@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <pre contenteditable="true">
+  (define factorial
+    (lambda (n)
+      (if (= n 0)
+          1
+          (* n (factorial (- n 1))))))
+
+  (render (factorial 5))
+  </pre>
+  <button id="run">Run</button>
+  <hr>
+  <div id="output"></div>
+
+  <script type="module">
+    import * as Scamper from '../dist/scamper.js'
+
+    document.getElementById('run').addEventListener('click', () => {
+      const output = document.getElementById('output')
+      output.innerText = ''
+      const program = document.querySelector('pre').textContent
+      Scamper.runProgram(Scamper.makeInitialEnv('output'), program)
+    })
+  </script>
+</body>
+</html>
