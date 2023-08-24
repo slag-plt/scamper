@@ -1,4 +1,4 @@
-import { minimalSetup, EditorView } from 'codemirror'
+import { basicSetup, EditorView } from 'codemirror'
 import * as Scamper from '../scamper.js'
 
 let editor: EditorView | null = null
@@ -8,9 +8,21 @@ const runButton  = document.getElementById('run')
 
 function initialize() {
   editor = new EditorView({
-    doc: '(render "Hello World!")',
+    doc: `
+(import image)
+
+(define triforce
+  (lambda (n sz)
+    (if (= n 0)
+        (overlay (triangle sz "outline" "black")
+                 (triangle sz "solid" "yellow"))
+        (let ([sub (triforce (- n 1) (/ sz 2))])
+             (above sub (beside sub sub))))))
+
+(render (triforce 5 500))
+    `.trim(),
     extensions: [
-      minimalSetup,
+      basicSetup,
     ],
     parent: editorPane!
   })
