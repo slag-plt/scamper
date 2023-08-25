@@ -97,7 +97,7 @@ export function sexpToString (s: Sexp): string {
 export type Id = string
 export type Binding = { name: Id, body: Exp }
 
-export type Exp = Var | Num | Bool | Str | Lam | Let | App | If
+export type Exp = Var | Num | Bool | Str | Lam | Let | App | If | Begin
 export type Var = { tag: 'var', name: string, range: Range }
 export type Num = { tag: 'num', value: number, range: Range }
 export type Bool = { tag: 'bool', value: boolean, range: Range }
@@ -106,6 +106,7 @@ export type Lam = { tag: 'lam', args: Id[], body: Exp, bracket: Bracket, range: 
 export type Let = { tag: 'let', bindings: Binding[], body: Exp, bracket: Bracket, range: Range }
 export type App = { tag: 'app', head: Exp, args: Exp[], bracket: Bracket, range: Range }
 export type If = { tag: 'if', guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range }
+export type Begin = { tag: 'begin', exps: Exp[], bracket: Bracket, range: Range }
 
 export const mkVar = (name: string, range: Range): Exp =>
   ({ tag: 'var', name, range })
@@ -123,6 +124,8 @@ export const mkApp = (head: Exp, args: Exp[], bracket: Bracket, range: Range): E
   ({ tag: 'app', head, args, bracket, range })
 export const mkIf = (guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range): Exp =>
   ({ tag: 'if', guard, ifb, elseb, bracket, range })
+export const mkBegin = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
+  ({ tag: 'begin', exps, bracket, range })
 
 export function expToSexp(e: Exp): Sexp {
   switch (e.tag) {
@@ -150,6 +153,8 @@ export function expToSexp(e: Exp): Sexp {
       return mkList([expToSexp(e.head), ...e.args.map(expToSexp)], '(', e.range)
     case 'if':
       return mkList([mkAtom('if', noRange), expToSexp(e.guard), expToSexp(e.ifb), expToSexp(e.elseb)], '(', e.range)
+    case 'begin':
+      return mkList([mkAtom('begin', noRange), ...e.exps.map(expToSexp)], '(', e.range)
   }
 }
 

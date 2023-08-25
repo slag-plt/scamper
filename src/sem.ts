@@ -2,7 +2,6 @@ import { Op, Value, Env } from './value.js'
 import { ICE, Id, ScamperError } from './lang.js'
 import * as S from './lang.js'
 import * as V from './value.js'
-import { render } from './lib/image.js'
 
 class Control {
   private idx: number
@@ -57,6 +56,8 @@ export function expToOps (e: S.Exp): Op[]{
       return [e.head].concat(e.args).flatMap(expToOps).concat([V.mkAp(e.args.length, e.range)])
     case 'if':
       return expToOps(e.guard).concat([V.mkIf(expToOps(e.ifb), expToOps(e.elseb), e.range)])
+    case 'begin':
+      return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
   }
 }
 
@@ -131,12 +132,25 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
         for (let i = 0; i < op.names.length; i++) { stack.pop() }
         state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
         // TODO: need to pop the env at some point, right?
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for let binding`)
       }
       break
     case 'disp':
       if (stack.length >= 1) {
         const value = stack.pop()
         display(value)
+      } else {
+        throw new ICE('sem.step', `Value missing from stack for display`)
+      }
+      break
+    case 'seq':
+      const values = stack.slice(-op.numSubexps)
+      if (stack.length >= op.numSubexps) {
+        // N.B., the top of the stack is the last value created which we want to return!
+        const ret = stack.pop()
+        for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
+        stack.push(ret)
       }
   }
   if (state.control.isEmpty() && state.dump.length > 0) {

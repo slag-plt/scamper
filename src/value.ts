@@ -1,6 +1,6 @@
 import { Id, Range } from './lang.js'
 
-export type Op   = Var | Val | Cls | Ap | If | Let | Disp
+export type Op   = Var | Val | Cls | Ap | If | Let | Disp | Seq
 export type Var  = { tag: 'var', name: string, range: Range }
 export type Val  = { tag: 'val', value: Value }
 export type Cls  = { tag: 'cls', params: Id[], ops: Op[] }
@@ -8,6 +8,7 @@ export type Ap   = { tag: 'ap', arity: number, range: Range }
 export type If   = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
 export type Let  = { tag: 'let', names: Id[] }
 export type Disp = { tag: 'disp' }
+export type Seq  = { tag: 'seq', numSubexps: number }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
 export const mkValue = (value: Value): Op => ({ tag: 'val', value })
@@ -16,6 +17,7 @@ export const mkAp = (arity: number, range: Range): Op => ({ tag: 'ap', arity, ra
 export const mkIf = (ifb: Op[], elseb: Op[], range: Range): Op => ({ tag: 'if', ifb, elseb, range })
 export const mkLet = (names: Id[]): Op => ({ tag: 'let', names })
 export const mkDisp = (): Op => ({ tag: 'disp' })
+export const mkSeq = (numSubexps: number): Op => ({ tag: 'seq', numSubexps })
 
 export function opToString (op: Op): string {
   switch (op.tag) {
@@ -33,6 +35,8 @@ export function opToString (op: Op): string {
       return `let (${op.names.join(' ')})`
     case 'disp':
       return 'disp'
+    case 'seq':
+      return `seq ${op.numSubexps}`
   }
 }
 

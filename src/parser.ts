@@ -310,6 +310,12 @@ export function sexpToExp (e: S.Sexp): S.Exp {
             e.range
           )
         }
+      } else if (head.tag === 'atom' && head.value === 'begin') {
+        if (args.length === 0) {
+          throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, e.range)
+        } else {
+          return S.mkBegin(args.map(sexpToExp), e.bracket, e.range)
+        }
       } else {
         return S.mkApp(sexpToExp(head), args.map(sexpToExp), e.bracket, e.range)
       }
