@@ -60,7 +60,7 @@ export function expToOps (e: S.Exp): Op[]{
   }
 }
 
-export function step (state: ExecutionState): void {
+export function step (display: (v: any) => void, state: ExecutionState): void {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
@@ -103,7 +103,7 @@ export function step (state: ExecutionState): void {
               const result = (head as V.JsFunction).fn(...args) as Value
               stack.push(result)
             } catch (e) {
-              renderException(state.env, e)
+              display(e)
             }
           }
         }
@@ -133,6 +133,11 @@ export function step (state: ExecutionState): void {
         // TODO: need to pop the env at some point, right?
       }
       break
+    case 'disp':
+      if (stack.length >= 1) {
+        const value = stack.pop()
+        display(value)
+      }
   }
   if (state.control.isEmpty() && state.dump.length > 0) {
     const ret = state.stack.pop()!
@@ -144,13 +149,9 @@ export function step (state: ExecutionState): void {
   }
 }
 
-function renderException (env: Env, err: any) {
-  execute(new ExecutionState(env, [V.mkVar('render', S.noRange), V.mkValue(err as any), V.mkAp(1, S.noRange)]))
-}
-
-function execute (state: ExecutionState): Value {
+function execute (display: (v: any) => void ,state: ExecutionState): Value {
   while (state.isRunning()) {
-    step(state)
+    step(display, state)
   }
   if (state.stack.length !== 1) {
     throw new ICE('sem.execute', `Stack size is not 1 after execution: ${state.stack}`)
@@ -158,16 +159,16 @@ function execute (state: ExecutionState): Value {
   return state.stack.pop()!
 }
 
-export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, env: Env, prog: S.Prog) {
+export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: any) => void, env: Env, prog: S.Prog) {
   prog.forEach((stmt) => {
     switch (stmt.tag) {
       case 'binding': {
         try {
           const state = new ExecutionState(env, expToOps(stmt.body))
-          const result = execute(state)
+          const result = execute(display, state)
           env.set(stmt.name, result)
         } catch (e) {
-          renderException(env, e)
+          display(e)
         }
         break
       }
@@ -182,25 +183,34 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, env: Env, prog:
       case 'stmtexp': {
         try {
           const state = new ExecutionState(env, expToOps(stmt.body))
-          execute(state)
+          execute(display, state)
         } catch (e) {
-          renderException(env, e)
+          display(e)
         }
       }
       break
+      case 'display': {
+        try {
+          const state = new ExecutionState(env, expToOps(stmt.body))
+          const result = execute(display, state)
+          display(result)
+        } catch (e) {
+          display(e)
+        }
+      }
     }
   })
 }
 
-export function runClosure (closure: V.Closure, ...args: Value[]): Value {
+export function runClosure (display: (v: any) => void, closure: V.Closure, ...args: Value[]): Value {
   const state = new ExecutionState(closure.env, closure.ops)
   state.stack = args
-  return execute(state)
+  return execute(display, state)
 }
 
-export function callFunction (fn: V.Closure | V.JsFunction | Function, ...args: any): any {
+export function callFunction (display: (v: any) => void, fn: V.Closure | V.JsFunction | Function, ...args: any): any {
   if (V.isClosure(fn)) {
-    return runClosure(fn as V.Closure, ...args)
+    return runClosure(display, fn as V.Closure, ...args)
   } else if (V.isJsFunction(fn)) {
     return (fn as V.JsFunction).fn(...args)
   } else {

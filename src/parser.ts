@@ -345,6 +345,11 @@ export function sexpToStmt (e: S.Sexp): S.Stmt {
           throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, args[0].range)
         }
         return S.mkImport(name.value, e.bracket, e.range)
+      } else if (head.value === 'display') {
+        if (args.length !== 1) {
+          throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
+        }
+        return S.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
       } else {
         return S.mkStmtExp(sexpToExp(e))
       }

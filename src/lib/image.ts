@@ -1,4 +1,4 @@
-import * as Render from '../render.js'
+import * as Render from '../display.js'
 import * as V from '../value.js'
 
 function color (r: number, g: number, b: number, a: number): string {
