@@ -34,7 +34,25 @@ class ExecutionState {
     this.dump = []
   }
 
-  isRunning(): boolean { return !this.control.isEmpty() }
+  isFinished(): boolean { return !this.control.isEmpty() }
+
+  isControlEmpty(): boolean { return this.control.isEmpty() }
+
+  dumpAndSwitch (stack: Value[], env: Env, ops: Op[]): void {
+    this.dump.push([this.stack, this.env, this.control])
+    this.stack = stack
+    this.env = env
+    this.control = new Control(ops)
+  }
+
+  isDumpEmpty() { return this.dump.length === 0 }
+
+  popDump () {
+    const [stack, env, control] = this.dump.pop()!
+    this.stack = stack
+    this.env = env
+    this.control = control
+  }
 }
 
 export function expToOps (e: S.Exp): Op[]{
@@ -88,10 +106,7 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
           if (closure.params.length !== args.length) {
             throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
           } else {
-            state.dump.push([state.stack, state.env, state.control])
-            state.stack = []
-            state.env = closure.env.extend(closure.params.map((p, i) => [p, args[i]]))
-            state.control = new Control(closure.ops)
+            state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
           }
         } else if (V.isJsFunction(head)) {
           const jsFunc = head as V.JsFunction
@@ -153,18 +168,15 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
         stack.push(ret)
       }
   }
-  if (state.control.isEmpty() && state.dump.length > 0) {
+  if (state.isControlEmpty() && !state.isDumpEmpty()) {
     const ret = state.stack.pop()!
-    const [stack, env, control] = state.dump.pop()!
-    state.stack = stack
-    state.env = env
-    state.control = control
+    state.popDump()
     state.stack.push(ret)
   }
 }
 
 function execute (display: (v: any) => void ,state: ExecutionState): Value {
-  while (state.isRunning()) {
+  while (state.isFinished()) {
     step(display, state)
   }
   if (state.stack.length !== 1) {
@@ -212,6 +224,15 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
           display(e)
         }
       }
+      break
+      case 'struct': {
+        const name = stmt.id
+        const pred: [string, Value]= [`${name}?`, V.mkJsFunction((v: any) => V.isStructKind(v, name), 1)]
+        const fieldFns: [string, Value][] = stmt.fields.map((f, i) => [`${name}-${f}`, V.mkJsFunction((v: V.Struct) => v.fields[i], 1)])
+        const ctor: [string, Value]= [name, V.mkJsFunction((...args: any[]) => V.mkStruct(name, args), stmt.fields.length)]
+        env = env.extend([pred, ctor, ...fieldFns])
+      }
+      break
     }
   })
 }

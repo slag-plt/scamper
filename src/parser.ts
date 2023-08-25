@@ -356,6 +356,26 @@ export function sexpToStmt (e: S.Sexp): S.Stmt {
           throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
         }
         return S.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
+      } else if (head.value === 'struct') {
+        if (args.length !== 2) {
+          throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, e.range)
+        } 
+        const name = args[0]
+        if (name.tag !== 'atom') {
+          throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, name.range)
+        }
+        const sfields = args[1]
+        if (sfields.tag !== 'list') {
+          throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, args[1].range)
+        }
+        const fields: string[] = []
+        sfields.value.forEach((f) => {
+          if (f.tag !== 'atom') {
+            throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, f.range)
+          }
+          fields.push(f.value)
+        })
+        return S.mkStruct(name.value, fields, e.bracket, e.range) 
       } else {
         return S.mkStmtExp(sexpToExp(e))
       }

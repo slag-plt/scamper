@@ -162,17 +162,19 @@ export function expToString(e: Exp): string {
   return sexpToString(expToSexp(e))
 }
 
-export type Stmt = StmtBinding | StmtExp | Import | Display
+export type Stmt = StmtBinding | StmtExp | Import | Display | Struct
 export type StmtBinding = { tag: 'binding', name: Id, body: Exp, bracket: Bracket, range: Range }
 export type StmtExp = { tag: 'stmtexp', body: Exp }
 export type Import = { tag: 'import', modName: string, bracket: Bracket, range: Range }
 export type Display = { tag: 'display', body: Exp, bracket: Bracket, range: Range }
+export type Struct = { tag: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
 
 export const mkStmtBinding = (name: Id, body: Exp, bracket: Bracket, range: Range): Stmt =>
   ({ tag: 'binding', name, body, bracket, range })
 export const mkStmtExp = (body: Exp): Stmt => ({ tag: 'stmtexp', body })
 export const mkImport = (modName: string, bracket: Bracket, range: Range): Stmt => ({ tag: 'import', modName, bracket, range })
 export const mkDisplay = (body: Exp, bracket: Bracket, range: Range): Stmt => ({ tag: 'display', body, bracket, range })
+export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): Stmt => ({ tag: 'struct', id, fields, bracket, range })
 
 export function stmtToSexp(s: Stmt): Sexp {
   switch (s.tag) {
@@ -184,6 +186,8 @@ export function stmtToSexp(s: Stmt): Sexp {
       return mkList([mkAtom('import', noRange), mkAtom(s.modName, noRange)], s.bracket, s.range)
     case 'display':
       return mkList([mkAtom('define', noRange), expToSexp(s.body)], s.bracket, s.range)
+    case 'struct':
+      return mkList([mkAtom('struct', noRange), mkAtom(s.id, noRange), ...s.fields.map((f) => mkAtom(f, noRange))], '(', s.range)
   }
 }
 
