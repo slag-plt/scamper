@@ -1,4 +1,5 @@
 import { basicSetup, EditorView } from 'codemirror'
+import Split from 'split.js'
 import Scamper from '../scamper.js'
 
 let editor: EditorView | null = null
@@ -32,6 +33,14 @@ function initialize() {
     outputPane!.innerHTML = ''
     const program = editor!.state.doc.toString()
     scamper.runProgram(program)
+  })
+
+  Split(['#editor', '#results'], {
+    sizes: [50, 50]
+  })
+  Split(['#output', '#interactions'], {
+    sizes: [80, 20],
+    direction: 'vertical',
   })
 }
 

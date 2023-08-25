@@ -24,6 +24,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "codemirror": "^6.0.1"
+    "codemirror": "^6.0.1",
+    "split.js": "^1.6.5"
   }
 }
