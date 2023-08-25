@@ -1,12 +1,13 @@
 import { Id, Range } from './lang.js'
 
-export type Op  = Var | Val | Cls | Ap | If | Let
-export type Var = { tag: 'var', name: string, range: Range }
-export type Val = { tag: 'val', value: Value }
-export type Cls = { tag: 'cls', params: Id[], ops: Op[] }
-export type Ap  = { tag: 'ap', arity: number, range: Range }
-export type If  = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
-export type Let = { tag: 'let', names: Id[] }
+export type Op   = Var | Val | Cls | Ap | If | Let | Disp
+export type Var  = { tag: 'var', name: string, range: Range }
+export type Val  = { tag: 'val', value: Value }
+export type Cls  = { tag: 'cls', params: Id[], ops: Op[] }
+export type Ap   = { tag: 'ap', arity: number, range: Range }
+export type If   = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
+export type Let  = { tag: 'let', names: Id[] }
+export type Disp = { tag: 'disp' }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
 export const mkValue = (value: Value): Op => ({ tag: 'val', value })
@@ -14,6 +15,7 @@ export const mkCls = (params: Id[], ops: Op[]): Op => ({ tag: 'cls', params, ops
 export const mkAp = (arity: number, range: Range): Op => ({ tag: 'ap', arity, range })
 export const mkIf = (ifb: Op[], elseb: Op[], range: Range): Op => ({ tag: 'if', ifb, elseb, range })
 export const mkLet = (names: Id[]): Op => ({ tag: 'let', names })
+export const mkDisp = (): Op => ({ tag: 'disp' })
 
 export function opToString (op: Op): string {
   switch (op.tag) {
@@ -29,27 +31,10 @@ export function opToString (op: Op): string {
       return `if (${op.ifb.map(opToString).join('; ')}) else (${op.elseb.map(opToString).join('; ')}))`
     case 'let':
       return `let (${op.names.join(' ')})`
+    case 'disp':
+      return 'disp'
   }
 }
-
-/*
- * Scamper-Javascript value mapping:
- *
- * (boolean? e) <=> typeof e === 'boolean'
- * (number? e) <=> typeof e === 'number'
- * (string? e) <==> typeof e === 'string'
- * (null? e) <==> e === null
- * (void? e) <==> e === undefined
- * (function? e) <==>
- *   typeof e === 'function' (raw JS function) or
- *   typeof e === 'object': { _scamperTag: 'closure', params: string[], ops: Op, env: Env } (Scamper closure) or
- *   typeof e === 'object': { _scamperTag: 'jsfunc', fn: Function, arity: number, isVariadic: boolean } (Scamper JS function)
- * (vector? e) <==> Array.isArray(e)
- * (list? e) <==> typeof e === 'object': { _scamperTag: 'pair', fst: Value, snd: Value, isList: true }
- * (pair? e) <==> typeof e === 'object': { _scamperTag: 'pair', fst: Value, snd: Value, isList: false }
- * (struct? e) <==> typeof e === 'object': { _scamperTag: 'struct', 'kind': string, fields: Value[] }
- * (object? e) <==> typeof e === 'object': { ... } (no _scamperTag field)
- */
 
 export type TaggedObject = Closure | JsFunction | Char | Pair | Struct
 export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op[], env: Env }

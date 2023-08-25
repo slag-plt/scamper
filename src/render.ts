@@ -37,7 +37,7 @@ function getRenderer<T> (v: any, renderers: [TypeTest, T][]): T | undefined {
   return undefined
 }
 
-function renderToString (v: any): string {
+export function renderToString (v: any): string {
   switch (typeof v) {
     case 'boolean':
       return v ? '#t' : '#f'
@@ -80,7 +80,7 @@ function renderToString (v: any): string {
   }
 }
 
-function renderToHTML (v: any): HTMLElement {
+export function renderToHTML (v: any): HTMLElement {
   switch (typeof v) {
     case 'boolean':
       return mkCodeElement(v ? '#t' : '#f')
@@ -121,18 +121,4 @@ function renderToHTML (v: any): HTMLElement {
         }
       }
   }
-}
-
-function makeRenderer (id?: string): (v: any) => void {
-  if (id === undefined) {
-    return (v: any) => { console.log(renderToString(v)) }
-  } else {
-    return (v: any) => { document.getElementById(id)!.appendChild(mkOutputDiv(renderToHTML(v))) }
-  }
-}
-
-export function makeRenderLib (id?: string): [string, V.Value][] {
-  return [
-    ['render', V.mkJsFunction(makeRenderer(id), 1)],
-  ]
 }

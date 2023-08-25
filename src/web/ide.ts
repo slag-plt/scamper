@@ -1,5 +1,5 @@
 import { basicSetup, EditorView } from 'codemirror'
-import * as Scamper from '../scamper.js'
+import Scamper from '../scamper.js'
 
 let editor: EditorView | null = null
 const editorPane = document.getElementById('editor')
@@ -19,7 +19,7 @@ function initialize() {
         (let ([sub (triforce (- n 1) (/ sz 2))])
              (above sub (beside sub sub))))))
 
-(render (triforce 5 500))
+(display (triforce 5 500))
     `.trim(),
     extensions: [
       basicSetup,
@@ -28,9 +28,10 @@ function initialize() {
   })
 
   runButton!.addEventListener('click', () => {
+    const scamper = new Scamper('output')
     outputPane!.innerHTML = ''
     const program = editor!.state.doc.toString()
-    Scamper.runProgram(Scamper.makeInitialEnv('output'), program)
+    scamper.runProgram(program)
   })
 }
 

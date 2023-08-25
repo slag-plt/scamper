@@ -1,7 +1,7 @@
-import * as Scamper from './scamper.js'
+import Scamper from './scamper.js'
 
 const prog = `
   (make-string 1)
 `
 
-Scamper.runProgram(Scamper.makeInitialEnv(), prog)
+new Scamper().runProgram( prog)
