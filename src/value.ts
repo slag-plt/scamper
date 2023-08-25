@@ -45,10 +45,13 @@ export type Struct = { _scamperTag: 'struct', 'kind': string, 'fields': Value[] 
 export type Value = boolean | number | string | null | undefined | Value[] | TaggedObject | Function | Object
 export type List = null | Pair
 
+export const isArray = (v: Value): boolean => Array.isArray(v)
 export const isClosure = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'closure'
 export const isJsFunction = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'jsfunc'
+export const isFunction = (v: Value): boolean => typeof v === 'function' || isClosure(v) || isJsFunction(v)
 export const isChar = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'char'
 export const isPair = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'pair'
+export const isList = (v: Value): boolean => isPair(v) && (v as Pair).isList
 export const isStruct = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'struct'
 export const isStructKind = (v: Value, k: string): boolean => isStruct(v) && (v as Struct).kind === k
 
@@ -69,6 +72,47 @@ export function valueToString (v: Value) {
   } else {
     return `${v}`
   }
+}
+
+export function valuesEqual (v1: Value, v2: Value): boolean {
+  const t1 = typeof v1
+  const t2 = typeof v2
+  if ((v1 === null && v2 === null) ||
+      (v1 === undefined && v2 === undefined)) {
+        return true
+  } else if ((t1 === 'number' && t2 === 'number') ||
+      (t1 === 'boolean' && t2 === 'boolean') ||
+      (t1 === 'string' && t2 === 'string') ||
+      (t1 === 'undefined' && t2 === 'undefined') ||
+      // N.B., function equality is reference-ish equality
+      (isFunction(t1) && isFunction(t2))) {
+    return v1 === v2
+  } else if (isPair(v1) && isPair(v2)) {
+    return valuesEqual((v1 as Pair).fst, (v2 as Pair).fst) &&
+      valuesEqual((v1 as Pair).snd, (v2 as Pair).snd)
+  } else if (isChar(v1) && isChar(v2)) {
+    return (v1 as Char).value === (v2 as Char).value
+  } else if (isStruct(v1) && isStruct(v2)) {
+    const s1 = v1 as Struct
+    const s2 = v2 as Struct
+    return s1.kind === s2.kind && s1.fields.length === s2.fields.length &&
+      s1.fields.every((f, i) => valuesEqual(f, s2.fields[i]))
+  } else {
+    return false
+  }
+}
+
+export function typeOfValue (v: Value): string {
+  const t = typeof v
+  if (t === 'boolean' || t === 'number' || t === 'string') { return t }
+  if (v === 'null') { return 'null' }
+  if (v === 'undefined') { return 'void'}
+  if (Array.isArray(v)) { return 'vector' }
+  if (isChar(v)) { return 'char' }
+  if (isList(v)) { return 'list' }
+  if (isStruct(v)) { return `struct (${(v as Struct).kind})` }
+  if (t === 'function' || isClosure(v) || isJsFunction(v)) { return 'function' }
+  return 'object'
 }
 
 export class Env {
