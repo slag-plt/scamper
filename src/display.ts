@@ -1,6 +1,9 @@
 import { ICE, ScamperError } from './lang.js'
 import * as V from './value.js'
 
+// TODO: probably need to sandbox this as an object held by the the Scamper
+// instance at some point...
+
 function mkOutputDiv (body: HTMLElement) {
   const ret = document.createElement('div')
   ret.classList.add('scamper-output')
