@@ -34,7 +34,7 @@ class ExecutionState {
     this.dump = []
   }
 
-  isFinished(): boolean { return !this.control.isEmpty() }
+  isFinished(): boolean { return this.control.isEmpty() }
 
   isControlEmpty(): boolean { return this.control.isEmpty() }
 
@@ -55,7 +55,7 @@ class ExecutionState {
   }
 }
 
-export function expToOps (e: S.Exp): Op[]{
+export function expToOps (e: S.Exp): Op[] {
   switch (e.tag) {
     case 'var':
       return [V.mkVar(e.name, e.range)]
@@ -76,6 +76,50 @@ export function expToOps (e: S.Exp): Op[]{
       return expToOps(e.guard).concat([V.mkIf(expToOps(e.ifb), expToOps(e.elseb), e.range)])
     case 'begin':
       return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
+    case 'match':
+      return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+  }
+}
+
+export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
+
+  if (p.tag === 'wild') {
+    return []
+  } else if (p.tag === 'var') {
+    return [[p.name, v]]
+  } else if (p.tag === 'null' && v === null) {
+    return []
+  } else if (p.tag === 'bool' && typeof v === 'boolean' && p.value === v) {
+    return []
+  } else if (p.tag === 'num' && typeof v === 'number' && p.value === v) {
+    return []
+  } else if (p.tag === 'str' && typeof v === 'string' && p.value === v) {
+    return []
+  } else if (p.tag === 'ctor' && (V.isPair(v) || V.isStruct(v))) {
+    const head = p.ctor
+    const args = p.args
+    if ((head === 'pair' || head === 'cons') && args.length === 2 && V.isPair(v)) {
+      const env1 = tryMatch(args[0], (v as V.Pair).fst)
+      const env2 = tryMatch(args[1], (v as V.Pair).snd)
+      return env1 && env2 ? env1.concat(env2) : undefined
+  } else if (V.isStructKind(v, head)) {
+      const fields = [...((v as V.Struct).fields).values()]
+      if (fields.length === args.length) {
+        let env: [string, Value][] = []
+        for (let i = 0; i < fields.length; i++) {
+          const env2 = tryMatch(args[i], fields[i])
+          if (!env2) {
+            return undefined
+          }
+          env = env.concat(env2)
+        }
+        return env
+      } else {
+        return undefined
+      }
+    }
+  } else {
+    return undefined
   }
 }
 
@@ -106,6 +150,9 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
           if (closure.params.length !== args.length) {
             throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
           } else {
+            // TODO: here, we can check if this control is done.
+            // If so, then this is a tail call! No need to dump,
+            // just overwrite the current state and go forward.
             state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
           }
         } else if (V.isJsFunction(head)) {
@@ -166,9 +213,33 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
         const ret = stack.pop()
         for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
         stack.push(ret)
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
       }
+    break
+    case 'match':
+      if (stack.length >= 1) {
+        const scrutinee = stack.pop()!
+        let foundMatch = false
+        for (let i = 0; !foundMatch && i < op.branches.length; i++) {
+          const bindings = tryMatch(op.branches[i].pattern, scrutinee)
+          if (bindings) {
+            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body)
+            foundMatch = true
+          }
+        }
+        if (!foundMatch) {
+          throw new ScamperError('Runtime', `No pattern matches for ${V.valueToString(scrutinee)}`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Scrutinee missing from stack for match`)
+      }
+    break
+    default:
+      throw new ICE('sem.step', `Unknown op tag: ${(op as any).tag}`)
   }
-  if (state.isControlEmpty() && !state.isDumpEmpty()) {
+  // N.B., pop the dump until we arrive at a non-finished state
+  while (state.isFinished() && !state.isDumpEmpty()) {
     const ret = state.stack.pop()!
     state.popDump()
     state.stack.push(ret)
@@ -176,7 +247,7 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
 }
 
 function execute (display: (v: any) => void ,state: ExecutionState): Value {
-  while (state.isFinished()) {
+  while (!state.isFinished()) {
     step(display, state)
   }
   if (state.stack.length !== 1) {

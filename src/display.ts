@@ -54,15 +54,19 @@ export function renderToString (v: any): string {
       if (v === null) {
         return 'null'
       } else if (Array.isArray(v)) {
-        return `(vector ...)`
+        const arr = v as any[]
+        return arr.length === 0 ? '(vector)' : `(vector ${arr.map(renderToString).join(' ')})`
       } else if (V.isClosure(v)) {
         return `[Function (closure)]`
       } else if (V.isJsFunction(v)) {
         return `[Function (JS)]`
       } else if (V.isChar(v)) {
         throw new Error(`renderToString: char unimplemented ${v.toString()}`)
+      } else if (V.isList(v)) {
+        const arr = V.listToArray(v)
+        return arr.length === 0 ? '(list)' : `(list ${arr.map(renderToString).join(' ')})`
       } else if (V.isPair(v)) {
-        throw new Error(`renderToString: pair unimplemented ${v.toString()}`)
+        return `(pair ${renderToString(v.fst)} ${renderToString(v.snd)})`
       } else {
         const customRenderer = getRenderer(v, customConsoleRenderers)
         if (customRenderer !== undefined) {
@@ -104,8 +108,25 @@ export function renderToHTML (v: any): HTMLElement {
         return mkCodeElement(`[Function (JS)]`)
       } else if (V.isChar(v)) {
         throw new Error(`renderToString: char unimplemented ${v.toString()}`)
+      } else if (V.isList(v)) {
+        const ret = mkCodeElement('(list ')
+        let lst = v
+        ret.appendChild(renderToHTML(lst.fst))
+        lst = lst.snd
+        while (lst !== null) {
+          ret.appendChild(mkCodeElement(' '))
+          ret.appendChild(renderToHTML(lst.fst))
+          lst = lst.snd
+        }
+        ret.append(mkCodeElement(')'))
+        return ret
       } else if (V.isPair(v)) {
-        throw new Error(`renderToString: pair unimplemented ${v.toString()}`)
+        const ret = mkCodeElement('(pair ')
+        ret.appendChild(renderToHTML(v.fst))
+        ret.appendChild(mkCodeElement(' '))
+        ret.appendChild(renderToHTML(v.snd))
+        ret.append(mkCodeElement(')'))
+        return ret
       } else {
         const customRenderer = getRenderer(v, customWebRenderers)
         if (customRenderer !== undefined) {

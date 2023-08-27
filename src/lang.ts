@@ -97,7 +97,49 @@ export function sexpToString (s: Sexp): string {
 export type Id = string
 export type Binding = { name: Id, body: Exp }
 
-export type Exp = Var | Num | Bool | Str | Lam | Let | App | If | Begin
+export type MatchBranch = { pattern: Pat, body: Exp }
+
+export type Pat = PVar | PWild | PNum | PBool | PStr | PNull | PCtor
+export type PVar = { tag: 'var', name: string, range: Range }
+export type PWild = { tag: 'wild', range: Range }
+export type PNum = { tag: 'num', value: number, range: Range }
+export type PBool = { tag: 'bool', value: boolean, range: Range }
+export type PStr = { tag: 'str', value: string, range: Range }
+export type PNull = { tag: 'null', range: Range }
+export type PCtor = { tag: 'ctor', ctor: string, args: Pat[], range: Range }
+
+export const mkPVar = (name: string, range: Range): Pat => ({ tag: 'var', name, range })
+export const mkPWild = (range: Range): Pat => ({ tag: 'wild', range })
+export const mkPNum = (value: number, range: Range): Pat => ({ tag: 'num', value, range })
+export const mkPBool = (value: boolean, range: Range): Pat => ({ tag: 'bool', value, range })
+export const mkPStr = (value: string, range: Range): Pat => ({ tag: 'str', value, range })
+export const mkPNull = (range: Range): Pat => ({ tag: 'null', range })
+export const mkPCtor = (ctor: string, args: Pat[], range: Range): Pat => ({ tag: 'ctor', ctor, args, range })
+
+export function patToSexp (p: Pat): Sexp {
+  switch (p.tag) {
+    case 'var':
+      return mkAtom(p.name, p.range)
+    case 'wild':
+      return mkAtom('_', p.range)
+    case 'num':
+      return mkAtom(p.value.toString(), p.range)
+    case 'bool':
+      return mkAtom(p.value ? "#t" : "#f", p.range)
+    case 'str':
+      return mkAtom(`"${p.value}"`, p.range)
+    case 'null':
+      return mkAtom('null', p.range)
+    case 'ctor':
+      return mkList([mkAtom(p.ctor, noRange), ...p.args.map(patToSexp)], '(', p.range)
+  }
+}
+
+export function patToString (p: Pat): string {
+  return sexpToString(patToSexp(p))
+}
+
+export type Exp = Var | Num | Bool | Str | Lam | Let | App | If | Begin | Match
 export type Var = { tag: 'var', name: string, range: Range }
 export type Num = { tag: 'num', value: number, range: Range }
 export type Bool = { tag: 'bool', value: boolean, range: Range }
@@ -107,6 +149,7 @@ export type Let = { tag: 'let', bindings: Binding[], body: Exp, bracket: Bracket
 export type App = { tag: 'app', head: Exp, args: Exp[], bracket: Bracket, range: Range }
 export type If = { tag: 'if', guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range }
 export type Begin = { tag: 'begin', exps: Exp[], bracket: Bracket, range: Range }
+export type Match = { tag: 'match', scrutinee: Exp, branches: MatchBranch[], bracket: Bracket, range: Range }
 
 export const mkVar = (name: string, range: Range): Exp =>
   ({ tag: 'var', name, range })
@@ -126,6 +169,8 @@ export const mkIf = (guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: 
   ({ tag: 'if', guard, ifb, elseb, bracket, range })
 export const mkBegin = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
   ({ tag: 'begin', exps, bracket, range })
+export const mkMatch = (scrutinee: Exp, branches: MatchBranch[], bracket: Bracket, range: Range): Exp =>
+  ({ tag: 'match', scrutinee, branches, bracket, range })
 
 export function expToSexp(e: Exp): Sexp {
   switch (e.tag) {
@@ -155,6 +200,12 @@ export function expToSexp(e: Exp): Sexp {
       return mkList([mkAtom('if', noRange), expToSexp(e.guard), expToSexp(e.ifb), expToSexp(e.elseb)], '(', e.range)
     case 'begin':
       return mkList([mkAtom('begin', noRange), ...e.exps.map(expToSexp)], '(', e.range)
+    case 'match':
+      return mkList([
+        mkAtom('match', noRange),
+        expToSexp(e.scrutinee),
+        mkList(e.branches.map((b) => mkList([patToSexp(b.pattern), expToSexp(b.body)], '[', noRange)), '(', noRange)],
+        e.bracket, e.range)
   }
 }
 
