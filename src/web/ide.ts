@@ -1,6 +1,7 @@
 import { basicSetup, EditorView } from 'codemirror'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
+import { ScamperSupport } from '../codemirror/language.js'
 
 let editor: EditorView | null = null
 const editorPane = document.getElementById('editor')
@@ -24,6 +25,7 @@ function initialize() {
     `.trim(),
     extensions: [
       basicSetup,
+      ScamperSupport()
     ],
     parent: editorPane!
   })
