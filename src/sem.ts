@@ -143,7 +143,7 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
     case 'ap':
       if (stack.length >= op.arity + 1) {
         const head = stack[stack.length - op.arity - 1]
-        const args = stack.slice(-op.arity)
+        const args = op.arity === 0 ? [] : stack.slice(-op.arity)
         for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
         if (V.isClosure(head)) {
           const closure = head as V.Closure
