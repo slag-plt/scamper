@@ -1,6 +1,7 @@
 import { basicSetup, EditorView } from 'codemirror'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
+import { version } from '../version.js'
 
 let editor: EditorView | null = null
 const editorPane = document.getElementById('editor')
@@ -89,10 +90,13 @@ function initialize() {
   Split(['#editor', '#results'], {
     sizes: [50, 50]
   })
-  Split(['#output', '#interactions'], {
-    sizes: [80, 20],
-    direction: 'vertical',
-  })
+  // N.B., interactions pane cut for the time being
+  // Split(['#output', '#interactions'], {
+  //   sizes: [80, 20],
+  //   direction: 'vertical',
+  // })
+
+  document.getElementById('version')!.innerText = `(${version})`
 }
 
 export default initialize
