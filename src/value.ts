@@ -55,6 +55,11 @@ export type Struct = { _scamperTag: 'struct', 'kind': string, 'fields': Value[] 
 export type Value = boolean | number | string | null | undefined | Value[] | TaggedObject | Function | Object
 export type List = null | Pair
 
+export const isNumber = (v: Value): boolean => typeof v === 'number'
+export const isBoolean = (v: Value): boolean => typeof v === 'boolean'
+export const isString = (v: Value): boolean => typeof v === 'string'
+export const isNull = (v: Value): boolean => v === null
+export const isVoid = (v: Value): boolean => v === undefined
 export const isArray = (v: Value): boolean => Array.isArray(v)
 export const isClosure = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'closure'
 export const isJsFunction = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'jsfunc'
