@@ -2,6 +2,7 @@ import { basicSetup, EditorView } from 'codemirror'
 import FS from './fs.js'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
+import { ScamperSupport } from '../codemirror/language.js'
 import { version } from '../version.js'
 
 let editor: EditorView | null = null
@@ -19,7 +20,7 @@ class IDE {
   constructor () {
     this.fs = new FS()
     this.editor = new EditorView({
-      doc: '', extensions: [basicSetup], parent: editorPane!
+      doc: '', extensions: [basicSetup, ScamperSupport()], parent: editorPane!
     })
     this.autosaveId = -1
 
