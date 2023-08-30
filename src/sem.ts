@@ -1,11 +1,12 @@
 import { Op, Value, Env } from './value.js'
-import { ICE, Id, ScamperError } from './lang.js'
+import { ICE, Id, noRange, ScamperError } from './lang.js'
 import * as S from './lang.js'
 import * as V from './value.js'
+import * as C from './contract.js'
 
 class Control {
-  private idx: number
-  private ops: Op[]
+  idx: number
+  ops: Op[]
 
   constructor (ops: Op[]) {
     this.idx = 0
@@ -14,10 +15,15 @@ class Control {
 
   isEmpty (): boolean { return this.idx >= this.ops.length }
   next (): Op { return this.ops[this.idx++] }
-  insertOps (ops: Op[]): void { this.ops.splice(this.idx, 0, ...ops) }
 
   toString (): string {
     return `[idx=${this.idx}, ops=${this.ops.map(V.opToString).join(',')}]`
+  }
+
+  clone(): Control {
+    const ret = new Control(this.ops);
+    ret.idx = this.idx
+    return ret
   }
 }
 
@@ -53,6 +59,55 @@ class ExecutionState {
     this.env = env
     this.control = control
   }
+
+  clone() {
+    const ret = new ExecutionState(this.env, [])
+    ret.stack = [...this.stack]
+    ret.env = this.env    // NOTE: do I need to clone the env, too?
+    ret.control = this.control.clone()
+    ret.dump = this.dump.map(([stack, env, control]) => [[...stack], env, control.clone()] as [Value[], Env, Control])
+  }
+}
+
+/**
+ exp: (+ (* 1 2) (/ 3 4) 5) 
+ ops: [+, *, 1, 2, ap(2), /, 3, 4, ap(2), 5, ap(3)]
+ */
+
+/**
+ exp (+ (* 1 2) (/ 3 4) 5)
+ ops: [_, _, _, 2, ap(2), /, 3, 4, ap(2), 5, ap(3)]
+ stack: +, *
+ */
+
+function valueToExp (v: Value): S.Exp {
+  if (V.isNumber(v)) {
+    return S.mkNum(v as number, noRange)
+  } else if (V.isBoolean(v)) {
+    return S.mkBool(v as boolean, noRange)
+  } else if (V.isString(v)) {
+    return S.mkStr(v as string, noRange)
+  } else if (V.isNull(v)) {
+    return S.mkVar('null', noRange)
+  } else if (V.isVoid(v)) {
+    return S.mkVar('void', noRange)
+  } else if (V.isArray(v)) {
+    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map(valueToExp), '(', noRange)
+  } else if (V.isClosure(v)) {
+    
+  }
+  throw new ICE('sem.valueToExp', 'Unimplemented')
+}
+
+function dumpToExp ([stack, env, control]: [Value[], Env, Control]): S.Exp {
+  let expStack = stack.map(valueToExp)
+  let stackIdx = stack.length - 1
+  throw new ICE('sem.valueToExp', 'Unimplemented')
+}
+
+function stateToExp (state: ExecutionState): S.Exp | null {
+  // TODO: fill me out!
+  return null
 }
 
 export function expToOps (e: S.Exp): Op[] {
@@ -158,19 +213,9 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
             state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
           }
         } else if (V.isJsFunction(head)) {
-          const jsFunc = head as V.JsFunction
-          if (!jsFunc.isVariadic && (jsFunc.arity !== args.length)) {
-            throw new ScamperError('Runtime', `Function expected ${jsFunc.arity} arguments, passed ${args.length} instead.`, undefined, op.range)
-          } else if (jsFunc.isVariadic && (args.length < jsFunc.arity)) {
-            throw new ScamperError('Runtime', `Function expected at least arguments ${jsFunc.arity}, passed ${args.length}.`, undefined, op.range) 
-          } else {
-            try {
-              const result = (head as V.JsFunction).fn(...args) as Value
-              stack.push(result)
-            } catch (e) {
-              display(e)
-            }
-          }
+          const jsFunc = head as Function
+          const result = (head as Function)(...args) as Value
+          stack.push(result)
         }
       } else {
         throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
@@ -180,9 +225,9 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
       if (stack.length >= 1) {
         const guard = stack.pop()!
         if (guard === true) {
-          state.control.insertOps(op.ifb)
+          state.dumpAndSwitch([], state.env, op.ifb)
         } else if (guard === false) {
-          state.control.insertOps(op.elseb)
+          state.dumpAndSwitch([], state.env, op.elseb)
         } else {
           throw new ScamperError('Runtime', `Boolean expected in conditional, received ${V.valueToString(guard)} instead`, undefined, op.range)
         }
@@ -248,7 +293,7 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
   }
 }
 
-function execute (display: (v: any) => void ,state: ExecutionState): Value {
+function execute (display: (v: any) => void, state: ExecutionState): Value {
   while (!state.isFinished()) {
     step(display, state)
   }
@@ -300,9 +345,31 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
       break
       case 'struct': {
         const name = stmt.id
-        const pred: [string, Value]= [`${name}?`, V.mkJsFunction((v: any) => V.isStructKind(v, name), 1)]
-        const fieldFns: [string, Value][] = stmt.fields.map((f, i) => [`${name}-${f}`, V.mkJsFunction((v: V.Struct) => v.fields[i], 1)])
-        const ctor: [string, Value]= [name, V.mkJsFunction((...args: any[]) => V.mkStruct(name, args), stmt.fields.length)]
+        const predFn = function (v: any) {
+          C.checkContract(arguments, C.contract(`${name}?`, [C.any]))
+          return V.isStructKind(v, name)
+        }
+        V.nameFn(`${name}?`, predFn)
+        const pred: [string, Value] = [`${name}?`, predFn]
+
+        const ctorFn = function (...args: any[]) {
+          C.checkContract(arguments, C.contract(name, stmt.fields.map((f) => C.any)))
+          return V.mkStruct(name, args)
+        }
+        V.nameFn(name, ctorFn)
+        const ctor: [string, Value] = [name, ctorFn]
+
+        const fieldFns: [string, Value][] = []
+        stmt.fields.forEach((f, i) => {
+          const fieldName = `${name}-${f}`
+          const fn = function (v: V.Struct) {
+            C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
+            return v.fields[i]
+          }
+          V.nameFn(fieldName, fn)
+          fieldFns.push([fieldName, fn])
+        })
+
         env = env.extend([pred, ctor, ...fieldFns])
       }
       break
@@ -316,11 +383,9 @@ export function runClosure (display: (v: any) => void, closure: V.Closure, ...ar
   return execute(display, state)
 }
 
-export function callFunction (display: (v: any) => void, fn: V.Closure | V.JsFunction | Function, ...args: any): any {
+export function callFunction (display: (v: any) => void, fn: V.Closure | Function, ...args: any): any {
   if (V.isClosure(fn)) {
     return runClosure(display, fn as V.Closure, ...args)
-  } else if (V.isJsFunction(fn)) {
-    return (fn as V.JsFunction).fn(...args)
   } else {
     return (fn as Function)(...args)
   }

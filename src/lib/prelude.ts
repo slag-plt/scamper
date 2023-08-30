@@ -1,12 +1,19 @@
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
 import { Value } from '../value.js'
 import * as V from '../value.js'
 import { callFunction } from '../sem.js'
+import { ScamperError } from '../lang.js'
 
-// TODO:
-//   + 1: implement higher-order functions once we factor out the runtime
-//   + 2: implement error handling once we define an error type
+function registerFn (name: string, fn: Function, map: [string, Value][]) {
+  V.nameFn(name, fn)
+  map.push([name, fn])
+}
 
-const mkFn = V.mkJsFunction
+const Prelude: [string, Value][] = []
+
+const query1C = (name: string) => contract(name, [C.any])
+const query2C = (name: string) => contract(name, [C.any])
 
 // Equivalence predicates (6.1)
 
@@ -16,17 +23,31 @@ const mkFn = V.mkJsFunction
 // Since we don't have effects beside vectors. Therefore, value vs. reference
 // equality is not an issue!
 
-const equalQ = (x: any, y: any): boolean => x === y
-
-const equivalencePrimitives: [string, Value][] = [
-  ['equal?', mkFn(equalQ, 2)]
-]
+function equalQ (x: any, y: any): boolean {
+  checkContract(arguments, query2C('equal?'))
+  return V.valuesEqual(x, y)
+}
+registerFn('equal?', equalQ, Prelude)
 
 // Numbers (6.2)
 
-const numberQ = (x: any): boolean => typeof x === 'number'
-const realQ = (x: any): boolean => typeof x === 'number' && !Number.isInteger(x)
-const integerQ = (x: any): boolean => typeof x === 'number' && Number.isInteger(x)
+function numberQ (x: any): boolean {
+  checkContract(arguments, query1C('number?'))
+  return typeof x === 'number'
+}
+registerFn('number?', numberQ, Prelude)
+
+function realQ (x: any): boolean {
+  checkContract(arguments, query1C('real?'))
+  return typeof x === 'number' && !Number.isInteger(x)
+}
+registerFn('real?', realQ, Prelude)
+
+function integerQ (x: any): boolean {
+  checkContract(arguments, query1C('integer?'))
+  return typeof x === 'number' && Number.isInteger(x)
+}
+registerFn('integer?', integerQ, Prelude)
 
 // N.B., we don't implement the following functions:
 //   (complex? obj)
@@ -40,24 +61,113 @@ const integerQ = (x: any): boolean => typeof x === 'number' && Number.isInteger(
 // Because we only implement the subset of numbers corresponding to the
 // Javascript numeric stack: number -> real -> integer
 
-const nanQ = (x: any): boolean => Number.isNaN(x)
-const lt = (x: number, y: number): boolean => x < y
-const leq = (x: number, y: number): boolean => x <= y
-const gt = (x: number, y: number): boolean => x > y
-const geq = (x: number, y: number): boolean => x >= y
-const eq = (x: number, y: number): boolean => x === y
-const zeroQ = (x: number): boolean => x === 0
-const positiveQ = (x: number): boolean => x > 0
-const negativeQ = (x: number): boolean => x < 0
-const oddQ = (x: number): boolean => (x & 1) === 1
-const evenQ = (x: number): boolean => (x & 1) !== 1
-const max = (...xs: number[]): number => Math.max(...xs)
-const min = (...xs: number[]): number => Math.min(...xs)
-const plus = (...xs: number[]): number => xs.reduce((a, b) => a + b, 0)
-const minus = (...xs: number[]): number => xs.length === 1 ? -xs[0] : xs.reduce((a, b) => a - b)
-const times = (...xs: number[]): number => xs.reduce((a, b) => a * b, 1)
-const div = (...xs: number[]): number => xs.length === 1 ? 1 / xs[0] : xs.reduce((a, b) => a / b)
-const abs = (x: number): number => Math.abs(x)
+function nanQ (x: any): boolean {
+  checkContract(arguments, query1C('nan?'))
+  return Number.isNaN(x)
+}
+registerFn('nan?', nanQ, Prelude)
+
+function lt (x: number, y: number): boolean {
+  checkContract(arguments, contract('<', [C.number, C.number]))
+  return x < y
+}
+registerFn('<', lt, Prelude)
+
+function leq (x: number, y: number): boolean {
+  checkContract(arguments, contract('<=', [C.number, C.number]))
+  return x <= y
+}
+registerFn('<=', leq, Prelude)
+
+function gt (x: number, y: number): boolean {
+  checkContract(arguments, contract('>', [C.number, C.number]))
+  return x > y
+}
+registerFn('>', gt, Prelude)
+
+function geq (x: number, y: number): boolean {
+  checkContract(arguments, contract('>=', [C.number, C.number]))
+  return x >= y
+}
+registerFn('>=', geq, Prelude)
+
+function eq (x: number, y: number): boolean {
+  checkContract(arguments, contract('=', [C.number, C.number]))
+  return x === y
+}
+registerFn('=', eq, Prelude)
+
+function zeroQ (x: number): boolean {
+  checkContract(arguments, contract('zero?', [C.number]))
+  return x === 0
+}
+registerFn('zero?', zeroQ, Prelude)
+
+function positiveQ (x: number): boolean {
+  checkContract(arguments, contract('positive?', [C.number]))
+  return x > 0
+}
+registerFn('positive?', positiveQ, Prelude)
+
+function negativeQ (x: number): boolean {
+  checkContract(arguments, contract('negative?', [C.number]))
+  return x < 0
+}
+registerFn('negative?', negativeQ, Prelude)
+
+function oddQ (x: number): boolean {
+  checkContract(arguments, contract('odd?', [C.integer]))
+  return (x & 1) === 1
+}
+registerFn('odd?', oddQ, Prelude)
+
+function evenQ (x: number): boolean {
+  checkContract(arguments, contract('even?', [C.integer]))
+  return (x & 1) !== 1
+}
+registerFn('even?', evenQ, Prelude)
+
+function max (...xs: number[]): number {
+  checkContract(arguments, contract('max', [], C.number))
+  return Math.max(...xs)
+}
+registerFn('max', max, Prelude)
+
+function min (...xs: number[]): number {
+  checkContract(arguments, contract('min', [], C.number))
+  return Math.min(...xs)
+}
+registerFn('min', min, Prelude)
+
+function plus (...xs: number[]): number {
+  checkContract(arguments, contract('+', [], C.number))
+  return xs.reduce((a, b) => a + b, 0)
+}
+registerFn('+', plus, Prelude)
+
+function minus (...xs: number[]): number {
+  checkContract(arguments, contract('-', [C.number], C.number))
+  return xs.length === 1 ? -xs[0] : xs.reduce((a, b) => a - b)
+}
+registerFn('-', minus, Prelude)
+
+function times (...xs: number[]): number {
+  checkContract(arguments, contract('*', [], C.number))
+  return xs.reduce((a, b) => a * b, 1)
+}
+registerFn('*', times, Prelude)
+
+function div (...xs: number[]): number {
+  checkContract(arguments, contract('/', [C.number], C.number))
+  return xs.length === 1 ? 1 / xs[0] : xs.reduce((a, b) => a / b)
+}
+registerFn('/', div, Prelude)
+
+function abs (x: number): number {
+  checkContract(arguments, contract('abs', [C.number]))
+  return Math.abs(x)
+}
+registerFn('abs', abs, Prelude)
 
 // N.B., not implementing the composite division functions:
 //   (floor / n1 n2)
@@ -68,9 +178,23 @@ const abs = (x: number): number => Math.abs(x)
 //   (truncate-remainder n1 n2)
 // To avoid clutter in the documentation.
 
-const quotient = (x: number, y: number): number => Math.trunc(x / y)
-const remainder = (x: number, y: number): number => x % y
-const modulo = (x: number, y: number): number => ((x % y) + y) % y
+function quotient (x: number, y: number): number {
+  checkContract(arguments, contract('quotient', [C.integer, C.integer]))
+  return Math.trunc(x / y)
+}
+registerFn('quotient', quotient, Prelude)
+
+function remainder (x: number, y: number): number {
+  checkContract(arguments, contract('remainder', [C.integer, C.integer]))
+  return x % y
+}
+registerFn('remainder', remainder, Prelude)
+
+function modulo (x: number, y: number): number {
+  checkContract(arguments, contract('modulo', [C.integer, C.integer]))
+  return ((x % y) + y) % y
+}
+registerFn('modulo', modulo, Prelude)
 
 // TODO: implement:
 //   (gcd n1 ...)
@@ -81,23 +205,55 @@ const modulo = (x: number, y: number): number => ((x % y) + y) % y
 //   (denominator q)
 // Since we don't implement rationals.
 
-const floor = (x: number): number => Math.floor(x)
-const ceiling = (x: number): number => Math.ceil(x)
-const truncate = (x: number): number => Math.trunc(x)
-const round = (x: number): number => Math.round(x)
+function floor (x: number): number {
+  checkContract(arguments, contract('floor', [C.number]))
+  return Math.floor(x)
+}
+registerFn('floor', floor, Prelude)
+
+function ceiling (x: number): number {
+  checkContract(arguments, contract('ceiling', [C.number]))
+  return Math.ceil(x)
+}
+registerFn('ceiling', ceiling, Prelude)
+
+function truncate (x: number): number {
+  checkContract(arguments, contract('truncate', [C.number]))
+  return Math.trunc(x)
+}
+registerFn('truncate', truncate, Prelude)
+
+function round (x: number): number {
+  checkContract(arguments, contract('round', [C.number]))
+  return Math.round(x)
+}
+registerFn('round', round, Prelude)
 
 // N.B., we don't implement:
 //   (rationalize x y)
 // Because we don't implement rationals.
 
-const square = (x: number): number => Math.pow(x, 2)
-const sqrt = (x: number): number => Math.sqrt(x)
+function square (x: number): number {
+  checkContract(arguments, contract('square', [C.number]))
+  return x * x
+}
+registerFn('square', square, Prelude)
+
+function sqrt (x: number): number {
+  checkContract(arguments, contract('sqrt', [C.number]))
+  return Math.sqrt(x)
+}
+registerFn('sqrt', sqrt, Prelude)
 
 // N.B., we don't implement:
 //   (exact-integer-sqrt k)
 // To avoid polluting the documentation.
 
-const expt = (x: number, y: number): number => Math.pow(x, y)
+function expt (x: number, y: number): number {
+  checkContract(arguments, contract('expt', [C.number, C.number]))
+  return Math.pow(x, y)
+}
+registerFn('expt', expt, Prelude)
 
 // N.B., we don't implement:
 //   (make-rectangular x1 x2)   ...probably not!
@@ -108,13 +264,18 @@ const expt = (x: number, y: number): number => Math.pow(x, y)
 //   (angle z)                  ...probably not!
 // Because we don't implement complex numbers.
 
-const numberToString = (x: number): string => x.toString()
+function numberToString (x: number): string {
+  checkContract(arguments, contract('number->string', [C.number]))
+  return x.toString()
+}
+registerFn('number->string', numberToString, Prelude)
 
 // TODO: implement:
 //   (string->number s)
 //   (string->number s radix)
 
-const stringToNumber = (s: string): number => {
+function stringToNumber (s: string): number {
+  checkContract(arguments, contract('string->number', [C.string]))
   if (/^[+-]?\d+$/.test(s)) {
     return parseInt(s)
   } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
@@ -123,128 +284,176 @@ const stringToNumber = (s: string): number => {
     throw new Error(`Runtime error: string->number: invalid string: ${s}`)
   }
 }
+registerFn('string->number', stringToNumber, Prelude)
 
 // Additional functions from racket/base
 
-const exp = (x: number): number => Math.exp(x)
-const log = (x: number): number => Math.log(x)
-const sin = (x: number): number => Math.sin(x)
-const cos = (x: number): number => Math.cos(x)
-const tan = (x: number): number => Math.tan(x)
-const asin = (x: number): number => Math.asin(x)
-const acos = (x: number): number => Math.acos(x)
-const atan = (x: number): number => Math.atan(x)
-const equalsEps = (eps: number): Value => mkFn ((x: number, y: number): boolean => Math.abs(x - y) <= eps, 2)
+function exp (x: number): number {
+  checkContract(arguments, contract('exp', [C.number]))
+  return Math.exp(x)
+}
+registerFn('exp', exp, Prelude)
 
-const numericPrimitives: [string, Value][] = [
-  ['number?', mkFn(numberQ, 1)],
-  ['real?', mkFn(realQ, 1)],
-  ['integer?', mkFn(integerQ, 1)],
-  ['nan?', mkFn(nanQ, 1)],
-  ['<', mkFn(lt, 2)],
-  ['<=', mkFn(leq, 2)],
-  ['>', mkFn(gt, 2)],
-  ['>=', mkFn(geq, 2)],
-  ['=', mkFn(eq, 2)],
-  ['zero?', mkFn(zeroQ, 1)],
-  ['positive?', mkFn(positiveQ, 1)],
-  ['negative?', mkFn(negativeQ, 1)],
-  ['odd?', mkFn(oddQ, 1)],
-  ['even?', mkFn(evenQ, 1)],
-  ['max', mkFn(max, 1, true)],
-  ['min', mkFn(min, 1, true)],
-  ['+', mkFn(plus, 1, true)],
-  ['-', mkFn(minus, 1, true)],
-  ['*', mkFn(times, 1, true)],
-  ['/', mkFn(div, 1, true)],
-  ['abs', mkFn(abs, 1)],
-  ['quotient', mkFn(quotient, 2)],
-  ['remainder', mkFn(remainder, 2)],
-  ['modulo', mkFn(modulo, 2)],
-  ['floor', mkFn(floor, 1)],
-  ['ceiling', mkFn(ceiling, 1)],
-  ['truncate', mkFn(truncate, 1)],
-  ['round', mkFn(round, 1)],
-  ['square', mkFn(square, 1)],
-  ['sqrt', mkFn(sqrt, 1)],
-  ['expt', mkFn(expt, 2)],
-  ['number->string', mkFn(numberToString, 1)],
-  ['string->number', mkFn(stringToNumber, 1)],
-  ['exp', mkFn(exp, 1)],
-  ['log', mkFn(log, 1)],
-  ['sin', mkFn(sin, 1)],
-  ['cos', mkFn(cos, 1)],
-  ['tan', mkFn(tan, 1)],
-  ['asin', mkFn(asin, 1)],
-  ['acos', mkFn(acos, 1)],
-  ['atan', mkFn(atan, 1)],
-  ['=-eps', mkFn(equalsEps, 1)]
-]
+function log (x: number): number {
+  checkContract(arguments, contract('log', [C.number]))
+  return Math.log(x)
+}
+registerFn('log', log, Prelude)
+
+function sin (x: number): number {
+  checkContract(arguments, contract('sin', [C.number]))
+  return Math.sin(x)
+}
+registerFn('sin', sin, Prelude)
+
+function cos (x: number): number {
+  checkContract(arguments, contract('cos', [C.number]))
+  return Math.cos(x)
+}
+registerFn('cos', cos, Prelude)
+
+function tan (x: number): number {
+  checkContract(arguments, contract('tan', [C.number]))
+  return Math.tan(x)
+}
+registerFn('tan', tan, Prelude)
+
+function asin (x: number): number {
+  checkContract(arguments, contract('asin', [C.number]))
+  return Math.asin(x)
+}
+registerFn('asin', asin, Prelude)
+
+function acos (x: number): number {
+  checkContract(arguments, contract('acos', [C.number]))
+  return Math.acos(x)
+}
+registerFn('acos', acos, Prelude)
+
+function atan (x: number): number {
+  checkContract(arguments, contract('atan', [C.number]))
+  return Math.atan(x)
+}
+registerFn('atan', atan, Prelude)
+
+function equalsEps (eps: number): Value {
+  checkContract(arguments, contract('=-eps', [C.number]))
+  const name = `=-(${eps})`
+  const ret = function (x: number, y: number): boolean {
+    checkContract(arguments, contract(`=-(${eps})`, [C.number, C.number]))
+    return Math.abs(x - y) <= eps
+  }
+  V.nameFn(name, ret)
+  return ret
+}
+registerFn('=-eps', equalsEps, Prelude)
 
 // Booleans (6.3)
 
-const not = (x: boolean): boolean => !x
-const booleanQ = (x: any): boolean => typeof x === 'boolean'
+function not (x: boolean): boolean {
+  checkContract(arguments, contract('not', [C.boolean]))
+  return !x
+}
+registerFn('not', not, Prelude)
+
+function booleanQ (x: any): boolean {
+  checkContract(arguments, contract('boolean?', [C.any]))
+  return typeof x === 'boolean'
+}
+registerFn('boolean?', booleanQ, Prelude)
 
 // From racket/base
 
-const nand = (...xs: boolean[]): boolean => !xs.reduce((a, b) => a && b, true)
-const nor = (...xs: boolean[]): boolean => !xs.reduce((a, b) => a || b, false)
-const implies = (x: boolean, y: boolean): boolean => !x || y
-const xor = (x: boolean, y: boolean): boolean => (x && !y) || (!x && y)
+function nand (...xs: boolean[]): boolean {
+  checkContract(arguments, contract('nand', [], C.boolean))
+  return !xs.reduce((a, b) => a && b, true)
+}
+registerFn('nand', nand, Prelude)
 
-const booleanPrimitives: [string, Value][] = [
-  ['not', mkFn(not, 1)],
-  ['boolean?', mkFn(booleanQ, 1)],
-  ['nand', mkFn(nand, 1, true)],
-  ['nor', mkFn(nor, 1, true)],
-  ['implies', mkFn(implies, 2)],
-  ['xor', mkFn(xor, 2)]
-]
+function nor (...xs: boolean[]): boolean {
+  checkContract(arguments, contract('nor', [], C.boolean))
+  return !xs.reduce((a, b) => a || b, false)
+}
+registerFn('nor', nor, Prelude)
+
+function implies (x: boolean, y: boolean): boolean {
+  checkContract(arguments, contract('implies', [C.boolean, C.boolean]))
+  return !x || y
+}
+registerFn('implies', implies, Prelude)
+
+function xor (x: boolean, y: boolean): boolean {
+  checkContract(arguments, contract('xor', [C.boolean, C.boolean]))
+  return (x && !y) || (!x && y)
+}
+registerFn('xor', xor, Prelude)
 
 // Pairs and Lists (6.4)
 
-const pairQ = (x: any): boolean => V.isPair(x)
-const cons = (x: any, y: any): Value => V.mkPair(x, y)
-const pair = cons
-const car = (x: Value): Value => (x as any).fst
-const cdr = (x: Value): Value => (x as any).snd
+function pairQ (x: any): boolean {
+  checkContract(arguments, contract('pair?', [C.any]))
+  return V.isPair(x)
+}
+registerFn('pair?', pairQ, Prelude)
+
+function cons (x: any, y: any): Value {
+  checkContract(arguments, contract('cons', [C.any, C.any]))
+  return V.mkPair(x, y)
+}
+registerFn('cons', cons, Prelude)
+
+function pair (x: any, y: any): Value {
+  checkContract(arguments, contract('pair', [C.any, C.any]))
+  return V.mkPair(x, y)
+}
+registerFn('pair', pair, Prelude)
+
+function car (x: Value): Value {
+  checkContract(arguments, contract('car', [C.pair]))
+  return (x as any).fst
+}
+registerFn('car', car, Prelude)
 
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
 
 // TODO: implement caar, cadr, cdar, cddr, caaar, ..., cdddr in some elegant way
 
-const nullQ = (x: any): boolean => x === null
-const listQ = (x: any): boolean => x === null || (V.isPair(x) && (x as any).isList) 
+function nullQ (x: any): boolean {
+  checkContract(arguments, contract('null?', [C.any]))
+  return x === null
+}
+registerFn('null?', nullQ, Prelude)
 
-const pairListPrimitives: [string, Value][] = [
-  ['pair?', mkFn(pairQ, 1)],
-  ['cons', mkFn(cons, 2)],
-  ['pair', mkFn(pair, 2)],
-  ['car', mkFn(car, 1)],
-  ['cdr', mkFn(cdr, 1)],
-  ['null?', mkFn(nullQ, 1)],
-  ['list?', mkFn(listQ, 1)]
-]
+function listQ (x: any): boolean {
+  checkContract(arguments, contract('list?', [C.any]))
+  return x === null || (V.isPair(x) && (x as any).isList)
+}
+registerFn('list?', listQ, Prelude)
 
-const list = (...xs: Value[]): V.List => {
+function list (...xs: Value[]): V.List {
+  checkContract(arguments, contract('list', [], C.any))
   let ret: V.List = null
   for (let i = xs.length - 1; i >= 0; i--) {
     ret = V.mkPair(xs[i], ret)
   }
   return ret
 }
+registerFn('list', list, Prelude)
 
-const makeList: (n: number, fill: Value) => V.List = (n, fill) => {
+
+function makeList (n: number, fill: Value): V.List {
+  checkContract(arguments, contract('make-list', [C.integer, C.any]))
   let ret = null
   for (let i = 0; i < n; i++) {
     ret = V.mkPair(fill, ret)
   }
   return ret
 }
+registerFn('make-list', makeList, Prelude)
 
-const length = (l: V.List): number => {
+function length (l: V.List): number {
+  checkContract(arguments, contract('length', [C.list]))
   let len = 0
   while (l !== null) {
     len += 1
@@ -252,6 +461,7 @@ const length = (l: V.List): number => {
   }
   return len
 }
+registerFn('length', length, Prelude)
 
 function appendOne_ (l1: V.List, l2: V.List): V.List {
   if (l1 === null) {
@@ -262,14 +472,17 @@ function appendOne_ (l1: V.List, l2: V.List): V.List {
 }
 
 function append (l: V.List, ...ls: V.List[]): V.List {
+  checkContract(arguments, contract('append', [C.list], C.list))
   let ret = l
   for (let i = 0; i < ls.length; i++) {
     ret = appendOne_(ret, ls[i])
   }
   return ret 
 }
+registerFn('append', append, Prelude)
 
 function reverse (l: V.List): V.List {
+  checkContract(arguments, contract('reverse', [C.list]))
   const queue = []
   while (l !== null) {
     queue.push(l)
@@ -283,18 +496,22 @@ function reverse (l: V.List): V.List {
   }
   return ret
 }
+registerFn('reverse', reverse, Prelude)
 
 function listTail (l: V.List, k: number): V.List {
   throw new Error ('Prelude.tail unimplemented')
 }
+registerFn('list-tail', listTail, Prelude)
 
 function listTake (l: V.List, k: number): V.List {
   throw new Error ('Prelude.take unimplemented')
 }
+registerFn('list-take', listTake, Prelude)
 
 function listRef (l: V.List, n: number): Value {
   throw new Error ('Prelude.ref unimplemented')
 }
+registerFn('list-ref', listRef, Prelude)
 
 // N.B., list-set! is unimplemented since it is effectful.
 
@@ -315,34 +532,22 @@ function listRef (l: V.List, n: number): Value {
 function indexOf (l: V.List, v: Value): number {
   throw new Error ('Prelude.indexOf unimplemented') 
 }
+registerFn('index-of', indexOf, Prelude)
 
 function assocKey (v: Value, l: V.List): boolean {
   throw new Error ('Prelude.assocKey unimplemented')
 }
+registerFn('assoc-key?', assocKey, Prelude)
 
 function assocRef (v: Value, l: V.List): boolean {
   throw new Error ('Prelude.assocKey unimplemented')
 }
+registerFn('assoc-ref', assocRef, Prelude)
 
 function assocSet (k: Value, v: Value, l: V.List): boolean {
   throw new Error ('Prelude.assocKey unimplemented')
 }
-
-const listPrimitives: [string, Value][] = [
-  ['list', mkFn(list, 0, true)],
-  ['make-list', mkFn(makeList, 2)],
-  ['length', mkFn(length, 1)],
-  ['append', mkFn(append, 1, true)],
-  ['reverse', mkFn(reverse, 1)],
-  ['list-tail', mkFn(listTail, 2)],
-  ['list-drop', mkFn(listTail, 2)],
-  ['list-take', mkFn(listTake, 2)],
-  ['list-ref', mkFn(listRef, 2)],
-  ['index-of', mkFn(indexOf, 2)],
-  ['assoc-key?', mkFn(assocKey, 2)],
-  ['assoc-ref', mkFn(assocRef, 2)],
-  ['assoc-set', mkFn(assocSet, 3)]
-]
+registerFn('assoc-set', assocSet, Prelude)
 
 // Symbols (6.5)
 
@@ -356,9 +561,11 @@ const listPrimitives: [string, Value][] = [
 
 // Characters (6.6)
 
-// TODO: implement:
-
-const charQ = (x: any): boolean => V.isChar(x)
+function charQ (x: any): boolean {
+  checkContract(arguments, contract('char?', [C.any]))
+  return V.isChar(x)
+}
+registerFn('char?', charQ, Prelude)
 
 function pairwiseSatisfies<T> (f: (a: T, b: T) => boolean, xs: T[]): boolean {
   if (xs.length <= 1) {
@@ -373,123 +580,187 @@ function pairwiseSatisfies<T> (f: (a: T, b: T) => boolean, xs: T[]): boolean {
   }
 }
 
-function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): Function {
-  return (...args: Value[]) => (pairwiseSatisfies((a, b) => f((a as V.Char).value, (b as V.Char).value), args))
+function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): void {
+  const fn = function (...args: Value[]) {
+    checkContract(arguments, contract(name, [], C.char))
+    pairwiseSatisfies((a, b) => f((a as V.Char).value, (b as V.Char).value), args)
+  }
+  V.nameFn(name, fn)
+  registerFn(name, fn, Prelude)
 }
 
-const charEqQ: Function = mkCharCompareFn('char=?', (a, b) => a === b)
-const charLtQ: Function = mkCharCompareFn('char<?', (a, b) => a.codePointAt(0)! < b.codePointAt(0)!)
-const charGtQ: Function = mkCharCompareFn('char>?', (a, b) => a.codePointAt(0)! > b.codePointAt(0)!)
-const charLeqQ: Function = mkCharCompareFn('char<=?', (a, b) => a.codePointAt(0)! <= b.codePointAt(0)!)
-const charGeqQ: Function = mkCharCompareFn('char>=?', (a, b) => a.codePointAt(0)! >= b.codePointAt(0)!)
-const charEqCiQ: Function = mkCharCompareFn('char-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
-const charLtCiQ: Function = mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase().codePointAt(0)! < b.toLowerCase().codePointAt(0)!)
-const charGtCiQ: Function = mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase().codePointAt(0)! > b.toLowerCase().codePointAt(0)!)
-const charLeqCiQ: Function = mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase().codePointAt(0)! <= b.toLowerCase().codePointAt(0)!)
-const charGeqCiQ: Function = mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase().codePointAt(0)! >= b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char=?', (a, b) => a === b)
+mkCharCompareFn('char<?', (a, b) => a.codePointAt(0)! < b.codePointAt(0)!)
+mkCharCompareFn('char>?', (a, b) => a.codePointAt(0)! > b.codePointAt(0)!)
+mkCharCompareFn('char<=?', (a, b) => a.codePointAt(0)! <= b.codePointAt(0)!)
+mkCharCompareFn('char>=?', (a, b) => a.codePointAt(0)! >= b.codePointAt(0)!)
+mkCharCompareFn('char-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
+mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase().codePointAt(0)! < b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase().codePointAt(0)! > b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase().codePointAt(0)! <= b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase().codePointAt(0)! >= b.toLowerCase().codePointAt(0)!)
 
-function mkCharPredicatePrim (name: string, f: (a: string) => boolean): Function {
-  return (x: V.Char) => f(x.value)
+function mkCharPredicatePrim (name: string, f: (a: string) => boolean): void {
+  const fn = function (x: V.Char) {
+    checkContract(arguments, contract(name, [], C.char))
+    return f(x.value)
+  }
+  V.nameFn(name, fn)
+  registerFn(name, fn, Prelude)
 }
 
-const charAlphabeticQ: Function =
-  mkCharPredicatePrim('char-alphabetic?', (a) => /\p{L}/gu.test(a))
-const charNumericQ: Function =
-  mkCharPredicatePrim('char-numeric?', (a) => /\p{N}/gu.test(a))
-const charWhitespaceQ: Function =
-  mkCharPredicatePrim('char-whitespace?', (a) => /\p{Z}/gu.test(a))
-const charUpperCaseQ: Function =
-  mkCharPredicatePrim('char-upper-case?', (a) => /\p{Lu}/gu.test(a))
-const charLowerCaseQ: Function =
-  mkCharPredicatePrim('char-lower-case?', (a) => /\p{Ll}/gu.test(a))
+mkCharPredicatePrim('char-alphabetic?', (a) => /\p{L}/gu.test(a))
+mkCharPredicatePrim('char-numeric?', (a) => /\p{N}/gu.test(a))
+mkCharPredicatePrim('char-whitespace?', (a) => /\p{Z}/gu.test(a))
+mkCharPredicatePrim('char-upper-case?', (a) => /\p{Lu}/gu.test(a))
+mkCharPredicatePrim('char-lower-case?', (a) => /\p{Ll}/gu.test(a))
 
 function digitalValue (c: V.Char): number {
+  checkContract(arguments, contract('digit-value', [], C.char))
   const n = parseInt(c.value, 10)
   if (isNaN(n)) {
-    throw new Error('digitalValue: not a decimal digit')
+    throw new ScamperError('Runtime', `digit-value: ${c.value} is not a decimal digit`)
   } else {
     return n
   }
 }
+registerFn('digit-value', digitalValue, Prelude)
 
-const charToInteger = (c: V.Char): number => c.value.codePointAt(0)!
-const integerToChar = (n: number): V.Char => V.mkChar(String.fromCodePoint(n))
-const charUpcase = (c: V.Char): V.Char => V.mkChar(c.value.toUpperCase())
-const charDowncase = (c: V.Char): V.Char => V.mkChar(c.value.toLowerCase())
+function charToInteger (c: V.Char): number {
+  checkContract(arguments, contract('char->integer', [], C.char))
+  return c.value.codePointAt(0)!
+}
+registerFn('char->integer', charToInteger, Prelude)
+
+function integerToChar (n: number): V.Char {
+  checkContract(arguments, contract('integer->char', [C.integer]))
+  return V.mkChar(String.fromCodePoint(n))
+}
+registerFn('integer->char', integerToChar, Prelude)
+
+function charUpcase (c: V.Char): V.Char {
+  checkContract(arguments, contract('char-upcase?', [], C.char))
+  return V.mkChar(c.value.toUpperCase())
+}
+registerFn('char-upcase', charUpcase, Prelude)
+
+function charDowncase (c: V.Char): V.Char {
+  checkContract(arguments, contract('char-downcase?', [], C.char))
+  return V.mkChar(c.value.toLowerCase())
+}
+registerFn('char-downcase', charDowncase, Prelude)
 
 // N.B., "folding" in Unicode returns a character to a "canonical" form, suitable for
 // comparison in a "case-insensitive" manner. toLowerCase is Unicode aware, so maybe
 // this implementation works. But... yea, maybe not!
 //
 // See: https://unicode.org/reports/tr18/#General_Category_Property
-const charFoldcase = (c: V.Char): V.Char => V.mkChar(c.value.toLowerCase())
+function charFoldcase (c: V.Char): V.Char {
+  checkContract(arguments, contract('char-foldcase?', [], C.char))
+  return V.mkChar(c.value.toLowerCase())
+}
+registerFn('char-foldcase', charFoldcase, Prelude)
 
 // Strings (6.7)
 
-const stringQ = (x: any): boolean => typeof x === 'string'
+function stringQ (x: any): boolean {
+  checkContract(arguments, contract('string?', [C.any]))
+  return typeof x === 'string'
+}
+registerFn('string?', stringQ, Prelude)
 
 // N.B., we don't implement the (make-string k) variant because our strings are
 // immutable, so having an "empty" string of size k does not make sense.
-const makeString = (k: number, c: V.Char): string => c.value.repeat(k)
+function makeString (k: number, c: V.Char): string {
+  checkContract(arguments, contract('make-string', [C.integer, C.char]))
+  return c.value.repeat(k)
+}
+registerFn('make-string', makeString, Prelude)
 
-const stringPrim = (...args: V.Char[]): string => args.map((e) => e.value).join('')
-const stringLength = (s: string): number => s.length
-const stringRef = (s: string, i: number): V.Char => V.mkChar(s[i])
+function string (c: V.Char, ...cs: V.Char[]): string {
+  checkContract(arguments, contract('string', [C.char], C.string))
+  return [c, ...cs].map((e) => e.value).join('')
+}
+registerFn('string', string, Prelude)
+
+function stringLength (s: string): number {
+  checkContract(arguments, contract('string-length', [C.string]))
+  return s.length
+}
+registerFn('string-length', stringLength, Prelude)
+
+function stringRef (s: string, i: number): V.Char {
+  checkContract(arguments, contract('string-ref', [C.string, C.integer]))
+  return V.mkChar(s[i])
+}
+registerFn('string-ref', stringRef, Prelude)
 
 // N.B., string-set! is unimplemented since it is effectful.
 
-function mkStringCompareFn (name: string, f: (a: string, b: string) => boolean): Function {
-  return (...args: string[]) => pairwiseSatisfies((a, b) => f(a, b), args)
+function mkStringCompareFn (name: string, f: (a: string, b: string) => boolean): void {
+  const fn = function (...args: string[]) {
+    checkContract(arguments, contract(name, [], C.string))
+    return pairwiseSatisfies((a, b) => f(a, b), args)
+  }
+  V.nameFn(name, fn)
+  registerFn(name, fn, Prelude)
 }
 
-const stringEq: Function = mkStringCompareFn('string=?', (a, b) => a === b)
-const stringLt: Function = mkStringCompareFn('string<?', (a, b) => a < b)
-const stringGt: Function = mkStringCompareFn('string>?', (a, b) => a > b)
-const stringLeq: Function = mkStringCompareFn('string<=?', (a, b) => a <= b)
-const stringGeq: Function = mkStringCompareFn('string>=?', (a, b) => a >= b)
-const stringEqCi: Function = mkStringCompareFn('string-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
-const stringLtCi: Function = mkStringCompareFn('string-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
-const stringGtCi: Function = mkStringCompareFn('string-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
-const stringLeqCi: Function = mkStringCompareFn('string-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
-const stringGeqCi: Function = mkStringCompareFn('string-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
+mkStringCompareFn('string=?', (a, b) => a === b)
+mkStringCompareFn('string<?', (a, b) => a < b)
+mkStringCompareFn('string>?', (a, b) => a > b)
+mkStringCompareFn('string<=?', (a, b) => a <= b)
+mkStringCompareFn('string>=?', (a, b) => a >= b)
+mkStringCompareFn('string-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
+mkStringCompareFn('string-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
+mkStringCompareFn('string-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
+mkStringCompareFn('string-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
+mkStringCompareFn('string-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
 
-const stringUpcase = (s: string): string => s.toUpperCase()
-const stringDowncase = (s: string): string => s.toLowerCase()
-const stringFoldcase = (s: string): string => s.toLowerCase()
-const substring = (s: string, start: number, end: number): string => s.substring(start, end)
-const stringAppend = (...args: string[]): string => args.join('')
-const stringToList = (s: string): V.List => {
-  throw new Error ('string->list unimplemented')
+function stringUpcase (s: string): string {
+  checkContract(arguments, contract('string-upcase', [C.string])) 
+  return s.toUpperCase()
 }
+registerFn('string-upcase', stringUpcase, Prelude)
 
-/*
-const stringListPrim: L.Prim = (_env, args, app) => {
-  if (args.length !== 1 && args.length !== 3) {
-    return Promise.resolve(runtimeError(msg('error-arity', 'string->list', '1 or 3', args.length), app))
-  }
-  if (!L.valueIsString(args[0])) {
-    return Promise.resolve(runtimeError(msg('error-type-expected-fun', 1, 'string->list', 'string', L.nlevalue(args[0])), app))
-  }
-  const str = args[0] as string
-  let start, end
-  if (args.length === 1) {
-    start = 0
-    end = str.length
-  } else {
-    if (!L.valueIsInteger(args[1])) {
-      return Promise.resolve(runtimeError(msg('error-type-expected-fun', 2, 'string->list', 'integer', L.nlevalue(args[1])), app))
-    }
-    if (!L.valueIsInteger(args[2])) {
-      return Promise.resolve(runtimeError(msg('error-type-expected-fun', 3, 'string->list', 'integer', L.nlevalue(args[2])), app))
-    }
-    start = args[1] as number
-    end = args[2] as number
-  }
-  return Promise.resolve(ok(L.valueArrayToList(str.substring(start, end).split('').map(L.vchar))))
+function stringDowncase (s: string): string {
+  checkContract(arguments, contract('string-downcase', [C.string])) 
+  return s.toLowerCase()
 }
-*/
+registerFn('string-downcase', stringDowncase, Prelude)
+
+function stringFoldcase (s: string): string {
+  checkContract(arguments, contract('string-foldcase', [C.string])) 
+  return s.toLowerCase()
+}
+registerFn('string-foldcase', stringFoldcase, Prelude)
+
+function substring (s: string, start: number, end: number): string {
+  checkContract(arguments, contract('substring', [C.string, C.integer, C.integer])) 
+  return s.substring(start, end)
+}
+registerFn('substring', substring, Prelude)
+
+function stringAppend (...args: string[]): string {
+  checkContract(arguments, contract('string-append', [], C.string))
+  return args.join('')
+}
+registerFn('string-append', stringAppend, Prelude)
+
+// TODO: stringToList has a 3-argument version, too, that specifies
+// a substring of s to turn into a list.
+function stringToList (s: string): V.List {
+  checkContract(arguments, contract('string->list', [C.string]))
+  let ret = null
+  for (let i = s.length - 1; i >= 0; i--) {
+    ret = V.mkPair(V.mkChar(s[i]), ret)
+  }
+  return ret
+}
+registerFn('string->list', stringToList, Prelude)
 
 function listToString (l: V.List): string {
+  checkContract(arguments, contract('list->string', [C.list]))
   let ret = ''
   while (l !== null) {
     ret += (l.fst as V.Char).value
@@ -497,22 +768,27 @@ function listToString (l: V.List): string {
   } 
   return ret
 }
+registerFn('list->string', listToString, Prelude)
 
 function stringToVector (s: string): V.Char[] {
+  checkContract(arguments, contract('string->vector', [C.string]))
   const ret = []
   for (let i = 0; i < s.length; i++) {
     ret.push(V.mkChar(s[i]))
   }
   return ret
 }
+registerFn('string->vector', stringToVector, Prelude)
 
 function vectorToString (v: V.Char[]): string {
+  checkContract(arguments, contract('vector->string', [C.vector]))
   let ret = ''
   for (let i = 0; i < v.length; i++) {
     ret += v[i].value
   }
   return ret
 }
+registerFn('vector->string', vectorToString, Prelude)
 
 // N.B., the following functions:
 //
@@ -525,8 +801,14 @@ function vectorToString (v: V.Char[]): string {
 
 // Additional functions from racket/string.
 
-const stringContains = (s: string, sub: string): boolean => s.includes(sub)
-const stringSplit = (s: string, sep: string): V.List => {
+function stringContains (s: string, sub: string): boolean {
+  checkContract(arguments, contract('string-contains', [C.string, C.string]))  
+  return s.includes(sub)
+}
+registerFn('string-contains', stringContains, Prelude)
+
+function stringSplit (s: string, sep: string): V.List {
+  checkContract(arguments, contract('string-split', [C.string, C.string]))
   const splits = s.split(sep)
   let ret = null
   for (let i = splits.length - 1; i >= 0; i--) {
@@ -534,111 +816,90 @@ const stringSplit = (s: string, sep: string): V.List => {
   }
   return ret
 }
-const stringSplitVector = (s: string, sep: string): string[] => s.split(sep)
+registerFn('string-split', stringSplit, Prelude)
 
-// const fileStringPrim: L.Prim = (_env, args, app) =>
-//   Utils.checkArgsResult('file->string', ['string?'], undefined, args, app).asyncAndThen(async _ =>
-//     (await fs.read(args[0] as string)).asyncAndThen(s =>
-//       Promise.resolve(ok(s))))
 
-// const fileLinesPrim: L.Prim = (env, args, app) =>
-//   Utils.checkArgsResult('file->lines', ['string?'], undefined, args, app).asyncAndThen(_ =>
-//     evaluateExp(env, L.nlecall(L.nlevar('string-split'), [
-//       L.nlecall(L.nlevar('file->string'), [L.nlevalue(args[0])]),
-//       L.nlestr('\n')
-//     ])))
+function stringSplitVector (s: string, sep: string): string[] {
+  checkContract(arguments, contract('string-split-vector', [C.string, C.string])) 
+  return s.split(sep)
+}
+registerFn('string-split-vector', stringSplitVector, Prelude)
 
 // TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
 
-type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: V.Closure | V.JsFunction }
-const withFile = (callback: V.Closure | V.JsFunction): ReactiveFile => ({
-  _scamperTag: 'struct',
-  kind: '_reactive-file',
-  callback
-})
-
-const stringPrimitives: [string, Value][] = [
-  ['char?', mkFn(charQ, 1)],
-  ['char=?', mkFn(charEqQ, 1, true)],
-  ['char<?', mkFn(charLtQ, 1, true)],
-  ['char>?', mkFn(charGtQ, 1, true)],
-  ['char<=?', mkFn(charLeqQ, 1, true)],
-  ['char>=?', mkFn(charGeqQ, 1, true)],
-  ['char-ci=?', mkFn(charEqCiQ, 1, true)],
-  ['char-ci<?', mkFn(charLtCiQ, 1, true)],
-  ['char-ci>?', mkFn(charGtCiQ, 1, true)],
-  ['char-ci<=?', mkFn(charLeqCiQ, 1, true)],
-  ['char-ci>=?', mkFn(charGeqCiQ, 1, true)],
-  ['char-alphabetic?', mkFn(charAlphabeticQ, 1)],
-  ['char-numeric?', mkFn(charNumericQ, 1)],
-  ['char-whitespace?', mkFn(charWhitespaceQ, 1)],
-  ['char-upper-case?', mkFn(charUpperCaseQ, 1)],
-  ['char-lower-case?', mkFn(charLowerCaseQ, 1)],
-  ['digit-value', mkFn(digitalValue, 1)],
-  ['char->integer', mkFn(charToInteger, 1)],
-  ['integer->char', mkFn(integerToChar, 1)],
-  ['char-upcase', mkFn(charUpcase, 1)],
-  ['char-downcase', mkFn(charDowncase, 1)],
-  ['char-foldcase', mkFn(charFoldcase, 1)],
-  ['string?', mkFn(stringQ, 1)],
-  ['make-string', mkFn(makeString, 2)], 
-  ['string', mkFn(stringPrim, 0, true)],
-  ['string-length', mkFn(stringLength, 1)],
-  ['string-ref', mkFn(stringRef, 2)],
-  ['string=?', mkFn(stringEq, 1, true)],
-  ['string<?', mkFn(stringLt, 1, true)],
-  ['string>?', mkFn(stringGt, 1, true)],
-  ['string<=?', mkFn(stringLeq, 1, true)],
-  ['string>=?', mkFn(stringGeq, 1, true)],
-  ['string-ci=?', mkFn(stringEqCi, 1, true)],
-  ['string-ci<?', mkFn(stringLtCi, 1, true)],
-  ['string-ci>?', mkFn(stringGtCi, 1, true)],
-  ['string-ci<=?', mkFn(stringLeqCi, 1, true)],
-  ['string-ci>=?', mkFn(stringGeqCi, 1, true)],
-  ['string-upcase', mkFn(stringUpcase, 1)],
-  ['string-downcase', mkFn(stringDowncase, 1)],
-  ['string-foldcase', mkFn(stringFoldcase, 1)],
-  ['substring', mkFn(substring, 3)],
-  ['string->list', mkFn(stringToList, 1)],
-  ['list->string', mkFn(listToString, 1)],
-  ['string->vector', mkFn(stringToVector, 1)],
-  ['vector->string', mkFn(vectorToString, 1)],
-  ['string-contains', mkFn(stringContains, 2)],
-  ['string-split', mkFn(stringSplit, 2)],
-  ['string-split-vector', mkFn(stringSplitVector, 2)],
-  ['string-append', mkFn(stringAppend, 0, true)],
-  ['with-file', mkFn(withFile, 1)]
-]
+type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: V.Closure | Function }
+function withFile (callback: V.Closure | Function): ReactiveFile {
+  checkContract(arguments, contract('with-file', [C.func]))  
+  return {
+    _scamperTag: 'struct',
+    kind: '_reactive-file',
+    callback
+  }
+}
+registerFn('with-file', withFile, Prelude)
 
 // Vectors (6.8)
 
-const vectorQ = (x: any): boolean => Array.isArray(x)
-const vector = (...xs: Value[]): Value[] => xs
-const makeVector = (n: number, fill: Value): Value[] => {
+function vectorQ (x: any): boolean {
+  checkContract(arguments, contract('vector?', [C.any]))
+  return V.isArray(x)
+}
+registerFn('vector?', vectorQ, Prelude)
+
+function vector (...xs: Value[]): Value[] {
+  checkContract(arguments, contract('vector', [], C.any))
+  return xs
+}
+registerFn('vector', vector, Prelude)
+
+function makeVector (n: number, fill: Value): Value[] {
+  checkContract(arguments, contract('make-vector', [C.integer, C.any]))
   const ret = []
   for (let i = 0; i < n; i++) {
     ret.push(fill)
   }
   return ret
 }
-const vectorLength = (v: Value[]): number => v.length
-const vectorRef = (v: Value[], i: number): Value => v[i]
-const vectorSet = (v: Value[], i: number, x: Value): void => { v[i] = x }
-const vectorFill = (v: Value[], x: Value): void => {
+registerFn('make-vector', makeVector, Prelude)
+
+function vectorLength (v: Value[]): number {
+  checkContract(arguments, contract('vector-length', [C.vector])) 
+  return v.length
+}
+registerFn('vector-length', vectorLength, Prelude)
+
+function vectorRef (v: Value[], i: number): Value {
+  checkContract(arguments, contract('vector-ref', [C.vector, C.integer]))
+  return v[i]
+}
+registerFn('vector-ref', vectorRef, Prelude)
+
+function vectorSet (v: Value[], i: number, x: Value): void {
+  checkContract(arguments, contract('vector-set!', [C.vector, C.integer, C.any]))
+  v[i] = x
+}
+registerFn('vector-set!', vectorSet, Prelude)
+
+function vectorFill (v: Value[], x: Value): void {
+  checkContract(arguments, contract('vector-fill!', [C.vector, C.any]))
   for (let i = 0; i < v.length; i++) {
     v[i] = x
   }
 }
+registerFn('vector-fill!', vectorFill, Prelude)
 
-const vectorToList = (v: Value[]): V.List => {
+function vectorToList (v: Value[]): V.List {
+  checkContract(arguments, contract('vector->list', [C.vector]))
   let ret = null
   for (let i = v.length - 1; i >= 0; i--) {
     ret = V.mkPair(v[i], ret)
   }
   return ret
 }
+registerFn('vector->list', vectorToList, Prelude)
 
-const listToVector = (l: V.List): Value[] => {
+function listToVector (l: V.List): Value[] {
+  checkContract(arguments, contract('list->vector', [C.list]))
   const ret = []
   while (l !== null) {
     ret.push(l.fst)
@@ -646,10 +907,12 @@ const listToVector = (l: V.List): Value[] => {
   }
   return ret
 }
+registerFn('list->vector', listToVector, Prelude)
 
 const vectorRange = (m: number, n: number, step: number): number[] => {
-  throw new Error ('vector-range unimplemented')
+  throw new ScamperError ('Runtime', 'vector-range unimplemented')
 }
+registerFn('vector-range', vectorRange, Prelude)
 
 /*
 // N.B., this is identical to rangePrim except it does not conver the output
@@ -676,7 +939,8 @@ const vectorRangePrim: L.Prim = (_env, args, app) =>
   }))
 */
 
-const vectorAppend = (...vecs: Value[][]): Value[] => {
+function vectorAppend (...vecs: Value[][]): Value[] {
+  checkContract(arguments, contract('vector-append', [], C.vector))
   const arr = []
   for (let i = 0; i < vecs.length; i++) {
     for (let j = 0; j < vecs[i].length; j++) {
@@ -685,19 +949,7 @@ const vectorAppend = (...vecs: Value[][]): Value[] => {
   }
   return arr
 }
-
-const vectorPrimitives: [string, Value][] = [
-  ['vector?', mkFn(vectorQ, 1)],
-  ['vector', mkFn(vector, 0, true)],
-  ['make-vector', mkFn(makeVector, 2)],
-  ['vector-length', mkFn(vectorLength, 1)],
-  ['vector-ref', mkFn(vectorRef, 2)],
-  ['vector-set!', mkFn(vectorSet, 3)],
-  ['vector-fill!', mkFn(vectorFill, 2)],
-  ['vector->list', mkFn(vectorToList, 1)],
-  ['list->vector', mkFn(vectorToList, 1)],
-  ['vector-range', mkFn(vectorRange, 1, true)]
-]
+registerFn('vector-append', vectorAppend, Prelude)
 
 // Bytevectors (6.9)
 
@@ -705,13 +957,21 @@ const vectorPrimitives: [string, Value][] = [
 
 // Control features (6.10)
 
-const procedureQ = (x: any): boolean => V.isClosure(x) || V.isJsFunction(x)
-const apply = (f: V.Closure | V.JsFunction, args: Value[]): Value => {
-  throw new Error ('apply unimplemented')
+function procedureQ (x: any): boolean {
+  checkContract(arguments, contract('procedure?', [C.any]))
+  return V.isClosure(x) || V.isJsFunction(x)
 }
-const stringMap = (f: V.Closure | V.JsFunction, s: string): string => {
-  throw new Error ('string-map unimplemented')
+registerFn('procedure?', procedureQ, Prelude)
+
+function apply (f: V.Closure | Function, args: Value[]): Value {
+  throw new ScamperError ('Runtime', 'apply unimplemented')
 }
+registerFn('apply', apply, Prelude)
+
+function stringMap (f: V.Closure | Function, s: string): string {
+  throw new ScamperError ('Runtime', 'string-map unimplemented')
+}
+registerFn('string-map', stringMap, Prelude)
 
 /**
  * @param arr - a rectangular array of arrays, i.e., each array has the same
@@ -736,9 +996,10 @@ function transpose <T> (arr: T[][]): T[][] {
   return result
 }
 
-const map = (f: V.Closure | V.JsFunction, ...lsts: V.List[]): V.List => {
-  throw new Error ('map unimplemented')
+const map = (f: V.Closure | Function, ...lsts: V.List[]): V.List => {
+  throw new ScamperError ('Runtime', 'map unimplemented')
 }
+registerFn('map', map, Prelude)
 
 /*
 const mapPrim: L.Prim = async (env, args, app) =>
@@ -787,43 +1048,55 @@ const mapPrim: L.Prim = async (env, args, app) =>
 */
 // Additional list pipeline functions from racket/base
 
-const filter = (f: V.Closure | V.JsFunction, lst: V.List): V.List => {
-  throw new Error ('filter unimplemented')
+const filter = (f: V.Closure | Function, lst: V.List): V.List => {
+  throw new ScamperError ('Runtime', 'filter unimplemented')
 }
+registerFn('filter', filter, Prelude)
 
-const fold = (f: V.Closure | V.JsFunction, init: Value, lst: V.List): Value => {
-  throw new Error ('fold unimplemented')
+const fold = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
+  throw new ScamperError ('Runtime', 'fold unimplemented')
 }
+registerFn('fold', fold, Prelude)
 
-const reduce = (f: V.Closure | V.JsFunction, lst: V.List): Value => {
-  throw new Error ('reduce unimplemented')
+const reduce = (f: V.Closure | Function, lst: V.List): Value => {
+  throw new ScamperError ('Runtime', 'reduce unimplemented')
 }
+registerFn('reduce', reduce, Prelude)
 
-const foldLeft = fold
-
-const foldRight = (f: V.Closure | V.JsFunction, init: Value, lst: V.List): Value => {
-  throw new Error ('fold-right unimplemented')
+const foldLeft = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
+  throw new ScamperError ('Runtime', 'fold-left unimplemented')
 }
+registerFn('fold-left', foldLeft, Prelude)
 
-const reduceRight = (f: V.Closure | V.JsFunction, lst: V.List): Value => {
-  throw new Error ('reduce-right unimplemented')
+const foldRight = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
+  throw new ScamperError ('Runtime', 'fold-right unimplemented')
 }
+registerFn('fold-right', foldRight, Prelude)
 
-const vectorMap = (f: V.Closure | V.JsFunction, ...vecs: Value[][]): Value[] => {
-  throw new Error ('vector-map unimplemented')
+const reduceRight = (f: V.Closure | Function, lst: V.List): Value => {
+  throw new ScamperError ('Runtime', 'reduce-right unimplemented')
 }
+registerFn('reduce-right', reduceRight, Prelude)
 
-const vectorMapBang = (f: V.Closure | V.JsFunction, vec: Value[]): void => {
-  throw new Error ('vector-map! unimplemented')
+const vectorMap = (f: V.Closure | Function, ...vecs: Value[][]): Value[] => {
+  throw new ScamperError ('Runtime', 'vector-map unimplemented')
 }
+registerFn('vector-map', vectorMap, Prelude)
 
-const vectorForEach = (f: V.Closure | V.JsFunction, vec: Value[]): void => {
-  throw new Error ('vector-for-each unimplemented')
+const vectorMapBang = (f: V.Closure | Function, vec: Value[]): void => {
+  throw new ScamperError ('Runtime', 'vector-map! unimplemented')
 }
+registerFn('vector-map!', vectorMapBang, Prelude)
 
-const forRange = (start: number, end: number, f: V.Closure | V.JsFunction): void => {
-  throw new Error ('for-range unimplemented')
+const vectorForEach = (f: V.Closure | Function, vec: Value[]): void => {
+  throw new ScamperError ('Runtime', 'vector-for-each unimplemented')
 }
+registerFn('vector-for-each', vectorForEach, Prelude)
+
+const forRange = (start: number, end: number, f: V.Closure | Function): void => {
+  throw new ScamperError ('Runtime', 'for-range unimplemented')
+}
+registerFn('for-range', forRange, Prelude)
 
 // TODO: implement:
 //   (for-each fn l1 ... lk)
@@ -840,24 +1113,44 @@ const forRange = (start: number, end: number, f: V.Closure | V.JsFunction): void
 
 // Additional control features
 
-const vectorFilter = (f: V.Closure | V.JsFunction, lst: Value[]): Value[][] => {
-  throw new Error ('vector-filter unimplemented')
+const vectorFilter = (f: V.Closure | Function, lst: Value[]): Value[][] => {
+  throw new ScamperError ('Runtime', 'vector-filter unimplemented')
 }
+registerFn('vector-filter', vectorFilter, Prelude)
 
 // TODO: implement fold/reduce variants for vectors
 
-const voidQ = (x: any): boolean => x === undefined
-const error = (msg: string): never => { throw new Error(msg) }
-const qq = (): never => { throw new Error('??') }
-const compose = (...fs: (V.Closure | V.JsFunction)[]): V.Closure | V.JsFunction => {
+function voidQ (x: any): boolean {
+  checkContract(arguments, contract('void?', [C.any]))
+  return x === undefined
+}
+registerFn('void?', voidQ, Prelude)
+
+function error (msg: string): never {
+  checkContract(arguments, contract('error', [C.string]))
+  throw new ScamperError ('Runtime', msg)
+}
+registerFn('error', error, Prelude)
+
+function qq (): never {
+  checkContract(arguments, contract('??', []))
+  throw new ScamperError ('Runtime', 'Hole encountered in program!')
+}
+
+const compose = (...fs: (V.Closure | Function)[]): V.Closure | Function => {
   throw new Error ('compose unimplemented')
 }
-const pipe = (init: Value, ...fs: (V.Closure | V.JsFunction)[]): V.Closure | V.JsFunction => {
+registerFn('compose', compose, Prelude)
+
+const pipe = (init: Value, ...fs: (V.Closure | Function)[]): V.Closure | Function => {
   throw new Error ('|> unimplemented')
 }
+registerFn('|>', pipe, Prelude)
+
 const range = (m: number, n: number, step: number): number[] => {
   throw new Error ('range unimplemented')
 }
+registerFn('range', range, Prelude)
 
 /*
 const rangePrim: L.Prim = (env, args, app) =>
@@ -882,38 +1175,19 @@ const rangePrim: L.Prim = (env, args, app) =>
   }))
 */
 
-const random = (n: number): number => Math.floor(Math.random() * n)
-const withHandler = (handler: V.Closure | V.JsFunction, fn: V.Closure | V.JsFunction, ...args: Value[]): Value => {
-  throw new Error ('with-handler unimplemented')
+function random (n: number): number {
+  checkContract(arguments, contract('random', [C.integer])) 
+  return Math.floor(Math.random() * n)
 }
+registerFn('random', random, Prelude)
 
-const controlPrimitives: [string, Value][] = [
-  ['procedure?', mkFn(procedureQ, 1)],
-  ['apply', mkFn(apply, 2, true)],
-  ['string-map', mkFn(stringMap, 2)],
-  ['map', mkFn(map, 2, true)],
-  ['filter', mkFn(filter, 2, true)],
-  ['fold', mkFn(fold, 3)],
-  ['reduce', mkFn(reduce, 2)],
-  ['fold-left', mkFn(foldLeft, 3)],
-  ['fold-right', mkFn(foldRight, 3)],
-  ['reduce-right', mkFn(reduceRight, 2)],
-  ['vector-map', mkFn(vectorMap, 2, true)],
-  ['vector-map!', mkFn(vectorMapBang, 2)],
-  ['vector-for-each', mkFn(vectorForEach, 2)],
-  ['for-range', mkFn(forRange, 3)],
-  ['vector-filter', mkFn(vectorFilter, 2)],
-  ['vector-append', mkFn(vectorAppend, 0, true)],
-  ['voidQ', mkFn(voidQ, 1)],
-  ['error', mkFn(error, 1)],
-  ['??', mkFn(qq, 0)],
-  ['compose', mkFn(compose, 1, true)],
-  ['o', mkFn(compose, 1, true)],
-  ['|>', mkFn(pipe, 2, true)],
-  ['range', mkFn(range, 1, true)],
-  ['random', mkFn(random, 1)],
-  ['with-handler', mkFn(withHandler, 2, true)]
-]
+
+
+function withHandler (handler: V.Closure | Function, fn: V.Closure | Function, ...args: Value[]): Value {
+  checkContract(arguments, contract('with-handler', [C.func, C.func], C.any))
+  throw new ScamperError('Runtime', 'with-handler unimplemented')
+}
+registerFn('with-handler', withHandler, Prelude)
 
 // Exceptions (6.11)
 
@@ -937,19 +1211,9 @@ const elseConst = true
 const piConst = Math.PI
 const voidConst = undefined
 
-const Prelude: [string, Value][] = [
-  ...equivalencePrimitives,
-  ...numericPrimitives,
-  ...booleanPrimitives,
-  ...pairListPrimitives,
-  ...listPrimitives,
-  ...stringPrimitives,
-  ...vectorPrimitives,
-  ...controlPrimitives,
-  ['else', elseConst],
-  ['pi', piConst],
-  ['π', piConst],
-  ['void', voidConst]
-]
+Prelude.push(['else', elseConst])
+Prelude.push(['pi', piConst])
+Prelude.push(['π', piConst])
+Prelude.push(['void', voidConst])
 
 export default Prelude
