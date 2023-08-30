@@ -61,7 +61,7 @@ class Tokenizer {
     // N.B., chomp whitespace so we maintain the invariant that the
     // tokenizer is always pointing to a valid token if there are tokens
     // left to process
-    this.chompWhitespace()
+    this.chompWhitespaceAndComments()
   }
 
   isEmpty (): boolean { return this.idx >= this.src.length }
@@ -104,7 +104,7 @@ class Tokenizer {
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
       // always pointing to a valid token if there are any left
-      this.chompWhitespace()
+      this.chompWhitespaceAndComments()
       return token
     }
   }
@@ -125,8 +125,14 @@ class Tokenizer {
     this.idx += 1
   }
 
-  chompWhitespace(): void {
-    while (isWhitespace(this.peek())) {
+  chompWhitespaceAndComments(): void {
+    let inComment = false
+    while (!this.isEmpty() && (inComment || isWhitespace(this.peek()) || this.peek() === ';')) {
+      if (this.peek() === ';') {
+        inComment = true
+      } else if (inComment && this.peek() === '\n') {
+        inComment = false
+      }
       this.advance()
     }
   }
@@ -170,7 +176,7 @@ class Tokenizer {
       this.advance()
       while (!this.isEmpty()) {
         ch = this.peek()
-        if (isWhitespace(ch) || isBracket(ch)) {
+        if (isWhitespace(ch) || isBracket(ch) || ch === ';') {
           // N.B., don't include the terminating char in this token!
           return this.emitToken()
         } else {
