@@ -39,6 +39,7 @@ class Tokenizer {
   private startCol: number
   private endRow: number
   private endCol: number
+  private endIdx: number
   private tokenLen: number
 
   constructor (src: string) {
@@ -54,6 +55,7 @@ class Tokenizer {
     this.startCol = -1
     this.endRow = -1
     this.endCol = -1
+    this.endIdx = -1
     this.tokenLen = 0
 
     // N.B., chomp whitespace so we maintain the invariant that the
@@ -72,6 +74,7 @@ class Tokenizer {
     this.startCol = -1
     this.endRow = -1
     this.endCol = -1
+    this.endIdx = -1
     this.tokenLen = 0
   }
 
@@ -84,6 +87,7 @@ class Tokenizer {
       this.startCol = this.col
       this.endRow   = this.row
       this.endCol   = this.col
+      this.endIdx   = this.idx
       // N.B., the first call to advance() will capture the first character
       // by incrementing tokenLen
     }
@@ -95,7 +99,7 @@ class Tokenizer {
     } else {
       const token = new Token(
         this.src.slice(this.startIdx, this.startIdx + this.tokenLen),
-        new S.Range(this.startRow, this.startCol, this.endRow, this.endCol)
+        new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -110,6 +114,7 @@ class Tokenizer {
       this.tokenLen += 1
       this.endRow = this.row
       this.endCol = this.col
+      this.endIdx = this.idx
     }
     if (this.peek() === '\n') {
       this.row += 1
@@ -158,7 +163,7 @@ class Tokenizer {
       // file. Depending on error reporting, it may make sense to report only the
       // starting quote or try to approx. where the string should end.
       throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, new S.Range(this.startRow, this.startCol, this.endRow, this.endCol))
+        undefined, new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
     // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()

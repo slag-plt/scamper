@@ -1,10 +1,12 @@
 export class Loc {
   line: number
   col: number
+  idx: number
 
-  constructor (line: number, col: number) {
+  constructor (line: number, col: number, idx: number) {
     this.line = line
     this.col = col
+    this.idx = idx
   }
 
   public toString (): string {
@@ -16,9 +18,9 @@ export class Range {
   begin: Loc
   end: Loc
 
-  constructor (startLine: number, startCol: number, endLine: number, endCol: number) {
-    this.begin = new Loc(startLine, startCol)
-    this.end = new Loc(endLine, endCol)
+  constructor (startLine: number, startCol: number, startIdx: number, endLine: number, endCol: number, endIdx: number) {
+    this.begin = new Loc(startLine, startCol, startIdx)
+    this.end = new Loc(endLine, endCol, endIdx)
   }
 
   public toString (): string {
@@ -26,10 +28,10 @@ export class Range {
   }
 }
 
-export const mkRange = (beg: Loc, end: Loc): Range => new Range(beg.line, beg.col, end.line, end.col)
+export const mkRange = (beg: Loc, end: Loc): Range => new Range(beg.line, beg.col, beg.idx, end.line, end.col, end.idx)
 
-export const noLoc = new Loc(-1, -1)
-export const noRange = new Range(-1, -1, -1, -1)
+export const noLoc = new Loc(-1, -1, -1)
+export const noRange = new Range(-1, -1, -1, -1, -1, -1)
 
 type Phase = 'Parser' | 'Runtime'
 

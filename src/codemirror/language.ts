@@ -14,9 +14,12 @@ export const ScamperLanguage = LRLanguage.define({
       styleTags({
         Identifier: t.variableName,
         Boolean: t.bool,
+        Number: t.number,
         String: t.string,
         LineComment: t.lineComment,
-        "( ) [ ] { }": t.paren
+        "( )": t.paren,
+        "[ ]": t.squareBracket,
+        "{ }": t.brace
       })
     ]
   }),
