@@ -1,10 +1,12 @@
 export class Loc {
   line: number
   col: number
+  idx: number
 
-  constructor (line: number, col: number) {
+  constructor (line: number, col: number, idx: number) {
     this.line = line
     this.col = col
+    this.idx = idx
   }
 
   public toString (): string {
@@ -16,9 +18,9 @@ export class Range {
   begin: Loc
   end: Loc
 
-  constructor (startLine: number, startCol: number, endLine: number, endCol: number) {
-    this.begin = new Loc(startLine, startCol)
-    this.end = new Loc(endLine, endCol)
+  constructor (startLine: number, startCol: number, startIdx: number, endLine: number, endCol: number, endIdx: number) {
+    this.begin = new Loc(startLine, startCol, startIdx)
+    this.end = new Loc(endLine, endCol, endIdx)
   }
 
   public toString (): string {
@@ -26,10 +28,10 @@ export class Range {
   }
 }
 
-export const mkRange = (beg: Loc, end: Loc): Range => new Range(beg.line, beg.col, end.line, end.col)
+export const mkRange = (beg: Loc, end: Loc): Range => new Range(beg.line, beg.col, beg.idx, end.line, end.col, end.idx)
 
-export const noLoc = new Loc(-1, -1)
-export const noRange = new Range(-1, -1, -1, -1)
+export const noLoc = new Loc(-1, -1, -1)
+export const noRange = new Range(-1, -1, -1, -1, -1, -1)
 
 type Phase = 'Parser' | 'Runtime'
 
@@ -94,16 +96,37 @@ export function sexpToString (s: Sexp): string {
   }
 }
 
+const specialCharToNameMap: Map<string, string> = new Map([
+  [String.fromCharCode(9), 'alarm'],
+  [String.fromCharCode(7), 'backspace'],
+  [String.fromCharCode(126), 'delete'],
+  [String.fromCharCode(26), 'escape'],
+  [String.fromCharCode(9), 'newline'],
+  [String.fromCharCode(-1), 'null'],
+  [String.fromCharCode(12), 'return'],
+  [' ', 'space'],
+  [String.fromCharCode(8), 'tab']
+])
+
+export function charToName (c: string): string {
+  if (specialCharToNameMap.has(c)) {
+    return specialCharToNameMap.get(c)!
+  } else {
+    return c
+  }
+}
+
 export type Id = string
 export type Binding = { name: Id, body: Exp }
 
 export type MatchBranch = { pattern: Pat, body: Exp }
 
-export type Pat = PVar | PWild | PNum | PBool | PStr | PNull | PCtor
+export type Pat = PVar | PWild | PNum | PBool | PChar | PStr | PNull | PCtor
 export type PVar = { tag: 'var', name: string, range: Range }
 export type PWild = { tag: 'wild', range: Range }
 export type PNum = { tag: 'num', value: number, range: Range }
 export type PBool = { tag: 'bool', value: boolean, range: Range }
+export type PChar = { tag: 'char', value: string, range: Range }
 export type PStr = { tag: 'str', value: string, range: Range }
 export type PNull = { tag: 'null', range: Range }
 export type PCtor = { tag: 'ctor', ctor: string, args: Pat[], range: Range }
@@ -112,6 +135,7 @@ export const mkPVar = (name: string, range: Range): Pat => ({ tag: 'var', name, 
 export const mkPWild = (range: Range): Pat => ({ tag: 'wild', range })
 export const mkPNum = (value: number, range: Range): Pat => ({ tag: 'num', value, range })
 export const mkPBool = (value: boolean, range: Range): Pat => ({ tag: 'bool', value, range })
+export const mkPChar = (value: string, range: Range): Pat => ({ tag: 'char', value, range })
 export const mkPStr = (value: string, range: Range): Pat => ({ tag: 'str', value, range })
 export const mkPNull = (range: Range): Pat => ({ tag: 'null', range })
 export const mkPCtor = (ctor: string, args: Pat[], range: Range): Pat => ({ tag: 'ctor', ctor, args, range })
@@ -126,6 +150,8 @@ export function patToSexp (p: Pat): Sexp {
       return mkAtom(p.value.toString(), p.range)
     case 'bool':
       return mkAtom(p.value ? "#t" : "#f", p.range)
+    case 'char':
+      return mkAtom(`#\\${charToName(p.value)}`, p.range)
     case 'str':
       return mkAtom(`"${p.value}"`, p.range)
     case 'null':
@@ -139,10 +165,11 @@ export function patToString (p: Pat): string {
   return sexpToString(patToSexp(p))
 }
 
-export type Exp = Var | Num | Bool | Str | Lam | Let | App | If | Begin | Match
+export type Exp = Var | Num | Bool | Char | Str | Lam | Let | App | If | Begin | Match
 export type Var = { tag: 'var', name: string, range: Range }
 export type Num = { tag: 'num', value: number, range: Range }
 export type Bool = { tag: 'bool', value: boolean, range: Range }
+export type Char = { tag: 'char', value: string, range: Range }
 export type Str = { tag: 'str', value: string, range: Range }
 export type Lam = { tag: 'lam', args: Id[], body: Exp, bracket: Bracket, range: Range }
 export type Let = { tag: 'let', bindings: Binding[], body: Exp, bracket: Bracket, range: Range }
@@ -157,6 +184,8 @@ export const mkNum = (value: number, range: Range): Exp =>
   ({ tag: 'num', value, range })
 export const mkBool = (value: boolean, range: Range): Exp =>
   ({ tag: 'bool', value, range })
+export const mkChar = (value: string, range: Range): Exp =>
+  ({ tag: 'char', value, range })  
 export const mkStr = (value: string, range: Range): Exp =>
   ({ tag: 'str', value, range })
 export const mkLam = (args: Id[], body: Exp, bracket: Bracket, range: Range): Exp =>
@@ -180,6 +209,8 @@ export function expToSexp(e: Exp): Sexp {
       return mkAtom(e.value.toString(), e.range)
     case 'bool':
       return mkAtom(e.value ? "#t" : "#f", e.range)
+    case 'char':
+      return mkAtom(`#\\${charToName(e.value)}`, e.range)
     case 'str':
       return mkAtom(`"${e.value}"`, e.range)
     case 'lam':

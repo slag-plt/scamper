@@ -117,6 +117,8 @@ export function expToOps (e: S.Exp): Op[] {
       return [V.mkValue(e.value)]
     case 'bool':
       return [V.mkValue(e.value)]
+    case 'char':
+      return [V.mkValue(V.mkChar(e.value))]
     case 'str':
       return [V.mkValue(e.value)]
     case 'lam':
