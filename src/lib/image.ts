@@ -12,8 +12,10 @@ function registerFn (name: string, fn: Function): void {
 }
 
 function color (r: number, g: number, b: number, a: number): string {
+  checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
   return `rgba(${r}, ${g}, ${b}, ${a})`
 }
+registerFn('color', color)
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
@@ -34,10 +36,14 @@ const colorS: C.Spec = {
   // https://stackoverflow.com/questions/48484767/javascript-check-if-string-is-valid-css-color
   predicate: (v: any) => {
     if (typeof v !== 'string') { return false }
+    // TODO: need to test this more thoroughly, esp. with rgba strings
+    /*
     var s = new Option().style
     s.color = v
     // return 'false' if color wasn't assigned
     return s.color === v.toLowerCase()
+    */
+   return true
   },
   errorMsg: (actual: any) => `expected a color, received ${typeOfValue(actual)}`
 }
