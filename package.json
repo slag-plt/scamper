@@ -1,10 +1,10 @@
 {
   "name": "scamper-next",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "clean": "rm -rf dist/",
+    "gen-version": "npx genversion src/version.ts --es6",
     "build": "rollup -c",
     "serve": "python3 -m http.server"
   },
@@ -21,6 +21,7 @@
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-n": "^15.7.0",
     "eslint-plugin-promise": "^6.1.1",
+    "genversion": "^3.1.1",
     "rollup": "^3.28.1",
     "typescript": "^5.1.6"
   },
