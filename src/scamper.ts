@@ -31,6 +31,10 @@ class Scamper {
     }
   }
 
+  parseProgram (src: string) {
+    return Parser.parseProgram(src)
+  }
+
   runProgram (src: string) {
     const prog = Parser.parseProgram(src)
     Sem.runProgram(builtinLibs, this.display, this.env, prog)

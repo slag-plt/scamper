@@ -3,6 +3,7 @@ import FS from './fs.js'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
 import { ScamperSupport } from '../codemirror/language.js'
+import makeScamperLinter from '../codemirror/linter.js'
 import { version } from '../version.js'
 
 let editor: EditorView | null = null
@@ -20,7 +21,7 @@ class IDE {
   constructor () {
     this.fs = new FS()
     this.editor = new EditorView({
-      doc: '', extensions: [basicSetup, ScamperSupport()], parent: editorPane!
+      doc: '', extensions: [basicSetup, ScamperSupport(), makeScamperLinter('output')], parent: editorPane!
     })
     this.autosaveId = -1
 
@@ -32,7 +33,11 @@ class IDE {
       const scamper = new Scamper('output')
       outputPane!.innerHTML = ''
       const program = this.getDoc()
-      scamper.runProgram(program)
+      try {
+        scamper.runProgram(program)
+      } catch (e) {
+        scamper.display(e)
+      }
     })
 
     Split(['#file-drawer', '#editor', '#results'], {

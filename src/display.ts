@@ -1,4 +1,4 @@
-import { ICE, ScamperError } from './lang.js'
+import { charToName, ICE, ScamperError } from './lang.js'
 import * as V from './value.js'
 
 // TODO: probably need to sandbox this as an object held by the the Scamper
@@ -61,7 +61,7 @@ export function renderToString (v: any): string {
       } else if (V.isJsFunction(v)) {
         return `[Function (JS)]`
       } else if (V.isChar(v)) {
-        throw new Error(`renderToString: char unimplemented ${v.toString()}`)
+        return `#\\${charToName((v as V.Char).value)}`
       } else if (V.isList(v)) {
         const arr = V.listToArray(v)
         return arr.length === 0 ? '(list)' : `(list ${arr.map(renderToString).join(' ')})`
@@ -101,13 +101,24 @@ export function renderToHTML (v: any): HTMLElement {
       if (v === null) {
         return mkCodeElement('null')
       } else if (Array.isArray(v)) {
-        return mkCodeElement(`(vector ...)`)
+        const vec = v as V.Value[]
+        if (vec.length === 0) {
+          return mkCodeElement('(vector)')
+        }
+        const ret = mkCodeElement('(vector ')
+        ret.appendChild(renderToHTML(vec[0]))
+        vec.slice(1).forEach((e) => {
+          ret.appendChild(renderToHTML(e))
+          ret.appendChild(mkCodeElement(' '))
+        })
+        ret.append(mkCodeElement(')'))
+        return ret
       } else if (V.isClosure(v)) {
         return mkCodeElement(`[Function (closure)]`)
       } else if (V.isJsFunction(v)) {
         return mkCodeElement(`[Function (JS)]`)
       } else if (V.isChar(v)) {
-        throw new Error(`renderToString: char unimplemented ${v.toString()}`)
+        return mkCodeElement(`#\\${charToName((v as V.Char).value)}`)
       } else if (V.isList(v)) {
         const ret = mkCodeElement('(list ')
         let lst = v

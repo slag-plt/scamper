@@ -39,6 +39,7 @@ class Tokenizer {
   private startCol: number
   private endRow: number
   private endCol: number
+  private endIdx: number
   private tokenLen: number
 
   constructor (src: string) {
@@ -54,12 +55,13 @@ class Tokenizer {
     this.startCol = -1
     this.endRow = -1
     this.endCol = -1
+    this.endIdx = -1
     this.tokenLen = 0
 
     // N.B., chomp whitespace so we maintain the invariant that the
     // tokenizer is always pointing to a valid token if there are tokens
     // left to process
-    this.chompWhitespace()
+    this.chompWhitespaceAndComments()
   }
 
   isEmpty (): boolean { return this.idx >= this.src.length }
@@ -72,6 +74,7 @@ class Tokenizer {
     this.startCol = -1
     this.endRow = -1
     this.endCol = -1
+    this.endIdx = -1
     this.tokenLen = 0
   }
 
@@ -84,6 +87,7 @@ class Tokenizer {
       this.startCol = this.col
       this.endRow   = this.row
       this.endCol   = this.col
+      this.endIdx   = this.idx
       // N.B., the first call to advance() will capture the first character
       // by incrementing tokenLen
     }
@@ -95,12 +99,12 @@ class Tokenizer {
     } else {
       const token = new Token(
         this.src.slice(this.startIdx, this.startIdx + this.tokenLen),
-        new S.Range(this.startRow, this.startCol, this.endRow, this.endCol)
+        new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
       // always pointing to a valid token if there are any left
-      this.chompWhitespace()
+      this.chompWhitespaceAndComments()
       return token
     }
   }
@@ -110,6 +114,7 @@ class Tokenizer {
       this.tokenLen += 1
       this.endRow = this.row
       this.endCol = this.col
+      this.endIdx = this.idx
     }
     if (this.peek() === '\n') {
       this.row += 1
@@ -120,8 +125,14 @@ class Tokenizer {
     this.idx += 1
   }
 
-  chompWhitespace(): void {
-    while (isWhitespace(this.peek())) {
+  chompWhitespaceAndComments(): void {
+    let inComment = false
+    while (!this.isEmpty() && (inComment || isWhitespace(this.peek()) || this.peek() === ';')) {
+      if (this.peek() === ';') {
+        inComment = true
+      } else if (inComment && this.peek() === '\n') {
+        inComment = false
+      }
       this.advance()
     }
   }
@@ -158,14 +169,14 @@ class Tokenizer {
       // file. Depending on error reporting, it may make sense to report only the
       // starting quote or try to approx. where the string should end.
       throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, new S.Range(this.startRow, this.startCol, this.endRow, this.endCol))
+        undefined, new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
     // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()
       this.advance()
       while (!this.isEmpty()) {
         ch = this.peek()
-        if (isWhitespace(ch) || isBracket(ch)) {
+        if (isWhitespace(ch) || isBracket(ch) || ch === ';') {
           // N.B., don't include the terminating char in this token!
           return this.emitToken()
         } else {
@@ -220,7 +231,7 @@ export function tokensToSexps (tokens: Token[]): S.Sexp[] {
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
 
-const reservedWords = [
+export const reservedWords = [
   'and',
   'begin',
   'cond',
@@ -250,7 +261,18 @@ export function atomToExp (e: S.Atom): S.Exp {
     return S.mkStr(e.value.slice(1, -1), e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+  } else if (e.value.startsWith('#\\')) {
+    const escapedChar = e.value.slice(2)
+    if (escapedChar.length === 1) {
+      return S.mkChar(escapedChar, e.range)
+    } else if (namedCharValues.has(escapedChar)) {
+      return S.mkChar(namedCharValues.get(escapedChar)!, e.range)
+    } else {
+      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+    }
   } else {
+    // TODO: ensure identifiers don't have invalid characters, i.e., #
+    // Probably should be done in the lexer, not the parser...
     return S.mkVar(e.value, e.range)
   }
 }
@@ -271,6 +293,18 @@ export function sexpToMatchBranch (e: S.Sexp): S.MatchBranch {
   }
 }
 
+export const namedCharValues = new Map([
+  ['alarm', String.fromCharCode(7)],
+  ['backspace', String.fromCharCode(8)],
+  ['delete', String.fromCharCode(127)],
+  ['escape', String.fromCharCode(27)],
+  ['newline', String.fromCharCode(10)],
+  ['null', String.fromCharCode(0)],
+  ['return', String.fromCharCode(13)],
+  ['space', ' '],
+  ['tab', String.fromCharCode(9)]
+])
+
 export function atomToPat (e: S.Atom): S.Pat {
   const text = e.value
   if (intRegex.test(text)) {
@@ -289,6 +323,15 @@ export function atomToPat (e: S.Atom): S.Pat {
     return S.mkPNull(e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+  } else if (e.value.startsWith('#\\')) {
+    const escapedChar = e.value.slice(2)
+    if (escapedChar.length === 1) {
+      return S.mkPChar(escapedChar, e.range)
+    } else if (namedCharValues.has(escapedChar)) {
+      return S.mkPChar(namedCharValues.get(escapedChar)!, e.range)
+    } else {
+      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+    }
   } else {
     return S.mkPVar(e.value, e.range)
   }

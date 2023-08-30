@@ -12,11 +12,15 @@ export const ScamperLanguage = LRLanguage.define({
         Application: foldInside
       }),
       styleTags({
+        "and begin cond define display if import lambda let let* letrec match or struct": t.keyword,        
         Identifier: t.variableName,
         Boolean: t.bool,
+        Number: t.number,
         String: t.string,
         LineComment: t.lineComment,
-        "( ) [ ] { }": t.paren
+        "( )": t.paren,
+        "[ ]": t.squareBracket,
+        "{ }": t.brace
       })
     ]
   }),
