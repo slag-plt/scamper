@@ -261,7 +261,18 @@ export function atomToExp (e: S.Atom): S.Exp {
     return S.mkStr(e.value.slice(1, -1), e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+  } else if (e.value.startsWith('#\\')) {
+    const escapedChar = e.value.slice(2)
+    if (escapedChar.length === 1) {
+      return S.mkChar(escapedChar, e.range)
+    } else if (namedCharValues.has(escapedChar)) {
+      return S.mkChar(namedCharValues.get(escapedChar)!, e.range)
+    } else {
+      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+    }
   } else {
+    // TODO: ensure identifiers don't have invalid characters, i.e., #
+    // Probably should be done in the lexer, not the parser...
     return S.mkVar(e.value, e.range)
   }
 }
@@ -282,6 +293,18 @@ export function sexpToMatchBranch (e: S.Sexp): S.MatchBranch {
   }
 }
 
+export const namedCharValues = new Map([
+  ['alarm', String.fromCharCode(7)],
+  ['backspace', String.fromCharCode(8)],
+  ['delete', String.fromCharCode(127)],
+  ['escape', String.fromCharCode(27)],
+  ['newline', String.fromCharCode(10)],
+  ['null', String.fromCharCode(0)],
+  ['return', String.fromCharCode(13)],
+  ['space', ' '],
+  ['tab', String.fromCharCode(9)]
+])
+
 export function atomToPat (e: S.Atom): S.Pat {
   const text = e.value
   if (intRegex.test(text)) {
@@ -300,6 +323,15 @@ export function atomToPat (e: S.Atom): S.Pat {
     return S.mkPNull(e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+  } else if (e.value.startsWith('#\\')) {
+    const escapedChar = e.value.slice(2)
+    if (escapedChar.length === 1) {
+      return S.mkPChar(escapedChar, e.range)
+    } else if (namedCharValues.has(escapedChar)) {
+      return S.mkPChar(namedCharValues.get(escapedChar)!, e.range)
+    } else {
+      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+    }
   } else {
     return S.mkPVar(e.value, e.range)
   }
