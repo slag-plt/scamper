@@ -198,6 +198,17 @@ export function stringToTokens (src: string): Token[] {
   return tokens 
 }
 
+function puffRange(r: S.Range): S.Range {
+  return new S.Range(
+    r.begin.line,
+    r.begin.col === 1 ? r.begin.col : r.begin.col - 1,
+    r.begin.col === 1 ? r.begin.idx : r.begin.idx - 1,
+    r.end.line,
+    r.end.col,
+    r.end.idx + 1
+  )
+}
+
 export function tokensToSexp (tokens: Token[]): S.Sexp {
   const beg = tokens.shift()!
   if (isOpeningBracket(beg.text)) {
@@ -207,7 +218,7 @@ export function tokensToSexp (tokens: Token[]): S.Sexp {
     }
     if (tokens.length === 0) {
       // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, beg.range)
+      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
     } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
       throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
         undefined, S.mkRange(beg.range.begin, tokens[0].range.end))

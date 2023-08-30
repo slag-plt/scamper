@@ -41,7 +41,7 @@ class IDE {
     })
 
     Split(['#file-drawer', '#editor', '#results'], {
-      sizes: [10, 50, 40]
+      sizes: [15, 50, 35]
     })
 
     document.getElementById('version')!.innerText = `(${version})`
