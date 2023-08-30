@@ -46,9 +46,8 @@ export function opToString (op: Op): string {
   }
 }
 
-export type TaggedObject = Closure | JsFunction | Char | Pair | Struct
+export type TaggedObject = Closure | Char | Pair | Struct
 export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op[], env: Env }
-export type JsFunction = { _scamperTag: 'jsfunc', fn: Function, arity: number, isVariadic: boolean }
 export type Char = { _scamperTag: 'char', value: string }
 export type Pair = { _scamperTag: 'pair', fst: Value, snd: Value, isList: boolean }
 export type Struct = { _scamperTag: 'struct', 'kind': string, 'fields': Value[] }
@@ -62,8 +61,8 @@ export const isNull = (v: Value): boolean => v === null
 export const isVoid = (v: Value): boolean => v === undefined
 export const isArray = (v: Value): boolean => Array.isArray(v)
 export const isClosure = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'closure'
-export const isJsFunction = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'jsfunc'
-export const isFunction = (v: Value): boolean => typeof v === 'function' || isClosure(v) || isJsFunction(v)
+export const isJsFunction = (v: Value): boolean => typeof v === 'function'
+export const isFunction = (v: Value): boolean => isJsFunction(v) || isClosure(v)
 export const isChar = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'char'
 export const isPair = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'pair'
 export const isList = (v: Value): boolean => v === null || (isPair(v) && (v as Pair).isList)
@@ -71,7 +70,6 @@ export const isStruct = (v: Value): boolean => typeof v === 'object' && (v as an
 export const isStructKind = (v: Value, k: string): boolean => isStruct(v) && (v as Struct).kind === k
 
 export const mkClosure = (arity: number, params: Id[], ops: Op[], env: Env): Value => ({ _scamperTag: 'closure', arity, params, ops, env })
-export const mkJsFunction = (fn: Function, arity: number, isVariadic: boolean = false): Value => ({ _scamperTag: 'jsfunc', fn, arity, isVariadic })
 export const mkChar = (v: string): Char => ({ _scamperTag: 'char', value: v })
 export const mkPair = (fst: Value, snd: Value): Pair => ({
   _scamperTag: 'pair', fst, snd,
@@ -79,7 +77,10 @@ export const mkPair = (fst: Value, snd: Value): Pair => ({
 })
 export const mkStruct = (kind: string, fields: Value[]): Value => ({ _scamperTag: 'struct', kind, fields })
 
-export function listToArray (l: Pair): Value[] {
+export const nameFn = (name: string, fn: Function): Function =>
+  Object.defineProperty(fn, 'name', { value: name })
+
+export function listToArray (l: List): Value[] {
   const ret = []
   let cur = l
   while (cur !== null) {
@@ -100,8 +101,8 @@ export function arrayToList (arr: Value[]): Pair | null {
 export function valueToString (v: Value) {
   if (isClosure(v)) {
     return `<closure (${(v as Closure).params.join(' ')})>`
-  } else if (isJsFunction(v)) {
-    return `<jsfunc (${(v as JsFunction).arity})>`
+  } else if (typeof v === 'function') {
+    return `<jsfunc: (${v.name})>`
   } else {
     return `${v}`
   }
@@ -144,7 +145,7 @@ export function typeOfValue (v: Value): string {
   if (isChar(v)) { return 'char' }
   if (isList(v)) { return 'list' }
   if (isStruct(v)) { return `struct (${(v as Struct).kind})` }
-  if (t === 'function' || isClosure(v) || isJsFunction(v)) { return 'function' }
+  if (t === 'function' || isClosure(v)) { return 'function' }
   return 'object'
 }
 

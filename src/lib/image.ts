@@ -1,42 +1,122 @@
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
 import * as Render from '../display.js'
+import { typeOfValue, Value } from '../value.js'
 import * as V from '../value.js'
+
+export const imageLib: [string, V.Value][] = []
+
+function registerFn (name: string, fn: Function): void {
+  V.nameFn(name, fn)
+  imageLib.push([name, fn])
+}
 
 function color (r: number, g: number, b: number, a: number): string {
   return `rgba(${r}, ${g}, ${b}, ${a})`
 }
 
+const modeS: C.Spec = {
+  predicate: (v: any) => v === 'solid' || v === 'outline',
+  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${typeOfValue(actual)}`
+}
+
+const alignVS: C.Spec = {
+  predicate: (v: any) => v === 'top' || v === 'middle' || v === 'bottom',
+  errorMsg: (actual: any) => `expected a vertical alignment ("top", "middle", or "bottom"), received ${typeOfValue(actual)}`
+}
+
+const alignHS: C.Spec = {
+  predicate: (v: any) => v === 'left' || v === 'center' || v === 'right',
+  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "center", or "right"), received ${typeOfValue(actual)}`
+}
+
+const colorS: C.Spec = {
+  // https://stackoverflow.com/questions/48484767/javascript-check-if-string-is-valid-css-color
+  predicate: (v: any) => {
+    if (typeof v !== 'string') { return false }
+    var s = new Option().style
+    s.color = v
+    // return 'false' if color wasn't assigned
+    return s.color === v.toLowerCase()
+  },
+  errorMsg: (actual: any) => `expected a color, received ${typeOfValue(actual)}`
+}
+
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash
 
-const imageQ = (v: any): boolean => typeof v === 'object' && v._scamperTag === 'image'
+function imageQ (v: any): boolean {
+  checkContract(arguments, contract('image?', [C.any]))
+  return typeof v === 'object' && v._scamperTag === 'image'
+}
+registerFn('image?', imageQ)
+
+const imageS = {
+  predicate: imageQ,
+  errorMsg: (actual: any) => `expected an image, received ${typeOfValue(actual)}`
+}
 
 type Ellipse = { _scamperTag: 'image', kind: 'ellipse', width: number, height: number, mode: Mode, color: string }
-const ellipse = (width: number, height: number, mode: Mode, color: string): Ellipse => ({
+const ellipsePrim = (width: number, height: number, mode: Mode, color: string): Ellipse => ({
   _scamperTag: 'image', kind: 'ellipse', width, height, mode, color
 })
 
-const circle = (radius: number, mode: Mode, color: string): Ellipse => ellipse(radius * 2, radius * 2, mode, color)
+function ellipse (width: number, height: number, mode: Mode, color: string): Ellipse {
+  checkContract(arguments, contract('ellipse', [C.nonneg, C.nonneg, modeS, colorS]))
+  return ellipsePrim(width, height, mode, color)
+}
+registerFn('ellipse', ellipse)
+
+function circle (radius: number, mode: Mode, color: string): Ellipse {
+  checkContract(arguments, contract('circle', [C.nonneg, modeS, colorS]))
+  return ellipsePrim(radius * 2, radius * 2, mode, color)
+}
+registerFn('circle', circle)
 
 type Rectangle = { _scamperTag: 'image', kind: 'rectangle', width: number, height: number, mode: Mode, color: string }
-const rectangle = (width: number, height: number, mode: Mode, color: string): Rectangle => ({
+const rectanglePrim = (width: number, height: number, mode: Mode, color: string): Rectangle => ({
   _scamperTag: 'image', kind: 'rectangle', width, height, mode, color
 })
 
-const square = (length: number, mode: Mode, color: string): Rectangle => rectangle(length, length, mode, color)
+function rectangle (width: number, height: number, mode: Mode, color: string): Rectangle {
+  checkContract(arguments, contract('rectangle', [C.nonneg, C.nonneg, modeS, colorS]))
+  return rectanglePrim(width, height, mode, color)
+}
+registerFn('rectangle', rectangle)
+
+function square (length: number, mode: Mode, color: string): Rectangle {
+  checkContract(arguments, contract('square', [C.nonneg, modeS, colorS]))
+  return rectanglePrim(length, length, mode, color)
+}
+registerFn('square', square)
 
 type Triangle = { _scamperTag: 'image', kind: 'triangle', width: number, height: number, length: number, mode: Mode, color: string }
-const triangle = (length: number, mode: Mode, color: string): Triangle => ({
+const trianglePrim = (length: number, mode: Mode, color: string): Triangle => ({
   _scamperTag: 'image', kind: 'triangle', width: length, height: length * Math.sqrt(3) / 2,
   length, mode, color
 })
 
-type Path = { _scamperTag: 'image', kind: 'path', width: number, height: number, points: [number, number][], mode: Mode, color: string }
-const path = (width: number, height: number, points: [number, number][], mode: Mode, color: string): Path =>
-  ({ _scamperTag: 'image', kind: 'path', width, height, points, mode, color })
+function triangle (length: number, mode: Mode, color: string): Triangle {
+  checkContract(arguments, contract('triangle', [C.nonneg, modeS, colorS]))
+  return trianglePrim(length, mode, color)
+}
+registerFn('triangle', triangle)
 
+type Path = { _scamperTag: 'image', kind: 'path', width: number, height: number, points: [number, number][], mode: Mode, color: string }
+const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: string): Path => ({
+   _scamperTag: 'image', kind: 'path', width, height, points, mode, color
+})
+
+function path (width: number, height: number, points: V.List, mode: Mode, color: string): Path {
+  checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
+  return pathPrim(width, height, 
+    V.listToArray(points).map((p: Value) => [(p as V.Pair).fst, (p as V.Pair).snd]) as [number, number][],
+    mode, color)
+}
+registerFn('path', path)
 
 type Beside = { _scamperTag: 'image', kind: 'beside', align: string, width: number, height: number, drawings: Drawing[] }
-const besideAlign = (align: string, ...drawings: Drawing[]): Beside => ({
+const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
   _scamperTag: 'image',
   kind: 'beside',
   align,
@@ -45,10 +125,20 @@ const besideAlign = (align: string, ...drawings: Drawing[]): Beside => ({
   drawings
 })
 
-const beside = (...drawings: Drawing[]): Beside => besideAlign('center', ...drawings)
+function beside (...drawings: Drawing[]): Beside {
+  checkContract(arguments, contract('beside', [], imageS)) 
+  return besideAlignPrim('center', ...drawings)
+}
+registerFn('beside', beside)
+
+function besideAlign (align: string, ...drawings: Drawing[]): Beside {
+  checkContract(arguments, contract('beside/align', [alignHS], imageS))
+  return besideAlignPrim(align, ...drawings)
+}
+registerFn('beside/align', besideAlign)
 
 type Above = { _scamperTag: 'image', kind: 'above', align: string, width: number, height: number, drawings: Drawing[] }
-const aboveAlign = (align: string, ...drawings: Drawing[]): Above => ({
+const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
   _scamperTag: 'image',
   kind: 'above',
   align,
@@ -57,10 +147,20 @@ const aboveAlign = (align: string, ...drawings: Drawing[]): Above => ({
   drawings
 })
 
-const above = (...drawings: Drawing[]): Above => aboveAlign('middle', ...drawings)
+function above (...drawings: Drawing[]): Above {
+  checkContract(arguments, contract('above', [], imageS))
+  return aboveAlignPrim('middle', ...drawings)
+}
+registerFn('above', above)
+
+function aboveAlign (align: string, ...drawings: Drawing[]): Above {
+  checkContract(arguments, contract('above/align', [alignVS], imageS))
+  return aboveAlignPrim(align, ...drawings)
+}
+registerFn('above/align', aboveAlign)
 
 type Overlay = { _scamperTag: 'image', kind: 'overlay', xAlign: string, yAlign: string, width: number, height: number, drawings: Drawing[] }
-const overlayAlign = (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay => ({
+const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay => ({
   _scamperTag: 'image',
   kind: 'overlay',
   xAlign,
@@ -70,10 +170,21 @@ const overlayAlign = (xAlign: string, yAlign: string, ...drawings: Drawing[]): O
   drawings
 })
 
-const overlay = (...drawings: Drawing[]) => overlayAlign('middle', 'center', ...drawings)
+function overlay (...drawings: Drawing[]) {
+  checkContract(arguments, contract('overlay', [], imageS))
+  return overlayAlignPrim('middle', 'center', ...drawings)
+}
+registerFn('overlay', overlay)
+
+function overlayAlign (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
+  checkContract(arguments, contract('overlay/align', [alignHS, alignVS], imageS))
+  return overlayAlignPrim(xAlign, yAlign, ...drawings)
+}
+registerFn('overlay/align', overlayAlign)
 
 type OverlayOffset = { _scamperTag: 'image', kind: 'overlayOffset', dx: number, dy: number, width: number, height: number, d1: Drawing, d2: Drawing }
-const overlayOffset = (dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset => {
+function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
+  checkContract(arguments, contract('overlay/offset', [C.number, C.number, imageS, imageS]))
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
   // or larger image and (b) whether we are shifting it positively or
   // negatively.
@@ -109,6 +220,7 @@ const overlayOffset = (dx: number, dy: number, d1: Drawing, d2: Drawing): Overla
     d2
   }
 }
+registerFn('overlay/offset', overlayOffset)
 
 type Rotate = { _scamperTag: 'image', kind: 'rotate', width: number, height: number, angle: number, drawing: Drawing }
 // const rotate = (angle: number, drawing: Drawing): Rotate => ({
@@ -148,7 +260,8 @@ function calculateRotatedBox (width: number, height: number, degrees: number): {
   }
 }
 
-const rotate = (angle: number, drawing: Drawing): Rotate => {
+function rotate (angle: number, drawing: Drawing): Rotate {
+  checkContract(arguments, contract('rotate', [C.number, imageS]))
   const dims = calculateRotatedBox(drawing.width, drawing.height, angle)
   return {
     _scamperTag: 'image',
@@ -159,36 +272,21 @@ const rotate = (angle: number, drawing: Drawing): Rotate => {
     drawing
   }
 }
+registerFn('rotate', rotate)
 
 type WithDash = { _scamperTag: 'image', kind: 'withDash', dashSpec: number[], drawing: Drawing, width: number, height: number }
-const withDash = (dashSpec: number[], drawing: Drawing): WithDash => ({
-  _scamperTag: 'image',
-  kind: 'withDash',
-  dashSpec,
-  drawing,
-  width: drawing.width,
-  height: drawing.height
-})
-
-export const imageLib: [string, V.Value][] = [
-  ['image?', V.mkJsFunction(imageQ, 1)],
-  ['color', V.mkJsFunction(color, 4)],
-  ['ellipse', V.mkJsFunction(ellipse, 4)],
-  ['circle', V.mkJsFunction(circle, 3)],
-  ['rectangle', V.mkJsFunction(rectangle, 4)],
-  ['square', V.mkJsFunction(square, 3)],
-  ['triangle', V.mkJsFunction(triangle, 3)],
-  ['path', V.mkJsFunction(path, 5)],
-  ['beside', V.mkJsFunction(beside, 1, true)],
-  ['beside/align', V.mkJsFunction(besideAlign, 2, true)],
-  ['above', V.mkJsFunction(above, 1, true)],
-  ['above/align', V.mkJsFunction(aboveAlign, 2, true)],
-  ['overlay', V.mkJsFunction(overlay, 1, true)],
-  ['overlay/align', V.mkJsFunction(overlayAlign, 3, true)],
-  ['overlay/offset', V.mkJsFunction(overlayOffset, 4)],
-  ['rotate', V.mkJsFunction(rotate, 2)],
-  ['with-dash', V.mkJsFunction(withDash, 2)]
-]
+function withDash (dashSpec: number[], drawing: Drawing): WithDash {
+  checkContract(arguments, contract('with-dash', [C.list, imageS])) 
+  return {
+    _scamperTag: 'image',
+    kind: 'withDash',
+    dashSpec,
+    drawing,
+    width: drawing.width,
+    height: drawing.height
+  }
+}
+registerFn('with-dash', withDash)
 
 export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
