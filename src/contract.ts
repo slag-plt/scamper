@@ -90,14 +90,14 @@ export const equal = (expected: any) => ({
 export type Contract = { funcName: string, params: Spec[], varargs?: Spec }
 export const contract = (funcName: string, params: Spec[], varargs?: Spec): Contract => ({ funcName, params, varargs })
 
-export function checkContract (contract: Contract, args: any[]): void {
+export function checkContract (args: any[], contract: Contract): void {
   if (contract.varargs === undefined && args.length !== contract.params.length) {
-    throw new ScamperError('Runtime', `wrong number of arguments to ${contract.funcName}. Expected ${contract.params.length}, received ${args.length}.`)
+    throw new ScamperError('Runtime', `wrong number of arguments to ${contract.funcName} provided. Expected ${contract.params.length}, received ${args.length}.`)
   }
   if (contract.varargs !== undefined && args.length < contract.params.length) {
-    throw new ScamperError('Runtime', `wrong number of arguments to ${contract.funcName}. Expected at least ${contract.params.length}, received ${args.length}.`)
+    throw new ScamperError('Runtime', `wrong number of arguments to ${contract.funcName} provided. Expected at least ${contract.params.length}, received ${args.length}.`)
   }
-  const required   = args.slice(0, contract.params.length)
+  const required = args.slice(0, contract.params.length)
   const additional = args.slice(contract.params.length)
   required.forEach((arg, i) => {
     if (!contract.params[i].predicate(arg)) {

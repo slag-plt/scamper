@@ -95,13 +95,13 @@ function valueToExp (v: Value): S.Exp {
   } else if (V.isClosure(v)) {
     
   }
+  throw new ICE('sem.valueToExp', 'Unimplemented')
 }
 
 function dumpToExp ([stack, env, control]: [Value[], Env, Control]): S.Exp {
   let expStack = stack.map(valueToExp)
   let stackIdx = stack.length - 1
-  let expStack: Exp[] = []
-
+  throw new ICE('sem.valueToExp', 'Unimplemented')
 }
 
 function stateToExp (state: ExecutionState): S.Exp | null {
