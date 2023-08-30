@@ -263,6 +263,55 @@ export function sexpToBinding (e: S.Sexp): S.Binding {
   }
 }
 
+export function sexpToMatchBranch (e: S.Sexp): S.MatchBranch {
+  if (e.tag === 'atom' || e.value.length !== 2) {
+    throw new ScamperError('Parser', `Match branches must be given a pair of a pattern and an expression: ${S.sexpToString(e)}`, undefined, e.range)
+  } else {
+    return { pattern: sexpToPat(e.value[0]), body: sexpToExp(e.value[1]) }
+  }
+}
+
+export function atomToPat (e: S.Atom): S.Pat {
+  const text = e.value
+  if (intRegex.test(text)) {
+    return S.mkPNum(parseInt(text), e.range)
+  } else if (floatRegex.test(e.value)) {
+    return S.mkPNum(parseFloat(e.value), e.range)
+  } else if (e.value === '#t') {
+    return S.mkPBool(true, e.range)
+  } else if (e.value === '#f') {
+    return S.mkPBool(false, e.range)
+  } else if (e.value.startsWith('"')) {
+    return S.mkPStr(e.value.slice(1, -1), e.range)
+  } else if (e.value === '_') {
+    return S.mkPWild(e.range)
+  } else if (e.value === 'null') {
+    return S.mkPNull(e.range)
+  } else if (reservedWords.includes(e.value)) {
+    throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+  } else {
+    return S.mkPVar(e.value, e.range)
+  }
+}
+
+export function sexpToPat (e: S.Sexp): S.Pat {
+  switch (e.tag) {
+    case 'atom':
+      return atomToPat(e)
+    case 'list': {
+      if (e.value.length === 0) {
+        throw new ScamperError('Parser', 'The empty list is not a valid pattern', undefined, e.range)
+      }
+      const head = e.value[0]
+      if (head.tag !== 'atom') {
+        throw new ScamperError('Parser', 'Constructor patterns must start with an identifier', undefined, head.range)
+      }
+      const args = e.value.slice(1)
+      return S.mkPCtor(head.value, args.map(sexpToPat), e.range)
+    }
+  }
+}
+
 export function sexpToExp (e: S.Sexp): S.Exp {
   switch (e.tag) {
     case 'atom':
@@ -310,6 +359,19 @@ export function sexpToExp (e: S.Sexp): S.Exp {
             e.range
           )
         }
+      } else if (head.tag === 'atom' && head.value === 'begin') {
+        if (args.length === 0) {
+          throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, e.range)
+        } else {
+          return S.mkBegin(args.map(sexpToExp), e.bracket, e.range)
+        }
+      } else if (head.tag === 'atom' && head.value === 'match') {
+        if (args.length < 2) {
+          throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, e.range)
+        }
+        const scrutinee = args[0]
+        const branches = args.slice(1)
+        return S.mkMatch(sexpToExp(scrutinee), branches.map(sexpToMatchBranch), e.bracket, e.range)
       } else {
         return S.mkApp(sexpToExp(head), args.map(sexpToExp), e.bracket, e.range)
       }
@@ -350,6 +412,26 @@ export function sexpToStmt (e: S.Sexp): S.Stmt {
           throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
         }
         return S.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
+      } else if (head.value === 'struct') {
+        if (args.length !== 2) {
+          throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, e.range)
+        } 
+        const name = args[0]
+        if (name.tag !== 'atom') {
+          throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, name.range)
+        }
+        const sfields = args[1]
+        if (sfields.tag !== 'list') {
+          throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, args[1].range)
+        }
+        const fields: string[] = []
+        sfields.value.forEach((f) => {
+          if (f.tag !== 'atom') {
+            throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, f.range)
+          }
+          fields.push(f.value)
+        })
+        return S.mkStruct(name.value, fields, e.bracket, e.range) 
       } else {
         return S.mkStmtExp(sexpToExp(e))
       }

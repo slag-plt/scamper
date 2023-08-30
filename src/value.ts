@@ -1,13 +1,17 @@
-import { Id, Range } from './lang.js'
+import { Id, Range, Pat, patToString } from './lang.js'
 
-export type Op   = Var | Val | Cls | Ap | If | Let | Disp
-export type Var  = { tag: 'var', name: string, range: Range }
-export type Val  = { tag: 'val', value: Value }
-export type Cls  = { tag: 'cls', params: Id[], ops: Op[] }
-export type Ap   = { tag: 'ap', arity: number, range: Range }
-export type If   = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
-export type Let  = { tag: 'let', names: Id[] }
-export type Disp = { tag: 'disp' }
+export type MatchBranch = { pattern: Pat, body: Op[] }
+
+export type Op    = Var | Val | Cls | Ap | If | Let | Disp | Seq | Match
+export type Var   = { tag: 'var', name: string, range: Range }
+export type Val   = { tag: 'val', value: Value }
+export type Cls   = { tag: 'cls', params: Id[], ops: Op[] }
+export type Ap    = { tag: 'ap', arity: number, range: Range }
+export type If    = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
+export type Let   = { tag: 'let', names: Id[] }
+export type Disp  = { tag: 'disp' }
+export type Seq   = { tag: 'seq', numSubexps: number }
+export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
 export const mkValue = (value: Value): Op => ({ tag: 'val', value })
@@ -16,6 +20,8 @@ export const mkAp = (arity: number, range: Range): Op => ({ tag: 'ap', arity, ra
 export const mkIf = (ifb: Op[], elseb: Op[], range: Range): Op => ({ tag: 'if', ifb, elseb, range })
 export const mkLet = (names: Id[]): Op => ({ tag: 'let', names })
 export const mkDisp = (): Op => ({ tag: 'disp' })
+export const mkSeq = (numSubexps: number): Op => ({ tag: 'seq', numSubexps })
+export const mkMatch = (branches: MatchBranch[], range: Range): Op => ({ tag: 'match', branches, range })
 
 export function opToString (op: Op): string {
   switch (op.tag) {
@@ -33,6 +39,10 @@ export function opToString (op: Op): string {
       return `let (${op.names.join(' ')})`
     case 'disp':
       return 'disp'
+    case 'seq':
+      return `seq ${op.numSubexps}`
+    case 'match':
+      return `match (${op.branches.map((b) => patToString(b.pattern) + ' => ' + b.body.map(opToString).join('; ')).join(' | ')})`
   }
 }
 
@@ -51,7 +61,7 @@ export const isJsFunction = (v: Value): boolean => typeof v === 'object' && (v a
 export const isFunction = (v: Value): boolean => typeof v === 'function' || isClosure(v) || isJsFunction(v)
 export const isChar = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'char'
 export const isPair = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'pair'
-export const isList = (v: Value): boolean => isPair(v) && (v as Pair).isList
+export const isList = (v: Value): boolean => v === null || (isPair(v) && (v as Pair).isList)
 export const isStruct = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'struct'
 export const isStructKind = (v: Value, k: string): boolean => isStruct(v) && (v as Struct).kind === k
 
@@ -63,6 +73,24 @@ export const mkPair = (fst: Value, snd: Value): Pair => ({
   isList: snd === null || (isPair(snd) && (snd as Pair).isList)
 })
 export const mkStruct = (kind: string, fields: Value[]): Value => ({ _scamperTag: 'struct', kind, fields })
+
+export function listToArray (l: Pair): Value[] {
+  const ret = []
+  let cur = l
+  while (cur !== null) {
+    ret.push(cur.fst)
+    cur = cur.snd as Pair
+  }
+  return ret
+}
+
+export function arrayToList (arr: Value[]): Pair | null {
+  let ret = null
+  for (let i = arr.length - 1; i >= 0; i--) {
+    ret = mkPair(arr[i], ret)
+  }
+  return ret
+}
 
 export function valueToString (v: Value) {
   if (isClosure(v)) {

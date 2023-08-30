@@ -2,7 +2,6 @@ import { Op, Value, Env } from './value.js'
 import { ICE, Id, ScamperError } from './lang.js'
 import * as S from './lang.js'
 import * as V from './value.js'
-import { render } from './lib/image.js'
 
 class Control {
   private idx: number
@@ -35,10 +34,28 @@ class ExecutionState {
     this.dump = []
   }
 
-  isRunning(): boolean { return !this.control.isEmpty() }
+  isFinished(): boolean { return this.control.isEmpty() }
+
+  isControlEmpty(): boolean { return this.control.isEmpty() }
+
+  dumpAndSwitch (stack: Value[], env: Env, ops: Op[]): void {
+    this.dump.push([this.stack, this.env, this.control])
+    this.stack = stack
+    this.env = env
+    this.control = new Control(ops)
+  }
+
+  isDumpEmpty() { return this.dump.length === 0 }
+
+  popDump () {
+    const [stack, env, control] = this.dump.pop()!
+    this.stack = stack
+    this.env = env
+    this.control = control
+  }
 }
 
-export function expToOps (e: S.Exp): Op[]{
+export function expToOps (e: S.Exp): Op[] {
   switch (e.tag) {
     case 'var':
       return [V.mkVar(e.name, e.range)]
@@ -57,6 +74,52 @@ export function expToOps (e: S.Exp): Op[]{
       return [e.head].concat(e.args).flatMap(expToOps).concat([V.mkAp(e.args.length, e.range)])
     case 'if':
       return expToOps(e.guard).concat([V.mkIf(expToOps(e.ifb), expToOps(e.elseb), e.range)])
+    case 'begin':
+      return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
+    case 'match':
+      return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+  }
+}
+
+export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
+
+  if (p.tag === 'wild') {
+    return []
+  } else if (p.tag === 'var') {
+    return [[p.name, v]]
+  } else if (p.tag === 'null' && v === null) {
+    return []
+  } else if (p.tag === 'bool' && typeof v === 'boolean' && p.value === v) {
+    return []
+  } else if (p.tag === 'num' && typeof v === 'number' && p.value === v) {
+    return []
+  } else if (p.tag === 'str' && typeof v === 'string' && p.value === v) {
+    return []
+  } else if (p.tag === 'ctor' && (V.isPair(v) || V.isStruct(v))) {
+    const head = p.ctor
+    const args = p.args
+    if ((head === 'pair' || head === 'cons') && args.length === 2 && V.isPair(v)) {
+      const env1 = tryMatch(args[0], (v as V.Pair).fst)
+      const env2 = tryMatch(args[1], (v as V.Pair).snd)
+      return env1 && env2 ? env1.concat(env2) : undefined
+  } else if (V.isStructKind(v, head)) {
+      const fields = [...((v as V.Struct).fields).values()]
+      if (fields.length === args.length) {
+        let env: [string, Value][] = []
+        for (let i = 0; i < fields.length; i++) {
+          const env2 = tryMatch(args[i], fields[i])
+          if (!env2) {
+            return undefined
+          }
+          env = env.concat(env2)
+        }
+        return env
+      } else {
+        return undefined
+      }
+    }
+  } else {
+    return undefined
   }
 }
 
@@ -80,17 +143,17 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
     case 'ap':
       if (stack.length >= op.arity + 1) {
         const head = stack[stack.length - op.arity - 1]
-        const args = stack.slice(-op.arity)
+        const args = op.arity === 0 ? [] : stack.slice(-op.arity)
         for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
         if (V.isClosure(head)) {
           const closure = head as V.Closure
           if (closure.params.length !== args.length) {
             throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
           } else {
-            state.dump.push([state.stack, state.env, state.control])
-            state.stack = []
-            state.env = closure.env.extend(closure.params.map((p, i) => [p, args[i]]))
-            state.control = new Control(closure.ops)
+            // TODO: here, we can check if this control is done.
+            // If so, then this is a tail call! No need to dump,
+            // just overwrite the current state and go forward.
+            state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
           }
         } else if (V.isJsFunction(head)) {
           const jsFunc = head as V.JsFunction
@@ -131,26 +194,60 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
         for (let i = 0; i < op.names.length; i++) { stack.pop() }
         state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
         // TODO: need to pop the env at some point, right?
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for let binding`)
       }
       break
     case 'disp':
       if (stack.length >= 1) {
         const value = stack.pop()
         display(value)
+      } else {
+        throw new ICE('sem.step', `Value missing from stack for display`)
       }
+      break
+    case 'seq':
+      const values = stack.slice(-op.numSubexps)
+      if (stack.length >= op.numSubexps) {
+        // N.B., the top of the stack is the last value created which we want to return!
+        const ret = stack.pop()
+        for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
+        stack.push(ret)
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
+      }
+    break
+    case 'match':
+      if (stack.length >= 1) {
+        const scrutinee = stack.pop()!
+        let foundMatch = false
+        for (let i = 0; !foundMatch && i < op.branches.length; i++) {
+          const bindings = tryMatch(op.branches[i].pattern, scrutinee)
+          if (bindings) {
+            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body)
+            foundMatch = true
+          }
+        }
+        if (!foundMatch) {
+          throw new ScamperError('Runtime', `No pattern matches for ${V.valueToString(scrutinee)}`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Scrutinee missing from stack for match`)
+      }
+    break
+    default:
+      throw new ICE('sem.step', `Unknown op tag: ${(op as any).tag}`)
   }
-  if (state.control.isEmpty() && state.dump.length > 0) {
+  // N.B., pop the dump until we arrive at a non-finished state
+  while (state.isFinished() && !state.isDumpEmpty()) {
     const ret = state.stack.pop()!
-    const [stack, env, control] = state.dump.pop()!
-    state.stack = stack
-    state.env = env
-    state.control = control
+    state.popDump()
     state.stack.push(ret)
   }
 }
 
 function execute (display: (v: any) => void ,state: ExecutionState): Value {
-  while (state.isRunning()) {
+  while (!state.isFinished()) {
     step(display, state)
   }
   if (state.stack.length !== 1) {
@@ -198,6 +295,15 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
           display(e)
         }
       }
+      break
+      case 'struct': {
+        const name = stmt.id
+        const pred: [string, Value]= [`${name}?`, V.mkJsFunction((v: any) => V.isStructKind(v, name), 1)]
+        const fieldFns: [string, Value][] = stmt.fields.map((f, i) => [`${name}-${f}`, V.mkJsFunction((v: V.Struct) => v.fields[i], 1)])
+        const ctor: [string, Value]= [name, V.mkJsFunction((...args: any[]) => V.mkStruct(name, args), stmt.fields.length)]
+        env = env.extend([pred, ctor, ...fieldFns])
+      }
+      break
     }
   })
 }
