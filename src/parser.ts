@@ -225,7 +225,7 @@ export function tokensToSexps (tokens: Token[]): S.Sexp[] {
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
 
-const reservedWords = [
+export const reservedWords = [
   'and',
   'begin',
   'cond',

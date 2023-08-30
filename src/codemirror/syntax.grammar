@@ -1,4 +1,4 @@
-@top Program { expression* }
+@top Program { statement* }
 
 @skip { space | LineComment }
 
@@ -8,6 +8,15 @@ expression {
   Boolean |
   Application { "(" expression* ")" }
 }
+
+statement {
+  Import { "(" kw<"import"> Identifier ")" }
+  Define { "(" kw<"define"> Identifier expression ")" }
+  Display { "(" kw<"display"> expression ")" }
+  SExpr { expression }
+}
+
+kw<term> { @specialize[@name={term}]<Identifier, term> }
 
 @tokens {
   Identifier { $[a-zA-Z_\-0-9]+ }

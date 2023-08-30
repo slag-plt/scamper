@@ -33,7 +33,11 @@ class IDE {
       const scamper = new Scamper('output')
       outputPane!.innerHTML = ''
       const program = this.getDoc()
-      scamper.runProgram(program)
+      try {
+        scamper.runProgram(program)
+      } catch (e) {
+        scamper.display(e)
+      }
     })
 
     Split(['#file-drawer', '#editor', '#results'], {
