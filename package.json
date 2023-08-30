@@ -4,8 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "clean": "rm -rf dist/ src/version.ts",
-    "build": "npx genversion src/version.ts --es6; rollup -c",
+    "gen-version": "npx genversion src/version.ts --es6",
+    "build": "rollup -c",
     "serve": "python3 -m http.server"
   },
   "type": "module",

@@ -105,3 +105,5 @@ dist
 
 dist/
 src/version.ts
+.DS_Store
+site
