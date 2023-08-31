@@ -310,6 +310,9 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
         try {
           const state = new ExecutionState(env, expToOps(stmt.body))
           const result = execute(display, state)
+          if (env.has(stmt.name)) {
+            throw new ScamperError('Runtime', `Identifier ${stmt.name} already bound at the global scope`, undefined, stmt.range)
+          }
           env.set(stmt.name, result)
         } catch (e) {
           display(e)
