@@ -10,7 +10,7 @@ class Control {
 
   constructor (ops: Op[]) {
     this.idx = 0
-    this.ops = [...ops]   // N.B., make a copy because we mutate ops!
+    this.ops = ops
   }
 
   isEmpty (): boolean { return this.idx >= this.ops.length }
@@ -94,20 +94,82 @@ function valueToExp (v: Value): S.Exp {
   } else if (V.isArray(v)) {
     return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map(valueToExp), '(', noRange)
   } else if (V.isClosure(v)) {
-    
+    throw new ICE('sem.valueToExp', 'Unimplemented')
+  } else if (V.isJsFunction(v)) {
+    return S.mkVar((v as Function).name, noRange)
+  } else if (V.isChar(v)) {
+    return S.mkChar((v as V.Char).value, noRange)
+  } else if (V.isList(v)) {
+    const l = v as V.List
+    if (l === null) {
+      return S.mkVar('null', noRange)
+    } else {
+      const elems = V.listToArray(l)
+      return S.mkApp(S.mkVar('list', noRange), elems.map(valueToExp), '(', noRange)
+    }
+  } else if (V.isPair(v)) {
+    const p = v as V.Pair
+    return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map(valueToExp), '(', noRange)
+  } else if (V.isStruct(v)) {
+    const s = v as V.Struct
+    return S.mkApp(S.mkVar(s.kind, noRange), s.fields.map(valueToExp), '(', noRange)
+  } else {
+    throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
-  throw new ICE('sem.valueToExp', 'Unimplemented')
 }
 
-function dumpToExp ([stack, env, control]: [Value[], Env, Control]): S.Exp {
+function dumpToExp ([stack, control]: [Value[], Control], hole?: S.Exp): S.Exp {
   let expStack = stack.map(valueToExp)
-  let stackIdx = stack.length - 1
-  throw new ICE('sem.valueToExp', 'Unimplemented')
+  if (hole !== undefined) { expStack.push(hole) }
+  for (let i = control.idx; i < control.ops.length; i++) {
+    const op = control.ops[i]
+    if (op.tag === 'var') {
+      expStack.push(S.mkVar(op.name, op.range))
+    } else if (op.tag === 'val') {
+      expStack.push(valueToExp(op.value))
+    } else if (op.tag === 'cls') {
+      throw new ICE('sem.dumpToExp', 'Unimplemented closure case')
+    } else if (op.tag === 'ap') {
+      const args = op.arity === 0 ? [] : expStack.slice(-op.arity)
+      for (let i = 0; i < op.arity; i++) { expStack.pop() }
+      expStack.push(S.mkApp(expStack.pop()!, args, '(', noRange))
+    } else if (op.tag === 'if') {
+      const elseb = expStack.pop()!
+      const ifb = expStack.pop()!
+      const guard = expStack.pop()!
+      expStack.push(S.mkIf(guard, ifb, elseb, '(', noRange))
+    } else if (op.tag === 'let') {
+      const names = op.names
+      const bindings = names.reverse().map((n: string) =>
+        ({ name: n, body: expStack.pop()! })).reverse()
+      expStack.push(S.mkLet(bindings, expStack.pop()!, '(', noRange))
+    } else if (op.tag === 'seq') {
+      if (op.numSubexps === 0) {
+        expStack.push(S.mkBegin([], '(', noRange))
+      } else {
+        const exps = expStack.slice(-op.numSubexps)
+        for (let i = 0; i < op.numSubexps; i++) { expStack.pop() }
+        expStack.push(S.mkBegin(exps, '(', noRange))
+      }
+    } else if (op.tag === 'match') {
+      throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+    }
+  }
+  if (expStack.length !== 1) {
+    throw new ICE('sem.dumpToExp', `Stack size is not 1 after execution: ${stack}`)
+  } else {
+    return expStack.pop()!
+  }
 }
 
-function stateToExp (state: ExecutionState): S.Exp | null {
-  // TODO: fill me out!
-  return null
+export function stateToExp (state: ExecutionState): S.Exp | undefined {
+  const dump: [Value[], Control][] = state.dump.map(([stack, _env, control]) => [stack, control])
+  dump.push([state.stack, state.control])
+  let ret: S.Exp | undefined = undefined
+  for (let i = dump.length - 1; i >= 0; i--) {
+    ret = dumpToExp(dump[i], ret)
+  }
+  return ret
 }
 
 export function expToOps (e: S.Exp): Op[] {
@@ -139,7 +201,6 @@ export function expToOps (e: S.Exp): Op[] {
 }
 
 export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
-
   if (p.tag === 'wild') {
     return []
   } else if (p.tag === 'var') {
@@ -180,7 +241,7 @@ export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
   }
 }
 
-export function step (display: (v: any) => void, state: ExecutionState): void {
+export function step (_display: (v: any) => void, state: ExecutionState): void {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
@@ -243,14 +304,6 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
         // TODO: need to pop the env at some point, right?
       } else {
         throw new ICE('sem.step', `Not enough values on stack for let binding`)
-      }
-      break
-    case 'disp':
-      if (stack.length >= 1) {
-        const value = stack.pop()
-        display(value)
-      } else {
-        throw new ICE('sem.step', `Value missing from stack for display`)
       }
       break
     case 'seq':
