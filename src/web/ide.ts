@@ -106,7 +106,7 @@ class IDE {
       if (this.fs.getLastOpened() === file) {
         li.classList.add('selected')
       }
-      fileList.appendChild(li)
+      lst.appendChild(li)
     }
     fileList.appendChild(lst)
   }
@@ -134,24 +134,36 @@ class IDE {
     filenameLabel.setAttribute('contenteditable', 'true')
     filenameLabel.focus()
     window.getSelection()!.selectAllChildren(filenameLabel)
-    const fn = (e: KeyboardEvent) => {
-      if (e.code === 'Enter') {
-        const newName = filenameLabel.innerText
-        if (this.fs.fileExists(newName)) {
-          alert(`A file named ${newName} already exists.`)
-          filenameLabel.innerText = oldName
-        } else {
-          this.fs.renameFile(oldName, newName)
-          console.log(this.fs.getFileList())
-          this.changeCurrentFile(newName, false)
-          this.updateFileList()
-        }
-        filenameLabel.setAttribute('contenteditable', 'false')
-        filenameLabel.removeEventListener('keydown', fn)
-        this.startAutosaving()
+    let isRenaming = true
+    const tryCommitFilename = () => {
+      const newName = filenameLabel.innerText
+      if (newName === oldName) { 
+        // N.B.: continue through to clean-up
+      } else if (this.fs.fileExists(newName)) {
+        alert(`A file named ${newName} already exists.`)
+        filenameLabel.innerText = oldName
+      } else {
+        this.fs.renameFile(oldName, newName)
+        this.changeCurrentFile(newName, false)
+        this.updateFileList()
       }
+      filenameLabel.setAttribute('contenteditable', 'false')
+      filenameLabel.removeEventListener('keydown', tryCommitFilename)
+      this.startAutosaving()
     }
-    filenameLabel.addEventListener('keydown', fn)
+    filenameLabel.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.code === 'Enter' && isRenaming) {
+        // N.B., race condition with focusout? How do I manage this?
+        isRenaming = false
+        tryCommitFilename()
+      }
+    })
+    filenameLabel.addEventListener('focusout', (e) => {
+      if (isRenaming) {
+        isRenaming = false
+        tryCommitFilename()
+      }
+    })
   }
 
   deleteCurrentFile () {
