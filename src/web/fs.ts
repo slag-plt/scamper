@@ -102,9 +102,7 @@ class FS {
 
   deleteFile (filename: string): void {
     const fileList = this.getFileList()
-    console.log(`before: ${JSON.stringify(fileList)}`)
     fileList.splice(fileList.indexOf(filename), 1)
-    console.log(`after: ${JSON.stringify(fileList)}`)
     localStorage.setItem(this.fileListTag, JSON.stringify(fileList))
     localStorage.removeItem(this.fileTag(filename))
   }
