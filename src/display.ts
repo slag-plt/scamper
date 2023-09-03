@@ -108,8 +108,8 @@ export function renderToHTML (v: any): HTMLElement {
         const ret = mkCodeElement('(vector ')
         ret.appendChild(renderToHTML(vec[0]))
         vec.slice(1).forEach((e) => {
-          ret.appendChild(renderToHTML(e))
           ret.appendChild(mkCodeElement(' '))
+          ret.appendChild(renderToHTML(e))
         })
         ret.append(mkCodeElement(')'))
         return ret
@@ -151,8 +151,11 @@ export function renderToHTML (v: any): HTMLElement {
           return mkCodeElement(v.toString())
         } else if (v instanceof ICE) {
           return mkCodeElement(v.toString())
+        } else if (v instanceof Error) {
+          return mkCodeElement(v.toString())
         } else {
-          return mkCodeElement(`[Object]`)
+          // return mkCodeElement(JSON.stringify(v, undefined, 2))
+          return mkCodeElement('[Object]')
         }
       }
   }

@@ -39,17 +39,20 @@ export class ScamperError extends Error {
   phase: Phase
   modName?: string
   range?: Range
+  source?: string
 
-  constructor (phase: Phase, msg: string, modName?: string, range?: Range) {
+  constructor (phase: Phase, msg: string, modName?: string, range?: Range, source?: string) {
     super(msg)
     this.phase = phase
     this.modName = modName
     this.range = range
+    this.source = source
   }
 
   toString(): string {
     const detail = `${this.modName ? this.modName : ''}${this.range ? this.range.toString() : ''}`
-    return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${this.message}`
+    const src = this.source ? `(${this.source}) ` : ''
+    return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
   }
 }
 

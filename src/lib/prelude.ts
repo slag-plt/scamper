@@ -499,17 +499,44 @@ function reverse (l: V.List): V.List {
 registerFn('reverse', reverse, Prelude)
 
 function listTail (l: V.List, k: number): V.List {
-  throw new Error ('Prelude.tail unimplemented')
+  checkContract(arguments, contract('list-tail', [C.list, C.nonneg]))
+  while (l !== null && k > 0) {
+    l = l.snd as V.List
+    k -= 1
+  }
+  return l
 }
 registerFn('list-tail', listTail, Prelude)
 
 function listTake (l: V.List, k: number): V.List {
-  throw new Error ('Prelude.take unimplemented')
+  checkContract(arguments, contract('list-take', [C.list, C.nonneg]))
+  let elts = []
+  // N.B., push in reverse order so we built the list right-to-left
+  while (l !== null && k > 0) {
+    elts.push(l.fst)
+    l = l.snd as V.List
+    k -= 1
+  }
+  let ret: V.List = null
+  for (let i = elts.length - 1; i >= 0; i--) {
+    ret = V.mkPair(elts[i], ret)
+  }
+  return ret
 }
 registerFn('list-take', listTake, Prelude)
 
 function listRef (l: V.List, n: number): Value {
-  throw new Error ('Prelude.ref unimplemented')
+  checkContract(arguments, contract('list-ref', [C.list, C.nonneg]))
+  let i = n
+  while (l !== null && i > 0) {
+    l = l.snd as V.List
+    i -= 1
+  }
+  if (l === null) {
+    throw new ScamperError('Runtime', `list-ref: index ${n} out of bounds of list`)
+  } else {
+    return l.fst
+  }
 }
 registerFn('list-ref', listRef, Prelude)
 
@@ -530,22 +557,62 @@ registerFn('list-ref', listRef, Prelude)
 // Other list functions
 
 function indexOf (l: V.List, v: Value): number {
-  throw new Error ('Prelude.indexOf unimplemented') 
+  checkContract(arguments, contract('index-of', [C.list, C.any]))
+  let i = 0
+  while (l !== null) {
+    if (V.valuesEqual(l.fst, v)) {
+      return i
+    }
+    l = l.snd as V.List
+    i += 1
+  }
+  return -1
 }
 registerFn('index-of', indexOf, Prelude)
 
 function assocKey (v: Value, l: V.List): boolean {
-  throw new Error ('Prelude.assocKey unimplemented')
+  checkContract(arguments, contract('assoc-key?', [C.any, C.listof(C.pair)]))
+  while (l !== null) {
+    if (V.valuesEqual((l.fst as V.Pair).fst, v)) {
+      return true
+    }
+    l = l.snd as V.List
+  }
+  return false
 }
 registerFn('assoc-key?', assocKey, Prelude)
 
-function assocRef (v: Value, l: V.List): boolean {
-  throw new Error ('Prelude.assocKey unimplemented')
+function assocRef (v: Value, l: V.List): Value {
+  checkContract(arguments, contract('assoc-ref', [C.any, C.listof(C.pair)]))
+  while (l !== null) {
+    if (V.valuesEqual((l.fst as V.Pair).fst, v)) {
+      return (l.fst as V.Pair).snd
+    }
+    l = l.snd as V.List
+  }
+  throw new ScamperError('Runtime', `assoc-ref: key ${v} not found in association list`)
 }
 registerFn('assoc-ref', assocRef, Prelude)
 
-function assocSet (k: Value, v: Value, l: V.List): boolean {
-  throw new Error ('Prelude.assocKey unimplemented')
+function assocSet (k: Value, v: Value, l: V.List): V.List {
+  checkContract(arguments, contract('assoc-set', [C.any, C.any, C.listof(C.pair)]))
+  const front = []
+  // TODO: implement me—this isn't the right implementation!
+  while (l !== null) {
+    const entry = l.fst as V.Pair
+    if (V.valuesEqual(entry.fst, k)) {
+      front.push(V.mkPair(k, v))
+      let ret = l.snd as V.List
+      for (let i = front.length - 1; i >= 0; i--) {
+        ret = V.mkPair(front[i], ret)
+      }
+      return ret
+    } else {
+      front.push(l.fst)
+      l = l.snd as V.List
+    }
+  }
+  return V.arrayToList(front.concat([V.mkPair(k, v)]))
 }
 registerFn('assoc-set', assocSet, Prelude)
 
@@ -826,6 +893,7 @@ function stringSplitVector (s: string, sep: string): string[] {
 registerFn('string-split-vector', stringSplitVector, Prelude)
 
 // TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
+// TODO: need to add a custom renderer for reactive file blobs
 
 type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: V.Closure | Function }
 function withFile (callback: V.Closure | Function): ReactiveFile {
@@ -909,35 +977,27 @@ function listToVector (l: V.List): Value[] {
 }
 registerFn('list->vector', listToVector, Prelude)
 
-const vectorRange = (m: number, n: number, step: number): number[] => {
-  throw new ScamperError ('Runtime', 'vector-range unimplemented')
+function vectorRange (...args: number[]): number[] {
+  checkContract(arguments, contract('vector-range', [], C.number))
+  if (args.length === 0 || args.length > 3) {
+    throw new ScamperError('Runtime', '1, 2, or 3 numbers must be passed to function')
+  } else {
+    const m = args.length === 1 ? 0 : args[0]
+    const n = args.length === 1 ? args[0] : args[1]
+    const step = args.length < 3 ? 1 : args[2]
+    const arr = []
+    // N.B., to prevent the internal infinite loop that would result
+    // from having a zero step.
+    if (step === 0) {
+      throw new ScamperError('Runtime', '"step" argument must be non-zero')
+    }
+    for (let i = m; step > 0 ? i < n : i > n; i += step) {
+      arr.push(i)
+    }
+    return arr
+  }
 }
 registerFn('vector-range', vectorRange, Prelude)
-
-/*
-// N.B., this is identical to rangePrim except it does not conver the output
-// to a list! Probably should refactor this...
-const vectorRangePrim: L.Prim = (_env, args, app) =>
-  Promise.resolve(Utils.checkArgsResult('vector-range', [], 'number?', args, app).andThen(_ => {
-    if (args.length === 0 || args.length > 3) {
-      return runtimeError(msg('error-arity', 'vector-range', '1--3', args.length), app)
-    } else {
-      const m = args.length === 1 ? 0 : args[0] as number
-      const n = args.length === 1 ? args[0] as number : args[1] as number
-      const step = args.length < 3 ? 1 : args[2] as number
-      const arr = []
-      // N.B., to prevent the internal infinite loop that would result
-      // from having a zero step.
-      if (step === 0) {
-        return runtimeError(msg('error-precondition-not-met', 'vector-range', '3', 'non-zero', step), app)
-      }
-      for (let i = m; step > 0 ? i < n : i > n; i += step) {
-        arr.push(i)
-      }
-      return ok(arr)
-    }
-  }))
-*/
 
 function vectorAppend (...vecs: Value[][]): Value[] {
   checkContract(arguments, contract('vector-append', [], C.vector))
@@ -964,12 +1024,18 @@ function procedureQ (x: any): boolean {
 registerFn('procedure?', procedureQ, Prelude)
 
 function apply (f: V.Closure | Function, args: Value[]): Value {
-  throw new ScamperError ('Runtime', 'apply unimplemented')
+  checkContract(arguments, contract('apply', [C.func, C.list]))
+  return callFunction(f, ...args)
 }
 registerFn('apply', apply, Prelude)
 
 function stringMap (f: V.Closure | Function, s: string): string {
-  throw new ScamperError ('Runtime', 'string-map unimplemented')
+  checkContract(arguments, contract('string-map', [C.func, C.string]))
+  let chs = []
+  for (let i = 0; i < s.length; i++) {
+    chs.push(V.mkChar(s[i]))
+  }
+  return chs.map((c) => callFunction(f, c).value).join('')
 }
 registerFn('string-map', stringMap, Prelude)
 
@@ -996,105 +1062,146 @@ function transpose <T> (arr: T[][]): T[][] {
   return result
 }
 
-const map = (f: V.Closure | Function, ...lsts: V.List[]): V.List => {
-  throw new ScamperError ('Runtime', 'map unimplemented')
+function mapOne (f: V.Closure | Function, l: V.List): V.List {
+  const values = []
+  while (l !== null) {
+    values.push(callFunction(f, l.fst))
+    l = l.snd as V.Pair
+  }
+  return V.arrayToList(values)
+}
+
+function map (f: V.Closure | Function, ...lsts: V.List[]): V.List {
+  checkContract(arguments, contract('map', [C.func], C.list))
+  if (lsts.length === 0) {
+    return null
+  } else if (lsts.length === 1) {
+    return mapOne(f, lsts[0])
+  } else {
+    const lists = lsts.map(V.listToArray)
+    if (!(lists.map(l => l.length).every(n => n === lists[0].length))) {
+      throw new ScamperError('Runtime', 'the lists passed to the function call do not have the same length')
+    }
+    const xs = transpose(lists)
+    return V.arrayToList(xs.map(vs => callFunction(f, ...vs)))
+  }
 }
 registerFn('map', map, Prelude)
 
-/*
-const mapPrim: L.Prim = async (env, args, app) =>
-  Utils.checkArgsResult('map', ['procedure?', 'list?'], 'list?', args, app).asyncAndThen(async _ => {
-    const fn = args[0]
-    // N.B., non-recursive, linear-time map when only one list is involved
-    if (args.length === 2) {
-      const list = args[1]
-      if (list === null) {
-        return Promise.resolve(ok(null))
-      } else {
-        let cur = list as L.PairType
-        const ret = L.vpair(cur.fst, null) as L.PairType
-        let result = await evaluateExp(env, L.nlecall(L.nlevalue(fn), [L.nlevalue(cur.fst)]))
-        if (result.tag === 'error') {
-          return Promise.resolve(result)
-        } else {
-          ret.fst = result.value
-        }
-        let curRet: L.PairType = ret
-        while (cur.snd !== null) {
-          cur = cur.snd as L.PairType
-          const newNode = L.vpair(null, null) as L.PairType
-          result = await evaluateExp(env, L.nlecall(L.nlevalue(fn), [L.nlevalue(cur.fst)]))
-          if (result.tag === 'error') {
-            return Promise.resolve(result)
-          } else {
-            newNode.fst = result.value
-          }
-          curRet.snd = newNode
-          curRet = newNode
-        }
-        return Promise.resolve(ok(ret))
-      }
-    } else {
-      const lists = args.slice(1).map(L.valueListToArray_)
-      if (!(lists.map(l => l.length).every(n => n === lists[0].length))) {
-        return runtimeError(msg('error-precondition-not-met', 'map', 2,
-          'all lists have the same length', Pretty.expToString(0, app)), app)
-      }
-      const xs = transpose(lists)
-      const exp = L.arrayToList(xs.map(vs => L.nlecall(L.nlevalue(fn), asValues(vs))))
-      return evaluateExp(env, exp)
-    }
-  })
-*/
 // Additional list pipeline functions from racket/base
 
-const filter = (f: V.Closure | Function, lst: V.List): V.List => {
-  throw new ScamperError ('Runtime', 'filter unimplemented')
+function filter (f: V.Closure | Function, lst: V.List): V.List {
+  checkContract(arguments, contract('filter', [C.func, C.list]))
+  const values = []
+  while (lst !== null) {
+    if (callFunction(f, lst.fst)) {
+      values.push(lst.fst)
+    }
+    lst = lst.snd as V.Pair
+  }
+  return V.arrayToList(values) 
 }
 registerFn('filter', filter, Prelude)
 
-const fold = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
-  throw new ScamperError ('Runtime', 'fold unimplemented')
+function fold (f: V.Closure | Function, init: Value, lst: V.List): Value {
+  checkContract(arguments, contract('fold', [C.func, C.any, C.list]))
+  let acc = init
+  while (lst !== null) {
+    acc = callFunction(f, acc, lst.fst)
+    lst = lst.snd as V.Pair
+  }
+  return acc
 }
 registerFn('fold', fold, Prelude)
 
-const reduce = (f: V.Closure | Function, lst: V.List): Value => {
-  throw new ScamperError ('Runtime', 'reduce unimplemented')
+function reduce (f: V.Closure | Function, lst: V.List): Value {
+  checkContract(arguments, contract('reduce', [C.func, C.nonemptyList]))
+  let acc = (lst as V.Pair).fst
+  lst = (lst as V.Pair).snd as V.Pair
+  while (lst !== null) {
+    acc = callFunction(f, acc, lst.fst)
+    lst = lst.snd as V.Pair
+  }
+  return acc
 }
 registerFn('reduce', reduce, Prelude)
 
-const foldLeft = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
-  throw new ScamperError ('Runtime', 'fold-left unimplemented')
+function foldLeft (f: V.Closure | Function, init: Value, lst: V.List): Value {
+  checkContract(arguments, contract('fold-left', [C.func, C.any, C.list]))
+  let acc = init
+  while (lst !== null) {
+    acc = callFunction(f, acc, lst.fst)
+    lst = lst.snd as V.Pair
+  }
+  return acc
 }
 registerFn('fold-left', foldLeft, Prelude)
 
-const foldRight = (f: V.Closure | Function, init: Value, lst: V.List): Value => {
-  throw new ScamperError ('Runtime', 'fold-right unimplemented')
+function foldRight (f: V.Closure | Function, init: Value, lst: V.List): Value {
+  checkContract(arguments, contract('fold-right', [C.func, C.any, C.list]))
+  const values = V.listToArray(lst)
+  let acc = init
+  for (let i = values.length - 1; i >= 0; i--) {
+    acc = callFunction(f, values[i], acc)
+  }
+  return acc
 }
 registerFn('fold-right', foldRight, Prelude)
 
-const reduceRight = (f: V.Closure | Function, lst: V.List): Value => {
-  throw new ScamperError ('Runtime', 'reduce-right unimplemented')
+function reduceRight (f: V.Closure | Function, lst: V.List): Value {
+  checkContract(arguments, contract('reduce-right', [C.func, C.nonemptyList]))
+  const values = V.listToArray(lst)
+  let acc = values.pop()
+  for (let i = values.length - 1; i >= 0; i--) {
+    acc = callFunction(f, values[i], acc)
+  }
+  return acc
 }
 registerFn('reduce-right', reduceRight, Prelude)
 
-const vectorMap = (f: V.Closure | Function, ...vecs: Value[][]): Value[] => {
-  throw new ScamperError ('Runtime', 'vector-map unimplemented')
+function vectorMap (f: V.Closure | Function, ...vecs: Value[][]): Value[] {
+  checkContract(arguments, contract('vector-map', [C.func], C.vector))
+  if (vecs.length === 0) {
+    return []
+  } else if (vecs.length === 1) {
+    return vecs[0].map((v) => callFunction(f, v))
+  } else {
+    if (!(vecs.map(l => l.length).every(n => n === vecs[0].length))) {
+      throw new ScamperError('Runtime', 'the vectors passed to the function call do not have the same length')
+    }
+    const xs = transpose(vecs)
+    return xs.map(vs => callFunction(f, ...vs))
+  }
 }
 registerFn('vector-map', vectorMap, Prelude)
 
-const vectorMapBang = (f: V.Closure | Function, vec: Value[]): void => {
-  throw new ScamperError ('Runtime', 'vector-map! unimplemented')
+function vectorMapBang (f: V.Closure | Function, vec: Value[]): void {
+  checkContract(arguments, contract('vector-map!', [C.func, C.vector]))
+  for (let i = 0; i < vec.length; i++) {
+    vec[i] = callFunction(f, vec[i])
+  }
 }
 registerFn('vector-map!', vectorMapBang, Prelude)
 
-const vectorForEach = (f: V.Closure | Function, vec: Value[]): void => {
-  throw new ScamperError ('Runtime', 'vector-for-each unimplemented')
+function vectorForEach (f: V.Closure | Function, vec: Value[]): void {
+  checkContract(arguments, contract('vector-for-each', [C.func, C.vector]))
+  for (let i = 0; i < vec.length; i++) {
+    callFunction(f, vec[i])
+  }
 }
 registerFn('vector-for-each', vectorForEach, Prelude)
 
-const forRange = (start: number, end: number, f: V.Closure | Function): void => {
-  throw new ScamperError ('Runtime', 'for-range unimplemented')
+function forRange (start: number, end: number, f: V.Closure | Function): void {
+  checkContract(arguments, contract('for-range', [C.integer, C.integer, C.func]))
+  if (start < end) {
+    for (let i = start; i < end; i++) {
+      callFunction(f, i)
+    }
+  } else {
+    for (let i = start; i > end; i--) {
+      callFunction(f, i)
+    }
+  }
 }
 registerFn('for-range', forRange, Prelude)
 
@@ -1113,8 +1220,15 @@ registerFn('for-range', forRange, Prelude)
 
 // Additional control features
 
-const vectorFilter = (f: V.Closure | Function, lst: Value[]): Value[][] => {
-  throw new ScamperError ('Runtime', 'vector-filter unimplemented')
+function vectorFilter (f: V.Closure | Function, lst: Value[]): Value[] {
+  checkContract(arguments, contract('vector-filter', [C.func, C.vector]))
+  const ret = []
+  for (let i = 0; i < lst.length; i++) {
+    if (callFunction(f, lst[i])) {
+      ret.push(lst[i])
+    }
+  }
+  return ret
 }
 registerFn('vector-filter', vectorFilter, Prelude)
 
@@ -1137,51 +1251,57 @@ function qq (): never {
   throw new ScamperError ('Runtime', 'Hole encountered in program!')
 }
 
-const compose = (...fs: (V.Closure | Function)[]): V.Closure | Function => {
-  throw new Error ('compose unimplemented')
+function compose (...fss: (V.Closure | Function)[]): V.Closure | Function {
+  checkContract(arguments, contract('compose', [C.func], C.func))
+  let first = fss[fss.length - 1]
+  return (x: Value) => {
+    let ret = callFunction(first, x)
+    for (let i = fss.length - 2; i >= 0; i--) {
+      ret = callFunction(fss[i], ret)
+    }
+    return ret
+  }
 }
 registerFn('compose', compose, Prelude)
+registerFn('o', compose, Prelude)
 
-const pipe = (init: Value, ...fs: (V.Closure | Function)[]): V.Closure | Function => {
-  throw new Error ('|> unimplemented')
+function pipe (init: Value, ...fs: (V.Closure | Function)[]): Value {
+  checkContract(arguments, contract('|>', [C.any, C.func], C.func))
+  let acc = init
+  for (let i = 0; i < fs.length; i++) {
+    acc = callFunction(fs[i], acc)
+  }
+  return acc
 }
 registerFn('|>', pipe, Prelude)
 
-const range = (m: number, n: number, step: number): number[] => {
-  throw new Error ('range unimplemented')
+function range (...args: number[]): V.List {
+  checkContract(arguments, contract('range', [], C.number))
+  if (args.length === 0 || args.length > 3) {
+    throw new ScamperError('Runtime', '1, 2, or 3 numbers must be passed to function')
+  } else {
+    const m = args.length === 1 ? 0 : args[0]
+    const n = args.length === 1 ? args[0] : args[1]
+    const step = args.length < 3 ? 1 : args[2]
+    const arr = []
+    // N.B., to prevent the internal infinite loop that would result
+    // from having a zero step.
+    if (step === 0) {
+      throw new ScamperError('Runtime', '"step" argument must be non-zero')
+    }
+    for (let i = m; step > 0 ? i < n : i > n; i += step) {
+      arr.push(i)
+    }
+    return V.arrayToList(arr)
+  }
 }
 registerFn('range', range, Prelude)
-
-/*
-const rangePrim: L.Prim = (env, args, app) =>
-  Promise.resolve(Utils.checkArgsResult('range', [], 'number?', args, app).andThen(_ => {
-    if (args.length === 0 || args.length > 3) {
-      return runtimeError(msg('error-arity', 'range', '1--3', args.length), app)
-    } else {
-      const m = args.length === 1 ? 0 : args[0] as number
-      const n = args.length === 1 ? args[0] as number : args[1] as number
-      const step = args.length < 3 ? 1 : args[2] as number
-      const arr = []
-      // N.B., to prevent the internal infinite loop that would result
-      // from having a zero step.
-      if (step === 0) {
-        return runtimeError(msg('error-precondition-not-met', 'range', '3', 'non-zero', step), app)
-      }
-      for (let i = m; step > 0 ? i < n : i > n; i += step) {
-        arr.push(i)
-      }
-      return ok(L.valueArrayToList(arr))
-    }
-  }))
-*/
 
 function random (n: number): number {
   checkContract(arguments, contract('random', [C.integer])) 
   return Math.floor(Math.random() * n)
 }
 registerFn('random', random, Prelude)
-
-
 
 function withHandler (handler: V.Closure | Function, fn: V.Closure | Function, ...args: Value[]): Value {
   checkContract(arguments, contract('with-handler', [C.func, C.func], C.any))
