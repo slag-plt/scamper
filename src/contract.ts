@@ -87,6 +87,41 @@ export const list = {
   errorMsg: (actual: any) => `expected a list, received ${typeOfValue(actual)}`
 }
 
+export const nonemptyList = {
+  predicate: (v: any) => V.isList(v) && v !== null,
+  errorMsg: (actual: any) => `expected a non-empty list, received ${typeOfValue(actual)}`
+}
+
+export const listof = (spec: Spec) => ({
+  predicate: (v: any) => {
+    if (!V.isList(v)) {
+      return false
+    }
+    let lst = v
+    while (lst !== null) {
+      if (!spec.predicate(lst.fst)) {
+        return false
+      }
+      lst = lst.snd
+    }
+    return true
+  },
+  errorMsg: (actual: any) => {
+    if (!V.isList(actual)) {
+      return `expected a list, received ${typeOfValue(actual)}`
+    } else {
+      let lst = actual
+      while (lst !== null) {
+        if (!spec.predicate(lst.fst)) {
+          return spec.errorMsg(lst.fst)
+        }
+        lst = lst.snd
+      }
+      throw new ICE('listofC.errorMsg', 'listofC should have found a failing spec!')
+    }
+  }
+})
+
 export const vector = {
   predicate: (v: any) => Array.isArray(v),
   errorMsg: (actual: any) => `expected a vector, received ${typeOfValue(actual)}`
