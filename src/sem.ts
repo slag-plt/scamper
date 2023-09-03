@@ -139,7 +139,6 @@ export function expToOps (e: S.Exp): Op[] {
 }
 
 export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
-
   if (p.tag === 'wild') {
     return []
   } else if (p.tag === 'var') {
@@ -213,9 +212,19 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
             state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
           }
         } else if (V.isJsFunction(head)) {
-          const jsFunc = head as Function
-          const result = (head as Function)(...args) as Value
-          stack.push(result)
+          const fn = head as Function
+          try {
+            const result = fn(...args) as Value
+            stack.push(result)
+          } catch (e) {
+            // N.B., annotate any errors from foreign function calls with
+            // range information from this application
+            if (e instanceof ScamperError) {
+              e.source = fn.name
+              e.range = op.range
+            }
+            throw e
+          }
         }
       } else {
         throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
@@ -380,15 +389,20 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
   })
 }
 
-export function runClosure (display: (v: any) => void, closure: V.Closure, ...args: Value[]): Value {
-  const state = new ExecutionState(closure.env, closure.ops)
-  state.stack = args
-  return execute(display, state)
+// TODO: these functions are used by Javascript libraries to invoke higher-order
+// functions that could potentially be Scamper closures. We don't expect them to
+// side-effect. Hence, we pass in a "dummy" display function that does nothing.
+// However, if we allow side-effecting higher-order functions in the future,
+// we'll need to revisit this design decision.
+
+function runClosure (closure: V.Closure, ...args: Value[]): Value {
+  const state = new ExecutionState(closure.env.extend(closure.params.map((x, i) => [x, args[i]])), closure.ops)
+  return execute((v) => { }, state)
 }
 
-export function callFunction (display: (v: any) => void, fn: V.Closure | Function, ...args: any): any {
+export function callFunction (fn: V.Closure | Function, ...args: any): any {
   if (V.isClosure(fn)) {
-    return runClosure(display, fn as V.Closure, ...args)
+    return runClosure(fn as V.Closure, ...args)
   } else {
     return (fn as Function)(...args)
   }
