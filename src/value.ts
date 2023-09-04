@@ -43,7 +43,7 @@ export function opToString (op: Op): string {
 }
 
 export type TaggedObject = Closure | Char | Pair | Struct
-export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op[], env: Env }
+export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op[], env: Env, name?: string }
 export type Char = { _scamperTag: 'char', value: string }
 export type Pair = { _scamperTag: 'pair', fst: Value, snd: Value, isList: boolean }
 export type Struct = { _scamperTag: 'struct', 'kind': string, 'fields': Value[] }

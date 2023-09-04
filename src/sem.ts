@@ -69,7 +69,7 @@ class ExecutionState {
   }
 }
 
-function valueToExp (v: Value): S.Exp {
+function valueToExp (env: Env, v: Value): S.Exp {
   if (V.isNumber(v)) {
     return S.mkNum(v as number, noRange)
   } else if (V.isBoolean(v)) {
@@ -81,10 +81,14 @@ function valueToExp (v: Value): S.Exp {
   } else if (V.isVoid(v)) {
     return S.mkVar('void', noRange)
   } else if (V.isArray(v)) {
-    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map(valueToExp), '(', noRange)
+    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map((v) => (valueToExp(env, v))), '(', noRange)
   } else if (V.isClosure(v)) {
     const cls = v as V.Closure
-    return S.mkLam (cls.params, dumpToExp([[], new Control(cls.ops)]), '(', noRange)
+    if (cls.name === undefined) {
+      return S.mkLam(cls.params, dumpToExp([[], cls.env, new Control(cls.ops)]), '(', noRange)
+    } else {
+      return S.mkVar(cls.name, noRange)
+    }
   } else if (V.isJsFunction(v)) {
     return S.mkVar((v as Function).name, noRange)
   } else if (V.isChar(v)) {
@@ -95,37 +99,46 @@ function valueToExp (v: Value): S.Exp {
       return S.mkVar('null', noRange)
     } else {
       const elems = V.listToArray(l)
-      return S.mkApp(S.mkVar('list', noRange), elems.map(valueToExp), '(', noRange)
+      return S.mkApp(S.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
     }
   } else if (V.isPair(v)) {
     const p = v as V.Pair
-    return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map(valueToExp), '(', noRange)
+    return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
   } else if (V.isStruct(v)) {
     const s = v as V.Struct
-    return S.mkApp(S.mkVar(s.kind, noRange), s.fields.map(valueToExp), '(', noRange)
+    return S.mkApp(S.mkVar(s.kind, noRange), s.fields.map((v) => valueToExp(env, v)), '(', noRange)
   } else {
     throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
 }
 
-function dumpToExp ([stack, control]: [Value[], Control], hole?: S.Exp): S.Exp {
-  let expStack = stack.map(valueToExp)
+function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
+  let expStack = stack.map((v) => valueToExp(env, v))
   if (hole !== undefined) { expStack.push(hole) }
   for (let i = control.idx; i < control.ops.length; i++) {
     const op = control.ops[i]
     if (op.tag === 'var') {
-      expStack.push(S.mkVar(op.name, op.range))
+      if (env.has(op.name)) {
+        const val = env.get(op.name)!
+        if (V.isClosure(val) || V.isJsFunction(val)) {
+          expStack.push(S.mkVar(op.name, op.range))
+        } else {
+          expStack.push(valueToExp(env, env.get(op.name)!))
+        }
+      } else {
+        expStack.push(S.mkVar(op.name, op.range))
+      }
     } else if (op.tag === 'val') {
-      expStack.push(valueToExp(op.value))
+      expStack.push(valueToExp(env, op.value))
     } else if (op.tag === 'cls') {
-      throw new ICE('sem.dumpToExp', 'Unimplemented closure case')
+      expStack.push(S.mkLam(op.params, dumpToExp([[], env, new Control(op.ops)]), '(', noRange))
     } else if (op.tag === 'ap') {
       const args = op.arity === 0 ? [] : expStack.slice(-op.arity)
       for (let i = 0; i < op.arity; i++) { expStack.pop() }
       expStack.push(S.mkApp(expStack.pop()!, args, '(', noRange))
     } else if (op.tag === 'if') {
-      const elseb = dumpToExp([[], new Control(op.elseb)])
-      const ifb = dumpToExp([[], new Control(op.ifb)])
+      const elseb = dumpToExp([[], env, new Control(op.elseb)])
+      const ifb = dumpToExp([[], env, new Control(op.ifb)])
       const guard = expStack.pop()!
       expStack.push(S.mkIf(guard, ifb, elseb, '(', noRange))
     } else if (op.tag === 'let') {
@@ -153,12 +166,12 @@ function dumpToExp ([stack, control]: [Value[], Control], hole?: S.Exp): S.Exp {
 }
 
 export function opsToExp (ops: Op[]): S.Exp {
-  return dumpToExp([[], new Control(ops)])
+  return dumpToExp([[], new Env([]), new Control(ops)])
 }
 
 export function stateToExp (state: ExecutionState): S.Exp | undefined {
-  const dump: [Value[], Control][] = state.dump.map(([stack, _env, control]) => [stack, control])
-  dump.push([state.stack, state.control])
+  const dump: [Value[], Env, Control][] = [...state.dump]
+  dump.push([state.stack, state.env, state.control])
   let ret: S.Exp | undefined = undefined
   for (let i = dump.length - 1; i >= 0; i--) {
     ret = dumpToExp(dump[i], ret)
@@ -472,7 +485,13 @@ export class Sem {
           if (this.state.stack.length !== 1) {
             throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
           }
-          this.env.set(stmt.name, this.state.stack.pop())
+          // N.B., if we bind a lambda, annotate the closure value with the
+          // name for stepping purposes
+          const val = this.state.stack.pop()!
+          if (V.isClosure(val)) {
+            (val as V.Closure).name = stmt.name
+          }
+          this.env.set(stmt.name, val)
           this.advance()
         }
         break

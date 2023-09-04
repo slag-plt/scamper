@@ -1,6 +1,4 @@
-import * as Lang from './lang.js'
 import * as Parser from './parser.js'
-import * as Render from './display.js'
 import * as Sem from './sem.js'
 import * as Value from './value.js'
 
