@@ -7,24 +7,20 @@ import * as Value from './value.js'
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
 
+/*
+const output = document.getElementById(outputId)
+const div = document.createElement('div')
+div.classList.add('scamper-output')
+div.appendChild(Render.renderToHTML(v))
+output!.appendChild(div)
+*/
+
 class Scamper {
   env: Value.Env
-  display: (v: any) => void
+  display: HTMLElement
 
-  constructor (outputId?: string, initialEnv?: Value.Env) {
-    if (outputId !== undefined) {
-      this.display = (v: any) => {
-        const output = document.getElementById(outputId)
-        const div = document.createElement('div')
-        div.classList.add('scamper-output')
-        div.appendChild(Render.renderToHTML(v))
-        output!.appendChild(div)
-      }
-    } else {
-      this.display = (v: any) => {
-        console.log(Render.renderToString(v))
-      }
-    }
+  constructor (display: HTMLElement, initialEnv?: Value.Env) {
+    this.display = display
     if (initialEnv !== undefined) {
       this.env = initialEnv
     } else {
@@ -40,7 +36,6 @@ class Scamper {
     const prog = Parser.parseProgram(src)
     const state = new Sem.Sem(this.display, builtinLibs, this.env, prog)
     state.execute()
-    // Sem.runProgram(builtinLibs, this.display, this.env, prog)
   }
 }
 

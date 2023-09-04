@@ -1,5 +1,6 @@
 import { Op, Value, Env } from './value.js'
 import { ICE, Id, noRange, ScamperError } from './lang.js'
+import { renderToOutput } from './display.js'
 import * as S from './lang.js'
 import * as V from './value.js'
 import * as C from './contract.js'
@@ -234,7 +235,7 @@ export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
   }
 }
 
-function _step (_display: (v: any) => void, state: ExecutionState): boolean {
+function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
   var cont = false
@@ -343,8 +344,8 @@ function _step (_display: (v: any) => void, state: ExecutionState): boolean {
   return cont
 }
 
-function step (display: (v: any) => void, state: ExecutionState): void {
-  while (!state.isFinished() && _step(display, state)) { }
+function step (state: ExecutionState): void {
+  while (!state.isFinished() && stepPrim(state)) { }
 }
 
 function executeStructDecl (name: string, fields: string[], env: Env): Env {
@@ -382,9 +383,9 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
 // However, if we allow side-effecting higher-order functions in the future,
 // we'll need to revisit this design decision.
 
-function execute (display: (v: any) => void, state: ExecutionState): Value {
+function execute (state: ExecutionState): Value {
   while (!state.isFinished()) {
-    step(display, state)
+    step(state)
   }
   if (state.stack.length !== 1) {
     throw new ICE('sem.execute', `Stack size is not 1 after execution: ${state.stack}`)
@@ -394,7 +395,7 @@ function execute (display: (v: any) => void, state: ExecutionState): Value {
 
 function runClosure (closure: V.Closure, ...args: Value[]): Value {
   const state = new ExecutionState(closure.env.extend(closure.params.map((x, i) => [x, args[i]])), closure.ops)
-  return execute((v) => { }, state)
+  return execute(state)
 }
 
 export function callFunction (fn: V.Closure | Function, ...args: any): any {
@@ -406,14 +407,14 @@ export function callFunction (fn: V.Closure | Function, ...args: any): any {
 }
 
 export class Sem {
-  display: (v: any) => void
+  display: HTMLElement
   env: Env
   prog: S.Prog
   curStmt: number
   state?: ExecutionState
   builtinLibs: Map<Id, [Id, Value][]>
 
-  constructor (display: (v: any) => void, builtinLibs: Map<Id, [Id, Value][]>, env: Env, prog: S.Prog) {
+  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value][]>, env: Env, prog: S.Prog) {
     this.display = display
     this.builtinLibs = builtinLibs
     this.env = env
@@ -440,9 +441,9 @@ export class Sem {
         }
         if (!this.state.isFinished()) {
           try {
-            step(this.display, this.state)
+            step(this.state)
           } catch (e) {
-            this.display(e)
+            renderToOutput(this.display, e)
             this.advance()
           }
         } else {
@@ -460,9 +461,9 @@ export class Sem {
         }
         if (!this.state.isFinished()) {
           try {
-            step(this.display, this.state)
+            step(this.state)
           } catch (e) {
-            this.display(e)
+            renderToOutput(this.display, e)
             this.advance()
           }
         } else {
@@ -489,17 +490,17 @@ export class Sem {
         }
         if (!this.state.isFinished()) {
           try {
-            step(this.display, this.state)
-            this.display(S.expToString(stateToExp(this.state)!))
+            step(this.state)
+            renderToOutput(this.display, S.expToString(stateToExp(this.state)!))
           } catch (e) {
-            this.display(e)
+            renderToOutput(this.display, e)
             this.advance()
           }
         } else {
           if (this.state.stack.length !== 1) {
             throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
           }
-          this.display(this.state.stack.pop())
+          renderToOutput(this.display, this.state.stack.pop())
           this.advance()
         }
         break

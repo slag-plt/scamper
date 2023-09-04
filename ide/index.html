@@ -128,7 +128,9 @@
 <body>
   <div id="ide">
     <div id="header">
-      Scamper <span id="version">(ver)</span> ⋅ <span id="current-file"></span> ⋅ <button id="run" class="fa-solid fa-play"></button>
+      Scamper <span id="version">(ver)</span> ⋅ <span id="current-file"></span> ⋅
+      <button id="run" class="fa-solid fa-play"></button>
+      <button id="step" class="fa-solid fa-step-forward"></button> ⋅
     </div>
     <div id="content">
       <div id="file-drawer">
@@ -148,6 +150,14 @@
       </div>
       <div id="editor"></div>
       <div id="results">
+        <div id="results-toolbar">
+          <div class="text-align: left;">
+            <button id="step-once" class="fa-solid fa-shoe-prints"></button>
+            <button id="step-stmt" class="fa-solid fa-forward-step"></button>
+            <button id="step-all" class="fa-solid fa-play"></button>
+          </div>
+          <div id="results-status" class="text-align: right;"></div>
+        </div>
         <div id="output">Output</div>
         <!-- <div id="interactions">Interactions (forthcoming)</div> -->
       </div>

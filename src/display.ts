@@ -1,9 +1,6 @@
 import { charToName, ICE, ScamperError } from './lang.js'
 import * as V from './value.js'
 
-// TODO: probably need to sandbox this as an object held by the the Scamper
-// instance at some point...
-
 function mkOutputDiv (body: HTMLElement) {
   const ret = document.createElement('div')
   ret.classList.add('scamper-output')
@@ -38,53 +35,6 @@ function getRenderer<T> (v: any, renderers: [TypeTest, T][]): T | undefined {
     if (test(v)) { return renderer }
   }
   return undefined
-}
-
-export function renderToString (v: any): string {
-  switch (typeof v) {
-    case 'boolean':
-      return v ? '#t' : '#f'
-    case 'number':
-      return v.toString()
-    case 'string':
-      return `"${v}"`
-    case 'undefined':
-      return 'void'
-    default:
-      if (v === null) {
-        return 'null'
-      } else if (Array.isArray(v)) {
-        const arr = v as any[]
-        return arr.length === 0 ? '(vector)' : `(vector ${arr.map(renderToString).join(' ')})`
-      } else if (V.isClosure(v)) {
-        return `[Function (closure)]`
-      } else if (V.isJsFunction(v)) {
-        return `[Function (JS)]`
-      } else if (V.isChar(v)) {
-        return `#\\${charToName((v as V.Char).value)}`
-      } else if (V.isList(v)) {
-        const arr = V.listToArray(v)
-        return arr.length === 0 ? '(list)' : `(list ${arr.map(renderToString).join(' ')})`
-      } else if (V.isPair(v)) {
-        return `(pair ${renderToString(v.fst)} ${renderToString(v.snd)})`
-      } else {
-        const customRenderer = getRenderer(v, customConsoleRenderers)
-        if (customRenderer !== undefined) {
-          return customRenderer(v)
-        } else if (V.isStruct(v)) {
-          const s = v as V.Struct
-          return s.fields.length === 0 ?
-            `(${s.kind})` :
-            `(${s.kind} ${s.fields.map(renderToString).join(' ')})`
-        } else if (v instanceof ScamperError) {
-          return v.toString()
-        } else if (v instanceof ICE) {
-          return v.toString()
-        } else {
-          return `[Object]`
-        }
-      }
-  }
 }
 
 export function renderToHTML (v: any): HTMLElement {
@@ -144,9 +94,18 @@ export function renderToHTML (v: any): HTMLElement {
           return customRenderer(v)
         } else if (V.isStruct(v)) {
           const s = v as V.Struct
-          return mkCodeElement(s.fields.length === 0 ?
-            `(${s.kind})` :
-            `(${s.kind} ${s.fields.map(renderToString).join(' ')})`)
+          if (s.fields.length === 0) {
+            return mkCodeElement(`(${s.kind})`)
+          } else {
+            const ret = mkCodeElement(`(${s.kind} `)
+            ret.appendChild(renderToHTML(s.fields[0]))
+            for (let i = 1; i < s.fields.length; i++) {
+              ret.appendChild(mkCodeElement(' '))
+              ret.appendChild(renderToHTML(s.fields[i]))
+            }
+            ret.append(mkCodeElement(')'))
+            return ret
+          }
         } else if (v instanceof ScamperError) {
           return mkCodeElement(v.toString())
         } else if (v instanceof ICE) {
@@ -154,9 +113,15 @@ export function renderToHTML (v: any): HTMLElement {
         } else if (v instanceof Error) {
           return mkCodeElement(v.toString())
         } else {
-          // return mkCodeElement(JSON.stringify(v, undefined, 2))
-          return mkCodeElement('[Object]')
+          return mkCodeElement(`[Blob: ${JSON.stringify(v)}]`)
         }
       }
   }
+}
+
+export function renderToOutput(output: HTMLElement, v: any) {
+  const div = document.createElement('div')
+  div.classList.add('scamper-output')
+  div.appendChild(renderToHTML(v))
+  output!.appendChild(div)
 }

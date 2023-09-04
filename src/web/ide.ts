@@ -2,15 +2,16 @@ import { basicSetup, EditorView } from 'codemirror'
 import FS from './fs.js'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
+import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { version } from '../version.js'
 
 let editor: EditorView | null = null
-const editorPane = document.getElementById('editor')
-const outputPane = document.getElementById('output')
+const editorPane = document.getElementById('editor')!
+const outputPane = document.getElementById('output')!
 const fileList   = document.getElementById('files')!
-const runButton  = document.getElementById('run')
+const runButton  = document.getElementById('run')!
 
 class IDE {
   fs: FS
@@ -21,7 +22,7 @@ class IDE {
   constructor () {
     this.fs = new FS()
     this.editor = new EditorView({
-      doc: '', extensions: [basicSetup, ScamperSupport(), makeScamperLinter('output')], parent: editorPane!
+      doc: '', extensions: [basicSetup, ScamperSupport(), makeScamperLinter(outputPane)], parent: editorPane!
     })
     this.autosaveId = -1
 
@@ -30,13 +31,13 @@ class IDE {
     this.updateFileList()
 
     runButton!.addEventListener('click', () => {
-      const scamper = new Scamper('output')
+      const scamper = new Scamper(outputPane)
       outputPane!.innerHTML = ''
       const program = this.getDoc()
       try {
         scamper.runProgram(program)
       } catch (e) {
-        scamper.display(e)
+        renderToOutput(outputPane, e)
       }
     })
 
