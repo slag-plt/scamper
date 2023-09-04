@@ -7,14 +7,6 @@ import * as Value from './value.js'
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
 
-/*
-const output = document.getElementById(outputId)
-const div = document.createElement('div')
-div.classList.add('scamper-output')
-div.appendChild(Render.renderToHTML(v))
-output!.appendChild(div)
-*/
-
 class Scamper {
   env: Value.Env
   display: HTMLElement

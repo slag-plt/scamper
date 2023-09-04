@@ -238,114 +238,136 @@ export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
 function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
-  var cont = false
-  if (op.tag === 'val') {
-    stack.push(op.value)
-    cont = true
-  } else if (op.tag === 'cls') {
-    stack.push(V.mkClosure(op.params.length, op.params, op.ops, state.env))
-    cont = true
-  } else if (op.tag === 'var') {
-    if (state.env.has(op.name)) {
-      stack.push(state.env.get(op.name)!)
-    } else {
-      throw new ScamperError('Runtime', `Referenced unbound identifier "${op.name}".`, undefined, op.range)
+  switch (op.tag) {
+    case 'val': {
+      stack.push(op.value)
+      return true
     }
-    cont = true
-  } else if (op.tag === 'ap') {
-    if (stack.length < op.arity + 1) {
-      throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
+
+    case 'cls': {
+      stack.push(V.mkClosure(op.params.length, op.params, op.ops, state.env))
+      return true
     }
-    const head = stack[stack.length - op.arity - 1]
-    const args = op.arity === 0 ? [] : stack.slice(-op.arity)
-    for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
-    if (V.isClosure(head)) {
-      const closure = head as V.Closure
-      if (closure.params.length !== args.length) {
-        throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
+  
+    case 'var': {
+      if (state.env.has(op.name)) {
+        stack.push(state.env.get(op.name)!)
       } else {
-        // TODO: here, we can check if this control is done.
-        // If so, then this is a tail call! No need to dump,
-        // just overwrite the current state and go forward.
-        state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
+        throw new ScamperError('Runtime', `Referenced unbound identifier "${op.name}".`, undefined, op.range)
       }
-    } else if (V.isJsFunction(head)) {
-      const fn = head as Function
-      try {
-        const result = fn(...args) as Value
-        stack.push(result)
-      } catch (e) {
-        // N.B., annotate any errors from foreign function calls with
-        // range information from this application
-        if (e instanceof ScamperError) {
-          e.source = fn.name
-          e.range = op.range
+      return true
+    }
+
+    case 'ap': {
+      if (stack.length < op.arity + 1) {
+        throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
+      }
+      const head = stack[stack.length - op.arity - 1]
+      const args = op.arity === 0 ? [] : stack.slice(-op.arity)
+      for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
+      if (V.isClosure(head)) {
+        const closure = head as V.Closure
+        if (closure.params.length !== args.length) {
+          throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
+        } else {
+          // TODO: here, we can check if this control is done.
+          // If so, then this is a tail call! No need to dump,
+          // just overwrite the current state and go forward.
+          state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
         }
-        throw e
-      }
-    }
-  } else if (op.tag === 'if') {
-    if (stack.length >= 1) {
-      const guard = stack.pop()!
-      if (guard === true) {
-        state.dumpAndSwitch([], state.env, op.ifb)
-      } else if (guard === false) {
-        state.dumpAndSwitch([], state.env, op.elseb)
-      } else {
-        throw new ScamperError('Runtime', `Boolean expected in conditional, received ${V.valueToString(guard)} instead`, undefined, op.range)
-      }
-    } else {
-      throw new ICE('sem.step', `Guard missing from stack for conditional`)
-    }
-  } else if (op.tag === 'let') {
-    if (stack.length >= op.names.length) {
-      const values = stack.slice(-op.names.length)
-      for (let i = 0; i < op.names.length; i++) { stack.pop() }
-      state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
-      // TODO: need to pop the env at some point, right?
-      // If we push it onto the dump, then we can pop the env naturally!
-    } else {
-      throw new ICE('sem.step', `Not enough values on stack for let binding`)
-    }
-  } else if (op.tag === 'seq') {
-    stack.slice(-op.numSubexps)
-    if (stack.length >= op.numSubexps) {
-      // N.B., the top of the stack is the last value created which we want to return!
-      const ret = stack.pop()
-      for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
-      stack.push(ret)
-    } else {
-      throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
-    }
-  } else if (op.tag === 'match') {
-    if (stack.length >= 1) {
-      const scrutinee = stack.pop()!
-      let foundMatch = false
-      for (let i = 0; !foundMatch && i < op.branches.length; i++) {
-        const bindings = tryMatch(op.branches[i].pattern, scrutinee)
-        if (bindings) {
-          state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body)
-          foundMatch = true
+      } else if (V.isJsFunction(head)) {
+        const fn = head as Function
+        try {
+          const result = fn(...args) as Value
+          stack.push(result)
+        } catch (e) {
+          // N.B., annotate any errors from foreign function calls with
+          // range information from this application
+          if (e instanceof ScamperError) {
+            e.source = fn.name
+            e.range = op.range
+          }
+          throw e
         }
       }
-      if (!foundMatch) {
-        throw new ScamperError('Runtime', `No pattern matches for ${V.valueToString(scrutinee)}`, undefined, op.range)
+      return false
+    }
+
+    case 'if': {
+      if (stack.length >= 1) {
+        const guard = stack.pop()!
+        if (guard === true) {
+          state.dumpAndSwitch([], state.env, op.ifb)
+        } else if (guard === false) {
+          state.dumpAndSwitch([], state.env, op.elseb)
+        } else {
+          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${V.valueToString(guard)} instead`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Guard missing from stack for conditional`)
       }
-    } else {
-      throw new ICE('sem.step', `Scrutinee missing from stack for match`)
+      return false
+    }
+
+    case 'let': {
+      if (stack.length >= op.names.length) {
+        const values = stack.slice(-op.names.length)
+        for (let i = 0; i < op.names.length; i++) { stack.pop() }
+        state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
+        // TODO: need to pop the env at some point, right?
+        // If we push it onto the dump, then we can pop the env naturally!
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for let binding`)
+      }
+      return false
+    }
+  
+    case 'seq': {
+      stack.slice(-op.numSubexps)
+      if (stack.length >= op.numSubexps) {
+        // N.B., the top of the stack is the last value created which we want to return!
+        const ret = stack.pop()
+        for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
+        stack.push(ret)
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
+      }
+      return false
+    }
+  
+    case 'match': {
+      if (stack.length >= 1) {
+        const scrutinee = stack.pop()!
+        let foundMatch = false
+        for (let i = 0; !foundMatch && i < op.branches.length; i++) {
+          const bindings = tryMatch(op.branches[i].pattern, scrutinee)
+          if (bindings) {
+            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body)
+            foundMatch = true
+          }
+        }
+        if (!foundMatch) {
+          throw new ScamperError('Runtime', `No pattern matches for ${V.valueToString(scrutinee)}`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Scrutinee missing from stack for match`)
+      }
+      return false
     }
   }
-  // N.B., pop the dump until we arrive at a non-finished state
-  while (state.control.isEmpty() && !state.isDumpEmpty()) {
-    const ret = state.stack.pop()!
-    state.popDump()
-    state.stack.push(ret)
-  }
-  return cont
 }
 
 function step (state: ExecutionState): void {
-  while (!state.isFinished() && stepPrim(state)) { }
+  var cont = false
+  do {
+    cont = stepPrim(state)
+    // N.B., pop the dump until we arrive at a non-finished state
+    while (state.control.isEmpty() && !state.isDumpEmpty()) {
+      const ret = state.stack.pop()!
+      state.popDump()
+      state.stack.push(ret)
+    }
+  } while (!state.isFinished() && cont)
 }
 
 function executeStructDecl (name: string, fields: string[], env: Env): Env {
