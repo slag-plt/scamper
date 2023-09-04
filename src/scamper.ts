@@ -38,7 +38,9 @@ class Scamper {
 
   runProgram (src: string) {
     const prog = Parser.parseProgram(src)
-    Sem.runProgram(builtinLibs, this.display, this.env, prog)
+    const state = new Sem.Sem(this.display, builtinLibs, this.env, prog)
+    state.execute()
+    // Sem.runProgram(builtinLibs, this.display, this.env, prog)
   }
 }
 
