@@ -1023,9 +1023,10 @@ function procedureQ (x: any): boolean {
 }
 registerFn('procedure?', procedureQ, Prelude)
 
-function apply (f: V.Closure | Function, args: Value[]): Value {
+function apply (f: V.Closure | Function, args: V.List): Value {
   checkContract(arguments, contract('apply', [C.func, C.list]))
-  return callFunction(f, ...args)
+
+  return callFunction(f, ...V.listToArray(args))
 }
 registerFn('apply', apply, Prelude)
 

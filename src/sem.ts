@@ -493,12 +493,10 @@ export class Sem {
   isFinished (): boolean { return this.curStmt === this.prog.length }
   isTracing (): boolean { return this.traces !== undefined }
   appendToCurrentTrace (v: HTMLElement | string): void {
-    if (this.traces !== undefined) {
-      if (typeof v === 'string') {
-        v = mkCodeElement(v)
-      }
-      this.traces[this.curStmt]!.appendChild(v)
+    if (typeof v === 'string') {
+      v = mkCodeElement(v)
     }
+    this.traces![this.curStmt]!.appendChild(v)
   }
 
   advance (): void {
@@ -507,7 +505,7 @@ export class Sem {
     if (this.isTracing()) {
       this.display.appendChild(this.traces![this.curStmt]!)
     }
-    if (!this.isFinished()) {
+    if (!this.isFinished() && this.isTracing()) {
       this.appendToCurrentTrace(makeTraceHeader(this.prog[this.curStmt]))
       this.appendToCurrentTrace('\n')
     }
@@ -524,8 +522,10 @@ export class Sem {
         if (!this.state.isFinished()) {
           try {
             step(this.state)
-            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-            this.appendToCurrentTrace('\n')
+            if (this.isTracing()) {
+              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('\n')
+            }
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -541,7 +541,9 @@ export class Sem {
             (val as V.Closure).name = stmt.name
           }
           this.env.set(stmt.name, val)
-          this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
+          if (this.isTracing()) {
+            this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
+          }
           this.advance()
         }
         break
@@ -550,14 +552,18 @@ export class Sem {
       case 'stmtexp': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
-          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-          this.appendToCurrentTrace('\n')
+          if (this.isTracing()) {
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
+          }
         }
         if (!this.state.isFinished()) {
           try {
             step(this.state)
-          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-          this.appendToCurrentTrace('\n')
+            if (this.isTracing()) {
+              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('\n')
+            }
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -573,7 +579,9 @@ export class Sem {
       case 'import': {
         if (this.builtinLibs.has(stmt.modName)) {
           this.env = this.env.extend(this.builtinLibs.get(stmt.modName)!)
-          this.appendToCurrentTrace(`Module ${stmt.modName} imported`)
+          if (this.isTracing()) {
+            this.appendToCurrentTrace(`Module ${stmt.modName} imported`)
+          }
           this.advance()
         } else {
           this.advance()
@@ -584,14 +592,18 @@ export class Sem {
       case 'display': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
-          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-          this.appendToCurrentTrace('\n')
+          if (this.isTracing()) {
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
+          }
         }
         if (!this.state.isFinished()) {
           try {
             step(this.state)
-            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-            this.appendToCurrentTrace('\n')
+            if (this.isTracing()) {
+              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('\n')
+            }
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -607,7 +619,9 @@ export class Sem {
       }
       case 'struct': {
         this.env = executeStructDecl(stmt.id, stmt.fields, this.env)
-        this.appendToCurrentTrace(`Struct ${stmt.id} declared`)
+        if (this.isTracing()) {
+          this.appendToCurrentTrace(`Struct ${stmt.id} declared`)
+        }
         this.advance()
         break
       }
