@@ -2,43 +2,82 @@ import { basicSetup, EditorView } from 'codemirror'
 import FS from './fs.js'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
+import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { version } from '../version.js'
 
 let editor: EditorView | null = null
-const editorPane = document.getElementById('editor')
-const outputPane = document.getElementById('output')
+const editorPane = document.getElementById('editor')!
+const outputPane = document.getElementById('output')!
 const fileList   = document.getElementById('files')!
-const runButton  = document.getElementById('run')
+const runButton  = document.getElementById('run')!
+const stepButton = document.getElementById('step')!
+
+const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
+const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
+const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
 
 class IDE {
   fs: FS
   editor: EditorView
   currentFile: string
   autosaveId: number
+  scamper?: Scamper
+  isDirty: boolean
+
+  startScamper (isTracing: boolean): void {
+    outputPane!.innerHTML = ''
+    try {
+      this.scamper = new Scamper(outputPane, isTracing, this.getDoc())
+      if (isTracing) {
+        stepOnceButton.disabled = false
+        stepStmtButton.disabled = false
+        stepAllButton.disabled = false
+      } else {
+        stepOnceButton.disabled = true
+        stepStmtButton.disabled = true
+        stepAllButton.disabled = true
+      }
+    } catch (e) {
+      renderToOutput(outputPane, e)
+    }
+    this.makeClean()
+  }
 
   constructor () {
     this.fs = new FS()
     this.editor = new EditorView({
-      doc: '', extensions: [basicSetup, ScamperSupport(), makeScamperLinter('output')], parent: editorPane!
+      doc: '',
+      extensions: [
+        basicSetup,
+        ScamperSupport(),
+        makeScamperLinter(outputPane),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            this.makeDirty()
+          }
+        })
+      ], parent: editorPane!
     })
     this.autosaveId = -1
+    this.isDirty = false
 
     this.currentFile = this.fs.getLastOpened()
     this.loadCurrentFile()
     this.updateFileList()
 
-    runButton!.addEventListener('click', () => {
-      const scamper = new Scamper('output')
-      outputPane!.innerHTML = ''
-      const program = this.getDoc()
-      try {
-        scamper.runProgram(program)
-      } catch (e) {
-        scamper.display(e)
-      }
+    runButton.addEventListener('click', () => {
+      this.startScamper(false)
+      this.scamper!.runProgram()
     })
+    stepButton.addEventListener('click', () => this.startScamper(true))
+    stepOnceButton.addEventListener('click', () => this.scamper!.stepProgram())
+    stepStmtButton.addEventListener('click', () => this.scamper!.stepStmtProgram())
+    stepAllButton.addEventListener('click', () => this.scamper!.runProgram())
+    stepOnceButton.disabled = true
+    stepStmtButton.disabled = true
+    stepAllButton.disabled = true
 
     Split(['#file-drawer', '#editor', '#results'], {
       sizes: [15, 50, 35]
@@ -73,6 +112,21 @@ class IDE {
     this.editor.dispatch(this.editor.state.update({
       changes: { from: 0, to: this.editor.state.doc.length, insert: src }
     }))
+  }
+
+  makeDirty () {
+    if (this.scamper !== undefined && !this.isDirty) {
+      this.isDirty = true
+      const status = document.getElementById('results-status')!
+      const msg = document.createElement('em')
+      msg.innerText = '(Warning: results out of sync with updated code)'
+      document.getElementById('results-status')!.appendChild(msg)
+    }
+  }
+
+  makeClean () {
+    document.getElementById('results-status')!.innerHTML = ''
+    this.isDirty = false
   }
 
   saveCurrentFile () {

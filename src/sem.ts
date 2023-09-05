@@ -1,5 +1,6 @@
 import { Op, Value, Env } from './value.js'
 import { ICE, Id, noRange, ScamperError } from './lang.js'
+import { mkCodeElement, renderToOutput } from './display.js'
 import * as S from './lang.js'
 import * as V from './value.js'
 import * as C from './contract.js'
@@ -10,7 +11,7 @@ class Control {
 
   constructor (ops: Op[]) {
     this.idx = 0
-    this.ops = [...ops]   // N.B., make a copy because we mutate ops!
+    this.ops = ops
   }
 
   isEmpty (): boolean { return this.idx >= this.ops.length }
@@ -40,9 +41,7 @@ class ExecutionState {
     this.dump = []
   }
 
-  isFinished(): boolean { return this.control.isEmpty() }
-
-  isControlEmpty(): boolean { return this.control.isEmpty() }
+  isFinished(): boolean { return this.control.isEmpty() && this.dump.length === 0 }
 
   dumpAndSwitch (stack: Value[], env: Env, ops: Op[]): void {
     this.dump.push([this.stack, this.env, this.control])
@@ -65,22 +64,12 @@ class ExecutionState {
     ret.stack = [...this.stack]
     ret.env = this.env    // NOTE: do I need to clone the env, too?
     ret.control = this.control.clone()
-    ret.dump = this.dump.map(([stack, env, control]) => [[...stack], env, control.clone()] as [Value[], Env, Control])
+    ret.dump = this.dump.map(([stack, env, control]) =>
+      [[...stack], env, control.clone()] as [Value[], Env, Control])
   }
 }
 
-/**
- exp: (+ (* 1 2) (/ 3 4) 5) 
- ops: [+, *, 1, 2, ap(2), /, 3, 4, ap(2), 5, ap(3)]
- */
-
-/**
- exp (+ (* 1 2) (/ 3 4) 5)
- ops: [_, _, _, 2, ap(2), /, 3, 4, ap(2), 5, ap(3)]
- stack: +, *
- */
-
-function valueToExp (v: Value): S.Exp {
+function valueToExp (env: Env, v: Value): S.Exp {
   if (V.isNumber(v)) {
     return S.mkNum(v as number, noRange)
   } else if (V.isBoolean(v)) {
@@ -92,22 +81,102 @@ function valueToExp (v: Value): S.Exp {
   } else if (V.isVoid(v)) {
     return S.mkVar('void', noRange)
   } else if (V.isArray(v)) {
-    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map(valueToExp), '(', noRange)
+    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map((v) => (valueToExp(env, v))), '(', noRange)
   } else if (V.isClosure(v)) {
-    
+    const cls = v as V.Closure
+    if (cls.name === undefined) {
+      return S.mkLam(cls.params, dumpToExp([[], cls.env, new Control(cls.ops)]), '(', noRange)
+    } else {
+      return S.mkVar(cls.name, noRange)
+    }
+  } else if (V.isJsFunction(v)) {
+    return S.mkVar((v as Function).name, noRange)
+  } else if (V.isChar(v)) {
+    return S.mkChar((v as V.Char).value, noRange)
+  } else if (V.isList(v)) {
+    const l = v as V.List
+    if (l === null) {
+      return S.mkVar('null', noRange)
+    } else {
+      const elems = V.listToArray(l)
+      return S.mkApp(S.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
+    }
+  } else if (V.isPair(v)) {
+    const p = v as V.Pair
+    return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
+  } else if (V.isStruct(v)) {
+    const s = v as V.Struct
+    return S.mkApp(S.mkVar(s.kind, noRange), s.fields.map((v) => valueToExp(env, v)), '(', noRange)
+  } else {
+    throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
-  throw new ICE('sem.valueToExp', 'Unimplemented')
 }
 
-function dumpToExp ([stack, env, control]: [Value[], Env, Control]): S.Exp {
-  let expStack = stack.map(valueToExp)
-  let stackIdx = stack.length - 1
-  throw new ICE('sem.valueToExp', 'Unimplemented')
+function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
+  let expStack = stack.map((v) => valueToExp(env, v))
+  if (hole !== undefined) { expStack.push(hole) }
+  for (let i = control.idx; i < control.ops.length; i++) {
+    const op = control.ops[i]
+    if (op.tag === 'var') {
+      if (env.has(op.name)) {
+        const val = env.get(op.name)!
+        if (V.isClosure(val) || V.isJsFunction(val)) {
+          expStack.push(S.mkVar(op.name, op.range))
+        } else {
+          expStack.push(valueToExp(env, env.get(op.name)!))
+        }
+      } else {
+        expStack.push(S.mkVar(op.name, op.range))
+      }
+    } else if (op.tag === 'val') {
+      expStack.push(valueToExp(env, op.value))
+    } else if (op.tag === 'cls') {
+      expStack.push(S.mkLam(op.params, dumpToExp([[], env, new Control(op.ops)]), '(', noRange))
+    } else if (op.tag === 'ap') {
+      const args = op.arity === 0 ? [] : expStack.slice(-op.arity)
+      for (let i = 0; i < op.arity; i++) { expStack.pop() }
+      expStack.push(S.mkApp(expStack.pop()!, args, '(', noRange))
+    } else if (op.tag === 'if') {
+      const elseb = dumpToExp([[], env, new Control(op.elseb)])
+      const ifb = dumpToExp([[], env, new Control(op.ifb)])
+      const guard = expStack.pop()!
+      expStack.push(S.mkIf(guard, ifb, elseb, '(', noRange))
+    } else if (op.tag === 'let') {
+      const names = op.names
+      const bindings = names.reverse().map((n: string) =>
+        ({ name: n, body: expStack.pop()! })).reverse()
+      expStack.push(S.mkLet(bindings, expStack.pop()!, '(', noRange))
+    } else if (op.tag === 'seq') {
+      if (op.numSubexps === 0) {
+        expStack.push(S.mkBegin([], '(', noRange))
+      } else {
+        const exps = expStack.slice(-op.numSubexps)
+        for (let i = 0; i < op.numSubexps; i++) { expStack.pop() }
+        expStack.push(S.mkBegin(exps, '(', noRange))
+      }
+    } else if (op.tag === 'match') {
+      throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+    }
+  }
+  if (expStack.length !== 1) {
+    throw new ICE('sem.dumpToExp', `Stack size is not 1 after execution: ${stack}`)
+  } else {
+    return expStack.pop()!
+  }
 }
 
-function stateToExp (state: ExecutionState): S.Exp | null {
-  // TODO: fill me out!
-  return null
+export function opsToExp (ops: Op[]): S.Exp {
+  return dumpToExp([[], new Env([]), new Control(ops)])
+}
+
+export function stateToExp (state: ExecutionState): S.Exp | undefined {
+  const dump: [Value[], Env, Control][] = [...state.dump]
+  dump.push([state.stack, state.env, state.control])
+  let ret: S.Exp | undefined = undefined
+  for (let i = dump.length - 1; i >= 0; i--) {
+    ret = dumpToExp(dump[i], ret)
+  }
+  return ret
 }
 
 export function expToOps (e: S.Exp): Op[] {
@@ -179,58 +248,65 @@ export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
   }
 }
 
-export function step (display: (v: any) => void, state: ExecutionState): void {
+function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
-    case 'val':
+    case 'val': {
       stack.push(op.value)
-      break
-    case 'cls':
+      return true
+    }
+
+    case 'cls': {
       stack.push(V.mkClosure(op.params.length, op.params, op.ops, state.env))
-      break
-    case 'var':
+      return true
+    }
+  
+    case 'var': {
       if (state.env.has(op.name)) {
         stack.push(state.env.get(op.name)!)
       } else {
         throw new ScamperError('Runtime', `Referenced unbound identifier "${op.name}".`, undefined, op.range)
       }
-      break
-    case 'ap':
-      if (stack.length >= op.arity + 1) {
-        const head = stack[stack.length - op.arity - 1]
-        const args = op.arity === 0 ? [] : stack.slice(-op.arity)
-        for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
-        if (V.isClosure(head)) {
-          const closure = head as V.Closure
-          if (closure.params.length !== args.length) {
-            throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
-          } else {
-            // TODO: here, we can check if this control is done.
-            // If so, then this is a tail call! No need to dump,
-            // just overwrite the current state and go forward.
-            state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
-          }
-        } else if (V.isJsFunction(head)) {
-          const fn = head as Function
-          try {
-            const result = fn(...args) as Value
-            stack.push(result)
-          } catch (e) {
-            // N.B., annotate any errors from foreign function calls with
-            // range information from this application
-            if (e instanceof ScamperError) {
-              e.source = fn.name
-              e.range = op.range
-            }
-            throw e
-          }
-        }
-      } else {
+      return true
+    }
+
+    case 'ap': {
+      if (stack.length < op.arity + 1) {
         throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
       }
-      break
-    case 'if':
+      const head = stack[stack.length - op.arity - 1]
+      const args = op.arity === 0 ? [] : stack.slice(-op.arity)
+      for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
+      if (V.isClosure(head)) {
+        const closure = head as V.Closure
+        if (closure.params.length !== args.length) {
+          throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
+        } else {
+          // TODO: here, we can check if this control is done.
+          // If so, then this is a tail call! No need to dump,
+          // just overwrite the current state and go forward.
+          state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
+        }
+      } else if (V.isJsFunction(head)) {
+        const fn = head as Function
+        try {
+          const result = fn(...args) as Value
+          stack.push(result)
+        } catch (e) {
+          // N.B., annotate any errors from foreign function calls with
+          // range information from this application
+          if (e instanceof ScamperError) {
+            e.source = fn.name
+            e.range = op.range
+          }
+          throw e
+        }
+      }
+      return false
+    }
+
+    case 'if': {
       if (stack.length >= 1) {
         const guard = stack.pop()!
         if (guard === true) {
@@ -243,27 +319,24 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
       } else {
         throw new ICE('sem.step', `Guard missing from stack for conditional`)
       }
-      break
-    case 'let':
+      return false
+    }
+
+    case 'let': {
       if (stack.length >= op.names.length) {
         const values = stack.slice(-op.names.length)
         for (let i = 0; i < op.names.length; i++) { stack.pop() }
         state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
         // TODO: need to pop the env at some point, right?
+        // If we push it onto the dump, then we can pop the env naturally!
       } else {
         throw new ICE('sem.step', `Not enough values on stack for let binding`)
       }
-      break
-    case 'disp':
-      if (stack.length >= 1) {
-        const value = stack.pop()
-        display(value)
-      } else {
-        throw new ICE('sem.step', `Value missing from stack for display`)
-      }
-      break
-    case 'seq':
-      const values = stack.slice(-op.numSubexps)
+      return false
+    }
+  
+    case 'seq': {
+      stack.slice(-op.numSubexps)
       if (stack.length >= op.numSubexps) {
         // N.B., the top of the stack is the last value created which we want to return!
         const ret = stack.pop()
@@ -272,8 +345,10 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
       } else {
         throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
       }
-    break
-    case 'match':
+      return false
+    }
+  
+    case 'match': {
       if (stack.length >= 1) {
         const scrutinee = stack.pop()!
         let foundMatch = false
@@ -290,103 +365,51 @@ export function step (display: (v: any) => void, state: ExecutionState): void {
       } else {
         throw new ICE('sem.step', `Scrutinee missing from stack for match`)
       }
-    break
-    default:
-      throw new ICE('sem.step', `Unknown op tag: ${(op as any).tag}`)
-  }
-  // N.B., pop the dump until we arrive at a non-finished state
-  while (state.isFinished() && !state.isDumpEmpty()) {
-    const ret = state.stack.pop()!
-    state.popDump()
-    state.stack.push(ret)
-  }
-}
-
-function execute (display: (v: any) => void, state: ExecutionState): Value {
-  while (!state.isFinished()) {
-    step(display, state)
-  }
-  if (state.stack.length !== 1) {
-    throw new ICE('sem.execute', `Stack size is not 1 after execution: ${state.stack}`)
-  }
-  return state.stack.pop()!
-}
-
-export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: any) => void, env: Env, prog: S.Prog) {
-  prog.forEach((stmt) => {
-    switch (stmt.tag) {
-      case 'binding': {
-        try {
-          const state = new ExecutionState(env, expToOps(stmt.body))
-          const result = execute(display, state)
-          if (env.has(stmt.name)) {
-            throw new ScamperError('Runtime', `Identifier ${stmt.name} already bound at the global scope`, undefined, stmt.range)
-          }
-          env.set(stmt.name, result)
-        } catch (e) {
-          display(e)
-        }
-        break
-      }
-      case 'import': {
-        if (builtinLibs.has(stmt.modName)) {
-          env = env.extend(builtinLibs.get(stmt.modName)!)
-        } else {
-          throw new ScamperError('Runtime', `Module ${stmt.modName} not found`, undefined, stmt.range)
-        }
-        break
-      }
-      case 'stmtexp': {
-        try {
-          const state = new ExecutionState(env, expToOps(stmt.body))
-          execute(display, state)
-        } catch (e) {
-          display(e)
-        }
-      }
-      break
-      case 'display': {
-        try {
-          const state = new ExecutionState(env, expToOps(stmt.body))
-          const result = execute(display, state)
-          display(result)
-        } catch (e) {
-          display(e)
-        }
-      }
-      break
-      case 'struct': {
-        const name = stmt.id
-        const predFn = function (v: any) {
-          C.checkContract(arguments, C.contract(`${name}?`, [C.any]))
-          return V.isStructKind(v, name)
-        }
-        V.nameFn(`${name}?`, predFn)
-        const pred: [string, Value] = [`${name}?`, predFn]
-
-        const ctorFn = function (...args: any[]) {
-          C.checkContract(arguments, C.contract(name, stmt.fields.map((f) => C.any)))
-          return V.mkStruct(name, args)
-        }
-        V.nameFn(name, ctorFn)
-        const ctor: [string, Value] = [name, ctorFn]
-
-        const fieldFns: [string, Value][] = []
-        stmt.fields.forEach((f, i) => {
-          const fieldName = `${name}-${f}`
-          const fn = function (v: V.Struct) {
-            C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
-            return v.fields[i]
-          }
-          V.nameFn(fieldName, fn)
-          fieldFns.push([fieldName, fn])
-        })
-
-        env = env.extend([pred, ctor, ...fieldFns])
-      }
-      break
+      return false
     }
+  }
+}
+
+function step (state: ExecutionState): void {
+  var cont = false
+  do {
+    cont = stepPrim(state)
+    // N.B., pop the dump until we arrive at a non-finished state
+    while (state.control.isEmpty() && !state.isDumpEmpty()) {
+      const ret = state.stack.pop()!
+      state.popDump()
+      state.stack.push(ret)
+    }
+  } while (!state.isFinished() && cont)
+}
+
+function executeStructDecl (name: string, fields: string[], env: Env): Env {
+  const predFn = function (v: any) {
+    C.checkContract(arguments, C.contract(`${name}?`, [C.any]))
+    return V.isStructKind(v, name)
+  }
+  V.nameFn(`${name}?`, predFn)
+  const pred: [string, Value] = [`${name}?`, predFn]
+
+  const ctorFn = function (...args: any[]) {
+    C.checkContract(arguments, C.contract(name, fields.map((f) => C.any)))
+    return V.mkStruct(name, args)
+  }
+  V.nameFn(name, ctorFn)
+  const ctor: [string, Value] = [name, ctorFn]
+
+  const fieldFns: [string, Value][] = []
+  fields.forEach((f, i) => {
+    const fieldName = `${name}-${f}`
+    const fn = function (v: V.Struct) {
+      C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
+      return v.fields[i]
+    }
+    V.nameFn(fieldName, fn)
+    fieldFns.push([fieldName, fn])
   })
+
+  return env.extend([pred, ctor, ...fieldFns])
 }
 
 // TODO: these functions are used by Javascript libraries to invoke higher-order
@@ -395,9 +418,19 @@ export function runProgram (builtinLibs: Map<Id, [Id, Value][]>, display: (v: an
 // However, if we allow side-effecting higher-order functions in the future,
 // we'll need to revisit this design decision.
 
+function execute (state: ExecutionState): Value {
+  while (!state.isFinished()) {
+    step(state)
+  }
+  if (state.stack.length !== 1) {
+    throw new ICE('sem.execute', `Stack size is not 1 after execution: ${state.stack}`)
+  }
+  return state.stack.pop()!
+}
+
 function runClosure (closure: V.Closure, ...args: Value[]): Value {
   const state = new ExecutionState(closure.env.extend(closure.params.map((x, i) => [x, args[i]])), closure.ops)
-  return execute((v) => { }, state)
+  return execute(state)
 }
 
 export function callFunction (fn: V.Closure | Function, ...args: any): any {
@@ -405,5 +438,192 @@ export function callFunction (fn: V.Closure | Function, ...args: any): any {
     return runClosure(fn as V.Closure, ...args)
   } else {
     return (fn as Function)(...args)
+  }
+}
+
+function makeTraceDiv(): HTMLElement {
+  const div = document.createElement('div')
+  div.classList.add('scamper-trace')
+  return div
+}
+
+function makeTraceHeader (s: S.Stmt): string {
+  switch (s.tag) {
+    case 'binding':
+      return `Evaluating binding ${s.name}...`
+    case 'display':
+      return 'Evaluating displayed expression...'
+    case 'import':
+      return `Importing module ${s.modName}...`
+    case 'stmtexp':
+      return 'Evaluating expression...'
+    case 'struct':
+      return `Evaluating struct declaration ${s.id}...`
+  }
+}
+
+export class Sem {
+  display: HTMLElement
+  env: Env
+  prog: S.Prog
+  curStmt: number
+  state?: ExecutionState
+  builtinLibs: Map<Id, [Id, Value][]>
+  traces?: HTMLElement[]
+
+  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value][]>, isTracing: boolean, env: Env, prog: S.Prog) {
+    this.display = display
+    this.builtinLibs = builtinLibs
+    if (isTracing) {
+      this.traces = new Array(prog.length)
+      for (let i = 0; i < prog.length; i++) {
+        this.traces[i] = makeTraceDiv()
+      }
+    } else {
+      this.traces = undefined
+    }
+    this.env = env
+    this.prog = prog
+    // N.B., start at -1 so that we can advance immediately
+    this.curStmt = -1
+    this.state = undefined
+    this.advance()
+  }
+
+  isFinished (): boolean { return this.curStmt === this.prog.length }
+  isTracing (): boolean { return this.traces !== undefined }
+  appendToCurrentTrace (v: HTMLElement | string): void {
+    if (this.traces !== undefined) {
+      if (typeof v === 'string') {
+        v = mkCodeElement(v)
+      }
+      this.traces[this.curStmt]!.appendChild(v)
+    }
+  }
+
+  advance (): void {
+    this.curStmt += 1
+    this.state = undefined
+    if (this.isTracing()) {
+      this.display.appendChild(this.traces![this.curStmt]!)
+    }
+    if (!this.isFinished()) {
+      this.appendToCurrentTrace(makeTraceHeader(this.prog[this.curStmt]))
+      this.appendToCurrentTrace('\n')
+    }
+  }
+
+  step (): void {
+    const stmt = this.prog[this.curStmt]
+    switch (stmt.tag) {
+
+      case 'binding': {
+        if (this.state === undefined) {
+          this.state = new ExecutionState(this.env, expToOps(stmt.body))
+        }
+        if (!this.state.isFinished()) {
+          try {
+            step(this.state)
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
+          } catch (e) {
+            renderToOutput(this.display, e)
+            this.advance()
+          }
+        } else {
+          if (this.state.stack.length !== 1) {
+            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+          }
+          // N.B., if we bind a lambda, annotate the closure value with the
+          // name for stepping purposes
+          const val = this.state.stack.pop()!
+          if (V.isClosure(val)) {
+            (val as V.Closure).name = stmt.name
+          }
+          this.env.set(stmt.name, val)
+          this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
+          this.advance()
+        }
+        break
+      }
+
+      case 'stmtexp': {
+        if (this.state === undefined) {
+          this.state = new ExecutionState(this.env, expToOps(stmt.body))
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
+        }
+        if (!this.state.isFinished()) {
+          try {
+            step(this.state)
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
+          } catch (e) {
+            renderToOutput(this.display, e)
+            this.advance()
+          }
+        } else {
+          if (this.state.stack.length !== 1) {
+            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+          }
+          this.advance()
+        }
+        break
+      }
+      case 'import': {
+        if (this.builtinLibs.has(stmt.modName)) {
+          this.env = this.env.extend(this.builtinLibs.get(stmt.modName)!)
+          this.appendToCurrentTrace(`Module ${stmt.modName} imported`)
+          this.advance()
+        } else {
+          this.advance()
+          throw new ScamperError('Runtime', `Module ${stmt.modName} not found`, undefined, stmt.range)
+        }
+        break
+      }
+      case 'display': {
+        if (this.state === undefined) {
+          this.state = new ExecutionState(this.env, expToOps(stmt.body))
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
+        }
+        if (!this.state.isFinished()) {
+          try {
+            step(this.state)
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
+          } catch (e) {
+            renderToOutput(this.display, e)
+            this.advance()
+          }
+        } else {
+          if (this.state.stack.length !== 1) {
+            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+          }
+          renderToOutput(this.display, this.state.stack.pop())
+          this.advance()
+        }
+        break
+      }
+      case 'struct': {
+        this.env = executeStructDecl(stmt.id, stmt.fields, this.env)
+        this.appendToCurrentTrace(`Struct ${stmt.id} declared`)
+        this.advance()
+        break
+      }
+    }
+  }
+
+  stepToNextStmt (): void {
+    const idx = this.curStmt
+    while (!this.isFinished() && this.curStmt === idx) {
+      this.step()
+    }
+  }
+
+  execute (): void {
+    while (!this.isFinished()) {
+      this.step()
+    }
   }
 }

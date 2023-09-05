@@ -2,13 +2,12 @@ import { linter, Diagnostic } from '@codemirror/lint'
 import Scamper from '../scamper.js'
 import { ScamperError } from '../lang.js'
 
-function makeScamperLinter (outputId: string) {
+function makeScamperLinter (outputId: HTMLElement) {
   return linter((view) => {
-    const scamper = new Scamper(outputId)
     const diagnostics: Diagnostic[] = []
     const doc = view.state.doc.toString()
     try {
-      scamper.parseProgram(doc)
+      new Scamper(outputId, false, doc)
     } catch (e) {
       if (e instanceof ScamperError) {
         let to, from
