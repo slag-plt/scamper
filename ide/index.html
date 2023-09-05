@@ -80,11 +80,21 @@
       height: 100%;
     }
 
+    #results-toolbar {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-left: 0.25em;
+      margin-right: 0.25em;
+    }
+
     #output {
       background: #fff;
       color: #333;
-      overflow: auto;
-      white-space: pre;
+      height: 100%;
+      overflow: scroll;
+      white-space: pre-wrap;
     }
 
     #output code {
@@ -141,7 +151,7 @@
     <div id="header">
       Scamper <span id="version">(ver)</span> ⋅ <span id="current-file"></span> ⋅
       <button id="run" class="fa-solid fa-play"></button>
-      <button id="step" class="fa-solid fa-step-forward"></button> ⋅
+      <button id="step" class="fa-solid fa-route"></button>
     </div>
     <div id="content">
       <div id="file-drawer">
@@ -157,7 +167,7 @@
           </div>
         </div>
         <hr>
-        <div id="files">Files are here!</div>
+        <div id="files"></div>
       </div>
       <div id="editor"></div>
       <div id="results">
@@ -165,11 +175,11 @@
           <div class="text-align: left;">
             <button id="step-once" class="fa-solid fa-shoe-prints"></button>
             <button id="step-stmt" class="fa-solid fa-forward-step"></button>
-            <button id="step-all" class="fa-solid fa-play"></button>
+            <button id="step-all" class="fa-solid fa-forward"></button>
           </div>
           <div id="results-status" class="text-align: right;"></div>
         </div>
-        <div id="output">Output</div>
+        <div id="output"></div>
         <!-- <div id="interactions">Interactions (forthcoming)</div> -->
       </div>
     </div>
