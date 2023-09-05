@@ -1,6 +1,6 @@
 import { Op, Value, Env } from './value.js'
 import { ICE, Id, noRange, ScamperError } from './lang.js'
-import { renderToOutput } from './display.js'
+import { mkCodeElement, renderToOutput } from './display.js'
 import * as S from './lang.js'
 import * as V from './value.js'
 import * as C from './contract.js'
@@ -441,6 +441,27 @@ export function callFunction (fn: V.Closure | Function, ...args: any): any {
   }
 }
 
+function makeTraceDiv(): HTMLElement {
+  const div = document.createElement('div')
+  div.classList.add('scamper-trace')
+  return div
+}
+
+function makeTraceHeader (s: S.Stmt): string {
+  switch (s.tag) {
+    case 'binding':
+      return `Evaluating binding ${s.name}...`
+    case 'display':
+      return 'Evaluating displayed expression...'
+    case 'import':
+      return `Importing module ${s.modName}...`
+    case 'stmtexp':
+      return 'Evaluating expression...'
+    case 'struct':
+      return `Evaluating struct declaration ${s.id}...`
+  }
+}
+
 export class Sem {
   display: HTMLElement
   env: Env
@@ -448,28 +469,54 @@ export class Sem {
   curStmt: number
   state?: ExecutionState
   builtinLibs: Map<Id, [Id, Value][]>
+  traces?: HTMLElement[]
 
-  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value][]>, env: Env, prog: S.Prog) {
+  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value][]>, isTracing: boolean, env: Env, prog: S.Prog) {
     this.display = display
     this.builtinLibs = builtinLibs
+    if (isTracing) {
+      this.traces = new Array(prog.length)
+      for (let i = 0; i < prog.length; i++) {
+        this.traces[i] = makeTraceDiv()
+      }
+    } else {
+      this.traces = undefined
+    }
     this.env = env
     this.prog = prog
-    this.curStmt = 0
+    // N.B., start at -1 so that we can advance immediately
+    this.curStmt = -1
     this.state = undefined
+    this.advance()
   }
 
-  isFinished (): boolean {
-    return this.curStmt === this.prog.length
+  isFinished (): boolean { return this.curStmt === this.prog.length }
+  isTracing (): boolean { return this.traces !== undefined }
+  appendToCurrentTrace (v: HTMLElement | string): void {
+    if (this.traces !== undefined) {
+      if (typeof v === 'string') {
+        v = mkCodeElement(v)
+      }
+      this.traces[this.curStmt]!.appendChild(v)
+    }
   }
 
   advance (): void {
     this.curStmt += 1
     this.state = undefined
+    if (this.isTracing()) {
+      this.display.appendChild(this.traces![this.curStmt]!)
+    }
+    if (!this.isFinished()) {
+      this.appendToCurrentTrace(makeTraceHeader(this.prog[this.curStmt]))
+      this.appendToCurrentTrace('\n')
+    }
   }
 
   step (): void {
     const stmt = this.prog[this.curStmt]
     switch (stmt.tag) {
+
       case 'binding': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
@@ -477,6 +524,8 @@ export class Sem {
         if (!this.state.isFinished()) {
           try {
             step(this.state)
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -492,17 +541,23 @@ export class Sem {
             (val as V.Closure).name = stmt.name
           }
           this.env.set(stmt.name, val)
+          this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
           this.advance()
         }
         break
       }
+
       case 'stmtexp': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
         }
         if (!this.state.isFinished()) {
           try {
             step(this.state)
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -518,6 +573,7 @@ export class Sem {
       case 'import': {
         if (this.builtinLibs.has(stmt.modName)) {
           this.env = this.env.extend(this.builtinLibs.get(stmt.modName)!)
+          this.appendToCurrentTrace(`Module ${stmt.modName} imported`)
           this.advance()
         } else {
           this.advance()
@@ -528,11 +584,14 @@ export class Sem {
       case 'display': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
+          this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
         }
         if (!this.state.isFinished()) {
           try {
             step(this.state)
-            renderToOutput(this.display, S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+            this.appendToCurrentTrace('\n')
           } catch (e) {
             renderToOutput(this.display, e)
             this.advance()
@@ -548,6 +607,7 @@ export class Sem {
       }
       case 'struct': {
         this.env = executeStructDecl(stmt.id, stmt.fields, this.env)
+        this.appendToCurrentTrace(`Struct ${stmt.id} declared`)
         this.advance()
         break
       }

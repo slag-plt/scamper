@@ -12,12 +12,27 @@ const editorPane = document.getElementById('editor')!
 const outputPane = document.getElementById('output')!
 const fileList   = document.getElementById('files')!
 const runButton  = document.getElementById('run')!
+const stepButton = document.getElementById('step')!
+
+const stepOnceButton = document.getElementById('step-once')!
+const stepStmtButton = document.getElementById('step-stmt')!
+const stepAllButton  = document.getElementById('step-all')!
 
 class IDE {
   fs: FS
   editor: EditorView
   currentFile: string
   autosaveId: number
+  scamper?: Scamper
+
+  startScamper (isTracing: boolean): void {
+    outputPane!.innerHTML = ''
+    try {
+      this.scamper = new Scamper(outputPane, isTracing, this.getDoc())
+    } catch (e) {
+      renderToOutput(outputPane, e)
+    }
+  }
 
   constructor () {
     this.fs = new FS()
@@ -30,16 +45,14 @@ class IDE {
     this.loadCurrentFile()
     this.updateFileList()
 
-    runButton!.addEventListener('click', () => {
-      const scamper = new Scamper(outputPane)
-      outputPane!.innerHTML = ''
-      const program = this.getDoc()
-      try {
-        scamper.runProgram(program)
-      } catch (e) {
-        renderToOutput(outputPane, e)
-      }
+    runButton.addEventListener('click', () => {
+      this.startScamper(false)
+      this.scamper!.runProgram()
     })
+    stepButton.addEventListener('click', () => this.startScamper(true))
+    stepOnceButton.addEventListener('click', () => this.scamper!.stepProgram())
+    stepStmtButton.addEventListener('click', () => this.scamper!.stepStmtProgram())
+    stepAllButton.addEventListener('click', () => this.scamper!.runProgram())
 
     Split(['#file-drawer', '#editor', '#results'], {
       sizes: [15, 50, 35]

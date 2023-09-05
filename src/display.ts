@@ -8,7 +8,7 @@ function mkOutputDiv (body: HTMLElement) {
   return ret
 }
 
-function mkCodeElement (text: string): HTMLElement {
+export function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
   ret.appendChild(document.createTextNode(text))
   return ret
