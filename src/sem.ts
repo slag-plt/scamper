@@ -21,10 +21,14 @@ class Control {
     return `[idx=${this.idx}, ops=${this.ops.map(V.opToString).join(',')}]`
   }
 
-  clone(): Control {
-    const ret = new Control(this.ops);
-    ret.idx = this.idx
-    return ret
+  jumpTo(label: V.Label): void {
+    let cur = this.ops[this.idx]
+    while (!this.isEmpty() && (cur.tag !== 'lbl' || cur.name !== label)) {
+      cur = this.ops[++this.idx]
+    }
+    if (this.isEmpty()) {
+      throw new ICE('Control.jumpTo', `Label ${label} not found`)
+    }
   }
 }
 
@@ -59,13 +63,9 @@ class ExecutionState {
     this.control = control
   }
 
-  clone() {
-    const ret = new ExecutionState(this.env, [])
-    ret.stack = [...this.stack]
-    ret.env = this.env    // NOTE: do I need to clone the env, too?
-    ret.control = this.control.clone()
-    ret.dump = this.dump.map(([stack, env, control]) =>
-      [[...stack], env, control.clone()] as [Value[], Env, Control])
+  jumpPast (label: V.Label): void {
+    this.control.jumpTo(label)
+    this.control.idx += 1
   }
 }
 
@@ -112,6 +112,23 @@ function valueToExp (env: Env, v: Value): S.Exp {
   }
 }
 
+function findArgs (start: number, label: string, ops: Op[]): { segments: Op[][], endIdx: number } {
+  let i = start
+  let segments: Op[][] = []
+  let seg: Op[] = []
+  let op = ops[i]
+  while (op.tag !== 'lbl' || op.name !== label) {
+    if ((op.tag === 'and' || op.tag === 'or') && op.jmpTo === label) {
+      segments.push(seg)
+      seg = []
+    } else {
+      seg.push(op)
+    }
+    op = ops[++i]
+  }
+  return { segments, endIdx: i }
+}
+
 function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
   let expStack = stack.map((v) => valueToExp(env, v))
   if (hole !== undefined) { expStack.push(hole) }
@@ -156,6 +173,18 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
       }
     } else if (op.tag === 'match') {
       throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+    } else if (op.tag === 'and') {
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkAnd(args, '(', noRange))
+      i = endIdx + 1
+    } else if (op.tag === 'or') {
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkOr(args, '(', noRange))
+      i = endIdx + 1
+    } else if (op.tag === 'lbl') {
+      // N.B., do nothing, skip over labels!
     }
   }
   if (expStack.length !== 1) {
@@ -204,6 +233,14 @@ export function expToOps (e: S.Exp): Op[] {
       return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
     case 'match':
       return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+    case 'and': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label, e.range)])).concat([V.mkValue(true), V.mkLbl(label)])
+    }
+    case 'or': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label, e.range)])).concat([V.mkValue(false), V.mkLbl(label)])
+    }
   }
 }
 
@@ -252,6 +289,7 @@ function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
+
     case 'val': {
       stack.push(op.value)
       return true
@@ -366,6 +404,43 @@ function stepPrim (state: ExecutionState): boolean {
         throw new ICE('sem.step', `Scrutinee missing from stack for match`)
       }
       return false
+    }
+
+    case 'and': {
+      if (stack.length < 1) {
+        throw new ICE('sem.and', 'Missing argument to "and" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (!val) {
+        state.stack.push(false)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'or': {
+      if (stack.length < 1) {
+        throw new ICE('sem.or', 'Missing argument to "or" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (val) {
+        state.stack.push(true)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'lbl': {
+      // N.B., skip over a label peacefully
+      return true
     }
   }
 }

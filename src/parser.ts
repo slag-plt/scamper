@@ -401,6 +401,10 @@ export function sexpToExp (e: S.Sexp): S.Exp {
           throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, binds.range)
         }
         return S.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
+      } else if (head.tag === 'atom' && head.value === 'and') {
+        return S.mkAnd(args.map(sexpToExp), e.bracket, e.range)
+      } else if (head.tag === 'atom' && head.value === 'or') {
+        return S.mkOr(args.map(sexpToExp), e.bracket, e.range)
       } else if (head.tag === 'atom' && head.value === 'if') {
         if (args.length !== 3) {
           throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, e.range)

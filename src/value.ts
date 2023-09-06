@@ -1,8 +1,14 @@
 import { Id, Range, Pat, patToString } from './lang.js'
 
+export type Label = string
+export const freshLabel: () => Label = (() => {
+  let counter = 0
+  return () => `lbl_${counter++}`
+})()
+
 export type MatchBranch = { pattern: Pat, body: Op[] }
 
-export type Op    = Var | Val | Cls | Ap | If | Let | Seq | Match
+export type Op    = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Lbl
 export type Var   = { tag: 'var', name: string, range: Range }
 export type Val   = { tag: 'val', value: Value }
 export type Cls   = { tag: 'cls', params: Id[], ops: Op[] }
@@ -11,6 +17,9 @@ export type If    = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
 export type Let   = { tag: 'let', names: Id[] }
 export type Seq   = { tag: 'seq', numSubexps: number }
 export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
+export type And   = { tag: 'and', jmpTo: Label, range: Range }
+export type Or    = { tag: 'or', jmpTo: Label, range: Range }
+export type Lbl   = { tag: 'lbl', name: string }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
 export const mkValue = (value: Value): Op => ({ tag: 'val', value })
@@ -20,6 +29,9 @@ export const mkIf = (ifb: Op[], elseb: Op[], range: Range): Op => ({ tag: 'if', 
 export const mkLet = (names: Id[]): Op => ({ tag: 'let', names })
 export const mkSeq = (numSubexps: number): Op => ({ tag: 'seq', numSubexps })
 export const mkMatch = (branches: MatchBranch[], range: Range): Op => ({ tag: 'match', branches, range })
+export const mkAnd = (jmpTo: Label, range: Range): Op => ({ tag: 'and', jmpTo, range })
+export const mkOr = (jmpTo: Label, range: Range): Op => ({ tag: 'or', jmpTo, range })
+export const mkLbl = (name: string): Op => ({ tag: 'lbl', name })
 
 export function opToString (op: Op): string {
   switch (op.tag) {
@@ -39,6 +51,12 @@ export function opToString (op: Op): string {
       return `seq ${op.numSubexps}`
     case 'match':
       return `match (${op.branches.map((b) => patToString(b.pattern) + ' => ' + b.body.map(opToString).join('; ')).join(' | ')})`
+    case 'and':
+      return `and (jmpto ${op.jmpTo})`
+    case 'or':
+      return `or (jmpto ${op.jmpTo})`
+    case 'lbl':
+      return `lbl ${op.name}`
   }
 }
 
