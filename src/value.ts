@@ -17,8 +17,8 @@ export type If    = { tag: 'if', ifb: Op[], elseb: Op[], range: Range }
 export type Let   = { tag: 'let', names: Id[] }
 export type Seq   = { tag: 'seq', numSubexps: number }
 export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
-export type And   = { tag: 'and', jmpTo: Label }
-export type Or    = { tag: 'or', jmpTo: Label }
+export type And   = { tag: 'and', jmpTo: Label, range: Range }
+export type Or    = { tag: 'or', jmpTo: Label, range: Range }
 export type Lbl   = { tag: 'lbl', name: string }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
@@ -29,8 +29,8 @@ export const mkIf = (ifb: Op[], elseb: Op[], range: Range): Op => ({ tag: 'if', 
 export const mkLet = (names: Id[]): Op => ({ tag: 'let', names })
 export const mkSeq = (numSubexps: number): Op => ({ tag: 'seq', numSubexps })
 export const mkMatch = (branches: MatchBranch[], range: Range): Op => ({ tag: 'match', branches, range })
-export const mkAnd = (jmpTo: Label): Op => ({ tag: 'and', jmpTo })
-export const mkOr = (jmpTo: Label): Op => ({ tag: 'or', jmpTo })
+export const mkAnd = (jmpTo: Label, range: Range): Op => ({ tag: 'and', jmpTo, range })
+export const mkOr = (jmpTo: Label, range: Range): Op => ({ tag: 'or', jmpTo, range })
 export const mkLbl = (name: string): Op => ({ tag: 'lbl', name })
 
 export function opToString (op: Op): string {

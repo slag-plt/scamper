@@ -21,10 +21,14 @@ class Control {
     return `[idx=${this.idx}, ops=${this.ops.map(V.opToString).join(',')}]`
   }
 
-  clone(): Control {
-    const ret = new Control(this.ops);
-    ret.idx = this.idx
-    return ret
+  jumpTo(label: V.Label): void {
+    let cur = this.ops[this.idx]
+    while (!this.isEmpty() && (cur.tag !== 'lbl' || cur.name !== label)) {
+      cur = this.ops[++this.idx]
+    }
+    if (this.isEmpty()) {
+      throw new ICE('Control.jumpTo', `Label ${label} not found`)
+    }
   }
 }
 
@@ -59,14 +63,7 @@ class ExecutionState {
     this.control = control
   }
 
-  clone() {
-    const ret = new ExecutionState(this.env, [])
-    ret.stack = [...this.stack]
-    ret.env = this.env    // NOTE: do I need to clone the env, too?
-    ret.control = this.control.clone()
-    ret.dump = this.dump.map(([stack, env, control]) =>
-      [[...stack], env, control.clone()] as [Value[], Env, Control])
-  }
+  jumpTo (label: V.Label): void { this.control.jumpTo(label) }
 }
 
 function valueToExp (env: Env, v: Value): S.Exp {
@@ -156,6 +153,12 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
       }
     } else if (op.tag === 'match') {
       throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+    } else if (op.tag === 'and') {
+      throw new ICE('sem.dumpToExp', 'Unimplemented and case')
+    } else if (op.tag === 'or') {
+      throw new ICE('sem.dumpToExp', 'Unimplemented or case')
+    } else if (op.tag === 'lbl') {
+      // N.B., do nothing, skip over labels!
     }
   }
   if (expStack.length !== 1) {
@@ -206,11 +209,11 @@ export function expToOps (e: S.Exp): Op[] {
       return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
     case 'and': {
       const label = V.freshLabel()
-      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label)]))
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label, e.range)])).concat([V.mkValue(true), V.mkLbl(label)])
     }
     case 'or': {
       const label = V.freshLabel()
-      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label)]))
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label, e.range)])).concat([V.mkValue(false), V.mkLbl(label)])
     }
   }
 }
@@ -260,6 +263,7 @@ function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
+
     case 'val': {
       stack.push(op.value)
       return true
@@ -374,6 +378,43 @@ function stepPrim (state: ExecutionState): boolean {
         throw new ICE('sem.step', `Scrutinee missing from stack for match`)
       }
       return false
+    }
+
+    case 'and': {
+      if (stack.length < 1) {
+        throw new ICE('sem.and', 'Missing argument to "and" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (!val) {
+        state.stack.push(false)
+        state.jumpTo(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'or': {
+      if (stack.length < 1) {
+        throw new ICE('sem.or', 'Missing argument to "or" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (val) {
+        state.stack.push(true)
+        state.jumpTo(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'lbl': {
+      // N.B., skip over a label peacefully
+      return true
     }
   }
 }
