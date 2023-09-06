@@ -63,7 +63,10 @@ class ExecutionState {
     this.control = control
   }
 
-  jumpTo (label: V.Label): void { this.control.jumpTo(label) }
+  jumpPast (label: V.Label): void {
+    this.control.jumpTo(label)
+    this.control.idx += 1
+  }
 }
 
 function valueToExp (env: Env, v: Value): S.Exp {
@@ -107,6 +110,23 @@ function valueToExp (env: Env, v: Value): S.Exp {
   } else {
     throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
+}
+
+function findArgs (start: number, label: string, ops: Op[]): { segments: Op[][], endIdx: number } {
+  let i = start
+  let segments: Op[][] = []
+  let seg: Op[] = []
+  let op = ops[i]
+  while (op.tag !== 'lbl' || op.name !== label) {
+    if ((op.tag === 'and' || op.tag === 'or') && op.jmpTo === label) {
+      segments.push(seg)
+      seg = []
+    } else {
+      seg.push(op)
+    }
+    op = ops[++i]
+  }
+  return { segments, endIdx: i }
 }
 
 function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
@@ -154,9 +174,15 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
     } else if (op.tag === 'match') {
       throw new ICE('sem.dumpToExp', 'Unimplemented match case')
     } else if (op.tag === 'and') {
-      throw new ICE('sem.dumpToExp', 'Unimplemented and case')
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkAnd(args, '(', noRange))
+      i = endIdx + 1
     } else if (op.tag === 'or') {
-      throw new ICE('sem.dumpToExp', 'Unimplemented or case')
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkOr(args, '(', noRange))
+      i = endIdx + 1
     } else if (op.tag === 'lbl') {
       // N.B., do nothing, skip over labels!
     }
@@ -390,7 +416,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       if (!val) {
         state.stack.push(false)
-        state.jumpTo(op.jmpTo)
+        state.jumpPast(op.jmpTo)
       }
       // N.B., otherwise, move onto the next instruction!
       return false
@@ -406,7 +432,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       if (val) {
         state.stack.push(true)
-        state.jumpTo(op.jmpTo)
+        state.jumpPast(op.jmpTo)
       }
       // N.B., otherwise, move onto the next instruction!
       return false
