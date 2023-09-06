@@ -168,7 +168,7 @@ export function patToString (p: Pat): string {
   return sexpToString(patToSexp(p))
 }
 
-export type Exp = Var | Num | Bool | Char | Str | Lam | Let | App | If | Begin | Match
+export type Exp = Var | Num | Bool | Char | Str | Lam | Let | App | And | Or | If | Begin | Match
 export type Var = { tag: 'var', name: string, range: Range }
 export type Num = { tag: 'num', value: number, range: Range }
 export type Bool = { tag: 'bool', value: boolean, range: Range }
@@ -177,6 +177,8 @@ export type Str = { tag: 'str', value: string, range: Range }
 export type Lam = { tag: 'lam', args: Id[], body: Exp, bracket: Bracket, range: Range }
 export type Let = { tag: 'let', bindings: Binding[], body: Exp, bracket: Bracket, range: Range }
 export type App = { tag: 'app', head: Exp, args: Exp[], bracket: Bracket, range: Range }
+export type And = { tag: 'and', exps: Exp[], bracket: Bracket, range: Range }
+export type Or = { tag: 'or', exps: Exp[], bracket: Bracket, range: Range }
 export type If = { tag: 'if', guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range }
 export type Begin = { tag: 'begin', exps: Exp[], bracket: Bracket, range: Range }
 export type Match = { tag: 'match', scrutinee: Exp, branches: MatchBranch[], bracket: Bracket, range: Range }
@@ -197,6 +199,10 @@ export const mkLet = (bindings: Binding[], body: Exp, bracket: Bracket, range: R
   ({ tag: 'let', bindings, body, bracket, range })
 export const mkApp = (head: Exp, args: Exp[], bracket: Bracket, range: Range): Exp =>
   ({ tag: 'app', head, args, bracket, range })
+export const mkAnd = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
+  ({ tag: 'and', exps, bracket, range })
+export const mkOr = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
+  ({ tag: 'or', exps, bracket, range })
 export const mkIf = (guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range): Exp =>
   ({ tag: 'if', guard, ifb, elseb, bracket, range })
 export const mkBegin = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
@@ -230,6 +236,10 @@ export function expToSexp(e: Exp): Sexp {
         expToSexp(e.body)], e.bracket, e.range)
     case 'app':
       return mkList([expToSexp(e.head), ...e.args.map(expToSexp)], '(', e.range)
+    case 'and':
+      return mkList([mkAtom('and', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
+    case 'or':
+      return mkList([mkAtom('or', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
     case 'if':
       return mkList([mkAtom('if', noRange), expToSexp(e.guard), expToSexp(e.ifb), expToSexp(e.elseb)], '(', e.range)
     case 'begin':

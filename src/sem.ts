@@ -204,6 +204,14 @@ export function expToOps (e: S.Exp): Op[] {
       return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
     case 'match':
       return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+    case 'and': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label)]))
+    }
+    case 'or': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label)]))
+    }
   }
 }
 
