@@ -1,0 +1,729 @@
+
+  <html>
+    <head>
+      <style>
+        #content {
+          display: flex;
+          flex-direction: row;
+          width: 100%;
+          height: 95vh;
+        }
+
+        #index {
+          margin: 1em;
+          padding: 1em;
+          background-color: #eee;
+          font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+          width: 20%;
+          height: 100%;
+          overflow: scroll;
+        }
+
+        #docs {
+          height: 100%;
+          overflow: scroll;
+        }
+
+        .entry {
+          border: 1px solid black;
+          padding: 1em;
+          margin: 1em;
+          font: 1em;
+          font-family: font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+        }
+        .entry code {
+          font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+        }
+      </style>
+    </head>
+    <body>
+    <div id="content">
+      <div id="index">prelude <ul><li><a href="#prelude-abs">abs</a></li><li><a href="#prelude-acos">acos</a></li><li><a href="#prelude-append">append</a></li><li><a href="#prelude-apply">apply</a></li><li><a href="#prelude-asin">asin</a></li><li><a href="#prelude-assocKey">assocKey</a></li><li><a href="#prelude-assocRef">assocRef</a></li><li><a href="#prelude-assocSet">assocSet</a></li><li><a href="#prelude-atan">atan</a></li><li><a href="#prelude-boolean">boolean</a></li><li><a href="#prelude-car">car</a></li><li><a href="#prelude-cdr">cdr</a></li><li><a href="#prelude-ceiling">ceiling</a></li><li><a href="#prelude-charAlphabetic">charAlphabetic</a></li><li><a href="#prelude-charDowncase">charDowncase</a></li><li><a href="#prelude-charEq">charEq</a></li><li><a href="#prelude-charEqCi">charEqCi</a></li><li><a href="#prelude-charFoldcase">charFoldcase</a></li><li><a href="#prelude-charGeq">charGeq</a></li><li><a href="#prelude-charGeqCi">charGeqCi</a></li><li><a href="#prelude-charGt">charGt</a></li><li><a href="#prelude-charGtCi">charGtCi</a></li><li><a href="#prelude-charLeq">charLeq</a></li><li><a href="#prelude-charLeqCi">charLeqCi</a></li><li><a href="#prelude-charLowerCase">charLowerCase</a></li><li><a href="#prelude-charLt">charLt</a></li><li><a href="#prelude-charLtCi">charLtCi</a></li><li><a href="#prelude-charNumeric">charNumeric</a></li><li><a href="#prelude-charQ">charQ</a></li><li><a href="#prelude-charToInteger">charToInteger</a></li><li><a href="#prelude-charUpcase">charUpcase</a></li><li><a href="#prelude-charUpperCase">charUpperCase</a></li><li><a href="#prelude-charWhitespace">charWhitespace</a></li><li><a href="#prelude-compose">compose</a></li><li><a href="#prelude-cons">cons</a></li><li><a href="#prelude-cos">cos</a></li><li><a href="#prelude-digitValue">digitValue</a></li><li><a href="#prelude-div">div</a></li><li><a href="#prelude-elseV">elseV</a></li><li><a href="#prelude-equal">equal</a></li><li><a href="#prelude-equalsEps">equalsEps</a></li><li><a href="#prelude-error">error</a></li><li><a href="#prelude-even">even</a></li><li><a href="#prelude-exp">exp</a></li><li><a href="#prelude-expt">expt</a></li><li><a href="#prelude-fileLines">fileLines</a></li><li><a href="#prelude-fileString">fileString</a></li><li><a href="#prelude-filter">filter</a></li><li><a href="#prelude-floor">floor</a></li><li><a href="#prelude-fold">fold</a></li><li><a href="#prelude-foldRight">foldRight</a></li><li><a href="#prelude-forRange">forRange</a></li><li><a href="#prelude-geq">geq</a></li><li><a href="#prelude-gt">gt</a></li><li><a href="#prelude-implies">implies</a></li><li><a href="#prelude-indexOf">indexOf</a></li><li><a href="#prelude-integer">integer</a></li><li><a href="#prelude-integerToChar">integerToChar</a></li><li><a href="#prelude-length">length</a></li><li><a href="#prelude-leq">leq</a></li><li><a href="#prelude-list">list</a></li><li><a href="#prelude-listDrop">listDrop</a></li><li><a href="#prelude-listQ">listQ</a></li><li><a href="#prelude-listRef">listRef</a></li><li><a href="#prelude-listString">listString</a></li><li><a href="#prelude-listTail">listTail</a></li><li><a href="#prelude-listTake">listTake</a></li><li><a href="#prelude-listVector">listVector</a></li><li><a href="#prelude-log">log</a></li><li><a href="#prelude-lt">lt</a></li><li><a href="#prelude-makeList">makeList</a></li><li><a href="#prelude-makeString">makeString</a></li><li><a href="#prelude-makeVector">makeVector</a></li><li><a href="#prelude-map">map</a></li><li><a href="#prelude-max">max</a></li><li><a href="#prelude-min">min</a></li><li><a href="#prelude-minus">minus</a></li><li><a href="#prelude-modulo">modulo</a></li><li><a href="#prelude-nanQ">nanQ</a></li><li><a href="#prelude-nand">nand</a></li><li><a href="#prelude-negative">negative</a></li><li><a href="#prelude-nor">nor</a></li><li><a href="#prelude-not">not</a></li><li><a href="#prelude-nullQ">nullQ</a></li><li><a href="#prelude-number">number</a></li><li><a href="#prelude-numberString">numberString</a></li><li><a href="#prelude-numeq">numeq</a></li><li><a href="#prelude-o">o</a></li><li><a href="#prelude-odd">odd</a></li><li><a href="#prelude-pair">pair</a></li><li><a href="#prelude-pairQ">pairQ</a></li><li><a href="#prelude-pi">pi</a></li><li><a href="#prelude-pipe">pipe</a></li><li><a href="#prelude-plus">plus</a></li><li><a href="#prelude-positive">positive</a></li><li><a href="#prelude-procedure">procedure</a></li><li><a href="#prelude-qq">qq</a></li><li><a href="#prelude-quotient">quotient</a></li><li><a href="#prelude-random">random</a></li><li><a href="#prelude-range">range</a></li><li><a href="#prelude-real">real</a></li><li><a href="#prelude-reduce">reduce</a></li><li><a href="#prelude-reduceRight">reduceRight</a></li><li><a href="#prelude-remainder">remainder</a></li><li><a href="#prelude-reverse">reverse</a></li><li><a href="#prelude-round">round</a></li><li><a href="#prelude-sin">sin</a></li><li><a href="#prelude-sqrt">sqrt</a></li><li><a href="#prelude-square">square</a></li><li><a href="#prelude-string">string</a></li><li><a href="#prelude-stringAppend">stringAppend</a></li><li><a href="#prelude-stringContains">stringContains</a></li><li><a href="#prelude-stringDowncase">stringDowncase</a></li><li><a href="#prelude-stringEq">stringEq</a></li><li><a href="#prelude-stringEqCi">stringEqCi</a></li><li><a href="#prelude-stringFoldcase">stringFoldcase</a></li><li><a href="#prelude-stringGeq">stringGeq</a></li><li><a href="#prelude-stringGeqCi">stringGeqCi</a></li><li><a href="#prelude-stringGt">stringGt</a></li><li><a href="#prelude-stringGtCi">stringGtCi</a></li><li><a href="#prelude-stringLength">stringLength</a></li><li><a href="#prelude-stringLeq">stringLeq</a></li><li><a href="#prelude-stringLeqCi">stringLeqCi</a></li><li><a href="#prelude-stringList">stringList</a></li><li><a href="#prelude-stringLt">stringLt</a></li><li><a href="#prelude-stringLtCi">stringLtCi</a></li><li><a href="#prelude-stringMap">stringMap</a></li><li><a href="#prelude-stringNumber">stringNumber</a></li><li><a href="#prelude-stringQ">stringQ</a></li><li><a href="#prelude-stringRef">stringRef</a></li><li><a href="#prelude-stringSplit">stringSplit</a></li><li><a href="#prelude-stringSplitVector">stringSplitVector</a></li><li><a href="#prelude-stringUpcase">stringUpcase</a></li><li><a href="#prelude-stringVector">stringVector</a></li><li><a href="#prelude-substring">substring</a></li><li><a href="#prelude-tan">tan</a></li><li><a href="#prelude-times">times</a></li><li><a href="#prelude-truncate">truncate</a></li><li><a href="#prelude-vector">vector</a></li><li><a href="#prelude-vectorAppend">vectorAppend</a></li><li><a href="#prelude-vectorFill">vectorFill</a></li><li><a href="#prelude-vectorFilter">vectorFilter</a></li><li><a href="#prelude-vectorForEach">vectorForEach</a></li><li><a href="#prelude-vectorLength">vectorLength</a></li><li><a href="#prelude-vectorList">vectorList</a></li><li><a href="#prelude-vectorMap">vectorMap</a></li><li><a href="#prelude-vectorMapBang">vectorMapBang</a></li><li><a href="#prelude-vectorQ">vectorQ</a></li><li><a href="#prelude-vectorRange">vectorRange</a></li><li><a href="#prelude-vectorRef">vectorRef</a></li><li><a href="#prelude-vectorSet">vectorSet</a></li><li><a href="#prelude-vectorString">vectorString</a></li><li><a href="#prelude-voidQ">voidQ</a></li><li><a href="#prelude-voidV">voidV</a></li><li><a href="#prelude-withFile">withFile</a></li><li><a href="#prelude-withHandler">withHandler</a></li><li><a href="#prelude-xor">xor</a></li><li><a href="#prelude-zero">zero</a></li></ul></div>
+      <div id="docs"><div id="prelude-abs" class="entry"><pre><code>(abs v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the absolute value of <code>v</code>.</p></div><div id="prelude-acos" class="entry"><pre><code>(acos v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the arc cosine of <code>v</code>.</p></div><div id="prelude-append" class="entry"><pre><code>(append l1 l2 ...): list?
+
+  l: list?
+</code></pre>
+<p>Returns a new list containing the elements of lists <code>l1</code>, <code>l2</code>, … in sequence.</p></div><div id="prelude-apply" class="entry"><pre><code>(apply f l): any
+
+  f: procedure?
+  l: list?
+</code></pre>
+<p>Calls <code>f</code> with the values contained in <code>l</code>.</p></div><div id="prelude-asin" class="entry"><pre><code>(asin v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the arc sine of <code>v</code>.</p></div><div id="prelude-assocKey" class="entry"><pre><code>(assoc-key? k l): any
+
+  k: any
+  l: list?, an association list
+</code></pre>
+<p>Returns <code>#t</code> if <code>k</code> is a key in association list <code>l</code>.</p></div><div id="prelude-assocRef" class="entry"><pre><code>(assoc-ref k l): any
+
+  k: any
+  l: list?, an association list
+</code></pre>
+<p>Returns the value associated with key <code>k</code> in association list <code>l</code>.</p></div><div id="prelude-assocSet" class="entry"><pre><code>(assoc-set k v l): list?
+
+  k: any
+  v: any
+  l: list?, an association list
+</code></pre>
+<p>Returns a new association list containing the same key-value pairs as <code>l</code> except that <code>k</code> is associated with <code>v</code>.</p></div><div id="prelude-atan" class="entry"><pre><code>(atan v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the arc tangent of <code>v</code>.</p></div><div id="prelude-boolean" class="entry"><pre><code>(boolean? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a boolean.</p></div><div id="prelude-car" class="entry"><pre><code>(car v): any
+
+  v: pair?
+</code></pre>
+<p>Returns the first element of <code>v</code>.</p></div><div id="prelude-cdr" class="entry"><pre><code>(cdr v): any
+
+  v: pair?
+</code></pre>
+<p>Returns the second element of <code>v</code>.</p></div><div id="prelude-ceiling" class="entry"><pre><code>(ceiling v): integer?
+
+  v: number?
+</code></pre>
+<p>Returns the smallest integer greater than or equal to <code>v</code>.</p></div><div id="prelude-charAlphabetic" class="entry"><pre><code>(char-alphabetic? c): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c</code> is an alphabetic character.</p></div><div id="prelude-charDowncase" class="entry"><pre><code>(char-downcase c): char?
+
+  c: char?
+</code></pre>
+<p>Returns the lower-case equivalent of <code>c</code>.</p></div><div id="prelude-charEq" class="entry"><pre><code>(char=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … are all equivalent characters.</p></div><div id="prelude-charEqCi" class="entry"><pre><code>(char-ci=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … are all equivalent characters, ignoring case.</p></div><div id="prelude-charFoldcase" class="entry"><pre><code>(char-foldcase c): char?
+
+  c: char?
+</code></pre>
+<p>Returns the case-folded equivalent of <code>c</code>. This is a version of <code>c</code> that is appropriate for case-insensitive comparison.</p></div><div id="prelude-charGeq" class="entry"><pre><code>(char&gt;=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have non-increasing character values.</p></div><div id="prelude-charGeqCi" class="entry"><pre><code>(char-ci&gt;=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have non-increasing character values, ignoring case.</p></div><div id="prelude-charGt" class="entry"><pre><code>(char&gt;? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have strictly decreasing character values.</p></div><div id="prelude-charGtCi" class="entry"><pre><code>(char-ci&gt;? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have strictly decreasing character values, ignoring case.</p></div><div id="prelude-charLeq" class="entry"><pre><code>(char&lt;=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have non-decreasing character values.</p></div><div id="prelude-charLeqCi" class="entry"><pre><code>(char-ci&lt;=? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have non-decreasing character values, ignoring case.</p></div><div id="prelude-charLowerCase" class="entry"><pre><code>(char-lower-case? c): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c</code> is a lower-case character.</p></div><div id="prelude-charLt" class="entry"><pre><code>(char&lt;? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have strictly increasing character values.</p></div><div id="prelude-charLtCi" class="entry"><pre><code>(char-ci&lt;? c1 c2 ...): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c1</code>, <code>c2</code>, … have strictly increasing character values, ignoring case.</p></div><div id="prelude-charNumeric" class="entry"><pre><code>(char-numeric? c): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c</code> is a numeric character.</p></div><div id="prelude-charQ" class="entry"><pre><code>(char? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a character.</p></div><div id="prelude-charToInteger" class="entry"><pre><code>(char-&gt;integer c): integer?
+
+  c: char?
+</code></pre>
+<p>Returns the codepoint value of character <code>c</code>.</p></div><div id="prelude-charUpcase" class="entry"><pre><code>(char-upcase c): char?
+
+  c: char?
+</code></pre>
+<p>Returns the upper-case equivalent of <code>c</code>.</p></div><div id="prelude-charUpperCase" class="entry"><pre><code>(char-upper-case? c): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c</code> is an upper-case character.</p></div><div id="prelude-charWhitespace" class="entry"><pre><code>(char-whitespace? c): boolean?
+
+  c: char?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>c</code> is a whitespace character.</p></div><div id="prelude-compose" class="entry"><pre><code>(compose f1 f2 ...): procedure?
+
+  f: procedure?
+</code></pre>
+<p>Returns a new procedure that is the composition of the given functions, <em>i.e.</em>, <code>f(x) = f1(f2(...(fk(x))))</code>.</p></div><div id="prelude-cons" class="entry"><pre><code>(cons v1 v2): pair?
+
+  v1: any
+  v2: any
+</code></pre>
+<p>Returns a new pair containing <code>v1</code> and <code>v2</code>.</p></div><div id="prelude-cos" class="entry"><pre><code>(cos v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the cosine of <code>v</code>.</p></div><div id="prelude-digitValue" class="entry"><pre><code>(digit-value c): integer?
+
+  c: char?
+</code></pre>
+<p>Returns the numeric value of <code>c</code> if <code>c</code> is a decimal digit (0-10), otherwise raises an error.</p></div><div id="prelude-div" class="entry"><pre><code>(/ v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the quotient of <code>v1</code>, <code>v2</code>, … .</p></div><div id="prelude-elseV" class="entry"><pre><code>else: ?boolean
+</code></pre>
+<p>A synonym for <code>#t</code> appropriate for use as the final guard of a <code>cond</code> expression.</p></div><div id="prelude-equal" class="entry"><pre><code>(equal? v1 v2): boolean?
+
+  v1: any
+  v2: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> and <code>v2</code> are (structurally) equal values.</p></div><div id="prelude-equalsEps" class="entry"><pre><code>(=eps n): procedure?
+
+  n: number?
+</code></pre>
+<p>Returns a function that takes two numbers <code>x</code> and <code>y</code> as input returns <code>#t</code> if <code>|x - y| &lt; n</code>.</p></div><div id="prelude-error" class="entry"><pre><code>(error msg): any
+
+  msg: string?
+</code></pre>
+<p>Raises a runtime error with message <code>msg</code>.</p></div><div id="prelude-even" class="entry"><pre><code>(even? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is even.</p></div><div id="prelude-exp" class="entry"><pre><code>(exp v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the exponential of <code>v</code>.</p></div><div id="prelude-expt" class="entry"><pre><code>(expt x y): number?
+
+  x: number?
+  y: number?
+</code></pre>
+<p>Returns <code>x</code> raised to the power of <code>y</code>.</p></div><div id="prelude-fileLines" class="entry"><pre><code>(file-&gt;lines path): list?
+
+  path: string?
+</code></pre>
+<p>Returns the contents of the file at <code>path</code> as a list of strings, one for each line.</p></div><div id="prelude-fileString" class="entry"><pre><code>(file-&gt;string path): string?
+
+  path: string?
+</code></pre>
+<p>Returns the contents of the file at <code>path</code> as a string.</p></div><div id="prelude-filter" class="entry"><pre><code>(filter f l): list?
+
+  f: procedure?, a predicate
+  l: list?
+</code></pre>
+<p>Returns a new list containing the elements of <code>l</code> for which <code>f</code> returns <code>#t</code>.</p></div><div id="prelude-floor" class="entry"><pre><code>(floor v): integer?
+
+  v: number?
+</code></pre>
+<p>Returns the largest integer less than or equal to <code>v</code>.</p></div><div id="prelude-fold" class="entry"><pre><code>(fold f v l): any
+
+  f: procedure?, a binary function
+  v: any
+  l: list?
+</code></pre>
+<p>Returns the result of accumulating the result of applying <code>f</code> to each element of <code>l</code>, starting with initial value <code>v</code>.</p></div><div id="prelude-foldRight" class="entry"><pre><code>(fold-right f v l): any
+
+  f: procedure?, a binary function
+  v: any
+  l: list?
+</code></pre>
+<p>Returns the result of accumulating the result of applying <code>f</code> to each element of <code>l</code> in reverse order, starting with initial value <code>v</code>.</p></div><div id="prelude-forRange" class="entry"><pre><code>(for-range beg end f): void?
+
+  beg: number?
+  end: number?
+  f: procedure?
+</code></pre>
+<p>Runs <code>f</code> on each integer in the range <code>[beg, end)</code>. <code>f</code> takes one argument, the current value of integer.</p></div><div id="prelude-geq" class="entry"><pre><code>(&gt;= v1 v2): boolean?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> is greater than or equal to <code>v2</code>.</p></div><div id="prelude-gt" class="entry"><pre><code>(&gt; v1 v2): boolean?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> is strictly greater than <code>v2</code>.</p></div><div id="prelude-implies" class="entry"><pre><code>(implies v1 v2): boolean?
+
+  v1: boolean?
+  v2: boolean?
+</code></pre>
+<p>Equivalent to <code>(if v1 v2 #t)</code>.</p></div><div id="prelude-indexOf" class="entry"><pre><code>(index-of l v): integer?
+
+  l: list?
+  v: any
+</code></pre>
+<p>Returns the index of the first occurrence of <code>v</code> in <code>l</code> or <code>-1</code> if <code>v</code> is not in <code>l</code>.</p></div><div id="prelude-integer" class="entry"><pre><code>(integer? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is an integer.</p></div><div id="prelude-integerToChar" class="entry"><pre><code>(integer-&gt;char n): char?
+
+  n: integer?
+</code></pre>
+<p>Returns the character with codepoint value <code>n</code>.</p></div><div id="prelude-length" class="entry"><pre><code>(length v): integer?
+
+  v: list?
+</code></pre>
+<p>Returns the length of <code>v</code>.</p></div><div id="prelude-leq" class="entry"><pre><code>(&lt;= v1 v2): boolean?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> is less than or equal to <code>v2</code>.</p></div><div id="prelude-list" class="entry"><pre><code>(list v1 v2 ...): list?
+
+  v: any
+</code></pre>
+<p>Returns a new list containing <code>v1</code>, <code>v2</code>, … .</p></div><div id="prelude-listDrop" class="entry"><pre><code>(list-drop l k): list?
+
+  l: list?
+  k: integer?, 0 &lt;= k &lt;= (length l)
+</code></pre>
+<p>An alias for <code>(list-tail l k)</code>.</p></div><div id="prelude-listQ" class="entry"><pre><code>(list? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a list.</p></div><div id="prelude-listRef" class="entry"><pre><code>(list-ref l n): any
+
+  l: list?
+  n: integer?, 0 &lt;= n &lt; (length l)
+</code></pre>
+<p>Returns the <code>n</code>th element of <code>l</code>.</p></div><div id="prelude-listString" class="entry"><pre><code>(list-&gt;string l): string?
+
+  l: list?
+</code></pre>
+<p>Returns a string made by joining the characters in <code>l</code> together.</p></div><div id="prelude-listTail" class="entry"><pre><code>(list-tail l k): list?
+
+  l: list?
+  k: integer?, 0 &lt;= k &lt;= (length l)
+</code></pre>
+<p>Returns a new list containing the last <code>k</code> elements of `l.</p></div><div id="prelude-listTake" class="entry"><pre><code>(list-take l k): list?
+
+  l: list?
+  k: integer?, 0 &lt;= k &lt;= (length l)
+</code></pre>
+<p>Returns a new list containing the first <code>k</code> elements of <code>l</code>.</p></div><div id="prelude-listVector" class="entry"><pre><code>(list-&gt;vector l): vector?
+
+  l: list?
+</code></pre>
+<p>Returns a vector consisting of the values in list <code>l</code>.</p></div><div id="prelude-log" class="entry"><pre><code>(log v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the natural logarithm of <code>v</code>.</p></div><div id="prelude-lt" class="entry"><pre><code>(&lt; v1 v2): boolean?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> is strictly less than <code>v2</code>.</p></div><div id="prelude-makeList" class="entry"><pre><code>(make-list n v): list?
+
+  n: integer?
+  v: any
+</code></pre>
+<p>Returns a new list containing <code>n</code> copies of <code>v</code>.</p></div><div id="prelude-makeString" class="entry"><pre><code>(make-string k c): string?
+
+  k: integer?
+  c: char?
+</code></pre>
+<p>Returns a string of length <code>k</code> with each character set to <code>c</code>.</p></div><div id="prelude-makeVector" class="entry"><pre><code>(make-vector k v): vector?
+
+  k: integer?
+  v: any
+</code></pre>
+<p>Returns a vector of length <code>k</code> with each element set to <code>v</code>.</p></div><div id="prelude-map" class="entry"><pre><code>(map f l): list?
+
+  f: procedure?
+  l: list?
+</code></pre>
+<p>Returns a new list containing the results of applying <code>f</code> to each element of <code>l</code>.</p></div><div id="prelude-max" class="entry"><pre><code>(max v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the maximum of the given numbers.</p></div><div id="prelude-min" class="entry"><pre><code>(min v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the minimum of the given numbers.</p></div><div id="prelude-minus" class="entry"><pre><code>(- v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the difference of <code>v1</code>, <code>v2</code>, … .</p></div><div id="prelude-modulo" class="entry"><pre><code>(modulo v1 v2): number?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>k = n - d * q</code> where <code>q</code> is the integer such that <code>k</code> has the same sign as the divisor <code>d</code> while being as close to 0 as possible. (Source: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder">MDN docs</a>.)</p></div><div id="prelude-nanQ" class="entry"><pre><code>(nan? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is the number <code>NaN</code>.</p></div><div id="prelude-nand" class="entry"><pre><code>(nand v1 v2 ...): boolean?
+
+  v: boolean?
+</code></pre>
+<p>Equivalent to <code>(not (and v1 v2 ...))</code>.</p></div><div id="prelude-negative" class="entry"><pre><code>(negative? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is negative.</p></div><div id="prelude-nor" class="entry"><pre><code>(nor v1 v2 ...): boolean?
+
+  v: boolean?
+</code></pre>
+<p>Equivalent to <code>(not (or v1 v2 ...))</code>.</p></div><div id="prelude-not" class="entry"><pre><code>(not v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is <code>#f</code>.</p></div><div id="prelude-nullQ" class="entry"><pre><code>(null? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is the empty list.</p></div><div id="prelude-number" class="entry"><pre><code>(number? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a number.</p></div><div id="prelude-numberString" class="entry"><pre><code>(number-&gt;string v): string?
+
+  v: number?
+</code></pre>
+<p>Returns the string representation of <code>v</code>.</p></div><div id="prelude-numeq" class="entry"><pre><code>(= v1 v2): boolean?
+
+  v1: number?
+  v2: number?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v1</code> is equal to <code>v2</code>.</p></div><div id="prelude-o" class="entry"><pre><code>(o f1 f2 ...): procedure?
+
+  f: procedure?
+</code></pre>
+<p>A synonym for <code>compose</code>.</p></div><div id="prelude-odd" class="entry"><pre><code>(odd? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is odd.</p></div><div id="prelude-pair" class="entry"><pre><code>(pair v1 v2): pair?
+
+  v1: any
+  v2: any
+</code></pre>
+<p>Returns a new pair containing <code>v1</code> and <code>v2</code>.</p></div><div id="prelude-pairQ" class="entry"><pre><code>(pair? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a pair.</p></div><div id="prelude-pi" class="entry"><pre><code>pi: number
+</code></pre>
+<p>The constant π.</p></div><div id="prelude-pipe" class="entry"><pre><code>(|&gt; v f1 f2 ...): any
+
+  v: any
+  f: procedure?
+</code></pre>
+<p>Returns the result of applying the given function in sequence, starting with initial value <code>v</code>, <em>i.e.</em>, <code>fk(fk-1(...(f1(v))))</code>.</p></div><div id="prelude-plus" class="entry"><pre><code>(+ v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the sum of <code>v1</code>, <code>v2</code>, … .</p></div><div id="prelude-positive" class="entry"><pre><code>(positive? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is positive.</p></div><div id="prelude-procedure" class="entry"><pre><code>(procedure? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a procedure.</p></div><div id="prelude-qq" class="entry"><pre><code>{??}: any
+</code></pre>
+<p>A placeholder for an expression that is not yet implemented.</p></div><div id="prelude-quotient" class="entry"><pre><code>(quotient v1 v2): number?
+
+  v1: integer?
+  v2: integer?
+</code></pre>
+<p>Returns the quotient of <code>v1</code> and <code>v2</code>, <em>i.e.</em>, the whole number part of <code>v1 / v2</code>.</p></div><div id="prelude-random" class="entry"><pre><code>(random n): list?
+
+  n: integer?, n &gt;= 0
+</code></pre>
+<p>Returns a random number in the range 0 to n (exclusive).</p></div><div id="prelude-range" class="entry"><pre><code>(range beg end): list?
+
+  beg: integer?, this argument can be omitted
+  end: integer?
+  step: integer?, step &gt; 0, this argument can be omitted
+</code></pre>
+<p>Returns a list containing the numbers from <code>beg</code> to <code>end</code> (exclusive). If <code>beg</code> is not given, it defaults to 0. If step is not given, it defaults to 1.</p></div><div id="prelude-real" class="entry"><pre><code>(real? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a real number.</p></div><div id="prelude-reduce" class="entry"><pre><code>(reduce f l): any
+
+  f: procedure?, a binary function
+  l: list?, non-empty
+</code></pre>
+<p>Like <code>fold</code> but uses the first element of <code>l</code> as the initial value.</p></div><div id="prelude-reduceRight" class="entry"><pre><code>(reduce-right f l): any
+
+  f: procedure?, a binary function
+  l: list?, non-empty
+</code></pre>
+<p>Like <code>fold-right</code> but uses the last element of <code>l</code> as the initial value.</p></div><div id="prelude-remainder" class="entry"><pre><code>(remainder v1 v2): number?
+
+  v1: integer?
+  v2: integer?
+</code></pre>
+<p>Returns the remainder of <code>v1</code> and <code>v2</code>, <em>i.e.</em>, the remainder of <code>v1 / v2</code>.</p></div><div id="prelude-reverse" class="entry"><pre><code>(reverse l): list?
+
+  l: list?
+</code></pre>
+<p>Returns a new list containing the elements of <code>l</code> in reverse order.</p></div><div id="prelude-round" class="entry"><pre><code>(round v): integer?
+
+  v: number?
+</code></pre>
+<p>Returns the integer closest to <code>v</code>.</p></div><div id="prelude-sin" class="entry"><pre><code>(sin v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the sine of <code>v</code>.</p></div><div id="prelude-sqrt" class="entry"><pre><code>(sqrt v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the square root of <code>v</code>.</p></div><div id="prelude-square" class="entry"><pre><code>(square v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the square of <code>v</code>.</p></div><div id="prelude-string" class="entry"><pre><code>(string c1 c2 ...): string?
+
+  c: char?
+</code></pre>
+<p>Returns a string consisting of the characters <code>c1</code>, <code>c2</code>, …</p></div><div id="prelude-stringAppend" class="entry"><pre><code>(string-append s1 s2 ...): string?
+
+  s: string?
+</code></pre>
+<p>Returns a string made by joining <code>s1</code>, <code>s2</code>, … together.</p></div><div id="prelude-stringContains" class="entry"><pre><code>(string-contains? s1 s2): boolean?
+
+  s1: string?
+  s2: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only if string <code>s1</code> contains string <code>s2</code>.</p></div><div id="prelude-stringDowncase" class="entry"><pre><code>(string-downcase s): string?
+
+  s: string?
+</code></pre>
+<p>Returns the lower-case version of <code>s</code>.</p></div><div id="prelude-stringEq" class="entry"><pre><code>(string=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are equivalent strings.</p></div><div id="prelude-stringEqCi" class="entry"><pre><code>(string-ci=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are equivalent strings, ignoring case.</p></div><div id="prelude-stringFoldcase" class="entry"><pre><code>(string-foldcase s): string?
+
+  s: string?
+</code></pre>
+<p>Returns the case-folded version of <code>s</code>. This is a version of <code>s</code> that is appropriate for case-insensitive comparison.</p></div><div id="prelude-stringGeq" class="entry"><pre><code>(string&gt;=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in reverse lexicographical order.</p></div><div id="prelude-stringGeqCi" class="entry"><pre><code>(string-ci&gt;=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in reverse lexicographical order, ignoring case.</p></div><div id="prelude-stringGt" class="entry"><pre><code>(string&gt;? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in strictly lexicographically decreasing order.</p></div><div id="prelude-stringGtCi" class="entry"><pre><code>(string-ci&gt;? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in strictly lexicographically decreasing order, ignoring case.</p></div><div id="prelude-stringLength" class="entry"><pre><code>(string-length v): integer?
+
+  v: string?
+</code></pre>
+<p>Returns the length of <code>v</code>.</p></div><div id="prelude-stringLeq" class="entry"><pre><code>(string&lt;=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in lexicographical order.</p></div><div id="prelude-stringLeqCi" class="entry"><pre><code>(string-ci&lt;=? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in lexicographical order, ignoring case.</p></div><div id="prelude-stringList" class="entry"><pre><code>(string-&gt;list s): list?
+
+  s: string?
+</code></pre>
+<p>Returns a list of the characters in <code>s</code>.</p></div><div id="prelude-stringLt" class="entry"><pre><code>(string&lt;? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in strictly lexicographically increasing order.</p></div><div id="prelude-stringLtCi" class="entry"><pre><code>(string-ci&lt;? s1 s2 ...): boolean?
+
+  s: string?
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>s1</code>, <code>s2</code>, … are in strictly lexicographically increasing order, ignoring case.</p></div><div id="prelude-stringMap" class="entry"><pre><code>(string-map f s): string?
+
+  f: procedure?, a function from characters to characters
+  s: string?
+</code></pre>
+<p>Returns a new string containing the results of applying <code>f</code> to each character of <code>s</code>.</p></div><div id="prelude-stringNumber" class="entry"><pre><code>(string-&gt;number s): number?
+
+  s: string?, presumed to be a number
+</code></pre>
+<p>Returns the number denoted by <code>s</code> as a <code>number</code>.</p></div><div id="prelude-stringQ" class="entry"><pre><code>(string? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a string.</p></div><div id="prelude-stringRef" class="entry"><pre><code>(string-ref s n): string?
+
+  s: string?
+  n: integer?
+</code></pre>
+<p>Returns the character at index <code>n</code> of string <code>s</code>.</p></div><div id="prelude-stringSplit" class="entry"><pre><code>(string-split s sep): list?
+
+  s: string?
+  sep: string?
+</code></pre>
+<p>Returns a list of strings obtained by splitting <code>s</code> at occurrences of <code>sep</code>.</p></div><div id="prelude-stringSplitVector" class="entry"><pre><code>(string-split-vector s sep): list?
+
+  s: string?
+  sep: string?
+</code></pre>
+<p>Returns a vector of strings obtained by splitting <code>s</code> at occurrences of <code>sep</code>.</p></div><div id="prelude-stringUpcase" class="entry"><pre><code>(string-upcase s): string?
+
+  s: string?
+</code></pre>
+<p>Returns the upper-case version of <code>s</code>.</p></div><div id="prelude-stringVector" class="entry"><pre><code>(string-&gt;vector s): vector?
+
+  s: string?
+</code></pre>
+<p>Returns a vector of the characters in <code>s</code>.</p></div><div id="prelude-substring" class="entry"><pre><code>(substring s start end): string?
+
+  s: string?
+  start: integer?
+  end: integer?
+</code></pre>
+<p>Returns the substring of <code>s</code> from index <code>start</code> (inclusive) to index <code>end</code> (exclusive).</p></div><div id="prelude-tan" class="entry"><pre><code>(tan v): number?
+
+  v: number?
+</code></pre>
+<p>Returns the tangent of <code>v</code>.</p></div><div id="prelude-times" class="entry"><pre><code>(* v1 v2 ...): number?
+
+  v: number?
+</code></pre>
+<p>Returns the product of <code>v1</code>, <code>v2</code>, … .</p></div><div id="prelude-truncate" class="entry"><pre><code>(truncate v): integer?
+
+  v: number?
+</code></pre>
+<p>Returns the integer closest to <code>v</code> less than or equal to <code>v</code>.</p></div><div id="prelude-vector" class="entry"><pre><code>(vector v1 v2 ...): vector?
+
+  v: any
+</code></pre>
+<p>Returns a vector consisting of the values <code>v1</code>, <code>v2</code>, …</p></div><div id="prelude-vectorAppend" class="entry"><pre><code>(vector-append v1 .. vk): vector?
+
+  v: vector?
+</code></pre>
+<p>Returns a new vector containing the elements of <code>v1</code>, …, <code>vk</code> in order.</p></div><div id="prelude-vectorFill" class="entry"><pre><code>(vector-fill! v x): void?
+
+  v: vector?
+  x: any
+</code></pre>
+<p>Sets each element of vector <code>v</code> to <code>x</code>.</p></div><div id="prelude-vectorFilter" class="entry"><pre><code>(vector-filter f l): list?
+
+  f: procedure?, a predicate
+  l: vector?
+</code></pre>
+<p>Returns a new vector containing the elements of <code>l</code> for which <code>f</code> returns <code>#t</code>.</p></div><div id="prelude-vectorForEach" class="entry"><pre><code>(vector-for-each f v1 .. vk): void
+
+  f: procedure?
+  v: vector?
+</code></pre>
+<p>Runs <code>f</code> on each element of <code>v1</code>, …, <code>vk</code> in a element-wise fashion. <code>f</code> takes <code>k+1</code> arguments where the first argument is the current index and the remaining arguments are the elements of each vector at that index.</p></div><div id="prelude-vectorLength" class="entry"><pre><code>(vector-length v): integer?
+
+  v: vector?
+</code></pre>
+<p>Returns the length of vector <code>v</code>.</p></div><div id="prelude-vectorList" class="entry"><pre><code>(vector-&gt;list v): list?
+
+  v: vector?
+</code></pre>
+<p>Returns a list consisting of the values in vector <code>v</code>.</p></div><div id="prelude-vectorMap" class="entry"><pre><code>(vector-map f v1 .. vk): vector?
+
+  f: procedure?
+  v: vector?
+</code></pre>
+<p>Returns a new vector containing the results of applying <code>f</code> to each element of <code>v1</code>, …, <code>vk</code> in a element-wise fashion.</p></div><div id="prelude-vectorMapBang" class="entry"><pre><code>(vector-map f v1 .. vk): void
+
+  f: procedure?
+  v: vector?
+</code></pre>
+<p>Mutates v1 with the results of results of applying <code>f</code> to each element of <code>v1</code>, …, <code>vk</code> in a element-wise fashion.</p></div><div id="prelude-vectorQ" class="entry"><pre><code>(vector? v): boolean
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is a vector.</p></div><div id="prelude-vectorRange" class="entry"><pre><code>(vector-range beg end): vector?
+
+  beg: integer?, this argument can be omitted
+  end: integer?
+  step: integer?, step &gt; 0, this argument can be omitted
+</code></pre>
+<p>Returns a vector containing the numbers from <code>beg</code> to <code>end</code> (exclusive). If <code>beg</code> is not given, it defaults to 0. If step is not given, it defaults to 1.</p></div><div id="prelude-vectorRef" class="entry"><pre><code>(vector-ref v n): any?
+
+  v: vector?
+  n: integer?, a valid index into v
+</code></pre>
+<p>Returns the value at index <code>n</code> of vector <code>v</code>.</p></div><div id="prelude-vectorSet" class="entry"><pre><code>(vector-set! v n x): void?
+
+  v: vector?
+  n: integer?, a valid index into v
+  x: any
+</code></pre>
+<p>Sets the value at index <code>n</code> of vector <code>v</code> to <code>x</code>.</p></div><div id="prelude-vectorString" class="entry"><pre><code>(vector-&gt;string v): string?
+
+  v: vector? of characters
+</code></pre>
+<p>Returns a string made by joining the characters in <code>v</code> together.</p></div><div id="prelude-voidQ" class="entry"><pre><code>(void? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only if <code>v</code> is the void value.</p></div><div id="prelude-voidV" class="entry"><pre><code>void: void
+</code></pre>
+<p>The void value.</p></div><div id="prelude-withFile" class="entry"><pre><code>(with-file fn): void
+
+  fn: procedure?
+</code></pre>
+<p>Creates a file choose widget. When a file is selected, <code>fn</code> is called and passed the file's contents as input</p></div><div id="prelude-withHandler" class="entry"><pre><code>(with-handler h f v1 .. vk): any
+
+  h: procedure?, a handler
+  f: procedure?, a function
+  v: any
+</code></pre>
+<p>Calls <code>(f v1 .. vk)</code> and if an error is occurred, calls <code>(h err)</code> where <code>err</code> is the string associated with the raised error.</p></div><div id="prelude-xor" class="entry"><pre><code>(xor v1 v2): boolean?
+
+  v1: boolean?
+  v2: boolean?
+</code></pre>
+<p>Equivalent to <code>(or (and v1 (not v2)) (and (not v1) v2))</code>.</p></div><div id="prelude-zero" class="entry"><pre><code>(zero? v): boolean?
+
+  v: any
+</code></pre>
+<p>Returns <code>#t</code> if and only <code>v</code> is zero.</p></div></div>
+    </div>
+  </head>
+</html>
+  
