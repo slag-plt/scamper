@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <link href="css/normalize.css" rel="stylesheet">
+  <!-- Fontawesome (brands + solid) -->
+  <link href="css/fontawesome.css" rel="stylesheet">
+  <link href="css/brands.css" rel="stylesheet">
+  <link href="css/solid.css" rel="stylesheet">
+  <style>
+    html, body { height: 100%; margin: 0px; padding: 0px; }
+
+    #content {
+      background-color: White;
+      color: Black;
+      font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+      width: 100%;
+      height: 100vh;
+      margin: 1em;
+      content: 1em;
+    }
+    
+    #content code {
+      font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+      font-size: 1em;
+    }
+
+    #content pre {
+      font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+      font-size: 1em;
+      overflow: scroll;
+    }
+  </style>
+</head>
+<body>
+  <div id="content">
+    <h1>Scamper Language Reference</h1>
+
+    <h2>Statements</h2>
+    
+    <pre>
+; Import statements
+(import "&lt;identifier&gt;")
+
+(import "image")
+
+; Binding statements
+(define &lt;identifier&gt; &lt;expression&gt;)
+
+(define x (+ 1 1))
+
+; Expression statements
+&lt;expression&gt;
+
+(+ 1 1)
+
+; Display statement
+(display &lt;expression&gt;)
+
+(display "Hello!")
+
+; Struct declaration statements
+(struct &lt;identifier&gt; (&lt;identifier1&gt; ... &lt;identifierK&gt;))
+
+(struct person (name age height))
+</pre>
+    <h2>Expressions</h2>
+
+    <pre>
+; Variables
+&lt;identifier&gt;
+
+x
+
+; Literals
+42        ; integers
+-0.3      ; floating-point number
+#t        ; boolean true
+#f        ; boolean false
+"Hello"   ; string
+#\a       ; character
+
+; Lambda Expressions
+(lambda (&lt;identifier1&gt; ... &lt;identifierK&gt;) &lt;expression&gt;)
+
+(lambda (x y z)
+  (- (* x y) (/ y z)))
+
+; Function application/call
+(&lt;expression1&gt; ... &lt;expressionK&gt;)
+
+(+ 1 1)
+
+; Boolean conjunction/disjunction
+(and &lt;expression1&gt; ... &lt;expressionK&gt;)
+(or &lt;expression1&gt; ... &lt;expressionK&gt;)
+
+(and (= 1 1) (= 2 2))
+
+; Conditional expressions
+(if &lt;expression1&gt; &lt;expression2&gt; &lt;expression3&gt;)
+
+(if (= x 10)
+    "is 10"
+    "is not 10")
+
+; "Cond" expressions
+(cond
+  [&lt;expression11&gt; &lt;expression12&gt;]
+  ...
+  [&lt;expressionK1&gt; &lt;expressionK2&gt;])
+
+(cond [(= x 10) "is 10"]
+      [(= x 20) "is 20"]
+      [else "is not 10 or 20"])   ; Note: 'else' is #t
+
+; Let-bindings
+(let
+  [&lt;identifier1&gt; &lt;expression1&gt;]
+  ...
+  [&lt;identifierK&gt; &lt;expressionK&gt;]
+  &lt;expression&gt;)
+
+(let [x 10]
+     [y 20]
+     (+ x y))
+
+; Match expression
+(match &lt;expression&gt;
+  [&lt;pattern1&gt; &lt;expression1&gt;]
+  ...
+  [&lt;patternK&gt; &lt;expressionK&gt;])
+
+(match lst
+  [null #t]
+  [(cons _ _) #f])
+    </pre>
+  </div>
+</body>
+</html>

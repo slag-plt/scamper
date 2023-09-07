@@ -9,6 +9,7 @@ src/version.ts :
 
 site/ : dist/
 	mkdir -p site/js
+	cp -r docs/dist/docs site/
 	cp -r ide/* site/
 	cp -r dist/ide.js site/js/ide.js
 
