@@ -8,7 +8,7 @@ export const freshLabel: () => Label = (() => {
 
 export type MatchBranch = { pattern: Pat, body: Op[] }
 
-export type Op    = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Lbl
+export type Op    = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Cond | Lbl | Exn
 export type Var   = { tag: 'var', name: string, range: Range }
 export type Val   = { tag: 'val', value: Value }
 export type Cls   = { tag: 'cls', params: Id[], ops: Op[] }
@@ -19,7 +19,9 @@ export type Seq   = { tag: 'seq', numSubexps: number }
 export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
 export type And   = { tag: 'and', jmpTo: Label, range: Range }
 export type Or    = { tag: 'or', jmpTo: Label, range: Range }
+export type Cond  = { tag: 'cond', body: Op[], end: Label, range: Range }
 export type Lbl   = { tag: 'lbl', name: string }
+export type Exn   = { tag: 'exn', msg: string, modName?: string, range?: Range, source?: string }
 
 export const mkVar = (name: string, range: Range): Op => ({ tag: 'var', name, range })
 export const mkValue = (value: Value): Op => ({ tag: 'val', value })
@@ -31,7 +33,9 @@ export const mkSeq = (numSubexps: number): Op => ({ tag: 'seq', numSubexps })
 export const mkMatch = (branches: MatchBranch[], range: Range): Op => ({ tag: 'match', branches, range })
 export const mkAnd = (jmpTo: Label, range: Range): Op => ({ tag: 'and', jmpTo, range })
 export const mkOr = (jmpTo: Label, range: Range): Op => ({ tag: 'or', jmpTo, range })
+export const mkCond = (body: Op[], end: Label, range: Range): Op => ({ tag: 'cond', body, end, range })
 export const mkLbl = (name: string): Op => ({ tag: 'lbl', name })
+export const mkExn = (msg: string, modName?: string, range?: Range, source?: string): Op => ({ tag: 'exn', msg, modName, range, source })
 
 export function opToString (op: Op): string {
   switch (op.tag) {
@@ -55,8 +59,12 @@ export function opToString (op: Op): string {
       return `and (jmpto ${op.jmpTo})`
     case 'or':
       return `or (jmpto ${op.jmpTo})`
+    case 'cond':
+      return `cond (${op.end}, ${op.body.map(opToString).join('; ')})`
     case 'lbl':
       return `lbl ${op.name}`
+    case 'exn':
+      return `exn "${op.msg}"`
   }
 }
 
