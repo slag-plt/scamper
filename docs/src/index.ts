@@ -1,6 +1,16 @@
 import Doc from './docs.js'
+import fs from 'fs'
 import showdown from 'showdown'
+
 import * as Prelude from './prelude.js'
+import * as Image from './image.js'
+import * as Music from './music.js'
+
+const libs: [string, object][] = [
+  ['prelude', Prelude],
+  ['image', Image],
+  ['music', Music]
+]
 
 // https://stackoverflow.com/questions/5251520/how-do-i-escape-some-html-in-javascript
 function escape(s: string): string {
@@ -14,6 +24,18 @@ function escape(s: string): string {
   return s.replace(/[&"'<>]/g, c => lookup[c])
 }
 
+function jsToSchemeName (s: string): string {
+  let ret = ''
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === s[i].toUpperCase()) {
+      ret += '-' + s[i].toLowerCase()
+    } else {
+      ret += s[i]
+    }
+  }
+  return ret
+}
+
 function entryId (module: string, name: string): string {
   return `${module}-${name}`
 }
@@ -25,9 +47,9 @@ function makeEntry (converter: showdown.Converter, module: string, name: string,
 function makeModulePage (converter: showdown.Converter, modName: string, mod: object): string {
   let index = `${modName} <ul>`
   let docs = ''
-  for (const name in Prelude) {
+  for (const name in mod) {
     index += `<li><a href="#${entryId(modName, name)}">${escape(name)}</a></li>`
-    docs += makeEntry(converter, 'prelude', name, (Prelude as any)[name] as Doc)
+    docs += makeEntry(converter, modName, name, (mod as any)[name] as Doc)
   }
   index += '</ul>'
   return `
@@ -79,6 +101,16 @@ function makeModulePage (converter: showdown.Converter, modName: string, mod: ob
 }
 
 const converter = new showdown.Converter()
-const preludePage = makeModulePage(converter, 'prelude', Prelude)
-console.log(preludePage)
+for (const [modName, mod] of libs) {
+  fs.open(`dist/docs/${modName}.html`, 'w', (err, fd) => {
+    console.log(`Generating docs for ${modName}...`)
+    if (err) { throw err }
+    fs.write(fd, makeModulePage(converter, modName, mod), (err) => {
+      if (err) { throw err }
+      fs.close(fd, (err) => {
+        if (err) { throw err }
+      })
+    })
+  })
+}
 

@@ -19,6 +19,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "@types/node": "^20.5.9",
     "@types/showdown": "^2.0.1",
     "showdown": "^2.1.0"
   }
