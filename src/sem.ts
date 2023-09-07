@@ -21,10 +21,14 @@ class Control {
     return `[idx=${this.idx}, ops=${this.ops.map(V.opToString).join(',')}]`
   }
 
-  clone(): Control {
-    const ret = new Control(this.ops);
-    ret.idx = this.idx
-    return ret
+  jumpTo(label: V.Label): void {
+    let cur = this.ops[this.idx]
+    while (!this.isEmpty() && (cur.tag !== 'lbl' || cur.name !== label)) {
+      cur = this.ops[++this.idx]
+    }
+    if (this.isEmpty()) {
+      throw new ICE('Control.jumpTo', `Label ${label} not found`)
+    }
   }
 }
 
@@ -35,10 +39,20 @@ class ExecutionState {
   dump: [Value[], Env, Control][]
 
   constructor (env: Env, ops: Op[]) {
-    this.stack = []
-    this.env = env
-    this.control = new Control(ops)
-    this.dump = []
+    // N.B., if the state consists of a single value, then immediately
+    // turn the value Op to a genuine value to avoid an unnecessary
+    // step of computation
+    if (ops.length === 1 && ops[0].tag === 'val') {
+      this.stack = [ops[0].value]
+      this.env = env
+      this.control = new Control([])
+      this.dump = []
+    } else {
+      this.stack = []
+      this.env = env
+      this.control = new Control(ops)
+      this.dump = []
+    }
   }
 
   isFinished(): boolean { return this.control.isEmpty() && this.dump.length === 0 }
@@ -59,13 +73,9 @@ class ExecutionState {
     this.control = control
   }
 
-  clone() {
-    const ret = new ExecutionState(this.env, [])
-    ret.stack = [...this.stack]
-    ret.env = this.env    // NOTE: do I need to clone the env, too?
-    ret.control = this.control.clone()
-    ret.dump = this.dump.map(([stack, env, control]) =>
-      [[...stack], env, control.clone()] as [Value[], Env, Control])
+  jumpPast (label: V.Label): void {
+    this.control.jumpTo(label)
+    this.control.idx += 1
   }
 }
 
@@ -112,6 +122,40 @@ function valueToExp (env: Env, v: Value): S.Exp {
   }
 }
 
+function findCondBranches (start: number, label: string, ops: Op[]): { branches: { guard: Op[], body: Op[] }[], endIdx: number } {
+  let i = start
+  const branches: { guard: Op[], body: Op[] }[] = []
+  let guard: Op[] = []
+  let op = ops[i]
+  while (op.tag !== 'lbl' || op.name !== label) {
+    if (op.tag === 'cond' && op.end === label) {
+      branches.push({ guard, body: op. body})
+      guard = []
+    } else {
+      guard.push(op)
+    }
+    op = ops[++i]
+  }
+  return { branches, endIdx: i }
+}
+
+function findArgs (start: number, label: string, ops: Op[]): { segments: Op[][], endIdx: number } {
+  let i = start
+  let segments: Op[][] = []
+  let seg: Op[] = []
+  let op = ops[i]
+  while (op.tag !== 'lbl' || op.name !== label) {
+    if ((op.tag === 'and' || op.tag === 'or') && op.jmpTo === label) {
+      segments.push(seg)
+      seg = []
+    } else {
+      seg.push(op)
+    }
+    op = ops[++i]
+  }
+  return { segments, endIdx: i }
+}
+
 function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
   let expStack = stack.map((v) => valueToExp(env, v))
   if (hole !== undefined) { expStack.push(hole) }
@@ -156,6 +200,28 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
       }
     } else if (op.tag === 'match') {
       throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+    } else if (op.tag === 'and') {
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkAnd(args, '(', noRange))
+      i = endIdx
+    } else if (op.tag === 'or') {
+      const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
+      const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
+      expStack.push(S.mkOr(args, '(', noRange))
+      i = endIdx
+    } else if (op.tag === 'cond') {
+      const first = { guard: expStack.pop()!, body: dumpToExp([[], env, new Control(op.body)]) }
+      const { branches, endIdx } = findCondBranches(i + 1, op.end, control.ops)
+      expStack.push(S.mkCond([first].concat(branches.map((b) => ({
+        guard: dumpToExp([[], env, new Control(b.guard)]),
+        body: dumpToExp([[], env, new Control(b.body)])
+      }))), noRange))
+      i = endIdx
+    } else if (op.tag === 'exn') {
+      expStack.push(S.mkApp(S.mkVar('error', noRange), [S.mkStr(op.msg, noRange)], '(', noRange))
+    } else if (op.tag === 'lbl') {
+      // N.B., do nothing, skip over labels!
     }
   }
   if (expStack.length !== 1) {
@@ -204,6 +270,22 @@ export function expToOps (e: S.Exp): Op[] {
       return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
     case 'match':
       return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+    case 'and': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label, e.range)])).concat([V.mkValue(true), V.mkLbl(label)])
+    }
+    case 'or': {
+      const label = V.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label, e.range)])).concat([V.mkValue(false), V.mkLbl(label)])
+    }
+    case 'cond': {
+      // TODO: need an error instruction to throw before the label!
+      const label = V.freshLabel()
+      return e.branches.flatMap((b) => expToOps(b.guard).concat([V.mkCond(expToOps(b.body), label, e.range)])).concat([
+        V.mkExn('No branches of "cond" expression matched', undefined, e.range),
+        V.mkLbl(label)
+      ])
+    }
   }
 }
 
@@ -252,6 +334,7 @@ function stepPrim (state: ExecutionState): boolean {
   const op = state.control.next()
   const stack = state.stack
   switch (op.tag) {
+
     case 'val': {
       stack.push(op.value)
       return true
@@ -367,6 +450,61 @@ function stepPrim (state: ExecutionState): boolean {
       }
       return false
     }
+
+    case 'and': {
+      if (stack.length < 1) {
+        throw new ICE('sem.and', 'Missing argument to "and" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (!val) {
+        state.stack.push(false)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'or': {
+      if (stack.length < 1) {
+        throw new ICE('sem.or', 'Missing argument to "or" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+      }
+      if (val) {
+        state.stack.push(true)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+    
+    case 'cond': {
+      if (stack.length < 1) {
+        throw new ICE('sem.cond', 'Missing guard to "cond" instruction')
+      }
+      const guard = stack.pop()!
+      if (guard) {
+        // N.B., make sure to switch this frame's instr pointer before jumping
+        // otherwise we'll forget where to return to!
+        state.jumpPast(op.end)
+        state.dumpAndSwitch([], state.env, op.body)
+      }
+      return false
+    }
+
+    case 'lbl': {
+      // N.B., skip over a label peacefully
+      return true
+    }
+
+    case 'exn': {
+      throw new ScamperError('Runtime', op.msg, op.modName, op.range, op.source)
+    }
   }
 }
 
@@ -447,18 +585,18 @@ function makeTraceDiv(): HTMLElement {
   return div
 }
 
-function makeTraceHeader (s: S.Stmt): string {
+function makeTraceHeader (s: S.Stmt): HTMLElement {
   switch (s.tag) {
     case 'binding':
-      return `Evaluating binding ${s.name}...`
+      return mkCodeElement(`Evaluating binding ${s.name}...\n${S.expToString(s.body)}`)
     case 'display':
-      return 'Evaluating displayed expression...'
+      return mkCodeElement(`Evaluating displayed expression...\n${S.expToString(s.body)}`)
     case 'import':
-      return `Importing module ${s.modName}...`
+      return mkCodeElement(`Importing module ${s.modName}...`)
     case 'stmtexp':
-      return 'Evaluating expression...'
+      return mkCodeElement(`Evaluating expression...\n${S.expToString(s.body)}`)
     case 'struct':
-      return `Evaluating struct declaration ${s.id}...`
+      return mkCodeElement(`Evaluating struct declaration ${s.id}...`)
   }
 }
 
@@ -502,10 +640,8 @@ export class Sem {
   advance (): void {
     this.curStmt += 1
     this.state = undefined
-    if (this.isTracing()) {
-      this.display.appendChild(this.traces![this.curStmt]!)
-    }
     if (!this.isFinished() && this.isTracing()) {
+      this.display.appendChild(this.traces![this.curStmt]!)
       this.appendToCurrentTrace(makeTraceHeader(this.prog[this.curStmt]))
       this.appendToCurrentTrace('\n')
     }
@@ -552,10 +688,6 @@ export class Sem {
       case 'stmtexp': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
-          if (this.isTracing()) {
-            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-            this.appendToCurrentTrace('\n')
-          }
         }
         if (!this.state.isFinished()) {
           try {
@@ -592,10 +724,6 @@ export class Sem {
       case 'display': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
-          if (this.isTracing()) {
-            this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
-            this.appendToCurrentTrace('\n')
-          }
         }
         if (!this.state.isFinished()) {
           try {

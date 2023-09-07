@@ -304,6 +304,14 @@ export function sexpToMatchBranch (e: S.Sexp): S.MatchBranch {
   }
 }
 
+export function sexpToCondBranch (e: S.Sexp): S.CondBranch {
+  if (e.tag === 'atom' || e.value.length !== 2) {
+    throw new ScamperError('Parser', `Cond branches must be given a pair expressions: ${S.sexpToString(e)}`, undefined, e.range)
+  } else {
+    return { guard: sexpToExp(e.value[0]), body: sexpToExp(e.value[1]) }
+  }
+}
+
 export const namedCharValues = new Map([
   ['alarm', String.fromCharCode(7)],
   ['backspace', String.fromCharCode(8)],
@@ -401,6 +409,10 @@ export function sexpToExp (e: S.Sexp): S.Exp {
           throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, binds.range)
         }
         return S.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
+      } else if (head.tag === 'atom' && head.value === 'and') {
+        return S.mkAnd(args.map(sexpToExp), e.bracket, e.range)
+      } else if (head.tag === 'atom' && head.value === 'or') {
+        return S.mkOr(args.map(sexpToExp), e.bracket, e.range)
       } else if (head.tag === 'atom' && head.value === 'if') {
         if (args.length !== 3) {
           throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, e.range)
@@ -426,6 +438,11 @@ export function sexpToExp (e: S.Sexp): S.Exp {
         const scrutinee = args[0]
         const branches = args.slice(1)
         return S.mkMatch(sexpToExp(scrutinee), branches.map(sexpToMatchBranch), e.bracket, e.range)
+      } else if (head.tag === 'atom' && head.value === 'cond') {
+        if (args.length < 1) {
+          throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, e.range)
+        }
+        return S.mkCond(args.map(sexpToCondBranch), e.range)
       } else {
         return S.mkApp(sexpToExp(head), args.map(sexpToExp), e.bracket, e.range)
       }
