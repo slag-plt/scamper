@@ -23,13 +23,13 @@ const modeS: C.Spec = {
 }
 
 const alignVS: C.Spec = {
-  predicate: (v: any) => v === 'top' || v === 'middle' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "middle", or "bottom"), received ${typeOfValue(actual)}`
+  predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
+  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${typeOfValue(actual)}`
 }
 
 const alignHS: C.Spec = {
-  predicate: (v: any) => v === 'left' || v === 'center' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "center", or "right"), received ${typeOfValue(actual)}`
+  predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
+  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${typeOfValue(actual)}`
 }
 
 const colorS: C.Spec = {
@@ -138,7 +138,7 @@ function beside (...drawings: Drawing[]): Beside {
 registerFn('beside', beside)
 
 function besideAlign (align: string, ...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside/align', [alignHS], imageS))
+  checkContract(arguments, contract('beside/align', [alignVS], imageS))
   return besideAlignPrim(align, ...drawings)
 }
 registerFn('beside/align', besideAlign)
@@ -160,7 +160,7 @@ function above (...drawings: Drawing[]): Above {
 registerFn('above', above)
 
 function aboveAlign (align: string, ...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above/align', [alignVS], imageS))
+  checkContract(arguments, contract('above/align', [alignHS], imageS))
   return aboveAlignPrim(align, ...drawings)
 }
 registerFn('above/align', aboveAlign)
