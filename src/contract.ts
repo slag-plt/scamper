@@ -148,7 +148,7 @@ export function checkContract (args: IArguments, contract: Contract): void {
     throw new ScamperError('Runtime', `wrong number of arguments to ${contract.funcName} provided. Expected at least ${contract.params.length}, received ${args.length}.`)
   }
   const required = Array.prototype.slice.call(args, 0, contract.params.length)
-  const additional = Array.prototype.slice.call(contract.params.length)
+  const additional = Array.prototype.slice.call(args, contract.params.length, args.length)
   required.forEach((arg, i) => {
     if (!contract.params[i].predicate(arg)) {
       throw new ScamperError('Runtime', contract.params[i].errorMsg(arg))
