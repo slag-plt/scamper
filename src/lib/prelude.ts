@@ -650,7 +650,7 @@ function pairwiseSatisfies<T> (f: (a: T, b: T) => boolean, xs: T[]): boolean {
 function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): void {
   const fn = function (...args: Value[]) {
     checkContract(arguments, contract(name, [], C.char))
-    pairwiseSatisfies((a, b) => f((a as V.Char).value, (b as V.Char).value), args)
+    return pairwiseSatisfies((a, b) => f((a as V.Char).value, (b as V.Char).value), args)
   }
   V.nameFn(name, fn)
   registerFn(name, fn, Prelude)
