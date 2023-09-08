@@ -13,7 +13,7 @@ function registerFn (name: string, fn: Function, map: [string, Value][]) {
 const Prelude: [string, Value][] = []
 
 const query1C = (name: string) => contract(name, [C.any])
-const query2C = (name: string) => contract(name, [C.any])
+const query2C = (name: string) => contract(name, [C.any, C.any])
 
 // Equivalence predicates (6.1)
 
