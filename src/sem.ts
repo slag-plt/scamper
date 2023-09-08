@@ -385,6 +385,8 @@ function stepPrim (state: ExecutionState): boolean {
           }
           throw e
         }
+      } else {
+        throw new ScamperError('Runtime', `Non-function value (${V.typeOfValue(head)}) in function application`, undefined, op.range)
       }
       return false
     }
@@ -758,14 +760,18 @@ export class Sem {
 
   stepToNextStmt (): void {
     const idx = this.curStmt
-    while (!this.isFinished() && this.curStmt === idx) {
-      this.step()
+    try {
+      while (!this.isFinished() && this.curStmt === idx) { this.step() }
+    } catch (e) {
+      renderToOutput(this.display, e)
     }
   }
 
   execute (): void {
-    while (!this.isFinished()) {
-      this.step()
+    try {
+      while (!this.isFinished()) { this.step() }
+    } catch (e) {
+      renderToOutput(this.display, e)
     }
   }
 }
