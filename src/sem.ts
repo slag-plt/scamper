@@ -678,7 +678,11 @@ export class Sem {
           if (V.isClosure(val)) {
             (val as V.Closure).name = stmt.name
           }
-          this.env.set(stmt.name, val)
+          if (this.env.has(stmt.name)) {
+            throw new ScamperError('Runtime', `Identifier "${stmt.name}" already bound`, undefined, stmt.range)
+          } else {
+            this.env.set(stmt.name, val)
+          }
           if (this.isTracing()) {
             this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
           }
