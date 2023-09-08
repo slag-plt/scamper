@@ -1,4 +1,7 @@
-import { basicSetup, EditorView } from 'codemirror'
+import { basicSetup } from 'codemirror'
+import { indentWithTab } from '@codemirror/commands'
+import { EditorView, keymap } from "@codemirror/view"
+
 import FS from './fs.js'
 import Split from 'split.js'
 import Scamper from '../scamper.js'
@@ -51,7 +54,9 @@ class IDE {
       doc: '',
       extensions: [
         basicSetup,
+        keymap.of([indentWithTab]),
         ScamperSupport(),
+
         makeScamperLinter(outputPane),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
