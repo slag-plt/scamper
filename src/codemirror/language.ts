@@ -14,6 +14,7 @@ export const ScamperLanguage = LRLanguage.define({
         Application: continuedIndent({except: undefined, units: 1}),
         And: continuedIndent({except: undefined, units: 1}),
         Or: continuedIndent({except: undefined, units: 1}),
+        If: continuedIndent({except: undefined, units: 1}),
         Cond: continuedIndent({except: undefined, units: 1}),
         binding: continuedIndent({except: undefined, units: 1}),
       }),
