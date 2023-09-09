@@ -1,6 +1,6 @@
 {
   "name": "scamper-next",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
