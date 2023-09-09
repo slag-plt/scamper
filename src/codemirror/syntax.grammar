@@ -25,27 +25,27 @@ expression {
   Identifier |
   String |
   Boolean |
-  Lambda { "(" kw<"lambda"> arglist expression ")" }
-  If { "(" kw<"if"> expression expression expression ")" }
-  And { "(" kw<"and"> expression* ")" }
-  Or { "(" kw<"or"> expression* ")" }
-  Begin { "(" kw<"begin"> expression* ")" }
-  Cond { "(" kw<"cond"> binding* expression ")"}
-  Application { "(" expression* ")" }
+  Lambda { "(" kw<"lambda"> arglist expression ")" } |
+  If { "(" kw<"if"> expression expression expression ")" } |
+  And { "(" kw<"and"> expression* ")" } |
+  Or { "(" kw<"or"> expression* ")" } |
+  Begin { "(" kw<"begin"> expression* ")" } |
+  Cond { "(" kw<"cond"> binding* expression ")"} |
+  Application { "(" expression* ")" } |
   Match { "(" kw<"match"> expression branch* ")" }
 }
 
 statement {
-  Import { "(" kw<"import"> Identifier ")" }
-  Define { "(" kw<"define"> Identifier expression ")" }
-  Display { "(" kw<"display"> expression ")" }
+  Import { "(" kw<"import"> Identifier ")" } |
+  Define { "(" kw<"define"> Identifier expression ")" } |
+  Display { "(" kw<"display"> expression ")" } |
   SExpr { expression }
 }
 
 kw<term> { @specialize[@name={term}]<Identifier, term> }
 
 @tokens {
-  Identifier { $[a-zA-Z_\-0-9]+ }
+  Identifier { $[a-zA-Z_\-0-9\+\*\=]+ }
 
   String { '"' (!["\\] | "\\" _)* '"' }
 
