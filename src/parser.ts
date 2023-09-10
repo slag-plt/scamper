@@ -258,6 +258,67 @@ export const reservedWords = [
   'struct',
 ]
 
+function parseStringLiteral (src: string, range: S.Range): string {
+  if (src.length === 0) {
+    throw new ICE('parseStringLiteral', 'Empty string literal (with no quote!)')
+  } else if (src[0] !== '"') {
+    throw new ScamperError('Parser', 'String literal must begin with a quote', undefined, range)
+  }
+
+  let ret = ''
+  for (let i = 1; i < src.length; i++) {
+    // A quote closes this string literal
+    if (src[i] === '"') {
+      return ret
+    // Escape characters require us to consume the next character
+    } else if (src[i] === '\\') {
+      if (i+1 >= src.length) {
+        throw new ScamperError('Parser', 'Escape character "\\" cannot occur at the end of a string.', undefined, range)
+      }
+      const ch = src[i + 1]
+      switch (ch) {
+        // Alarm: ASCII 7
+        case 'a': ret += '\u0007'; break
+        // Backspace: ASCII 8
+        case 'b': ret += '\u0008'; break
+        // Tab: ASCII 9
+        case 't': ret += '\u0009'; break
+        // Linefeed: ASCII 10
+        case 'n': ret += '\u000A'; break
+        // Vertical tab: ASCII 11
+        case 'v': ret += '\u000B'; break
+        // Form feed: ASCII 12
+        case 'f': ret += '\u000C'; break
+        // Carriage return: ASCII 13
+        case 'r': ret += '\u000D'; break
+        // Escape: ASCII 27
+        case 'e': ret += '\u001B'; break
+        case '"': ret += '"'; break
+        case "'": ret += "'"; break
+        case '\\': ret += '\\'; break
+        default:
+          // NOTE: Extended escape codes are currently not supported
+          if (ch >= '0' && ch <= '9') {
+            throw new ScamperError('Parser', 'Octal escape codes not supported', undefined, range)
+          } else if (ch === 'x') {
+            throw new ScamperError('Parser', 'Hex escape codes not supported', undefined, range)
+          } else if (ch === 'u' || ch === 'U') {
+            throw new ScamperError('Parser', 'Unicode escape codes not supported', undefined, range)
+          } else if (ch === '\n') {
+            // Skip over newline characters but continue processing the literal
+          }
+      }
+      // NOTE: skip the extra \ that we parsed in this case. If/when we support
+      // extended escape codes, the size of the jump will obviously grow!
+      i += 1
+    // Any other character is simply appended onto the result.
+    } else {
+      ret += src[i]
+    }
+  }
+  return ret
+}
+
 export function atomToExp (e: S.Atom): S.Exp {
   const text = e.value
   if (intRegex.test(text)) {
@@ -269,7 +330,7 @@ export function atomToExp (e: S.Atom): S.Exp {
   } else if (e.value === '#f') {
     return S.mkBool(false, e.range)
   } else if (e.value.startsWith('"')) {
-    return S.mkStr(e.value.slice(1, -1), e.range)
+    return S.mkStr(parseStringLiteral(e.value, e.range), e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
   } else if (e.value.startsWith('#\\')) {
