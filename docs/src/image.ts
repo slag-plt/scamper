@@ -122,10 +122,10 @@ export const overlayAlign: Doc = new Doc(
 )
 
 export const overlayOffset: Doc = new Doc(
-  '(overlay/offset d1 dx dy d2): drawing?', [
-    'd1: drawing?',
+  '(overlay/offset dx dy d1 d2): drawing?', [
     'dx: number?',
     'dy: number?',
+    'd1: drawing?',
     'd2: drawing?'
   ],
   'Creates a new drawing formed by places the drawing `d1` on top of `d2`, offset by `(dx, dy)`.'
