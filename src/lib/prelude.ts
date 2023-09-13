@@ -414,6 +414,12 @@ function car (x: Value): Value {
 }
 registerFn('car', car, Prelude)
 
+function cdr (x: Value): Value {
+  checkContract(arguments, contract('cdr', [C.pair]))
+  return (x as any).snd
+}
+registerFn('cdr', cdr, Prelude)
+
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
 
