@@ -136,6 +136,11 @@ x
 (match lst
   [null #t]
   [(cons _ _) #f])
+
+; Section expression
+(section &lt;expression1&gt; ... &lt;expressionK&gt;)
+
+(section string-append "Hello " _ "!")
     </pre>
   </div>
 </body>

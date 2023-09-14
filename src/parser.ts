@@ -17,13 +17,14 @@ class Token {
 
 const isWhitespace = (c: string): boolean => /\s/.test(c)
 const isOpeningBracket = (ch: string): boolean =>
-  ['(', '{', '['].includes(ch)
+  ['(', '#(', '{', '['].includes(ch)
 const isClosingBracket = (ch: string): boolean =>
   [')', '}', ']'].includes(ch)
 const isBracket = (ch: string): boolean =>
   isOpeningBracket(ch) || isClosingBracket(ch)
 const areMatchingBrackets = (open: string, close: string): boolean => {
   return (open === '(' && close === ')') ||
+         (open === '#(' && close === ')') ||
          (open === '[' && close === ']') ||
          (open === '{' && close === '}')
 }
@@ -255,6 +256,7 @@ export const reservedWords = [
   'letrec',
   'match',
   'or',
+  'section',
   'struct',
 ]
 
@@ -319,7 +321,7 @@ function parseStringLiteral (src: string, range: S.Range): string {
   return ret
 }
 
-export function atomToExp (e: S.Atom): S.Exp {
+export function atomToExp (e: S.Atom, inSection: boolean): S.Exp {
   const text = e.value
   if (intRegex.test(text)) {
     return S.mkNum(parseInt(text), e.range)
@@ -345,6 +347,9 @@ export function atomToExp (e: S.Atom): S.Exp {
   } else {
     // TODO: ensure identifiers don't have invalid characters, i.e., #
     // Probably should be done in the lexer, not the parser...
+    if (e.value.startsWith('_') && !inSection) {
+      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
+    }
     return S.mkVar(e.value, e.range)
   }
 }
@@ -435,10 +440,62 @@ export function sexpToPat (e: S.Sexp): S.Pat {
   }
 }
 
-export function sexpToExp (e: S.Sexp): S.Exp {
+export function holesToVars (e: S.Sexp): S.Sexp {
+  let counter = 1
+  let holesAreNamed: boolean | undefined = undefined
+  function rec (e: S.Sexp): S.Sexp {
+    switch (e.tag) {
+      case 'atom':
+        if (e.value === '_') {
+          if (holesAreNamed) {
+            throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
+          } else {
+            holesAreNamed = false
+            return S.mkAtom(`_${counter++}`, e.range)
+          }
+        } else if (e.value.startsWith('_')) {
+          if (holesAreNamed === false) {
+            throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
+          } else {
+            holesAreNamed = true
+            return S.mkAtom(e.value, e.range)
+          }
+        } else {
+          return e
+        }
+      case 'list':
+        return S.mkList(e.value.map(rec), e.bracket, e.range)
+    }
+  }
+  return rec(e)
+}
+
+export function getNamedHoles (e: S.Sexp): string[] {
+  const vars: Set<string> = new Set()
+  function rec (e: S.Sexp): void {
+    switch (e.tag) {
+      case 'atom':
+        if (e.value.startsWith('_')) {
+          vars.add(e.value)
+        }
+        break
+      case 'list':
+        e.value.forEach(rec)
+        break
+    }
+  }
+  rec(e)
+  const ret = []
+  for (const v of vars.values()) {
+    ret.push(v)
+  }
+  return ret
+}
+
+export function sexpToExp (e: S.Sexp, inSection: boolean = false): S.Exp {
   switch (e.tag) {
     case 'atom':
-      return atomToExp(e)
+      return atomToExp(e, inSection)
     case 'list': {
       if (e.value.length === 0) {
         throw new ScamperError('Parser', 'The empty list is not a valid expression', undefined, e.range)
@@ -451,7 +508,7 @@ export function sexpToExp (e: S.Sexp): S.Exp {
         }
         const es = args[0]
         if (es.tag !== 'list') {
-          throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, es.range)
+         throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, es.range)
         }
         const params: string[] = []
         es.value.forEach(arg => {
@@ -471,9 +528,9 @@ export function sexpToExp (e: S.Sexp): S.Exp {
         }
         return S.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
       } else if (head.tag === 'atom' && head.value === 'and') {
-        return S.mkAnd(args.map(sexpToExp), e.bracket, e.range)
+        return S.mkAnd(args.map((s) => sexpToExp(s)), e.bracket, e.range)
       } else if (head.tag === 'atom' && head.value === 'or') {
-        return S.mkOr(args.map(sexpToExp), e.bracket, e.range)
+        return S.mkOr(args.map((s) => sexpToExp(s)), e.bracket, e.range)
       } else if (head.tag === 'atom' && head.value === 'if') {
         if (args.length !== 3) {
           throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, e.range)
@@ -490,7 +547,7 @@ export function sexpToExp (e: S.Sexp): S.Exp {
         if (args.length === 0) {
           throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, e.range)
         } else {
-          return S.mkBegin(args.map(sexpToExp), e.bracket, e.range)
+          return S.mkBegin(args.map((s) => sexpToExp(s)), e.bracket, e.range)
         }
       } else if (head.tag === 'atom' && head.value === 'match') {
         if (args.length < 2) {
@@ -504,8 +561,17 @@ export function sexpToExp (e: S.Sexp): S.Exp {
           throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, e.range)
         }
         return S.mkCond(args.map(sexpToCondBranch), e.range)
+      } else if (head.tag === 'atom' && head.value === 'section') {
+        if (args.length < 1) {
+          throw new ScamperError('Parser', 'Section expression must have at least one sub-expression', undefined, e.range)
+        }
+        const body = holesToVars(S.mkList(args, e.bracket, e.range))
+        const params = getNamedHoles(body)
+        // N.B., place the params in numeric/alphabetical order
+        params.sort()
+        return S.mkLam(params, sexpToExp(body), e.bracket, e.range)
       } else {
-        return S.mkApp(sexpToExp(head), args.map(sexpToExp), e.bracket, e.range)
+        return S.mkApp(sexpToExp(head), args.map((s) => sexpToExp(s, true), true), e.bracket, e.range)
       }
     }
   }
