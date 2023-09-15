@@ -82,20 +82,20 @@ export const isString = (v: Value): boolean => typeof v === 'string'
 export const isNull = (v: Value): boolean => v === null
 export const isVoid = (v: Value): boolean => v === undefined
 export const isArray = (v: Value): boolean => Array.isArray(v)
-export const isClosure = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'closure'
+export const isClosure = (v: Value): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'closure'
 export const isJsFunction = (v: Value): boolean => typeof v === 'function'
 export const isFunction = (v: Value): boolean => isJsFunction(v) || isClosure(v)
-export const isChar = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'char'
-export const isPair = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'pair'
+export const isChar = (v: Value): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'char'
+export const isPair = (v: Value): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'pair'
 export const isList = (v: Value): boolean => v === null || (isPair(v) && (v as Pair).isList)
-export const isStruct = (v: Value): boolean => typeof v === 'object' && (v as any)._scamperTag === 'struct'
+export const isStruct = (v: Value): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'struct'
 export const isStructKind = (v: Value, k: string): boolean => isStruct(v) && (v as Struct).kind === k
 
 export const mkClosure = (arity: number, params: Id[], ops: Op[], env: Env): Value => ({ _scamperTag: 'closure', arity, params, ops, env })
 export const mkChar = (v: string): Char => ({ _scamperTag: 'char', value: v })
 export const mkPair = (fst: Value, snd: Value): Pair => ({
   _scamperTag: 'pair', fst, snd,
-  isList: snd === null || (isPair(snd) && (snd as Pair).isList)
+  isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
 })
 export const mkStruct = (kind: string, fields: Value[]): Value => ({ _scamperTag: 'struct', kind, fields })
 
