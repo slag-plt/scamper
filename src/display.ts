@@ -88,6 +88,8 @@ export function renderToHTML (v: any): HTMLElement {
         ret.appendChild(renderToHTML(v.snd))
         ret.append(mkCodeElement(')'))
         return ret
+      } else if (v instanceof HTMLElement) {
+        return v
       } else {
         const customRenderer = getRenderer(v, customWebRenderers)
         if (customRenderer !== undefined) {
