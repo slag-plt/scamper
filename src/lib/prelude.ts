@@ -1335,10 +1335,12 @@ registerFn('with-handler', withHandler, Prelude)
 // Additional constants
 
 const elseConst = true
+const nullConst = null
 const piConst = Math.PI
 const voidConst = undefined
 
 Prelude.push(['else', elseConst])
+Prelude.push(['null', nullConst])
 Prelude.push(['pi', piConst])
 Prelude.push(['π', piConst])
 Prelude.push(['void', voidConst])
