@@ -1,17 +1,28 @@
-.PHONY: clean deploy
+.PHONY: site/js
 
-dist/ : src/version.ts
-	mkdir -p dist
+dist/ : site/index.html site/reference.html site/docs site/webfonts site/css site/js/
+
+site/js :
 	npm run build
 
-src/version.ts :
-	npm run gen-version
-
-site/ : dist/
-	mkdir -p site/js
+site/docs : docs/dist/docs
+	mkdir -p site
 	cp -r docs/dist/docs site/
-	cp -r ide/* site/
-	cp -r dist/ide.js site/js/ide.js
+
+site/%.html : ide/%.html
+	mkdir -p site
+	cp $< $@
+
+site/webfonts : ide/webfonts
+	mkdir -p site
+	cp -r $< $@
+
+site/css : ide/css
+	mkdir -p site
+	cp -r $< $@
+
+site/js/ :
+	npm run build
 
 deploy : site/
 	rsync -rtz site/ compsci:csc151.cs.grinnell.edu/scamper

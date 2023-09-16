@@ -4,9 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "gen-version": "npx genversion src/version.ts --es6",
-    "build": "npx genversion src/version.ts --es6; rollup -c",
-    "serve": "python3 -m http.server"
+    "build": "genversion src/version.ts --es6; rollup -c",
+    "serve": "live-server --open=site"
   },
   "type": "module",
   "author": "",
@@ -24,6 +23,7 @@
     "eslint-plugin-n": "^15.7.0",
     "eslint-plugin-promise": "^6.1.1",
     "genversion": "^3.1.1",
+    "live-server": "^1.1.0",
     "rollup": "^3.28.1",
     "typescript": "^5.1.6"
   },

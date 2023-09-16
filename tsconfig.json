@@ -7,7 +7,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist/ts",
+    "outDir": "./site/js/src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,

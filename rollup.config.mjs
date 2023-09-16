@@ -5,7 +5,7 @@ import {lezer} from "@lezer/generator/rollup"
 export default {
   input: 'src/web/ide.ts',
   output: {
-    dir: 'dist',
+    dir: 'site/js',
     format: 'es',
     sourcemap: true,
   },
