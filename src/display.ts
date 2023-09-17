@@ -96,14 +96,15 @@ export function renderToHTML (v: any): HTMLElement {
           return customRenderer(v)
         } else if (V.isStruct(v)) {
           const s = v as V.Struct
-          if (s.fields.length === 0) {
+          const fields = V.getFieldsOfStruct(s)
+          if (fields.length === 0) {
             return mkCodeElement(`(${s.kind})`)
           } else {
             const ret = mkCodeElement(`(${s.kind} `)
-            ret.appendChild(renderToHTML(s.fields[0]))
-            for (let i = 1; i < s.fields.length; i++) {
+            ret.appendChild(renderToHTML(s[fields[0]]))
+            for (let i = 1; i < fields.length; i++) {
               ret.appendChild(mkCodeElement(' '))
-              ret.appendChild(renderToHTML(s.fields[i]))
+              ret.appendChild(renderToHTML(s[fields[i]]))
             }
             ret.append(mkCodeElement(')'))
             return ret

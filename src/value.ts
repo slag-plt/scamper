@@ -72,7 +72,14 @@ export type TaggedObject = Closure | Char | Pair | Struct
 export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op[], env: Env, name?: string }
 export type Char = { _scamperTag: 'char', value: string }
 export type Pair = { _scamperTag: 'pair', fst: Value, snd: Value, isList: boolean }
-export type Struct = { _scamperTag: 'struct', 'kind': string, 'fields': Value[] }
+
+// NOTE: to maximize interoperability, a struct is an object with at least
+// a _scamperTag and kind field. The rest of the fields are the fields of the
+// the struct, all required to be string keys (i.e., no index or symbol keys).
+// The order of arguments of a struct's constructor is thus property order of
+// the corresponding object, i.e., the order in which the fields are defined.
+export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any }
+
 export type Value = boolean | number | string | null | undefined | Value[] | TaggedObject | Function | Object
 export type List = null | Pair
 
@@ -97,7 +104,13 @@ export const mkPair = (fst: Value, snd: Value): Pair => ({
   _scamperTag: 'pair', fst, snd,
   isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
 })
-export const mkStruct = (kind: string, fields: Value[]): Value => ({ _scamperTag: 'struct', kind, fields })
+export const mkStruct = (kind: string, fields: string[], values: Value[]): Value => {
+  const ret: Struct = { _scamperTag: 'struct', kind }
+  for (let i = 0; i < fields.length; i++) {
+    ret[fields[i]] = values[i]
+  }
+  return ret
+}
 
 export const nameFn = (name: string, fn: Function): Function =>
   Object.defineProperty(fn, 'name', { value: name })
@@ -130,6 +143,16 @@ export function valueToString (v: Value) {
   }
 }
 
+export function getFieldsOfStruct (s: Struct): string[] {
+  const ret = []
+  for (const f in s) {
+    if (f !== '_scamperTag' && f !== 'kind') {
+      ret.push(f)
+    }
+  }
+  return ret
+}
+
 export function valuesEqual (v1: Value, v2: Value): boolean {
   const t1 = typeof v1
   const t2 = typeof v2
@@ -151,8 +174,10 @@ export function valuesEqual (v1: Value, v2: Value): boolean {
   } else if (isStruct(v1) && isStruct(v2)) {
     const s1 = v1 as Struct
     const s2 = v2 as Struct
-    return s1.kind === s2.kind && s1.fields.length === s2.fields.length &&
-      s1.fields.every((f, i) => valuesEqual(f, s2.fields[i]))
+    const fieldsS1 = getFieldsOfStruct(s1)
+    const fieldsS2 = getFieldsOfStruct(s2)
+    return s1.kind === s2.kind && fieldsS1.length === fieldsS2.length &&
+      fieldsS1.every((f) => valuesEqual(s1[f], s2[f]))
   } else {
     return false
   }

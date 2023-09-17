@@ -116,7 +116,8 @@ function valueToExp (env: Env, v: Value): S.Exp {
     return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
   } else if (V.isStruct(v)) {
     const s = v as V.Struct
-    return S.mkApp(S.mkVar(s.kind, noRange), s.fields.map((v) => valueToExp(env, v)), '(', noRange)
+    const fields = V.getFieldsOfStruct(s)
+    return S.mkApp(S.mkVar(s.kind, noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
   } else {
     throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
@@ -533,17 +534,17 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
 
   const ctorFn = function (...args: any[]) {
     C.checkContract(arguments, C.contract(name, fields.map((f) => C.any)))
-    return V.mkStruct(name, args)
+    return V.mkStruct(name, fields, args)
   }
   V.nameFn(name, ctorFn)
   const ctor: [string, Value] = [name, ctorFn]
 
   const fieldFns: [string, Value][] = []
-  fields.forEach((f, i) => {
+  fields.forEach((f) => {
     const fieldName = `${name}-${f}`
     const fn = function (v: V.Struct) {
       C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
-      return v.fields[i]
+      return v.fields[f]
     }
     V.nameFn(fieldName, fn)
     fieldFns.push([fieldName, fn])
