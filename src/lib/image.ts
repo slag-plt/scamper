@@ -18,17 +18,17 @@ registerFn('color', color)
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
-  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${Value.typeOf(actual)}`
 }
 
 const alignVS: C.Spec = {
   predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${Value.typeOf(actual)}`
 }
 
 const alignHS: C.Spec = {
   predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${Value.typeOf(actual)}`
 }
 
 const colorS: C.Spec = {
@@ -44,7 +44,7 @@ const colorS: C.Spec = {
     */
    return true
   },
-  errorMsg: (actual: any) => `expected a color, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a color, received ${Value.typeOf(actual)}`
 }
 
 type Mode = 'solid' | 'outline'
@@ -58,7 +58,7 @@ registerFn('image?', imageQ)
 
 const imageS = {
   predicate: imageQ,
-  errorMsg: (actual: any) => `expected an image, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
 }
 
 type Ellipse = { _scamperTag: 'image', kind: 'ellipse', width: number, height: number, mode: Mode, color: string }

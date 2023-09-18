@@ -23,7 +23,7 @@ const query2C = (name: string) => contract(name, [C.any, C.any])
 
 function equalQ (x: any, y: any): boolean {
   checkContract(arguments, query2C('equal?'))
-  return Value.valuesEqual(x, y)
+  return Value.equal(x, y)
 }
 registerFn('equal?', equalQ, Prelude)
 
@@ -564,7 +564,7 @@ function indexOf (l: Value.List, v: Value.T): number {
   checkContract(arguments, contract('index-of', [C.list, C.any]))
   let i = 0
   while (l !== null) {
-    if (Value.valuesEqual(l.fst, v)) {
+    if (Value.equal(l.fst, v)) {
       return i
     }
     l = l.snd as Value.List
@@ -577,7 +577,7 @@ registerFn('index-of', indexOf, Prelude)
 function assocKey (v: Value.T, l: Value.List): boolean {
   checkContract(arguments, contract('assoc-key?', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (Value.valuesEqual((l.fst as Value.Pair).fst, v)) {
+    if (Value.equal((l.fst as Value.Pair).fst, v)) {
       return true
     }
     l = l.snd as Value.List
@@ -589,7 +589,7 @@ registerFn('assoc-key?', assocKey, Prelude)
 function assocRef (v: Value.T, l: Value.List): Value.T {
   checkContract(arguments, contract('assoc-ref', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (Value.valuesEqual((l.fst as Value.Pair).fst, v)) {
+    if (Value.equal((l.fst as Value.Pair).fst, v)) {
       return (l.fst as Value.Pair).snd
     }
     l = l.snd as Value.List
@@ -604,7 +604,7 @@ function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
   // TODO: implement me—this isn't the right implementation!
   while (l !== null) {
     const entry = l.fst as Value.Pair
-    if (Value.valuesEqual(entry.fst, k)) {
+    if (Value.equal(entry.fst, k)) {
       front.push(Value.mkPair(k, v))
       let ret = l.snd as Value.List
       for (let i = front.length - 1; i >= 0; i--) {

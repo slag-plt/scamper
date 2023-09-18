@@ -32,62 +32,62 @@ export const or = (...specs: Spec[]): Spec => ({
 
 export const boolean = {
   predicate: (v: any) => typeof v === 'boolean',
-  errorMsg: (actual: any) => `expected a boolean, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a boolean, received ${Value.typeOf(actual)}`
 } 
 
 export const number = {
   predicate: (v: any) => typeof v === 'number',
-  errorMsg: (actual: any) => `expected a number, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a number, received ${Value.typeOf(actual)}`
 }
 
 export const string = {
   predicate: (v: any) => typeof v === 'string',
-  errorMsg: (actual: any) => `expected a string, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a string, received ${Value.typeOf(actual)}`
 }
 
 export const integer = {
   predicate: (v: any) => typeof v === 'number' && Math.floor(v) === v,
-  errorMsg: (actual: any) => `expected an integer, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected an integer, received ${Value.typeOf(actual)}`
 }
 
 export const nat = {
   predicate: (v: any) => typeof v === 'number' && Math.floor(v) === v && v >= 0,
-  errorMsg: (actual: any) => `expected a natural number, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a natural number, received ${Value.typeOf(actual)}`
 }
 
 export const pos = {
   predicate: (v: any) => typeof v === 'number' && v > 0,
-  errorMsg: (actual: any) => `expected a positive number, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a positive number, received ${Value.typeOf(actual)}`
 }
 
 export const nonneg = {
   predicate: (v: any) => typeof v === 'number' && v >= 0,
-  errorMsg: (actual: any) => `expected a non-negative number, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a non-negative number, received ${Value.typeOf(actual)}`
 }
 
 export const func = {
   predicate: (v: any) => Value.isFunction(v),
-  errorMsg: (actual: any) => `expected a function, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a function, received ${Value.typeOf(actual)}`
 }
 
 export const char = {
   predicate: (v: any) => Value.isChar(v),
-  errorMsg: (actual: any) => `expected a character, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a character, received ${Value.typeOf(actual)}`
 }
 
 export const pair = {
   predicate: (v: any) => Value.isPair(v),
-  errorMsg: (actual: any) => `expected a pair, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a pair, received ${Value.typeOf(actual)}`
 }
 
 export const list = {
   predicate: (v: any) => Value.isList(v),
-  errorMsg: (actual: any) => `expected a list, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a list, received ${Value.typeOf(actual)}`
 }
 
 export const nonemptyList = {
   predicate: (v: any) => Value.isList(v) && v !== null,
-  errorMsg: (actual: any) => `expected a non-empty list, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a non-empty list, received ${Value.typeOf(actual)}`
 }
 
 export const listof = (spec: Spec) => ({
@@ -106,7 +106,7 @@ export const listof = (spec: Spec) => ({
   },
   errorMsg: (actual: any) => {
     if (!Value.isList(actual)) {
-      return `expected a list, received ${Value.typeOfValue(actual)}`
+      return `expected a list, received ${Value.typeOf(actual)}`
     } else {
       let lst = actual
       while (lst !== null) {
@@ -122,16 +122,16 @@ export const listof = (spec: Spec) => ({
 
 export const vector = {
   predicate: (v: any) => Array.isArray(v),
-  errorMsg: (actual: any) => `expected a vector, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a vector, received ${Value.typeOf(actual)}`
 }
 
 export const struct = (kind: string) => ({
   predicate: (v: any) => Value.isStructKind(v, kind),
-  errorMsg: (actual: any) => `expected a struct of kind ${kind}, received ${Value.typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a struct of kind ${kind}, received ${Value.typeOf(actual)}`
 })
 
 export const equal = (expected: any) => ({
-  predicate: (v: any) => Value.valuesEqual(expected, v),
+  predicate: (v: any) => Value.equal(expected, v),
   errorMsg: (actual: any) => `expected ${expected}, received ${actual}`
 })
 

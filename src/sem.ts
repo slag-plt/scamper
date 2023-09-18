@@ -16,7 +16,7 @@ class Control {
   next (): Op.T { return this.ops[this.idx++] }
 
   toString (): string {
-    return `[idx=${this.idx}, ops=${this.ops.map(Op.opToString).join(',')}]`
+    return `[idx=${this.idx}, ops=${this.ops.map(Op.toString).join(',')}]`
   }
 
   jumpTo(label: Op.Label): void {
@@ -379,7 +379,7 @@ function stepPrim (state: ExecutionState): boolean {
           throw e
         }
       } else {
-        throw new ScamperError('Runtime', `Non-function value (${Value.typeOfValue(head)}) in function application`, undefined, op.range)
+        throw new ScamperError('Runtime', `Non-function value (${Value.typeOf(head)}) in function application`, undefined, op.range)
       }
       return false
     }
@@ -392,7 +392,7 @@ function stepPrim (state: ExecutionState): boolean {
         } else if (guard === false) {
           state.dumpAndSwitch([], state.env, op.elseb)
         } else {
-          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${Value.valueToString(guard)} instead`, undefined, op.range)
+          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${Value.toString(guard)} instead`, undefined, op.range)
         }
       } else {
         throw new ICE('sem.step', `Guard missing from stack for conditional`)
@@ -438,7 +438,7 @@ function stepPrim (state: ExecutionState): boolean {
           }
         }
         if (!foundMatch) {
-          throw new ScamperError('Runtime', `No pattern matches for ${Value.valueToString(scrutinee)}`, undefined, op.range)
+          throw new ScamperError('Runtime', `No pattern matches for ${Value.toString(scrutinee)}`, undefined, op.range)
         }
       } else {
         throw new ICE('sem.step', `Scrutinee missing from stack for match`)
@@ -452,7 +452,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       const val = stack.pop()!
       if (typeof val !== 'boolean') {
-        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${Value.typeOfValue(val)}`, undefined, op.range)
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${Value.typeOf(val)}`, undefined, op.range)
       }
       if (!val) {
         state.stack.push(false)
@@ -468,7 +468,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       const val = stack.pop()!
       if (typeof val !== 'boolean') {
-        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${Value.typeOfValue(val)}`, undefined, op.range)
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${Value.typeOf(val)}`, undefined, op.range)
       }
       if (val) {
         state.stack.push(true)
@@ -583,13 +583,13 @@ function makeTraceDiv(): HTMLElement {
 function makeTraceHeader (s: Stmt.T): HTMLElement {
   switch (s.kind) {
     case 'binding':
-      return mkCodeElement(`Evaluating binding ${s.name}...\n${Exp.expToString(s.body)}`)
+      return mkCodeElement(`Evaluating binding ${s.name}...\n${Exp.toString(s.body)}`)
     case 'display':
-      return mkCodeElement(`Evaluating displayed expression...\n${Exp.expToString(s.body)}`)
+      return mkCodeElement(`Evaluating displayed expression...\n${Exp.toString(s.body)}`)
     case 'import':
       return mkCodeElement(`Importing module ${s.modName}...`)
-    case 'stmtexp':
-      return mkCodeElement(`Evaluating expression...\n${Exp.expToString(s.body)}`)
+    case 'exp':
+      return mkCodeElement(`Evaluating expression...\n${Exp.toString(s.body)}`)
     case 'struct':
       return mkCodeElement(`Evaluating struct declaration ${s.id}...`)
   }
@@ -654,7 +654,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -684,7 +684,7 @@ export class Sem {
         break
       }
 
-      case 'stmtexp': {
+      case 'exp': {
         if (this.state === undefined) {
           this.state = new ExecutionState(this.env, expToOps(stmt.body))
         }
@@ -692,7 +692,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -728,7 +728,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {

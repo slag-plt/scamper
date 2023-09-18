@@ -145,7 +145,7 @@ export namespace Pat {
   export const mkNull = (range: Range): T => ({ _scamperTag: 'struct', kind: 'null', range })
   export const mkCtor = (ctor: string, args: T[], range: Range): T => ({ _scamperTag: 'struct', kind: 'ctor', ctor, args, range })
 
-  export function patToSexp (p: T): Sexp.T {
+  export function toSexp (p: T): Sexp.T {
     switch (p.kind) {
       case 'var':
         return Sexp.mkAtom(p.name, p.range)
@@ -162,12 +162,12 @@ export namespace Pat {
       case 'null':
         return Sexp.mkAtom('null', p.range)
       case 'ctor':
-        return Sexp.mkList([Sexp.mkAtom(p.ctor, noRange), ...p.args.map(patToSexp)], '(', p.range)
+        return Sexp.mkList([Sexp.mkAtom(p.ctor, noRange), ...p.args.map(toSexp)], '(', p.range)
     }
   }
 
-  export function patToString (p: T): string {
-    return Sexp.sexpToString(patToSexp(p))
+  export function toString (p: T): string {
+    return Sexp.sexpToString(toSexp(p))
   }
 }
 
@@ -213,7 +213,7 @@ export namespace Exp {
   export const mkCond = (branches: CondBranch[], range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'cond', branches, range })
 
-  export function expToSexp(e: T): Sexp.T {
+  export function toSexp (e: T): Sexp.T {
     switch (e.kind) {
       case 'var':
         return Sexp.mkAtom(e.name, e.range)
@@ -222,83 +222,83 @@ export namespace Exp {
       case 'lam':
         return Sexp.mkList([
           Sexp.mkAtom('lambda', noRange),
-          Sexp.mkList(e.args.map((arg) => Sexp.mkAtom(arg, noRange)), '(', noRange), expToSexp(e.body)],
+          Sexp.mkList(e.args.map((arg) => Sexp.mkAtom(arg, noRange)), '(', noRange), toSexp(e.body)],
           e.bracket, e.range)
       case 'let':
         return Sexp.mkList([
           Sexp.mkAtom('let', noRange),
           Sexp.mkList(e.bindings.map(
-            b => Sexp.mkList([Sexp.mkAtom(b.name, noRange), expToSexp(b.body)], '[', noRange)),
+            b => Sexp.mkList([Sexp.mkAtom(b.name, noRange), toSexp(b.body)], '[', noRange)),
             '(', noRange),
-          expToSexp(e.body)], e.bracket, e.range)
+          toSexp(e.body)], e.bracket, e.range)
       case 'app':
-        return Sexp.mkList([expToSexp(e.head), ...e.args.map(expToSexp)], '(', e.range)
+        return Sexp.mkList([toSexp(e.head), ...e.args.map(toSexp)], '(', e.range)
       case 'and':
-        return Sexp.mkList([Sexp.mkAtom('and', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
+        return Sexp.mkList([Sexp.mkAtom('and', noRange), ...e.exps.map(toSexp)], e.bracket, e.range)
       case 'or':
-        return Sexp.mkList([Sexp.mkAtom('or', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
+        return Sexp.mkList([Sexp.mkAtom('or', noRange), ...e.exps.map(toSexp)], e.bracket, e.range)
       case 'if':
-        return Sexp.mkList([Sexp.mkAtom('if', noRange), expToSexp(e.guard), expToSexp(e.ifb), expToSexp(e.elseb)], '(', e.range)
+        return Sexp.mkList([Sexp.mkAtom('if', noRange), toSexp(e.guard), toSexp(e.ifb), toSexp(e.elseb)], '(', e.range)
       case 'begin':
-        return Sexp.mkList([Sexp.mkAtom('begin', noRange), ...e.exps.map(expToSexp)], '(', e.range)
+        return Sexp.mkList([Sexp.mkAtom('begin', noRange), ...e.exps.map(toSexp)], '(', e.range)
       case 'match':
         return Sexp.mkList([
           Sexp.mkAtom('match', noRange),
-          expToSexp(e.scrutinee),
-          Sexp.mkList(e.branches.map((b) => Sexp.mkList([Pat.patToSexp(b.pattern), expToSexp(b.body)], '[', noRange)), '(', noRange)],
+          toSexp(e.scrutinee),
+          Sexp.mkList(e.branches.map((b) => Sexp.mkList([Pat.toSexp(b.pattern), toSexp(b.body)], '[', noRange)), '(', noRange)],
           e.bracket, e.range)
       case 'cond':
         return Sexp.mkList([
           Sexp.mkAtom('cond', noRange),
-          ...e.branches.map((b) => Sexp.mkList([expToSexp(b.guard), expToSexp(b.body)], '[', noRange))],
+          ...e.branches.map((b) => Sexp.mkList([toSexp(b.guard), toSexp(b.body)], '[', noRange))],
           '(', e.range)
     }
   }
 
-  export function expToString(e: T): string {
-    return Sexp.sexpToString(expToSexp(e))
+  export function toString (e: T): string {
+    return Sexp.sexpToString(toSexp(e))
   }
 }
 
 export namespace Stmt {
-  export type T = StmtBinding | StmtExp | Import | Display | Struct
-  export type StmtBinding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
-  export type StmtExp = { _scamperTag: 'struct', kind: 'stmtexp', body: Exp.T }
+  export type T = Binding | Exp | Import | Display | Struct
+  export type Binding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
+  export type Exp = { _scamperTag: 'struct', kind: 'exp', body: Exp.T }
   export type Import = { _scamperTag: 'struct', kind: 'import', modName: string, bracket: Bracket, range: Range }
   export type Display = { _scamperTag: 'struct', kind: 'display', body: Exp.T, bracket: Bracket, range: Range }
   export type Struct = { _scamperTag: 'struct', kind: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
 
   export const mkStmtBinding = (name: Id, body: Exp.T, bracket: Bracket, range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'binding', name, body, bracket, range })
-  export const mkStmtExp = (body: Exp.T): T => ({ _scamperTag: 'struct', kind: 'stmtexp', body })
+  export const mkStmtExp = (body: Exp.T): T => ({ _scamperTag: 'struct', kind: 'exp', body })
   export const mkImport = (modName: string, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'import', modName, bracket, range })
   export const mkDisplay = (body: Exp.T, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'display', body, bracket, range })
   export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'struct', id, fields, bracket, range })
 
-  export function stmtToSexp(s: T): Sexp.T {
+  export function toSexp(s: T): Sexp.T {
     switch (s.kind) {
       case 'binding':
-        return Sexp.mkList([Sexp.mkAtom('define', noRange), Sexp.mkAtom(s.name, noRange), Exp.expToSexp(s.body)], s.bracket, s.range)
-      case 'stmtexp':
-        return Exp.expToSexp(s.body)
+        return Sexp.mkList([Sexp.mkAtom('define', noRange), Sexp.mkAtom(s.name, noRange), Exp.toSexp(s.body)], s.bracket, s.range)
+      case 'exp':
+        return Exp.toSexp(s.body)
       case 'import':
         return Sexp.mkList([Sexp.mkAtom('import', noRange), Sexp.mkAtom(s.modName, noRange)], s.bracket, s.range)
       case 'display':
-        return Sexp.mkList([Sexp.mkAtom('define', noRange), Exp.expToSexp(s.body)], s.bracket, s.range)
+        return Sexp.mkList([Sexp.mkAtom('define', noRange), Exp.toSexp(s.body)], s.bracket, s.range)
       case 'struct':
         return Sexp.mkList([Sexp.mkAtom('struct', noRange), Sexp.mkAtom(s.id, noRange), ...s.fields.map((f) => Sexp.mkAtom(f, noRange))], '(', s.range)
     }
   }
 
-  export function stmtToString(s: T): string {
-    return Sexp.sexpToString(stmtToSexp(s))
+  export function toString(s: T): string {
+    return Sexp.sexpToString(toSexp(s))
   }
 }
 
 export type Prog = Stmt.T[]
 
 export function progToSexps(p: Prog): Sexp.T[] {
-  return p.map(Stmt.stmtToSexp)
+  return p.map(Stmt.toSexp)
 }
 
 export function progToString(p: Prog, sep: string = '\n\n'): string {
@@ -343,30 +343,30 @@ export namespace Op {
   export const mkLbl = (name: string): T => ({ tag: 'lbl', name })
   export const mkExn = (msg: string, modName?: string, range?: Range, source?: string): T => ({ tag: 'exn', msg, modName, range, source })
 
-  export function opToString (op: T): string {
+  export function toString (op: T): string {
     switch (op.tag) {
       case 'var':
         return `var ${op.name}`
       case 'val':
-        return `val ${Value.valueToString(op.value)}`
+        return `val ${Value.toString(op.value)}`
       case 'cls':
         return `cls (${op.params.join(' ')})`
       case 'ap':
         return `ap ${op.arity}`
       case 'if':
-        return `if (${op.ifb.map(opToString).join('; ')}) else (${op.elseb.map(opToString).join('; ')}))`
+        return `if (${op.ifb.map(toString).join('; ')}) else (${op.elseb.map(toString).join('; ')}))`
       case 'let':
         return `let (${op.names.join(' ')})`
       case 'seq':
         return `seq ${op.numSubexps}`
       case 'match':
-        return `match (${op.branches.map((b) => Pat.patToString(b.pattern) + ' => ' + b.body.map(opToString).join('; ')).join(' | ')})`
+        return `match (${op.branches.map((b) => Pat.toString(b.pattern) + ' => ' + b.body.map(toString).join('; ')).join(' | ')})`
       case 'and':
         return `and (jmpto ${op.jmpTo})`
       case 'or':
         return `or (jmpto ${op.jmpTo})`
       case 'cond':
-        return `cond (${op.end}, ${op.body.map(opToString).join('; ')})`
+        return `cond (${op.end}, ${op.body.map(toString).join('; ')})`
       case 'lbl':
         return `lbl ${op.name}`
       case 'exn':
@@ -442,7 +442,7 @@ export namespace Value {
     return ret
   }
 
-  export function valueToString (v: T) {
+  export function toString (v: T) {
     if (isClosure(v)) {
       return `<closure (${(v as Closure).params.join(' ')})>`
     } else if (typeof v === 'function') {
@@ -522,7 +522,7 @@ export namespace Value {
     throw new ICE('valueToSexp', `unknown value ${v}`)
   }
 
-  export function valuesEqual (v1: T, v2: T): boolean {
+  export function equal (v1: T, v2: T): boolean {
     const t1 = typeof v1
     const t2 = typeof v2
     if ((v1 === null && v2 === null) ||
@@ -536,8 +536,8 @@ export namespace Value {
         (isFunction(t1) && isFunction(t2))) {
       return v1 === v2
     } else if (isPair(v1) && isPair(v2)) {
-      return valuesEqual((v1 as Pair).fst, (v2 as Pair).fst) &&
-        valuesEqual((v1 as Pair).snd, (v2 as Pair).snd)
+      return equal((v1 as Pair).fst, (v2 as Pair).fst) &&
+        equal((v1 as Pair).snd, (v2 as Pair).snd)
     } else if (isChar(v1) && isChar(v2)) {
       return (v1 as Char).value === (v2 as Char).value
     } else if (isStruct(v1) && isStruct(v2)) {
@@ -546,13 +546,13 @@ export namespace Value {
       const fieldsS1 = getFieldsOfStruct(s1)
       const fieldsS2 = getFieldsOfStruct(s2)
       return s1.kind === s2.kind && fieldsS1.length === fieldsS2.length &&
-        fieldsS1.every((f) => valuesEqual(s1[f], s2[f]))
+        fieldsS1.every((f) => equal(s1[f], s2[f]))
     } else {
       return false
     }
   }
 
-  export function typeOfValue (v: T): string {
+  export function typeOf (v: T): string {
     const t = typeof v
     if (t === 'boolean' || t === 'number' || t === 'string') { return t }
     if (v === 'null') { return 'null' }
