@@ -1,13 +1,13 @@
-import { nameFn, Value } from '../value.js'
+import { Value } from '../lang.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value][]) {
-  nameFn(name, fn)
+function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
+  Value.nameFn(name, fn)
   map.push([name, fn])
 }
 
-const Lab: [string, Value][] = []
+const Lab: [string, Value.T][] = []
 
 function title (text: string) {
   checkContract(arguments, contract('title', [C.string]))

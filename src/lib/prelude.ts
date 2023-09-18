@@ -1,16 +1,14 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import { Value } from '../value.js'
-import * as V from '../value.js'
 import { callFunction } from '../sem.js'
-import { ScamperError } from '../lang.js'
+import { ScamperError, Value } from '../lang.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value][]) {
-  V.nameFn(name, fn)
+function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
+  Value.nameFn(name, fn)
   map.push([name, fn])
 }
 
-const Prelude: [string, Value][] = []
+const Prelude: [string, Value.T][] = []
 
 const query1C = (name: string) => contract(name, [C.any])
 const query2C = (name: string) => contract(name, [C.any, C.any])
@@ -25,7 +23,7 @@ const query2C = (name: string) => contract(name, [C.any, C.any])
 
 function equalQ (x: any, y: any): boolean {
   checkContract(arguments, query2C('equal?'))
-  return V.valuesEqual(x, y)
+  return Value.equal(x, y)
 }
 registerFn('equal?', equalQ, Prelude)
 
@@ -336,14 +334,14 @@ function atan (x: number): number {
 }
 registerFn('atan', atan, Prelude)
 
-function equalsEps (eps: number): Value {
+function equalsEps (eps: number): Value.T {
   checkContract(arguments, contract('=-eps', [C.number]))
   const name = `=-(${eps})`
   const ret = function (x: number, y: number): boolean {
     checkContract(arguments, contract(`=-(${eps})`, [C.number, C.number]))
     return Math.abs(x - y) <= eps
   }
-  V.nameFn(name, ret)
+  Value.nameFn(name, ret)
   return ret
 }
 registerFn('=-eps', equalsEps, Prelude)
@@ -392,29 +390,29 @@ registerFn('xor', xor, Prelude)
 
 function pairQ (x: any): boolean {
   checkContract(arguments, contract('pair?', [C.any]))
-  return V.isPair(x)
+  return Value.isPair(x)
 }
 registerFn('pair?', pairQ, Prelude)
 
-function cons (x: any, y: any): Value {
+function cons (x: any, y: any): Value.T {
   checkContract(arguments, contract('cons', [C.any, C.any]))
-  return V.mkPair(x, y)
+  return Value.mkPair(x, y)
 }
 registerFn('cons', cons, Prelude)
 
-function pair (x: any, y: any): Value {
+function pair (x: any, y: any): Value.T {
   checkContract(arguments, contract('pair', [C.any, C.any]))
-  return V.mkPair(x, y)
+  return Value.mkPair(x, y)
 }
 registerFn('pair', pair, Prelude)
 
-function car (x: Value): Value {
+function car (x: Value.T): Value.T {
   checkContract(arguments, contract('car', [C.pair]))
   return (x as any).fst
 }
 registerFn('car', car, Prelude)
 
-function cdr (x: Value): Value {
+function cdr (x: Value.T): Value.T {
   checkContract(arguments, contract('cdr', [C.pair]))
   return (x as any).snd
 }
@@ -433,51 +431,51 @@ registerFn('null?', nullQ, Prelude)
 
 function listQ (x: any): boolean {
   checkContract(arguments, contract('list?', [C.any]))
-  return x === null || (V.isPair(x) && (x as any).isList)
+  return x === null || (Value.isPair(x) && (x as any).isList)
 }
 registerFn('list?', listQ, Prelude)
 
-function list (...xs: Value[]): V.List {
+function list (...xs: Value.T[]): Value.List {
   checkContract(arguments, contract('list', [], C.any))
-  let ret: V.List = null
+  let ret: Value.List = null
   for (let i = xs.length - 1; i >= 0; i--) {
-    ret = V.mkPair(xs[i], ret)
+    ret = Value.mkPair(xs[i], ret)
   }
   return ret
 }
 registerFn('list', list, Prelude)
 
 
-function makeList (n: number, fill: Value): V.List {
+function makeList (n: number, fill: Value.T): Value.List {
   checkContract(arguments, contract('make-list', [C.integer, C.any]))
   let ret = null
   for (let i = 0; i < n; i++) {
-    ret = V.mkPair(fill, ret)
+    ret = Value.mkPair(fill, ret)
   }
   return ret
 }
 registerFn('make-list', makeList, Prelude)
 
-function length (l: V.List): number {
+function length (l: Value.List): number {
   checkContract(arguments, contract('length', [C.list]))
   let len = 0
   while (l !== null) {
     len += 1
-    l = (l.snd as V.List)
+    l = (l.snd as Value.List)
   }
   return len
 }
 registerFn('length', length, Prelude)
 
-function appendOne_ (l1: V.List, l2: V.List): V.List {
+function appendOne_ (l1: Value.List, l2: Value.List): Value.List {
   if (l1 === null) {
     return l2
   } else {
-    return V.mkPair(l1.fst, appendOne_(l1.snd as V.List, l2))
+    return Value.mkPair(l1.fst, appendOne_(l1.snd as Value.List, l2))
   }
 }
 
-function append (l: V.List, ...ls: V.List[]): V.List {
+function append (l: Value.List, ...ls: Value.List[]): Value.List {
   checkContract(arguments, contract('append', [C.list], C.list))
   let ret = l
   for (let i = 0; i < ls.length; i++) {
@@ -487,55 +485,55 @@ function append (l: V.List, ...ls: V.List[]): V.List {
 }
 registerFn('append', append, Prelude)
 
-function reverse (l: V.List): V.List {
+function reverse (l: Value.List): Value.List {
   checkContract(arguments, contract('reverse', [C.list]))
   const queue = []
   while (l !== null) {
     queue.push(l)
-    l = l.snd as V.List
+    l = l.snd as Value.List
   }
   queue.reverse()
   let ret = null
   while (queue.length > 0) {
-    const next = queue.pop() as V.Pair
-    ret = V.mkPair(next.fst, ret)
+    const next = queue.pop() as Value.Pair
+    ret = Value.mkPair(next.fst, ret)
   }
   return ret
 }
 registerFn('reverse', reverse, Prelude)
 
-function listTail (l: V.List, k: number): V.List {
+function listTail (l: Value.List, k: number): Value.List {
   checkContract(arguments, contract('list-tail', [C.list, C.nonneg]))
   while (l !== null && k > 0) {
-    l = l.snd as V.List
+    l = l.snd as Value.List
     k -= 1
   }
   return l
 }
 registerFn('list-tail', listTail, Prelude)
 
-function listTake (l: V.List, k: number): V.List {
+function listTake (l: Value.List, k: number): Value.List {
   checkContract(arguments, contract('list-take', [C.list, C.nonneg]))
   let elts = []
   // N.B., push in reverse order so we built the list right-to-left
   while (l !== null && k > 0) {
     elts.push(l.fst)
-    l = l.snd as V.List
+    l = l.snd as Value.List
     k -= 1
   }
-  let ret: V.List = null
+  let ret: Value.List = null
   for (let i = elts.length - 1; i >= 0; i--) {
-    ret = V.mkPair(elts[i], ret)
+    ret = Value.mkPair(elts[i], ret)
   }
   return ret
 }
 registerFn('list-take', listTake, Prelude)
 
-function listRef (l: V.List, n: number): Value {
+function listRef (l: Value.List, n: number): Value.T {
   checkContract(arguments, contract('list-ref', [C.list, C.nonneg]))
   let i = n
   while (l !== null && i > 0) {
-    l = l.snd as V.List
+    l = l.snd as Value.List
     i -= 1
   }
   if (l === null) {
@@ -562,63 +560,63 @@ registerFn('list-ref', listRef, Prelude)
 
 // Other list functions
 
-function indexOf (l: V.List, v: Value): number {
+function indexOf (l: Value.List, v: Value.T): number {
   checkContract(arguments, contract('index-of', [C.list, C.any]))
   let i = 0
   while (l !== null) {
-    if (V.valuesEqual(l.fst, v)) {
+    if (Value.equal(l.fst, v)) {
       return i
     }
-    l = l.snd as V.List
+    l = l.snd as Value.List
     i += 1
   }
   return -1
 }
 registerFn('index-of', indexOf, Prelude)
 
-function assocKey (v: Value, l: V.List): boolean {
+function assocKey (v: Value.T, l: Value.List): boolean {
   checkContract(arguments, contract('assoc-key?', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (V.valuesEqual((l.fst as V.Pair).fst, v)) {
+    if (Value.equal((l.fst as Value.Pair).fst, v)) {
       return true
     }
-    l = l.snd as V.List
+    l = l.snd as Value.List
   }
   return false
 }
 registerFn('assoc-key?', assocKey, Prelude)
 
-function assocRef (v: Value, l: V.List): Value {
+function assocRef (v: Value.T, l: Value.List): Value.T {
   checkContract(arguments, contract('assoc-ref', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (V.valuesEqual((l.fst as V.Pair).fst, v)) {
-      return (l.fst as V.Pair).snd
+    if (Value.equal((l.fst as Value.Pair).fst, v)) {
+      return (l.fst as Value.Pair).snd
     }
-    l = l.snd as V.List
+    l = l.snd as Value.List
   }
   throw new ScamperError('Runtime', `assoc-ref: key ${v} not found in association list`)
 }
 registerFn('assoc-ref', assocRef, Prelude)
 
-function assocSet (k: Value, v: Value, l: V.List): V.List {
+function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
   checkContract(arguments, contract('assoc-set', [C.any, C.any, C.listof(C.pair)]))
   const front = []
   // TODO: implement me—this isn't the right implementation!
   while (l !== null) {
-    const entry = l.fst as V.Pair
-    if (V.valuesEqual(entry.fst, k)) {
-      front.push(V.mkPair(k, v))
-      let ret = l.snd as V.List
+    const entry = l.fst as Value.Pair
+    if (Value.equal(entry.fst, k)) {
+      front.push(Value.mkPair(k, v))
+      let ret = l.snd as Value.List
       for (let i = front.length - 1; i >= 0; i--) {
-        ret = V.mkPair(front[i], ret)
+        ret = Value.mkPair(front[i], ret)
       }
       return ret
     } else {
       front.push(l.fst)
-      l = l.snd as V.List
+      l = l.snd as Value.List
     }
   }
-  return V.arrayToList(front.concat([V.mkPair(k, v)]))
+  return Value.arrayToList(front.concat([Value.mkPair(k, v)]))
 }
 registerFn('assoc-set', assocSet, Prelude)
 
@@ -636,7 +634,7 @@ registerFn('assoc-set', assocSet, Prelude)
 
 function charQ (x: any): boolean {
   checkContract(arguments, contract('char?', [C.any]))
-  return V.isChar(x)
+  return Value.isChar(x)
 }
 registerFn('char?', charQ, Prelude)
 
@@ -654,11 +652,11 @@ function pairwiseSatisfies<T> (f: (a: T, b: T) => boolean, xs: T[]): boolean {
 }
 
 function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): void {
-  const fn = function (...args: Value[]) {
+  const fn = function (...args: Value.T[]) {
     checkContract(arguments, contract(name, [], C.char))
-    return pairwiseSatisfies((a, b) => f((a as V.Char).value, (b as V.Char).value), args)
+    return pairwiseSatisfies((a, b) => f((a as Value.Char).value, (b as Value.Char).value), args)
   }
-  V.nameFn(name, fn)
+  Value.nameFn(name, fn)
   registerFn(name, fn, Prelude)
 }
 
@@ -674,11 +672,11 @@ mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase().codePointAt(0)! <= b.toL
 mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase().codePointAt(0)! >= b.toLowerCase().codePointAt(0)!)
 
 function mkCharPredicatePrim (name: string, f: (a: string) => boolean): void {
-  const fn = function (x: V.Char) {
+  const fn = function (x: Value.Char) {
     checkContract(arguments, contract(name, [], C.char))
     return f(x.value)
   }
-  V.nameFn(name, fn)
+  Value.nameFn(name, fn)
   registerFn(name, fn, Prelude)
 }
 
@@ -688,7 +686,7 @@ mkCharPredicatePrim('char-whitespace?', (a) => /\p{Z}/gu.test(a))
 mkCharPredicatePrim('char-upper-case?', (a) => /\p{Lu}/gu.test(a))
 mkCharPredicatePrim('char-lower-case?', (a) => /\p{Ll}/gu.test(a))
 
-function digitalValue (c: V.Char): number {
+function digitalValue (c: Value.Char): number {
   checkContract(arguments, contract('digit-value', [], C.char))
   const n = parseInt(c.value, 10)
   if (isNaN(n)) {
@@ -699,27 +697,27 @@ function digitalValue (c: V.Char): number {
 }
 registerFn('digit-value', digitalValue, Prelude)
 
-function charToInteger (c: V.Char): number {
+function charToInteger (c: Value.Char): number {
   checkContract(arguments, contract('char->integer', [], C.char))
   return c.value.codePointAt(0)!
 }
 registerFn('char->integer', charToInteger, Prelude)
 
-function integerToChar (n: number): V.Char {
+function integerToChar (n: number): Value.Char {
   checkContract(arguments, contract('integer->char', [C.integer]))
-  return V.mkChar(String.fromCodePoint(n))
+  return Value.mkChar(String.fromCodePoint(n))
 }
 registerFn('integer->char', integerToChar, Prelude)
 
-function charUpcase (c: V.Char): V.Char {
+function charUpcase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-upcase?', [], C.char))
-  return V.mkChar(c.value.toUpperCase())
+  return Value.mkChar(c.value.toUpperCase())
 }
 registerFn('char-upcase', charUpcase, Prelude)
 
-function charDowncase (c: V.Char): V.Char {
+function charDowncase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-downcase?', [], C.char))
-  return V.mkChar(c.value.toLowerCase())
+  return Value.mkChar(c.value.toLowerCase())
 }
 registerFn('char-downcase', charDowncase, Prelude)
 
@@ -728,9 +726,9 @@ registerFn('char-downcase', charDowncase, Prelude)
 // this implementation works. But... yea, maybe not!
 //
 // See: https://unicode.org/reports/tr18/#General_Category_Property
-function charFoldcase (c: V.Char): V.Char {
+function charFoldcase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-foldcase?', [], C.char))
-  return V.mkChar(c.value.toLowerCase())
+  return Value.mkChar(c.value.toLowerCase())
 }
 registerFn('char-foldcase', charFoldcase, Prelude)
 
@@ -744,13 +742,13 @@ registerFn('string?', stringQ, Prelude)
 
 // N.B., we don't implement the (make-string k) variant because our strings are
 // immutable, so having an "empty" string of size k does not make sense.
-function makeString (k: number, c: V.Char): string {
+function makeString (k: number, c: Value.Char): string {
   checkContract(arguments, contract('make-string', [C.integer, C.char]))
   return c.value.repeat(k)
 }
 registerFn('make-string', makeString, Prelude)
 
-function string (c: V.Char, ...cs: V.Char[]): string {
+function string (c: Value.Char, ...cs: Value.Char[]): string {
   checkContract(arguments, contract('string', [C.char], C.string))
   return [c, ...cs].map((e) => e.value).join('')
 }
@@ -762,9 +760,9 @@ function stringLength (s: string): number {
 }
 registerFn('string-length', stringLength, Prelude)
 
-function stringRef (s: string, i: number): V.Char {
+function stringRef (s: string, i: number): Value.Char {
   checkContract(arguments, contract('string-ref', [C.string, C.integer]))
-  return V.mkChar(s[i])
+  return Value.mkChar(s[i])
 }
 registerFn('string-ref', stringRef, Prelude)
 
@@ -775,7 +773,7 @@ function mkStringCompareFn (name: string, f: (a: string, b: string) => boolean):
     checkContract(arguments, contract(name, [], C.string))
     return pairwiseSatisfies((a, b) => f(a, b), args)
   }
-  V.nameFn(name, fn)
+  Value.nameFn(name, fn)
   registerFn(name, fn, Prelude)
 }
 
@@ -822,38 +820,38 @@ registerFn('string-append', stringAppend, Prelude)
 
 // TODO: stringToList has a 3-argument version, too, that specifies
 // a substring of s to turn into a list.
-function stringToList (s: string): V.List {
+function stringToList (s: string): Value.List {
   checkContract(arguments, contract('string->list', [C.string]))
   let ret = null
   for (let i = s.length - 1; i >= 0; i--) {
-    ret = V.mkPair(V.mkChar(s[i]), ret)
+    ret = Value.mkPair(Value.mkChar(s[i]), ret)
   }
   return ret
 }
 registerFn('string->list', stringToList, Prelude)
 
-function listToString (l: V.List): string {
+function listToString (l: Value.List): string {
   checkContract(arguments, contract('list->string', [C.list]))
   let ret = ''
   while (l !== null) {
-    ret += (l.fst as V.Char).value
-    l = l.snd as V.List
+    ret += (l.fst as Value.Char).value
+    l = l.snd as Value.List
   } 
   return ret
 }
 registerFn('list->string', listToString, Prelude)
 
-function stringToVector (s: string): V.Char[] {
+function stringToVector (s: string): Value.Char[] {
   checkContract(arguments, contract('string->vector', [C.string]))
   const ret = []
   for (let i = 0; i < s.length; i++) {
-    ret.push(V.mkChar(s[i]))
+    ret.push(Value.mkChar(s[i]))
   }
   return ret
 }
 registerFn('string->vector', stringToVector, Prelude)
 
-function vectorToString (v: V.Char[]): string {
+function vectorToString (v: Value.Char[]): string {
   checkContract(arguments, contract('vector->string', [C.vector]))
   let ret = ''
   for (let i = 0; i < v.length; i++) {
@@ -880,12 +878,12 @@ function stringContains (s: string, sub: string): boolean {
 }
 registerFn('string-contains', stringContains, Prelude)
 
-function stringSplit (s: string, sep: string): V.List {
+function stringSplit (s: string, sep: string): Value.List {
   checkContract(arguments, contract('string-split', [C.string, C.string]))
   const splits = s.split(sep)
   let ret = null
   for (let i = splits.length - 1; i >= 0; i--) {
-    ret = V.mkPair(splits[i], ret)
+    ret = Value.mkPair(splits[i], ret)
   }
   return ret
 }
@@ -901,8 +899,8 @@ registerFn('string-split-vector', stringSplitVector, Prelude)
 // TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
 // TODO: need to add a custom renderer for reactive file blobs
 
-type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: V.Closure | Function }
-function withFile (callback: V.Closure | Function): ReactiveFile {
+type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: Value.Closure | Function }
+function withFile (callback: Value.Closure | Function): ReactiveFile {
   checkContract(arguments, contract('with-file', [C.func]))  
   return {
     _scamperTag: 'struct',
@@ -916,17 +914,17 @@ registerFn('with-file', withFile, Prelude)
 
 function vectorQ (x: any): boolean {
   checkContract(arguments, contract('vector?', [C.any]))
-  return V.isArray(x)
+  return Value.isArray(x)
 }
 registerFn('vector?', vectorQ, Prelude)
 
-function vector (...xs: Value[]): Value[] {
+function vector (...xs: Value.T[]): Value.T[] {
   checkContract(arguments, contract('vector', [], C.any))
   return xs
 }
 registerFn('vector', vector, Prelude)
 
-function makeVector (n: number, fill: Value): Value[] {
+function makeVector (n: number, fill: Value.T): Value.T[] {
   checkContract(arguments, contract('make-vector', [C.integer, C.any]))
   const ret = []
   for (let i = 0; i < n; i++) {
@@ -936,25 +934,25 @@ function makeVector (n: number, fill: Value): Value[] {
 }
 registerFn('make-vector', makeVector, Prelude)
 
-function vectorLength (v: Value[]): number {
+function vectorLength (v: Value.T[]): number {
   checkContract(arguments, contract('vector-length', [C.vector])) 
   return v.length
 }
 registerFn('vector-length', vectorLength, Prelude)
 
-function vectorRef (v: Value[], i: number): Value {
+function vectorRef (v: Value.T[], i: number): Value.T {
   checkContract(arguments, contract('vector-ref', [C.vector, C.integer]))
   return v[i]
 }
 registerFn('vector-ref', vectorRef, Prelude)
 
-function vectorSet (v: Value[], i: number, x: Value): void {
+function vectorSet (v: Value.T[], i: number, x: Value.T): void {
   checkContract(arguments, contract('vector-set!', [C.vector, C.integer, C.any]))
   v[i] = x
 }
 registerFn('vector-set!', vectorSet, Prelude)
 
-function vectorFill (v: Value[], x: Value): void {
+function vectorFill (v: Value.T[], x: Value.T): void {
   checkContract(arguments, contract('vector-fill!', [C.vector, C.any]))
   for (let i = 0; i < v.length; i++) {
     v[i] = x
@@ -962,22 +960,22 @@ function vectorFill (v: Value[], x: Value): void {
 }
 registerFn('vector-fill!', vectorFill, Prelude)
 
-function vectorToList (v: Value[]): V.List {
+function vectorToList (v: Value.T[]): Value.List {
   checkContract(arguments, contract('vector->list', [C.vector]))
   let ret = null
   for (let i = v.length - 1; i >= 0; i--) {
-    ret = V.mkPair(v[i], ret)
+    ret = Value.mkPair(v[i], ret)
   }
   return ret
 }
 registerFn('vector->list', vectorToList, Prelude)
 
-function listToVector (l: V.List): Value[] {
+function listToVector (l: Value.List): Value.T[] {
   checkContract(arguments, contract('list->vector', [C.list]))
   const ret = []
   while (l !== null) {
     ret.push(l.fst)
-    l = l.snd as V.List
+    l = l.snd as Value.List
   }
   return ret
 }
@@ -1005,7 +1003,7 @@ function vectorRange (...args: number[]): number[] {
 }
 registerFn('vector-range', vectorRange, Prelude)
 
-function vectorAppend (...vecs: Value[][]): Value[] {
+function vectorAppend (...vecs: Value.T[][]): Value.T[] {
   checkContract(arguments, contract('vector-append', [], C.vector))
   const arr = []
   for (let i = 0; i < vecs.length; i++) {
@@ -1025,22 +1023,22 @@ registerFn('vector-append', vectorAppend, Prelude)
 
 function procedureQ (x: any): boolean {
   checkContract(arguments, contract('procedure?', [C.any]))
-  return V.isClosure(x) || V.isJsFunction(x)
+  return Value.isClosure(x) || Value.isJsFunction(x)
 }
 registerFn('procedure?', procedureQ, Prelude)
 
-function apply (f: V.Closure | Function, args: V.List): Value {
+function apply (f: Value.Closure | Function, args: Value.List): Value.T {
   checkContract(arguments, contract('apply', [C.func, C.list]))
 
-  return callFunction(f, ...V.listToArray(args))
+  return callFunction(f, ...Value.listToArray(args))
 }
 registerFn('apply', apply, Prelude)
 
-function stringMap (f: V.Closure | Function, s: string): string {
+function stringMap (f: Value.Closure | Function, s: string): string {
   checkContract(arguments, contract('string-map', [C.func, C.string]))
   let chs = []
   for (let i = 0; i < s.length; i++) {
-    chs.push(V.mkChar(s[i]))
+    chs.push(Value.mkChar(s[i]))
   }
   return chs.map((c) => callFunction(f, c).value).join('')
 }
@@ -1069,84 +1067,84 @@ function transpose <T> (arr: T[][]): T[][] {
   return result
 }
 
-function mapOne (f: V.Closure | Function, l: V.List): V.List {
+function mapOne (f: Value.Closure | Function, l: Value.List): Value.List {
   const values = []
   while (l !== null) {
     values.push(callFunction(f, l.fst))
-    l = l.snd as V.Pair
+    l = l.snd as Value.Pair
   }
-  return V.arrayToList(values)
+  return Value.arrayToList(values)
 }
 
-function map (f: V.Closure | Function, ...lsts: V.List[]): V.List {
+function map (f: Value.Closure | Function, ...lsts: Value.List[]): Value.List {
   checkContract(arguments, contract('map', [C.func], C.list))
   if (lsts.length === 0) {
     return null
   } else if (lsts.length === 1) {
     return mapOne(f, lsts[0])
   } else {
-    const lists = lsts.map(V.listToArray)
+    const lists = lsts.map(Value.listToArray)
     if (!(lists.map(l => l.length).every(n => n === lists[0].length))) {
       throw new ScamperError('Runtime', 'the lists passed to the function call do not have the same length')
     }
     const xs = transpose(lists)
-    return V.arrayToList(xs.map(vs => callFunction(f, ...vs)))
+    return Value.arrayToList(xs.map(vs => callFunction(f, ...vs)))
   }
 }
 registerFn('map', map, Prelude)
 
 // Additional list pipeline functions from racket/base
 
-function filter (f: V.Closure | Function, lst: V.List): V.List {
+function filter (f: Value.Closure | Function, lst: Value.List): Value.List {
   checkContract(arguments, contract('filter', [C.func, C.list]))
   const values = []
   while (lst !== null) {
     if (callFunction(f, lst.fst)) {
       values.push(lst.fst)
     }
-    lst = lst.snd as V.Pair
+    lst = lst.snd as Value.Pair
   }
-  return V.arrayToList(values) 
+  return Value.arrayToList(values) 
 }
 registerFn('filter', filter, Prelude)
 
-function fold (f: V.Closure | Function, init: Value, lst: V.List): Value {
+function fold (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold', [C.func, C.any, C.list]))
   let acc = init
   while (lst !== null) {
     acc = callFunction(f, acc, lst.fst)
-    lst = lst.snd as V.Pair
+    lst = lst.snd as Value.Pair
   }
   return acc
 }
 registerFn('fold', fold, Prelude)
 
-function reduce (f: V.Closure | Function, lst: V.List): Value {
+function reduce (f: Value.Closure | Function, lst: Value.List): Value.T {
   checkContract(arguments, contract('reduce', [C.func, C.nonemptyList]))
-  let acc = (lst as V.Pair).fst
-  lst = (lst as V.Pair).snd as V.Pair
+  let acc = (lst as Value.Pair).fst
+  lst = (lst as Value.Pair).snd as Value.Pair
   while (lst !== null) {
     acc = callFunction(f, acc, lst.fst)
-    lst = lst.snd as V.Pair
+    lst = lst.snd as Value.Pair
   }
   return acc
 }
 registerFn('reduce', reduce, Prelude)
 
-function foldLeft (f: V.Closure | Function, init: Value, lst: V.List): Value {
+function foldLeft (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold-left', [C.func, C.any, C.list]))
   let acc = init
   while (lst !== null) {
     acc = callFunction(f, acc, lst.fst)
-    lst = lst.snd as V.Pair
+    lst = lst.snd as Value.Pair
   }
   return acc
 }
 registerFn('fold-left', foldLeft, Prelude)
 
-function foldRight (f: V.Closure | Function, init: Value, lst: V.List): Value {
+function foldRight (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold-right', [C.func, C.any, C.list]))
-  const values = V.listToArray(lst)
+  const values = Value.listToArray(lst)
   let acc = init
   for (let i = values.length - 1; i >= 0; i--) {
     acc = callFunction(f, values[i], acc)
@@ -1155,9 +1153,9 @@ function foldRight (f: V.Closure | Function, init: Value, lst: V.List): Value {
 }
 registerFn('fold-right', foldRight, Prelude)
 
-function reduceRight (f: V.Closure | Function, lst: V.List): Value {
+function reduceRight (f: Value.Closure | Function, lst: Value.List): Value.T {
   checkContract(arguments, contract('reduce-right', [C.func, C.nonemptyList]))
-  const values = V.listToArray(lst)
+  const values = Value.listToArray(lst)
   let acc = values.pop()
   for (let i = values.length - 1; i >= 0; i--) {
     acc = callFunction(f, values[i], acc)
@@ -1166,7 +1164,7 @@ function reduceRight (f: V.Closure | Function, lst: V.List): Value {
 }
 registerFn('reduce-right', reduceRight, Prelude)
 
-function vectorMap (f: V.Closure | Function, ...vecs: Value[][]): Value[] {
+function vectorMap (f: Value.Closure | Function, ...vecs: Value.T[][]): Value.T[] {
   checkContract(arguments, contract('vector-map', [C.func], C.vector))
   if (vecs.length === 0) {
     return []
@@ -1182,7 +1180,7 @@ function vectorMap (f: V.Closure | Function, ...vecs: Value[][]): Value[] {
 }
 registerFn('vector-map', vectorMap, Prelude)
 
-function vectorMapBang (f: V.Closure | Function, vec: Value[]): void {
+function vectorMapBang (f: Value.Closure | Function, vec: Value.T[]): void {
   checkContract(arguments, contract('vector-map!', [C.func, C.vector]))
   for (let i = 0; i < vec.length; i++) {
     vec[i] = callFunction(f, vec[i])
@@ -1190,7 +1188,7 @@ function vectorMapBang (f: V.Closure | Function, vec: Value[]): void {
 }
 registerFn('vector-map!', vectorMapBang, Prelude)
 
-function vectorForEach (f: V.Closure | Function, vec: Value[]): void {
+function vectorForEach (f: Value.Closure | Function, vec: Value.T[]): void {
   checkContract(arguments, contract('vector-for-each', [C.func, C.vector]))
   for (let i = 0; i < vec.length; i++) {
     callFunction(f, vec[i])
@@ -1198,7 +1196,7 @@ function vectorForEach (f: V.Closure | Function, vec: Value[]): void {
 }
 registerFn('vector-for-each', vectorForEach, Prelude)
 
-function forRange (start: number, end: number, f: V.Closure | Function): void {
+function forRange (start: number, end: number, f: Value.Closure | Function): void {
   checkContract(arguments, contract('for-range', [C.integer, C.integer, C.func]))
   if (start < end) {
     for (let i = start; i < end; i++) {
@@ -1227,7 +1225,7 @@ registerFn('for-range', forRange, Prelude)
 
 // Additional control features
 
-function vectorFilter (f: V.Closure | Function, lst: Value[]): Value[] {
+function vectorFilter (f: Value.Closure | Function, lst: Value.T[]): Value.T[] {
   checkContract(arguments, contract('vector-filter', [C.func, C.vector]))
   const ret = []
   for (let i = 0; i < lst.length; i++) {
@@ -1258,10 +1256,10 @@ function qq (): never {
   throw new ScamperError ('Runtime', 'Hole encountered in program!')
 }
 
-function compose (...fss: (V.Closure | Function)[]): V.Closure | Function {
+function compose (...fss: (Value.Closure | Function)[]): Value.Closure | Function {
   checkContract(arguments, contract('compose', [C.func], C.func))
   let first = fss[fss.length - 1]
-  return (x: Value) => {
+  return (x: Value.T) => {
     let ret = callFunction(first, x)
     for (let i = fss.length - 2; i >= 0; i--) {
       ret = callFunction(fss[i], ret)
@@ -1272,7 +1270,7 @@ function compose (...fss: (V.Closure | Function)[]): V.Closure | Function {
 registerFn('compose', compose, Prelude)
 registerFn('o', compose, Prelude)
 
-function pipe (init: Value, ...fs: (V.Closure | Function)[]): Value {
+function pipe (init: Value.T, ...fs: (Value.Closure | Function)[]): Value.T {
   checkContract(arguments, contract('|>', [C.any, C.func], C.func))
   let acc = init
   for (let i = 0; i < fs.length; i++) {
@@ -1282,7 +1280,7 @@ function pipe (init: Value, ...fs: (V.Closure | Function)[]): Value {
 }
 registerFn('|>', pipe, Prelude)
 
-function range (...args: number[]): V.List {
+function range (...args: number[]): Value.List {
   checkContract(arguments, contract('range', [], C.number))
   if (args.length === 0 || args.length > 3) {
     throw new ScamperError('Runtime', '1, 2, or 3 numbers must be passed to function')
@@ -1299,7 +1297,7 @@ function range (...args: number[]): V.List {
     for (let i = m; step > 0 ? i < n : i > n; i += step) {
       arr.push(i)
     }
-    return V.arrayToList(arr)
+    return Value.arrayToList(arr)
   }
 }
 registerFn('range', range, Prelude)
@@ -1310,7 +1308,7 @@ function random (n: number): number {
 }
 registerFn('random', random, Prelude)
 
-function withHandler (handler: V.Closure | Function, fn: V.Closure | Function, ...args: Value[]): Value {
+function withHandler (handler: Value.Closure | Function, fn: Value.Closure | Function, ...args: Value.T[]): Value.T {
   checkContract(arguments, contract('with-handler', [C.func, C.func], C.any))
   throw new ScamperError('Runtime', 'with-handler unimplemented')
 }

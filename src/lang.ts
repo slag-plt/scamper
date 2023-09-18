@@ -69,33 +69,14 @@ export class ICE extends Error {
   }
 }
 
+export type Id = string
 export type Bracket = '(' | '[' | '{'
-export type Sexp = Atom | List
-export type Atom = { tag: 'atom', value: string, range: Range }
-export type List = { tag: 'list', bracket: Bracket, value: Sexp[], range: Range }
 
-export const mkAtom = (value: string, range: Range): Atom =>
-  ({ tag: 'atom', value, range })
-export const mkList = (value: Sexp[], bracket: Bracket, range: Range): List =>
-  ({ tag: 'list', bracket, value, range }) 
-
-function surround (s: string, bracket: Bracket): string {
-  switch (bracket) {
-    case '(':
-      return `(${s})`
-    case '[':
-      return `[${s}]`
-    case '{':
-      return `{${s}}`
-  }
-}
-
-export function sexpToString (s: Sexp): string {
-  switch (s.tag) {
-    case 'atom':
-      return s.value
-    case 'list':
-      return `${surround(s.value.map(sexpToString).join(' '), s.bracket)}`
+export function closeBracket (b: Bracket): string {
+  switch (b) {
+    case '(': return ')'
+    case '[': return ']'
+    case '{': return '}'
   }
 }
 
@@ -119,192 +100,508 @@ export function charToName (c: string): string {
   }
 }
 
-export type Id = string
-export type Binding = { name: Id, body: Exp }
+export namespace Sexp {
+  export type T = Atom | List
+  export type Atom = { _scamperTag: 'struct', kind: 'atom', value: string, range: Range }
+  export type List = { _scamperTag: 'struct', kind: 'list', bracket: Bracket, value: T[], range: Range }
 
-export type MatchBranch = { pattern: Pat, body: Exp }
-export type CondBranch = { guard: Exp, body: Exp }
+  export const mkAtom = (value: string, range: Range): Atom =>
+    ({ _scamperTag: 'struct', kind: 'atom', value, range })
+  export const mkList = (value: T[], bracket: Bracket, range: Range): List =>
+    ({ _scamperTag: 'struct', kind: 'list', bracket, value, range }) 
 
-export type Pat = PVar | PWild | PNum | PBool | PChar | PStr | PNull | PCtor
-export type PVar = { tag: 'var', name: string, range: Range }
-export type PWild = { tag: 'wild', range: Range }
-export type PNum = { tag: 'num', value: number, range: Range }
-export type PBool = { tag: 'bool', value: boolean, range: Range }
-export type PChar = { tag: 'char', value: string, range: Range }
-export type PStr = { tag: 'str', value: string, range: Range }
-export type PNull = { tag: 'null', range: Range }
-export type PCtor = { tag: 'ctor', ctor: string, args: Pat[], range: Range }
+  function surround (s: string, bracket: Bracket): string {
+    switch (bracket) {
+      case '(':
+        return `(${s})`
+      case '[':
+        return `[${s}]`
+      case '{':
+        return `{${s}}`
+    }
+  }
 
-export const mkPVar = (name: string, range: Range): Pat => ({ tag: 'var', name, range })
-export const mkPWild = (range: Range): Pat => ({ tag: 'wild', range })
-export const mkPNum = (value: number, range: Range): Pat => ({ tag: 'num', value, range })
-export const mkPBool = (value: boolean, range: Range): Pat => ({ tag: 'bool', value, range })
-export const mkPChar = (value: string, range: Range): Pat => ({ tag: 'char', value, range })
-export const mkPStr = (value: string, range: Range): Pat => ({ tag: 'str', value, range })
-export const mkPNull = (range: Range): Pat => ({ tag: 'null', range })
-export const mkPCtor = (ctor: string, args: Pat[], range: Range): Pat => ({ tag: 'ctor', ctor, args, range })
-
-export function patToSexp (p: Pat): Sexp {
-  switch (p.tag) {
-    case 'var':
-      return mkAtom(p.name, p.range)
-    case 'wild':
-      return mkAtom('_', p.range)
-    case 'num':
-      return mkAtom(p.value.toString(), p.range)
-    case 'bool':
-      return mkAtom(p.value ? "#t" : "#f", p.range)
-    case 'char':
-      return mkAtom(`#\\${charToName(p.value)}`, p.range)
-    case 'str':
-      return mkAtom(`"${p.value}"`, p.range)
-    case 'null':
-      return mkAtom('null', p.range)
-    case 'ctor':
-      return mkList([mkAtom(p.ctor, noRange), ...p.args.map(patToSexp)], '(', p.range)
+  export function sexpToString (s: T): string {
+    switch (s.kind) {
+      case 'atom':
+        return s.value
+      case 'list':
+        return `${surround(s.value.map(sexpToString).join(' '), s.bracket)}`
+    }
   }
 }
 
-export function patToString (p: Pat): string {
-  return sexpToString(patToSexp(p))
-}
+export namespace Pat {
+  export type MatchBranch = { pattern: T, body: Exp.T }
 
-export type Exp = Var | Num | Bool | Char | Str | Lam | Let | App | And | Or | If | Begin | Match | Cond
-export type Var = { tag: 'var', name: string, range: Range }
-export type Num = { tag: 'num', value: number, range: Range }
-export type Bool = { tag: 'bool', value: boolean, range: Range }
-export type Char = { tag: 'char', value: string, range: Range }
-export type Str = { tag: 'str', value: string, range: Range }
-export type Lam = { tag: 'lam', args: Id[], body: Exp, bracket: Bracket, range: Range }
-export type Let = { tag: 'let', bindings: Binding[], body: Exp, bracket: Bracket, range: Range }
-export type App = { tag: 'app', head: Exp, args: Exp[], bracket: Bracket, range: Range }
-export type And = { tag: 'and', exps: Exp[], bracket: Bracket, range: Range }
-export type Or = { tag: 'or', exps: Exp[], bracket: Bracket, range: Range }
-export type If = { tag: 'if', guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range }
-export type Begin = { tag: 'begin', exps: Exp[], bracket: Bracket, range: Range }
-export type Match = { tag: 'match', scrutinee: Exp, branches: MatchBranch[], bracket: Bracket, range: Range }
-export type Cond = { tag: 'cond', branches: CondBranch[], range: Range }
+  export type T = Var | Wild | Num | Bool | Char | Str | Null | Ctor
+  export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
+  export type Wild = { _scamperTag: 'struct', kind: 'wild', range: Range }
+  export type Num = { _scamperTag: 'struct', kind: 'num', value: number, range: Range }
+  export type Bool = { _scamperTag: 'struct', kind: 'bool', value: boolean, range: Range }
+  export type Char = { _scamperTag: 'struct', kind: 'char', value: string, range: Range }
+  export type Str = { _scamperTag: 'struct', kind: 'str', value: string, range: Range }
+  export type Null = { _scamperTag: 'struct', kind: 'null', range: Range }
+  export type Ctor = { _scamperTag: 'struct', kind: 'ctor', ctor: string, args: T[], range: Range }
 
-export const mkVar = (name: string, range: Range): Exp =>
-  ({ tag: 'var', name, range })
-export const mkNum = (value: number, range: Range): Exp =>
-  ({ tag: 'num', value, range })
-export const mkBool = (value: boolean, range: Range): Exp =>
-  ({ tag: 'bool', value, range })
-export const mkChar = (value: string, range: Range): Exp =>
-  ({ tag: 'char', value, range })  
-export const mkStr = (value: string, range: Range): Exp =>
-  ({ tag: 'str', value, range })
-export const mkLam = (args: Id[], body: Exp, bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'lam', args, body, bracket, range })
-export const mkLet = (bindings: Binding[], body: Exp, bracket: Bracket, range: Range): Exp => 
-  ({ tag: 'let', bindings, body, bracket, range })
-export const mkApp = (head: Exp, args: Exp[], bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'app', head, args, bracket, range })
-export const mkAnd = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'and', exps, bracket, range })
-export const mkOr = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'or', exps, bracket, range })
-export const mkIf = (guard: Exp, ifb: Exp, elseb: Exp, bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'if', guard, ifb, elseb, bracket, range })
-export const mkBegin = (exps: Exp[], bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'begin', exps, bracket, range })
-export const mkMatch = (scrutinee: Exp, branches: MatchBranch[], bracket: Bracket, range: Range): Exp =>
-  ({ tag: 'match', scrutinee, branches, bracket, range })
-export const mkCond = (branches: CondBranch[], range: Range): Exp =>
-  ({ tag: 'cond', branches, range })
+  export const mkVar = (name: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'var', name, range })
+  export const mkWild = (range: Range): T => ({ _scamperTag: 'struct', kind: 'wild', range })
+  export const mkNum = (value: number, range: Range): T => ({ _scamperTag: 'struct', kind: 'num', value, range })
+  export const mkBool = (value: boolean, range: Range): T => ({ _scamperTag: 'struct', kind: 'bool', value, range })
+  export const mkChar = (value: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'char', value, range })
+  export const mkStr = (value: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'str', value, range })
+  export const mkNull = (range: Range): T => ({ _scamperTag: 'struct', kind: 'null', range })
+  export const mkCtor = (ctor: string, args: T[], range: Range): T => ({ _scamperTag: 'struct', kind: 'ctor', ctor, args, range })
 
-export function expToSexp(e: Exp): Sexp {
-  switch (e.tag) {
-    case 'var':
-      return mkAtom(e.name, e.range)
-    case 'num':
-      return mkAtom(e.value.toString(), e.range)
-    case 'bool':
-      return mkAtom(e.value ? "#t" : "#f", e.range)
-    case 'char':
-      return mkAtom(`#\\${charToName(e.value)}`, e.range)
-    case 'str':
-      return mkAtom(`"${e.value}"`, e.range)
-    case 'lam':
-      return mkList([
-        mkAtom('lambda', noRange),
-        mkList(e.args.map((arg) => mkAtom(arg, noRange)), '(', noRange), expToSexp(e.body)],
-        e.bracket, e.range)
-    case 'let':
-      return mkList([
-        mkAtom('let', noRange),
-        mkList(e.bindings.map(
-          b => mkList([mkAtom(b.name, noRange), expToSexp(b.body)], '[', noRange)),
-          '(', noRange),
-        expToSexp(e.body)], e.bracket, e.range)
-    case 'app':
-      return mkList([expToSexp(e.head), ...e.args.map(expToSexp)], '(', e.range)
-    case 'and':
-      return mkList([mkAtom('and', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
-    case 'or':
-      return mkList([mkAtom('or', noRange), ...e.exps.map(expToSexp)], e.bracket, e.range)
-    case 'if':
-      return mkList([mkAtom('if', noRange), expToSexp(e.guard), expToSexp(e.ifb), expToSexp(e.elseb)], '(', e.range)
-    case 'begin':
-      return mkList([mkAtom('begin', noRange), ...e.exps.map(expToSexp)], '(', e.range)
-    case 'match':
-      return mkList([
-        mkAtom('match', noRange),
-        expToSexp(e.scrutinee),
-        mkList(e.branches.map((b) => mkList([patToSexp(b.pattern), expToSexp(b.body)], '[', noRange)), '(', noRange)],
-        e.bracket, e.range)
-    case 'cond':
-      return mkList([
-        mkAtom('cond', noRange),
-        ...e.branches.map((b) => mkList([expToSexp(b.guard), expToSexp(b.body)], '[', noRange))],
-        '(', e.range)
+  export function toSexp (p: T): Sexp.T {
+    switch (p.kind) {
+      case 'var':
+        return Sexp.mkAtom(p.name, p.range)
+      case 'wild':
+        return Sexp.mkAtom('_', p.range)
+      case 'num':
+        return Sexp.mkAtom(p.value.toString(), p.range)
+      case 'bool':
+        return Sexp.mkAtom(p.value ? "#t" : "#f", p.range)
+      case 'char':
+        return Sexp.mkAtom(`#\\${charToName(p.value)}`, p.range)
+      case 'str':
+        return Sexp.mkAtom(`"${p.value}"`, p.range)
+      case 'null':
+        return Sexp.mkAtom('null', p.range)
+      case 'ctor':
+        return Sexp.mkList([Sexp.mkAtom(p.ctor, noRange), ...p.args.map(toSexp)], '(', p.range)
+    }
+  }
+
+  export function toString (p: T): string {
+    return Sexp.sexpToString(toSexp(p))
   }
 }
 
-export function expToString(e: Exp): string {
-  return sexpToString(expToSexp(e))
-}
+export namespace Exp {
+  export type T = Var | Val | Lam | Let | App | And | Or | If | Begin | Match | Cond
+  
+  export type Binding = { name: Id, body: T }
+  export type CondBranch = { guard: T, body: T }
+  export type MatchBranch = { pattern: Pat.T, body: T }
 
-export type Stmt = StmtBinding | StmtExp | Import | Display | Struct
-export type StmtBinding = { tag: 'binding', name: Id, body: Exp, bracket: Bracket, range: Range }
-export type StmtExp = { tag: 'stmtexp', body: Exp }
-export type Import = { tag: 'import', modName: string, bracket: Bracket, range: Range }
-export type Display = { tag: 'display', body: Exp, bracket: Bracket, range: Range }
-export type Struct = { tag: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
+  export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
+  export type Val = { _scamperTag: 'struct', kind: 'val', value: Value.T, range: Range } 
+  export type Lam = { _scamperTag: 'struct', kind: 'lam', args: Id[], body: T, bracket: Bracket, range: Range }
+  export type Let = { _scamperTag: 'struct', kind: 'let', bindings: Binding[], body: T, bracket: Bracket, range: Range }
+  export type App = { _scamperTag: 'struct', kind: 'app', head: T, args: T[], bracket: Bracket, range: Range }
+  export type And = { _scamperTag: 'struct', kind: 'and', exps: T[], bracket: Bracket, range: Range }
+  export type Or = { _scamperTag: 'struct', kind: 'or', exps: T[], bracket: Bracket, range: Range }
+  export type If = { _scamperTag: 'struct', kind: 'if', guard: T, ifb: T, elseb: T, bracket: Bracket, range: Range }
+  export type Begin = { _scamperTag: 'struct', kind: 'begin', exps: T[], bracket: Bracket, range: Range }
+  export type Match = { _scamperTag: 'struct', kind: 'match', scrutinee: T, branches: MatchBranch[], bracket: Bracket, range: Range }
+  export type Cond = { _scamperTag: 'struct', kind: 'cond', branches: CondBranch[], range: Range }
 
-export const mkStmtBinding = (name: Id, body: Exp, bracket: Bracket, range: Range): Stmt =>
-  ({ tag: 'binding', name, body, bracket, range })
-export const mkStmtExp = (body: Exp): Stmt => ({ tag: 'stmtexp', body })
-export const mkImport = (modName: string, bracket: Bracket, range: Range): Stmt => ({ tag: 'import', modName, bracket, range })
-export const mkDisplay = (body: Exp, bracket: Bracket, range: Range): Stmt => ({ tag: 'display', body, bracket, range })
-export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): Stmt => ({ tag: 'struct', id, fields, bracket, range })
+  export const mkVar = (name: string, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'var', name, range })
+  export const mkVal = (value: Value.T, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'val', value, range })
+  export const mkLam = (args: Id[], body: T, bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'lam', args, body, bracket, range })
+  export const mkLet = (bindings: Binding[], body: T, bracket: Bracket, range: Range): T => 
+    ({ _scamperTag: 'struct', kind: 'let', bindings, body, bracket, range })
+  export const mkApp = (head: T, args: T[], bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'app', head, args, bracket, range })
+  export const mkAnd = (exps: T[], bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'and', exps, bracket, range })
+  export const mkOr = (exps: T[], bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'or', exps, bracket, range })
+  export const mkIf = (guard: T, ifb: T, elseb: T, bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'if', guard, ifb, elseb, bracket, range })
+  export const mkBegin = (exps: T[], bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'begin', exps, bracket, range })
+  export const mkMatch = (scrutinee: T, branches: MatchBranch[], bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'match', scrutinee, branches, bracket, range })
+  export const mkCond = (branches: CondBranch[], range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'cond', branches, range })
 
-export function stmtToSexp(s: Stmt): Sexp {
-  switch (s.tag) {
-    case 'binding':
-      return mkList([mkAtom('define', noRange), mkAtom(s.name, noRange), expToSexp(s.body)], s.bracket, s.range)
-    case 'stmtexp':
-      return expToSexp(s.body)
-    case 'import':
-      return mkList([mkAtom('import', noRange), mkAtom(s.modName, noRange)], s.bracket, s.range)
-    case 'display':
-      return mkList([mkAtom('define', noRange), expToSexp(s.body)], s.bracket, s.range)
-    case 'struct':
-      return mkList([mkAtom('struct', noRange), mkAtom(s.id, noRange), ...s.fields.map((f) => mkAtom(f, noRange))], '(', s.range)
+  export function toSexp (e: T): Sexp.T {
+    switch (e.kind) {
+      case 'var':
+        return Sexp.mkAtom(e.name, e.range)
+      case 'val':
+        return Value.toSexp(e.value, e.range)
+      case 'lam':
+        return Sexp.mkList([
+          Sexp.mkAtom('lambda', noRange),
+          Sexp.mkList(e.args.map((arg) => Sexp.mkAtom(arg, noRange)), '(', noRange), toSexp(e.body)],
+          e.bracket, e.range)
+      case 'let':
+        return Sexp.mkList([
+          Sexp.mkAtom('let', noRange),
+          Sexp.mkList(e.bindings.map(
+            b => Sexp.mkList([Sexp.mkAtom(b.name, noRange), toSexp(b.body)], '[', noRange)),
+            '(', noRange),
+          toSexp(e.body)], e.bracket, e.range)
+      case 'app':
+        return Sexp.mkList([toSexp(e.head), ...e.args.map(toSexp)], '(', e.range)
+      case 'and':
+        return Sexp.mkList([Sexp.mkAtom('and', noRange), ...e.exps.map(toSexp)], e.bracket, e.range)
+      case 'or':
+        return Sexp.mkList([Sexp.mkAtom('or', noRange), ...e.exps.map(toSexp)], e.bracket, e.range)
+      case 'if':
+        return Sexp.mkList([Sexp.mkAtom('if', noRange), toSexp(e.guard), toSexp(e.ifb), toSexp(e.elseb)], '(', e.range)
+      case 'begin':
+        return Sexp.mkList([Sexp.mkAtom('begin', noRange), ...e.exps.map(toSexp)], '(', e.range)
+      case 'match':
+        return Sexp.mkList([
+          Sexp.mkAtom('match', noRange),
+          toSexp(e.scrutinee),
+          Sexp.mkList(e.branches.map((b) => Sexp.mkList([Pat.toSexp(b.pattern), toSexp(b.body)], '[', noRange)), '(', noRange)],
+          e.bracket, e.range)
+      case 'cond':
+        return Sexp.mkList([
+          Sexp.mkAtom('cond', noRange),
+          ...e.branches.map((b) => Sexp.mkList([toSexp(b.guard), toSexp(b.body)], '[', noRange))],
+          '(', e.range)
+    }
+  }
+
+  export function toString (e: T): string {
+    return Sexp.sexpToString(toSexp(e))
   }
 }
 
-export function stmtToString(s: Stmt): string {
-  return sexpToString(stmtToSexp(s))
+export namespace Stmt {
+  export type T = Binding | Exp | Import | Display | Struct
+  export type Binding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
+  export type Exp = { _scamperTag: 'struct', kind: 'exp', body: Exp.T }
+  export type Import = { _scamperTag: 'struct', kind: 'import', modName: string, bracket: Bracket, range: Range }
+  export type Display = { _scamperTag: 'struct', kind: 'display', body: Exp.T, bracket: Bracket, range: Range }
+  export type Struct = { _scamperTag: 'struct', kind: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
+
+  export const mkStmtBinding = (name: Id, body: Exp.T, bracket: Bracket, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'binding', name, body, bracket, range })
+  export const mkStmtExp = (body: Exp.T): T => ({ _scamperTag: 'struct', kind: 'exp', body })
+  export const mkImport = (modName: string, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'import', modName, bracket, range })
+  export const mkDisplay = (body: Exp.T, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'display', body, bracket, range })
+  export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'struct', id, fields, bracket, range })
+
+  export function toSexp(s: T): Sexp.T {
+    switch (s.kind) {
+      case 'binding':
+        return Sexp.mkList([Sexp.mkAtom('define', noRange), Sexp.mkAtom(s.name, noRange), Exp.toSexp(s.body)], s.bracket, s.range)
+      case 'exp':
+        return Exp.toSexp(s.body)
+      case 'import':
+        return Sexp.mkList([Sexp.mkAtom('import', noRange), Sexp.mkAtom(s.modName, noRange)], s.bracket, s.range)
+      case 'display':
+        return Sexp.mkList([Sexp.mkAtom('define', noRange), Exp.toSexp(s.body)], s.bracket, s.range)
+      case 'struct':
+        return Sexp.mkList([Sexp.mkAtom('struct', noRange), Sexp.mkAtom(s.id, noRange), ...s.fields.map((f) => Sexp.mkAtom(f, noRange))], '(', s.range)
+    }
+  }
+
+  export function toString(s: T): string {
+    return Sexp.sexpToString(toSexp(s))
+  }
 }
 
-export type Prog = Stmt[]
+export type Prog = Stmt.T[]
 
-export function progToSexps(p: Prog): Sexp[] {
-  return p.map(stmtToSexp)
+export function progToSexps(p: Prog): Sexp.T[] {
+  return p.map(Stmt.toSexp)
 }
 
 export function progToString(p: Prog, sep: string = '\n\n'): string {
-  return progToSexps(p).map(sexpToString).join(sep)
+  return progToSexps(p).map(Sexp.sexpToString).join(sep)
+}
+
+export namespace Op {
+  export type Label = string
+  export const freshLabel: () => Label = (() => {
+    let counter = 0
+    return () => `lbl_${counter++}`
+  })()
+
+  export type MatchBranch = { pattern: Pat.T, body: T[] }
+
+  export type T    = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Cond | Lbl | Exn
+  export type Var   = { tag: 'var', name: string, range: Range }
+  export type Val   = { tag: 'val', value: Value.T }
+  export type Cls   = { tag: 'cls', params: Id[], ops: T[] }
+  export type Ap    = { tag: 'ap', arity: number, range: Range }
+  export type If    = { tag: 'if', ifb: T[], elseb: T[], range: Range }
+  export type Let   = { tag: 'let', names: Id[] }
+  export type Seq   = { tag: 'seq', numSubexps: number }
+  export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
+  export type And   = { tag: 'and', jmpTo: Label, range: Range }
+  export type Or    = { tag: 'or', jmpTo: Label, range: Range }
+  export type Cond  = { tag: 'cond', body: T[], end: Label, range: Range }
+  export type Lbl   = { tag: 'lbl', name: string }
+  export type Exn   = { tag: 'exn', msg: string, modName?: string, range?: Range, source?: string }
+
+  export const mkVar = (name: string, range: Range): T => ({ tag: 'var', name, range })
+  export const mkValue = (value: Value.T): T => ({ tag: 'val', value })
+  export const mkCls = (params: Id[], ops: T[]): T => ({ tag: 'cls', params, ops })
+  export const mkAp = (arity: number, range: Range): T => ({ tag: 'ap', arity, range })
+  export const mkIf = (ifb: T[], elseb: T[], range: Range): T => ({ tag: 'if', ifb, elseb, range })
+  export const mkLet = (names: Id[]): T => ({ tag: 'let', names })
+  export const mkSeq = (numSubexps: number): T => ({ tag: 'seq', numSubexps })
+  export const mkMatch = (branches: MatchBranch[], range: Range): T => ({ tag: 'match', branches, range })
+  export const mkAnd = (jmpTo: Label, range: Range): T => ({ tag: 'and', jmpTo, range })
+  export const mkOr = (jmpTo: Label, range: Range): T => ({ tag: 'or', jmpTo, range })
+  export const mkCond = (body: T[], end: Label, range: Range): T => ({ tag: 'cond', body, end, range })
+  export const mkLbl = (name: string): T => ({ tag: 'lbl', name })
+  export const mkExn = (msg: string, modName?: string, range?: Range, source?: string): T => ({ tag: 'exn', msg, modName, range, source })
+
+  export function toString (op: T): string {
+    switch (op.tag) {
+      case 'var':
+        return `var ${op.name}`
+      case 'val':
+        return `val ${Value.toString(op.value)}`
+      case 'cls':
+        return `cls (${op.params.join(' ')})`
+      case 'ap':
+        return `ap ${op.arity}`
+      case 'if':
+        return `if (${op.ifb.map(toString).join('; ')}) else (${op.elseb.map(toString).join('; ')}))`
+      case 'let':
+        return `let (${op.names.join(' ')})`
+      case 'seq':
+        return `seq ${op.numSubexps}`
+      case 'match':
+        return `match (${op.branches.map((b) => Pat.toString(b.pattern) + ' => ' + b.body.map(toString).join('; ')).join(' | ')})`
+      case 'and':
+        return `and (jmpto ${op.jmpTo})`
+      case 'or':
+        return `or (jmpto ${op.jmpTo})`
+      case 'cond':
+        return `cond (${op.end}, ${op.body.map(toString).join('; ')})`
+      case 'lbl':
+        return `lbl ${op.name}`
+      case 'exn':
+        return `exn "${op.msg}"`
+    }
+  }
+}
+
+export namespace Value {
+  export type TaggedObject = Closure | Char | Pair | Struct
+  export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
+  export type Char = { _scamperTag: 'char', value: string }
+  export type Pair = { _scamperTag: 'pair', fst: T, snd: T, isList: boolean }
+
+  // NOTE: to maximize interoperability, a struct is an object with at least
+  // a _scamperTag and kind field. The rest of the fields are the fields of the
+  // the struct, all required to be string keys (i.e., no index or symbol keys).
+  // The order of arguments of a struct's constructor is thus property order of
+  // the corresponding object, i.e., the order in which the fields are defined.
+  export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any }
+
+  export type List = null | Pair
+  export type T = boolean | number | string | List | undefined | T[] | TaggedObject | Function | Object
+
+  export const isNumber = (v: T): boolean => typeof v === 'number'
+  export const isBoolean = (v: T): boolean => typeof v === 'boolean'
+  export const isString = (v: T): boolean => typeof v === 'string'
+  export const isNull = (v: T): boolean => v === null
+  export const isVoid = (v: T): boolean => v === undefined
+  export const isArray = (v: T): boolean => Array.isArray(v)
+  export const isClosure = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'closure'
+  export const isJsFunction = (v: T): boolean => typeof v === 'function'
+  export const isFunction = (v: T): boolean => isJsFunction(v) || isClosure(v)
+  export const isChar = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'char'
+  export const isPair = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'pair'
+  export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
+  export const isStruct = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'struct'
+  export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct).kind === k
+
+  export const mkClosure = (arity: number, params: Id[], ops: Op.T[], env: Env): T =>
+    ({ _scamperTag: 'closure', arity, params, ops, env })
+  export const mkChar = (v: string): Char => ({ _scamperTag: 'char', value: v })
+  export const mkPair = (fst: T, snd: T): Pair => ({
+    _scamperTag: 'pair', fst, snd,
+    isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
+  })
+  export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
+    const ret: Struct = { _scamperTag: 'struct', kind }
+    for (let i = 0; i < fields.length; i++) {
+      ret[fields[i]] = values[i]
+    }
+    return ret
+  }
+
+  export const nameFn = (name: string, fn: Function): Function =>
+    Object.defineProperty(fn, 'name', { value: name })
+
+  export function listToArray (l: List): T[] {
+    const ret = []
+    let cur = l
+    while (cur !== null) {
+      ret.push(cur.fst)
+      cur = cur.snd as Pair
+    }
+    return ret
+  }
+
+  export function arrayToList (arr: T[]): Pair | null {
+    let ret = null
+    for (let i = arr.length - 1; i >= 0; i--) {
+      ret = mkPair(arr[i], ret)
+    }
+    return ret
+  }
+
+  export function toString (v: T) {
+    if (isClosure(v)) {
+      return `<closure (${(v as Closure).params.join(' ')})>`
+    } else if (typeof v === 'function') {
+      return `<jsfunc: (${v.name})>`
+    } else {
+      return `${v}`
+    }
+  }
+
+  export function getFieldsOfStruct (s: Struct): string[] {
+    const ret = []
+    for (const f in s) {
+      if (f !== '_scamperTag' && f !== 'kind') {
+        ret.push(f)
+      }
+    }
+    return ret
+  }
+
+  export function toSexp (v: T, range: Range): Sexp.T {
+    switch (typeof v) {
+      case 'number':
+        return Sexp.mkAtom(v.toString(), range)
+      case 'boolean':
+        return Sexp.mkAtom(v ? "#t" : "#f", range)
+      // TODO: need to unescape string values!
+      case 'string':
+        return Sexp.mkAtom(`"${v}"`, range)
+      case 'undefined':
+        return Sexp.mkAtom('void', range)
+      default:
+        if (v === null) {
+          return Sexp.mkAtom('null', range)
+        } else if (Array.isArray(v)) {
+          Sexp.mkList([
+            Sexp.mkAtom('vector', noRange),
+            ...(v as T[]).map((e) => toSexp(e, noRange))
+          ], '(', range)
+        } else if (isClosure(v)) {
+          const cls = v as Closure
+          Sexp.mkList([
+            Sexp.mkAtom('lambda', noRange),
+            Sexp.mkList(cls.params.map((p) => Sexp.mkAtom(p, noRange)), '(', noRange),
+            // TODO: we could raise the Ops back to an Exp but then
+            // we would need to port all of the raising code from
+            // Sem to here, too! Perhaps pretty-printing should be
+            // regelated to another file after all...
+            Sexp.mkAtom('<closure>', noRange)
+          ], '(', range)
+        } else if (isJsFunction(v)) {
+          return Sexp.mkAtom('[Function (JS)]', range)
+        } else if (isChar(v)) {
+          const ch = v as Char
+          return Sexp.mkAtom(`#\\${charToName(ch.value)}`, range)
+        } else if (isList(v)) {
+          const values = listToArray(v as List)
+          return Sexp.mkList([
+            Sexp.mkAtom('list', noRange),
+            ...(values.map((e) => toSexp(e, noRange)))
+          ], '(', range)
+        } else if (isPair(v)) {
+          const p = v as Pair
+          return Sexp.mkList([
+            Sexp.mkAtom('pair', noRange),
+            toSexp(p.fst, noRange),
+            toSexp(p.snd, noRange)
+          ], '(', range)
+        } else if (isStruct(v)) {
+          const s = v as Struct
+          const fields = getFieldsOfStruct(s)
+          return Sexp.mkList([
+            Sexp.mkAtom('struct', noRange),
+            Sexp.mkAtom(s.kind, noRange),
+            ...fields.map((f) => toSexp(s[f], noRange))
+          ], '(', range)
+        }
+    }
+    throw new ICE('valueToSexp', `unknown value ${v}`)
+  }
+
+  export function equal (v1: T, v2: T): boolean {
+    const t1 = typeof v1
+    const t2 = typeof v2
+    if ((v1 === null && v2 === null) ||
+        (v1 === undefined && v2 === undefined)) {
+          return true
+    } else if ((t1 === 'number' && t2 === 'number') ||
+        (t1 === 'boolean' && t2 === 'boolean') ||
+        (t1 === 'string' && t2 === 'string') ||
+        (t1 === 'undefined' && t2 === 'undefined') ||
+        // N.B., function equality is reference-ish equality
+        (isFunction(t1) && isFunction(t2))) {
+      return v1 === v2
+    } else if (isPair(v1) && isPair(v2)) {
+      return equal((v1 as Pair).fst, (v2 as Pair).fst) &&
+        equal((v1 as Pair).snd, (v2 as Pair).snd)
+    } else if (isChar(v1) && isChar(v2)) {
+      return (v1 as Char).value === (v2 as Char).value
+    } else if (isStruct(v1) && isStruct(v2)) {
+      const s1 = v1 as Struct
+      const s2 = v2 as Struct
+      const fieldsS1 = getFieldsOfStruct(s1)
+      const fieldsS2 = getFieldsOfStruct(s2)
+      return s1.kind === s2.kind && fieldsS1.length === fieldsS2.length &&
+        fieldsS1.every((f) => equal(s1[f], s2[f]))
+    } else {
+      return false
+    }
+  }
+
+  export function typeOf (v: T): string {
+    const t = typeof v
+    if (t === 'boolean' || t === 'number' || t === 'string') { return t }
+    if (v === 'null') { return 'null' }
+    if (v === 'undefined') { return 'void'}
+    if (Array.isArray(v)) { return 'vector' }
+    if (isChar(v)) { return 'char' }
+    if (isList(v)) { return 'list' }
+    if (isStruct(v)) { return `struct (${(v as Struct).kind})` }
+    if (t === 'function' || isClosure(v)) { return 'function' }
+    return 'object'
+  }
+}
+
+export class Env {
+  private bindings: Map<Id, Value.T>
+  private parent?: Env
+
+  constructor (bindings: [Id, Value.T][], parent?: Env) {
+    this.bindings = new Map(bindings)
+    this.parent = parent
+  }
+
+  has (name: Id): boolean {
+    return this.bindings.has(name) ||
+      (this.parent !== undefined && this.parent.has(name))
+  }
+
+  get (name: Id): Value.T | undefined {
+    if (this.bindings.has(name)) {
+      return this.bindings.get(name)
+    } else if (this.parent !== undefined && this.parent.has(name)) {
+      return this.parent.get(name)
+    }
+  }
+
+  extend (bindings: [Id, Value.T][]): Env {
+    return new Env(bindings, this)
+  }
+
+  set (name: Id, v: Value.T): void {
+    this.bindings.set(name, v)
+  }
 }

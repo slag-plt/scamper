@@ -1,11 +1,11 @@
 import { ICE, ScamperError } from './lang.js'
-import * as S from './lang.js'
+import { Bracket, Range, mkRange, Sexp, Exp, Stmt, Pat, Prog, Value } from './lang.js'
 
 class Token {
   text: string
-  range: S.Range
+  range: Range
 
-  constructor (text: string, range: S.Range) {
+  constructor (text: string, range: Range) {
     this.text = text
     this.range = range
   }
@@ -100,7 +100,7 @@ class Tokenizer {
     } else {
       const token = new Token(
         this.src.slice(this.startIdx, this.startIdx + this.tokenLen),
-        new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
+        new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -170,7 +170,7 @@ class Tokenizer {
       // file. Depending on error reporting, it may make sense to report only the
       // starting quote or try to approx. where the string should end.
       throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, new S.Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
+        undefined, new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
     // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()
@@ -199,8 +199,8 @@ export function stringToTokens (src: string): Token[] {
   return tokens 
 }
 
-function puffRange(r: S.Range): S.Range {
-  return new S.Range(
+function puffRange(r: Range): Range {
+  return new Range(
     r.begin.line,
     r.begin.col === 1 ? r.begin.col : r.begin.col - 1,
     r.begin.col === 1 ? r.begin.idx : r.begin.idx - 1,
@@ -210,7 +210,7 @@ function puffRange(r: S.Range): S.Range {
   )
 }
 
-export function tokensToSexp (tokens: Token[]): S.Sexp {
+export function tokensToSexp (tokens: Token[]): Sexp.T {
   const beg = tokens.shift()!
   if (isOpeningBracket(beg.text)) {
     const exps = []
@@ -222,17 +222,17 @@ export function tokensToSexp (tokens: Token[]): S.Sexp {
       throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
     } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
       throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined, S.mkRange(beg.range.begin, tokens[0].range.end))
+        undefined, mkRange(beg.range.begin, tokens[0].range.end))
     } else {
       const end = tokens.shift()!
-      return S.mkList(exps, beg.text as S.Bracket, S.mkRange(beg.range.begin, end.range.end))
+      return Sexp.mkList(exps, beg.text as Bracket, mkRange(beg.range.begin, end.range.end))
     }
   } else {
-    return S.mkAtom(beg.text, beg.range)
+    return Sexp.mkAtom(beg.text, beg.range)
   }
 }
 
-export function tokensToSexps (tokens: Token[]): S.Sexp[] {
+export function tokensToSexps (tokens: Token[]): Sexp.T[] {
   const ret = []
   while (tokens.length > 0) {
     ret.push(tokensToSexp(tokens))
@@ -260,7 +260,7 @@ export const reservedWords = [
   'struct',
 ]
 
-function parseStringLiteral (src: string, range: S.Range): string {
+function parseStringLiteral (src: string, range: Range): string {
   if (src.length === 0) {
     throw new ICE('parseStringLiteral', 'Empty string literal (with no quote!)')
   } else if (src[0] !== '"') {
@@ -321,26 +321,26 @@ function parseStringLiteral (src: string, range: S.Range): string {
   return ret
 }
 
-export function atomToExp (e: S.Atom, inSection: boolean): S.Exp {
+export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
   const text = e.value
   if (intRegex.test(text)) {
-    return S.mkNum(parseInt(text), e.range)
+    return Exp.mkVal(parseInt(text), e.range)
   } else if (floatRegex.test(e.value)) {
-    return S.mkNum(parseFloat(e.value), e.range)
+    return Exp.mkVal(parseFloat(e.value), e.range)
   } else if (e.value === '#t') {
-    return S.mkBool(true, e.range)
+    return Exp.mkVal(true, e.range)
   } else if (e.value === '#f') {
-    return S.mkBool(false, e.range)
+    return Exp.mkVal(false, e.range)
   } else if (e.value.startsWith('"')) {
-    return S.mkStr(parseStringLiteral(e.value, e.range), e.range)
+    return Exp.mkVal(parseStringLiteral(e.value, e.range), e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
   } else if (e.value.startsWith('#\\')) {
     const escapedChar = e.value.slice(2)
     if (escapedChar.length === 1) {
-      return S.mkChar(escapedChar, e.range)
+      return Exp.mkVal(Value.mkChar(escapedChar), e.range)
     } else if (namedCharValues.has(escapedChar)) {
-      return S.mkChar(namedCharValues.get(escapedChar)!, e.range)
+      return Exp.mkVal(Value.mkChar(namedCharValues.get(escapedChar)!), e.range)
     } else {
       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
     }
@@ -350,29 +350,29 @@ export function atomToExp (e: S.Atom, inSection: boolean): S.Exp {
     if (e.value.startsWith('_') && !inSection) {
       throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
     }
-    return S.mkVar(e.value, e.range)
+    return Exp.mkVar(e.value, e.range)
   }
 }
 
-export function sexpToBinding (e: S.Sexp): S.Binding {
-  if (e.tag === 'atom' || e.value.length !== 2 || e.value[0].tag !== 'atom') {
-    throw new ScamperError('Parser', `Bindings must given as pairs of names and values: ${S.sexpToString(e)}`, undefined, e.range)
+export function sexpToBinding (e: Sexp.T): Exp.Binding {
+  if (e.kind === 'atom' || e.value.length !== 2 || e.value[0].kind !== 'atom') {
+    throw new ScamperError('Parser', `Bindings must given as pairs of names and values: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
     return { name: e.value[0].value, body: sexpToExp(e.value[1]) }
   }
 }
 
-export function sexpToMatchBranch (e: S.Sexp): S.MatchBranch {
-  if (e.tag === 'atom' || e.value.length !== 2) {
-    throw new ScamperError('Parser', `Match branches must be given a pair of a pattern and an expression: ${S.sexpToString(e)}`, undefined, e.range)
+export function sexpToMatchBranch (e: Sexp.T): Exp.MatchBranch {
+  if (e.kind === 'atom' || e.value.length !== 2) {
+    throw new ScamperError('Parser', `Match branches must be given a pair of a pattern and an expression: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
     return { pattern: sexpToPat(e.value[0]), body: sexpToExp(e.value[1]) }
   }
 }
 
-export function sexpToCondBranch (e: S.Sexp): S.CondBranch {
-  if (e.tag === 'atom' || e.value.length !== 2) {
-    throw new ScamperError('Parser', `Cond branches must be given a pair expressions: ${S.sexpToString(e)}`, undefined, e.range)
+export function sexpToCondBranch (e: Sexp.T): Exp.CondBranch {
+  if (e.kind === 'atom' || e.value.length !== 2) {
+    throw new ScamperError('Parser', `Cond branches must be given a pair expressions: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
     return { guard: sexpToExp(e.value[0]), body: sexpToExp(e.value[1]) }
   }
@@ -390,40 +390,40 @@ export const namedCharValues = new Map([
   ['tab', String.fromCharCode(9)]
 ])
 
-export function atomToPat (e: S.Atom): S.Pat {
+export function atomToPat (e: Sexp.Atom): Pat.T {
   const text = e.value
   if (intRegex.test(text)) {
-    return S.mkPNum(parseInt(text), e.range)
+    return Pat.mkNum(parseInt(text), e.range)
   } else if (floatRegex.test(e.value)) {
-    return S.mkPNum(parseFloat(e.value), e.range)
+    return Pat.mkNum(parseFloat(e.value), e.range)
   } else if (e.value === '#t') {
-    return S.mkPBool(true, e.range)
+    return Pat.mkBool(true, e.range)
   } else if (e.value === '#f') {
-    return S.mkPBool(false, e.range)
+    return Pat.mkBool(false, e.range)
   } else if (e.value.startsWith('"')) {
-    return S.mkPStr(e.value.slice(1, -1), e.range)
+    return Pat.mkStr(e.value.slice(1, -1), e.range)
   } else if (e.value === '_') {
-    return S.mkPWild(e.range)
+    return Pat.mkWild(e.range)
   } else if (e.value === 'null') {
-    return S.mkPNull(e.range)
+    return Pat.mkNull(e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
   } else if (e.value.startsWith('#\\')) {
     const escapedChar = e.value.slice(2)
     if (escapedChar.length === 1) {
-      return S.mkPChar(escapedChar, e.range)
+      return Pat.mkChar(escapedChar, e.range)
     } else if (namedCharValues.has(escapedChar)) {
-      return S.mkPChar(namedCharValues.get(escapedChar)!, e.range)
+      return Pat.mkChar(namedCharValues.get(escapedChar)!, e.range)
     } else {
       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
     }
   } else {
-    return S.mkPVar(e.value, e.range)
+    return Pat.mkVar(e.value, e.range)
   }
 }
 
-export function sexpToPat (e: S.Sexp): S.Pat {
-  switch (e.tag) {
+export function sexpToPat (e: Sexp.T): Pat.T {
+  switch (e.kind) {
     case 'atom':
       return atomToPat(e)
     case 'list': {
@@ -431,49 +431,49 @@ export function sexpToPat (e: S.Sexp): S.Pat {
         throw new ScamperError('Parser', 'The empty list is not a valid pattern', undefined, e.range)
       }
       const head = e.value[0]
-      if (head.tag !== 'atom') {
+      if (head.kind !== 'atom') {
         throw new ScamperError('Parser', 'Constructor patterns must start with an identifier', undefined, head.range)
       }
       const args = e.value.slice(1)
-      return S.mkPCtor(head.value, args.map(sexpToPat), e.range)
+      return Pat.mkCtor(head.value, args.map(sexpToPat), e.range)
     }
   }
 }
 
-export function holesToVars (e: S.Sexp): S.Sexp {
+export function holesToVars (e: Sexp.T): Sexp.T {
   let counter = 1
   let holesAreNamed: boolean | undefined = undefined
-  function rec (e: S.Sexp): S.Sexp {
-    switch (e.tag) {
+  function rec (e: Sexp.T): Sexp.T {
+    switch (e.kind) {
       case 'atom':
         if (e.value === '_') {
           if (holesAreNamed) {
             throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
           } else {
             holesAreNamed = false
-            return S.mkAtom(`_${counter++}`, e.range)
+            return Sexp.mkAtom(`_${counter++}`, e.range)
           }
         } else if (e.value.startsWith('_')) {
           if (holesAreNamed === false) {
             throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
           } else {
             holesAreNamed = true
-            return S.mkAtom(e.value, e.range)
+            return Sexp.mkAtom(e.value, e.range)
           }
         } else {
           return e
         }
       case 'list':
-        return S.mkList(e.value.map(rec), e.bracket, e.range)
+        return Sexp.mkList(e.value.map(rec), e.bracket, e.range)
     }
   }
   return rec(e)
 }
 
-export function getNamedHoles (e: S.Sexp): string[] {
+export function getNamedHoles (e: Sexp.T): string[] {
   const vars: Set<string> = new Set()
-  function rec (e: S.Sexp): void {
-    switch (e.tag) {
+  function rec (e: Sexp.T): void {
+    switch (e.kind) {
       case 'atom':
         if (e.value.startsWith('_')) {
           vars.add(e.value)
@@ -492,8 +492,8 @@ export function getNamedHoles (e: S.Sexp): string[] {
   return ret
 }
 
-export function sexpToExp (e: S.Sexp, inSection: boolean = false): S.Exp {
-  switch (e.tag) {
+export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
+  switch (e.kind) {
     case 'atom':
       return atomToExp(e, inSection)
     case 'list': {
@@ -502,40 +502,40 @@ export function sexpToExp (e: S.Sexp, inSection: boolean = false): S.Exp {
       }
       const head = e.value[0]
       const args = e.value.slice(1)
-      if (head.tag === 'atom' && head.value === 'lambda') {
+      if (head.kind === 'atom' && head.value === 'lambda') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Lambda expression must have 2 sub-components, an parameter list and a body', undefined, e.range)
         }
         const es = args[0]
-        if (es.tag !== 'list') {
+        if (es.kind !== 'list') {
          throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, es.range)
         }
         const params: string[] = []
         es.value.forEach(arg => {
-          if (arg.tag !== 'atom') {
+          if (arg.kind !== 'atom') {
             throw new ScamperError('Parser', 'Parameters must only be identifiers but a list was given instead', undefined, arg.range)
           }
           params.push(arg.value)
         })
-        return S.mkLam(params, sexpToExp(args[1]), e.bracket, e.range)
-      } else if (head.tag === 'atom' && head.value === 'let') {
+        return Exp.mkLam(params, sexpToExp(args[1]), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'let') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, e.range)
         }
         const binds = args[0]
-        if (binds.tag !== 'list') {
+        if (binds.kind !== 'list') {
           throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, binds.range)
         }
-        return S.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
-      } else if (head.tag === 'atom' && head.value === 'and') {
-        return S.mkAnd(args.map((s) => sexpToExp(s)), e.bracket, e.range)
-      } else if (head.tag === 'atom' && head.value === 'or') {
-        return S.mkOr(args.map((s) => sexpToExp(s)), e.bracket, e.range)
-      } else if (head.tag === 'atom' && head.value === 'if') {
+        return Exp.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'and') {
+        return Exp.mkAnd(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'or') {
+        return Exp.mkOr(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'if') {
         if (args.length !== 3) {
           throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, e.range)
         } else {
-          return S.mkIf(
+          return Exp.mkIf(
             sexpToExp(args[0]),
             sexpToExp(args[1]),
             sexpToExp(args[2]),
@@ -543,44 +543,44 @@ export function sexpToExp (e: S.Sexp, inSection: boolean = false): S.Exp {
             e.range
           )
         }
-      } else if (head.tag === 'atom' && head.value === 'begin') {
+      } else if (head.kind === 'atom' && head.value === 'begin') {
         if (args.length === 0) {
           throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, e.range)
         } else {
-          return S.mkBegin(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+          return Exp.mkBegin(args.map((s) => sexpToExp(s)), e.bracket, e.range)
         }
-      } else if (head.tag === 'atom' && head.value === 'match') {
+      } else if (head.kind === 'atom' && head.value === 'match') {
         if (args.length < 2) {
           throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, e.range)
         }
         const scrutinee = args[0]
         const branches = args.slice(1)
-        return S.mkMatch(sexpToExp(scrutinee), branches.map(sexpToMatchBranch), e.bracket, e.range)
-      } else if (head.tag === 'atom' && head.value === 'cond') {
+        return Exp.mkMatch(sexpToExp(scrutinee), branches.map(sexpToMatchBranch), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'cond') {
         if (args.length < 1) {
           throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, e.range)
         }
-        return S.mkCond(args.map(sexpToCondBranch), e.range)
-      } else if (head.tag === 'atom' && head.value === 'section') {
+        return Exp.mkCond(args.map(sexpToCondBranch), e.range)
+      } else if (head.kind === 'atom' && head.value === 'section') {
         if (args.length < 1) {
           throw new ScamperError('Parser', 'Section expression must have at least one sub-expression', undefined, e.range)
         }
-        const body = holesToVars(S.mkList(args, e.bracket, e.range))
+        const body = holesToVars(Sexp.mkList(args, e.bracket, e.range))
         const params = getNamedHoles(body)
         // N.B., place the params in numeric/alphabetical order
         params.sort()
-        return S.mkLam(params, sexpToExp(body), e.bracket, e.range)
+        return Exp.mkLam(params, sexpToExp(body), e.bracket, e.range)
       } else {
-        return S.mkApp(sexpToExp(head), args.map((s) => sexpToExp(s, true), true), e.bracket, e.range)
+        return Exp.mkApp(sexpToExp(head), args.map((s) => sexpToExp(s, true), true), e.bracket, e.range)
       }
     }
   }
 }
 
-export function sexpToStmt (e: S.Sexp): S.Stmt {
-  switch (e.tag) {
+export function sexpToStmt (e: Sexp.T): Stmt.T {
+  switch (e.kind) {
     case 'atom':
-      return S.mkStmtExp(sexpToExp(e))
+      return Stmt.mkStmtExp(sexpToExp(e))
     case 'list': {
       if (e.value.length === 0) {
         throw new ScamperError('Parser', 'The empty list is not a valid statement', undefined, e.range)
@@ -592,56 +592,56 @@ export function sexpToStmt (e: S.Sexp): S.Stmt {
           throw new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, e.range)
         }
         const name = args[0]
-        if (name.tag !== 'atom') {
+        if (name.kind !== 'atom') {
           throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, name.range)
         }
-        return S.mkStmtBinding(name.value, sexpToExp(args[1]), e.bracket, e.range)
+        return Stmt.mkStmtBinding(name.value, sexpToExp(args[1]), e.bracket, e.range)
       } else if (head.value === 'import') {
         if (args.length !== 1) {
           throw new ScamperError('Parser', 'Import statements must have 1 argument, the name of a module', undefined, e.range)
         }
         const name = args[0]
-        if (name.tag !== 'atom') {
+        if (name.kind !== 'atom') {
           throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, args[0].range)
         }
-        return S.mkImport(name.value, e.bracket, e.range)
+        return Stmt.mkImport(name.value, e.bracket, e.range)
       } else if (head.value === 'display') {
         if (args.length !== 1) {
           throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
         }
-        return S.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
+        return Stmt.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
       } else if (head.value === 'struct') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, e.range)
         } 
         const name = args[0]
-        if (name.tag !== 'atom') {
+        if (name.kind !== 'atom') {
           throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, name.range)
         }
         const sfields = args[1]
-        if (sfields.tag !== 'list') {
+        if (sfields.kind !== 'list') {
           throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, args[1].range)
         }
         const fields: string[] = []
         sfields.value.forEach((f) => {
-          if (f.tag !== 'atom') {
+          if (f.kind !== 'atom') {
             throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, f.range)
           }
           fields.push(f.value)
         })
-        return S.mkStruct(name.value, fields, e.bracket, e.range) 
+        return Stmt.mkStruct(name.value, fields, e.bracket, e.range) 
       } else {
-        return S.mkStmtExp(sexpToExp(e))
+        return Stmt.mkStmtExp(sexpToExp(e))
       }
     }
   }
 }
 
-export function sexpsToProg (exps: S.Sexp[]): S.Prog {
+export function sexpsToProg (exps: Sexp.T[]): Prog {
   return exps.map(sexpToStmt)
 }
 
-export function parseProgram (src: string): S.Prog {
+export function parseProgram (src: string): Prog {
   const tokens = stringToTokens(src)
   const sexps = tokensToSexps(tokens)
   return sexpsToProg(sexps)
