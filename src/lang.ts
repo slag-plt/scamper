@@ -172,7 +172,7 @@ export namespace Pat {
 }
 
 export namespace Exp {
-  export type T = Var | Val | Num | Bool | Char | Str | Lam | Let | App | And | Or | If | Begin | Match | Cond
+  export type T = Var | Val | Lam | Let | App | And | Or | If | Begin | Match | Cond
   
   export type Binding = { name: Id, body: T }
   export type CondBranch = { guard: T, body: T }
@@ -180,10 +180,6 @@ export namespace Exp {
 
   export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
   export type Val = { _scamperTag: 'struct', kind: 'val', value: Value.T, range: Range } 
-  export type Num = { _scamperTag: 'struct', kind: 'num', value: number, range: Range }
-  export type Bool = { _scamperTag: 'struct', kind: 'bool', value: boolean, range: Range }
-  export type Char = { _scamperTag: 'struct', kind: 'char', value: string, range: Range }
-  export type Str = { _scamperTag: 'struct', kind: 'str', value: string, range: Range }
   export type Lam = { _scamperTag: 'struct', kind: 'lam', args: Id[], body: T, bracket: Bracket, range: Range }
   export type Let = { _scamperTag: 'struct', kind: 'let', bindings: Binding[], body: T, bracket: Bracket, range: Range }
   export type App = { _scamperTag: 'struct', kind: 'app', head: T, args: T[], bracket: Bracket, range: Range }
@@ -198,14 +194,6 @@ export namespace Exp {
     ({ _scamperTag: 'struct', kind: 'var', name, range })
   export const mkVal = (value: Value.T, range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'val', value, range })
-  export const mkNum = (value: number, range: Range): T =>
-    ({ _scamperTag: 'struct', kind: 'num', value, range })
-  export const mkBool = (value: boolean, range: Range): T =>
-    ({ _scamperTag: 'struct', kind: 'bool', value, range })
-  export const mkChar = (value: string, range: Range): T =>
-    ({ _scamperTag: 'struct', kind: 'char', value, range })  
-  export const mkStr = (value: string, range: Range): T =>
-    ({ _scamperTag: 'struct', kind: 'str', value, range })
   export const mkLam = (args: Id[], body: T, bracket: Bracket, range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'lam', args, body, bracket, range })
   export const mkLet = (bindings: Binding[], body: T, bracket: Bracket, range: Range): T => 
@@ -231,14 +219,6 @@ export namespace Exp {
         return Sexp.mkAtom(e.name, e.range)
       case 'val':
         return Value.toSexp(e.value, e.range)
-      case 'num':
-        return Sexp.mkAtom(e.value.toString(), e.range)
-      case 'bool':
-        return Sexp.mkAtom(e.value ? "#t" : "#f", e.range)
-      case 'char':
-        return Sexp.mkAtom(`#\\${charToName(e.value)}`, e.range)
-      case 'str':
-        return Sexp.mkAtom(`"${e.value}"`, e.range)
       case 'lam':
         return Sexp.mkList([
           Sexp.mkAtom('lambda', noRange),

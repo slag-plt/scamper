@@ -79,11 +79,11 @@ class ExecutionState {
 
 function valueToExp (env: Env, v: Value.T): Exp.T {
   if (Value.isNumber(v)) {
-    return Exp.mkNum(v as number, noRange)
+    return Exp.mkVal(v, noRange)
   } else if (Value.isBoolean(v)) {
-    return Exp.mkBool(v as boolean, noRange)
+    return Exp.mkVal(v, noRange)
   } else if (Value.isString(v)) {
-    return Exp.mkStr(v as string, noRange)
+    return Exp.mkVal(v, noRange)
   } else if (Value.isNull(v)) {
     return Exp.mkVar('null', noRange)
   } else if (Value.isVoid(v)) {
@@ -100,7 +100,7 @@ function valueToExp (env: Env, v: Value.T): Exp.T {
   } else if (Value.isJsFunction(v)) {
     return Exp.mkVar((v as Function).name, noRange)
   } else if (Value.isChar(v)) {
-    return Exp.mkChar((v as Value.Char).value, noRange)
+    return Exp.mkVal(v, noRange)
   } else if (Value.isList(v)) {
     const l = v as Value.List
     if (l === null) {
@@ -218,7 +218,7 @@ function dumpToExp ([stack, env, control]: [Value.T[], Env, Control], hole?: Exp
       }))), noRange))
       i = endIdx
     } else if (op.tag === 'exn') {
-      expStack.push(Exp.mkApp(Exp.mkVar('error', noRange), [Exp.mkStr(op.msg, noRange)], '(', noRange))
+      expStack.push(Exp.mkApp(Exp.mkVar('error', noRange), [Exp.mkVal(op.msg, noRange)], '(', noRange))
     } else if (op.tag === 'lbl') {
       // N.B., do nothing, skip over labels!
     }
@@ -249,14 +249,6 @@ export function expToOps (e: Exp.T): Op.T[] {
     case 'var':
       return [Op.mkVar(e.name, e.range)]
     case 'val':
-      return [Op.mkValue(e.value)]
-    case 'num':
-      return [Op.mkValue(e.value)]
-    case 'bool':
-      return [Op.mkValue(e.value)]
-    case 'char':
-      return [Op.mkValue(Value.mkChar(e.value))]
-    case 'str':
       return [Op.mkValue(e.value)]
     case 'lam':
       return [Op.mkCls(e.args, expToOps(e.body))]

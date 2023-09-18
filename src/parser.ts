@@ -1,5 +1,5 @@
 import { ICE, ScamperError } from './lang.js'
-import { Bracket, Range, mkRange, Sexp, Exp, Stmt, Pat, Prog } from './lang.js'
+import { Bracket, Range, mkRange, Sexp, Exp, Stmt, Pat, Prog, Value } from './lang.js'
 
 class Token {
   text: string
@@ -324,23 +324,23 @@ function parseStringLiteral (src: string, range: Range): string {
 export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
   const text = e.value
   if (intRegex.test(text)) {
-    return Exp.mkNum(parseInt(text), e.range)
+    return Exp.mkVal(parseInt(text), e.range)
   } else if (floatRegex.test(e.value)) {
-    return Exp.mkNum(parseFloat(e.value), e.range)
+    return Exp.mkVal(parseFloat(e.value), e.range)
   } else if (e.value === '#t') {
-    return Exp.mkBool(true, e.range)
+    return Exp.mkVal(true, e.range)
   } else if (e.value === '#f') {
-    return Exp.mkBool(false, e.range)
+    return Exp.mkVal(false, e.range)
   } else if (e.value.startsWith('"')) {
-    return Exp.mkStr(parseStringLiteral(e.value, e.range), e.range)
+    return Exp.mkVal(parseStringLiteral(e.value, e.range), e.range)
   } else if (reservedWords.includes(e.value)) {
     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
   } else if (e.value.startsWith('#\\')) {
     const escapedChar = e.value.slice(2)
     if (escapedChar.length === 1) {
-      return Exp.mkChar(escapedChar, e.range)
+      return Exp.mkVal(Value.mkChar(escapedChar), e.range)
     } else if (namedCharValues.has(escapedChar)) {
-      return Exp.mkChar(namedCharValues.get(escapedChar)!, e.range)
+      return Exp.mkVal(Value.mkChar(namedCharValues.get(escapedChar)!), e.range)
     } else {
       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
     }
