@@ -72,6 +72,14 @@ export class ICE extends Error {
 export type Id = string
 export type Bracket = '(' | '[' | '{'
 
+export function closeBracket (b: Bracket): string {
+  switch (b) {
+    case '(': return ')'
+    case '[': return ']'
+    case '{': return '}'
+  }
+}
+
 const specialCharToNameMap: Map<string, string> = new Map([
   [String.fromCharCode(9), 'alarm'],
   [String.fromCharCode(7), 'backspace'],
@@ -468,8 +476,9 @@ export namespace Value {
         return Sexp.mkAtom(v.toString(), range)
       case 'boolean':
         return Sexp.mkAtom(v ? "#t" : "#f", range)
+      // TODO: need to unescape string values!
       case 'string':
-        return Sexp.mkAtom(`#\\${charToName(v)}`, range)
+        return Sexp.mkAtom(`"${v}"`, range)
       case 'undefined':
         return Sexp.mkAtom('void', range)
       default:

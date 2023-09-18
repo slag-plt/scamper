@@ -1,6 +1,6 @@
 import { ICE, Id, noRange, ScamperError } from './lang.js'
 import { Pat, Exp, Stmt, Prog, Op, Value, Env } from './lang.js'
-import { mkCodeElement, renderToOutput } from './display.js'
+import { expToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
 class Control {
@@ -117,7 +117,9 @@ function valueToExp (env: Env, v: Value.T): Exp.T {
     const fields = Value.getFieldsOfStruct(s)
     return Exp.mkApp(Exp.mkVar(s.kind, noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
   } else {
-    throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
+    // NOTE: we're slowly mushing together values and expressions... perhaps
+    // we should collapse the hierarchy once and for all to avoid this mess?
+    return Exp.mkVal(v, noRange)
   }
 }
 
@@ -188,6 +190,9 @@ function dumpToExp ([stack, env, control]: [Value.T[], Env, Control], hole?: Exp
       const names = op.names
       const bindings = names.reverse().map((n: string) =>
         ({ name: n, body: expStack.pop()! })).reverse()
+      // BUG: expStack.pop() is not the body of the let! It is the remaining
+      // instructions of the control that are the let---oh crap, how do we
+      // process those?
       expStack.push(Exp.mkLet(bindings, expStack.pop()!, '(', noRange))
     } else if (op.tag === 'seq') {
       if (op.numSubexps === 0) {
@@ -582,14 +587,30 @@ function makeTraceDiv(): HTMLElement {
 
 function makeTraceHeader (s: Stmt.T): HTMLElement {
   switch (s.kind) {
-    case 'binding':
-      return mkCodeElement(`Evaluating binding ${s.name}...\n${Exp.toString(s.body)}`)
-    case 'display':
-      return mkCodeElement(`Evaluating displayed expression...\n${Exp.toString(s.body)}`)
+    case 'binding': {
+      const ret = mkCodeElement(`Evaluating binding ${s.name}...`)
+      ret.append(mkCodeElement('\n'))
+      ret.append(expToHTML(s.body))
+      return ret
+    }
+
+    case 'display': {
+      const ret = mkCodeElement('Evaluating displayed expression...')
+      ret.append(mkCodeElement('\n'))
+      ret.append(expToHTML(s.body))
+      return ret
+    }
+
     case 'import':
       return mkCodeElement(`Importing module ${s.modName}...`)
-    case 'exp':
-      return mkCodeElement(`Evaluating expression...\n${Exp.toString(s.body)}`)
+
+    case 'exp': {
+      const ret = mkCodeElement('Evaluating expression...')
+      ret.append(mkCodeElement('\n'))
+      ret.append(expToHTML(s.body))
+      return ret
+    }
+
     case 'struct':
       return mkCodeElement(`Evaluating struct declaration ${s.id}...`)
   }
@@ -654,7 +675,9 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('-->')
+              this.appendToCurrentTrace(' ')
+              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -692,7 +715,9 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('-->')
+              this.appendToCurrentTrace(' ')
+              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -728,7 +753,9 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(Exp.toString(stateToExp(this.state)!))
+              this.appendToCurrentTrace('-->')
+              this.appendToCurrentTrace(' ')
+              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
