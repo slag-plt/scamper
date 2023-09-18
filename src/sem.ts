@@ -245,7 +245,7 @@ export function stateToExp (state: ExecutionState): Exp.T | undefined {
 }
 
 export function expToOps (e: Exp.T): Op.T[] {
-  switch (e.tag) {
+  switch (e.kind) {
     case 'var':
       return [Op.mkVar(e.name, e.range)]
     case 'num':
@@ -289,9 +289,9 @@ export function expToOps (e: Exp.T): Op.T[] {
 }
 
 export function tryMatch (p: Pat.T, v: Value.T): [string, Value.T][] | undefined {
-  if (p.tag === 'wild') {
+  if (p.kind === 'wild') {
     return []
-  } else if (p.tag === 'var') {
+  } else if (p.kind === 'var') {
     return [[p.name, v]]
   } else if (p.tag === 'null' && v === null) {
     return []
@@ -587,7 +587,7 @@ function makeTraceDiv(): HTMLElement {
 }
 
 function makeTraceHeader (s: Stmt.T): HTMLElement {
-  switch (s.tag) {
+  switch (s.kind) {
     case 'binding':
       return mkCodeElement(`Evaluating binding ${s.name}...\n${Exp.expToString(s.body)}`)
     case 'display':
@@ -650,7 +650,7 @@ export class Sem {
 
   step (): void {
     const stmt = this.prog[this.curStmt]
-    switch (stmt.tag) {
+    switch (stmt.kind) {
 
       case 'binding': {
         if (this.state === undefined) {

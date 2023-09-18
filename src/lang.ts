@@ -94,13 +94,13 @@ export function charToName (c: string): string {
 
 export namespace Sexp {
   export type T = Atom | List
-  export type Atom = { tag: 'atom', value: string, range: Range }
-  export type List = { tag: 'list', bracket: Bracket, value: T[], range: Range }
+  export type Atom = { _scamperTag: 'struct', kind: 'atom', value: string, range: Range }
+  export type List = { _scamperTag: 'struct', kind: 'list', bracket: Bracket, value: T[], range: Range }
 
   export const mkAtom = (value: string, range: Range): Atom =>
-    ({ tag: 'atom', value, range })
+    ({ _scamperTag: 'struct', kind: 'atom', value, range })
   export const mkList = (value: T[], bracket: Bracket, range: Range): List =>
-    ({ tag: 'list', bracket, value, range }) 
+    ({ _scamperTag: 'struct', kind: 'list', bracket, value, range }) 
 
   function surround (s: string, bracket: Bracket): string {
     switch (bracket) {
@@ -114,7 +114,7 @@ export namespace Sexp {
   }
 
   export function sexpToString (s: T): string {
-    switch (s.tag) {
+    switch (s.kind) {
       case 'atom':
         return s.value
       case 'list':
@@ -127,26 +127,26 @@ export namespace Pat {
   export type MatchBranch = { pattern: T, body: Exp.T }
 
   export type T = Var | Wild | Num | Bool | Char | Str | Null | Ctor
-  export type Var = { tag: 'var', name: string, range: Range }
-  export type Wild = { tag: 'wild', range: Range }
-  export type Num = { tag: 'num', value: number, range: Range }
-  export type Bool = { tag: 'bool', value: boolean, range: Range }
-  export type Char = { tag: 'char', value: string, range: Range }
-  export type Str = { tag: 'str', value: string, range: Range }
-  export type Null = { tag: 'null', range: Range }
-  export type Ctor = { tag: 'ctor', ctor: string, args: T[], range: Range }
+  export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
+  export type Wild = { _scamperTag: 'struct', kind: 'wild', range: Range }
+  export type Num = { _scamperTag: 'struct', kind: 'num', value: number, range: Range }
+  export type Bool = { _scamperTag: 'struct', kind: 'bool', value: boolean, range: Range }
+  export type Char = { _scamperTag: 'struct', kind: 'char', value: string, range: Range }
+  export type Str = { _scamperTag: 'struct', kind: 'str', value: string, range: Range }
+  export type Null = { _scamperTag: 'struct', kind: 'null', range: Range }
+  export type Ctor = { _scamperTag: 'struct', kind: 'ctor', ctor: string, args: T[], range: Range }
 
-  export const mkVar = (name: string, range: Range): T => ({ tag: 'var', name, range })
-  export const mkWild = (range: Range): T => ({ tag: 'wild', range })
-  export const mkNum = (value: number, range: Range): T => ({ tag: 'num', value, range })
-  export const mkBool = (value: boolean, range: Range): T => ({ tag: 'bool', value, range })
-  export const mkChar = (value: string, range: Range): T => ({ tag: 'char', value, range })
-  export const mkStr = (value: string, range: Range): T => ({ tag: 'str', value, range })
-  export const mkNull = (range: Range): T => ({ tag: 'null', range })
-  export const mkCtor = (ctor: string, args: T[], range: Range): T => ({ tag: 'ctor', ctor, args, range })
+  export const mkVar = (name: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'var', name, range })
+  export const mkWild = (range: Range): T => ({ _scamperTag: 'struct', kind: 'wild', range })
+  export const mkNum = (value: number, range: Range): T => ({ _scamperTag: 'struct', kind: 'num', value, range })
+  export const mkBool = (value: boolean, range: Range): T => ({ _scamperTag: 'struct', kind: 'bool', value, range })
+  export const mkChar = (value: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'char', value, range })
+  export const mkStr = (value: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'str', value, range })
+  export const mkNull = (range: Range): T => ({ _scamperTag: 'struct', kind: 'null', range })
+  export const mkCtor = (ctor: string, args: T[], range: Range): T => ({ _scamperTag: 'struct', kind: 'ctor', ctor, args, range })
 
   export function patToSexp (p: T): Sexp.T {
-    switch (p.tag) {
+    switch (p.kind) {
       case 'var':
         return Sexp.mkAtom(p.name, p.range)
       case 'wild':
@@ -178,52 +178,52 @@ export namespace Exp {
   export type CondBranch = { guard: T, body: T }
   export type MatchBranch = { pattern: Pat.T, body: T }
 
-  export type Var = { tag: 'var', name: string, range: Range }
-  export type Num = { tag: 'num', value: number, range: Range }
-  export type Bool = { tag: 'bool', value: boolean, range: Range }
-  export type Char = { tag: 'char', value: string, range: Range }
-  export type Str = { tag: 'str', value: string, range: Range }
-  export type Lam = { tag: 'lam', args: Id[], body: T, bracket: Bracket, range: Range }
-  export type Let = { tag: 'let', bindings: Binding[], body: T, bracket: Bracket, range: Range }
-  export type App = { tag: 'app', head: T, args: T[], bracket: Bracket, range: Range }
-  export type And = { tag: 'and', exps: T[], bracket: Bracket, range: Range }
-  export type Or = { tag: 'or', exps: T[], bracket: Bracket, range: Range }
-  export type If = { tag: 'if', guard: T, ifb: T, elseb: T, bracket: Bracket, range: Range }
-  export type Begin = { tag: 'begin', exps: T[], bracket: Bracket, range: Range }
-  export type Match = { tag: 'match', scrutinee: T, branches: MatchBranch[], bracket: Bracket, range: Range }
-  export type Cond = { tag: 'cond', branches: CondBranch[], range: Range }
+  export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
+  export type Num = { _scamperTag: 'struct', kind: 'num', value: number, range: Range }
+  export type Bool = { _scamperTag: 'struct', kind: 'bool', value: boolean, range: Range }
+  export type Char = { _scamperTag: 'struct', kind: 'char', value: string, range: Range }
+  export type Str = { _scamperTag: 'struct', kind: 'str', value: string, range: Range }
+  export type Lam = { _scamperTag: 'struct', kind: 'lam', args: Id[], body: T, bracket: Bracket, range: Range }
+  export type Let = { _scamperTag: 'struct', kind: 'let', bindings: Binding[], body: T, bracket: Bracket, range: Range }
+  export type App = { _scamperTag: 'struct', kind: 'app', head: T, args: T[], bracket: Bracket, range: Range }
+  export type And = { _scamperTag: 'struct', kind: 'and', exps: T[], bracket: Bracket, range: Range }
+  export type Or = { _scamperTag: 'struct', kind: 'or', exps: T[], bracket: Bracket, range: Range }
+  export type If = { _scamperTag: 'struct', kind: 'if', guard: T, ifb: T, elseb: T, bracket: Bracket, range: Range }
+  export type Begin = { _scamperTag: 'struct', kind: 'begin', exps: T[], bracket: Bracket, range: Range }
+  export type Match = { _scamperTag: 'struct', kind: 'match', scrutinee: T, branches: MatchBranch[], bracket: Bracket, range: Range }
+  export type Cond = { _scamperTag: 'struct', kind: 'cond', branches: CondBranch[], range: Range }
 
   export const mkVar = (name: string, range: Range): T =>
-    ({ tag: 'var', name, range })
+    ({ _scamperTag: 'struct', kind: 'var', name, range })
   export const mkNum = (value: number, range: Range): T =>
-    ({ tag: 'num', value, range })
+    ({ _scamperTag: 'struct', kind: 'num', value, range })
   export const mkBool = (value: boolean, range: Range): T =>
-    ({ tag: 'bool', value, range })
+    ({ _scamperTag: 'struct', kind: 'bool', value, range })
   export const mkChar = (value: string, range: Range): T =>
-    ({ tag: 'char', value, range })  
+    ({ _scamperTag: 'struct', kind: 'char', value, range })  
   export const mkStr = (value: string, range: Range): T =>
-    ({ tag: 'str', value, range })
+    ({ _scamperTag: 'struct', kind: 'str', value, range })
   export const mkLam = (args: Id[], body: T, bracket: Bracket, range: Range): T =>
-    ({ tag: 'lam', args, body, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'lam', args, body, bracket, range })
   export const mkLet = (bindings: Binding[], body: T, bracket: Bracket, range: Range): T => 
-    ({ tag: 'let', bindings, body, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'let', bindings, body, bracket, range })
   export const mkApp = (head: T, args: T[], bracket: Bracket, range: Range): T =>
-    ({ tag: 'app', head, args, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'app', head, args, bracket, range })
   export const mkAnd = (exps: T[], bracket: Bracket, range: Range): T =>
-    ({ tag: 'and', exps, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'and', exps, bracket, range })
   export const mkOr = (exps: T[], bracket: Bracket, range: Range): T =>
-    ({ tag: 'or', exps, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'or', exps, bracket, range })
   export const mkIf = (guard: T, ifb: T, elseb: T, bracket: Bracket, range: Range): T =>
-    ({ tag: 'if', guard, ifb, elseb, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'if', guard, ifb, elseb, bracket, range })
   export const mkBegin = (exps: T[], bracket: Bracket, range: Range): T =>
-    ({ tag: 'begin', exps, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'begin', exps, bracket, range })
   export const mkMatch = (scrutinee: T, branches: MatchBranch[], bracket: Bracket, range: Range): T =>
-    ({ tag: 'match', scrutinee, branches, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'match', scrutinee, branches, bracket, range })
   export const mkCond = (branches: CondBranch[], range: Range): T =>
-    ({ tag: 'cond', branches, range })
+    ({ _scamperTag: 'struct', kind: 'cond', branches, range })
 
   export function expToSexp(e: T): Sexp.T {
-    switch (e.tag) {
+    switch (e.kind) {
       case 'var':
         return Sexp.mkAtom(e.name, e.range)
       case 'num':
@@ -277,21 +277,21 @@ export namespace Exp {
 
 export namespace Stmt {
   export type T = StmtBinding | StmtExp | Import | Display | Struct
-  export type StmtBinding = { tag: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
-  export type StmtExp = { tag: 'stmtexp', body: Exp.T }
-  export type Import = { tag: 'import', modName: string, bracket: Bracket, range: Range }
-  export type Display = { tag: 'display', body: Exp.T, bracket: Bracket, range: Range }
-  export type Struct = { tag: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
+  export type StmtBinding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
+  export type StmtExp = { _scamperTag: 'struct', kind: 'stmtexp', body: Exp.T }
+  export type Import = { _scamperTag: 'struct', kind: 'import', modName: string, bracket: Bracket, range: Range }
+  export type Display = { _scamperTag: 'struct', kind: 'display', body: Exp.T, bracket: Bracket, range: Range }
+  export type Struct = { _scamperTag: 'struct', kind: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
 
   export const mkStmtBinding = (name: Id, body: Exp.T, bracket: Bracket, range: Range): T =>
-    ({ tag: 'binding', name, body, bracket, range })
-  export const mkStmtExp = (body: Exp.T): T => ({ tag: 'stmtexp', body })
-  export const mkImport = (modName: string, bracket: Bracket, range: Range): T => ({ tag: 'import', modName, bracket, range })
-  export const mkDisplay = (body: Exp.T, bracket: Bracket, range: Range): T => ({ tag: 'display', body, bracket, range })
-  export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): T => ({ tag: 'struct', id, fields, bracket, range })
+    ({ _scamperTag: 'struct', kind: 'binding', name, body, bracket, range })
+  export const mkStmtExp = (body: Exp.T): T => ({ _scamperTag: 'struct', kind: 'stmtexp', body })
+  export const mkImport = (modName: string, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'import', modName, bracket, range })
+  export const mkDisplay = (body: Exp.T, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'display', body, bracket, range })
+  export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'struct', id, fields, bracket, range })
 
   export function stmtToSexp(s: T): Sexp.T {
-    switch (s.tag) {
+    switch (s.kind) {
       case 'binding':
         return Sexp.mkList([Sexp.mkAtom('define', noRange), Sexp.mkAtom(s.name, noRange), Exp.expToSexp(s.body)], s.bracket, s.range)
       case 'stmtexp':
