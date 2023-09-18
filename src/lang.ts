@@ -172,13 +172,14 @@ export namespace Pat {
 }
 
 export namespace Exp {
-  export type T = Var | Num | Bool | Char | Str | Lam | Let | App | And | Or | If | Begin | Match | Cond
+  export type T = Var | Val | Num | Bool | Char | Str | Lam | Let | App | And | Or | If | Begin | Match | Cond
   
   export type Binding = { name: Id, body: T }
   export type CondBranch = { guard: T, body: T }
   export type MatchBranch = { pattern: Pat.T, body: T }
 
   export type Var = { _scamperTag: 'struct', kind: 'var', name: string, range: Range }
+  export type Val = { _scamperTag: 'struct', kind: 'val', value: Value.T, range: Range } 
   export type Num = { _scamperTag: 'struct', kind: 'num', value: number, range: Range }
   export type Bool = { _scamperTag: 'struct', kind: 'bool', value: boolean, range: Range }
   export type Char = { _scamperTag: 'struct', kind: 'char', value: string, range: Range }
@@ -195,6 +196,8 @@ export namespace Exp {
 
   export const mkVar = (name: string, range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'var', name, range })
+  export const mkVal = (value: Value.T, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'val', value, range })
   export const mkNum = (value: number, range: Range): T =>
     ({ _scamperTag: 'struct', kind: 'num', value, range })
   export const mkBool = (value: boolean, range: Range): T =>
@@ -226,6 +229,8 @@ export namespace Exp {
     switch (e.kind) {
       case 'var':
         return Sexp.mkAtom(e.name, e.range)
+      case 'val':
+        return Value.toSexp(e.value, e.range)
       case 'num':
         return Sexp.mkAtom(e.value.toString(), e.range)
       case 'bool':
@@ -475,6 +480,66 @@ export namespace Value {
       }
     }
     return ret
+  }
+
+  export function toSexp (v: T, range: Range): Sexp.T {
+    switch (typeof v) {
+      case 'number':
+        return Sexp.mkAtom(v.toString(), range)
+      case 'boolean':
+        return Sexp.mkAtom(v ? "#t" : "#f", range)
+      case 'string':
+        return Sexp.mkAtom(`#\\${charToName(v)}`, range)
+      case 'undefined':
+        return Sexp.mkAtom('void', range)
+      default:
+        if (v === null) {
+          return Sexp.mkAtom('null', range)
+        } else if (Array.isArray(v)) {
+          Sexp.mkList([
+            Sexp.mkAtom('vector', noRange),
+            ...(v as T[]).map((e) => toSexp(e, noRange))
+          ], '(', range)
+        } else if (isClosure(v)) {
+          const cls = v as Closure
+          Sexp.mkList([
+            Sexp.mkAtom('lambda', noRange),
+            Sexp.mkList(cls.params.map((p) => Sexp.mkAtom(p, noRange)), '(', noRange),
+            // TODO: we could raise the Ops back to an Exp but then
+            // we would need to port all of the raising code from
+            // Sem to here, too! Perhaps pretty-printing should be
+            // regelated to another file after all...
+            Sexp.mkAtom('<closure>', noRange)
+          ], '(', range)
+        } else if (isJsFunction(v)) {
+          return Sexp.mkAtom('[Function (JS)]', range)
+        } else if (isChar(v)) {
+          const ch = v as Char
+          return Sexp.mkAtom(`#\\${charToName(ch.value)}`, range)
+        } else if (isList(v)) {
+          const values = listToArray(v as List)
+          return Sexp.mkList([
+            Sexp.mkAtom('list', noRange),
+            ...(values.map((e) => toSexp(e, noRange)))
+          ], '(', range)
+        } else if (isPair(v)) {
+          const p = v as Pair
+          return Sexp.mkList([
+            Sexp.mkAtom('pair', noRange),
+            toSexp(p.fst, noRange),
+            toSexp(p.snd, noRange)
+          ], '(', range)
+        } else if (isStruct(v)) {
+          const s = v as Struct
+          const fields = getFieldsOfStruct(s)
+          return Sexp.mkList([
+            Sexp.mkAtom('struct', noRange),
+            Sexp.mkAtom(s.kind, noRange),
+            ...fields.map((f) => toSexp(s[f], noRange))
+          ], '(', range)
+        }
+    }
+    throw new ICE('valueToSexp', `unknown value ${v}`)
   }
 
   export function valuesEqual (v1: T, v2: T): boolean {

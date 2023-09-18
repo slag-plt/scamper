@@ -248,6 +248,8 @@ export function expToOps (e: Exp.T): Op.T[] {
   switch (e.kind) {
     case 'var':
       return [Op.mkVar(e.name, e.range)]
+    case 'val':
+      return [Op.mkValue(e.value)]
     case 'num':
       return [Op.mkValue(e.value)]
     case 'bool':
@@ -293,15 +295,15 @@ export function tryMatch (p: Pat.T, v: Value.T): [string, Value.T][] | undefined
     return []
   } else if (p.kind === 'var') {
     return [[p.name, v]]
-  } else if (p.tag === 'null' && v === null) {
+  } else if (p.kind === 'null' && v === null) {
     return []
-  } else if (p.tag === 'bool' && typeof v === 'boolean' && p.value === v) {
+  } else if (p.kind === 'bool' && typeof v === 'boolean' && p.value === v) {
     return []
-  } else if (p.tag === 'num' && typeof v === 'number' && p.value === v) {
+  } else if (p.kind === 'num' && typeof v === 'number' && p.value === v) {
     return []
-  } else if (p.tag === 'str' && typeof v === 'string' && p.value === v) {
+  } else if (p.kind === 'str' && typeof v === 'string' && p.value === v) {
     return []
-  } else if (p.tag === 'ctor' && (Value.isPair(v) || Value.isStruct(v))) {
+  } else if (p.kind === 'ctor' && (Value.isPair(v) || Value.isStruct(v))) {
     const head = p.ctor
     const args = p.args
     if ((head === 'pair' || head === 'cons') && args.length === 2 && Value.isPair(v)) {
