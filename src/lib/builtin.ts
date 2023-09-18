@@ -1,8 +1,8 @@
+import { Value } from '../lang.js'
 import { imageLib } from './image.js'
 import Lab from './lab.js'
-import { Value } from '../value.js'
 
-const builtinLibs: Map<string, [string, Value][]> = new Map([
+const builtinLibs: Map<string, [string, Value.T][]> = new Map([
   ['image', imageLib],
   ['lab', Lab]
 ])

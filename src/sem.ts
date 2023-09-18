@@ -1,27 +1,25 @@
-import { Op, Value, Env } from './value.js'
 import { ICE, Id, noRange, ScamperError } from './lang.js'
+import { Pat, Exp, Stmt, Prog, Op, Value, Env } from './lang.js'
 import { mkCodeElement, renderToOutput } from './display.js'
-import * as S from './lang.js'
-import * as V from './value.js'
 import * as C from './contract.js'
 
 class Control {
   idx: number
-  ops: Op[]
+  ops: Op.T[]
 
-  constructor (ops: Op[]) {
+  constructor (ops: Op.T[]) {
     this.idx = 0
     this.ops = ops
   }
 
   isEmpty (): boolean { return this.idx >= this.ops.length }
-  next (): Op { return this.ops[this.idx++] }
+  next (): Op.T { return this.ops[this.idx++] }
 
   toString (): string {
-    return `[idx=${this.idx}, ops=${this.ops.map(V.opToString).join(',')}]`
+    return `[idx=${this.idx}, ops=${this.ops.map(Op.opToString).join(',')}]`
   }
 
-  jumpTo(label: V.Label): void {
+  jumpTo(label: Op.Label): void {
     let cur = this.ops[this.idx]
     while (!this.isEmpty() && (cur.tag !== 'lbl' || cur.name !== label)) {
       cur = this.ops[++this.idx]
@@ -33,12 +31,12 @@ class Control {
 }
 
 class ExecutionState {
-  stack: Value[]
+  stack: Value.T[]
   env: Env
   control: Control
-  dump: [Value[], Env, Control][]
+  dump: [Value.T[], Env, Control][]
 
-  constructor (env: Env, ops: Op[]) {
+  constructor (env: Env, ops: Op.T[]) {
     // N.B., if the state consists of a single value, then immediately
     // turn the value Op to a genuine value to avoid an unnecessary
     // step of computation
@@ -57,7 +55,7 @@ class ExecutionState {
 
   isFinished(): boolean { return this.control.isEmpty() && this.dump.length === 0 }
 
-  dumpAndSwitch (stack: Value[], env: Env, ops: Op[]): void {
+  dumpAndSwitch (stack: Value.T[], env: Env, ops: Op.T[]): void {
     this.dump.push([this.stack, this.env, this.control])
     this.stack = stack
     this.env = env
@@ -73,60 +71,60 @@ class ExecutionState {
     this.control = control
   }
 
-  jumpPast (label: V.Label): void {
+  jumpPast (label: Op.Label): void {
     this.control.jumpTo(label)
     this.control.idx += 1
   }
 }
 
-function valueToExp (env: Env, v: Value): S.Exp {
-  if (V.isNumber(v)) {
-    return S.mkNum(v as number, noRange)
-  } else if (V.isBoolean(v)) {
-    return S.mkBool(v as boolean, noRange)
-  } else if (V.isString(v)) {
-    return S.mkStr(v as string, noRange)
-  } else if (V.isNull(v)) {
-    return S.mkVar('null', noRange)
-  } else if (V.isVoid(v)) {
-    return S.mkVar('void', noRange)
-  } else if (V.isArray(v)) {
-    return S.mkApp (S.mkVar('vector', noRange), (v as Value[]).map((v) => (valueToExp(env, v))), '(', noRange)
-  } else if (V.isClosure(v)) {
-    const cls = v as V.Closure
+function valueToExp (env: Env, v: Value.T): Exp.T {
+  if (Value.isNumber(v)) {
+    return Exp.mkNum(v as number, noRange)
+  } else if (Value.isBoolean(v)) {
+    return Exp.mkBool(v as boolean, noRange)
+  } else if (Value.isString(v)) {
+    return Exp.mkStr(v as string, noRange)
+  } else if (Value.isNull(v)) {
+    return Exp.mkVar('null', noRange)
+  } else if (Value.isVoid(v)) {
+    return Exp.mkVar('void', noRange)
+  } else if (Value.isArray(v)) {
+    return Exp.mkApp (Exp.mkVar('vector', noRange), (v as Value.T[]).map((v) => (valueToExp(env, v))), '(', noRange)
+  } else if (Value.isClosure(v)) {
+    const cls = v as Value.Closure
     if (cls.name === undefined) {
-      return S.mkLam(cls.params, dumpToExp([[], cls.env, new Control(cls.ops)]), '(', noRange)
+      return Exp.mkLam(cls.params, dumpToExp([[], cls.env, new Control(cls.ops)]), '(', noRange)
     } else {
-      return S.mkVar(cls.name, noRange)
+      return Exp.mkVar(cls.name, noRange)
     }
-  } else if (V.isJsFunction(v)) {
-    return S.mkVar((v as Function).name, noRange)
-  } else if (V.isChar(v)) {
-    return S.mkChar((v as V.Char).value, noRange)
-  } else if (V.isList(v)) {
-    const l = v as V.List
+  } else if (Value.isJsFunction(v)) {
+    return Exp.mkVar((v as Function).name, noRange)
+  } else if (Value.isChar(v)) {
+    return Exp.mkChar((v as Value.Char).value, noRange)
+  } else if (Value.isList(v)) {
+    const l = v as Value.List
     if (l === null) {
-      return S.mkVar('null', noRange)
+      return Exp.mkVar('null', noRange)
     } else {
-      const elems = V.listToArray(l)
-      return S.mkApp(S.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
+      const elems = Value.listToArray(l)
+      return Exp.mkApp(Exp.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
     }
-  } else if (V.isPair(v)) {
-    const p = v as V.Pair
-    return S.mkApp(S.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
-  } else if (V.isStruct(v)) {
-    const s = v as V.Struct
-    const fields = V.getFieldsOfStruct(s)
-    return S.mkApp(S.mkVar(s.kind, noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
+  } else if (Value.isPair(v)) {
+    const p = v as Value.Pair
+    return Exp.mkApp(Exp.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
+  } else if (Value.isStruct(v)) {
+    const s = v as Value.Struct
+    const fields = Value.getFieldsOfStruct(s)
+    return Exp.mkApp(Exp.mkVar(s.kind, noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
   } else {
     throw new ICE('sem.valueToExp', `Unknown value type encountered: ${v}`)
   }
 }
 
-function findCondBranches (start: number, label: string, ops: Op[]): { branches: { guard: Op[], body: Op[] }[], endIdx: number } {
+function findCondBranches (start: number, label: string, ops: Op.T[]): { branches: { guard: Op.T[], body: Op.T[] }[], endIdx: number } {
   let i = start
-  const branches: { guard: Op[], body: Op[] }[] = []
-  let guard: Op[] = []
+  const branches: { guard: Op.T[], body: Op.T[] }[] = []
+  let guard: Op.T[] = []
   let op = ops[i]
   while (op.tag !== 'lbl' || op.name !== label) {
     if (op.tag === 'cond' && op.end === label) {
@@ -140,10 +138,10 @@ function findCondBranches (start: number, label: string, ops: Op[]): { branches:
   return { branches, endIdx: i }
 }
 
-function findArgs (start: number, label: string, ops: Op[]): { segments: Op[][], endIdx: number } {
+function findArgs (start: number, label: string, ops: Op.T[]): { segments: Op.T[][], endIdx: number } {
   let i = start
-  let segments: Op[][] = []
-  let seg: Op[] = []
+  let segments: Op.T[][] = []
+  let seg: Op.T[] = []
   let op = ops[i]
   while (op.tag !== 'lbl' || op.name !== label) {
     if ((op.tag === 'and' || op.tag === 'or') && op.jmpTo === label) {
@@ -157,7 +155,7 @@ function findArgs (start: number, label: string, ops: Op[]): { segments: Op[][],
   return { segments, endIdx: i }
 }
 
-function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp): S.Exp {
+function dumpToExp ([stack, env, control]: [Value.T[], Env, Control], hole?: Exp.T): Exp.T {
   let expStack = stack.map((v) => valueToExp(env, v))
   if (hole !== undefined) { expStack.push(hole) }
   for (let i = control.idx; i < control.ops.length; i++) {
@@ -165,62 +163,62 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
     if (op.tag === 'var') {
       if (env.has(op.name)) {
         const val = env.get(op.name)!
-        if (V.isClosure(val) || V.isJsFunction(val)) {
-          expStack.push(S.mkVar(op.name, op.range))
+        if (Value.isClosure(val) || Value.isJsFunction(val)) {
+          expStack.push(Exp.mkVar(op.name, op.range))
         } else {
           expStack.push(valueToExp(env, env.get(op.name)!))
         }
       } else {
-        expStack.push(S.mkVar(op.name, op.range))
+        expStack.push(Exp.mkVar(op.name, op.range))
       }
     } else if (op.tag === 'val') {
       expStack.push(valueToExp(env, op.value))
     } else if (op.tag === 'cls') {
-      expStack.push(S.mkLam(op.params, dumpToExp([[], env, new Control(op.ops)]), '(', noRange))
+      expStack.push(Exp.mkLam(op.params, dumpToExp([[], env, new Control(op.ops)]), '(', noRange))
     } else if (op.tag === 'ap') {
       const args = op.arity === 0 ? [] : expStack.slice(-op.arity)
       for (let i = 0; i < op.arity; i++) { expStack.pop() }
-      expStack.push(S.mkApp(expStack.pop()!, args, '(', noRange))
+      expStack.push(Exp.mkApp(expStack.pop()!, args, '(', noRange))
     } else if (op.tag === 'if') {
       const elseb = dumpToExp([[], env, new Control(op.elseb)])
       const ifb = dumpToExp([[], env, new Control(op.ifb)])
       const guard = expStack.pop()!
-      expStack.push(S.mkIf(guard, ifb, elseb, '(', noRange))
+      expStack.push(Exp.mkIf(guard, ifb, elseb, '(', noRange))
     } else if (op.tag === 'let') {
       const names = op.names
       const bindings = names.reverse().map((n: string) =>
         ({ name: n, body: expStack.pop()! })).reverse()
-      expStack.push(S.mkLet(bindings, expStack.pop()!, '(', noRange))
+      expStack.push(Exp.mkLet(bindings, expStack.pop()!, '(', noRange))
     } else if (op.tag === 'seq') {
       if (op.numSubexps === 0) {
-        expStack.push(S.mkBegin([], '(', noRange))
+        expStack.push(Exp.mkBegin([], '(', noRange))
       } else {
         const exps = expStack.slice(-op.numSubexps)
         for (let i = 0; i < op.numSubexps; i++) { expStack.pop() }
-        expStack.push(S.mkBegin(exps, '(', noRange))
+        expStack.push(Exp.mkBegin(exps, '(', noRange))
       }
     } else if (op.tag === 'match') {
       throw new ICE('sem.dumpToExp', 'Unimplemented match case')
     } else if (op.tag === 'and') {
       const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
       const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
-      expStack.push(S.mkAnd(args, '(', noRange))
+      expStack.push(Exp.mkAnd(args, '(', noRange))
       i = endIdx
     } else if (op.tag === 'or') {
       const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
       const args = [expStack.pop()!].concat(segments.map((ops) => dumpToExp([[], env, new Control(ops)])))
-      expStack.push(S.mkOr(args, '(', noRange))
+      expStack.push(Exp.mkOr(args, '(', noRange))
       i = endIdx
     } else if (op.tag === 'cond') {
       const first = { guard: expStack.pop()!, body: dumpToExp([[], env, new Control(op.body)]) }
       const { branches, endIdx } = findCondBranches(i + 1, op.end, control.ops)
-      expStack.push(S.mkCond([first].concat(branches.map((b) => ({
+      expStack.push(Exp.mkCond([first].concat(branches.map((b) => ({
         guard: dumpToExp([[], env, new Control(b.guard)]),
         body: dumpToExp([[], env, new Control(b.body)])
       }))), noRange))
       i = endIdx
     } else if (op.tag === 'exn') {
-      expStack.push(S.mkApp(S.mkVar('error', noRange), [S.mkStr(op.msg, noRange)], '(', noRange))
+      expStack.push(Exp.mkApp(Exp.mkVar('error', noRange), [Exp.mkStr(op.msg, noRange)], '(', noRange))
     } else if (op.tag === 'lbl') {
       // N.B., do nothing, skip over labels!
     }
@@ -232,65 +230,65 @@ function dumpToExp ([stack, env, control]: [Value[], Env, Control], hole?: S.Exp
   }
 }
 
-export function opsToExp (ops: Op[]): S.Exp {
+export function opsToExp (ops: Op.T[]): Exp.T {
   return dumpToExp([[], new Env([]), new Control(ops)])
 }
 
-export function stateToExp (state: ExecutionState): S.Exp | undefined {
-  const dump: [Value[], Env, Control][] = [...state.dump]
+export function stateToExp (state: ExecutionState): Exp.T | undefined {
+  const dump: [Value.T[], Env, Control][] = [...state.dump]
   dump.push([state.stack, state.env, state.control])
-  let ret: S.Exp | undefined = undefined
+  let ret: Exp.T | undefined = undefined
   for (let i = dump.length - 1; i >= 0; i--) {
     ret = dumpToExp(dump[i], ret)
   }
   return ret
 }
 
-export function expToOps (e: S.Exp): Op[] {
+export function expToOps (e: Exp.T): Op.T[] {
   switch (e.tag) {
     case 'var':
-      return [V.mkVar(e.name, e.range)]
+      return [Op.mkVar(e.name, e.range)]
     case 'num':
-      return [V.mkValue(e.value)]
+      return [Op.mkValue(e.value)]
     case 'bool':
-      return [V.mkValue(e.value)]
+      return [Op.mkValue(e.value)]
     case 'char':
-      return [V.mkValue(V.mkChar(e.value))]
+      return [Op.mkValue(Value.mkChar(e.value))]
     case 'str':
-      return [V.mkValue(e.value)]
+      return [Op.mkValue(e.value)]
     case 'lam':
-      return [V.mkCls(e.args, expToOps(e.body))]
+      return [Op.mkCls(e.args, expToOps(e.body))]
     case 'let':
       const valOps = e.bindings.map((b) => b.body).flatMap(expToOps)
-      return valOps.concat([V.mkLet(e.bindings.map((b) => b.name))]).concat(expToOps(e.body))
+      return valOps.concat([Op.mkLet(e.bindings.map((b) => b.name))]).concat(expToOps(e.body))
     case 'app':
-      return [e.head].concat(e.args).flatMap(expToOps).concat([V.mkAp(e.args.length, e.range)])
+      return [e.head].concat(e.args).flatMap(expToOps).concat([Op.mkAp(e.args.length, e.range)])
     case 'if':
-      return expToOps(e.guard).concat([V.mkIf(expToOps(e.ifb), expToOps(e.elseb), e.range)])
+      return expToOps(e.guard).concat([Op.mkIf(expToOps(e.ifb), expToOps(e.elseb), e.range)])
     case 'begin':
-      return e.exps.flatMap(expToOps).concat([V.mkSeq(e.exps.length)])
+      return e.exps.flatMap(expToOps).concat([Op.mkSeq(e.exps.length)])
     case 'match':
-      return expToOps(e.scrutinee).concat([V.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
+      return expToOps(e.scrutinee).concat([Op.mkMatch(e.branches.map((b) => ({ pattern: b.pattern, body: expToOps(b.body) })), e.range)])
     case 'and': {
-      const label = V.freshLabel()
-      return e.exps.flatMap((e) => expToOps(e).concat([V.mkAnd(label, e.range)])).concat([V.mkValue(true), V.mkLbl(label)])
+      const label = Op.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([Op.mkAnd(label, e.range)])).concat([Op.mkValue(true), Op.mkLbl(label)])
     }
     case 'or': {
-      const label = V.freshLabel()
-      return e.exps.flatMap((e) => expToOps(e).concat([V.mkOr(label, e.range)])).concat([V.mkValue(false), V.mkLbl(label)])
+      const label = Op.freshLabel()
+      return e.exps.flatMap((e) => expToOps(e).concat([Op.mkOr(label, e.range)])).concat([Op.mkValue(false), Op.mkLbl(label)])
     }
     case 'cond': {
       // TODO: need an error instruction to throw before the label!
-      const label = V.freshLabel()
-      return e.branches.flatMap((b) => expToOps(b.guard).concat([V.mkCond(expToOps(b.body), label, e.range)])).concat([
-        V.mkExn('No branches of "cond" expression matched', undefined, e.range),
-        V.mkLbl(label)
+      const label = Op.freshLabel()
+      return e.branches.flatMap((b) => expToOps(b.guard).concat([Op.mkCond(expToOps(b.body), label, e.range)])).concat([
+        Op.mkExn('No branches of "cond" expression matched', undefined, e.range),
+        Op.mkLbl(label)
       ])
     }
   }
 }
 
-export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
+export function tryMatch (p: Pat.T, v: Value.T): [string, Value.T][] | undefined {
   if (p.tag === 'wild') {
     return []
   } else if (p.tag === 'var') {
@@ -303,17 +301,17 @@ export function tryMatch (p: S.Pat, v: Value): [string, Value][] | undefined {
     return []
   } else if (p.tag === 'str' && typeof v === 'string' && p.value === v) {
     return []
-  } else if (p.tag === 'ctor' && (V.isPair(v) || V.isStruct(v))) {
+  } else if (p.tag === 'ctor' && (Value.isPair(v) || Value.isStruct(v))) {
     const head = p.ctor
     const args = p.args
-    if ((head === 'pair' || head === 'cons') && args.length === 2 && V.isPair(v)) {
-      const env1 = tryMatch(args[0], (v as V.Pair).fst)
-      const env2 = tryMatch(args[1], (v as V.Pair).snd)
+    if ((head === 'pair' || head === 'cons') && args.length === 2 && Value.isPair(v)) {
+      const env1 = tryMatch(args[0], (v as Value.Pair).fst)
+      const env2 = tryMatch(args[1], (v as Value.Pair).snd)
       return env1 && env2 ? env1.concat(env2) : undefined
-  } else if (V.isStructKind(v, head)) {
-      const fields = [...((v as V.Struct).fields).values()]
+  } else if (Value.isStructKind(v, head)) {
+      const fields = [...((v as Value.Struct).fields).values()]
       if (fields.length === args.length) {
-        let env: [string, Value][] = []
+        let env: [string, Value.T][] = []
         for (let i = 0; i < fields.length; i++) {
           const env2 = tryMatch(args[i], fields[i])
           if (!env2) {
@@ -342,7 +340,7 @@ function stepPrim (state: ExecutionState): boolean {
     }
 
     case 'cls': {
-      stack.push(V.mkClosure(op.params.length, op.params, op.ops, state.env))
+      stack.push(Value.mkClosure(op.params.length, op.params, op.ops, state.env))
       return true
     }
   
@@ -362,8 +360,8 @@ function stepPrim (state: ExecutionState): boolean {
       const head = stack[stack.length - op.arity - 1]
       const args = op.arity === 0 ? [] : stack.slice(-op.arity)
       for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
-      if (V.isClosure(head)) {
-        const closure = head as V.Closure
+      if (Value.isClosure(head)) {
+        const closure = head as Value.Closure
         if (closure.params.length !== args.length) {
           throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
         } else {
@@ -372,10 +370,10 @@ function stepPrim (state: ExecutionState): boolean {
           // just overwrite the current state and go forward.
           state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
         }
-      } else if (V.isJsFunction(head)) {
+      } else if (Value.isJsFunction(head)) {
         const fn = head as Function
         try {
-          const result = fn(...args) as Value
+          const result = fn(...args) as Value.T
           stack.push(result)
         } catch (e) {
           // N.B., annotate any errors from foreign function calls with
@@ -387,7 +385,7 @@ function stepPrim (state: ExecutionState): boolean {
           throw e
         }
       } else {
-        throw new ScamperError('Runtime', `Non-function value (${V.typeOfValue(head)}) in function application`, undefined, op.range)
+        throw new ScamperError('Runtime', `Non-function value (${Value.typeOfValue(head)}) in function application`, undefined, op.range)
       }
       return false
     }
@@ -400,7 +398,7 @@ function stepPrim (state: ExecutionState): boolean {
         } else if (guard === false) {
           state.dumpAndSwitch([], state.env, op.elseb)
         } else {
-          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${V.valueToString(guard)} instead`, undefined, op.range)
+          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${Value.valueToString(guard)} instead`, undefined, op.range)
         }
       } else {
         throw new ICE('sem.step', `Guard missing from stack for conditional`)
@@ -446,7 +444,7 @@ function stepPrim (state: ExecutionState): boolean {
           }
         }
         if (!foundMatch) {
-          throw new ScamperError('Runtime', `No pattern matches for ${V.valueToString(scrutinee)}`, undefined, op.range)
+          throw new ScamperError('Runtime', `No pattern matches for ${Value.valueToString(scrutinee)}`, undefined, op.range)
         }
       } else {
         throw new ICE('sem.step', `Scrutinee missing from stack for match`)
@@ -460,7 +458,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       const val = stack.pop()!
       if (typeof val !== 'boolean') {
-        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${Value.typeOfValue(val)}`, undefined, op.range)
       }
       if (!val) {
         state.stack.push(false)
@@ -476,7 +474,7 @@ function stepPrim (state: ExecutionState): boolean {
       }
       const val = stack.pop()!
       if (typeof val !== 'boolean') {
-        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${V.typeOfValue(val)}`, undefined, op.range)
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${Value.typeOfValue(val)}`, undefined, op.range)
       }
       if (val) {
         state.stack.push(true)
@@ -527,26 +525,26 @@ function step (state: ExecutionState): void {
 function executeStructDecl (name: string, fields: string[], env: Env): Env {
   const predFn = function (v: any) {
     C.checkContract(arguments, C.contract(`${name}?`, [C.any]))
-    return V.isStructKind(v, name)
+    return Value.isStructKind(v, name)
   }
-  V.nameFn(`${name}?`, predFn)
-  const pred: [string, Value] = [`${name}?`, predFn]
+  Value.nameFn(`${name}?`, predFn)
+  const pred: [string, Value.T] = [`${name}?`, predFn]
 
   const ctorFn = function (...args: any[]) {
     C.checkContract(arguments, C.contract(name, fields.map((f) => C.any)))
-    return V.mkStruct(name, fields, args)
+    return Value.mkStruct(name, fields, args)
   }
-  V.nameFn(name, ctorFn)
-  const ctor: [string, Value] = [name, ctorFn]
+  Value.nameFn(name, ctorFn)
+  const ctor: [string, Value.T] = [name, ctorFn]
 
-  const fieldFns: [string, Value][] = []
+  const fieldFns: [string, Value.T][] = []
   fields.forEach((f) => {
     const fieldName = `${name}-${f}`
-    const fn = function (v: V.Struct) {
+    const fn = function (v: Value.Struct) {
       C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
       return v.fields[f]
     }
-    V.nameFn(fieldName, fn)
+    Value.nameFn(fieldName, fn)
     fieldFns.push([fieldName, fn])
   })
 
@@ -559,7 +557,7 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
 // However, if we allow side-effecting higher-order functions in the future,
 // we'll need to revisit this design decision.
 
-function execute (state: ExecutionState): Value {
+function execute (state: ExecutionState): Value.T {
   while (!state.isFinished()) {
     step(state)
   }
@@ -569,14 +567,14 @@ function execute (state: ExecutionState): Value {
   return state.stack.pop()!
 }
 
-function runClosure (closure: V.Closure, ...args: Value[]): Value {
+function runClosure (closure: Value.Closure, ...args: Value.T[]): Value.T {
   const state = new ExecutionState(closure.env.extend(closure.params.map((x, i) => [x, args[i]])), closure.ops)
   return execute(state)
 }
 
-export function callFunction (fn: V.Closure | Function, ...args: any): any {
-  if (V.isClosure(fn)) {
-    return runClosure(fn as V.Closure, ...args)
+export function callFunction (fn: Value.Closure | Function, ...args: any): any {
+  if (Value.isClosure(fn)) {
+    return runClosure(fn as Value.Closure, ...args)
   } else {
     return (fn as Function)(...args)
   }
@@ -588,16 +586,16 @@ function makeTraceDiv(): HTMLElement {
   return div
 }
 
-function makeTraceHeader (s: S.Stmt): HTMLElement {
+function makeTraceHeader (s: Stmt.T): HTMLElement {
   switch (s.tag) {
     case 'binding':
-      return mkCodeElement(`Evaluating binding ${s.name}...\n${S.expToString(s.body)}`)
+      return mkCodeElement(`Evaluating binding ${s.name}...\n${Exp.expToString(s.body)}`)
     case 'display':
-      return mkCodeElement(`Evaluating displayed expression...\n${S.expToString(s.body)}`)
+      return mkCodeElement(`Evaluating displayed expression...\n${Exp.expToString(s.body)}`)
     case 'import':
       return mkCodeElement(`Importing module ${s.modName}...`)
     case 'stmtexp':
-      return mkCodeElement(`Evaluating expression...\n${S.expToString(s.body)}`)
+      return mkCodeElement(`Evaluating expression...\n${Exp.expToString(s.body)}`)
     case 'struct':
       return mkCodeElement(`Evaluating struct declaration ${s.id}...`)
   }
@@ -606,13 +604,13 @@ function makeTraceHeader (s: S.Stmt): HTMLElement {
 export class Sem {
   display: HTMLElement
   env: Env
-  prog: S.Prog
+  prog: Prog
   curStmt: number
   state?: ExecutionState
-  builtinLibs: Map<Id, [Id, Value][]>
+  builtinLibs: Map<Id, [Id, Value.T][]>
   traces?: HTMLElement[]
 
-  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value][]>, isTracing: boolean, env: Env, prog: S.Prog) {
+  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value.T][]>, isTracing: boolean, env: Env, prog: Prog) {
     this.display = display
     this.builtinLibs = builtinLibs
     if (isTracing) {
@@ -662,7 +660,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -676,8 +674,8 @@ export class Sem {
           // N.B., if we bind a lambda, annotate the closure value with the
           // name for stepping purposes
           const val = this.state.stack.pop()!
-          if (V.isClosure(val)) {
-            (val as V.Closure).name = stmt.name
+          if (Value.isClosure(val)) {
+            (val as Value.Closure).name = stmt.name
           }
           if (this.env.has(stmt.name)) {
             throw new ScamperError('Runtime', `Identifier "${stmt.name}" already bound`, undefined, stmt.range)
@@ -700,7 +698,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {
@@ -736,7 +734,7 @@ export class Sem {
           try {
             step(this.state)
             if (this.isTracing()) {
-              this.appendToCurrentTrace(S.expToString(stateToExp(this.state)!))
+              this.appendToCurrentTrace(Exp.expToString(stateToExp(this.state)!))
               this.appendToCurrentTrace('\n')
             }
           } catch (e) {

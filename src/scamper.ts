@@ -1,25 +1,24 @@
-import * as Lang from './lang.js'
+import { Env, Prog } from './lang.js'
 import * as Parser from './parser.js'
 import * as Sem from './sem.js'
-import * as Value from './value.js'
 
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
 
 class Scamper {
-  env: Value.Env
+  env: Env
   display: HTMLElement
   isTracing: boolean
-  prog: Lang.Prog
+  prog: Prog
   sem: Sem.Sem
 
-  constructor (display: HTMLElement, isTracing: boolean, src: string, initialEnv?: Value.Env) {
+  constructor (display: HTMLElement, isTracing: boolean, src: string, initialEnv?: Env) {
     this.display = display
     this.isTracing = isTracing
     if (initialEnv !== undefined) {
       this.env = initialEnv
     } else {
-      this.env = new Value.Env([...Prelude,])
+      this.env = new Env([...Prelude,])
     }
     this.prog = Parser.parseProgram(src)
     this.sem = new Sem.Sem(this.display, builtinLibs, isTracing, this.env, this.prog)

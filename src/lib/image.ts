@@ -1,13 +1,12 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Render from '../display.js'
-import { typeOfValue, Value } from '../value.js'
-import * as V from '../value.js'
+import { Value } from '../lang.js'
 
-export const imageLib: [string, V.Value][] = []
+export const imageLib: [string, Value.T][] = []
 
 function registerFn (name: string, fn: Function): void {
-  V.nameFn(name, fn)
+  Value.nameFn(name, fn)
   imageLib.push([name, fn])
 }
 
@@ -19,17 +18,17 @@ registerFn('color', color)
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
-  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${Value.typeOfValue(actual)}`
 }
 
 const alignVS: C.Spec = {
   predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${Value.typeOfValue(actual)}`
 }
 
 const alignHS: C.Spec = {
   predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${Value.typeOfValue(actual)}`
 }
 
 const colorS: C.Spec = {
@@ -45,7 +44,7 @@ const colorS: C.Spec = {
     */
    return true
   },
-  errorMsg: (actual: any) => `expected a color, received ${typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected a color, received ${Value.typeOfValue(actual)}`
 }
 
 type Mode = 'solid' | 'outline'
@@ -59,7 +58,7 @@ registerFn('image?', imageQ)
 
 const imageS = {
   predicate: imageQ,
-  errorMsg: (actual: any) => `expected an image, received ${typeOfValue(actual)}`
+  errorMsg: (actual: any) => `expected an image, received ${Value.typeOfValue(actual)}`
 }
 
 type Ellipse = { _scamperTag: 'image', kind: 'ellipse', width: number, height: number, mode: Mode, color: string }
@@ -113,10 +112,10 @@ const pathPrim = (width: number, height: number, points: [number, number][], mod
    _scamperTag: 'image', kind: 'path', width, height, points, mode, color
 })
 
-function path (width: number, height: number, points: V.List, mode: Mode, color: string): Path {
+function path (width: number, height: number, points: Value.List, mode: Mode, color: string): Path {
   checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
   return pathPrim(width, height, 
-    V.listToArray(points).map((p: Value) => [(p as V.Pair).fst, (p as V.Pair).snd]) as [number, number][],
+    Value.listToArray(points).map((p: Value.T) => [(p as Value.Pair).fst, (p as Value.Pair).snd]) as [number, number][],
     mode, color)
 }
 registerFn('path', path)

@@ -1,5 +1,4 @@
-import { charToName, ICE, ScamperError } from './lang.js'
-import * as V from './value.js'
+import { charToName, ICE, ScamperError, Value } from './lang.js'
 
 function mkOutputDiv (body: HTMLElement) {
   const ret = document.createElement('div')
@@ -51,7 +50,7 @@ export function renderToHTML (v: any): HTMLElement {
       if (v === null) {
         return mkCodeElement('null')
       } else if (Array.isArray(v)) {
-        const vec = v as V.Value[]
+        const vec = v as Value.T[]
         if (vec.length === 0) {
           return mkCodeElement('(vector)')
         }
@@ -63,13 +62,13 @@ export function renderToHTML (v: any): HTMLElement {
         })
         ret.append(mkCodeElement(')'))
         return ret
-      } else if (V.isClosure(v)) {
+      } else if (Value.isClosure(v)) {
         return mkCodeElement(`[Function (closure)]`)
-      } else if (V.isJsFunction(v)) {
+      } else if (Value.isJsFunction(v)) {
         return mkCodeElement(`[Function (JS)]`)
-      } else if (V.isChar(v)) {
-        return mkCodeElement(`#\\${charToName((v as V.Char).value)}`)
-      } else if (V.isList(v)) {
+      } else if (Value.isChar(v)) {
+        return mkCodeElement(`#\\${charToName((v as Value.Char).value)}`)
+      } else if (Value.isList(v)) {
         const ret = mkCodeElement('(list ')
         let lst = v
         ret.appendChild(renderToHTML(lst.fst))
@@ -81,7 +80,7 @@ export function renderToHTML (v: any): HTMLElement {
         }
         ret.append(mkCodeElement(')'))
         return ret
-      } else if (V.isPair(v)) {
+      } else if (Value.isPair(v)) {
         const ret = mkCodeElement('(pair ')
         ret.appendChild(renderToHTML(v.fst))
         ret.appendChild(mkCodeElement(' '))
@@ -94,9 +93,9 @@ export function renderToHTML (v: any): HTMLElement {
         const customRenderer = getRenderer(v, customWebRenderers)
         if (customRenderer !== undefined) {
           return customRenderer(v)
-        } else if (V.isStruct(v)) {
-          const s = v as V.Struct
-          const fields = V.getFieldsOfStruct(s)
+        } else if (Value.isStruct(v)) {
+          const s = v as Value.Struct
+          const fields = Value.getFieldsOfStruct(s)
           if (fields.length === 0) {
             return mkCodeElement(`(${s.kind})`)
           } else {
