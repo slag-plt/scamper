@@ -397,7 +397,8 @@ export namespace Value {
   export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any }
 
   export type List = null | Pair
-  export type T = boolean | number | string | List | undefined | T[] | TaggedObject | Function | Object
+  export type ScamperFn = Closure | Function
+  export type T = boolean | number | string | List | undefined | T[] | TaggedObject | ScamperFn | Object
 
   export const isNumber = (v: T): boolean => typeof v === 'number'
   export const isBoolean = (v: T): boolean => typeof v === 'boolean'

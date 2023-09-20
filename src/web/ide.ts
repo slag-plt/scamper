@@ -77,9 +77,18 @@ class IDE {
       this.scamper!.runProgram()
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
-    stepOnceButton.addEventListener('click', () => this.scamper!.stepProgram())
-    stepStmtButton.addEventListener('click', () => this.scamper!.stepStmtProgram())
-    stepAllButton.addEventListener('click', () => this.scamper!.runProgram())
+    stepOnceButton.addEventListener('click', () => {
+      this.scamper!.stepProgram()
+      outputPane.scrollTo(0, outputPane.scrollHeight)
+    })
+    stepStmtButton.addEventListener('click', () => {
+      this.scamper!.stepStmtProgram()
+      outputPane.scrollTo(0, outputPane.scrollHeight)
+    })
+    stepAllButton.addEventListener('click', () => {
+      this.scamper!.runProgram()
+      outputPane.scrollTo(0, outputPane.scrollHeight)
+    })
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
     stepAllButton.disabled = true
