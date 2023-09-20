@@ -1,6 +1,6 @@
 .PHONY: site/js
 
-dist/ : site/index.html site/reference.html site/docs site/webfonts site/css site/js/
+site/ : site/index.html site/reference.html site/docs site/webfonts site/css site/js/
 
 site/js :
 	npm run build
