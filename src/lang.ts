@@ -394,7 +394,7 @@ export namespace Value {
   // the struct, all required to be string keys (i.e., no index or symbol keys).
   // The order of arguments of a struct's constructor is thus property order of
   // the corresponding object, i.e., the order in which the fields are defined.
-  export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any }
+  export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any, [key: number]: never, [key: symbol]: never}
 
   export type List = null | Pair
   export type ScamperFn = Closure | Function
