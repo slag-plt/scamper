@@ -45,6 +45,11 @@ export const string = {
   errorMsg: (actual: any) => `expected a string, received ${Value.typeOf(actual)}`
 }
 
+export const numRange = (min: number, max: number) => ({
+  predicate: (v: any) => typeof v === 'number' && v >= min && v <= max,
+  errorMsg: (actual: any) => `expected a number in the range [${min}, ${max}], received ${Value.typeOf(actual)}`
+})
+
 export const integer = {
   predicate: (v: any) => typeof v === 'number' && Math.floor(v) === v,
   errorMsg: (actual: any) => `expected an integer, received ${Value.typeOf(actual)}`
