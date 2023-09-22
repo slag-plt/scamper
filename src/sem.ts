@@ -190,10 +190,10 @@ function dumpToExp ([stack, env, control]: [Value.T[], Env, Control], hole?: Exp
       const names = op.names
       const bindings = names.reverse().map((n: string) =>
         ({ name: n, body: expStack.pop()! })).reverse()
-      // BUG: expStack.pop() is not the body of the let! It is the remaining
-      // instructions of the control that are the let---oh crap, how do we
-      // process those?
-      expStack.push(Exp.mkLet(bindings, expStack.pop()!, '(', noRange))
+      // N.B., names bound by the let shadow outer bindings, so remove them
+      // from the environment so that we don't replace them by accident!
+      const body = dumpToExp([[], env.quotient(...names), new Control(op.body)])
+      expStack.push(Exp.mkLet(bindings, body, '(', noRange))
     } else if (op.tag === 'seq') {
       if (op.numSubexps === 0) {
         expStack.push(Exp.mkBegin([], '(', noRange))
@@ -259,7 +259,7 @@ export function expToOps (e: Exp.T): Op.T[] {
       return [Op.mkCls(e.args, expToOps(e.body))]
     case 'let':
       const valOps = e.bindings.map((b) => b.body).flatMap(expToOps)
-      return valOps.concat([Op.mkLet(e.bindings.map((b) => b.name))]).concat(expToOps(e.body))
+      return valOps.concat([Op.mkLet(e.bindings.map((b) => b.name), expToOps(e.body))])
     case 'app':
       return [e.head].concat(e.args).flatMap(expToOps).concat([Op.mkAp(e.args.length, e.range)])
     case 'if':
@@ -409,9 +409,8 @@ function stepPrim (state: ExecutionState): boolean {
       if (stack.length >= op.names.length) {
         const values = stack.slice(-op.names.length)
         for (let i = 0; i < op.names.length; i++) { stack.pop() }
-        state.env = state.env.extend(op.names.map((n, i) => [n, values[i]]))
-        // TODO: need to pop the env at some point, right?
-        // If we push it onto the dump, then we can pop the env naturally!
+        const newEnv = state.env.extend(op.names.map((n, i) => [n, values[i]]))
+        state.dumpAndSwitch([], newEnv, op.body)
       } else {
         throw new ICE('sem.step', `Not enough values on stack for let binding`)
       }

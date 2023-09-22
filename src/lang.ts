@@ -322,27 +322,27 @@ export namespace Op {
 
   export type MatchBranch = { pattern: Pat.T, body: T[] }
 
-  export type T    = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Cond | Lbl | Exn
-  export type Var   = { tag: 'var', name: string, range: Range }
-  export type Val   = { tag: 'val', value: Value.T }
-  export type Cls   = { tag: 'cls', params: Id[], ops: T[] }
-  export type Ap    = { tag: 'ap', arity: number, range: Range }
-  export type If    = { tag: 'if', ifb: T[], elseb: T[], range: Range }
-  export type Let   = { tag: 'let', names: Id[] }
-  export type Seq   = { tag: 'seq', numSubexps: number }
-  export type Match = { tag: 'match', branches: MatchBranch[], range: Range }
-  export type And   = { tag: 'and', jmpTo: Label, range: Range }
-  export type Or    = { tag: 'or', jmpTo: Label, range: Range }
-  export type Cond  = { tag: 'cond', body: T[], end: Label, range: Range }
-  export type Lbl   = { tag: 'lbl', name: string }
-  export type Exn   = { tag: 'exn', msg: string, modName?: string, range?: Range, source?: string }
+  export type T      = Var | Val | Cls | Ap | If | Let | Seq | Match | And | Or | Cond | Lbl | Exn
+  export type Var    = { tag: 'var', name: string, range: Range }
+  export type Val    = { tag: 'val', value: Value.T }
+  export type Cls    = { tag: 'cls', params: Id[], ops: T[] }
+  export type Ap     = { tag: 'ap', arity: number, range: Range }
+  export type If     = { tag: 'if', ifb: T[], elseb: T[], range: Range }
+  export type Let    = { tag: 'let', names: Id[], body: T[] }
+  export type Seq    = { tag: 'seq', numSubexps: number }
+  export type Match  = { tag: 'match', branches: MatchBranch[], range: Range }
+  export type And    = { tag: 'and', jmpTo: Label, range: Range }
+  export type Or     = { tag: 'or', jmpTo: Label, range: Range }
+  export type Cond   = { tag: 'cond', body: T[], end: Label, range: Range }
+  export type Lbl    = { tag: 'lbl', name: string }
+  export type Exn    = { tag: 'exn', msg: string, modName?: string, range?: Range, source?: string }
 
   export const mkVar = (name: string, range: Range): T => ({ tag: 'var', name, range })
   export const mkValue = (value: Value.T): T => ({ tag: 'val', value })
   export const mkCls = (params: Id[], ops: T[]): T => ({ tag: 'cls', params, ops })
   export const mkAp = (arity: number, range: Range): T => ({ tag: 'ap', arity, range })
   export const mkIf = (ifb: T[], elseb: T[], range: Range): T => ({ tag: 'if', ifb, elseb, range })
-  export const mkLet = (names: Id[]): T => ({ tag: 'let', names })
+  export const mkLet = (names: Id[], body: T[]): T => ({ tag: 'let', names, body })
   export const mkSeq = (numSubexps: number): T => ({ tag: 'seq', numSubexps })
   export const mkMatch = (branches: MatchBranch[], range: Range): T => ({ tag: 'match', branches, range })
   export const mkAnd = (jmpTo: Label, range: Range): T => ({ tag: 'and', jmpTo, range })
@@ -350,37 +350,6 @@ export namespace Op {
   export const mkCond = (body: T[], end: Label, range: Range): T => ({ tag: 'cond', body, end, range })
   export const mkLbl = (name: string): T => ({ tag: 'lbl', name })
   export const mkExn = (msg: string, modName?: string, range?: Range, source?: string): T => ({ tag: 'exn', msg, modName, range, source })
-
-  export function toString (op: T): string {
-    switch (op.tag) {
-      case 'var':
-        return `var ${op.name}`
-      case 'val':
-        return `val ${Value.toString(op.value)}`
-      case 'cls':
-        return `cls (${op.params.join(' ')})`
-      case 'ap':
-        return `ap ${op.arity}`
-      case 'if':
-        return `if (${op.ifb.map(toString).join('; ')}) else (${op.elseb.map(toString).join('; ')}))`
-      case 'let':
-        return `let (${op.names.join(' ')})`
-      case 'seq':
-        return `seq ${op.numSubexps}`
-      case 'match':
-        return `match (${op.branches.map((b) => Pat.toString(b.pattern) + ' => ' + b.body.map(toString).join('; ')).join(' | ')})`
-      case 'and':
-        return `and (jmpto ${op.jmpTo})`
-      case 'or':
-        return `or (jmpto ${op.jmpTo})`
-      case 'cond':
-        return `cond (${op.end}, ${op.body.map(toString).join('; ')})`
-      case 'lbl':
-        return `lbl ${op.name}`
-      case 'exn':
-        return `exn "${op.msg}"`
-    }
-  }
 }
 
 export namespace Value {
@@ -604,5 +573,22 @@ export class Env {
 
   set (name: Id, v: Value.T): void {
     this.bindings.set(name, v)
+  }
+
+  remove (...names: Id[]): void {
+    for (const n of names) {
+      this.bindings.delete(n)
+    }
+    this.parent?.remove(...names)
+  }
+
+  clone (): Env {
+    return new Env([...this.bindings.entries()], this.parent?.clone())
+  }
+
+  quotient (...names: Id[]): Env {
+    const ret = this.clone()
+    ret.remove(...names)
+    return ret 
   }
 }
