@@ -18,6 +18,28 @@
       font-size: 1em;
     }
 
+    #loading {
+      display: block; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      padding-top: 100px; /* Location of the box */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgb(0,0,0); /* Fallback color */
+      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+
+    #loading-content {
+      background-color: #fefefe;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+    }
+
     #header {
       background: #eee;
       color: #333;
@@ -218,7 +240,17 @@
       </div>
     </div>
   </div>
+  <div id="loading">
+    <div id="loading-content">
+      Loading Scamper...
+    </div>
+  </div>
 
+  <script>
+    document.addEventListener("DOMContentLoaded", (event) => {
+      document.getElementById("loading").style.display = "none";
+    })
+  </script>
   <script type="module">
     import IDE from './js/ide.js'
     new IDE()
