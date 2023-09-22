@@ -1000,7 +1000,7 @@ export const fold: Doc = new Doc(
     'v: any',
     'l: list?'
   ],
-  'Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`.'
+  'Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.'
 )
 
 export const reduce: Doc = new Doc(
@@ -1017,7 +1017,7 @@ export const foldRight: Doc = new Doc(
     'v: any',
     'l: list?'
   ],
-  'Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`.'
+  'Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.'
 )
 
 export const reduceRight: Doc = new Doc(
