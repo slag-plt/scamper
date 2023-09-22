@@ -369,6 +369,7 @@ function stepPrim (state: ExecutionState): boolean {
           // just overwrite the current state and go forward.
           state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
         }
+        return false
       } else if (Value.isJsFunction(head)) {
         const fn = head as Function
         try {
@@ -385,7 +386,7 @@ function stepPrim (state: ExecutionState): boolean {
         }
         // N.B., continue stepping if we step through one of the primitive
         // constructor-functions
-        return fn.name === 'pair' || fn.name === 'list' || fn.name === 'vector')
+        return fn.name === 'pair' || fn.name === 'list' || fn.name === 'vector'
       } else {
         throw new ScamperError('Runtime', `Non-function value (${Value.typeOf(head)}) in function application`, undefined, op.range)
       }
