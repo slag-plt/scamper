@@ -383,10 +383,12 @@ function stepPrim (state: ExecutionState): boolean {
           }
           throw e
         }
+        // N.B., continue stepping if we step through one of the primitive
+        // constructor-functions
+        return fn.name === 'pair' || fn.name === 'list' || fn.name === 'vector')
       } else {
         throw new ScamperError('Runtime', `Non-function value (${Value.typeOf(head)}) in function application`, undefined, op.range)
       }
-      return false
     }
 
     case 'if': {
