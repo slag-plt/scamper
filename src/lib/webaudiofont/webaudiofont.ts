@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// @ts-nocheck
 
 import { WebAudioFontPlayer } from './WebAudioFontPlayer.js'
 import * as instr from './instruments_FluidR3_GM_sf2_file.js'

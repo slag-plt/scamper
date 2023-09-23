@@ -4,7 +4,7 @@ import { EditorView, keymap } from "@codemirror/view"
 
 import FS from './fs.js'
 import Split from 'split.js'
-import Scamper from '../scamper.js'
+import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
@@ -31,8 +31,10 @@ class IDE {
 
   startScamper (isTracing: boolean): void {
     outputPane!.innerHTML = ''
+    const opts = mkOptions()
+    opts.isTracing = isTracing
     try {
-      this.scamper = new Scamper(outputPane, isTracing, this.getDoc())
+      this.scamper = new Scamper(outputPane, this.getDoc(), opts)
       if (isTracing) {
         stepOnceButton.disabled = false
         stepStmtButton.disabled = false

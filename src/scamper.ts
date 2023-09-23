@@ -5,23 +5,37 @@ import * as Sem from './sem.js'
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
 
-class Scamper {
+export type ScamperOptions = {
+  isTracing: boolean
+  initialEnv?: Env
+  defaultDisplay: boolean
+}
+
+export function mkOptions(): ScamperOptions {
+  return {
+    isTracing: false,
+    initialEnv: undefined,
+    defaultDisplay: true
+  }
+}
+
+export class Scamper {
   env: Env
   display: HTMLElement
   isTracing: boolean
   prog: Prog
   sem: Sem.Sem
 
-  constructor (display: HTMLElement, isTracing: boolean, src: string, initialEnv?: Env) {
+  constructor (display: HTMLElement, src: string, opts: ScamperOptions) {
     this.display = display
-    this.isTracing = isTracing
-    if (initialEnv !== undefined) {
-      this.env = initialEnv
+    this.isTracing = opts.isTracing
+    if (opts.initialEnv !== undefined) {
+      this.env = opts.initialEnv
     } else {
       this.env = new Env([...Prelude,])
     }
     this.prog = Parser.parseProgram(src)
-    this.sem = new Sem.Sem(this.display, builtinLibs, isTracing, this.env, this.prog)
+    this.sem = new Sem.Sem(this.display, builtinLibs, opts.isTracing, opts.defaultDisplay, this.env, this.prog)
   }
 
   runProgram () { this.sem.execute() }
