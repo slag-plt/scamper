@@ -720,7 +720,7 @@ export class WebAudioFontLoader {
     };
 }
 
-class WebAudioFontPlayer {
+export class WebAudioFontPlayer {
     constructor() {
         this.envelopes = [];
         this.loader = new WebAudioFontLoader(this);
