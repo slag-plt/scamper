@@ -1,5 +1,5 @@
 import { linter, Diagnostic } from '@codemirror/lint'
-import Scamper from '../scamper.js'
+import { Scamper, mkOptions } from '../scamper.js'
 import { ScamperError } from '../lang.js'
 
 function makeScamperLinter (outputId: HTMLElement) {
@@ -7,7 +7,7 @@ function makeScamperLinter (outputId: HTMLElement) {
     const diagnostics: Diagnostic[] = []
     const doc = view.state.doc.toString()
     try {
-      new Scamper(outputId, false, doc)
+      new Scamper(outputId, doc, mkOptions())
     } catch (e) {
       if (e instanceof ScamperError) {
         let to, from

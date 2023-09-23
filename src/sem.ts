@@ -626,8 +626,9 @@ export class Sem {
   state?: ExecutionState
   builtinLibs: Map<Id, [Id, Value.T][]>
   traces?: HTMLElement[]
+  defaultDisplay: boolean
 
-  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value.T][]>, isTracing: boolean, env: Env, prog: Prog) {
+  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value.T][]>, isTracing: boolean, defaultDisplay: boolean, env: Env, prog: Prog) {
     this.display = display
     this.builtinLibs = builtinLibs
     if (isTracing) {
@@ -643,6 +644,7 @@ export class Sem {
     // N.B., start at -1 so that we can advance immediately
     this.curStmt = -1
     this.state = undefined
+    this.defaultDisplay = defaultDisplay
     this.advance()
   }
 
@@ -729,6 +731,11 @@ export class Sem {
         } else {
           if (this.state.stack.length !== 1) {
             throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+          }
+          if (this.defaultDisplay) {
+            renderToOutput(this.display, this.state.stack.pop()!)
+          } else {
+            this.state.stack.pop()
           }
           this.advance()
         }
