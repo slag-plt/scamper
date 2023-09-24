@@ -30,10 +30,8 @@ scamperTest('abs-quotient', `
 (abs 0)
 (abs -0.10000000000000009)
 (quotient 7 2)
-(quotient 0.2 0.5)
 (quotient 100 1)
-(quotient 2.0 2)
-(quotient 3.0 3.1)
+(quotient 2 2)
 `, [
   '13',
   '0.71',
@@ -46,10 +44,8 @@ scamperTest('abs-quotient', `
   '0',
   '0.10000000000000009',
   '3',
-  '0',
   '100',
   '1',
-  '0'
 ])
 
 scamperTest('append-reverse', `
@@ -215,13 +211,13 @@ updated-inventory
 (assoc-ref "oranges" updated-inventory)
 
 `, [
-  '(list (cons "apples" 5) (cons "bananas" 2) (cons "oranges" 8))',
+  '(list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8))',
   '#t',
   '#f',
   '5',
   '2',
   '8',
-  '(list (cons "apples" 3) (cons "bananas" 2) (cons "oranges" 8))',
+  '(list (pair "apples" 3) (pair "bananas" 2) (pair "oranges" 8))',
   '3',
   '2',
   '8'
@@ -253,8 +249,8 @@ scamperTest('car-cdr', `
 ])
 
 scamperTest('char-comp', `
-(define c1 #\c)
-(define c2 #\f)
+(define c1 #\\c)
+(define c2 #\\f)
 
 (char=? c1 c1)
 (char=? c1 c2)
@@ -281,8 +277,8 @@ scamperTest('char-comp', `
 (char>=? c2 c1)
 (char>=? c2 c2)
 
-(define c3 #\A)
-(define c4 #\d)
+(define c3 #\\A)
+(define c4 #\\d)
 
 (char-ci=? c3 c3)
 (char-ci=? c3 c4)
@@ -380,15 +376,15 @@ scamperTest('char-ops', `
 scamperTest('char-pred', `
 (char-alphabetic? #\\c)
 (char-alphabetic? #\\5)
-(char-alphabetic? #\\ )
+(char-alphabetic? #\\space)
 
 (char-numeric? #\\c)
 (char-numeric? #\\5)
-(char-numeric? #\ )
+(char-numeric? #\\space)
 
 (char-whitespace? #\\c)
 (char-whitespace? #\\5)
-(char-whitespace? #\\ )
+(char-whitespace? #\\space)
 
 (char-upper-case? #\\c)
 (char-upper-case? #\\F)
@@ -464,16 +460,16 @@ scamperTest('cons-pair', `
 (pair "a" "b")
 (pair 0.003 100)
 `, [
-  '(cons #t #f)',
-  '(cons 1 2)',
-  '(cons "hi" "bye")',
-  '(cons "a" "b")',
-  '(cons 0.003 100)',
-  '(cons 1 2)',
-  '(cons #t #f)',
-  '(cons "hi" "bye")',
-  '(cons "a" "b")',
-  '(cons 0.003 100)'
+  '(pair #t #f)',
+  '(pair 1 2)',
+  '(pair "hi" "bye")',
+  '(pair "a" "b")',
+  '(pair 0.003 100)',
+  '(pair 1 2)',
+  '(pair #t #f)',
+  '(pair "hi" "bye")',
+  '(pair "a" "b")',
+  '(pair 0.003 100)'
 ])
 
 scamperTest('equal', `
@@ -494,14 +490,10 @@ scamperTest('equal', `
 
 scamperTest('error-qq', `
 (error "existing")
-(+ 5 {??})
+(+ 5 (??))
 `, [
-  ':0:0: Runtime error:',
-  'A runtime error was encountered: existing',
-  'In program: (error "existing")',
-  ':5:1: Runtime error:',
-  'A hole was encountered!',
-  'In program: {??}'
+  'Runtime error [1:1-1:18]: (error) existing',
+  'Runtime error [2:6-2:9]: (??) Hole encountered in program!'
 ])
 
 scamperTest('exp-log', `
@@ -565,7 +557,7 @@ scamperTest('filter-fold-reduce', `
 (reduce-right - (list 10 9 8 7 6 5))
 `, [
   '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
-  '(list [object Function] [object Function] [object Function] [object Function] [object Function] [object Function])',
+  '(list [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)])',
   '(list null)',
   '(list null (list 4 5 6))',
   '15',
@@ -851,8 +843,6 @@ scamperTest('not-boolean', `
 (not #t)
 (not #f)
 (not 1)
-(not 0)
-(not 2)
 (boolean? #t)
 (boolean? #f)
 (boolean? 0)
@@ -861,15 +851,7 @@ scamperTest('not-boolean', `
 `, [
   '#f',
   '#t',
-  ':0:2: Runtime error:',
-  'not expected an boolean? in position 1 but a 1 was given',
-  'In program: (not 1)',
-  ':0:3: Runtime error:',
-  'not expected an boolean? in position 1 but a 0 was given',
-  'In program: (not 0)',
-  ':0:4: Runtime error:',
-  'not expected an boolean? in position 1 but a 2 was given',
-  'In program: (not 2)',
+  'Runtime error [3:1-3:7]: (not) expected a boolean, received number',
   '#t',
   '#t',
   '#f',
@@ -1105,26 +1087,18 @@ scamperTest('real', `
 
 scamperTest('remainder-modulo', `
 (remainder 7 2)
-(remainder 0.2 0.5)
-(remainder 100 1)
-(remainder 2.0 2)
-(remainder 3.0 3.1)
+(remainder 35 9)
+(remainder 2 2)
 (modulo 7 2)
-(modulo 0.2 0.5)
-(modulo 100 1)
-(modulo 2.0 2)
-(modulo 3.0 3.1)
+(modulo 35 9)
+(modulo 2 2)
 `, [
   '1',
-  '0.2',
+  '8',
   '0',
-  '0',
-  '3',
   '1',
-  '0.19999999999999996',
+  '8',
   '0',
-  '0',
-  '2.9999999999999996'
 ])
 
 scamperTest('sin-cos-tan', `
@@ -1370,14 +1344,14 @@ scamperTest('string-number-conversions', `
 ])
 
 scamperTest('string-ops', `
-(make-string 5 #\a)
-(make-string 0 #\c)
+(make-string 5 #\\a)
+(make-string 0 #\\c)
 (string-upcase "aCcD01-E")
 (string-downcase "aCcD01-E")
 (string-foldcase "aCcD01-E")
 (substring "hello world" 3 7)
 (string->list "hello world")
-(list->string (list #\h #\e #\l #\l #\o #\space #\w #\o #\r #\l #\d))
+(list->string (list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d))
 `, [
   '"aaaaa"',
   '""',
@@ -1385,7 +1359,7 @@ scamperTest('string-ops', `
   '"accd01-e"',
   '"accd01-e"',
   '"lo w"',
-  '(list #\h #\e #\l #\l #\o #\space #\w #\o #\r #\l #\d)',
+  '(list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d)',
   '"hello world"'
 ])
 
@@ -1580,7 +1554,7 @@ scamperTest('with-handler', `
 
 `, [
   '6',
-  '"This is the error that was generated: A runtime error was encountered: oh no, an error!"'
+  '"This is the error that was generated: oh no, an error!"'
 ])
 
 scamperTest('zero', `

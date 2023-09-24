@@ -529,6 +529,16 @@ function listTake (l: Value.List, k: number): Value.List {
 }
 registerFn('list-take', listTake, Prelude)
 
+function listDrop (l: Value.List, k: number): Value.List {
+  checkContract(arguments, contract('list-drop', [C.list, C.nonneg]))
+  while (l !== null && k > 0) {
+    l = l.snd as Value.List
+    k -= 1
+  }
+  return l
+}
+registerFn('list-drop', listDrop, Prelude)
+
 function listRef (l: Value.List, n: number): Value.T {
   checkContract(arguments, contract('list-ref', [C.list, C.nonneg]))
   let i = n
@@ -1255,6 +1265,7 @@ function qq (): never {
   checkContract(arguments, contract('??', []))
   throw new ScamperError ('Runtime', 'Hole encountered in program!')
 }
+registerFn('??', qq, Prelude)
 
 function compose (...fss: (Value.Closure | Function)[]): Value.Closure | Function {
   checkContract(arguments, contract('compose', [C.func], C.func))
@@ -1310,7 +1321,11 @@ registerFn('random', random, Prelude)
 
 function withHandler (handler: Value.Closure | Function, fn: Value.Closure | Function, ...args: Value.T[]): Value.T {
   checkContract(arguments, contract('with-handler', [C.func, C.func], C.any))
-  throw new ScamperError('Runtime', 'with-handler unimplemented')
+  try {
+    return callFunction(fn, ...args)
+  } catch (e) {
+    return callFunction(handler, (e as ScamperError).message)
+  }
 }
 registerFn('with-handler', withHandler, Prelude)
 
