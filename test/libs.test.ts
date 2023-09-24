@@ -102,9 +102,7 @@ scamperTest('control', `
 scamperTest('error', `
 (error "This is an example runtime error")
 `, [
-  ':0:0: Runtime error:',
-  'A runtime error was encountered: This is an example runtime error',
-  'In program: (error "This is an example runtime error")'
+  'Runtime error [1:1-1:42]: (error) This is an example runtime error'
 ])
 scamperTest('length', `
 (length (list 1 2 3 4 5))
@@ -135,11 +133,9 @@ scamperTest('min', `
   '1'
 ])
 scamperTest('qq', `
-(+ {??} 1)
+(+ (??) 1)
 `, [
-  ':3:0: Runtime error:',
-  'A hole was encountered!',
-  'In program: {??}'
+  'Runtime error [1:4-1:7]: (??) Hole encountered in program!'
 ])
 scamperTest('reverse', `
 (reverse (list 1 2 3 4 5))
