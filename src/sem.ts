@@ -300,6 +300,8 @@ export function tryMatch (p: Pat.T, v: Value.T): [string, Value.T][] | undefined
     return []
   } else if (p.kind === 'str' && typeof v === 'string' && p.value === v) {
     return []
+  } else if (p.kind === 'char' && Value.isChar(v)) {
+    return p.value === (v as Value.Char).value ? [] : undefined
   } else if (p.kind === 'ctor' && (Value.isPair(v) || Value.isStruct(v))) {
     const head = p.ctor
     const args = p.args
@@ -308,11 +310,12 @@ export function tryMatch (p: Pat.T, v: Value.T): [string, Value.T][] | undefined
       const env2 = tryMatch(args[1], (v as Value.Pair).snd)
       return env1 && env2 ? env1.concat(env2) : undefined
   } else if (Value.isStructKind(v, head)) {
-      const fields = [...((v as Value.Struct).fields).values()]
+      const st = v as Value.Struct
+      const fields = Value.getFieldsOfStruct(st)
       if (fields.length === args.length) {
         let env: [string, Value.T][] = []
         for (let i = 0; i < fields.length; i++) {
-          const env2 = tryMatch(args[i], fields[i])
+          const env2 = tryMatch(args[i], st[fields[i]])
           if (!env2) {
             return undefined
           }
@@ -543,7 +546,7 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
     const fieldName = `${name}-${f}`
     const fn = function (v: Value.Struct) {
       C.checkContract(arguments, C.contract(fieldName, [C.struct(name)]))
-      return v.fields[f]
+      return v[f]
     }
     Value.nameFn(fieldName, fn)
     fieldFns.push([fieldName, fn])
