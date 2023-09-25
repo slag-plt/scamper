@@ -16,16 +16,15 @@ const Music: [string, Value.T][] = []
 export type PitchClass = string
 export type Octave = number
 
-export type Duration = {
-  _scamperTag: 'struct',
-  kind: 'dur',
-  numerator: number,
-  denominator: number
+export interface Duration extends Value.Struct {
+  [Value.structKind] : 'dur',
+  numerator : number,
+  denominator : number
 }
 
 function dur (numerator: number, denominator: number): Duration {
   checkContract(arguments, contract('dur', [C.number, C.number]))
-  return { _scamperTag: 'struct', kind: 'dur', numerator, denominator }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dur', numerator, denominator }
 }
 registerFn('dur', dur, Music)
 
@@ -78,21 +77,21 @@ const noteC: C.Spec = {
   errorMsg: (actual: any) => `expected a midi note (0--127), received ${Value.typeOf(actual)}`,
 }
 
-export interface Note extends Value.Struct { kind: 'note', note: number, duration: Duration }
+export interface Note extends Value.Struct { [Value.structKind]: 'note', note: number, duration: Duration }
 function note (note: number, duration: Duration): Note {
   checkContract(arguments, contract('note', [noteC, durC]))
-  return { _scamperTag: 'struct', kind: 'note', note, duration }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note', note, duration }
 }
 registerFn('note', note, Music)
 
 export interface NoteFreq extends Value.Struct {
-  kind: 'note-freq',
+  [Value.structKind]: 'note-freq',
   freq: number,
   duration: Duration
 }
 function noteFreq (freq: number, duration: Duration): NoteFreq {
   checkContract(arguments, contract('note-freq', [C.number, durC]))  
-  return { _scamperTag: 'struct', kind: 'note-freq', freq, duration }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note-freq', freq, duration }
 }
 registerFn('note-freq', noteFreq, Music)
 
@@ -106,42 +105,42 @@ function repeat (n: number, composition: Composition): Composition {
 }
 registerFn('repeat', repeat, Music)
 
-interface Empty extends Value.Struct { kind: 'empty' }
-const empty = (): Empty => ({ _scamperTag: 'struct', kind: 'empty' })
+interface Empty extends Value.Struct { [Value.structKind]: 'empty' }
+const empty = (): Empty => ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'empty' })
 registerFn('empty', empty, Music)
 
-interface Rest extends Value.Struct { kind: 'rest', duration: Duration }
+interface Rest extends Value.Struct { [Value.structKind]: 'rest', duration: Duration }
 function rest (duration: Duration): Rest {
   checkContract(arguments, contract('rest', [durC]))
-  return { _scamperTag: 'struct', kind: 'rest', duration }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'rest', duration }
 }
 registerFn('rest', rest, Music)
 
-interface Trigger extends Value.Struct { kind: 'trigger', fn: Value.ScamperFn }
+interface Trigger extends Value.Struct { [Value.structKind]: 'trigger', fn: Value.ScamperFn }
 function trigger (fn: Value.ScamperFn): Trigger {
   checkContract(arguments, contract('trigger', [C.func]))
-  return { _scamperTag: 'struct', kind: 'trigger', fn }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'trigger', fn }
 }
 registerFn('trigger', trigger, Music)
 
-interface Par extends Value.Struct { kind: 'par', notes: Composition[] }
+interface Par extends Value.Struct { [Value.structKind]: 'par', notes: Composition[] }
 function par (...notes: Composition[]): Par {
   checkContract(arguments, contract('par', [], compositionC))
-  return { _scamperTag: 'struct', kind: 'par', notes }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'par', notes }
 }
 registerFn('par', par, Music)
 
-interface Seq extends Value.Struct { kind: 'seq', notes: Composition[] }
+interface Seq extends Value.Struct { [Value.structKind]: 'seq', notes: Composition[] }
 function seq (...notes: Composition[]): Seq {
   checkContract(arguments, contract('seq', [], compositionC)) 
-  return { _scamperTag: 'struct', kind: 'seq', notes }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'seq', notes }
 }
 registerFn('seq', seq, Music)
 
-interface Pickup extends Value.Struct { kind: 'pickup', pickup: Composition, notes: Composition }
+interface Pickup extends Value.Struct { [Value.structKind]: 'pickup', pickup: Composition, notes: Composition }
 function pickup (pickup: Composition, notes: Composition): Composition {
   checkContract(arguments, contract('pickup', [compositionC, compositionC]))
-  return { _scamperTag: 'struct', kind: 'pickup', pickup, notes }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pickup', pickup, notes }
 }
 registerFn('pickup', pickup, Music)
 
@@ -162,44 +161,44 @@ const modC: C.Spec = {
   errorMsg: (actual: any) => `expected a mod, received ${Value.typeOf(actual)}`,
 }
 
-interface Percussion extends Value.Struct { kind: 'percussion' }
+interface Percussion extends Value.Struct { [Value.structKind]: 'percussion' }
 function percussion (): Percussion {
   checkContract(arguments, contract('percussion', [])) 
-  return { _scamperTag: 'struct', kind: 'percussion' }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'percussion' }
 }
 registerFn('percussion', percussion, Music)
 
-interface PitchBend extends Value.Struct { kind: 'pitchBend', amount: number }
+interface PitchBend extends Value.Struct { [Value.structKind]: 'pitchBend', amount: number }
 function pitchBend (amount: number): PitchBend {
   checkContract(arguments, contract('bend', [C.numRange(-1, 1)]))
-  return { _scamperTag: 'struct', kind: 'pitchBend', amount }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pitchBend', amount }
 }
 registerFn('bend', pitchBend, Music)
 
-interface Tempo extends Value.Struct { kind: 'tempo', beat: Duration, bpm: number }
+interface Tempo extends Value.Struct { [Value.structKind]: 'tempo', beat: Duration, bpm: number }
 function tempo (beat: Duration, bpm: number): Tempo {
   checkContract(arguments, contract('tempo', [durC, C.nonneg]))
-  return { _scamperTag: 'struct', kind: 'tempo', beat, bpm }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'tempo', beat, bpm }
 }
 registerFn('tempo', tempo, Music)
 
-interface Dynamics extends Value.Struct { _scamperTag: 'struct', kind: 'dynamics', amount: number }
+interface Dynamics extends Value.Struct { [Value.structKind]: 'dynamics', amount: number }
 function dynamics (amount: number): Dynamics {
   checkContract(arguments, contract('dynamics', [C.numRange(0, 127)])) 
-  return { _scamperTag: 'struct', kind: 'dynamics', amount }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dynamics', amount }
 }
 registerFn('dynamics', dynamics, Music)
 
-interface Instrument extends Value.Struct { _scamperTag: 'struct', kind: 'instrument', program: number }
+interface Instrument extends Value.Struct { [Value.structKind]: 'instrument', program: number }
 function instrument (program: number): Instrument {
   checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
-  return { _scamperTag: 'struct', kind: 'instrument', program }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'instrument', program }
 }
 
-interface Mod extends Value.Struct { _scamperTag: 'struct', kind: 'mod', note: Composition, mod: ModKind }
+interface Mod extends Value.Struct { [Value.structKind]: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
   checkContract(arguments, contract('mod', [modC, compositionC]))
-  return { _scamperTag: 'struct', kind: 'mod', note, mod }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'mod', note, mod }
 }
 registerFn('mod', mod, Music)
 
@@ -260,7 +259,7 @@ function freqToNote (freq: number): number {
 function compositionToMsgs (
   beat: Duration, bpm: number, velocity: number, startTime: number,
   instrument: number, composition: Composition): { endTime: number, msgs: Msg[] } {
-  switch (composition.kind) {
+  switch (composition[Value.structKind]) {
     case 'empty':
       return { endTime: startTime, msgs: [] }
     case 'note': {

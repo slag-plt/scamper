@@ -115,7 +115,7 @@ function valueToExp (env: Env, v: Value.T): Exp.T {
   } else if (Value.isStruct(v)) {
     const s = v as Value.Struct
     const fields = Value.getFieldsOfStruct(s)
-    return Exp.mkApp(Exp.mkVar(s.kind, noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
+    return Exp.mkApp(Exp.mkVar(s[Value.structKind], noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
   } else {
     // NOTE: we're slowly mushing together values and expressions... perhaps
     // we should collapse the hierarchy once and for all to avoid this mess?

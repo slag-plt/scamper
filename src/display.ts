@@ -225,9 +225,9 @@ export function renderToHTML (v: Value.T): HTMLElement {
           const s = v as Value.Struct
           const fields = Value.getFieldsOfStruct(s)
           if (fields.length === 0) {
-            return mkCodeElement(`(${s.kind})`)
+            return mkCodeElement(`(${s[Value.structKind]})`)
           } else {
-            const ret = mkCodeElement(`(${s.kind} `)
+            const ret = mkCodeElement(`(${s[Value.structKind]} `)
             ret.appendChild(renderToHTML(s[fields[0]]))
             for (let i = 1; i < fields.length; i++) {
               ret.appendChild(mkCodeElement(' '))

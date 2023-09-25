@@ -100,6 +100,203 @@ export function charToName (c: string): string {
   }
 }
 
+export namespace Value {
+  export const scamperTag = Symbol('tag')
+  export const structKind = Symbol('kind')
+
+  export type TaggedObject = Closure | Char | Pair | Struct
+  export type Closure = { [scamperTag]: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
+  export type Char = { [scamperTag]: 'char', value: string }
+  export type Sym  = { [scamperTag]: 'sym', value: string } 
+  export type Pair = { [scamperTag]: 'pair', fst: T, snd: T, isList: boolean }
+
+  // NOTE: to maximize interoperability, a struct is an object with at least
+  // a _scamperTag and kind field. The rest of the fields are the fields of the
+  // the struct. The order of arguments of a struct's constructor is the
+  // property order of the corresponding object, i.e., the order in which the
+  // fields are defined.
+  export interface Struct { [scamperTag]: 'struct', [structKind]: string, [key: string]: any, [key: number]: never }
+
+  export type List = null | Pair
+  export type Vector = T[]
+  export type ScamperFn = Closure | Function
+  export type Raw = Object
+  export type T = boolean | number | string | List | Vector | ScamperFn | undefined | TaggedObject | Raw
+
+  export const isNumber = (v: T): boolean => typeof v === 'number'
+  export const isBoolean = (v: T): boolean => typeof v === 'boolean'
+  export const isString = (v: T): boolean => typeof v === 'string'
+  export const isNull = (v: T): boolean => v === null
+  export const isVoid = (v: T): boolean => v === undefined
+  export const isArray = (v: T): boolean => Array.isArray(v)
+  export const isClosure = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'closure'
+  export const isJsFunction = (v: T): boolean => typeof v === 'function'
+  export const isFunction = (v: T): boolean => isJsFunction(v) || isClosure(v)
+  export const isChar = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'char'
+  export const isPair = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'pair'
+  export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
+  export const isStruct = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'struct'
+  export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct)[structKind] === k
+
+  export const mkClosure = (arity: number, params: Id[], ops: Op.T[], env: Env): T =>
+    ({ [scamperTag]: 'closure', arity, params, ops, env })
+  export const mkChar = (v: string): Char => ({ [scamperTag]: 'char', value: v })
+  export const mkPair = (fst: T, snd: T): Pair => ({
+    [scamperTag]: 'pair', fst, snd,
+    isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
+  })
+  export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
+    const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
+    for (let i = 0; i < fields.length; i++) {
+      ret[fields[i]] = values[i]
+    }
+    return ret
+  }
+
+  export const nameFn = (name: string, fn: Function): Function =>
+    Object.defineProperty(fn, 'name', { value: name })
+
+  export function listToArray (l: List): T[] {
+    const ret = []
+    let cur = l
+    while (cur !== null) {
+      ret.push(cur.fst)
+      cur = cur.snd as Pair
+    }
+    return ret
+  }
+
+  export function arrayToList (arr: T[]): Pair | null {
+    let ret = null
+    for (let i = arr.length - 1; i >= 0; i--) {
+      ret = mkPair(arr[i], ret)
+    }
+    return ret
+  }
+
+  export function toString (v: T) {
+    if (isClosure(v)) {
+      return `<closure (${(v as Closure).params.join(' ')})>`
+    } else if (typeof v === 'function') {
+      return `<jsfunc: (${v.name})>`
+    } else {
+      return `${v}`
+    }
+  }
+
+  export function getFieldsOfStruct (s: Struct): string[] {
+    const ret = []
+    for (const f in s) {
+      ret.push(f)
+    }
+    return ret
+  }
+
+  export function toSexp (v: T, range: Range): Sexp.T {
+    switch (typeof v) {
+      case 'number':
+        return Sexp.mkAtom(v.toString(), range)
+      case 'boolean':
+        return Sexp.mkAtom(v ? "#t" : "#f", range)
+      // TODO: need to unescape string values!
+      case 'string':
+        return Sexp.mkAtom(`"${v}"`, range)
+      case 'undefined':
+        return Sexp.mkAtom('void', range)
+      default:
+        if (v === null) {
+          return Sexp.mkAtom('null', range)
+        } else if (Array.isArray(v)) {
+          Sexp.mkList([
+            Sexp.mkAtom('vector', noRange),
+            ...(v as T[]).map((e) => toSexp(e, noRange))
+          ], '(', range)
+        } else if (isClosure(v)) {
+          const cls = v as Closure
+          Sexp.mkList([
+            Sexp.mkAtom('lambda', noRange),
+            Sexp.mkList(cls.params.map((p) => Sexp.mkAtom(p, noRange)), '(', noRange),
+            // TODO: we could raise the Ops back to an Exp but then
+            // we would need to port all of the raising code from
+            // Sem to here, too! Perhaps pretty-printing should be
+            // regelated to another file after all...
+            Sexp.mkAtom('<closure>', noRange)
+          ], '(', range)
+        } else if (isJsFunction(v)) {
+          return Sexp.mkAtom('[Function (JS)]', range)
+        } else if (isChar(v)) {
+          const ch = v as Char
+          return Sexp.mkAtom(`#\\${charToName(ch.value)}`, range)
+        } else if (isList(v)) {
+          const values = listToArray(v as List)
+          return Sexp.mkList([
+            Sexp.mkAtom('list', noRange),
+            ...(values.map((e) => toSexp(e, noRange)))
+          ], '(', range)
+        } else if (isPair(v)) {
+          const p = v as Pair
+          return Sexp.mkList([
+            Sexp.mkAtom('pair', noRange),
+            toSexp(p.fst, noRange),
+            toSexp(p.snd, noRange)
+          ], '(', range)
+        } else if (isStruct(v)) {
+          const s = v as Struct
+          const fields = getFieldsOfStruct(s)
+          return Sexp.mkList([
+            Sexp.mkAtom('struct', noRange),
+            Sexp.mkAtom(s.kind, noRange),
+            ...fields.map((f) => toSexp(s[f], noRange))
+          ], '(', range)
+        }
+    }
+    throw new ICE('valueToSexp', `unknown value ${v}`)
+  }
+
+  export function equal (v1: T, v2: T): boolean {
+    const t1 = typeof v1
+    const t2 = typeof v2
+    if ((v1 === null && v2 === null) ||
+        (v1 === undefined && v2 === undefined)) {
+          return true
+    } else if ((t1 === 'number' && t2 === 'number') ||
+        (t1 === 'boolean' && t2 === 'boolean') ||
+        (t1 === 'string' && t2 === 'string') ||
+        (t1 === 'undefined' && t2 === 'undefined') ||
+        // N.B., function equality is reference-ish equality
+        (isFunction(t1) && isFunction(t2))) {
+      return v1 === v2
+    } else if (isPair(v1) && isPair(v2)) {
+      return equal((v1 as Pair).fst, (v2 as Pair).fst) &&
+        equal((v1 as Pair).snd, (v2 as Pair).snd)
+    } else if (isChar(v1) && isChar(v2)) {
+      return (v1 as Char).value === (v2 as Char).value
+    } else if (isStruct(v1) && isStruct(v2)) {
+      const s1 = v1 as Struct
+      const s2 = v2 as Struct
+      const fieldsS1 = getFieldsOfStruct(s1)
+      const fieldsS2 = getFieldsOfStruct(s2)
+      return s1[Value.structKind] === s2[Value.structKind] && fieldsS1.length === fieldsS2.length &&
+        fieldsS1.every((f) => equal(s1[f], s2[f]))
+    } else {
+      return false
+    }
+  }
+
+  export function typeOf (v: T): string {
+    const t = typeof v
+    if (t === 'boolean' || t === 'number' || t === 'string') { return t }
+    if (v === 'null') { return 'null' }
+    if (v === 'undefined') { return 'void'}
+    if (Array.isArray(v)) { return 'vector' }
+    if (isChar(v)) { return 'char' }
+    if (isList(v)) { return 'list' }
+    if (isStruct(v)) { return `struct (${(v as Struct)[Value.structKind].toString()})` }
+    if (t === 'function' || isClosure(v)) { return 'function' }
+    return 'object'
+  }
+}
+
 export namespace Sexp {
   export type T = Atom | List
   export type Atom = { _scamperTag: 'struct', kind: 'atom', value: string, range: Range }
@@ -350,199 +547,6 @@ export namespace Op {
   export const mkCond = (body: T[], end: Label, range: Range): T => ({ tag: 'cond', body, end, range })
   export const mkLbl = (name: string): T => ({ tag: 'lbl', name })
   export const mkExn = (msg: string, modName?: string, range?: Range, source?: string): T => ({ tag: 'exn', msg, modName, range, source })
-}
-
-export namespace Value {
-  export type TaggedObject = Closure | Char | Pair | Struct
-  export type Closure = { _scamperTag: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
-  export type Char = { _scamperTag: 'char', value: string }
-  export type Pair = { _scamperTag: 'pair', fst: T, snd: T, isList: boolean }
-
-  // NOTE: to maximize interoperability, a struct is an object with at least
-  // a _scamperTag and kind field. The rest of the fields are the fields of the
-  // the struct, all required to be string keys (i.e., no index or symbol keys).
-  // The order of arguments of a struct's constructor is thus property order of
-  // the corresponding object, i.e., the order in which the fields are defined.
-  export interface Struct { _scamperTag: 'struct', kind: string, [key: string]: any, [key: number]: never, [key: symbol]: never}
-
-  export type List = null | Pair
-  export type ScamperFn = Closure | Function
-  export type T = boolean | number | string | List | undefined | T[] | TaggedObject | ScamperFn | Object
-
-  export const isNumber = (v: T): boolean => typeof v === 'number'
-  export const isBoolean = (v: T): boolean => typeof v === 'boolean'
-  export const isString = (v: T): boolean => typeof v === 'string'
-  export const isNull = (v: T): boolean => v === null
-  export const isVoid = (v: T): boolean => v === undefined
-  export const isArray = (v: T): boolean => Array.isArray(v)
-  export const isClosure = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'closure'
-  export const isJsFunction = (v: T): boolean => typeof v === 'function'
-  export const isFunction = (v: T): boolean => isJsFunction(v) || isClosure(v)
-  export const isChar = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'char'
-  export const isPair = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'pair'
-  export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
-  export const isStruct = (v: T): boolean => v !== null && typeof v === 'object' && (v as any)._scamperTag === 'struct'
-  export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct).kind === k
-
-  export const mkClosure = (arity: number, params: Id[], ops: Op.T[], env: Env): T =>
-    ({ _scamperTag: 'closure', arity, params, ops, env })
-  export const mkChar = (v: string): Char => ({ _scamperTag: 'char', value: v })
-  export const mkPair = (fst: T, snd: T): Pair => ({
-    _scamperTag: 'pair', fst, snd,
-    isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
-  })
-  export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
-    const ret: Struct = { _scamperTag: 'struct', kind }
-    for (let i = 0; i < fields.length; i++) {
-      ret[fields[i]] = values[i]
-    }
-    return ret
-  }
-
-  export const nameFn = (name: string, fn: Function): Function =>
-    Object.defineProperty(fn, 'name', { value: name })
-
-  export function listToArray (l: List): T[] {
-    const ret = []
-    let cur = l
-    while (cur !== null) {
-      ret.push(cur.fst)
-      cur = cur.snd as Pair
-    }
-    return ret
-  }
-
-  export function arrayToList (arr: T[]): Pair | null {
-    let ret = null
-    for (let i = arr.length - 1; i >= 0; i--) {
-      ret = mkPair(arr[i], ret)
-    }
-    return ret
-  }
-
-  export function toString (v: T) {
-    if (isClosure(v)) {
-      return `<closure (${(v as Closure).params.join(' ')})>`
-    } else if (typeof v === 'function') {
-      return `<jsfunc: (${v.name})>`
-    } else {
-      return `${v}`
-    }
-  }
-
-  export function getFieldsOfStruct (s: Struct): string[] {
-    const ret = []
-    for (const f in s) {
-      if (f !== '_scamperTag' && f !== 'kind') {
-        ret.push(f)
-      }
-    }
-    return ret
-  }
-
-  export function toSexp (v: T, range: Range): Sexp.T {
-    switch (typeof v) {
-      case 'number':
-        return Sexp.mkAtom(v.toString(), range)
-      case 'boolean':
-        return Sexp.mkAtom(v ? "#t" : "#f", range)
-      // TODO: need to unescape string values!
-      case 'string':
-        return Sexp.mkAtom(`"${v}"`, range)
-      case 'undefined':
-        return Sexp.mkAtom('void', range)
-      default:
-        if (v === null) {
-          return Sexp.mkAtom('null', range)
-        } else if (Array.isArray(v)) {
-          Sexp.mkList([
-            Sexp.mkAtom('vector', noRange),
-            ...(v as T[]).map((e) => toSexp(e, noRange))
-          ], '(', range)
-        } else if (isClosure(v)) {
-          const cls = v as Closure
-          Sexp.mkList([
-            Sexp.mkAtom('lambda', noRange),
-            Sexp.mkList(cls.params.map((p) => Sexp.mkAtom(p, noRange)), '(', noRange),
-            // TODO: we could raise the Ops back to an Exp but then
-            // we would need to port all of the raising code from
-            // Sem to here, too! Perhaps pretty-printing should be
-            // regelated to another file after all...
-            Sexp.mkAtom('<closure>', noRange)
-          ], '(', range)
-        } else if (isJsFunction(v)) {
-          return Sexp.mkAtom('[Function (JS)]', range)
-        } else if (isChar(v)) {
-          const ch = v as Char
-          return Sexp.mkAtom(`#\\${charToName(ch.value)}`, range)
-        } else if (isList(v)) {
-          const values = listToArray(v as List)
-          return Sexp.mkList([
-            Sexp.mkAtom('list', noRange),
-            ...(values.map((e) => toSexp(e, noRange)))
-          ], '(', range)
-        } else if (isPair(v)) {
-          const p = v as Pair
-          return Sexp.mkList([
-            Sexp.mkAtom('pair', noRange),
-            toSexp(p.fst, noRange),
-            toSexp(p.snd, noRange)
-          ], '(', range)
-        } else if (isStruct(v)) {
-          const s = v as Struct
-          const fields = getFieldsOfStruct(s)
-          return Sexp.mkList([
-            Sexp.mkAtom('struct', noRange),
-            Sexp.mkAtom(s.kind, noRange),
-            ...fields.map((f) => toSexp(s[f], noRange))
-          ], '(', range)
-        }
-    }
-    throw new ICE('valueToSexp', `unknown value ${v}`)
-  }
-
-  export function equal (v1: T, v2: T): boolean {
-    const t1 = typeof v1
-    const t2 = typeof v2
-    if ((v1 === null && v2 === null) ||
-        (v1 === undefined && v2 === undefined)) {
-          return true
-    } else if ((t1 === 'number' && t2 === 'number') ||
-        (t1 === 'boolean' && t2 === 'boolean') ||
-        (t1 === 'string' && t2 === 'string') ||
-        (t1 === 'undefined' && t2 === 'undefined') ||
-        // N.B., function equality is reference-ish equality
-        (isFunction(t1) && isFunction(t2))) {
-      return v1 === v2
-    } else if (isPair(v1) && isPair(v2)) {
-      return equal((v1 as Pair).fst, (v2 as Pair).fst) &&
-        equal((v1 as Pair).snd, (v2 as Pair).snd)
-    } else if (isChar(v1) && isChar(v2)) {
-      return (v1 as Char).value === (v2 as Char).value
-    } else if (isStruct(v1) && isStruct(v2)) {
-      const s1 = v1 as Struct
-      const s2 = v2 as Struct
-      const fieldsS1 = getFieldsOfStruct(s1)
-      const fieldsS2 = getFieldsOfStruct(s2)
-      return s1.kind === s2.kind && fieldsS1.length === fieldsS2.length &&
-        fieldsS1.every((f) => equal(s1[f], s2[f]))
-    } else {
-      return false
-    }
-  }
-
-  export function typeOf (v: T): string {
-    const t = typeof v
-    if (t === 'boolean' || t === 'number' || t === 'string') { return t }
-    if (v === 'null') { return 'null' }
-    if (v === 'undefined') { return 'void'}
-    if (Array.isArray(v)) { return 'vector' }
-    if (isChar(v)) { return 'char' }
-    if (isList(v)) { return 'list' }
-    if (isStruct(v)) { return `struct (${(v as Struct).kind})` }
-    if (t === 'function' || isClosure(v)) { return 'function' }
-    return 'object'
-  }
 }
 
 export class Env {
