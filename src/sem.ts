@@ -106,7 +106,7 @@ function valueToExp (env: Env, v: Value.T): Exp.T {
     if (l === null) {
       return Exp.mkVar('null', noRange)
     } else {
-      const elems = Value.listToArray(l)
+      const elems = Value.listToVector(l)
       return Exp.mkApp(Exp.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
     }
   } else if (Value.isPair(v)) {

@@ -104,11 +104,12 @@ export namespace Value {
   export const scamperTag = Symbol('tag')
   export const structKind = Symbol('kind')
 
-  export type TaggedObject = Closure | Char | Pair | Struct
+  export type TaggedObject = Closure | Char | Sym | Pair | Syntax | Struct
   export type Closure = { [scamperTag]: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
   export type Char = { [scamperTag]: 'char', value: string }
   export type Sym  = { [scamperTag]: 'sym', value: string } 
   export type Pair = { [scamperTag]: 'pair', fst: T, snd: T, isList: boolean }
+  export type Syntax = { [scamperTag]: 'syntax', range: Range, value: T }
 
   // NOTE: to maximize interoperability, a struct is an object with at least
   // a _scamperTag and kind field. The rest of the fields are the fields of the
@@ -121,7 +122,7 @@ export namespace Value {
   export type Vector = T[]
   export type ScamperFn = Closure | Function
   export type Raw = Object
-  export type T = boolean | number | string | List | Vector | ScamperFn | undefined | TaggedObject | Raw
+  export type T = boolean | number | string | List | Vector | Function | undefined | TaggedObject | Raw
 
   export const isNumber = (v: T): boolean => typeof v === 'number'
   export const isBoolean = (v: T): boolean => typeof v === 'boolean'
@@ -129,22 +130,31 @@ export namespace Value {
   export const isNull = (v: T): boolean => v === null
   export const isVoid = (v: T): boolean => v === undefined
   export const isArray = (v: T): boolean => Array.isArray(v)
-  export const isClosure = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'closure'
   export const isJsFunction = (v: T): boolean => typeof v === 'function'
+
+  export const isTaggedObject = (v: T): boolean =>
+    v !== null && typeof v === 'object' && v.hasOwnProperty(scamperTag)
+  export const isClosure = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'closure'
   export const isFunction = (v: T): boolean => isJsFunction(v) || isClosure(v)
-  export const isChar = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'char'
-  export const isPair = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'pair'
+  export const isChar = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'char'
+  export const isSym = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'sym'
+  export const isPair = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pair'
   export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
-  export const isStruct = (v: T): boolean => v !== null && typeof v === 'object' && (v as TaggedObject)[scamperTag] === 'struct'
+  export const isSyntax = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'syntax'
+  export const isStruct = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'struct'
   export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct)[structKind] === k
 
   export const mkClosure = (arity: number, params: Id[], ops: Op.T[], env: Env): T =>
     ({ [scamperTag]: 'closure', arity, params, ops, env })
   export const mkChar = (v: string): Char => ({ [scamperTag]: 'char', value: v })
+  export const mkSym = (v: string): Sym => ({ [scamperTag]: 'sym', value: v })
   export const mkPair = (fst: T, snd: T): Pair => ({
     [scamperTag]: 'pair', fst, snd,
     isList: snd === null || ((isPair(snd) && (snd as Pair).isList))
   })
+  export const mkList = (...values: T[]): List => vectorToList(values)
+  export const mkSyntax = (range: Range, value: T): Syntax =>
+    ({ [scamperTag]: 'syntax', range, value })
   export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
     const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
     for (let i = 0; i < fields.length; i++) {
@@ -156,7 +166,7 @@ export namespace Value {
   export const nameFn = (name: string, fn: Function): Function =>
     Object.defineProperty(fn, 'name', { value: name })
 
-  export function listToArray (l: List): T[] {
+  export function listToVector (l: List): T[] {
     const ret = []
     let cur = l
     while (cur !== null) {
@@ -166,7 +176,7 @@ export namespace Value {
     return ret
   }
 
-  export function arrayToList (arr: T[]): Pair | null {
+  export function vectorToList (arr: T[]): Pair | null {
     let ret = null
     for (let i = arr.length - 1; i >= 0; i--) {
       ret = mkPair(arr[i], ret)
@@ -228,7 +238,7 @@ export namespace Value {
           const ch = v as Char
           return Sexp.mkAtom(`#\\${charToName(ch.value)}`, range)
         } else if (isList(v)) {
-          const values = listToArray(v as List)
+          const values = listToVector(v as List)
           return Sexp.mkList([
             Sexp.mkAtom('list', noRange),
             ...(values.map((e) => toSexp(e, noRange)))

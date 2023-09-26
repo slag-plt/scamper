@@ -321,6 +321,37 @@ function parseStringLiteral (src: string, range: Range): string {
   return ret
 }
 
+export function atomToValue (e: Sexp.Atom, inSection: boolean): Value.T {
+  const text = e.value
+  if (intRegex.test(text)) {
+    return Value.mkSyntax(e.range, parseInt(text))
+  } else if (floatRegex.test(e.value)) {
+    return Value.mkSyntax(e.range, parseFloat(e.value))
+  } else if (e.value === '#t') {
+    return Value.mkSyntax(e.range, true)
+  } else if (e.value === '#f') {
+    return Value.mkSyntax(e.range, false)
+  } else if (e.value.startsWith('"')) {
+    return Value.mkSyntax(e.range, parseStringLiteral(e.value, e.range))
+  } else if (e.value.startsWith('#\\')) {
+    const escapedChar = e.value.slice(2)
+    if (escapedChar.length === 1) {
+      return Value.mkSyntax(e.range, Value.mkChar(escapedChar))
+    } else if (namedCharValues.has(escapedChar)) {
+      return Value.mkSyntax(e.range, Value.mkChar(namedCharValues.get(escapedChar)!))
+    } else {
+      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+    }
+  } else {
+    // TODO: ensure identifiers don't have invalid characters, i.e., #
+    // Probably should be done in the lexer, not the parser...
+    if (e.value.startsWith('_') && !inSection) {
+      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
+    }
+    return Value.mkSyntax(e.range, Value.mkSym(e.value))
+  }
+}
+
 export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
   const text = e.value
   if (intRegex.test(text)) {
