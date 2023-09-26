@@ -447,7 +447,7 @@ export const listTail: Doc = new Doc(
     'l: list?',
     'k: integer?, 0 <= k <= (length l)'
   ],
-  'Returns a new list containing the last `k` elements of `l.'
+  'Returns `l` but with the first `k` elements of `l` omitted.'
 )
 
 export const listDrop: Doc = new Doc(
