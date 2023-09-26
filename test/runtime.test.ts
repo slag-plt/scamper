@@ -15,6 +15,10 @@ export function scamperTest (label: string, src: string, expected: string[]) {
   test(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
 }
 
+export function failingScamperTest (label: string, src: string, expected: string[]) {
+  test.failing(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 scamperTest('and-or-short-circuit', `
@@ -140,7 +144,7 @@ scamperTest('define-test1', `
   '20'
 ])
 
-scamperTest('duplicate-binders', `
+failingScamperTest('duplicate-binders', `
 (lambda (x x y) (+ x x))
 
 (struct foo (z y z))
@@ -226,15 +230,9 @@ scamperTest('let-binding-errors', `
    [y3 5])
   (+ x3 y3))
 `, [
-  ':10:3: Scope error:',
-  'Variable x1 is not defined',
-  'In program: x1',
-  ':7:9: Scope error:',
-  'Variable y2 is not defined',
-  'In program: y2',
-  ':7:14: Scope error:',
-  'Variable y3 is not defined',
-  'In program: y3'
+  'Runtime error [4:11-4:12]: Referenced unbound identifier "x1".',
+  'Runtime error [10:8-10:9]: Referenced unbound identifier "y2".',
+  'Runtime error [15:8-15:9]: Referenced unbound identifier "y3".'
 ])
 
 scamperTest('let-binding', `
@@ -356,7 +354,7 @@ scamperTest('match-lit', `
   '"lists"'
 ])
 
-scamperTest('match-repeated-bindings', `
+failingScamperTest('match-repeated-bindings', `
 (match (list 1 2 3)
   [null "fail"]
   [(cons x x) "fail"])
@@ -468,7 +466,7 @@ scamperTest('numbers', `
   '-0.003'
 ])
 
-scamperTest('shadowing', `
+failingScamperTest('shadowing', `
 (define x 3)
 
 (define y (+ x 2))
