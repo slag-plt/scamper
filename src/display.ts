@@ -79,6 +79,57 @@ export function patToHTML (p: Pat.T): HTMLElement {
   }
 }
 
+function letToHTML (soFar: Exp.Binding[], e: Exp.Let): HTMLElement {
+  if (e.bindings.length === 1 && e.body.kind === 'let') {
+    soFar.push(e.bindings[0])
+    return letToHTML(soFar, e.body)
+  } else if (soFar.length === 0) {
+    return bracketHTMLElements('(', [
+      mkCodeElement('let'),
+      bracketHTMLElements('(', e.bindings.map(({name, body}) => {
+        return bracketHTMLElements('[', [
+          mkCodeElement(name),
+          expToHTML(body)
+        ])
+      })),
+      expToHTML(e.body)
+    ])
+  } else if (e.bindings.length > 1) {
+    const ret = bracketHTMLElements('(', [
+      mkCodeElement('let'),
+      bracketHTMLElements('(', e.bindings.map(({name, body}) => {
+        return bracketHTMLElements('[', [
+          mkCodeElement(name),
+          expToHTML(body)
+        ])
+      })),
+      expToHTML(e.body)
+    ])
+    return bracketHTMLElements('(', [
+      mkCodeElement('let*'),
+      bracketHTMLElements('(', soFar.map(({name, body}) => {
+        return bracketHTMLElements('[', [
+          mkCodeElement(name),
+          expToHTML(body)
+        ])
+      })),
+      ret
+    ])
+  } else {
+    soFar.push(e.bindings[0])
+    return bracketHTMLElements('(', [
+      mkCodeElement('let*'),
+      bracketHTMLElements('(', soFar.map(({name, body}) => {
+        return bracketHTMLElements('[', [
+          mkCodeElement(name),
+          expToHTML(body)
+        ])
+      })),
+      expToHTML(e.body)
+    ])
+  }
+}
+
 export function expToHTML (e: Exp.T): HTMLElement {
   switch (e.kind) {
     case 'var':
@@ -95,16 +146,7 @@ export function expToHTML (e: Exp.T): HTMLElement {
       ])
 
     case 'let':
-      return bracketHTMLElements('(', [
-        mkCodeElement('let'),
-        bracketHTMLElements('(', e.bindings.map(({name, body}) => {
-          return bracketHTMLElements('[', [
-            mkCodeElement(name),
-            expToHTML(body)
-          ])
-        })),
-        expToHTML(e.body)
-      ])
+      return letToHTML([], e)
 
     case 'app':
       return bracketHTMLElements('(', [expToHTML(e.head), ...e.args.map(expToHTML)])
