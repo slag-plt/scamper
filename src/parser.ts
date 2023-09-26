@@ -558,6 +558,23 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
           throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, binds.range)
         }
         return Exp.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
+      } else if (head.kind === 'atom' && head.value === 'let*') {
+        if (args.length !== 2) {
+          throw new ScamperError('Parser', 'Let* expression must have 2 sub-components, a binding list and a body', undefined, e.range)
+        }
+        const binds = args[0]
+        if (binds.kind !== 'list') {
+          throw new ScamperError('Parser', 'Let* expression bindings must be given as a list', undefined, binds.range)
+        }
+        if (binds.value.length === 0) {
+          return Exp.mkLet([], sexpToExp(args[1]), e.bracket, e.range)
+        } else {
+          let ret = Exp.mkLet([sexpToBinding(binds.value[binds.value.length - 1])], sexpToExp(args[1]), e.bracket, e.range)
+          for (let i = binds.value.length - 2; i >= 0; i--) {
+            ret = Exp.mkLet([sexpToBinding(binds.value[i])], ret, e.bracket, e.range)
+          }
+          return ret
+        }
       } else if (head.kind === 'atom' && head.value === 'and') {
         return Exp.mkAnd(args.map((s) => sexpToExp(s)), e.bracket, e.range)
       } else if (head.kind === 'atom' && head.value === 'or') {
