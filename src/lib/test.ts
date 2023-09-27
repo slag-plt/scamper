@@ -13,7 +13,7 @@ const Test: [string, Value.T][] = []
 
 type Result = Ok | Error
 type Ok = { _scamperTag: 'struct', kind: 'ok', desc: string }
-type Error = { _scamperTag: 'struct', kind: 'error', desc: string, reason: string }
+type Error = { _scamperTag: 'struct', kind: 'error', desc: string, reason: HTMLElement }
 
 function testOk (desc: string): Ok {
   checkContract(arguments, contract('test-ok', [C.string]))
@@ -21,25 +21,34 @@ function testOk (desc: string): Ok {
 }
 registerFn('test-ok', testOk, Test)
 
-function testError (desc: string, reason: string): Error {
-  checkContract(arguments, contract('test-error', [C.string, C.string]))
+function testError (desc: string, reason: HTMLElement): Error {
+  checkContract(arguments, contract('test-error', [C.string, C.html]))
   return { _scamperTag: 'struct', kind: 'error', desc, reason }
 }
 registerFn('test-error', testError, Test)
 
 function testCase (desc: string, eqFn: Value.ScamperFn, expected: Value.T, testFn: Value.ScamperFn): Result {
+  checkContract(arguments, contract('test-case', [C.string, C.func, C.any, C.func]))
   try {
     const actual = callFunction(testFn)
     const isEqual = callFunction(eqFn, expected, actual) 
     if (isEqual === true) {
       return testOk(desc)
     } else if (isEqual === false) {
-      return testError(desc, `Expected ${Value.toString(expected)}, received ${Value.toString(actual)}`)
+      const reason = document.createElement('span')
+      reason.appendChild(Display.mkCodeElement('Expected '))
+      reason.appendChild(Display.renderToHTML(expected))
+      reason.appendChild(Display.mkCodeElement(', received '))
+      reason.appendChild(Display.renderToHTML(actual))
+      return testError(desc, reason)
     } else {
-      throw new ScamperError('Runtime', `test case function should have produced a boolean, produced ${Value.typeOf(actual)} instead`)
+      throw new ScamperError('Runtime', `Test case function should have produced a boolean, produced ${Value.typeOf(actual)} instead`)
     }
   } catch (e) {
-    return testError(desc, `Test case threw an exception: ${e}`)
+    const reason = document.createElement('span')
+    reason.appendChild(Display.mkCodeElement('Test case threw an exception: '))
+    reason.appendChild(Display.renderToHTML(e as Value.T))
+    return testError(desc, reason)
   }
 }
 registerFn('test-case', testCase, Test)
@@ -47,7 +56,7 @@ registerFn('test-case', testCase, Test)
 function testExn (desc: string, testFn: Value.ScamperFn): Result {
   try {
     callFunction(testFn, [])
-    return testError(desc, `Test case did not throw an exception`)
+    return testError(desc, Display.mkCodeElement(`Test case did not throw an exception`))
   } catch (e) {
     return testOk(desc)
   }
@@ -70,7 +79,7 @@ function render (v: any): HTMLElement {
     ret.classList.add('error')
     ret.innerText = `Test "${result.desc}": Failed! ❌`
     ret.appendChild(document.createElement('hr'))
-    ret.appendChild(document.createTextNode(`${result.reason}`))
+    ret.appendChild(result.reason)
   }
   return ret
 }

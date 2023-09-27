@@ -140,6 +140,11 @@ export const equal = (expected: any) => ({
   errorMsg: (actual: any) => `expected ${expected}, received ${actual}`
 })
 
+export const html = ({
+  predicate: (v: any) => v instanceof HTMLElement,
+  errorMsg: (actual: any) => `expected an HTML element, received ${Value.typeOf(actual)}`
+})
+
 export type Contract = { funcName: string, params: Spec[], varargs?: Spec }
 export const contract = (funcName: string, params: Spec[], varargs?: Spec): Contract => ({ funcName, params, varargs })
 
