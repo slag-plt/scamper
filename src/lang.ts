@@ -138,6 +138,7 @@ export namespace Value {
   export const isFunction = (v: T): boolean => isJsFunction(v) || isClosure(v)
   export const isChar = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'char'
   export const isSym = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'sym'
+  export const isSymName = (v: T, name: string): boolean => isSym(v) && (v as Sym).value === name
   export const isPair = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pair'
   export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
   export const isSyntax = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'syntax'
@@ -510,15 +511,15 @@ export namespace Stmt {
   }
 }
 
-export type Prog = Stmt.T[]
+export type Prog = Value.T[]
 
-export function progToSexps(p: Prog): Sexp.T[] {
-  return p.map(Stmt.toSexp)
-}
+// export function progToSexps(p: Prog): Sexp.T[] {
+//   return p.map(Value.toSexp)
+// }
 
-export function progToString(p: Prog, sep: string = '\n\n'): string {
-  return progToSexps(p).map(Sexp.sexpToString).join(sep)
-}
+// export function progToString(p: Prog, sep: string = '\n\n'): string {
+//   return progToSexps(p).map(Sexp.sexpToString).join(sep)
+// }
 
 export namespace Op {
   export type Label = string

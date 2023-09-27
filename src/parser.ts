@@ -321,7 +321,7 @@ function parseStringLiteral (src: string, range: Range): string {
   return ret
 }
 
-export function atomToValue (e: Sexp.Atom, inSection: boolean): Value.T {
+export function atomToValue (e: Sexp.Atom, wildAllowed: boolean): Value.Syntax {
   const text = e.value
   if (intRegex.test(text)) {
     return Value.mkSyntax(e.range, parseInt(text))
@@ -331,6 +331,8 @@ export function atomToValue (e: Sexp.Atom, inSection: boolean): Value.T {
     return Value.mkSyntax(e.range, true)
   } else if (e.value === '#f') {
     return Value.mkSyntax(e.range, false)
+  } else if (e.value === 'null') {
+    return Value.mkSyntax(e.range, null)
   } else if (e.value.startsWith('"')) {
     return Value.mkSyntax(e.range, parseStringLiteral(e.value, e.range))
   } else if (e.value.startsWith('#\\')) {
@@ -345,67 +347,67 @@ export function atomToValue (e: Sexp.Atom, inSection: boolean): Value.T {
   } else {
     // TODO: ensure identifiers don't have invalid characters, i.e., #
     // Probably should be done in the lexer, not the parser...
-    if (e.value.startsWith('_') && !inSection) {
-      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
+    if (e.value.startsWith('_') && !wildAllowed) {
+      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, e.range)
     }
     return Value.mkSyntax(e.range, Value.mkSym(e.value))
   }
 }
 
-export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
-  const text = e.value
-  if (intRegex.test(text)) {
-    return Exp.mkVal(parseInt(text), e.range)
-  } else if (floatRegex.test(e.value)) {
-    return Exp.mkVal(parseFloat(e.value), e.range)
-  } else if (e.value === '#t') {
-    return Exp.mkVal(true, e.range)
-  } else if (e.value === '#f') {
-    return Exp.mkVal(false, e.range)
-  } else if (e.value.startsWith('"')) {
-    return Exp.mkVal(parseStringLiteral(e.value, e.range), e.range)
-  } else if (reservedWords.includes(e.value)) {
-    throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
-  } else if (e.value.startsWith('#\\')) {
-    const escapedChar = e.value.slice(2)
-    if (escapedChar.length === 1) {
-      return Exp.mkVal(Value.mkChar(escapedChar), e.range)
-    } else if (namedCharValues.has(escapedChar)) {
-      return Exp.mkVal(Value.mkChar(namedCharValues.get(escapedChar)!), e.range)
-    } else {
-      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
-    }
-  } else {
-    // TODO: ensure identifiers don't have invalid characters, i.e., #
-    // Probably should be done in the lexer, not the parser...
-    if (e.value.startsWith('_') && !inSection) {
-      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
-    }
-    return Exp.mkVar(e.value, e.range)
-  }
-}
+// export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
+//   const text = e.value
+//   if (intRegex.test(text)) {
+//     return Exp.mkVal(parseInt(text), e.range)
+//   } else if (floatRegex.test(e.value)) {
+//     return Exp.mkVal(parseFloat(e.value), e.range)
+//   } else if (e.value === '#t') {
+//     return Exp.mkVal(true, e.range)
+//   } else if (e.value === '#f') {
+//     return Exp.mkVal(false, e.range)
+//   } else if (e.value.startsWith('"')) {
+//     return Exp.mkVal(parseStringLiteral(e.value, e.range), e.range)
+//   } else if (reservedWords.includes(e.value)) {
+//     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+//   } else if (e.value.startsWith('#\\')) {
+//     const escapedChar = e.value.slice(2)
+//     if (escapedChar.length === 1) {
+//       return Exp.mkVal(Value.mkChar(escapedChar), e.range)
+//     } else if (namedCharValues.has(escapedChar)) {
+//       return Exp.mkVal(Value.mkChar(namedCharValues.get(escapedChar)!), e.range)
+//     } else {
+//       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+//     }
+//   } else {
+//     // TODO: ensure identifiers don't have invalid characters, i.e., #
+//     // Probably should be done in the lexer, not the parser...
+//     if (e.value.startsWith('_') && !inSection) {
+//       throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
+//     }
+//     return Exp.mkVar(e.value, e.range)
+//   }
+// }
 
-export function sexpToBinding (e: Sexp.T): Exp.Binding {
+export function sexpToBinding (e: Sexp.T): Value.Syntax {
   if (e.kind === 'atom' || e.value.length !== 2 || e.value[0].kind !== 'atom') {
     throw new ScamperError('Parser', `Bindings must given as pairs of names and values: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
-    return { name: e.value[0].value, body: sexpToExp(e.value[1]) }
+    return Value.mkSyntax(e.range, [e.value[0].value, sexpToExp(e.value[1], false)])
   }
 }
 
-export function sexpToMatchBranch (e: Sexp.T): Exp.MatchBranch {
+export function sexpToMatchBranch (e: Sexp.T): Value.Syntax {
   if (e.kind === 'atom' || e.value.length !== 2) {
     throw new ScamperError('Parser', `Match branches must be given a pair of a pattern and an expression: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
-    return { pattern: sexpToPat(e.value[0]), body: sexpToExp(e.value[1]) }
+    return Value.mkSyntax(e.range, [sexpToPat(e.value[0]), sexpToExp(e.value[1])])
   }
 }
 
-export function sexpToCondBranch (e: Sexp.T): Exp.CondBranch {
+export function sexpToCondBranch (e: Sexp.T): Value.Syntax {
   if (e.kind === 'atom' || e.value.length !== 2) {
     throw new ScamperError('Parser', `Cond branches must be given a pair expressions: ${Sexp.sexpToString(e)}`, undefined, e.range)
   } else {
-    return { guard: sexpToExp(e.value[0]), body: sexpToExp(e.value[1]) }
+    return Value.mkSyntax(e.range, [sexpToExp(e.value[0]), sexpToExp(e.value[1])])
   }
 }
 
@@ -421,42 +423,42 @@ export const namedCharValues = new Map([
   ['tab', String.fromCharCode(9)]
 ])
 
-export function atomToPat (e: Sexp.Atom): Pat.T {
-  const text = e.value
-  if (intRegex.test(text)) {
-    return Pat.mkNum(parseInt(text), e.range)
-  } else if (floatRegex.test(e.value)) {
-    return Pat.mkNum(parseFloat(e.value), e.range)
-  } else if (e.value === '#t') {
-    return Pat.mkBool(true, e.range)
-  } else if (e.value === '#f') {
-    return Pat.mkBool(false, e.range)
-  } else if (e.value.startsWith('"')) {
-    return Pat.mkStr(e.value.slice(1, -1), e.range)
-  } else if (e.value === '_') {
-    return Pat.mkWild(e.range)
-  } else if (e.value === 'null') {
-    return Pat.mkNull(e.range)
-  } else if (reservedWords.includes(e.value)) {
-    throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
-  } else if (e.value.startsWith('#\\')) {
-    const escapedChar = e.value.slice(2)
-    if (escapedChar.length === 1) {
-      return Pat.mkChar(escapedChar, e.range)
-    } else if (namedCharValues.has(escapedChar)) {
-      return Pat.mkChar(namedCharValues.get(escapedChar)!, e.range)
-    } else {
-      throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
-    }
-  } else {
-    return Pat.mkVar(e.value, e.range)
-  }
-}
+// export function atomToPat (e: Sexp.Atom): SyntaxError.{
+//   const text = e.value
+//   if (intRegex.test(text)) {
+//     return Pat.mkNum(parseInt(text), e.range)
+//   } else if (floatRegex.test(e.value)) {
+//     return Pat.mkNum(parseFloat(e.value), e.range)
+//   } else if (e.value === '#t') {
+//     return Pat.mkBool(true, e.range)
+//   } else if (e.value === '#f') {
+//     return Pat.mkBool(false, e.range)
+//   } else if (e.value.startsWith('"')) {
+//     return Pat.mkStr(e.value.slice(1, -1), e.range)
+//   } else if (e.value === '_') {
+//     return Pat.mkWild(e.range)
+//   } else if (e.value === 'null') {
+//     return Pat.mkNull(e.range)
+//   } else if (reservedWords.includes(e.value)) {
+//     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
+//   } else if (e.value.startsWith('#\\')) {
+//     const escapedChar = e.value.slice(2)
+//     if (escapedChar.length === 1) {
+//       return Pat.mkChar(escapedChar, e.range)
+//     } else if (namedCharValues.has(escapedChar)) {
+//       return Pat.mkChar(namedCharValues.get(escapedChar)!, e.range)
+//     } else {
+//       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
+//     }
+//   } else {
+//     return Pat.mkVar(e.value, e.range)
+//   }
+// }
 
-export function sexpToPat (e: Sexp.T): Pat.T {
+export function sexpToPat (e: Sexp.T): Value.Syntax {
   switch (e.kind) {
     case 'atom':
-      return atomToPat(e)
+      return atomToValue(e, true)
     case 'list': {
       if (e.value.length === 0) {
         throw new ScamperError('Parser', 'The empty list is not a valid pattern', undefined, e.range)
@@ -466,7 +468,7 @@ export function sexpToPat (e: Sexp.T): Pat.T {
         throw new ScamperError('Parser', 'Constructor patterns must start with an identifier', undefined, head.range)
       }
       const args = e.value.slice(1)
-      return Pat.mkCtor(head.value, args.map(sexpToPat), e.range)
+      return Value.mkSyntax(e.range, Value.mkList(Value.mkSym(head.value), ...args.map(sexpToPat)))
     }
   }
 }
@@ -523,13 +525,13 @@ export function getNamedHoles (e: Sexp.T): string[] {
   return ret
 }
 
-export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
+export function sexpToExp (e: Sexp.T, inSection: boolean = false): Value.Syntax {
   switch (e.kind) {
     case 'atom':
-      return atomToExp(e, inSection)
+      return atomToValue(e, inSection)
     case 'list': {
       if (e.value.length === 0) {
-        throw new ScamperError('Parser', 'The empty list is not a valid expression', undefined, e.range)
+        return Value.mkSyntax(e.range, Value.mkList())
       }
       const head = e.value[0]
       const args = e.value.slice(1)
@@ -548,7 +550,11 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
           }
           params.push(arg.value)
         })
-        return Exp.mkLam(params, sexpToExp(args[1]), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('lambda'),
+          Value.mkList(...params.map(Value.mkSym)),
+          sexpToExp(args[1])
+        ))
       } else if (head.kind === 'atom' && head.value === 'let') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, e.range)
@@ -557,7 +563,11 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
         if (binds.kind !== 'list') {
           throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, binds.range)
         }
-        return Exp.mkLet(binds.value.map(sexpToBinding), sexpToExp(args[1]), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('let'),
+          Value.mkList(...binds.value.map(sexpToBinding)),
+          sexpToExp(args[1])
+        ))
       } else if (head.kind === 'atom' && head.value === 'let*') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Let* expression must have 2 sub-components, a binding list and a body', undefined, e.range)
@@ -567,35 +577,49 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
           throw new ScamperError('Parser', 'Let* expression bindings must be given as a list', undefined, binds.range)
         }
         if (binds.value.length === 0) {
-          return Exp.mkLet([], sexpToExp(args[1]), e.bracket, e.range)
+          return Value.mkSyntax(e.range, Value.mkList(sexpToExp(args[1])))
         } else {
-          let ret = Exp.mkLet([sexpToBinding(binds.value[binds.value.length - 1])], sexpToExp(args[1]), e.bracket, e.range)
+          let ret = Value.mkSyntax(e.range, Value.mkList(
+              Value.mkSym('let'),
+              Value.mkList(sexpToBinding(binds.value[binds.value.length - 1])),
+              sexpToExp(args[1])
+          ))
           for (let i = binds.value.length - 2; i >= 0; i--) {
-            ret = Exp.mkLet([sexpToBinding(binds.value[i])], ret, e.bracket, e.range)
+            ret = Value.mkSyntax(e.range, Value.mkList(
+              Value.mkSym('let'),
+              [sexpToBinding(binds.value[i])],
+              ret
+            ))
           }
           return ret
         }
       } else if (head.kind === 'atom' && head.value === 'and') {
-        return Exp.mkAnd(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('and'),
+          ...args.map((e) => sexpToExp(e, inSection))
+        ))
       } else if (head.kind === 'atom' && head.value === 'or') {
-        return Exp.mkOr(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('or'),
+          ...args.map((e) => sexpToExp(e, inSection))
+        ))
       } else if (head.kind === 'atom' && head.value === 'if') {
         if (args.length !== 3) {
           throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, e.range)
         } else {
-          return Exp.mkIf(
-            sexpToExp(args[0]),
-            sexpToExp(args[1]),
-            sexpToExp(args[2]),
-            e.bracket,
-            e.range
-          )
+          return Value.mkSyntax(e.range, Value.mkList(
+            Value.mkSym('if'),
+            sexpToExp(args[0], inSection),
+            sexpToExp(args[1], inSection),
+            sexpToExp(args[2], inSection)
+          ))
         }
       } else if (head.kind === 'atom' && head.value === 'begin') {
         if (args.length === 0) {
           throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, e.range)
         } else {
-          return Exp.mkBegin(args.map((s) => sexpToExp(s)), e.bracket, e.range)
+          return Value.mkSyntax(e.range,
+            Value.mkList(Value.mkSym('begin'), ...args.map((e) => sexpToExp(e, inSection))))
         }
       } else if (head.kind === 'atom' && head.value === 'match') {
         if (args.length < 2) {
@@ -603,12 +627,19 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
         }
         const scrutinee = args[0]
         const branches = args.slice(1)
-        return Exp.mkMatch(sexpToExp(scrutinee), branches.map(sexpToMatchBranch), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('match'),
+          sexpToExp(scrutinee, inSection),
+          ...branches.map(sexpToMatchBranch)
+        ))
       } else if (head.kind === 'atom' && head.value === 'cond') {
         if (args.length < 1) {
           throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, e.range)
         }
-        return Exp.mkCond(args.map(sexpToCondBranch), e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('cond'),
+          ...args.map(sexpToCondBranch)
+        ))
       } else if (head.kind === 'atom' && head.value === 'section') {
         if (args.length < 1) {
           throw new ScamperError('Parser', 'Section expression must have at least one sub-expression', undefined, e.range)
@@ -617,18 +648,25 @@ export function sexpToExp (e: Sexp.T, inSection: boolean = false): Exp.T {
         const params = getNamedHoles(body)
         // N.B., place the params in numeric/alphabetical order
         params.sort()
-        return Exp.mkLam(params, sexpToExp(body), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('lambda'),
+          Value.mkList(...params.map(Value.mkSym)),
+          sexpToExp(body, true)
+        ))
       } else {
-        return Exp.mkApp(sexpToExp(head), args.map((s) => sexpToExp(s, true), true), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          sexpToExp(head),
+          ...args.map((s) => sexpToExp(s, inSection))
+        ))
       }
     }
   }
 }
 
-export function sexpToStmt (e: Sexp.T): Stmt.T {
+export function sexpToStmt (e: Sexp.T): Value.Syntax {
   switch (e.kind) {
     case 'atom':
-      return Stmt.mkStmtExp(sexpToExp(e))
+      return Value.mkSyntax(e.range, sexpToExp(e))
     case 'list': {
       if (e.value.length === 0) {
         throw new ScamperError('Parser', 'The empty list is not a valid statement', undefined, e.range)
@@ -643,7 +681,11 @@ export function sexpToStmt (e: Sexp.T): Stmt.T {
         if (name.kind !== 'atom') {
           throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, name.range)
         }
-        return Stmt.mkStmtBinding(name.value, sexpToExp(args[1]), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('define'),
+          Value.mkSym(name.value),
+          sexpToExp(args[1])
+        ))
       } else if (head.value === 'import') {
         if (args.length !== 1) {
           throw new ScamperError('Parser', 'Import statements must have 1 argument, the name of a module', undefined, e.range)
@@ -652,12 +694,18 @@ export function sexpToStmt (e: Sexp.T): Stmt.T {
         if (name.kind !== 'atom') {
           throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, args[0].range)
         }
-        return Stmt.mkImport(name.value, e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('import'),
+          Value.mkSym(name.value)
+        ))
       } else if (head.value === 'display') {
         if (args.length !== 1) {
           throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
         }
-        return Stmt.mkDisplay(sexpToExp(args[0]), e.bracket, e.range)
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('display'),
+          sexpToExp(args[0])
+        ))
       } else if (head.value === 'struct') {
         if (args.length !== 2) {
           throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, e.range)
@@ -677,9 +725,20 @@ export function sexpToStmt (e: Sexp.T): Stmt.T {
           }
           fields.push(f.value)
         })
-        return Stmt.mkStruct(name.value, fields, e.bracket, e.range) 
+        if (fields.length === 0) {
+          return Value.mkSyntax(e.range, Value.mkList(
+            Value.mkSym('struct'),
+            Value.mkSym(name.value)
+          ))
+        } else {
+        return Value.mkSyntax(e.range, Value.mkList(
+          Value.mkSym('struct'),
+          Value.mkSym(name.value),
+          Value.mkList(...fields.map(Value.mkSym))
+        ))
+        }
       } else {
-        return Stmt.mkStmtExp(sexpToExp(e))
+        return sexpToExp(e)
       }
     }
   }

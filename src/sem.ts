@@ -1,4 +1,4 @@
-import { ICE, Id, noRange, ScamperError } from './lang.js'
+import { ICE, Id, noRange, Range, ScamperError } from './lang.js'
 import { Pat, Exp, Stmt, Prog, Op, Value, Env } from './lang.js'
 import { expToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
@@ -247,6 +247,24 @@ export function stateToExp (state: ExecutionState): Exp.T | undefined {
     ret = dumpToExp(dump[i], ret)
   }
   return ret
+}
+
+export function expToOps (e: Value.T): Op.T[] {
+  // N.B., e is assumed to be a well-formed program
+  if (Value.isList(e)) {
+    const values = Value.listToVector(e as Value.List)
+    if (values.length == 0) {
+      return [Op.mkValue(null)]
+    } else {
+      const head = values[0]
+      const args = values.slice(1)
+      if (Value.isSymName(head, 'lambda')) {
+        return [Op.mkCls(Value.listToVector(args[0] as Value.List).map((x) => (x as Value.Sym).value), expToOps(args[1]))]
+      } else if (Value.isSymName(head, 'let')) {
+        // TODO: got more to do!
+      }
+    }
+  }
 }
 
 export function expToOps (e: Exp.T): Op.T[] {
@@ -555,12 +573,6 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
   return env.extend([pred, ctor, ...fieldFns])
 }
 
-// TODO: these functions are used by Javascript libraries to invoke higher-order
-// functions that could potentially be Scamper closures. We don't expect them to
-// side-effect. Hence, we pass in a "dummy" display function that does nothing.
-// However, if we allow side-effecting higher-order functions in the future,
-// we'll need to revisit this design decision.
-
 function execute (state: ExecutionState): Value.T {
   while (!state.isFinished()) {
     step(state)
@@ -670,127 +682,149 @@ export class Sem {
     }
   }
 
-  step (): void {
-    const stmt = this.prog[this.curStmt]
-    switch (stmt.kind) {
-
-      case 'binding': {
-        if (this.state === undefined) {
-          this.state = new ExecutionState(this.env, expToOps(stmt.body))
-        }
-        if (!this.state.isFinished()) {
-          try {
-            step(this.state)
-            if (this.isTracing()) {
-              this.appendToCurrentTrace('-->')
-              this.appendToCurrentTrace(' ')
-              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
-              this.appendToCurrentTrace('\n')
-            }
-          } catch (e) {
-            renderToOutput(this.display, e)
-            this.advance()
-          }
-        } else {
-          if (this.state.stack.length !== 1) {
-            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
-          }
-          // N.B., if we bind a lambda, annotate the closure value with the
-          // name for stepping purposes
-          const val = this.state.stack.pop()!
-          if (Value.isClosure(val)) {
-            (val as Value.Closure).name = stmt.name
-          }
-          if (this.env.has(stmt.name)) {
-            throw new ScamperError('Runtime', `Identifier "${stmt.name}" already bound`, undefined, stmt.range)
-          } else {
-            this.env.set(stmt.name, val)
-          }
-          if (this.isTracing()) {
-            this.appendToCurrentTrace(mkCodeElement(`${stmt.name} bound`))
-          }
-          this.advance()
-        }
-        break
-      }
-
-      case 'exp': {
-        if (this.state === undefined) {
-          this.state = new ExecutionState(this.env, expToOps(stmt.body))
-        }
-        if (!this.state.isFinished()) {
-          try {
-            step(this.state)
-            if (this.isTracing()) {
-              this.appendToCurrentTrace('-->')
-              this.appendToCurrentTrace(' ')
-              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
-              this.appendToCurrentTrace('\n')
-            }
-          } catch (e) {
-            renderToOutput(this.display, e)
-            this.advance()
-          }
-        } else {
-          if (this.state.stack.length !== 1) {
-            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
-          }
-          if (this.defaultDisplay) {
-            renderToOutput(this.display, this.state.stack.pop()!)
-          } else {
-            this.state.stack.pop()
-          }
-          this.advance()
-        }
-        break
-      }
-      case 'import': {
-        if (this.builtinLibs.has(stmt.modName)) {
-          this.env = this.env.extend(this.builtinLibs.get(stmt.modName)!)
-          if (this.isTracing()) {
-            this.appendToCurrentTrace(`Module ${stmt.modName} imported`)
-          }
-          this.advance()
-        } else {
-          this.advance()
-          throw new ScamperError('Runtime', `Module ${stmt.modName} not found`, undefined, stmt.range)
-        }
-        break
-      }
-      case 'display': {
-        if (this.state === undefined) {
-          this.state = new ExecutionState(this.env, expToOps(stmt.body))
-        }
-        if (!this.state.isFinished()) {
-          try {
-            step(this.state)
-            if (this.isTracing()) {
-              this.appendToCurrentTrace('-->')
-              this.appendToCurrentTrace(' ')
-              this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
-              this.appendToCurrentTrace('\n')
-            }
-          } catch (e) {
-            renderToOutput(this.display, e)
-            this.advance()
-          }
-        } else {
-          if (this.state.stack.length !== 1) {
-            throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
-          }
-          renderToOutput(this.display, this.state.stack.pop())
-          this.advance()
-        }
-        break
-      }
-      case 'struct': {
-        this.env = executeStructDecl(stmt.id, stmt.fields, this.env)
+  stepDefine (args: Value.T[], range?: Range): void {
+    const name = (args[1] as Value.Sym).value
+    const body = args[2]
+    if (this.state === undefined) {
+      this.state = new ExecutionState(this.env, expToOps(body))
+    }
+    if (!this.state.isFinished()) {
+      try {
+        step(this.state)
         if (this.isTracing()) {
-          this.appendToCurrentTrace(`Struct ${stmt.id} declared`)
+          this.appendToCurrentTrace('-->')
+          this.appendToCurrentTrace(' ')
+          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
         }
+      } catch (e) {
+        renderToOutput(this.display, e)
         this.advance()
-        break
       }
+    } else {
+      if (this.state.stack.length !== 1) {
+        throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+      }
+      // N.B., if we bind a lambda, annotate the closure value with the
+      // name for stepping purposes
+      const val = this.state.stack.pop()!
+      if (Value.isClosure(val)) {
+        (val as Value.Closure).name = name
+      }
+      if (this.env.has(name)) {
+        throw new ScamperError('Runtime', `Identifier "${name}" already bound`, undefined, range)
+      } else {
+        this.env.set(name, val)
+      }
+      if (this.isTracing()) {
+        this.appendToCurrentTrace(mkCodeElement(`${name} bound`))
+      }
+      this.advance()
+    }
+  }
+
+  stepImport (args: Value.T[], range?: Range): void {
+    // TODO: fill me in! Lost the code from a bad copy-paste
+  }
+
+  stepStruct (args: Value.T[], range?: Range): void {
+    const id = (args[1] as Value.Sym).value
+    const fields = args.slice(2).map((v) => (v as Value.Sym).value)
+    this.env = executeStructDecl(id, fields, this.env)
+    if (this.isTracing()) {
+      this.appendToCurrentTrace(`Struct ${id} declared`)
+    }
+    this.advance()
+  }
+
+  stepDisplay (args: Value.T[], range?: Range): void {
+    const body = args[1]
+    if (this.state === undefined) {
+      this.state = new ExecutionState(this.env, expToOps(body))
+    }
+    if (!this.state.isFinished()) {
+      try {
+        step(this.state)
+        if (this.isTracing()) {
+          this.appendToCurrentTrace('-->')
+          this.appendToCurrentTrace(' ')
+          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
+        }
+      } catch (e) {
+        renderToOutput(this.display, e)
+        this.advance()
+      }
+    } else {
+      if (this.state.stack.length !== 1) {
+        throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+      }
+      renderToOutput(this.display, this.state.stack.pop())
+      this.advance()
+    }
+  }
+
+  stepExp (e: Value.T, range?: Range): void {
+    if (this.state === undefined) {
+      this.state = new ExecutionState(this.env, expToOps(e))
+    }
+    if (!this.state.isFinished()) {
+      try {
+        step(this.state)
+        if (this.isTracing()) {
+          this.appendToCurrentTrace('-->')
+          this.appendToCurrentTrace(' ')
+          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace('\n')
+        }
+      } catch (e) {
+        renderToOutput(this.display, e)
+        this.advance()
+      }
+    } else {
+      if (this.state.stack.length !== 1) {
+        throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
+      }
+      if (this.defaultDisplay) {
+        renderToOutput(this.display, this.state.stack.pop()!)
+      } else {
+        this.state.stack.pop()
+      }
+      this.advance()
+    }
+  }
+
+  specialForms: Map<string, (args: Value.T[], range?: Range) => void> = new Map([
+    ['define', this.stepDefine],
+    ['import', this.stepImport],
+    ['struct', this.stepStruct],
+    ['display', this.stepDisplay]
+  ])
+
+  step (): void {
+    let stmt = this.prog[this.curStmt]
+    let range = undefined
+    if (Value.isSyntax(stmt)) {
+      const syn = stmt as Value.Syntax
+      stmt = syn.value
+      range = syn.range
+    }
+    if (Value.isList(stmt)) {
+      const values = Value.listToVector(stmt as Value.List)
+      if (values.length === 0) {
+        renderToOutput(this.display, new ScamperError('Runtime', 'The empty list is not a valid statement', undefined, range))
+        this.advance()
+      } else if (Value.isSym(values[0])) {
+        const head = (values[0] as Value.Sym).value
+        const args = values.slice(1)
+        if (head in this.specialForms.keys()) {
+          this.specialForms.get(head)!(args, range)
+        } else {
+          this.stepExp(stmt, range)
+        }
+      }
+    } else {
+      this.stepExp(stmt, range)
     }
   }
 
