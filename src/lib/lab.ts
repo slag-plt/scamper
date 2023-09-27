@@ -36,9 +36,11 @@ registerFn('problem', problem, Lab)
 function description (text: string) {
   checkContract(arguments, contract('description', [C.string]))
   const ret = document.createElement('p')
-  ret.innerText = text
+  const em = document.createElement('em')
+  em.innerText = text
+  ret.appendChild(em)
   return ret
 }
-registerFn('description', problem, Lab)
+registerFn('description', description, Lab)
 
 export default Lab
