@@ -388,6 +388,15 @@ registerFn('xor', xor, Prelude)
 
 // Pairs and Lists (6.4)
 
+// TODO: really: the pair/list values we manipulated are _quoted_ pairs/lists.
+// The unquoted pair/list form is always evaluated by Scheme immediately, so
+// they only exist temporarily. Since our old infrastructure tried to
+// distinguish between pairs and lists, we have some architectual changes to
+// them to support this behavior.
+//
+// We should introduce "quoted" helpers for pairs, lists, and vectors so that
+// the standard library can use them throughout.
+
 function pairQ (x: any): boolean {
   checkContract(arguments, contract('pair?', [C.any]))
   return Value.isPair(x)

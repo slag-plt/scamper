@@ -104,12 +104,13 @@ export namespace Value {
   export const scamperTag = Symbol('tag')
   export const structKind = Symbol('kind')
 
-  export type TaggedObject = Closure | Char | Sym | Pair | Syntax | Struct
+  export type TaggedObject = Closure | Char | Sym | Pair | Syntax | Quote | Struct
   export type Closure = { [scamperTag]: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
   export type Char = { [scamperTag]: 'char', value: string }
   export type Sym  = { [scamperTag]: 'sym', value: string } 
   export type Pair = { [scamperTag]: 'pair', fst: T, snd: T, isList: boolean }
   export type Syntax = { [scamperTag]: 'syntax', range: Range, value: T }
+  export type Quote = { [scamperTag]: 'quote', value: T }
 
   // NOTE: to maximize interoperability, a struct is an object with at least
   // a _scamperTag and kind field. The rest of the fields are the fields of the
@@ -142,6 +143,7 @@ export namespace Value {
   export const isPair = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pair'
   export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
   export const isSyntax = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'syntax'
+  export const isQuote = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'quote'
   export const isStruct = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'struct'
   export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct)[structKind] === k
 
@@ -156,6 +158,7 @@ export namespace Value {
   export const mkList = (...values: T[]): List => vectorToList(values)
   export const mkSyntax = (range: Range, value: T): Syntax =>
     ({ [scamperTag]: 'syntax', range, value })
+  export const mkQuote = (value: T): Quote => ({ [scamperTag]: 'quote', value })
   export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
     const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
     for (let i = 0; i < fields.length; i++) {
@@ -481,42 +484,23 @@ export namespace Value {
 //   }
 // }
 
-// export namespace Stmt {
-//   export type T = Binding | Exp | Import | Display | Struct
-//   export type Binding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Exp.T, bracket: Bracket, range: Range }
-//   export type Exp = { _scamperTag: 'struct', kind: 'exp', body: Exp.T }
-//   export type Import = { _scamperTag: 'struct', kind: 'import', modName: string, bracket: Bracket, range: Range }
-//   export type Display = { _scamperTag: 'struct', kind: 'display', body: Exp.T, bracket: Bracket, range: Range }
-//   export type Struct = { _scamperTag: 'struct', kind: 'struct', id: string, fields: string[], bracket: Bracket, range: Range }
+export namespace Stmt {
+  export type T = Binding | Exp | Import | Display | Struct
+  export type Binding = { _scamperTag: 'struct', kind: 'binding', name: Id, body: Op.T[], src: Value.T, range: Range }
+  export type Exp = { _scamperTag: 'struct', kind: 'exp', body: Op.T[], src: Value.T, range: Range }
+  export type Import = { _scamperTag: 'struct', kind: 'import', modName: string, range: Range }
+  export type Display = { _scamperTag: 'struct', kind: 'display', body: Op.T[], src: Value.T, range: Range }
+  export type Struct = { _scamperTag: 'struct', kind: 'struct', id: string, fields: string[], range: Range }
 
-//   export const mkStmtBinding = (name: Id, body: Exp.T, bracket: Bracket, range: Range): T =>
-//     ({ _scamperTag: 'struct', kind: 'binding', name, body, bracket, range })
-//   export const mkStmtExp = (body: Exp.T): T => ({ _scamperTag: 'struct', kind: 'exp', body })
-//   export const mkImport = (modName: string, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'import', modName, bracket, range })
-//   export const mkDisplay = (body: Exp.T, bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'display', body, bracket, range })
-//   export const mkStruct = (id: string, fields: string[], bracket: Bracket, range: Range): T => ({ _scamperTag: 'struct', kind: 'struct', id, fields, bracket, range })
+  export const mkStmtBinding = (name: Id, body: Op.T[], src: Value.T, range: Range): T =>
+    ({ _scamperTag: 'struct', kind: 'binding', name, body, src, range })
+  export const mkStmtExp = (body: Op.T[], src: Value.T, range: Range): T => ({ _scamperTag: 'struct', kind: 'exp', body, src, range })
+  export const mkImport = (modName: string, range: Range): T => ({ _scamperTag: 'struct', kind: 'import', modName, range })
+  export const mkDisplay = (body: Op.T[], src: Value.T, range: Range): T => ({ _scamperTag: 'struct', kind: 'display', body, src, range })
+  export const mkStruct = (id: string, fields: string[], range: Range): T => ({ _scamperTag: 'struct', kind: 'struct', id, fields, range })
+}
 
-//   export function toSexp(s: T): Sexp.T {
-//     switch (s.kind) {
-//       case 'binding':
-//         return Sexp.mkList([Sexp.mkAtom('define', noRange), Sexp.mkAtom(s.name, noRange), Exp.toSexp(s.body)], s.bracket, s.range)
-//       case 'exp':
-//         return Exp.toSexp(s.body)
-//       case 'import':
-//         return Sexp.mkList([Sexp.mkAtom('import', noRange), Sexp.mkAtom(s.modName, noRange)], s.bracket, s.range)
-//       case 'display':
-//         return Sexp.mkList([Sexp.mkAtom('define', noRange), Exp.toSexp(s.body)], s.bracket, s.range)
-//       case 'struct':
-//         return Sexp.mkList([Sexp.mkAtom('struct', noRange), Sexp.mkAtom(s.id, noRange), ...s.fields.map((f) => Sexp.mkAtom(f, noRange))], '(', s.range)
-//     }
-//   }
-
-//   export function toString(s: T): string {
-//     return Sexp.sexpToString(toSexp(s))
-//   }
-// }
-
-export type Prog = Value.T[]
+export type Prog = Stmt.T[]
 
 // export function progToSexps(p: Prog): Sexp.T[] {
 //   return p.map(Value.toSexp)

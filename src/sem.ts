@@ -1,6 +1,6 @@
-import { ICE, Id, noRange, Range, ScamperError } from './lang.js'
+import { ICE, Id, noRange, Range, ScamperError, Stmt } from './lang.js'
 import { Prog, Op, Value, Env } from './lang.js'
-import { expToHTML, mkCodeElement, renderToOutput } from './display.js'
+import { renderToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
 class Control {
@@ -590,14 +590,14 @@ function makeTraceHeader (s: Stmt.T): HTMLElement {
     case 'binding': {
       const ret = mkCodeElement(`Evaluating binding ${s.name}...`)
       ret.append(mkCodeElement('\n'))
-      ret.append(expToHTML(s.body))
+      ret.append(renderToHTML(s.body))
       return ret
     }
 
     case 'display': {
       const ret = mkCodeElement('Evaluating displayed expression...')
       ret.append(mkCodeElement('\n'))
-      ret.append(expToHTML(s.body))
+      ret.append(renderToHTML(s.body))
       return ret
     }
 
@@ -607,7 +607,7 @@ function makeTraceHeader (s: Stmt.T): HTMLElement {
     case 'exp': {
       const ret = mkCodeElement('Evaluating expression...')
       ret.append(mkCodeElement('\n'))
-      ret.append(expToHTML(s.body))
+      ret.append(renderToHTML(s.body))
       return ret
     }
 
@@ -665,11 +665,9 @@ export class Sem {
     }
   }
 
-  stepDefine (args: Value.T[], range?: Range): void {
-    const name = (args[1] as Value.Sym).value
-    const body = args[2]
+  stepDefine (name: string, body: Op.T[], range: Range): void {
     if (this.state === undefined) {
-      this.state = new ExecutionState(this.env, expToOps(body))
+      this.state = new ExecutionState(this.env, body)
     }
     if (!this.state.isFinished()) {
       try {
@@ -677,7 +675,7 @@ export class Sem {
         if (this.isTracing()) {
           this.appendToCurrentTrace('-->')
           this.appendToCurrentTrace(' ')
-          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace(renderToHTML(stateToExp(this.state)!))
           this.appendToCurrentTrace('\n')
         }
       } catch (e) {
@@ -706,13 +704,20 @@ export class Sem {
     }
   }
 
-  stepImport (args: Value.T[], range?: Range): void {
-    // TODO: fill me in! Lost the code from a bad copy-paste
+  stepImport (modName: string, range: Range): void {
+    if (this.builtinLibs.has(modName)) {
+      this.env = this.env.extend(this.builtinLibs.get(modName)!)
+      if (this.isTracing()) {
+        this.appendToCurrentTrace(`Module ${modName} imported`)
+      }
+      this.advance()
+    } else {
+      this.advance()
+      throw new ScamperError('Runtime', `Module ${modName} not found`, undefined, range)
+    }
   }
 
-  stepStruct (args: Value.T[], range?: Range): void {
-    const id = (args[1] as Value.Sym).value
-    const fields = args.slice(2).map((v) => (v as Value.Sym).value)
+  stepStruct (id: string, fields: string[]): void {
     this.env = executeStructDecl(id, fields, this.env)
     if (this.isTracing()) {
       this.appendToCurrentTrace(`Struct ${id} declared`)
@@ -720,10 +725,9 @@ export class Sem {
     this.advance()
   }
 
-  stepDisplay (args: Value.T[], range?: Range): void {
-    const body = args[1]
+  stepDisplay (body: Op.T[], range?: Range): void {
     if (this.state === undefined) {
-      this.state = new ExecutionState(this.env, expToOps(body))
+      this.state = new ExecutionState(this.env, body)
     }
     if (!this.state.isFinished()) {
       try {
@@ -731,7 +735,7 @@ export class Sem {
         if (this.isTracing()) {
           this.appendToCurrentTrace('-->')
           this.appendToCurrentTrace(' ')
-          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace(renderToHTML(stateToExp(this.state)!))
           this.appendToCurrentTrace('\n')
         }
       } catch (e) {
@@ -747,9 +751,9 @@ export class Sem {
     }
   }
 
-  stepExp (e: Value.T, range?: Range): void {
+  stepExp (body: Op.T[]): void {
     if (this.state === undefined) {
-      this.state = new ExecutionState(this.env, expToOps(e))
+      this.state = new ExecutionState(this.env, (body))
     }
     if (!this.state.isFinished()) {
       try {
@@ -757,7 +761,7 @@ export class Sem {
         if (this.isTracing()) {
           this.appendToCurrentTrace('-->')
           this.appendToCurrentTrace(' ')
-          this.appendToCurrentTrace(expToHTML(stateToExp(this.state)!))
+          this.appendToCurrentTrace(renderToHTML(stateToExp(this.state)!))
           this.appendToCurrentTrace('\n')
         }
       } catch (e) {
@@ -777,37 +781,24 @@ export class Sem {
     }
   }
 
-  specialForms: Map<string, (args: Value.T[], range?: Range) => void> = new Map([
-    ['define', this.stepDefine],
-    ['import', this.stepImport],
-    ['struct', this.stepStruct],
-    ['display', this.stepDisplay]
-  ])
-
   step (): void {
     let stmt = this.prog[this.curStmt]
-    let range = undefined
-    if (Value.isSyntax(stmt)) {
-      const syn = stmt as Value.Syntax
-      stmt = syn.value
-      range = syn.range
-    }
-    if (Value.isList(stmt)) {
-      const values = Value.listToVector(stmt as Value.List)
-      if (values.length === 0) {
-        renderToOutput(this.display, new ScamperError('Runtime', 'The empty list is not a valid statement', undefined, range))
-        this.advance()
-      } else if (Value.isSym(values[0])) {
-        const head = (values[0] as Value.Sym).value
-        const args = values.slice(1)
-        if (head in this.specialForms.keys()) {
-          this.specialForms.get(head)!(args, range)
-        } else {
-          this.stepExp(stmt, range)
-        }
-      }
-    } else {
-      this.stepExp(stmt, range)
+    switch (stmt.kind) {
+      case 'binding':
+        this.stepDefine(stmt.name, stmt.body, stmt.range)
+        break
+      case 'exp':
+        this.stepExp(stmt.body)
+        break
+      case 'import':
+        this.stepImport(stmt.modName, stmt.range)
+        break
+      case 'display':
+        this.stepDisplay(stmt.body, stmt.range)
+        break
+      case 'struct':
+        this.stepStruct(stmt.id, stmt.fields)
+        break
     }
   }
 

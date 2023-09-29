@@ -1,4 +1,4 @@
-import { Bracket, closeBracket, charToName, ICE, ScamperError, Exp, Pat, Value } from './lang.js'
+import { Bracket, closeBracket, charToName, ICE, ScamperError, Value } from './lang.js'
 
 function mkOutputDiv (body: HTMLElement) {
   const ret = document.createElement('div')
@@ -47,160 +47,160 @@ function bracketHTMLElements (bracket: Bracket, es: HTMLElement[]): HTMLElement 
   return ret
 }
 
-export function patToHTML (p: Pat.T): HTMLElement {
-  switch (p.kind) {
-    case 'var':
-      return mkCodeElement(p.name)
+// export function patToHTML (p: Pat.T): HTMLElement {
+//   switch (p.kind) {
+//     case 'var':
+//       return mkCodeElement(p.name)
 
-    case 'wild':
-      return mkCodeElement('_')
+//     case 'wild':
+//       return mkCodeElement('_')
 
-    case 'num':
-      return mkCodeElement(p.value.toString())
+//     case 'num':
+//       return mkCodeElement(p.value.toString())
 
-    case 'bool':
-      return mkCodeElement(p.value ? '#t' : '#f')
+//     case 'bool':
+//       return mkCodeElement(p.value ? '#t' : '#f')
 
-    case 'char':
-      return mkCodeElement(`#\\${charToName(p.value)}`)
+//     case 'char':
+//       return mkCodeElement(`#\\${charToName(p.value)}`)
 
-    // TODO: need to unescape string values!
-    case 'str':
-      return mkCodeElement(`"${p.value}"`)
+//     // TODO: need to unescape string values!
+//     case 'str':
+//       return mkCodeElement(`"${p.value}"`)
 
-    case 'null':
-      return mkCodeElement('null')
+//     case 'null':
+//       return mkCodeElement('null')
 
-    case 'ctor':
-      return bracketHTMLElements('(', [
-        mkCodeElement(p.ctor),
-        ...p.args.map(patToHTML)
-      ])
-  }
-}
+//     case 'ctor':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement(p.ctor),
+//         ...p.args.map(patToHTML)
+//       ])
+//   }
+// }
 
-function letToHTML (soFar: Exp.Binding[], e: Exp.Let): HTMLElement {
-  if (e.bindings.length === 1 && e.body.kind === 'let') {
-    soFar.push(e.bindings[0])
-    return letToHTML(soFar, e.body)
-  } else if (soFar.length === 0) {
-    return bracketHTMLElements('(', [
-      mkCodeElement('let'),
-      bracketHTMLElements('(', e.bindings.map(({name, body}) => {
-        return bracketHTMLElements('[', [
-          mkCodeElement(name),
-          expToHTML(body)
-        ])
-      })),
-      expToHTML(e.body)
-    ])
-  } else if (e.bindings.length > 1) {
-    const ret = bracketHTMLElements('(', [
-      mkCodeElement('let'),
-      bracketHTMLElements('(', e.bindings.map(({name, body}) => {
-        return bracketHTMLElements('[', [
-          mkCodeElement(name),
-          expToHTML(body)
-        ])
-      })),
-      expToHTML(e.body)
-    ])
-    return bracketHTMLElements('(', [
-      mkCodeElement('let*'),
-      bracketHTMLElements('(', soFar.map(({name, body}) => {
-        return bracketHTMLElements('[', [
-          mkCodeElement(name),
-          expToHTML(body)
-        ])
-      })),
-      ret
-    ])
-  } else {
-    soFar.push(e.bindings[0])
-    return bracketHTMLElements('(', [
-      mkCodeElement('let*'),
-      bracketHTMLElements('(', soFar.map(({name, body}) => {
-        return bracketHTMLElements('[', [
-          mkCodeElement(name),
-          expToHTML(body)
-        ])
-      })),
-      expToHTML(e.body)
-    ])
-  }
-}
+// function letToHTML (soFar: Exp.Binding[], e: Exp.Let): HTMLElement {
+//   if (e.bindings.length === 1 && e.body.kind === 'let') {
+//     soFar.push(e.bindings[0])
+//     return letToHTML(soFar, e.body)
+//   } else if (soFar.length === 0) {
+//     return bracketHTMLElements('(', [
+//       mkCodeElement('let'),
+//       bracketHTMLElements('(', e.bindings.map(({name, body}) => {
+//         return bracketHTMLElements('[', [
+//           mkCodeElement(name),
+//           expToHTML(body)
+//         ])
+//       })),
+//       expToHTML(e.body)
+//     ])
+//   } else if (e.bindings.length > 1) {
+//     const ret = bracketHTMLElements('(', [
+//       mkCodeElement('let'),
+//       bracketHTMLElements('(', e.bindings.map(({name, body}) => {
+//         return bracketHTMLElements('[', [
+//           mkCodeElement(name),
+//           expToHTML(body)
+//         ])
+//       })),
+//       expToHTML(e.body)
+//     ])
+//     return bracketHTMLElements('(', [
+//       mkCodeElement('let*'),
+//       bracketHTMLElements('(', soFar.map(({name, body}) => {
+//         return bracketHTMLElements('[', [
+//           mkCodeElement(name),
+//           expToHTML(body)
+//         ])
+//       })),
+//       ret
+//     ])
+//   } else {
+//     soFar.push(e.bindings[0])
+//     return bracketHTMLElements('(', [
+//       mkCodeElement('let*'),
+//       bracketHTMLElements('(', soFar.map(({name, body}) => {
+//         return bracketHTMLElements('[', [
+//           mkCodeElement(name),
+//           expToHTML(body)
+//         ])
+//       })),
+//       expToHTML(e.body)
+//     ])
+//   }
+// }
 
-export function expToHTML (e: Exp.T): HTMLElement {
-  switch (e.kind) {
-    case 'var':
-      return mkCodeElement(e.name)
+// export function expToHTML (e: Exp.T): HTMLElement {
+//   switch (e.kind) {
+//     case 'var':
+//       return mkCodeElement(e.name)
 
-    case 'val':
-      return renderToHTML(e.value)
+//     case 'val':
+//       return renderToHTML(e.value)
 
-    case 'lam':
-      return bracketHTMLElements('(', [
-        mkCodeElement('lambda'),
-        bracketHTMLElements('(', e.args.map(mkCodeElement)),
-        expToHTML(e.body)
-      ])
+//     case 'lam':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('lambda'),
+//         bracketHTMLElements('(', e.args.map(mkCodeElement)),
+//         expToHTML(e.body)
+//       ])
 
-    case 'let':
-      return letToHTML([], e)
+//     case 'let':
+//       return letToHTML([], e)
 
-    case 'app':
-      return bracketHTMLElements('(', [expToHTML(e.head), ...e.args.map(expToHTML)])
+//     case 'app':
+//       return bracketHTMLElements('(', [expToHTML(e.head), ...e.args.map(expToHTML)])
 
-    case 'and':
-      return bracketHTMLElements('(', [
-        mkCodeElement('and'),
-        ...e.exps.map(expToHTML)
-      ])
+//     case 'and':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('and'),
+//         ...e.exps.map(expToHTML)
+//       ])
 
-    case 'or':
-      return bracketHTMLElements('(', [
-        mkCodeElement('or'),
-        ...e.exps.map(expToHTML)
-      ])
+//     case 'or':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('or'),
+//         ...e.exps.map(expToHTML)
+//       ])
 
-    case 'if':
-      return bracketHTMLElements('(', [
-        mkCodeElement('if'),
-        expToHTML(e.guard),
-        expToHTML(e.ifb),
-        expToHTML(e.elseb)
-      ])
+//     case 'if':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('if'),
+//         expToHTML(e.guard),
+//         expToHTML(e.ifb),
+//         expToHTML(e.elseb)
+//       ])
 
-    case 'begin':
-      return bracketHTMLElements('(', [
-        mkCodeElement('begin'),
-        ...e.exps.map(expToHTML)
-      ])
+//     case 'begin':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('begin'),
+//         ...e.exps.map(expToHTML)
+//       ])
 
-    case 'cond':
-      return bracketHTMLElements('(', [
-        mkCodeElement('cond'),
-        ...e.branches.map(({guard, body}) => {
-          return bracketHTMLElements('[', [
-            expToHTML(guard),
-            expToHTML(body)
-          ])
-        })
-      ])
+//     case 'cond':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('cond'),
+//         ...e.branches.map(({guard, body}) => {
+//           return bracketHTMLElements('[', [
+//             expToHTML(guard),
+//             expToHTML(body)
+//           ])
+//         })
+//       ])
 
-    case 'match':
-      return bracketHTMLElements('(', [
-        mkCodeElement('match'),
-        expToHTML(e.scrutinee),
-        ...e.branches.map(({pattern, body}) => {
-          return bracketHTMLElements('[', [
-            patToHTML(pattern),
-            expToHTML(body)
-          ])
-        })
-      ])
-  }
-}
+//     case 'match':
+//       return bracketHTMLElements('(', [
+//         mkCodeElement('match'),
+//         expToHTML(e.scrutinee),
+//         ...e.branches.map(({pattern, body}) => {
+//           return bracketHTMLElements('[', [
+//             patToHTML(pattern),
+//             expToHTML(body)
+//           ])
+//         })
+//       ])
+//   }
+// }
 
 export function renderToHTML (v: Value.T): HTMLElement {
   switch (typeof v) {
@@ -214,19 +214,26 @@ export function renderToHTML (v: Value.T): HTMLElement {
       return mkCodeElement('void')
     default:
       if (v === null) {
-        return mkCodeElement('null')
-      } else if (Array.isArray(v)) {
+        return mkCodeElement('()')
+      } else if (Value.isSym(v)) {
+        return mkCodeElement((v as Value.Sym).value)
+      } else if (Value.isQuote(v)) {
+        const ret = document.createElement('span')
+        ret.appendChild(mkCodeElement("'"))
+        ret.appendChild(renderToHTML((v as Value.Quote).value))
+        return ret
+      } else if (Value.isArray(v)) {
         const vec = v as Value.T[]
         if (vec.length === 0) {
-          return mkCodeElement('(vector)')
+          return mkCodeElement('[]')
         }
-        const ret = mkCodeElement('(vector ')
+        const ret = mkCodeElement('[')
         ret.appendChild(renderToHTML(vec[0]))
         vec.slice(1).forEach((e) => {
           ret.appendChild(mkCodeElement(' '))
           ret.appendChild(renderToHTML(e))
         })
-        ret.append(mkCodeElement(')'))
+        ret.append(mkCodeElement(']'))
         return ret
       } else if (Value.isClosure(v)) {
         return mkCodeElement(`[Function (closure)]`)
@@ -235,7 +242,7 @@ export function renderToHTML (v: Value.T): HTMLElement {
       } else if (Value.isChar(v)) {
         return mkCodeElement(`#\\${charToName((v as Value.Char).value)}`)
       } else if (Value.isList(v)) {
-        const ret = mkCodeElement('(list ')
+        const ret = mkCodeElement('(')
         let lst: any = v
         // N.B., we know the list is non-empty because we cover the null case already
         ret.appendChild(renderToHTML(lst.fst))
@@ -248,6 +255,7 @@ export function renderToHTML (v: Value.T): HTMLElement {
         ret.append(mkCodeElement(')'))
         return ret
       } else if (Value.isPair(v)) {
+        // TODO: do we introduce `( . `)` for pairs again?
         const ret = mkCodeElement('(pair ')
         ret.appendChild(renderToHTML((v as Value.Pair).fst))
         ret.appendChild(mkCodeElement(' '))

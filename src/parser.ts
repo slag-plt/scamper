@@ -1,5 +1,5 @@
 import { ICE, ScamperError } from './lang.js'
-import { Bracket, Range, mkRange, Op, Value } from './lang.js'
+import { Range, mkRange, Prog, Stmt, Op, Value } from './lang.js'
 
 class Token {
   text: string
@@ -689,93 +689,79 @@ export function valueToOps (v: Value.T): Op.T[] {
   }
 }
 
-// export function sexpToStmt (e: Sexp.T): Value.Syntax {
-//   switch (e.kind) {
-//     case 'atom':
-//       return Value.mkSyntax(e.range, sexpToExp(e))
-//     case 'list': {
-//       if (e.value.length === 0) {
-//         throw new ScamperError('Parser', 'The empty list is not a valid statement', undefined, e.range)
-//       }
-//       const head = e.value[0]
-//       const args = e.value.slice(1)
-//       if (head.value === 'define') {
-//         if (args.length !== 2) {
-//           throw new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, e.range)
-//         }
-//         const name = args[0]
-//         if (name.kind !== 'atom') {
-//           throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, name.range)
-//         }
-//         return Value.mkSyntax(e.range, Value.mkList(
-//           Value.mkSym('define'),
-//           Value.mkSym(name.value),
-//           sexpToExp(args[1])
-//         ))
-//       } else if (head.value === 'import') {
-//         if (args.length !== 1) {
-//           throw new ScamperError('Parser', 'Import statements must have 1 argument, the name of a module', undefined, e.range)
-//         }
-//         const name = args[0]
-//         if (name.kind !== 'atom') {
-//           throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, args[0].range)
-//         }
-//         return Value.mkSyntax(e.range, Value.mkList(
-//           Value.mkSym('import'),
-//           Value.mkSym(name.value)
-//         ))
-//       } else if (head.value === 'display') {
-//         if (args.length !== 1) {
-//           throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, e.range)
-//         }
-//         return Value.mkSyntax(e.range, Value.mkList(
-//           Value.mkSym('display'),
-//           sexpToExp(args[0])
-//         ))
-//       } else if (head.value === 'struct') {
-//         if (args.length !== 2) {
-//           throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, e.range)
-//         } 
-//         const name = args[0]
-//         if (name.kind !== 'atom') {
-//           throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, name.range)
-//         }
-//         const sfields = args[1]
-//         if (sfields.kind !== 'list') {
-//           throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, args[1].range)
-//         }
-//         const fields: string[] = []
-//         sfields.value.forEach((f) => {
-//           if (f.kind !== 'atom') {
-//             throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, f.range)
-//           }
-//           fields.push(f.value)
-//         })
-//         if (fields.length === 0) {
-//           return Value.mkSyntax(e.range, Value.mkList(
-//             Value.mkSym('struct'),
-//             Value.mkSym(name.value)
-//           ))
-//         } else {
-//         return Value.mkSyntax(e.range, Value.mkList(
-//           Value.mkSym('struct'),
-//           Value.mkSym(name.value),
-//           Value.mkList(...fields.map(Value.mkSym))
-//         ))
-//         }
-//       } else {
-//         return sexpToExp(e)
-//       }
-//     }
-//   }
-// }
+export function valueToStmt (v: Value.T): Stmt.T {
+  let { range, value } = Value.unpackSyntax(v)
+  v = value
 
-// export function sexpsToProg (exps: Sexp.T[]): Prog {
-//   return exps.map(sexpToStmt)
-// }
+  if (!Value.isList(v)) {
+    return Stmt.mkStmtExp(valueToOps(v), v, range)
+  } else {
+    const values = Value.listToVector(v as Value.List)
+    if (values.length === 0) {
+      return Stmt.mkStmtExp([Op.mkValue(null)], v, range)
+    }
 
-// export function parseProgram (src: string): Prog {
-//   const tokens = stringToTokens(src)
-//   const sexps = tokensToSexps(tokens)
-//   return sexpsToProg(sexps)
-// }
+    const head = values[0]
+    const args = values.slice(1)
+
+    if (Value.isSymName(head, 'define')) {
+      if (args.length !== 2) {
+        throw new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, range)
+      }
+      const name = args[0]
+      if (!Value.isSym(name)) {
+        throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, range)
+      }
+      return Stmt.mkStmtBinding((name as Value.Sym).value, valueToOps(args[1]), v, range)
+
+    } else if (Value.isSymName(head, 'import')) {
+      if (args.length !== 1) {
+        throw new ScamperError('Parser', 'Import statements must have 1 argument, the name of a module', undefined, range)
+      }
+      const name = args[0]
+      if (!Value.isSym(name)) {
+          throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, range)
+      }
+      return Stmt.mkImport((name as Value.Sym).value, range)
+
+    } else if (Value.isSymName(head, 'display')) {
+      if (args.length !== 1) {
+        throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, range)
+      }
+      return Stmt.mkDisplay(valueToOps(args[0]), v, range)
+
+    } else if (Value.isSymName(head, 'struct')) {
+      if (args.length !== 2) {
+        throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, range)
+      } 
+      const name = args[0]
+      if (!Value.isSym(name)) {
+        throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, range)
+      }
+      const sfields = args[1]
+      if (!Value.isList(sfields)) {
+        throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, range)
+      }
+      const fields: string[] = []
+      Value.listToVector(sfields as Value.List).forEach((f) => {
+        if (!Value.isSym(f)) {
+          throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, range)
+        }
+        fields.push((f as Value.Sym).value)
+      })
+      return Stmt.mkStruct((name as Value.Sym).value, fields, range)
+    } else {
+      return Stmt.mkStmtExp(valueToOps(v), v, range)
+    }
+  }
+}
+
+export function valuesToProg (exps: Value.T[]): Prog {
+   return exps.map(valueToStmt)
+}
+
+export function parseProgram (src: string): Prog {
+  const tokens = stringToTokens(src)
+  const values = tokensToValues(tokens)
+  return valuesToProg(values)
+}
