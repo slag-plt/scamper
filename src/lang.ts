@@ -167,10 +167,16 @@ export namespace Value {
     return ret
   }
 
+  export const stripSyntax = (v: T): T =>
+    isSyntax(v) ? (v as Syntax).value : v
+
   export const unpackSyntax = (v: T): { range: Range, value: T } =>
     isSyntax(v) ?
       { range: (v as Syntax).range, value: (v as Syntax).value } :
       { range: noRange, value: v }
+
+  export const rangeOf = (v: T): Range =>
+    isSyntax(v) ? (v as Syntax).range : noRange
 
   export const nameFn = (name: string, fn: Function): Function =>
     Object.defineProperty(fn, 'name', { value: name })

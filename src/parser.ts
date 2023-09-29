@@ -232,7 +232,7 @@ export function tokensToValue (tokens: Token[]): Value.Syntax {
         beg.text === '[' ? values : Value.mkList(...values))
     }
   } else {
-    return Value.mkSyntax(beg.range, tokenToValue(beg, true))
+    return tokenToValue(beg, true)
   }
 }
 
@@ -441,29 +441,36 @@ export function tokenToValue (t: Token, wildAllowed: boolean): Value.Syntax {
 //   }
 // }
 
-function valueToBinding (v: Value.T, range?: Range): { name: string, ops: Op.T[] } {
+function valueToBinding (v: Value.T): { name: string, ops: Op.T[] } {
+  let { range, value } = Value.unpackSyntax(v)
+  v = value
   if (!Value.isArray(v)) {
     throw new ScamperError('Parser', 'Binding pair must be given as a vector', undefined, range)
   }
   const vec = v as Value.Vector
-  if (vec.length !== 2 || !Value.isSym(vec[0])) {
-    throw new ScamperError('Parser', `Binding must be a pair of a name and value`, undefined, range)
+  if (vec.length !== 2 || !Value.isSym(Value.stripSyntax(vec[0]))) {
+    throw new ScamperError('Parser', `Binding must be a pair of a name and value`, undefined, Value.rangeOf(vec[0]))
   }
-  return { name: (vec[0] as Value.Sym).value, ops: valueToOps(vec[1]) }
+  return { name: (Value.stripSyntax(vec[0]) as Value.Sym).value
+         , ops: valueToOps(vec[1]) }
 }
 
-function valueToMatchBranch (v: Value.T, range?: Range): Op.MatchBranch {
+function valueToMatchBranch (v: Value.T): Op.MatchBranch {
+  let { range, value } = Value.unpackSyntax(v)
+  v = value
   if (!Value.isArray(v)) {
     throw new ScamperError('Parser', 'Match branches must be given as a vector', undefined, range)
   }
   const vec = v as Value.Vector
-  if (vec.length !== 2 || !Value.isSym(vec[0])) {
-    throw new ScamperError('Parser', 'Match branches must be given as a pair of a pattern and an expression', undefined, range)
+  if (vec.length !== 2 || !Value.isSym(Value.stripSyntax(vec[0]))) {
+    throw new ScamperError('Parser', 'Match branches must be given as a pair of a pattern and an expression', undefined, Value.rangeOf(vec[0]))
   }
-  return { pattern: vec[0], body: valueToOps(vec[1]) }
+  return { pattern: Value.stripSyntax(vec[0]), body: valueToOps(vec[1]) }
 }
 
-function valueToCondBranch (v: Value.T, range?: Range): { cond: Op.T[], body: Op.T[]} {
+function valueToCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
+  let { range, value } = Value.unpackSyntax(v)
+  v = value
   if (!Value.isArray(v)) {
     throw new ScamperError('Parser', 'Cond branch must be given as a vector', undefined, range)
   }
@@ -473,7 +480,6 @@ function valueToCondBranch (v: Value.T, range?: Range): { cond: Op.T[], body: Op
   }
   return { cond: valueToOps(vec[0]), body: valueToOps(vec[1]) }
 }
-
 
 // export function sexpToMatchBranch (e: Sexp.T): Value.Syntax {
 //   if (e.kind === 'atom' || e.value.length !== 2) {
@@ -609,46 +615,48 @@ export function valueToOps (v: Value.T): Op.T[] {
     }
     const head = values[0]
     const args = values.slice(1)
-    if (Value.isSymName(head, 'lambda')) {
+    if (Value.isSymName(Value.stripSyntax(head), 'lambda')) {
       if (args.length !== 2) {
         throw new ScamperError('Parser', 'Lambda expression must have 2 sub-components, an parameter list and a body', undefined, range)
       }
-      const es = args[0]
+      const { range: esr, value: es } = Value.unpackSyntax(args[0])
       if (!Value.isList(es)) {
-        throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, range)
+        throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, esr)
       }
       const params: string[] = []
       Value.listToVector(es as Value.List).forEach(arg => {
-        if (!Value.isSym(arg)) {
-          throw new ScamperError('Parser', 'Parameters must only be identifiers', undefined, range)
+        let { range: r, value: x } = Value.unpackSyntax(arg)
+        if (!Value.isSym(x)) {
+          throw new ScamperError('Parser', 'Parameters must only be identifiers', undefined, r)
         }
-        params.push((arg as Value.Sym).value)
+        params.push((x as Value.Sym).value)
       })
       return [Op.mkCls(params, valueToOps(args[1]))]
-    } else if (Value.isSymName(head, 'let')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'let')) {
       if (args.length !== 2) {
         throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, range)
       }
-      if (!Value.isList(args[0])) {
-        throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, range)
+      const { range: bsr, value: bs } = Value.unpackSyntax(args[0])
+      if (!Value.isList(bs)) {
+        throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, bsr)
       }
       // TODO: problem will need to unwrap syntax for each individual binding
-      const bindings = Value.listToVector(args[0] as Value.List).map((b) => valueToBinding(b, range))
+      const bindings = Value.listToVector(bs as Value.List).map(valueToBinding)
       const valOps = bindings.flatMap((b) => b.ops)
       return valOps.concat([Op.mkLet(bindings.map((b) => b.name), valueToOps(args[1]))])
-    } else if (Value.isSymName(head, 'and')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'and')) {
       const label = Op.freshLabel()
       return args
         .flatMap((arg) => valueToOps(arg))
         .concat([Op.mkAnd(label, range)])
         .concat([Op.mkValue(true), Op.mkLbl(label)])
-    } else if (Value.isSymName(head, 'or')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'or')) {
       const label = Op.freshLabel()
       return args
         .flatMap((arg) => valueToOps(arg))
         .concat([Op.mkOr(label, range)])
         .concat([Op.mkValue(false), Op.mkLbl(label)])
-    } else if (Value.isSymName(head, 'if')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'if')) {
       if (args.length !== 3) {
         throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, range)
       } else {
@@ -656,25 +664,25 @@ export function valueToOps (v: Value.T): Op.T[] {
           Op.mkIf(valueToOps(args[1]), valueToOps(args[2]), range)
         ])
       }
-    } else if (Value.isSymName(head, 'begin')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'begin')) {
       if (args.length === 0) {
         throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, range)
       } else {
         return args.flatMap((arg) => valueToOps(arg)).concat([Op.mkSeq(args.length)])
       }
-    } else if (Value.isSymName(head, 'match')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'match')) {
       if (args.length < 2) {
         throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, range)
       }
       const scrutinee = args[0]
-      const branches = args.slice(1).map((b) => valueToMatchBranch(b, range))
+      const branches = args.slice(1).map(valueToMatchBranch)
       return valueToOps(scrutinee).concat([Op.mkMatch(branches, range)])
     } else if (Value.isSymName(head, 'cond')) {
       if (args.length < 1) {
         throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, range)
       }
       const label = Op.freshLabel()
-      const branches = args.map((b) => valueToCondBranch(b, range))
+      const branches = args.map(valueToCondBranch)
       return branches
         .flatMap((b) => b.cond.concat([Op.mkCond(b.body, label, range)]))
         .concat([
@@ -704,48 +712,49 @@ export function valueToStmt (v: Value.T): Stmt.T {
     const head = values[0]
     const args = values.slice(1)
 
-    if (Value.isSymName(head, 'define')) {
+    if (Value.isSymName(Value.stripSyntax(head), 'define')) {
       if (args.length !== 2) {
         throw new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, range)
       }
-      const name = args[0]
+      const { range: r, value: name } = Value.unpackSyntax(args[0])
       if (!Value.isSym(name)) {
-        throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, range)
+        throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, r)
       }
       return Stmt.mkStmtBinding((name as Value.Sym).value, valueToOps(args[1]), v, range)
 
-    } else if (Value.isSymName(head, 'import')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'import')) {
       if (args.length !== 1) {
         throw new ScamperError('Parser', 'Import statements must have 1 argument, the name of a module', undefined, range)
       }
-      const name = args[0]
+      const { range: r, value: name } = Value.unpackSyntax(args[0])
       if (!Value.isSym(name)) {
-          throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, range)
+          throw new ScamperError('Parser', 'The argument of an import statement must be a module name', undefined, r)
       }
       return Stmt.mkImport((name as Value.Sym).value, range)
 
-    } else if (Value.isSymName(head, 'display')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'display')) {
       if (args.length !== 1) {
         throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, range)
       }
       return Stmt.mkDisplay(valueToOps(args[0]), v, range)
 
-    } else if (Value.isSymName(head, 'struct')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'struct')) {
       if (args.length !== 2) {
         throw new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, range)
       } 
-      const name = args[0]
+      const { range: nr, value: name } = Value.unpackSyntax(args[0])
       if (!Value.isSym(name)) {
-        throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, range)
+        throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, nr )
       }
-      const sfields = args[1]
+      const { range: sfr, value: sfields } = Value.unpackSyntax(args[1])
       if (!Value.isList(sfields)) {
         throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, range)
       }
       const fields: string[] = []
-      Value.listToVector(sfields as Value.List).forEach((f) => {
+      Value.listToVector(sfields as Value.List).forEach((fld) => {
+        const { range: r, value: f } = Value.unpackSyntax(fld)
         if (!Value.isSym(f)) {
-          throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, range)
+          throw new ScamperError('Parser', 'Struct fields must be identifiers', undefined, r)
         }
         fields.push((f as Value.Sym).value)
       })
