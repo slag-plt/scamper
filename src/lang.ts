@@ -104,13 +104,12 @@ export namespace Value {
   export const scamperTag = Symbol('tag')
   export const structKind = Symbol('kind')
 
-  export type TaggedObject = Closure | Char | Sym | Pair | Syntax | Quote | Struct
+  export type TaggedObject = Closure | Char | Sym | Pair | Syntax | Struct
   export type Closure = { [scamperTag]: 'closure', params: Id[], ops: Op.T[], env: Env, name?: string }
   export type Char = { [scamperTag]: 'char', value: string }
   export type Sym  = { [scamperTag]: 'sym', value: string } 
   export type Pair = { [scamperTag]: 'pair', fst: T, snd: T, isList: boolean }
   export type Syntax = { [scamperTag]: 'syntax', range: Range, value: T }
-  export type Quote = { [scamperTag]: 'quote', value: T }
 
   // NOTE: to maximize interoperability, a struct is an object with at least
   // a _scamperTag and kind field. The rest of the fields are the fields of the
@@ -143,7 +142,6 @@ export namespace Value {
   export const isPair = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pair'
   export const isList = (v: T): boolean => v === null || (isPair(v) && (v as Pair).isList)
   export const isSyntax = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'syntax'
-  export const isQuote = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'quote'
   export const isStruct = (v: T): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'struct'
   export const isStructKind = (v: T, k: string): boolean => isStruct(v) && (v as Struct)[structKind] === k
 
@@ -158,7 +156,6 @@ export namespace Value {
   export const mkList = (...values: T[]): List => vectorToList(values)
   export const mkSyntax = (range: Range, value: T): Syntax =>
     ({ [scamperTag]: 'syntax', range, value })
-  export const mkQuote = (value: T): Quote => ({ [scamperTag]: 'quote', value })
   export const mkStruct = (kind: string, fields: string[], values: T[]): T => {
     const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
     for (let i = 0; i < fields.length; i++) {
