@@ -146,6 +146,11 @@ class Tokenizer {
       this.beginTracking()
       this.advance()
       return this.emitToken()
+    // Case: quotation
+    } else if (ch === "'") {
+      this.beginTracking()
+      this.advance()
+      return this.emitToken()
     // Case: string literals
     } else if (ch === '"') {
       this.beginTracking() 
@@ -177,7 +182,7 @@ class Tokenizer {
       this.advance()
       while (!this.isEmpty()) {
         ch = this.peek()
-        if (isWhitespace(ch) || isBracket(ch) || ch === ';') {
+        if (isWhitespace(ch) || isBracket(ch) || ch === ';' || ch === "'") {
           // N.B., don't include the terminating char in this token!
           return this.emitToken()
         } else {
@@ -231,6 +236,8 @@ export function tokensToValue (tokens: Token[]): Value.Syntax {
         // we ever allow '{' to imply an dictionary/object.
         beg.text === '[' ? values : Value.mkList(...values))
     }
+  } else if (beg.text === "'") {
+    return Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), tokensToValue(tokens)))
   } else {
     return tokenToValue(beg, true)
   }
@@ -677,7 +684,7 @@ export function valueToOps (v: Value.T): Op.T[] {
       const scrutinee = args[0]
       const branches = args.slice(1).map(valueToMatchBranch)
       return valueToOps(scrutinee).concat([Op.mkMatch(branches, range)])
-    } else if (Value.isSymName(head, 'cond')) {
+    } else if (Value.isSymName(Value.stripSyntax(head), 'cond')) {
       if (args.length < 1) {
         throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, range)
       }
@@ -689,6 +696,11 @@ export function valueToOps (v: Value.T): Op.T[] {
           Op.mkExn('No branches of "cond" expression matched', undefined, range),
           Op.mkLbl(label)
         ])
+    } else if (Value.isSymName(Value.stripSyntax(head), 'quote')) {
+      if (args.length !== 1) {
+        throw new ScamperError('Parser', 'Quote expression must have exactly one sub-expression', undefined, range)
+      }
+      return [Op.mkValue(Value.stripAllSyntax(args[0]))]
     } else {
       return values.flatMap(valueToOps).concat([
         Op.mkAp(args.length, range)

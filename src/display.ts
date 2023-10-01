@@ -217,11 +217,6 @@ export function renderToHTML (v: Value.T): HTMLElement {
         return mkCodeElement('()')
       } else if (Value.isSym(v)) {
         return mkCodeElement((v as Value.Sym).value)
-      } else if (Value.isQuote(v)) {
-        const ret = document.createElement('span')
-        ret.appendChild(mkCodeElement("'"))
-        ret.appendChild(renderToHTML((v as Value.Quote).value))
-        return ret
       } else if (Value.isArray(v)) {
         const vec = v as Value.T[]
         if (vec.length === 0) {

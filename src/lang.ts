@@ -166,6 +166,23 @@ export namespace Value {
 
   export const stripSyntax = (v: T): T =>
     isSyntax(v) ? (v as Syntax).value : v
+  
+  export function stripAllSyntax (v: T): T {
+    if (isSyntax(v)) {
+      return stripAllSyntax((v as Syntax).value)
+    } else if (isPair(v)) {
+      const p = v as Pair
+      return mkPair(stripAllSyntax(p.fst), stripAllSyntax(p.snd))
+    } else if (isArray(v)) {
+      return (v as T[]).map(stripAllSyntax)
+    } else if (isStruct(v)) {
+      const s = v as Struct
+      const fields = getFieldsOfStruct(s)
+      return mkStruct(s[structKind], fields, fields.map((f) => stripAllSyntax(s[f])))
+    } else {
+      return v
+    }
+  }
 
   export const unpackSyntax = (v: T): { range: Range, value: T } =>
     isSyntax(v) ?
