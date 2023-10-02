@@ -157,8 +157,68 @@ function findArgs (start: number, label: string, ops: Op.T[]): { segments: Op.T[
   return { segments, endIdx: i }
 }
 
+function valToExp (v: Value.T): Value.T {
+  if (Value.isNumber(v)) {
+    return v
+  } else if (Value.isBoolean(v)) {
+    return v
+  } else if (Value.isString(v)) {
+    return v
+  } else if (Value.isNull(v)) {
+    return Value.mkSym('null')
+  } else if (Value.isVoid(v)) {
+    return v
+  } else if (Value.isArray(v)) {
+    return Value.vectorToList([
+      Value.mkSym('vector'),
+      ...(v as Value.T[]).map((v) => valToExp(v))
+    ])
+  } else if (Value.isClosure(v)) {
+    const cls = v as Value.Closure
+    if (cls.name === undefined) {
+      return Value.vectorToList([
+        Value.mkSym('lambda'),
+        Value.vectorToList(cls.params.map((p) => Value.mkSym(p))),
+        dumpToValue([[], cls.env, new Control(cls.ops)])
+      ])
+    } else {
+      return Value.mkSym(cls.name)
+    }
+  } else if (Value.isJsFunction(v)) {
+    return Value.mkSym((v as Function).name)
+  } else if (Value.isChar(v)) {
+    return v
+  } else if (Value.isList(v)) {
+    if (v === null) {
+      return Value.mkSym('null')
+    } else {
+      const elems = Value.listToVector(v as Value.List)
+      return Value.vectorToList([
+        Value.mkSym('list'),
+        ...elems.map((v) => valToExp(v))
+      ])
+    }
+  } else if (Value.isPair(v)) {
+    return Value.vectorToList([
+      Value.mkSym('pair'),
+      valToExp((v as Value.Pair).fst),
+      valToExp((v as Value.Pair).snd)
+    ])
+  } else if (Value.isStruct(v)) {
+    const s = v as Value.Struct
+    const fields = Value.getFieldsOfStruct(s)
+    return Value.vectorToList([
+      Value.mkSym(s[Value.structKind]),
+      ...fields.map((f) => valToExp(s[f]))
+    ])
+  } else {
+    // TODO: urk, when does this arise?
+    return v
+  }
+}
+
 function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: Value.T): Value.T {
-  let valStack = [...stack]
+  let valStack = [...stack.map(valToExp)]
   if (hole !== undefined) { valStack.push(hole) }
   for (let i = control.idx; i < control.ops.length; i++) {
     const op = control.ops[i]
@@ -174,7 +234,7 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
         valStack.push(Value.mkSym(op.name))
       }
     } else if (op.tag === 'val') {
-      valStack.push(op.value)
+      valStack.push(valToExp(op.value))
     } else if (op.tag === 'cls') {
       valStack.push(Value.vectorToList([
         Value.mkSym('lambda'),
@@ -590,14 +650,14 @@ function makeTraceHeader (s: Stmt.T): HTMLElement {
     case 'binding': {
       const ret = mkCodeElement(`Evaluating binding ${s.name}...`)
       ret.append(mkCodeElement('\n'))
-      ret.append(renderToHTML(s.body))
+      ret.append(renderToHTML(opsToValue(s.body)))
       return ret
     }
 
     case 'display': {
       const ret = mkCodeElement('Evaluating displayed expression...')
       ret.append(mkCodeElement('\n'))
-      ret.append(renderToHTML(s.body))
+      ret.append(renderToHTML(opsToValue(s.body)))
       return ret
     }
 
@@ -607,7 +667,7 @@ function makeTraceHeader (s: Stmt.T): HTMLElement {
     case 'exp': {
       const ret = mkCodeElement('Evaluating expression...')
       ret.append(mkCodeElement('\n'))
-      ret.append(renderToHTML(s.body))
+      ret.append(renderToHTML(opsToValue(s.body)))
       return ret
     }
 
@@ -746,7 +806,7 @@ export class Sem {
       if (this.state.stack.length !== 1) {
         throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
       }
-      renderToOutput(this.display, this.state.stack.pop())
+      renderToOutput(this.display, valToExp(this.state.stack.pop()))
       this.advance()
     }
   }
@@ -773,7 +833,7 @@ export class Sem {
         throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
       }
       if (this.defaultDisplay) {
-        renderToOutput(this.display, this.state.stack.pop()!)
+        renderToOutput(this.display, valToExp(this.state.stack.pop()!))
       } else {
         this.state.stack.pop()
       }

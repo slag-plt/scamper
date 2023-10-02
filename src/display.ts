@@ -233,7 +233,7 @@ export function renderToHTML (v: Value.T): HTMLElement {
       } else if (Value.isClosure(v)) {
         return mkCodeElement(`[Function (closure)]`)
       } else if (Value.isJsFunction(v)) {
-        return mkCodeElement(`[Function (JS)]`)
+        return mkCodeElement(`[Function (${(v as Function).name})]`)
       } else if (Value.isChar(v)) {
         return mkCodeElement(`#\\${charToName((v as Value.Char).value)}`)
       } else if (Value.isList(v)) {

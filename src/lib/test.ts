@@ -12,18 +12,18 @@ function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
 const Test: [string, Value.T][] = []
 
 type Result = Ok | Error
-type Ok = { _scamperTag: 'struct', kind: 'ok', desc: string }
-type Error = { _scamperTag: 'struct', kind: 'error', desc: string, reason: HTMLElement }
+interface Ok extends Value.Struct { [Value.structKind]: 'ok', desc: string }
+interface Error extends Value.Struct { [Value.structKind]: 'error', desc: string, reason: HTMLElement }
 
 function testOk (desc: string): Ok {
   checkContract(arguments, contract('test-ok', [C.string]))
-  return { _scamperTag: 'struct', kind: 'ok', desc }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'ok', desc }
 }
 registerFn('test-ok', testOk, Test)
 
 function testError (desc: string, reason: HTMLElement): Error {
   checkContract(arguments, contract('test-error', [C.string, C.html]))
-  return { _scamperTag: 'struct', kind: 'error', desc, reason }
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'error', desc, reason }
 }
 registerFn('test-error', testError, Test)
 
@@ -72,7 +72,7 @@ function render (v: any): HTMLElement {
   const ret = document.createElement('div')
   ret.classList.add('test-result')
 
-  if (result.kind === 'ok') {
+  if (result[Value.structKind] === 'ok') {
     ret.classList.add('ok')
     ret.innerText = `Test "${result.desc}": Passed! ✅`
   } else {
