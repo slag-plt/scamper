@@ -357,7 +357,7 @@ export function tryMatch (p: Value.T, v: Value.T, range?: Range): [string, Value
     return (p as Value.Char).value === (v as Value.Char).value ? [] : undefined
   } else if (p === null && v === null) {
     return []
-  } else if (Value.isList(p) && (Value.isPair(v) || Value.isStruct(v))) {
+  } else if (Value.isPair(p) && (Value.isPair(v) || Value.isStruct(v))) {
     const elems = Value.listToVector(p as Value.List)
     // N.B., performed a null check above, so p has at least one element
     const head = elems[0]

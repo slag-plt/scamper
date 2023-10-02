@@ -470,10 +470,14 @@ function valueToMatchBranch (v: Value.T): Op.MatchBranch {
     throw new ScamperError('Parser', 'Match branches must be given as a vector', undefined, range)
   }
   const vec = v as Value.Vector
-  if (vec.length !== 2 || !Value.isSym(Value.stripSyntax(vec[0]))) {
+  // TODO: should we be checking to see if the value is a valid pattern here?
+  // Or do we defer to runtime at this point...? Probably depends on the
+  // syntax of valid patterns and whether the set is small enough to warrant
+  // a static check.
+  if (vec.length !== 2) {
     throw new ScamperError('Parser', 'Match branches must be given as a pair of a pattern and an expression', undefined, Value.rangeOf(vec[0]))
   }
-  return { pattern: Value.stripSyntax(vec[0]), body: valueToOps(vec[1]) }
+  return { pattern: Value.stripAllSyntax(vec[0]), body: valueToOps(vec[1]) }
 }
 
 function valueToCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
@@ -709,13 +713,12 @@ export function valueToOps (v: Value.T): Op.T[] {
 }
 
 export function valueToStmt (v: Value.T): Stmt.T {
-  let { range, value } = Value.unpackSyntax(v)
-  v = value
+  let { range, value: uv } = Value.unpackSyntax(v)
 
-  if (!Value.isList(v)) {
+  if (!Value.isList(uv)) {
     return Stmt.mkStmtExp(valueToOps(v), v, range)
   } else {
-    const values = Value.listToVector(v as Value.List)
+    const values = Value.listToVector(uv as Value.List)
     if (values.length === 0) {
       return Stmt.mkStmtExp([Op.mkValue(null)], v, range)
     }
