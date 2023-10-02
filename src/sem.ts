@@ -3,6 +3,8 @@ import { Prog, Op, Value, Env } from './lang.js'
 import { renderToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
+///// Machine state structures /////////////////////////////////////////////////
+
 class Control {
   idx: number
   ops: Op.T[]
@@ -77,51 +79,7 @@ class ExecutionState {
   }
 }
 
-// function valueToExp (env: Env, v: Value.T): Exp.T {
-//   if (Value.isNumber(v)) {
-//     return Exp.mkVal(v, noRange)
-//   } else if (Value.isBoolean(v)) {
-//     return Exp.mkVal(v, noRange)
-//   } else if (Value.isString(v)) {
-//     return Exp.mkVal(v, noRange)
-//   } else if (Value.isNull(v)) {
-//     return Exp.mkVar('null', noRange)
-//   } else if (Value.isVoid(v)) {
-//     return Exp.mkVar('void', noRange)
-//   } else if (Value.isArray(v)) {
-//     return Exp.mkApp (Exp.mkVar('vector', noRange), (v as Value.T[]).map((v) => (valueToExp(env, v))), '(', noRange)
-//   } else if (Value.isClosure(v)) {
-//     const cls = v as Value.Closure
-//     if (cls.name === undefined) {
-//       return Exp.mkLam(cls.params, dumpToExp([[], cls.env, new Control(cls.ops)]), '(', noRange)
-//     } else {
-//       return Exp.mkVar(cls.name, noRange)
-//     }
-//   } else if (Value.isJsFunction(v)) {
-//     return Exp.mkVar((v as Function).name, noRange)
-//   } else if (Value.isChar(v)) {
-//     return Exp.mkVal(v, noRange)
-//   } else if (Value.isList(v)) {
-//     const l = v as Value.List
-//     if (l === null) {
-//       return Exp.mkVar('null', noRange)
-//     } else {
-//       const elems = Value.listToVector(l)
-//       return Exp.mkApp(Exp.mkVar('list', noRange), elems.map((v) => valueToExp(env, v)), '(', noRange)
-//     }
-//   } else if (Value.isPair(v)) {
-//     const p = v as Value.Pair
-//     return Exp.mkApp(Exp.mkVar('pair', noRange), [p.fst, p.snd].map((v) => valueToExp(env, v)), '(', noRange)
-//   } else if (Value.isStruct(v)) {
-//     const s = v as Value.Struct
-//     const fields = Value.getFieldsOfStruct(s)
-//     return Exp.mkApp(Exp.mkVar(s[Value.structKind], noRange), fields.map((f) => valueToExp(env, s[f])), '(', noRange)
-//   } else {
-//     // NOTE: we're slowly mushing together values and expressions... perhaps
-//     // we should collapse the hierarchy once and for all to avoid this mess?
-//     return Exp.mkVal(v, noRange)
-//   }
-// }
+///// Raising (ops to values) //////////////////////////////////////////////////
 
 function findCondBranches (start: number, label: string, ops: Op.T[]): { branches: { guard: Op.T[], body: Op.T[] }[], endIdx: number } {
   let i = start
@@ -339,6 +297,8 @@ export function stateToExp (state: ExecutionState): Value.T | undefined {
   }
   return ret
 }
+
+///// Evaluation ///////////////////////////////////////////////////////////////
 
 export function tryMatch (p: Value.T, v: Value.T, range?: Range): [string, Value.T][] | undefined {
   if (Value.isSymName(p, '_')) {
