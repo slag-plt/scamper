@@ -50,7 +50,7 @@ export class ScamperError extends Error {
   }
 
   toString(): string {
-    const detail = `${this.modName ? this.modName : ''}${this.range ? this.range.toString() : ''}`
+    const detail = `${this.modName ? this.modName : ''}${(this.range && this.range !== noRange) ? this.range.toString() : ''}`
     const src = this.source ? `(${this.source}) ` : ''
     return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
   }
