@@ -297,6 +297,7 @@ export const reservedWords = [
   'letrec',
   'match',
   'or',
+  'quote',
   'section',
   'struct',
 ]
@@ -654,14 +655,12 @@ export function valueToOps (v: Value.T): Op.T[] {
     } else if (Value.isSymName(Value.stripSyntax(head), 'and')) {
       const label = Op.freshLabel()
       return args
-        .flatMap((arg) => valueToOps(arg))
-        .concat([Op.mkAnd(label, range)])
+        .flatMap((arg) => valueToOps(arg).concat([Op.mkAnd(label, range)]))
         .concat([Op.mkValue(true), Op.mkLbl(label)])
     } else if (Value.isSymName(Value.stripSyntax(head), 'or')) {
       const label = Op.freshLabel()
       return args
-        .flatMap((arg) => valueToOps(arg))
-        .concat([Op.mkOr(label, range)])
+        .flatMap((arg) => valueToOps(arg).concat([Op.mkOr(label, range)]))
         .concat([Op.mkValue(false), Op.mkLbl(label)])
     } else if (Value.isSymName(Value.stripSyntax(head), 'if')) {
       if (args.length !== 3) {
