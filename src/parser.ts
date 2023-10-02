@@ -1,6 +1,8 @@
 import { ICE, ScamperError } from './lang.js'
 import { Range, mkRange, Prog, Stmt, Op, Value } from './lang.js'
 
+///// Tokenization /////////////////////////////////////////////////////////////
+
 class Token {
   text: string
   range: Range
@@ -204,6 +206,8 @@ export function stringToTokens (src: string): Token[] {
   return tokens 
 }
 
+///// Parsing //////////////////////////////////////////////////////////////////
+
 function puffRange(r: Range): Range {
   return new Range(
     r.begin.line,
@@ -214,72 +218,6 @@ function puffRange(r: Range): Range {
     r.end.idx + 1
   )
 }
-
-export function tokensToValue (tokens: Token[]): Value.Syntax {
-  const beg = tokens.shift()!
-  if (isOpeningBracket(beg.text)) {
-    const values = []
-    while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-      values.push(tokensToValue(tokens))
-    }
-    if (tokens.length === 0) {
-      // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
-    } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
-      throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined, mkRange(beg.range.begin, tokens[0].range.end))
-    } else {
-      const end = tokens.shift()!
-      return Value.mkSyntax(
-        mkRange(beg.range.begin, end.range.end),
-        // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
-        // we ever allow '{' to imply an dictionary/object.
-        beg.text === '[' ? values : Value.mkList(...values))
-    }
-  } else if (beg.text === "'") {
-    return Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), tokensToValue(tokens)))
-  } else {
-    return tokenToValue(beg, true)
-  }
-}
-
-export function tokensToValues (tokens: Token[]): Value.Syntax[] {
-  const ret = []
-  while (tokens.length > 0) {
-    ret.push(tokensToValue(tokens))
-  }
-  return ret
-}
-
-// export function tokensToSexp (tokens: Token[]): Sexp.T {
-//   const beg = tokens.shift()!
-//   if (isOpeningBracket(beg.text)) {
-//     const exps = []
-//     while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-//       exps.push(tokensToSexp(tokens))
-//     }
-//     if (tokens.length === 0) {
-//       // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-//       throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
-//     } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
-//       throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-//         undefined, mkRange(beg.range.begin, tokens[0].range.end))
-//     } else {
-//       const end = tokens.shift()!
-//       return Sexp.mkList(exps, beg.text as Bracket, mkRange(beg.range.begin, end.range.end))
-//     }
-//   } else {
-//     return Sexp.mkAtom(beg.text, beg.range)
-//   }
-// }
-
-// export function tokensToSexps (tokens: Token[]): Sexp.T[] {
-//   const ret = []
-//   while (tokens.length > 0) {
-//     ret.push(tokensToSexp(tokens))
-//   }
-//   return ret
-// }
 
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
@@ -375,7 +313,7 @@ export const namedCharValues = new Map([
   ['tab', String.fromCharCode(9)]
 ])
 
-export function tokenToValue (t: Token, wildAllowed: boolean): Value.Syntax {
+export function parseSingle (t: Token, wildAllowed: boolean): Value.Syntax {
   const text = t.text
   if (intRegex.test(text)) {
     return Value.mkSyntax(t.range, parseInt(text))
@@ -408,48 +346,7 @@ export function tokenToValue (t: Token, wildAllowed: boolean): Value.Syntax {
   }
 }
 
-// export function atomToExp (e: Sexp.Atom, inSection: boolean): Exp.T {
-//   const text = e.value
-//   if (intRegex.test(text)) {
-//     return Exp.mkVal(parseInt(text), e.range)
-//   } else if (floatRegex.test(e.value)) {
-//     return Exp.mkVal(parseFloat(e.value), e.range)
-//   } else if (e.value === '#t') {
-//     return Exp.mkVal(true, e.range)
-//   } else if (e.value === '#f') {
-//     return Exp.mkVal(false, e.range)
-//   } else if (e.value.startsWith('"')) {
-//     return Exp.mkVal(parseStringLiteral(e.value, e.range), e.range)
-//   } else if (reservedWords.includes(e.value)) {
-//     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
-//   } else if (e.value.startsWith('#\\')) {
-//     const escapedChar = e.value.slice(2)
-//     if (escapedChar.length === 1) {
-//       return Exp.mkVal(Value.mkChar(escapedChar), e.range)
-//     } else if (namedCharValues.has(escapedChar)) {
-//       return Exp.mkVal(Value.mkChar(namedCharValues.get(escapedChar)!), e.range)
-//     } else {
-//       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
-//     }
-//   } else {
-//     // TODO: ensure identifiers don't have invalid characters, i.e., #
-//     // Probably should be done in the lexer, not the parser...
-//     if (e.value.startsWith('_') && !inSection) {
-//       throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section"', undefined, e.range)
-//     }
-//     return Exp.mkVar(e.value, e.range)
-//   }
-// }
-
-// export function sexpToBinding (e: Sexp.T): Value.Syntax {
-//   if (e.kind === 'atom' || e.value.length !== 2 || e.value[0].kind !== 'atom') {
-//     throw new ScamperError('Parser', `Bindings must given as pairs of names and values: ${Sexp.sexpToString(e)}`, undefined, e.range)
-//   } else {
-//     return Value.mkSyntax(e.range, [e.value[0].value, sexpToExp(e.value[1], false)])
-//   }
-// }
-
-function valueToBinding (v: Value.T): { name: string, ops: Op.T[] } {
+function parseBinding (v: Value.T): { name: string, ops: Op.T[] } {
   let { range, value } = Value.unpackSyntax(v)
   v = value
   if (!Value.isArray(v)) {
@@ -460,10 +357,10 @@ function valueToBinding (v: Value.T): { name: string, ops: Op.T[] } {
     throw new ScamperError('Parser', `Binding must be a pair of a name and value`, undefined, Value.rangeOf(vec[0]))
   }
   return { name: (Value.stripSyntax(vec[0]) as Value.Sym).value
-         , ops: valueToOps(vec[1]) }
+         , ops: lower(vec[1]) }
 }
 
-function valueToMatchBranch (v: Value.T): Op.MatchBranch {
+function parseMatchBranch (v: Value.T): Op.MatchBranch {
   let { range, value } = Value.unpackSyntax(v)
   v = value
   if (!Value.isArray(v)) {
@@ -477,10 +374,10 @@ function valueToMatchBranch (v: Value.T): Op.MatchBranch {
   if (vec.length !== 2) {
     throw new ScamperError('Parser', 'Match branches must be given as a pair of a pattern and an expression', undefined, Value.rangeOf(vec[0]))
   }
-  return { pattern: Value.stripAllSyntax(vec[0]), body: valueToOps(vec[1]) }
+  return { pattern: Value.stripAllSyntax(vec[0]), body: lower(vec[1]) }
 }
 
-function valueToCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
+function parseCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
   let { range, value } = Value.unpackSyntax(v)
   v = value
   if (!Value.isArray(v)) {
@@ -490,129 +387,48 @@ function valueToCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
   if (vec.length !== 2) {
     throw new ScamperError('Parser', `Cond branch must be a pair of expressions`, undefined, range)
   }
-  return { cond: valueToOps(vec[0]), body: valueToOps(vec[1]) }
+  return { cond: lower(vec[0]), body: lower(vec[1]) }
 }
 
-// export function sexpToMatchBranch (e: Sexp.T): Value.Syntax {
-//   if (e.kind === 'atom' || e.value.length !== 2) {
-//     throw new ScamperError('Parser', `Match branches must be given a pair of a pattern and an expression: ${Sexp.sexpToString(e)}`, undefined, e.range)
-//   } else {
-//     return Value.mkSyntax(e.range, [sexpToPat(e.value[0]), sexpToExp(e.value[1])])
-//   }
-// }
+export function parseValue (tokens: Token[]): Value.Syntax {
+  const beg = tokens.shift()!
+  if (isOpeningBracket(beg.text)) {
+    const values = []
+    while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
+      values.push(parseValue(tokens))
+    }
+    if (tokens.length === 0) {
+      // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
+      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
+    } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
+      throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
+        undefined, mkRange(beg.range.begin, tokens[0].range.end))
+    } else {
+      const end = tokens.shift()!
+      return Value.mkSyntax(
+        mkRange(beg.range.begin, end.range.end),
+        // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
+        // we ever allow '{' to imply an dictionary/object.
+        beg.text === '[' ? values : Value.mkList(...values))
+    }
+  } else if (beg.text === "'") {
+    return Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), parseValue(tokens)))
+  } else {
+    return parseSingle(beg, true)
+  }
+}
 
-// export function sexpToCondBranch (e: Sexp.T): Value.Syntax {
-//   if (e.kind === 'atom' || e.value.length !== 2) {
-//     throw new ScamperError('Parser', `Cond branches must be given a pair expressions: ${Sexp.sexpToString(e)}`, undefined, e.range)
-//   } else {
-//     return Value.mkSyntax(e.range, [sexpToExp(e.value[0]), sexpToExp(e.value[1])])
-//   }
-// }
+export function parseValues (tokens: Token[]): Value.Syntax[] {
+  const ret = []
+  while (tokens.length > 0) {
+    ret.push(parseValue(tokens))
+  }
+  return ret
+}
 
+///// Lowering /////////////////////////////////////////////////////////////////
 
-// export function atomToPat (e: Sexp.Atom): SyntaxError.{
-//   const text = e.value
-//   if (intRegex.test(text)) {
-//     return Pat.mkNum(parseInt(text), e.range)
-//   } else if (floatRegex.test(e.value)) {
-//     return Pat.mkNum(parseFloat(e.value), e.range)
-//   } else if (e.value === '#t') {
-//     return Pat.mkBool(true, e.range)
-//   } else if (e.value === '#f') {
-//     return Pat.mkBool(false, e.range)
-//   } else if (e.value.startsWith('"')) {
-//     return Pat.mkStr(e.value.slice(1, -1), e.range)
-//   } else if (e.value === '_') {
-//     return Pat.mkWild(e.range)
-//   } else if (e.value === 'null') {
-//     return Pat.mkNull(e.range)
-//   } else if (reservedWords.includes(e.value)) {
-//     throw new ScamperError('Parser', `Cannot use reserved word as identifier name: ${e.value}`, undefined, e.range)
-//   } else if (e.value.startsWith('#\\')) {
-//     const escapedChar = e.value.slice(2)
-//     if (escapedChar.length === 1) {
-//       return Pat.mkChar(escapedChar, e.range)
-//     } else if (namedCharValues.has(escapedChar)) {
-//       return Pat.mkChar(namedCharValues.get(escapedChar)!, e.range)
-//     } else {
-//       throw new ScamperError('Parser', `Invalid character literal: ${e.value}`, undefined, e.range)
-//     }
-//   } else {
-//     return Pat.mkVar(e.value, e.range)
-//   }
-// }
-
-// export function sexpToPat (e: Sexp.T): Value.Syntax {
-//   switch (e.kind) {
-//     case 'atom':
-//       return atomToValue(e, true)
-//     case 'list': {
-//       if (e.value.length === 0) {
-//         throw new ScamperError('Parser', 'The empty list is not a valid pattern', undefined, e.range)
-//       }
-//       const head = e.value[0]
-//       if (head.kind !== 'atom') {
-//         throw new ScamperError('Parser', 'Constructor patterns must start with an identifier', undefined, head.range)
-//       }
-//       const args = e.value.slice(1)
-//       return Value.mkSyntax(e.range, Value.mkList(Value.mkSym(head.value), ...args.map(sexpToPat)))
-//     }
-//   }
-// }
-
-// export function holesToVars (e: Sexp.T): Sexp.T {
-//   let counter = 1
-//   let holesAreNamed: boolean | undefined = undefined
-//   function rec (e: Sexp.T): Sexp.T {
-//     switch (e.kind) {
-//       case 'atom':
-//         if (e.value === '_') {
-//           if (holesAreNamed) {
-//             throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
-//           } else {
-//             holesAreNamed = false
-//             return Sexp.mkAtom(`_${counter++}`, e.range)
-//           }
-//         } else if (e.value.startsWith('_')) {
-//           if (holesAreNamed === false) {
-//             throw new ScamperError('Parser', 'Cannot mixed named and anonymous holes in a section or anonymous function', undefined, e.range)
-//           } else {
-//             holesAreNamed = true
-//             return Sexp.mkAtom(e.value, e.range)
-//           }
-//         } else {
-//           return e
-//         }
-//       case 'list':
-//         return Sexp.mkList(e.value.map(rec), e.bracket, e.range)
-//     }
-//   }
-//   return rec(e)
-// }
-
-// export function getNamedHoles (e: Sexp.T): string[] {
-//   const vars: Set<string> = new Set()
-//   function rec (e: Sexp.T): void {
-//     switch (e.kind) {
-//       case 'atom':
-//         if (e.value.startsWith('_')) {
-//           vars.add(e.value)
-//         }
-//         break
-//       case 'list':
-//         e.value.forEach(rec)
-//         break
-//     }
-//   }
-//   rec(e)
-//   const ret = []
-//   for (const v of vars.values()) {
-//     ret.push(v)
-//   }
-//   return ret
-// }
-
-export function valueToOps (v: Value.T): Op.T[] {
+export function lower (v: Value.T): Op.T[] {
   let { range, value } = Value.unpackSyntax(v)
   v = value
 
@@ -643,7 +459,7 @@ export function valueToOps (v: Value.T): Op.T[] {
         }
         params.push((x as Value.Sym).value)
       })
-      return [Op.mkCls(params, valueToOps(args[1]))]
+      return [Op.mkCls(params, lower(args[1]))]
     } else if (Value.isSymName(Value.stripSyntax(head), 'let')) {
       if (args.length !== 2) {
         throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, range)
@@ -653,46 +469,46 @@ export function valueToOps (v: Value.T): Op.T[] {
         throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, bsr)
       }
       // TODO: problem will need to unwrap syntax for each individual binding
-      const bindings = Value.listToVector(bs as Value.List).map(valueToBinding)
+      const bindings = Value.listToVector(bs as Value.List).map(parseBinding)
       const valOps = bindings.flatMap((b) => b.ops)
-      return valOps.concat([Op.mkLet(bindings.map((b) => b.name), valueToOps(args[1]))])
+      return valOps.concat([Op.mkLet(bindings.map((b) => b.name), lower(args[1]))])
     } else if (Value.isSymName(Value.stripSyntax(head), 'and')) {
       const label = Op.freshLabel()
       return args
-        .flatMap((arg) => valueToOps(arg).concat([Op.mkAnd(label, range)]))
+        .flatMap((arg) => lower(arg).concat([Op.mkAnd(label, range)]))
         .concat([Op.mkValue(true), Op.mkLbl(label)])
     } else if (Value.isSymName(Value.stripSyntax(head), 'or')) {
       const label = Op.freshLabel()
       return args
-        .flatMap((arg) => valueToOps(arg).concat([Op.mkOr(label, range)]))
+        .flatMap((arg) => lower(arg).concat([Op.mkOr(label, range)]))
         .concat([Op.mkValue(false), Op.mkLbl(label)])
     } else if (Value.isSymName(Value.stripSyntax(head), 'if')) {
       if (args.length !== 3) {
         throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, range)
       } else {
-        return valueToOps(args[0]).concat([
-          Op.mkIf(valueToOps(args[1]), valueToOps(args[2]), range)
+        return lower(args[0]).concat([
+          Op.mkIf(lower(args[1]), lower(args[2]), range)
         ])
       }
     } else if (Value.isSymName(Value.stripSyntax(head), 'begin')) {
       if (args.length === 0) {
         throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, range)
       } else {
-        return args.flatMap((arg) => valueToOps(arg)).concat([Op.mkSeq(args.length)])
+        return args.flatMap((arg) => lower(arg)).concat([Op.mkSeq(args.length)])
       }
     } else if (Value.isSymName(Value.stripSyntax(head), 'match')) {
       if (args.length < 2) {
         throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, range)
       }
       const scrutinee = args[0]
-      const branches = args.slice(1).map(valueToMatchBranch)
-      return valueToOps(scrutinee).concat([Op.mkMatch(branches, range)])
+      const branches = args.slice(1).map(parseMatchBranch)
+      return lower(scrutinee).concat([Op.mkMatch(branches, range)])
     } else if (Value.isSymName(Value.stripSyntax(head), 'cond')) {
       if (args.length < 1) {
         throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, range)
       }
       const label = Op.freshLabel()
-      const branches = args.map(valueToCondBranch)
+      const branches = args.map(parseCondBranch)
       return branches
         .flatMap((b) => b.cond.concat([Op.mkCond(b.body, label, range)]))
         .concat([
@@ -705,18 +521,20 @@ export function valueToOps (v: Value.T): Op.T[] {
       }
       return [Op.mkValue(Value.stripAllSyntax(args[0]))]
     } else {
-      return values.flatMap(valueToOps).concat([
+      return values.flatMap(lower).concat([
         Op.mkAp(args.length, range)
       ])
     }
   }
 }
 
-export function valueToStmt (v: Value.T): Stmt.T {
+///// Top-level/program parsing ////////////////////////////////////////////////
+
+export function parseStmt (v: Value.T): Stmt.T {
   let { range, value: uv } = Value.unpackSyntax(v)
 
   if (!Value.isList(uv)) {
-    return Stmt.mkStmtExp(valueToOps(v), v, range)
+    return Stmt.mkStmtExp(lower(v), v, range)
   } else {
     const values = Value.listToVector(uv as Value.List)
     if (values.length === 0) {
@@ -734,7 +552,7 @@ export function valueToStmt (v: Value.T): Stmt.T {
       if (!Value.isSym(name)) {
         throw new ScamperError('Parser', 'The first component of a define statement must be an identifier', undefined, r)
       }
-      return Stmt.mkStmtBinding((name as Value.Sym).value, valueToOps(args[1]), v, range)
+      return Stmt.mkStmtBinding((name as Value.Sym).value, lower(args[1]), v, range)
 
     } else if (Value.isSymName(Value.stripSyntax(head), 'import')) {
       if (args.length !== 1) {
@@ -750,7 +568,7 @@ export function valueToStmt (v: Value.T): Stmt.T {
       if (args.length !== 1) {
         throw new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, range)
       }
-      return Stmt.mkDisplay(valueToOps(args[0]), v, range)
+      return Stmt.mkDisplay(lower(args[0]), v, range)
 
     } else if (Value.isSymName(Value.stripSyntax(head), 'struct')) {
       if (args.length !== 2) {
@@ -774,17 +592,13 @@ export function valueToStmt (v: Value.T): Stmt.T {
       })
       return Stmt.mkStruct((name as Value.Sym).value, fields, range)
     } else {
-      return Stmt.mkStmtExp(valueToOps(v), v, range)
+      return Stmt.mkStmtExp(lower(v), v, range)
     }
   }
 }
 
-export function valuesToProg (exps: Value.T[]): Prog {
-   return exps.map(valueToStmt)
-}
-
 export function parseProgram (src: string): Prog {
   const tokens = stringToTokens(src)
-  const values = tokensToValues(tokens)
-  return valuesToProg(values)
+  const values = parseValues(tokens)
+  return values.map(parseStmt)
 }
