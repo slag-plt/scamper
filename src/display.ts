@@ -1,11 +1,4 @@
-import { Bracket, closeBracket, charToName, ICE, ScamperError, Value } from './lang.js'
-
-function mkOutputDiv (body: HTMLElement) {
-  const ret = document.createElement('div')
-  ret.classList.add('scamper-output')
-  ret.appendChild(body)
-  return ret
-}
+import { charToName, ICE, ScamperError, Value } from './lang.js'
 
 export function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
@@ -13,16 +6,10 @@ export function mkCodeElement (text: string): HTMLElement {
   return ret
 }
 
-type ConsoleRenderer = (v: any) => string
 type WebRenderer = (v: any) => HTMLElement
 type TypeTest = (v: any) => boolean
 
-const customConsoleRenderers: [TypeTest, ConsoleRenderer][] = []
 const customWebRenderers: [TypeTest, WebRenderer][] = []
-
-export function addCustomConsoleRenderer (test: TypeTest, renderer: ConsoleRenderer): void {
-  customConsoleRenderers.push([test, renderer])
-}
 
 export function addCustomWebRenderer (test: TypeTest, renderer: WebRenderer): void {
   const entry: [TypeTest, WebRenderer] = [test, renderer]
@@ -35,172 +22,6 @@ function getRenderer<T> (v: any, renderers: [TypeTest, T][]): T | undefined {
   }
   return undefined
 }
-
-function bracketHTMLElements (bracket: Bracket, es: HTMLElement[]): HTMLElement {
-  const ret = mkCodeElement(bracket)
-  ret.append(es[0])
-  for (let i = 1; i < es.length; i++) {
-    ret.appendChild(mkCodeElement(' '))
-    ret.appendChild(es[i])
-  }
-  ret.append(mkCodeElement(closeBracket(bracket)))
-  return ret
-}
-
-// export function patToHTML (p: Pat.T): HTMLElement {
-//   switch (p.kind) {
-//     case 'var':
-//       return mkCodeElement(p.name)
-
-//     case 'wild':
-//       return mkCodeElement('_')
-
-//     case 'num':
-//       return mkCodeElement(p.value.toString())
-
-//     case 'bool':
-//       return mkCodeElement(p.value ? '#t' : '#f')
-
-//     case 'char':
-//       return mkCodeElement(`#\\${charToName(p.value)}`)
-
-//     // TODO: need to unescape string values!
-//     case 'str':
-//       return mkCodeElement(`"${p.value}"`)
-
-//     case 'null':
-//       return mkCodeElement('null')
-
-//     case 'ctor':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement(p.ctor),
-//         ...p.args.map(patToHTML)
-//       ])
-//   }
-// }
-
-// function letToHTML (soFar: Exp.Binding[], e: Exp.Let): HTMLElement {
-//   if (e.bindings.length === 1 && e.body.kind === 'let') {
-//     soFar.push(e.bindings[0])
-//     return letToHTML(soFar, e.body)
-//   } else if (soFar.length === 0) {
-//     return bracketHTMLElements('(', [
-//       mkCodeElement('let'),
-//       bracketHTMLElements('(', e.bindings.map(({name, body}) => {
-//         return bracketHTMLElements('[', [
-//           mkCodeElement(name),
-//           expToHTML(body)
-//         ])
-//       })),
-//       expToHTML(e.body)
-//     ])
-//   } else if (e.bindings.length > 1) {
-//     const ret = bracketHTMLElements('(', [
-//       mkCodeElement('let'),
-//       bracketHTMLElements('(', e.bindings.map(({name, body}) => {
-//         return bracketHTMLElements('[', [
-//           mkCodeElement(name),
-//           expToHTML(body)
-//         ])
-//       })),
-//       expToHTML(e.body)
-//     ])
-//     return bracketHTMLElements('(', [
-//       mkCodeElement('let*'),
-//       bracketHTMLElements('(', soFar.map(({name, body}) => {
-//         return bracketHTMLElements('[', [
-//           mkCodeElement(name),
-//           expToHTML(body)
-//         ])
-//       })),
-//       ret
-//     ])
-//   } else {
-//     soFar.push(e.bindings[0])
-//     return bracketHTMLElements('(', [
-//       mkCodeElement('let*'),
-//       bracketHTMLElements('(', soFar.map(({name, body}) => {
-//         return bracketHTMLElements('[', [
-//           mkCodeElement(name),
-//           expToHTML(body)
-//         ])
-//       })),
-//       expToHTML(e.body)
-//     ])
-//   }
-// }
-
-// export function expToHTML (e: Exp.T): HTMLElement {
-//   switch (e.kind) {
-//     case 'var':
-//       return mkCodeElement(e.name)
-
-//     case 'val':
-//       return renderToHTML(e.value)
-
-//     case 'lam':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('lambda'),
-//         bracketHTMLElements('(', e.args.map(mkCodeElement)),
-//         expToHTML(e.body)
-//       ])
-
-//     case 'let':
-//       return letToHTML([], e)
-
-//     case 'app':
-//       return bracketHTMLElements('(', [expToHTML(e.head), ...e.args.map(expToHTML)])
-
-//     case 'and':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('and'),
-//         ...e.exps.map(expToHTML)
-//       ])
-
-//     case 'or':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('or'),
-//         ...e.exps.map(expToHTML)
-//       ])
-
-//     case 'if':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('if'),
-//         expToHTML(e.guard),
-//         expToHTML(e.ifb),
-//         expToHTML(e.elseb)
-//       ])
-
-//     case 'begin':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('begin'),
-//         ...e.exps.map(expToHTML)
-//       ])
-
-//     case 'cond':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('cond'),
-//         ...e.branches.map(({guard, body}) => {
-//           return bracketHTMLElements('[', [
-//             expToHTML(guard),
-//             expToHTML(body)
-//           ])
-//         })
-//       ])
-
-//     case 'match':
-//       return bracketHTMLElements('(', [
-//         mkCodeElement('match'),
-//         expToHTML(e.scrutinee),
-//         ...e.branches.map(({pattern, body}) => {
-//           return bracketHTMLElements('[', [
-//             patToHTML(pattern),
-//             expToHTML(body)
-//           ])
-//         })
-//       ])
-//   }
-// }
 
 export function renderToHTML (v: Value.T): HTMLElement {
   switch (typeof v) {
