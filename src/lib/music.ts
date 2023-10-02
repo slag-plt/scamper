@@ -163,11 +163,8 @@ const modC: C.Spec = {
 }
 
 interface Percussion extends Value.Struct { kind: 'percussion' }
-function percussion (): Percussion {
-  checkContract(arguments, contract('percussion', [])) 
-  return { _scamperTag: 'struct', kind: 'percussion' }
-}
-registerFn('percussion', percussion, Music)
+const percussion = ({ _scamperTag: 'struct', kind: 'percussion' })
+Music.push(['percussion', percussion])
 
 interface PitchBend extends Value.Struct { kind: 'pitchBend', amount: number }
 function pitchBend (amount: number): PitchBend {
@@ -195,6 +192,7 @@ function instrument (program: number): Instrument {
   checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
   return { _scamperTag: 'struct', kind: 'instrument', program }
 }
+registerFn('instrument', instrument, Music)
 
 interface Mod extends Value.Struct { _scamperTag: 'struct', kind: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
@@ -366,11 +364,11 @@ function compositionToMsgs (
         // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
         return { msgs, endTime: data.endTime }
       } else if (composition.mod.kind === 'tempo') {
-        return compositionToMsgs(composition.mod.fields[0], composition.mod.fields[1], velocity, startTime, instrument, composition.note)
+        return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, composition.note)
       } else if (composition.mod.kind === 'dynamics') {
-        return compositionToMsgs(beat, bpm, composition.mod.fields[0], startTime, instrument, composition.note)
+        return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, composition.note)
       } else if (composition.mod.kind === 'instrument') {
-        return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.fields[0], composition.note)
+        return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, composition.note)
       } else {
         throw new ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
       }
