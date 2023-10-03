@@ -557,7 +557,7 @@ scamperTest('filter-fold-reduce', `
 (reduce-right - (list 10 9 8 7 6 5))
 `, [
   '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
-  '(list [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)] [Function (JS)])',
+  '(list string-length list? + - = string?)',
   '(list null)',
   '(list null (list 4 5 6))',
   '15',

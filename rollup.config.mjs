@@ -5,7 +5,7 @@ import {lezer} from "@lezer/generator/rollup"
 export default {
   input: './src/web/ide.ts',
   output: {
-    dir: './site/js',
+    file: `./site/js/scamper-ide-${process.env.npm_package_version}.js`,
     format: 'es',
     sourcemap: true,
   },

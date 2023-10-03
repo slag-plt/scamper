@@ -115,7 +115,7 @@ const pathPrim = (width: number, height: number, points: [number, number][], mod
 function path (width: number, height: number, points: Value.List, mode: Mode, color: string): Path {
   checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
   return pathPrim(width, height, 
-    Value.listToArray(points).map((p: Value.T) => [(p as Value.Pair).fst, (p as Value.Pair).snd]) as [number, number][],
+    Value.listToVector(points).map((p: Value.T) => [(p as Value.Pair).fst, (p as Value.Pair).snd]) as [number, number][],
     mode, color)
 }
 registerFn('path', path)

@@ -388,6 +388,15 @@ registerFn('xor', xor, Prelude)
 
 // Pairs and Lists (6.4)
 
+// TODO: really: the pair/list values we manipulated are _quoted_ pairs/lists.
+// The unquoted pair/list form is always evaluated by Scheme immediately, so
+// they only exist temporarily. Since our old infrastructure tried to
+// distinguish between pairs and lists, we have some architectual changes to
+// them to support this behavior.
+//
+// We should introduce "quoted" helpers for pairs, lists, and vectors so that
+// the standard library can use them throughout.
+
 function pairQ (x: any): boolean {
   checkContract(arguments, contract('pair?', [C.any]))
   return Value.isPair(x)
@@ -626,7 +635,7 @@ function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
       l = l.snd as Value.List
     }
   }
-  return Value.arrayToList(front.concat([Value.mkPair(k, v)]))
+  return Value.vectorToList(front.concat([Value.mkPair(k, v)]))
 }
 registerFn('assoc-set', assocSet, Prelude)
 
@@ -1040,7 +1049,7 @@ registerFn('procedure?', procedureQ, Prelude)
 function apply (f: Value.Closure | Function, args: Value.List): Value.T {
   checkContract(arguments, contract('apply', [C.func, C.list]))
 
-  return callFunction(f, ...Value.listToArray(args))
+  return callFunction(f, ...Value.listToVector(args))
 }
 registerFn('apply', apply, Prelude)
 
@@ -1083,7 +1092,7 @@ function mapOne (f: Value.Closure | Function, l: Value.List): Value.List {
     values.push(callFunction(f, l.fst))
     l = l.snd as Value.Pair
   }
-  return Value.arrayToList(values)
+  return Value.vectorToList(values)
 }
 
 function map (f: Value.Closure | Function, ...lsts: Value.List[]): Value.List {
@@ -1093,12 +1102,12 @@ function map (f: Value.Closure | Function, ...lsts: Value.List[]): Value.List {
   } else if (lsts.length === 1) {
     return mapOne(f, lsts[0])
   } else {
-    const lists = lsts.map(Value.listToArray)
+    const lists = lsts.map(Value.listToVector)
     if (!(lists.map(l => l.length).every(n => n === lists[0].length))) {
       throw new ScamperError('Runtime', 'the lists passed to the function call do not have the same length')
     }
     const xs = transpose(lists)
-    return Value.arrayToList(xs.map(vs => callFunction(f, ...vs)))
+    return Value.vectorToList(xs.map(vs => callFunction(f, ...vs)))
   }
 }
 registerFn('map', map, Prelude)
@@ -1114,7 +1123,7 @@ function filter (f: Value.Closure | Function, lst: Value.List): Value.List {
     }
     lst = lst.snd as Value.Pair
   }
-  return Value.arrayToList(values) 
+  return Value.vectorToList(values) 
 }
 registerFn('filter', filter, Prelude)
 
@@ -1154,7 +1163,7 @@ registerFn('fold-left', foldLeft, Prelude)
 
 function foldRight (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold-right', [C.func, C.any, C.list]))
-  const values = Value.listToArray(lst)
+  const values = Value.listToVector(lst)
   let acc = init
   for (let i = values.length - 1; i >= 0; i--) {
     acc = callFunction(f, values[i], acc)
@@ -1165,7 +1174,7 @@ registerFn('fold-right', foldRight, Prelude)
 
 function reduceRight (f: Value.Closure | Function, lst: Value.List): Value.T {
   checkContract(arguments, contract('reduce-right', [C.func, C.nonemptyList]))
-  const values = Value.listToArray(lst)
+  const values = Value.listToVector(lst)
   let acc = values.pop()
   for (let i = values.length - 1; i >= 0; i--) {
     acc = callFunction(f, values[i], acc)
@@ -1308,7 +1317,7 @@ function range (...args: number[]): Value.List {
     for (let i = m; step > 0 ? i < n : i > n; i += step) {
       arr.push(i)
     }
-    return Value.arrayToList(arr)
+    return Value.vectorToList(arr)
   }
 }
 registerFn('range', range, Prelude)

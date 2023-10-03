@@ -390,10 +390,10 @@ scamperTest('match-struct', `
 ])
 
 scamperTest('mixed-brackets', `
-{- [* 3
+{- {* 3
      (+ {* 1
-           [ / 5 8]}
-         12)]
+           { / 5 8}}
+         12)}
    (- 5 1)}
 `, [
   '33.875'
@@ -496,7 +496,7 @@ x
 ])
 
 scamperTest('simple-exp', `
-(let ((x 1) (y (+ 1 1))) (+ (- 1 1) y (* x 5 8) x))
+(let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
 
 (+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
 `, [
@@ -546,4 +546,15 @@ scamperTest('undefined-variable', `
 (+ x 1)
 `, [
   'Runtime error [1:4-1:4]: Referenced unbound identifier "x".'
+])
+
+scamperTest('section', `
+((section + _ 1) 1)
+
+(|> (list "a" "b" "c" "d" "e")
+    (section map (section string-upcase _) _))
+
+`, [
+  '2',
+  '(list "A" "B" "C" "D" "E")'
 ])

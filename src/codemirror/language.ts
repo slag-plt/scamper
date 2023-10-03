@@ -39,7 +39,6 @@ export const ScamperLanguage = LRLanguage.define({
   }
 })
 
-
 export function ScamperSupport() {
   return new LanguageSupport(ScamperLanguage)
 }
