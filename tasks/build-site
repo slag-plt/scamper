@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 VER=$(npm pkg get version | tr -d '"')
 

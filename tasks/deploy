@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+rsync -rtz site/ compsci:csc151.cs.grinnell.edu/scamper
