@@ -547,3 +547,14 @@ scamperTest('undefined-variable', `
 `, [
   'Runtime error [1:4-1:4]: Referenced unbound identifier "x".'
 ])
+
+scamperTest('section', `
+((section + _ 1) 1)
+
+(|> (list "a" "b" "c" "d" "e")
+    (section map (section string-upcase _) _))
+
+`, [
+  '2',
+  '(list "A" "B" "C" "D" "E")'
+])

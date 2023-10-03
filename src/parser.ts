@@ -428,6 +428,171 @@ export function parseValues (tokens: Token[]): Value.Syntax[] {
 
 ///// Lowering /////////////////////////////////////////////////////////////////
 
+let holeSymCounter = 0
+function genHoleSym(): string {
+  return `_${holeSymCounter++}`
+}
+
+function collectSectionHoles (bvars: string[], v: Value.T): Value.T {
+  const orig = v
+  let { range, value } = Value.unpackSyntax(v)
+  v = value
+  if (Value.isSymName(Value.stripSyntax(v), '_')) {
+    const x = genHoleSym()
+    bvars.push(x)
+    return Value.mkSyntax(range, Value.mkSym(x))
+  } else if (v === null) {
+    return orig
+  } else if (Value.isList(v)) {
+    const values = Value.listToVector(v as Value.List)
+    // N.B., do _not_ recursively collect holes in enclosed section forms
+    if (Value.isSymName(Value.stripSyntax(values[0]), 'section')) {
+      return orig
+    } else {
+      return Value.mkSyntax(range, Value.mkList(...values.map((v) => collectSectionHoles(bvars, v))))
+    }
+  } else if (Value.isPair(v)) {
+    return Value.mkSyntax(range, Value.mkPair(
+      collectSectionHoles(bvars, (v as Value.Pair).fst),
+      collectSectionHoles(bvars, (v as Value.Pair).snd)))
+  } else if (Value.isArray(v)) {
+    return Value.mkSyntax(range, (v as Value.T[]).map((v) => collectSectionHoles(bvars, v)))
+  } else {
+    return orig
+  }
+}
+
+const specialForms: Map<string, (args: Value.T[], range: Range) => Op.T[]> = new Map([
+  ['lambda', (args, range) => {
+    if (args.length !== 2) {
+      throw new ScamperError('Parser', 'Lambda expression must have 2 sub-components, an parameter list and a body', undefined, range)
+    }
+    const { range: esr, value: es } = Value.unpackSyntax(args[0])
+    if (!Value.isList(es)) {
+      throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, esr)
+    }
+    const params: string[] = []
+    Value.listToVector(es as Value.List).forEach(arg => {
+      let { range: r, value: x } = Value.unpackSyntax(arg)
+      if (!Value.isSym(x)) {
+        throw new ScamperError('Parser', 'Parameters must only be identifiers', undefined, r)
+      }
+      params.push((x as Value.Sym).value)
+    })
+    return [Op.mkCls(params, lower(args[1]))]
+  }],
+  
+  ['let', (args, range) => {
+    if (args.length !== 2) {
+      throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, range)
+    }
+    const { range: bsr, value: bs } = Value.unpackSyntax(args[0])
+    if (!Value.isList(bs)) {
+      throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, bsr)
+    }
+    const bindings = Value.listToVector(bs as Value.List).map(parseBinding)
+    const valOps = bindings.flatMap((b) => b.ops)
+    return valOps.concat([Op.mkLet(bindings.map((b) => b.name), lower(args[1]))])    
+  }],
+
+  ['let*', (args, range) => {
+    if (args.length !== 2) {
+      throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, range)
+    }
+    const { range: bsr, value: bs } = Value.unpackSyntax(args[0])
+    if (!Value.isList(bs)) {
+      throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, bsr)
+    }
+    const bindings = Value.listToVector(bs as Value.List)
+    let val = Value.mkSyntax(range, Value.mkList(
+      Value.mkSym('let'),
+      Value.mkList(bindings[bindings.length - 1]),
+      args[1]))
+    for (let i = bindings.length-2; i >= 0; i--) {
+      val = Value.mkSyntax(range, Value.mkList(
+        Value.mkSym('let'),
+        Value.mkList(bindings[i]),
+        val))
+    } 
+    return lower(val)
+  }],
+
+  ['and', (args, range) => {
+    const label = Op.freshLabel()
+    return args
+      .flatMap((arg) => lower(arg).concat([Op.mkAnd(label, range)]))
+      .concat([Op.mkValue(true), Op.mkLbl(label)]) 
+  }],
+
+  ['or', (args, range) => {
+    const label = Op.freshLabel()
+    return args
+      .flatMap((arg) => lower(arg).concat([Op.mkOr(label, range)]))
+      .concat([Op.mkValue(false), Op.mkLbl(label)]) 
+  }],
+
+  ['if', (args, range) => {
+    if (args.length !== 3) {
+      throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, range)
+    } else {
+      return lower(args[0]).concat([
+        Op.mkIf(lower(args[1]), lower(args[2]), range)
+      ])
+    }  
+  }],
+
+  ['begin', (args, range) => {
+    if (args.length === 0) {
+      throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, range)
+    } else {
+      return args.flatMap((arg) => lower(arg)).concat([Op.mkSeq(args.length)])
+    } 
+  }],
+
+  ['match', (args, range) => {
+    if (args.length < 2) {
+      throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, range)
+    }
+    const scrutinee = args[0]
+    const branches = args.slice(1).map(parseMatchBranch)
+    return lower(scrutinee).concat([Op.mkMatch(branches, range)])  
+  }],
+
+  ['cond', (args, range) => {
+    if (args.length < 1) {
+      throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, range)
+    }
+    const label = Op.freshLabel()
+    const branches = args.map(parseCondBranch)
+    return branches
+      .flatMap((b) => b.cond.concat([Op.mkCond(b.body, label, range)]))
+      .concat([
+        Op.mkExn('No branches of "cond" expression matched', undefined, range),
+        Op.mkLbl(label)
+      ])  
+  }],
+
+  ['quote', (args, range) => {
+    if (args.length !== 1) {
+      throw new ScamperError('Parser', 'Quote expression must have exactly one sub-expression', undefined, range)
+    }
+    return [Op.mkValue(Value.stripAllSyntax(args[0]))] 
+  }],
+
+  ['section', (args, range) => {
+    if (args.length === 0) {
+      throw new ScamperError('Parser', 'Section expression must have at least one sub-expression', undefined, range)
+    }
+    const params: string[] = []
+    const app = Value.mkList(...args.map((arg) => collectSectionHoles(params, arg)))
+    return lower(Value.mkSyntax(range, Value.mkList(
+      Value.mkSym('lambda'),
+      Value.mkList(...params.map((p) => Value.mkSym(p))),
+      app,
+    )))
+  }]
+])
+
 export function lower (v: Value.T): Op.T[] {
   let { range, value } = Value.unpackSyntax(v)
   v = value
@@ -441,85 +606,10 @@ export function lower (v: Value.T): Op.T[] {
     if (values.length === 0) {
       return [Op.mkValue(null)]
     }
-    const head = values[0]
+    const head = Value.stripSyntax(values[0])
     const args = values.slice(1)
-    if (Value.isSymName(Value.stripSyntax(head), 'lambda')) {
-      if (args.length !== 2) {
-        throw new ScamperError('Parser', 'Lambda expression must have 2 sub-components, an parameter list and a body', undefined, range)
-      }
-      const { range: esr, value: es } = Value.unpackSyntax(args[0])
-      if (!Value.isList(es)) {
-        throw new ScamperError('Parser', 'The first component of a lambda expression must be a parameter list', undefined, esr)
-      }
-      const params: string[] = []
-      Value.listToVector(es as Value.List).forEach(arg => {
-        let { range: r, value: x } = Value.unpackSyntax(arg)
-        if (!Value.isSym(x)) {
-          throw new ScamperError('Parser', 'Parameters must only be identifiers', undefined, r)
-        }
-        params.push((x as Value.Sym).value)
-      })
-      return [Op.mkCls(params, lower(args[1]))]
-    } else if (Value.isSymName(Value.stripSyntax(head), 'let')) {
-      if (args.length !== 2) {
-        throw new ScamperError('Parser', 'Let expression must have 2 sub-components, a binding list and a body', undefined, range)
-      }
-      const { range: bsr, value: bs } = Value.unpackSyntax(args[0])
-      if (!Value.isList(bs)) {
-        throw new ScamperError('Parser', 'Let expression bindings must be given as a list', undefined, bsr)
-      }
-      // TODO: problem will need to unwrap syntax for each individual binding
-      const bindings = Value.listToVector(bs as Value.List).map(parseBinding)
-      const valOps = bindings.flatMap((b) => b.ops)
-      return valOps.concat([Op.mkLet(bindings.map((b) => b.name), lower(args[1]))])
-    } else if (Value.isSymName(Value.stripSyntax(head), 'and')) {
-      const label = Op.freshLabel()
-      return args
-        .flatMap((arg) => lower(arg).concat([Op.mkAnd(label, range)]))
-        .concat([Op.mkValue(true), Op.mkLbl(label)])
-    } else if (Value.isSymName(Value.stripSyntax(head), 'or')) {
-      const label = Op.freshLabel()
-      return args
-        .flatMap((arg) => lower(arg).concat([Op.mkOr(label, range)]))
-        .concat([Op.mkValue(false), Op.mkLbl(label)])
-    } else if (Value.isSymName(Value.stripSyntax(head), 'if')) {
-      if (args.length !== 3) {
-        throw new ScamperError('Parser', 'If expression must have 3 sub-expressions, a guard, if-branch, and else-branch', undefined, range)
-      } else {
-        return lower(args[0]).concat([
-          Op.mkIf(lower(args[1]), lower(args[2]), range)
-        ])
-      }
-    } else if (Value.isSymName(Value.stripSyntax(head), 'begin')) {
-      if (args.length === 0) {
-        throw new ScamperError('Parser', 'Begin expression must have at least 1 sub-expression', undefined, range)
-      } else {
-        return args.flatMap((arg) => lower(arg)).concat([Op.mkSeq(args.length)])
-      }
-    } else if (Value.isSymName(Value.stripSyntax(head), 'match')) {
-      if (args.length < 2) {
-        throw new ScamperError('Parser', 'Match expression must have at least two sub-expressions, a scrutinee at least one branch', undefined, range)
-      }
-      const scrutinee = args[0]
-      const branches = args.slice(1).map(parseMatchBranch)
-      return lower(scrutinee).concat([Op.mkMatch(branches, range)])
-    } else if (Value.isSymName(Value.stripSyntax(head), 'cond')) {
-      if (args.length < 1) {
-        throw new ScamperError('Parser', 'Cond expression must have at least one branch', undefined, range)
-      }
-      const label = Op.freshLabel()
-      const branches = args.map(parseCondBranch)
-      return branches
-        .flatMap((b) => b.cond.concat([Op.mkCond(b.body, label, range)]))
-        .concat([
-          Op.mkExn('No branches of "cond" expression matched', undefined, range),
-          Op.mkLbl(label)
-        ])
-    } else if (Value.isSymName(Value.stripSyntax(head), 'quote')) {
-      if (args.length !== 1) {
-        throw new ScamperError('Parser', 'Quote expression must have exactly one sub-expression', undefined, range)
-      }
-      return [Op.mkValue(Value.stripAllSyntax(args[0]))]
+    if (Value.isSym(head) && specialForms.has((head as Value.Sym).value)) {
+      return specialForms.get((head as Value.Sym).value)!(args, range)
     } else {
       return values.flatMap(lower).concat([
         Op.mkAp(args.length, range)
