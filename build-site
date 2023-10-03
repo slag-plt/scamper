@@ -1,0 +1,29 @@
+#!/bin/bash
+
+VER=$(npm pkg get version | tr -d '"')
+
+echo "Building from $(pwd)"
+
+echo "Cleaning site..."
+rm -rf site/ src/version.ts
+
+mkdir -p site/
+
+echo "Building Javascript..."
+npm run build
+
+echo "Building documents..."
+make -C docs
+cp -r docs/dist/docs site
+
+echo "Copying media and web support..."
+cp -r ide/webfonts ide/css site
+
+filter_page() {
+  sed s/{{ver}}/${VER}/g ide/$1 > site/$2
+}
+
+echo "Generating webpages..."
+filter_page "index.html" "index.html"
+filter_page "index.html" "ide-${VER}.html"
+filter_page "reference.html" "reference.html"

@@ -198,7 +198,7 @@
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        Scamper <span id="version">(ver)</span> ⋅ <span id="current-file"></span> ⋅
+        Scamper <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
         <button id="run" class="fa-solid fa-play"></button>
         <button id="step" class="fa-solid fa-route"></button> ⋅
         <a href="docs/index.html">Docs</a> ⋅
@@ -252,7 +252,7 @@
     })
   </script>
   <script type="module">
-    import IDE from './js/ide.js'
+    import IDE from './js/scamper-ide-{{ver}}.js'
     new IDE()
   </script>
 </body>
