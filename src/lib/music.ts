@@ -147,12 +147,11 @@ registerFn('pickup', pickup, Music)
 type ModKind = Percussion | PitchBend | Tempo | Dynamics | Instrument
 
 function modQ (v: any): boolean {
-  if (!Value.isStruct(v)) {
-    return false
-  } else {
-    const kind = v.kind
-    return kind === 'percussion' || kind === 'pitchBend' || kind === 'tempo' || kind === 'dynamics' || kind === 'instrument'
-  }
+  return Value.isStructKind(v, 'percussion') ||
+    Value.isStructKind(v, 'pitchBend') ||
+    Value.isStructKind(v, 'tempo') ||
+    Value.isStructKind(v, 'dynamics') ||
+    Value.isStructKind(v, 'instrument')
 }
 registerFn('mod?', modQ, Music)
 
@@ -203,12 +202,15 @@ registerFn('mod', mod, Music)
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod
 
 function compositionQ (v: any): boolean {
-  if (!Value.isStruct(v)) {
-    return false
-  } else {
-    const kind = v.kind
-    return kind === 'empty' || kind === 'note' || kind === 'note-freq' || kind === 'rest' || kind === 'trigger' || kind === 'par' || kind === 'seq' || kind === 'pickup' || kind === 'mod'
-  }
+  return Value.isStructKind(v, 'empty') ||
+    Value.isStructKind(v, 'note') ||
+    Value.isStructKind(v, 'note-freq') ||
+    Value.isStructKind(v, 'rest') ||
+    Value.isStructKind(v, 'trigger') ||
+    Value.isStructKind(v, 'par') ||
+    Value.isStructKind(v, 'seq') ||
+    Value.isStructKind(v, 'pickup') ||
+    Value.isStructKind(v, 'mod')
 }
 registerFn('composition?', compositionQ, Music)
 
@@ -352,9 +354,9 @@ function compositionToMsgs (
     }
 
     case 'mod': {
-      if (composition.mod.kind === 'percussion') {
+      if (composition.mod[Value.structKind] === 'percussion') {
         return compositionToMsgs(beat, bpm, velocity, startTime, 128, composition.note)
-      } else if (composition.mod.kind === 'pitchBend') {
+      } else if (composition.mod[Value.structKind] === 'pitchBend') {
         const msgs: Msg[] = []
         const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.note)
         // TODO: handle pitch bends
@@ -362,11 +364,11 @@ function compositionToMsgs (
         // msgs.push(...data.msgs)
         // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
         return { msgs, endTime: data.endTime }
-      } else if (composition.mod.kind === 'tempo') {
+      } else if (composition.mod[Value.structKind] === 'tempo') {
         return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, composition.note)
-      } else if (composition.mod.kind === 'dynamics') {
+      } else if (composition.mod[Value.structKind] === 'dynamics') {
         return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, composition.note)
-      } else if (composition.mod.kind === 'instrument') {
+      } else if (composition.mod[Value.structKind] === 'instrument') {
         return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, composition.note)
       } else {
         throw new ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)

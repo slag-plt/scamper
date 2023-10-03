@@ -163,12 +163,22 @@ function valToExp (v: Value.T): Value.T {
       valToExp((v as Value.Pair).snd)
     ])
   } else if (Value.isStruct(v)) {
-    const s = v as Value.Struct
-    const fields = Value.getFieldsOfStruct(s)
-    return Value.vectorToList([
-      Value.mkSym(s[Value.structKind]),
-      ...fields.map((f) => valToExp(s[f]))
-    ])
+    // TODO: problems! When raising a value to an expression, we rely on valToExp to
+    // convert values to expression forms, in particular lists. This way, we know
+    // the difference between a list value `(list + 2 3)` and a form `(+ 2 3)`.
+    // However, in this case, our conversion is too early: display needs the original
+    // struct value in order to custom render it. The hack is to simply return the
+    // original struct value. However, now, any forms/lists nested inside of a
+    // struct may be rendered incorrectly.
+    //
+    // One fix might be to take this "opToValue" pipeline in sem.ts and turn it into
+    // an "opToHTML" pipeline so that we can properly integrate the special forms
+    // checking into here. That's a bit of work to implement, so maybe we can get away
+    // with a variant of the split architecture we have now. The right path is unclear...
+    return v
+    // const s = v as Value.Struct
+    // const fields = Value.getFieldsOfStruct(s)
+    // return Value.mkStruct(s[Value.structKind], fields, fields.map((f) => valToExp(s[f])))
   } else {
     // TODO: urk, when does this arise?
     return v
