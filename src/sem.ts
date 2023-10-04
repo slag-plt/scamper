@@ -250,7 +250,17 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
         ]))
       }
     } else if (op.tag === 'match') {
-      throw new ICE('sem.dumpToExp', 'Unimplemented match case')
+      const scrutinee = valStack.pop()!
+      const branches = op.branches.map((b) => [
+        b.pattern,
+        dumpToValue([[], env, new Control(b.body)])
+      ])
+      valStack.push(Value.vectorToList([
+        Value.mkSym('match'),
+        scrutinee,
+        Value.vectorToList(branches)
+      ])) 
+
     } else if (op.tag === 'and') {
       const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
       const args = [valStack.pop()!].concat(segments.map((ops) => dumpToValue([[], env, new Control(ops)])))
