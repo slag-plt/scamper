@@ -70,9 +70,13 @@ class IDE {
     this.autosaveId = -1
     this.isDirty = false
 
-    this.currentFile = this.fs.getLastOpened()
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('filename')) {
+      this.currentFile = params.get('filename')!
+    } else {
+      this.currentFile = this.fs.getLastOpened()
+    }
     this.loadCurrentFile()
-    this.updateFileList()
 
     runButton.addEventListener('click', () => {
       this.startScamper(false)
@@ -95,18 +99,13 @@ class IDE {
     stepStmtButton.disabled = true
     stepAllButton.disabled = true
 
-    Split(['#file-drawer', '#editor', '#results'], {
-      sizes: [15, 50, 35]
+    Split(['#editor', '#results'], {
+      sizes: [65, 35]
     })
 
     document.getElementById('version')!.innerText = `(${version})`
 
     this.startAutosaving()
-
-    document.getElementById('new-file-button')!.addEventListener('click', () => this.makeNewFile())
-    document.getElementById('download-button')!.addEventListener('click', () => this.downloadCurrentFile())
-    document.getElementById('rename-button')!.addEventListener('click', () => this.renameCurrentFile())
-    document.getElementById('delete-button')!.addEventListener('click', () => this.deleteCurrentFile())
   }
 
   startAutosaving () {

@@ -61,50 +61,6 @@
       height: 95vh;
     }
 
-    #file-drawer {
-      background-color: Black;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
-      padding: 0.5em;
-    }
-
-    #file-toolbar {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      font-size: 1.2em;
-    }
-
-    #files {
-      overflow: scroll;
-      height: 95%;
-    }
-
-    #files ul {
-      display: block;
-      list-style-type: disc;
-      margin-block-start: 0em;
-      margin-block-end: 0em;
-      margin-inline-start: 0px;
-      margin-inline-end: 0px;
-      padding-inline-start: 0px;
-    }
-    
-    #files li {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #files li.selected {
-      background-color: #452525;
-    }
-
-    #files li:hover {
-      background-color: #410b0b;
-    }
-
     #editor {
       font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
       font-size: 1em;
@@ -198,7 +154,7 @@
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        Scamper <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
+        <a href="file-chooser-{{ver}}.html">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
         <button id="run" class="fa-solid fa-play"></button>
         <button id="step" class="fa-solid fa-route"></button> ⋅
         <a href="docs/index.html">Docs</a> ⋅
@@ -210,21 +166,6 @@
       </div>
     </div>
     <div id="content">
-      <div id="file-drawer">
-        <div id="file-toolbar">
-          <div class="text-align: left;">
-            <button id="new-file-button" class="fa-solid fa-file"></button>
-            <button id="download-button" class="fa-solid fa-download"></button>
-            <!-- <button class="fa-solid fa-upload"></button> -->
-          </div>
-          <div class="text-align: right;">
-            <button id="rename-button" class="fa-solid fa-pencil"></button>
-            <button id="delete-button" class="fa-solid fa-trash"></button>
-          </div>
-        </div>
-        <hr>
-        <div id="files"></div>
-      </div>
       <div id="editor"></div>
       <div id="results">
         <div id="results-toolbar">
