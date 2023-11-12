@@ -128,8 +128,8 @@
   </script>
   <script type="module">
     import FileChooser from './js/scamper-file-chooser-{{ver}}.js'
-    const chooser = new FileChooser()
-    chooser.populateChooser(document.getElementById('content'))
+    const chooser = new FileChooser(document.getElementById('content'))
+    chooser.populateChooser()
   </script>
 </body>
 </html>

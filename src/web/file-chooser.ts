@@ -8,9 +8,11 @@ function firstNLines(str: string, n: number): string {
 class FileChooser {
 
   fs: FS
+  container: HTMLElement
 
-  constructor () {
+  constructor (container: HTMLElement) {
     this.fs = new FS()
+    this.container = container
   }
 
   downloadFile (filename: string): void {
@@ -58,11 +60,31 @@ class FileChooser {
     const renameButton = document.createElement('button')
     renameButton.classList.add('fa-solid')
     renameButton.classList.add('fa-pencil')
+    renameButton.addEventListener('click', (e) => {
+      const newName = prompt(`Enter a new filename for ${filename}.\n\n(Make sure ${filename} is not open in a separate tab!)`, filename)
+      if (newName !== null && newName !== filename) {
+        if (this.fs.fileExists(newName)) {
+          alert(`File ${newName} already exists!`)
+        } else {
+          this.fs.renameFile(filename, newName)
+          this.populateChooser()
+        }
+      }
+      e.stopPropagation()
+    })
     actionBar.appendChild(renameButton)
 
     const deleteButton = document.createElement('button')
     deleteButton.classList.add('fa-solid')
     deleteButton.classList.add('fa-trash')
+    deleteButton.addEventListener('click', (e) => {
+      const shouldDelete = confirm(`Are you sure you want to delete ${filename}?\n\n(Make sure ${filename} is not open in a separate tab!)`)
+      if (shouldDelete) {
+        this.fs.deleteFile(filename)
+        this.populateChooser()
+      }
+      e.stopPropagation()
+    })
     actionBar.appendChild(deleteButton)
 
     ret.addEventListener('click', () => {
@@ -78,20 +100,32 @@ class FileChooser {
     ret.classList.add('file')
     
     const header = document.createElement('div')
-    header.innerText = 'New file (not working!)'
+    header.innerText = 'Create a new program'
     ret.appendChild(header)
 
-    // TODO: implement click behavior!
+    ret.addEventListener('click', (e) => {
+      const filename = prompt('Enter a file name for your new program.')
+      if (filename !== null) {
+        if (this.fs.fileExists(filename)) {
+          alert(`File ${filename} already exists!`)
+        } else {
+          this.fs.saveFile(filename, `; ${filename}`)
+          this.populateChooser()
+        }
+      }
+    })
 
     return ret
   }
 
-  populateChooser (container: HTMLElement): void {
+  populateChooser (): void {
+    // N.B., empty the container and repopulate from scratch
+    this.container.innerHTML = ''
     const files = this.fs.getFileList() 
     for (const file of files) {
-      container.appendChild(this.makeFileDiv(file))
+      this.container.appendChild(this.makeFileDiv(file))
     } 
-    container.appendChild(this.makeNewFileDiv())
+    this.container.appendChild(this.makeNewFileDiv())
   }
 }
 
