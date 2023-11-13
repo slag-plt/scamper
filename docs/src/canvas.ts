@@ -89,8 +89,8 @@ export const animateWithDoc: Doc = new Doc(
   'Repeatedly calls `proc` approximately once every 60 seconds, creating the effect of animation.'
 )
 
-export const setCanvasOnclickDoc: Doc = new Doc(
-  '(set-canvas-onclick canvas proc) -> void?', [
+export const canvasOnclickDoc: Doc = new Doc(
+  '(canvas-onclick canvas proc) -> void?', [
     'canvas: canvas?',
     'proc: procedure?, a procedure that takes two arguments: numbers representing the x and y coordinate of the mouse click on the canvas.'
   ],
