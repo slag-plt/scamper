@@ -2,6 +2,7 @@ import Doc from './docs.js'
 import fs from 'fs'
 import showdown from 'showdown'
 
+import * as Audio from './audio.js'
 import * as Prelude from './prelude.js'
 import * as Image from './image.js'
 import * as Lab from './lab.js'
@@ -14,6 +15,7 @@ const libs: [string, object][] = [
   ['lab', Lab],
   ['music', Music],
   ['test', Test],
+  ['audio', Audio],
 ]
 
 // https://stackoverflow.com/questions/5251520/how-do-i-escape-some-html-in-javascript
