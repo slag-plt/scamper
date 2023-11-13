@@ -1,4 +1,4 @@
-import { ICE, ScamperError, Value } from '../lang.js'
+import { ScamperError, Value } from '../lang.js'
 import * as L from '../lang.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'

@@ -4,6 +4,7 @@ import Lab from './lab.js'
 import Music from './music.js'
 import Test from './test.js'
 import Audio from './audio.js'
+import Canvas from './canvas.js'
 
 const builtinLibs: Map<string, [string, Value.T][]> = new Map([
   ['image', imageLib],
@@ -11,6 +12,7 @@ const builtinLibs: Map<string, [string, Value.T][]> = new Map([
   ['music', Music],
   ['test', Test],
   ['audio', Audio],
+  ['canvas', Canvas]
 ])
 
 export default builtinLibs
