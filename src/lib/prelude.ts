@@ -1354,6 +1354,16 @@ registerFn('with-handler', withHandler, Prelude)
 
 // N.B., not implemented, all operating system-specific stuff.
 
+// Additional Scamper-specific functions
+
+function ignore (_v: Value.T): HTMLElement {
+  checkContract(arguments, contract('ignore', [C.any]))
+  const ret = document.createElement('div')
+  ret.style.display = 'non'
+  return ret
+}
+registerFn('ignore', ignore, Prelude)
+
 // Additional constants
 
 const elseConst = true

@@ -1142,6 +1142,13 @@ export const withHandler: Doc = new Doc(
   'Calls `(f v1 .. vk)` and if an error is occurred, calls `(h err)` where `err` is the string associated with the raised error.'
 )
 
+export const ignore: Doc = new Doc(
+  '(ignore v): void', [
+    'v: any'
+  ],
+  'Suppresses the output of value `v` to the page.'
+)
+
 export const elseV: Doc = new Doc(
   'else: ?boolean', [],
   'A synonym for `#t` appropriate for use as the final guard of a `cond` expression.'
