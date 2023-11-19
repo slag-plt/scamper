@@ -2,6 +2,7 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { callFunction } from '../sem.js'
 import { ScamperError, Value } from '../lang.js'
+import * as Display from '../display.js'
 
 function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
   Value.nameFn(name, fn)
@@ -918,16 +919,55 @@ registerFn('string-split-vector', stringSplitVector, Prelude)
 // TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
 // TODO: need to add a custom renderer for reactive file blobs
 
-type ReactiveFile = { _scamperTag: 'struct', kind: '_reactive-file', callback: Value.Closure | Function }
-function withFile (callback: Value.Closure | Function): ReactiveFile {
+export interface ReactiveFile extends Value.Struct {
+  [Value.structKind]: 'reactive-file',
+  callback: Value.ScamperFn
+}
+
+function withFile (callback: Value.ScamperFn): ReactiveFile {
   checkContract(arguments, contract('with-file', [C.func]))  
   return {
-    _scamperTag: 'struct',
-    kind: '_reactive-file',
+    [Value.scamperTag]: 'struct',
+    [Value.structKind]: 'reactive-file',
     callback
   }
 }
 registerFn('with-file', withFile, Prelude)
+
+function renderReactiveFile (v: any): HTMLElement {
+  const rf = v as ReactiveFile
+  const ret = document.createElement('code')
+  const inp = document.createElement('input')
+  const outp = document.createElement('code')
+  inp.type = 'file'
+  inp.addEventListener('change', () => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e !== null && e.target !== null) {
+        outp.innerHTML = ''
+        try {
+          const v = callFunction(rf.callback, [e.target.result as string])
+          outp.appendChild(Display.renderToHTML(v))
+        } catch (e) {
+          outp.appendChild(Display.renderToHTML(e as ScamperError))
+        }
+      } else {
+        outp.innerText = ''
+      }
+    }
+    if (inp.files !== null && inp.files.length > 0) {
+      outp.innerText = 'Loading...'
+      reader.readAsText(inp.files[0])
+    }
+  }, false)
+
+  ret.appendChild(inp)
+  ret.appendChild(document.createElement('br'))
+  ret.appendChild(outp)
+  return ret
+}
+Display.addCustomWebRenderer(
+  (v) => Value.isStructKind(v, 'reactive-file'), renderReactiveFile)
 
 // Vectors (6.8)
 

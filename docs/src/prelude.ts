@@ -823,7 +823,7 @@ export const withFile: Doc = new Doc(
   '(with-file fn): void', [
     'fn: procedure?'
   ],
-  "Creates a file choose widget. When a file is selected, `fn` is called and passed the file's contents as input"
+  "Creates a file chooser widget. When a file is selected, `fn` is called and passed the file's contents as input"
 )
 
 export const vectorQ: Doc = new Doc(
