@@ -138,9 +138,11 @@ registerFn('animate-with', animateWith, Canvas)
 
 function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('canvas-onclick', [C.any, C.func]))
+  console.log('canvasOnclick')
   canvas.onclick = function (ev: MouseEvent) {
     try {
-      callFunction(fn, ev.x, ev.y)
+      console.log(`offset: (${ev.offsetX}, ${ev.offsetY}), client: (${ev.clientX}, ${ev.clientY}), page: (${ev.pageX}, ${ev.pageY})`)
+      callFunction(fn, ev.offsetX, ev.offsetY)
     } catch (e) {
       alert(`canvas-onclick callback threw an error:\n\n${(e as Error).toString()}`)
       return
