@@ -11,10 +11,11 @@ import makeScamperLinter from '../codemirror/linter.js'
 import { version } from '../version.js'
 
 let editor: EditorView | null = null
-const editorPane = document.getElementById('editor')!
-const outputPane = document.getElementById('output')!
-const runButton  = document.getElementById('run')!
-const stepButton = document.getElementById('step')!
+const editorPane      = document.getElementById('editor')!
+const outputPane      = document.getElementById('output')!
+const runButton       = document.getElementById('run')!
+const runWindowButton = document.getElementById('run-window')!
+const stepButton      = document.getElementById('step')!
 
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
 const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
@@ -82,6 +83,11 @@ class IDE {
     runButton.addEventListener('click', () => {
       this.startScamper(false)
       this.scamper!.runProgram()
+    })
+    runWindowButton.addEventListener('click', () => {
+      this.saveCurrentFile()
+      const params = new URLSearchParams({ filename: this.currentFile })
+      window.open(`runner-${version}.html?${params.toString()}`)
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
     stepOnceButton.addEventListener('click', () => {

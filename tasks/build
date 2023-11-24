@@ -4,8 +4,10 @@ VER=$(npm pkg get version | tr -d '"')
 
 echo "Building from $(pwd)"
 
-# echo "Cleaning site..."
-# rm -rf site/ src/version.ts
+if [[ -n "$1" ]] && [[ "${1}" == "clean" ]]; then
+  echo "Cleaning site..."
+  rm -rf site/ src/version.ts
+fi
 
 mkdir -p site/
 
@@ -27,4 +29,5 @@ echo "Generating webpages..."
 filter_page "file-chooser.html" "index.html"
 filter_page "file-chooser.html" "file-chooser-${VER}.html"
 filter_page "ide.html" "ide-${VER}.html"
+filter_page "runner.html" "runner-${VER}.html"
 filter_page "reference.html" "reference.html"
