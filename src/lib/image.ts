@@ -429,9 +429,11 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       // the origin.
       ctx.translate(centerX, centerY)
       ctx.rotate(angle)
-      ctx.translate(-drawing.drawing.width / 2, -drawing.drawing.height / 2)
+      ctx.translate(-centerX, -centerY);
+      // ctx.translate(-drawing.drawing.width / 2, -drawing.drawing.height / 2)
       render(x, y, drawing.drawing, canvas)
-      ctx.translate(drawing.drawing.width / 2, drawing.drawing.height / 2)
+      ctx.translate(centerX, centerY)
+      // ctx.translate(drawing.drawing.width / 2, drawing.drawing.height / 2)
       ctx.rotate(-angle)
       ctx.translate(-centerX, -centerY)
       break
