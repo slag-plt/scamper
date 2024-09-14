@@ -1,4 +1,4 @@
-import Doc from './docs.js'
+import { Doc } from './docs.js'
 import fs from 'fs'
 import showdown from 'showdown'
 
@@ -34,18 +34,6 @@ function escape(s: string): string {
   return s.replace(/[&"'<>]/g, c => lookup[c])
 }
 
-function jsToSchemeName (s: string): string {
-  let ret = ''
-  for (let i = 0; i < s.length; i++) {
-    if (s[i] === s[i].toUpperCase()) {
-      ret += '-' + s[i].toLowerCase()
-    } else {
-      ret += s[i]
-    }
-  }
-  return ret
-}
-
 function entryId (module: string, name: string): string {
   return `${module}-${name}`
 }
@@ -55,11 +43,13 @@ function makeEntry (converter: showdown.Converter, module: string, name: string,
 }
 
 function makeModulePage (converter: showdown.Converter, modName: string, mod: object): string {
-  let index = `${modName} <ul>`
+  let index = `<strong>${modName}</strong><ul>`
   let docs = ''
-  for (const name in mod) {
-    index += `<li><a href="#${entryId(modName, name)}">${escape(name)}</a></li>`
-    docs += makeEntry(converter, modName, name, (mod as any)[name] as Doc)
+  for (const entry in mod) {
+    const doc = (mod as any)[entry] as Doc
+    console.log(`Making entry for ${doc.name}...`)
+    index += `<li><a href="#${entryId(modName, entry)}">${escape(doc.name)}</a></li>`
+    docs += makeEntry(converter, modName, entry, doc)
   }
   index += '</ul>'
   return `
@@ -78,9 +68,17 @@ function makeModulePage (converter: showdown.Converter, modName: string, mod: ob
           padding: 1em;
           background-color: #eee;
           font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-          width: 20%;
+          width: 40%;
           height: 100%;
-          overflow: scroll;
+          overflow-x: auto;
+          overflow-y: scroll;
+        }
+
+        #index ul,li {
+          list-style-type: none;
+          list-style-position:inside;
+          margin: 0;
+          padding: 0;
         }
 
         #docs {
