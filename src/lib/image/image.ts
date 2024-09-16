@@ -3,6 +3,7 @@ import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { ScamperError, Value } from '../../lang.js'
 import { callFunction } from '../../sem.js'
+import { rgb } from './rgb.js'
 
 /***** Image loading **********************************************************/
 
@@ -22,6 +23,35 @@ function withImageFile (callback: Value.ScamperFn): ReactiveImageFile {
 
 function isReactiveImageFile (v: any): boolean {
   return Value.isStructKind(v, 'reactive-image-file')
+}
+
+/***** Per-pixel manipulation *************************************************/
+
+function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d')!
+  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
+  const src = inpImg.data
+
+
+  const outImg = ctx.createImageData(canvas.width, canvas.height)
+  const dst = outImg.data
+  for (let i = 0; i < src.length; i += 4) {
+    const c = callFunction(fn, rgb(src[i], src[i + 1], src[i+2], src[i+3]))
+    dst[i] = c.red
+    dst[i + 1] = c.green
+    dst[i + 2] = c.blue
+    dst[i + 3] = c.alpha
+  }
+
+  // NOTE: clone the results to a new canvas. Will likely need to implement a
+  // mutable version of this function to mitigate the performance hit of
+  // processing large images.
+  const ret = document.createElement('canvas')
+  ret.width = canvas.width
+  ret.height = canvas.height
+  const retCtx = ret.getContext('2d')!
+  retCtx.putImageData(outImg, 0, 0)
+  return ret
 }
 
 /***** Rendering **************************************************************/
@@ -48,8 +78,8 @@ function render(rif: ReactiveImageFile): HTMLElement {
             ctx.drawImage(img, 0, 0)
           }
           try {
-            canvas = callFunction(rif.callback, canvas)
-            outp.appendChild(Render.renderToHTML(canvas))
+            const v = callFunction(rif.callback, canvas)
+            outp.appendChild(Render.renderToHTML(v))
           } catch (e) {
             outp.appendChild(Render.renderToHTML(e as ScamperError))
           }
@@ -82,3 +112,6 @@ function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
 
 // Image loading
 registerFn('with-image-file', withImageFile, lib)
+
+// Per-pixel manipulation
+registerFn('pixel-map', pixelMap, lib)

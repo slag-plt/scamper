@@ -5,7 +5,7 @@ import { ScamperError, Value } from '../../lang.js'
 
 /***** RGB(A) Colors **********************************************************/
 
-interface Rgb extends Value.Struct {
+export interface Rgb extends Value.Struct {
   [Value.structKind]: 'rgba'
   red: number
   green: number
@@ -33,7 +33,7 @@ const rgbS: C.Spec = {
   errorMsg: (actual: any) => `expected an RGB value, received ${Value.typeOf(actual)}`
 }
 
-function rgb(...args: number[]): Rgb {
+export function rgb(...args: number[]): Rgb {
   checkContract(arguments, contract('rgb', [], rgbNumS))
   if (args.length !== 3 && args.length !== 4) {
     throw new ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
