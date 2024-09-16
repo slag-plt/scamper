@@ -50,7 +50,7 @@ const colorS: C.Spec = {
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash
 
-function imageQ (v: any): boolean {
+function drawingQ (v: any): boolean {
   checkContract(arguments, contract('image?', [C.any]))
   return Value.isStructKind(v, 'ellipse') || Value.isStructKind(v, 'rectangle') ||
          Value.isStructKind(v, 'triangle') || Value.isStructKind(v, 'path') ||
@@ -58,11 +58,11 @@ function imageQ (v: any): boolean {
          Value.isStructKind(v, 'overlay') || Value.isStructKind(v, 'overlayOffset') ||
          Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash')
 }
-registerFn('image?', imageQ)
+registerFn('image?', drawingQ)
 
-const imageS = {
-  predicate: imageQ,
-  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
+const drawingS = {
+  predicate: drawingQ,
+  errorMsg: (actual: any) => `expected a drawing, received ${Value.typeOf(actual)}`
 }
 
 interface Ellipse extends Value.Struct {
@@ -171,13 +171,13 @@ const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
 })
 
 function beside (...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside', [], imageS)) 
+  checkContract(arguments, contract('beside', [], drawingS)) 
   return besideAlignPrim('center', ...drawings)
 }
 registerFn('beside', beside)
 
 function besideAlign (align: string, ...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside/align', [alignVS], imageS))
+  checkContract(arguments, contract('beside/align', [alignVS], drawingS))
   return besideAlignPrim(align, ...drawings)
 }
 registerFn('beside/align', besideAlign)
@@ -199,13 +199,13 @@ const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
 })
 
 function above (...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above', [], imageS))
+  checkContract(arguments, contract('above', [], drawingS))
   return aboveAlignPrim('middle', ...drawings)
 }
 registerFn('above', above)
 
 function aboveAlign (align: string, ...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above/align', [alignHS], imageS))
+  checkContract(arguments, contract('above/align', [alignHS], drawingS))
   return aboveAlignPrim(align, ...drawings)
 }
 registerFn('above/align', aboveAlign)
@@ -229,13 +229,13 @@ const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]
 })
 
 function overlay (...drawings: Drawing[]) {
-  checkContract(arguments, contract('overlay', [], imageS))
+  checkContract(arguments, contract('overlay', [], drawingS))
   return overlayAlignPrim('middle', 'center', ...drawings)
 }
 registerFn('overlay', overlay)
 
 function overlayAlign (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
-  checkContract(arguments, contract('overlay/align', [alignHS, alignVS], imageS))
+  checkContract(arguments, contract('overlay/align', [alignHS, alignVS], drawingS))
   return overlayAlignPrim(xAlign, yAlign, ...drawings)
 }
 registerFn('overlay/align', overlayAlign)
@@ -251,7 +251,7 @@ interface OverlayOffset extends Value.Struct {
 }
 
 function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
-  checkContract(arguments, contract('overlay/offset', [C.number, C.number, imageS, imageS]))
+  checkContract(arguments, contract('overlay/offset', [C.number, C.number, drawingS, drawingS]))
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
   // or larger image and (b) whether we are shifting it positively or
   // negatively.
@@ -334,7 +334,7 @@ function calculateRotatedBox (width: number, height: number, degrees: number): {
 }
 
 function rotate (angle: number, drawing: Drawing): Rotate {
-  checkContract(arguments, contract('rotate', [C.number, imageS]))
+  checkContract(arguments, contract('rotate', [C.number, drawingS]))
   const dims = calculateRotatedBox(drawing.width, drawing.height, angle)
   return {
     [Value.scamperTag]: 'struct', [Value.structKind]: 'rotate',
@@ -355,7 +355,7 @@ interface WithDash extends Value.Struct {
 }
 
 function withDash (dashSpec: number[], drawing: Drawing): WithDash {
-  checkContract(arguments, contract('with-dash', [C.list, imageS])) 
+  checkContract(arguments, contract('with-dash', [C.list, drawingS])) 
   return {
     [Value.scamperTag]: 'struct', [Value.structKind]: 'withDash',
     dashSpec,
@@ -535,4 +535,4 @@ function renderer (drawing: Drawing): HTMLElement {
   return canvas
 }
 
-Render.addCustomWebRenderer(imageQ, renderer)
+Render.addCustomWebRenderer(drawingQ, renderer)

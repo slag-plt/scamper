@@ -2,7 +2,6 @@ import { ScamperError, Value } from '../lang.js'
 import * as L from '../lang.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import { Drawing, render } from './image.js'
 import { callFunction } from '../sem.js'
 
 function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
