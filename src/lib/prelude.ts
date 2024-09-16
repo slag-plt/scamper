@@ -769,7 +769,7 @@ function makeString (k: number, c: Value.Char): string {
 registerFn('make-string', makeString, Prelude)
 
 function string (c: Value.Char, ...cs: Value.Char[]): string {
-  checkContract(arguments, contract('string', [C.char], C.string))
+  checkContract(arguments, contract('string', [C.char], C.char))
   return [c, ...cs].map((e) => e.value).join('')
 }
 registerFn('string', string, Prelude)

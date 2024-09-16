@@ -144,6 +144,8 @@ function pickup (pickup: Composition, notes: Composition): Composition {
 }
 registerFn('pickup', pickup, Music)
 
+/** TODO: we're missing on-note? */
+
 type ModKind = Percussion | PitchBend | Tempo | Dynamics | Instrument
 
 function modQ (v: any): boolean {
