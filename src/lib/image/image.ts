@@ -26,39 +26,6 @@ function isReactiveImageFile (v: any): boolean {
 
 /***** Rendering **************************************************************/
 
-function loadImageToCanvas(rif: ReactiveImageFile): HTMLElement {
-  const container = document.createElement('div');
-  const input = document.createElement('input');
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  input.type = 'file';
-  input.accept = 'image/*';
-  
-  input.addEventListener('change', () => {
-    const file = input.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          if (ctx) {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-          }
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-  
-  container.appendChild(input);
-  container.appendChild(canvas);
-  return container;
-}
-
 function render(rif: ReactiveImageFile): HTMLElement {
   const ret = document.createElement('div')
   const inp = document.createElement('input')
