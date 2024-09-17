@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { WebAudioFontPlayer } from './WebAudioFontPlayer.js'
 
 function mkToneIndex (instrument: number): string {
@@ -43,7 +41,7 @@ class Player {
     // TODO: this is obviously prone to race conditions, in particular if a
     //       user mashes on the play button. Pre-loading mitigates this
     //       but ideally we would make this load synchronous somehow.
-    if (window[name] === undefined) {
+    if ((window as any)[name] === undefined) {
       this.player.loader.startLoad(this.audioContext, path, name);
       this.player.loader.waitLoad(() => {
         // TODO: is there any way to make the load synchronous so that
@@ -61,14 +59,14 @@ class Player {
 
   getInstrument (id: number, isPercussion: boolean = false): any {
     this.loadInstrument(id, isPercussion)
-    return window[isPercussion ? mkPercId(id, this.fontName) : mkToneId(id, this.fontName)]
+    return (window as any)[isPercussion ? mkPercId(id, this.fontName) : mkToneId(id, this.fontName)]
   }
 }
 
 export function waf(): Player {
   // N.B., we want a _per-browser_ singleton, so we'll send this up to window!
-  if (window['wafInstance'] === undefined) {
-    window['wafInstance']= new Player()
+  if ((window as any)['wafInstance'] === undefined) {
+    (window as any)['wafInstance']= new Player()
   }
-  return window['wafInstance']
+  return (window as any)['wafInstance']
 }
