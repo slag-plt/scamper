@@ -1,20 +1,15 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { Value } from '../../lang.js'
+import { emptyLibrary, Library, registerValue, Value } from '../../lang.js'
 
-export const lib: [string, Value.T][] = []
-
-function registerFn (name: string, fn: Function): void {
-  Value.nameFn(name, fn)
-  lib.push([name, fn])
-}
+export const lib: Library = emptyLibrary()
 
 function color (r: number, g: number, b: number, a: number): string {
   checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
   return `rgba(${r}, ${g}, ${b}, ${a})`
 }
-registerFn('color', color)
+registerValue('color', color, lib)
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
@@ -58,7 +53,7 @@ function drawingQ (v: any): boolean {
          Value.isStructKind(v, 'overlay') || Value.isStructKind(v, 'overlayOffset') ||
          Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash')
 }
-registerFn('image?', drawingQ)
+registerValue('image?', drawingQ, lib)
 
 const drawingS = {
   predicate: drawingQ,
@@ -81,13 +76,13 @@ function ellipse (width: number, height: number, mode: Mode, color: string): Ell
   checkContract(arguments, contract('ellipse', [C.nonneg, C.nonneg, modeS, colorS]))
   return ellipsePrim(width, height, mode, color)
 }
-registerFn('ellipse', ellipse)
+registerValue('ellipse', ellipse, lib)
 
 function circle (radius: number, mode: Mode, color: string): Ellipse {
   checkContract(arguments, contract('circle', [C.nonneg, modeS, colorS]))
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
-registerFn('circle', circle)
+registerValue('circle', circle, lib)
 
 interface Rectangle extends Value.Struct {
   [Value.structKind]: 'rectangle',
@@ -105,13 +100,13 @@ function rectangle (width: number, height: number, mode: Mode, color: string): R
   checkContract(arguments, contract('rectangle', [C.nonneg, C.nonneg, modeS, colorS]))
   return rectanglePrim(width, height, mode, color)
 }
-registerFn('rectangle', rectangle)
+registerValue('rectangle', rectangle, lib)
 
 function square (length: number, mode: Mode, color: string): Rectangle {
   checkContract(arguments, contract('square', [C.nonneg, modeS, colorS]))
   return rectanglePrim(length, length, mode, color)
 }
-registerFn('square', square)
+registerValue('square', square, lib)
 
 interface Triangle extends Value.Struct {
   [Value.structKind]: 'triangle',
@@ -131,7 +126,7 @@ function triangle (length: number, mode: Mode, color: string): Triangle {
   checkContract(arguments, contract('triangle', [C.nonneg, modeS, colorS]))
   return trianglePrim(length, mode, color)
 }
-registerFn('triangle', triangle)
+registerValue('triangle', triangle, lib)
 
 interface Path extends Value.Struct {
   [Value.structKind]: 'path',
@@ -152,7 +147,7 @@ function path (width: number, height: number, points: Value.List, mode: Mode, co
     Value.listToVector(points).map((p: Value.T) => [(p as Value.Pair).fst, (p as Value.Pair).snd]) as [number, number][],
     mode, color)
 }
-registerFn('path', path)
+registerValue('path', path, lib)
 
 interface Beside extends Value.Struct {
   [Value.structKind]: 'beside',
@@ -174,13 +169,13 @@ function beside (...drawings: Drawing[]): Beside {
   checkContract(arguments, contract('beside', [], drawingS)) 
   return besideAlignPrim('center', ...drawings)
 }
-registerFn('beside', beside)
+registerValue('beside', beside, lib)
 
 function besideAlign (align: string, ...drawings: Drawing[]): Beside {
   checkContract(arguments, contract('beside/align', [alignVS], drawingS))
   return besideAlignPrim(align, ...drawings)
 }
-registerFn('beside/align', besideAlign)
+registerValue('beside/align', besideAlign, lib)
 
 interface Above extends Value.Struct {
   [Value.structKind]: 'above',
@@ -202,13 +197,13 @@ function above (...drawings: Drawing[]): Above {
   checkContract(arguments, contract('above', [], drawingS))
   return aboveAlignPrim('middle', ...drawings)
 }
-registerFn('above', above)
+registerValue('above', above, lib)
 
 function aboveAlign (align: string, ...drawings: Drawing[]): Above {
   checkContract(arguments, contract('above/align', [alignHS], drawingS))
   return aboveAlignPrim(align, ...drawings)
 }
-registerFn('above/align', aboveAlign)
+registerValue('above/align', aboveAlign, lib)
 
 interface Overlay extends Value.Struct {
   [Value.structKind]: 'overlay',
@@ -232,13 +227,13 @@ function overlay (...drawings: Drawing[]) {
   checkContract(arguments, contract('overlay', [], drawingS))
   return overlayAlignPrim('middle', 'center', ...drawings)
 }
-registerFn('overlay', overlay)
+registerValue('overlay', overlay, lib)
 
 function overlayAlign (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
   checkContract(arguments, contract('overlay/align', [alignHS, alignVS], drawingS))
   return overlayAlignPrim(xAlign, yAlign, ...drawings)
 }
-registerFn('overlay/align', overlayAlign)
+registerValue('overlay/align', overlayAlign, lib)
 
 interface OverlayOffset extends Value.Struct {
   [Value.structKind]: 'overlayOffset',
@@ -286,7 +281,7 @@ function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): Overl
     d2
   }
 }
-registerFn('overlay/offset', overlayOffset)
+registerValue('overlay/offset', overlayOffset, lib)
 
 interface Rotate extends Value.Struct {
   [Value.structKind]: 'rotate',
@@ -344,7 +339,7 @@ function rotate (angle: number, drawing: Drawing): Rotate {
     drawing
   }
 }
-registerFn('rotate', rotate)
+registerValue('rotate', rotate, lib)
 
 interface WithDash extends Value.Struct {
   [Value.structKind]: 'withDash',
@@ -364,7 +359,7 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
     height: drawing.height
   }
 }
-registerFn('with-dash', withDash)
+registerValue('with-dash', withDash, lib)
 
 export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!

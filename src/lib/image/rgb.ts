@@ -1,7 +1,7 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { ScamperError, Value } from '../../lang.js'
+import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
 
 /***** RGB(A) Colors **********************************************************/
 
@@ -544,65 +544,60 @@ Render.addCustomWebRenderer(isRgb, renderRgb)
 
 /***** Exports ****************************************************************/
 
-export const lib: [string, Value.T][] = []
-
-function registerFn (name: string, fn: Function): void {
-  Value.nameFn(name, fn)
-  lib.push([name, fn])
-}
+export const lib: Library = emptyLibrary()
 
 // RGB(A) colors
-registerFn('rgb-component?', isRgbComponent)
-registerFn('rgb?', isRgb)
-registerFn('rgb', rgb)
-registerFn('rgb-red', rgbRed)
-registerFn('rgb-green', rgbGreen)
-registerFn('rgb-blue', rgbBlue)
-registerFn('rgb-alpha', rgbAlpha)
-registerFn('rgb-distance', rgbDistance)
+registerValue('rgb-component?', isRgbComponent, lib)
+registerValue('rgb?', isRgb, lib)
+registerValue('rgb', rgb, lib)
+registerValue('rgb-red', rgbRed, lib)
+registerValue('rgb-green', rgbGreen, lib)
+registerValue('rgb-blue', rgbBlue, lib)
+registerValue('rgb-alpha', rgbAlpha, lib)
+registerValue('rgb-distance', rgbDistance, lib)
 
 // Color names
-registerFn('color-name?', isColorName)
-registerFn('all-color-names', allColorNames)
-registerFn('find-colors', findColors)
+registerValue('color-name?', isColorName, lib)
+registerValue('all-color-names', allColorNames, lib)
+registerValue('find-colors', findColors, lib)
 
 // Color strings
-registerFn('rbg->string', rgbToString)
+registerValue('rbg->string', rgbToString, lib)
 
 // RGB hex strings
 
 // HSV colors
-registerFn('hsv?', hsv)
-registerFn('hsv', hsv)
-registerFn('hsv-hue', hsvHue)
-registerFn('hsv-saturation', hsvSaturation)
-registerFn('hsv-value', hsvValue)
-registerFn('hsv-alpha', hsvAlpha)
-registerFn('hsv-complement', hsvComplement)
+registerValue('hsv?', hsv, lib)
+registerValue('hsv', hsv, lib)
+registerValue('hsv-hue', hsvHue, lib)
+registerValue('hsv-saturation', hsvSaturation, lib)
+registerValue('hsv-value', hsvValue, lib)
+registerValue('hsv-alpha', hsvAlpha, lib)
+registerValue('hsv-complement', hsvComplement, lib)
 
 // Other predicates
 
 // Color conversion
-registerFn('color-name->rgb', colorNameToRgb)
+registerValue('color-name->rgb', colorNameToRgb, lib)
 
 // Color components
 
 // Miscellaneous procedures
 
 // Color transformations
-registerFn('rgb-darker', rgbDarker)
-registerFn('rgb-lighter', rgbLighter)
-registerFn('rgb-redder', rgbRedder)
-registerFn('rgb-bluer', rgbBluer)
-registerFn('rgb-greener', rgbGreener)
-registerFn('rgb-pseudo-complement', rgbPseudoComplement)
-registerFn('rgb-greyscale', rgbGreyscale)
-registerFn('rgb-phaseshift', rgbPhaseshift)
-registerFn('rgb-rotate-components', rgbRotateComponents)
-registerFn('rgb-thin', rgbThin)
-registerFn('rgb-thicken', rgbThicken)
+registerValue('rgb-darker', rgbDarker, lib)
+registerValue('rgb-lighter', rgbLighter, lib)
+registerValue('rgb-redder', rgbRedder, lib)
+registerValue('rgb-bluer', rgbBluer, lib)
+registerValue('rgb-greener', rgbGreener, lib)
+registerValue('rgb-pseudo-complement', rgbPseudoComplement, lib)
+registerValue('rgb-greyscale', rgbGreyscale, lib)
+registerValue('rgb-phaseshift', rgbPhaseshift, lib)
+registerValue('rgb-rotate-components', rgbRotateComponents, lib)
+registerValue('rgb-thin', rgbThin, lib)
+registerValue('rgb-thicken', rgbThicken, lib)
 
 // Color combinations
-registerFn('rgb-add', rgbAdd)
-registerFn('rgb-subtract', rgbSubtract)
-registerFn('rgb-average', rgbAverage)
+registerValue('rgb-add', rgbAdd, lib)
+registerValue('rgb-subtract', rgbSubtract, lib)
+registerValue('rgb-average', rgbAverage, lib)

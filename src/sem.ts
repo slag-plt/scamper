@@ -1,4 +1,4 @@
-import { ICE, Id, noRange, Range, ScamperError, Stmt } from './lang.js'
+import { ICE, Id, Library, Range, ScamperError, Stmt } from './lang.js'
 import { Prog, Op, Value, Env } from './lang.js'
 import { renderToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
@@ -662,11 +662,11 @@ export class Sem {
   prog: Prog
   curStmt: number
   state?: ExecutionState
-  builtinLibs: Map<Id, [Id, Value.T][]>
+  builtinLibs: Map<Id, Library>
   traces?: HTMLElement[]
   defaultDisplay: boolean
 
-  constructor (display: HTMLElement, builtinLibs: Map<Id, [Id, Value.T][]>, isTracing: boolean, defaultDisplay: boolean, env: Env, prog: Prog) {
+  constructor (display: HTMLElement, builtinLibs: Map<Id, Library>, isTracing: boolean, defaultDisplay: boolean, env: Env, prog: Prog) {
     this.display = display
     this.builtinLibs = builtinLibs
     if (isTracing) {
@@ -746,7 +746,11 @@ export class Sem {
 
   stepImport (modName: string, range: Range): void {
     if (this.builtinLibs.has(modName)) {
-      this.env = this.env.extend(this.builtinLibs.get(modName)!)
+      const library = this.builtinLibs.get(modName)!
+      this.env = this.env.extend(library.lib)
+      if (library.initializer !== undefined) {
+        library.initializer()
+      }
       if (this.isTracing()) {
         this.appendToCurrentTrace(`Module ${modName} imported`)
       }

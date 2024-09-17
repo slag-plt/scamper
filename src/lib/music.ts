@@ -1,17 +1,11 @@
-import { ICE, Value } from '../lang.js'
+import { ICE, emptyLibrary, Library, Value, registerValue } from '../lang.js'
 import { checkContract, contract } from '../contract.js'
 import { callFunction } from '../sem.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
+import { waf } from './webaudiofont/webaudiofont.js'
 
-import { waf, instrMap, percMap } from './webaudiofont/webaudiofont.js'
-
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Music: [string, Value.T][] = []
+const Music: Library = emptyLibrary()
 
 export type PitchClass = string
 export type Octave = number
@@ -26,46 +20,44 @@ function dur (numerator: number, denominator: number): Duration {
   checkContract(arguments, contract('dur', [C.number, C.number]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dur', numerator, denominator }
 }
-registerFn('dur', dur, Music)
+registerValue('dur', dur, Music)
 
 function numerator (dur: Duration): number {
   checkContract(arguments, contract('numerator', [durC]))
   return dur.numerator
 }
-registerFn('numerator', numerator, Music)
+registerValue('numerator', numerator, Music)
 
 function denominator (dur: Duration): number {
   checkContract(arguments, contract('denominator', [durC]))
   return dur.denominator
 }
-registerFn('denominator', denominator, Music)
+registerValue('denominator', denominator, Music)
 
-Music.push(
-  ['wn', dur(1, 1)],
-  ['hn', dur(1, 2)],
-  ['qn', dur(1, 4)],
-  ['en', dur(1, 8)],
-  ['sn', dur(1, 16)],
-  ['tn', dur(1, 32)],
-)
+registerValue('wn', dur(1, 1), Music)
+registerValue('hn', dur(1, 2), Music)
+registerValue('qn', dur(1, 4), Music)
+registerValue('en', dur(1, 8), Music)
+registerValue('sn', dur(1, 16), Music)
+registerValue('tn', dur(1, 32), Music)
 
 function isPitchClass (s: string): boolean {
   checkContract(arguments, contract('pitch?', [C.string]))
   return /^[A-Ga-g][#b]{0,2}$/.test(s)
 }
-registerFn('pitch?', isPitchClass, Music)
+registerValue('pitch?', isPitchClass, Music)
 
 function isOctave (n: number): boolean {
   checkContract(arguments, contract('octave?', [C.number]))
   return n >= 0 && n <= 10
 }
-registerFn('octave?', isOctave, Music)
+registerValue('octave?', isOctave, Music)
 
 function isValidMidiNote (n: number): boolean {
   checkContract(arguments, contract('note?', [C.number]))
   return n >= 0 && n <= 127
 }
-registerFn('note?', isValidMidiNote, Music)
+registerValue('note?', isValidMidiNote, Music)
 
 const durC: C.Spec = {
   predicate: (v: any) => Value.isStructKind(v, 'dur'),
@@ -82,7 +74,7 @@ function note (note: number, duration: Duration): Note {
   checkContract(arguments, contract('note', [noteC, durC]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note', note, duration }
 }
-registerFn('note', note, Music)
+registerValue('note', note, Music)
 
 export interface NoteFreq extends Value.Struct {
   [Value.structKind]: 'note-freq',
@@ -93,7 +85,7 @@ function noteFreq (freq: number, duration: Duration): NoteFreq {
   checkContract(arguments, contract('note-freq', [C.number, durC]))  
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note-freq', freq, duration }
 }
-registerFn('note-freq', noteFreq, Music)
+registerValue('note-freq', noteFreq, Music)
 
 function repeat (n: number, composition: Composition): Composition {
   checkContract(arguments, contract('repeat', [C.nat, compositionC]))
@@ -103,46 +95,46 @@ function repeat (n: number, composition: Composition): Composition {
     return seq(composition, repeat(n - 1, composition))
   }
 }
-registerFn('repeat', repeat, Music)
+registerValue('repeat', repeat, Music)
 
 interface Empty extends Value.Struct { [Value.structKind]: 'empty' }
 const empty = (): Empty => ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'empty' })
-registerFn('empty', empty, Music)
+registerValue('empty', empty, Music)
 
 interface Rest extends Value.Struct { [Value.structKind]: 'rest', duration: Duration }
 function rest (duration: Duration): Rest {
   checkContract(arguments, contract('rest', [durC]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'rest', duration }
 }
-registerFn('rest', rest, Music)
+registerValue('rest', rest, Music)
 
 interface Trigger extends Value.Struct { [Value.structKind]: 'trigger', fn: Value.ScamperFn }
 function trigger (fn: Value.ScamperFn): Trigger {
   checkContract(arguments, contract('trigger', [C.func]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'trigger', fn }
 }
-registerFn('trigger', trigger, Music)
+registerValue('trigger', trigger, Music)
 
 interface Par extends Value.Struct { [Value.structKind]: 'par', notes: Composition[] }
 function par (...notes: Composition[]): Par {
   checkContract(arguments, contract('par', [], compositionC))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'par', notes }
 }
-registerFn('par', par, Music)
+registerValue('par', par, Music)
 
 interface Seq extends Value.Struct { [Value.structKind]: 'seq', notes: Composition[] }
 function seq (...notes: Composition[]): Seq {
   checkContract(arguments, contract('seq', [], compositionC)) 
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'seq', notes }
 }
-registerFn('seq', seq, Music)
+registerValue('seq', seq, Music)
 
 interface Pickup extends Value.Struct { [Value.structKind]: 'pickup', pickup: Composition, notes: Composition }
 function pickup (pickup: Composition, notes: Composition): Composition {
   checkContract(arguments, contract('pickup', [compositionC, compositionC]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pickup', pickup, notes }
 }
-registerFn('pickup', pickup, Music)
+registerValue('pickup', pickup, Music)
 
 /** TODO: we're missing on-note? */
 
@@ -155,7 +147,7 @@ function modQ (v: any): boolean {
     Value.isStructKind(v, 'dynamics') ||
     Value.isStructKind(v, 'instrument')
 }
-registerFn('mod?', modQ, Music)
+registerValue('mod?', modQ, Music)
 
 const modC: C.Spec = {
   predicate: modQ,
@@ -164,42 +156,42 @@ const modC: C.Spec = {
 
 interface Percussion extends Value.Struct { kind: 'percussion' }
 const percussion = ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'percussion' })
-Music.push(['percussion', percussion])
+registerValue('percussion', percussion, Music)
 
 interface PitchBend extends Value.Struct { [Value.structKind]: 'pitchBend', amount: number }
 function pitchBend (amount: number): PitchBend {
   checkContract(arguments, contract('bend', [C.numRange(-1, 1)]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pitchBend', amount }
 }
-registerFn('bend', pitchBend, Music)
+registerValue('bend', pitchBend, Music)
 
 interface Tempo extends Value.Struct { [Value.structKind]: 'tempo', beat: Duration, bpm: number }
 function tempo (beat: Duration, bpm: number): Tempo {
   checkContract(arguments, contract('tempo', [durC, C.nonneg]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'tempo', beat, bpm }
 }
-registerFn('tempo', tempo, Music)
+registerValue('tempo', tempo, Music)
 
 interface Dynamics extends Value.Struct { [Value.structKind]: 'dynamics', amount: number }
 function dynamics (amount: number): Dynamics {
   checkContract(arguments, contract('dynamics', [C.numRange(0, 127)])) 
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dynamics', amount }
 }
-registerFn('dynamics', dynamics, Music)
+registerValue('dynamics', dynamics, Music)
 
 interface Instrument extends Value.Struct { [Value.structKind]: 'instrument', program: number }
 function instrument (program: number): Instrument {
   checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'instrument', program }
 }
-registerFn('instrument', instrument, Music)
+registerValue('instrument', instrument, Music)
 
 interface Mod extends Value.Struct { [Value.structKind]: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
   checkContract(arguments, contract('mod', [modC, compositionC]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'mod', note, mod }
 }
-registerFn('mod', mod, Music)
+registerValue('mod', mod, Music)
 
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod
 
@@ -214,14 +206,14 @@ function compositionQ (v: any): boolean {
     Value.isStructKind(v, 'pickup') ||
     Value.isStructKind(v, 'mod')
 }
-registerFn('composition?', compositionQ, Music)
+registerValue('composition?', compositionQ, Music)
 
 const compositionC: C.Spec = {
   predicate: compositionQ,
   errorMsg: (actual: any) => `expected a composition, received ${Value.typeOf(actual)}`,
 }
 
-////////////////////////////////////////////////////////////////////////////////
+/***** Rendering **************************************************************/
 
 type MidiMsg = {
   tag: 'midi',
@@ -388,10 +380,16 @@ export function playComposition (composition: Composition): number {
   // Enqueue notes
   for (const msg of msgs) {
     // const elapsed = audioContext.currentTime - startTime
-    if (msg.tag === 'midi' && msg.instrument < 128) {
-      waf().player.queueWaveTable(waf().audioContext, waf().audioContext.destination, instrMap.get(msg.instrument)!, startTime + msg.time / 1000, msg.note, msg.duration / 1000, msg.velocity)
-    } else if (msg.tag === 'midi' && msg.instrument === 128) {
-      waf().player.queueWaveTable(waf().audioContext, waf().audioContext.destination, percMap.get(msg.note)!, startTime + msg.time / 1000, msg.note, msg.duration / 1000, msg.velocity)
+    if (msg.tag === 'midi') {
+      const isPercussion = msg.instrument === 128
+      const instr = isPercussion ? msg.note : msg.instrument
+      waf().player.queueWaveTable(waf().audioContext,
+        waf().audioContext.destination,
+        waf().getInstrument(instr, isPercussion),
+        startTime + msg.time / 1000,
+        msg.note,
+        msg.duration / 1000,
+        msg.velocity)
     }
   }
 
@@ -417,7 +415,7 @@ export function playComposition (composition: Composition): number {
   })
   return id
 }
-registerFn('play-composition', playComposition, Music)
+registerValue('play-composition', playComposition, Music)
 
 export function render (v: any): HTMLElement {
   const composition: Composition = v as Composition
@@ -445,5 +443,17 @@ export function render (v: any): HTMLElement {
 }
 
 Display.addCustomWebRenderer(compositionQ, render)
+
+Music.initializer = function initializer(): void {
+  console.log('Initializing music library...')
+  // Initialize webaudiofont
+  waf()
+
+  // Pre-load common, low bandwidth instruments
+  waf().loadInstrument(0)         // 0: Acoustic Grand Piano
+  waf().loadInstrument(35, true)  // 35: Acoustic Bass
+  waf().loadInstrument(38, true)  // 38: Acoustic Snare
+  waf().loadInstrument(42, true)  // 42: Closed Hi-Hat
+}
 
 export default Music

@@ -1,15 +1,10 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { callFunction } from '../sem.js'
-import { ScamperError, Value } from '../lang.js'
+import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../lang.js'
 import * as Display from '../display.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Prelude: [string, Value.T][] = []
+const Prelude: Library = emptyLibrary()
 
 const query1C = (name: string) => contract(name, [C.any])
 const query2C = (name: string) => contract(name, [C.any, C.any])
@@ -26,7 +21,7 @@ function equalQ (x: any, y: any): boolean {
   checkContract(arguments, query2C('equal?'))
   return Value.equal(x, y)
 }
-registerFn('equal?', equalQ, Prelude)
+registerValue('equal?', equalQ, Prelude)
 
 // Numbers (6.2)
 
@@ -34,19 +29,19 @@ function numberQ (x: any): boolean {
   checkContract(arguments, query1C('number?'))
   return typeof x === 'number'
 }
-registerFn('number?', numberQ, Prelude)
+registerValue('number?', numberQ, Prelude)
 
 function realQ (x: any): boolean {
   checkContract(arguments, query1C('real?'))
   return typeof x === 'number' && !Number.isInteger(x)
 }
-registerFn('real?', realQ, Prelude)
+registerValue('real?', realQ, Prelude)
 
 function integerQ (x: any): boolean {
   checkContract(arguments, query1C('integer?'))
   return typeof x === 'number' && Number.isInteger(x)
 }
-registerFn('integer?', integerQ, Prelude)
+registerValue('integer?', integerQ, Prelude)
 
 // N.B., we don't implement the following functions:
 //   (complex? obj)
@@ -64,109 +59,109 @@ function nanQ (x: any): boolean {
   checkContract(arguments, query1C('nan?'))
   return Number.isNaN(x)
 }
-registerFn('nan?', nanQ, Prelude)
+registerValue('nan?', nanQ, Prelude)
 
 function lt (x: number, y: number): boolean {
   checkContract(arguments, contract('<', [C.number, C.number]))
   return x < y
 }
-registerFn('<', lt, Prelude)
+registerValue('<', lt, Prelude)
 
 function leq (x: number, y: number): boolean {
   checkContract(arguments, contract('<=', [C.number, C.number]))
   return x <= y
 }
-registerFn('<=', leq, Prelude)
+registerValue('<=', leq, Prelude)
 
 function gt (x: number, y: number): boolean {
   checkContract(arguments, contract('>', [C.number, C.number]))
   return x > y
 }
-registerFn('>', gt, Prelude)
+registerValue('>', gt, Prelude)
 
 function geq (x: number, y: number): boolean {
   checkContract(arguments, contract('>=', [C.number, C.number]))
   return x >= y
 }
-registerFn('>=', geq, Prelude)
+registerValue('>=', geq, Prelude)
 
 function eq (x: number, y: number): boolean {
   checkContract(arguments, contract('=', [C.number, C.number]))
   return x === y
 }
-registerFn('=', eq, Prelude)
+registerValue('=', eq, Prelude)
 
 function zeroQ (x: number): boolean {
   checkContract(arguments, contract('zero?', [C.number]))
   return x === 0
 }
-registerFn('zero?', zeroQ, Prelude)
+registerValue('zero?', zeroQ, Prelude)
 
 function positiveQ (x: number): boolean {
   checkContract(arguments, contract('positive?', [C.number]))
   return x > 0
 }
-registerFn('positive?', positiveQ, Prelude)
+registerValue('positive?', positiveQ, Prelude)
 
 function negativeQ (x: number): boolean {
   checkContract(arguments, contract('negative?', [C.number]))
   return x < 0
 }
-registerFn('negative?', negativeQ, Prelude)
+registerValue('negative?', negativeQ, Prelude)
 
 function oddQ (x: number): boolean {
   checkContract(arguments, contract('odd?', [C.integer]))
   return (x & 1) === 1
 }
-registerFn('odd?', oddQ, Prelude)
+registerValue('odd?', oddQ, Prelude)
 
 function evenQ (x: number): boolean {
   checkContract(arguments, contract('even?', [C.integer]))
   return (x & 1) !== 1
 }
-registerFn('even?', evenQ, Prelude)
+registerValue('even?', evenQ, Prelude)
 
 function max (...xs: number[]): number {
   checkContract(arguments, contract('max', [], C.number))
   return Math.max(...xs)
 }
-registerFn('max', max, Prelude)
+registerValue('max', max, Prelude)
 
 function min (...xs: number[]): number {
   checkContract(arguments, contract('min', [], C.number))
   return Math.min(...xs)
 }
-registerFn('min', min, Prelude)
+registerValue('min', min, Prelude)
 
 function plus (...xs: number[]): number {
   checkContract(arguments, contract('+', [], C.number))
   return xs.reduce((a, b) => a + b, 0)
 }
-registerFn('+', plus, Prelude)
+registerValue('+', plus, Prelude)
 
 function minus (...xs: number[]): number {
   checkContract(arguments, contract('-', [C.number], C.number))
   return xs.length === 1 ? -xs[0] : xs.reduce((a, b) => a - b)
 }
-registerFn('-', minus, Prelude)
+registerValue('-', minus, Prelude)
 
 function times (...xs: number[]): number {
   checkContract(arguments, contract('*', [], C.number))
   return xs.reduce((a, b) => a * b, 1)
 }
-registerFn('*', times, Prelude)
+registerValue('*', times, Prelude)
 
 function div (...xs: number[]): number {
   checkContract(arguments, contract('/', [C.number], C.number))
   return xs.length === 1 ? 1 / xs[0] : xs.reduce((a, b) => a / b)
 }
-registerFn('/', div, Prelude)
+registerValue('/', div, Prelude)
 
 function abs (x: number): number {
   checkContract(arguments, contract('abs', [C.number]))
   return Math.abs(x)
 }
-registerFn('abs', abs, Prelude)
+registerValue('abs', abs, Prelude)
 
 // N.B., not implementing the composite division functions:
 //   (floor / n1 n2)
@@ -181,19 +176,19 @@ function quotient (x: number, y: number): number {
   checkContract(arguments, contract('quotient', [C.integer, C.integer]))
   return Math.trunc(x / y)
 }
-registerFn('quotient', quotient, Prelude)
+registerValue('quotient', quotient, Prelude)
 
 function remainder (x: number, y: number): number {
   checkContract(arguments, contract('remainder', [C.integer, C.integer]))
   return x % y
 }
-registerFn('remainder', remainder, Prelude)
+registerValue('remainder', remainder, Prelude)
 
 function modulo (x: number, y: number): number {
   checkContract(arguments, contract('modulo', [C.integer, C.integer]))
   return ((x % y) + y) % y
 }
-registerFn('modulo', modulo, Prelude)
+registerValue('modulo', modulo, Prelude)
 
 // TODO: implement:
 //   (gcd n1 ...)
@@ -208,25 +203,25 @@ function floor (x: number): number {
   checkContract(arguments, contract('floor', [C.number]))
   return Math.floor(x)
 }
-registerFn('floor', floor, Prelude)
+registerValue('floor', floor, Prelude)
 
 function ceiling (x: number): number {
   checkContract(arguments, contract('ceiling', [C.number]))
   return Math.ceil(x)
 }
-registerFn('ceiling', ceiling, Prelude)
+registerValue('ceiling', ceiling, Prelude)
 
 function truncate (x: number): number {
   checkContract(arguments, contract('truncate', [C.number]))
   return Math.trunc(x)
 }
-registerFn('truncate', truncate, Prelude)
+registerValue('truncate', truncate, Prelude)
 
 function round (x: number): number {
   checkContract(arguments, contract('round', [C.number]))
   return Math.round(x)
 }
-registerFn('round', round, Prelude)
+registerValue('round', round, Prelude)
 
 // N.B., we don't implement:
 //   (rationalize x y)
@@ -236,13 +231,13 @@ function square (x: number): number {
   checkContract(arguments, contract('square', [C.number]))
   return x * x
 }
-registerFn('square', square, Prelude)
+registerValue('square', square, Prelude)
 
 function sqrt (x: number): number {
   checkContract(arguments, contract('sqrt', [C.number]))
   return Math.sqrt(x)
 }
-registerFn('sqrt', sqrt, Prelude)
+registerValue('sqrt', sqrt, Prelude)
 
 // N.B., we don't implement:
 //   (exact-integer-sqrt k)
@@ -252,7 +247,7 @@ function expt (x: number, y: number): number {
   checkContract(arguments, contract('expt', [C.number, C.number]))
   return Math.pow(x, y)
 }
-registerFn('expt', expt, Prelude)
+registerValue('expt', expt, Prelude)
 
 // N.B., we don't implement:
 //   (make-rectangular x1 x2)   ...probably not!
@@ -267,7 +262,7 @@ function numberToString (x: number): string {
   checkContract(arguments, contract('number->string', [C.number]))
   return x.toString()
 }
-registerFn('number->string', numberToString, Prelude)
+registerValue('number->string', numberToString, Prelude)
 
 // TODO: implement:
 //   (string->number s)
@@ -283,7 +278,7 @@ function stringToNumber (s: string): number {
     throw new Error(`Runtime error: string->number: invalid string: ${s}`)
   }
 }
-registerFn('string->number', stringToNumber, Prelude)
+registerValue('string->number', stringToNumber, Prelude)
 
 // Additional functions from racket/base
 
@@ -291,49 +286,49 @@ function exp (x: number): number {
   checkContract(arguments, contract('exp', [C.number]))
   return Math.exp(x)
 }
-registerFn('exp', exp, Prelude)
+registerValue('exp', exp, Prelude)
 
 function log (x: number): number {
   checkContract(arguments, contract('log', [C.number]))
   return Math.log(x)
 }
-registerFn('log', log, Prelude)
+registerValue('log', log, Prelude)
 
 function sin (x: number): number {
   checkContract(arguments, contract('sin', [C.number]))
   return Math.sin(x)
 }
-registerFn('sin', sin, Prelude)
+registerValue('sin', sin, Prelude)
 
 function cos (x: number): number {
   checkContract(arguments, contract('cos', [C.number]))
   return Math.cos(x)
 }
-registerFn('cos', cos, Prelude)
+registerValue('cos', cos, Prelude)
 
 function tan (x: number): number {
   checkContract(arguments, contract('tan', [C.number]))
   return Math.tan(x)
 }
-registerFn('tan', tan, Prelude)
+registerValue('tan', tan, Prelude)
 
 function asin (x: number): number {
   checkContract(arguments, contract('asin', [C.number]))
   return Math.asin(x)
 }
-registerFn('asin', asin, Prelude)
+registerValue('asin', asin, Prelude)
 
 function acos (x: number): number {
   checkContract(arguments, contract('acos', [C.number]))
   return Math.acos(x)
 }
-registerFn('acos', acos, Prelude)
+registerValue('acos', acos, Prelude)
 
 function atan (x: number): number {
   checkContract(arguments, contract('atan', [C.number]))
   return Math.atan(x)
 }
-registerFn('atan', atan, Prelude)
+registerValue('atan', atan, Prelude)
 
 function equalsEps (eps: number): Value.T {
   checkContract(arguments, contract('=-eps', [C.number]))
@@ -345,7 +340,7 @@ function equalsEps (eps: number): Value.T {
   Value.nameFn(name, ret)
   return ret
 }
-registerFn('=-eps', equalsEps, Prelude)
+registerValue('=-eps', equalsEps, Prelude)
 
 // Booleans (6.3)
 
@@ -353,13 +348,13 @@ function not (x: boolean): boolean {
   checkContract(arguments, contract('not', [C.boolean]))
   return !x
 }
-registerFn('not', not, Prelude)
+registerValue('not', not, Prelude)
 
 function booleanQ (x: any): boolean {
   checkContract(arguments, contract('boolean?', [C.any]))
   return typeof x === 'boolean'
 }
-registerFn('boolean?', booleanQ, Prelude)
+registerValue('boolean?', booleanQ, Prelude)
 
 // From racket/base
 
@@ -367,25 +362,25 @@ function nand (...xs: boolean[]): boolean {
   checkContract(arguments, contract('nand', [], C.boolean))
   return !xs.reduce((a, b) => a && b, true)
 }
-registerFn('nand', nand, Prelude)
+registerValue('nand', nand, Prelude)
 
 function nor (...xs: boolean[]): boolean {
   checkContract(arguments, contract('nor', [], C.boolean))
   return !xs.reduce((a, b) => a || b, false)
 }
-registerFn('nor', nor, Prelude)
+registerValue('nor', nor, Prelude)
 
 function implies (x: boolean, y: boolean): boolean {
   checkContract(arguments, contract('implies', [C.boolean, C.boolean]))
   return !x || y
 }
-registerFn('implies', implies, Prelude)
+registerValue('implies', implies, Prelude)
 
 function xor (x: boolean, y: boolean): boolean {
   checkContract(arguments, contract('xor', [C.boolean, C.boolean]))
   return (x && !y) || (!x && y)
 }
-registerFn('xor', xor, Prelude)
+registerValue('xor', xor, Prelude)
 
 // Pairs and Lists (6.4)
 
@@ -402,31 +397,31 @@ function pairQ (x: any): boolean {
   checkContract(arguments, contract('pair?', [C.any]))
   return Value.isPair(x)
 }
-registerFn('pair?', pairQ, Prelude)
+registerValue('pair?', pairQ, Prelude)
 
 function cons (x: any, y: any): Value.T {
   checkContract(arguments, contract('cons', [C.any, C.any]))
   return Value.mkPair(x, y)
 }
-registerFn('cons', cons, Prelude)
+registerValue('cons', cons, Prelude)
 
 function pair (x: any, y: any): Value.T {
   checkContract(arguments, contract('pair', [C.any, C.any]))
   return Value.mkPair(x, y)
 }
-registerFn('pair', pair, Prelude)
+registerValue('pair', pair, Prelude)
 
 function car (x: Value.T): Value.T {
   checkContract(arguments, contract('car', [C.pair]))
   return (x as any).fst
 }
-registerFn('car', car, Prelude)
+registerValue('car', car, Prelude)
 
 function cdr (x: Value.T): Value.T {
   checkContract(arguments, contract('cdr', [C.pair]))
   return (x as any).snd
 }
-registerFn('cdr', cdr, Prelude)
+registerValue('cdr', cdr, Prelude)
 
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
@@ -437,13 +432,13 @@ function nullQ (x: any): boolean {
   checkContract(arguments, contract('null?', [C.any]))
   return x === null
 }
-registerFn('null?', nullQ, Prelude)
+registerValue('null?', nullQ, Prelude)
 
 function listQ (x: any): boolean {
   checkContract(arguments, contract('list?', [C.any]))
   return x === null || (Value.isPair(x) && (x as any).isList)
 }
-registerFn('list?', listQ, Prelude)
+registerValue('list?', listQ, Prelude)
 
 function list (...xs: Value.T[]): Value.List {
   checkContract(arguments, contract('list', [], C.any))
@@ -453,7 +448,7 @@ function list (...xs: Value.T[]): Value.List {
   }
   return ret
 }
-registerFn('list', list, Prelude)
+registerValue('list', list, Prelude)
 
 
 function makeList (n: number, fill: Value.T): Value.List {
@@ -464,7 +459,7 @@ function makeList (n: number, fill: Value.T): Value.List {
   }
   return ret
 }
-registerFn('make-list', makeList, Prelude)
+registerValue('make-list', makeList, Prelude)
 
 function length (l: Value.List): number {
   checkContract(arguments, contract('length', [C.list]))
@@ -475,7 +470,7 @@ function length (l: Value.List): number {
   }
   return len
 }
-registerFn('length', length, Prelude)
+registerValue('length', length, Prelude)
 
 function appendOne_ (l1: Value.List, l2: Value.List): Value.List {
   if (l1 === null) {
@@ -493,7 +488,7 @@ function append (l: Value.List, ...ls: Value.List[]): Value.List {
   }
   return ret 
 }
-registerFn('append', append, Prelude)
+registerValue('append', append, Prelude)
 
 function reverse (l: Value.List): Value.List {
   checkContract(arguments, contract('reverse', [C.list]))
@@ -510,7 +505,7 @@ function reverse (l: Value.List): Value.List {
   }
   return ret
 }
-registerFn('reverse', reverse, Prelude)
+registerValue('reverse', reverse, Prelude)
 
 function listTail (l: Value.List, k: number): Value.List {
   checkContract(arguments, contract('list-tail', [C.list, C.nonneg]))
@@ -520,7 +515,7 @@ function listTail (l: Value.List, k: number): Value.List {
   }
   return l
 }
-registerFn('list-tail', listTail, Prelude)
+registerValue('list-tail', listTail, Prelude)
 
 function listTake (l: Value.List, k: number): Value.List {
   checkContract(arguments, contract('list-take', [C.list, C.nonneg]))
@@ -537,7 +532,7 @@ function listTake (l: Value.List, k: number): Value.List {
   }
   return ret
 }
-registerFn('list-take', listTake, Prelude)
+registerValue('list-take', listTake, Prelude)
 
 function listDrop (l: Value.List, k: number): Value.List {
   checkContract(arguments, contract('list-drop', [C.list, C.nonneg]))
@@ -547,7 +542,7 @@ function listDrop (l: Value.List, k: number): Value.List {
   }
   return l
 }
-registerFn('list-drop', listDrop, Prelude)
+registerValue('list-drop', listDrop, Prelude)
 
 function listRef (l: Value.List, n: number): Value.T {
   checkContract(arguments, contract('list-ref', [C.list, C.nonneg]))
@@ -562,7 +557,7 @@ function listRef (l: Value.List, n: number): Value.T {
     return l.fst
   }
 }
-registerFn('list-ref', listRef, Prelude)
+registerValue('list-ref', listRef, Prelude)
 
 // N.B., list-set! is unimplemented since it is effectful.
 
@@ -592,7 +587,7 @@ function indexOf (l: Value.List, v: Value.T): number {
   }
   return -1
 }
-registerFn('index-of', indexOf, Prelude)
+registerValue('index-of', indexOf, Prelude)
 
 function assocKey (v: Value.T, l: Value.List): boolean {
   checkContract(arguments, contract('assoc-key?', [C.any, C.listof(C.pair)]))
@@ -604,7 +599,7 @@ function assocKey (v: Value.T, l: Value.List): boolean {
   }
   return false
 }
-registerFn('assoc-key?', assocKey, Prelude)
+registerValue('assoc-key?', assocKey, Prelude)
 
 function assocRef (v: Value.T, l: Value.List): Value.T {
   checkContract(arguments, contract('assoc-ref', [C.any, C.listof(C.pair)]))
@@ -616,7 +611,7 @@ function assocRef (v: Value.T, l: Value.List): Value.T {
   }
   throw new ScamperError('Runtime', `assoc-ref: key ${v} not found in association list`)
 }
-registerFn('assoc-ref', assocRef, Prelude)
+registerValue('assoc-ref', assocRef, Prelude)
 
 function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
   checkContract(arguments, contract('assoc-set', [C.any, C.any, C.listof(C.pair)]))
@@ -638,7 +633,7 @@ function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
   }
   return Value.vectorToList(front.concat([Value.mkPair(k, v)]))
 }
-registerFn('assoc-set', assocSet, Prelude)
+registerValue('assoc-set', assocSet, Prelude)
 
 // Symbols (6.5)
 
@@ -656,7 +651,7 @@ function charQ (x: any): boolean {
   checkContract(arguments, contract('char?', [C.any]))
   return Value.isChar(x)
 }
-registerFn('char?', charQ, Prelude)
+registerValue('char?', charQ, Prelude)
 
 function pairwiseSatisfies<T> (f: (a: T, b: T) => boolean, xs: T[]): boolean {
   if (xs.length <= 1) {
@@ -677,7 +672,7 @@ function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): v
     return pairwiseSatisfies((a, b) => f((a as Value.Char).value, (b as Value.Char).value), args)
   }
   Value.nameFn(name, fn)
-  registerFn(name, fn, Prelude)
+  registerValue(name, fn, Prelude)
 }
 
 mkCharCompareFn('char=?', (a, b) => a === b)
@@ -697,7 +692,7 @@ function mkCharPredicatePrim (name: string, f: (a: string) => boolean): void {
     return f(x.value)
   }
   Value.nameFn(name, fn)
-  registerFn(name, fn, Prelude)
+  registerValue(name, fn, Prelude)
 }
 
 mkCharPredicatePrim('char-alphabetic?', (a) => /\p{L}/gu.test(a))
@@ -715,31 +710,31 @@ function digitalValue (c: Value.Char): number {
     return n
   }
 }
-registerFn('digit-value', digitalValue, Prelude)
+registerValue('digit-value', digitalValue, Prelude)
 
 function charToInteger (c: Value.Char): number {
   checkContract(arguments, contract('char->integer', [], C.char))
   return c.value.codePointAt(0)!
 }
-registerFn('char->integer', charToInteger, Prelude)
+registerValue('char->integer', charToInteger, Prelude)
 
 function integerToChar (n: number): Value.Char {
   checkContract(arguments, contract('integer->char', [C.integer]))
   return Value.mkChar(String.fromCodePoint(n))
 }
-registerFn('integer->char', integerToChar, Prelude)
+registerValue('integer->char', integerToChar, Prelude)
 
 function charUpcase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-upcase?', [], C.char))
   return Value.mkChar(c.value.toUpperCase())
 }
-registerFn('char-upcase', charUpcase, Prelude)
+registerValue('char-upcase', charUpcase, Prelude)
 
 function charDowncase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-downcase?', [], C.char))
   return Value.mkChar(c.value.toLowerCase())
 }
-registerFn('char-downcase', charDowncase, Prelude)
+registerValue('char-downcase', charDowncase, Prelude)
 
 // N.B., "folding" in Unicode returns a character to a "canonical" form, suitable for
 // comparison in a "case-insensitive" manner. toLowerCase is Unicode aware, so maybe
@@ -750,7 +745,7 @@ function charFoldcase (c: Value.Char): Value.Char {
   checkContract(arguments, contract('char-foldcase?', [], C.char))
   return Value.mkChar(c.value.toLowerCase())
 }
-registerFn('char-foldcase', charFoldcase, Prelude)
+registerValue('char-foldcase', charFoldcase, Prelude)
 
 // Strings (6.7)
 
@@ -758,7 +753,7 @@ function stringQ (x: any): boolean {
   checkContract(arguments, contract('string?', [C.any]))
   return typeof x === 'string'
 }
-registerFn('string?', stringQ, Prelude)
+registerValue('string?', stringQ, Prelude)
 
 // N.B., we don't implement the (make-string k) variant because our strings are
 // immutable, so having an "empty" string of size k does not make sense.
@@ -766,25 +761,25 @@ function makeString (k: number, c: Value.Char): string {
   checkContract(arguments, contract('make-string', [C.integer, C.char]))
   return c.value.repeat(k)
 }
-registerFn('make-string', makeString, Prelude)
+registerValue('make-string', makeString, Prelude)
 
 function string (c: Value.Char, ...cs: Value.Char[]): string {
   checkContract(arguments, contract('string', [C.char], C.char))
   return [c, ...cs].map((e) => e.value).join('')
 }
-registerFn('string', string, Prelude)
+registerValue('string', string, Prelude)
 
 function stringLength (s: string): number {
   checkContract(arguments, contract('string-length', [C.string]))
   return s.length
 }
-registerFn('string-length', stringLength, Prelude)
+registerValue('string-length', stringLength, Prelude)
 
 function stringRef (s: string, i: number): Value.Char {
   checkContract(arguments, contract('string-ref', [C.string, C.integer]))
   return Value.mkChar(s[i])
 }
-registerFn('string-ref', stringRef, Prelude)
+registerValue('string-ref', stringRef, Prelude)
 
 // N.B., string-set! is unimplemented since it is effectful.
 
@@ -794,7 +789,7 @@ function mkStringCompareFn (name: string, f: (a: string, b: string) => boolean):
     return pairwiseSatisfies((a, b) => f(a, b), args)
   }
   Value.nameFn(name, fn)
-  registerFn(name, fn, Prelude)
+  registerValue(name, fn, Prelude)
 }
 
 mkStringCompareFn('string=?', (a, b) => a === b)
@@ -812,31 +807,31 @@ function stringUpcase (s: string): string {
   checkContract(arguments, contract('string-upcase', [C.string])) 
   return s.toUpperCase()
 }
-registerFn('string-upcase', stringUpcase, Prelude)
+registerValue('string-upcase', stringUpcase, Prelude)
 
 function stringDowncase (s: string): string {
   checkContract(arguments, contract('string-downcase', [C.string])) 
   return s.toLowerCase()
 }
-registerFn('string-downcase', stringDowncase, Prelude)
+registerValue('string-downcase', stringDowncase, Prelude)
 
 function stringFoldcase (s: string): string {
   checkContract(arguments, contract('string-foldcase', [C.string])) 
   return s.toLowerCase()
 }
-registerFn('string-foldcase', stringFoldcase, Prelude)
+registerValue('string-foldcase', stringFoldcase, Prelude)
 
 function substring (s: string, start: number, end: number): string {
   checkContract(arguments, contract('substring', [C.string, C.integer, C.integer])) 
   return s.substring(start, end)
 }
-registerFn('substring', substring, Prelude)
+registerValue('substring', substring, Prelude)
 
 function stringAppend (...args: string[]): string {
   checkContract(arguments, contract('string-append', [], C.string))
   return args.join('')
 }
-registerFn('string-append', stringAppend, Prelude)
+registerValue('string-append', stringAppend, Prelude)
 
 // TODO: stringToList has a 3-argument version, too, that specifies
 // a substring of s to turn into a list.
@@ -848,7 +843,7 @@ function stringToList (s: string): Value.List {
   }
   return ret
 }
-registerFn('string->list', stringToList, Prelude)
+registerValue('string->list', stringToList, Prelude)
 
 function listToString (l: Value.List): string {
   checkContract(arguments, contract('list->string', [C.list]))
@@ -859,7 +854,7 @@ function listToString (l: Value.List): string {
   } 
   return ret
 }
-registerFn('list->string', listToString, Prelude)
+registerValue('list->string', listToString, Prelude)
 
 function stringToVector (s: string): Value.Char[] {
   checkContract(arguments, contract('string->vector', [C.string]))
@@ -869,7 +864,7 @@ function stringToVector (s: string): Value.Char[] {
   }
   return ret
 }
-registerFn('string->vector', stringToVector, Prelude)
+registerValue('string->vector', stringToVector, Prelude)
 
 function vectorToString (v: Value.Char[]): string {
   checkContract(arguments, contract('vector->string', [C.vector]))
@@ -879,7 +874,7 @@ function vectorToString (v: Value.Char[]): string {
   }
   return ret
 }
-registerFn('vector->string', vectorToString, Prelude)
+registerValue('vector->string', vectorToString, Prelude)
 
 // N.B., the following functions:
 //
@@ -896,7 +891,7 @@ function stringContains (s: string, sub: string): boolean {
   checkContract(arguments, contract('string-contains', [C.string, C.string]))  
   return s.includes(sub)
 }
-registerFn('string-contains', stringContains, Prelude)
+registerValue('string-contains', stringContains, Prelude)
 
 function stringSplit (s: string, sep: string): Value.List {
   checkContract(arguments, contract('string-split', [C.string, C.string]))
@@ -907,14 +902,14 @@ function stringSplit (s: string, sep: string): Value.List {
   }
   return ret
 }
-registerFn('string-split', stringSplit, Prelude)
+registerValue('string-split', stringSplit, Prelude)
 
 
 function stringSplitVector (s: string, sep: string): string[] {
   checkContract(arguments, contract('string-split-vector', [C.string, C.string])) 
   return s.split(sep)
 }
-registerFn('string-split-vector', stringSplitVector, Prelude)
+registerValue('string-split-vector', stringSplitVector, Prelude)
 
 // TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
 // TODO: need to add a custom renderer for reactive file blobs
@@ -932,7 +927,7 @@ function withFile (callback: Value.ScamperFn): ReactiveFile {
     callback
   }
 }
-registerFn('with-file', withFile, Prelude)
+registerValue('with-file', withFile, Prelude)
 
 function renderReactiveFile (v: any): HTMLElement {
   const rf = v as ReactiveFile
@@ -975,13 +970,13 @@ function vectorQ (x: any): boolean {
   checkContract(arguments, contract('vector?', [C.any]))
   return Value.isArray(x)
 }
-registerFn('vector?', vectorQ, Prelude)
+registerValue('vector?', vectorQ, Prelude)
 
 function vector (...xs: Value.T[]): Value.T[] {
   checkContract(arguments, contract('vector', [], C.any))
   return xs
 }
-registerFn('vector', vector, Prelude)
+registerValue('vector', vector, Prelude)
 
 function makeVector (n: number, fill: Value.T): Value.T[] {
   checkContract(arguments, contract('make-vector', [C.integer, C.any]))
@@ -991,25 +986,25 @@ function makeVector (n: number, fill: Value.T): Value.T[] {
   }
   return ret
 }
-registerFn('make-vector', makeVector, Prelude)
+registerValue('make-vector', makeVector, Prelude)
 
 function vectorLength (v: Value.T[]): number {
   checkContract(arguments, contract('vector-length', [C.vector])) 
   return v.length
 }
-registerFn('vector-length', vectorLength, Prelude)
+registerValue('vector-length', vectorLength, Prelude)
 
 function vectorRef (v: Value.T[], i: number): Value.T {
   checkContract(arguments, contract('vector-ref', [C.vector, C.integer]))
   return v[i]
 }
-registerFn('vector-ref', vectorRef, Prelude)
+registerValue('vector-ref', vectorRef, Prelude)
 
 function vectorSet (v: Value.T[], i: number, x: Value.T): void {
   checkContract(arguments, contract('vector-set!', [C.vector, C.integer, C.any]))
   v[i] = x
 }
-registerFn('vector-set!', vectorSet, Prelude)
+registerValue('vector-set!', vectorSet, Prelude)
 
 function vectorFill (v: Value.T[], x: Value.T): void {
   checkContract(arguments, contract('vector-fill!', [C.vector, C.any]))
@@ -1017,7 +1012,7 @@ function vectorFill (v: Value.T[], x: Value.T): void {
     v[i] = x
   }
 }
-registerFn('vector-fill!', vectorFill, Prelude)
+registerValue('vector-fill!', vectorFill, Prelude)
 
 function vectorToList (v: Value.T[]): Value.List {
   checkContract(arguments, contract('vector->list', [C.vector]))
@@ -1027,7 +1022,7 @@ function vectorToList (v: Value.T[]): Value.List {
   }
   return ret
 }
-registerFn('vector->list', vectorToList, Prelude)
+registerValue('vector->list', vectorToList, Prelude)
 
 function listToVector (l: Value.List): Value.T[] {
   checkContract(arguments, contract('list->vector', [C.list]))
@@ -1038,7 +1033,7 @@ function listToVector (l: Value.List): Value.T[] {
   }
   return ret
 }
-registerFn('list->vector', listToVector, Prelude)
+registerValue('list->vector', listToVector, Prelude)
 
 function vectorRange (...args: number[]): number[] {
   checkContract(arguments, contract('vector-range', [], C.number))
@@ -1060,7 +1055,7 @@ function vectorRange (...args: number[]): number[] {
     return arr
   }
 }
-registerFn('vector-range', vectorRange, Prelude)
+registerValue('vector-range', vectorRange, Prelude)
 
 function vectorAppend (...vecs: Value.T[][]): Value.T[] {
   checkContract(arguments, contract('vector-append', [], C.vector))
@@ -1072,7 +1067,7 @@ function vectorAppend (...vecs: Value.T[][]): Value.T[] {
   }
   return arr
 }
-registerFn('vector-append', vectorAppend, Prelude)
+registerValue('vector-append', vectorAppend, Prelude)
 
 // Bytevectors (6.9)
 
@@ -1084,14 +1079,14 @@ function procedureQ (x: any): boolean {
   checkContract(arguments, contract('procedure?', [C.any]))
   return Value.isClosure(x) || Value.isJsFunction(x)
 }
-registerFn('procedure?', procedureQ, Prelude)
+registerValue('procedure?', procedureQ, Prelude)
 
 function apply (f: Value.Closure | Function, args: Value.List): Value.T {
   checkContract(arguments, contract('apply', [C.func, C.list]))
 
   return callFunction(f, ...Value.listToVector(args))
 }
-registerFn('apply', apply, Prelude)
+registerValue('apply', apply, Prelude)
 
 function stringMap (f: Value.Closure | Function, s: string): string {
   checkContract(arguments, contract('string-map', [C.func, C.string]))
@@ -1101,7 +1096,7 @@ function stringMap (f: Value.Closure | Function, s: string): string {
   }
   return chs.map((c) => callFunction(f, c).value).join('')
 }
-registerFn('string-map', stringMap, Prelude)
+registerValue('string-map', stringMap, Prelude)
 
 /**
  * @param arr - a rectangular array of arrays, i.e., each array has the same
@@ -1150,7 +1145,7 @@ function map (f: Value.Closure | Function, ...lsts: Value.List[]): Value.List {
     return Value.vectorToList(xs.map(vs => callFunction(f, ...vs)))
   }
 }
-registerFn('map', map, Prelude)
+registerValue('map', map, Prelude)
 
 // Additional list pipeline functions from racket/base
 
@@ -1165,7 +1160,7 @@ function filter (f: Value.Closure | Function, lst: Value.List): Value.List {
   }
   return Value.vectorToList(values) 
 }
-registerFn('filter', filter, Prelude)
+registerValue('filter', filter, Prelude)
 
 function fold (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold', [C.func, C.any, C.list]))
@@ -1176,7 +1171,7 @@ function fold (f: Value.Closure | Function, init: Value.T, lst: Value.List): Val
   }
   return acc
 }
-registerFn('fold', fold, Prelude)
+registerValue('fold', fold, Prelude)
 
 function reduce (f: Value.Closure | Function, lst: Value.List): Value.T {
   checkContract(arguments, contract('reduce', [C.func, C.nonemptyList]))
@@ -1188,7 +1183,7 @@ function reduce (f: Value.Closure | Function, lst: Value.List): Value.T {
   }
   return acc
 }
-registerFn('reduce', reduce, Prelude)
+registerValue('reduce', reduce, Prelude)
 
 function foldLeft (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold-left', [C.func, C.any, C.list]))
@@ -1199,7 +1194,7 @@ function foldLeft (f: Value.Closure | Function, init: Value.T, lst: Value.List):
   }
   return acc
 }
-registerFn('fold-left', foldLeft, Prelude)
+registerValue('fold-left', foldLeft, Prelude)
 
 function foldRight (f: Value.Closure | Function, init: Value.T, lst: Value.List): Value.T {
   checkContract(arguments, contract('fold-right', [C.func, C.any, C.list]))
@@ -1210,7 +1205,7 @@ function foldRight (f: Value.Closure | Function, init: Value.T, lst: Value.List)
   }
   return acc
 }
-registerFn('fold-right', foldRight, Prelude)
+registerValue('fold-right', foldRight, Prelude)
 
 function reduceRight (f: Value.Closure | Function, lst: Value.List): Value.T {
   checkContract(arguments, contract('reduce-right', [C.func, C.nonemptyList]))
@@ -1221,7 +1216,7 @@ function reduceRight (f: Value.Closure | Function, lst: Value.List): Value.T {
   }
   return acc
 }
-registerFn('reduce-right', reduceRight, Prelude)
+registerValue('reduce-right', reduceRight, Prelude)
 
 function vectorMap (f: Value.Closure | Function, ...vecs: Value.T[][]): Value.T[] {
   checkContract(arguments, contract('vector-map', [C.func], C.vector))
@@ -1237,7 +1232,7 @@ function vectorMap (f: Value.Closure | Function, ...vecs: Value.T[][]): Value.T[
     return xs.map(vs => callFunction(f, ...vs))
   }
 }
-registerFn('vector-map', vectorMap, Prelude)
+registerValue('vector-map', vectorMap, Prelude)
 
 function vectorMapBang (f: Value.Closure | Function, vec: Value.T[]): void {
   checkContract(arguments, contract('vector-map!', [C.func, C.vector]))
@@ -1245,7 +1240,7 @@ function vectorMapBang (f: Value.Closure | Function, vec: Value.T[]): void {
     vec[i] = callFunction(f, vec[i])
   }
 }
-registerFn('vector-map!', vectorMapBang, Prelude)
+registerValue('vector-map!', vectorMapBang, Prelude)
 
 function vectorForEach (f: Value.Closure | Function, vec: Value.T[]): void {
   checkContract(arguments, contract('vector-for-each', [C.func, C.vector]))
@@ -1253,7 +1248,7 @@ function vectorForEach (f: Value.Closure | Function, vec: Value.T[]): void {
     callFunction(f, vec[i])
   }
 }
-registerFn('vector-for-each', vectorForEach, Prelude)
+registerValue('vector-for-each', vectorForEach, Prelude)
 
 function forRange (start: number, end: number, f: Value.Closure | Function): void {
   checkContract(arguments, contract('for-range', [C.integer, C.integer, C.func]))
@@ -1267,7 +1262,7 @@ function forRange (start: number, end: number, f: Value.Closure | Function): voi
     }
   }
 }
-registerFn('for-range', forRange, Prelude)
+registerValue('for-range', forRange, Prelude)
 
 // TODO: implement:
 //   (for-each fn l1 ... lk)
@@ -1294,7 +1289,7 @@ function vectorFilter (f: Value.Closure | Function, lst: Value.T[]): Value.T[] {
   }
   return ret
 }
-registerFn('vector-filter', vectorFilter, Prelude)
+registerValue('vector-filter', vectorFilter, Prelude)
 
 // TODO: implement fold/reduce variants for vectors
 
@@ -1302,19 +1297,19 @@ function voidQ (x: any): boolean {
   checkContract(arguments, contract('void?', [C.any]))
   return x === undefined
 }
-registerFn('void?', voidQ, Prelude)
+registerValue('void?', voidQ, Prelude)
 
 function error (msg: string): never {
   checkContract(arguments, contract('error', [C.string]))
   throw new ScamperError ('Runtime', msg)
 }
-registerFn('error', error, Prelude)
+registerValue('error', error, Prelude)
 
 function qq (): never {
   checkContract(arguments, contract('??', []))
   throw new ScamperError ('Runtime', 'Hole encountered in program!')
 }
-registerFn('??', qq, Prelude)
+registerValue('??', qq, Prelude)
 
 function compose (...fss: (Value.Closure | Function)[]): Value.Closure | Function {
   checkContract(arguments, contract('compose', [C.func], C.func))
@@ -1327,8 +1322,8 @@ function compose (...fss: (Value.Closure | Function)[]): Value.Closure | Functio
     return ret
   }
 }
-registerFn('compose', compose, Prelude)
-registerFn('o', compose, Prelude)
+registerValue('compose', compose, Prelude)
+registerValue('o', compose, Prelude)
 
 function pipe (init: Value.T, ...fs: (Value.Closure | Function)[]): Value.T {
   checkContract(arguments, contract('|>', [C.any, C.func], C.func))
@@ -1338,7 +1333,7 @@ function pipe (init: Value.T, ...fs: (Value.Closure | Function)[]): Value.T {
   }
   return acc
 }
-registerFn('|>', pipe, Prelude)
+registerValue('|>', pipe, Prelude)
 
 function range (...args: number[]): Value.List {
   checkContract(arguments, contract('range', [], C.number))
@@ -1360,13 +1355,13 @@ function range (...args: number[]): Value.List {
     return Value.vectorToList(arr)
   }
 }
-registerFn('range', range, Prelude)
+registerValue('range', range, Prelude)
 
 function random (n: number): number {
   checkContract(arguments, contract('random', [C.integer])) 
   return Math.floor(Math.random() * n)
 }
-registerFn('random', random, Prelude)
+registerValue('random', random, Prelude)
 
 function withHandler (handler: Value.Closure | Function, fn: Value.Closure | Function, ...args: Value.T[]): Value.T {
   checkContract(arguments, contract('with-handler', [C.func, C.func], C.any))
@@ -1376,7 +1371,7 @@ function withHandler (handler: Value.Closure | Function, fn: Value.Closure | Fun
     return callFunction(handler, (e as ScamperError).message)
   }
 }
-registerFn('with-handler', withHandler, Prelude)
+registerValue('with-handler', withHandler, Prelude)
 
 // Exceptions (6.11)
 
@@ -1402,7 +1397,7 @@ function ignore (_v: Value.T): HTMLElement {
   ret.style.display = 'non'
   return ret
 }
-registerFn('ignore', ignore, Prelude)
+registerValue('ignore', ignore, Prelude)
 
 // Additional constants
 
@@ -1411,10 +1406,10 @@ const nullConst = null
 const piConst = Math.PI
 const voidConst = undefined
 
-Prelude.push(['else', elseConst])
-Prelude.push(['null', nullConst])
-Prelude.push(['pi', piConst])
-Prelude.push(['π', piConst])
-Prelude.push(['void', voidConst])
+registerValue('else', elseConst, Prelude)
+registerValue('null', nullConst, Prelude)
+registerValue('pi', piConst, Prelude)
+registerValue('π', piConst, Prelude)
+registerValue('void', voidConst, Prelude)
 
 export default Prelude
