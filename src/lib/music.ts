@@ -213,6 +213,28 @@ const compositionC: C.Spec = {
   errorMsg: (actual: any) => `expected a composition, received ${Value.typeOf(actual)}`,
 }
 
+function loadInstrument(n: number): void {
+  C.checkContract(arguments, contract('load-instrument', [C.nat]))
+  waf().loadInstrument(n)
+}
+registerValue('load-instrument', loadInstrument, Music)
+
+function loadPercussion(n: number): void {
+  C.checkContract(arguments, contract('load-percussion', [C.nat]))
+  waf().loadInstrument(n, true)
+}
+registerValue('load-percussion', loadPercussion, Music)
+
+function useHighQualityInstruments(enable: boolean): void {
+  C.checkContract(arguments, contract('use-high-quality-instruments', [C.boolean]))
+  if (enable) {
+    waf().fontName = 'FluidR3_GM'
+  } else {
+    waf().fontName = 'Chaos'
+  }
+}
+registerValue('use-high-quality-instruments', useHighQualityInstruments, Music)
+
 /***** Rendering **************************************************************/
 
 type MidiMsg = {

@@ -209,3 +209,24 @@ export const playComposition: Doc = new Doc(
   [ new ArgDoc('comp', 'composition?') ],
   'Plays the given composition. Note that this function must be triggered from some user action on the screen, _e.g._, a button click. Otherwise, the browser will silently block audio playback.'
 )
+
+export const loadInstrument: Doc = new Doc(
+  'load-instrument',
+  'void',
+  [ new ArgDoc('prog', 'integer?, a valid MIDI program number (0--127)') ],
+  'Loads the requested tone MIDI instrument.'
+)
+
+export const loadPercussion: Doc = new Doc(
+  'load-percussion',
+  'void',
+  [ new ArgDoc('prog', 'integer?, a valid MIDI program number (0--127)') ],
+  'Loads the requested percussion MIDI instrument.'
+)
+
+export const useHighQualityInstruments: Doc = new Doc(
+  'use-high-quality-instruments',
+  'void',
+  [ new ArgDoc('enable', 'boolean?, whether to use high-quality MIDI instruments') ],
+  'Enables (or disables) the use of high-quality MIDI instruments. Note that high-quality instruments are much bigger and take longer to load.'
+)
