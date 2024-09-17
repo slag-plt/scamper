@@ -1,7 +1,7 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { ScamperError, Value } from '../../lang.js'
+import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
 import { callFunction } from '../../sem.js'
 import { rgb } from './rgb.js'
 
@@ -103,15 +103,10 @@ Render.addCustomWebRenderer(isReactiveImageFile, render)
 
 /***** Exports ****************************************************************/
 
-export const lib: [string, Value.T][] = []
-
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
+export const lib: Library = emptyLibrary()
 
 // Image loading
-registerFn('with-image-file', withImageFile, lib)
+registerValue('with-image-file', withImageFile, lib)
 
 // Per-pixel manipulation
-registerFn('pixel-map', pixelMap, lib)
+registerValue('pixel-map', pixelMap, lib)

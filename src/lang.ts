@@ -370,3 +370,19 @@ export class Env {
     return ret 
   }
 }
+
+export type Library = {
+  lib: [string, Value.T][],
+  initializer: Function | undefined
+}
+
+export function emptyLibrary(): Library {
+  return { lib: [], initializer: undefined }
+}
+
+export function registerValue (name: string, v: Value.T, library: Library) {
+  if (typeof v === 'function') {
+    Value.nameFn(name, v)
+  }
+  library.lib.push([name, v])
+}

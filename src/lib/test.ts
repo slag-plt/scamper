@@ -1,15 +1,10 @@
-import { ScamperError, Value } from '../lang.js'
+import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../lang.js'
 import { callFunction } from '../sem.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Test: [string, Value.T][] = []
+const Test: Library = emptyLibrary()
 
 type Result = Ok | Error
 interface Ok extends Value.Struct { [Value.structKind]: 'ok', desc: string }
@@ -19,13 +14,13 @@ function testOk (desc: string): Ok {
   checkContract(arguments, contract('test-ok', [C.string]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'ok', desc }
 }
-registerFn('test-ok', testOk, Test)
+registerValue('test-ok', testOk, Test)
 
 function testError (desc: string, reason: HTMLElement): Error {
   checkContract(arguments, contract('test-error', [C.string, C.html]))
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'error', desc, reason }
 }
-registerFn('test-error', testError, Test)
+registerValue('test-error', testError, Test)
 
 function testCase (desc: string, eqFn: Value.ScamperFn, expected: Value.T, testFn: Value.ScamperFn): Result {
   checkContract(arguments, contract('test-case', [C.string, C.func, C.any, C.func]))
@@ -51,7 +46,7 @@ function testCase (desc: string, eqFn: Value.ScamperFn, expected: Value.T, testF
     return testError(desc, reason)
   }
 }
-registerFn('test-case', testCase, Test)
+registerValue('test-case', testCase, Test)
 
 function testExn (desc: string, testFn: Value.ScamperFn): Result {
   try {
@@ -61,7 +56,7 @@ function testExn (desc: string, testFn: Value.ScamperFn): Result {
     return testOk(desc)
   }
 }
-registerFn('test-exn', testExn, Test)
+registerValue('test-exn', testExn, Test)
 
 function isResult (v: any): boolean {
   return Value.isStructKind(v, 'ok') || Value.isStructKind(v, 'error')

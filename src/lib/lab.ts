@@ -1,13 +1,8 @@
-import { Value } from '../lang.js'
+import { emptyLibrary, Library, registerValue } from '../lang.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Lab: [string, Value.T][] = []
+const Lab: Library = emptyLibrary()
 
 function title (text: string) {
   checkContract(arguments, contract('title', [C.string]))
@@ -15,7 +10,7 @@ function title (text: string) {
   ret.innerText = text
   return ret
 }
-registerFn('title', title, Lab)
+registerValue('title', title, Lab)
 
 function part (text: string) {
   checkContract(arguments, contract('part', [C.string]))
@@ -23,7 +18,7 @@ function part (text: string) {
   ret.innerText = text
   return ret
 }
-registerFn('part', part, Lab)
+registerValue('part', part, Lab)
 
 function problem (text: string) {
   checkContract(arguments, contract('problem', [C.string]))
@@ -31,7 +26,7 @@ function problem (text: string) {
   ret.innerText = text
   return ret
 }
-registerFn('problem', problem, Lab)
+registerValue('problem', problem, Lab)
 
 function description (text: string) {
   checkContract(arguments, contract('description', [C.string]))
@@ -41,6 +36,6 @@ function description (text: string) {
   ret.appendChild(em)
   return ret
 }
-registerFn('description', description, Lab)
+registerValue('description', description, Lab)
 
 export default Lab

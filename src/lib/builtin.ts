@@ -1,4 +1,4 @@
-import { Value } from '../lang.js'
+import { Library } from '../lang.js'
 import { imageLib } from './image.js'
 import Lab from './lab.js'
 import Music from './music.js'
@@ -7,7 +7,7 @@ import Audio from './audio.js'
 import Canvas from './canvas.js'
 import Html from './html.js'
 
-const builtinLibs: Map<string, [string, Value.T][]> = new Map([
+const builtinLibs: Map<string, Library> = new Map([
   ['image', imageLib],
   ['lab', Lab],
   ['music', Music],

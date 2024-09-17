@@ -5,12 +5,7 @@ import * as C from '../contract.js'
 import { Drawing, render } from './image/drawing.js'
 import { callFunction } from '../sem.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Canvas: [string, Value.T][] = []
+const Canvas: L.Library = L.emptyLibrary()
 
 function makeCanvas (width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
@@ -19,7 +14,7 @@ function makeCanvas (width: number, height: number): HTMLCanvasElement {
   canvas.height = height
   return canvas
 }
-registerFn('make-canvas', makeCanvas, Canvas)
+L.registerValue('make-canvas', makeCanvas, Canvas)
 
 function drawRectangle (canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: string): void {
   checkContract(arguments, contract('draw-rectangle', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, C.string]))
@@ -34,7 +29,7 @@ function drawRectangle (canvas: HTMLCanvasElement, x: number, y: number, width: 
     throw new ScamperError('Runtime', `draw-rectangle: expected "solid" or "outline", but got ${mode}`)
   }
 }
-registerFn('draw-rectangle', drawRectangle, Canvas)
+L.registerValue('draw-rectangle', drawRectangle, Canvas)
 
 function drawEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: string): void {
   checkContract(arguments, contract('draw-ellipse', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, C.string]))
@@ -51,7 +46,7 @@ function drawEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: 
     throw new ScamperError('Runtime', `draw-ellipse: expected "solid" or "outline", but got ${mode}`)
   }
 }
-registerFn('draw-ellipse', drawEllipse, Canvas)
+L.registerValue('draw-ellipse', drawEllipse, Canvas)
 
 function drawCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
   checkContract(arguments, contract('draw-circle', [C.any, C.number, C.number, C.number, C.string, C.string]))
@@ -68,7 +63,7 @@ function drawCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: nu
     throw new ScamperError('Runtime', `draw-circle: expected "solid" or "outline", but got ${mode}`)
   }
 }
-registerFn('draw-circle', drawCircle, Canvas)
+L.registerValue('draw-circle', drawCircle, Canvas)
 
 function drawText (canvas: HTMLCanvasElement, text: string, x: number, y: number, mode: string, color: string, font: string): void {
   checkContract(arguments, contract('draw-text', [C.any, C.string, C.integer, C.integer, C.string, C.string, C.string]))
@@ -84,14 +79,14 @@ function drawText (canvas: HTMLCanvasElement, text: string, x: number, y: number
     throw new ScamperError('Runtime', `draw-text: expected "solid" or "outline", but got ${mode}`)
   }
 }
-registerFn('draw-text', drawText, Canvas)
+L.registerValue('draw-text', drawText, Canvas)
 
 function drawDrawing (canvas: HTMLCanvasElement, drawing: Drawing, x: number, y: number): void {
   checkContract(arguments, contract('draw-drawing', [C.any, C.any, C.integer, C.integer]))
   const ctx = canvas.getContext('2d')!
   render(x, y, drawing, canvas)
 }
-registerFn('draw-drawing', drawDrawing, Canvas)
+L.registerValue('draw-drawing', drawDrawing, Canvas)
 
 function drawPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, color: string): void {
   checkContract(arguments, contract('draw-path', [C.any, C.list, C.string, C.string]))
@@ -119,7 +114,7 @@ function drawPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, col
     ctx.stroke()
   }
 }
-registerFn('draw-path', drawPath, Canvas)
+L.registerValue('draw-path', drawPath, Canvas)
 
 function animateWith (fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
@@ -134,7 +129,7 @@ function animateWith (fn: L.Value.ScamperFn): void {
   }
   window.requestAnimationFrame(callback)
 }
-registerFn('animate-with', animateWith, Canvas)
+L.registerValue('animate-with', animateWith, Canvas)
 
 function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('canvas-onclick', [C.any, C.func]))
@@ -150,6 +145,6 @@ function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void 
   }
 }
 
-registerFn('canvas-onclick', canvasOnclick, Canvas)
+L.registerValue('canvas-onclick', canvasOnclick, Canvas)
 
 export default Canvas

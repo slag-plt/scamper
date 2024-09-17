@@ -32,7 +32,10 @@ export class Scamper {
     if (opts.initialEnv !== undefined) {
       this.env = opts.initialEnv
     } else {
-      this.env = new Env([...Prelude,])
+      if (Prelude.initializer !== undefined) {
+        Prelude.initializer()
+      }
+      this.env = new Env([...Prelude.lib,])
     }
     this.prog = Parser.parseProgram(src)
     this.sem = new Sem.Sem(this.display, builtinLibs, opts.isTracing, opts.defaultDisplay, this.env, this.prog)

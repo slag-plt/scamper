@@ -9,7 +9,7 @@ function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
   map.push([name, fn])
 }
 
-const Audio: [string, Value.T][] = []
+const Audio: L.Library = L.emptyLibrary()
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
 // TODO: need to factor appropriately so that we aren't initializing any
@@ -33,14 +33,14 @@ function sampleNode (data: number[]): SampleNode {
   }
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'sample', data: new Float32Array(data) }
 }
-registerFn('sample-node', sampleNode, Audio)
+L.registerValue('sample-node', sampleNode, Audio)
 
 function audioContext (sampleRate: number): AudioContext {
   checkContract(arguments, contract('audio-context', [C.integer]))
   const AudioContext = window.AudioContext
   return new AudioContext({ sampleRate })
 }
-registerFn('audio-context', sampleNode, Audio)
+L.registerValue('audio-context', sampleNode, Audio)
 
 interface AudioPipeline extends Value.Struct {
   [Value.structKind]: 'audio-pipeline',
@@ -63,7 +63,7 @@ function audioPipeline (ctx: AudioContext, pipeline: AudioNode, ...nodes: AudioN
   onOffNode.connect(ctx.destination)
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'audio-pipeline', ctx, pipeline, onOffNode }
 }
-registerFn('audio-pipeline', audioPipeline, Audio)
+L.registerValue('audio-pipeline', audioPipeline, Audio)
 
 function oscillatorNode (ctx: AudioContext, type: OscillatorType, freq: number): OscillatorNode {
   checkContract(arguments, contract('oscillator-node', [C.any, C.string, C.integer]))
@@ -72,7 +72,7 @@ function oscillatorNode (ctx: AudioContext, type: OscillatorType, freq: number):
   oscillator.frequency.value = freq
   return oscillator
 }
-registerFn('oscillator-node', oscillatorNode, Audio)
+L.registerValue('oscillator-node', oscillatorNode, Audio)
 
 // NOTE: microphone usage requires an async call! Oof! How are we suppose to
 // handle that in our synchronous setting?
@@ -92,13 +92,13 @@ function audioFileNode (ctx: AudioContext, filename: string): MediaElementAudioS
   const source = new MediaElementAudioSourceNode(ctx, { mediaElement })
   return source
 }
-registerFn('audio-file-node', audioFileNode, Audio)
+L.registerValue('audio-file-node', audioFileNode, Audio)
 
 function delayNode (ctx: AudioContext, delayTime: number): DelayNode {
   checkContract(arguments, contract('delay-node', [C.any, C.integer]))
   return new DelayNode(ctx, { delayTime })
 }
-registerFn('delay-node', delayNode, Audio)
+L.registerValue('delay-node', delayNode, Audio)
 
 function playSample (pipeline: SampleNode): void {
   checkContract(arguments, contract('play-sample', [C.any]))
@@ -117,7 +117,7 @@ function playSample (pipeline: SampleNode): void {
     throw new ScamperError('Runtime', `expected a sample node, received ${pipeline}`)
   }
 }
-registerFn('play-sample', playSample, Audio)
+L.registerValue('play-sample', playSample, Audio)
 
 export default Audio
 

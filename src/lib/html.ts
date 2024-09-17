@@ -4,12 +4,7 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { callFunction } from '../sem.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
-const Html: [string, Value.T][] = []
+const Html: L.Library = L.emptyLibrary()
 
 function textArea (id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))
@@ -17,13 +12,13 @@ function textArea (id: string): HTMLTextAreaElement {
   ret.id = id
   return ret
 }
-registerFn('text-area', textArea, Html)
+L.registerValue('text-area', textArea, Html)
 
 function textAreaGet (textArea: HTMLTextAreaElement): string {
   checkContract(arguments, contract('text-area-get', [C.any]))
   return textArea.textContent!
 }
-registerFn('text-area-get', textAreaGet, Html)
+L.registerValue('text-area-get', textAreaGet, Html)
 
 function button (label: string, fn: Function): HTMLButtonElement {
   checkContract(arguments, contract('button', [C.string, C.any]))
@@ -39,7 +34,7 @@ function button (label: string, fn: Function): HTMLButtonElement {
   }
   return ret
 }
-registerFn('button', button, Html)
+L.registerValue('button', button, Html)
 
 function tag (name: string, ...children: Value.T[]): HTMLElement {
   checkContract(arguments, contract('tag', [C.string], C.any))
@@ -70,7 +65,7 @@ function tag (name: string, ...children: Value.T[]): HTMLElement {
   }
   return elt
 }
-registerFn('tag', tag, Html)
+L.registerValue('tag', tag, Html)
 
 function tagSetChildren (elt: HTMLElement, ...children: Value.T[]) {
   checkContract(arguments, contract('tag-set-children', [C.any], C.any))
@@ -86,7 +81,7 @@ function tagSetChildren (elt: HTMLElement, ...children: Value.T[]) {
     }
   }
 }
-registerFn('tag-set-children!', tagSetChildren, Html)
+L.registerValue('tag-set-children!', tagSetChildren, Html)
 
 function onKeydown (fn: Function): void {
   checkContract(arguments, contract('on-keydown!', [C.func]))
@@ -98,6 +93,6 @@ function onKeydown (fn: Function): void {
     }
   })
 }
-registerFn('on-keydown!', onKeydown, Html)
+L.registerValue('on-keydown!', onKeydown, Html)
 
 export default Html
