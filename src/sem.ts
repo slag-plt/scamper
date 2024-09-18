@@ -660,13 +660,22 @@ export class Sem {
   display: HTMLElement
   env: Env
   prog: Prog
+  src: string
   curStmt: number
   state?: ExecutionState
   builtinLibs: Map<Id, Library>
   traces?: HTMLElement[]
   defaultDisplay: boolean
+  isPrintingCode: boolean
 
-  constructor (display: HTMLElement, builtinLibs: Map<Id, Library>, isTracing: boolean, defaultDisplay: boolean, env: Env, prog: Prog) {
+  constructor (display: HTMLElement,
+               builtinLibs: Map<Id, Library>,
+               isTracing: boolean,
+               defaultDisplay: boolean,
+               isPrintingCode: boolean,
+               env: Env,
+               prog: Prog,
+               src: string) {
     this.display = display
     this.builtinLibs = builtinLibs
     if (isTracing) {
@@ -679,10 +688,12 @@ export class Sem {
     }
     this.env = env
     this.prog = prog
+    this.src = src
     // N.B., start at -1 so that we can advance immediately
     this.curStmt = -1
     this.state = undefined
     this.defaultDisplay = defaultDisplay
+    this.isPrintingCode = isPrintingCode
     this.advance()
   }
 
@@ -705,8 +716,19 @@ export class Sem {
     }
   }
 
+  tryPrintCurrentCodeSegment(): void {
+    if (this.isPrintingCode) {
+      const start        = this.curStmt === 0 ? 0 : this.prog[this.curStmt - 1].range.end.idx + 1
+      const end          = this.prog[this.curStmt].range.end.idx + 1
+      const seg          = this.src.substring(start, end)
+      const renderedCode = mkCodeElement(seg.trim())
+      this.display.appendChild(renderedCode)
+    }
+  }
+
   stepDefine (name: string, body: Op.T[], range: Range): void {
     if (this.state === undefined) {
+      this.tryPrintCurrentCodeSegment()
       this.state = new ExecutionState(this.env, body)
     }
     if (!this.state.isFinished()) {
@@ -745,6 +767,7 @@ export class Sem {
   }
 
   stepImport (modName: string, range: Range): void {
+    this.tryPrintCurrentCodeSegment()
     if (this.builtinLibs.has(modName)) {
       const library = this.builtinLibs.get(modName)!
       this.env = this.env.extend(library.lib)
@@ -762,6 +785,7 @@ export class Sem {
   }
 
   stepStruct (id: string, fields: string[]): void {
+    this.tryPrintCurrentCodeSegment()
     this.env = executeStructDecl(id, fields, this.env)
     if (this.isTracing()) {
       this.appendToCurrentTrace(`Struct ${id} declared`)
@@ -771,6 +795,7 @@ export class Sem {
 
   stepDisplay (body: Op.T[], range?: Range): void {
     if (this.state === undefined) {
+      this.tryPrintCurrentCodeSegment()
       this.state = new ExecutionState(this.env, body)
     }
     if (!this.state.isFinished()) {
@@ -797,6 +822,7 @@ export class Sem {
 
   stepExp (body: Op.T[]): void {
     if (this.state === undefined) {
+      this.tryPrintCurrentCodeSegment()
       this.state = new ExecutionState(this.env, (body))
     }
     if (!this.state.isFinished()) {

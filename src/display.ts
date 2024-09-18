@@ -3,6 +3,7 @@ import { charToName, ICE, ScamperError, Value } from './lang.js'
 export function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
   ret.appendChild(document.createTextNode(text))
+  // TODO: here is where I want to syntax highlight, I think!
   return ret
 }
 

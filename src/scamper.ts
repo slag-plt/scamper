@@ -7,6 +7,7 @@ import Prelude from './lib/prelude.js'
 
 export type ScamperOptions = {
   isTracing: boolean
+  isPrintingCode: boolean
   initialEnv?: Env
   defaultDisplay: boolean
 }
@@ -14,6 +15,7 @@ export type ScamperOptions = {
 export function mkOptions(): ScamperOptions {
   return {
     isTracing: false,
+    isPrintingCode: true,
     initialEnv: undefined,
     defaultDisplay: true
   }
@@ -38,7 +40,16 @@ export class Scamper {
       this.env = new Env([...Prelude.lib,])
     }
     this.prog = Parser.parseProgram(src)
-    this.sem = new Sem.Sem(this.display, builtinLibs, opts.isTracing, opts.defaultDisplay, this.env, this.prog)
+    this.sem = new Sem.Sem(
+      this.display,
+      builtinLibs,
+      // TODO: probably should just pass opts through...
+      opts.isTracing,
+      opts.defaultDisplay,
+      opts.isPrintingCode,
+      this.env,
+      this.prog,
+      src)
   }
 
   runProgram () { this.sem.execute() }
