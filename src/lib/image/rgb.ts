@@ -249,18 +249,13 @@ function findColors (name: string): Value.List {
 // rgb-string?
 // rgb-string->rgb
 
-function rgbToString (rgba: Rgb): string {
-  checkContract(arguments, contract('rgb-to-string', [rgbS]))
-  return `rgb(${rgba.red}, ${rgba.green}, ${rgba.blue}, ${rgba.alpha})`
-}
-
 function fracToPercentString(n: number, m: number): string {
   return `${Math.trunc(n/m * 100)}%`
 }
 
-function rbgToCssString (rgba: Rgb): string {
-  checkContract(arguments, contract('rgb-to-css-string', [rgbS]))
-  return `rgb(${rgba.red} ${rgba.green} ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
+function rgbToString (rgba: Rgb): string {
+  checkContract(arguments, contract('rgb->string', [rgbS]))
+  return `rgb(${rgba.red}  ${rgba.green}  ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
 }
 
 // color->string (variable type "color" argument to rgb string)
@@ -531,8 +526,8 @@ function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
 function renderRgb(rgb: Rgb): HTMLElement {
   const div = document.createElement('div')
   const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rbgToCssString(textColor)
-  div.style.backgroundColor = rbgToCssString(rgb)
+  div.style.color = rgbToString(textColor)
+  div.style.backgroundColor = rgbToString(rgb)
   div.style.width = 'fit-content'
   div.style.border = '1px solid black'
   div.style.padding = '0.25em'
@@ -562,7 +557,7 @@ registerValue('all-color-names', allColorNames, lib)
 registerValue('find-colors', findColors, lib)
 
 // Color strings
-registerValue('rbg->string', rgbToString, lib)
+registerValue('rgb->string', rgbToString, lib)
 
 // RGB hex strings
 
