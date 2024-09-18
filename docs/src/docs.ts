@@ -48,3 +48,11 @@ export class ArgDoc {
     return `${this.name}: ${this.desc}`
   }
 }
+
+export class NoArgDoc extends ArgDoc {
+  constructor () {
+    super('', '')
+  } 
+
+  public toString(): string { return '' }
+}
