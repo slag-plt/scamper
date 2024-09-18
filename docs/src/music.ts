@@ -109,7 +109,7 @@ export const instrument: Doc = new Doc(
   'instrument',
   'composition?',
   [ new ArgDoc('prog', 'integer?, a valid MIDI program number (0--127)') ],
-  'Creates a new composition that plays composition `comp` played with MIDI sound or program `prog`. See the Generam MIDI Wikipedia for a complete list of MIDI program numbers to sound mappings.'
+  'Creates a new composition that plays composition `comp` played with MIDI sound or program `prog`. See the "General MIDI" Wikipedia article for a complete list of MIDI program numbers to sound mappings. Additionally, you should call `load-instrument` at the top-level of your program to download the desired instrument\'s soundfont before using this function.'
 )
 
 export const trigger: Doc = new Doc(
@@ -133,25 +133,23 @@ export const percussion: Doc = new Doc(
   'A modification that switches playback to percussion mode (MIDI channel 9). In percussion mode, each note corresponds to one percussion instrument.'
 )
 
-export const bend: Doc = new Doc(
-  'bend',
-  'composition?',
-  [ new ArgDoc('amount', 'number?, -1 <= amount <= 1') ],
-  'Creates a new composition where the pitch is bent by a factor of `amount × 2` semitones. If `amount = 0`, then the pitch is played normally.'
-)
-
 export const tempo: Doc = new Doc(
   'tempo',
-  'composition?',
-  [ new ArgDoc('beat', 'dur?, the pulse of the tempo'), new ArgDoc('bpm', 'number?, beats per minute'), new ArgDoc('comp', 'composition?') ],
-  'Creates a new composition that plays `comp` at the given `beat` and `bpm`.'
+  'mod?',
+  [
+    new ArgDoc('beat', 'dur?, the pulse of the tempo'),
+    new ArgDoc('bpm', 'number?, beats per minute')
+  ],
+  'A modification that plays the modified composition at the given `beat` and `bpm`.'
 )
 
 export const dynamics: Doc = new Doc(
   'dynamics',
-  'composition?',
-  [ new ArgDoc('velocity', 'integer?, 0 <= level <= 127'), new ArgDoc('comp', 'composition?') ],
-  'Creates a new composition that plays `comp` at the given MIDI `velocity` value. Note that a `velocity` of `127` corresponds to full volume for that note.'
+  'mod?',
+  [
+    new ArgDoc('velocity', 'integer?, 0 <= level <= 127'),
+  ],
+  'A modification that plays the modified composition at the given MIDI `velocity` level. Note than a `velocity` of `127` corresponds to full volume for that note.'
 )
 
 export const repeat: Doc = new Doc(
@@ -214,14 +212,14 @@ export const loadInstrument: Doc = new Doc(
   'load-instrument',
   'void',
   [ new ArgDoc('prog', 'integer?, a valid MIDI program number (0--127)') ],
-  'Loads the requested tone MIDI instrument.'
+  'Downloads and loads the requested MIDI instrument soundfont.'
 )
 
 export const loadPercussion: Doc = new Doc(
   'load-percussion',
   'void',
   [ new ArgDoc('prog', 'integer?, a valid MIDI program number (0--127)') ],
-  'Loads the requested percussion MIDI instrument.'
+  'Loads the requested percussion MIDI instrument soundfont.'
 )
 
 export const useHighQualityInstruments: Doc = new Doc(

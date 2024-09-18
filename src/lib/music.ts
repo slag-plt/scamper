@@ -476,6 +476,7 @@ Music.initializer = function initializer(): void {
   waf().loadInstrument(35, true)  // 35: Acoustic Bass
   waf().loadInstrument(38, true)  // 38: Acoustic Snare
   waf().loadInstrument(42, true)  // 42: Closed Hi-Hat
+  waf().loadInstrument(49, true)  // 49: Crash Cymbal 1
 }
 
 export default Music
