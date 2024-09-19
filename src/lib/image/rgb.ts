@@ -348,7 +348,7 @@ function hsvComplement(h: Hsv): Hsv {
 // rgb->hue
 // rgb->saturation
 // rgb->value
-// rhb->hsv
+// TODO: implement rgb->hsv for the hw!
 
 /***** Other predicates *******************************************************/
 
@@ -366,7 +366,7 @@ function colorNameToRgb(name: string): Rgb {
 
 // rgb->color-name
 // color->rgb
-// hsv->rgb
+// TODO: implement hsv->rgb for the hw!
 // color->color-name
 
 /***** Color components *******************************************************/
@@ -497,7 +497,7 @@ function rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
     Math.min(255, rgba1.red + rgba2.red),
     Math.min(255, rgba1.green + rgba2.green),
     Math.min(255, rgba1.blue + rgba2.blue),
-    Math.min(255, rgba1.alpha + rgba2.alpha)
+    rgba1.alpha
   )
 }
 
@@ -507,7 +507,7 @@ function rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
     Math.max(0, rgba1.red - rgba2.red),
     Math.max(0, rgba1.green - rgba2.green),
     Math.max(0, rgba1.blue - rgba2.blue),
-    Math.max(0, rgba1.alpha - rgba2.alpha)
+    rgba1.alpha
   )
 }
 

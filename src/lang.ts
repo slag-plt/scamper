@@ -91,6 +91,24 @@ export function charToName (c: string): string {
   }
 }
 
+export const reservedWords = [
+  'and',
+  'begin',
+  'cond',
+  'define',
+  'if',
+  'import',
+  'lambda',
+  'let',
+  'let*',
+  'letrec',
+  'match',
+  'or',
+  'quote',
+  'section',
+  'struct',
+]
+
 export namespace Value {
   export const scamperTag = Symbol('tag')
   export const structKind = Symbol('kind')
