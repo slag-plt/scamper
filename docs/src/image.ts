@@ -432,3 +432,30 @@ export const rgbAverage: Doc = new Doc(
   ],
   'Returns the average of the two rgb values.'
 )
+
+export const withImageFile: Doc = new Doc(
+  'with-image-file',
+  'html?',
+  [ new ArgDoc('callback', 'function?') ],
+  'Returns a container with a file chooser that, when used, calls `callback` with the selected image and replaces the container\'s contentsr with the output produced by `callback`.'
+)
+
+export const withImageFromUrl: Doc = new Doc(
+  'with-image-from-url',
+  'html?',
+  [
+    new ArgDoc('url', 'string?'),
+    new ArgDoc('callback', 'function?')
+  ],
+  'Returns a container that, when used, calls `callback` with the selected image and replaces the chooser with the output produced by `callback`.'
+)
+
+export const pixelMap: Doc = new Doc(
+  'pixel-map',
+  'image?',
+  [
+    new ArgDoc('fn', 'function?'),
+    new ArgDoc('img', 'image?')
+  ],
+  'Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.'
+)
