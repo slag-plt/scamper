@@ -292,7 +292,7 @@ const hsvS: C.Spec = {
 // hsv
 
 function hsv(...args: number[]): Hsv {
-  checkContract(arguments, contract('hsv', [], rgbNumS))
+  checkContract(arguments, contract('hsv', [], C.number))
   if (args.length !== 3 && args.length !== 4) {
     throw new ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
   }
