@@ -319,11 +319,46 @@ export const hsvComplement: Doc = new Doc(
   'Returns the complement of the hsv value.'
 )
 
+export const rgbHue: Doc = new Doc(
+  'rgb-hue',
+  'number?',
+  [ new ArgDoc('rgb', 'rgb?') ],
+  'Returns the hue component of the rgb value.'
+)
+
+export const rgbSaturation: Doc = new Doc(
+  'rgb-saturation',
+  'number?',
+  [ new ArgDoc('rgb', 'rgb?') ],
+  'Returns the saturation component of the rgb value.'
+)
+
+export const rgbValue: Doc = new Doc(
+  'rgb-value',
+  'number?',
+  [ new ArgDoc('rgb', 'rgb?') ],
+  'Returns the value component of the rgb value.'
+)
+
+export const rgbToHsv: Doc = new Doc(
+  'rgb->hsv',
+  'hsv?',
+  [ new ArgDoc('rgb', 'rgb?') ],
+  'Converts the rgb value to an hsv value.'
+)
+
 export const colorNameToRgb: Doc = new Doc(
   'color-name->rgb',
   'rgb?',
   [ new ArgDoc('color-name', 'string') ],
   'Returns the rgb value of the color name.'
+)
+
+export const colorNameToHsv: Doc = new Doc(
+  'color-name->hsv',
+  'hsv?',
+  [ new ArgDoc('color-name', 'string') ],
+  'Returns the hsv value of the color name.'
 )
 
 export const rgbDarker: Doc = new Doc(
