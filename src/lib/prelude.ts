@@ -849,6 +849,9 @@ function listToString (l: Value.List): string {
   checkContract(arguments, contract('list->string', [C.list]))
   let ret = ''
   while (l !== null) {
+    if (!Value.isChar(l.fst)) {
+      throw new ScamperError('Runtime', `list->string: list contains non-character element: ${Value.typeOf(l.fst)}`)
+    }
     ret += (l.fst as Value.Char).value
     l = l.snd as Value.List
   } 
