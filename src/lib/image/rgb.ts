@@ -286,7 +286,7 @@ function isHsv(v: any): boolean {
 
 const hsvS: C.Spec = {
   predicate: isHsv,
-  errorMsg: (actual: any) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? actual : Value.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an hsv value but received ${Value.typeOf(actual)}`
 }
 
 // hsv
