@@ -319,6 +319,13 @@ export const hsvComplement: Doc = new Doc(
   'Returns the complement of the hsv value.'
 )
 
+export const hsvToRgb: Doc = new Doc(
+  'hsv->rgb',
+  'rgb?',
+  [ new ArgDoc('hsv', 'hsv?') ],
+  'Converts the hsv value to an rgb value.'
+)
+
 export const rgbHue: Doc = new Doc(
   'rgb-hue',
   'number?',
