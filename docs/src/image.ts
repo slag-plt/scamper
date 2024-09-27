@@ -494,3 +494,14 @@ export const pixelMap: Doc = new Doc(
   ],
   'Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.'
 )
+
+export const imageGetPixel: Doc = new Doc(
+  'image-get-pixel',
+  'rgb?',
+  [
+    new ArgDoc('img', 'image?'),
+    new ArgDoc('x', 'integer?'),
+    new ArgDoc('y', 'integer?')
+  ],
+  'Returns the rgb value of the pixel at position `(x, y)` in the image.'
+)

@@ -81,6 +81,14 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
   return ret
 }
 
+function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.Struct {
+  checkContract(arguments, contract('image-get-pixel', [C.any, C.integer, C.integer]))
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.getImageData(x, y, 1, 1)
+  const data = img.data
+  return rgb(data[0], data[1], data[2], data[3])
+}
+
 /***** Rendering **************************************************************/
 
 function render(rif: ReactiveImageFile): HTMLElement {
@@ -138,3 +146,4 @@ registerValue('with-image-from-url', withImageFromUrl, lib)
 
 // Per-pixel manipulation
 registerValue('pixel-map', pixelMap, lib)
+registerValue('image-get-pixel', imageGetPixel, lib)
