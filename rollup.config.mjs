@@ -1,6 +1,8 @@
 import typescript from '@rollup/plugin-typescript';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import {lezer} from "@lezer/generator/rollup"
+import commonjs from '@rollup/plugin-commonjs';
+
 
 export default [
   {
@@ -10,7 +12,7 @@ export default [
       format: 'es',
       sourcemap: true,
     },
-    plugins: [lezer(), typescript(), nodeResolve()]
+    plugins: [lezer(), typescript(), nodeResolve(), commonjs()]
   },
   {
     input: './src/web/ide.ts',
@@ -19,7 +21,7 @@ export default [
       format: 'es',
       sourcemap: true,
     },
-    plugins: [lezer(), typescript(), nodeResolve()]
+    plugins: [lezer(), typescript(), nodeResolve(), commonjs()]
   },
   {
     input: './src/web/runner.ts',
@@ -28,6 +30,6 @@ export default [
       format: 'es',
       sourcemap: true,
     },
-    plugins: [typescript(), nodeResolve()]
+    plugins: [typescript(), nodeResolve(), commonjs()]
   }
 ]

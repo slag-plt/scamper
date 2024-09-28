@@ -20,7 +20,16 @@ export class Doc {
    * @returns A string containing the docstring formatted in Markdown.
    */
   public docToMarkdown (): string {
-    return `
+    if (this.args.length === 0) {
+      return `
+~~~
+${this.name} : ${this.returnType}
+~~~
+
+${this.desc.trim()}
+      `.trim()
+    } else {
+      return `
 ~~~
 (${this.name} ${this.args.map(arg => arg.name).join(' ')}) -> ${this.returnType}
 ${this.args.map(arg => '  ' + arg.toString()).join('\n')}
@@ -28,6 +37,7 @@ ${this.args.map(arg => '  ' + arg.toString()).join('\n')}
 
 ${this.desc.trim()}
     `.trim()
+    }
   }
 }
 
@@ -37,4 +47,12 @@ export class ArgDoc {
   public toString(): string {
     return `${this.name}: ${this.desc}`
   }
+}
+
+export class NoArgDoc extends ArgDoc {
+  constructor () {
+    super('', '')
+  } 
+
+  public toString(): string { return '' }
 }

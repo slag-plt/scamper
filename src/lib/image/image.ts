@@ -25,6 +25,33 @@ function isReactiveImageFile (v: any): boolean {
   return Value.isStructKind(v, 'reactive-image-file')
 }
 
+function withImageFromUrl (url: string, callback: Value.ScamperFn): HTMLElement {
+    checkContract(arguments, contract('with-image-from-url', [C.string, C.func]))
+    const container = document.createElement('div')
+    container.innerHTML = `Loading ${url}...`
+    const img = new Image()
+    img.onload = () => {
+        container.innerHTML = ''
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+        try {
+          const v = callFunction(callback, canvas)
+          container.appendChild(Render.renderToHTML(v))
+        } catch (e) {
+          if (e instanceof DOMException && e.name === 'SecurityError') {
+            container.innerHTML = `Failed to load ${url}: cannot manipulate images from domains other than scamper.cs.grinnell.edu`
+          } else {
+            container.appendChild(Render.renderToHTML(e as ScamperError))
+          }
+        }
+    } 
+    img.src = url
+    return container
+}
+
 /***** Per-pixel manipulation *************************************************/
 
 function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
@@ -52,6 +79,14 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
   const retCtx = ret.getContext('2d')!
   retCtx.putImageData(outImg, 0, 0)
   return ret
+}
+
+function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.Struct {
+  checkContract(arguments, contract('image-get-pixel', [C.any, C.integer, C.integer]))
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.getImageData(x, y, 1, 1)
+  const data = img.data
+  return rgb(data[0], data[1], data[2], data[3])
 }
 
 /***** Rendering **************************************************************/
@@ -107,6 +142,8 @@ export const lib: Library = emptyLibrary()
 
 // Image loading
 registerValue('with-image-file', withImageFile, lib)
+registerValue('with-image-from-url', withImageFromUrl, lib)
 
 // Per-pixel manipulation
 registerValue('pixel-map', pixelMap, lib)
+registerValue('image-get-pixel', imageGetPixel, lib)

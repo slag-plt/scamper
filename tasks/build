@@ -19,7 +19,7 @@ make -C docs
 cp -r docs/dist/docs site
 
 echo "Copying media and web support..."
-cp -r ide/webfonts ide/css site
+cp -r ide/webfonts ide/css ide/images site
 
 filter_page() {
   sed s/{{ver}}/${VER}/g ide/$1 > site/$2

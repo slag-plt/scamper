@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+tasks/build
+npm run serve

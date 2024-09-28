@@ -1,5 +1,5 @@
 import { ICE, Id, Library, Range, ScamperError, Stmt } from './lang.js'
-import { Prog, Op, Value, Env } from './lang.js'
+import { Env, Prog, Op, reservedWords, Value, } from './lang.js'
 import { renderToHTML, mkCodeElement, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
@@ -320,11 +320,19 @@ export function stateToExp (state: ExecutionState): Value.T | undefined {
 
 ///// Evaluation ///////////////////////////////////////////////////////////////
 
+function assertNotReserved (ident: string): void {
+  if (reservedWords.includes(ident)) {
+    throw new ScamperError('Runtime', `"${ident}" is a reserved word and cannot be used as an identifier`, undefined)
+  }
+}
+
 export function tryMatch (p: Value.T, v: Value.T, range?: Range): [string, Value.T][] | undefined {
   if (Value.isSymName(p, '_')) {
     return []
   } else if (Value.isSym(p)) {
-    return [[(p as Value.Sym).value, v]]
+    const s = p as Value.Sym
+    assertNotReserved(s.value)
+    return [[s.value, v]]
   } else if (p === null && v === null) {
     return []
   } else if (typeof p === 'boolean' && typeof v === 'boolean' && p === v) {
@@ -388,6 +396,7 @@ function stepPrim (state: ExecutionState): boolean {
     }
   
     case 'var': {
+      assertNotReserved(op.name)
       if (state.env.has(op.name)) {
         stack.push(state.env.get(op.name)!)
       } else {
@@ -453,9 +462,12 @@ function stepPrim (state: ExecutionState): boolean {
     }
 
     case 'let': {
+      op.names.forEach(assertNotReserved)
       if (stack.length >= op.names.length) {
         const values = stack.slice(-op.names.length)
-        for (let i = 0; i < op.names.length; i++) { stack.pop() }
+        for (let i = 0; i < op.names.length; i++) {
+          stack.pop()
+        }
         const newEnv = state.env.extend(op.names.map((n, i) => [n, values[i]]))
         state.dumpAndSwitch([], newEnv, op.body)
       } else {
@@ -568,6 +580,8 @@ function step (state: ExecutionState): void {
 }
 
 function executeStructDecl (name: string, fields: string[], env: Env): Env {
+  assertNotReserved(name)
+  fields.forEach(assertNotReserved)
   const predFn = function (v: any) {
     C.checkContract(arguments, C.contract(`${name}?`, [C.any]))
     return Value.isStructKind(v, name)
@@ -728,6 +742,7 @@ export class Sem {
 
   stepDefine (name: string, body: Op.T[], range: Range): void {
     if (this.state === undefined) {
+      assertNotReserved(name)
       this.tryPrintCurrentCodeSegment()
       this.state = new ExecutionState(this.env, body)
     }

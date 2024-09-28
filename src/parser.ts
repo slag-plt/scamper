@@ -222,24 +222,6 @@ function puffRange(r: Range): Range {
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
 
-export const reservedWords = [
-  'and',
-  'begin',
-  'cond',
-  'define',
-  'if',
-  'import',
-  'lambda',
-  'let',
-  'let*',
-  'letrec',
-  'match',
-  'or',
-  'quote',
-  'section',
-  'struct',
-]
-
 function parseStringLiteral (src: string, range: Range): string {
   if (src.length === 0) {
     throw new ICE('parseStringLiteral', 'Empty string literal (with no quote!)')

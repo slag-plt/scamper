@@ -3,6 +3,8 @@ import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
 
+import * as colorsys from 'colorsys'
+
 /***** RGB(A) Colors **********************************************************/
 
 export interface Rgb extends Value.Struct {
@@ -249,18 +251,13 @@ function findColors (name: string): Value.List {
 // rgb-string?
 // rgb-string->rgb
 
-function rgbToString (rgba: Rgb): string {
-  checkContract(arguments, contract('rgb-to-string', [rgbS]))
-  return `rgb(${rgba.red}, ${rgba.green}, ${rgba.blue}, ${rgba.alpha})`
-}
-
 function fracToPercentString(n: number, m: number): string {
   return `${Math.trunc(n/m * 100)}%`
 }
 
-function rbgToCssString (rgba: Rgb): string {
-  checkContract(arguments, contract('rgb-to-css-string', [rgbS]))
-  return `rgb(${rgba.red} ${rgba.green} ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
+function rgbToString (rgba: Rgb): string {
+  checkContract(arguments, contract('rgb->string', [rgbS]))
+  return `rgb(${rgba.red}  ${rgba.green}  ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
 }
 
 // color->string (variable type "color" argument to rgb string)
@@ -289,13 +286,13 @@ function isHsv(v: any): boolean {
 
 const hsvS: C.Spec = {
   predicate: isHsv,
-  errorMsg: (actual: any) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? actual : Value.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an hsv value but received ${Value.typeOf(actual)}`
 }
 
 // hsv
 
 function hsv(...args: number[]): Hsv {
-  checkContract(arguments, contract('hsv', [], rgbNumS))
+  checkContract(arguments, contract('hsv', [], C.number))
   if (args.length !== 3 && args.length !== 4) {
     throw new ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
   }
@@ -350,10 +347,59 @@ function hsvComplement(h: Hsv): Hsv {
   return hsv((h.hue + 180) % 360, h.saturation, h.value, h.alpha)
 }
 
-// rgb->hue
-// rgb->saturation
-// rgb->value
-// rhb->hsv
+// N.B., translated from the csc151 mediascheme implementation:
+// https://github.com/grinnell-cs/csc151/blob/8dbcc594fbb5e3579e08ccc897c5fba7d973b779/colors.rkt#L379
+
+function rgbHue(r: Rgb): number {
+  checkContract(arguments, contract('rgb-hue', [rgbS]))
+  return rgbHueHelper(r.red, r.green, r.blue)
+}
+
+function rgbHueHelper(r: number, g: number, b: number): number {
+  return rgbHueHelper2(Math.max(r, g, b), Math.min(r, g, b), r, g, b)
+}
+
+function rgbHueHelper2(max: number, min: number, r: number, g: number, b: number): number {
+  if (max - min === 0) {
+    return Math.random() * 360
+  } else if (max === r) {
+    return fixHue((g - b) / (max - min))
+  } else if (max === g) {
+    return fixHue(2 + (b - r) / (max - min))
+  } else {
+    return fixHue(4 + (r - g) / (max - min))
+  }
+}
+
+function fixHue(h: number): number {
+  return Math.round(60 * (h < 0 ? h + 6 : h))
+}
+
+function rgbSaturation(r: Rgb): number {
+  checkContract(arguments, contract('rgb-saturation', [rgbS]))
+  return rgbSaturationHelper(Math.max(r.red, r.green, r.blue),
+                             Math.min(r.red, r.green, r.blue))
+}
+
+function rgbSaturationHelper(min: number, max: number): number {
+  return max === 0 ? 0 : 100 * ((max - min) / max)
+}
+
+function rgbValue(r: Rgb): number {
+  checkContract(arguments, contract('rgb-value', [rgbS]))
+  return Math.round(100 * (Math.max(r.red, r.green, r.blue) / 255))
+}
+
+function rgbToHsv(r: Rgb) {
+  checkContract(arguments, contract('rgb->hsv', [rgbS]))
+  const ret = colorsys.rgbToHsv(r.red, r.green, r.blue)
+  return hsv(ret.h, ret.s, ret.v, r.alpha)
+}
+
+function hsvToString(hsv: Hsv): string {
+  checkContract(arguments, contract('hsv->string', [hsvS]))
+  return `hsv(${hsv.hue} ${fracToPercentString(hsv.saturation, 100)}  ${fracToPercentString(hsv.value, 100)} / ${fracToPercentString(hsv.alpha, 255)})`
+}
 
 /***** Other predicates *******************************************************/
 
@@ -371,7 +417,23 @@ function colorNameToRgb(name: string): Rgb {
 
 // rgb->color-name
 // color->rgb
-// hsv->rgb
+
+function mod2(n: number): number {
+  if (n < 0) {
+    return 2 - (mod2(-n))
+  } else if (n < 2) {
+    return n
+  } else {
+    return mod2(n-2)
+  }
+}
+
+function hsvToRgb(hsv: Hsv): Rgb {
+  C.checkContract(arguments, contract('hsv->rgb', [hsvS]))
+  const ret = colorsys.hsvToRgb(hsv.hue, hsv.saturation, hsv.value)
+  return rgb(ret.r, ret.g, ret.b, hsv.alpha)
+}
+
 // color->color-name
 
 /***** Color components *******************************************************/
@@ -502,7 +564,7 @@ function rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
     Math.min(255, rgba1.red + rgba2.red),
     Math.min(255, rgba1.green + rgba2.green),
     Math.min(255, rgba1.blue + rgba2.blue),
-    Math.min(255, rgba1.alpha + rgba2.alpha)
+    rgba1.alpha
   )
 }
 
@@ -512,7 +574,7 @@ function rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
     Math.max(0, rgba1.red - rgba2.red),
     Math.max(0, rgba1.green - rgba2.green),
     Math.max(0, rgba1.blue - rgba2.blue),
-    Math.max(0, rgba1.alpha - rgba2.alpha)
+    rgba1.alpha
   )
 }
 
@@ -531,8 +593,8 @@ function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
 function renderRgb(rgb: Rgb): HTMLElement {
   const div = document.createElement('div')
   const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rbgToCssString(textColor)
-  div.style.backgroundColor = rbgToCssString(rgb)
+  div.style.color = rgbToString(textColor)
+  div.style.backgroundColor = rgbToString(rgb)
   div.style.width = 'fit-content'
   div.style.border = '1px solid black'
   div.style.padding = '0.25em'
@@ -541,6 +603,22 @@ function renderRgb(rgb: Rgb): HTMLElement {
 }
 
 Render.addCustomWebRenderer(isRgb, renderRgb)
+
+function renderHsv(hsv: Hsv): HTMLElement {
+  const div = document.createElement('div')
+  const rgb = hsvToRgb(hsv)
+  const textColor = rgbPseudoComplement(rgb)
+  div.style.color = rgbToString(textColor)
+  div.style.backgroundColor = rgbToString(rgb)
+  div.style.width = 'fit-content'
+  div.style.border = '1px solid black'
+  div.style.padding = '0.25em'
+  div.textContent = hsvToString(hsv)
+  return div
+}
+
+Render.addCustomWebRenderer(isHsv, renderHsv)
+
 
 /***** Exports ****************************************************************/
 
@@ -562,7 +640,7 @@ registerValue('all-color-names', allColorNames, lib)
 registerValue('find-colors', findColors, lib)
 
 // Color strings
-registerValue('rbg->string', rgbToString, lib)
+registerValue('rgb->string', rgbToString, lib)
 
 // RGB hex strings
 
@@ -574,11 +652,17 @@ registerValue('hsv-saturation', hsvSaturation, lib)
 registerValue('hsv-value', hsvValue, lib)
 registerValue('hsv-alpha', hsvAlpha, lib)
 registerValue('hsv-complement', hsvComplement, lib)
+registerValue('rgb-hue', rgbHue, lib)
+registerValue('rgb-saturation', rgbSaturation, lib)
+registerValue('rgb-value', rgbValue, lib)
+registerValue('rgb->hsv', rgbToHsv, lib)
+registerValue('hsv->string', hsvToString, lib)
 
 // Other predicates
 
 // Color conversion
 registerValue('color-name->rgb', colorNameToRgb, lib)
+registerValue('hsv->rgb', hsvToRgb, lib)
 
 // Color components
 
