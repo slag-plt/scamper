@@ -15,7 +15,7 @@ export type ScamperOptions = {
 export function mkOptions(): ScamperOptions {
   return {
     isTracing: false,
-    isPrintingCode: true,
+    isPrintingCode: false,
     initialEnv: undefined,
     defaultDisplay: true
   }
