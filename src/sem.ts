@@ -1,6 +1,6 @@
 import { ICE, Id, Library, Range, ScamperError, Stmt } from './lang.js'
 import { Env, Prog, Op, reservedWords, Value, } from './lang.js'
-import { renderToHTML, mkCodeElement, renderToOutput } from './display.js'
+import { renderToHTML, mkCodeElement, mkSourceBlock, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
 ///// Machine state structures /////////////////////////////////////////////////
@@ -735,7 +735,7 @@ export class Sem {
       const start        = this.curStmt === 0 ? 0 : this.prog[this.curStmt - 1].range.end.idx + 1
       const end          = this.prog[this.curStmt].range.end.idx + 1
       const seg          = this.src.substring(start, end)
-      const renderedCode = mkCodeElement(seg.trim())
+      const renderedCode = mkSourceBlock(seg.trim())
       this.display.appendChild(renderedCode)
     }
   }

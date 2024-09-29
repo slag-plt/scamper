@@ -88,6 +88,15 @@ export const numeq: Doc = new Doc(
   'Returns `#t` if and only `v1` is equal to `v2`.'
 )
 
+export const numeqEps: Doc = new Doc(
+  '=-eps',
+  'function?',
+  [
+    new ArgDoc('epsilon', 'number?')
+  ],
+  'Returns an equality function that tests two numbers to see if the absolute value of their difference is no greater than `epsilon`, _i.e._, `(< (- x y) epsilon)`.'
+)
+
 export const zero: Doc = new Doc(
   'zero?',
   'boolean?',
