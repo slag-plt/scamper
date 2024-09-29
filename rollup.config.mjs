@@ -31,5 +31,14 @@ export default [
       sourcemap: true,
     },
     plugins: [typescript(), nodeResolve(), commonjs()]
+  },
+  {
+    input: './src/web/web.ts',
+    output: {
+      file: `./site/js/scamper-web-${process.env.npm_package_version}.js`,
+      format: 'es',
+      sourcemap: true,
+    },
+    plugins: [typescript(), nodeResolve(), commonjs()]
   }
 ]

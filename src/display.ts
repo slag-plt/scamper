@@ -1,8 +1,19 @@
 import { charToName, ICE, ScamperError, Value } from './lang.js'
+import hljs from 'highlight.js'
 
 export function mkCodeElement (text: string): HTMLElement {
+  const elt = hljs.highlight(text, {language: 'scheme', ignoreIllegals: true})
   const ret = document.createElement('code')
-  ret.appendChild(document.createTextNode(text))
+  ret.classList.add('hljs')
+  ret.innerHTML = elt.value
+  return ret
+}
+
+export function mkSourceBlock (text: string): HTMLElement {
+  const elt = hljs.highlight(text, {language: 'scheme', ignoreIllegals: true})
+  const ret = document.createElement('pre')
+  ret.classList.add('hljs')
+  ret.innerHTML = elt.value
   return ret
 }
 

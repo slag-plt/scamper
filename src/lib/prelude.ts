@@ -91,6 +91,17 @@ function eq (x: number, y: number): boolean {
 }
 registerValue('=', eq, Prelude)
 
+function eqEps (eps: number): Value.ScamperFn {
+  checkContract(arguments, contract('=-eps', [C.number]))
+  const eq = function (x: number, y: number): boolean {
+    checkContract(arguments, contract(`=-eps`, [C.number, C.number]))
+    return Math.abs(x - y) <= eps
+  }
+  Value.nameFn(`(=-eps ${eps})`, eq)
+  return eq
+}
+registerValue('=-eps', eqEps, Prelude)
+
 function zeroQ (x: number): boolean {
   checkContract(arguments, contract('zero?', [C.number]))
   return x === 0
