@@ -88,7 +88,7 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
 }
 
 function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.Struct {
-  checkContract(arguments, contract('image-get-pixel', [C.any, C.integer, C.integer]))
+  checkContract(arguments, contract('image-get-pixel', [imageS, C.integer, C.integer]))
   const ctx = canvas.getContext('2d')!
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
