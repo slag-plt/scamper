@@ -393,6 +393,36 @@ function xor (x: boolean, y: boolean): boolean {
 }
 registerValue('xor', xor, Prelude)
 
+// Additional functions
+
+function anyOf(...fns: Value.ScamperFn[]): Value.ScamperFn {
+  checkContract(arguments, contract('any-of', [], C.func))
+  return function (v: any): boolean {
+    checkContract(arguments, contract(`any-of`, [C.any]))
+    for (let i = 0; i < fns.length; i++) {
+      if (callFunction(fns[i], v)) {
+        return true
+      }
+    }
+    return false
+  }
+}
+registerValue('any-of', anyOf, Prelude)
+
+function allOf(...fns: Value.ScamperFn[]): Value.ScamperFn {
+  checkContract(arguments, contract('any-of', [], C.func))
+  return function (v: any): boolean {
+    checkContract(arguments, contract(`any-of`, [C.any]))
+    for (let i = 0; i < fns.length; i++) {
+      if (!callFunction(fns[i], v)) {
+        return false
+      }
+    }
+    return true
+  }
+}
+registerValue('all-of', allOf, Prelude)
+
 // Pairs and Lists (6.4)
 
 // TODO: really: the pair/list values we manipulated are _quoted_ pairs/lists.
@@ -409,6 +439,22 @@ function pairQ (x: any): boolean {
   return Value.isPair(x)
 }
 registerValue('pair?', pairQ, Prelude)
+
+function listOf (pred: Value.ScamperFn): Value.ScamperFn {
+  checkContract(arguments, contract('list-of', [C.func]))
+  return function (l: Value.List): boolean {
+    // N.B., list-of returns false if the input is _not_ a list
+    if (!listQ(l)) { return false; }
+    while (l !== null) {
+      if (!callFunction(pred, l.fst)) {
+        return false
+      }
+      l = l.snd as Value.List
+    }
+    return true
+  }
+}
+registerValue('list-of', listOf, Prelude)
 
 function cons (x: any, y: any): Value.T {
   checkContract(arguments, contract('cons', [C.any, C.any]))

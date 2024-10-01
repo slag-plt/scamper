@@ -20,7 +20,7 @@ function isRgbComponent (n: number): boolean {
   return n >= 0 && n <= 255
 }
 
-function isRgb (v: any): boolean {
+export function isRgb (v: any): boolean {
   checkContract(arguments, contract('rgb?', [C.any]))
   return Value.isStructKind(v, 'rgba')
 }
@@ -40,9 +40,9 @@ export function rgb(...args: number[]): Rgb {
   if (args.length !== 3 && args.length !== 4) {
     throw new ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
   }
-  const red = args[0]
-  const green = args[1]
-  const blue = args[2]
+  const red = Math.min(args[0], 255)
+  const green = Math.min(args[1], 255)
+  const blue = Math.min(args[2], 255)
   const alpha = args[3] ?? 255
   return ({
     [Value.scamperTag]: 'struct', [Value.structKind]: 'rgba',
@@ -255,7 +255,7 @@ function fracToPercentString(n: number, m: number): string {
   return `${Math.trunc(n/m * 100)}%`
 }
 
-function rgbToString (rgba: Rgb): string {
+export function rgbToString (rgba: Rgb): string {
   checkContract(arguments, contract('rgb->string', [rgbS]))
   return `rgb(${rgba.red}  ${rgba.green}  ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
 }
@@ -407,7 +407,7 @@ function hsvToString(hsv: Hsv): string {
 
 /***** Color conversion *******************************************************/
 
-function colorNameToRgb(name: string): Rgb {
+export function colorNameToRgb(name: string): Rgb {
   checkContract(arguments, contract('color-name->rgb', [C.string]))
   if (!isColorName(name)) {
     throw new ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
@@ -428,7 +428,7 @@ function mod2(n: number): number {
   }
 }
 
-function hsvToRgb(hsv: Hsv): Rgb {
+export function hsvToRgb(hsv: Hsv): Rgb {
   C.checkContract(arguments, contract('hsv->rgb', [hsvS]))
   const ret = colorsys.hsvToRgb(hsv.hue, hsv.saturation, hsv.value)
   return rgb(ret.r, ret.g, ret.b, hsv.alpha)
@@ -578,7 +578,7 @@ function rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
   )
 }
 
-function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
+export function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
   checkContract(arguments, contract('rgb-average', [rgbS, rgbS]))
   return rgb(
     (rgba1.red + rgba2.red) / 2,

@@ -1,13 +1,31 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { emptyLibrary, Library, registerValue, Value } from '../../lang.js'
+import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
+
+import { colorNameToRgb, hsvToRgb, Rgb, rgb, rgbAverage, rgbToString } from './rgb.js'
 
 export const lib: Library = emptyLibrary()
 
-function color (r: number, g: number, b: number, a: number): string {
+/***** Core Functions *********************************************************/
+
+function colorToRgb (v: any): Rgb {
+  if (Value.isStructKind(v, 'rgba')) {
+    return v
+  } else if (typeof v === 'string') {
+    return colorNameToRgb(v)
+  } else if (Value.isStructKind(v, 'hsv')) {
+    return hsvToRgb(v)
+  } else {
+    throw new ScamperError('Runtime', `Shapes expect a valid color, received a: ${Value.typeOf(v)}`)
+  }
+}
+
+// N.B., color is a legacy function from the htdp library. Currently, we standardize
+// on Rgb as the stored color type for shapes.
+function color (r: number, g: number, b: number, a: number): Rgb {
   checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
-  return `rgba(${r}, ${g}, ${b}, ${a})`
+  return rgb(r, g, b, a)
 }
 registerValue('color', color, lib)
 
@@ -26,19 +44,12 @@ const alignHS: C.Spec = {
   errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${Value.typeOf(actual)}`
 }
 
+// N.B., colors through the drawing/shape API can be a variety of inputs (ugh).
+// It is the responsibility of constructor functions to convert these into
+// Rgb values internally.
 const colorS: C.Spec = {
   // https://stackoverflow.com/questions/48484767/javascript-check-if-string-is-valid-css-color
-  predicate: (v: any) => {
-    if (typeof v !== 'string') { return false }
-    // TODO: need to test this more thoroughly, esp. with rgba strings
-    /*
-    var s = new Option().style
-    s.color = v
-    // return 'false' if color wasn't assigned
-    return s.color === v.toLowerCase()
-    */
-   return true
-  },
+  predicate: (v: any) => typeof v !== 'string' || Value.isStructKind(v, 'rgba') || Value.isStructKind(v, 'hsv'),
   errorMsg: (actual: any) => `expected a color, received ${Value.typeOf(actual)}`
 }
 
@@ -54,6 +65,11 @@ function drawingQ (v: any): boolean {
          Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash')
 }
 registerValue('image?', drawingQ, lib)
+// TODO: in the new 151 library, images generalize to more than just shapes!
+// In particular, images include shapes, image files, etc. We don't have
+// such a unified view in Scamper (yet), so for now, shape? is an alias of
+// image?
+registerValue('shape?', drawingQ, lib)
 
 const drawingS = {
   predicate: drawingQ,
@@ -65,20 +81,21 @@ interface Ellipse extends Value.Struct {
   width: number,
   height: number,
   mode: Mode,
-  color: string
+  color: Rgb
 }
 
-const ellipsePrim = (width: number, height: number, mode: Mode, color: string): Ellipse => ({
-  [Value.scamperTag]: 'struct', [Value.structKind]: 'ellipse', width, height, mode, color
+const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ellipse => ({
+  [Value.scamperTag]: 'struct', [Value.structKind]: 'ellipse',
+  width, height, mode, color: colorToRgb(color)
 })
 
-function ellipse (width: number, height: number, mode: Mode, color: string): Ellipse {
+function ellipse (width: number, height: number, mode: Mode, color: any): Ellipse {
   checkContract(arguments, contract('ellipse', [C.nonneg, C.nonneg, modeS, colorS]))
   return ellipsePrim(width, height, mode, color)
 }
 registerValue('ellipse', ellipse, lib)
 
-function circle (radius: number, mode: Mode, color: string): Ellipse {
+function circle (radius: number, mode: Mode, color: any): Ellipse {
   checkContract(arguments, contract('circle', [C.nonneg, modeS, colorS]))
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
@@ -89,20 +106,21 @@ interface Rectangle extends Value.Struct {
   width: number,
   height: number,
   mode: Mode,
-  color: string
+  color: Rgb
 }
 
-const rectanglePrim = (width: number, height: number, mode: Mode, color: string): Rectangle => ({
-  [Value.scamperTag]: 'struct', [Value.structKind]: 'rectangle', width, height, mode, color
+const rectanglePrim = (width: number, height: number, mode: Mode, color: any): Rectangle => ({
+  [Value.scamperTag]: 'struct', [Value.structKind]: 'rectangle',
+  width, height, mode, color: colorToRgb(color)
 })
 
-function rectangle (width: number, height: number, mode: Mode, color: string): Rectangle {
+function rectangle (width: number, height: number, mode: Mode, color: any): Rectangle {
   checkContract(arguments, contract('rectangle', [C.nonneg, C.nonneg, modeS, colorS]))
   return rectanglePrim(width, height, mode, color)
 }
 registerValue('rectangle', rectangle, lib)
 
-function square (length: number, mode: Mode, color: string): Rectangle {
+function square (length: number, mode: Mode, color: any): Rectangle {
   checkContract(arguments, contract('square', [C.nonneg, modeS, colorS]))
   return rectanglePrim(length, length, mode, color)
 }
@@ -112,21 +130,26 @@ interface Triangle extends Value.Struct {
   [Value.structKind]: 'triangle',
   width: number,
   height: number,
-  length: number,
   mode: Mode,
-  color: string
+  color: Rgb
 }
 
-const trianglePrim = (length: number, mode: Mode, color: string): Triangle => ({
-  [Value.scamperTag]: 'struct', [Value.structKind]: 'triangle', width: length, height: length * Math.sqrt(3) / 2,
-  length, mode, color
+const trianglePrim = (width: number, height: number, mode: Mode, color: any): Triangle => ({
+  [Value.scamperTag]: 'struct', [Value.structKind]: 'triangle',
+  width, height, mode, color: colorToRgb(color)
 })
 
-function triangle (length: number, mode: Mode, color: string): Triangle {
+function triangle (length: number, mode: Mode, color: any): Triangle {
   checkContract(arguments, contract('triangle', [C.nonneg, modeS, colorS]))
-  return trianglePrim(length, mode, color)
+  return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
 }
 registerValue('triangle', triangle, lib)
+
+function isoscelesTriangle (width: number, height: number, mode: Mode, color: any): Triangle {
+  checkContract(arguments, contract('isosceles-triangle', [C.nonneg, C.nonneg, modeS, colorS]))
+  return trianglePrim(width, height, mode, color)
+}
+registerValue('isosceles-triangle', isoscelesTriangle, lib)
 
 interface Path extends Value.Struct {
   [Value.structKind]: 'path',
@@ -134,14 +157,15 @@ interface Path extends Value.Struct {
   height: number,
   points: [number, number][],
   mode: Mode,
-  color: string
+  color: Rgb
 }
 
-const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: string): Path => ({
-  [Value.scamperTag]: 'struct', [Value.structKind]: 'path', width, height, points, mode, color
+const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: any): Path => ({
+  [Value.scamperTag]: 'struct', [Value.structKind]: 'path',
+  width, height, points, mode, color: colorToRgb(color)
 })
 
-function path (width: number, height: number, points: Value.List, mode: Mode, color: string): Path {
+function path (width: number, height: number, points: Value.List, mode: Mode, color: any): Path {
   checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
   return pathPrim(width, height, 
     Value.listToVector(points).map((p: Value.T) => [(p as Value.Pair).fst, (p as Value.Pair).snd]) as [number, number][],
@@ -245,6 +269,18 @@ interface OverlayOffset extends Value.Struct {
   d2: Drawing
 }
 
+function overlayOffsetPrim (dx: number, dy: number, width: number, height: number, d1: Drawing, d2: Drawing): OverlayOffset {
+  return {
+    [Value.scamperTag]: 'struct', [Value.structKind]: 'overlayOffset',
+    dx,
+    dy,
+    width,
+    height,
+    d1,
+    d2
+  }
+}
+
 function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
   checkContract(arguments, contract('overlay/offset', [C.number, C.number, drawingS, drawingS]))
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
@@ -270,16 +306,8 @@ function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): Overl
       ? Math.max(d2.height, d1.height + Math.abs(dy))
       : Math.abs(dy) + d2.height
   }
-  return {
-    [Value.scamperTag]: 'struct', [Value.structKind]: 'overlayOffset',
-    dx,
-    dy,
-    // BUG: what if d2 is actually bigger than d1? Then the calculation needs to mirror!
-    width,
-    height,
-    d1,
-    d2
-  }
+  // BUG: what if d2 is actually bigger than d1? Then the calculation needs to mirror!
+  return overlayOffsetPrim(dx, dy, width, height, d1, d2)
 }
 registerValue('overlay/offset', overlayOffset, lib)
 
@@ -361,12 +389,139 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
 }
 registerValue('with-dash', withDash, lib)
 
+/***** Extended Functions *****************************************************/
+
+function solidSquare(length: number, color: string): Rectangle {
+  return square(length, 'solid', color)
+}
+
+function outlinedSquare(length: number, color: string): Rectangle {
+  return square(length, 'outline', color)
+}
+
+function solidRectangle(width: number, height: number, color: string): Rectangle {
+  return rectangle(width, height, 'solid', color)
+}
+
+function outlinedRectangle(width: number, height: number, color: string): Rectangle {
+  return rectangle(width, height, 'outline', color)
+}
+
+function solidCircle(radius: number, color: string): Ellipse {
+  return circle(radius, 'solid', color)
+}
+
+function outlinedCircle(radius: number, color: string): Ellipse {
+  return circle(radius, 'outline', color)
+}
+
+function solidEllipse(width: number, height: number, color: string): Ellipse {
+  return ellipse(width, height, 'solid', color)
+}
+
+function outlinedEllipse(width: number, height: number, color: string): Ellipse {
+  return ellipse(width, height, 'outline', color)
+}
+
+function solidTriangle(length: number, color: string): Triangle {
+  return triangle(length, 'solid', color)
+}
+
+function outlinedTriangle(length: number, color: string): Triangle {
+  return triangle(length, 'outline', color)
+}
+
+function solidIsoscelesTriangle(width: number, height: number, color: string): Triangle {
+  return isoscelesTriangle(width, height, 'solid', color)
+}
+
+function outlinedIsoscelesTriangle(width: number, height: number, color: string): Triangle {
+  return isoscelesTriangle(width, height, 'outline', color)
+}
+
+function imageWidth (drawing: Drawing): number {
+  checkContract(arguments, contract('image-width', [drawingS]))
+  return drawing.width
+}
+
+function imageHeight (drawing: Drawing): number {
+  checkContract(arguments, contract('image-height', [drawingS]))
+  return drawing.height
+}
+
+function imageColor (drawing: Drawing): Rgb {
+  checkContract(arguments, contract('image-color', [drawingS]))
+  switch(drawing[Value.structKind]) {
+    case 'ellipse':
+    case 'rectangle':
+    case 'triangle':
+    case 'path':
+      return drawing.color
+    // N.B.: what do we return for aggregates, the average color?
+    case 'beside':
+    case 'above':
+    case 'overlay':
+    case 'overlayOffset':
+      return drawing.drawings.reduce(rgbAverage)
+    case 'rotate':
+      return imageColor(drawing.drawing)
+    case 'withDash':
+      return imageColor(drawing.drawing)
+  }
+}
+
+function imageRecolor (drawing: Drawing, color: any): Drawing {
+  checkContract(arguments, contract('image-recolor', [drawingS, colorS]))
+  switch(drawing[Value.structKind]) {
+    case 'ellipse':
+      return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
+    case 'rectangle':
+      return rectanglePrim(drawing.width, drawing.height, drawing.mode, color)
+    case 'triangle':
+      return trianglePrim(drawing.width, drawing.height, drawing.mode, color)
+    case 'path':
+      return pathPrim(drawing.width, drawing.height, drawing.points, drawing.mode, color)
+    case 'beside':
+      return besideAlignPrim(drawing.align, ...drawing.drawings.map(d => imageRecolor(d, color)))
+    case 'above':
+      return aboveAlignPrim(drawing.align, ...drawing.drawings.map(d => imageRecolor(d, color)))
+    case 'overlay':
+      return overlayAlignPrim(drawing.xAlign, drawing.yAlign, ...drawing.drawings.map(d => imageRecolor(d, color)))
+    case 'overlayOffset':
+      return overlayOffsetPrim(drawing.dx, drawing.dy, drawing.width, drawing.height, imageRecolor(drawing.d1, color), imageRecolor(drawing.d2, color))
+    case 'rotate':
+      return rotate(drawing.angle, imageRecolor(drawing.drawing, color))
+    case 'withDash':
+      return withDash(drawing.dashSpec, imageRecolor(drawing.drawing, color))
+  }
+}
+
+registerValue('solid-square', solidSquare, lib)
+registerValue('outlined-square', outlinedSquare, lib)
+registerValue('solid-rectangle', solidRectangle, lib)
+registerValue('outlined-rectangle', outlinedRectangle, lib)
+registerValue('solid-circle', solidCircle, lib)
+registerValue('outlined-circle', outlinedCircle, lib)
+registerValue('solid-ellipse', solidEllipse, lib)
+registerValue('outlined-ellipse', outlinedEllipse, lib)
+registerValue('solid-triangle', solidTriangle, lib)
+registerValue('outlined-triangle', outlinedTriangle, lib)
+registerValue('solid-isosceles-triangle', solidIsoscelesTriangle, lib)
+registerValue('outlined-isosceles-triangle', outlinedIsoscelesTriangle, lib)
+
+registerValue('image-width', imageWidth, lib)
+registerValue('image-height', imageHeight, lib)
+registerValue('image-color', imageColor, lib)
+registerValue('image-recolor', imageRecolor, lib)
+
+/***** Rendering **************************************************************/
+
 export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   switch (drawing[Value.structKind]) {
     case 'ellipse': {
-      ctx.fillStyle = drawing.color
-      ctx.strokeStyle = drawing.color
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.strokeStyle = rgbToString(drawing.color)
       const radiusX = drawing.width / 2
       const radiusY = drawing.height / 2
       const centerX = x + radiusX
@@ -381,8 +536,8 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       break
     }
     case 'rectangle': {
-      ctx.fillStyle = drawing.color
-      ctx.strokeStyle = drawing.color
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.strokeStyle = rgbToString(drawing.color)
       if (drawing.mode === 'solid') {
         ctx.fillRect(x, y, drawing.width, drawing.height)
       } else if (drawing.mode === 'outline') {
@@ -391,8 +546,8 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       break
     }
     case 'triangle': {
-      ctx.fillStyle = drawing.color
-      ctx.strokeStyle = drawing.color
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.strokeStyle = rgbToString(drawing.color)
       ctx.beginPath()
       // Start in the bottom-left corner of the triangle...
       ctx.moveTo(x, y + drawing.height)
@@ -411,8 +566,8 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
     }
     case 'path': {
       if (drawing.points.length === 0) { break }
-      ctx.fillStyle = drawing.color
-      ctx.strokeStyle = drawing.color
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.strokeStyle = rgbToString(drawing.color)
       ctx.beginPath()
       ctx.moveTo(x + drawing.points[0][0], y + drawing.points[0][1])
       drawing.points.slice(1).forEach(p => {
