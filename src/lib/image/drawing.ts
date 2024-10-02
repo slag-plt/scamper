@@ -49,7 +49,7 @@ const alignHS: C.Spec = {
 // Rgb values internally.
 const colorS: C.Spec = {
   // https://stackoverflow.com/questions/48484767/javascript-check-if-string-is-valid-css-color
-  predicate: (v: any) => typeof v !== 'string' || Value.isStructKind(v, 'rgba') || Value.isStructKind(v, 'hsv'),
+  predicate: (v: any) => typeof v === 'string' || Value.isStructKind(v, 'rgba') || Value.isStructKind(v, 'hsv'),
   errorMsg: (actual: any) => `expected a color, received ${Value.typeOf(actual)}`
 }
 
@@ -391,51 +391,51 @@ registerValue('with-dash', withDash, lib)
 
 /***** Extended Functions *****************************************************/
 
-function solidSquare(length: number, color: string): Rectangle {
+function solidSquare(length: number, color: any): Rectangle {
   return square(length, 'solid', color)
 }
 
-function outlinedSquare(length: number, color: string): Rectangle {
+function outlinedSquare(length: number, color: any): Rectangle {
   return square(length, 'outline', color)
 }
 
-function solidRectangle(width: number, height: number, color: string): Rectangle {
+function solidRectangle(width: number, height: number, color: any): Rectangle {
   return rectangle(width, height, 'solid', color)
 }
 
-function outlinedRectangle(width: number, height: number, color: string): Rectangle {
+function outlinedRectangle(width: number, height: number, color: any): Rectangle {
   return rectangle(width, height, 'outline', color)
 }
 
-function solidCircle(radius: number, color: string): Ellipse {
+function solidCircle(radius: number, color: any): Ellipse {
   return circle(radius, 'solid', color)
 }
 
-function outlinedCircle(radius: number, color: string): Ellipse {
+function outlinedCircle(radius: number, color: any): Ellipse {
   return circle(radius, 'outline', color)
 }
 
-function solidEllipse(width: number, height: number, color: string): Ellipse {
+function solidEllipse(width: number, height: number, color: any): Ellipse {
   return ellipse(width, height, 'solid', color)
 }
 
-function outlinedEllipse(width: number, height: number, color: string): Ellipse {
+function outlinedEllipse(width: number, height: number, color: any): Ellipse {
   return ellipse(width, height, 'outline', color)
 }
 
-function solidTriangle(length: number, color: string): Triangle {
+function solidTriangle(length: number, color: any): Triangle {
   return triangle(length, 'solid', color)
 }
 
-function outlinedTriangle(length: number, color: string): Triangle {
+function outlinedTriangle(length: number, color: any): Triangle {
   return triangle(length, 'outline', color)
 }
 
-function solidIsoscelesTriangle(width: number, height: number, color: string): Triangle {
+function solidIsoscelesTriangle(width: number, height: number, color: any): Triangle {
   return isoscelesTriangle(width, height, 'solid', color)
 }
 
-function outlinedIsoscelesTriangle(width: number, height: number, color: string): Triangle {
+function outlinedIsoscelesTriangle(width: number, height: number, color: any): Triangle {
   return isoscelesTriangle(width, height, 'outline', color)
 }
 
@@ -460,9 +460,15 @@ function imageColor (drawing: Drawing): Rgb {
     // N.B.: what do we return for aggregates, the average color?
     case 'beside':
     case 'above':
-    case 'overlay':
+    case 'overlay': {
+      var avg = imageColor(drawing.drawings[0])
+      for (var i = 1; i < drawing.drawings.length; i++) {
+        avg = rgbAverage(avg, imageColor(drawing.drawings[i]))
+      }
+      return avg
+    }
     case 'overlayOffset':
-      return drawing.drawings.reduce(rgbAverage)
+      return rgbAverage(imageColor(drawing.d1), imageColor(drawing.d2))
     case 'rotate':
       return imageColor(drawing.drawing)
     case 'withDash':

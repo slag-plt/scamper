@@ -692,6 +692,23 @@ function assocSet (k: Value.T, v: Value.T, l: Value.List): Value.List {
 }
 registerValue('assoc-set', assocSet, Prelude)
 
+// Miscellaneous list functions
+
+function sort(l: Value.List, cmp: Value.ScamperFn): Value.List {
+  checkContract(arguments, contract('sort', [C.list, C.func]))
+  const arr = Value.listToVector(l)
+  arr.sort((a, b) => {
+    const result = callFunction(cmp, a, b)
+    if (typeof result !== 'number') {
+      throw new ScamperError('Runtime', `sort: comparator function must return a number`)
+    } else {
+      return result
+    }
+  })
+  return Value.vectorToList(arr)
+}
+registerValue('sort', sort, Prelude)
+
 // Symbols (6.5)
 
 // TODO: implement:

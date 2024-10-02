@@ -475,9 +475,9 @@ function rgbLighter(rgba: Rgb): Rgb {
 function rgbRedder(rgba: Rgb): Rgb {
   checkContract(arguments, contract('rgb-redder', [rgbS]))
   return rgb(
-    Math.min(255, rgba.red + 16),
-    rgba.green,
-    rgba.blue,
+    Math.min(255, rgba.red + 32),
+    Math.max(0, rgba.green - 16),
+    Math.max(0, rgba.blue - 16),
     rgba.alpha
   )
 }
@@ -485,9 +485,9 @@ function rgbRedder(rgba: Rgb): Rgb {
 function rgbBluer(rgba: Rgb): Rgb {
   checkContract(arguments, contract('rgb-bluer', [rgbS]))
   return rgb(
-    rgba.red,
-    rgba.green,
-    Math.min(255, rgba.blue + 16),
+    Math.max(0, rgba.red - 16),
+    Math.max(0, rgba.green - 16),
+    Math.min(255, rgba.blue + 32),
     rgba.alpha
   )
 }
@@ -495,9 +495,9 @@ function rgbBluer(rgba: Rgb): Rgb {
 function rgbGreener(rgba: Rgb): Rgb {
   checkContract(arguments, contract('rgb-greener', [rgbS]))
   return rgb(
-    rgba.red,
-    Math.min(255, rgba.green + 16),
-    rgba.blue,
+    Math.max(0, rgba.red - 16),
+    Math.min(255, rgba.green + 32),
+    Math.max(0, rgba.blue - 16),
     rgba.alpha
   )
 }
