@@ -694,15 +694,15 @@ registerValue('assoc-set', assocSet, Prelude)
 
 // Miscellaneous list functions
 
-function sort(l: Value.List, cmp: Value.ScamperFn): Value.List {
+function sort(l: Value.List, lt: Value.ScamperFn): Value.List {
   checkContract(arguments, contract('sort', [C.list, C.func]))
   const arr = Value.listToVector(l)
   arr.sort((a, b) => {
-    const result = callFunction(cmp, a, b)
-    if (typeof result !== 'number') {
+    const result = callFunction(lt, a, b)
+    if (typeof result !== 'boolean') {
       throw new ScamperError('Runtime', `sort: comparator function must return a number`)
     } else {
-      return result
+      return result ? -1 : 1
     }
   })
   return Value.vectorToList(arr)
