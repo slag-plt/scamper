@@ -334,7 +334,7 @@ export const atan: Doc = new Doc(
 )
 
 export const equalsEps: Doc = new Doc(
-  '=eps',
+  '=-eps',
   'procedure?',
   [ new ArgDoc('n', 'number?') ],
   'Returns a function that takes two numbers `x` and `y` as input returns `#t` if `|x - y| < n`.'
@@ -560,6 +560,16 @@ export const assocSet: Doc = new Doc(
     new ArgDoc('l', 'list?, an association list')
   ],
   'Returns a new association list containing the same key-value pairs as `l` except that `k` is associated with `v`.'
+)
+
+export const sort: Doc = new Doc(
+  'sort',
+  'list?',
+  [
+    new ArgDoc('l', 'list?'),
+    new ArgDoc('lt?', 'procedure?, returns `#t` if the first arg is less than the second')
+  ],
+  'Returns a new list containing the elements of `l` sorted in ascending order according to the comparison function `lt?`.'
 )
 
 export const charQ: Doc = new Doc(
