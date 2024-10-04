@@ -3,7 +3,6 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import {lezer} from "@lezer/generator/rollup"
 import commonjs from '@rollup/plugin-commonjs';
 
-
 export default [
   {
     input: './src/web/file-chooser.ts',

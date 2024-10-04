@@ -1,8 +1,8 @@
 {
-  "name": "scamper-next",
+  "name": "scamper",
   "version": "2.7.9",
   "description": "",
-  "main": "dist/index.js",
+  "main": "site/index.js",
   "scripts": {
     "build": "genversion src/version.ts --es6; rollup -c",
     "serve": "live-server --open=site",

@@ -14,10 +14,6 @@ mkdir -p site/
 echo "Building Javascript..."
 npm run build
 
-echo "Building documents..."
-make -C docs
-cp -r docs/dist/docs site
-
 echo "Copying media and web support..."
 cp -r ide/webfonts ide/css ide/images site
 

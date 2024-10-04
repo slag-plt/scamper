@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true
   },
-  "exclude": ["node_modules", "dist", "esbuild.config.js", "tsconfig.json", "docs/"]
+  "exclude": ["node_modules", "site", "test", "esbuild.config.js", "tsconfig.json", "jest.config.ts"]
 }
