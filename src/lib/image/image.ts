@@ -5,6 +5,11 @@ import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../..
 import { callFunction } from '../../sem.js'
 import { rgb } from './rgb.js'
 
+const imageS: C.Spec = {
+  predicate: (v: any) => v instanceof HTMLCanvasElement,
+  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
+}
+
 /***** Image loading **********************************************************/
 
 export interface ReactiveImageFile extends Value.Struct {
@@ -55,6 +60,7 @@ function withImageFromUrl (url: string, callback: Value.ScamperFn): HTMLElement 
 /***** Per-pixel manipulation *************************************************/
 
 function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
+  checkContract(arguments, contract('pixel-map', [C.func, imageS]))
   const ctx = canvas.getContext('2d')!
   const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
   const src = inpImg.data
@@ -82,7 +88,7 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
 }
 
 function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.Struct {
-  checkContract(arguments, contract('image-get-pixel', [C.any, C.integer, C.integer]))
+  checkContract(arguments, contract('image-get-pixel', [imageS, C.integer, C.integer]))
   const ctx = canvas.getContext('2d')!
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
