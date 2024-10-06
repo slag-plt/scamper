@@ -4,7 +4,7 @@ import { callFunction } from '../sem.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../lang.js'
 import * as Display from '../display.js'
 
-const Prelude: Library = emptyLibrary()
+export const Prelude: Library = emptyLibrary()
 
 const query1C = (name: string) => contract(name, [C.any])
 const query2C = (name: string) => contract(name, [C.any, C.any])

@@ -1,3 +1,3 @@
-export * as Scamper from './scamper.js'
-export * as builtinLibs from './lib/builtin.js'
-export * as Prelude from './lib/prelude.js'
+export { Scamper } from './scamper.js'
+export { builtinLibs } from './lib/builtin.js'
+export { Prelude } from './lib/prelude.js'

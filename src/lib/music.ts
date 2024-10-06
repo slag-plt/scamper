@@ -57,7 +57,7 @@ function isValidMidiNote (n: number): boolean {
   checkContract(arguments, contract('note?', [C.number]))
   return n >= 0 && n <= 127
 }
-registerValue('note?', isValidMidiNote, Music)
+registerValue('note-value?', isValidMidiNote, Music)
 
 const durC: C.Spec = {
   predicate: (v: any) => Value.isStructKind(v, 'dur'),
@@ -138,11 +138,11 @@ registerValue('pickup', pickup, Music)
 
 /** TODO: we're missing on-note? */
 
-type ModKind = Percussion | PitchBend | Tempo | Dynamics | Instrument
+type ModKind = Percussion | Tempo | Dynamics | Instrument
 
 function modQ (v: any): boolean {
   return Value.isStructKind(v, 'percussion') ||
-    Value.isStructKind(v, 'pitchBend') ||
+    //Value.isStructKind(v, 'pitchBend') ||
     Value.isStructKind(v, 'tempo') ||
     Value.isStructKind(v, 'dynamics') ||
     Value.isStructKind(v, 'instrument')
@@ -158,12 +158,14 @@ interface Percussion extends Value.Struct { kind: 'percussion' }
 const percussion = ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'percussion' })
 registerValue('percussion', percussion, Music)
 
-interface PitchBend extends Value.Struct { [Value.structKind]: 'pitchBend', amount: number }
-function pitchBend (amount: number): PitchBend {
-  checkContract(arguments, contract('bend', [C.numRange(-1, 1)]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pitchBend', amount }
-}
-registerValue('bend', pitchBend, Music)
+// TODO: need to implement bends again!
+
+// interface PitchBend extends Value.Struct { [Value.structKind]: 'pitchBend', amount: number }
+// function pitchBend (amount: number): PitchBend {
+//   checkContract(arguments, contract('bend', [C.numRange(-1, 1)]))
+//   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pitchBend', amount }
+// }
+// registerValue('bend', pitchBend, Music)
 
 interface Tempo extends Value.Struct { [Value.structKind]: 'tempo', beat: Duration, bpm: number }
 function tempo (beat: Duration, bpm: number): Tempo {

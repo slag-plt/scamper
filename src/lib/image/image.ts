@@ -3,7 +3,7 @@ import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
 import { callFunction } from '../../sem.js'
-import { rgb } from './rgb.js'
+import { rgb } from './color.js'
 
 const imageS: C.Spec = {
   predicate: (v: any) => v instanceof HTMLCanvasElement,

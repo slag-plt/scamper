@@ -104,6 +104,7 @@ dist
 .tern-port
 
 dist/
+_build/
 src/version.ts
 .DS_Store
 site

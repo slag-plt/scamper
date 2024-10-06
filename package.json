@@ -1,9 +1,10 @@
 {
   "name": "scamper",
-  "version": "2.7.9",
+  "version": "2.7.10",
   "description": "",
-  "main": "site/index.js",
+  "main": "./_build/js/index.js",
   "scripts": {
+    "tsc": "tsc",
     "build": "genversion src/version.ts --es6; rollup -c",
     "serve": "live-server --open=site",
     "test": "jest"

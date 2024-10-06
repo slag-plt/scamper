@@ -5,6 +5,45 @@ import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../..
 
 import * as colorsys from 'colorsys'
 
+// NOTE: throughout the image library, we standardize on the `Rgb` struct as
+//       the representation for colors. It is the responsibility of the various
+//       data structures in the library to internally store colors as `Rgb`
+//       values and accept multiple representations as input, converting via
+//       `colorToRgb` as necessary.
+
+/***** Generic Colors *********************************************************/
+
+// N.B., color is a legacy function from the htdp library. Currently, we standardize
+// on Rgb as the stored color type for shapes.
+function color (r: number, g: number, b: number, a: number): Rgb {
+  checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
+  return rgb(r, g, b, a)
+}
+
+/** Converts between various representations of color in Scamper. */
+export function colorToRgb (v: any): Rgb {
+  if (Value.isStructKind(v, 'rgba')) {
+    return v
+  } else if (typeof v === 'string') {
+    return colorNameToRgb(v)
+  } else if (Value.isStructKind(v, 'hsv')) {
+    return hsvToRgb(v)
+  } else {
+    throw new ScamperError('Runtime', `Shapes expect a valid color, received a: ${Value.typeOf(v)}`)
+  }
+}
+
+export function colorQ (v: any): boolean {
+  return (typeof v === 'string' && isColorName(v)) ||
+    Value.isStructKind(v, 'rgba') ||
+    Value.isStructKind(v, 'hsv')
+}
+
+export const colorS: C.Spec = {
+  predicate: colorQ,
+  errorMsg: (actual: any) => `expected a color, received ${Value.typeOf(actual)}`
+}
+
 /***** RGB(A) Colors **********************************************************/
 
 export interface Rgb extends Value.Struct {
@@ -623,6 +662,10 @@ Render.addCustomWebRenderer(isHsv, renderHsv)
 /***** Exports ****************************************************************/
 
 export const lib: Library = emptyLibrary()
+
+// Generic colors
+registerValue('color', color, lib)
+registerValue('color?', colorQ, lib)
 
 // RGB(A) colors
 registerValue('rgb-component?', isRgbComponent, lib)

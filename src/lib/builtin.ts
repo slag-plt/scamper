@@ -7,7 +7,7 @@ import Audio from './audio.js'
 import Canvas from './canvas.js'
 import Html from './html.js'
 
-const builtinLibs: Map<string, Library> = new Map([
+export const builtinLibs: Map<string, Library> = new Map([
   ['image', imageLib],
   ['lab', Lab],
   ['music', Music],

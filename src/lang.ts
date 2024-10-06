@@ -258,6 +258,10 @@ export namespace Value {
         equal((v1 as Pair).snd, (v2 as Pair).snd)
     } else if (isChar(v1) && isChar(v2)) {
       return (v1 as Char).value === (v2 as Char).value
+    } else if (isArray(v1) && isArray(v2)) {
+      const a1 = v1 as T[]
+      const a2 = v2 as T[]
+      return a1.length === a2.length && a1.every((v, i) => equal(v, a2[i]))
     } else if (isStruct(v1) && isStruct(v2)) {
       const s1 = v1 as Struct
       const s2 = v2 as Struct

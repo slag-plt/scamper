@@ -3,31 +3,12 @@ import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
 
-import { colorNameToRgb, hsvToRgb, Rgb, rgb, rgbAverage, rgbToString } from './rgb.js'
+import { Rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 
 export const lib: Library = emptyLibrary()
 
 /***** Core Functions *********************************************************/
 
-function colorToRgb (v: any): Rgb {
-  if (Value.isStructKind(v, 'rgba')) {
-    return v
-  } else if (typeof v === 'string') {
-    return colorNameToRgb(v)
-  } else if (Value.isStructKind(v, 'hsv')) {
-    return hsvToRgb(v)
-  } else {
-    throw new ScamperError('Runtime', `Shapes expect a valid color, received a: ${Value.typeOf(v)}`)
-  }
-}
-
-// N.B., color is a legacy function from the htdp library. Currently, we standardize
-// on Rgb as the stored color type for shapes.
-function color (r: number, g: number, b: number, a: number): Rgb {
-  checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
-  return rgb(r, g, b, a)
-}
-registerValue('color', color, lib)
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
@@ -42,15 +23,6 @@ const alignVS: C.Spec = {
 const alignHS: C.Spec = {
   predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
   errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${Value.typeOf(actual)}`
-}
-
-// N.B., colors through the drawing/shape API can be a variety of inputs (ugh).
-// It is the responsibility of constructor functions to convert these into
-// Rgb values internally.
-const colorS: C.Spec = {
-  // https://stackoverflow.com/questions/48484767/javascript-check-if-string-is-valid-css-color
-  predicate: (v: any) => typeof v === 'string' || Value.isStructKind(v, 'rgba') || Value.isStructKind(v, 'hsv'),
-  errorMsg: (actual: any) => `expected a color, received ${Value.typeOf(actual)}`
 }
 
 type Mode = 'solid' | 'outline'
