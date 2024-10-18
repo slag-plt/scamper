@@ -625,18 +625,32 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       const centerX = x + drawing.width / 2
       const centerY = y + drawing.height / 2
       const angle = drawing.angle * Math.PI / 180
-      // N.B., need to move the canvas from the origin to the
-      // center of the drawing to rotate and then move back to
-      // the origin.
+      ctx.save()
       ctx.translate(centerX, centerY)
       ctx.rotate(angle)
-      ctx.translate(-centerX, -centerY);
-      // ctx.translate(-drawing.drawing.width / 2, -drawing.drawing.height / 2)
-      render(x, y, drawing.drawing, canvas)
-      ctx.translate(centerX, centerY)
-      // ctx.translate(drawing.drawing.width / 2, drawing.drawing.height / 2)
-      ctx.rotate(-angle)
       ctx.translate(-centerX, -centerY)
+      render(x, y, drawing.drawing, canvas)
+      ctx.restore()
+      break
+
+      // // N.B., need to move the canvas from the origin to the
+      // // center of the drawing to rotate and then move back to
+      // // the origin.
+      // ctx.translate(centerX, centerY)
+      // ctx.rotate(angle)
+
+      // // N.B., this "works" but the image is no longer centered!
+      // ctx.translate(-drawing.drawing.width / 2, -drawing.drawing.height / 2)
+      // render(x, y, drawing.drawing, canvas)
+      // ctx.translate(drawing.drawing.width / 2, drawing.drawing.height / 2)
+
+      // // N.B., this is incorrect but bounding boxes are preserved
+      // // ctx.translate(-centerX, -centerY);
+      // // render(x, y, drawing.drawing, canvas)
+      // // ctx.translate(centerX, centerY)
+      
+      // ctx.rotate(-angle)
+      // ctx.translate(-centerX, -centerY)
       break
     }
     case 'withDash': {

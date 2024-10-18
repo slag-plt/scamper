@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <link href="css/normalize.css" rel="stylesheet">
+</head>
+
+<body style="padding: 2em;">
+  <canvas id="content" width="500" height="500">  </canvas>
+</body>
+
+<script>
+  const canvas = document.getElementById('content')
+  const ctx = canvas.getContext('2d')
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.strokeRect(0, 0, canvas.width, canvas.height)
+
+  ctx.fillStyle = 'rgb(0, 0, 255)'
+  ctx.beginPath()
+  ctx.ellipse(canvas.width / 2, canvas.height / 2, 10, 10, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  for (let i = 0; i < 360; i += 10) {
+    ctx.save()
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate(Math.PI / 180 * i)
+    ctx.translate(-canvas.width / 2, -canvas.height / 2)
+    ctx.strokeStyle = 'red'
+    ctx.strokeRect(canvas.width / 2 - 25, canvas.height / 2 - 25, 50, 50)
+    ctx.restore()
+  }
+
+  ctx.fillStyle = 'black'
+  const diag = Math.sqrt(25 ** 2 + 25 **2)
+  ctx.strokeRect(canvas.width / 2 - diag, canvas.height / 2 - diag, diag * 2, diag * 2)
+</script>
+
+</html>
