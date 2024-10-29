@@ -533,7 +533,16 @@ function appendOne_ (l1: Value.List, l2: Value.List): Value.List {
   if (l1 === null) {
     return l2
   } else {
-    return Value.mkPair(l1.fst, appendOne_(l1.snd as Value.List, l2))
+    let head = Value.mkPair(l1.fst, null)
+    let last = head
+    let cur = l1.snd as Value.List
+    while (cur !== null) {
+      last.snd = Value.mkPair(cur.fst, null)
+      last = last.snd as Value.Pair
+      cur = cur.snd as Value.List
+    }
+    last.snd = l2
+    return head
   }
 }
 
