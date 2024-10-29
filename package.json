@@ -1,6 +1,6 @@
 {
   "name": "scamper",
-  "version": "2.7.10",
+  "version": "2.7.12",
   "description": "",
   "main": "./_build/js/index.js",
   "scripts": {
