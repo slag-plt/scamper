@@ -1,7 +1,7 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
+import { emptyLibrary, Library, registerValue, Value } from '../../lang.js'
 
 import { Rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 

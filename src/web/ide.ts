@@ -8,9 +8,7 @@ import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
-import { version } from '../version.js'
 
-let editor: EditorView | null = null
 const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
 const runButton       = document.getElementById('run')!
@@ -87,7 +85,7 @@ class IDE {
     runWindowButton.addEventListener('click', () => {
       this.saveCurrentFile()
       const params = new URLSearchParams({ filename: this.currentFile })
-      window.open(`runner-${version}.html?${params.toString()}`)
+      window.open(`runner.html?${params.toString()}`)
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
     stepOnceButton.addEventListener('click', () => {
@@ -110,9 +108,9 @@ class IDE {
       sizes: [65, 35]
     })
 
-    document.getElementById('version')!.innerText = `(${version})`
+    document.getElementById('version')!.innerText = `(${APP_VERSION})`
 
-    window.addEventListener('beforeunload', (e) => {
+    window.addEventListener('beforeunload', (_e) => {
       this.saveCurrentFile()
     })
 
@@ -166,4 +164,4 @@ class IDE {
   }
 }
 
-export default IDE
+new IDE()

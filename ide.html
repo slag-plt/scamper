@@ -172,7 +172,7 @@
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        <a href="file-chooser-{{ver}}.html">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
+        <a href="index.html">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
         <button id="run" class="fa-solid fa-play"></button>
         <button id="step" class="fa-solid fa-route"></button>
         <button id="run-window" class="fa-solid fa-window-maximize"></button> ⋅
@@ -210,9 +210,6 @@
       document.getElementById("loading").style.display = "none";
     })
   </script>
-  <script type="module">
-    import IDE from './js/scamper-ide-{{ver}}.js'
-    new IDE()
-  </script>
+  <script type="module" src="/src/web/ide.ts"></script>
 </body>
 </html>

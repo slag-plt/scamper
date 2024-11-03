@@ -1,5 +1,5 @@
 import {parser} from "./syntax.grammar"
-import {LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp, foldInside, continuedIndent, delimitedIndent} from "@codemirror/language"
+import {LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp, foldInside, continuedIndent} from "@codemirror/language"
 import {styleTags, tags as t} from "@lezer/highlight"
 
 export const ScamperLanguage = LRLanguage.define({

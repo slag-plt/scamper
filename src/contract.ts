@@ -6,8 +6,8 @@ export interface Spec {
 }
 
 export const any: Spec = {
-  predicate: (v: any) => true,
-  errorMsg: (actual: any) => { throw new ICE('anyC.errorMsg', 'anyC should not produce an error!') }
+  predicate: (_v: any) => true,
+  errorMsg: (_actual: any) => { throw new ICE('anyC.errorMsg', 'anyC should not produce an error!') }
 }
 
 export const and = (...specs: Spec[]): Spec => ({

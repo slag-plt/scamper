@@ -277,7 +277,7 @@ function allColorNames(): Value.List {
 function findColors (name: string): Value.List {
   checkContract(arguments, contract('find-colors', [C.string]))
   const results = []
-  for (const [key, value] of namedCssColors) {
+  for (const [key, _value] of namedCssColors) {
     if (key.includes(name.toLowerCase())) {
       results.push(key)
     }
@@ -456,16 +456,6 @@ export function colorNameToRgb(name: string): Rgb {
 
 // rgb->color-name
 // color->rgb
-
-function mod2(n: number): number {
-  if (n < 0) {
-    return 2 - (mod2(-n))
-  } else if (n < 2) {
-    return n
-  } else {
-    return mod2(n-2)
-  }
-}
 
 export function hsvToRgb(hsv: Hsv): Rgb {
   C.checkContract(arguments, contract('hsv->rgb', [hsvS]))
