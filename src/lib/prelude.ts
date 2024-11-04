@@ -1027,7 +1027,7 @@ function renderReactiveFile (v: any): HTMLElement {
       if (e !== null && e.target !== null) {
         outp.innerHTML = ''
         try {
-          const v = callFunction(rf.callback, [e.target.result as string])
+          const v = callFunction(rf.callback, e.target.result as string)
           outp.appendChild(Display.renderToHTML(v))
         } catch (e) {
           outp.appendChild(Display.renderToHTML(e as ScamperError))
