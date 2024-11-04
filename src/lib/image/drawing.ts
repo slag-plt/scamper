@@ -26,7 +26,7 @@ const alignHS: C.Spec = {
 }
 
 type Mode = 'solid' | 'outline'
-export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash
+export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
 function drawingQ (v: any): boolean {
   checkContract(arguments, contract('image?', [C.any]))
@@ -34,7 +34,8 @@ function drawingQ (v: any): boolean {
          Value.isStructKind(v, 'triangle') || Value.isStructKind(v, 'path') ||
          Value.isStructKind(v, 'beside') || Value.isStructKind(v, 'above') ||
          Value.isStructKind(v, 'overlay') || Value.isStructKind(v, 'overlayOffset') ||
-         Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash')
+         Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash') ||
+         Value.isStructKind(v, 'text')
 }
 registerValue('image?', drawingQ, lib)
 // TODO: in the new 151 library, images generalize to more than just shapes!
@@ -396,6 +397,13 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
       return rotatedPoints.map(([x, y]) => [x - xMin, y - yMin])
     case 'withDash':
       return getDrawingPoints(drawing.drawing)
+    case 'text':
+      return [
+        [0, 0],
+        [drawing.width, 0],
+        [drawing.width, drawing.height],
+        [0, drawing.height]
+      ]
   }
 }
 
@@ -458,6 +466,83 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
   }
 }
 registerValue('with-dash', withDash, lib)
+
+interface Font extends Value.Struct {
+  [Value.structKind]: 'font',
+  face: string,
+  system: string,
+  isBold: boolean,
+  isItalic: boolean
+}
+
+function fontPrim (face: string, system: string, isBold: boolean, isItalic: boolean): Font {
+  return {
+    [Value.scamperTag]: 'struct', [Value.structKind]: 'font',
+    face, system, isBold, isItalic
+  }
+}
+
+function font (name: string, system?: string,
+    isBold?: boolean, isItalic?: boolean): Font {
+  checkContract(arguments, contract('font', [C.string], C.any))
+  return fontPrim(name, system || 'sans-serif', isBold || false, isItalic || false)
+}
+registerValue('font', font, lib)
+
+const fontS: C.Spec = {
+  predicate: (v: any) => Value.isStructKind(v, 'font'),
+  errorMsg: (actual: any) => `expected a font, received ${Value.typeOf(actual)}`
+}
+
+function fontToFontString (f: Font, size: number): string {
+  const fontString = `"${f.face}"${f.system ? `, ${f.system}` : ''}`
+  return `${f.isItalic ? 'italic ' : ''}${f.isBold ? 'bold ' : ''}${size}px ${fontString}`
+}
+
+interface DText extends Value.Struct {
+  [Value.structKind]: 'text',
+  width: number,
+  height: number,
+  text: string,
+  size: number,
+  color: Rgb
+  font: Font,
+}
+
+function textPrim (width: number, height: number, text: string,
+    font: Font, size: number, color: any): DText {
+  return {
+    [Value.scamperTag]: 'struct', [Value.structKind]: 'text',
+    width, height, text, size, color: colorToRgb(color), font
+  }
+}
+
+function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
+  checkContract(arguments, contract('text', [C.string, C.nonneg, colorS], C.any))
+  let f: Font = font('Arial')
+  if (rest.length > 1) {
+    throw new ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
+  } else if (rest.length == 1 && fontS.predicate(rest[0])) {
+    if (fontS.predicate(rest[0])) {
+      f = rest[0] as Font
+    } else {
+      throw new ScamperError('Runtime', fontS.errorMsg(rest[0]))
+    }
+  }
+
+  // N.B., to calculate the width and height of text, we need to make a
+  // temporary canvas to measure the text's dimensions.
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  ctx.font = fontToFontString(f, size)
+  console.log(fontToFontString(f, size))
+  const met = ctx.measureText(text)
+  const width = met.width
+  const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent
+
+  return textPrim(width, height, text, f, size, color)
+}
+registerValue('text', text, lib)
 
 /***** Extended Functions *****************************************************/
 
@@ -543,6 +628,8 @@ function imageColor (drawing: Drawing): Rgb {
       return imageColor(drawing.drawing)
     case 'withDash':
       return imageColor(drawing.drawing)
+    case 'text':
+      return drawing.color
   }
 }
 
@@ -569,6 +656,9 @@ function imageRecolor (drawing: Drawing, color: any): Drawing {
       return rotate(drawing.angle, imageRecolor(drawing.drawing, color))
     case 'withDash':
       return withDash(drawing.dashSpec, imageRecolor(drawing.drawing, color))
+    case 'text':
+      return textPrim(drawing.width, drawing.height, drawing.text,
+        drawing.font, drawing.size, drawing.color)
   }
 }
 
@@ -739,6 +829,12 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       ctx.setLineDash(drawing.dashSpec)
       render(x, y, drawing.drawing, canvas)
       ctx.setLineDash([])
+      break
+    }
+    case 'text': {
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.font = fontToFontString(drawing.font, drawing.size) 
+      ctx.fillText(drawing.text, x, y + drawing.height)
     }
   }
 }
