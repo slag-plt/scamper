@@ -420,10 +420,18 @@ function stepPrim (state: ExecutionState): boolean {
         if (closure.params.length !== args.length) {
           throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
         } else {
-          // TODO: here, we can check if this control is done.
-          // If so, then this is a tail call! No need to dump,
-          // just overwrite the current state and go forward.
-          state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops, op.range)
+          const env = closure.env.extend(closure.params.map((p, i) => [p, args[i]]))
+          const ops = closure.ops
+          const range = op.range
+          // N.B., if the control is empty, then we can tail-call optimize by
+          // overwriting the current state instead of dumping.
+          if (state.control.isEmpty()) {
+            state.stack = []
+            state.env = env
+            state.control = new Control(closure.ops)
+          } else {
+            state.dumpAndSwitch([], env, ops, range)
+          }
         }
         return false
       } else if (Value.isJsFunction(head)) {
