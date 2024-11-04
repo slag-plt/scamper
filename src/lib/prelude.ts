@@ -1485,6 +1485,15 @@ function ignore (_v: Value.T): HTMLElement {
 }
 registerValue('ignore', ignore, Prelude)
 
+function setMaximumRecursionDepth (n: number): any {
+  checkContract(arguments, contract('set-maximum-recursion-depth', [C.nat]))
+  return {
+    [Value.scamperTag]: 'set-maximum-recursion-depth',
+    value: n
+  }
+}
+registerValue('set-maximum-recursion-depth!', setMaximumRecursionDepth, Prelude)
+
 // Additional constants
 
 const elseConst = true

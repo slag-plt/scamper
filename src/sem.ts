@@ -3,7 +3,7 @@ import { Env, Prog, Op, reservedWords, Value, } from './lang.js'
 import { renderToHTML, mkCodeElement, mkSourceBlock, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
-const maxCallStackDepth = 1000;
+let maxCallStackDepth = 100000;
 
 ///// Machine state structures /////////////////////////////////////////////////
 
@@ -860,10 +860,13 @@ export class Sem {
       if (this.state.stack.length !== 1) {
         throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
       }
-      if (this.defaultDisplay) {
-        renderToOutput(this.display, valToExp(this.state.stack.pop()!))
-      } else {
-        this.state.stack.pop()
+      const value: Value.T = this.state.stack.pop()!
+      if (value !== null && typeof value === 'object' &&
+        value.hasOwnProperty(Value.scamperTag) &&
+        (value as any)[Value.scamperTag] === 'set-maximum-recursion-depth') {
+          maxCallStackDepth = (value as any)['value']
+      } else if (this.defaultDisplay) {
+        renderToOutput(this.display, valToExp(value))
       }
       this.advance()
     }
