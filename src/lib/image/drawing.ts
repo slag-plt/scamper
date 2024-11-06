@@ -538,7 +538,7 @@ function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
   console.log(fontToFontString(f, size))
   const met = ctx.measureText(text)
   const width = met.width
-  const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent
+  const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent + 1
 
   return textPrim(width, height, text, f, size, color)
 }
@@ -834,7 +834,8 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
     case 'text': {
       ctx.fillStyle = rgbToString(drawing.color)
       ctx.font = fontToFontString(drawing.font, drawing.size) 
-      ctx.fillText(drawing.text, x, y + drawing.height)
+      const metrics = ctx.measureText(drawing.text)
+      ctx.fillText(drawing.text, x, y + metrics.actualBoundingBoxAscent + 1)
     }
   }
 }
@@ -843,13 +844,13 @@ function clearDrawing (canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = 'white'
   ctx.strokeStyle = 'black'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
 function renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
-  canvas.width = drawing.width
-  canvas.height = drawing.height
+  canvas.width = Math.ceil(drawing.width)
+  canvas.height = Math.ceil(drawing.height)
   clearDrawing(canvas)
   render(0, 0, drawing, canvas)
   return canvas
