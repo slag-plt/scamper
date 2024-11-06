@@ -1494,6 +1494,16 @@ function setMaximumRecursionDepth (n: number): any {
 }
 registerValue('set-maximum-recursion-depth!', setMaximumRecursionDepth, Prelude)
 
+function stringToWords (s: string): Value.List {
+  checkContract(arguments, contract('string->words', [C.string]))
+  const words = s.split(/\s+/)
+  for (let i = 0; i < words.length; i++) {
+    words[i] = words[i].replace(/[.,;?:!]$/, '')
+  }
+  return Value.vectorToList(words.filter((w) => w.length > 0))
+}
+registerValue('string->words', stringToWords, Prelude)
+
 // Additional constants
 
 const elseConst = true
