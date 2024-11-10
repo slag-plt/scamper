@@ -594,14 +594,31 @@ function outlinedIsoscelesTriangle(width: number, height: number, color: any): T
   return isoscelesTriangle(width, height, 'outline', color)
 }
 
+// TODO: this need to be factored out to a general image lib that handles both
+// drawings and canvases.
+
+const imageS: C.Spec = {
+  predicate: (v: any) => v instanceof HTMLCanvasElement,
+  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
+}
+
+
 function imageWidth (drawing: Drawing): number {
-  checkContract(arguments, contract('image-width', [drawingS]))
-  return drawing.width
+  // checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
+  if (drawingS.predicate(drawing)) {
+    return drawing.width
+  } else {
+    return (drawing as unknown as HTMLCanvasElement).width
+  }
 }
 
 function imageHeight (drawing: Drawing): number {
-  checkContract(arguments, contract('image-height', [drawingS]))
-  return drawing.height
+  // checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
+  if (drawingS.predicate(drawing)) {
+    return drawing.height
+  } else {
+    return (drawing as unknown as HTMLCanvasElement).height
+  }
 }
 
 function imageColor (drawing: Drawing): Rgb {

@@ -65,7 +65,6 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
   const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
   const src = inpImg.data
 
-
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const dst = outImg.data
   for (let i = 0; i < src.length; i += 4) {
@@ -93,6 +92,36 @@ function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
   return rgb(data[0], data[1], data[2], data[3])
+}
+
+function imageToPixels (canvas: HTMLCanvasElement): Value.Struct[] {
+  checkContract(arguments, contract('image-to-pixels', [imageS]))
+  const ctx = canvas.getContext('2d')!
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
+  const ret = []
+  for (let i = 0; i < src.length; i += 4) {
+    ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
+  }
+  return ret
+}
+
+function pixelsToImage (pixels: Value.Struct[], width: number, height: number): HTMLCanvasElement {
+  checkContract(arguments, contract('pixels-to-image', [C.vector, C.integer, C.integer]))
+  const ret = document.createElement('canvas')
+  ret.width = width
+  ret.height = height
+  const ctx = ret.getContext('2d')!
+  const outImg = ctx.createImageData(width, height)
+  const data = outImg.data
+  for (let i = 0; i < pixels.length; i++) {
+    const c = pixels[i]
+    data[i*4] = c.red
+    data[i*4 + 1] = c.green
+    data[i*4 + 2] = c.blue
+    data[i*4 + 3] = c.alpha
+  }
+  ctx.putImageData(outImg, 0, 0)
+  return ret
 }
 
 /***** Rendering **************************************************************/
@@ -153,3 +182,5 @@ registerValue('with-image-from-url', withImageFromUrl, lib)
 // Per-pixel manipulation
 registerValue('pixel-map', pixelMap, lib)
 registerValue('image-get-pixel', imageGetPixel, lib)
+registerValue('image->pixels', imageToPixels, lib)
+registerValue('pixels->image', pixelsToImage, lib)
