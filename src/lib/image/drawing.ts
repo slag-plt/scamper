@@ -26,7 +26,7 @@ const alignHS: C.Spec = {
 }
 
 type Mode = 'solid' | 'outline'
-export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash
+export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
 function drawingQ (v: any): boolean {
   checkContract(arguments, contract('image?', [C.any]))
@@ -34,7 +34,8 @@ function drawingQ (v: any): boolean {
          Value.isStructKind(v, 'triangle') || Value.isStructKind(v, 'path') ||
          Value.isStructKind(v, 'beside') || Value.isStructKind(v, 'above') ||
          Value.isStructKind(v, 'overlay') || Value.isStructKind(v, 'overlayOffset') ||
-         Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash')
+         Value.isStructKind(v, 'rotate') || Value.isStructKind(v, 'withDash') ||
+         Value.isStructKind(v, 'text')
 }
 registerValue('image?', drawingQ, lib)
 // TODO: in the new 151 library, images generalize to more than just shapes!
@@ -287,35 +288,136 @@ interface Rotate extends Value.Struct {
   [Value.structKind]: 'rotate',
   width: number,
   height: number,
+  dx: number,
+  dy: number,
   angle: number,
   drawing: Drawing
 }
 
-// const rotate = (angle: number, drawing: Drawing): Rotate => ({
-//   tag: 'rotate',
-//   width: drawing.width * Math.abs(Math.cos(angle * Math.PI / 180)) + drawing.height * Math.abs(Math.sin(angle * Math.PI / 180)),
-//   height: drawing.width * Math.abs(Math.sin(angle * Math.PI / 180)) + drawing.height * Math.abs(Math.cos(angle * Math.PI /180)),
-//   angle,
-//   drawing
-// })
+function getDrawingPoints (drawing: Drawing): [number, number][] {
+  let points: [number, number][] = []
+  switch(drawing[Value.structKind]) {
+    case 'ellipse':
+      const n = 100;
+      for (let i = 1; i < n; i++) {
+        const t = 2 * Math.PI * i / n;
+        points.push([
+          0.5 * drawing.width * Math.cos(t),
+          0.5 * drawing.height * Math.sin(t)
+        ])
+      }
+      return points
+    case 'rectangle':
+      return [
+        [0, 0],
+        [drawing.width, 0],
+        [drawing.width, drawing.height],
+        [0, drawing.height]
+      ]
+    case 'triangle':
+      return [
+        [0, 0],
+        [0.5 * drawing.width, drawing.height],
+        [drawing.width, 0]
+      ]
+    case 'path':
+      return drawing.points
+    case 'beside':
+      let xOffset = 0
+      drawing.drawings.forEach((subimage) => {
+        let subPoints: [number, number][] = getDrawingPoints(subimage)
+          .map(([x, y]) => [
+            x + xOffset,
+            drawing.align === 'top'
+              ? y
+              : drawing.align === 'bottom'
+                ? y + drawing.height - subimage.height
+                // N.B., assumed to be 'center'
+                : y + (drawing.height - subimage.height) / 2
+        ])
+        points.push(...subPoints)
+        xOffset += subimage.width
+      })
+      return points
+    case 'above':
+      let yOffset = 0
+      drawing.drawings.forEach((subimage) => {
+        let subPoints: [number, number][] = getDrawingPoints(subimage)
+          .map(([x, y]) => [
+            drawing.align === 'left'
+              ? x
+              : drawing.align === 'right'
+                ? x + drawing.width - subimage.width
+                // N.B., assumed to be 'middle'
+                : x + (drawing.width - subimage.width) / 2,
+            y + yOffset
+        ])
+        points.push(...subPoints)
+        xOffset += subimage.width
+      })
+      return points
+    case 'overlay': {
+      return drawing.drawings.reverse().flatMap((d) => {
+        return getDrawingPoints(d)
+          .map(([x, y]) => [
+            drawing.xAlign === 'left'
+            ? x
+            : drawing.xAlign === 'right'
+              ? x + drawing.width - d.width
+              // N.B., assumed to be 'middle'
+              : x + (drawing.width - d.width) / 2,
+          drawing.yAlign === 'top'
+            ? y
+            : drawing.yAlign === 'bottom'
+              ? y + drawing.height - d.height
+              // N.B., assumed to be 'center'
+              : y + (drawing.height - d.height) / 2
+          ]) as Array<[number, number]>
+      })
+    }
+    case 'overlayOffset':
+      const x1 = drawing.dx > 0 ? 0 : Math.abs(drawing.dx)
+      const y1 = drawing.dy > 0 ? 0 : Math.abs(drawing.dy)
+      const x2 = drawing.dx > 0 ? drawing.dx : 0
+      const y2 = drawing.dy > 0 ? drawing.dy : 0
+      const d1Points: [number, number][] = getDrawingPoints(drawing.d1)
+        .map(([x, y]) => [x + x1, y + y1])
+      const d2Points: [number, number][] = getDrawingPoints(drawing.d2)
+        .map(([x, y]) => [x + x2, y + y2])
+      return d1Points.concat(d2Points)
+    case 'rotate':
+      const angle = drawing.angle * Math.PI / 180
+      const rotatedPoints = getDrawingPoints(drawing.drawing)
+        .map(([x, y]) => [
+          x * Math.cos(angle) - y * Math.sin(angle),
+          x * Math.sin(angle) + y * Math.cos(angle)
+        ])
+      const xMin = Math.min(...rotatedPoints.map(([x, _]) => x))
+      const yMin = Math.min(...rotatedPoints.map(([_, y]) => y))
+      return rotatedPoints.map(([x, y]) => [x - xMin, y - yMin])
+    case 'withDash':
+      return getDrawingPoints(drawing.drawing)
+    case 'text':
+      return [
+        [0, 0],
+        [drawing.width, 0],
+        [drawing.width, drawing.height],
+        [0, drawing.height]
+      ]
+  }
+}
 
-function calculateRotatedBox (width: number, height: number, degrees: number): { width: number, height: number } {
-  // Calculate the rotated corners of the box
+function calculateRotatedBox (points: [number, number][], degrees: number): { width: number, height: number, dx: number, dy: number } {
+  // Calculate the rotated points
   const angle = degrees * Math.PI / 180
-  const origPoints = [
-    [-width / 2, -height / 2],
-    [width / 2, -height / 2],
-    [-width / 2, height / 2],
-    [width / 2, height / 2]
-  ]
-  const rotatedPoints = origPoints.map(
+  const rotatedPoints = points.map(
     ([x, y]) => [
       x * Math.cos(angle) - y * Math.sin(angle),
       x * Math.sin(angle) + y * Math.cos(angle)
     ]
   )
 
-  // Determine the width and height of the box's bounding
+  // Determine the width and height of the bounding
   // box by taking mins and maxes of the points.
   const xMin = Math.min(...rotatedPoints.map(([x, _]) => x))
   const xMax = Math.max(...rotatedPoints.map(([x, _]) => x))
@@ -324,17 +426,21 @@ function calculateRotatedBox (width: number, height: number, degrees: number): {
 
   return {
     width: xMax - xMin,
-    height: yMax - yMin
+    height: yMax - yMin,
+    dx: -xMin,
+    dy: -yMin
   }
 }
 
 function rotate (angle: number, drawing: Drawing): Rotate {
   checkContract(arguments, contract('rotate', [C.number, drawingS]))
-  const dims = calculateRotatedBox(drawing.width, drawing.height, angle)
+  const dims = calculateRotatedBox(getDrawingPoints(drawing), angle)
   return {
     [Value.scamperTag]: 'struct', [Value.structKind]: 'rotate',
     width: dims.width,
     height: dims.height,
+    dx: dims.dx,
+    dy: dims.dy,
     angle,
     drawing
   }
@@ -360,6 +466,83 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
   }
 }
 registerValue('with-dash', withDash, lib)
+
+interface Font extends Value.Struct {
+  [Value.structKind]: 'font',
+  face: string,
+  system: string,
+  isBold: boolean,
+  isItalic: boolean
+}
+
+function fontPrim (face: string, system: string, isBold: boolean, isItalic: boolean): Font {
+  return {
+    [Value.scamperTag]: 'struct', [Value.structKind]: 'font',
+    face, system, isBold, isItalic
+  }
+}
+
+function font (name: string, system?: string,
+    isBold?: boolean, isItalic?: boolean): Font {
+  checkContract(arguments, contract('font', [C.string], C.any))
+  return fontPrim(name, system || 'sans-serif', isBold || false, isItalic || false)
+}
+registerValue('font', font, lib)
+
+const fontS: C.Spec = {
+  predicate: (v: any) => Value.isStructKind(v, 'font'),
+  errorMsg: (actual: any) => `expected a font, received ${Value.typeOf(actual)}`
+}
+
+function fontToFontString (f: Font, size: number): string {
+  const fontString = `"${f.face}"${f.system ? `, ${f.system}` : ''}`
+  return `${f.isItalic ? 'italic ' : ''}${f.isBold ? 'bold ' : ''}${size}px ${fontString}`
+}
+
+interface DText extends Value.Struct {
+  [Value.structKind]: 'text',
+  width: number,
+  height: number,
+  text: string,
+  size: number,
+  color: Rgb
+  font: Font,
+}
+
+function textPrim (width: number, height: number, text: string,
+    font: Font, size: number, color: any): DText {
+  return {
+    [Value.scamperTag]: 'struct', [Value.structKind]: 'text',
+    width, height, text, size, color: colorToRgb(color), font
+  }
+}
+
+function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
+  checkContract(arguments, contract('text', [C.string, C.nonneg, colorS], C.any))
+  let f: Font = font('Arial')
+  if (rest.length > 1) {
+    throw new ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
+  } else if (rest.length == 1 && fontS.predicate(rest[0])) {
+    if (fontS.predicate(rest[0])) {
+      f = rest[0] as Font
+    } else {
+      throw new ScamperError('Runtime', fontS.errorMsg(rest[0]))
+    }
+  }
+
+  // N.B., to calculate the width and height of text, we need to make a
+  // temporary canvas to measure the text's dimensions.
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  ctx.font = fontToFontString(f, size)
+  console.log(fontToFontString(f, size))
+  const met = ctx.measureText(text)
+  const width = met.width
+  const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent + 1
+
+  return textPrim(width, height, text, f, size, color)
+}
+registerValue('text', text, lib)
 
 /***** Extended Functions *****************************************************/
 
@@ -411,14 +594,31 @@ function outlinedIsoscelesTriangle(width: number, height: number, color: any): T
   return isoscelesTriangle(width, height, 'outline', color)
 }
 
+// TODO: this need to be factored out to a general image lib that handles both
+// drawings and canvases.
+
+const imageS: C.Spec = {
+  predicate: (v: any) => v instanceof HTMLCanvasElement,
+  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
+}
+
+
 function imageWidth (drawing: Drawing): number {
-  checkContract(arguments, contract('image-width', [drawingS]))
-  return drawing.width
+  // checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
+  if (drawingS.predicate(drawing)) {
+    return drawing.width
+  } else {
+    return (drawing as unknown as HTMLCanvasElement).width
+  }
 }
 
 function imageHeight (drawing: Drawing): number {
-  checkContract(arguments, contract('image-height', [drawingS]))
-  return drawing.height
+  // checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
+  if (drawingS.predicate(drawing)) {
+    return drawing.height
+  } else {
+    return (drawing as unknown as HTMLCanvasElement).height
+  }
 }
 
 function imageColor (drawing: Drawing): Rgb {
@@ -445,6 +645,8 @@ function imageColor (drawing: Drawing): Rgb {
       return imageColor(drawing.drawing)
     case 'withDash':
       return imageColor(drawing.drawing)
+    case 'text':
+      return drawing.color
   }
 }
 
@@ -471,6 +673,9 @@ function imageRecolor (drawing: Drawing, color: any): Drawing {
       return rotate(drawing.angle, imageRecolor(drawing.drawing, color))
     case 'withDash':
       return withDash(drawing.dashSpec, imageRecolor(drawing.drawing, color))
+    case 'text':
+      return textPrim(drawing.width, drawing.height, drawing.text,
+        drawing.font, drawing.size, drawing.color)
   }
 }
 
@@ -622,27 +827,32 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       break
     }
     case 'rotate': {
-      const centerX = x + drawing.width / 2
-      const centerY = y + drawing.height / 2
+      const offsetX = x + drawing.dx
+      const offsetY = y + drawing.dy
       const angle = drawing.angle * Math.PI / 180
       // N.B., need to move the canvas from the origin to the
       // center of the drawing to rotate and then move back to
       // the origin.
-      ctx.translate(centerX, centerY)
+      ctx.translate(offsetX, offsetY)
       ctx.rotate(angle)
-      ctx.translate(-centerX, -centerY);
-      // ctx.translate(-drawing.drawing.width / 2, -drawing.drawing.height / 2)
-      render(x, y, drawing.drawing, canvas)
-      ctx.translate(centerX, centerY)
-      // ctx.translate(drawing.drawing.width / 2, drawing.drawing.height / 2)
+      
+      render(0, 0, drawing.drawing, canvas)
+      
       ctx.rotate(-angle)
-      ctx.translate(-centerX, -centerY)
+      ctx.translate(-offsetX, -offsetY)
       break
     }
     case 'withDash': {
       ctx.setLineDash(drawing.dashSpec)
       render(x, y, drawing.drawing, canvas)
       ctx.setLineDash([])
+      break
+    }
+    case 'text': {
+      ctx.fillStyle = rgbToString(drawing.color)
+      ctx.font = fontToFontString(drawing.font, drawing.size) 
+      const metrics = ctx.measureText(drawing.text)
+      ctx.fillText(drawing.text, x, y + metrics.actualBoundingBoxAscent + 1)
     }
   }
 }
@@ -651,13 +861,13 @@ function clearDrawing (canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = 'white'
   ctx.strokeStyle = 'black'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
 function renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
-  canvas.width = drawing.width
-  canvas.height = drawing.height
+  canvas.width = Math.ceil(drawing.width)
+  canvas.height = Math.ceil(drawing.height)
   clearDrawing(canvas)
   render(0, 0, drawing, canvas)
   return canvas

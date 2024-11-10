@@ -1027,7 +1027,7 @@ function renderReactiveFile (v: any): HTMLElement {
       if (e !== null && e.target !== null) {
         outp.innerHTML = ''
         try {
-          const v = callFunction(rf.callback, [e.target.result as string])
+          const v = callFunction(rf.callback, e.target.result as string)
           outp.appendChild(Display.renderToHTML(v))
         } catch (e) {
           outp.appendChild(Display.renderToHTML(e as ScamperError))
@@ -1484,6 +1484,25 @@ function ignore (_v: Value.T): HTMLElement {
   return ret
 }
 registerValue('ignore', ignore, Prelude)
+
+function setMaximumRecursionDepth (n: number): any {
+  checkContract(arguments, contract('set-maximum-recursion-depth', [C.nat]))
+  return {
+    [Value.scamperTag]: 'set-maximum-recursion-depth',
+    value: n
+  }
+}
+registerValue('set-maximum-recursion-depth!', setMaximumRecursionDepth, Prelude)
+
+function stringToWords (s: string): Value.List {
+  checkContract(arguments, contract('string->words', [C.string]))
+  const words = s.split(/\s+/)
+  for (let i = 0; i < words.length; i++) {
+    words[i] = words[i].replace(/[.,;?:!]$/, '')
+  }
+  return Value.vectorToList(words.filter((w) => w.length > 0))
+}
+registerValue('string->words', stringToWords, Prelude)
 
 // Additional constants
 

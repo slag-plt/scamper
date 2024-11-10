@@ -3,6 +3,8 @@ import { Env, Prog, Op, reservedWords, Value, } from './lang.js'
 import { renderToHTML, mkCodeElement, mkSourceBlock, renderToOutput } from './display.js'
 import * as C from './contract.js'
 
+let maxCallStackDepth = 100000;
+
 ///// Machine state structures /////////////////////////////////////////////////
 
 class Control {
@@ -44,24 +46,25 @@ class ExecutionState {
     // step of computation
     if (ops.length === 1 && ops[0].tag === 'val') {
       this.stack = [ops[0].value]
-      this.env = env
       this.control = new Control([])
-      this.dump = []
     } else {
       this.stack = []
-      this.env = env
       this.control = new Control(ops)
-      this.dump = []
     }
+    this.env = env
+    this.dump = []
   }
 
   isFinished(): boolean { return this.control.isEmpty() && this.dump.length === 0 }
 
-  dumpAndSwitch (stack: Value.T[], env: Env, ops: Op.T[]): void {
+  dumpAndSwitch (stack: Value.T[], env: Env, ops: Op.T[], range?: Range): void {
     this.dump.push([this.stack, this.env, this.control])
     this.stack = stack
     this.env = env
     this.control = new Control(ops)
+    if (this.dump.length > maxCallStackDepth) {
+      throw new ScamperError('Runtime', "Maximum call stack size exceeded", undefined, range)
+    }
   }
 
   isDumpEmpty() { return this.dump.length === 0 }
@@ -417,10 +420,18 @@ function stepPrim (state: ExecutionState): boolean {
         if (closure.params.length !== args.length) {
           throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
         } else {
-          // TODO: here, we can check if this control is done.
-          // If so, then this is a tail call! No need to dump,
-          // just overwrite the current state and go forward.
-          state.dumpAndSwitch([], closure.env.extend(closure.params.map((p, i) => [p, args[i]])), closure.ops)
+          const env = closure.env.extend(closure.params.map((p, i) => [p, args[i]]))
+          const ops = closure.ops
+          const range = op.range
+          // N.B., if the control is empty, then we can tail-call optimize by
+          // overwriting the current state instead of dumping.
+          if (state.control.isEmpty()) {
+            state.stack = []
+            state.env = env
+            state.control = new Control(closure.ops)
+          } else {
+            state.dumpAndSwitch([], env, ops, range)
+          }
         }
         return false
       } else if (Value.isJsFunction(head)) {
@@ -449,9 +460,9 @@ function stepPrim (state: ExecutionState): boolean {
       if (stack.length >= 1) {
         const guard = stack.pop()!
         if (guard === true) {
-          state.dumpAndSwitch([], state.env, op.ifb)
+          state.dumpAndSwitch([], state.env, op.ifb, op.range)
         } else if (guard === false) {
-          state.dumpAndSwitch([], state.env, op.elseb)
+          state.dumpAndSwitch([], state.env, op.elseb, op.range)
         } else {
           throw new ScamperError('Runtime', `Boolean expected in conditional, received ${Value.toString(guard)} instead`, undefined, op.range)
         }
@@ -496,7 +507,7 @@ function stepPrim (state: ExecutionState): boolean {
         for (let i = 0; !foundMatch && i < op.branches.length; i++) {
           const bindings = tryMatch(op.branches[i].pattern, scrutinee)
           if (bindings) {
-            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body)
+            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body, op.range)
             foundMatch = true
           }
         }
@@ -550,7 +561,7 @@ function stepPrim (state: ExecutionState): boolean {
         // N.B., make sure to switch this frame's instr pointer before jumping
         // otherwise we'll forget where to return to!
         state.jumpPast(op.end)
-        state.dumpAndSwitch([], state.env, op.body)
+        state.dumpAndSwitch([], state.env, op.body, op.range)
       }
       return false
     }
@@ -857,10 +868,13 @@ export class Sem {
       if (this.state.stack.length !== 1) {
         throw new ICE('sem.step', `Stack size is not 1 after execution: ${this.state.stack}`)
       }
-      if (this.defaultDisplay) {
-        renderToOutput(this.display, valToExp(this.state.stack.pop()!))
-      } else {
-        this.state.stack.pop()
+      const value: Value.T = this.state.stack.pop()!
+      if (value !== null && typeof value === 'object' &&
+        value.hasOwnProperty(Value.scamperTag) &&
+        (value as any)[Value.scamperTag] === 'set-maximum-recursion-depth') {
+          maxCallStackDepth = (value as any)['value']
+      } else if (this.defaultDisplay) {
+        renderToOutput(this.display, valToExp(value))
       }
       this.advance()
     }
