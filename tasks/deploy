@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-rsync -crtvz --progress site/* compsci:scamper.cs.grinnell.edu/
