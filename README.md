@@ -1,16 +1,23 @@
 # Scamper
 
-A mini-Scheme implementation designed for teaching, targeting
-multimedia applications on the web.
+A mini-Scheme implementation designed for teaching, targeting multimedia applications on the web.
 
 ## Development
 
-To Run Scamper in its basic test environment:
+To run a local instance of Scamper for development purposes:
 
 ~~~console
-$> tasks/build
-$> npm run serve    # spawns a live-server rooted in this project
+$> npm install    # Install NPM dependencies
+$> npm run dev    # Spawns a local vite server to serve the application
 ~~~
 
-By default, you can then navigate to `localhost:8080/site` to interact
-with the test environment.
+Follow the terminal instructions to connect to your local Scamper instance.
+
+## Deployment
+
+The deployment script builds Scamper and copies it to `<server>:<root>/<version>` and adds `<server>:<root>/index.html` which redirects to this latest version.
+The deployment script also requires that you are on Mac/Linux and the `compsci` host points to the correct web server.
+
+~~~console
+$> npm run deploy   # Deploys Scamper
+~~~
