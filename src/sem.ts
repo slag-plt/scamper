@@ -601,7 +601,7 @@ function executeStructDecl (name: string, fields: string[], env: Env): Env {
   const pred: [string, Value.T] = [`${name}?`, predFn]
 
   const ctorFn = function (...args: any[]) {
-    C.checkContract(arguments, C.contract(name, fields.map((f) => C.any)))
+    C.checkContract(arguments, C.contract(name, fields.map((_f) => C.any)))
     return Value.mkStruct(name, fields, args)
   }
   Value.nameFn(name, ctorFn)
@@ -819,7 +819,7 @@ export class Sem {
     this.advance()
   }
 
-  stepDisplay (body: Op.T[], range?: Range): void {
+  stepDisplay (body: Op.T[], _range?: Range): void {
     if (this.state === undefined) {
       this.tryPrintCurrentCodeSegment()
       this.state = new ExecutionState(this.env, body)

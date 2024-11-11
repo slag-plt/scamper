@@ -28,7 +28,8 @@ class Runner {
     } catch (e) {
       renderToOutput(outputPane, e)
     }
+    document.getElementById('version')!.innerText = `(${APP_VERSION})`
   }
 }
 
-export default Runner
+new Runner()

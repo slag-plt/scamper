@@ -83,7 +83,6 @@ L.registerValue('draw-text', drawText, Canvas)
 
 function drawDrawing (canvas: HTMLCanvasElement, drawing: Drawing, x: number, y: number): void {
   checkContract(arguments, contract('draw-drawing', [C.any, C.any, C.integer, C.integer]))
-  const ctx = canvas.getContext('2d')!
   render(x, y, drawing, canvas)
 }
 L.registerValue('draw-drawing', drawDrawing, Canvas)
@@ -120,7 +119,7 @@ function animateWith (fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
   function callback (time: number) {
     try {
-      const result = callFunction(fn, time)
+      callFunction(fn, time)
     } catch (e) {
       alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
       return

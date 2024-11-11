@@ -1,18 +1,36 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "useDefineForClassFields": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
-    "rootDir": "./src",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./_build/js",
+
+    /* Bundler mode */
+    "moduleResolution": "Node",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+
+    /* Linting */
     "strict": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "forceConsistentCasingInFileNames": true,
+    /*"allowSyntheticDefaultImports": true,*/
+
+    /*"rootDir": "./src",*/
+    /*"outDir": "./_build/js",*/
   },
-  "exclude": ["node_modules", "site", "_build", "test", "esbuild.config.js", "tsconfig.json", "jest.config.ts"]
+  "exclude": ["node_modules", "site", "_build", "test", "esbuild.config.js", "tsconfig.json", "jest.config.ts"],
+  "include": ["src"]
 }

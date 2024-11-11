@@ -4,9 +4,9 @@ function mkToneIndex (instrument: number): string {
   return `${instrument}`.padStart(3, '0') + '0'
 }
 
-function mkPercIndex (instrument: number): string {
-  return `${instrument}`.padStart(2, '0')
-}
+// function mkPercIndex (instrument: number): string {
+//   return `${instrument}`.padStart(2, '0')
+// }
 
 function mkTonePath (instrument: number, fontName: string): string {
   return `https://surikov.github.io/webaudiofontdata/sound/${mkToneIndex(instrument)}_${fontName}_sf2_file.js`

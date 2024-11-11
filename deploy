@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+VER=$1
+
+echo "Deploying ${VER}"
+
+tsc
+vite build --base=/${VER}/
+rsync -crtvz --progress dist/ compsci:scamper.cs.grinnell.edu/${VER}
+
+cat << EOF | ssh compsci 'cat > scamper.cs.grinnell.edu/index.html'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="refresh" content="0; url=${VER}/">
+  <title>Redirecting to latest Scamper version...</title>
+</head>
+<body>
+  <p>If you are not redirected automatically, follow this <a href="${VER}/">link to Scamper ${VER}</a>.</p>
+</body>
+</html></html>
+EOF 

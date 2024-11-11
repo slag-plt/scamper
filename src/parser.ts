@@ -650,7 +650,7 @@ export function parseStmt (v: Value.T): Stmt.T {
       if (!Value.isSym(name)) {
         throw new ScamperError('Parser', 'The first argument of a struct statement must be a struct name', undefined, nr )
       }
-      const { range: sfr, value: sfields } = Value.unpackSyntax(args[1])
+      const { range: _sfr, value: sfields } = Value.unpackSyntax(args[1])
       if (!Value.isList(sfields)) {
         throw new ScamperError('Parser', 'The second argument of a struct statement must be a list of fields', undefined, range)
       }

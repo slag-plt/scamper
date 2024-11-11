@@ -45,7 +45,7 @@ class FakeLocalStorage {
     this.map.set(key, value)
   }
 
-  key (index: number): string | null {
+  key (_index: number): string | null {
     throw new ICE('FakeLocalStorage.key', 'Not implemented')
   }
 

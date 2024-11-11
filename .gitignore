@@ -104,11 +104,17 @@ dist
 .tern-port
 
 dist/
-_build/
+dist-ssr
+*.local
 src/version.ts
-.DS_Store
-site
-test.html
 
-# VSCode
-.vscode
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

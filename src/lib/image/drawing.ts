@@ -604,7 +604,7 @@ const imageS: C.Spec = {
 
 
 function imageWidth (drawing: Drawing): number {
-  // checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
+  checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
   if (drawingS.predicate(drawing)) {
     return drawing.width
   } else {
@@ -613,7 +613,7 @@ function imageWidth (drawing: Drawing): number {
 }
 
 function imageHeight (drawing: Drawing): number {
-  // checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
+  checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
   if (drawingS.predicate(drawing)) {
     return drawing.height
   } else {

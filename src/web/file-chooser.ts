@@ -1,5 +1,4 @@
 import FS from './fs.js'
-import { version } from '../version.js'
 
 function firstNLines(str: string, n: number): string {
   return str.split('\n').slice(0, n).join('\n')
@@ -89,7 +88,7 @@ class FileChooser {
 
     ret.addEventListener('click', () => {
       const params = new URLSearchParams({ filename })
-      window.open(`ide-${version}.html?${params.toString()}`)
+      window.open(`ide.html?${params.toString()}`)
     })
 
     return ret
@@ -103,7 +102,7 @@ class FileChooser {
     header.innerText = 'Create a new program'
     ret.appendChild(header)
 
-    ret.addEventListener('click', (e) => {
+    ret.addEventListener('click', (_e) => {
       const filename = prompt('Enter a file name for your new program.')
       if (filename !== null) {
         if (this.fs.fileExists(filename)) {
@@ -129,4 +128,6 @@ class FileChooser {
   }
 }
 
-export default FileChooser
+const chooser = new FileChooser(document.getElementById('content')!)
+document.getElementById('version')!.innerText = `(${APP_VERSION})`
+chooser.populateChooser()

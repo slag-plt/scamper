@@ -1,0 +1,130 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <link href="css/normalize.css" rel="stylesheet">
+    <!-- Fontawesome (brands + solid) -->
+    <link href="css/fontawesome.css" rel="stylesheet">
+    <link href="css/brands.css" rel="stylesheet">
+    <link href="css/solid.css" rel="stylesheet">
+    <link href="css/scamper-hljs.css" rel="stylesheet">
+    <style>
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+        font-family:  -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+        font-size: 1em;
+      }
+
+      #content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #header {
+        background: #eee;
+        color: #333;
+        padding: 0.5em;
+        flex: 0 0 auto;
+
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+
+      #modules {
+        padding: 0em;
+        margin: 0em;
+        text-align: center;
+      }
+
+      #modules button {
+        margin: 0em;
+        padding: 0em;
+        background-color: transparent;
+        border: none;
+      }
+
+      #modules button:hover {
+        text-decoration: underline;
+      }
+
+      #docs {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+
+      #api {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 95vh;
+      } 
+
+      #index {
+        margin: 1em;
+        padding: 1em;
+        background-color: #ddd;
+        font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+        width: max-content;
+        overflow: scroll;
+      }
+
+      #index ul,li {
+        list-style-type: none;
+        list-style-position:inside;
+        margin: 0;
+        padding: 0;
+      }
+      
+      #entries {
+        height: 100%;
+        overflow: scroll;
+      }
+
+      .entry {
+        border: 1px solid black;
+        padding: 1em;
+        margin: 1em;
+        font: 1em;
+        font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+      }
+
+      .entry code {
+        font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <div id="header">
+        <div class="text-align: left;">
+          <a href="index.html">Scamper</a> <span id="version">{{ver}}</span> ⋅
+          <a href="docs.html">Docs</a> ⋅
+          <a href="reference.html">Reference</a>
+        </div>
+        <div class="text-align: right; font-size: 0.75em; color: #333;">
+          <a href="https://github.com/slag-plt/scamper"><i class="fa-brands fa-github"></i></a> ⋅
+          <em><a href="https://github.com/slag-plt/scamper/issues">Report an issue</a></em>
+        </div>
+      </div>
+      <div id="docs">
+        <div id="modules"></div>
+        <div id="api">
+          <div id="index"></div>
+          <div id="entries"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/docs/index.ts"></script>
+  </body>
+</head>
+</html>

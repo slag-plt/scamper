@@ -4,11 +4,6 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
 
-function registerFn (name: string, fn: Function, map: [string, Value.T][]) {
-  Value.nameFn(name, fn)
-  map.push([name, fn])
-}
-
 const Audio: L.Library = L.emptyLibrary()
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
@@ -40,7 +35,7 @@ function audioContext (sampleRate: number): AudioContext {
   const AudioContext = window.AudioContext
   return new AudioContext({ sampleRate })
 }
-L.registerValue('audio-context', sampleNode, Audio)
+L.registerValue('audio-context', audioContext, Audio)
 
 interface AudioPipeline extends Value.Struct {
   [Value.structKind]: 'audio-pipeline',
