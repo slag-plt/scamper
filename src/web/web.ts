@@ -28,3 +28,5 @@ export function replaceCodeWidgets() {
     replaceCodeWidget(widgets[i] as HTMLElement)
   }
 }
+
+replaceCodeWidgets()
