@@ -103,7 +103,7 @@ export const animateWithDoc: Doc = new Doc(
   [
     new ArgDoc('proc', 'procedure?, a procedure that takes the current time in milliseconds as input.')
   ],
-  'Repeatedly calls `proc` approximately once every 60 seconds, creating the effect of animation.'
+  'Repeatedly calls `proc` approximately once every 60 seconds, creating the effect of animation. `proc` should return a boolean. If `proc` returns `#t` the loop of calls continues, otherwise, it stops.'
 )
 
 export const canvasOnclickDoc: Doc = new Doc(

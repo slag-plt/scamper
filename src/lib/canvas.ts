@@ -131,13 +131,19 @@ L.registerValue('canvas-path!', canvasPath, Canvas)
 function animateWith (fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
   function callback (time: number) {
+    let result = false
     try {
-      callFunction(fn, time)
+      result = callFunction(fn, time)
     } catch (e) {
       alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
       return
     }
-    window.requestAnimationFrame(callback)
+    if (typeof result !== 'boolean') {
+      alert(`animate-with callback returned a non-boolean value: ${result}`)
+    } else if (result) {
+      window.requestAnimationFrame(callback)
+    }
+    // Otherwise, let the animation die!
   }
   window.requestAnimationFrame(callback)
 }
