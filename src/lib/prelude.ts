@@ -1504,6 +1504,38 @@ function stringToWords (s: string): Value.List {
 }
 registerValue('string->words', stringToWords, Prelude)
 
+interface Ref extends Value.Struct {
+  [Value.structKind]: 'ref',
+  value: Value.T
+}
+
+function ref (v: Value.T): Ref {
+  checkContract(arguments, contract('ref', [C.any]))
+  return {
+    [Value.scamperTag]: 'struct',
+    [Value.structKind]: 'ref',
+    value: v
+  }
+}
+registerValue('ref', ref, Prelude)
+
+function isRef (v: Value.T): boolean {
+  return Value.isStructKind(v, 'ref')
+}
+registerValue('ref?', isRef, Prelude)
+
+function deref (r: Ref): Value.T {
+  checkContract(arguments, contract('deref', [C.struct('ref')]))
+  return r.value
+}
+registerValue('deref', deref, Prelude)
+
+function refSet (r: Ref, v: Value.T): void {
+  checkContract(arguments, contract('ref-set!', [C.struct('ref'), C.any]))
+  r.value = v
+}
+registerValue('ref-set!', refSet, Prelude)
+
 // Additional constants
 
 const elseConst = true

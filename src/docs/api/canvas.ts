@@ -10,8 +10,8 @@ export const makeCanvasDoc: Doc = new Doc(
   'Creates a canvas with the given width and height.'
 )
 
-export const drawRectangleDoc: Doc = new Doc(
-  'draw-rectangle',
+export const canvasRectangleDoc: Doc = new Doc(
+  'canvas-rectangle!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
@@ -20,13 +20,13 @@ export const drawRectangleDoc: Doc = new Doc(
     new ArgDoc('width', 'integer?, non-negative'),
     new ArgDoc('height', 'integer?, non-negative'),
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
-    new ArgDoc('color', 'string?')
+    new ArgDoc('color', 'color?')
   ],
   'Renders a rectangle whose upper-left corner is at `(x, y)`.'
 )
 
-export const drawEllipseDoc: Doc = new Doc(
-  'draw-ellipse',
+export const canvasEllipseDoc: Doc = new Doc(
+  'canvas-ellipse!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
@@ -38,13 +38,13 @@ export const drawEllipseDoc: Doc = new Doc(
     new ArgDoc('startAngle', 'number?'),
     new ArgDoc('endAngle', 'number?'),
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
-    new ArgDoc('color', 'string?')
+    new ArgDoc('color', 'color?')
   ],
   'Renders an ellipse whose center is at `(x, y)`, radii `radiusX` and `radiusY`, `rotation`, `startAngle`, and `endAngle`.'
 )
 
-export const drawCircleDoc: Doc = new Doc(
-  'draw-circle',
+export const canvasCircleDoc: Doc = new Doc(
+  'canvas-circle!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
@@ -52,46 +52,47 @@ export const drawCircleDoc: Doc = new Doc(
     new ArgDoc('y', 'number?'),
     new ArgDoc('radius', 'number?, non-negative'),
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
-    new ArgDoc('color', 'string?')
+    new ArgDoc('color', 'color?')
   ],
   'Renders a circle whose center is at `(x, y)` and radius `radius`.'
 )
 
-export const drawTextDoc: Doc = new Doc(
-  'draw-text',
+export const canvasTextDoc: Doc = new Doc(
+  'canvas-text!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
-    new ArgDoc('text', 'string?'),
     new ArgDoc('x', 'integer?'),
     new ArgDoc('y', 'integer?'),
+    new ArgDoc('text', 'string?'),
+    new ArgDoc('size', 'number?, positive'),
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
-    new ArgDoc('color', 'string?'),
+    new ArgDoc('color', 'color?'),
     new ArgDoc('font', 'string?, a css font string, e.g., `"24px sans-serif"`')
   ],
   'Renders the given text at the given coordinates.'
 )
 
-export const drawDrawingDoc: Doc = new Doc(
-  'draw-drawing',
+export const canvasDrawingDoc: Doc = new Doc(
+  'canvas-drawing!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
-    new ArgDoc('drawing', 'drawing?'),
     new ArgDoc('x', 'integer?'),
-    new ArgDoc('y', 'integer?')
+    new ArgDoc('y', 'integer?'),
+    new ArgDoc('drawing', 'drawing?'),
   ],
   'Draws the given drawing (created via the `image` library) at the given coordinates.'
 )
 
-export const drawPathDoc: Doc = new Doc(
-  'draw-path',
+export const canvasPathDoc: Doc = new Doc(
+  'canvas-path!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),
     new ArgDoc('pairs', 'list?, a list of pairs of numbers'),
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
-    new ArgDoc('color', 'string?')
+    new ArgDoc('color', 'color?')
   ],
   'Renders a path from the given list of pairs of numbers.'
 )
@@ -106,7 +107,7 @@ export const animateWithDoc: Doc = new Doc(
 )
 
 export const canvasOnclickDoc: Doc = new Doc(
-  'canvas-onclick',
+  'canvas-onclick!',
   'void?',
   [
     new ArgDoc('canvas', 'canvas?'),

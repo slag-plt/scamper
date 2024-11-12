@@ -2,13 +2,12 @@ import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
-
 import { Rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
+import { Font, font, fontS, fontToFontString } from './font.js'
 
 export const lib: Library = emptyLibrary()
 
 /***** Core Functions *********************************************************/
-
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
@@ -466,39 +465,6 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
   }
 }
 registerValue('with-dash', withDash, lib)
-
-interface Font extends Value.Struct {
-  [Value.structKind]: 'font',
-  face: string,
-  system: string,
-  isBold: boolean,
-  isItalic: boolean
-}
-
-function fontPrim (face: string, system: string, isBold: boolean, isItalic: boolean): Font {
-  return {
-    [Value.scamperTag]: 'struct', [Value.structKind]: 'font',
-    face, system, isBold, isItalic
-  }
-}
-
-function font (name: string, system?: string,
-    isBold?: boolean, isItalic?: boolean): Font {
-  checkContract(arguments, contract('font', [C.string], C.any))
-  return fontPrim(name, system || 'sans-serif', isBold || false, isItalic || false)
-}
-registerValue('font', font, lib)
-
-const fontS: C.Spec = {
-  predicate: (v: any) => Value.isStructKind(v, 'font'),
-  errorMsg: (actual: any) => `expected a font, received ${Value.typeOf(actual)}`
-}
-
-function fontToFontString (f: Font, size: number): string {
-  const fontString = `"${f.face}"${f.system ? `, ${f.system}` : ''}`
-  return `${f.isItalic ? 'italic ' : ''}${f.isBold ? 'bold ' : ''}${size}px ${fontString}`
-}
-
 interface DText extends Value.Struct {
   [Value.structKind]: 'text',
   width: number,

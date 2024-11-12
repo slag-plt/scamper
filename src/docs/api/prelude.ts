@@ -1307,6 +1307,37 @@ export const stringToWords: Doc = new Doc(
   'Returns a list of the words in `s`, stripping whitespace and punctuation.'
 )
 
+export const ref: Doc = new Doc(
+  'ref',
+  'ref?',
+  [ new ArgDoc('v', 'any') ],
+  'Returns a reference cell initially containing `v`.'
+)
+
+export const isRef: Doc = new Doc(
+  'ref?',
+  'boolean?',
+  [ new ArgDoc('v', 'any') ],
+  'Returns `#t` if and only `v` is a reference cell.'
+)
+
+export const deref: Doc = new Doc(
+  'deref',
+  'any',
+  [ new ArgDoc('r', 'ref?') ],
+  'Returns the value contained in reference cell `r`.'
+)
+
+export const setRef: Doc = new Doc(
+  'set-ref!',
+  'void',
+  [
+    new ArgDoc('r', 'ref?'),
+    new ArgDoc('v', 'any')
+  ],
+  'Sets the value contained in reference cell `r` to `v`.'
+)
+
 export const elseV: Doc = new Doc(
   'else',
   'boolean?',

@@ -124,6 +124,21 @@ function pixelsToImage (pixels: Value.Struct[], width: number, height: number): 
   return ret
 }
 
+function canvasSetPixels (canvas: HTMLCanvasElement, pixels: Value.Struct[]): void {
+  checkContract(arguments, contract('canvas-set-pixels!', [imageS, C.vector]))
+  const ctx = canvas.getContext('2d')!
+  const outImg = ctx.createImageData(canvas.width, canvas.height)
+  const data = outImg.data
+  for (let i = 0; i < pixels.length; i++) {
+    const c = pixels[i]
+    data[i*4] = c.red
+    data[i*4 + 1] = c.green
+    data[i*4 + 2] = c.blue
+    data[i*4 + 3] = c.alpha
+  }
+  ctx.putImageData(outImg, 0, 0)
+}
+
 /***** Rendering **************************************************************/
 
 function render(rif: ReactiveImageFile): HTMLElement {
@@ -184,3 +199,4 @@ registerValue('pixel-map', pixelMap, lib)
 registerValue('image-get-pixel', imageGetPixel, lib)
 registerValue('image->pixels', imageToPixels, lib)
 registerValue('pixels->image', pixelsToImage, lib)
+registerValue('canvas-set-pixels!', canvasSetPixels, lib)

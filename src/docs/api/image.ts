@@ -726,3 +726,31 @@ export const imageGetPixel: Doc = new Doc(
   ],
   'Returns the rgb value of the pixel at position `(x, y)` in the image.'
 )
+
+export const imageToPixels: Doc = new Doc(
+  'image->pixels',
+  'canvas?',
+  [ new ArgDoc('img', 'canvas?') ],
+  'Returns a vector of `rgb` values corresponding to the pixels of the given canvas.'
+)
+
+export const pixelsToImage: Doc = new Doc(
+  'pixels->image',
+  'canvas?',
+  [
+    new ArgDoc('pixels', 'vector? of rgb values'),
+    new ArgDoc('width', 'integer?'),
+    new ArgDoc('height', 'integer?')
+  ],
+  'Returns a new canvas with the given `pixels` and dimensions `width × height`.'
+)
+
+export const canvasSetPixels: Doc = new Doc(
+  'canvas-set-pixels!',
+  'void?',
+  [
+    new ArgDoc('canvas', 'canvas?'),
+    new ArgDoc('pixels', 'vector? of rgb values'),
+  ],
+  'Sets the pixels of the given `canvas` to the given `pixels`.'
+)

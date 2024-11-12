@@ -4,6 +4,8 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { Drawing, render } from './image/drawing.js'
 import { callFunction } from '../sem.js'
+import { colorToRgb, colorS, rgbToString } from './image/color.js'
+import { Font, font, fontS, fontToFontString } from './image/font.js'
 
 const Canvas: L.Library = L.emptyLibrary()
 
@@ -16,26 +18,26 @@ function makeCanvas (width: number, height: number): HTMLCanvasElement {
 }
 L.registerValue('make-canvas', makeCanvas, Canvas)
 
-function drawRectangle (canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: string): void {
-  checkContract(arguments, contract('draw-rectangle', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, C.string]))
+function canvasRectangle (canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
+  checkContract(arguments, contract('canvas-rectangle!', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = color
-  ctx.strokeStyle = color
+  ctx.fillStyle = rgbToString(colorToRgb(color))
+  ctx.strokeStyle = rgbToString(colorToRgb(color))
   if (mode === 'solid') {
     ctx.fillRect(x, y, width, height)
   } else if (mode === 'outline') {
     ctx.strokeRect(x, y, width, height)
   } else {
-    throw new ScamperError('Runtime', `draw-rectangle: expected "solid" or "outline", but got ${mode}`)
+    throw new ScamperError('Runtime', `canvas-rectangle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('draw-rectangle', drawRectangle, Canvas)
+L.registerValue('canvas-rectangle!', canvasRectangle, Canvas)
 
-function drawEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: string): void {
-  checkContract(arguments, contract('draw-ellipse', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, C.string]))
+function canvasEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
+  checkContract(arguments, contract('canvas-ellipse!', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = color
-  ctx.strokeStyle = color
+  ctx.fillStyle = rgbToString(colorToRgb(color))
+  ctx.strokeStyle = rgbToString(colorToRgb(color))
   ctx.beginPath()
   ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
   if (mode === 'solid') {
@@ -43,16 +45,16 @@ function drawEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: 
   } else if (mode === 'outline') {
     ctx.stroke()
   } else {
-    throw new ScamperError('Runtime', `draw-ellipse: expected "solid" or "outline", but got ${mode}`)
+    throw new ScamperError('Runtime', `canvas-ellipse!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('draw-ellipse', drawEllipse, Canvas)
+L.registerValue('canvas-ellipse!', canvasEllipse, Canvas)
 
-function drawCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
-  checkContract(arguments, contract('draw-circle', [C.any, C.number, C.number, C.number, C.string, C.string]))
+function canvasCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
+  checkContract(arguments, contract('canvas-circle!', [C.any, C.number, C.number, C.number, C.string, colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = color
-  ctx.strokeStyle = color
+  ctx.fillStyle = rgbToString(colorToRgb(color))
+  ctx.strokeStyle = rgbToString(colorToRgb(color))
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, 2 * Math.PI)
   if (mode === 'solid') {
@@ -60,46 +62,57 @@ function drawCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: nu
   } else if (mode === 'outline') {
     ctx.stroke()
   } else {
-    throw new ScamperError('Runtime', `draw-circle: expected "solid" or "outline", but got ${mode}`)
+    throw new ScamperError('Runtime', `canvas-circle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('draw-circle', drawCircle, Canvas)
+L.registerValue('canvas-circle!', canvasCircle, Canvas)
 
-function drawText (canvas: HTMLCanvasElement, text: string, x: number, y: number, mode: string, color: string, font: string): void {
-  checkContract(arguments, contract('draw-text', [C.any, C.string, C.integer, C.integer, C.string, C.string, C.string]))
+function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
+  checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, colorS], C.any))
+  let f: Font = font('Arial')
+  if (rest.length > 1) {
+    throw new ScamperError('Runtime', `wrong number of arguments to canvas-circle! provided. Expected 3 or 4, received ${3 + rest.length}.`)
+  } else if (rest.length == 1 && fontS.predicate(rest[0])) {
+    if (fontS.predicate(rest[0])) {
+      f = rest[0] as Font
+    } else {
+      throw new ScamperError('Runtime', fontS.errorMsg(rest[0]))
+    }
+  }
+
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = color
-  ctx.strokeStyle = color
-  ctx.font = font
+  ctx.fillStyle = rgbToString(colorToRgb(color))
+  ctx.strokeStyle = rgbToString(colorToRgb(color))
+  ctx.font = fontToFontString(f, size)
   if (mode === 'solid') {
     ctx.fillText(text, x, y)
   } else if (mode === 'outline') {
     ctx.strokeText(text, x, y)
   } else {
-    throw new ScamperError('Runtime', `draw-text: expected "solid" or "outline", but got ${mode}`)
+    throw new ScamperError('Runtime', `canvas-text!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('draw-text', drawText, Canvas)
+L.registerValue('canvas-text!', canvasText, Canvas)
 
-function drawDrawing (canvas: HTMLCanvasElement, drawing: Drawing, x: number, y: number): void {
-  checkContract(arguments, contract('draw-drawing', [C.any, C.any, C.integer, C.integer]))
+function canvasDrawing (canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
+  checkContract(arguments, contract('canvas-drawing!', [C.any, C.integer, C.integer, C.any]))
   render(x, y, drawing, canvas)
 }
-L.registerValue('draw-drawing', drawDrawing, Canvas)
+L.registerValue('canvas-drawing!', canvasDrawing, Canvas)
 
-function drawPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, color: string): void {
-  checkContract(arguments, contract('draw-path', [C.any, C.list, C.string, C.string]))
+function canvasPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, color: any): void {
+  checkContract(arguments, contract('canvas-path!', [C.any, C.list, C.string, C.string]))
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
   const pairs = L.Value.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
-    throw new ScamperError('Runtime', `draw-path: expected "solid" or "outline", but got ${mode}`)
+    throw new ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
   }
   if (pairs.length === 0) {
     return
   }
 
-  ctx.fillStyle = color
-  ctx.strokeStyle = color
+  ctx.fillStyle = rgbToString(colorToRgb(color))
+  ctx.strokeStyle = rgbToString(colorToRgb(color))
   ctx.beginPath()
   let p: L.Value.Pair = pairs[0] as L.Value.Pair
   ctx.moveTo(p.fst as number, p.snd as number)
@@ -113,7 +126,7 @@ function drawPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, col
     ctx.stroke()
   }
 }
-L.registerValue('draw-path', drawPath, Canvas)
+L.registerValue('canvas-path!', canvasPath, Canvas)
 
 function animateWith (fn: L.Value.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
@@ -131,19 +144,18 @@ function animateWith (fn: L.Value.ScamperFn): void {
 L.registerValue('animate-with', animateWith, Canvas)
 
 function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void {
-  checkContract(arguments, contract('canvas-onclick', [C.any, C.func]))
-  console.log('canvasOnclick')
+  checkContract(arguments, contract('canvas-onclick!', [C.any, C.func]))
   canvas.onclick = function (ev: MouseEvent) {
     try {
       console.log(`offset: (${ev.offsetX}, ${ev.offsetY}), client: (${ev.clientX}, ${ev.clientY}), page: (${ev.pageX}, ${ev.pageY})`)
       callFunction(fn, ev.offsetX, ev.offsetY)
     } catch (e) {
-      alert(`canvas-onclick callback threw an error:\n\n${(e as Error).toString()}`)
+      alert(`canvas-onclick! callback threw an error:\n\n${(e as Error).toString()}`)
       return
     }
   }
 }
 
-L.registerValue('canvas-onclick', canvasOnclick, Canvas)
+L.registerValue('canvas-onclick!', canvasOnclick, Canvas)
 
 export default Canvas
