@@ -14,6 +14,7 @@ export default defineConfig({
         'scamper-file-chooser': resolve(__dirname, 'index.html'),
         'scamper-ide': resolve(__dirname, 'ide.html'),
         'scamper-runner': resolve(__dirname, 'runner.html'),
+        'scamper-web': resolve(__dirname, 'web.html'),
       },
       output: {
         entryFileNames: `assets/[name]-${AppVersion}.js`,
