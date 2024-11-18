@@ -1,7 +1,7 @@
-import { FsRequest, FsResponse } from "./message-types"
+import { FsRequest, FsResponse } from './message-types'
 
 class FsWorker {
-  private rootDir: FileSystemDirectoryHandle | null = null
+  private rootDir?: FileSystemDirectoryHandle
   private currFile: FileSystemSyncAccessHandle | null = null
 
   constructor() {
@@ -18,9 +18,12 @@ class FsWorker {
       const request = event.data
 
       if (!this.currFile && request.type !== 'MoveFile') {
-        const path = request.type === 'ReadFile'
-          ? request.path
-          : request.type === 'WriteFile' ? request.path : ''
+        const path =
+          request.type === 'ReadFile'
+            ? request.path
+            : request.type === 'WriteFile'
+              ? request.path
+              : ''
         this.currFile = await this.getFileHandle(path)
       }
 
@@ -43,9 +46,9 @@ class FsWorker {
         }
       }
     } catch (error) {
-      this.sendResponse({ 
-        type: 'Error', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+      this.sendResponse({
+        type: 'Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       })
     }
   }
@@ -73,7 +76,7 @@ class FsWorker {
   private async handleMoveFile(oldPath: string, newPath: string) {
     // get old file handle
     const oldHandle = await this.rootDir!.getFileHandle(oldPath)
-    
+
     // get sync handle to check if file is accessible
     try {
       const syncHandle = await (oldHandle as any).createSyncAccessHandle()
@@ -88,18 +91,22 @@ class FsWorker {
     const contents = await file.text()
 
     // create new file
-    const newHandle = await this.rootDir!.getFileHandle(newPath, { create: true })
+    const newHandle = await this.rootDir!.getFileHandle(newPath, {
+      create: true,
+    })
     const newSyncHandle = await (newHandle as any).createSyncAccessHandle()
     await this.writeFile(newSyncHandle, contents)
     newSyncHandle.close()
 
     // remove old file
     await this.rootDir!.removeEntry(oldPath)
-    
+
     this.sendResponse({ type: 'MoveComplete' })
   }
 
-  private async getFileHandle(path: string): Promise<FileSystemSyncAccessHandle> {
+  private async getFileHandle(
+    path: string,
+  ): Promise<FileSystemSyncAccessHandle> {
     const fileHandle = await this.rootDir!.getFileHandle(path)
     try {
       return await (fileHandle as any).createSyncAccessHandle()
@@ -115,7 +122,10 @@ class FsWorker {
     return new TextDecoder().decode(buffer)
   }
 
-  private async writeFile(handle: FileSystemSyncAccessHandle, content: string): Promise<void> {
+  private async writeFile(
+    handle: FileSystemSyncAccessHandle,
+    content: string,
+  ): Promise<void> {
     const encoder = new TextEncoder()
     const buffer = encoder.encode(content)
     handle.truncate(0)

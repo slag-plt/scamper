@@ -22,7 +22,7 @@ class FileChooser {
     if (!this.fs) {
       throw new Error('FileChooser: must call init() before usage')
     }
-    
+
     const contents = await this.fs.loadFile(filename)
     const hidden = document.createElement('a')
     hidden.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
@@ -94,7 +94,7 @@ class FileChooser {
     deleteButton.addEventListener('click', async (e) => {
       if (!this.fs) return
       e.stopPropagation()
-      const shouldDelete = confirm(`Are you sure you want to delete ${file.name}?\n\n(Make sure ${file.name} is not open in a separate tab!)`)
+      const shouldDelete = confirm(`Are you sure you want to delete ${file.name}?`)
       if (shouldDelete) {
         await this.fs.deleteFile(file.name)
         this.populateChooser()
@@ -113,7 +113,7 @@ class FileChooser {
   makeNewFileDiv(): HTMLElement {
     const ret = document.createElement('div')
     ret.classList.add('file')
-    
+
     const header = document.createElement('div')
     header.innerText = 'Create a new program'
     ret.appendChild(header)
@@ -141,12 +141,12 @@ class FileChooser {
 
     // N.B., empty the container and repopulate from scratch
     this.container.innerHTML = ''
-    const files = await this.fs.getFileList() 
+    const files = await this.fs.getFileList()
     for (const file of files) {
       if (!file.isDirectory) {
         this.container.appendChild(this.makeFileDiv(file))
       }
-    } 
+    }
     this.container.appendChild(this.makeNewFileDiv())
   }
 
@@ -156,6 +156,7 @@ class FileChooser {
   }
 }
 
-const chooser = await FileChooser.create(document.getElementById('content')!)
 document.getElementById('version')!.innerText = `(${APP_VERSION})`
+
+const chooser = await FileChooser.create(document.getElementById('content')!)
 chooser.populateChooser()
