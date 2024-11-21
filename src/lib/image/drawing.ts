@@ -2,7 +2,7 @@ import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
 import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
-import { Rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
+import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
 
 export const lib: Library = emptyLibrary()
@@ -645,6 +645,18 @@ function imageRecolor (drawing: Drawing, color: any): Drawing {
   }
 }
 
+function drawingToPixels(drawing: Drawing): Rgb[] {
+  checkContract(arguments, contract('drawing->image', [drawingS]))
+  const canvas = renderer(drawing) as HTMLCanvasElement
+  const ctx = canvas.getContext('2d')!
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
+  const ret = []
+  for (let i = 0; i < src.length; i += 4) {
+    ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
+  }
+  return ret
+}
+
 registerValue('solid-square', solidSquare, lib)
 registerValue('outlined-square', outlinedSquare, lib)
 registerValue('solid-rectangle', solidRectangle, lib)
@@ -662,6 +674,8 @@ registerValue('image-width', imageWidth, lib)
 registerValue('image-height', imageHeight, lib)
 registerValue('image-color', imageColor, lib)
 registerValue('image-recolor', imageRecolor, lib)
+
+registerValue('drawing->pixels', drawingToPixels, lib)
 
 /***** Rendering **************************************************************/
 

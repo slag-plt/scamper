@@ -259,6 +259,13 @@ export const imageRecolor: Doc = new Doc(
   'Returns a new image with the same dimensions as `img` but with the color `color`.'
 )
 
+export const drawingToPixels: Doc = new Doc(
+  'drawing->pixels',
+  'vector?',
+  [ new ArgDoc('d', 'drawing?') ],
+  'Returns a vector of rgb values corresponding to the pixels of the given drawing.'
+)
+
 export const path: Doc = new Doc(
   'path',
   'drawing?',
