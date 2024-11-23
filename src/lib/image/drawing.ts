@@ -646,7 +646,7 @@ function imageRecolor (drawing: Drawing, color: any): Drawing {
 }
 
 function drawingToPixels(drawing: Drawing): Rgb[] {
-  checkContract(arguments, contract('drawing->image', [drawingS]))
+  checkContract(arguments, contract('drawing->pixels', [drawingS]))
   const canvas = renderer(drawing) as HTMLCanvasElement
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
@@ -655,6 +655,11 @@ function drawingToPixels(drawing: Drawing): Rgb[] {
     ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
   }
   return ret
+}
+
+function drawingToImage(drawing: Drawing): HTMLCanvasElement {
+  checkContract(arguments, contract('drawing->image', [drawingS]))
+  return renderer(drawing) as HTMLCanvasElement
 }
 
 registerValue('solid-square', solidSquare, lib)
@@ -676,6 +681,7 @@ registerValue('image-color', imageColor, lib)
 registerValue('image-recolor', imageRecolor, lib)
 
 registerValue('drawing->pixels', drawingToPixels, lib)
+registerValue('drawing->image', drawingToImage, lib)
 
 /***** Rendering **************************************************************/
 

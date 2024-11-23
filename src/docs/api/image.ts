@@ -266,6 +266,15 @@ export const drawingToPixels: Doc = new Doc(
   'Returns a vector of rgb values corresponding to the pixels of the given drawing.'
 )
 
+export const drawingToImage: Doc = new Doc(
+  'drawing->image',
+  'image?',
+  [
+    new ArgDoc('drawing', 'drawing?'),
+  ],
+  'Returns a new image/canvas created from the provided drawing.'
+)
+
 export const path: Doc = new Doc(
   'path',
   'drawing?',
