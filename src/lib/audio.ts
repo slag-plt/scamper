@@ -54,7 +54,11 @@ function audioPipeline (ctx: AudioContext, pipeline: AudioNode, ...nodes: AudioN
     pipeline.connect(nodes[0])
   }
   const onOffNode = new GainNode(ctx);
-  (nodes[arguments.length - 1] as AudioNode).connect(onOffNode)
+  if (nodes.length > 0) {
+    (nodes[nodes.length - 1] as AudioNode).connect(onOffNode)
+  } else {
+    pipeline.connect(onOffNode)
+  }
   onOffNode.connect(ctx.destination)
   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'audio-pipeline', ctx, pipeline, onOffNode }
 }

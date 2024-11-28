@@ -68,16 +68,20 @@ function tag (name: string, ...children: Value.T[]): HTMLElement {
 L.registerValue('tag', tag, Html)
 
 function tagSetChildren (elt: HTMLElement, ...children: Value.T[]) {
-  checkContract(arguments, contract('tag-set-children', [C.any], C.any))
+  checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
     throw new ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.Value.typeOf(elt)}`)
   } else {
-    for (const child of children) {
-      if (child instanceof HTMLElement) {
-        elt.appendChild(child)
-      } else {
-        elt.textContent = child as string
+    children.forEach((e, i) => {
+      if (!(e instanceof HTMLElement)) {
+        throw new ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.Value.typeOf(elt)}$.`)
       }
+    })
+    // N.B., clear the current set of children
+    elt.replaceChildren(children as unknown as Node)
+    elt.textContent = ''
+    for (const child of children) {
+      elt.appendChild(child as HTMLElement)
     }
   }
 }
