@@ -71,8 +71,8 @@ function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: stri
   checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, colorS], C.any))
   let f: Font = font('Arial')
   if (rest.length > 1) {
-    throw new ScamperError('Runtime', `wrong number of arguments to canvas-circle! provided. Expected 3 or 4, received ${3 + rest.length}.`)
-  } else if (rest.length == 1 && fontS.predicate(rest[0])) {
+    throw new ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
+  } else if (rest.length == 1) {
     if (fontS.predicate(rest[0])) {
       f = rest[0] as Font
     } else {

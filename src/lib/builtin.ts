@@ -6,6 +6,7 @@ import Test from './test.js'
 import Audio from './audio.js'
 import Canvas from './canvas.js'
 import Html from './html.js'
+import Reactive from './reactive.js'
 
 export const builtinLibs: Map<string, Library> = new Map([
   ['image', imageLib],
@@ -14,7 +15,8 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['test', Test],
   ['audio', Audio],
   ['canvas', Canvas],
-  ['html', Html]
+  ['html', Html],
+  ['reactive', Reactive]
 ])
 
 export default builtinLibs
