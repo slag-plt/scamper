@@ -138,14 +138,15 @@ registerValue('pickup', pickup, Music)
 
 /** TODO: we're missing on-note? */
 
-type ModKind = Percussion | Tempo | Dynamics | Instrument
+type ModKind = Percussion | Tempo | Dynamics | Instrument | NoteHandlersMod
 
 function modQ (v: any): boolean {
   return Value.isStructKind(v, 'percussion') ||
     //Value.isStructKind(v, 'pitchBend') ||
     Value.isStructKind(v, 'tempo') ||
     Value.isStructKind(v, 'dynamics') ||
-    Value.isStructKind(v, 'instrument')
+    Value.isStructKind(v, 'instrument') ||
+    Value.isStructKind(v, 'noteHandlers')
 }
 registerValue('mod?', modQ, Music)
 
@@ -188,6 +189,13 @@ function instrument (program: number): Instrument {
 }
 registerValue('instrument', instrument, Music)
 
+interface NoteHandlersMod extends Value.Struct { [Value.structKind]: 'noteHandlers', handlers: NoteHandlers }
+function noteHandlers (handlers: NoteHandlers): NoteHandlersMod {
+  checkContract(arguments, contract('note-handlers', [C.vector]))
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'noteHandlers', handlers }
+}
+registerValue('note-handlers', noteHandlers, Music)
+
 interface Mod extends Value.Struct { [Value.structKind]: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
   checkContract(arguments, contract('mod', [modC, compositionC]))
@@ -195,7 +203,14 @@ function mod (mod: ModKind, note: Composition): Mod {
 }
 registerValue('mod', mod, Music)
 
-export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod
+interface NoteEvent extends Value.Struct { [Value.structKind]: 'note-event', id: string }
+function noteEvent (id: string): NoteEvent {
+  checkContract(arguments, contract('note-event', [C.string]))
+  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note-event', id }
+}
+registerValue('note-event', noteEvent, Music)
+
+export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod | NoteEvent
 
 function compositionQ (v: any): boolean {
   return Value.isStructKind(v, 'empty') ||
@@ -206,7 +221,8 @@ function compositionQ (v: any): boolean {
     Value.isStructKind(v, 'par') ||
     Value.isStructKind(v, 'seq') ||
     Value.isStructKind(v, 'pickup') ||
-    Value.isStructKind(v, 'mod')
+    Value.isStructKind(v, 'mod') ||
+    Value.isStructKind(v, 'note-event')
 }
 registerValue('composition?', compositionQ, Music)
 
@@ -237,6 +253,21 @@ function useHighQualityInstruments(enable: boolean): void {
 }
 registerValue('use-high-quality-instruments', useHighQualityInstruments, Music)
 
+/***** Reactive Events ********************************************************/
+
+export interface NoteMsg extends Value.Struct {
+  [Value.structKind]: 'event-note',
+  id: string
+}
+
+export type NoteHandlers = ((note: NoteMsg) => void)[]
+
+function makeNoteHandlers (): NoteHandlers {
+  checkContract(arguments, contract('make-note-handlers', []))
+  return []
+}
+registerValue('make-note-handlers', makeNoteHandlers, Music)
+
 /***** Rendering **************************************************************/
 
 type MidiMsg = {
@@ -254,13 +285,23 @@ type TriggerMsg = {
   callback: Value.ScamperFn
 }
 
-type Msg = MidiMsg | TriggerMsg
+type EventMsg = {
+  tag: 'event',
+  time: number,
+  id: string,
+  handlers: NoteHandlers
+}
+
+type Msg = MidiMsg | TriggerMsg | EventMsg
 
 const midiMsg = (time: number, duration: number, note: number, instrument: number, velocity: number): Msg =>
   ({ tag: 'midi', time, duration, note, instrument, velocity })
 
 const triggerMsg = (time: number, callback: Value.ScamperFn): Msg =>
   ({ tag: 'trigger', time, callback })
+
+const eventMsg = (time: number, id: string, handlers: NoteHandlers): Msg =>
+  ({ tag: 'event', time, id, handlers })
 
 function ratioToDouble (ratio: Duration) {
   return ratio.numerator / ratio.denominator
@@ -276,10 +317,11 @@ function freqToNote (freq: number): number {
 
 function compositionToMsgs (
   beat: Duration, bpm: number, velocity: number, startTime: number,
-  instrument: number, composition: Composition): { endTime: number, msgs: Msg[] } {
+  instrument: number, handlers: NoteHandlers, composition: Composition): { endTime: number, msgs: Msg[] } {
   switch (composition[Value.structKind]) {
     case 'empty':
       return { endTime: startTime, msgs: [] }
+
     case 'note': {
       const endTime = startTime + durationToTimeMs(beat, bpm, composition.duration)
       return {
@@ -295,6 +337,7 @@ function compositionToMsgs (
         ]
       }
     }
+
     case 'note-freq': {
       const endTime = startTime + durationToTimeMs(beat, bpm, composition.duration)
       return {
@@ -310,11 +353,13 @@ function compositionToMsgs (
         ]
       }
     }
+
     case 'rest':
       return {
         endTime: startTime + durationToTimeMs(beat, bpm, composition.duration),
         msgs: []
       }
+
     case 'trigger': {
       return {
         endTime: startTime,
@@ -326,7 +371,7 @@ function compositionToMsgs (
       const msgs: Msg[] = []
       let endTime = 0
       composition.notes.forEach(note => {
-        const result = compositionToMsgs(beat, bpm, velocity, startTime, instrument, note)
+        const result = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, note)
         msgs.push(...result.msgs)
         endTime = Math.max(result.endTime, endTime)
       })
@@ -338,7 +383,7 @@ function compositionToMsgs (
       const msgs: Msg[] = []
       let time = startTime
       composition.notes.forEach(note => {
-        const result = compositionToMsgs(beat, bpm, velocity, time, instrument, note)
+        const result = compositionToMsgs(beat, bpm, velocity, time, instrument, handlers, note)
         msgs.push(...result.msgs)
         time = result.endTime
       })
@@ -347,7 +392,7 @@ function compositionToMsgs (
     }
 
     case 'pickup': {
-      const pickup = compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.pickup)
+      const pickup = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.pickup)
       const pickupDuration = pickup.endTime - startTime
       let notes: { endTime: number, msgs: Msg[] } | undefined
       // If the pickup would start in negative time, then rebase the composition to start
@@ -356,14 +401,14 @@ function compositionToMsgs (
         pickup.msgs.forEach(msg => {
           msg.time += pickupDuration
         })
-        notes = compositionToMsgs(beat, bpm, velocity, pickupDuration, instrument, composition.notes)
+        notes = compositionToMsgs(beat, bpm, velocity, pickupDuration, instrument, handlers, composition.notes)
 
       // Otherwise, rebase pickup to start before the composition.
       } else {
         pickup.msgs.forEach(msg => {
           msg.time -= pickupDuration
         })
-        notes = compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.notes)
+        notes = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.notes)
       }
       const msgs: Msg[] = []
       msgs.push(...pickup.msgs)
@@ -373,23 +418,32 @@ function compositionToMsgs (
 
     case 'mod': {
       if (composition.mod[Value.structKind] === 'percussion') {
-        return compositionToMsgs(beat, bpm, velocity, startTime, 128, composition.note)
+        return compositionToMsgs(beat, bpm, velocity, startTime, 128, handlers, composition.note)
       } else if (composition.mod[Value.structKind] === 'pitchBend') {
         const msgs: Msg[] = []
-        const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.note)
+        const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.note)
         // TODO: handle pitch bends
         // msgs.push(midiMsg(startTime, pitchBendF(0, composition.mod.fields[0])))
         // msgs.push(...data.msgs)
         // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
         return { msgs, endTime: data.endTime }
       } else if (composition.mod[Value.structKind] === 'tempo') {
-        return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, composition.note)
+        return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, handlers, composition.note)
       } else if (composition.mod[Value.structKind] === 'dynamics') {
-        return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, composition.note)
+        return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, handlers, composition.note)
       } else if (composition.mod[Value.structKind] === 'instrument') {
-        return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, composition.note)
+        return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, handlers, composition.note)
+      } else if (composition.mod[Value.structKind] === 'noteHandlers') {
+        return compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.mod.handlers, composition.note)
       } else {
         throw new ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
+      }
+    }
+
+    case 'note-event': {
+      return {
+        endTime: startTime,
+        msgs: [eventMsg(startTime, composition.id, handlers)]
       }
     }
   }
@@ -397,8 +451,8 @@ function compositionToMsgs (
 
 export function playComposition (composition: Composition): number {
   checkContract(arguments, contract('play-composition', [compositionC]))
-  const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, composition).msgs
-  const triggers = msgs.filter(msg => msg.tag === 'trigger') as TriggerMsg[]
+  const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, [], composition).msgs
+  const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event') as (TriggerMsg | EventMsg)[]
   const startTime = waf().audioContext.currentTime
 
   // Enqueue notes
@@ -417,25 +471,38 @@ export function playComposition (composition: Composition): number {
     }
   }
 
-  // Set up a timer to discharge triggers
-  let i = 0
+  // Set up a timer to discharge triggers and events
+  let idx = 0
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const id = window.setInterval(async () => {
     // N.B., in milliseconds
     const now = waf().audioContext.currentTime
-    while (i < triggers.length) {
-      const trigger = triggers[i]
-      if (trigger.time / 1000 + startTime <= now) {
-        // TODO: need to catch and expose exceptions from here!
-        // Likely need to install a global to display async errors.
-        callFunction(trigger.callback, [])
-        i += 1
-        continue
+    while (idx < events.length) {
+      const ev = events[idx]
+      if (ev.time / 1000 + startTime <= now) {
+        try {
+          if (ev.tag === 'trigger') {
+            callFunction(ev.callback, [])
+          } else {
+            ev.handlers.forEach(handler => {
+              handler({ [Value.scamperTag]: 'struct', [Value.structKind]: 'event-note', id: ev.id })
+            })
+          }
+        } catch (e) {
+          alert(`Error in composition playback:\n\n${(e as Error).toString()}`)
+          clearInterval(id)
+          return
+        }
+        idx += 1
       } else {
-        return
+        // N.B., the next trigger is not ready, so bail for now.
+        break
       }
     }
-    clearInterval(id)
+    // Once we exhaust our triggers and events, stop the interval
+    if (idx >= events.length) {
+      clearInterval(id)
+    }
   })
   return id
 }

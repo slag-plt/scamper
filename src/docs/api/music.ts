@@ -105,6 +105,27 @@ export const mod: Doc = new Doc(
   'Creates a new composition that plays `comp` with the given modification `mod`.'
 )
 
+export const noteEvent: Doc = new Doc(
+  'note-event',
+  'composition?',
+  [ new ArgDoc('id', 'any') ],
+  'Creates a new zero-length composition that triggers an event with the given `id`.'
+)
+
+export const makeNoteHandlers: Doc = new Doc(
+  'make-note-handlers',
+  'vector?',
+  [ ],
+  'Makes an empty vector of note handlers appropriate for use with `note-handler` and `on-note`'
+)
+
+export const noteHandlers: Doc = new Doc(
+  'note-handlers',
+  'mod?',
+  [ new ArgDoc('handlers', 'vector?') ],
+  'Create a new modification that plays the composition with the given note handlers. This modification should be used at the top-level of a composition as nested handlers will take precedence over outer handlers.'
+)
+
 export const modQ: Doc = new Doc(
   'mod?',
   'boolean?',

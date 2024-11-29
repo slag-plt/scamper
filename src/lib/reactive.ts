@@ -3,6 +3,8 @@ import * as C from '../contract.js'
 import { emptyLibrary, Library, registerValue, Value } from '../lang.js'
 import { callFunction } from '../sem.js'
 
+import { NoteHandlers, NoteMsg } from './music.js'
+
 const lib: Library = emptyLibrary()
 
 /***** Reactive Components ****************************************************/
@@ -173,6 +175,7 @@ type Msg =
   | KeyDownMsg
   | KeyUpMsg
   | TimerMsg
+  | NoteMsg   // from music
 
 interface ButtonClickMsg extends Value.Struct {
   [Value.structKind]: 'event-button-click',
@@ -285,6 +288,13 @@ function onTimer (interval: number): Subscription {
   })
 }
 
+function onNote (handlers: NoteHandlers): Subscription {
+  checkContract(arguments, contract('on-note', [C.any]))
+  return subscription((react) => {
+    handlers.push((msg) => { react.update(msg) })
+  })
+}
+
 /***** Exports ****************************************************************/
 
 // Reactive components
@@ -298,5 +308,6 @@ registerValue('on-mouse-hover', onMouseHover, lib)
 registerValue('on-key-down', onKeyDown, lib)
 registerValue('on-key-up', onKeyUp, lib)
 registerValue('on-timer', onTimer, lib)
+registerValue('on-note', onNote, lib)
 
 export default lib

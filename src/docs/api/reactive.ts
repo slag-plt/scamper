@@ -65,3 +65,10 @@ export const onTimer: Doc = new Doc(
   [ new ArgDoc('interval', 'non-negative integer') ],
   'Returns a subscription that emits a message of the form `(event-timer time elapsed)` every `interval` milliseconds. `time` is the current time since the page was loaded and `elapsed` is the time since the last timer message, all in milliseconds.'
 )
+
+export const onNote: Doc = new Doc(
+  'on-note',
+  'subscription',
+  [ new ArgDoc('handlers', 'vector?') ],
+  'Returns a subscription that emits a message of the form `(event-note id)` whenever `(note-event id)` is played in a composition that users `handlers` to handle events.'
+)
