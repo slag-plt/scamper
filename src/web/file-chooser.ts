@@ -26,7 +26,7 @@ class FileChooser {
   makeFileDiv (filename: string): HTMLElement {
     const ret = document.createElement('div')
     ret.setAttribute('role', 'button')
-    ret.setAttribute('aria-label', 'open file')
+    ret.setAttribute('aria-label', `Open ${filename}`)
     ret.setAttribute('tabindex', '0')
     ret.classList.add('file')
 
@@ -101,7 +101,7 @@ class FileChooser {
   makeNewFileDiv(): HTMLElement {
     const ret = document.createElement('div')
     ret.setAttribute('role', 'button')
-    ret.setAttribute('aria-label', 'open new file')
+    ret.setAttribute('aria-label', 'Create a new program')
     ret.setAttribute('tabindex', '0')
     ret.classList.add('file')
     
