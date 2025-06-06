@@ -95,10 +95,10 @@ class FileChooser {
   }
 
   makeNewFileDiv(): HTMLElement {
-    const ret = document.createElement('div')
+    const ret = document.createElement('button')
     ret.classList.add('file')
     
-    const header = document.createElement('div')
+    const header = document.createElement('button')
     header.innerText = 'Create a new program'
     ret.appendChild(header)
 
