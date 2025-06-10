@@ -8,6 +8,7 @@ import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
+import { indentSelection } from "@codemirror/commands"
 
 const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
@@ -54,7 +55,22 @@ class IDE {
       doc: '',
       extensions: [
         basicSetup,
-        keymap.of([indentWithTab]),
+        keymap.of([
+          indentWithTab,
+          {
+            key: "Ctrl-i",
+            run: (view) => {
+              const allPage = view.state.doc
+              view.dispatch({
+                selection: {
+                  anchor: 0,
+                  head: allPage.length
+                }
+              })
+              return indentSelection(view)
+            }
+          }
+        ]),   
         ScamperSupport(),
 
         makeScamperLinter(outputPane),
