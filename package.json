@@ -5,6 +5,7 @@
   "main": "./_build/js/index.js",
   "scripts": {
     "dev": "vite",
+    "postbuild": "tsc -p tsconfig.json --emitDeclarationOnly --declaration --declarationDir ./dist/@types --skipLibCheck",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "deploy": "./deploy $npm_package_version",
