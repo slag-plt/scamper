@@ -18,6 +18,7 @@ const stepButton      = document.getElementById('step')!
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
 const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
+const visualizeButton  = document.getElementById('visualize')! as HTMLButtonElement
 
 class IDE {
   fs: FS
@@ -37,10 +38,12 @@ class IDE {
         stepOnceButton.disabled = false
         stepStmtButton.disabled = false
         stepAllButton.disabled = false
+        visualizeButton.disabled = false
       } else {
         stepOnceButton.disabled = true
         stepStmtButton.disabled = true
         stepAllButton.disabled = true
+        visualizeButton.disabled = true
       }
     } catch (e) {
       renderToOutput(outputPane, e)
@@ -103,6 +106,7 @@ class IDE {
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
     stepAllButton.disabled = true
+    visualizeButton.disabled = true
 
     Split(['#editor', '#results'], {
       sizes: [65, 35]
