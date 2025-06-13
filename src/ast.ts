@@ -1,5 +1,5 @@
-import {Value} from "./lang.ts";
-import {renderToOutput} from "./display.ts";
+import {Value} from "./lang";
+import {renderToOutput} from "./display";
 import T = Value.T;
 import isPair = Value.isPair;
 import Pair = Value.Pair;

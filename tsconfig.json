@@ -12,10 +12,10 @@
 
     /* Bundler mode */
     "moduleResolution": "Node",
-    "allowImportingTsExtensions": true,
+    //"allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true,
+    //"noEmit": true,
 
     "esModuleInterop": true,
 

@@ -1,6 +1,6 @@
 import {ICE, ParserOutput, ScamperError} from './lang.js'
 import { Range, mkRange, Stmt, Op, Value } from './lang.js'
-import {AST} from "./ast.ts";
+import {AST} from "./ast";
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 

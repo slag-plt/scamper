@@ -1,4 +1,4 @@
-import {AST} from "./ast.ts";
+import {AST} from "./ast";
 
 export class Loc {
   line: number
