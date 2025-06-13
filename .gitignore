@@ -118,3 +118,7 @@ src/version.ts
 *.njsproj
 *.sln
 *.sw?
+
+# js and js.map files shoved in src directory
+src/*.js
+src/*.js.map
