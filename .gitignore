@@ -120,5 +120,5 @@ src/version.ts
 *.sw?
 
 # js and js.map files shoved in src directory
-src/*.js
-src/*.js.map
+src/**/*.js
+src/**/*.js.map
