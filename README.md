@@ -21,3 +21,12 @@ The deployment script also requires that you are on Mac/Linux and the `compsci` 
 ~~~console
 $> npm run deploy   # Deploys Scamper
 ~~~
+
+## Information about the AST
+
+The parser now outputs a `ParserOutput` object containing an abstract syntax tree in addition to the lowered scamper code. To access the tree, either run the
+parser yourself and occess the `ast` field of the `ParserOutput`, or if you have access to a `Scamper` object (one is created to run code in `ide.ts`), you can access
+the `Scamper` object's `parseroutput.ast` field.
+
+The `AST` object itself is defined in `ast.ts`, along with `SyntaxNode`. The tree holds a collection of nodes, and each node holds a textual description and a list
+of children. Better documentation forthcoming.
