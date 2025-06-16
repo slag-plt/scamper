@@ -14,6 +14,7 @@ const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
 const runButton       = document.getElementById('run')!
 const runWindowButton = document.getElementById('run-window')!
+const astWindowButton = document.getElementById('ast-window')!
 const stepButton      = document.getElementById('step')!
 
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
@@ -135,7 +136,12 @@ class IDE {
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
     astTextButton.addEventListener('click', () => {
-      this.showASTText()
+      // Nicky Implements
+    })
+    astWindowButton.addEventListener('click', () => {
+      this.saveCurrentFile()
+      const params = new URLSearchParams({filename: this.currentFile, isTree: "true"})
+      window.open(`runner.html?${params.toString()}`)
     })
     
     stepOnceButton.disabled = true

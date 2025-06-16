@@ -57,6 +57,9 @@ export class Scamper {
 
   runProgram () {
     this.sem.execute();
+  }
+
+  runTree () {
     renderToOutput(this.display, "Syntax Tree:");
     this.parseroutput.ast.render(this.display);
   }

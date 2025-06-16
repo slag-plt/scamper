@@ -95,9 +95,41 @@ export class AST {
     }
 
     render(output: HTMLElement) {
+        this.renderTree(output, this.nodes)
         for (let n of this.nodes) {
             renderToOutput(output, "\n"+n.toString()+"\n");
             //renderToOutput(output, n.syntax);
         }
+    }
+
+    buildTreeHTML(node: SyntaxNode): HTMLElement {
+    const li = document.createElement("li");
+
+    const div = document.createElement("div");
+    div.className = "box";
+    div.textContent = node.value;
+    li.appendChild(div);
+
+    if (node.children && node.children.length > 0) {
+        const ul = document.createElement("ul");
+        for (const child of node.children) {
+            ul.appendChild(this.buildTreeHTML(child));
+        }
+        li.appendChild(ul);
+    }
+
+    return li;
+    }
+
+    renderTree(output: HTMLElement, nodes: SyntaxNode[]) {
+    const rootUl = document.createElement("ul");
+
+    for (const node of nodes) {
+        rootUl.appendChild(this.buildTreeHTML(node));
+    }
+
+    output.innerHTML = "";
+    output.classList.add("tree-chart");
+    output.appendChild(rootUl);
     }
 }

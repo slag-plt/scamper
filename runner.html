@@ -94,6 +94,72 @@
     #output .test-result.error {
       background-color: #ffe5e5;
     }
+
+    .tree-chart ul {
+      padding-top: 20px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tree-chart li {
+      list-style-type: none;
+      text-align: center;
+      position: relative;
+      padding: 20px 5px 0 5px;
+    }
+
+    .tree-chart li::before,
+    .tree-chart li::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 50%;
+      border-top: 1px solid #ccc;
+      width: 50%;
+      height: 20px;
+    }
+
+    .tree-chart li::after {
+      right: auto;
+      left: 50%;
+      border-left: 1px solid #ccc;
+    }
+
+    .tree-chart ul > li::before,
+    .tree-chart ul > li::after {
+      border: 0;
+    }
+
+    .tree-chart li:only-child::before,
+    .tree-chart li:only-child::after {
+      display: none;
+    }
+
+    .tree-chart li:only-child {
+      padding-top: 0;
+    }
+
+    .tree-chart li > ul::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      border-left: 1px solid #ccc;
+      height: 20px;
+    }
+
+    .box {
+      display: inline-block;
+      padding: 8px 16px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background-color: #fff;
+      font-family: sans-serif;
+      font-size: 14px;
+      position: relative;
+    }
   </style>
 </head>
 <body>
