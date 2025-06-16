@@ -4,7 +4,7 @@ import * as Sem from './sem.js'
 
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
-import {renderToOutput} from "./display";
+import {renderToOutput} from "./display"
 
 export type ScamperOptions = {
   isTracing: boolean

@@ -80,6 +80,17 @@ class SyntaxNode {
 
         return ret;
     }
+
+    toAsciiTree(prefix: string = "", isLast: boolean = true): string {
+        const connector = isLast ? "└── " : "├── "
+        let result = prefix + connector + this.value + "\n"
+        const newPrefix = prefix + (isLast ? "    " : "│   ")
+      
+        for (let i = 0; i < this.children.length; i++) {
+          result += this.children[i].toAsciiTree(newPrefix, i === this.children.length - 1)
+        }
+        return result
+    }
 }
 
 export class AST {
@@ -95,7 +106,6 @@ export class AST {
     }
 
     render(output: HTMLElement) {
-        this.renderTree(output, this.nodes)
         for (let n of this.nodes) {
             renderToOutput(output, "\n"+n.toString()+"\n");
             //renderToOutput(output, n.syntax);

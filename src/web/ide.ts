@@ -1,6 +1,7 @@
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, keymap } from "@codemirror/view"
+import * as Parser from '../parser.js'
 
 import FS from './fs.js'
 import Split from 'split.js'
@@ -54,7 +55,23 @@ class IDE {
 
   // Converts the editor source to an AST and renders it as ASCII.
   showASTText(): void {
-     ///
+    const existing = document.getElementById('ast-output')
+    const label = document.getElementById('ast-label')
+    if (existing) {
+      existing.remove()
+      if (label) label.remove()
+      return
+    } try {
+      const parsed = Parser.parseProgram(this.getDoc())
+      const labelEl = document.createElement('h2')
+      labelEl.setAttribute('id', 'ast-label')
+      labelEl.innerText = "Abstract Syntax Tree"
+      outputPane!.appendChild(labelEl)
+      parsed.ast.render(outputPane)
+      this.makeClean()
+    } catch (e) {
+      renderToOutput(outputPane, e)
+    }
   }
 
   constructor () {
@@ -209,5 +226,3 @@ class IDE {
 }
 
 new IDE()
-
-// ├── and └── 
