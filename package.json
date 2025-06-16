@@ -34,8 +34,8 @@
     "jsdom": "^22.1.0",
     "rollup": "^3.28.1",
     "ts-jest": "^29.1.1",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
     "vite": "^5.4.10"
   },
   "dependencies": {
@@ -46,6 +46,7 @@
     "codemirror": "^6.0.1",
     "colorsys": "^1.0.22",
     "highlight.js": "^11.10.0",
+    "react-d3-tree": "^3.6.6",
     "showdown": "^2.1.0",
     "split.js": "^1.6.5",
     "webaudiofont": "^3.0.4"

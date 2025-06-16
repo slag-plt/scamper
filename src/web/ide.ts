@@ -19,6 +19,8 @@ const stepButton      = document.getElementById('step')!
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
 const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
+const astTextButton = document.getElementById('ast-text')! as HTMLButtonElement
+
 
 class IDE {
   fs: FS
@@ -49,6 +51,11 @@ class IDE {
     this.makeClean()
   }
 
+  // Converts the editor source to an AST and renders it as ASCII.
+  showASTText(): void {
+     ///
+  }
+
   constructor () {
     this.fs = new FS()
     this.editor = new EditorView({
@@ -68,7 +75,19 @@ class IDE {
               })
               return indentSelection(view)
             }
-          }]),
+          },
+          {
+            key: "'",
+            run: (view) => {
+              const { from, to } = view.state.selection.main
+              view.dispatch({
+                changes: { from, to, insert: "'" },
+                selection: { anchor: from + 1 }
+              })
+              return true
+            }
+          }
+          ]),
         ScamperSupport(),
 
         makeScamperLinter(outputPane),
@@ -114,6 +133,10 @@ class IDE {
       this.scamper!.runProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
+    astTextButton.addEventListener('click', () => {
+      this.showASTText()
+    })
+    
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
     stepAllButton.disabled = true
@@ -179,3 +202,5 @@ class IDE {
 }
 
 new IDE()
+
+// ├── and └── 
