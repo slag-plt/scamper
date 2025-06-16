@@ -4,7 +4,7 @@ import * as Sem from './sem.js'
 
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
-import {renderToOutput} from "./display";
+import {renderToOutput} from "./display"
 
 export type ScamperOptions = {
   isTracing: boolean
@@ -57,8 +57,8 @@ export class Scamper {
 
   runProgram () {
     this.sem.execute();
-    renderToOutput(this.display, "Syntax Tree:");
-    this.parseroutput.ast.render(this.display);
+    //renderToOutput(this.display, "Syntax Tree:");
+    //this.parseroutput.ast.render(this.display);
   }
 
   stepProgram () { this.sem.step() }
