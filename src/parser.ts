@@ -1,5 +1,6 @@
-import { ICE, ScamperError } from './lang.js'
-import { Range, mkRange, Prog, Stmt, Op, Value } from './lang.js'
+import {ICE, ParserOutput, ScamperError} from './lang.js'
+import { Range, mkRange, Stmt, Op, Value } from './lang.js'
+import {AST} from "./ast";
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
@@ -669,8 +670,8 @@ export function parseStmt (v: Value.T): Stmt.T {
   }
 }
 
-export function parseProgram (src: string): Prog {
+export function parseProgram (src: string): ParserOutput {
   const tokens = stringToTokens(src)
   const values = parseValues(tokens)
-  return values.map(parseStmt)
+  return {prog: values.map(parseStmt), ast: new AST(values)};
 }

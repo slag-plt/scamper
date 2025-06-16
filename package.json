@@ -5,6 +5,7 @@
   "main": "./_build/js/index.js",
   "scripts": {
     "dev": "vite",
+    "postbuild": "tsc -p tsconfig.json --emitDeclarationOnly --declaration --declarationDir ./dist/@types --skipLibCheck",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "deploy": "./deploy $npm_package_version",
@@ -37,6 +38,9 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^5.4.10"
+    "ts-node": "^10.9.1",
+    "typescript": "^5.6.2",
+    "vite": "^6.3.5"
   },
   "dependencies": {
     "@codemirror/language": "^6.9.0",

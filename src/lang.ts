@@ -1,3 +1,5 @@
+import {AST} from "./ast";
+
 export class Loc {
   line: number
   col: number
@@ -305,6 +307,7 @@ export namespace Stmt {
 }
 
 export type Prog = Stmt.T[]
+export type ParserOutput = {prog: Prog, ast: AST}
 
 export namespace Op {
   export type Label = string

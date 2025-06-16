@@ -62,7 +62,8 @@ class IDE {
       doc: '',
       extensions: [
         basicSetup,
-        keymap.of([indentWithTab,
+        keymap.of([
+          indentWithTab,
           {
             key: "Ctrl-i",
             run: (view) => {
