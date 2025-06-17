@@ -160,7 +160,6 @@ export class AST {
     render(output: HTMLElement) {
         const pre = document.createElement('pre')
         pre.setAttribute('id', 'ast-output')
-        pre.setAttribute('aria-label', 'Abstract Syntax Tree')
         pre.setAttribute('role', 'tree')
         pre.style.fontFamily = 'monospace'
         for (let i = 0; i < this.nodes.length; i++) {
@@ -186,12 +185,12 @@ export class AST {
             li.appendChild(ul);
         }
 
-    return li;
+        return li;
     }
 
     renderTree(output: HTMLElement, nodes: SyntaxNode[]) {
-    output.innerHTML = "";
-    output.classList.remove("tree");
+        output.innerHTML = "";
+        output.classList.remove("tree");
 
         for (const n of nodes) {
             const treeContainer = document.createElement("div");
