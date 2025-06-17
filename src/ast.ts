@@ -106,40 +106,51 @@ export class AST {
     }
 
     render(output: HTMLElement) {
-        for (let n of this.nodes) {
-            renderToOutput(output, "\n"+n.toString()+"\n");
-            //renderToOutput(output, n.syntax);
+        this.renderTree(output, this.nodes)
+        const pre = document.createElement('pre')
+        pre.setAttribute('id', 'ast-output')
+        pre.setAttribute('aria-label', 'Abstract Syntax Tree')
+        pre.setAttribute('role', 'tree')
+        pre.style.fontFamily = 'monospace'
+        for (let i = 0; i < this.nodes.length; i++) {
+            const isLast = (i === this.nodes.length - 1)
+            pre.textContent += this.nodes[i].toAsciiTree("", isLast)
         }
+        output.appendChild(pre)
     }
 
     buildTreeHTML(node: SyntaxNode): HTMLElement {
-    const li = document.createElement("li");
+        const li = document.createElement("li");
+        const div = document.createElement("div");
+        
+        div.className = "box";
+        div.textContent = node.value;
+        li.appendChild(div);
 
-    const div = document.createElement("div");
-    div.className = "box";
-    div.textContent = node.value;
-    li.appendChild(div);
-
-    if (node.children && node.children.length > 0) {
-        const ul = document.createElement("ul");
-        for (const child of node.children) {
-            ul.appendChild(this.buildTreeHTML(child));
+        if (node.children && node.children.length > 0) {
+            const ul = document.createElement("ul");
+            for (const child of node.children) {
+                ul.appendChild(this.buildTreeHTML(child));
+            }
+            li.appendChild(ul);
         }
-        li.appendChild(ul);
-    }
 
     return li;
     }
 
     renderTree(output: HTMLElement, nodes: SyntaxNode[]) {
-    const rootUl = document.createElement("ul");
-
-    for (const node of nodes) {
-        rootUl.appendChild(this.buildTreeHTML(node));
-    }
-
     output.innerHTML = "";
-    output.classList.add("tree-chart");
-    output.appendChild(rootUl);
+    output.classList.remove("tree");
+
+    for (const n of nodes) {
+        const treeContainer = document.createElement("div");
+        treeContainer.classList.add("tree");
+
+        const rootUl = document.createElement("ul");
+        rootUl.appendChild(this.buildTreeHTML(n));
+        treeContainer.appendChild(rootUl);
+
+        output.appendChild(treeContainer);
     }
+  }
 }

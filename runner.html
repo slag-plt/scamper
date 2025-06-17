@@ -59,8 +59,11 @@
       color: #333;
       flex: 1;
       min-height: 0;
-      overflow: scroll;
-      white-space: pre-wrap;
+      overflow-x: auto;
+      overflow-y: auto;    
+      white-space: nowrap; 
+      padding: 1rem;       
+      box-sizing: border-box;
     }
 
     #output code {
@@ -95,53 +98,52 @@
       background-color: #ffe5e5;
     }
 
-    .tree-chart ul {
-      padding-top: 20px;
-      position: relative;
-      display: flex;
+    .tree {
+      display: inline-block;
+      vertical-align: top;
       justify-content: center;
-      flex-wrap: wrap;
+      align-items: flex-start;
+      padding-top: 40px;
+      margin-bottom: 60px;
+      border-top: 1px dashed #ccc;
+      padding-top: 20px;
     }
 
-    .tree-chart li {
+    .tree ul {
+      position: relative;
+      padding-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .tree li {
       list-style-type: none;
       text-align: center;
       position: relative;
       padding: 20px 5px 0 5px;
     }
 
-    .tree-chart li::before,
-    .tree-chart li::after {
+    .tree li::before,
+    .tree li::after {
       content: '';
       position: absolute;
       top: 0;
-      right: 50%;
-      border-top: 1px solid #ccc;
       width: 50%;
       height: 20px;
+      border-top: 1px solid #ccc;
     }
 
-    .tree-chart li::after {
-      right: auto;
+    .tree li::before {
+      right: 50%;
+      border-right: 1px solid #ccc;
+    }
+
+    .tree li::after {
       left: 50%;
       border-left: 1px solid #ccc;
     }
 
-    .tree-chart ul > li::before,
-    .tree-chart ul > li::after {
-      border: 0;
-    }
-
-    .tree-chart li:only-child::before,
-    .tree-chart li:only-child::after {
-      display: none;
-    }
-
-    .tree-chart li:only-child {
-      padding-top: 0;
-    }
-
-    .tree-chart li > ul::before {
+    .tree li > ul::before {
       content: '';
       position: absolute;
       top: 0;
@@ -153,12 +155,12 @@
     .box {
       display: inline-block;
       padding: 8px 16px;
-      border: 1px solid #444;
-      border-radius: 4px;
+      border: 1px solid #999;
+      border-radius: 16px;
       background-color: #fff;
       font-family: sans-serif;
-      font-size: 14px;
-      position: relative;
+      font-size: 16px;
+      white-space: nowrap;
     }
   </style>
 </head>
