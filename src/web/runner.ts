@@ -25,7 +25,7 @@ class Runner {
     outputPane!.innerHTML = ''
     try {
       if (isTree) {
-        new Scamper(outputPane, src, mkOptions()).runTree()
+        new Scamper(outputPane, src, mkOptions()).runnerTree()
       } else {
         new Scamper(outputPane, src, mkOptions()).runProgram()
       }

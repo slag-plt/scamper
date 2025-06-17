@@ -136,7 +136,7 @@ class IDE {
     })
     runWindowButton.addEventListener('click', () => {
       this.saveCurrentFile()
-      const params = new URLSearchParams({ filename: this.currentFile })
+      const params = new URLSearchParams({ filename: this.currentFile, isTree: "false"})
       window.open(`runner.html?${params.toString()}`)
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
@@ -153,7 +153,7 @@ class IDE {
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
     astTextButton.addEventListener('click', () => {
-      // Nicky Implements
+      this.showASTText()
     })
     astWindowButton.addEventListener('click', () => {
       this.saveCurrentFile()

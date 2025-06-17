@@ -106,7 +106,6 @@ export class AST {
     }
 
     render(output: HTMLElement) {
-        this.renderTree(output, this.nodes)
         const pre = document.createElement('pre')
         pre.setAttribute('id', 'ast-output')
         pre.setAttribute('aria-label', 'Abstract Syntax Tree')
@@ -122,7 +121,7 @@ export class AST {
     buildTreeHTML(node: SyntaxNode): HTMLElement {
         const li = document.createElement("li");
         const div = document.createElement("div");
-        
+
         div.className = "box";
         div.textContent = node.value;
         li.appendChild(div);
