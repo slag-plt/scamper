@@ -46,8 +46,6 @@ class FileChooser {
 
     const preview = document.createElement('div')
     preview.classList.add('preview')
-    preview.innerText = firstNLines(this.fs.loadFile(file.name), 5)
-    preview.innerText = firstNLines(this.fs.loadFile(file.name), 5)
     ret.appendChild(preview)
 
     const lastModified = document.createElement('div')

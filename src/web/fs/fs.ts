@@ -256,6 +256,10 @@ export class FS {
       return filename
     }
   }
+  
+  loadFileTag(filename: string): string {
+    return localStorage.getItem(this.fileTag(filename))!
+  }
 }
 
 export default FS
