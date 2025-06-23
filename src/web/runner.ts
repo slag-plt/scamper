@@ -1,11 +1,13 @@
-import FS from './fs.js'
+import FS from './fs/fs.js'
 import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 
 class Runner {
-  constructor () {
+  constructor () {}
+
+  static async create (): Promise<void> {
     const fs = new FS()
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
 
     if (!params.has('filename')) {
@@ -21,7 +23,7 @@ class Runner {
       return
     }
 
-    const src = fs.loadFile(filename)
+    const src = await fs.loadFile(filename)
     outputPane!.innerHTML = ''
     try {
       new Scamper(outputPane, src, mkOptions()).runProgram()
@@ -32,4 +34,4 @@ class Runner {
   }
 }
 
-new Runner()
+await Runner.create()
