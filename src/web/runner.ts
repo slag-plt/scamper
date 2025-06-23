@@ -1,11 +1,13 @@
-import FS from './fs.js'
+import FS from './fs/fs.js'
 import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 
 class Runner {
-  constructor (isTree: boolean) {
+  constructor (isTree: boolean) {}
+
+  static async create (): Promise<void> {
     const fs = new FS()
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
 
     if (!params.has('filename')) {
@@ -21,7 +23,7 @@ class Runner {
       return
     }
 
-    const src = fs.loadFile(filename)
+    const src = await fs.loadFile(filename)
     outputPane!.innerHTML = ''
     try {
       if (isTree) {
@@ -38,4 +40,4 @@ class Runner {
 
 const params = new URLSearchParams(window.location.search);
 const isTree = params.get("isTree") === "true";
-new Runner(isTree);
+await Runner.create(isTree);
