@@ -57,9 +57,15 @@ class IDE {
   showASTText(): void {
     const existing = document.getElementById('ast-output')
     const label = document.getElementById('ast-label')
+    const desc = document.getElementById('ast-desc')
     if (existing) {
       existing.remove()
-      if (label) label.remove()
+      if (label) {
+        label.remove()
+      }
+      if (desc) {
+        desc.remove()
+      }
       return
     } try {
       const parsed = Parser.parseProgram(this.getDoc())
@@ -68,6 +74,10 @@ class IDE {
       labelEl.innerText = "Abstract Syntax Tree"
       outputPane!.appendChild(labelEl)
       parsed.ast.render(outputPane)
+      const descriptionEl = document.createElement('div')
+      descriptionEl.setAttribute('id', 'ast-desc')
+      descriptionEl.innerText = parsed.ast.describe()
+      outputPane!.appendChild(descriptionEl)
       this.makeClean()
     } catch (e) {
       renderToOutput(outputPane, e)
@@ -82,7 +92,7 @@ class IDE {
         keymap.of([
           indentWithTab,
           {
-            key: "Ctrl-i",
+            key: "Ctrl-shift-i",
             run: (view) => {
               const allPage = view.state.doc
               view.dispatch({
@@ -107,7 +117,6 @@ class IDE {
           }
           ]),
         ScamperSupport(),
-
         makeScamperLinter(outputPane),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -133,8 +142,8 @@ class IDE {
       this.scamper!.runProgram()
     })
     runWindowButton.addEventListener('click', async () => {
-      this.saveCurrentFile()
-      const params = new URLSearchParams({ filename: this.currentFile, isTree: "false"})
+      await this.saveCurrentFile()
+      const params = new URLSearchParams({ filename: this.currentFile, isTree: "false" })
       window.open(`runner.html?${params.toString()}`)
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
