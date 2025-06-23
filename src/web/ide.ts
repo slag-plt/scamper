@@ -2,7 +2,7 @@ import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, keymap } from "@codemirror/view"
 
-import FS from './fs.js'
+import FS from './fs/fs.js'
 import Split from 'split.js'
 import { Scamper, mkOptions } from '../scamper.js'
 import { renderToOutput } from '../display.js'
@@ -20,7 +20,7 @@ const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElemen
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
 
 class IDE {
-  fs: FS
+  fs?: FS
   editor: EditorView
   currentFile: string
   autosaveId: number
@@ -49,7 +49,6 @@ class IDE {
   }
 
   constructor () {
-    this.fs = new FS()
     this.editor = new EditorView({
       doc: '',
       extensions: [
@@ -68,22 +67,21 @@ class IDE {
     this.autosaveId = -1
     this.isDirty = false
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search)
     if (params.has('filename')) {
       this.currentFile = params.get('filename')!
     } else {
       // TODO: probably can delete this at some point---we'll (probably)
       // never invoke the IDE without a filename parameter.
-      this.currentFile = this.fs.getLastOpened()
+      this.currentFile = new FS().getLastOpened()
     }
-    this.loadCurrentFile()
 
     runButton.addEventListener('click', () => {
       this.startScamper(false)
       this.scamper!.runProgram()
     })
-    runWindowButton.addEventListener('click', () => {
-      this.saveCurrentFile()
+    runWindowButton.addEventListener('click', async () => {
+      await this.saveCurrentFile()
       const params = new URLSearchParams({ filename: this.currentFile })
       window.open(`runner.html?${params.toString()}`)
     })
@@ -110,16 +108,27 @@ class IDE {
 
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
 
-    window.addEventListener('beforeunload', (_e) => {
-      this.saveCurrentFile()
+    window.addEventListener('beforeunload', async (_e) => {
+      await this.saveCurrentFile()
     })
+  }
 
+  async init (): Promise<void> {
+    this.fs = await FS.create()
+
+    await this.loadCurrentFile()
     this.startAutosaving()
+  }
+
+  static async create (): Promise<IDE> {
+    const ide = new IDE()
+    await ide.init()
+    return ide
   }
 
   startAutosaving () {
     if (this.autosaveId === -1) {
-      this.autosaveId = window.setInterval(() => this.saveCurrentFile(), 3000)
+      this.autosaveId = window.setInterval(async () => await this.saveCurrentFile(), 3000)
     }
   }
 
@@ -153,15 +162,34 @@ class IDE {
     this.isDirty = false
   }
 
-  saveCurrentFile () {
-    this.fs.saveFile(this.currentFile, this.getDoc())
+  async saveCurrentFile () {
+    if (!this.fs) return
+    try {
+      await this.fs.saveFile(this.currentFile, this.getDoc(), true)
+    } catch (e) {
+      if (e instanceof Error) {
+        this.displayError(e.message)
+      }
+    }
   }
 
-  loadCurrentFile () {
+  async loadCurrentFile () {
+    if (!this.fs) return
     const currentFileLabel = document.getElementById('current-file')!
     currentFileLabel.innerText = this.currentFile
-    this.setDoc(this.fs.loadFile(this.currentFile))
+    try {
+      this.setDoc(await this.fs.loadFile(this.currentFile, true))
+    } catch (e) {
+      if (e instanceof Error) {
+        this.displayError(e.message)
+      }
+    }
+  }
+
+  displayError (error: string) {
+    document.getElementById("loading-content")!.innerText = error
+    document.getElementById("loading")!.style.display = "block"
   }
 }
 
-new IDE()
+await IDE.create()
