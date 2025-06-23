@@ -577,6 +577,207 @@ function stepPrim (state: ExecutionState): boolean {
   }
 }
 
+type def_type = {
+  name: string,
+  value: any
+}
+
+function visualizePrints (state: ExecutionState): boolean {
+  const op = state.control.next()
+  const stack = state.stack
+  const draw_array = []
+  switch (op.tag) {
+
+    case 'val': {
+      stack.push(op.value)
+      draw_array.push()
+      return true
+    }
+
+    case 'cls': {
+      stack.push(Value.mkClosure(op.params.length, op.params, op.ops, state.env))
+      return true
+    }
+  
+    case 'var': {
+      assertNotReserved(op.name)
+      if (state.env.has(op.name)) {
+        stack.push(state.env.get(op.name)!)
+      } else {
+        throw new ScamperError('Runtime', `Referenced unbound identifier "${op.name}".`, undefined, op.range)
+      }
+      return true
+    }
+
+    case 'ap': {
+      if (stack.length < op.arity + 1) {
+        throw new ICE('sem.step', `Not enough arguments on stack. Need ${op.arity + 1}, have ${stack.length}`)
+      }
+      const head = stack[stack.length - op.arity - 1]
+      const args = op.arity === 0 ? [] : stack.slice(-op.arity)
+      for (let i = 0; i < op.arity + 1; i++) { stack.pop() }
+      if (Value.isClosure(head)) {
+        const closure = head as Value.Closure
+        if (closure.params.length !== args.length) {
+          throw new ScamperError('Runtime', `Function expected ${closure.params.length} arguments, passed ${args.length} instead.`, undefined, op.range)
+        } else {
+          const env = closure.env.extend(closure.params.map((p, i) => [p, args[i]]))
+          const ops = closure.ops
+          const range = op.range
+          // N.B., if the control is empty, then we can tail-call optimize by
+          // overwriting the current state instead of dumping.
+          if (state.control.isEmpty()) {
+            state.stack = []
+            state.env = env
+            state.control = new Control(closure.ops)
+          } else {
+            state.dumpAndSwitch([], env, ops, range)
+          }
+        }
+        return false
+      } else if (Value.isJsFunction(head)) {
+        const fn = head as Function
+        try {
+          const result = fn(...args) as Value.T
+          stack.push(result)
+        } catch (e) {
+          // N.B., annotate any errors from foreign function calls with
+          // range information from this application
+          if (e instanceof ScamperError) {
+            e.source = fn.name
+            e.range = op.range
+          }
+          throw e
+        }
+        // N.B., continue stepping if we step through one of the primitive
+        // constructor-functions
+        return fn.name === 'pair' || fn.name === 'list' || fn.name === 'vector'
+      } else {
+        throw new ScamperError('Runtime', `Non-function value (${Value.typeOf(head)}) in function application`, undefined, op.range)
+      }
+    }
+
+    case 'if': {
+      if (stack.length >= 1) {
+        const guard = stack.pop()!
+        if (guard === true) {
+          state.dumpAndSwitch([], state.env, op.ifb, op.range)
+        } else if (guard === false) {
+          state.dumpAndSwitch([], state.env, op.elseb, op.range)
+        } else {
+          throw new ScamperError('Runtime', `Boolean expected in conditional, received ${Value.toString(guard)} instead`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Guard missing from stack for conditional`)
+      }
+      return false
+    }
+
+    case 'let': {
+      op.names.forEach(assertNotReserved)
+      if (stack.length >= op.names.length) {
+        const values = stack.slice(-op.names.length)
+        for (let i = 0; i < op.names.length; i++) {
+          stack.pop()
+        }
+        const newEnv = state.env.extend(op.names.map((n, i) => [n, values[i]]))
+        state.dumpAndSwitch([], newEnv, op.body)
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for let binding`)
+      }
+      return false
+    }
+  
+    case 'seq': {
+      stack.slice(-op.numSubexps)
+      if (stack.length >= op.numSubexps) {
+        // N.B., the top of the stack is the last value created which we want to return!
+        const ret = stack.pop()
+        for (let i = 1; i < op.numSubexps; i++) { stack.pop() }
+        stack.push(ret)
+      } else {
+        throw new ICE('sem.step', `Not enough values on stack for sequence, ${op.numSubexps} expected, ${stack.length} found`)
+      }
+      return false
+    }
+  
+    case 'match': {
+      if (stack.length >= 1) {
+        const scrutinee = stack.pop()!
+        let foundMatch = false
+        for (let i = 0; !foundMatch && i < op.branches.length; i++) {
+          const bindings = tryMatch(op.branches[i].pattern, scrutinee)
+          if (bindings) {
+            state.dumpAndSwitch([], state.env.extend(bindings), op.branches[i].body, op.range)
+            foundMatch = true
+          }
+        }
+        if (!foundMatch) {
+          throw new ScamperError('Runtime', `No pattern matches for ${Value.toString(scrutinee)}`, undefined, op.range)
+        }
+      } else {
+        throw new ICE('sem.step', `Scrutinee missing from stack for match`)
+      }
+      return false
+    }
+
+    case 'and': {
+      if (stack.length < 1) {
+        throw new ICE('sem.and', 'Missing argument to "and" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"and" expects a boolean value, received ${Value.typeOf(val)}`, undefined, op.range)
+      }
+      if (!val) {
+        state.stack.push(false)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+
+    case 'or': {
+      if (stack.length < 1) {
+        throw new ICE('sem.or', 'Missing argument to "or" instruction')
+      }
+      const val = stack.pop()!
+      if (typeof val !== 'boolean') {
+        throw new ScamperError('Runtime', `"or" expects a boolean value, received ${Value.typeOf(val)}`, undefined, op.range)
+      }
+      if (val) {
+        state.stack.push(true)
+        state.jumpPast(op.jmpTo)
+      }
+      // N.B., otherwise, move onto the next instruction!
+      return false
+    }
+    
+    case 'cond': {
+      if (stack.length < 1) {
+        throw new ICE('sem.cond', 'Missing guard to "cond" instruction')
+      }
+      const guard = stack.pop()!
+      if (guard) {
+        // N.B., make sure to switch this frame's instr pointer before jumping
+        // otherwise we'll forget where to return to!
+        state.jumpPast(op.end)
+        state.dumpAndSwitch([], state.env, op.body, op.range)
+      }
+      return false
+    }
+
+    case 'lbl': {
+      // N.B., skip over a label peacefully
+      return true
+    }
+
+    case 'exn': {
+      throw new ScamperError('Runtime', op.msg, op.modName, op.range, op.source)
+    }
+  }
+}
+
 function step (state: ExecutionState): void {
   var cont = false
   do {
