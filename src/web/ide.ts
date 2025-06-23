@@ -53,7 +53,6 @@ class IDE {
     this.makeClean()
   }
 
-  // Converts the editor source to an AST and renders it as ASCII.
   showASTText(): void {
     const existing = document.getElementById('ast-output')
     const label = document.getElementById('ast-label')
