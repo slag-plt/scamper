@@ -71,11 +71,16 @@ class IDE {
       const labelEl = document.createElement('h2')
       labelEl.setAttribute('id', 'ast-label')
       labelEl.innerText = "Abstract Syntax Tree"
+      labelEl.setAttribute('tabindex', '0')
+      labelEl.setAttribute('aria-label', 'Abstract Syntax Tree')
       outputPane!.appendChild(labelEl)
       parsed.ast.render(outputPane)
       const descriptionEl = document.createElement('div')
       descriptionEl.setAttribute('id', 'ast-desc')
       descriptionEl.innerText = parsed.ast.describe()
+      descriptionEl.setAttribute('tabindex', '0')
+      descriptionEl.setAttribute('role', 'region')
+      descriptionEl.setAttribute('aria-label', 'AST Description')
       outputPane!.appendChild(descriptionEl)
       this.makeClean()
     } catch (e) {

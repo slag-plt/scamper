@@ -21,7 +21,8 @@ class SyntaxNode {
     children: SyntaxNode[] = [];
 
     constructor(syntax: Value.Syntax, parent: string | null = null, index: number | null = null) {
-        this.syntax = syntax;
+        this.syntax = syntax; 
+        console.log("range is", (syntax as any).range);
         this.parentname = parent;
         this.index = index;
         let v: T = this.syntax.value;
@@ -54,22 +55,24 @@ class SyntaxNode {
                 break;
             case 'object':
                 if (isPair(v)) {
-                    this.children.push(new SyntaxNode(mkSyntax(((v as Pair).fst as Syntax).range, ((v as Pair).fst as Syntax).value)));
                     let tail: T = (v as Pair).snd;
-
-                    if (isPair(this.children[0].syntax.value)) {
-                        while (isPair(tail)) {
-                            this.children.push(new SyntaxNode(mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value)));
-                            tail = (tail as Pair).snd;
-                        }
-                    } else {
-                        let i: number = 1;
-                        while (isPair(tail)) {
-                            this.children.push(new SyntaxNode(mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value), this.children[0].simplename, i));
-                            i += 1;
-                            tail = (tail as Pair).snd;
-                        }
-                    }
+                    this.children.push(
+                      new SyntaxNode(
+                        mkSyntax(((v as Pair).fst as Syntax).range, ((v as Pair).fst as Syntax).value)
+                      )
+                    );
+                      let i: number = 1;
+                      while (isPair(tail)) {
+                        this.children.push(
+                          new SyntaxNode(
+                            mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value),
+                            this.children[0].simplename, // parent name for accessibility
+                            i                            // child index for aria-posinset
+                          )
+                        );
+                        i += 1;
+                        tail = (tail as Pair).snd;
+                      }
 
                     this.value = "S-expression";
                     if (this.parentname != null) {
@@ -132,17 +135,6 @@ class SyntaxNode {
 
         return ret;
     }
-
-    toAsciiTree(prefix: string = "", isLast: boolean = true): string {
-        const connector = isLast ? "└── " : "├── "
-        let result = prefix + connector + this.value + "\n"
-        const newPrefix = prefix + (isLast ? "    " : "│   ")
-      
-        for (let i = 0; i < this.children.length; i++) {
-          result += this.children[i].toAsciiTree(newPrefix, i === this.children.length - 1)
-        }
-        return result
-    }
 }
 
 export class AST {
@@ -156,18 +148,69 @@ export class AST {
             this.nodes.push(new SyntaxNode(s));
         }
     }
+    
+    renderNode(
+        node: SyntaxNode,
+        level: number,
+        isLast: boolean,
+        indexInParent: number = 0,
+        totalSiblings: number = 1
+      ): HTMLElement {
+        const div = document.createElement('div');
+        div.setAttribute('aria-level', level.toString());
+        div.setAttribute('aria-posinset', (indexInParent + 1).toString());
+        div.setAttribute('aria-setsize', totalSiblings.toString());
+        // console.log(`Rendering "${node.value}" at level ${level} (item ${indexInParent + 1} of ${totalSiblings})`);
+        div.setAttribute(
+            'aria-label',
+            `Level ${level}, item ${indexInParent + 1} of ${totalSiblings}: ${node.name}`
+        );    
+        const connector = isLast ? "└── " : "├── ";
+        const prefix = document.createElement('span');
+        prefix.textContent = `${'│   '.repeat(level - 1)}${connector}`;
+        prefix.setAttribute('aria-hidden', 'true');
+        prefix.setAttribute('tabindex', '-1'); // avoid accidental focus
+      
+        const label = document.createElement('button');
+        label.setAttribute('aria-hidden', 'true');
+        label.textContent = node.value;
+      
+        div.appendChild(prefix);
+        div.appendChild(label);
+      
+        if (node.children.length > 0) {
+          const group = document.createElement('div');
+          group.setAttribute('aria-label', `Nested items inside ${node.value}`);
+          for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            group.appendChild(
+              this.renderNode(child, level + 1, i === node.children.length - 1, i, node.children.length)
+            );
+          }
+          div.appendChild(group);
+        }
+        return div;
+      }
 
     render(output: HTMLElement) {
-        const pre = document.createElement('pre')
-        pre.setAttribute('id', 'ast-output')
-        pre.setAttribute('role', 'tree')
-        pre.style.fontFamily = 'monospace'
+        const container = document.createElement('div');
+        container.setAttribute('id', 'ast-output');
+        container.setAttribute('role', 'list');
+        const heading = document.createElement('h2');
+        heading.setAttribute('aria-hidden', 'true');
+        container.appendChild(heading);
+        container.style.fontFamily = 'monospace';
+        container.style.whiteSpace = 'pre';
+      
         for (let i = 0; i < this.nodes.length; i++) {
-            const isLast = (i === this.nodes.length - 1)
-            pre.textContent += this.nodes[i].toAsciiTree("", isLast)
+            const isLast = (i === this.nodes.length - 1);
+            const node = this.nodes[i];
+            node.index = i + 1;
+            container.appendChild(this.renderNode(node, 1, isLast, i, this.nodes.length));
         }
-        output.appendChild(pre)
+        output.appendChild(container);
     }
+
 
     buildTreeHTML(node: SyntaxNode): HTMLElement {
         const li = document.createElement("li");
