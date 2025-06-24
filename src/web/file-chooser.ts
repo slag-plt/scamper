@@ -33,9 +33,14 @@ class FileChooser {
 
   makeFileDiv (file: FileEntry): HTMLElement {
     const ret = document.createElement('div')
+    ret.setAttribute('role', 'button')
+    ret.setAttribute('aria-label', `Open ${file.name}`)
+    ret.setAttribute('tabindex', '0')
     ret.classList.add('file')
 
     const header = document.createElement('div')
+    header.setAttribute('id', `file-${file.name}-header`)
+    header.innerText = file.name
     header.classList.add('header')
     ret.appendChild(header)
 
@@ -58,6 +63,7 @@ class FileChooser {
     const downloadButton = document.createElement('button')
     downloadButton.classList.add('fa-solid')
     downloadButton.classList.add('fa-download')
+    downloadButton.setAttribute('aria-label', `download ${file.name}`)
     downloadButton.addEventListener('click', async (e) => {
       e.stopPropagation()
       await this.downloadFile(file.name)
@@ -67,6 +73,7 @@ class FileChooser {
     const renameButton = document.createElement('button')
     renameButton.classList.add('fa-solid')
     renameButton.classList.add('fa-pencil')
+    renameButton.setAttribute('aria-label', `rename ${file.name}`)
     renameButton.addEventListener('click', async (e) => {
       if (!this.fs) return
       e.stopPropagation()
@@ -91,6 +98,7 @@ class FileChooser {
     const deleteButton = document.createElement('button')
     deleteButton.classList.add('fa-solid')
     deleteButton.classList.add('fa-trash')
+    deleteButton.setAttribute('aria-label', `delete ${file.name}`)
     deleteButton.addEventListener('click', async (e) => {
       if (!this.fs) return
       e.stopPropagation()
@@ -112,6 +120,9 @@ class FileChooser {
 
   makeNewFileDiv(): HTMLElement {
     const ret = document.createElement('div')
+    ret.setAttribute('role', 'button')
+    ret.setAttribute('aria-label', 'Create a new program')
+    ret.setAttribute('tabindex', '0')
     ret.classList.add('file')
 
     const header = document.createElement('div')

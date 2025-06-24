@@ -5,7 +5,7 @@ import { renderToOutput } from '../display.js'
 class Runner {
   constructor () {}
 
-  static async create (): Promise<void> {
+  static async create (runTree: boolean): Promise<void> {
     const fs = new FS()
     const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
@@ -23,10 +23,14 @@ class Runner {
       return
     }
 
-    const src = await fs.loadFile(filename)
+    const src = await fs.loadFileTag(filename)
     outputPane!.innerHTML = ''
     try {
-      new Scamper(outputPane, src, mkOptions()).runProgram()
+      if (runTree) {
+        new Scamper(outputPane, src, mkOptions()).runnerTree()
+      } else {
+        new Scamper(outputPane, src, mkOptions()).runProgram()
+      }
     } catch (e) {
       renderToOutput(outputPane, e)
     }
@@ -34,4 +38,7 @@ class Runner {
   }
 }
 
-await Runner.create()
+
+const params = new URLSearchParams(window.location.search);
+const isTree = params.get("isTree") === "true";
+await Runner.create(isTree)

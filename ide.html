@@ -172,15 +172,16 @@
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        <a href="index.html">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
-        <button id="run" class="fa-solid fa-play"></button>
-        <button id="step" class="fa-solid fa-route"></button>
-        <button id="run-window" class="fa-solid fa-window-maximize"></button> ⋅
+        <a href="index.html" aria-label="Return to Index">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
+        <button id="run" class="fa-solid fa-play" aria-label="Run"></button>
+        <button id="step" class="fa-solid fa-route" aria-label="Trace"></button>
+        <button id="run-window" class="fa-solid fa-window-maximize" aria-label="Maximize Output Window "></button>
+        <button id="ast-window" class="fa-solid fa-tree" aria-label="Display Syntax Tree"></button> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a>
       </div>
       <div class="text-align: right; font-size: 0.75em; color: #333;">
-        <a href="https://github.com/slag-plt/scamper"><i class="fa-brands fa-github"></i></a> ⋅
+        <a href="https://github.com/slag-plt/scamper" role="button" aria-label="Scamper Repository"><i class="fa-brands fa-github"></i></a> ⋅
         <em><a href="https://github.com/slag-plt/scamper/issues">Report an issue</a></em>
       </div>
     </div>
@@ -189,9 +190,10 @@
       <div id="results">
         <div id="results-toolbar">
           <div class="text-align: left;">
-            <button id="step-once" class="fa-solid fa-shoe-prints"></button>
-            <button id="step-stmt" class="fa-solid fa-forward-step"></button>
-            <button id="step-all" class="fa-solid fa-forward"></button>
+            <button id="step-once" class="fa-solid fa-shoe-prints" aria-label="Step once"></button>
+            <button id="step-stmt" class="fa-solid fa-forward-step" aria-label="Step Statement"></button>
+            <button id="step-all" class="fa-solid fa-forward" aria-label="Step All"></button>
+            <button id="ast-text" class="fa-solid fa-tree" aria-label="Show AST"></button>
           </div>
           <div id="results-status" class="text-align: right;"></div>
         </div>
