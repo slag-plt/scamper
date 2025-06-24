@@ -336,3 +336,29 @@ export function typeOf (v: Value): string {
     return typeof v
   }
 }
+
+/** The code of a LPM program is an array of bytes. */
+export type Code = {
+  ops: Uint8Array,
+  numLocals: number,
+}
+
+/**
+ * A program collects together three structures:
+ * + `code`: a mapping from function identifiers to their code.
+ * + `identifiers`: a mapping from string identifiers to their strings.
+ * + `objects`: a mapping from object identifiers to their values.
+ */
+export type Program = {
+  code: Map<Id, Code>
+  identifiers: string[],
+  objects: Value[],
+}
+
+export function mkProgram (): Program {
+  return {
+    code: new Map<Id, Code>(),
+    identifiers: [],
+    objects: []
+  }
+}
