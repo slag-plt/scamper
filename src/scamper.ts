@@ -1,9 +1,10 @@
-import { Env, Prog } from './lang.js'
+import {Env, ParserOutput, Prog} from './lang.js'
 import * as Parser from './parser.js'
 import * as Sem from './sem.js'
 
 import builtinLibs from './lib/builtin.js'
 import Prelude from './lib/prelude.js'
+import {renderToOutput} from "./display"
 
 export type ScamperOptions = {
   isTracing: boolean
@@ -25,6 +26,7 @@ export class Scamper {
   env: Env
   display: HTMLElement
   isTracing: boolean
+  parseroutput: ParserOutput
   prog: Prog
   sem: Sem.Sem
 
@@ -39,7 +41,8 @@ export class Scamper {
       }
       this.env = new Env([...Prelude.lib,])
     }
-    this.prog = Parser.parseProgram(src)
+    this.parseroutput = Parser.parseProgram(src)
+    this.prog = this.parseroutput.prog;
     this.sem = new Sem.Sem(
       this.display,
       builtinLibs,
@@ -52,7 +55,19 @@ export class Scamper {
       src)
   }
 
-  runProgram () { this.sem.execute() }
+  runProgram () {
+    this.sem.execute();
+  }
+
+  runnerTree () {
+    this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);
+  }
+
+  runTree () {
+    renderToOutput(this.display, "Syntax Tree:");
+    this.parseroutput.ast.render(this.display);
+  }
+
   stepProgram () { this.sem.step() }
   stepStmtProgram () { this.sem.stepToNextStmt() }
 }

@@ -7,15 +7,16 @@
     "skipLibCheck": true,
 
     "declaration": true,
+    "declarationDir": "./types",
     "declarationMap": true,
     "sourceMap": true,
 
     /* Bundler mode */
     "moduleResolution": "Node",
-    "allowImportingTsExtensions": true,
+    //"allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true,
+    //"noEmit": true,
 
     "esModuleInterop": true,
 

@@ -1,6 +1,7 @@
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, keymap } from "@codemirror/view"
+import * as Parser from '../parser.js'
 
 import FS from './fs/fs.js'
 import Split from 'split.js'
@@ -14,11 +15,14 @@ const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
 const runButton       = document.getElementById('run')!
 const runWindowButton = document.getElementById('run-window')!
+const astWindowButton = document.getElementById('ast-window')!
 const stepButton      = document.getElementById('step')!
 
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
 const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
+const astTextButton = document.getElementById('ast-text')! as HTMLButtonElement
+
 
 class IDE {
   fs?: FS
@@ -49,14 +53,45 @@ class IDE {
     this.makeClean()
   }
 
+  showASTText(): void {
+    const existing = document.getElementById('ast-output')
+    const label = document.getElementById('ast-label')
+    const desc = document.getElementById('ast-desc')
+    if (existing) {
+      existing.remove()
+      if (label) {
+        label.remove()
+      }
+      if (desc) {
+        desc.remove()
+      }
+      return
+    } try {
+      const parsed = Parser.parseProgram(this.getDoc())
+      const labelEl = document.createElement('h2')
+      labelEl.setAttribute('id', 'ast-label')
+      labelEl.innerText = "Abstract Syntax Tree"
+      outputPane!.appendChild(labelEl)
+      parsed.ast.render(outputPane)
+      const descriptionEl = document.createElement('div')
+      descriptionEl.setAttribute('id', 'ast-desc')
+      descriptionEl.innerText = parsed.ast.describe()
+      outputPane!.appendChild(descriptionEl)
+      this.makeClean()
+    } catch (e) {
+      renderToOutput(outputPane, e)
+    }
+  }
+
   constructor () {
     this.editor = new EditorView({
       doc: '',
       extensions: [
         basicSetup,
-        keymap.of([indentWithTab,
+        keymap.of([
+          indentWithTab,
           {
-            key: "Ctrl-i",
+            key: "Ctrl-shift-i",
             run: (view) => {
               const allPage = view.state.doc
               view.dispatch({
@@ -67,9 +102,20 @@ class IDE {
               })
               return indentSelection(view)
             }
-          }]),
+          },
+          {
+            key: "'",
+            run: (view) => {
+              const { from, to } = view.state.selection.main
+              view.dispatch({
+                changes: { from, to, insert: "'" },
+                selection: { anchor: from + 1 }
+              })
+              return true
+            }
+          }
+          ]),
         ScamperSupport(),
-
         makeScamperLinter(outputPane),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -96,7 +142,7 @@ class IDE {
     })
     runWindowButton.addEventListener('click', async () => {
       await this.saveCurrentFile()
-      const params = new URLSearchParams({ filename: this.currentFile })
+      const params = new URLSearchParams({ filename: this.currentFile, isTree: "false" })
       window.open(`runner.html?${params.toString()}`)
     })
     stepButton.addEventListener('click', () => this.startScamper(true))
@@ -112,6 +158,15 @@ class IDE {
       this.scamper!.runProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
+    astTextButton.addEventListener('click', () => {
+      this.showASTText()
+    })
+    astWindowButton.addEventListener('click', () => {
+      this.saveCurrentFile()
+      const params = new URLSearchParams({filename: this.currentFile, isTree: "true"})
+      window.open(`runner.html?${params.toString()}`)
+    })
+    
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
     stepAllButton.disabled = true
