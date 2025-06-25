@@ -157,13 +157,10 @@ export class AST {
         totalSiblings: number = 1
       ): HTMLElement {
         const div = document.createElement('div');
-        div.setAttribute('aria-level', level.toString());
-        div.setAttribute('aria-posinset', (indexInParent + 1).toString());
-        div.setAttribute('aria-setsize', totalSiblings.toString());
         // console.log(`Rendering "${node.value}" at level ${level} (item ${indexInParent + 1} of ${totalSiblings})`);
         div.setAttribute(
             'aria-label',
-            `Level ${level}, item ${indexInParent + 1} of ${totalSiblings}: ${node.name}`
+            `Level ${level}, item ${indexInParent + 1} of ${totalSiblings}`
         );    
         const connector = isLast ? "└── " : "├── ";
         const prefix = document.createElement('span');
@@ -180,7 +177,6 @@ export class AST {
       
         if (node.children.length > 0) {
           const group = document.createElement('div');
-          group.setAttribute('aria-label', `Nested items inside ${node.value}`);
           for (let i = 0; i < node.children.length; i++) {
             const child = node.children[i];
             group.appendChild(
@@ -195,7 +191,6 @@ export class AST {
     render(output: HTMLElement) {
         const container = document.createElement('div');
         container.setAttribute('id', 'ast-output');
-        container.setAttribute('role', 'list');
         const heading = document.createElement('h2');
         heading.setAttribute('aria-hidden', 'true');
         container.appendChild(heading);

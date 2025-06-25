@@ -80,7 +80,6 @@ class IDE {
       descriptionEl.innerText = parsed.ast.describe()
       descriptionEl.setAttribute('tabindex', '0')
       descriptionEl.setAttribute('role', 'region')
-      descriptionEl.setAttribute('aria-label', 'AST Description')
       outputPane!.appendChild(descriptionEl)
       this.makeClean()
     } catch (e) {
