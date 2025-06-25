@@ -10,6 +10,8 @@ import Sym = Value.Sym;
 import Vector = Value.Vector;
 import isChar = Value.isChar;
 import Char = Value.Char;
+import {EditorView} from "@codemirror/view";
+import {EditorSelection} from "@codemirror/state";
 
 class SyntaxNode {
     syntax: Value.Syntax
@@ -153,8 +155,9 @@ export class AST {
         node: SyntaxNode,
         level: number,
         isLast: boolean,
+        editor: EditorView,
         indexInParent: number = 0,
-        totalSiblings: number = 1
+        totalSiblings: number = 1,
       ): HTMLElement {
         const div = document.createElement('div');
         // console.log(`Rendering "${node.value}" at level ${level} (item ${indexInParent + 1} of ${totalSiblings})`);
@@ -171,6 +174,17 @@ export class AST {
         const label = document.createElement('button');
         label.setAttribute('aria-hidden', 'true');
         label.textContent = node.value;
+
+        label.onclick = () => {
+            console.log("Clicked " + node.syntax.range);
+
+            editor.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(node.syntax.range.begin.idx, node.syntax.range.end.idx+1),
+                    EditorSelection.cursor(node.syntax.range.begin.idx)
+                ])
+            })
+        }
       
         div.appendChild(prefix);
         div.appendChild(label);
@@ -180,7 +194,7 @@ export class AST {
           for (let i = 0; i < node.children.length; i++) {
             const child = node.children[i];
             group.appendChild(
-              this.renderNode(child, level + 1, i === node.children.length - 1, i, node.children.length)
+              this.renderNode(child, level + 1, i === node.children.length - 1, editor, i, node.children.length)
             );
           }
           div.appendChild(group);
@@ -188,7 +202,7 @@ export class AST {
         return div;
       }
 
-    render(output: HTMLElement) {
+    render(output: HTMLElement, editor: EditorView) {
         const container = document.createElement('div');
         container.setAttribute('id', 'ast-output');
         const heading = document.createElement('h2');
@@ -201,7 +215,7 @@ export class AST {
             const isLast = (i === this.nodes.length - 1);
             const node = this.nodes[i];
             node.index = i + 1;
-            container.appendChild(this.renderNode(node, 1, isLast, i, this.nodes.length));
+            container.appendChild(this.renderNode(node, 1, isLast, editor, i, this.nodes.length));
         }
         output.appendChild(container);
     }

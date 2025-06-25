@@ -74,7 +74,7 @@ class IDE {
       labelEl.setAttribute('tabindex', '0')
       labelEl.setAttribute('aria-label', 'Abstract Syntax Tree')
       outputPane!.appendChild(labelEl)
-      parsed.ast.render(outputPane)
+      parsed.ast.render(outputPane, this.editor)
       const descriptionEl = document.createElement('div')
       descriptionEl.setAttribute('id', 'ast-desc')
       descriptionEl.innerText = parsed.ast.describe()
