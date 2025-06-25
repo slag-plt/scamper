@@ -180,12 +180,13 @@ export class AST {
         label.onclick = () => {
             console.log("Clicked " + node.syntax.range);
 
+            editor.focus();
+
             editor.dispatch({
                 selection: EditorSelection.create([
                     EditorSelection.range(node.syntax.range.begin.idx, node.syntax.range.end.idx+1),
-                    EditorSelection.cursor(node.syntax.range.begin.idx)
                 ])
-            })
+            });
         }
       
         div.appendChild(prefix);
