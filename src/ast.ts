@@ -161,10 +161,7 @@ export class AST {
       ): HTMLElement {
         const div = document.createElement('div');
         // console.log(`Rendering "${node.value}" at level ${level} (item ${indexInParent + 1} of ${totalSiblings})`);
-        div.setAttribute(
-            'aria-label',
-            `Level ${level}, item ${indexInParent + 1} of ${totalSiblings}`
-        );    
+
         const connector = isLast ? "└── " : "├── ";
         const prefix = document.createElement('span');
         prefix.textContent = `${'│   '.repeat(level - 1)}${connector}`;
@@ -172,7 +169,12 @@ export class AST {
         prefix.setAttribute('tabindex', '-1'); // avoid accidental focus
       
         const label = document.createElement('button');
-        label.setAttribute('aria-hidden', 'true');
+
+        label.setAttribute(
+            'aria-label',
+            `${node.value}, Level ${level}, item ${indexInParent + 1} of ${totalSiblings}`
+        );
+
         label.textContent = node.value;
 
         label.onclick = () => {
