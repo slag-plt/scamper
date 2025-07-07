@@ -77,13 +77,13 @@ class SyntaxNode {
                         tail = (tail as Pair).snd;
                       }
 
-                    this.value = "S-expression";
+                    this.value = "Parenthesis List";
                     if (this.parentname != null) {
-                        this.name = "the s-expression in argument "+this.index+" of "+this.parentname;
+                        this.name = "the parenthesis list in argument "+this.index+" of "+this.parentname;
                     } else {
-                        this.name = "the s-expression starting with " + this.children[0].name;
+                        this.name = "the parenthesis starting with " + this.children[0].name;
                     }
-                    this.simplename = 'an s-expression';
+                    this.simplename = 'a parenthesis list';
                 } else if (isArray(v)) {
                     this.simplename = 'a square bracket array';
                     this.value = "Square bracket array";
