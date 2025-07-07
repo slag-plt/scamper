@@ -95,16 +95,24 @@ class IDE {
         keymap.of([
           indentWithTab,
           {
-            key: "Ctrl-shift-i",
+            key: "Ctrl-Shift-i",
             run: (view) => {
-              const allPage = view.state.doc
+              const doc = view.state.doc
+              const sel = view.state.selection.main
+              const line = doc.lineAt(sel.head)
+              const visualColumn = sel.head - line.from
               view.dispatch({
-                selection: {
-                  anchor: 0,
-                  head: allPage.length
-                }
+                selection: { anchor: 0, head: doc.length }
+              })     
+              const success = indentSelection(view)
+              const updatedLine = view.state.doc.line(line.number)
+              const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0         
+              const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
+              view.dispatch({
+                selection: { anchor: newHead },
+                scrollIntoView: true
               })
-              return indentSelection(view)
+              return success
             }
           },
           {
