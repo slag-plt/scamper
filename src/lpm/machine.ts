@@ -577,6 +577,17 @@ export class Machine {
         this.advancePc()
         return
       }
+
+      case Ops.loadlib: {
+        if (arg === undefined) {
+          throw new ScamperError('Runtime', 'Expected argument for loadlib operation')
+        } else if (arg < 0 || arg >= this.program.identifiers.length) {
+          throw new ICE('step', `Invalid library index ${arg} for loadlib operation`)
+        } else {
+          const libName = this.program.identifiers[arg]
+          // TODO: load libName into the global scope
+        }
+      }
     }
   }
 }

@@ -39,6 +39,9 @@ const Ops = {
   'gte': 0x37,      // gte [2 values]
   'eq': 0x38,       // eq  [2 values]
   'neq': 0x39,      // neq [2 values]
+
+  // Runtime
+  'loadlib': 0x40,  // loadlib s
 }
 
 export default Ops

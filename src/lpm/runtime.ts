@@ -32,6 +32,9 @@ export class Range {
   }
 
   static none: Range = new Range(Loc.none, Loc.none)
+  static of (startLine: number, startCol: number, startIdx: number, endLine: number, endCol: number, endIdx: number): Range {
+    return new Range(new Loc(startLine, startCol, startIdx), new Loc(endLine, endCol, endIdx))
+  }
 }
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
@@ -264,8 +267,8 @@ export const unpackSyntax = (v: Value): { range: Range, value: Value } =>
     { range: Range.none, value: v }
 
 /** @returns the range component of a syntax object. */
-export const rangeOf = (v: Value): Range =>
-  isSyntax(v) ? (v as Syntax).range : Range.none
+export const rangeOf = (v: Value, fallback: Range = Range.none): Range =>
+  isSyntax(v) ? (v as Syntax).range : fallback
 
 /** Mutates a Javascript function to contain a `name` field with that function's name. */
 export const nameFn = (name: string, fn: Function): Function =>
@@ -289,6 +292,45 @@ export function vectorToList (arr: Value[]): Pair | null {
     ret = mkPair(arr[i], ret)
   }
   return ret
+}
+
+/**
+ * @return the first elment of l assuming that l has the correct number of
+ * elements.
+ */
+export function listFirst (l: Value): Value {
+  return (l as Pair).fst
+}
+
+/**
+ * @return the second elment of l assuming that l has the correct number of
+ * elements.
+ */
+export function listSecond (l: Value): Value {
+  return ((l as Pair).snd as Pair).fst
+}
+
+/**
+ * @return the third elment of l assuming that l has the correct number of
+ * elements.
+ */
+export function listThird (l: Value): Value {
+  return (((l as Pair).snd as Pair).snd as Pair).fst
+}
+
+/**
+ * @return the fourth elment of l assuming that l has the correct number of
+ * elements.
+ */
+export function listFourth (l: Value): Value {
+  return ((((l as Pair).snd as Pair).snd as Pair).snd as Pair).fst
+}
+
+/**
+ * @return the tail of the l assuming it is a non-empty list.
+ */
+export function listTail (l: Value): Value {
+  return (l as Pair).snd
 }
 
 /** @return a list of the fields of the given struct. */

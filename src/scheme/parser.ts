@@ -1,5 +1,4 @@
-import { ICE, ScamperError } from './lang.js'
-import { Range, mkRange, Prog, Stmt, Op, Value } from './lang.js'
+import { ICE, mkChar, mkList, mkSym, mkSyntax, Range, ScamperError, Syntax, Value } from '../lpm/runtime.js'
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
@@ -102,7 +101,7 @@ class Tokenizer {
     } else {
       const token = new Token(
         this.src.slice(this.startIdx, this.startIdx + this.tokenLen),
-        new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
+        Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -177,7 +176,7 @@ class Tokenizer {
       // file. Depending on error reporting, it may make sense to report only the
       // starting quote or try to approx. where the string should end.
       throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
+        undefined, Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
     // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()
@@ -209,7 +208,7 @@ export function stringToTokens (src: string): Token[] {
 ///// Parsing //////////////////////////////////////////////////////////////////
 
 function puffRange(r: Range): Range {
-  return new Range(
+  return Range.of(
     r.begin.line,
     r.begin.col === 1 ? r.begin.col : r.begin.col - 1,
     r.begin.col === 1 ? r.begin.idx : r.begin.idx - 1,
@@ -295,26 +294,26 @@ export const namedCharValues = new Map([
   ['tab', String.fromCharCode(9)]
 ])
 
-export function parseSingle (t: Token, wildAllowed: boolean): Value.Syntax {
+export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
   const text = t.text
   if (intRegex.test(text)) {
-    return Value.mkSyntax(t.range, parseInt(text))
+    return mkSyntax(t.range, parseInt(text))
   } else if (floatRegex.test(text)) {
-    return Value.mkSyntax(t.range, parseFloat(text))
+    return mkSyntax(t.range, parseFloat(text))
   } else if (text === '#t') {
-    return Value.mkSyntax(t.range, true)
+    return mkSyntax(t.range, true)
   } else if (text === '#f') {
-    return Value.mkSyntax(t.range, false)
+    return mkSyntax(t.range, false)
   } else if (text === 'null') {
-    return Value.mkSyntax(t.range, null)
+    return mkSyntax(t.range, null)
   } else if (text.startsWith('"')) {
-    return Value.mkSyntax(t.range, parseStringLiteral(text, t.range))
+    return mkSyntax(t.range, parseStringLiteral(text, t.range))
   } else if (text.startsWith('#\\')) {
     const escapedChar = text.slice(2)
     if (escapedChar.length === 1) {
-      return Value.mkSyntax(t.range, Value.mkChar(escapedChar))
+      return mkSyntax(t.range, mkChar(escapedChar))
     } else if (namedCharValues.has(escapedChar)) {
-      return Value.mkSyntax(t.range, Value.mkChar(namedCharValues.get(escapedChar)!))
+      return mkSyntax(t.range, mkChar(namedCharValues.get(escapedChar)!))
     } else {
       throw new ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }
@@ -324,11 +323,11 @@ export function parseSingle (t: Token, wildAllowed: boolean): Value.Syntax {
     if (text.startsWith('_') && !wildAllowed) {
       throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, t.range)
     }
-    return Value.mkSyntax(t.range, Value.mkSym(text))
+    return mkSyntax(t.range, mkSym(text))
   }
 }
 
-export function parseValue (tokens: Token[]): Value.Syntax {
+export function parseValue (tokens: Token[]): Syntax {
   const beg = tokens.shift()!
   if (isOpeningBracket(beg.text)) {
     const values = []
@@ -340,34 +339,26 @@ export function parseValue (tokens: Token[]): Value.Syntax {
       throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
     } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
       throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined, mkRange(beg.range.begin, tokens[0].range.end))
+        undefined, new Range(beg.range.begin, tokens[0].range.end))
     } else {
       const end = tokens.shift()!
-      return Value.mkSyntax(
-        mkRange(beg.range.begin, end.range.end),
+      return mkSyntax(
+        new Range(beg.range.begin, end.range.end),
         // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
         // we ever allow '{' to imply an dictionary/object.
-        beg.text === '[' ? values : Value.mkList(...values))
+        beg.text === '[' ? values : mkList(...values))
     }
   } else if (beg.text === "'") {
-    return Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), parseValue(tokens)))
+    return mkSyntax(beg.range, mkList(mkSym('quote'), parseValue(tokens)))
   } else {
     return parseSingle(beg, true)
   }
 }
 
-export function parseValues (tokens: Token[]): Value.Syntax[] {
+export function parseValues (tokens: Token[]): Syntax[] {
   const ret = []
   while (tokens.length > 0) {
     ret.push(parseValue(tokens))
   }
   return ret
 }
-
-///// Top-level/program parsing ////////////////////////////////////////////////
-
-// export function parseProgram (src: string): Prog {
-//   const tokens = stringToTokens(src)
-//   const values = parseValues(tokens)
-//   return values.map(parseStmt)
-// }
