@@ -72,7 +72,7 @@ class IDE {
       labelEl.setAttribute('id', 'ast-label')
       labelEl.innerText = "Abstract Syntax Tree"
       labelEl.setAttribute('tabindex', '0')
-      labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent"')
+      labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
       outputPane!.appendChild(labelEl)
       parsed.ast.render(outputPane, this.editor)
       const descriptionEl = document.createElement('div')
