@@ -6,6 +6,7 @@ export function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
   ret.classList.add('hljs')
   ret.innerHTML = elt.value
+  ret.tabIndex = 0;
   return ret
 }
 
@@ -14,6 +15,7 @@ export function mkSourceBlock (text: string): HTMLElement {
   const ret = document.createElement('pre')
   ret.classList.add('hljs')
   ret.innerHTML = elt.value
+  ret.tabIndex = 0;
   return ret
 }
 

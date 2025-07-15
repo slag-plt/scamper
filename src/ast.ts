@@ -10,6 +10,8 @@ import Sym = Value.Sym;
 import Vector = Value.Vector;
 import isChar = Value.isChar;
 import Char = Value.Char;
+import {EditorView} from "@codemirror/view";
+import {EditorSelection} from "@codemirror/state";
 
 class SyntaxNode {
     syntax: Value.Syntax
@@ -19,9 +21,10 @@ class SyntaxNode {
     simplename: string = '';
     index: number | null = null;
     children: SyntaxNode[] = [];
+    parent: SyntaxNode | null = null;
 
     constructor(syntax: Value.Syntax, parent: string | null = null, index: number | null = null) {
-        this.syntax = syntax;
+        this.syntax = syntax; 
         this.parentname = parent;
         this.index = index;
         let v: T = this.syntax.value;
@@ -54,30 +57,32 @@ class SyntaxNode {
                 break;
             case 'object':
                 if (isPair(v)) {
-                    this.children.push(new SyntaxNode(mkSyntax(((v as Pair).fst as Syntax).range, ((v as Pair).fst as Syntax).value)));
                     let tail: T = (v as Pair).snd;
+                    const first = new SyntaxNode(
+                        mkSyntax(((v as Pair).fst as Syntax).range, ((v as Pair).fst as Syntax).value)
+                    );
+                      first.parent = this;
+                      this.children.push(first);
+                      let i: number = 1;
+                    while (isPair(tail)) {
+                        const child = new SyntaxNode(
+                            mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value),
+                            this.children[0].simplename,
+                            i
+                        );
+                        child.parent = this;
+                        this.children.push(child);
+                        i += 1;
+                        tail = (tail as Pair).snd;
+                      }
 
-                    if (isPair(this.children[0].syntax.value)) {
-                        while (isPair(tail)) {
-                            this.children.push(new SyntaxNode(mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value)));
-                            tail = (tail as Pair).snd;
-                        }
-                    } else {
-                        let i: number = 1;
-                        while (isPair(tail)) {
-                            this.children.push(new SyntaxNode(mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value), this.children[0].simplename, i));
-                            i += 1;
-                            tail = (tail as Pair).snd;
-                        }
-                    }
-
-                    this.value = "S-expression";
+                    this.value = "Parenthesis List";
                     if (this.parentname != null) {
-                        this.name = "the s-expression in argument "+this.index+" of "+this.parentname;
+                        this.name = "the parenthesis list in argument "+this.index+" of "+this.parentname;
                     } else {
-                        this.name = "the s-expression starting with " + this.children[0].name;
+                        this.name = "the parenthesis starting with " + this.children[0].name;
                     }
-                    this.simplename = 'an s-expression';
+                    this.simplename = 'a parenthesis list';
                 } else if (isArray(v)) {
                     this.simplename = 'a square bracket array';
                     this.value = "Square bracket array";
@@ -89,7 +94,9 @@ class SyntaxNode {
 
                     let i: number = 0;
                     for (let c of (v as Vector)) {
-                        this.children.push(new SyntaxNode(mkSyntax((c as Syntax).range, (c as Syntax).value),this.name,i));
+                        const child = new SyntaxNode(mkSyntax((c as Syntax).range, (c as Syntax).value), this.name, i);
+                        child.parent = this;
+                        this.children.push(child);
                         i += 1;
                     }
 
@@ -132,22 +139,12 @@ class SyntaxNode {
 
         return ret;
     }
-
-    toAsciiTree(prefix: string = "", isLast: boolean = true): string {
-        const connector = isLast ? "└── " : "├── "
-        let result = prefix + connector + this.value + "\n"
-        const newPrefix = prefix + (isLast ? "    " : "│   ")
-      
-        for (let i = 0; i < this.children.length; i++) {
-          result += this.children[i].toAsciiTree(newPrefix, i === this.children.length - 1)
-        }
-        return result
-    }
 }
 
 export class AST {
     syntax: Value.Syntax[]
     nodes: SyntaxNode[] = [];
+    labelMap: Map<SyntaxNode, HTMLButtonElement> = new Map()
 
     constructor(syntax: Value.Syntax[]) {
         this.syntax = syntax;
@@ -156,18 +153,115 @@ export class AST {
             this.nodes.push(new SyntaxNode(s));
         }
     }
+    
+    renderNode(
+        node: SyntaxNode,
+        level: number,
+        isLast: boolean,
+        editor: EditorView,
+        indexInParent: number = 0,
+        totalSiblings: number = 1,
+      ): HTMLElement {
+        node.index = indexInParent;
+        const div = document.createElement('div');
+        // console.log(`Rendering "${node.value}" at level ${level} (item ${indexInParent + 1} of ${totalSiblings})`);
 
-    render(output: HTMLElement) {
-        const pre = document.createElement('pre')
-        pre.setAttribute('id', 'ast-output')
-        pre.setAttribute('role', 'tree')
-        pre.style.fontFamily = 'monospace'
-        for (let i = 0; i < this.nodes.length; i++) {
-            const isLast = (i === this.nodes.length - 1)
-            pre.textContent += this.nodes[i].toAsciiTree("", isLast)
+        const connector = isLast ? "└── " : "├── ";
+        const prefix = document.createElement('span');
+        prefix.textContent = `${'│   '.repeat(level - 1)}${connector}`;
+        prefix.setAttribute('aria-hidden', 'true');
+        prefix.setAttribute('tabindex', '-1'); // avoid accidental focus
+      
+        const label = document.createElement('button');
+        this.labelMap.set(node, label);
+
+        label.setAttribute(
+            'aria-label',
+            `${node.value}, Level ${level}, item ${indexInParent + 1} of ${totalSiblings}`
+        );
+
+        label.textContent = node.value;
+
+        label.onclick = () => {
+            console.log("Clicked " + node.syntax.range);
+
+            editor.focus();
+
+            editor.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(node.syntax.range.begin.idx, node.syntax.range.end.idx+1),
+                ])
+            });
         }
-        output.appendChild(pre)
+
+        label.addEventListener("keydown", (e: KeyboardEvent) => {
+            if (e.key === "ArrowDown") {
+              if (node.children.length > 0) {
+                this.labelMap.get(node.children[0])?.focus();
+              }
+              e.preventDefault();
+            } else if (e.key === "ArrowUp") {
+              if (node.parent) {
+                this.labelMap.get(node.parent)?.focus();
+              }
+              e.preventDefault();
+            } else if (e.key === "ArrowRight") {
+              if (node.parent && node.index !== null && node.index + 1 < node.parent.children.length) {
+                this.labelMap.get(node.parent.children[node.index + 1])?.focus();
+              }
+              e.preventDefault();
+            } else if (e.key === "ArrowLeft") {
+              if (node.parent && node.index !== null && node.index - 1 >= 0) {
+                this.labelMap.get(node.parent.children[node.index - 1])?.focus();
+              }
+              e.preventDefault();
+            }
+        });
+      
+        div.appendChild(prefix);
+        div.appendChild(label);
+      
+        if (node.children.length > 0) {
+          const group = document.createElement('div');
+          group.setAttribute('role', 'group');
+          for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            group.appendChild(
+              this.renderNode(child, level + 1, i === node.children.length - 1, editor, i, node.children.length)
+            );
+          }
+          div.appendChild(group);
+        }
+        return div;
+      }
+
+    render(output: HTMLElement, editor: EditorView) {
+        const container = document.createElement('div');
+        container.setAttribute('id', 'ast-output');
+        container.setAttribute('role', 'tree');
+        const heading = document.createElement('h2');
+        heading.setAttribute('aria-hidden', 'true');
+        container.appendChild(heading);
+        container.style.fontFamily = 'monospace';
+        container.style.whiteSpace = 'pre';
+      
+        const dummySyntax = {
+            range: { begin: { idx: 0 }, end: { idx: 0 } },
+            value: null
+          } as Value.Syntax;
+          
+        const topParent = new SyntaxNode(dummySyntax);
+        topParent.children = this.nodes;
+        for (let i = 0; i < this.nodes.length; i++) {
+            const isLast = (i === this.nodes.length - 1);
+            const node = this.nodes[i];
+            node.index = i;
+            node.parent = topParent;
+            container.appendChild(this.renderNode(node, 1, isLast, editor, i, this.nodes.length));
+        }
+        output.appendChild(container);
     }
+
 
     buildTreeHTML(node: SyntaxNode): HTMLElement {
         const li = document.createElement("li");

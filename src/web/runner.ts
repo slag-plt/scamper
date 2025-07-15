@@ -23,7 +23,7 @@ class Runner {
       return
     }
 
-    const src = await fs.loadFileTag(filename)
+    const src = await fs.directReadFile(filename)
     outputPane!.innerHTML = ''
     try {
       if (runTree) {
