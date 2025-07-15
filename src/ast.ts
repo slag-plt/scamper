@@ -238,6 +238,7 @@ export class AST {
     render(output: HTMLElement, editor: EditorView) {
         const container = document.createElement('div');
         container.setAttribute('id', 'ast-output');
+        container.setAttribute('role', 'tree');
         const heading = document.createElement('h2');
         heading.setAttribute('aria-hidden', 'true');
         container.appendChild(heading);
