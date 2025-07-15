@@ -223,6 +223,7 @@ export class AST {
       
         if (node.children.length > 0) {
           const group = document.createElement('div');
+          group.setAttribute('role', 'group');
           for (let i = 0; i < node.children.length; i++) {
             const child = node.children[i];
             group.appendChild(
