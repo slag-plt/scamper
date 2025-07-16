@@ -71,11 +71,15 @@ class IDE {
       const labelEl = document.createElement('h2')
       labelEl.setAttribute('id', 'ast-label')
       labelEl.innerText = "Abstract Syntax Tree"
+      labelEl.setAttribute('tabindex', '0')
+      labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
       outputPane!.appendChild(labelEl)
-      parsed.ast.render(outputPane)
+      parsed.ast.render(outputPane, this.editor)
       const descriptionEl = document.createElement('div')
       descriptionEl.setAttribute('id', 'ast-desc')
       descriptionEl.innerText = parsed.ast.describe()
+      descriptionEl.setAttribute('tabindex', '0')
+      descriptionEl.setAttribute('role', 'region')
       outputPane!.appendChild(descriptionEl)
       this.makeClean()
     } catch (e) {
@@ -91,16 +95,24 @@ class IDE {
         keymap.of([
           indentWithTab,
           {
-            key: "Ctrl-shift-i",
+            key: "Ctrl-Shift-i",
             run: (view) => {
-              const allPage = view.state.doc
+              const doc = view.state.doc
+              const sel = view.state.selection.main
+              const line = doc.lineAt(sel.head)
+              const visualColumn = sel.head - line.from
               view.dispatch({
-                selection: {
-                  anchor: 0,
-                  head: allPage.length
-                }
+                selection: { anchor: 0, head: doc.length }
+              })     
+              const success = indentSelection(view)
+              const updatedLine = view.state.doc.line(line.number)
+              const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0         
+              const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
+              view.dispatch({
+                selection: { anchor: newHead },
+                scrollIntoView: true
               })
-              return indentSelection(view)
+              return success
             }
           },
           {

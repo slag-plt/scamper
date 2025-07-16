@@ -257,8 +257,11 @@ export class FS {
     }
   }
   
-  loadFileTag(filename: string): string {
-    return localStorage.getItem(this.fileTag(filename))!
+  async directReadFile(filename: string): Promise<string> {
+    const directoryHandle = await navigator.storage.getDirectory();
+    const fileHandle = await directoryHandle.getFileHandle(filename);
+    const file = await fileHandle.getFile();
+    return await file.text();
   }
 }
 
