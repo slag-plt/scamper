@@ -1,7 +1,7 @@
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, keymap } from "@codemirror/view"
-import * as Parser from '../parser.js'
+import * as Parser from '../parser/parser'
 
 import FS from './fs/fs.js'
 import Split from 'split.js'

@@ -1,6 +1,6 @@
-import {ICE, ParserOutput, ScamperError} from './lang.js'
-import { Range, mkRange, Stmt, Op, Value } from './lang.js'
-import {AST} from "./ast";
+import {ICE, ParserOutput, ScamperError} from '../lang'
+import { Range, mkRange, Stmt, Op, Value } from '../lang'
+import {AST} from "../ast";
 import {DefaultTokenHandlingSettings, TokenHandler, TokenHandlingSettings} from "./tokenhandler";
 
 ///// Tokenization /////////////////////////////////////////////////////////////

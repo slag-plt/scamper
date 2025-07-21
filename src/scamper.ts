@@ -1,5 +1,5 @@
 import {Env, ParserOutput, Prog} from './lang.js'
-import * as Parser from './parser.js'
+import * as Parser from './parser/parser'
 import * as Sem from './sem.js'
 
 import builtinLibs from './lib/builtin.js'

@@ -1,5 +1,5 @@
 import {isBracket, isWhitespace, Token, Tokenizer} from "./parser";
-import {ScamperError} from "./lang";
+import {ScamperError} from "../lang";
 
 export interface TokenHandler {
     shouldHandle: (ch: string) => boolean;
