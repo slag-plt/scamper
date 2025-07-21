@@ -1,10 +1,11 @@
 import {ICE, ParserOutput, ScamperError} from './lang.js'
 import { Range, mkRange, Stmt, Op, Value } from './lang.js'
 import {AST} from "./ast";
+import {DefaultTokenHandlingSettings, TokenHandler, TokenHandlingSettings} from "./tokenhandler";
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
-class Token {
+export class Token {
   text: string
   range: Range
 
@@ -18,12 +19,12 @@ class Token {
   }
 }
 
-const isWhitespace = (c: string): boolean => /\s/.test(c)
+export const isWhitespace = (c: string): boolean => /\s/.test(c)
 const isOpeningBracket = (ch: string): boolean =>
   ['(', '#(', '{', '['].includes(ch)
 const isClosingBracket = (ch: string): boolean =>
   [')', '}', ']'].includes(ch)
-const isBracket = (ch: string): boolean =>
+export const isBracket = (ch: string): boolean =>
   isOpeningBracket(ch) || isClosingBracket(ch)
 const areMatchingBrackets = (open: string, close: string): boolean => {
   return (open === '(' && close === ')') ||
@@ -32,7 +33,7 @@ const areMatchingBrackets = (open: string, close: string): boolean => {
          (open === '{' && close === '}')
 }
 
-class Tokenizer {
+export class Tokenizer {
   private src: string
   private idx: number
   private row: number
@@ -46,11 +47,17 @@ class Tokenizer {
   private endIdx: number
   private tokenLen: number
 
-  constructor (src: string) {
+  private customHandlers: TokenHandler[]
+  private defaultHandler: TokenHandler
+
+  constructor (src: string, { customHandlers, defaultHandler }: TokenHandlingSettings = DefaultTokenHandlingSettings) {
     this.src = src
     this.idx = 0
     this.row = 1
     this.col = 1
+
+    this.customHandlers = customHandlers
+    this.defaultHandler = defaultHandler
 
     // N.B., can't call resetTracking because Typescript can't see through
     // the function call to see that resetTracking initializes values.
@@ -80,6 +87,10 @@ class Tokenizer {
     this.endCol = -1
     this.endIdx = -1
     this.tokenLen = 0
+  }
+
+  get currentRange(): Range {
+    return new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
   }
 
   beginTracking (): void {
@@ -144,57 +155,10 @@ class Tokenizer {
   // TODO: need to handle comments and whether they appear in the token stream
   next (): Token {
     let ch = this.peek()
-    // Case: brackets
-    if (isBracket(ch)) {
-      this.beginTracking()
-      this.advance()
-      return this.emitToken()
-    // Case: quotation
-    } else if (ch === "'") {
-      this.beginTracking()
-      this.advance()
-      return this.emitToken()
-    // Case: string literals
-    } else if (ch === '"') {
-      this.beginTracking() 
-      this.advance()
-      while (!this.isEmpty()) {
-        ch = this.peek()
-        if (this.peek() === '"') {
-          this.advance()
-          return this.emitToken()
-        // N.B., since any escape sequence that does not have a meaning is
-        // the identity escape sequence, we can simply advance past the
-        // the entire sequence and let Javascript handle interpreting the
-        // sequence for us!
-        } else if (this.peek() === '\\') {
-          this.advance()  // advance past '\\
-          this.advance()  // advance past the escaped character
-        } else {
-          this.advance()
-        }
-      }
-      // NOTE: error is localized to the open quote to, presumably, the end of the
-      // file. Depending on error reporting, it may make sense to report only the
-      // starting quote or try to approx. where the string should end.
-      throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, new Range(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
-    // Case: any other sequence of non-whitespace, non-delimiting characters
-    } else {
-      this.beginTracking()
-      this.advance()
-      while (!this.isEmpty()) {
-        ch = this.peek()
-        if (isWhitespace(ch) || isBracket(ch) || ch === ';' || ch === "'") {
-          // N.B., don't include the terminating char in this token!
-          return this.emitToken()
-        } else {
-          this.advance()
-        }
-      }
-      // N.B., should only get here if a complete token ends the file
-      return this.emitToken()
+    for (const handler of this.customHandlers) {
+      if (handler.shouldHandle(ch)) return handler.handle(this)
     }
+    return this.defaultHandler.handle(this)
   }
 }
 
