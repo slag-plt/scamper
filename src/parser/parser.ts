@@ -1,7 +1,8 @@
 import {ICE, ParserOutput, ScamperError} from '../lang'
-import { Range, mkRange, Stmt, Op, Value } from '../lang'
+import { Range, Stmt, Op, Value } from '../lang'
 import {AST} from "../ast";
 import {DefaultTokenHandlingSettings, TokenHandler, TokenHandlingSettings} from "./tokenhandler";
+import {DefaultParseHandlingSettings, ParseHandlingSettings} from "./parsehandler";
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
@@ -20,13 +21,13 @@ export class Token {
 }
 
 export const isWhitespace = (c: string): boolean => /\s/.test(c)
-const isOpeningBracket = (ch: string): boolean =>
+export const isOpeningBracket = (ch: string): boolean =>
   ['(', '#(', '{', '['].includes(ch)
-const isClosingBracket = (ch: string): boolean =>
+export const isClosingBracket = (ch: string): boolean =>
   [')', '}', ']'].includes(ch)
 export const isBracket = (ch: string): boolean =>
   isOpeningBracket(ch) || isClosingBracket(ch)
-const areMatchingBrackets = (open: string, close: string): boolean => {
+export const areMatchingBrackets = (open: string, close: string): boolean => {
   return (open === '(' && close === ')') ||
          (open === '#(' && close === ')') ||
          (open === '[' && close === ']') ||
@@ -172,7 +173,7 @@ export function stringToTokens (src: string, tokenizer = new Tokenizer(src)): To
 
 ///// Parsing //////////////////////////////////////////////////////////////////
 
-function puffRange(r: Range): Range {
+export function puffRange(r: Range): Range {
   return new Range(
     r.begin.line,
     r.begin.col === 1 ? r.begin.col : r.begin.col - 1,
@@ -336,32 +337,12 @@ function parseCondBranch (v: Value.T): { cond: Op.T[], body: Op.T[]} {
   return { cond: lower(vec[0]), body: lower(vec[1]) }
 }
 
-export function parseValue (tokens: Token[]): Value.Syntax {
+export function parseValue (tokens: Token[], { customHandlers, defaultHandler }: ParseHandlingSettings = DefaultParseHandlingSettings): Value.Syntax {
   const beg = tokens.shift()!
-  if (isOpeningBracket(beg.text)) {
-    const values = []
-    while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-      values.push(parseValue(tokens))
-    }
-    if (tokens.length === 0) {
-      // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
-    } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
-      throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined, mkRange(beg.range.begin, tokens[0].range.end))
-    } else {
-      const end = tokens.shift()!
-      return Value.mkSyntax(
-        mkRange(beg.range.begin, end.range.end),
-        // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
-        // we ever allow '{' to imply an dictionary/object.
-        beg.text === '[' ? values : Value.mkList(...values))
-    }
-  } else if (beg.text === "'") {
-    return Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), parseValue(tokens)))
-  } else {
-    return parseSingle(beg, true)
+  for (const handler of customHandlers) {
+    if (handler.shouldHandle(beg)) return handler.handle(beg, tokens)
   }
+  return defaultHandler.handle(beg, tokens)
 }
 
 export function parseValues (tokens: Token[]): Value.Syntax[] {
