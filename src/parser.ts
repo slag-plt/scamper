@@ -162,8 +162,7 @@ export class Tokenizer {
   }
 }
 
-export function stringToTokens (src: string): Token[] {
-  const tokenizer = new Tokenizer(src)
+export function stringToTokens (src: string, tokenizer = new Tokenizer(src)): Token[] {
   const tokens: Token[] = []
   while (!tokenizer.isEmpty()) {
     tokens.push(tokenizer.next())
