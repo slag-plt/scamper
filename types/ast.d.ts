@@ -3,13 +3,12 @@ import { EditorView } from "@codemirror/view";
 export declare class SyntaxNode {
     syntax: Value.Syntax;
     value: string;
-    name: string;
-    parentname: string | null;
     simplename: string;
     index: number | null;
     children: SyntaxNode[];
     parent: SyntaxNode | null;
-    constructor(syntax: Value.Syntax, parent?: string | null, index?: number | null);
+    constructor(syntax: Value.Syntax, index?: number | null);
+    listify(): void;
     toString(indent?: string): string;
 }
 export declare class AST {
@@ -21,6 +20,5 @@ export declare class AST {
     render(output: HTMLElement, editor: EditorView): void;
     buildTreeHTML(node: SyntaxNode): HTMLElement;
     renderTree(output: HTMLElement, nodes: SyntaxNode[]): void;
-    describe(): string;
 }
 //# sourceMappingURL=ast.d.ts.map
