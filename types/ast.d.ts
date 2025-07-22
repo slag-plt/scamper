@@ -1,6 +1,6 @@
 import { Value } from "./lang";
 import { EditorView } from "@codemirror/view";
-declare class SyntaxNode {
+export declare class SyntaxNode {
     syntax: Value.Syntax;
     value: string;
     name: string;
@@ -23,5 +23,4 @@ export declare class AST {
     renderTree(output: HTMLElement, nodes: SyntaxNode[]): void;
     describe(): string;
 }
-export {};
 //# sourceMappingURL=ast.d.ts.map

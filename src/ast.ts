@@ -13,7 +13,7 @@ import Char = Value.Char;
 import {EditorView} from "@codemirror/view";
 import {EditorSelection} from "@codemirror/state";
 
-class SyntaxNode {
+export class SyntaxNode {
     syntax: Value.Syntax
     value: string = ''
     name: string = ''
