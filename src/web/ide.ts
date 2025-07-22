@@ -75,12 +75,12 @@ class IDE {
       labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
       outputPane!.appendChild(labelEl)
       parsed.ast.render(outputPane, this.editor)
-      const descriptionEl = document.createElement('div')
+      /*const descriptionEl = document.createElement('div')
       descriptionEl.setAttribute('id', 'ast-desc')
       descriptionEl.innerText = parsed.ast.describe()
       descriptionEl.setAttribute('tabindex', '0')
       descriptionEl.setAttribute('role', 'region')
-      outputPane!.appendChild(descriptionEl)
+      outputPane!.appendChild(descriptionEl)*/
       this.makeClean()
     } catch (e) {
       renderToOutput(outputPane, e)

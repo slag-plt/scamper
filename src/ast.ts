@@ -16,43 +16,43 @@ import {EditorSelection} from "@codemirror/state";
 export class SyntaxNode {
     syntax: Value.Syntax
     value: string = ''
-    name: string = ''
-    parentname: string | null = null;
+    //name: string = ''
+    //parentname: string | null = null;
     simplename: string = '';
     index: number | null = null;
     children: SyntaxNode[] = [];
     parent: SyntaxNode | null = null;
 
-    constructor(syntax: Value.Syntax, parent: string | null = null, index: number | null = null) {
+    constructor(syntax: Value.Syntax, index: number | null = null) {
         this.syntax = syntax; 
-        this.parentname = parent;
+        //this.parentname = parent;
         this.index = index;
         let v: T = this.syntax.value;
 
         switch (typeof v) {
             case 'boolean':
                 this.value = "Boolean "+v;
-                this.name = "a boolean "+v;
+                //this.name = "a boolean "+v;
                 this.simplename = ''+v;
                 break;
             case 'number':
                 this.value = "Numerical "+v;
-                this.name = "the number "+v;
+                //this.name = "the number "+v;
                 this.simplename = ''+v;
                 break;
             case 'string':
                 this.value = '"'+v+'"';
-                this.name = 'the string "'+v+'"';
+                //this.name = 'the string "'+v+'"';
                 this.simplename = '"'+v+'"';
                 break;
             case 'undefined':
                 this.value = "Undefined";
-                this.name = 'an undefined value';
+                //this.name = 'an undefined value';
                 this.simplename = 'undefined';
                 break;
             case 'function':
                 this.value = 'Function';
-                this.name = 'a function';
+                //this.name = 'a function';
                 this.simplename = 'a function';
                 break;
             case 'object':
@@ -67,7 +67,6 @@ export class SyntaxNode {
                     while (isPair(tail)) {
                         const child = new SyntaxNode(
                             mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value),
-                            this.children[0].simplename,
                             i
                         );
                         child.parent = this;
@@ -76,58 +75,159 @@ export class SyntaxNode {
                         tail = (tail as Pair).snd;
                       }
 
-                    this.value = "Parenthesis List";
-                    if (this.parentname != null) {
-                        this.name = "the parenthesis list in argument "+this.index+" of "+this.parentname;
-                    } else {
-                        this.name = "the parenthesis starting with " + this.children[0].name;
-                    }
-                    this.simplename = 'a parenthesis list';
-                } else if (isArray(v)) {
-                    this.simplename = 'a square bracket array';
-                    this.value = "Square bracket array";
-                    this.name = "the square bracket array at "+this.syntax.range;
+                    let typeofstatement = "Function application"
 
-                    if (this.parentname != null) {
-                        this.name = "the square bracket array in argument "+this.index+" of "+this.parentname;
+                    // There are several special types of statement this could be
+                    // and
+                    if (this.children[0].simplename === 'and') {
+                        typeofstatement = 'And statement';
                     }
+                    // begin
+                    if (this.children[0].simplename === 'begin') {
+                        typeofstatement = 'Begin statement';
+                    }
+                    // cond
+                    if (this.children[0].simplename === 'cond') {
+                        typeofstatement = 'Cond statement';
+                        for (let c of this.children) {
+                            if (c.simplename === "vector") {
+                                c.value = "Cond branch"
+                            }
+                        }
+                    }
+                    // define
+                    if (this.children[0].simplename === 'define') {
+                        typeofstatement = 'Define statement';
+                    }
+                    // if
+                    if (this.children[0].simplename === 'if') {
+                        typeofstatement = 'If statement';
+                    }
+                    // import
+                    if (this.children[0].simplename === 'import') {
+                        typeofstatement = 'Import statement';
+                    }
+                    // lambda
+                    if (this.children[0].simplename === 'lambda') {
+                        typeofstatement = 'Lambda statement';
+                        this.children[1].value = "Parameter list"
+                    }
+                    // let
+                    if (this.children[0].simplename === 'let') {
+                        typeofstatement = 'Let statement';
+                        this.children[1].value = "List of let bindings"
+                        for (let c of this.children[1].children) {
+                            c.value = "Let binding"
+                        }
+                    }
+                    // let*
+                    if (this.children[0].simplename === 'let*') {
+                        typeofstatement = 'Let* statement';
+                        this.children[1].value = "List of let* bindings"
+                        for (let c of this.children[1].children) {
+                            c.value = "Let* binding"
+                        }
+                    }
+                    // letrec
+                    if (this.children[0].simplename === 'letrec') {
+                        typeofstatement = 'Letrec statement';
+                        this.children[1].value = "List of letrec bindings"
+                        for (let c of this.children[1].children) {
+                            c.value = "Letrec binding"
+                        }
+                    }
+                    // match
+                    if (this.children[0].simplename === 'match') {
+                        typeofstatement = 'Match statement';
+                        for (let c of this.children) {
+                            if (c.simplename === 'vector') {
+                                c.value = "Match branch";
+                            }
+                        }
+                    }
+                    // or
+                    if (this.children[0].simplename === 'or') {
+                        typeofstatement = 'Or statement';
+                    }
+                    // quote
+                    if (this.children[0].simplename === 'quote' || this.children[0].simplename === '"quote"') {
+                        typeofstatement = 'Quoted value';
+                        this.children = this.children.slice(1);
+                        if (this.children[0].simplename === 's-expression') {
+                            this.children[0].listify();
+                        }
+                    }
+                    // section
+                    if (this.children[0].simplename === 'section') {
+                        typeofstatement = 'Section statement';
+                    }
+                    // struct
+                    if (this.children[0].simplename === 'struct') {
+                        typeofstatement = 'Struct statement';
+                        this.children[2].value = "Field list";
+                    }
+
+                    this.value = typeofstatement;
+                    /*if (this.parentname != null) {
+                        this.name = "the "+typeofstatement+" in argument "+this.index+" of "+this.parentname;
+                    } else {
+                        this.name = "the "+typeofstatement+" starting with " + this.children[0].name;
+                    }*/
+                    this.simplename = 's-expression';
+                } else if (isArray(v)) {
+                    this.simplename = 'vector';
+                    this.value = "Vector";
+                    //this.name = "the square bracket array at "+this.syntax.range;
+
+                    /*if (this.parentname != null) {
+                        this.name = "the square bracket array in argument "+this.index+" of "+this.parentname;
+                    }*/
 
                     let i: number = 0;
                     for (let c of (v as Vector)) {
-                        const child = new SyntaxNode(mkSyntax((c as Syntax).range, (c as Syntax).value), this.name, i);
+                        const child = new SyntaxNode(mkSyntax((c as Syntax).range, (c as Syntax).value), i);
                         child.parent = this;
                         this.children.push(child);
                         i += 1;
                     }
 
-                    if (this.parentname == null) {
+                    /*if (this.parentname == null) {
                         this.name = "the square bracket array starting with " + this.children[0].name;
-                    }
+                    }*/
                 } else if (isSym(v)) {
                     this.value = "Symbol " + (v as Sym).value;
-                    this.name = "the symbol "+(v as Sym).value;
+                    //this.name = "the symbol "+(v as Sym).value;
                     this.simplename = ''+(v as Sym).value;
                 } else if (isChar(v)) {
                     this.value = "Character " + (v as Char).value;
-                    this.name = "the character " + (v as Char).value;
+                    //this.name = "the character " + (v as Char).value;
                     this.simplename = ''+(v as Char).value;
                 } else if (v === null) {
                     this.value = "null";
-                    this.name = "null";
+                    //this.name = "null";
                     this.simplename = "null";
                 } else {
                     this.value = "Unknown Object";
-                    this.name = "an unknown object";
+                    //this.name = "an unknown object";
                     this.simplename = "unknown object";
                 }
                 break;
             default:
                 this.value = "Unknown Value";
-                this.name = "an unknown value";
+                //this.name = "an unknown value";
                 this.simplename = "unknown value";
         }
         //TODO: double check this is all of the possible syntax values (probably not)
         //this.value += " " + this.syntax.range;
+    }
+
+    listify() {
+        this.value = 'List';
+        for (let c of this.children) {
+            if (c.simplename === 's-expression') {
+                c.listify();
+            }
+        }
     }
 
     toString(indent: string = ""): string {
@@ -298,7 +398,7 @@ export class AST {
         }
     }
 
-    describe() : string {
+    /*describe() : string {
         if (this.nodes.length === 0) {return "The source file is empty!";}
 
         let queue: SyntaxNode[] = [];
@@ -327,5 +427,5 @@ export class AST {
         }
 
         return ret;
-    }
+    }*/
 }
