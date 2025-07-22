@@ -9,7 +9,7 @@ import {
 } from "./parser";
 import {mkRange, ScamperError, Value} from "../lang";
 
-interface ParseHandler {
+export interface ParseHandler {
     shouldHandle: (beg: Token) => boolean;
     handle: (beg: Token, tokens: Token[]) => Value.Syntax;
 }
