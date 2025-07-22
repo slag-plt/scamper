@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "deploy": "./deploy $npm_package_version",
     "clean": "rm -rf dist",
-    "test": "jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "type": "module",
   "author": "",

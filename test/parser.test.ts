@@ -1,5 +1,5 @@
-import {expect, test} from '@jest/globals'
 import {stringToTokens} from "../src/parser/parser";
+import {expect, test} from '@jest/globals'
 
 describe("Tokenizer", () => {
     test.each(["(", ")", "{", "}", "[", "]"])("recognizes brackets", (bracket) => {

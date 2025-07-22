@@ -11,7 +11,7 @@ import {mkRange, ScamperError, Value} from "../lang";
 
 export interface ParseHandler {
     shouldHandle: (beg: Token) => boolean;
-    handle: (beg: Token, tokens: Token[]) => Value.Syntax;
+    handle: (beg: Token, tokens: Token[], handlingSettings: ParseHandlingSettings) => Value.Syntax;
 }
 
 export interface ParseHandlingSettings {
@@ -21,10 +21,10 @@ export interface ParseHandlingSettings {
 
 const BracketParseHandler: ParseHandler = {
     shouldHandle: beg => isOpeningBracket(beg.text),
-    handle: (beg, tokens) => {
+    handle: (beg, tokens, handlingSettings) => {
         const values = []
         while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-            values.push(parseValue(tokens))
+            values.push(parseValue(tokens, handlingSettings))
         }
         if (tokens.length === 0) {
             // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
@@ -45,7 +45,7 @@ const BracketParseHandler: ParseHandler = {
 
 const QuoteParseHandler: ParseHandler = {
     shouldHandle: beg => beg.text === "'",
-    handle: (beg, tokens) => Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), parseValue(tokens)))
+    handle: (beg, tokens, handlingSettings) => Value.mkSyntax(beg.range, Value.mkList(Value.mkSym('quote'), parseValue(tokens, handlingSettings)))
 }
 
 const DefaultParseHandler: ParseHandler = {
