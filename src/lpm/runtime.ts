@@ -198,7 +198,6 @@ export const isClosure = (v: Value): v is Closure => isTaggedObject(v) && v[scam
 export const isFunction = (v: Value): v is ScamperFn => isJsFunction(v) || isClosure(v)
 export const isChar = (v: Value): v is Char => isTaggedObject(v) && v[scamperTag] === 'char'
 export const isSym = (v: Value): v is Sym => isTaggedObject(v) && v[scamperTag] === 'sym'
-export const isSymName = (v: Value, name: string): boolean => isSym(v) && v.value === name
 export const isPair = (v: Value): v is Pair => isTaggedObject(v) && v[scamperTag] === 'pair'
 export const isList = (v: Value): v is List => v === null || (isPair(v) && v.isList)
 export const isPVar = (v: Value): v is PVar => isTaggedObject(v) && v[scamperTag] === 'pvar'
@@ -336,6 +335,53 @@ export function typeOf (v: Value): string {
     return `[Struct: ${(v as Struct)[structKind]}]`
   } else {
     return typeof v
+  }
+}
+
+/**
+ * @return true if the two values are structurally equal to each other.
+ */
+export function equals (v: Value, u: Value): boolean {
+  // N.B., performing a strict equality check covers atomic values and pointer
+  // equality without the need for excessive identity checks. We reserve the
+  // identity checks for our aggregate values.
+  if (v === u) {
+    return true
+  } else if (isArray(v) && isArray(u)) {
+    if (v.length !== u.length) {
+      return false
+    }
+    for (let i = 0; i < v.length; i++) {
+      if (!equals(v[i], u[i])) {
+        return false
+      }
+    }
+    return true
+  } else if (isChar(v) && isChar(u)) {
+    return v.value === u.value
+  } else if (isSym(v) && isSym(u)) {
+    return v.value === u.value
+  } else if (isPair(v) && isPair(u)) {
+    return equals(v.fst, u.fst) && equals(v.snd, u.snd)
+  } else if (isPVar(v) && isPVar(u)) {
+    return v.idx === u.idx
+  } else if (isStruct(v) && isStruct(u)) {
+    if (v[structKind] !== u[structKind]) {
+      return false
+    }
+    const vFields = getFieldsOfStruct(v)
+    const uFields = getFieldsOfStruct(u)
+    if (vFields.length !== uFields.length) {
+      return false
+    }
+    for (const f of vFields) {
+      if (!equals(v[f], u[f])) {
+        return false
+      }
+    }
+    return true
+  } else {
+    return false
   }
 }
 

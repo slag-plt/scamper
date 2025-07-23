@@ -1,7 +1,7 @@
 import { expect, test, describe } from "@jest/globals"
-import { Code, Machine, Output, Program } from "../../src/lpm/machine";
-import { Id, mkBranch, mkClosure, mkList, mkSym, mkPVar, Value } from "../../src/lpm/runtime";
-import Ops from "../../src/lpm/ops";
+import { Machine, Output } from "../../src/lpm/machine.js"
+import { Code, Id, mkBranch, mkClosure, mkList, mkSym, mkPVar, Program, Value } from "../../src/lpm/runtime.js"
+import Ops from "../../src/lpm/ops.js";
 
 class LoggingOutput implements Output {
   log: Value[] = []

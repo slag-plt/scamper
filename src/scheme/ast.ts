@@ -38,6 +38,8 @@ export const stripSyntax = (v: Value): Value => isSyntax(v) ? v.value : v
 export function stripAllSyntax (v: Value): Value {
   if (isSyntax(v)) {
     return stripAllSyntax((v as Syntax).value)
+  } else if (R.isList(v)) {
+    return R.mkList(...R.listToVector(v).map(stripAllSyntax))
   } else if (R.isPair(v)) {
     return R.mkPair(stripAllSyntax(v.fst), stripAllSyntax(v.snd))
   } else if (R.isArray(v)) {

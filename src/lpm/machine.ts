@@ -1,11 +1,11 @@
-import Ops from './ops'
+import Ops from './ops.js'
 import { 
   Range, Closure, Env, Id, isClosure, isJsFunction, ScamperError, typeOf,
   Value, ICE, isSym, Sym, isChar, Char, isPair, isStruct, listToVector, List,
   isStructKind, Struct, getFieldsOfStruct, Pair, isPVar, PVar,
   Code,
   Program
-} from './runtime'
+} from './runtime.js'
 
 /** Globals are a mapping from identifiers to values. */
 export type Globals = Map<Id, Value>
@@ -584,7 +584,7 @@ export class Machine {
         } else if (arg < 0 || arg >= this.program.identifiers.length) {
           throw new ICE('step', `Invalid library index ${arg} for loadlib operation`)
         } else {
-          const libName = this.program.identifiers[arg]
+          // const libName = this.program.identifiers[arg]
           // TODO: load libName into the global scope
         }
       }

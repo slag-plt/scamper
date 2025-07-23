@@ -2,7 +2,7 @@ import { Value } from '../lpm/runtime.js'
 import * as R from '../lpm/runtime.js'
 import * as A from './ast.js'
 
-function expandExpr (v: Value): Value {
+export function expandExpr (v: Value): Value {
   if (A.isAtom(v)) {
     return v
   } else if (A.isLambda(v)) {
@@ -20,7 +20,7 @@ function expandExpr (v: Value): Value {
     let expr: Value = true
     for (let i = values.length - 1; i >= 0; i--) {
       let b = values[i]
-      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, expr, R.mkSym('false')), ['desugared', 'and']) 
+      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, expr, false), ['desugared', 'and']) 
     }
     return A.mkSyntax(range, expr)
   } else if (A.isOr(v)) {
@@ -28,7 +28,7 @@ function expandExpr (v: Value): Value {
     let expr: Value = false
     for (let i = values.length - 1; i >= 0; i--) {
       let b = values[i]
-      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, R.mkSym('true'), expr), ['desugared', 'or'])
+      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, true, expr), ['desugared', 'or'])
     }
     return A.mkSyntax(range, expr)
   } else if (A.isBegin(v)) {
@@ -38,7 +38,7 @@ function expandExpr (v: Value): Value {
     const { guard, ifB, elseB, range } = A.asIf(v)
     return A.mkSyntax(range, R.mkList(R.mkSym('if'), expandExpr(guard), expandExpr(ifB), expandExpr(elseB)))
   } else if (A.isCond(v)) {
-    let { clauses, range } = A.asCond(v)
+    let { clauses, range: _range } = A.asCond(v)
     clauses = clauses.map(({ fst, snd, range }) => ({ fst: expandExpr(fst), snd: expandExpr(snd), range }))
     let expr: Value = undefined
     for (let i = clauses.length - 1; i >= 0; i--) {
@@ -66,7 +66,7 @@ function expandExpr (v: Value): Value {
   }
 }
 
-function expandStmt (v: Value): Value{
+export function expandStmt (v: Value): Value{
   if (A.isImport(v)) {
     return v
   } else if (A.isDefine(v)) {
