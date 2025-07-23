@@ -2,6 +2,40 @@ import { Value } from '../lpm/runtime.js'
 import * as R from '../lpm/runtime.js'
 import * as A from './ast.js'
 
+let holeSymCounter = 0
+function genHoleSym(): string {
+  return `_${holeSymCounter++}`
+}
+
+function collectSectionHoles (bvars: string[], v: Value): Value {
+  const orig = v
+  let { range, value } = A.unpackSyntax(v)
+  v = value
+  if (R.isSymName(A.stripSyntax(v), '_')) {
+    const x = genHoleSym()
+    bvars.push(x)
+    return A.mkSyntax(range, R.mkSym(x))
+  } else if (v === null) {
+    return orig
+  } else if (R.isList(v)) {
+    const values = R.listToVector(v)
+    // N.B., do _not_ recursively collect holes in enclosed section forms
+    if (R.isSymName(A.stripSyntax(values[0]), 'section')) {
+      return orig
+    } else {
+      return A.mkSyntax(range, R.mkList(...values.map((v) => collectSectionHoles(bvars, v))))
+    }
+  } else if (R.isPair(v)) {
+    return A.mkSyntax(range, R.mkPair(
+      collectSectionHoles(bvars, (v as R.Pair).fst),
+      collectSectionHoles(bvars, (v as R.Pair).snd)))
+  } else if (R.isArray(v)) {
+    return A.mkSyntax(range, (v as R.Vector).map((v) => collectSectionHoles(bvars, v)))
+  } else {
+    return orig
+  }
+}
+
 export function expandExpr (v: Value): Value {
   if (A.isAtom(v)) {
     return v
@@ -58,8 +92,14 @@ export function expandExpr (v: Value): Value {
     const { values, range } = A.asQuote(v)
     return A.mkSyntax(range, R.mkList(R.mkSym('quote'), ...values))
   } else if (A.isSection(v)) {
-    // TODO: need to portion section-expanding code to here!
-    throw new R.ICE('expandExpr', 'Section expressions are not yet supported in the expansion phase')
+    const { values, range } = A.asSection(v)
+    const params: string[] = []
+    const app = R.mkList(...values.map((arg) => collectSectionHoles(params, arg)))
+    return A.mkSyntax(range,
+        R.mkList(
+          R.mkSym('lambda'), R.mkList(...params.map((p) => R.mkSym(p))), app),
+        ['desugared', 'section']
+    )
   } else {
     const { values, range } = A.asApp(v)
     return A.mkSyntax(range, R.mkList(...values.map(expandExpr)))

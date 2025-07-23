@@ -198,6 +198,7 @@ export const isClosure = (v: Value): v is Closure => isTaggedObject(v) && v[scam
 export const isFunction = (v: Value): v is ScamperFn => isJsFunction(v) || isClosure(v)
 export const isChar = (v: Value): v is Char => isTaggedObject(v) && v[scamperTag] === 'char'
 export const isSym = (v: Value): v is Sym => isTaggedObject(v) && v[scamperTag] === 'sym'
+export const isSymName = (v: Value, name: string): boolean => isSym(v) && v.value === name
 export const isPair = (v: Value): v is Pair => isTaggedObject(v) && v[scamperTag] === 'pair'
 export const isList = (v: Value): v is List => v === null || (isPair(v) && v.isList)
 export const isPVar = (v: Value): v is PVar => isTaggedObject(v) && v[scamperTag] === 'pvar'
