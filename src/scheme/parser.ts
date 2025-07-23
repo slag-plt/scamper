@@ -1,4 +1,5 @@
-import { ICE, mkChar, mkList, mkSym, mkSyntax, Range, ScamperError, Syntax, Value } from '../lpm/runtime.js'
+import { ICE, mkChar, mkList, mkSym, Range, ScamperError } from '../lpm/runtime.js'
+import { mkSyntax, Syntax } from './ast.js'
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 

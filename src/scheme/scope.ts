@@ -3,7 +3,7 @@ import * as R from '../lpm/runtime.js'
 import * as A from './ast.js'
 
 function scopeCheckSingle (errors: ScamperError[], globals: string[], locals: string[], v: Value) {
-  const { range, value } = R.unpackSyntax(v)
+  const { range: _range, value } = A.unpackSyntax(v)
   v = value
   if (R.isSym(v)) {
     // TODO: need to distinguish between a local with
@@ -50,14 +50,14 @@ function scopeCheckStmt (errors: ScamperError[], globals: string[], v: Value) {
     // to shadow naturally. Probably should give a warning in this case!
   } else if (A.isDefine(v)) {
     const { name, value, range } = A.asDefine(v)
-    if (globals.includes(R.stripSyntax(name) as string)) {
-      errors.push(new ScamperError('Parser',  `Global variable '${name}' is already defined`, undefined, R.rangeOf(name, range)))
+    if (globals.includes(A.stripSyntax(name) as string)) {
+      errors.push(new ScamperError('Parser',  `Global variable '${name}' is already defined`, undefined, A.rangeOf(name, range)))
     } else {
-      globals.push(R.stripSyntax(name) as string)
+      globals.push(A.stripSyntax(name) as string)
     }
     scopeCheckExpr(errors, globals, [], value)
   } else if (A.isDisplay(v)) {
-    const { value, range } = A.asDisplay(v)
+    const { value, range: _range } = A.asDisplay(v)
     scopeCheckExpr(errors, globals, [], value)
   } else if (A.isStruct(v)) {
     // TODO: steal this from sem.ts, just adds a bunch of

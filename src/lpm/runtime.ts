@@ -147,11 +147,8 @@ export type Pair = { [scamperTag]: 'pair', fst: Value, snd: Value, isList: boole
  */
 export type PVar = { [scamperTag]: 'pvar', idx: number }
 
-/** A syntax object is a tagged object that wraps a Scamper object with source code information. */
-export type Syntax = { [scamperTag]: 'syntax', range: Range, value: Value }
-
 /** Tagged objects are Scamper values with a queryable runtime identity. */
-export type TaggedObject = Closure | Char | Sym | Pair | PVar | Syntax | Struct
+export type TaggedObject = Closure | Char | Sym | Pair | PVar | Struct
 
 // NOTE: to maximize interoperability, a struct is an object with at least
 // a _scamperTag and kind field. The rest of the fields are the fields of the
@@ -187,27 +184,26 @@ export type Value = boolean | number | string | List | Vector | Function | undef
 
 ///// Predicates for determining the type of a Scamper value.
 
-export const isNumber = (v: Value): boolean => typeof v === 'number'
-export const isBoolean = (v: Value): boolean => typeof v === 'boolean'
-export const isString = (v: Value): boolean => typeof v === 'string'
-export const isNull = (v: Value): boolean => v === null
-export const isVoid = (v: Value): boolean => v === undefined
-export const isArray = (v: Value): boolean => Array.isArray(v)
-export const isJsFunction = (v: Value): boolean => typeof v === 'function'
+export const isNumber = (v: Value): v is number => typeof v === 'number'
+export const isBoolean = (v: Value): v is boolean => typeof v === 'boolean'
+export const isString = (v: Value): v is string => typeof v === 'string'
+export const isNull = (v: Value): v is null => v === null
+export const isVoid = (v: Value): v is undefined => v === undefined
+export const isArray = (v: Value): v is Array<Value> => Array.isArray(v)
+export const isJsFunction = (v: Value): v is Function => typeof v === 'function'
 
-export const isTaggedObject = (v: Value): boolean =>
+export const isTaggedObject = (v: Value): v is TaggedObject =>
   v !== null && typeof v === 'object' && v.hasOwnProperty(scamperTag)
-export const isClosure = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'closure'
-export const isFunction = (v: Value): boolean => isJsFunction(v) || isClosure(v)
-export const isChar = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'char'
-export const isSym = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'sym'
-export const isSymName = (v: Value, name: string): boolean => isSym(v) && (v as Sym).value === name
-export const isPair = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pair'
-export const isList = (v: Value): boolean => v === null || (isPair(v) && (v as Pair).isList)
-export const isPVar = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'pvar'
-export const isSyntax = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'syntax'
-export const isStruct = (v: Value): boolean => isTaggedObject(v) && (v as TaggedObject)[scamperTag] === 'struct'
-export const isStructKind = (v: Value, k: string): boolean => isStruct(v) && (v as Struct)[structKind] === k
+export const isClosure = (v: Value): v is Closure => isTaggedObject(v) && v[scamperTag] === 'closure'
+export const isFunction = (v: Value): v is ScamperFn => isJsFunction(v) || isClosure(v)
+export const isChar = (v: Value): v is Char => isTaggedObject(v) && v[scamperTag] === 'char'
+export const isSym = (v: Value): v is Sym => isTaggedObject(v) && v[scamperTag] === 'sym'
+export const isSymName = (v: Value, name: string): boolean => isSym(v) && v.value === name
+export const isPair = (v: Value): v is Pair => isTaggedObject(v) && v[scamperTag] === 'pair'
+export const isList = (v: Value): v is List => v === null || (isPair(v) && v.isList)
+export const isPVar = (v: Value): v is PVar => isTaggedObject(v) && v[scamperTag] === 'pvar'
+export const isStruct = (v: Value): v is Struct => isTaggedObject(v) && v[scamperTag] === 'struct'
+export const isStructKind = <T extends Struct> (v: Value, k: string): v is T => isStruct(v) && v[structKind] === k
 
 ///// Constructor functions for making Scamper values.
 
@@ -221,8 +217,6 @@ export const mkPair = (fst: Value, snd: Value): Pair => ({
 })
 export const mkList = (...values: Value[]): List => vectorToList(values)
 export const mkPVar = (idx: number): PVar => ({ [scamperTag]: 'pvar', idx })
-export const mkSyntax = (range: Range, value: Value): Syntax =>
-  ({ [scamperTag]: 'syntax', range, value })
 export const mkStruct = (kind: string, fields: string[], values: Value[]): Value => {
   const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
   for (let i = 0; i < fields.length; i++) {
@@ -237,38 +231,6 @@ export const mkStruct = (kind: string, fields: string[], values: Value[]): Value
 export function mkBranch (pattern: Value, target: number): Pair {
   return mkPair(pattern, target)
 }
-
-/** @return v but with its top-level syntax wrapper removed, if it exists. */
-export const stripSyntax = (v: Value): Value =>
-  isSyntax(v) ? (v as Syntax).value : v
-
-/** @return v but with all syntax wrappers removed, recursively. */
-export function stripAllSyntax (v: Value): Value {
-  if (isSyntax(v)) {
-    return stripAllSyntax((v as Syntax).value)
-  } else if (isPair(v)) {
-    const p = v as Pair
-    return mkPair(stripAllSyntax(p.fst), stripAllSyntax(p.snd))
-  } else if (isArray(v)) {
-    return (v as Value[]).map(stripAllSyntax)
-  } else if (isStruct(v)) {
-    const s = v as Struct
-    const fields = getFieldsOfStruct(s)
-    return mkStruct(s[structKind], fields, fields.map((f) => stripAllSyntax(s[f])))
-  } else {
-    return v
-  }
-}
-
-/** @returns a pair of a syntax object and its wrapped value. */
-export const unpackSyntax = (v: Value): { range: Range, value: Value } =>
-  isSyntax(v) ?
-    { range: (v as Syntax).range, value: (v as Syntax).value } :
-    { range: Range.none, value: v }
-
-/** @returns the range component of a syntax object. */
-export const rangeOf = (v: Value, fallback: Range = Range.none): Range =>
-  isSyntax(v) ? (v as Syntax).range : fallback
 
 /** Mutates a Javascript function to contain a `name` field with that function's name. */
 export const nameFn = (name: string, fn: Function): Function =>
@@ -370,8 +332,6 @@ export function typeOf (v: Value): string {
     return `pair`
   } else if (isList(v)) {
     return `list`
-  } else if (isSyntax(v)) {
-    return `[Syntax: ${typeOf((v as Syntax).value)}]`
   } else if (isStruct(v)) {
     return `[Struct: ${(v as Struct)[structKind]}]`
   } else {

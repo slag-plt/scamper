@@ -1,5 +1,6 @@
 import { ScamperError, Value } from '../lpm/runtime.js'
 import * as R from '../lpm/runtime.js'
+import { unpackSyntax } from './ast.js'
 
 const reservedWords = [
   'and',
@@ -20,7 +21,7 @@ const reservedWords = [
 ]
 
 function checkIdentifier (errors: ScamperError[], v: Value, errorMsg: string = 'Expected an identifier') {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
   if (!R.isSym(v)) {
     errors.push(new ScamperError('Parser', errorMsg, undefined, range))
@@ -34,7 +35,7 @@ function checkIdentifier (errors: ScamperError[], v: Value, errorMsg: string = '
 function checkIdentifierList (errors: ScamperError[], v: Value,
                              listErrorMsg: string = 'Expected a list of identifiers',
                              identErrorMsg: string = 'Expected an identifier') {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
   if (!R.isList(v)) {
     errors.push(new ScamperError('Parser', listErrorMsg, undefined, range))
@@ -47,7 +48,7 @@ function checkIdentifierList (errors: ScamperError[], v: Value,
 }
 
 function checkBranch (errors: ScamperError[], v: Value) {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
   if (!R.isPair(v)) {
     errors.push(new ScamperError('Parser', 'Expected a pair for a branch', undefined, range))
@@ -59,7 +60,7 @@ function checkBranch (errors: ScamperError[], v: Value) {
 }
 
 function checkLetBinder (errors: ScamperError[], v: Value) {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
   if (!R.isPair(v)) {
     errors.push(new ScamperError('Parser', 'Expected a pair for a binder', undefined, range))
@@ -71,7 +72,7 @@ function checkLetBinder (errors: ScamperError[], v: Value) {
 }
 
 function checkLetBinders (errors: ScamperError[], v: Value) {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
   if (!R.isList(v)) {
     errors.push(new ScamperError('Parser', 'Expected a list of binding pairs', undefined, range))
@@ -100,7 +101,7 @@ export function checkSyntaxSingle (errors: ScamperError[], v: Value) {
 }
 
 export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   v = value
 
   if (!R.isList(v)) {
@@ -108,7 +109,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
   } else {
     const arr = R.listToVector(v as R.List)
     if (arr.length > 0) {
-      let { range: hr, value: hv } = R.unpackSyntax(arr[0])
+      let { range: hr, value: hv } = unpackSyntax(arr[0])
       if (R.isSym(hv)) {
         const head = (hv as R.Sym).value
         switch (head) {
@@ -211,7 +212,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 }
 
 export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
-  let { range, value } = R.unpackSyntax(v)
+  let { range, value } = unpackSyntax(v)
   const orig = v
   v = value
   if (!R.isList(v)) {
@@ -219,7 +220,7 @@ export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
   } else {
     const arr = R.listToVector(v as R.List)
     if (arr.length > 0) {
-      let { range: _hr, value: hv } = R.unpackSyntax(arr[0])
+      let { range: _hr, value: hv } = unpackSyntax(arr[0])
       if (R.isSym(hv)) {
         const head = (hv as R.Sym).value
         switch (head) {

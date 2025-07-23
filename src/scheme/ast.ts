@@ -16,102 +16,157 @@ import * as R from '../lpm/runtime.js'
 //     | (quote e)
 //     | (section e1 ... ek)
 
+///// Syntax Wrappers //////////////////////////////////////////////////////////
+
+export interface Syntax extends R.Struct {
+  [R.scamperTag]: 'struct'
+  [R.structKind]: 'syntax'
+  range: Range
+  value: Value
+  metadata?: Map<string, any>
+}
+
+export const mkSyntax = (range: Range, value: Value, ...metadata: [string, any][]): Syntax =>
+  ({ [R.scamperTag]: 'struct', [R.structKind]: 'syntax', range, value, metadata: new Map(metadata) })
+
+export const isSyntax = (v: Value): v is Syntax => R.isStructKind(v, 'syntax')
+
+/** @return v but with its top-level syntax wrapper removed, if it exists. */
+export const stripSyntax = (v: Value): Value => isSyntax(v) ? v.value : v
+
+/** @return v but with all syntax wrappers removed, recursively. */
+export function stripAllSyntax (v: Value): Value {
+  if (isSyntax(v)) {
+    return stripAllSyntax((v as Syntax).value)
+  } else if (R.isPair(v)) {
+    return R.mkPair(stripAllSyntax(v.fst), stripAllSyntax(v.snd))
+  } else if (R.isArray(v)) {
+    return v.map(stripAllSyntax)
+  } else if (R.isStruct(v)) {
+    const fields = R.getFieldsOfStruct(v)
+    return R.mkStruct(v[R.structKind], fields, fields.map((f) => stripAllSyntax(v[f])))
+  } else {
+    return v
+  }
+}
+
+/** @returns a pair of a syntax object and its wrapped value. */
+export const unpackSyntax = (v: Value): { range: Range, value: Value } =>
+  isSyntax(v) ?
+    { range: (v as Syntax).range, value: (v as Syntax).value } :
+    { range: Range.none, value: v }
+
+/** @returns the range component of a syntax object. */
+export const rangeOf = (v: Value, fallback: Range = Range.none): Range =>
+  isSyntax(v) ? (v as Syntax).range : fallback
+
 ////// Query Functions /////////////////////////////////////////////////////////
 
 export function isAtom (v: Value): boolean {
-  return !R.isList(R.stripSyntax(v))
+  return !R.isList(stripSyntax(v))
 }
 
-export function isSexp (v: Value): boolean {
-  return R.isList(R.stripSyntax(v))
+export function isApp (v: Value): boolean {
+  return R.isList(stripSyntax(v))
 }
 
-export function isSexpWithHead (v: Value, expected: string): boolean {
-  if (!isSexp(v)) { return false }
-  const lst = R.stripSyntax(v) as R.List
+export function isSpecialForm (v: Value, expected: string): boolean {
+  if (!isApp(v)) { return false }
+  const lst = stripSyntax(v) as R.List
   if (lst === null) { return false }
-  const head = R.stripSyntax(lst.fst)
+  const head = stripSyntax(lst.fst)
   return R.isSym(head) && (head as R.Sym).value === expected
 }
 
-// Expression forms
-export const isLambda = (v: Value) => isSexpWithHead(v, 'lambda')
-export const isLet = (v: Value) => isSexpWithHead(v, 'let')
-export const isLetStar = (v: Value) => isSexpWithHead(v, 'let*')
-export const isAnd = (v: Value) => isSexpWithHead(v, 'and')
-export const isOr = (v: Value) => isSexpWithHead(v, 'or')
-export const isBegin = (v: Value) => isSexpWithHead(v, 'begin')
-export const isIf = (v: Value) => isSexpWithHead(v, 'if')
-export const isCond = (v: Value) => isSexpWithHead(v, 'cond')
-export const isMatch = (v: Value) => isSexpWithHead(v, 'match')
-export const isQuote = (v: Value) => isSexpWithHead(v, 'quote')
-export const isSection = (v: Value) => isSexpWithHead(v, 'section')
+// Special Forms
+export const isLambda = (v: Value) => isSpecialForm(v, 'lambda')
+export const isLet = (v: Value) => isSpecialForm(v, 'let')
+export const isLetStar = (v: Value) => isSpecialForm(v, 'let*')
+export const isAnd = (v: Value) => isSpecialForm(v, 'and')
+export const isOr = (v: Value) => isSpecialForm(v, 'or')
+export const isBegin = (v: Value) => isSpecialForm(v, 'begin')
+export const isIf = (v: Value) => isSpecialForm(v, 'if')
+export const isCond = (v: Value) => isSpecialForm(v, 'cond')
+export const isMatch = (v: Value) => isSpecialForm(v, 'match')
+export const isQuote = (v: Value) => isSpecialForm(v, 'quote')
+export const isSection = (v: Value) => isSpecialForm(v, 'section')
 
-function asPair (v: Value): { fst: Value, snd: Value } {
-  const { range: _range, value } = R.unpackSyntax(v)
+export type Pair = { fst: Value, snd: Value, range: Range }
+
+function asPair (v: Value): Pair {
+  const { range: range, value } = unpackSyntax(v)
   v = value
-  return { fst: R.listFirst(v), snd: R.listSecond(v) }
+  return { fst: R.listFirst(v), snd: R.listSecond(v), range }
+}
+
+export function asApp (v: Value): { values: Value[], range: Range } {
+  const { range, value } = unpackSyntax(v)
+  v = value
+  return {
+    values: R.listToVector(v as R.List),
+    range
+  }
 }
 
 export function asLambda (v: Value): { params: Value[], body: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    params: R.listToVector(R.stripSyntax(R.listSecond(v)) as R.List),
+    params: R.listToVector(stripSyntax(R.listSecond(v)) as R.List),
     body: R.listThird(v),
     range
   }
 }
 
-export function asLet (v: Value): { bindings: { fst: Value, snd: Value }[], body: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+export function asLet (v: Value): { bindings: Pair[], body: Value, range: Range } {
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    bindings: R.listToVector(R.stripSyntax(R.listSecond(v)) as R.List).map(asPair),
+    bindings: R.listToVector(stripSyntax(R.listSecond(v)) as R.List).map(asPair),
     body: R.listThird(v),
     range
   }
 }
 
-export function asLetStar (v: Value): { bindings: { fst: Value, snd: Value }[], body: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+export function asLetStar (v: Value): { bindings: Pair[], body: Value, range: Range } {
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    bindings: R.listToVector(R.stripSyntax(R.listSecond(v)) as R.List).map(asPair),
+    bindings: R.listToVector(stripSyntax(R.listSecond(v)) as R.List).map(asPair),
     body: R.listThird(v),
     range
   }
 }
 
 export function asAnd (v: Value): { values: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    values: R.listToVector(R.stripSyntax(R.listTail(v)) as R.List),
+    values: R.listToVector(stripSyntax(R.listTail(v)) as R.List),
     range
   }
 }
 
 export function asOr (v: Value): { values: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    values: R.listToVector(R.stripSyntax(R.listTail(v)) as R.List),
+    values: R.listToVector(stripSyntax(R.listTail(v)) as R.List),
     range
   }
 }
 
 export function asBegin (v: Value): { values: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    values: R.listToVector(R.stripSyntax(R.listTail(v)) as R.List),
+    values: R.listToVector(stripSyntax(R.listTail(v)) as R.List),
     range
   }
 }
 
 export function asIf (v: Value): { guard: Value, ifB: Value, elseB: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
     guard: R.listSecond(v),
@@ -121,67 +176,67 @@ export function asIf (v: Value): { guard: Value, ifB: Value, elseB: Value, range
   }
 }
 
-export function asCond (v: Value): { clauses: { fst: Value, snd: Value }[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+export function asCond (v: Value): { clauses: Pair[], range: Range } {
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
-    clauses: R.listToVector(R.stripSyntax(R.listSecond(v)) as R.List).map(asPair),
+    clauses: R.listToVector(stripSyntax(R.listSecond(v)) as R.List).map(asPair),
     range
   }
 }
 
-export function asMatch (v: Value): { scrutinee: Value, clauses: { fst: Value, snd: Value }[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+export function asMatch (v: Value): { scrutinee: Value, clauses: Pair[], range: Range } {
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
     scrutinee: R.listSecond(v),
-    clauses: R.listToVector(R.stripSyntax(R.listThird(v)) as R.List).map(asPair),
+    clauses: R.listToVector(stripSyntax(R.listThird(v)) as R.List).map(asPair),
     range
   }
 }
 
 export function asQuote (v: Value): { values: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
-  return { values: R.listToVector(R.stripSyntax(R.listTail(v)) as R.List), range }
+  return { values: R.listToVector(stripSyntax(R.listTail(v)) as R.List), range }
 }
 
 export function asSection (v: Value): { values: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
-  return { values: R.listToVector(R.stripSyntax(R.listTail(v)) as R.List), range }
+  return { values: R.listToVector(stripSyntax(R.listTail(v)) as R.List), range }
 }
 
 // Statement forms
-export const isImport = (v: Value) => isSexpWithHead(v, 'import')
-export const isDefine = (v: Value) => isSexpWithHead(v, 'define')
-export const isDisplay = (v: Value) => isSexpWithHead(v, 'display')
-export const isStruct = (v: Value) => isSexpWithHead(v, 'struct')
+export const isImport = (v: Value) => isSpecialForm(v, 'import')
+export const isDefine = (v: Value) => isSpecialForm(v, 'define')
+export const isDisplay = (v: Value) => isSpecialForm(v, 'display')
+export const isStruct = (v: Value) => isSpecialForm(v, 'struct')
 
 export function asImport (v: Value): { name: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return { name: R.listSecond(v), range }
 }
 
 export function asDefine (v: Value): { name: Value, value: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return { name: R.listSecond(v), value: R.listThird(v), range }
 }
 
 export function asDisplay (v: Value): { value: Value, range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return { value: R.listSecond(v), range }
 }
 
 export function asStruct (v: Value): { name: Value, fields: Value[], range: Range } {
-  const { range, value } = R.unpackSyntax(v)
+  const { range, value } = unpackSyntax(v)
   v = value
   return {
     name: R.listSecond(v),
-    fields: R.listToVector(R.stripSyntax(R.listThird(v)) as R.List),
+    fields: R.listToVector(stripSyntax(R.listThird(v)) as R.List),
     range
   }
 }
