@@ -104,15 +104,16 @@ class IDE {
               view.dispatch({
                 selection: { anchor: 0, head: doc.length }
               })     
-              const success = indentSelection(view)
+              const selec = indentSelection(view)
               const updatedLine = view.state.doc.line(line.number)
+              // Calculating the number of leading whitespace characters (spaces or tabs) at the start of updatedLine
               const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0         
               const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
               view.dispatch({
                 selection: { anchor: newHead },
                 scrollIntoView: true
               })
-              return success
+              return selec
             }
           },
           {

@@ -118,6 +118,15 @@ function findArgs (start: number, label: string, ops: Op.T[]): { segments: Op.T[
   return { segments, endIdx: i }
 }
 
+function pairToListElements(v: Value.T): Value.T[] | null {
+  const result: Value.T[] = []
+  while (Value.isPair(v)) {
+    result.push((v as Value.Pair).fst)
+    v = (v as Value.Pair).snd
+  }
+  return Value.isNull(v) ? result : null
+}
+
 function valToExp (v: Value.T): Value.T {
   if (Value.isNumber(v)) {
     return v
@@ -149,41 +158,23 @@ function valToExp (v: Value.T): Value.T {
     return Value.mkSym((v as Function).name)
   } else if (Value.isChar(v)) {
     return v
-  } else if (Value.isList(v)) {
-    if (v === null) {
-      return Value.mkSym('null')
-    } else {
-      const elems = Value.listToVector(v as Value.List)
+  } else if (Value.isPair(v)) {
+    const elems = pairToListElements(v)
+    if (elems !== null) {
       return Value.vectorToList([
         Value.mkSym('list'),
-        ...elems.map((v) => valToExp(v))
+        ...elems.map(valToExp)
+      ])
+    } else {
+      return Value.vectorToList([
+        Value.mkSym('pair'),
+        valToExp((v as Value.Pair).fst),
+        valToExp((v as Value.Pair).snd)
       ])
     }
-  } else if (Value.isPair(v)) {
-    return Value.vectorToList([
-      Value.mkSym('pair'),
-      valToExp((v as Value.Pair).fst),
-      valToExp((v as Value.Pair).snd)
-    ])
   } else if (Value.isStruct(v)) {
-    // TODO: problems! When raising a value to an expression, we rely on valToExp to
-    // convert values to expression forms, in particular lists. This way, we know
-    // the difference between a list value `(list + 2 3)` and a form `(+ 2 3)`.
-    // However, in this case, our conversion is too early: display needs the original
-    // struct value in order to custom render it. The hack is to simply return the
-    // original struct value. However, now, any forms/lists nested inside of a
-    // struct may be rendered incorrectly.
-    //
-    // One fix might be to take this "opToValue" pipeline in sem.ts and turn it into
-    // an "opToHTML" pipeline so that we can properly integrate the special forms
-    // checking into here. That's a bit of work to implement, so maybe we can get away
-    // with a variant of the split architecture we have now. The right path is unclear...
     return v
-    // const s = v as Value.Struct
-    // const fields = Value.getFieldsOfStruct(s)
-    // return Value.mkStruct(s[Value.structKind], fields, fields.map((f) => valToExp(s[f])))
   } else {
-    // TODO: urk, when does this arise?
     return v
   }
 }
@@ -199,7 +190,7 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
         if (Value.isClosure(val) || Value.isJsFunction(val)) {
           valStack.push(Value.mkSym(op.name))
         } else {
-          valStack.push(env.get(op.name)!)
+          valStack.push(valToExp(val))
         }
       } else {
         valStack.push(Value.mkSym(op.name))
@@ -215,10 +206,20 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
     } else if (op.tag === 'ap') {
       const args = op.arity === 0 ? [] : valStack.slice(-op.arity)
       for (let i = 0; i < op.arity; i++) { valStack.pop() }
-      valStack.push(Value.vectorToList([
-        valStack.pop()!,
-        ...args
-      ]))
+      const fn = valStack.pop()!
+
+      if (Value.isSym(fn) && (fn as Value.Sym).value === 'list') {
+        // Reconstruct (list ...) instead of just values
+        valStack.push(Value.vectorToList([
+          Value.mkSym('list'),
+          ...args.map(valToExp)
+        ]))
+      } else {
+        valStack.push(Value.vectorToList([
+          fn,
+          ...args
+        ]))
+      }
     } else if (op.tag === 'if') {
       const elseb = dumpToValue([[], env, new Control(op.elseb)])
       const ifb = dumpToValue([[], env, new Control(op.ifb)])
@@ -242,16 +243,12 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
         body
       ]))
     } else if (op.tag === 'seq') {
-      if (op.numSubexps === 0) {
-        valStack.push(Value.vectorToList([Value.mkSym('begin')]))
-      } else {
-        const exps = valStack.slice(-op.numSubexps)
-        for (let i = 0; i < op.numSubexps; i++) { valStack.pop() }
-        valStack.push(Value.vectorToList([
-          Value.mkSym('begin'),
-          ...exps
-        ]))
-      }
+      const exps = valStack.splice(-op.numSubexps)
+      valStack.push(Value.vectorToList([
+        Value.mkSym('begin'),
+        ...exps
+      ]))
+
     } else if (op.tag === 'match') {
       const scrutinee = valStack.pop()!
       const branches = op.branches.map((b) => [
@@ -263,7 +260,6 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
         scrutinee,
         Value.vectorToList(branches)
       ])) 
-
     } else if (op.tag === 'and') {
       const { segments, endIdx } = findArgs(i + 1, op.jmpTo, control.ops)
       const args = [valStack.pop()!].concat(segments.map((ops) => dumpToValue([[], env, new Control(ops)])))
@@ -301,10 +297,9 @@ function dumpToValue ([stack, env, control]: [Value.T[], Env, Control], hole?: V
     }
   }
   if (valStack.length !== 1) {
-    throw new ICE('sem.dumpToExp', `Stack size is not 1 after execution: ${stack}`)
-  } else {
-    return valStack.pop()!
+    throw new ICE('sem.dumpToValue', `Expected single expression, got stack: ${valStack}`)
   }
+  return valStack.pop()!
 }
 
 export function opsToValue (ops: Op.T[]): Value.T {
