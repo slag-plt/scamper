@@ -4,16 +4,20 @@ import * as R from '../lpm/runtime.js'
 // e ::= n | b | s | c
 //     | null | void
 //     | (e1 ... ek)
+//
+//     -- Special forms
 //     | (lambda (x1 ... xk) e)
 //     | (let ([x1 e1] ... [xk ek]) e)
+//     | (begin e1 ... ek)
+//     | (if e1 e2 e3)
+//     | (match e [p1 e1] ... [pk ek])
+//     | (quote e)
+//
+//     -- Sugared forms
 //     | (let* ([x1 e1] ... [xk ek]) e)
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
-//     | (begin e1 ... ek)
-//     | (if e1 e2 e3)
 //     | (cond [e11 e12] ... [e1k e2k])
-//     | (match e [p1 e1] ... [pk ek])
-//     | (quote e)
 //     | (section e1 ... ek)
 
 ///// Syntax Wrappers //////////////////////////////////////////////////////////
@@ -23,7 +27,7 @@ export interface Syntax extends R.Struct {
   [R.structKind]: 'syntax'
   range: Range
   value: Value
-  metadata?: Map<string, any>
+  metadata: Map<string, any>
 }
 
 export const mkSyntax = (range: Range, value: Value, ...metadata: [string, any][]): Syntax =>
@@ -53,14 +57,18 @@ export function stripAllSyntax (v: Value): Value {
 }
 
 /** @returns a pair of a syntax object and its wrapped value. */
-export const unpackSyntax = (v: Value): { range: Range, value: Value } =>
+export const unpackSyntax = (v: Value): { range: Range, value: Value, metadata?: Map<string, any> } =>
   isSyntax(v) ?
-    { range: (v as Syntax).range, value: (v as Syntax).value } :
-    { range: Range.none, value: v }
+    { range: v.range, value: v.value, metadata: v.metadata } :
+    { range: Range.none, value: v, metadata: new Map() }
 
 /** @returns the range component of a syntax object. */
 export const rangeOf = (v: Value, fallback: Range = Range.none): Range =>
   isSyntax(v) ? (v as Syntax).range : fallback
+
+/** @returns the metadata component of a syntax object. */
+export const metadataOf = (v: Value, fallback: Map<string, any> = new Map()): Map<string, any> =>
+  isSyntax(v) ? v.metadata : fallback
 
 ////// Query Functions /////////////////////////////////////////////////////////
 
@@ -182,7 +190,7 @@ export function asCond (v: Value): { clauses: Pair[], range: Range } {
   const { range, value } = unpackSyntax(v)
   v = value
   return {
-    clauses: R.listToVector(stripSyntax(R.listSecond(v)) as R.List).map(asPair),
+    clauses: R.listToVector((v as R.Pair).snd as R.List).map(asPair),
     range
   }
 }

@@ -48,7 +48,16 @@ export function expandExpr (v: Value): Value {
     body = expandExpr(body)
     return A.mkSyntax(range, R.mkList(R.mkSym('let'), R.mkList(...bindings), body))
   } else if (A.isLetStar(v)) {
-
+    let { bindings, body, range: _range } = A.asLetStar(v)
+    bindings = bindings.map(({fst, snd, range }) => ({ fst, snd: expandExpr(snd), range }))
+    body = expandExpr(body)
+    let expr: Value = body
+    for (let i = bindings.length - 1; i >= 0; i--) {
+      let { fst, snd, range: r } = bindings[i]
+      expr = A.mkSyntax(r, R.mkList(R.mkSym('let'), fst, snd, expr), ['desugared', 'let*'])
+    }
+    // TODO: same deal as cond: the range of the top-level let is the first binding, is that ok?
+    return expr
   } else if (A.isAnd(v)) {
     const { values, range } = A.asAnd(v)
     let expr: Value = true
