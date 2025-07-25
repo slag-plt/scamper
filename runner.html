@@ -61,7 +61,6 @@
       min-height: 0;
       overflow-x: auto;
       overflow-y: auto;    
-      white-space: nowrap; 
       padding: 1rem;       
       box-sizing: border-box;
     }
@@ -99,14 +98,15 @@
     }
 
     .tree {
-      display: inline-block;
-      vertical-align: top;
+      display: block;
       justify-content: center;
       align-items: flex-start;
       padding-top: 40px;
       margin-bottom: 60px;
       border-top: 1px dashed #ccc;
       padding-top: 20px;
+      width: max-content;
+      min-width: 100%;
     }
 
     .tree ul {
@@ -150,6 +150,19 @@
       left: 50%;
       border-left: 1px solid #ccc;
       height: 20px;
+    }
+
+    .tree li:only-child::before,
+    .tree li:only-child::after {
+      display: none;
+    }
+
+    .tree li:first-child::before {
+      display: none;
+    }
+
+    .tree li:last-child::after {
+      display: none;
     }
 
     .box {
