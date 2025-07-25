@@ -179,6 +179,13 @@ class IDE {
       const params = new URLSearchParams({filename: this.currentFile, isTree: "true"})
       window.open(`runner.html?${params.toString()}`)
     })
+
+    window.addEventListener("message", (event) => {
+      const { type, index } = event.data || {};
+      if (type === "AST_CURSOR" && typeof index === "string") {
+          this.moveCursorToIndex(parseInt(index));
+      }
+    });
     
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
@@ -271,6 +278,14 @@ class IDE {
   displayError (error: string) {
     document.getElementById("loading-content")!.innerText = error
     document.getElementById("loading")!.style.display = "block"
+  }
+
+  moveCursorToIndex(index: number) {
+    this.editor.dispatch({
+        selection: { anchor: index },
+        scrollIntoView: true
+    });
+    this.editor.focus();
   }
 }
 
