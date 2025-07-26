@@ -21,24 +21,24 @@ const reservedWords = [
 ]
 
 function checkIdentifier (errors: ScamperError[], v: Value, errorMsg: string = 'Expected an identifier') {
-  let { range, value } = unpackSyntax(v)
+  let { value, metadata } = unpackSyntax(v)
   v = value
   if (!R.isSym(v)) {
-    errors.push(new ScamperError('Parser', errorMsg, undefined, range))
+    errors.push(new ScamperError('Parser', errorMsg, undefined, metadata.get('range')))
   }
   const s = (v as R.Sym).value 
   if (reservedWords.includes(s)) {
-    errors.push(new ScamperError('Parser', `The identifier "${s}" is a reserved word and cannot be used as a variable name`, undefined, range))
+    errors.push(new ScamperError('Parser', `The identifier "${s}" is a reserved word and cannot be used as a variable name`, undefined, metadata.get('range')))
   }
 }
 
 function checkIdentifierList (errors: ScamperError[], v: Value,
                              listErrorMsg: string = 'Expected a list of identifiers',
                              identErrorMsg: string = 'Expected an identifier') {
-  let { range, value } = unpackSyntax(v)
+  let { value, metadata } = unpackSyntax(v)
   v = value
   if (!R.isList(v)) {
-    errors.push(new ScamperError('Parser', listErrorMsg, undefined, range))
+    errors.push(new ScamperError('Parser', listErrorMsg, undefined, metadata.get('range')))
   } else {
     const arr = R.listToVector(v as R.List)
     arr.forEach((v) => {
@@ -48,10 +48,10 @@ function checkIdentifierList (errors: ScamperError[], v: Value,
 }
 
 function checkBranch (errors: ScamperError[], v: Value) {
-  let { range, value } = unpackSyntax(v)
+  let { value, metadata } = unpackSyntax(v)
   v = value
   if (!R.isPair(v)) {
-    errors.push(new ScamperError('Parser', 'Expected a pair for a branch', undefined, range))
+    errors.push(new ScamperError('Parser', 'Expected a pair for a branch', undefined, metadata.get('range')))
   } else {
     const p = v as R.Pair
     checkSyntaxExpr(errors, p.fst)
@@ -60,10 +60,10 @@ function checkBranch (errors: ScamperError[], v: Value) {
 }
 
 function checkLetBinder (errors: ScamperError[], v: Value) {
-  let { range, value } = unpackSyntax(v)
+  let { value, metadata } = unpackSyntax(v)
   v = value
   if (!R.isPair(v)) {
-    errors.push(new ScamperError('Parser', 'Expected a pair for a binder', undefined, range))
+    errors.push(new ScamperError('Parser', 'Expected a pair for a binder', undefined, metadata.get('range')))
   } else {
     const p = v as R.Pair
     checkIdentifier(errors, p.fst, 'Binding pair expects an identifier in the first position')
@@ -72,10 +72,10 @@ function checkLetBinder (errors: ScamperError[], v: Value) {
 }
 
 function checkLetBinders (errors: ScamperError[], v: Value) {
-  let { range, value } = unpackSyntax(v)
+  let { metadata, value } = unpackSyntax(v)
   v = value
   if (!R.isList(v)) {
-    errors.push(new ScamperError('Parser', 'Expected a list of binding pairs', undefined, range))
+    errors.push(new ScamperError('Parser', 'Expected a list of binding pairs', undefined, metadata.get('range')))
   } else {
     const arr = R.listToVector(v as R.List)
     arr.forEach((v) => {
@@ -101,7 +101,7 @@ export function checkSyntaxSingle (errors: ScamperError[], v: Value) {
 }
 
 export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
-  let { range, value } = unpackSyntax(v)
+  let { metadata, value } = unpackSyntax(v)
   v = value
 
   if (!R.isList(v)) {
@@ -109,13 +109,13 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
   } else {
     const arr = R.listToVector(v as R.List)
     if (arr.length > 0) {
-      let { range: hr, value: hv } = unpackSyntax(arr[0])
+      let { value: hv, metadata: hm } = unpackSyntax(arr[0])
       if (R.isSym(hv)) {
         const head = (hv as R.Sym).value
         switch (head) {
           case 'lambda': {
             if (arr.length !== 3) {
-              errors.push(new ScamperError('Parser', 'Lambda expressions must have 2 sub-components, a list of identifiers and a body', undefined, range))
+              errors.push(new ScamperError('Parser', 'Lambda expressions must have 2 sub-components, a list of identifiers and a body', undefined, metadata.get('range')))
             }
             checkIdentifierList(errors, arr[1],
               'The first component of a lambda expression must be a list of identifiers',
@@ -126,7 +126,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'let': {
             if (arr.length !== 3) {
-              errors.push(new ScamperError('Parser', 'Let expressions must have 2 sub-components, a list of binding pairs and a body', undefined, range))
+              errors.push(new ScamperError('Parser', 'Let expressions must have 2 sub-components, a list of binding pairs and a body', undefined, metadata.get('range')))
             }
             checkLetBinders(errors, arr[1])
             checkSyntaxExpr(errors, arr[2])
@@ -135,7 +135,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'let*': {
             if (arr.length !== 3) {
-              errors.push(new ScamperError('Parser', 'Let* expressions must have 2 sub-components, a list of binding pairs and a body', undefined, range))
+              errors.push(new ScamperError('Parser', 'Let* expressions must have 2 sub-components, a list of binding pairs and a body', undefined, metadata.get('range')))
             }
             checkLetBinders(errors, arr[1])
             checkSyntaxExpr(errors, arr[2])
@@ -154,7 +154,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'if': {
             if (arr.length !== 4) {
-              errors.push(new ScamperError('Parser', 'If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch', undefined, range))
+              errors.push(new ScamperError('Parser', 'If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch', undefined, metadata.get('range')))
             }
             checkSyntaxExpr(errors, arr[1])
             checkSyntaxExpr(errors, arr[2])
@@ -169,7 +169,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'match': {
             if (arr.length < 2) {
-              errors.push(new ScamperError('Parser', 'Match expressions must have at least 1 sub-component: a scrutine', undefined, range))
+              errors.push(new ScamperError('Parser', 'Match expressions must have at least 1 sub-component: a scrutine', undefined, metadata.get('range')))
             }
             checkSyntaxExpr(errors, arr[1])
             for (const v of arr.slice(2)) {
@@ -187,7 +187,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'quote': {
             if (arr.length === 1) {
-              errors.push(new ScamperError('Parser', 'Quote expressions must have at least one sub-component', undefined, range))
+              errors.push(new ScamperError('Parser', 'Quote expressions must have at least one sub-component', undefined, metadata.get('range')))
             }
             checkSyntaxExprList(errors, arr.slice(1))
             break
@@ -195,7 +195,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 
           case 'section': {
             if (arr.length === 1) {
-              errors.push(new ScamperError('Parser', 'Section expressions must have at least one sub-component', undefined, range))
+              errors.push(new ScamperError('Parser', 'Section expressions must have at least one sub-component', undefined, metadata.get('range')))
             }
             checkSyntaxExprList(errors, arr.slice(1))
             break
@@ -212,7 +212,7 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
 }
 
 export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
-  let { range, value } = unpackSyntax(v)
+  let { value, metadata } = unpackSyntax(v)
   const orig = v
   v = value
   if (!R.isList(v)) {
@@ -220,13 +220,13 @@ export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
   } else {
     const arr = R.listToVector(v as R.List)
     if (arr.length > 0) {
-      let { range: _hr, value: hv } = unpackSyntax(arr[0])
+      let { value: hv, metadata: hm } = unpackSyntax(arr[0])
       if (R.isSym(hv)) {
         const head = (hv as R.Sym).value
         switch (head) {
           case 'import': {
             if (arr.length !== 2) {
-              errors.push(new ScamperError('Parser', 'Import statements must have 2 sub-components, a module name and an alias', undefined, range))
+              errors.push(new ScamperError('Parser', 'Import statements must have 2 sub-components, a module name and an alias', undefined, metadata.get('range')))
             }
             checkIdentifier(errors, arr[1], 'The first component of an import statement must be an identifier')
             break
@@ -234,7 +234,7 @@ export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
 
           case 'define': {
             if (arr.length !== 3) {
-              errors.push(new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, range))
+              errors.push(new ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, metadata.get('range')))
             }
             checkIdentifier(errors, arr[1], 'The first component of a define statement must be an identifier')
             checkSyntaxExpr(errors, arr[2])
@@ -243,7 +243,7 @@ export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
 
           case 'display': {
             if (arr.length !== 2) {
-              errors.push(new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, range))
+              errors.push(new ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, metadata.get('range')))
             }
             checkSyntaxExpr(errors, arr[1])
             break
@@ -251,7 +251,7 @@ export function checkSyntaxStmt (errors: ScamperError[], v: Value) {
 
           case 'struct': {
             if (arr.length !== 3) {
-              errors.push(new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, range))
+              errors.push(new ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, metadata.get('range')))
             }
             checkIdentifier(errors, arr[1], 'The first component of a struct statement must be an identifier')
             checkIdentifierList(errors, arr[2],

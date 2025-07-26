@@ -121,8 +121,13 @@ export const scamperTag = Symbol('tag')
 /** The field name of Scamper objects that are structs denoting that struct's kind. */
 export const structKind = Symbol('kind')
 
+/** Tagged objects are Scamper values with a queryable runtime identity. */
+interface TaggedObject {
+  [scamperTag]: string
+}
+
 /** A closure is a tagged object that bundles a function with its captured environment. */
-export type Closure = {
+export interface Closure extends TaggedObject {
   [scamperTag]: 'closure',
   params: Id[],
   code: Id,
@@ -132,23 +137,30 @@ export type Closure = {
 }
 
 /** A char is a tagged object that captures a single character (a one-character string). */
-export type Char = { [scamperTag]: 'char', value: string }
+export interface Char extends TaggedObject {
+  [scamperTag]: 'char',
+  value: string
+}
 
 /** A symbol is tagged object that contains a string interned for fast equality. */
-export type Sym  = { [scamperTag]: 'sym', value: string } 
+export interface Sym extends TaggedObject {
+  [scamperTag]: 'sym', value: string
+} 
 
 /** A pair is a tagged object that contains a pair of (potentially heterogeneous) values. */
-export type Pair = { [scamperTag]: 'pair', fst: Value, snd: Value, isList: boolean }
+export interface Pair extends TaggedObject {
+  [scamperTag]: 'pair',
+  fst: Value,
+  snd: Value,
+  isList: boolean
+}
 
 /**
  * A pattern variable appears in pattern objects and denotes a binding
  * location in the pattern. Note that a negative index indicates a
  * wildcard (non-binding) variable.
  */
-export type PVar = { [scamperTag]: 'pvar', idx: number }
-
-/** Tagged objects are Scamper values with a queryable runtime identity. */
-export type TaggedObject = Closure | Char | Sym | Pair | PVar | Struct
+export interface PVar extends TaggedObject { [scamperTag]: 'pvar', idx: number }
 
 // NOTE: to maximize interoperability, a struct is an object with at least
 // a _scamperTag and kind field. The rest of the fields are the fields of the
@@ -157,7 +169,7 @@ export type TaggedObject = Closure | Char | Sym | Pair | PVar | Struct
 // An invariant of a Scamper object is that the order of arguments of a struct's
 // constructor is the property order of the corresponding object, i.e., the
 // order in which the fields are defined.
-export interface Struct {
+export interface Struct extends TaggedObject {
   [scamperTag]: 'struct',
   [structKind]: string,
   [key: string]: any,

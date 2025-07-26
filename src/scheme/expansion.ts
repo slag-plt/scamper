@@ -9,12 +9,12 @@ function genHoleSym(): string {
 
 function collectSectionHoles (bvars: string[], v: Value): Value {
   const orig = v
-  let { range, value } = A.unpackSyntax(v)
+  let { value, metadata } = A.unpackSyntax(v)
   v = value
   if (R.isSymName(A.stripSyntax(v), '_')) {
     const x = genHoleSym()
     bvars.push(x)
-    return A.mkSyntax(range, R.mkSym(x))
+    return A.mkSyntax(R.mkSym(x), ...metadata)
   } else if (v === null) {
     return orig
   } else if (R.isList(v)) {
@@ -23,14 +23,14 @@ function collectSectionHoles (bvars: string[], v: Value): Value {
     if (R.isSymName(A.stripSyntax(values[0]), 'section')) {
       return orig
     } else {
-      return A.mkSyntax(range, R.mkList(...values.map((v) => collectSectionHoles(bvars, v))))
+      return A.mkSyntax(R.mkList(...values.map((v) => collectSectionHoles(bvars, v))), ...metadata)
     }
   } else if (R.isPair(v)) {
-    return A.mkSyntax(range, R.mkPair(
+    return A.mkSyntax(R.mkPair(
       collectSectionHoles(bvars, (v as R.Pair).fst),
-      collectSectionHoles(bvars, (v as R.Pair).snd)))
+      collectSectionHoles(bvars, (v as R.Pair).snd)), ...metadata)
   } else if (R.isArray(v)) {
-    return A.mkSyntax(range, (v as R.Vector).map((v) => collectSectionHoles(bvars, v)))
+    return A.mkSyntax((v as R.Vector).map((v) => collectSectionHoles(bvars, v)), ...metadata)
   } else {
     return orig
   }
@@ -40,78 +40,79 @@ export function expandExpr (v: Value): Value {
   if (A.isAtom(v)) {
     return v
   } else if (A.isLambda(v)) {
-    const { params, body, range } = A.asLambda(v)
-    return A.mkSyntax(range, R.mkList(params, expandExpr(body)))
+    const { params, body, metadata } = A.asLambda(v)
+    return A.mkSyntax(R.mkList(params, expandExpr(body)), ...metadata)
   } else if (A.isLet(v)) {
-    let { bindings, body, range } = A.asLet(v)
-    bindings = bindings.map(({fst, snd, range }) => ({ fst, snd: expandExpr(snd), range }))
+    let { bindings, body, metadata } = A.asLet(v)
+    bindings = bindings.map(({fst, snd, metadata }) => ({ fst, snd: expandExpr(snd), metadata }))
     body = expandExpr(body)
-    return A.mkSyntax(range, R.mkList(R.mkSym('let'), R.mkList(...bindings), body))
+    return A.mkSyntax(R.mkList(R.mkSym('let'), R.mkList(...bindings), body), ...metadata)
   } else if (A.isLetStar(v)) {
-    let { bindings, body, range: _range } = A.asLetStar(v)
-    bindings = bindings.map(({fst, snd, range }) => ({ fst, snd: expandExpr(snd), range }))
+    // TODO: same deal as cond: the range of the top-level let is the first binding, is that ok?
+    let { bindings, body, metadata: _metadata } = A.asLetStar(v)
+    bindings = bindings.map(({fst, snd, metadata }) => ({ fst, snd: expandExpr(snd), metadata }))
     body = expandExpr(body)
     let expr: Value = body
     for (let i = bindings.length - 1; i >= 0; i--) {
-      let { fst, snd, range: r } = bindings[i]
-      expr = A.mkSyntax(r, R.mkList(R.mkSym('let'), fst, snd, expr), ['desugared', 'let*'])
+      let { fst, snd, metadata } = bindings[i]
+      expr = A.mkSyntax(R.mkList(R.mkSym('let'), fst, snd, expr), ...metadata, ['desugared', 'let*'])
     }
-    // TODO: same deal as cond: the range of the top-level let is the first binding, is that ok?
     return expr
   } else if (A.isAnd(v)) {
-    const { values, range } = A.asAnd(v)
+    const { values, metadata } = A.asAnd(v)
     let expr: Value = true
     for (let i = values.length - 1; i >= 0; i--) {
       let b = values[i]
-      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, expr, false), ['desugared', 'and']) 
+      expr = A.mkSyntax(R.mkList(R.mkSym('if'), b, expr, false), ...metadata, ['desugared', 'and'])
     }
-    return A.mkSyntax(range, expr)
+    return A.mkSyntax(expr, ...metadata)
   } else if (A.isOr(v)) {
-    const { values, range } = A.asOr(v)
+    const { values, metadata } = A.asOr(v)
     let expr: Value = false
     for (let i = values.length - 1; i >= 0; i--) {
       let b = values[i]
-      expr = A.mkSyntax(A.rangeOf(b), R.mkList(R.mkSym('if'), b, true, expr), ['desugared', 'or'])
+      expr = A.mkSyntax(R.mkList(R.mkSym('if'), b, true, expr), ...metadata, ['desugared', 'or'])
     }
-    return A.mkSyntax(range, expr)
+    return A.mkSyntax(expr, ...metadata)
   } else if (A.isBegin(v)) {
-    const { values, range } = A.asBegin(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('begin'), ...values.map(expandExpr)))
+    const { values, metadata } = A.asBegin(v)
+    return A.mkSyntax(R.mkList(R.mkSym('begin'), ...values.map(expandExpr)), ...metadata)
   } else if (A.isIf(v)) {
-    const { guard, ifB, elseB, range } = A.asIf(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('if'), expandExpr(guard), expandExpr(ifB), expandExpr(elseB)))
+    const { guard, ifB, elseB, metadata } = A.asIf(v)
+    return A.mkSyntax(R.mkList(R.mkSym('if'), expandExpr(guard), expandExpr(ifB), expandExpr(elseB)), ...metadata)
   } else if (A.isCond(v)) {
-    let { clauses, range: _range } = A.asCond(v)
-    clauses = clauses.map(({ fst, snd, range }) => ({ fst: expandExpr(fst), snd: expandExpr(snd), range }))
-    let expr: Value = undefined
-    for (let i = clauses.length - 1; i >= 0; i--) {
-      expr = A.mkSyntax(clauses[i].range, R.mkList(R.mkSym('if'), clauses[i].fst, clauses[i].snd, expr), ['desugared', 'cond'])
-    }
     // N.B., the range of the top if is the range of the first clause and not the overall cond.
     // Will that be ok for error reporting?
+    let { clauses, metadata: _metadata } = A.asCond(v)
+    clauses = clauses.map(({ fst, snd, metadata }) => ({ fst: expandExpr(fst), snd: expandExpr(snd), metadata }))
+    let expr: Value = undefined
+    for (let i = clauses.length - 1; i >= 0; i--) {
+      expr = A.mkSyntax(R.mkList(R.mkSym('if'), clauses[i].fst, clauses[i].snd, expr), ...clauses[i].metadata, ['desugared', 'cond'])
+    }
     return expr
   } else if (A.isMatch(v)) {
-    const { clauses, range } = A.asMatch(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('match'), ...clauses.map(({ fst, snd, range }) => ({
+    const { clauses, metadata } = A.asMatch(v)
+    return A.mkSyntax(R.mkList(R.mkSym('match'), ...clauses.map(({ fst, snd, metadata }) => ({
       fst,
       snd: expandExpr(snd),
-      range: range
-    }))))
+      metadata
+    }))), ...metadata)
   } else if (A.isQuote(v)) {
-    const { values, range } = A.asQuote(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('quote'), ...values))
+    const { values, metadata } = A.asQuote(v)
+    return A.mkSyntax(R.mkList(R.mkSym('quote'), ...values), ...metadata)
   } else if (A.isSection(v)) {
-    const { values, range } = A.asSection(v)
+    const { values, metadata } = A.asSection(v)
     const params: string[] = []
     const app = R.mkList(...values.map((arg) => collectSectionHoles(params, arg)))
-    return A.mkSyntax(range,
+    return A.mkSyntax(
         R.mkList(
           R.mkSym('lambda'), R.mkList(...params.map((p) => R.mkSym(p))), app),
-        ['desugared', 'section']
+        ['desugared', 'section'],
+        ...metadata
     )
   } else {
-    const { values, range } = A.asApp(v)
-    return A.mkSyntax(range, R.mkList(...values.map(expandExpr)))
+    const { values, metadata } = A.asApp(v)
+    return A.mkSyntax(R.mkList(...values.map(expandExpr)), ...metadata)
   }
 }
 
@@ -119,11 +120,11 @@ export function expandStmt (v: Value): Value{
   if (A.isImport(v)) {
     return v
   } else if (A.isDefine(v)) {
-    const { name, value, range } = A.asDefine(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('define'), name, expandExpr(value)))
+    const { name, value, metadata } = A.asDefine(v)
+    return A.mkSyntax(R.mkList(R.mkSym('define'), name, expandExpr(value)), ...metadata)
   } else if (A.isDisplay(v)) {
-    const { value, range } = A.asDisplay(v)
-    return A.mkSyntax(range, R.mkList(R.mkSym('display'), expandExpr(value)))
+    const { value, metadata } = A.asDisplay(v)
+    return A.mkSyntax(R.mkList(R.mkSym('display'), expandExpr(value)), ...metadata)
   } else if (A.isStruct(v)) {
     return v
   } else {

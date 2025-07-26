@@ -298,23 +298,23 @@ export const namedCharValues = new Map([
 export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
   const text = t.text
   if (intRegex.test(text)) {
-    return mkSyntax(t.range, parseInt(text))
+    return mkSyntax(parseInt(text), ['range', t.range])
   } else if (floatRegex.test(text)) {
-    return mkSyntax(t.range, parseFloat(text))
+    return mkSyntax(parseFloat(text), ['range', t.range])
   } else if (text === '#t') {
-    return mkSyntax(t.range, true)
+    return mkSyntax(true, ['range', t.range])
   } else if (text === '#f') {
-    return mkSyntax(t.range, false)
+    return mkSyntax(false, ['range', t.range])
   } else if (text === 'null') {
-    return mkSyntax(t.range, null)
+    return mkSyntax(null, ['range', t.range])
   } else if (text.startsWith('"')) {
-    return mkSyntax(t.range, parseStringLiteral(text, t.range))
+    return mkSyntax(parseStringLiteral(text, t.range), ['range', t.range])
   } else if (text.startsWith('#\\')) {
     const escapedChar = text.slice(2)
     if (escapedChar.length === 1) {
-      return mkSyntax(t.range, mkChar(escapedChar))
+      return mkSyntax(mkChar(escapedChar), ['range', t.range])
     } else if (namedCharValues.has(escapedChar)) {
-      return mkSyntax(t.range, mkChar(namedCharValues.get(escapedChar)!))
+      return mkSyntax(mkChar(namedCharValues.get(escapedChar)!), ['range', t.range])
     } else {
       throw new ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }
@@ -324,7 +324,7 @@ export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
     if (text.startsWith('_') && !wildAllowed) {
       throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, t.range)
     }
-    return mkSyntax(t.range, mkSym(text))
+    return mkSyntax(mkSym(text), ['range', t.range])
   }
 }
 
@@ -344,13 +344,13 @@ export function parseValue (tokens: Token[]): Syntax {
     } else {
       const end = tokens.shift()!
       return mkSyntax(
-        new Range(beg.range.begin, end.range.end),
         // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
         // we ever allow '{' to imply an dictionary/object.
-        beg.text === '[' ? values : mkList(...values))
+        beg.text === '[' ? values : mkList(...values),
+        ['range', new Range(beg.range.begin, end.range.end)])
     }
   } else if (beg.text === "'") {
-    return mkSyntax(beg.range, mkList(mkSym('quote'), parseValue(tokens)))
+    return mkSyntax(mkList(mkSym('quote'), parseValue(tokens)), ['range', beg.range])
   } else {
     return parseSingle(beg, true)
   }

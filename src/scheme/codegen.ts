@@ -40,7 +40,7 @@ function pushOp (state: State, op: number, arg: number) {
 ///// Code Generation //////////////////////////////////////////////////////////
 
 function lowerSingle (state: State, v: Value) {
-  const { range, value } = A.unpackSyntax(v)
+  const { value, metadata } = A.unpackSyntax(v)
   v = value
   if (R.isSym(v)) {
     // TODO: need to distinguish between a local with
@@ -89,17 +89,17 @@ function lowerExpr (state: State, v: Value) {
 function lowerStmt (state: State, v: Value) {
   const code = state.curBlk
   if (A.isImport(v)) {
-    const { name, range } = A.asImport(v)
+    const { name, metadata } = A.asImport(v)
     const libname = getIdentifierIndex(state, A.stripSyntax(name) as string)
     // TODO: check to see if libname is a valid library name
     pushOp(state, Ops.loadlib, libname)
   } else if (A.isDefine(v)) {
-    const { name, value, range } = A.asDefine(v)
+    const { name, value, metadata } = A.asDefine(v)
     // TODO: are we scope-checking the name?
     lowerExpr(state, value)
     pushOp(state, Ops.gstore, getIdentifierIndex(state, A.stripSyntax(name) as string))
   } else if (A.isDisplay(v)) {
-    const { value, range } = A.asDisplay(v)
+    const { value, metadata } = A.asDisplay(v)
     lowerExpr(state, value)
     pushOp(state, Ops.disp, 0)
   } else if (A.isStruct(v)) {
