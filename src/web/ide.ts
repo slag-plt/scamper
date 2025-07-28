@@ -75,12 +75,12 @@ class IDE {
       labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
       outputPane!.appendChild(labelEl)
       parsed.ast.render(outputPane, this.editor)
-      const descriptionEl = document.createElement('div')
+      /*const descriptionEl = document.createElement('div')
       descriptionEl.setAttribute('id', 'ast-desc')
       descriptionEl.innerText = parsed.ast.describe()
       descriptionEl.setAttribute('tabindex', '0')
       descriptionEl.setAttribute('role', 'region')
-      outputPane!.appendChild(descriptionEl)
+      outputPane!.appendChild(descriptionEl)*/
       this.makeClean()
     } catch (e) {
       renderToOutput(outputPane, e)
@@ -104,15 +104,16 @@ class IDE {
               view.dispatch({
                 selection: { anchor: 0, head: doc.length }
               })     
-              const success = indentSelection(view)
+              const selec = indentSelection(view)
               const updatedLine = view.state.doc.line(line.number)
+              // Calculating the number of leading whitespace characters (spaces or tabs) at the start of updatedLine
               const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0         
               const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
               view.dispatch({
                 selection: { anchor: newHead },
                 scrollIntoView: true
               })
-              return success
+              return selec
             }
           },
           {
@@ -178,6 +179,13 @@ class IDE {
       const params = new URLSearchParams({filename: this.currentFile, isTree: "true"})
       window.open(`runner.html?${params.toString()}`)
     })
+
+    window.addEventListener("message", (event) => {
+      const { type, index } = event.data || {};
+      if (type === "AST_CURSOR" && typeof index === "string") {
+          this.moveCursorToIndex(parseInt(index));
+      }
+    });
     
     stepOnceButton.disabled = true
     stepStmtButton.disabled = true
@@ -270,6 +278,14 @@ class IDE {
   displayError (error: string) {
     document.getElementById("loading-content")!.innerText = error
     document.getElementById("loading")!.style.display = "block"
+  }
+
+  moveCursorToIndex(index: number) {
+    this.editor.dispatch({
+        selection: { anchor: index },
+        scrollIntoView: true
+    });
+    this.editor.focus();
   }
 }
 
