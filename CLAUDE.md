@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm install` - Install NPM dependencies
 - `npm run dev` - Start local development server with hot reloading
 - `npm run build` - Build the project (TypeScript compilation + Vite build)
-- `npm test` - Run Jest tests
+- `npm run test` - Run Jest tests
 - `npm run deploy` - Deploy Scamper to production server
 - `npm run clean` - Remove dist directory
 - `npm run preview` - Preview the built application

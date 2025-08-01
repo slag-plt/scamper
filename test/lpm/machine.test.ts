@@ -386,17 +386,17 @@ describe("Conditionals", () => {
         Ops.int, 8,
         Ops.int, 8,
         Ops.eq, 0,
-        Ops.ifb, 16,
-        Ops.int, 76,
+        Ops.ifnb, 16,
+        Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
         Ops.ret, 0,
-        Ops.int, 42,
+        Ops.int, 76,
         Ops.disp, 0,
         Ops.int, 0, 
         Ops.ret, 0,
       ], 0]]
-    )).toBe(76)
+    )).toBe(42)
   })
 
   test("Bjmp false", () => {
@@ -405,7 +405,7 @@ describe("Conditionals", () => {
         Ops.int, 8,
         Ops.int, 2,
         Ops.eq, 0,
-        Ops.ifb, 16,
+        Ops.ifnb, 16,
         Ops.int, 76,
         Ops.disp, 0,
         Ops.int, 0,
@@ -424,7 +424,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.int, 255,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -440,7 +440,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.int, 100,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -456,7 +456,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.bool, 1,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -472,7 +472,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.bool, 0,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -488,7 +488,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.str, 0,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -504,7 +504,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.str, 0,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.int, 42,
         Ops.disp, 0,
         Ops.int, 0,
@@ -520,7 +520,7 @@ describe("Pattern matching", () => {
     expect(machineOutputOf(
       [["main", [
         Ops.obj, 1,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.lload, 0,
         Ops.disp, 0,
         Ops.int, 0,
@@ -561,7 +561,7 @@ describe("Function calls", () => {
         Ops.lload, 0,
         Ops.int, 0,
         Ops.neq, 0,
-        Ops.ifb, 24,
+        Ops.ifnb, 24,
         Ops.lload, 0,
         Ops.gload, 0,
         Ops.lload, 0,
@@ -590,7 +590,7 @@ describe("Function calls", () => {
         Ops.lload, 0,
         Ops.int, 0,
         Ops.neq, 0,
-        Ops.ifb, 26,
+        Ops.ifnb, 26,
         Ops.gload, 0,
         Ops.lload, 0,
         Ops.int, 1,
@@ -619,7 +619,7 @@ describe("Function calls", () => {
     expect(machineOutputOf(
       [["length", [
         Ops.lload, 0,
-        Ops.ifm, 0,
+        Ops.ifnm, 0,
         Ops.gload, 0,
         Ops.lload, 2,
         Ops.ap, 1,

@@ -183,16 +183,16 @@ export class Machine {
         return
       }
 
-      case Ops.ifb: {
+      case Ops.ifnb: {
         if (arg === undefined) {
-          throw new ICE('step', 'Expected an argument for ifb')
+          throw new ICE('step', 'Expected an argument for ifnb')
         } else if (arg < 0 || arg >= code.ops.length) {
-          throw new ICE('step', `Invalid jump target ${arg} for ifb operation`)
+          throw new ICE('step', `Invalid jump target ${arg} for ifnb operation`)
         } else if (values.length == 0) {
-          throw new ScamperError('Runtime', 'ifb operation requires at least one value on the stack')
-        } else { 
-          const cont = values.pop()!
-          if (cont) {
+          throw new ScamperError('Runtime', 'ifnb operation requires at least one value on the stack')
+        } else {
+          const isJump = values.pop()!
+          if (isJump) {
             this.advancePc()
           } else {
             frame.pc = arg
@@ -201,13 +201,13 @@ export class Machine {
         }
       }
 
-      case Ops.ifm: {
+      case Ops.ifnm: {
         if (arg === undefined) {
-          throw new ICE('step', 'Expected an argument for ifm')
+          throw new ICE('step', 'Expected an argument for ifnm')
         } else if (arg < 0 || arg >= code.ops.length) {
-          throw new ICE('step', `Invalid jump target ${arg} for ifm operation`)
+          throw new ICE('step', `Invalid jump target ${arg} for ifnm operation`)
         } else if (values.length === 0) {
-          throw new ScamperError('Runtime', 'ifm operation requires at least one value on the stack')
+          throw new ScamperError('Runtime', 'ifnm operation requires at least one value on the stack')
         } else if (this.program.objects[arg] === undefined) {
           throw new ScamperError('Runtime', `Object with index ${arg} not found in program`)
         } else if (!isPair(this.program.objects[arg])) {
@@ -215,12 +215,11 @@ export class Machine {
         } else {
           const obj: Pair = this.program.objects[arg] as Pair
           const pattern = obj.fst
-          const failBranch = obj.snd as number
+          const failIdx = obj.snd as number
           const scrutinee = values.pop()!
           const bindings = tryMatch(pattern, scrutinee, Range.none)
           if (bindings === undefined) {
-            // N.B., if we don't match, jump to the "else" branch
-            frame.pc = failBranch
+            frame.pc = failIdx
           } else {
             bindings.forEach(([idx, v]) => {
               frame.env[idx] = v

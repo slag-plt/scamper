@@ -19,6 +19,15 @@ import * as R from '../lpm/runtime.js'
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
 //     | (section e1 ... ek)
+//
+// s ::= e
+//     | (import m)
+//     | (define x e)
+//     | (display e)
+//     | e
+//
+//     -- Sugared form
+//     | (struct S (f1 ... fk))
 
 ///// Syntax Wrappers //////////////////////////////////////////////////////////
 
@@ -79,6 +88,15 @@ export function isAtom (v: Value): boolean {
 
 export function isApp (v: Value): boolean {
   return R.isList(stripSyntax(v))
+}
+
+export function asIdentifier (v: Value): { name: string, metadata: Metadata } {
+  const { value, metadata } = unpackSyntax(v)
+  v = value
+  return {
+    name: (v as R.Sym).value,
+    metadata
+  }
 }
 
 export function isSpecialForm (v: Value, expected: string): boolean {
@@ -206,10 +224,10 @@ export function asMatch (v: Value): { scrutinee: Value, clauses: Pair[], metadat
   }
 }
 
-export function asQuote (v: Value): { values: Value[], metadata: Metadata } {
+export function asQuote (v: Value): { value: Value, metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
-  return { values: R.listToVector(stripSyntax(R.listTail(v)) as R.List), metadata }
+  return { value: R.listSecond(v), metadata }
 }
 
 export function asSection (v: Value): { values: Value[], metadata: Metadata } {
@@ -250,4 +268,12 @@ export function asStruct (v: Value): { name: Value, fields: Value[], metadata: M
     fields: R.listToVector(stripSyntax(R.listThird(v)) as R.List),
     metadata
   }
+}
+
+export function structPredName (name: string): string {
+  return `${name}?`
+}
+
+export function structFieldName (name: string, field: string): string {
+  return `${name}-${field}`
 }

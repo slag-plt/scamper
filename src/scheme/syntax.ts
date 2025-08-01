@@ -189,7 +189,9 @@ export function checkSyntaxExpr (errors: ScamperError[], v: Value) {
             if (arr.length === 1) {
               errors.push(new ScamperError('Parser', 'Quote expressions must have at least one sub-component', undefined, metadata.get('range')))
             }
-            checkSyntaxExprList(errors, arr.slice(1))
+            // N.B., We _don't_ check the syntax of the quoted expression!
+            // We treat the syntax as-is, even if it is malformed. It is only
+            // when we evaluate the syntax would we then check its validity.
             break
           }
 

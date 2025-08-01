@@ -10,11 +10,12 @@ const Ops = {
 
   // Control
   'noop': 0x00,     // noop
-  'ifb': 0x01,      // ifb l  [1 value]
-  'ifm': 0x02,      // ifm r  [1 value]
-  'ap': 0x03,       // ap n   [n+1 values]
-  'ret': 0x04,      // ret    [1 value]
-  'disp': 0x05,     // disp   [1 value]
+  'ifnb': 0x01,     // ifnb l  [1 value]
+  'ifnm': 0x02,     // ifnm r  [1 value]
+  'jmp': 0x03,      // jmp l   [1 value]
+  'ap': 0x04,       // ap n    [n+1 values]
+  'ret': 0x05,      // ret     [1 value]
+  'disp': 0x06,     // disp    [1 value]
 
   // Literals
   'int': 0x10,      // int n
