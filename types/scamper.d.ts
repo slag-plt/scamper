@@ -16,6 +16,7 @@ export declare class Scamper {
     sem: Sem.Sem;
     constructor(display: HTMLElement, src: string, opts: ScamperOptions);
     runProgram(): void;
+    runnerTree(): void;
     stepProgram(): void;
     stepStmtProgram(): void;
 }
