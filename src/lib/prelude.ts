@@ -33,7 +33,7 @@ registerValue('number?', numberQ, Prelude)
 
 function realQ (x: any): boolean {
   checkContract(arguments, query1C('real?'))
-  return typeof x === 'number' && !Number.isInteger(x)
+  return typeof x === 'number' && Number.isFinite(x)
 }
 registerValue('real?', realQ, Prelude)
 

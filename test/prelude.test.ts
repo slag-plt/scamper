@@ -1078,10 +1078,26 @@ scamperTest('real', `
 (real? (/ 50 2))
 (real? (/ 51 2))
 `, [
-  '#f',
+  '#t',
   '#t',
   '#f',
+  '#t',
+  '#t'
+])
+
+scamperTest('real-edge-cases', `
+(real? (/ 1.0 0.0))
+(real? (/ -1.0 0.0))
+(real? (/ 0.0 0.0))
+(real? 0)
+(real? -5)
+(real? 3.14159)
+`, [
   '#f',
+  '#f',
+  '#f',
+  '#t',
+  '#t',
   '#t'
 ])
 
