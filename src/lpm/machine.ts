@@ -2,7 +2,8 @@ import Ops from './ops.js'
 import { 
   Range, Closure, Env, getFieldsOfStruct, Id, isClosure, isJsFunction,
   ScamperError, typeOf, Value, ICE, isSym, Sym, isChar, Char, isPair, isStruct,
-  listToVector, List, isStructKind, Struct, Pair, isPVar, PVar, Code, Program
+  Library, listToVector, List, isStructKind, Struct, Pair, isPVar, PVar, Code,
+  Program
 } from './runtime.js'
 
 /** Globals are a mapping from identifiers to values. */
@@ -108,14 +109,16 @@ export function tryMatch (p: Value, v: Value, range?: Range): [number, Value][] 
 export class Machine {
   program: Program
   globals: Globals
+  builtinLibs: Map<string, Library>
   currentFrame?: Frame
   dump: Frame[]
   output: Output
   options: Options
 
-  constructor (program: Program, globals: Globals, entry: Id, output: Output, options: Options) {
+  constructor (program: Program, globals: Globals, builtinLibs: Map<string, Library>, entry: Id, output: Output, options: Options) {
     this.program = program
     this.globals = globals
+    this.builtinLibs = builtinLibs
     const code = program.code.get(entry)!
     this.currentFrame = {
       code,
@@ -581,8 +584,18 @@ export class Machine {
         } else if (arg < 0 || arg >= this.program.identifiers.length) {
           throw new ICE('step', `Invalid library index ${arg} for loadlib operation`)
         } else {
-          // const libName = this.program.identifiers[arg]
-          // TODO: load libName into the global scope
+          const libName = this.program.identifiers[arg]
+          if (this.builtinLibs.has(libName)) {
+            const lib = this.builtinLibs.get(libName)!
+            if (lib.initializer !== undefined) {
+              lib.initializer()
+            }
+            for (const [name, value] of lib.lib) {
+              this.globals.set(name, value)
+            }
+          } else {
+            throw new ScamperError('Runtime', `Library '${libName}' not found`, undefined, Range.none)
+          }
         }
       }
     }

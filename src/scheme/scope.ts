@@ -79,13 +79,22 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
   }
 }
 
-function scopeCheckStmt (errors: ScamperError[], globals: string[], v: Value): Value {
+function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, R.Library>, globals: string[], v: Value): Value {
   if (A.isImport(v)) {
-    // const { name, range } = A.asImport(v)
-    // TODO: check to see if libname is a valid library name
-    // TODO: add the library names to global scope
-    // N.B., if libraries have name conflicts, we probably want to them
-    // to shadow naturally. Probably should give a warning in this case!
+    const { name: ident, metadata } = A.asImport(v)
+    const { name, metadata: nm } = A.asIdentifier(ident)
+    if (!builtinLibs.has(name)) {
+      errors.push(new ScamperError('Parser', `Library '${name}' is not defined`, undefined, metadata.get('range')))
+    } else {
+      const lib = builtinLibs.get(name)!
+      for (const [name, _v] of lib.lib) {
+        if (globals.includes(name)) {
+          // TODO: push a warning noting that shadowing is occuring!
+        } else {
+          globals.push(name)
+        }
+      }
+    }
     return v
   } else if (A.isDefine(v)) {
     const { name, value, metadata } = A.asDefine(v)
@@ -132,12 +141,12 @@ function scopeCheckStmt (errors: ScamperError[], globals: string[], v: Value): V
   }
 }
 
-export function scopeCheckProgram (vs: Value[]): { program: Value[], errors: ScamperError[] } {
+export function scopeCheckProgram (builtinLibs: Map<string, R.Library>, vs: Value[]): { program: Value[], errors: ScamperError[] } {
   const errors: ScamperError[] = []
   const globals: string[] = []
   const program: Value[] = []
   for (const v of vs) {
-    program.push(scopeCheckStmt(errors, globals, v))
+    program.push(scopeCheckStmt(errors, builtinLibs, globals, v))
   }
   return { program, errors }
 }

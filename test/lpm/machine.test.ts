@@ -29,6 +29,8 @@ function makeLoggingMachine(
   return new Machine(
     program,
     new Map<string, Value>(globals),
+    // TODO: populate this with the appropriate builtin libs (from lib/builtin.js)
+    new Map(),
     'main',
     log,
     { maxArgs: 4, maxCallStackDepth: 10 }
