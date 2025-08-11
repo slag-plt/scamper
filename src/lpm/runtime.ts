@@ -351,6 +351,17 @@ export function typeOf (v: Value): string {
   }
 }
 
+/** @return a generic string representation of value v. */
+export function toString (v: Value) {
+  if (isClosure(v)) {
+    return `<closure (${(v as Closure).params.join(' ')})>`
+  } else if (typeof v === 'function') {
+    return `<jsfunc: (${v.name})>`
+  } else {
+    return `${v}`
+  }
+}
+
 /**
  * @return true if the two values are structurally equal to each other.
  */

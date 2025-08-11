@@ -1,11 +1,12 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import { emptyLibrary, Library, registerValue, Value } from '../lang.js'
+import { Value } from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { callFunction } from '../sem.js'
 
 import { NoteHandlers, NoteMsg } from './music.js'
 
-const lib: Library = emptyLibrary()
+const lib: R.Library = new R.Library()
 
 /***** Reactive Components ****************************************************/
 
@@ -298,16 +299,16 @@ function onNote (handlers: NoteHandlers): Subscription {
 /***** Exports ****************************************************************/
 
 // Reactive components
-registerValue('reactive-canvas', reactiveCanvas, lib)
-registerValue('reactive-container', reactiveContainer, lib)
+lib.registerValue('reactive-canvas', reactiveCanvas)
+lib.registerValue('reactive-container', reactiveContainer)
 
 // Subscriptions
-registerValue('on-button-click', onButtonClick, lib)
-registerValue('on-mouse-click', onMouseClick, lib)
-registerValue('on-mouse-hover', onMouseHover, lib)
-registerValue('on-key-down', onKeyDown, lib)
-registerValue('on-key-up', onKeyUp, lib)
-registerValue('on-timer', onTimer, lib)
-registerValue('on-note', onNote, lib)
+lib.registerValue('on-button-click', onButtonClick)
+lib.registerValue('on-mouse-click', onMouseClick)
+lib.registerValue('on-mouse-hover', onMouseHover)
+lib.registerValue('on-key-down', onKeyDown)
+lib.registerValue('on-key-up', onKeyUp)
+lib.registerValue('on-timer', onTimer)
+lib.registerValue('on-note', onNote)
 
 export default lib

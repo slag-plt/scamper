@@ -1,8 +1,8 @@
-import { emptyLibrary, Library, registerValue } from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
-const Lab: Library = emptyLibrary()
+const Lab: R.Library = new R.Library()
 
 function title (text: string) {
   checkContract(arguments, contract('title', [C.string]))
@@ -10,7 +10,7 @@ function title (text: string) {
   ret.innerText = text
   return ret
 }
-registerValue('title', title, Lab)
+Lab.registerValue('title', title)
 
 function part (text: string) {
   checkContract(arguments, contract('part', [C.string]))
@@ -18,7 +18,7 @@ function part (text: string) {
   ret.innerText = text
   return ret
 }
-registerValue('part', part, Lab)
+Lab.registerValue('part', part)
 
 function problem (text: string) {
   checkContract(arguments, contract('problem', [C.string]))
@@ -26,7 +26,7 @@ function problem (text: string) {
   ret.innerText = text
   return ret
 }
-registerValue('problem', problem, Lab)
+Lab.registerValue('problem', problem)
 
 function description (text: string) {
   checkContract(arguments, contract('description', [C.string]))
@@ -36,6 +36,6 @@ function description (text: string) {
   ret.appendChild(em)
   return ret
 }
-registerValue('description', description, Lab)
+Lab.registerValue('description', description)
 
 export default Lab

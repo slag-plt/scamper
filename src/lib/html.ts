@@ -1,10 +1,9 @@
-import { ScamperError, Value } from '../lang.js'
-import * as L from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { callFunction } from '../sem.js'
 
-const Html: L.Library = L.emptyLibrary()
+const Html: R.Library = new R.Library()
 
 function textArea (id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))
@@ -12,13 +11,13 @@ function textArea (id: string): HTMLTextAreaElement {
   ret.id = id
   return ret
 }
-L.registerValue('text-area', textArea, Html)
+Html.registerValue('text-area', textArea)
 
 function textAreaGet (textArea: HTMLTextAreaElement): string {
   checkContract(arguments, contract('text-area-get', [C.any]))
   return textArea.textContent!
 }
-L.registerValue('text-area-get', textAreaGet, Html)
+Html.registerValue('text-area-get', textAreaGet)
 
 function button (label: string, fn: Function): HTMLButtonElement {
   checkContract(arguments, contract('button', [C.string, C.any]))
@@ -34,20 +33,20 @@ function button (label: string, fn: Function): HTMLButtonElement {
   }
   return ret
 }
-L.registerValue('button', button, Html)
+Html.registerValue('button', button)
 
-function tag (name: string, ...children: Value.T[]): HTMLElement {
+function tag (name: string, ...children: R.Value[]): HTMLElement {
   checkContract(arguments, contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
-  if (children.length > 0 && L.Value.isList(children[0])) {
-    const attrs = L.Value.listToVector(children[0] as L.Value.Pair)
+  if (children.length > 0 && R.isList(children[0])) {
+    const attrs = R.listToVector(children[0] as R.Pair)
     for (const attr of attrs) {
-      if (L.Value.isPair(attr)) {
-        const pair = attr as L.Value.Pair
-        if (!L.Value.isString(pair.fst)) {
-          throw new ScamperError('Runtime', `attribute must be a string: ${L.Value.toString(pair.fst)}`)
-        } else if (!L.Value.isString(pair.snd)) {
-          throw new ScamperError('Runtime', `attribute value must be a string: ${L.Value.toString(pair.snd)}`)
+      if (R.isPair(attr)) {
+        const pair = attr
+        if (!R.isString(pair.fst)) {
+          throw new R.ScamperError('Runtime', `attribute must be a string: ${R.toString(pair.fst)}`)
+        } else if (!R.isString(pair.snd)) {
+          throw new R.ScamperError('Runtime', `attribute value must be a string: ${R.toString(pair.snd)}`)
         } else {
           elt.setAttribute(pair.fst as string, pair.snd as string)
         }
@@ -65,16 +64,16 @@ function tag (name: string, ...children: Value.T[]): HTMLElement {
   }
   return elt
 }
-L.registerValue('tag', tag, Html)
+Html.registerValue('tag', tag)
 
-function tagSetChildren (elt: HTMLElement, ...children: Value.T[]) {
+function tagSetChildren (elt: HTMLElement, ...children: R.Value[]) {
   checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
-    throw new ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.Value.typeOf(elt)}`)
+    throw new R.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${R.typeOf(elt)}`)
   } else {
     children.forEach((e, i) => {
       if (!(e instanceof HTMLElement)) {
-        throw new ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.Value.typeOf(elt)}$.`)
+        throw new R.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${R.typeOf(elt)}$.`)
       }
     })
     // N.B., clear the current set of children
@@ -85,7 +84,7 @@ function tagSetChildren (elt: HTMLElement, ...children: Value.T[]) {
     }
   }
 }
-L.registerValue('tag-set-children!', tagSetChildren, Html)
+Html.registerValue('tag-set-children!', tagSetChildren)
 
 function onKeydown (fn: Function): void {
   checkContract(arguments, contract('on-keydown!', [C.func]))
@@ -97,6 +96,6 @@ function onKeydown (fn: Function): void {
     }
   })
 }
-L.registerValue('on-keydown!', onKeydown, Html)
+Html.registerValue('on-keydown!', onKeydown)
 
 export default Html

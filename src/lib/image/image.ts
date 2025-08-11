@@ -1,36 +1,36 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../../lang.js'
+import * as R from '../../lpm/runtime.js'
 import { callFunction } from '../../sem.js'
 import { rgb } from './color.js'
 
 const imageS: C.Spec = {
   predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${Value.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an image, received ${R.typeOf(actual)}`
 }
 
 /***** Image loading **********************************************************/
 
-export interface ReactiveImageFile extends Value.Struct {
-  [Value.structKind]: 'reactive-image-file',
-  callback: Value.ScamperFn
+export interface ReactiveImageFile extends R.Struct {
+  [R.structKind]: 'reactive-image-file',
+  callback: R.ScamperFn
 }
 
-function withImageFile (callback: Value.ScamperFn): ReactiveImageFile {
+function withImageFile (callback: R.ScamperFn): ReactiveImageFile {
   checkContract(arguments, contract('with-image-file', [C.func]))  
   return {
-    [Value.scamperTag]: 'struct',
-    [Value.structKind]: 'reactive-image-file',
+    [R.scamperTag]: 'struct',
+    [R.structKind]: 'reactive-image-file',
     callback
   }
 }
 
 function isReactiveImageFile (v: any): boolean {
-  return Value.isStructKind(v, 'reactive-image-file')
+  return R.isStructKind(v, 'reactive-image-file')
 }
 
-function withImageFromUrl (url: string, callback: Value.ScamperFn): HTMLElement {
+function withImageFromUrl (url: string, callback: R.ScamperFn): HTMLElement {
     checkContract(arguments, contract('with-image-from-url', [C.string, C.func]))
     const container = document.createElement('div')
     container.innerHTML = `Loading ${url}...`
@@ -49,7 +49,7 @@ function withImageFromUrl (url: string, callback: Value.ScamperFn): HTMLElement 
           if (e instanceof DOMException && e.name === 'SecurityError') {
             container.innerHTML = `Failed to load ${url}: cannot manipulate images from domains other than scamper.cs.grinnell.edu`
           } else {
-            container.appendChild(Render.renderToHTML(e as ScamperError))
+            container.appendChild(Render.renderToHTML(e as R.ScamperError))
           }
         }
     } 
@@ -59,7 +59,7 @@ function withImageFromUrl (url: string, callback: Value.ScamperFn): HTMLElement 
 
 /***** Per-pixel manipulation *************************************************/
 
-function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
+function pixelMap (fn: R.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
   checkContract(arguments, contract('pixel-map', [C.func, imageS]))
   const ctx = canvas.getContext('2d')!
   const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
@@ -86,7 +86,7 @@ function pixelMap (fn: Value.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasEl
   return ret
 }
 
-function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.Struct {
+function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): R.Struct {
   checkContract(arguments, contract('image-get-pixel', [imageS, C.integer, C.integer]))
   const ctx = canvas.getContext('2d')!
   const img = ctx.getImageData(x, y, 1, 1)
@@ -94,7 +94,7 @@ function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): Value.
   return rgb(data[0], data[1], data[2], data[3])
 }
 
-function imageToPixels (canvas: HTMLCanvasElement): Value.Struct[] {
+function imageToPixels (canvas: HTMLCanvasElement): R.Struct[] {
   checkContract(arguments, contract('image-to-pixels', [imageS]))
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
@@ -105,7 +105,7 @@ function imageToPixels (canvas: HTMLCanvasElement): Value.Struct[] {
   return ret
 }
 
-function pixelsToImage (pixels: Value.Struct[], width: number, height: number): HTMLCanvasElement {
+function pixelsToImage (pixels: R.Struct[], width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('pixels-to-image', [C.vector, C.integer, C.integer]))
   const ret = document.createElement('canvas')
   ret.width = width
@@ -124,7 +124,7 @@ function pixelsToImage (pixels: Value.Struct[], width: number, height: number): 
   return ret
 }
 
-function canvasSetPixels (canvas: HTMLCanvasElement, pixels: Value.Struct[]): void {
+function canvasSetPixels (canvas: HTMLCanvasElement, pixels: R.Struct[]): void {
   checkContract(arguments, contract('canvas-set-pixels!', [imageS, C.vector]))
   const ctx = canvas.getContext('2d')!
   const outImg = ctx.createImageData(canvas.width, canvas.height)
@@ -166,7 +166,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
             const v = callFunction(rif.callback, canvas)
             outp.appendChild(Render.renderToHTML(v))
           } catch (e) {
-            outp.appendChild(Render.renderToHTML(e as ScamperError))
+            outp.appendChild(Render.renderToHTML(e as R.ScamperError))
           }
         }
         img.src = e.target.result as string;
@@ -188,15 +188,15 @@ Render.addCustomWebRenderer(isReactiveImageFile, render)
 
 /***** Exports ****************************************************************/
 
-export const lib: Library = emptyLibrary()
+export const lib: R.Library = new R.Library()
 
 // Image loading
-registerValue('with-image-file', withImageFile, lib)
-registerValue('with-image-from-url', withImageFromUrl, lib)
+lib.registerValue('with-image-file', withImageFile)
+lib.registerValue('with-image-from-url', withImageFromUrl)
 
 // Per-pixel manipulation
-registerValue('pixel-map', pixelMap, lib)
-registerValue('image-get-pixel', imageGetPixel, lib)
-registerValue('image->pixels', imageToPixels, lib)
-registerValue('pixels->image', pixelsToImage, lib)
-registerValue('canvas-set-pixels!', canvasSetPixels, lib)
+lib.registerValue('pixel-map', pixelMap)
+lib.registerValue('image-get-pixel', imageGetPixel)
+lib.registerValue('image->pixels', imageToPixels)
+lib.registerValue('pixels->image', pixelsToImage)
+lib.registerValue('canvas-set-pixels!', canvasSetPixels)

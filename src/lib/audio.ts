@@ -1,10 +1,9 @@
-import { ScamperError, Value } from '../lang.js'
-import * as L from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
 
-const Audio: L.Library = L.emptyLibrary()
+const Audio: R.Library = new R.Library()
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
 // TODO: need to factor appropriately so that we aren't initializing any
@@ -17,28 +16,28 @@ export const getCtx = (): AudioContext => {
   return ctx
 }
 
-interface SampleNode extends Value.Struct { [Value.structKind]: 'sample', data: Float32Array }
+interface SampleNode extends R.Struct { [R.structKind]: 'sample', data: Float32Array }
 
 function sampleNode (data: number[]): SampleNode {
   checkContract(arguments, contract('sample-node', [C.vector]))
   for (let i = 0; i < data.length; i++) {
     if (typeof data[i] !== 'number' || data[i] as number < -1.0 || data[i] as number > 1.0) {
-      throw new ScamperError('Runtime', `expected a list of numbers between -1.0 and 1.0, received ${data[i]}`)
+      throw new R.ScamperError('Runtime', `expected a list of numbers between -1.0 and 1.0, received ${data[i]}`)
     }
   }
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'sample', data: new Float32Array(data) }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'sample', data: new Float32Array(data) }
 }
-L.registerValue('sample-node', sampleNode, Audio)
+Audio.registerValue('sample-node', sampleNode)
 
 function audioContext (sampleRate: number): AudioContext {
   checkContract(arguments, contract('audio-context', [C.integer]))
   const AudioContext = window.AudioContext
   return new AudioContext({ sampleRate })
 }
-L.registerValue('audio-context', audioContext, Audio)
+Audio.registerValue('audio-context', audioContext)
 
-interface AudioPipeline extends Value.Struct {
-  [Value.structKind]: 'audio-pipeline',
+interface AudioPipeline extends R.Struct {
+  [R.structKind]: 'audio-pipeline',
   ctx: AudioContext,
   pipeline: AudioNode,
   onOffNode: GainNode
@@ -60,9 +59,9 @@ function audioPipeline (ctx: AudioContext, pipeline: AudioNode, ...nodes: AudioN
     pipeline.connect(onOffNode)
   }
   onOffNode.connect(ctx.destination)
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'audio-pipeline', ctx, pipeline, onOffNode }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'audio-pipeline', ctx, pipeline, onOffNode }
 }
-L.registerValue('audio-pipeline', audioPipeline, Audio)
+Audio.registerValue('audio-pipeline', audioPipeline)
 
 function oscillatorNode (ctx: AudioContext, type: OscillatorType, freq: number): OscillatorNode {
   checkContract(arguments, contract('oscillator-node', [C.any, C.string, C.integer]))
@@ -71,7 +70,7 @@ function oscillatorNode (ctx: AudioContext, type: OscillatorType, freq: number):
   oscillator.frequency.value = freq
   return oscillator
 }
-L.registerValue('oscillator-node', oscillatorNode, Audio)
+Audio.registerValue('oscillator-node', oscillatorNode)
 
 // NOTE: microphone usage requires an async call! Oof! How are we suppose to
 // handle that in our synchronous setting?
@@ -91,17 +90,17 @@ function audioFileNode (ctx: AudioContext, filename: string): MediaElementAudioS
   const source = new MediaElementAudioSourceNode(ctx, { mediaElement })
   return source
 }
-L.registerValue('audio-file-node', audioFileNode, Audio)
+Audio.registerValue('audio-file-node', audioFileNode)
 
 function delayNode (ctx: AudioContext, delayTime: number): DelayNode {
   checkContract(arguments, contract('delay-node', [C.any, C.integer]))
   return new DelayNode(ctx, { delayTime })
 }
-L.registerValue('delay-node', delayNode, Audio)
+Audio.registerValue('delay-node', delayNode)
 
 function playSample (pipeline: SampleNode): void {
   checkContract(arguments, contract('play-sample', [C.any]))
-  if (L.Value.isStructKind(pipeline, 'sample')) {
+  if (R.isStructKind(pipeline, 'sample')) {
     const ctx = getCtx()
     const data = pipeline.data
     // N.B., for now, make the audio sample stereo (2 channels)
@@ -113,10 +112,10 @@ function playSample (pipeline: SampleNode): void {
     source.connect(ctx.destination)
     source.start()
   } else {
-    throw new ScamperError('Runtime', `expected a sample node, received ${pipeline}`)
+    throw new R.ScamperError('Runtime', `expected a sample node, received ${pipeline}`)
   }
 }
-L.registerValue('play-sample', playSample, Audio)
+Audio.registerValue('play-sample', playSample)
 
 export default Audio
 
@@ -230,5 +229,5 @@ export function audioPipelineRenderer (blob: AudioPipeline): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer((v) => L.Value.isStructKind(v, 'sample'), sampleRenderer)
-Display.addCustomWebRenderer((v) => L.Value.isStructKind(v, 'audio-pipeline'), audioPipelineRenderer)
+Display.addCustomWebRenderer((v) => R.isStructKind(v, 'sample'), sampleRenderer)
+Display.addCustomWebRenderer((v) => R.isStructKind(v, 'audio-pipeline'), audioPipelineRenderer)

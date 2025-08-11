@@ -1,28 +1,28 @@
-import { emptyLibrary, Library, registerValue, ScamperError, Value } from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { callFunction } from '../sem.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
 
-const Test: Library = emptyLibrary()
+const Test: R.Library = new R.Library()
 
 type Result = Ok | Error
-interface Ok extends Value.Struct { [Value.structKind]: 'ok', desc: string }
-interface Error extends Value.Struct { [Value.structKind]: 'error', desc: string, reason: HTMLElement }
+interface Ok extends R.Struct { [R.structKind]: 'ok', desc: string }
+interface Error extends R.Struct { [R.structKind]: 'error', desc: string, reason: HTMLElement }
 
 function testOk (desc: string): Ok {
   checkContract(arguments, contract('test-ok', [C.string]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'ok', desc }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'ok', desc }
 }
-registerValue('test-ok', testOk, Test)
+Test.registerValue('test-ok', testOk)
 
 function testError (desc: string, reason: HTMLElement): Error {
   checkContract(arguments, contract('test-error', [C.string, C.html]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'error', desc, reason }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'error', desc, reason }
 }
-registerValue('test-error', testError, Test)
+Test.registerValue('test-error', testError)
 
-function testCase (desc: string, eqFn: Value.ScamperFn, expected: Value.T, testFn: Value.ScamperFn): Result {
+function testCase (desc: string, eqFn: R.ScamperFn, expected: R.Value, testFn: R.ScamperFn): Result {
   checkContract(arguments, contract('test-case', [C.string, C.func, C.any, C.func]))
   try {
     const actual = callFunction(testFn)
@@ -37,18 +37,18 @@ function testCase (desc: string, eqFn: Value.ScamperFn, expected: Value.T, testF
       reason.appendChild(Display.renderToHTML(actual))
       return testError(desc, reason)
     } else {
-      throw new ScamperError('Runtime', `Test case function should have produced a boolean, produced ${Value.typeOf(actual)} instead`)
+      throw new R.ScamperError('Runtime', `Test case function should have produced a boolean, produced ${R.typeOf(actual)} instead`)
     }
   } catch (e) {
     const reason = document.createElement('span')
     reason.appendChild(Display.mkCodeElement('Test case threw an exception: '))
-    reason.appendChild(Display.renderToHTML(e as Value.T))
+    reason.appendChild(Display.renderToHTML(e as R.T))
     return testError(desc, reason)
   }
 }
-registerValue('test-case', testCase, Test)
+Test.registerValue('test-case', testCase)
 
-function testExn (desc: string, testFn: Value.ScamperFn): Result {
+function testExn (desc: string, testFn: R.ScamperFn): Result {
   try {
     callFunction(testFn, [])
     return testError(desc, Display.mkCodeElement(`Test case did not throw an exception`))
@@ -56,10 +56,10 @@ function testExn (desc: string, testFn: Value.ScamperFn): Result {
     return testOk(desc)
   }
 }
-registerValue('test-exn', testExn, Test)
+Test.registerValue('test-exn', testExn)
 
 function isResult (v: any): boolean {
-  return Value.isStructKind(v, 'ok') || Value.isStructKind(v, 'error')
+  return R.isStructKind(v, 'ok') || R.isStructKind(v, 'error')
 }
 
 function render (v: any): HTMLElement {
@@ -67,7 +67,7 @@ function render (v: any): HTMLElement {
   const ret = document.createElement('div')
   ret.classList.add('test-result')
 
-  if (result[Value.structKind] === 'ok') {
+  if (result[R.structKind] === 'ok') {
     ret.classList.add('ok')
     ret.innerText = `Test "${result.desc}": Passed! ✅`
   } else {

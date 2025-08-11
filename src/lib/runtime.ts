@@ -1,7 +1,6 @@
-import { Library, emptyLibrary, registerValue } from '../lang.js'
 import * as R from '../lpm/runtime.js'
 
-export const Runtime: Library = emptyLibrary()
+export const Runtime: R.Library = new R.Library()
 
 /**
  * @returns a predicate function for struct types t.
@@ -11,7 +10,7 @@ export function mkPredFn (t: string): (v: R.Value) => boolean {
     return R.isStructKind(v, t)
   }
 }
-registerValue('##mkPredFn##', mkPredFn, Runtime)
+Runtime.registerValue('##mkPredFn##', mkPredFn)
 
 /**
  * @returns a constructor function for struct type t with the given field names.
@@ -24,7 +23,7 @@ export function mkCtorFn (t: string, fieldNames: string[]): (...args: R.Value[])
     return R.mkStruct(t, fieldNames, args)
   }
 }
-registerValue('##mkCtorFn##', mkCtorFn, Runtime)
+Runtime.registerValue('##mkCtorFn##', mkCtorFn)
 
 /**
  * @return field accessor function for struct type t and field name f.
@@ -41,4 +40,4 @@ export function mkGetFn (t: string, f: string): (v: R.Value) => R.Value {
     }
   }
 }
-registerValue('##mkGetFn##', mkGetFn, Runtime)
+Runtime.registerValue('##mkGetFn##', mkGetFn)

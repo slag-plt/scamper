@@ -1,0 +1,1 @@
+{"version":3,"file":"expansion.d.ts","sourceRoot":"","sources":["../../src/scheme/expansion.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,KAAK,EAAE,MAAM,mBAAmB,CAAA;AAsCzC,wBAAgB,UAAU,CAAE,CAAC,EAAE,KAAK,GAAG,KAAK,CA0F3C;AAED,wBAAgB,UAAU,CAAE,CAAC,EAAE,KAAK,GAAG,KAAK,EAAE,CAsC7C;AAED,wBAAgB,iBAAiB,CAAE,EAAE,EAAE,KAAK,EAAE,GAAG,KAAK,EAAE,CAEvD"}

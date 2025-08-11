@@ -1,5 +1,5 @@
-import { ScamperError, Value } from '../lang.js'
-import * as L from '../lang.js'
+import { ScamperError } from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { Drawing, render } from './image/drawing.js'
@@ -7,7 +7,7 @@ import { callFunction } from '../sem.js'
 import { colorToRgb, colorS, rgbToString } from './image/color.js'
 import { Font, font, fontS, fontToFontString } from './image/font.js'
 
-const Canvas: L.Library = L.emptyLibrary()
+const Canvas: R.Library = new R.Library()
 
 function makeCanvas (width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
@@ -16,7 +16,7 @@ function makeCanvas (width: number, height: number): HTMLCanvasElement {
   canvas.height = height
   return canvas
 }
-L.registerValue('make-canvas', makeCanvas, Canvas)
+Canvas.registerValue('make-canvas', makeCanvas)
 
 function canvasRectangle (canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
   checkContract(arguments, contract('canvas-rectangle!', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, colorS]))
@@ -31,7 +31,7 @@ function canvasRectangle (canvas: HTMLCanvasElement, x: number, y: number, width
     throw new ScamperError('Runtime', `canvas-rectangle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('canvas-rectangle!', canvasRectangle, Canvas)
+Canvas.registerValue('canvas-rectangle!', canvasRectangle)
 
 function canvasEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
   checkContract(arguments, contract('canvas-ellipse!', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, colorS]))
@@ -48,7 +48,7 @@ function canvasEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX
     throw new ScamperError('Runtime', `canvas-ellipse!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('canvas-ellipse!', canvasEllipse, Canvas)
+Canvas.registerValue('canvas-ellipse!', canvasEllipse)
 
 function canvasCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
   checkContract(arguments, contract('canvas-circle!', [C.any, C.number, C.number, C.number, C.string, colorS]))
@@ -65,7 +65,7 @@ function canvasCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: 
     throw new ScamperError('Runtime', `canvas-circle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('canvas-circle!', canvasCircle, Canvas)
+Canvas.registerValue('canvas-circle!', canvasCircle)
 
 function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
   checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, colorS], C.any))
@@ -92,18 +92,18 @@ function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: stri
     throw new ScamperError('Runtime', `canvas-text!: expected "solid" or "outline", but got ${mode}`)
   }
 }
-L.registerValue('canvas-text!', canvasText, Canvas)
+Canvas.registerValue('canvas-text!', canvasText)
 
 function canvasDrawing (canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
   checkContract(arguments, contract('canvas-drawing!', [C.any, C.integer, C.integer, C.any]))
   render(x, y, drawing, canvas)
 }
-L.registerValue('canvas-drawing!', canvasDrawing, Canvas)
+Canvas.registerValue('canvas-drawing!', canvasDrawing)
 
-function canvasPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, color: any): void {
+function canvasPath (canvas: HTMLCanvasElement, lst: R.List, mode: string, color: any): void {
   checkContract(arguments, contract('canvas-path!', [C.any, C.list, C.string, C.string]))
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
-  const pairs = L.Value.listToVector(lst)
+  const pairs = R.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
     throw new ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
   }
@@ -114,10 +114,10 @@ function canvasPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, c
   ctx.fillStyle = rgbToString(colorToRgb(color))
   ctx.strokeStyle = rgbToString(colorToRgb(color))
   ctx.beginPath()
-  let p: L.Value.Pair = pairs[0] as L.Value.Pair
+  let p: R.Pair = pairs[0] as R.Pair
   ctx.moveTo(p.fst as number, p.snd as number)
   for (let i = 1; i < pairs.length; i++) {
-    p = pairs[i] as L.Value.Pair
+    p = pairs[i] as R.Pair
     ctx.lineTo(p.fst as number, p.snd as number)
   }
   if (mode === 'solid') {
@@ -126,9 +126,9 @@ function canvasPath (canvas: HTMLCanvasElement, lst: Value.List, mode: string, c
     ctx.stroke()
   }
 }
-L.registerValue('canvas-path!', canvasPath, Canvas)
+Canvas.registerValue('canvas-path!', canvasPath)
 
-function animateWith (fn: L.Value.ScamperFn): void {
+function animateWith (fn: R.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
   function callback (time: number) {
     let result = false
@@ -147,9 +147,9 @@ function animateWith (fn: L.Value.ScamperFn): void {
   }
   window.requestAnimationFrame(callback)
 }
-L.registerValue('animate-with', animateWith, Canvas)
+Canvas.registerValue('animate-with', animateWith)
 
-function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void {
+function canvasOnclick (canvas: HTMLCanvasElement, fn: R.ScamperFn): void {
   checkContract(arguments, contract('canvas-onclick!', [C.any, C.func]))
   canvas.onclick = function (ev: MouseEvent) {
     try {
@@ -162,6 +162,6 @@ function canvasOnclick (canvas: HTMLCanvasElement, fn: L.Value.ScamperFn): void 
   }
 }
 
-L.registerValue('canvas-onclick!', canvasOnclick, Canvas)
+Canvas.registerValue('canvas-onclick!', canvasOnclick)
 
 export default Canvas

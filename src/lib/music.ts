@@ -1,91 +1,90 @@
-import { ICE, emptyLibrary, Library, Value, registerValue } from '../lang.js'
+import * as R from '../lpm/runtime.js'
 import { checkContract, contract } from '../contract.js'
-import { callFunction } from '../sem.js'
 import * as C from '../contract.js'
 import * as Display from '../display.js'
 import { waf } from './webaudiofont/webaudiofont.js'
 
-const Music: Library = emptyLibrary()
+const Music: R.Library = new R.Library()
 
 export type PitchClass = string
 export type Octave = number
 
-export interface Duration extends Value.Struct {
-  [Value.structKind] : 'dur',
+export interface Duration extends R.Struct {
+  [R.structKind] : 'dur',
   numerator : number,
   denominator : number
 }
 
 function dur (numerator: number, denominator: number): Duration {
   checkContract(arguments, contract('dur', [C.number, C.number]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dur', numerator, denominator }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'dur', numerator, denominator }
 }
-registerValue('dur', dur, Music)
+Music.registerValue('dur', dur)
 
 function numerator (dur: Duration): number {
   checkContract(arguments, contract('numerator', [durC]))
   return dur.numerator
 }
-registerValue('numerator', numerator, Music)
+Music.registerValue('numerator', numerator)
 
 function denominator (dur: Duration): number {
   checkContract(arguments, contract('denominator', [durC]))
   return dur.denominator
 }
-registerValue('denominator', denominator, Music)
+Music.registerValue('denominator', denominator)
 
-registerValue('wn', dur(1, 1), Music)
-registerValue('hn', dur(1, 2), Music)
-registerValue('qn', dur(1, 4), Music)
-registerValue('en', dur(1, 8), Music)
-registerValue('sn', dur(1, 16), Music)
-registerValue('tn', dur(1, 32), Music)
+Music.registerValue('wn', dur(1, 1))
+Music.registerValue('hn', dur(1, 2))
+Music.registerValue('qn', dur(1, 4))
+Music.registerValue('en', dur(1, 8))
+Music.registerValue('sn', dur(1, 16))
+Music.registerValue('tn', dur(1, 32))
 
 function isPitchClass (s: string): boolean {
   checkContract(arguments, contract('pitch?', [C.string]))
   return /^[A-Ga-g][#b]{0,2}$/.test(s)
 }
-registerValue('pitch?', isPitchClass, Music)
+Music.registerValue('pitch?', isPitchClass)
 
 function isOctave (n: number): boolean {
   checkContract(arguments, contract('octave?', [C.number]))
   return n >= 0 && n <= 10
 }
-registerValue('octave?', isOctave, Music)
+Music.registerValue('octave?', isOctave)
 
 function isValidMidiNote (n: number): boolean {
   checkContract(arguments, contract('note?', [C.number]))
   return n >= 0 && n <= 127
 }
-registerValue('note-value?', isValidMidiNote, Music)
+Music.registerValue('note-value?', isValidMidiNote)
 
 const durC: C.Spec = {
-  predicate: (v: any) => Value.isStructKind(v, 'dur'),
-  errorMsg: (actual: any) => `expected a duration, received ${Value.typeOf(actual)}`,
+  predicate: (v: any) => R.isStructKind(v, 'dur'),
+  errorMsg: (actual: any) => `expected a duration, received ${R.typeOf(actual)}`,
 }
 
 const noteC: C.Spec = {
   predicate: (v: any) => isValidMidiNote(v),
-  errorMsg: (actual: any) => `expected a midi note (0--127), received ${Value.typeOf(actual)}`,
+  errorMsg: (actual: any) => `expected a midi note (0--127), received ${R.typeOf(actual)}`,
 }
 
-export interface Note extends Value.Struct { [Value.structKind]: 'note', note: number, duration: Duration }
+export interface Note extends R.Struct { [R.structKind]: 'note', note: number, duration: Duration }
 function note (note: number, duration: Duration): Note {
   checkContract(arguments, contract('note', [noteC, durC]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note', note, duration }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'note', note, duration }
 }
-registerValue('note', note, Music)
+Music.registerValue('note', note)
 
-export interface NoteFreq extends Value.Struct {
-  [Value.structKind]: 'note-freq',
+export interface NoteFreq extends R.Struct {
+  [R.structKind]: 'note-freq',
   freq: number,
   duration: Duration
 }
 function noteFreq (freq: number, duration: Duration): NoteFreq {
   checkContract(arguments, contract('note-freq', [C.number, durC]))  
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note-freq', freq, duration }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'note-freq', freq, duration }
 }
-registerValue('note-freq', noteFreq, Music)
+Music.registerValue('note-freq', noteFreq)
 
 function repeat (n: number, composition: Composition): Composition {
   checkContract(arguments, contract('repeat', [C.nat, compositionC]))
@@ -95,153 +94,153 @@ function repeat (n: number, composition: Composition): Composition {
     return seq(composition, repeat(n - 1, composition))
   }
 }
-registerValue('repeat', repeat, Music)
+Music.registerValue('repeat', repeat)
 
-interface Empty extends Value.Struct { [Value.structKind]: 'empty' }
-const empty = (): Empty => ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'empty' })
-registerValue('empty', empty, Music)
+interface Empty extends R.Struct { [R.structKind]: 'empty' }
+const empty = (): Empty => ({ [R.scamperTag]: 'struct', [R.structKind]: 'empty' })
+Music.registerValue('empty', empty)
 
-interface Rest extends Value.Struct { [Value.structKind]: 'rest', duration: Duration }
+interface Rest extends R.Struct { [R.structKind]: 'rest', duration: Duration }
 function rest (duration: Duration): Rest {
   checkContract(arguments, contract('rest', [durC]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'rest', duration }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'rest', duration }
 }
-registerValue('rest', rest, Music)
+Music.registerValue('rest', rest)
 
-interface Trigger extends Value.Struct { [Value.structKind]: 'trigger', fn: Value.ScamperFn }
-function trigger (fn: Value.ScamperFn): Trigger {
+interface Trigger extends R.Struct { [R.structKind]: 'trigger', fn: R.ScamperFn }
+function trigger (fn: R.ScamperFn): Trigger {
   checkContract(arguments, contract('trigger', [C.func]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'trigger', fn }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'trigger', fn }
 }
-registerValue('trigger', trigger, Music)
+Music.registerValue('trigger', trigger)
 
-interface Par extends Value.Struct { [Value.structKind]: 'par', notes: Composition[] }
+interface Par extends R.Struct { [R.structKind]: 'par', notes: Composition[] }
 function par (...notes: Composition[]): Par {
   checkContract(arguments, contract('par', [], compositionC))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'par', notes }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'par', notes }
 }
-registerValue('par', par, Music)
+Music.registerValue('par', par)
 
-interface Seq extends Value.Struct { [Value.structKind]: 'seq', notes: Composition[] }
+interface Seq extends R.Struct { [R.structKind]: 'seq', notes: Composition[] }
 function seq (...notes: Composition[]): Seq {
   checkContract(arguments, contract('seq', [], compositionC)) 
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'seq', notes }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'seq', notes }
 }
-registerValue('seq', seq, Music)
+Music.registerValue('seq', seq)
 
-interface Pickup extends Value.Struct { [Value.structKind]: 'pickup', pickup: Composition, notes: Composition }
+interface Pickup extends R.Struct { [R.structKind]: 'pickup', pickup: Composition, notes: Composition }
 function pickup (pickup: Composition, notes: Composition): Composition {
   checkContract(arguments, contract('pickup', [compositionC, compositionC]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pickup', pickup, notes }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'pickup', pickup, notes }
 }
-registerValue('pickup', pickup, Music)
+Music.registerValue('pickup', pickup)
 
 /** TODO: we're missing on-note? */
 
 type ModKind = Percussion | Tempo | Dynamics | Instrument | NoteHandlersMod
 
 function modQ (v: any): boolean {
-  return Value.isStructKind(v, 'percussion') ||
-    //Value.isStructKind(v, 'pitchBend') ||
-    Value.isStructKind(v, 'tempo') ||
-    Value.isStructKind(v, 'dynamics') ||
-    Value.isStructKind(v, 'instrument') ||
-    Value.isStructKind(v, 'noteHandlers')
+  return R.isStructKind(v, 'percussion') ||
+    //R.isStructKind(v, 'pitchBend') ||
+    R.isStructKind(v, 'tempo') ||
+    R.isStructKind(v, 'dynamics') ||
+    R.isStructKind(v, 'instrument') ||
+    R.isStructKind(v, 'noteHandlers')
 }
-registerValue('mod?', modQ, Music)
+Music.registerValue('mod?', modQ)
 
 const modC: C.Spec = {
   predicate: modQ,
-  errorMsg: (actual: any) => `expected a mod, received ${Value.typeOf(actual)}`,
+  errorMsg: (actual: any) => `expected a mod, received ${R.typeOf(actual)}`,
 }
 
-interface Percussion extends Value.Struct { kind: 'percussion' }
-const percussion = ({ [Value.scamperTag]: 'struct', [Value.structKind]: 'percussion' })
-registerValue('percussion', percussion, Music)
+interface Percussion extends R.Struct { kind: 'percussion' }
+const percussion = ({ [R.scamperTag]: 'struct', [R.structKind]: 'percussion' })
+Music.registerValue('percussion', percussion)
 
 // TODO: need to implement bends again!
 
-// interface PitchBend extends Value.Struct { [Value.structKind]: 'pitchBend', amount: number }
+// interface PitchBend extends R.Struct { [R.structKind]: 'pitchBend', amount: number }
 // function pitchBend (amount: number): PitchBend {
 //   checkContract(arguments, contract('bend', [C.numRange(-1, 1)]))
-//   return { [Value.scamperTag]: 'struct', [Value.structKind]: 'pitchBend', amount }
+//   return { [R.scamperTag]: 'struct', [R.structKind]: 'pitchBend', amount }
 // }
-// registerValue('bend', pitchBend, Music)
+// Music.registerValue('bend', pitchBend)
 
-interface Tempo extends Value.Struct { [Value.structKind]: 'tempo', beat: Duration, bpm: number }
+interface Tempo extends R.Struct { [R.structKind]: 'tempo', beat: Duration, bpm: number }
 function tempo (beat: Duration, bpm: number): Tempo {
   checkContract(arguments, contract('tempo', [durC, C.nonneg]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'tempo', beat, bpm }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'tempo', beat, bpm }
 }
-registerValue('tempo', tempo, Music)
+Music.registerValue('tempo', tempo)
 
-interface Dynamics extends Value.Struct { [Value.structKind]: 'dynamics', amount: number }
+interface Dynamics extends R.Struct { [R.structKind]: 'dynamics', amount: number }
 function dynamics (amount: number): Dynamics {
   checkContract(arguments, contract('dynamics', [C.numRange(0, 127)])) 
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'dynamics', amount }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'dynamics', amount }
 }
-registerValue('dynamics', dynamics, Music)
+Music.registerValue('dynamics', dynamics)
 
-interface Instrument extends Value.Struct { [Value.structKind]: 'instrument', program: number }
+interface Instrument extends R.Struct { [R.structKind]: 'instrument', program: number }
 function instrument (program: number): Instrument {
   checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'instrument', program }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'instrument', program }
 }
-registerValue('instrument', instrument, Music)
+Music.registerValue('instrument', instrument)
 
-interface NoteHandlersMod extends Value.Struct { [Value.structKind]: 'noteHandlers', handlers: NoteHandlers }
+interface NoteHandlersMod extends R.Struct { [R.structKind]: 'noteHandlers', handlers: NoteHandlers }
 function noteHandlers (handlers: NoteHandlers): NoteHandlersMod {
   checkContract(arguments, contract('note-handlers', [C.vector]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'noteHandlers', handlers }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'noteHandlers', handlers }
 }
-registerValue('note-handlers', noteHandlers, Music)
+Music.registerValue('note-handlers', noteHandlers)
 
-interface Mod extends Value.Struct { [Value.structKind]: 'mod', note: Composition, mod: ModKind }
+interface Mod extends R.Struct { [R.structKind]: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
   checkContract(arguments, contract('mod', [modC, compositionC]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'mod', note, mod }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'mod', note, mod }
 }
-registerValue('mod', mod, Music)
+Music.registerValue('mod', mod)
 
-interface NoteEvent extends Value.Struct { [Value.structKind]: 'note-event', id: string }
+interface NoteEvent extends R.Struct { [R.structKind]: 'note-event', id: string }
 function noteEvent (id: string): NoteEvent {
   checkContract(arguments, contract('note-event', [C.string]))
-  return { [Value.scamperTag]: 'struct', [Value.structKind]: 'note-event', id }
+  return { [R.scamperTag]: 'struct', [R.structKind]: 'note-event', id }
 }
-registerValue('note-event', noteEvent, Music)
+Music.registerValue('note-event', noteEvent)
 
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod | NoteEvent
 
 function compositionQ (v: any): boolean {
-  return Value.isStructKind(v, 'empty') ||
-    Value.isStructKind(v, 'note') ||
-    Value.isStructKind(v, 'note-freq') ||
-    Value.isStructKind(v, 'rest') ||
-    Value.isStructKind(v, 'trigger') ||
-    Value.isStructKind(v, 'par') ||
-    Value.isStructKind(v, 'seq') ||
-    Value.isStructKind(v, 'pickup') ||
-    Value.isStructKind(v, 'mod') ||
-    Value.isStructKind(v, 'note-event')
+  return R.isStructKind(v, 'empty') ||
+    R.isStructKind(v, 'note') ||
+    R.isStructKind(v, 'note-freq') ||
+    R.isStructKind(v, 'rest') ||
+    R.isStructKind(v, 'trigger') ||
+    R.isStructKind(v, 'par') ||
+    R.isStructKind(v, 'seq') ||
+    R.isStructKind(v, 'pickup') ||
+    R.isStructKind(v, 'mod') ||
+    R.isStructKind(v, 'note-event')
 }
-registerValue('composition?', compositionQ, Music)
+Music.registerValue('composition?', compositionQ)
 
 const compositionC: C.Spec = {
   predicate: compositionQ,
-  errorMsg: (actual: any) => `expected a composition, received ${Value.typeOf(actual)}`,
+  errorMsg: (actual: any) => `expected a composition, received ${R.typeOf(actual)}`,
 }
 
 function loadInstrument(n: number): void {
   C.checkContract(arguments, contract('load-instrument', [C.nat]))
   waf().loadInstrument(n)
 }
-registerValue('load-instrument', loadInstrument, Music)
+Music.registerValue('load-instrument', loadInstrument)
 
 function loadPercussion(n: number): void {
   C.checkContract(arguments, contract('load-percussion', [C.nat]))
   waf().loadInstrument(n, true)
 }
-registerValue('load-percussion', loadPercussion, Music)
+Music.registerValue('load-percussion', loadPercussion)
 
 function useHighQualityInstruments(enable: boolean): void {
   C.checkContract(arguments, contract('use-high-quality-instruments', [C.boolean]))
@@ -251,12 +250,12 @@ function useHighQualityInstruments(enable: boolean): void {
     waf().fontName = 'Chaos'
   }
 }
-registerValue('use-high-quality-instruments', useHighQualityInstruments, Music)
+Music.registerValue('use-high-quality-instruments', useHighQualityInstruments)
 
 /***** Reactive Events ********************************************************/
 
-export interface NoteMsg extends Value.Struct {
-  [Value.structKind]: 'event-note',
+export interface NoteMsg extends R.Struct {
+  [R.structKind]: 'event-note',
   id: string
 }
 
@@ -266,7 +265,7 @@ function makeNoteHandlers (): NoteHandlers {
   checkContract(arguments, contract('make-note-handlers', []))
   return []
 }
-registerValue('make-note-handlers', makeNoteHandlers, Music)
+Music.registerValue('make-note-handlers', makeNoteHandlers)
 
 /***** Rendering **************************************************************/
 
@@ -282,7 +281,7 @@ type MidiMsg = {
 type TriggerMsg = {
   tag: 'trigger',
   time: number,
-  callback: Value.ScamperFn
+  callback: R.ScamperFn
 }
 
 type EventMsg = {
@@ -297,7 +296,7 @@ type Msg = MidiMsg | TriggerMsg | EventMsg
 const midiMsg = (time: number, duration: number, note: number, instrument: number, velocity: number): Msg =>
   ({ tag: 'midi', time, duration, note, instrument, velocity })
 
-const triggerMsg = (time: number, callback: Value.ScamperFn): Msg =>
+const triggerMsg = (time: number, callback: R.ScamperFn): Msg =>
   ({ tag: 'trigger', time, callback })
 
 const eventMsg = (time: number, id: string, handlers: NoteHandlers): Msg =>
@@ -318,7 +317,7 @@ function freqToNote (freq: number): number {
 function compositionToMsgs (
   beat: Duration, bpm: number, velocity: number, startTime: number,
   instrument: number, handlers: NoteHandlers, composition: Composition): { endTime: number, msgs: Msg[] } {
-  switch (composition[Value.structKind]) {
+  switch (composition[R.structKind]) {
     case 'empty':
       return { endTime: startTime, msgs: [] }
 
@@ -417,9 +416,9 @@ function compositionToMsgs (
     }
 
     case 'mod': {
-      if (composition.mod[Value.structKind] === 'percussion') {
+      if (composition.mod[R.structKind] === 'percussion') {
         return compositionToMsgs(beat, bpm, velocity, startTime, 128, handlers, composition.note)
-      } else if (composition.mod[Value.structKind] === 'pitchBend') {
+      } else if (composition.mod[R.structKind] === 'pitchBend') {
         const msgs: Msg[] = []
         const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.note)
         // TODO: handle pitch bends
@@ -427,16 +426,16 @@ function compositionToMsgs (
         // msgs.push(...data.msgs)
         // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
         return { msgs, endTime: data.endTime }
-      } else if (composition.mod[Value.structKind] === 'tempo') {
+      } else if (composition.mod[R.structKind] === 'tempo') {
         return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, handlers, composition.note)
-      } else if (composition.mod[Value.structKind] === 'dynamics') {
+      } else if (composition.mod[R.structKind] === 'dynamics') {
         return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, handlers, composition.note)
-      } else if (composition.mod[Value.structKind] === 'instrument') {
+      } else if (composition.mod[R.structKind] === 'instrument') {
         return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, handlers, composition.note)
-      } else if (composition.mod[Value.structKind] === 'noteHandlers') {
+      } else if (composition.mod[R.structKind] === 'noteHandlers') {
         return compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.mod.handlers, composition.note)
       } else {
-        throw new ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
+        throw new R.ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
       }
     }
 
@@ -485,7 +484,7 @@ export function playComposition (composition: Composition): number {
             callFunction(ev.callback, [])
           } else {
             ev.handlers.forEach(handler => {
-              handler({ [Value.scamperTag]: 'struct', [Value.structKind]: 'event-note', id: ev.id })
+              handler({ [R.scamperTag]: 'struct', [R.structKind]: 'event-note', id: ev.id })
             })
           }
         } catch (e) {
@@ -506,7 +505,7 @@ export function playComposition (composition: Composition): number {
   })
   return id
 }
-registerValue('play-composition', playComposition, Music)
+Music.registerValue('play-composition', playComposition)
 
 export function render (v: any): HTMLElement {
   const composition: Composition = v as Composition

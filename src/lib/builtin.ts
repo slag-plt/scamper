@@ -1,4 +1,4 @@
-import { Library } from '../lang.js'
+import { Library } from '../lpm/runtime.js'
 import { imageLib } from './image.js'
 import Lab from './lab.js'
 import Music from './music.js'
