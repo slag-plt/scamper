@@ -99,6 +99,11 @@ export function asIdentifier (v: Value): { name: string, metadata: Metadata } {
   }
 }
 
+export function nameFromIdentifier (v: Value): string {
+  const { name, metadata: _metadata } = asIdentifier(v)
+  return name
+}
+
 export function isSpecialForm (v: Value, expected: string): boolean {
   if (!isApp(v)) { return false }
   const lst = stripSyntax(v) as R.List

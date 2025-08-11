@@ -128,38 +128,46 @@ export function expandExpr (v: Value): Value {
   }
 }
 
-export function expandStmt (v: Value): Value{
+export function expandStmt (v: Value): Value[] {
   if (A.isImport(v)) {
-    return v
+    return [v]
   } else if (A.isDefine(v)) {
     const { name, value, metadata } = A.asDefine(v)
-    return A.mkSyntax(R.mkList(R.mkSym('define'), name, expandExpr(value)), ...metadata)
+    return [A.mkSyntax(R.mkList(R.mkSym('define'), name, expandExpr(value)), ...metadata)]
   } else if (A.isDisplay(v)) {
     const { value, metadata } = A.asDisplay(v)
-    return A.mkSyntax(R.mkList(R.mkSym('display'), expandExpr(value)), ...metadata)
+    return [A.mkSyntax(R.mkList(R.mkSym('display'), expandExpr(value)), ...metadata)]
   } else if (A.isStruct(v)) {
-    // TODO: Problems! At this point, we need to generate code for the various
-    // struct functions. What can we do?
-    // 1. Add ops to be able to perform the struct operations and define the
-    //    struct functions directly in terms of the ops.
-    // 2. Add library function(s) to perform the struct functions in terms of
-    //    the names introduced by the struct.
-    // Actually, yeah, that'll work! If we expose the struct-creation functions
-    // in the library, then we can desugar as follows:
-    //
     // (struct S (f1 ... fk))
     // -->
-    // (define S (make-struct-constructor S (list f1 ... fk)))
-    // (define S? (make-struct-predicate S))
-    // (define S-f1 (lambda (e) (e[f1])))
+    // (define S (##mkCtorFn## S f1 ... fk))
+    // (define S? (##mkPredFn## S))
+    // (define S-f1 (##mkGetFn## S f1))
     // ...
-    // (define S-fk (lambda (e) (e[fk])))
-    return v
+    // (define S-fk (##mkGetFn## S fk))
+    const { name: ident, fields, metadata } = A.asStruct(v)
+    const name = A.nameFromIdentifier(ident)
+    const ctor = A.mkSyntax(R.mkList(R.mkSym('define'), name,
+      R.mkList(
+        R.mkSym('##mkCtorFn##'),
+        R.mkSym(name),
+        fields.map(A.nameFromIdentifier))),
+      ['desugared', 'struct'], ['struct', name], ...metadata)
+    const pred = A.mkSyntax(R.mkList(R.mkSym('define'), R.mkSym(A.structPredName(name)),
+        R.mkList(R.mkSym('##mkPredFn##'), R.mkSym(name))),
+      ['desugared', 'struct'], ['struct', name], ...metadata)
+    const accessors = fields.map((ident) => {
+      const fielName = A.nameFromIdentifier(ident)
+      return A.mkSyntax(R.mkList(R.mkSym('define'), R.mkSym(A.structFieldName(name, fielName)),
+        R.mkList(R.mkSym('##mkGetFn##'), R.mkSym(name), R.mkSym(fielName))),
+        ['desugared', 'struct'], ['struct', name], ...metadata)
+    })
+    return [ctor, pred, ...accessors]
   } else {
-    return expandExpr(v)
+    return [expandExpr(v)]
   }
 }
 
 export function scopeCheckProgram (vs: Value[]): Value[] {
-  return vs.map(expandStmt)
+  return vs.flatMap(expandStmt)
 }

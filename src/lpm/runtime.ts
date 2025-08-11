@@ -229,7 +229,7 @@ export const mkPair = (fst: Value, snd: Value): Pair => ({
 })
 export const mkList = (...values: Value[]): List => vectorToList(values)
 export const mkPVar = (idx: number): PVar => ({ [scamperTag]: 'pvar', idx })
-export const mkStruct = (kind: string, fields: string[], values: Value[]): Value => {
+export const mkStruct = (kind: string, fields: string[], values: Value[]): Struct => {
   const ret: Struct = { [scamperTag]: 'struct', [structKind]: kind }
   for (let i = 0; i < fields.length; i++) {
     ret[fields[i]] = values[i]
@@ -238,6 +238,15 @@ export const mkStruct = (kind: string, fields: string[], values: Value[]): Value
 }
 
 ///// Utility functions for manipulating Scamper values.
+
+/** @return a list of the fields of the given struct. */
+export function getFieldsOfStruct (s: Struct): string[] {
+  const ret: string[] = []
+  for (const f in s) {
+    ret.push(f)
+  }
+  return ret
+}
 
 /** @return a branch object suitable for pattern matching */
 export function mkBranch (pattern: Value, target: number): Pair {
@@ -305,15 +314,6 @@ export function listFourth (l: Value): Value {
  */
 export function listTail (l: Value): Value {
   return (l as Pair).snd
-}
-
-/** @return a list of the fields of the given struct. */
-export function getFieldsOfStruct (s: Struct): string[] {
-  const ret: string[] = []
-  for (const f in s) {
-    ret.push(f)
-  }
-  return ret
 }
 
 /**

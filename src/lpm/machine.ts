@@ -1,10 +1,8 @@
 import Ops from './ops.js'
 import { 
-  Range, Closure, Env, Id, isClosure, isJsFunction, ScamperError, typeOf,
-  Value, ICE, isSym, Sym, isChar, Char, isPair, isStruct, listToVector, List,
-  isStructKind, Struct, getFieldsOfStruct, Pair, isPVar, PVar,
-  Code,
-  Program
+  Range, Closure, Env, getFieldsOfStruct, Id, isClosure, isJsFunction,
+  ScamperError, typeOf, Value, ICE, isSym, Sym, isChar, Char, isPair, isStruct,
+  listToVector, List, isStructKind, Struct, Pair, isPVar, PVar, Code, Program
 } from './runtime.js'
 
 /** Globals are a mapping from identifiers to values. */
