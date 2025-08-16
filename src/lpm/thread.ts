@@ -19,23 +19,34 @@ export type Frame = {
 export class Thread {
   private frames: Frame[]
 
+  /**
+   * Creates a new thread with an initial frame created from the given
+   * arguments.
+   */
   constructor (code: R.Id, env?: R.Env) {
     this.frames = []
     this.push(code, env)
   }
 
+  /** @return true iff this thread has finished execution. */
   isFinished (): boolean {
     return this.frames.length === 0
   }
 
+  /** @return the current active frame of this thread. */
   getActiveFrame (): Frame {
     return this.frames[this.frames.length - 1]
   }
 
+  /** @return the number of frames in this thread. */
   getNumFrames (): number {
     return this.frames.length
   }
 
+  /** 
+   * Pushes a new frame onto this thread's stack created from the given
+   * arguments.
+   */
   push (code: R.Id, env?: R.Env): void {
     this.frames.push({
       code,
@@ -45,6 +56,11 @@ export class Thread {
     })
   }
 
+  /**
+   * Pops the currently active frame from this thread's stack. The current
+   * frame must have exactly one value on its value stack which is then
+   * pushed on the next frame's stack.
+   */
   pop (): void {
     const prevFrame = this.frames.pop()!
     if (prevFrame.values.length !== 0) {
