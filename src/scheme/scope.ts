@@ -44,9 +44,10 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
     return scopeCheckSingle(errors, globals, locals, v)
   } else if (A.isLambda(v)) {
     let { params, body, metadata } = A.asLambda(v)
+    const localBase = locals.length
     const boundVars: string[] = params.map((v) => A.stripSyntax(v) as string)
     body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(R.mkList(R.mkSym('lambda'), R.mkList(...params), body), ...metadata)
+    return A.mkSyntax(R.mkList(R.mkSym('lambda'), R.mkList(...params), body), ['localBase', localBase], ...metadata)
   } else if (A.isLet(v)) {
     let { bindings, body, metadata } = A.asLet(v)
     bindings = bindings.map(({ fst, snd, metadata }) => ({
@@ -54,9 +55,10 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
       snd: scopeCheckExpr(errors, globals, locals, snd),
       metadata
     }))
+    const localBase = locals.length
     const boundVars: string[] = bindings.map(({ fst }) => (A.stripSyntax(fst) as R.Sym).value)
     body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(R.mkList(R.mkSym('let'), R.mkList(...bindings), body), ...metadata)
+    return A.mkSyntax(R.mkList(R.mkSym('let'), R.mkList(...bindings), body), ['localBase', localBase], ...metadata)
   } else if (A.isBegin(v)) {
     let { values, metadata } = A.asBegin(v)
     values = values.map((v) => scopeCheckExpr(errors, globals, locals, v))

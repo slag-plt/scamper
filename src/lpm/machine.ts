@@ -1,22 +1,9 @@
 import Ops from './ops.js'
 import * as R from './runtime.js'
+import Thread from './thread.js'
 
 /** Globals are a mapping from identifiers to values. */
 export type Globals = Map<R.Id, R.Value>
-
-/**
- * An execution frame captures the ongoing execution of a function call:
- * + `ops`: the code currently being executed.
- * + `pc`: the program counter that tracks the current instructions.
- * + `values`: the value stack that holds intermediate results.
- * + `env`: the local environment.
- */
-export type Frame = {
-  code: R.Code,
-  pc: number,
-  values: R.Value[],
-  env: R.Env,
-}
 
 /** Runtime options for the LPM */
 export type Options = {
@@ -102,94 +89,81 @@ export function tryMatch (p: R.Value, v: R.Value, range?: R.Range): [number, R.V
  * small functional programs.
  */
 export class Machine {
-  program: R.Program                    // global: all compiled code
-  globals: Globals                    // thread-local: diff. threads can have different views of globals
-  builtinLibs: Map<string, R.Library>   // global: all available libraries
-  currentFrame?: Frame                // thread-local
-  dump: Frame[]                       // thread-local
-  output: Output                      // global
-  options: Options                    // global
+  program: R.Program
+  globals: Globals
+  builtinLibs: Map<string, R.Library>
+  output: Output
+  options: Options
 
-  constructor (program: R.Program, globals: Globals, builtinLibs: Map<string, R.Library>, entry: R.Id, output: Output, options: Options) {
+  constructor (program: R.Program, builtinLibs: Map<string, R.Library>, output: Output, options: Options, globals?: Globals) {
     this.program = program
-    this.globals = globals
+    this.globals = globals ?? new Map()
     this.builtinLibs = builtinLibs
-    const code = program.code.get(entry)!
-    this.currentFrame = {
-      code,
-      pc: 0,
-      values: [],
-      env: new Array(code.numLocals)
-    }
     this.options = options
     this.output = output
-    this.dump = []
   }
 
-  /** Advance the program counter of the current frame forward by one instruction. */
-  advancePc () {
-    if (this.currentFrame === undefined) {
-      throw new R.ICE('advancePc', 'ICE: No current frame to advance program counter')
-    }
-    this.currentFrame.pc += 2;
+  initializeClosures (): void {
+    this.program.objects.forEach((obj) => {
+      if (R.isClosure(obj)) {
+        obj['call'] = (...args: any) => {
+          const thread = new Thread(obj.code, obj.env)
+          thread.getActiveFrame().locals = 
+          return this.execute(thread)
+        }
+      }
+    })
   }
 
   /**
-   * Dumps the current frame onto the call stack and switches to a new
-   * stack frame indicated by the given values.
+   * Evaluates a code block with a given initial environment by creating a
+   * new thread for that block and evaluating it synchronously.
+   * @returns the value produced by the code block.
    */
-  dumpAndSwitch (values: R.Value[], env: R.Env, ops: R.Code, range?: R.Range) {
-    if (this.currentFrame === undefined) {
-      throw new R.ICE('advancePc', 'ICE: No current frame to advance program counter')
+  evaluate (codeId: string, env: R.Env): R.Value {
+    const thread = new Thread(codeId, env)
+    while (!thread.isFinished()) {
+      this.step(thread)
     }
-    this.dump.push(this.currentFrame)
-    if (this.dump.length > this.options.maxCallStackDepth) {
-      throw new R.ScamperError('Runtime', "Maximum call stack size exceeded", undefined, range)
-    } else {
-      this.currentFrame = { values, pc: 0, code: ops, env }
-    }
+    return thread.result
   }
 
-  /** @returns if this machine has finished execution */
-  isFinished () {
-    return this.currentFrame === undefined
-  }
-
-  /** Executes the machine from start to finish. */
-  execute () { 
-    while (!this.isFinished()) {
-      this.step()
+  /** Executes the given thread on this machine from start to finish */
+  execute (thread: Thread): R.Value { 
+    while (!thread.isFinished()) {
+      this.step(thread)
     }
+    return thread.result
   }
 
-  /** Executes a single step of the machine. */
-  step () {
-    const frame = this.currentFrame
+  /** Executes a single step the given thread on this machine */
+  step (thread: Thread): void {
+    const frame = thread.getActiveFrame()
     if (frame === undefined) {
       throw new R.ICE('step', 'ICE: No current frame to execute')
     }
-    const code = frame.code
+    const blk = this.program.code.get(frame.code)!
     const pc = frame.pc
-    const instr = code.ops[pc]
-    const arg = code.ops[pc + 1]
+    const instr = blk.ops[pc]
+    const arg = blk.ops[pc + 1]
     const values = frame.values
     switch (instr) {
       case Ops.noop: {
-        this.advancePc()
+        thread.advancePc()
         return
       }
 
       case Ops.ifnb: {
         if (arg === undefined) {
           throw new R.ICE('step', 'Expected an argument for ifnb')
-        } else if (arg < 0 || arg >= code.ops.length) {
+        } else if (arg < 0 || arg >= blk.ops.length) {
           throw new R.ICE('step', `Invalid jump target ${arg} for ifnb operation`)
         } else if (values.length == 0) {
           throw new R.ScamperError('Runtime', 'ifnb operation requires at least one value on the stack')
         } else {
           const isJump = values.pop()!
           if (isJump) {
-            this.advancePc()
+            thread.advancePc()
           } else {
             frame.pc = arg
           }
@@ -200,7 +174,7 @@ export class Machine {
       case Ops.ifnm: {
         if (arg === undefined) {
           throw new R.ICE('step', 'Expected an argument for ifnm')
-        } else if (arg < 0 || arg >= code.ops.length) {
+        } else if (arg < 0 || arg >= blk.ops.length) {
           throw new R.ICE('step', `Invalid jump target ${arg} for ifnm operation`)
         } else if (values.length === 0) {
           throw new R.ScamperError('Runtime', 'ifnm operation requires at least one value on the stack')
@@ -218,9 +192,9 @@ export class Machine {
             frame.pc = failIdx
           } else {
             bindings.forEach(([idx, v]) => {
-              frame.env[idx] = v
+              frame.locals[idx] = v
             })
-            this.advancePc()
+            thread.advancePc()
           }
           return
         }
@@ -255,22 +229,22 @@ export class Machine {
             let i = 0
             closure.env.forEach((v, _) => { env[i++] = v })
             fargs.forEach((v, _) => { env[i++] = v })
-            this.advancePc()
+            thread.advancePc()
             // N.B., if the next instruction is a ret, then tail call optimize:
             // overwrite this stack frame with the new function call directly.
             // TOOD: refactor the tail-call optimization into dumpAndSwitch?
-            if (code.ops[frame.pc] === Ops.ret) {
+            if (blk.ops[frame.pc] === Ops.ret) {
                 frame.values = []
-                frame.env = env
-                frame.code = fcode
+                frame.locals = env
+                frame.code = closure.code
                 frame.pc = 0
             } else {
-                this.dumpAndSwitch([], env, fcode /* TODO: range? */)
+                thread.push(closure.code, env)
             }
             return
           } else if (R.isJsFunction(head)) {
             values.push((head as Function)(...fargs))
-            this.advancePc()
+            thread.advancePc()
             return
           } else {
             throw new R.ScamperError('Runtime', `Function application expected a function, received a ${R.typeOf(head)}`)
@@ -283,15 +257,11 @@ export class Machine {
           throw new R.ICE('step', 'Value stack must have exactly one value when returning')
         } else {
           const ret = values.pop()!
-          // N.B, If the dump is empty, we clear the current frame to signal
-          // the end of program execution
-          if (this.dump.length === 0) {
-            this.currentFrame = undefined
+          thread.pop()
+          if (thread.getNumFrames() === 0) {
+            thread.result = ret
           } else {
-            // N.B., we expext that the PC of the new frame has already been
-            // advanced during the initial dump/function call.
-            this.currentFrame = this.dump.pop()!
-            this.currentFrame.values.push(ret)
+            thread.getActiveFrame().values.push(ret)
           }
           return
         }
@@ -302,7 +272,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', 'disp operation requires at least one value on the stack')
         }
         this.output.send(values.pop()!)
-        this.advancePc()
+        thread.advancePc()
         return
       }
 
@@ -311,7 +281,7 @@ export class Machine {
           throw new R.ICE('step', 'Expected argument for int operation')
         } else {
           values.push(arg)
-          this.advancePc()
+          thread.advancePc()
         }
         return
       }
@@ -326,7 +296,7 @@ export class Machine {
         } else {
           throw new R.ScamperError('Runtime', 'bool operation requires a 0 (false) or 1 (true) argument')
         }
-        this.advancePc()
+        thread.advancePc()
         return
       }
 
@@ -339,7 +309,7 @@ export class Machine {
             throw new R.ICE('step', `Identifier at index ${arg} not found`)
           }
           values.push(str)
-          this.advancePc()
+          thread.advancePc()
         }
         return
       }
@@ -353,7 +323,7 @@ export class Machine {
             throw new R.ICE('step', `Object at index ${arg} not found`)
           }
           values.push(obj)
-          this.advancePc()
+          thread.advancePc()
         } 
         return
       }
@@ -361,11 +331,11 @@ export class Machine {
       case Ops.lload: {
         if (arg === undefined) {
           throw new R.ScamperError('Runtime', 'Expected argument for lload operation')
-        } else if (arg < 0 && arg >= frame.env.length) {
+        } else if (arg < 0 && arg >= frame.locals.length) {
           throw new R.ICE('step', `Invalid local variable index ${arg} for lload operation`)
         } else {
-          values.push(frame.env[arg])
-          this.advancePc()
+          values.push(frame.locals[arg])
+          thread.advancePc()
         }
         return
       }
@@ -373,13 +343,13 @@ export class Machine {
       case Ops.lstore: {
         if (arg === undefined) {
           throw new R.ScamperError('Runtime', 'Expected argument for lstore operation')
-        } else if (arg < 0 && arg >= frame.env.length) {
+        } else if (arg < 0 && arg >= frame.locals.length) {
           throw new R.ICE('step', `Invalid local variable index ${arg} for lstore operation`)
         } else if (values.length === 0) {
           throw new R.ScamperError('Runtime', 'lstore operation requires at least one value on the stack')
         } else {
-          frame.env[arg] = values.pop()!
-          this.advancePc()
+          frame.locals[arg] = values.pop()!
+          thread.advancePc()
           return
         }
       }
@@ -395,7 +365,7 @@ export class Machine {
             throw new R.ScamperError('Runtime', `Global variable '${id}' not found`)
           }
           values.push(this.globals.get(id)!)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -409,7 +379,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', 'gstore operation requires at least one value on the stack')
         } else {
           this.globals.set(this.program.identifiers[arg], values.pop()!)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -427,7 +397,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(+)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 + v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -444,7 +414,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(-)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 - v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -461,7 +431,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(*)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 * v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -478,7 +448,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(/)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 / v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -495,7 +465,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(<)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 < v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -512,7 +482,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(<=)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 <= v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -529,7 +499,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(>)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 > v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -546,7 +516,7 @@ export class Machine {
           throw new R.ScamperError('Runtime', '(>=)', `Expected a number, received a ${R.typeOf(v2)}`)
         } else {
           values.push(v1 >= v2)
-          this.advancePc()
+          thread.advancePc()
           return
         }
       }
@@ -558,7 +528,7 @@ export class Machine {
         const v2 = values.pop()!
         const v1 = values.pop()!
         values.push(v1 === v2)
-        this.advancePc()
+        thread.advancePc()
         return
       }
 
@@ -569,7 +539,7 @@ export class Machine {
         const v2 = values.pop()!
         const v1 = values.pop()!
         values.push(v1 !== v2)
-        this.advancePc()
+        thread.advancePc()
         return
       }
 

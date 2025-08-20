@@ -2,6 +2,7 @@ import { expect, test, describe } from "@jest/globals"
 import { Machine, Output } from "../../src/lpm/machine.js"
 import { Code, Id, mkBranch, mkClosure, mkList, mkSym, mkPVar, Program, Value } from "../../src/lpm/runtime.js"
 import Ops from "../../src/lpm/ops.js";
+import Thread from "../../src/lpm/thread.js";
 
 class LoggingOutput implements Output {
   log: Value[] = []
@@ -28,12 +29,11 @@ function makeLoggingMachine(
   const program = makeProgram(code, identifiers, objects);
   return new Machine(
     program,
-    new Map<string, Value>(globals),
     // TODO: populate this with the appropriate builtin libs (from lib/builtin.js)
     new Map(),
-    'main',
     log,
-    { maxArgs: 4, maxCallStackDepth: 10 }
+    { maxArgs: 4, maxCallStackDepth: 10 },
+    new Map<string, Value>(globals),
   );
 }
 
@@ -45,7 +45,8 @@ function machineOutputOf(
 ): Value {
   const output = new LoggingOutput();
   const machine = makeLoggingMachine(code, output, identifiers, objects, globals);
-  machine.execute();
+  const thread = new Thread('main', [])
+  machine.execute(thread);
   return output.log[0]
 }
 

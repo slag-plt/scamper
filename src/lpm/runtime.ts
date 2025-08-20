@@ -116,10 +116,10 @@ export class Library {
 type LocalMap = string[]
 
 /** The field name of Scamper objects denoting that object's runtime tag. */
-export const scamperTag = Symbol('tag')
+export const scamperTag = '##scamperTag##'
 
 /** The field name of Scamper objects that are structs denoting that struct's kind. */
-export const structKind = Symbol('kind')
+export const structKind = '##structKind##'
 
 /** Tagged objects are Scamper values with a queryable runtime identity. */
 interface TaggedObject {
@@ -134,6 +134,7 @@ export interface Closure extends TaggedObject {
   env: Env,
   name?: string
   localMap?: LocalMap,
+  call: (...args: any) => any
 }
 
 /** A char is a tagged object that captures a single character (a one-character string). */

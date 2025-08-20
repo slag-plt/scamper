@@ -18,6 +18,7 @@ export type Frame = {
 /** A thread represents a single sequence of execution within Scamper. */
 export class Thread {
   private frames: Frame[]
+  public result: R.Value 
 
   /**
    * Creates a new thread with an initial frame created from the given
@@ -43,6 +44,14 @@ export class Thread {
     return this.frames.length
   }
 
+  /** Advances the PC of this thread by one instruction. */
+  advancePc (): void {
+    if (this.isFinished()) {
+      throw new R.ICE('advancePc', 'ICE: No current frame to advance program counter')
+    }
+    this.getActiveFrame().pc += 2;
+  }
+
   /** 
    * Pushes a new frame onto this thread's stack created from the given
    * arguments.
@@ -56,21 +65,9 @@ export class Thread {
     })
   }
 
-  /**
-   * Pops the currently active frame from this thread's stack. The current
-   * frame must have exactly one value on its value stack which is then
-   * pushed on the next frame's stack.
-   */
+  /** Pops the currently active frame from this thread's stack. */
   pop (): void {
-    const prevFrame = this.frames.pop()!
-    if (prevFrame.values.length !== 0) {
-      throw new ICE('Thread.pop', 'Value stack must have exactly one value when returning')
-    }
-    if (this.frames.length !== 0) {
-      // N.B., we expect that the PC of the new frame has already been
-      // advanced during the initial dump/function call.
-      this.getActiveFrame().values.push(prevFrame.values[0])
-    }
+    this.frames.pop()!
   }
 }
 
