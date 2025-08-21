@@ -1,5 +1,4 @@
 import * as R from './runtime.js'
-import { ICE } from './runtime.js'
 
 /**
  * An execution frame captures the ongoing execution of a function call:
