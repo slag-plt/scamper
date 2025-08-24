@@ -104,7 +104,7 @@ export type Value = number | boolean | string | symbol | null | undefined | Vect
 
 export type Lit   = { tag: 'lit', value: Value }
 export type Var   = { tag: 'var', name: string }
-export type Ctor  = { tag: 'ctor', name: string, arity: number }
+export type Ctor  = { tag: 'ctor', name: string, fields: string[] }
 export type Cls   = { tag: 'cls', params: string[], body: Exp, name?: string }
 export type Ap    = { tag: 'ap', numArgs: number }
 export type Match = { tag: 'match', pattern: Pat, ifB: Exp, elseB: Exp }

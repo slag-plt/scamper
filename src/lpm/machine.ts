@@ -50,7 +50,7 @@ export class Machine {
           const bindings: [string, L.Value][] = []
           for (let i = 0; i < flds.length; i++) {
             const pat = p.args[i]
-            const val = flds[i]
+            const val = v[flds[i]]
             const match = Machine.tryMatch(val, pat)
             if (!match) { return undefined }
             bindings.push(...match)
@@ -95,47 +95,54 @@ export class Machine {
       }
       
       case 'ctor':
-        current.values.push({
-          tag: 'ctor',
-          name: instr.name,
-          args: current.values.splice(-instr.arity)
-        })
+        current.values.push(U.mkStruct(
+          instr.name, instr.fields, current.values.splice(-instr.fields.length)))
         break
       
       case 'cls': {
-        current.values.push({
-          [L.scamperTag]: 'closure',
-          params: instr.params,
-          body: instr.body,
-          env: current.env,
-          call: ((...args: L.Value[]): L.Value => {
+        current.values.push(U.mkClosure(
+          instr.params,
+          instr.body,
+          current.env,
+          (...args: L.Value[]): L.Value => {
             return this.evaluateThread(new L.Thread(
               instr.name ?? '##anonymous##',
               current.env.extend(...instr.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
               instr.body
             ))
-          })
-        })
+          }
+        ))
         break
       }
       
       case 'ap': {
-        if (current.values.length < instr.numArgs) {
+        if (current.values.length < instr.numArgs + 1) {
           throw new ICE('Machine.stepThread', `Not enough values for application: ${instr.numArgs + 1}`) 
         }
-        const fn = current.values.pop()!
-        const args = current.values.splice(-instr.numArgs)
+        const values = current.values.splice(-(instr.numArgs + 1))
+        const fn = values[0]
+        const args = values.splice(-instr.numArgs)
         if (typeof fn === 'function') {
           current.values.push(fn(...args))
         } else if (U.isClosure(fn)) {
           if (thread.frames.length >= this.maxCallStackDepth) {
             throw new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`)
-          } 
-          thread.push(
-            fn.name ?? '##anonymous##',
-            fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
-            fn.code
-          )
+          } else if (current.isFinished()) {
+            // N.B., if this thread is finished, then tail-call optimize by
+            // overwriting the current frame instead of pushing a new one.
+            current.name = fn.name ?? '##anonymous##'
+            current.env = new L.Env(current.env.parent)
+            fn.params.forEach((x, i) => {
+              current.env.set(x, args[i])
+            })
+            current.pushExp(fn.code)
+          } else {
+            thread.push(
+              fn.name ?? '##anonymous##',
+              fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
+              fn.code
+            )
+          }
         } else {
           throw new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`)
         }

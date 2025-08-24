@@ -1,648 +1,212 @@
 import { expect, test, describe } from "@jest/globals"
-import { Machine, Output } from "../../src/lpm/machine.js"
-import { Code, Id, mkBranch, mkClosure, mkList, mkSym, mkPVar, Program, Value } from "../../src/lpm/runtime.js"
-import Ops from "../../src/lpm/ops.js";
-import Thread from "../../src/lpm/thread.js";
+import * as LPM from '../../src/lpm'
+import * as U from '../../src/lpm/util.js'
+import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output.js"
 
-class LoggingOutput implements Output {
-  log: Value[] = []
-  send (value: Value) {
-    this.log.push(value)
-  }
+// A stub builtin libraries map for testing purposes
+const builtinLibs: Map<string, [string, LPM.Value][]> = new Map()
+
+const env = (() => {
+  const ret = new LPM.Env()
+  ret.set('+', ((a: number, b: number) => a + b))
+  ret.set('-', ((a: number, b: number) => a - b))
+  ret.set('*', ((a: number, b: number) => a * b))
+  ret.set('/', ((a: number, b: number) => a / b))
+  return ret
+})()
+
+function makeMachine (exp: LPM.Exp): [LPM.Machine, LoggingOutputChannel, LoggingErrorChannel] {
+  const out = new LoggingOutputChannel()
+  const err = new LoggingErrorChannel()
+  const machine = new LPM.Machine(
+    builtinLibs,
+    env,
+    exp,
+    out,
+    err
+  )
+  return [machine, out, err]
 }
 
-function makeProgram(code: [string, Iterable<number>, number][], identifiers: string[] = [], objects: Value[] = []): Program {
-  const codeMap = new Map<Id, Code>();
-  for (const [id, bytes, numLocals] of code) {
-    codeMap.set(id, { ops: new Uint8Array(bytes), numLocals });
-  }
-  return { code: codeMap, identifiers, objects };
-}
-
-function makeLoggingMachine(
-  code: [string, Iterable<number>, number][],
-  log: Output,
-  identifiers: string[] = [],
-  objects: Value[] = [],
-  globals: [string, Value][] = [],
-): Machine {
-  const program = makeProgram(code, identifiers, objects);
-  return new Machine(
-    program,
-    // TODO: populate this with the appropriate builtin libs (from lib/builtin.js)
-    new Map(),
-    log,
-    { maxArgs: 4, maxCallStackDepth: 10 },
-    new Map<string, Value>(globals),
-  );
-}
-
-function machineOutputOf(
-  code: [string, Iterable<number>, number][],
-  identifiers: string[] = [],
-  objects: Value[] = [],
-  globals: [string, Value][] = []
-): Value {
-  const output = new LoggingOutput();
-  const machine = makeLoggingMachine(code, output, identifiers, objects, globals);
-  const thread = new Thread('main', [])
-  machine.execute(thread);
-  return output.log[0]
-}
-
-describe("Literals", () => {
-  test("int literal", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(42)
+describe('basic ops', () => {
+  test('lit', () => {
+    const [machine, out, _] = makeMachine([U.mkLit(42), U.mkDisp(), U.mkLit(undefined)])
+    machine.evaluate()
+    expect(out.log).toEqual([42])
   })
 
-  test("bool literal true", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.bool, 1,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
+  test('var', () => {
+    const [machine, out, _] = makeMachine([U.mkVar('+'), U.mkDisp(), U.mkLit(undefined)])
+    machine.evaluate()
+    expect(out.log).toEqual([env.get('+')!])
   })
 
-  test("bool literal false", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.bool, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
+  test('ctor', () => {
+    const [machine, out, _] = makeMachine([U.mkLit('test'), U.mkLit(2), U.mkCtor('test-ctor', ['a', 'b']), U.mkDisp(), U.mkLit(undefined)])
+    machine.evaluate()
+    const result = out.log[0] as LPM.Value
+    expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
   })
 
-  test("str literal", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.str, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], ["hello"])).toBe("hello")
+  test('cls', () => {
+    const body = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
+    const [machine, out, _] = makeMachine([
+      U.mkCls(['x'], body, 'add-one'),
+      U.mkLit(1),
+      U.mkAp(1),
+      U.mkDisp(),
+      U.mkLit(undefined)]
+    )
+    machine.evaluate()
+    const result = out.log[0] as LPM.Value
+    expect(result).toBe(2)
   })
 
-  test("obj literal", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.obj, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], [], ["string as object"])).toBe("string as object")
-  })
-})
-
-describe("Basic arithmetic", () => {
-  test("(+ 1 1)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 1,
-        Ops.int, 1,
-        Ops.add, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(2)
+  test('ap', () => {
+    const [machine, out, _] = makeMachine([
+      U.mkVar('+'),
+      U.mkLit(3),
+      U.mkLit(4),
+      U.mkAp(2),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual([7])
   })
 
-  test("(- 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.sub, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(2)
+  test('match - successful pattern', () => {
+    const ifBranch = [U.mkLit('matched')]
+    const elseBranch = [U.mkLit('not matched')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit(42),
+      U.mkMatch(U.mkPLit(42), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['matched'])
   })
 
-  test("(* 4 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 4,
-        Ops.int, 3,
-        Ops.mul, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(12)
+  test('match - failed pattern', () => {
+    const ifBranch = [U.mkLit('matched')]
+    const elseBranch = [U.mkLit('not matched')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit(42),
+      U.mkMatch(U.mkPLit(99), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['not matched'])
   })
 
-  test("(/ 15 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 15,
-        Ops.int, 3,
-        Ops.div, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(5)
+  test('match - variable pattern', () => {
+    const ifBranch = [U.mkVar('+'), U.mkVar('x'), U.mkLit(10), U.mkAp(2)]
+    const elseBranch = [U.mkLit(0)]
+    const [machine, out, _] = makeMachine([
+      U.mkLit(5),
+      U.mkMatch(U.mkPVar('x'), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual([15])
   })
 
-  test("(+ (* 2 3) 4)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 2,
-        Ops.int, 3,
-        Ops.mul, 0,
-        Ops.int, 4,
-        Ops.add, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(10)
+  test('match - wildcard pattern', () => {
+    const ifBranch = [U.mkLit('always matches')]
+    const elseBranch = [U.mkLit('never reached')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit('anything'),
+      U.mkMatch(U.mkPWild(), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['always matches'])
   })
 
-  test("(- (* 7 2) (/ 8 4))", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 7,
-        Ops.int, 2,
-        Ops.mul, 0,
-        Ops.int, 8,
-        Ops.int, 4,
-        Ops.div, 0,
-        Ops.sub, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(12)
+  test('disp', () => {
+    const [machine, out, _] = makeMachine([U.mkLit('hello world'), U.mkDisp(), U.mkLit(undefined)])
+    machine.evaluate()
+    expect(out.log).toEqual(['hello world'])
+  })
+
+  test('raise', () => {
+    const [machine, _out, _err] = makeMachine([U.mkRaise('test error')])
+    expect(() => machine.evaluate()).toThrow('test error')
+  })
+
+  test('pop - environment restoration', () => {
+    // Create a nested environment scenario
+    const innerBody = [U.mkVar('x'), U.mkDisp(), U.mkPop()]
+    const [machine, out, _] = makeMachine([
+      U.mkLit(42),
+      U.mkMatch(U.mkPVar('x'), innerBody, [U.mkLit('fail')]),
+      U.mkLit('after pop'),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual([42, 'after pop'])
   })
 })
 
-describe("Comparisons", () => {
-  test("(< 3 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 3,
-        Ops.int, 5,
-        Ops.lt, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
+describe('pattern matching', () => {
+  test('pwild - matches anything', () => {
+    const ifBranch = [U.mkLit('matched')]
+    const elseBranch = [U.mkLit('not matched')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit('any value'),
+      U.mkMatch(U.mkPWild(), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['matched'])
   })
 
-  test("(< 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.lt, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
+  test('plit - literal pattern match', () => {
+    const ifBranch = [U.mkLit('number matched')]
+    const elseBranch = [U.mkLit('number not matched')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit(123),
+      U.mkMatch(U.mkPLit(123), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['number matched'])
   })
 
-  test("(<= 3 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 3,
-        Ops.int, 5,
-        Ops.lte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
+  test('pvar - variable binding', () => {
+    const ifBranch = [U.mkVar('+'), U.mkVar('captured'), U.mkLit(' was captured'), U.mkAp(2)]
+    const elseBranch = [U.mkLit('no match')]
+    const [machine, out, _] = makeMachine([
+      U.mkLit('hello'),
+      U.mkMatch(U.mkPVar('captured'), ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual(['hello was captured'])
   })
 
-  test("(<= 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.lte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
-  })
-
-  test("(<= 5 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 5,
-        Ops.lte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(> 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.gt, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(> 3 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 3,
-        Ops.int, 5,
-        Ops.gt, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
-  })
-
-  test("(>= 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.gte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(>= 3 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 3,
-        Ops.int, 5,
-        Ops.gte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
-  })
-
-  test("(>= 5 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 5,
-        Ops.gte, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(= 5 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 5,
-        Ops.eq, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(= 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.eq, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
-  })
-
-  test("(!= 5 3)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 3,
-        Ops.neq, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(true)
-  })
-
-  test("(!= 5 5)", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 5,
-        Ops.int, 5,
-        Ops.neq, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]])).toBe(false)
-  })
-})
-
-describe("Variables", () => {
-  test("globals", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 41,
-        Ops.gstore, 0,
-        Ops.int, 1,
-        Ops.gload, 0,
-        Ops.add, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], ["x"])).toBe(42)
-  })
-
-  test("locals", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 41,
-        Ops.lstore, 0,
-        Ops.int, 1,
-        Ops.lload, 0,
-        Ops.add, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 1]])).toBe(42)
-  })
-})
-
-describe("Conditionals", () => {
-  test("Bjmp true", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 8,
-        Ops.int, 8,
-        Ops.eq, 0,
-        Ops.ifnb, 16,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 76,
-        Ops.disp, 0,
-        Ops.int, 0, 
-        Ops.ret, 0,
-      ], 0]]
-    )).toBe(42)
-  })
-
-  test("Bjmp false", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 8,
-        Ops.int, 2,
-        Ops.eq, 0,
-        Ops.ifnb, 16,
-        Ops.int, 76,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0, 
-        Ops.ret, 0,
-      ], 0]]
-    )).toBe(42)
-  })
-})
-
-describe("Pattern matching", () => {
-  test("Match literal int success", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 255,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], [], [mkBranch(255, 12)])).toBe(42)
-  })
-
-  test("Match literal int failure", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.int, 100,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], [], [mkBranch(255, 12)])).toBe(18)
-  })
-
-  test("Match literal bool success", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.bool, 1,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], [], [mkBranch(true, 12)])).toBe(42)
-  })
-
-  test("Match literal bool failure", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.bool, 0,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], [], [mkBranch(true, 12)])).toBe(18)
-  })
-
-  test("Match literal string success", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.str, 0,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], ["hello"], [mkBranch("hello", 12)])).toBe(42)
-  })
-
-  test("Match literal string failure", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.str, 0,
-        Ops.ifnm, 0,
-        Ops.int, 42,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 18,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 0]], ["world"], [mkBranch("hello", 12)])).toBe(18)
-  })
-
-  test("Match list pattern", () => {
-    expect(machineOutputOf(
-      [["main", [
-        Ops.obj, 1,
-        Ops.ifnm, 0,
-        Ops.lload, 0,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-        Ops.int, 99,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 2]],
-      [], 
-      [mkBranch(mkList(mkSym("cons"), mkPVar(0), mkPVar(1)), 16), mkList(42, 7)]
-    )).toBe(42)
-  })
-})
-
-describe("Function calls", () => {
-  test("Basic call", () => {
-    expect(machineOutputOf(
-      [["f", [
-        Ops.lload, 0,
-        Ops.int, 41,
-        Ops.add, 0,
-        Ops.ret, 0
-      ], 1],
-      ["main", [
-        Ops.gload, 0,
-        Ops.int, 1,
-        Ops.ap, 1,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], ["f"], [], [["f", mkClosure(1, ["x"], "f", [])]])).toBe(42)
-  })
-
-  test("Factorial (non-tail)", () => {
-    expect(machineOutputOf(
-      [["factorial", [
-        Ops.lload, 0,
-        Ops.int, 0,
-        Ops.neq, 0,
-        Ops.ifnb, 24,
-        Ops.lload, 0,
-        Ops.gload, 0,
-        Ops.lload, 0,
-        Ops.int, 1,
-        Ops.sub, 0,
-        Ops.ap, 1,
-        Ops.mul, 0,
-        Ops.ret, 0,
-        Ops.int, 1,
-        Ops.ret, 0,
-      ], 1],
-      ["main", [
-        Ops.gload, 0,
-        Ops.int, 5,
-        Ops.ap, 1,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], ["factorial"], [],
-      [["factorial", mkClosure(1, ["n"], "factorial", [])]])).toBe(120)
-  })
-
-  test("Factorial (tail)", () => {
-    expect(machineOutputOf(
-      [["factorial", [
-        Ops.lload, 0,
-        Ops.int, 0,
-        Ops.neq, 0,
-        Ops.ifnb, 26,
-        Ops.gload, 0,
-        Ops.lload, 0,
-        Ops.int, 1,
-        Ops.sub, 0,
-        Ops.lload, 0,
-        Ops.lload, 1,
-        Ops.mul, 0,
-        Ops.ap, 2,
-        Ops.ret, 0,
-        Ops.lload, 1,
-        Ops.ret, 0,
-      ], 2],
-      ["main", [
-        Ops.gload, 0,
-        Ops.int, 5,
-        Ops.int, 1,
-        Ops.ap, 2,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]], ["factorial"], [],
-      [["factorial", mkClosure(2, ["n", "ret"], "factorial", [])]])).toBe(120)
-  })
-
-  test("Recursive list length", () => {
-    expect(machineOutputOf(
-      [["length", [
-        Ops.lload, 0,
-        Ops.ifnm, 0,
-        Ops.gload, 0,
-        Ops.lload, 2,
-        Ops.ap, 1,
-        Ops.int, 1,
-        Ops.add, 0,
-        Ops.ret, 0,
-        Ops.int, 0,
-        Ops.ret, 0,
-      ], 3],
-      ["main", [
-        Ops.gload, 0,
-        Ops.obj, 1,
-        Ops.ap, 1,
-        Ops.disp, 0,
-        Ops.int, 0,
-        Ops.ret, 0
-      ], 0]],
-      ["length"],
-      [mkBranch(mkList(mkSym("cons"), mkPVar(1), mkPVar(2)), 16), mkList(1, 2, 3, 4)],
-      [["length", mkClosure(1, ["lst"], "length", [])]]
-    )).toBe(4)
+  test('pctor - constructor pattern', () => {
+    // First create a struct to match against
+    const setupStruct = [U.mkLit(1), U.mkLit(2), U.mkCtor('test-struct', ['field1', 'field2'])]
+    const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2), U.mkPop()]
+    const elseBranch = [U.mkRaise('no match'), U.mkPop(), U.mkLit(undefined)]
+    const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
+    
+    const [machine, out, _] = makeMachine([
+      ...setupStruct,
+      U.mkMatch(pattern, ifBranch, elseBranch),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual([3])
   })
 })
