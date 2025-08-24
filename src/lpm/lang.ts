@@ -56,7 +56,7 @@ export interface TaggedObject {
 export interface Closure extends TaggedObject {
   [scamperTag]: 'closure',
   params: Id[],
-  code: Exp,
+  code: Blk,
   env: Env,
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
@@ -98,21 +98,23 @@ export type ScamperFn = Closure | Function
 export type Raw = object
 
 /** Values are the core datatype manipulated by LPM programs. */
-export type Value = number | boolean | string | symbol | null | undefined | Vector | TaggedObject | ScamperFn | Raw
+export type Value =
+  number | boolean | string | symbol |
+  null | undefined | Vector | TaggedObject | ScamperFn | Raw
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
 export type Lit   = { tag: 'lit', value: Value }
 export type Var   = { tag: 'var', name: string }
 export type Ctor  = { tag: 'ctor', name: string, fields: string[] }
-export type Cls   = { tag: 'cls', params: string[], body: Exp, name?: string }
+export type Cls   = { tag: 'cls', params: string[], body: Blk, name?: string }
 export type Ap    = { tag: 'ap', numArgs: number }
-export type Match = { tag: 'match', pattern: Pat, ifB: Exp, elseB: Exp }
+export type Match = { tag: 'match', pattern: Pat, ifB: Blk, elseB: Blk }
 export type Disp  = { tag: 'disp' }
 export type Raise = { tag: 'raise', msg: string }
 export type Pop   = { tag: 'pop' }
 export type Ops   = Lit | Var | Ctor | Cls | Ap | Match | Disp | Raise | Pop
-export type Exp   = Ops[]
+export type Blk   = Ops[]
 
 export type PWild = { tag: 'pwild' }
 export type PLit  = { tag: 'plit', value: Value }
@@ -129,19 +131,19 @@ export class Frame {
   values: Value[]
   ops: Ops[]
 
-  constructor (name: string, env: Env, exp: Exp) {
+  constructor (name: string, env: Env, blk: Blk) {
     this.name = name
     this.env = env
     this.values = []
-    this.ops = exp.toReversed()
+    this.ops = blk.toReversed()
   }
 
   isFinished (): boolean {
     return this.ops.length === 0
   }
 
-  pushExp (exp: Exp) {
-    this.ops.push(...exp.toReversed())
+  pushBlk (blk: Blk) {
+    this.ops.push(...blk.toReversed())
   }
 
   popInstr (): Ops {
@@ -154,8 +156,8 @@ export class Thread {
   frames: Frame[]
   result: Value
 
-  constructor (name: string, env: Env, exp: Exp) { 
-    this.frames = [new Frame(name, env, exp)]
+  constructor (name: string, env: Env, blk: Blk) { 
+    this.frames = [new Frame(name, env, blk)]
     this.result = undefined
   }
 
@@ -167,8 +169,8 @@ export class Thread {
     return this.frames[this.frames.length - 1]
   }
 
-  push (name: string, env: Env, exp: Exp): void {
-    this.frames.push(new Frame(name, env, exp))
+  push (name: string, env: Env, blk: Blk): void {
+    this.frames.push(new Frame(name, env, blk))
   }
 
   pop (): void {

@@ -11,12 +11,12 @@ export class Machine {
   err: ErrorChannel
   mainThread: L.Thread
 
-  constructor (builtinLibs: Map<string, [string, L.Value][]>, env: L.Env, exp: L.Exp, out: OutputChannel, err: ErrorChannel, maxCallStackDepth = 10000) {
+  constructor (builtinLibs: Map<string, [string, L.Value][]>, env: L.Env, blk: L.Blk, out: OutputChannel, err: ErrorChannel, maxCallStackDepth = 10000) {
     this.builtinLibs = builtinLibs
     this.out = out
     this.err = err
     this.maxCallStackDepth = maxCallStackDepth
-    this.mainThread = new L.Thread('##main##', env, exp)
+    this.mainThread = new L.Thread('##main##', env, blk)
   }
 
   isFinished (): boolean {
@@ -135,7 +135,7 @@ export class Machine {
             fn.params.forEach((x, i) => {
               current.env.set(x, args[i])
             })
-            current.pushExp(fn.code)
+            current.pushBlk(fn.code)
           } else {
             thread.push(
               fn.name ?? '##anonymous##',
@@ -157,9 +157,9 @@ export class Machine {
         const bindings = Machine.tryMatch(scrutinee, instr.pattern)
         if (bindings) {
           current.env = current.env.extend(...bindings)
-          current.pushExp(instr.ifB)
+          current.pushBlk(instr.ifB)
         } else {
-          current.pushExp(instr.elseB)
+          current.pushBlk(instr.elseB)
         }
         break
       }

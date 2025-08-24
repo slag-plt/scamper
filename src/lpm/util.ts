@@ -21,11 +21,9 @@ export const isChar = (v: L.Value): v is L.Char => isTaggedObject(v) && v[L.scam
 export const isStruct = (v: L.Value): v is L.Struct => isTaggedObject(v) && v[L.scamperTag] === 'struct'
 export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
 
-
-
 ///// Constructors /////////////////////////////////////////////////////////////
 
-export const mkClosure = (params: L.Id[], code: L.Exp, env: L.Env, call: (...args: any) => any, name?: L.Id): L.Closure =>
+export const mkClosure = (params: L.Id[], code: L.Blk, env: L.Env, call: (...args: any) => any, name?: L.Id): L.Closure =>
   ({ [L.scamperTag]: 'closure', params, code, env, call, name })
 export const mkChar = (v: string): L.Char => ({ [L.scamperTag]: 'char', value: v })
 export const mkSym = (v: string): symbol => Symbol(v)
@@ -41,9 +39,9 @@ export const mkStruct = (kind: string, fields: string[], values: L.Value[]): L.S
 export const mkLit = (value: L.Value): L.Lit => ({ tag: 'lit', value })
 export const mkVar = (name: string): L.Var => ({ tag: 'var', name })
 export const mkCtor = (name: string, fields: string[]): L.Ctor => ({ tag: 'ctor', name, fields })
-export const mkCls = (params: string[], body: L.Exp, name?: string): L.Cls => ({ tag: 'cls', params, body, name })
+export const mkCls = (params: string[], body: L.Blk, name?: string): L.Cls => ({ tag: 'cls', params, body, name })
 export const mkAp = (numArgs: number): L.Ap => ({ tag: 'ap', numArgs })
-export const mkMatch = (pattern: L.Pat, ifB: L.Exp, elseB: L.Exp): L.Match => ({ tag: 'match', pattern, ifB, elseB })
+export const mkMatch = (pattern: L.Pat, ifB: L.Blk, elseB: L.Blk): L.Match => ({ tag: 'match', pattern, ifB, elseB })
 export const mkDisp = (): L.Disp => ({ tag: 'disp' })
 export const mkRaise = (msg: string): L.Raise => ({ tag: 'raise', msg })
 export const mkPop = (): L.Pop => ({ tag: 'pop' })
@@ -76,9 +74,7 @@ export function getFieldsOfStruct (s: L.Struct): string[] {
 export const nameFn = (name: string, fn: Function): Function =>
   Object.defineProperty(fn, 'name', { value: name })
 
-/**
- * @return true if the two L.Values are structurally equal to each other.
- */
+/** @return true if the two L.Values are structurally equal to each other. */
 export function equals (v: L.Value, u: L.Value): boolean {
   // N.B., performing a strict equality check covers atomic L.Values and pointer
   // equality without the need for excessive identity checks. We reserve the
@@ -117,9 +113,7 @@ export function equals (v: L.Value, u: L.Value): boolean {
   }
 }
 
-/**
- * @returns the type of the given value as a string (for debugging purposes).
- */
+/** @returns the type of the given value as a string (for debugging purposes) */
 export function typeOf (v: L.Value): string {
   if (isNumber(v)) {
     return 'number'
@@ -141,10 +135,6 @@ export function typeOf (v: L.Value): string {
     return `char`
   } else if (isSym(v)) {
     return `symbol`
-  } else if (isPair(v)) {
-    return `pair`
-  } else if (isList(v)) {
-    return `list`
   } else if (isStruct(v)) {
     return `[Struct: ${v[L.structKind]}]`
   } else {
@@ -160,99 +150,5 @@ export function toString (v: L.Value) {
     return `<jsfunc: (${v.name})>`
   } else {
     return `${String(v)}`
-  }
-}
-
-///// Pairs and Lists //////////////////////////////////////////////////////////
-
-// N.B., We follow Clojure's lead and distinguish between pairs and lists
-// explicitly. While they are defined as algebraic datatypes, pairs and lists
-// are common enough that are "built-in" datatypes to the runtime.
-
-/**
- * A pair is an algebraic datatype with a first and second component.
- */
-export interface Pair extends L.Struct {
-  [L.scamperTag]: 'struct',
-  [L.structKind]: 'pair',
-  fst: L.Value,
-  snd: L.Value
-}
-
-/**
- * A (non-empty) cons cell is an algebraic datatype representing a non-empty list
- * with a head and tail. The tail, itself, must be a list.
- */
-export interface Cons extends L.Struct {
-  [L.scamperTag]: 'struct',
-  [L.structKind]: 'cons',
-  head: L.Value,
-  tail: L.Value
-}
-
-/** A list is either empty (null) or non-empty (cons) */
-export type List = null | Cons
-
-export const isPair = (v: L.Value): v is Pair => isStructKind<Pair>(v, 'pair')
-export const isList = (v: L.Value): v is List => v === null || isStructKind<Cons>(v, 'cons')
-
-export const mkPair = (fst: L.Value, snd: L.Value): Pair => ({
-  [L.scamperTag]: 'struct',
-  [L.structKind]: 'pair',
-  fst,
-  snd
-})
-
-export const mkCons = (head: L.Value, tail: List): Cons => {
-  if (!isList(tail)) {
-    throw new ScamperError('Runtime', 'The second argument to cons should be a list')
-  } else {
-    return {
-      [L.scamperTag]: 'struct',
-      [L.structKind]: 'cons',
-      head,
-      tail
-    }
-  }
-}
-
-/** @return a vector (array) representation of the input list. */
-export function listToVector (l: List): L.Value[] {
-  const ret: L.Value[] = []
-  let cur = l
-  while (cur !== null) {
-    ret.push(cur.fst)
-    cur = cur.snd as List
-  }
-  return ret
-}
-
-/** @return a list representation of the input vector (array). */
-export function vectorToList (arr: L.Value[]): List {
-  let ret: List = null
-  for (let i = arr.length - 1; i >= 0; i--) {
-    ret = mkCons(arr[i], ret)
-  }
-  return ret
-}
-
-export const mkList = (...values: L.Value[]): List => vectorToList(values)
-
-/** @returns the nth element of the list */
-export function listNth (n: number, l: List): L.Value {
-  if (n < 0) {
-    throw new ScamperError('Runtime', `Cannot access negative index ${n} in list`)
-  }
-  let cur = l
-  for (let i = 0; i < n; i++) {
-    if (cur === null) {
-      throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
-    }
-    cur = cur.snd as List
-  }
-  if (cur == null) {
-    throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
-  } else {
-    return cur.fst
   }
 }
