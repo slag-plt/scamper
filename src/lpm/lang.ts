@@ -1,3 +1,5 @@
+import { Range } from './range.js'
+
 ///// Runtime values ///////////////////////////////////////////////////////////
 
 /** The field name of Scamper objects denoting that object's runtime tag. */
@@ -127,25 +129,25 @@ export type Value =
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit    = { tag: 'lit', value: Value }
-export type Var    = { tag: 'var', name: string }
-export type Ctor   = { tag: 'ctor', name: string, fields: string[] }
-export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string }
-export type Ap     = { tag: 'ap', numArgs: number }
-export type Match  = { tag: 'match', branches: [Pat, Blk][] }
-export type Disp   = { tag: 'disp' }
-export type Import = { tag: 'import', name: string }
-export type Define = { tag: 'define', name: string }
-export type Raise  = { tag: 'raise', msg: string }
+export type Lit    = { tag: 'lit', value: Value, range: Range }
+export type Var    = { tag: 'var', name: string, range: Range }
+export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range }
+export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
+export type Ap     = { tag: 'ap', numArgs: number, range: Range }
+export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range }
+export type Disp   = { tag: 'disp', range: Range }
+export type Import = { tag: 'import', name: string, range: Range }
+export type Define = { tag: 'define', name: string, range: Range }
+export type Raise  = { tag: 'raise', msg: string, range: Range }
 export type PopS   = { tag: 'pops' }
 export type PopV   = { tag: 'popv' }
 export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Disp | Import | Define | Raise | PopS | PopV
 export type Blk    = Ops[]
 
-export type PWild  = { tag: 'pwild' }
-export type PLit   = { tag: 'plit', value: Value }
-export type PVar   = { tag: 'pvar', name: string }
-export type PCtor  = { tag: 'pctor', name: string, args: Pat[] }
+export type PWild  = { tag: 'pwild', range: Range }
+export type PLit   = { tag: 'plit', value: Value, range: Range }
+export type PVar   = { tag: 'pvar', name: string, range: Range }
+export type PCtor  = { tag: 'pctor', name: string, args: Pat[], range: Range }
 export type Pat    = PWild | PLit | PVar | PCtor
 
 /**

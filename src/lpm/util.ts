@@ -1,3 +1,4 @@
+import { Range } from './range.js'
 import * as L from './lang.js'
 
 ///// Predicates /////////////////////////////////////////////////////////////////
@@ -34,24 +35,24 @@ export const mkStruct = (kind: string, fields: string[], values: L.Value[]): L.S
 }
 
 // Op constructors
-export const mkLit = (value: L.Value): L.Lit => ({ tag: 'lit', value })
-export const mkVar = (name: string): L.Var => ({ tag: 'var', name })
-export const mkCtor = (name: string, fields: string[]): L.Ctor => ({ tag: 'ctor', name, fields })
-export const mkCls = (params: string[], body: L.Blk, name?: string): L.Cls => ({ tag: 'cls', params, body, name })
-export const mkAp = (numArgs: number): L.Ap => ({ tag: 'ap', numArgs })
-export const mkMatch = (branches: [L.Pat, L.Blk][]): L.Match => ({ tag: 'match', branches })
-export const mkDisp = (): L.Disp => ({ tag: 'disp' })
-export const mkDefine = (name: string): L.Define => ({ tag: 'define', name })
-export const mkImport = (name: string): L.Import => ({ tag: 'import', name })
-export const mkRaise = (msg: string): L.Raise => ({ tag: 'raise', msg })
+export const mkLit = (value: L.Value, range?: Range): L.Lit => ({ tag: 'lit', value, range: range ?? Range.none })
+export const mkVar = (name: string, range?: Range): L.Var => ({ tag: 'var', name, range: range ?? Range.none })
+export const mkCtor = (name: string, fields: string[], range?: Range): L.Ctor => ({ tag: 'ctor', name, fields, range: range ?? Range.none })
+export const mkCls = (params: string[], body: L.Blk, name?: string, range?: Range): L.Cls => ({ tag: 'cls', params, body, name, range: range ?? Range.none })
+export const mkAp = (numArgs: number, range?: Range): L.Ap => ({ tag: 'ap', numArgs, range: range ?? Range.none })
+export const mkMatch = (branches: [L.Pat, L.Blk][], range?: Range): L.Match => ({ tag: 'match', branches, range: range ?? Range.none })
+export const mkDisp = (range?: Range): L.Disp => ({ tag: 'disp', range: range ?? Range.none })
+export const mkDefine = (name: string, range?: Range): L.Define => ({ tag: 'define', name, range: range ?? Range.none })
+export const mkImport = (name: string, range?: Range): L.Import => ({ tag: 'import', name, range: range ?? Range.none })
+export const mkRaise = (msg: string, range?: Range): L.Raise => ({ tag: 'raise', msg, range: range ?? Range.none })
 export const mkPops = (): L.PopS => ({ tag: 'pops' })
 export const mkPopv = (): L.PopV => ({ tag: 'popv' })
 
 // Pattern constructors
-export const mkPWild = (): L.PWild => ({ tag: 'pwild' })
-export const mkPLit = (value: L.Value): L.PLit => ({ tag: 'plit', value })
-export const mkPVar = (name: string): L.PVar => ({ tag: 'pvar', name })
-export const mkPCtor = (name: string, args: L.Pat[]): L.PCtor => ({ tag: 'pctor', name, args })
+export const mkPWild = (range?: Range): L.PWild => ({ tag: 'pwild', range: range ?? Range.none })
+export const mkPLit = (value: L.Value, range?: Range): L.PLit => ({ tag: 'plit', value, range: range ?? Range.none })
+export const mkPVar = (name: string, range?: Range): L.PVar => ({ tag: 'pvar', name, range: range ?? Range.none })
+export const mkPCtor = (name: string, args: L.Pat[], range?: Range): L.PCtor => ({ tag: 'pctor', name, args, range: range ?? Range.none })
 
 ///// Utility Functions ////////////////////////////////////////////////////////
 
