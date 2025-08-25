@@ -1,14 +1,11 @@
-import { ScamperError } from './error.js'
 import * as L from './lang.js'
-
 
 ///// Predicates /////////////////////////////////////////////////////////////////
 
 export const isNumber = (v: L.Value): v is number => typeof v === 'number'
 export const isBoolean = (v: L.Value): v is boolean => typeof v === 'boolean'
 export const isString = (v: L.Value): v is string => typeof v === 'string'
-export const isSym = (v: L.Value): v is symbol => typeof v == 'symbol'
-export const isSymName = (v: L.Value, name: string): boolean => isSym(v) && Symbol.keyFor(v) === name
+export const isSymName = (v: L.Value, name: string): boolean => isSym(v) && v.value === name
 export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
 export const isArray = (v: L.Value): v is Array<L.Value> => Array.isArray(v)
@@ -18,6 +15,7 @@ export const isJsFunction = (v: L.Value): v is Function => typeof v === 'functio
 export const isClosure = (v: L.Value): v is L.Closure => isTaggedObject(v) && v[L.scamperTag] === 'closure'
 export const isFunction = (v: L.Value): v is L.ScamperFn => isJsFunction(v) || isClosure(v)
 export const isChar = (v: L.Value): v is L.Char => isTaggedObject(v) && v[L.scamperTag] === 'char'
+export const isSym = (v: L.Value): v is L.Sym  => isTaggedObject(v) && v[L.scamperTag] === 'sym'
 export const isStruct = (v: L.Value): v is L.Struct => isTaggedObject(v) && v[L.scamperTag] === 'struct'
 export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
 
@@ -26,7 +24,7 @@ export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T
 export const mkClosure = (params: L.Id[], code: L.Blk, env: L.Env, call: (...args: any) => any, name?: L.Id): L.Closure =>
   ({ [L.scamperTag]: 'closure', params, code, env, call, name })
 export const mkChar = (v: string): L.Char => ({ [L.scamperTag]: 'char', value: v })
-export const mkSym = (v: string): symbol => Symbol(v)
+export const mkSym = (v: string): L.Sym => ({ [L.scamperTag]: 'sym', value: v })
 export const mkStruct = (kind: string, fields: string[], values: L.Value[]): L.Struct => {
   const ret: L.Struct = { [L.scamperTag]: 'struct', [L.structKind]: kind }
   for (let i = 0; i < fields.length; i++) {
@@ -41,10 +39,13 @@ export const mkVar = (name: string): L.Var => ({ tag: 'var', name })
 export const mkCtor = (name: string, fields: string[]): L.Ctor => ({ tag: 'ctor', name, fields })
 export const mkCls = (params: string[], body: L.Blk, name?: string): L.Cls => ({ tag: 'cls', params, body, name })
 export const mkAp = (numArgs: number): L.Ap => ({ tag: 'ap', numArgs })
-export const mkMatch = (pattern: L.Pat, ifB: L.Blk, elseB: L.Blk): L.Match => ({ tag: 'match', pattern, ifB, elseB })
+export const mkMatch = (branches: [L.Pat, L.Blk][]): L.Match => ({ tag: 'match', branches })
 export const mkDisp = (): L.Disp => ({ tag: 'disp' })
+export const mkDefine = (name: string): L.Define => ({ tag: 'define', name })
+export const mkImport = (name: string): L.Import => ({ tag: 'import', name })
 export const mkRaise = (msg: string): L.Raise => ({ tag: 'raise', msg })
-export const mkPop = (): L.Pop => ({ tag: 'pop' })
+export const mkPops = (): L.PopS => ({ tag: 'pops' })
+export const mkPopv = (): L.PopV => ({ tag: 'popv' })
 
 // Pattern constructors
 export const mkPWild = (): L.PWild => ({ tag: 'pwild' })

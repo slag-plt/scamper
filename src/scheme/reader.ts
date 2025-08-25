@@ -1,13 +1,13 @@
-import { ICE, mkChar, mkList, mkSym, Range, ScamperError } from '../lpm/runtime.js'
+import * as L from '../lpm'
 import { mkSyntax, Syntax } from './ast.js'
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
 class Token {
   text: string
-  range: Range
+  range: L.Range
 
-  constructor (text: string, range: Range) {
+  constructor (text: string, range: L.Range) {
     this.text = text
     this.range = range
   }
@@ -83,7 +83,7 @@ class Tokenizer {
 
   beginTracking (): void {
     if (this.isTracking()) {
-      throw new ICE('parser.beginTracking', 'Already tracking a token')
+      throw new L.ICE('parser.beginTracking', 'Already tracking a token')
     } else {
       this.startIdx = this.idx
       this.startRow = this.row
@@ -98,11 +98,11 @@ class Tokenizer {
 
   emitToken (): Token {
     if (!this.isTracking()) {
-      throw new ICE('parser.emitToken', 'Not tracking a token')
+      throw new L.ICE('parser.emitToken', 'Not tracking a token')
     } else {
       const token = new Token(
         this.src.slice(this.startIdx, this.startIdx + this.tokenLen),
-        Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
+        L.Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx)
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -176,8 +176,8 @@ class Tokenizer {
       // NOTE: error is localized to the open quote to, presumably, the end of the
       // file. Depending on error reporting, it may make sense to report only the
       // starting quote or try to approx. where the string should end.
-      throw new ScamperError('Parser', 'Unterminated string literal.',
-        undefined, Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
+      throw new L.ScamperError('Parser', 'Unterminated string literal.',
+        undefined, L.Range.of(this.startRow, this.startCol, this.startIdx, this.endRow, this.endCol, this.endIdx))
     // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()
@@ -208,8 +208,8 @@ export function stringToTokens (src: string): Token[] {
 
 ///// Parsing //////////////////////////////////////////////////////////////////
 
-function puffRange(r: Range): Range {
-  return Range.of(
+function puffRange(r: L.Range): L.Range {
+  return L.Range.of(
     r.begin.line,
     r.begin.col === 1 ? r.begin.col : r.begin.col - 1,
     r.begin.col === 1 ? r.begin.idx : r.begin.idx - 1,
@@ -222,11 +222,11 @@ function puffRange(r: Range): Range {
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
 
-function parseStringLiteral (src: string, range: Range): string {
+function parseStringLiteral (src: string, range: L.Range): string {
   if (src.length === 0) {
-    throw new ICE('parseStringLiteral', 'Empty string literal (with no quote!)')
+    throw new L.ICE('parseStringLiteral', 'Empty string literal (with no quote!)')
   } else if (src[0] !== '"') {
-    throw new ScamperError('Parser', 'String literal must begin with a quote', undefined, range)
+    throw new L.ScamperError('Parser', 'String literal must begin with a quote', undefined, range)
   }
 
   let ret = ''
@@ -237,7 +237,7 @@ function parseStringLiteral (src: string, range: Range): string {
     // Escape characters require us to consume the next character
     } else if (src[i] === '\\') {
       if (i+1 >= src.length) {
-        throw new ScamperError('Parser', 'Escape character "\\" cannot occur at the end of a string.', undefined, range)
+        throw new L.ScamperError('Parser', 'Escape character "\\" cannot occur at the end of a string.', undefined, range)
       }
       const ch = src[i + 1]
       switch (ch) {
@@ -263,11 +263,11 @@ function parseStringLiteral (src: string, range: Range): string {
         default:
           // NOTE: Extended escape codes are currently not supported
           if (ch >= '0' && ch <= '9') {
-            throw new ScamperError('Parser', 'Octal escape codes not supported', undefined, range)
+            throw new L.ScamperError('Parser', 'Octal escape codes not supported', undefined, range)
           } else if (ch === 'x') {
-            throw new ScamperError('Parser', 'Hex escape codes not supported', undefined, range)
+            throw new L.ScamperError('Parser', 'Hex escape codes not supported', undefined, range)
           } else if (ch === 'u' || ch === 'U') {
-            throw new ScamperError('Parser', 'Unicode escape codes not supported', undefined, range)
+            throw new L.ScamperError('Parser', 'Unicode escape codes not supported', undefined, range)
           } else if (ch === '\n') {
             // Skip over newline characters but continue processing the literal
           }
@@ -312,19 +312,19 @@ export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
   } else if (text.startsWith('#\\')) {
     const escapedChar = text.slice(2)
     if (escapedChar.length === 1) {
-      return mkSyntax(mkChar(escapedChar), ['range', t.range])
+      return mkSyntax(L.mkChar(escapedChar), ['range', t.range])
     } else if (namedCharValues.has(escapedChar)) {
-      return mkSyntax(mkChar(namedCharValues.get(escapedChar)!), ['range', t.range])
+      return mkSyntax(L.mkChar(namedCharValues.get(escapedChar)!), ['range', t.range])
     } else {
-      throw new ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
+      throw new L.ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }
   } else {
     // TODO: ensure identifiers don't have invalid characters, i.e., #
     // Probably should be done in the lexer, not the parser...
     if (text.startsWith('_') && !wildAllowed) {
-      throw new ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, t.range)
+      throw new L.ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, t.range)
     }
-    return mkSyntax(mkSym(text), ['range', t.range])
+    return mkSyntax(L.mkSym(text), ['range', t.range])
   }
 }
 
@@ -337,20 +337,20 @@ export function parseValue (tokens: Token[]): Syntax {
     }
     if (tokens.length === 0) {
       // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-      throw new ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
+      throw new L.ScamperError('Parser', `Missing closing bracket for "${beg.text}"`, undefined, puffRange(beg.range))
     } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
-      throw new ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined, new Range(beg.range.begin, tokens[0].range.end))
+      throw new L.ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
+        undefined, new L.Range(beg.range.begin, tokens[0].range.end))
     } else {
       const end = tokens.shift()!
       return mkSyntax(
         // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
         // we ever allow '{' to imply an dictionary/object.
-        beg.text === '[' ? values : mkList(...values),
-        ['range', new Range(beg.range.begin, end.range.end)])
+        beg.text === '[' ? values : L.mkList(...values),
+        ['range', new L.Range(beg.range.begin, end.range.end)])
     }
   } else if (beg.text === "'") {
-    return mkSyntax(mkList(mkSym('quote'), parseValue(tokens)), ['range', beg.range])
+    return mkSyntax(L.mkList(L.mkSym('quote'), parseValue(tokens)), ['range', beg.range])
   } else {
     return parseSingle(beg, true)
   }

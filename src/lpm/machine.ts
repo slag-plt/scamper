@@ -5,17 +5,20 @@ import { OutputChannel, ErrorChannel } from './output.js'
 
 /** The Little Pattern Machine */
 export class Machine {
-  builtinLibs: Map<string, [string, L.Value][]>
+  builtinLibs: Map<string, L.Library>
   maxCallStackDepth: number
+  stepMatch: boolean
   out: OutputChannel
   err: ErrorChannel
   mainThread: L.Thread
 
-  constructor (builtinLibs: Map<string, [string, L.Value][]>, env: L.Env, blk: L.Blk, out: OutputChannel, err: ErrorChannel, maxCallStackDepth = 10000) {
+  constructor (builtinLibs: Map<string, L.Library>, env: L.Env, blk: L.Blk,
+               out: OutputChannel, err: ErrorChannel, maxCallStackDepth = 10000, stepMatch = false) {
     this.builtinLibs = builtinLibs
     this.out = out
     this.err = err
     this.maxCallStackDepth = maxCallStackDepth
+    this.stepMatch = stepMatch
     this.mainThread = new L.Thread('##main##', env, blk)
   }
 
@@ -154,12 +157,29 @@ export class Machine {
           throw new ICE('Machine.stepThread', 'Match requires at least one value')
         }
         const scrutinee = current.values.pop()!
-        const bindings = Machine.tryMatch(scrutinee, instr.pattern)
-        if (bindings) {
-          current.env = current.env.extend(...bindings)
-          current.pushBlk(instr.ifB)
+        if (instr.branches.length === 0) {
+          throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
+        }
+        if (this.stepMatch) {
+          const [pat, blk] = instr.branches[0]
+          instr.branches = instr.branches.slice(1)
+          const bindings = Machine.tryMatch(scrutinee, pat)
+          if (bindings) {
+            current.env = current.env.extend(...bindings)
+            current.pushBlk(blk)
+          } else {
+            current.pushBlk([instr])
+          }
         } else {
-          current.pushBlk(instr.elseB)
+          for (const [pat, blk] of instr.branches) {
+            const bindings = Machine.tryMatch(scrutinee, pat)
+            if (bindings) {
+              current.env = current.env.extend(...bindings)
+              current.pushBlk(blk)
+              return
+            }
+          }
+          throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
         }
         break
       }
@@ -171,13 +191,37 @@ export class Machine {
         this.out.send(current.values.pop()!)
         break
       }
+
+      case 'define': {
+        if (current.values.length === 0) {
+          throw new ICE('Machine.stepThread', 'Define requires at least one value')
+        }
+        current.env.set(instr.name, current.values.pop()!)
+        break
+      }
+
+      case 'import': {
+        if (this.builtinLibs.has(instr.name)) {
+          const lib = this.builtinLibs.get(instr.name)!
+          if (lib.initializer) { lib.initializer() }
+          for (const [name, value] of lib.lib) {
+            current.env.set(name, value)
+          }
+        }
+        break
+      }
       
       case 'raise': {
         throw new ScamperError('Runtime', instr.msg)
       }
       
-      case 'pop': {
+      case 'pops': {
         current.env = current.env.pop()
+        break
+      }
+
+      case 'popv': {
+        current.values.pop()
         break
       }
     }

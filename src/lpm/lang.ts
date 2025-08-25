@@ -47,6 +47,23 @@ export class Env {
   }
 }
 
+/** A library is a collection of importable top-level definitions. */
+export class Library {
+  lib: [string, Value][]
+  initializer: Function | undefined
+
+  constructor (initializer?: Function) {
+    this.lib = []
+    this.initializer = initializer
+  }
+  registerValue (name: string, v: Value, library: Library) {
+    if (typeof v === 'function') {
+      Object.defineProperty(v, 'name', { value: name })
+    }
+    library.lib.push([name, v])
+  }
+}
+
 /** Tagged objects are Scamper values with a queryable runtime identity. */
 export interface TaggedObject {
   [scamperTag]: string
@@ -68,6 +85,12 @@ export interface Closure extends TaggedObject {
 /** A char is a tagged object that captures a single character (a one-character string). */
 export interface Char extends TaggedObject {
   [scamperTag]: 'char',
+  value: string
+}
+
+/** A symbol is a tagged object representing an identifier. */
+export interface Sym extends TaggedObject {
+  [scamperTag]: 'sym',
   value: string
 }
 
@@ -99,28 +122,31 @@ export type Raw = object
 
 /** Values are the core datatype manipulated by LPM programs. */
 export type Value =
-  number | boolean | string | symbol |
-  null | undefined | Vector | TaggedObject | ScamperFn | Raw
+  number | boolean | string | null | undefined |
+  Vector | TaggedObject | ScamperFn | Raw
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit   = { tag: 'lit', value: Value }
-export type Var   = { tag: 'var', name: string }
-export type Ctor  = { tag: 'ctor', name: string, fields: string[] }
-export type Cls   = { tag: 'cls', params: string[], body: Blk, name?: string }
-export type Ap    = { tag: 'ap', numArgs: number }
-export type Match = { tag: 'match', pattern: Pat, ifB: Blk, elseB: Blk }
-export type Disp  = { tag: 'disp' }
-export type Raise = { tag: 'raise', msg: string }
-export type Pop   = { tag: 'pop' }
-export type Ops   = Lit | Var | Ctor | Cls | Ap | Match | Disp | Raise | Pop
-export type Blk   = Ops[]
+export type Lit    = { tag: 'lit', value: Value }
+export type Var    = { tag: 'var', name: string }
+export type Ctor   = { tag: 'ctor', name: string, fields: string[] }
+export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string }
+export type Ap     = { tag: 'ap', numArgs: number }
+export type Match  = { tag: 'match', branches: [Pat, Blk][] }
+export type Disp   = { tag: 'disp' }
+export type Import = { tag: 'import', name: string }
+export type Define = { tag: 'define', name: string }
+export type Raise  = { tag: 'raise', msg: string }
+export type PopS   = { tag: 'pops' }
+export type PopV   = { tag: 'popv' }
+export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Disp | Import | Define | Raise | PopS | PopV
+export type Blk    = Ops[]
 
-export type PWild = { tag: 'pwild' }
-export type PLit  = { tag: 'plit', value: Value }
-export type PVar  = { tag: 'pvar', name: string }
-export type PCtor = { tag: 'pctor', name: string, args: Pat[] }
-export type Pat   = PWild | PLit | PVar | PCtor
+export type PWild  = { tag: 'pwild' }
+export type PLit   = { tag: 'plit', value: Value }
+export type PVar   = { tag: 'pvar', name: string }
+export type PCtor  = { tag: 'pctor', name: string, args: Pat[] }
+export type Pat    = PWild | PLit | PVar | PCtor
 
 /**
  * A stack frame records all relevant to track the execution of a single function call.

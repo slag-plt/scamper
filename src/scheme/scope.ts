@@ -1,5 +1,5 @@
-import { ScamperError, Value } from '../lpm/runtime.js'
-import * as R from '../lpm/runtime.js'
+import { ScamperError, Value } from '../lpm'
+import * as L from '../lpm'
 import * as A from './ast.js'
 
 /**
@@ -22,7 +22,7 @@ function scopeCheckSingle (errors: ScamperError[], globals: string[], locals: st
   // to determine whether they are local or global. Global variables are left
   // as is. However, local variables are annotated with a 'local' metadata
   // field that contains their calculated De Brujin index.
-  if (R.isSym(uv)) {
+  if (L.isSym(uv)) {
     const name = uv.value
     const localIndex = getIndexOfLocal(locals, name)
     if (localIndex === -1) {
@@ -47,7 +47,7 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
     const localBase = locals.length
     const boundVars: string[] = params.map((v) => A.stripSyntax(v) as string)
     body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(R.mkList(R.mkSym('lambda'), R.mkList(...params), body), ['localBase', localBase], ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('lambda'), L.mkList(...params), body), ['localBase', localBase], ...metadata)
   } else if (A.isLet(v)) {
     let { bindings, body, metadata } = A.asLet(v)
     bindings = bindings.map(({ fst, snd, metadata }) => ({
@@ -56,32 +56,32 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
       metadata
     }))
     const localBase = locals.length
-    const boundVars: string[] = bindings.map(({ fst }) => (A.stripSyntax(fst) as R.Sym).value)
+    const boundVars: string[] = bindings.map(({ fst }) => (A.stripSyntax(fst) as L.Sym).value)
     body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(R.mkList(R.mkSym('let'), R.mkList(...bindings), body), ['localBase', localBase], ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('let'), L.mkList(...bindings), body), ['localBase', localBase], ...metadata)
   } else if (A.isBegin(v)) {
     let { values, metadata } = A.asBegin(v)
     values = values.map((v) => scopeCheckExpr(errors, globals, locals, v))
-    return A.mkSyntax(R.mkList(R.mkSym('begin'), ...values), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('begin'), ...values), ...metadata)
   } else if (A.isIf(v)) {
     const { guard, ifB, elseB, metadata } = A.asIf(v)
     const guardExpr = scopeCheckExpr(errors, globals, locals, guard)
     const ifExpr = scopeCheckExpr(errors, globals, locals, ifB)
     const elseExpr = scopeCheckExpr(errors, globals, locals, elseB)
-    return A.mkSyntax(R.mkList(R.mkSym('if'), guardExpr, ifExpr, elseExpr), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('if'), guardExpr, ifExpr, elseExpr), ...metadata)
   } else if (A.isMatch(v)) {
     // TODO: need to handle binders in the patterns... darn!
   } else if (A.isQuote(v)) {
     const { value, metadata } = A.asQuote(v)
     const body = scopeCheckExpr(errors, globals, locals, value)
-    return A.mkSyntax(R.mkList(R.mkSym('quote'), body), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('quote'), body), ...metadata)
   } else {
     const { values, metadata } = A.asApp(v)
-    return A.mkSyntax(R.mkList(...values.map((v) => scopeCheckExpr(errors, globals, locals, v))), ...metadata)
+    return A.mkSyntax(L.mkList(...values.map((v) => scopeCheckExpr(errors, globals, locals, v))), ...metadata)
   }
 }
 
-function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, R.Library>, globals: string[], v: Value): Value {
+function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Library>, globals: string[], v: Value): Value {
   if (A.isImport(v)) {
     const { name: ident, metadata } = A.asImport(v)
     const { name, metadata: nm } = A.asIdentifier(ident)
@@ -106,11 +106,11 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, R.Libr
       globals.push(A.stripSyntax(name) as string)
     }
     const body = scopeCheckExpr(errors, globals, [], value)
-    return A.mkSyntax(R.mkList(R.mkSym('define'), name, body), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('define'), name, body), ...metadata)
   } else if (A.isDisplay(v)) {
     const { value, metadata } = A.asDisplay(v)
     const body = scopeCheckExpr(errors, globals, [], value)
-    return A.mkSyntax(R.mkList(R.mkSym('display'), body), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('display'), body), ...metadata)
   } else if (A.isStruct(v)) {
     const { name, fields, metadata: _metadata } = A.asStruct(v)
     const { name: nameValue, metadata: nameMetadata } = A.asIdentifier(name)
@@ -132,7 +132,7 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, R.Libr
       const { name: fieldName, metadata: fieldMetadata } = A.asIdentifier(f)
       const getter = A.structFieldName(nameValue, fieldName)
       if (globals.includes(getter)) {
-        errors.push(new ScamperError('Parser',  `Global variable '${getter}' is already defined`, undefined, fieldMetadata.get('range')))
+        errors.push(new ScamperError('Parser', `Global variable '${getter}' is already defined`, undefined, fieldMetadata.get('range')))
       } else {
         globals.push(getter)
       }
@@ -143,7 +143,7 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, R.Libr
   }
 }
 
-export function scopeCheckProgram (builtinLibs: Map<string, R.Library>, vs: Value[]): { program: Value[], errors: ScamperError[] } {
+export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, vs: Value[]): { program: Value[], errors: ScamperError[] } {
   const errors: ScamperError[] = []
   const globals: string[] = []
   const program: Value[] = []
