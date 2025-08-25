@@ -1,13 +1,13 @@
 import { expect, test, describe } from "@jest/globals"
-import * as LPM from '../../src/lpm'
+import * as L from '../../src/lpm'
 import * as U from '../../src/lpm/util.js'
 import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output.js"
 
 // A stub builtin libraries map for testing purposes
-const builtinLibs: Map<string, [string, LPM.Value][]> = new Map()
+const builtinLibs: Map<string, L.Library> = new Map()
 
 const env = (() => {
-  const ret = new LPM.Env()
+  const ret = new L.Env()
   ret.set('+', ((a: number, b: number) => a + b))
   ret.set('-', ((a: number, b: number) => a - b))
   ret.set('*', ((a: number, b: number) => a * b))
@@ -15,13 +15,13 @@ const env = (() => {
   return ret
 })()
 
-function makeMachine (exp: LPM.Exp): [LPM.Machine, LoggingOutputChannel, LoggingErrorChannel] {
+function makeMachine (blk: L.Blk): [L.Machine, LoggingOutputChannel, LoggingErrorChannel] {
   const out = new LoggingOutputChannel()
   const err = new LoggingErrorChannel()
-  const machine = new LPM.Machine(
+  const machine = new L.Machine(
     builtinLibs,
     env,
-    exp,
+    blk,
     out,
     err
   )
@@ -44,7 +44,7 @@ describe('basic ops', () => {
   test('ctor', () => {
     const [machine, out, _] = makeMachine([U.mkLit('test'), U.mkLit(2), U.mkCtor('test-ctor', ['a', 'b']), U.mkDisp(), U.mkLit(undefined)])
     machine.evaluate()
-    const result = out.log[0] as LPM.Value
+    const result = out.log[0] as L.Value
     expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
   })
 
@@ -58,7 +58,7 @@ describe('basic ops', () => {
       U.mkLit(undefined)]
     )
     machine.evaluate()
-    const result = out.log[0] as LPM.Value
+    const result = out.log[0] as L.Value
     expect(result).toBe(2)
   })
 
@@ -80,7 +80,10 @@ describe('basic ops', () => {
     const elseBranch = [U.mkLit('not matched')]
     const [machine, out, _] = makeMachine([
       U.mkLit(42),
-      U.mkMatch(U.mkPLit(42), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPLit(42), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -93,7 +96,10 @@ describe('basic ops', () => {
     const elseBranch = [U.mkLit('not matched')]
     const [machine, out, _] = makeMachine([
       U.mkLit(42),
-      U.mkMatch(U.mkPLit(99), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPLit(99), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -106,7 +112,10 @@ describe('basic ops', () => {
     const elseBranch = [U.mkLit(0)]
     const [machine, out, _] = makeMachine([
       U.mkLit(5),
-      U.mkMatch(U.mkPVar('x'), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPVar('x'), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -119,7 +128,10 @@ describe('basic ops', () => {
     const elseBranch = [U.mkLit('never reached')]
     const [machine, out, _] = makeMachine([
       U.mkLit('anything'),
-      U.mkMatch(U.mkPWild(), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPWild(), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -140,10 +152,13 @@ describe('basic ops', () => {
 
   test('pop - environment restoration', () => {
     // Create a nested environment scenario
-    const innerBody = [U.mkVar('x'), U.mkDisp(), U.mkPop()]
+    const innerBody = [U.mkVar('x'), U.mkDisp(), U.mkPops()]
     const [machine, out, _] = makeMachine([
       U.mkLit(42),
-      U.mkMatch(U.mkPVar('x'), innerBody, [U.mkLit('fail')]),
+      U.mkMatch([
+        [U.mkPVar('x'), innerBody],
+        [U.mkPWild(), [U.mkLit('fail')]]
+      ]),
       U.mkLit('after pop'),
       U.mkDisp(),
       U.mkLit(undefined)
@@ -159,7 +174,10 @@ describe('pattern matching', () => {
     const elseBranch = [U.mkLit('not matched')]
     const [machine, out, _] = makeMachine([
       U.mkLit('any value'),
-      U.mkMatch(U.mkPWild(), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPWild(), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -172,7 +190,10 @@ describe('pattern matching', () => {
     const elseBranch = [U.mkLit('number not matched')]
     const [machine, out, _] = makeMachine([
       U.mkLit(123),
-      U.mkMatch(U.mkPLit(123), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPLit(123), ifBranch], 
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -185,7 +206,10 @@ describe('pattern matching', () => {
     const elseBranch = [U.mkLit('no match')]
     const [machine, out, _] = makeMachine([
       U.mkLit('hello'),
-      U.mkMatch(U.mkPVar('captured'), ifBranch, elseBranch),
+      U.mkMatch([
+        [U.mkPVar('captured'), ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
@@ -196,13 +220,16 @@ describe('pattern matching', () => {
   test('pctor - constructor pattern', () => {
     // First create a struct to match against
     const setupStruct = [U.mkLit(1), U.mkLit(2), U.mkCtor('test-struct', ['field1', 'field2'])]
-    const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2), U.mkPop()]
-    const elseBranch = [U.mkRaise('no match'), U.mkPop(), U.mkLit(undefined)]
+    const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2), U.mkPops()]
+    const elseBranch = [U.mkRaise('no match'), U.mkPops(), U.mkLit(undefined)]
     const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
     
     const [machine, out, _] = makeMachine([
       ...setupStruct,
-      U.mkMatch(pattern, ifBranch, elseBranch),
+      U.mkMatch([
+        [pattern, ifBranch],
+        [U.mkPWild(), elseBranch]
+      ]),
       U.mkDisp(),
       U.mkLit(undefined)
     ])
