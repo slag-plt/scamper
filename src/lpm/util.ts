@@ -145,11 +145,24 @@ export function typeOf (v: L.Value): string {
 }
 
 /** @return a generic string representation of value v. */
-export function toString (v: L.Value) {
+export function toString (v: L.Value): string {
   if (isClosure(v)) {
     return `<closure (${(v as L.Closure).params.join(' ')})>`
   } else if (typeof v === 'function') {
     return `<jsfunc: (${v.name})>`
+  } else if (isSym(v)) {
+    return `\`${v.value}`
+  } else if (isArray(v)) {
+    return `[${v.map(toString).join(', ')}]`
+  } else if (isStruct(v)) {
+    const name = v[L.structKind]
+    const fields = getFieldsOfStruct(v)
+    if (fields.length === 0) {
+      return `(${name})`
+    } else {
+      const args = fields.map((f) => toString(v[f])).join(' ')
+      return `(${name} ${args})`
+    }
   } else {
     return `${String(v)}`
   }

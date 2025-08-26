@@ -36,7 +36,7 @@ function lowerExpr (v: L.Value): L.Blk {
   } else if (A.isLambda(v)) {
     const { params, body, metadata: metadata } = A.asLambda(v)
     const blk = lowerExpr(body)
-    return [...blk, L.mkCls(params.map((v) => A.asIdentifier(v).name), blk, '##anonymous##', metadata.get('range'))]
+    return [L.mkCls(params.map((v) => A.asIdentifier(v).name), blk, '##anonymous##', metadata.get('range'))]
   } else if (A.isLet(v)) {
     const { bindings, body, metadata: metadata } = A.asLet(v)
     let ret = lowerExpr(body)

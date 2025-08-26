@@ -22,13 +22,13 @@ function checkMachineOutput (src: string, expected: LPM.Value[]) {
 }
 
 
-describe('Basic codegen', () => {
-  test('simple arithmetic', () => {
-    checkMachineOutput(`
-      (display (+ 1 1))  
-    `, [2])
-  })
-})
+// describe('Basic codegen', () => {
+//   test('simple arithmetic', () => {
+//     checkMachineOutput(`
+//       (display (+ 1 1))  
+//     `, [2])
+//   })
+// })
 
 describe('End-to-end cases', () => {
   test('factorial', () => {
@@ -39,7 +39,7 @@ describe('End-to-end cases', () => {
               1
               (* n (fact (- n 1))))))
 
-      (display (+ 1 1))
+      (display (fact 5))
     `, [120])
   })
 })

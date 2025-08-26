@@ -45,7 +45,7 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
   } else if (A.isLambda(v)) {
     let { params, body, metadata } = A.asLambda(v)
     const localBase = locals.length
-    const boundVars: string[] = params.map((v) => A.stripSyntax(v) as string)
+    const boundVars: string[] = params.map((v) => (A.stripSyntax(v) as L.Sym).value)
     body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
     return A.mkSyntax(L.mkList(L.mkSym('lambda'), L.mkList(...params), body), ['localBase', localBase], ...metadata)
   } else if (A.isLet(v)) {
@@ -99,13 +99,14 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
     }
     return v
   } else if (A.isDefine(v)) {
-    const { name, value, metadata } = A.asDefine(v)
-    if (globals.includes(A.stripSyntax(name) as string)) {
+    const { name: sym, value, metadata } = A.asDefine(v)
+    const name = (A.stripSyntax(sym) as L.Sym).value
+    if (globals.includes(name)) {
       errors.push(new ScamperError('Parser',  `Global variable '${name}' is already defined`, undefined, metadata.get('range')))
     } else {
-      globals.push(A.stripSyntax(name) as string)
+      globals.push(name)
     }
-    const body = scopeCheckExpr(errors, globals, [], value)
+    const body = scopeCheckExpr(errors, globals, [name], value)
     return A.mkSyntax(L.mkList(L.mkSym('define'), name, body), ...metadata)
   } else if (A.isDisplay(v)) {
     const { value, metadata } = A.asDisplay(v)

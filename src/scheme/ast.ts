@@ -102,7 +102,7 @@ export function asIdentifier (v: Value): { name: string, metadata: Metadata } {
   const { value, metadata } = unpackSyntax(v)
   v = value
   return {
-    name: (v as L.Sym).value,
+    name: L.isSym(v) ? v.value : v as string,
     metadata
   }
 }

@@ -40,7 +40,7 @@ export function expandExpr (v: L.Value): L.Value {
     return v
   } else if (A.isLambda(v)) {
     const { params, body, metadata } = A.asLambda(v)
-    return A.mkSyntax(L.mkList(params, expandExpr(body)), ...metadata)
+    return A.mkSyntax(L.mkList(L.mkSym('lambda'), L.vectorToList(params), expandExpr(body)), ...metadata)
   } else if (A.isLet(v)) {
     let { bindings, body, metadata } = A.asLet(v)
     bindings = bindings.map(({fst, snd, metadata }) => ({ fst, snd: expandExpr(snd), metadata }))
