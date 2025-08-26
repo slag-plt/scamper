@@ -4,12 +4,11 @@ import builtinLibs from '../../src/lib'
 import * as Scheme from '../../src/scheme'
 import * as LPM from '../../src/lpm'
 
-describe('Basic codegen', () => {
-  test('simple arithmetic', () => {
+function checkMachineOutput (src: string, expected: LPM.Value[]) {
     const out = new LPM.LoggingOutputChannel() 
     const err = new LPM.LoggingErrorChannel()
     const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(err, '(display (+ 1 1))')
+    const prog = Scheme.compile(err, src)
     expect(err.log).toEqual([])
     const machine = new LPM.Machine(
       builtinLibs,
@@ -19,6 +18,28 @@ describe('Basic codegen', () => {
       err
     )
     machine.evaluate()
-    expect(out.log).toEqual([2])
+    expect(out.log).toEqual(expected)
+}
+
+
+describe('Basic codegen', () => {
+  test('simple arithmetic', () => {
+    checkMachineOutput(`
+      (display (+ 1 1))  
+    `, [2])
+  })
+})
+
+describe('End-to-end cases', () => {
+  test('factorial', () => {
+    checkMachineOutput(`
+      (define fact
+        (lambda (n)
+          (if (zero? n)
+              1
+              (* n (fact (- n 1))))))
+
+      (display (+ 1 1))
+    `, [120])
   })
 })
