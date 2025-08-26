@@ -59,8 +59,8 @@ export function listToVector (l: List): L.Value[] {
   const ret: L.Value[] = []
   let cur = l
   while (cur !== null) {
-    ret.push(cur.fst)
-    cur = cur.snd as List
+    ret.push(cur.head)
+    cur = cur.tail as List
   }
   return ret
 }
@@ -86,11 +86,11 @@ export function listNth (n: number, l: List): L.Value {
     if (cur === null) {
       throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
     }
-    cur = cur.snd as List
+    cur = cur.tail as List
   }
   if (cur == null) {
     throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
   } else {
-    return cur.fst
+    return cur.head
   }
 }

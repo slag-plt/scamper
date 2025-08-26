@@ -116,7 +116,7 @@ export function isSpecialForm (v: Value, expected: string): boolean {
   if (!isApp(v)) { return false }
   const lst = stripSyntax(v) as L.List
   if (lst === null) { return false }
-  const head = stripSyntax(lst.fst)
+  const head = stripSyntax(lst.head)
   return L.isSym(head) && (head as L.Sym).value === expected
 }
 
@@ -138,7 +138,7 @@ export type Pair = { fst: Value, snd: Value, metadata: Metadata }
 function asPair (v: Value): Pair {
   const { value, metadata } = unpackSyntax(v)
   v = value
-  return { fst: L.listNth(1, v as L.List), snd: L.listNth(2, v as L.List), metadata }
+  return { fst: L.listNth(0, v as L.List), snd: L.listNth(1, v as L.List), metadata }
 }
 
 export function asApp (v: Value): { values: Value[], metadata: Metadata } {
@@ -154,8 +154,8 @@ export function asLambda (v: Value): { params: Value[], body: Value, metadata: M
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    params: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List),
-    body: L.listNth(3, v as L.List),
+    params: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List),
+    body: L.listNth(2, v as L.List),
     metadata
   }
 }
@@ -164,8 +164,8 @@ export function asLet (v: Value): { bindings: Pair[], body: Value, metadata: Met
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    bindings: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List).map(asPair),
-    body: L.listNth(3, v as L.List),
+    bindings: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List).map(asPair),
+    body: L.listNth(2, v as L.List),
     metadata
   }
 }
@@ -174,8 +174,8 @@ export function asLetStar (v: Value): { bindings: Pair[], body: Value, metadata:
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    bindings: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List).map(asPair),
-    body: L.listNth(3, v as L.List),
+    bindings: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List).map(asPair),
+    body: L.listNth(2, v as L.List),
     metadata
   }
 }
@@ -211,9 +211,9 @@ export function asIf (v: Value): { guard: Value, ifB: Value, elseB: Value, metad
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    guard: L.listNth(2, v as L.List),
-    ifB: L.listNth(3, v as L.List),
-    elseB: L.listNth(4, v as L.List),
+    guard: L.listNth(1, v as L.List),
+    ifB: L.listNth(2, v as L.List),
+    elseB: L.listNth(3, v as L.List),
     metadata
   }
 }
@@ -222,7 +222,7 @@ export function asCond (v: Value): { clauses: Pair[], metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    clauses: L.listToVector((v as L.Pair).snd as L.List).map(asPair),
+    clauses: L.listToVector((v as L.Pair).tail as L.List).map(asPair),
     metadata
   }
 }
@@ -231,8 +231,8 @@ export function asMatch (v: Value): { scrutinee: Value, clauses: Pair[], metadat
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    scrutinee: L.listNth(2, v as L.List),
-    clauses: L.listToVector(stripSyntax(L.listNth(3, v as L.List)) as L.List).map(asPair),
+    scrutinee: L.listNth(1, v as L.List),
+    clauses: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List).map(asPair),
     metadata
   }
 }
@@ -240,7 +240,7 @@ export function asMatch (v: Value): { scrutinee: Value, clauses: Pair[], metadat
 export function asQuote (v: Value): { value: Value, metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
-  return { value: L.listNth(2, v as L.List), metadata }
+  return { value: L.listNth(1, v as L.List), metadata }
 }
 
 export function asSection (v: Value): { values: Value[], metadata: Metadata } {
@@ -258,27 +258,27 @@ export const isStruct = (v: Value) => isSpecialForm(v, 'struct')
 export function asImport (v: Value): { name: Value, metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
-  return { name: L.listNth(2, v as L.List), metadata }
+  return { name: L.listNth(1, v as L.List), metadata }
 }
 
 export function asDefine (v: Value): { name: Value, value: Value, metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
-  return { name: L.listNth(2, v as L.List), value: L.listNth(3, v as L.List), metadata }
+  return { name: L.listNth(1, v as L.List), value: L.listNth(2, v as L.List), metadata }
 }
 
 export function asDisplay (v: Value): { value: Value, metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
-  return { value: L.listNth(2, v as L.List), metadata }
+  return { value: L.listNth(1, v as L.List), metadata }
 }
 
 export function asStruct (v: Value): { name: Value, fields: Value[], metadata: Metadata } {
   const { metadata, value } = unpackSyntax(v)
   v = value
   return {
-    name: L.listNth(2, v as L.List),
-    fields: L.listToVector(stripSyntax(L.listNth(3, v as L.List)) as L.List),
+    name: L.listNth(1, v as L.List),
+    fields: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List),
     metadata
   }
 }

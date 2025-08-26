@@ -171,6 +171,6 @@ export function expandStmt (v: L.Value): L.Value[] {
   }
 }
 
-export function scopeCheckProgram (vs: L.Value[]): L.Value[] {
+export function expandProgram (vs: L.Value[]): L.Value[] {
   return vs.flatMap(expandStmt)
 }
