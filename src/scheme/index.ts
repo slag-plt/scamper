@@ -1,11 +1,12 @@
 import * as L from '../lpm'
+import builtinLibs from '../lib'
 import { lowerProgram } from './codegen'
 import { expandProgram } from './expansion'
 import { stringToTokens, parseValues } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { checkSyntaxProgram } from './syntax.js'
 
-export function compile (builtinLibs: Map<string, L.Library>, err: L.ErrorChannel, src: string): L.Blk | undefined {
+export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   // Tokenization
   let tokens = undefined 
   try {
@@ -49,4 +50,12 @@ export function compile (builtinLibs: Map<string, L.Library>, err: L.ErrorChanne
 
   // Lowering/codegen
   return lowerProgram(program)
+}
+
+export function mkInitialEnv (): L.Env {
+  const env = new L.Env()
+  for (const [name, fn] of builtinLibs.get('prelude')!.lib) {
+    env.set(name, fn)
+  }
+  return env
 }

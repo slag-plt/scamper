@@ -84,7 +84,7 @@ function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: stri
 function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Library>, globals: string[], v: Value): Value {
   if (A.isImport(v)) {
     const { name: ident, metadata } = A.asImport(v)
-    const { name, metadata: nm } = A.asIdentifier(ident)
+    const { name, metadata: _nm } = A.asIdentifier(ident)
     if (!builtinLibs.has(name)) {
       errors.push(new ScamperError('Parser', `Library '${name}' is not defined`, undefined, metadata.get('range')))
     } else {
@@ -147,6 +147,9 @@ export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, vs: Valu
   const errors: ScamperError[] = []
   const globals: string[] = []
   const program: Value[] = []
+  for (const [name, _] of builtinLibs.get('prelude')!.lib) {
+    globals.push(name)
+  }
   for (const v of vs) {
     program.push(scopeCheckStmt(errors, builtinLibs, globals, v))
   }

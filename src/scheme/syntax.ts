@@ -221,7 +221,7 @@ export function checkSyntaxStmt (errors: L.ScamperError[], v: L.Value) {
   } else {
     const arr = L.listToVector(v as L.List)
     if (arr.length > 0) {
-      let { value: hv, metadata: hm } = unpackSyntax(arr[0])
+      let { value: hv, metadata: _hm } = unpackSyntax(arr[0])
       if (L.isSym(hv)) {
         const head = (hv as L.Sym).value
         switch (head) {

@@ -91,5 +91,8 @@ function lowerStmt (v: L.Value): L.Blk {
 }
 
 export function lowerProgram (v: L.Value[]): L.Blk {
-  return v.flatMap(lowerStmt)
+  const ret = v.flatMap(lowerStmt)
+  // N.B., the main block must return a value to successfully exit
+  ret.push(L.mkLit(0))
+  return ret
 }

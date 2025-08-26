@@ -2,7 +2,7 @@ import {Env, ParserOutput, Prog} from './lang.js'
 import * as Parser from './parser.js'
 import * as Sem from './sem.js'
 
-import builtinLibs from './lib/builtin.js'
+import builtinLibs from './lib/index.js'
 import Prelude from './lib/prelude.js'
 
 export type ScamperOptions = {

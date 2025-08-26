@@ -70,7 +70,7 @@ export class Machine {
     const current = thread.getCurrentFrame()
     if (current.isFinished()) {
       if (current.values.length !== 1) {
-        throw new ICE('Machine.stepThread', 'Thread did not finish with exactly one value on the stack')
+        throw new ICE('Machine.stepThread', `Thread must finish with exactly one value on the stack, finished with ${current.values.length} instead`)
       }
       const ret = current.values.pop()
       thread.pop()
