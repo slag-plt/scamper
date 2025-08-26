@@ -236,4 +236,36 @@ describe('pattern matching', () => {
     machine.evaluate()
     expect(out.log).toEqual([3])
   })
+
+  test('factorial', () => {
+    const factorial = [
+      U.mkCls(
+        ['n'], [
+          U.mkVar('n'),
+          U.mkMatch([
+            [U.mkPLit(0), [U.mkLit(1)]],
+            [U.mkPWild(), [
+              U.mkVar('*'),
+                U.mkVar('n'),
+                U.mkVar('fact'),
+                  U.mkVar('-'),
+                  U.mkVar('n'),
+                  U.mkLit(1),
+                  U.mkAp(2),
+                U.mkAp(1),
+              U.mkAp(2)
+            ]]
+      ])], 'fact')]
+    const [machine, out, _] = makeMachine([
+      ...factorial,
+      U.mkDefine('fact'),
+      U.mkVar('fact'),
+      U.mkLit(5),
+      U.mkAp(1),
+      U.mkDisp(),
+      U.mkLit(undefined)
+    ])
+    machine.evaluate()
+    expect(out.log).toEqual([120])
+  })
 })
