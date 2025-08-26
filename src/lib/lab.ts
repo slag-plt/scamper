@@ -1,8 +1,8 @@
-import * as R from '../lpm/runtime.js'
+import * as L from '../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
-const Lab: R.Library = new R.Library()
+const Lab: L.Library = new L.Library()
 
 function title (text: string) {
   checkContract(arguments, contract('title', [C.string]))

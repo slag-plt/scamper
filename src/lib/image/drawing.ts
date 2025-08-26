@@ -1,27 +1,27 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import * as R from '../../lpm/runtime.js'
+import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
 
-export const lib: R.Library = new R.Library()
+export const lib: L.Library = new L.Library()
 
 /***** Core Functions *********************************************************/
 
 const modeS: C.Spec = {
   predicate: (v: any) => v === 'solid' || v === 'outline',
-  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${L.typeOf(actual)}`
 }
 
 const alignVS: C.Spec = {
   predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${L.typeOf(actual)}`
 }
 
 const alignHS: C.Spec = {
   predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${L.typeOf(actual)}`
 }
 
 type Mode = 'solid' | 'outline'
@@ -29,12 +29,12 @@ export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | O
 
 function drawingQ (v: any): boolean {
   checkContract(arguments, contract('image?', [C.any]))
-  return R.isStructKind(v, 'ellipse') || R.isStructKind(v, 'rectangle') ||
-         R.isStructKind(v, 'triangle') || R.isStructKind(v, 'path') ||
-         R.isStructKind(v, 'beside') || R.isStructKind(v, 'above') ||
-         R.isStructKind(v, 'overlay') || R.isStructKind(v, 'overlayOffset') ||
-         R.isStructKind(v, 'rotate') || R.isStructKind(v, 'withDash') ||
-         R.isStructKind(v, 'text')
+  return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
+         L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
+         L.isStructKind(v, 'beside') || L.isStructKind(v, 'above') ||
+         L.isStructKind(v, 'overlay') || L.isStructKind(v, 'overlayOffset') ||
+         L.isStructKind(v, 'rotate') || L.isStructKind(v, 'withDash') ||
+         L.isStructKind(v, 'text')
 }
 lib.registerValue('image?', drawingQ)
 // TODO: in the new 151 library, images generalize to more than just shapes!
@@ -45,11 +45,11 @@ lib.registerValue('shape?', drawingQ)
 
 const drawingS = {
   predicate: drawingQ,
-  errorMsg: (actual: any) => `expected a drawing, received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a drawing, received ${L.typeOf(actual)}`
 }
 
-interface Ellipse extends R.Struct {
-  [R.structKind]: 'ellipse',
+interface Ellipse extends L.Struct {
+  [L.structKind]: 'ellipse',
   width: number,
   height: number,
   mode: Mode,
@@ -57,7 +57,7 @@ interface Ellipse extends R.Struct {
 }
 
 const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ellipse => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'ellipse',
+  [L.scamperTag]: 'struct', [L.structKind]: 'ellipse',
   width, height, mode, color: colorToRgb(color)
 })
 
@@ -73,8 +73,8 @@ function circle (radius: number, mode: Mode, color: any): Ellipse {
 }
 lib.registerValue('circle', circle)
 
-interface Rectangle extends R.Struct {
-  [R.structKind]: 'rectangle',
+interface Rectangle extends L.Struct {
+  [L.structKind]: 'rectangle',
   width: number,
   height: number,
   mode: Mode,
@@ -82,7 +82,7 @@ interface Rectangle extends R.Struct {
 }
 
 const rectanglePrim = (width: number, height: number, mode: Mode, color: any): Rectangle => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'rectangle',
+  [L.scamperTag]: 'struct', [L.structKind]: 'rectangle',
   width, height, mode, color: colorToRgb(color)
 })
 
@@ -98,8 +98,8 @@ function square (length: number, mode: Mode, color: any): Rectangle {
 }
 lib.registerValue('square', square)
 
-interface Triangle extends R.Struct {
-  [R.structKind]: 'triangle',
+interface Triangle extends L.Struct {
+  [L.structKind]: 'triangle',
   width: number,
   height: number,
   mode: Mode,
@@ -107,7 +107,7 @@ interface Triangle extends R.Struct {
 }
 
 const trianglePrim = (width: number, height: number, mode: Mode, color: any): Triangle => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'triangle',
+  [L.scamperTag]: 'struct', [L.structKind]: 'triangle',
   width, height, mode, color: colorToRgb(color)
 })
 
@@ -123,8 +123,8 @@ function isoscelesTriangle (width: number, height: number, mode: Mode, color: an
 }
 lib.registerValue('isosceles-triangle', isoscelesTriangle)
 
-interface Path extends R.Struct {
-  [R.structKind]: 'path',
+interface Path extends L.Struct {
+  [L.structKind]: 'path',
   width: number,
   height: number,
   points: [number, number][],
@@ -133,20 +133,20 @@ interface Path extends R.Struct {
 }
 
 const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: any): Path => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'path',
+  [L.scamperTag]: 'struct', [L.structKind]: 'path',
   width, height, points, mode, color: colorToRgb(color)
 })
 
-function path (width: number, height: number, points: R.List, mode: Mode, color: any): Path {
+function path (width: number, height: number, points: L.List, mode: Mode, color: any): Path {
   checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
   return pathPrim(width, height,
-    R.listToVector(points).map((p: R.Value) => [(p as R.Pair).fst, (p as R.Pair).snd]) as [number, number][],
+    L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
     mode, color)
 }
 lib.registerValue('path', path)
 
-interface Beside extends R.Struct {
-  [R.structKind]: 'beside',
+interface Beside extends L.Struct {
+  [L.structKind]: 'beside',
   align: string,
   width: number,
   height: number,
@@ -154,7 +154,7 @@ interface Beside extends R.Struct {
 }
 
 const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'beside',
+  [L.scamperTag]: 'struct', [L.structKind]: 'beside',
   align,
   width: drawings.reduce((acc, d) => acc + d.width, 0),
   height: Math.max(...drawings.map(d => d.height)),
@@ -173,8 +173,8 @@ function besideAlign (align: string, ...drawings: Drawing[]): Beside {
 }
 lib.registerValue('beside/align', besideAlign)
 
-interface Above extends R.Struct {
-  [R.structKind]: 'above',
+interface Above extends L.Struct {
+  [L.structKind]: 'above',
   align: string,
   width: number,
   height: number,
@@ -182,7 +182,7 @@ interface Above extends R.Struct {
 }
 
 const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'above',
+  [L.scamperTag]: 'struct', [L.structKind]: 'above',
   align,
   width: Math.max(...drawings.map(d => d.width)),
   height: drawings.reduce((acc, d) => acc + d.height, 0),
@@ -201,8 +201,8 @@ function aboveAlign (align: string, ...drawings: Drawing[]): Above {
 }
 lib.registerValue('above/align', aboveAlign)
 
-interface Overlay extends R.Struct {
-  [R.structKind]: 'overlay',
+interface Overlay extends L.Struct {
+  [L.structKind]: 'overlay',
   xAlign: string,
   yAlign: string,
   width: number,
@@ -211,7 +211,7 @@ interface Overlay extends R.Struct {
 }
 
 const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay => ({
-  [R.scamperTag]: 'struct', [R.structKind]: 'overlay',
+  [L.scamperTag]: 'struct', [L.structKind]: 'overlay',
   xAlign,
   yAlign,
   width: Math.max(...drawings.map(d => d.width)),
@@ -231,8 +231,8 @@ function overlayAlign (xAlign: string, yAlign: string, ...drawings: Drawing[]): 
 }
 lib.registerValue('overlay/align', overlayAlign)
 
-interface OverlayOffset extends R.Struct {
-  [R.structKind]: 'overlayOffset',
+interface OverlayOffset extends L.Struct {
+  [L.structKind]: 'overlayOffset',
   dx: number,
   dy: number,
   width: number,
@@ -243,7 +243,7 @@ interface OverlayOffset extends R.Struct {
 
 function overlayOffsetPrim (dx: number, dy: number, width: number, height: number, d1: Drawing, d2: Drawing): OverlayOffset {
   return {
-    [R.scamperTag]: 'struct', [R.structKind]: 'overlayOffset',
+    [L.scamperTag]: 'struct', [L.structKind]: 'overlayOffset',
     dx,
     dy,
     width,
@@ -283,8 +283,8 @@ function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): Overl
 }
 lib.registerValue('overlay/offset', overlayOffset)
 
-interface Rotate extends R.Struct {
-  [R.structKind]: 'rotate',
+interface Rotate extends L.Struct {
+  [L.structKind]: 'rotate',
   width: number,
   height: number,
   dx: number,
@@ -295,7 +295,7 @@ interface Rotate extends R.Struct {
 
 function getDrawingPoints (drawing: Drawing): [number, number][] {
   let points: [number, number][] = []
-  switch(drawing[R.structKind]) {
+  switch(drawing[L.structKind]) {
     case 'ellipse':
       const n = 100;
       for (let i = 1; i < n; i++) {
@@ -435,7 +435,7 @@ function rotate (angle: number, drawing: Drawing): Rotate {
   checkContract(arguments, contract('rotate', [C.number, drawingS]))
   const dims = calculateRotatedBox(getDrawingPoints(drawing), angle)
   return {
-    [R.scamperTag]: 'struct', [R.structKind]: 'rotate',
+    [L.scamperTag]: 'struct', [L.structKind]: 'rotate',
     width: dims.width,
     height: dims.height,
     dx: dims.dx,
@@ -446,8 +446,8 @@ function rotate (angle: number, drawing: Drawing): Rotate {
 }
 lib.registerValue('rotate', rotate)
 
-interface WithDash extends R.Struct {
-  [R.structKind]: 'withDash',
+interface WithDash extends L.Struct {
+  [L.structKind]: 'withDash',
   dashSpec: number[],
   drawing: Drawing,
   width: number,
@@ -457,7 +457,7 @@ interface WithDash extends R.Struct {
 function withDash (dashSpec: number[], drawing: Drawing): WithDash {
   checkContract(arguments, contract('with-dash', [C.list, drawingS])) 
   return {
-    [R.scamperTag]: 'struct', [R.structKind]: 'withDash',
+    [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
     dashSpec,
     drawing,
     width: drawing.width,
@@ -465,8 +465,8 @@ function withDash (dashSpec: number[], drawing: Drawing): WithDash {
   }
 }
 lib.registerValue('with-dash', withDash)
-interface DText extends R.Struct {
-  [R.structKind]: 'text',
+interface DText extends L.Struct {
+  [L.structKind]: 'text',
   width: number,
   height: number,
   text: string,
@@ -478,7 +478,7 @@ interface DText extends R.Struct {
 function textPrim (width: number, height: number, text: string,
     font: Font, size: number, color: any): DText {
   return {
-    [R.scamperTag]: 'struct', [R.structKind]: 'text',
+    [L.scamperTag]: 'struct', [L.structKind]: 'text',
     width, height, text, size, color: colorToRgb(color), font
   }
 }
@@ -487,12 +487,12 @@ function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
   checkContract(arguments, contract('text', [C.string, C.nonneg, colorS], C.any))
   let f: Font = font('Arial')
   if (rest.length > 1) {
-    throw new R.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
+    throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
   } else if (rest.length == 1 && fontS.predicate(rest[0])) {
     if (fontS.predicate(rest[0])) {
       f = rest[0] as Font
     } else {
-      throw new R.ScamperError('Runtime', fontS.errorMsg(rest[0]))
+      throw new L.ScamperError('Runtime', fontS.errorMsg(rest[0]))
     }
   }
 
@@ -565,7 +565,7 @@ function outlinedIsoscelesTriangle(width: number, height: number, color: any): T
 
 const imageS: C.Spec = {
   predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an image, received ${L.typeOf(actual)}`
 }
 
 
@@ -589,7 +589,7 @@ function imageHeight (drawing: Drawing): number {
 
 function imageColor (drawing: Drawing): Rgb {
   checkContract(arguments, contract('image-color', [drawingS]))
-  switch(drawing[R.structKind]) {
+  switch(drawing[L.structKind]) {
     case 'ellipse':
     case 'rectangle':
     case 'triangle':
@@ -618,7 +618,7 @@ function imageColor (drawing: Drawing): Rgb {
 
 function imageRecolor (drawing: Drawing, color: any): Drawing {
   checkContract(arguments, contract('image-recolor', [drawingS, colorS]))
-  switch(drawing[R.structKind]) {
+  switch(drawing[L.structKind]) {
     case 'ellipse':
       return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
     case 'rectangle':
@@ -687,7 +687,7 @@ lib.registerValue('drawing->image', drawingToImage)
 
 export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
-  switch (drawing[R.structKind]) {
+  switch (drawing[L.structKind]) {
     case 'ellipse': {
       ctx.fillStyle = rgbToString(drawing.color)
       ctx.strokeStyle = rgbToString(drawing.color)

@@ -25,7 +25,7 @@ export interface Cons extends L.Struct {
   [L.scamperTag]: 'struct',
   [L.structKind]: 'cons',
   head: L.Value,
-  tail: L.Value
+  tail: List
 }
 
 /** A list is either empty (null) or non-empty (cons) */

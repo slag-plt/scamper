@@ -1,12 +1,12 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { Value } from '../lang.js'
-import * as R from '../lpm/runtime.js'
+import * as L from '../lpm'
 import { callFunction } from '../sem.js'
 
 import { NoteHandlers, NoteMsg } from './music.js'
 
-const lib: R.Library = new R.Library()
+const lib: L.Library = new L.Library()
 
 /***** Reactive Components ****************************************************/
 

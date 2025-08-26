@@ -1,7 +1,7 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
 import * as Render from '../../display.js'
-import * as R from '../../lpm/runtime.js'
+import * as L from '../../lpm'
 
 import * as colorsys from 'colorsys'
 
@@ -22,32 +22,32 @@ function color (r: number, g: number, b: number, a: number): Rgb {
 
 /** Converts between various representations of color in Scamper. */
 export function colorToRgb (v: any): Rgb {
-  if (R.isStructKind(v, 'rgba')) {
+  if (L.isStructKind(v, 'rgba')) {
     return v as Rgb
   } else if (typeof v === 'string') {
     return colorNameToRgb(v)
-  } else if (R.isStructKind(v, 'hsv')) {
+  } else if (L.isStructKind(v, 'hsv')) {
     return hsvToRgb(v as Hsv)
   } else {
-    throw new R.ScamperError('Runtime', `Shapes expect a valid color, received a: ${R.typeOf(v)}`)
+    throw new L.ScamperError('Runtime', `Shapes expect a valid color, received a: ${L.typeOf(v)}`)
   }
 }
 
 export function colorQ (v: any): boolean {
   return (typeof v === 'string' && isColorName(v)) ||
-    R.isStructKind(v, 'rgba') ||
-    R.isStructKind(v, 'hsv')
+    L.isStructKind(v, 'rgba') ||
+    L.isStructKind(v, 'hsv')
 }
 
 export const colorS: C.Spec = {
   predicate: colorQ,
-  errorMsg: (actual: any) => `expected a color, received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a color, received ${L.typeOf(actual)}`
 }
 
 /***** RGB(A) Colors **********************************************************/
 
-export interface Rgb extends R.Struct {
-  [R.structKind]: 'rgba'
+export interface Rgb extends L.Struct {
+  [L.structKind]: 'rgba'
   red: number
   green: number
   blue: number
@@ -61,30 +61,30 @@ function isRgbComponent (n: number): boolean {
 
 export function isRgb (v: any): boolean {
   checkContract(arguments, contract('rgb?', [C.any]))
-  return R.isStructKind(v, 'rgba')
+  return L.isStructKind(v, 'rgba')
 }
 
 const rgbNumS: C.Spec = {
   predicate: (v: any) => typeof v === 'number' && isRgbComponent(v),
-  errorMsg: (actual: any) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? actual : R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? actual : L.typeOf(actual)}`
 }
 
 const rgbS: C.Spec = {
   predicate: isRgb,
-  errorMsg: (actual: any) => `expected an RGB value, received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an RGB value, received ${L.typeOf(actual)}`
 }
 
 export function rgb(...args: number[]): Rgb {
   checkContract(arguments, contract('rgb', [], rgbNumS))
   if (args.length !== 3 && args.length !== 4) {
-    throw new R.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
   }
   const red = Math.min(args[0], 255)
   const green = Math.min(args[1], 255)
   const blue = Math.min(args[2], 255)
   const alpha = args[3] ?? 255
   return ({
-    [R.scamperTag]: 'struct', [R.structKind]: 'rgba',
+    [L.scamperTag]: 'struct', [L.structKind]: 'rgba',
     red, green, blue, alpha
   })
 }
@@ -269,12 +269,12 @@ function isColorName(name: string): boolean {
   return namedCssColors.has(name.toLowerCase())
 }
 
-function allColorNames(): R.List {
+function allColorNames(): L.List {
   checkContract(arguments, contract('all-color-names', []))
-  return R.mkList(...Array.from(namedCssColors.keys()))
+  return L.mkList(...Array.from(namedCssColors.keys()))
 }
 
-function findColors (name: string): R.List {
+function findColors (name: string): L.List {
   checkContract(arguments, contract('find-colors', [C.string]))
   const results = []
   for (const [key, _value] of namedCssColors) {
@@ -282,7 +282,7 @@ function findColors (name: string): R.List {
       results.push(key)
     }
   }
-  return R.mkList(...results)
+  return L.mkList(...results)
 }
 
 /***** Color Strings **********************************************************/
@@ -311,8 +311,8 @@ export function rgbToString (rgba: Rgb): string {
 
 /***** HSV colors *************************************************************/
 
-interface Hsv extends R.Struct {
-  [R.structKind]: 'hsv'
+interface Hsv extends L.Struct {
+  [L.structKind]: 'hsv'
   hue: number,
   saturation: number,
   value: number,
@@ -320,12 +320,12 @@ interface Hsv extends R.Struct {
 }
 
 function isHsv(v: any): boolean {
-  return R.isStructKind(v, 'hsv')
+  return L.isStructKind(v, 'hsv')
 }
 
 const hsvS: C.Spec = {
   predicate: isHsv,
-  errorMsg: (actual: any) => `expected an hsv value but received ${R.typeOf(actual)}`
+  errorMsg: (actual: any) => `expected an hsv value but received ${L.typeOf(actual)}`
 }
 
 // hsv
@@ -333,30 +333,30 @@ const hsvS: C.Spec = {
 function hsv(...args: number[]): Hsv {
   checkContract(arguments, contract('hsv', [], C.number))
   if (args.length !== 3 && args.length !== 4) {
-    throw new R.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
   }
   
   if (args[0] < 0 || args[0] > 360) {
-    throw new R.ScamperError('Runtime', `hsv: expects hue to be in the an angle (0–360), but got ${args[0]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects hue to be in the an angle (0–360), but got ${args[0]}`)
   }
   const hue = args[0]
 
   if (args[1] < 0 || args[1] > 100) {
-    throw new R.ScamperError('Runtime', `hsv: expects saturation to be a percentage (0–100), but got ${args[1]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects saturation to be a percentage (0–100), but got ${args[1]}`)
   }
   const saturation = args[1]
 
   if (args[2] < 0 || args[2] > 100) {
-    throw new R.ScamperError('Runtime', `hsv: expects value to be a percentage (0–100), but got ${args[2]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects value to be a percentage (0–100), but got ${args[2]}`)
   }
   const value = args[2]
 
   if (args[3] !== undefined && (args[3] < 0 || args[3] > 255)) {
-    throw new R.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${args[3]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${args[3]}`)
   }
   const alpha = args[3] ?? 255
   return ({
-    [R.scamperTag]: 'struct', [R.structKind]: 'hsv',
+    [L.scamperTag]: 'struct', [L.structKind]: 'hsv',
     hue, saturation, value, alpha
   })
 }
@@ -449,7 +449,7 @@ function hsvToString(hsv: Hsv): string {
 export function colorNameToRgb(name: string): Rgb {
   checkContract(arguments, contract('color-name->rgb', [C.string]))
   if (!isColorName(name)) {
-    throw new R.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
+    throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
   }
   return namedCssColors.get(name)!
 }
@@ -651,7 +651,7 @@ Render.addCustomWebRenderer(isHsv, renderHsv)
 
 /***** Exports ****************************************************************/
 
-export const lib: R.Library = new R.Library()
+export const lib: L.Library = new L.Library()
 
 // Generic colors
 lib.registerValue('color', color)

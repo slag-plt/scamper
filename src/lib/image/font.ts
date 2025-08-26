@@ -1,11 +1,11 @@
 import { checkContract, contract } from '../../contract.js'
 import * as C from '../../contract.js'
-import * as R from '../../lpm/runtime.js'
+import * as L from '../../lpm'
 
-export const lib: R.Library = new R.Library()
+export const lib: L.Library = new L.Library()
 
-export interface Font extends R.Struct {
-  [R.structKind]: 'font',
+export interface Font extends L.Struct {
+  [L.structKind]: 'font',
   face: string,
   system: string,
   isBold: boolean,
@@ -13,8 +13,8 @@ export interface Font extends R.Struct {
 }
 
 export const fontS: C.Spec = {
-  predicate: (v: any) => R.isStructKind(v, 'font'),
-  errorMsg: (actual: any) => `expected a font, received ${R.typeOf(actual)}`
+  predicate: (v: any) => L.isStructKind(v, 'font'),
+  errorMsg: (actual: any) => `expected a font, received ${L.typeOf(actual)}`
 }
 
 export function fontToFontString (f: Font, size: number): string {
@@ -24,7 +24,7 @@ export function fontToFontString (f: Font, size: number): string {
 
 function fontPrim (face: string, system: string, isBold: boolean, isItalic: boolean): Font {
   return {
-    [R.scamperTag]: 'struct', [R.structKind]: 'font',
+    [L.scamperTag]: 'struct', [L.structKind]: 'font',
     face, system, isBold, isItalic
   }
 }

@@ -58,11 +58,12 @@ export class Library {
     this.lib = []
     this.initializer = initializer
   }
-  registerValue (name: string, v: Value, library: Library) {
+
+  registerValue (name: string, v: Value) {
     if (typeof v === 'function') {
       Object.defineProperty(v, 'name', { value: name })
     }
-    library.lib.push([name, v])
+    this.lib.push([name, v])
   }
 }
 
@@ -118,6 +119,15 @@ export type Vector = Value[]
 
 /** A Scamper function is either a closure or a raw Javascript function. */
 export type ScamperFn = Closure | Function
+
+/** Calls a ScamperFn function with the provided arguments */
+export function callScamperFn (fn: ScamperFn, ...args: Value[]): any {
+  if (typeof fn === 'function') {
+    return fn(...args)
+  } else {
+    return fn.call(...args)
+  }
+}
 
 /** Raw Javascript values are any Javascript object. */
 export type Raw = object

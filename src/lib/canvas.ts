@@ -1,13 +1,12 @@
 import { ScamperError } from '../lang.js'
-import * as R from '../lpm/runtime.js'
+import * as L from '../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { Drawing, render } from './image/drawing.js'
-import { callFunction } from '../sem.js'
 import { colorToRgb, colorS, rgbToString } from './image/color.js'
 import { Font, font, fontS, fontToFontString } from './image/font.js'
 
-const Canvas: R.Library = new R.Library()
+const Canvas: L.Library = new L.Library()
 
 function makeCanvas (width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
@@ -100,10 +99,10 @@ function canvasDrawing (canvas: HTMLCanvasElement, x: number, y: number, drawing
 }
 Canvas.registerValue('canvas-drawing!', canvasDrawing)
 
-function canvasPath (canvas: HTMLCanvasElement, lst: R.List, mode: string, color: any): void {
+function canvasPath (canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
   checkContract(arguments, contract('canvas-path!', [C.any, C.list, C.string, C.string]))
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
-  const pairs = R.listToVector(lst)
+  const pairs = L.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
     throw new ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
   }
@@ -114,10 +113,10 @@ function canvasPath (canvas: HTMLCanvasElement, lst: R.List, mode: string, color
   ctx.fillStyle = rgbToString(colorToRgb(color))
   ctx.strokeStyle = rgbToString(colorToRgb(color))
   ctx.beginPath()
-  let p: R.Pair = pairs[0] as R.Pair
+  let p: L.Pair = pairs[0] as L.Pair
   ctx.moveTo(p.fst as number, p.snd as number)
   for (let i = 1; i < pairs.length; i++) {
-    p = pairs[i] as R.Pair
+    p = pairs[i] as L.Pair
     ctx.lineTo(p.fst as number, p.snd as number)
   }
   if (mode === 'solid') {
@@ -128,12 +127,12 @@ function canvasPath (canvas: HTMLCanvasElement, lst: R.List, mode: string, color
 }
 Canvas.registerValue('canvas-path!', canvasPath)
 
-function animateWith (fn: R.ScamperFn): void {
+function animateWith (fn: L.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
   function callback (time: number) {
     let result = false
     try {
-      result = callFunction(fn, time)
+      result = L.callScamperFn(fn, time)
     } catch (e) {
       alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
       return
@@ -149,12 +148,12 @@ function animateWith (fn: R.ScamperFn): void {
 }
 Canvas.registerValue('animate-with', animateWith)
 
-function canvasOnclick (canvas: HTMLCanvasElement, fn: R.ScamperFn): void {
+function canvasOnclick (canvas: HTMLCanvasElement, fn: L.ScamperFn): void {
   checkContract(arguments, contract('canvas-onclick!', [C.any, C.func]))
   canvas.onclick = function (ev: MouseEvent) {
     try {
       console.log(`offset: (${ev.offsetX}, ${ev.offsetY}), client: (${ev.clientX}, ${ev.clientY}), page: (${ev.pageX}, ${ev.pageY})`)
-      callFunction(fn, ev.offsetX, ev.offsetY)
+      L.callScamperFn(fn, ev.offsetX, ev.offsetY)
     } catch (e) {
       alert(`canvas-onclick! callback threw an error:\n\n${(e as Error).toString()}`)
       return

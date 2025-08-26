@@ -1,9 +1,9 @@
-import * as R from '../lpm/runtime.js'
+import * as L from '../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { callFunction } from '../sem.js'
 
-const Html: R.Library = new R.Library()
+const Html: L.Library = new L.Library()
 
 function textArea (id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))
@@ -35,18 +35,18 @@ function button (label: string, fn: Function): HTMLButtonElement {
 }
 Html.registerValue('button', button)
 
-function tag (name: string, ...children: R.Value[]): HTMLElement {
+function tag (name: string, ...children: L.Value[]): HTMLElement {
   checkContract(arguments, contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
-  if (children.length > 0 && R.isList(children[0])) {
-    const attrs = R.listToVector(children[0] as R.Pair)
+  if (children.length > 0 && L.isList(children[0])) {
+    const attrs = L.listToVector(children[0] as L.List)
     for (const attr of attrs) {
-      if (R.isPair(attr)) {
+      if (L.isPair(attr)) {
         const pair = attr
-        if (!R.isString(pair.fst)) {
-          throw new R.ScamperError('Runtime', `attribute must be a string: ${R.toString(pair.fst)}`)
-        } else if (!R.isString(pair.snd)) {
-          throw new R.ScamperError('Runtime', `attribute value must be a string: ${R.toString(pair.snd)}`)
+        if (!L.isString(pair.fst)) {
+          throw new L.ScamperError('Runtime', `attribute must be a string: ${L.toString(pair.fst)}`)
+        } else if (!L.isString(pair.snd)) {
+          throw new L.ScamperError('Runtime', `attribute value must be a string: ${L.toString(pair.snd)}`)
         } else {
           elt.setAttribute(pair.fst as string, pair.snd as string)
         }
@@ -66,14 +66,14 @@ function tag (name: string, ...children: R.Value[]): HTMLElement {
 }
 Html.registerValue('tag', tag)
 
-function tagSetChildren (elt: HTMLElement, ...children: R.Value[]) {
+function tagSetChildren (elt: HTMLElement, ...children: L.Value[]) {
   checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
-    throw new R.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${R.typeOf(elt)}`)
+    throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
   } else {
     children.forEach((e, i) => {
       if (!(e instanceof HTMLElement)) {
-        throw new R.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${R.typeOf(elt)}$.`)
+        throw new L.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.typeOf(elt)}$.`)
       }
     })
     // N.B., clear the current set of children
