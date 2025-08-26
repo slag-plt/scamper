@@ -1,5 +1,5 @@
-import { checkContract, contract } from '../../contract.js'
-import * as C from '../../contract.js'
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
 import * as Render from '../../display.js'
 import * as L from '../../lpm'
 

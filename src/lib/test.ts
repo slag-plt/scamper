@@ -1,6 +1,6 @@
 import * as L from '../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
+import { checkContract, contract } from './contract.js'
+import * as C from './contract.js'
 import * as Display from '../display.js'
 
 const Test: L.Library = new L.Library()

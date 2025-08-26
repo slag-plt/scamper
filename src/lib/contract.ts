@@ -1,4 +1,4 @@
-import { ScamperError, ICE, Value } from './lang.js'
+import { ScamperError, ICE, Value } from '../lang.js'
 
 export interface Spec {
   predicate: (v: any) => boolean

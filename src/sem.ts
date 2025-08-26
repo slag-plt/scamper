@@ -1,7 +1,7 @@
 import { ICE, Id, Library, Range, ScamperError, Stmt } from './lang.js'
 import { Env, Prog, Op, reservedWords, Value, } from './lang.js'
 import { renderToHTML, mkCodeElement, mkSourceBlock, renderToOutput } from './display.js'
-import * as C from './contract.js'
+import * as C from './lib/contract.js'
 
 let maxCallStackDepth = 100000;
 
