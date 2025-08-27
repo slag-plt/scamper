@@ -1,7 +1,6 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import { callFunction } from '../sem.js'
 
 const Html: L.Library = new L.Library()
 
@@ -25,7 +24,7 @@ function button (label: string, fn: Function): HTMLButtonElement {
   ret.textContent = label
   ret.onclick = () => {
     try {
-      callFunction(fn, [])
+      L.callScamperFn(fn, [])
     } catch (e) {
       alert(`button callback threw an error:\n\n${(e as Error).toString()}`)
       return
@@ -90,7 +89,7 @@ function onKeydown (fn: Function): void {
   checkContract(arguments, contract('on-keydown!', [C.func]))
   window.addEventListener('keydown', (e) => {
     try {
-      callFunction(fn, e.key)
+      L.callScamperFn(fn, e.key)
     } catch (e) {
       alert(`on-keydown! callback threw an error:\n\n${(e as Error).toString()}`)
     }

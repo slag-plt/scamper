@@ -42,4 +42,23 @@ describe('End-to-end cases', () => {
       (display (fact 5))
     `, [120])
   })
+
+  test('basic list operations', () => {
+    checkMachineOutput(`
+      (define list-length
+        (lambda (l)
+          (if (null? l)
+              0
+              (+ 1 (list-length (cdr l))))))
+      (display (list-length '()))
+    `, [0])
+  })
+
+  test('basic struct operations', () => {
+    checkMachineOutput(`
+      (struct point (x y))
+      (define p (point 1 2))
+      (display (point-x p))
+    `, [1])
+  })
 })

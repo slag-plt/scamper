@@ -1,4 +1,3 @@
-import { ScamperError } from '../lang.js'
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
@@ -27,7 +26,7 @@ function canvasRectangle (canvas: HTMLCanvasElement, x: number, y: number, width
   } else if (mode === 'outline') {
     ctx.strokeRect(x, y, width, height)
   } else {
-    throw new ScamperError('Runtime', `canvas-rectangle!: expected "solid" or "outline", but got ${mode}`)
+    throw new L.ScamperError('Runtime', `canvas-rectangle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
 Canvas.registerValue('canvas-rectangle!', canvasRectangle)
@@ -44,7 +43,7 @@ function canvasEllipse (canvas: HTMLCanvasElement, x: number, y: number, radiusX
   } else if (mode === 'outline') {
     ctx.stroke()
   } else {
-    throw new ScamperError('Runtime', `canvas-ellipse!: expected "solid" or "outline", but got ${mode}`)
+    throw new L.ScamperError('Runtime', `canvas-ellipse!: expected "solid" or "outline", but got ${mode}`)
   }
 }
 Canvas.registerValue('canvas-ellipse!', canvasEllipse)
@@ -61,7 +60,7 @@ function canvasCircle (canvas: HTMLCanvasElement, x: number, y: number, radius: 
   } else if (mode === 'outline') {
     ctx.stroke()
   } else {
-    throw new ScamperError('Runtime', `canvas-circle!: expected "solid" or "outline", but got ${mode}`)
+    throw new L.ScamperError('Runtime', `canvas-circle!: expected "solid" or "outline", but got ${mode}`)
   }
 }
 Canvas.registerValue('canvas-circle!', canvasCircle)
@@ -70,12 +69,12 @@ function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: stri
   checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, colorS], C.any))
   let f: Font = font('Arial')
   if (rest.length > 1) {
-    throw new ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
+    throw new L.ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
   } else if (rest.length == 1) {
     if (fontS.predicate(rest[0])) {
       f = rest[0] as Font
     } else {
-      throw new ScamperError('Runtime', fontS.errorMsg(rest[0]))
+      throw new L.ScamperError('Runtime', fontS.errorMsg(rest[0]))
     }
   }
 
@@ -88,7 +87,7 @@ function canvasText (canvas: HTMLCanvasElement, x: number, y: number, text: stri
   } else if (mode === 'outline') {
     ctx.strokeText(text, x, y)
   } else {
-    throw new ScamperError('Runtime', `canvas-text!: expected "solid" or "outline", but got ${mode}`)
+    throw new L.ScamperError('Runtime', `canvas-text!: expected "solid" or "outline", but got ${mode}`)
   }
 }
 Canvas.registerValue('canvas-text!', canvasText)
@@ -104,7 +103,7 @@ function canvasPath (canvas: HTMLCanvasElement, lst: L.List, mode: string, color
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
   const pairs = L.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
-    throw new ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
+    throw new L.ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
   }
   if (pairs.length === 0) {
     return

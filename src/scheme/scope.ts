@@ -1,3 +1,4 @@
+import { Prelude, Runtime } from '../lib'
 import { ICE, ScamperError } from '../lpm'
 import * as A from './ast.js'
 import * as L from '../lpm'
@@ -130,7 +131,10 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
 
 export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, errors: ScamperError[], prog: A.Prog) {
   const globals: string[] = []
-  for (const [name, _] of builtinLibs.get('prelude')!.lib) {
+  for (const [name, _] of Runtime.lib) {
+    globals.push(name)
+  }
+  for (const [name, _] of Prelude.lib) {
     globals.push(name)
   }
   for (const s of prog) {

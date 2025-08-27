@@ -66,6 +66,11 @@ export class Machine {
     }
   }
 
+  reportAndUnwind (thread: L.Thread, err: ScamperError) {
+    this.err.report(err)
+    thread.unwindToNextStatement()
+  }
+
   stepThread (thread: L.Thread): void {
     const current = thread.getCurrentFrame()
     if (current.isFinished()) {
@@ -90,7 +95,7 @@ export class Machine {
       
       case 'var': {
         if (!current.env.has(instr.name)) {
-          throw new ScamperError('Runtime', `Variable not found: ${instr.name}`)
+          this.reportAndUnwind(thread, new ScamperError('Runtime', `Variable not found: ${instr.name}`))
         } else {
           current.values.push(current.env.get(instr.name)!)
         }
@@ -126,10 +131,26 @@ export class Machine {
         const fn = values[0]
         const args = values.splice(-instr.numArgs)
         if (typeof fn === 'function') {
-          current.values.push(fn(...args))
+          let result = undefined 
+          try {
+            result = fn(...args)
+          } catch (e) {
+            if (e instanceof ScamperError) {
+              // N.B., annotate the error from the runtime with additional info
+              e.source = fn.name ?? '##anonymous##'
+              e.range = instr.range
+              this.reportAndUnwind(thread, e)
+            } else {
+            this.reportAndUnwind(thread,
+              new ScamperError('Runtime', `Error applying function: ${e}`, undefined, instr.range, fn.name ?? '##anonymous##'))
+            }
+            return
+          }
+          current.values.push(result)
         } else if (U.isClosure(fn)) {
           if (thread.frames.length >= this.maxCallStackDepth) {
-            throw new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`)
+            this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`))
+            return
           } else if (current.isFinished()) {
             // N.B., if this thread is finished, then tail-call optimize by
             // overwriting the current frame instead of pushing a new one.
@@ -147,7 +168,7 @@ export class Machine {
             )
           }
         } else {
-          throw new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`)
+          this.reportAndUnwind(thread, new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`))
         }
         break
       }
@@ -158,7 +179,8 @@ export class Machine {
         }
         const scrutinee = current.values.pop()!
         if (instr.branches.length === 0) {
-          throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
+          this.reportAndUnwind(thread, new ScamperError('Runtime', 'Inexhaustive pattern match failure'))
+          return
         }
         if (this.stepMatch) {
           const [pat, blk] = instr.branches[0]
@@ -179,7 +201,7 @@ export class Machine {
               return
             }
           }
-          throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
+          this.reportAndUnwind(thread, new ScamperError('Runtime', 'Inexhaustive pattern match failure'))
         }
         break
       }
@@ -212,7 +234,8 @@ export class Machine {
       }
       
       case 'raise': {
-        throw new ScamperError('Runtime', instr.msg)
+        this.reportAndUnwind(thread, new ScamperError('Runtime', instr.msg))
+        break
       }
       
       case 'pops': {

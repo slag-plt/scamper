@@ -52,8 +52,7 @@ function parsePat (errors: L.ScamperError[], v: L.Value): A.Pat {
   if (L.isList(v)) {
     const arr = L.listToVector(v)
     if (arr.length === 0) {
-      errors.push(new L.ScamperError('Parser', 'An empty list cannot be a pattern', undefined, range))
-      return L.mkPLit('<error>')
+      return A.mkPLit(null, range)
     }
     const head = parseIdentifier(errors, arr[0], 'The first element of a pattern list must be a constructor name')
     const args = arr.slice(1).map((v) => parsePat(errors, v))
@@ -84,17 +83,16 @@ function parseIdentifierList (errors: L.ScamperError[], v: L.Value,
 function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body: A.Exp } {
   let { value, range } = S.unpackSyntax(v)
   v = value
-  if (!L.isList(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a pair for a match branch', undefined, range))
+  if (!L.isArray(v)) {
+    errors.push(new L.ScamperError('Parser', 'Expected a vector for a match branch', undefined, range))
     return { pat: L.mkPLit('<error>'), body: phExp }
   } else {
-    const arr = L.listToVector(v)
-    if (arr.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a pair for a match branch', undefined, range))
+    if (v.length !== 2) {
+      errors.push(new L.ScamperError('Parser', 'Expected a vecotr of size 2 for a match branch', undefined, range))
       return { pat: L.mkPLit('<error>'), body: phExp }
     }
-    const pat = parsePat(errors, arr[0])
-    const body = parseExp(errors, arr[1])
+    const pat = parsePat(errors, v[0])
+    const body = parseExp(errors, v[1])
     return { pat, body }
   }
 }
@@ -102,17 +100,16 @@ function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body:
 function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, body: A.Exp } {
   let { value, range } = S.unpackSyntax(v)
   v = value
-  if (!L.isList(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a pair for a cond branch', undefined, range))
+  if (!L.isArray(v)) {
+    errors.push(new L.ScamperError('Parser', 'Expected a vector for a cond branch', undefined, range))
     return { test: L.mkLit('<error>'), body: phExp }
   } else {
-    const arr = L.listToVector(v)
-    if (arr.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a pair for a cond branch', undefined, range))
+    if (v.length !== 2) {
+      errors.push(new L.ScamperError('Parser', 'Expected a vector of size 2 for a cond branch', undefined, range))
       return { test: L.mkLit('<error>'), body: phExp }
     }
-    const test = parseExp(errors, arr[0])
-    const body = parseExp(errors, arr[1])
+    const test = parseExp(errors, v[0])
+    const body = parseExp(errors, v[1])
     return { test, body }
   }
 }
@@ -120,17 +117,16 @@ function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, 
 function parseLetBinder (errors: L.ScamperError[], v: L.Value): { name: string, value: A.Exp } {
   let { value, range } = S.unpackSyntax(v)
   v = value
-  if (!L.isList(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a pair for a binder', undefined, range))
+  if (!L.isArray(v)) {
+    errors.push(new L.ScamperError('Parser', 'Expected a vector for a binder', undefined, range))
     return { name: '<error>', value: phExp }
   } else {
-    const arr = L.listToVector(v as L.List)
-    if (arr.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a pair for a binder', undefined, range))
+    if (v.length !== 2) {
+      errors.push(new L.ScamperError('Parser', 'Expected a vector of size 2 for a binder', undefined, range))
       return { name: '<error>', value: phExp }
     }
-    const name = parseIdentifier(errors, arr[0], 'Binding pair expects an identifier in the first position')
-    const value = parseExp(errors, arr[1])
+    const name = parseIdentifier(errors, v[0], 'Binding pair expects an identifier in the first position')
+    const value = parseExp(errors, v[1])
     return { name, value }
   }
 }
@@ -142,7 +138,7 @@ function parseLetBinders (errors: L.ScamperError[], v: L.Value): { name: string,
     errors.push(new L.ScamperError('Parser', 'Expected a list of binding pairs', undefined, range))
     return [{ name: '<error>', value: phExp }]
   } else {
-    const arr = L.listToVector(v as L.List)
+    const arr = L.listToVector(v)
     return arr.map((v) => parseLetBinder(errors, v))
   }
 }
@@ -170,10 +166,7 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
   } else {
     const arr = L.listToVector(v)
     if (arr.length == 0) {
-      errors.push(new L.ScamperError('Parser', 'Empty lists are not valid expressions', undefined, range))
-      // N.B., this is a placeholder to allow parsing to continue; we'll fail
-      // parsing by the time we are done!
-      return phExp
+      return A.mkLit(null, range)
     } else {
       let { value: hv, range: hr } = S.unpackSyntax(arr[0])
       if (L.isSym(hv)) {
@@ -298,8 +291,7 @@ export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
   } else {
     const arr = L.listToVector(v as L.List)
     if (arr.length == 0) {
-      errors.push(new L.ScamperError('Parser', 'Empty lists are not valid statements', undefined, range))
-      return phStmt
+      return A.mkStmtExp(A.mkLit(null), range)
     } else {
       let { value: hv, range: hr } = S.unpackSyntax(arr[0])
       if (L.isSym(hv)) {

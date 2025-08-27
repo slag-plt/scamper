@@ -424,14 +424,7 @@ Prelude.registerValue('all-of', allOf)
 
 // Pairs and Lists (6.4)
 
-// TODO: really: the pair/list values we manipulated are _quoted_ pairs/lists.
-// The unquoted pair/list form is always evaluated by Scheme immediately, so
-// they only exist temporarily. Since our old infrastructure tried to
-// distinguish between pairs and lists, we have some architectual changes to
-// them to support this behavior.
-//
-// We should introduce "quoted" helpers for pairs, lists, and vectors so that
-// the standard library can use them throughout.
+// NOTE: like Clojure, we distinguish between pairs and lists (cons).
 
 function pairQ (x: any): boolean {
   checkContract(arguments, contract('pair?', [C.any]))
@@ -445,10 +438,10 @@ function listOf (pred: L.ScamperFn): L.ScamperFn {
     // N.B., list-of returns false if the input is _not_ a list
     if (!listQ(l)) { return false; }
     while (l !== null) {
-      if (!L.callScamperFn(pred, l.fst)) {
+      if (!L.callScamperFn(pred, l.head)) {
         return false
       }
-      l = l.snd as L.List
+      l = l.tail
     }
     return true
   }
@@ -457,7 +450,7 @@ Prelude.registerValue('list-of', listOf)
 
 function cons (x: any, y: any): L.Value {
   checkContract(arguments, contract('cons', [C.any, C.any]))
-  return L.mkPair(x, y)
+  return L.mkCons(x, y)
 }
 Prelude.registerValue('cons', cons)
 
@@ -468,14 +461,22 @@ function pair (x: any, y: any): L.Value {
 Prelude.registerValue('pair', pair)
 
 function car (x: L.Value): L.Value {
-  checkContract(arguments, contract('car', [C.pair]))
-  return (x as any).fst
+  checkContract(arguments, contract('car', [C.or(C.pair, C.list)]))
+  if (L.isPair(x)) {
+    return (x as any).fst
+  } else {
+    return (x as any).head
+  }
 }
 Prelude.registerValue('car', car)
 
 function cdr (x: L.Value): L.Value {
-  checkContract(arguments, contract('cdr', [C.pair]))
-  return (x as any).snd
+  checkContract(arguments, contract('cdr', [C.or(C.pair, C.list)]))
+  if (L.isPair(x)) {
+    return (x as any).snd
+  } else {
+    return (x as any).tail
+  }
 }
 Prelude.registerValue('cdr', cdr)
 
@@ -492,7 +493,7 @@ Prelude.registerValue('null?', nullQ)
 
 function listQ (x: any): boolean {
   checkContract(arguments, contract('list?', [C.any]))
-  return x === null || (L.isPair(x) && (x as any).isList)
+  return L.isList(x)
 }
 Prelude.registerValue('list?', listQ)
 
@@ -505,7 +506,6 @@ function list (...xs: L.Value[]): L.List {
   return ret
 }
 Prelude.registerValue('list', list)
-
 
 function makeList (n: number, fill: L.Value): L.List {
   checkContract(arguments, contract('make-list', [C.integer, C.any]))
@@ -522,7 +522,7 @@ function length (l: L.List): number {
   let len = 0
   while (l !== null) {
     len += 1
-    l = (l.snd as L.List)
+    l = l.tail
   }
   return len
 }
@@ -532,15 +532,15 @@ function appendOne_ (l1: L.List, l2: L.List): L.List {
   if (l1 === null) {
     return l2
   } else {
-    let head = L.mkCons(l1.fst, null)
+    let head = L.mkCons(l1.head, null)
     let last = head
-    let cur = l1.snd as L.List
+    let cur = l1.tail
     while (cur !== null) {
-      last.snd = L.mkCons(cur.fst, null)
-      last = last.snd as L.Cons
-      cur = cur.snd as L.List
+      last.tail = L.mkCons(cur.head, null)
+      last = last.tail as L.Cons
+      cur = cur.tail
     }
-    last.snd = l2
+    last.tail = l2
     return head
   }
 }
@@ -560,13 +560,13 @@ function reverse (l: L.List): L.List {
   const queue = []
   while (l !== null) {
     queue.push(l)
-    l = l.snd as L.List
+    l = l.tail
   }
   queue.reverse()
   let ret = null
   while (queue.length > 0) {
     const next = queue.pop() as L.Cons
-    ret = L.mkCons(next.fst, ret)
+    ret = L.mkCons(next.head, ret)
   }
   return ret
 }
@@ -575,7 +575,7 @@ Prelude.registerValue('reverse', reverse)
 function listTail (l: L.List, k: number): L.List {
   checkContract(arguments, contract('list-tail', [C.list, C.nonneg]))
   while (l !== null && k > 0) {
-    l = l.snd as L.List
+    l = l.tail
     k -= 1
   }
   return l
@@ -587,8 +587,8 @@ function listTake (l: L.List, k: number): L.List {
   let elts = []
   // N.B., push in reverse order so we built the list right-to-left
   while (l !== null && k > 0) {
-    elts.push(l.fst)
-    l = l.snd as L.List
+    elts.push(l.head)
+    l = l.tail
     k -= 1
   }
   let ret: L.List = null
@@ -602,7 +602,7 @@ Prelude.registerValue('list-take', listTake)
 function listDrop (l: L.List, k: number): L.List {
   checkContract(arguments, contract('list-drop', [C.list, C.nonneg]))
   while (l !== null && k > 0) {
-    l = l.snd as L.List
+    l = l.tail
     k -= 1
   }
   return l
@@ -613,13 +613,13 @@ function listRef (l: L.List, n: number): L.Value {
   checkContract(arguments, contract('list-ref', [C.list, C.nonneg]))
   let i = n
   while (l !== null && i > 0) {
-    l = l.snd as L.List
+    l = l.tail
     i -= 1
   }
   if (l === null) {
     throw new L.ScamperError('Runtime', `list-ref: index ${n} out of bounds of list`)
   } else {
-    return l.fst
+    return l.head
   }
 }
 Prelude.registerValue('list-ref', listRef)
@@ -644,10 +644,10 @@ function indexOf (l: L.List, v: L.Value): number {
   checkContract(arguments, contract('index-of', [C.list, C.any]))
   let i = 0
   while (l !== null) {
-    if (L.equals(l.fst, v)) {
+    if (L.equals(l.head, v)) {
       return i
     }
-    l = l.snd as L.List
+    l = l.tail as L.List
     i += 1
   }
   return -1
@@ -657,10 +657,10 @@ Prelude.registerValue('index-of', indexOf)
 function assocKey (v: L.Value, l: L.List): boolean {
   checkContract(arguments, contract('assoc-key?', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (L.equals((l.fst as L.Pair).fst, v)) {
+    if (L.equals((l.head as L.Pair).fst, v)) {
       return true
     }
-    l = l.snd as L.List
+    l = l.tail
   }
   return false
 }
@@ -669,10 +669,10 @@ Prelude.registerValue('assoc-key?', assocKey)
 function assocRef (v: L.Value, l: L.List): L.Value {
   checkContract(arguments, contract('assoc-ref', [C.any, C.listof(C.pair)]))
   while (l !== null) {
-    if (L.equals((l.fst as L.Pair).fst, v)) {
-      return (l.fst as L.Pair).snd
+    if (L.equals((l.head as L.Pair).fst, v)) {
+      return (l.head as L.Pair).snd
     }
-    l = l.snd as L.List
+    l = l.tail as L.List
   }
   throw new L.ScamperError('Runtime', `assoc-ref: key ${v} not found in association list`)
 }
@@ -683,17 +683,17 @@ function assocSet (k: L.Value, v: L.Value, l: L.List): L.List {
   const front = []
   // TODO: implement me—this isn't the right implementation!
   while (l !== null) {
-    const entry = l.fst as L.Pair
+    const entry = l.head as L.Pair
     if (L.equals(entry.fst, k)) {
       front.push(L.mkPair(k, v))
-      let ret = l.snd as L.List
+      let ret = l.tail as L.List
       for (let i = front.length - 1; i >= 0; i--) {
         ret = L.mkCons(front[i], ret)
       }
       return ret
     } else {
-      front.push(l.fst)
-      l = l.snd as L.List
+      front.push(l.head)
+      l = l.tail as L.List
     }
   }
   return L.vectorToList(front.concat([L.mkPair(k, v)]))
@@ -931,11 +931,11 @@ function listToString (l: L.List): string {
   checkContract(arguments, contract('list->string', [C.list]))
   let ret = ''
   while (l !== null) {
-    if (!L.isChar(l.fst)) {
-      throw new L.ScamperError('Runtime', `list->string: list contains non-character element: ${L.typeOf(l.fst)}`)
+    if (!L.isChar(l.head)) {
+      throw new L.ScamperError('Runtime', `list->string: list contains non-character element: ${L.typeOf(l.head)}`)
     }
-    ret += (l.fst as L.Char).value
-    l = l.snd as L.List
+    ret += (l.head as L.Char).value
+    l = l.tail
   } 
   return ret
 }
@@ -1113,8 +1113,8 @@ function listToVector (l: L.List): L.Value[] {
   checkContract(arguments, contract('list->vector', [C.list]))
   const ret = []
   while (l !== null) {
-    ret.push(l.fst)
-    l = l.snd as L.List
+    ret.push(l.head)
+    l = l.tail
   }
   return ret
 }
@@ -1209,8 +1209,8 @@ function transpose <T> (arr: T[][]): T[][] {
 function mapOne (f: L.Closure | Function, l: L.List): L.List {
   const values = []
   while (l !== null) {
-    values.push(L.callScamperFn(f, l.fst))
-    l = l.snd as L.List
+    values.push(L.callScamperFn(f, l.head))
+    l = l.tail
   }
   return L.vectorToList(values)
 }
@@ -1238,10 +1238,10 @@ function filter (f: L.Closure | Function, lst: L.List): L.List {
   checkContract(arguments, contract('filter', [C.func, C.list]))
   const values = []
   while (lst !== null) {
-    if (L.callScamperFn(f, lst.fst)) {
-      values.push(lst.fst)
+    if (L.callScamperFn(f, lst.head)) {
+      values.push(lst.head)
     }
-    lst = lst.snd as L.List
+    lst = lst.tail
   }
   return L.vectorToList(values) 
 }
@@ -1251,8 +1251,8 @@ function fold (f: L.Closure | Function, init: L.Value, lst: L.List): L.Value {
   checkContract(arguments, contract('fold', [C.func, C.any, C.list]))
   let acc = init
   while (lst !== null) {
-    acc = L.callScamperFn(f, acc, lst.fst)
-    lst = lst.snd as L.List
+    acc = L.callScamperFn(f, acc, lst.head)
+    lst = lst.tail
   }
   return acc
 }
@@ -1260,11 +1260,11 @@ Prelude.registerValue('fold', fold)
 
 function reduce (f: L.Closure | Function, lst: L.List): L.Value {
   checkContract(arguments, contract('reduce', [C.func, C.nonemptyList]))
-  let acc = (lst as L.List)!.head
-  lst = (lst as L.List)!.tail
+  let acc = lst!.head
+  lst = lst!.tail
   while (lst !== null) {
-    acc = L.callScamperFn(f, acc, lst.fst)
-    lst = lst.snd as L.List
+    acc = L.callScamperFn(f, acc, lst.head)
+    lst = lst.tail as L.List
   }
   return acc
 }
@@ -1274,8 +1274,8 @@ function foldLeft (f: L.Closure | Function, init: L.Value, lst: L.List): L.Value
   checkContract(arguments, contract('fold-left', [C.func, C.any, C.list]))
   let acc = init
   while (lst !== null) {
-    acc = L.callScamperFn(f, acc, lst.fst)
-    lst = lst.snd as L.List
+    acc = L.callScamperFn(f, acc, lst.head)
+    lst = lst.tail
   }
   return acc
 }

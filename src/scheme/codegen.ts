@@ -54,13 +54,22 @@ function lowerExpr (e: A.Exp): L.Blk {
 function lowerStmt (s: A.Stmt, displayStmtExpr: boolean = true): L.Blk {
   switch (s.tag) {
     case 'import':
-      return [L.mkImport(s.module, s.range)]
-    case 'define':
-      return [...lowerExpr(s.value), L.mkDefine(s.name, s.range)]
-    case 'display':
-      return [...lowerExpr(s.value), L.mkDisp(s.range)]
-    case 'stmtexp':
-      return [...lowerExpr(s.expr), displayStmtExpr ? L.mkDisp() : L.mkPopv()]
+      return [L.mkImport(s.module, s.range, true)]
+    case 'define': {
+      const blk = lowerExpr(s.value)
+      blk[0].startsStmt = true
+      return [...blk, L.mkDefine(s.name, s.range)]
+    }
+    case 'display': {
+      const blk = lowerExpr(s.value)
+      blk[0].startsStmt = true
+      return [...blk, L.mkDisp(s.range)]
+    }
+    case 'stmtexp': {
+      const blk = lowerExpr(s.expr)
+      blk[0].startsStmt = true
+      return [...blk, displayStmtExpr ? L.mkDisp() : L.mkPopv()]
+    }
     default:
       throw new L.ICE('lowerStmt', `Non-core statement encountered: ${s.tag}`)
   }

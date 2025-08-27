@@ -283,18 +283,6 @@ function parseStringLiteral (src: string, range: L.Range): string {
   return ret
 }
 
-export const namedCharValues = new Map([
-  ['alarm', String.fromCharCode(7)],
-  ['backspace', String.fromCharCode(8)],
-  ['delete', String.fromCharCode(127)],
-  ['escape', String.fromCharCode(27)],
-  ['newline', String.fromCharCode(10)],
-  ['null', String.fromCharCode(0)],
-  ['return', String.fromCharCode(13)],
-  ['space', ' '],
-  ['tab', String.fromCharCode(9)]
-])
-
 export function readSingle (t: Token, wildAllowed: boolean): Syntax {
   const text = t.text
   if (intRegex.test(text)) {
@@ -313,8 +301,8 @@ export function readSingle (t: Token, wildAllowed: boolean): Syntax {
     const escapedChar = text.slice(2)
     if (escapedChar.length === 1) {
       return mkSyntax(L.mkChar(escapedChar), t.range)
-    } else if (namedCharValues.has(escapedChar)) {
-      return mkSyntax(L.mkChar(namedCharValues.get(escapedChar)!), t.range)
+    } else if (L.namedCharValues.has(escapedChar)) {
+      return mkSyntax(L.mkChar(L.namedCharValues.get(escapedChar)!), t.range)
     } else {
       throw new L.ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }

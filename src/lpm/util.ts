@@ -1,3 +1,4 @@
+import { ICE, ScamperError } from './error.js'
 import { Range } from './range.js'
 import * as L from './lang.js'
 
@@ -20,6 +21,9 @@ export const isSym = (v: L.Value): v is L.Sym  => isTaggedObject(v) && v[L.scamp
 export const isStruct = (v: L.Value): v is L.Struct => isTaggedObject(v) && v[L.scamperTag] === 'struct'
 export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
 
+export const isPair = (v: L.Value): v is L.Pair => isStructKind<L.Pair>(v, 'pair')
+export const isList = (v: L.Value): v is L.List => v === null || isStructKind<L.Cons>(v, 'cons')
+
 ///// Constructors /////////////////////////////////////////////////////////////
 
 export const mkClosure = (params: L.Id[], code: L.Blk, env: L.Env, call: (...args: any) => any, name?: L.Id): L.Closure =>
@@ -34,25 +38,47 @@ export const mkStruct = (kind: string, fields: string[], values: L.Value[]): L.S
   return ret
 }
 
+export const mkPair = (fst: L.Value, snd: L.Value): L.Pair => ({
+  [L.scamperTag]: 'struct',
+  [L.structKind]: 'pair',
+  fst,
+  snd
+})
+
+export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
+  if (!isList(tail)) {
+    throw new ScamperError('Runtime', 'The second argument to cons should be a list')
+  } else {
+    return {
+      [L.scamperTag]: 'struct',
+      [L.structKind]: 'cons',
+      head,
+      tail
+    }
+  }
+}
+
+export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
+
 // Op constructors
-export const mkLit = (value: L.Value, range?: Range): L.Lit => ({ tag: 'lit', value, range: range ?? Range.none })
-export const mkVar = (name: string, range?: Range): L.Var => ({ tag: 'var', name, range: range ?? Range.none })
-export const mkCtor = (name: string, fields: string[], range?: Range): L.Ctor => ({ tag: 'ctor', name, fields, range: range ?? Range.none })
-export const mkCls = (params: string[], body: L.Blk, name?: string, range?: Range): L.Cls => ({ tag: 'cls', params, body, name, range: range ?? Range.none })
-export const mkAp = (numArgs: number, range?: Range): L.Ap => ({ tag: 'ap', numArgs, range: range ?? Range.none })
-export const mkMatch = (branches: [L.Pat, L.Blk][], range?: Range): L.Match => ({ tag: 'match', branches, range: range ?? Range.none })
-export const mkDisp = (range?: Range): L.Disp => ({ tag: 'disp', range: range ?? Range.none })
-export const mkDefine = (name: string, range?: Range): L.Define => ({ tag: 'define', name, range: range ?? Range.none })
-export const mkImport = (name: string, range?: Range): L.Import => ({ tag: 'import', name, range: range ?? Range.none })
-export const mkRaise = (msg: string, range?: Range): L.Raise => ({ tag: 'raise', msg, range: range ?? Range.none })
-export const mkPops = (): L.PopS => ({ tag: 'pops' })
-export const mkPopv = (): L.PopV => ({ tag: 'popv' })
+export const mkLit = (value: L.Value, range: Range = Range.none, startsStmt: boolean = false): L.Lit => ({ tag: 'lit', value, range, startsStmt})
+export const mkVar = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Var => ({ tag: 'var', name, range, startsStmt})
+export const mkCtor = (name: string, fields: string[], range: Range = Range.none, startsStmt: boolean = false): L.Ctor => ({ tag: 'ctor', name, fields, range, startsStmt})
+export const mkCls = (params: string[], body: L.Blk, name?: string, range: Range = Range.none, startsStmt: boolean = false): L.Cls => ({ tag: 'cls', params, body, name, range, startsStmt})
+export const mkAp = (numArgs: number, range: Range = Range.none, startsStmt: boolean = false): L.Ap => ({ tag: 'ap', numArgs, range, startsStmt})
+export const mkMatch = (branches: [L.Pat, L.Blk][], range: Range = Range.none, startsStmt: boolean = false): L.Match => ({ tag: 'match', branches, range, startsStmt})
+export const mkDisp = (range: Range = Range.none, startsStmt: boolean = false): L.Disp => ({ tag: 'disp', range, startsStmt})
+export const mkDefine = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Define => ({ tag: 'define', name, range, startsStmt})
+export const mkImport = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Import => ({ tag: 'import', name, range, startsStmt})
+export const mkRaise = (msg: string, range: Range = Range.none, startsStmt: boolean = false): L.Raise => ({ tag: 'raise', msg, range, startsStmt})
+export const mkPops = (startsStmt: boolean = false): L.PopS => ({ tag: 'pops', startsStmt})
+export const mkPopv = (startsStmt: boolean = false): L.PopV => ({ tag: 'popv', startsStmt})
 
 // Pattern constructors
-export const mkPWild = (range?: Range): L.PWild => ({ tag: 'pwild', range: range ?? Range.none })
-export const mkPLit = (value: L.Value, range?: Range): L.PLit => ({ tag: 'plit', value, range: range ?? Range.none })
-export const mkPVar = (name: string, range?: Range): L.PVar => ({ tag: 'pvar', name, range: range ?? Range.none })
-export const mkPCtor = (name: string, args: L.Pat[], range?: Range): L.PCtor => ({ tag: 'pctor', name, args, range: range ?? Range.none })
+export const mkPWild = (range: Range = Range.none): L.PWild => ({ tag: 'pwild', range })
+export const mkPLit = (value: L.Value, range: Range = Range.none): L.PLit => ({ tag: 'plit', value, range })
+export const mkPVar = (name: string, range: Range = Range.none): L.PVar => ({ tag: 'pvar', name, range })
+export const mkPCtor = (name: string, args: L.Pat[], range: Range = Range.none): L.PCtor => ({ tag: 'pctor', name, args, range })
 
 ///// Utility Functions ////////////////////////////////////////////////////////
 
@@ -75,6 +101,72 @@ export function getFieldsOfStruct (s: L.Struct): string[] {
 /** Mutates a Javascript function to contain a `name` field with that function's name. */
 export const nameFn = (name: string, fn: Function): Function =>
   Object.defineProperty(fn, 'name', { value: name })
+
+// N.B., the char-value conversions are actually language specific,
+// so there's probably a need to refactor this and all dependent
+// code, e.g., printing to the language-specific modules in the future.
+
+export const namedCharValues = new Map([
+  ['alarm', String.fromCharCode(7)],
+  ['backspace', String.fromCharCode(8)],
+  ['delete', String.fromCharCode(127)],
+  ['escape', String.fromCharCode(27)],
+  ['newline', String.fromCharCode(10)],
+  ['null', String.fromCharCode(0)],
+  ['return', String.fromCharCode(13)],
+  ['space', ' '],
+  ['tab', String.fromCharCode(9)]
+])
+
+export const charNamedValues = new Map(
+  [...namedCharValues.entries()].map(([k, v]) => [v, k])
+)
+
+export function charToName (c: string): string {
+  if (charNamedValues.has(c)) {
+    return charNamedValues.get(c)!
+  } else {
+    return c
+  }
+}
+/** @return a vector (array) representation of the input list. */
+export function listToVector (l: L.List): L.Value[] {
+  const ret: L.Value[] = []
+  let cur = l
+  while (cur !== null) {
+    ret.push(cur.head)
+    cur = cur.tail as L.List
+  }
+  return ret
+}
+
+/** @return a list representation of the input vector (array). */
+export function vectorToList (arr: L.Value[]): L.List {
+  let ret: L.List = null
+  for (let i = arr.length - 1; i >= 0; i--) {
+    ret = mkCons(arr[i], ret)
+  }
+  return ret
+}
+
+/** @returns the nth element of the list */
+export function listNth (n: number, l: L.List): L.Value {
+  if (n < 0) {
+    throw new ScamperError('Runtime', `Cannot access negative index ${n} in list`)
+  }
+  let cur = l
+  for (let i = 0; i < n; i++) {
+    if (cur === null) {
+      throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
+    }
+    cur = cur.tail
+  }
+  if (cur == null) {
+    throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
+  } else {
+    return cur.head
+  }
+}
 
 /** @return true if the two L.Values are structurally equal to each other. */
 export function equals (v: L.Value, u: L.Value): boolean {
@@ -137,6 +229,10 @@ export function typeOf (v: L.Value): string {
     return `char`
   } else if (isSym(v)) {
     return `symbol`
+  } else if (isPair(v)) {
+    return 'pair'
+  } else if (isList(v)) {
+    return 'list'
   } else if (isStruct(v)) {
     return `[Struct: ${v[L.structKind]}]`
   } else {
@@ -146,24 +242,48 @@ export function typeOf (v: L.Value): string {
 
 /** @return a generic string representation of value v. */
 export function toString (v: L.Value): string {
-  if (isClosure(v)) {
-    return `<closure (${(v as L.Closure).params.join(' ')})>`
-  } else if (typeof v === 'function') {
-    return `<jsfunc: (${v.name})>`
-  } else if (isSym(v)) {
-    return `\`${v.value}`
-  } else if (isArray(v)) {
-    return `[${v.map(toString).join(', ')}]`
-  } else if (isStruct(v)) {
-    const name = v[L.structKind]
-    const fields = getFieldsOfStruct(v)
-    if (fields.length === 0) {
-      return `(${name})`
-    } else {
-      const args = fields.map((f) => toString(v[f])).join(' ')
-      return `(${name} ${args})`
-    }
-  } else {
-    return `${String(v)}`
+  switch (typeof v) {
+    case 'boolean': return v ? '#t' : '#f'
+    case 'number': return v.toString()
+    case 'string': return `"${v}"`
+    case 'undefined': return 'void'
+    default: 
+      if (v === null) {
+        return 'null'
+      } else if (isSym(v)) {
+        return v.value
+      } else if (isArray(v)) {
+        return `[${v.map(toString).join(', ')}]`
+      } else if (isClosure(v)) {
+        return `[Function: ${v.name ?? '##anonymous##'}]`
+      } else if (isFunction(v)) {
+        return `[Function: ${v.name ?? '##anonymous##'}]`
+      } else if (isChar(v)) {
+        return `#\\${charToName(v.value)}`
+      } else if (isList(v)) {
+        return `(list ${listToVector(v)!.map(toString).join(' ')})`
+      } else if (isPair(v)) {
+        return `(pair ${toString(v.fst)} ${toString(v.snd)})`
+      } else if (v instanceof HTMLElement) {
+        // N.B., shouldn't encounter this? Need to be in browser to render...
+        return '[HTMLElement]'
+      } else if (isStruct(v)) {
+        const name = v[L.structKind]
+        const fields = getFieldsOfStruct(v)
+        if (fields.length === 0) {
+          return `(${name})`
+        } else {
+          const args = fields.map((f) => toString(v[f])).join(' ')
+          return `(${name} ${args})`
+        }
+      } else if (v instanceof ScamperError) {
+        return v.toString()
+      } else if (v instanceof ICE) {
+        return v.toString()
+      } else if (v instanceof Error) {
+        return v.toString()
+      } else {
+        return `[Blob: ${JSON.stringify(v)}]`
+      }
   }
 }

@@ -144,7 +144,7 @@ export function expandStmt (s: A.Stmt): A.Stmt[] {
       ))
       return [ctor, pred, ...accessors]
     }
-    case 'stmtexp': return [A.mkStmtExp(s.expr)]
+    case 'stmtexp': return [A.mkStmtExp(expandExpr(s.expr))]
   }
 }
 

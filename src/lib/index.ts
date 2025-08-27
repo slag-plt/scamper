@@ -1,6 +1,5 @@
 import { Library } from '../lpm'
 import { imageLib } from './image.js'
-import Prelude from './prelude.js'
 import Lab from './lab.js'
 import Music from './music.js'
 import Test from './test.js'
@@ -10,7 +9,6 @@ import Html from './html.js'
 import Reactive from './reactive.js'
 
 export const builtinLibs: Map<string, Library> = new Map([
-  ['prelude', Prelude],
   ['image', imageLib],
   ['lab', Lab],
   ['music', Music],
@@ -21,4 +19,6 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['reactive', Reactive]
 ])
 
+export { Prelude } from './prelude.js'
+export { Runtime } from './runtime.js'
 export default builtinLibs

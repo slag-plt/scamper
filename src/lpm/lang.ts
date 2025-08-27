@@ -25,7 +25,8 @@ export class Env {
   }
 
   get (name: string): Value | undefined {
-    return this.bindings.get(name) ?? this.parent?.get(name)
+    return this.bindings.has(name) ?
+      this.bindings.get(name) : this.parent?.get(name)
   }
 
   set (name: string, value: Value): void {
@@ -33,7 +34,8 @@ export class Env {
   }
 
   has (name: string): boolean {
-    return this.bindings.has(name) || (this.parent?.has(name) ?? false)
+    return this.bindings.has(name) || 
+      ((this.parent === undefined) ? false : this.parent.has(name))
   }
 
   extend (...bindings: [string, Value][]): Env {
@@ -45,7 +47,7 @@ export class Env {
   }
 
   pop (): Env {
-    return this.parent ?? new Env()
+    return this.parent === undefined ? new Env() : this.parent
   }
 }
 
@@ -137,20 +139,48 @@ export type Value =
   number | boolean | string | null | undefined |
   Vector | TaggedObject | ScamperFn | Raw
 
+// N.B., We follow Clojure's lead and distinguish between pairs and lists
+// explicitly. While they are defined as algebraic datatypes, pairs and lists
+// are common enough that are "built-in" datatypes to the runtime.
+
+/**
+ * A pair is an algebraic datatype with a first and second component.
+ */
+export interface Pair extends Struct {
+  [scamperTag]: 'struct',
+  [structKind]: 'pair',
+  fst: Value,
+  snd: Value
+}
+
+/**
+ * A (non-empty) cons cell is an algebraic datatype representing a non-empty list
+ * with a head and tail. The tail, itself, must be a list.
+ */
+export interface Cons extends Struct {
+  [scamperTag]: 'struct',
+  [structKind]: 'cons',
+  head: Value,
+  tail: List
+}
+
+/** A list is either empty (null) or non-empty (cons) */
+export type List = null | Cons
+
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit    = { tag: 'lit', value: Value, range: Range }
-export type Var    = { tag: 'var', name: string, range: Range }
-export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range }
-export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
-export type Ap     = { tag: 'ap', numArgs: number, range: Range }
-export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range }
-export type Disp   = { tag: 'disp', range: Range }
-export type Import = { tag: 'import', name: string, range: Range }
-export type Define = { tag: 'define', name: string, range: Range }
-export type Raise  = { tag: 'raise', msg: string, range: Range }
-export type PopS   = { tag: 'pops' }
-export type PopV   = { tag: 'popv' }
+export type Lit    = { tag: 'lit', value: Value, range: Range, startsStmt: boolean }
+export type Var    = { tag: 'var', name: string, range: Range, startsStmt: boolean }
+export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range, startsStmt: boolean }
+export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range, startsStmt: boolean }
+export type Ap     = { tag: 'ap', numArgs: number, range: Range, startsStmt: boolean }
+export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range, startsStmt: boolean }
+export type Disp   = { tag: 'disp', range: Range, startsStmt: boolean }
+export type Import = { tag: 'import', name: string, range: Range, startsStmt: boolean }
+export type Define = { tag: 'define', name: string, range: Range, startsStmt: boolean }
+export type Raise  = { tag: 'raise', msg: string, range: Range, startsStmt: boolean }
+export type PopS   = { tag: 'pops', startsStmt: boolean }
+export type PopV   = { tag: 'popv', startsStmt: boolean }
 export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Disp | Import | Define | Raise | PopS | PopV
 export type Blk    = Ops[]
 
@@ -213,5 +243,17 @@ export class Thread {
 
   pop (): void {
     this.frames.pop()
+  }
+
+  unwindToNextStatement (): void {
+    if (this.getCurrentFrame().isFinished()) { 
+      this.pop()
+    }
+    while (!this.isFinished() && !this.getCurrentFrame().ops[this.getCurrentFrame().ops.length - 1].startsStmt) {
+      this.getCurrentFrame().popInstr()
+      if (this.getCurrentFrame().isFinished()) {
+        this.pop()
+      }
+    }
   }
 }

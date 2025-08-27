@@ -1,4 +1,4 @@
-import { charToName, ICE, ScamperError, Value } from './lang.js'
+import * as L from './lpm'
 import hljs from 'highlight.js'
 
 export function mkCodeElement (text: string): HTMLElement {
@@ -36,7 +36,7 @@ function getRenderer<T> (v: any, renderers: [TypeTest, T][]): T | undefined {
   return undefined
 }
 
-export function renderToHTML (v: Value.T): HTMLElement {
+export function renderToHTML (v: L.Value): HTMLElement {
   switch (typeof v) {
     case 'boolean':
       return mkCodeElement(v ? '#t' : '#f')
@@ -49,10 +49,10 @@ export function renderToHTML (v: Value.T): HTMLElement {
     default:
       if (v === null) {
         return mkCodeElement('()')
-      } else if (Value.isSym(v)) {
-        return mkCodeElement((v as Value.Sym).value)
-      } else if (Value.isArray(v)) {
-        const vec = v as Value.T[]
+      } else if (L.isSym(v)) {
+        return mkCodeElement((v as L.Sym).value)
+      } else if (L.isArray(v)) {
+        const vec = v as L.Value[]
         if (vec.length === 0) {
           return mkCodeElement('[]')
         }
@@ -64,13 +64,13 @@ export function renderToHTML (v: Value.T): HTMLElement {
         })
         ret.append(mkCodeElement(']'))
         return ret
-      } else if (Value.isClosure(v)) {
+      } else if (L.isClosure(v)) {
         return mkCodeElement(`[Function (closure)]`)
-      } else if (Value.isJsFunction(v)) {
+      } else if (L.isJsFunction(v)) {
         return mkCodeElement(`[Function (${(v as Function).name})]`)
-      } else if (Value.isChar(v)) {
-        return mkCodeElement(`#\\${charToName((v as Value.Char).value)}`)
-      } else if (Value.isList(v)) {
+      } else if (L.isChar(v)) {
+        return mkCodeElement(`#\\${L.charToName((v as L.Char).value)}`)
+      } else if (L.isList(v)) {
         const ret = mkCodeElement('(')
         let lst: any = v
         // N.B., we know the list is non-empty because we cover the null case already
@@ -83,12 +83,12 @@ export function renderToHTML (v: Value.T): HTMLElement {
         }
         ret.append(mkCodeElement(')'))
         return ret
-      } else if (Value.isPair(v)) {
+      } else if (L.isPair(v)) {
         // TODO: do we introduce `( . `)` for pairs again?
         const ret = mkCodeElement('(pair ')
-        ret.appendChild(renderToHTML((v as Value.Pair).fst))
+        ret.appendChild(renderToHTML((v as L.Pair).fst))
         ret.appendChild(mkCodeElement(' '))
-        ret.appendChild(renderToHTML((v as Value.Pair).snd))
+        ret.appendChild(renderToHTML((v as L.Pair).snd))
         ret.append(mkCodeElement(')'))
         return ret
       } else if (v instanceof HTMLElement) {
@@ -100,13 +100,13 @@ export function renderToHTML (v: Value.T): HTMLElement {
         const customRenderer = getRenderer(v, customWebRenderers)
         if (customRenderer !== undefined) {
           return customRenderer(v)
-        } else if (Value.isStruct(v)) {
-          const s = v as Value.Struct
-          const fields = Value.getFieldsOfStruct(s)
+        } else if (L.isStruct(v)) {
+          const s = v as L.Struct
+          const fields = L.getFieldsOfStruct(s)
           if (fields.length === 0) {
-            return mkCodeElement(`(${s[Value.structKind]})`)
+            return mkCodeElement(`(${s[L.structKind]})`)
           } else {
-            const ret = mkCodeElement(`(${s[Value.structKind]} `)
+            const ret = mkCodeElement(`(${s[L.structKind]} `)
             ret.appendChild(renderToHTML(s[fields[0]]))
             for (let i = 1; i < fields.length; i++) {
               ret.appendChild(mkCodeElement(' '))
@@ -115,9 +115,9 @@ export function renderToHTML (v: Value.T): HTMLElement {
             ret.append(mkCodeElement(')'))
             return ret
           }
-        } else if (v instanceof ScamperError) {
+        } else if (v instanceof L.ScamperError) {
           return mkCodeElement(v.toString())
-        } else if (v instanceof ICE) {
+        } else if (v instanceof L.ICE) {
           return mkCodeElement(v.toString())
         } else if (v instanceof Error) {
           return mkCodeElement(v.toString())

@@ -1,6 +1,5 @@
 export * from './error.js'
 export * from './lang.js'
-export * from './list.js'
 export * from './machine.js'
 export * from './output.js'
 export * from './range.js'

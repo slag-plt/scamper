@@ -1,5 +1,5 @@
 import * as L from '../lpm'
-import builtinLibs from '../lib'
+import { Prelude, Runtime, builtinLibs } from '../lib'
 import { lowerProgram } from './codegen'
 import { expandProgram } from './expansion'
 import { read } from './reader.js'
@@ -41,7 +41,10 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
 
 export function mkInitialEnv (): L.Env {
   const env = new L.Env()
-  for (const [name, fn] of builtinLibs.get('prelude')!.lib) {
+  for (const [name, fn] of Runtime.lib) {
+    env.set(name, fn)
+  }
+  for (const [name, fn] of Prelude.lib) {
     env.set(name, fn)
   }
   return env
