@@ -146,8 +146,9 @@ describe('basic ops', () => {
   })
 
   test('raise', () => {
-    const [machine, _out, _err] = makeMachine([U.mkRaise('test error')])
-    expect(() => machine.evaluate()).toThrow('test error')
+    const [machine, _out, err] = makeMachine([U.mkRaise('test error')])
+    machine.evaluate()
+    expect(err.log.length).toBe(1)
   })
 
   test('pop - environment restoration', () => {
