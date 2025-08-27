@@ -283,11 +283,11 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
 }
 
 export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
-  let { value, range } = S.unpackSyntax(v)
   const orig = v
+  let { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
-    return A.mkStmtExp(parseExp(errors,v), range)
+    return A.mkStmtExp(parseExp(errors, orig), range)
   } else {
     const arr = L.listToVector(v as L.List)
     if (arr.length == 0) {

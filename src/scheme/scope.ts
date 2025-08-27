@@ -111,6 +111,7 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
       } else {
         globals.push(s.name)
       }
+      scopeCheckExp(errors, globals, [], s.value)
       return
     }
 
