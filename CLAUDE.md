@@ -1,69 +1,78 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to LLM agents when working with code in this repository.
+
+## Project Overview
+
+**Scamper** is a mini-Scheme implementation designed for teaching multimedia programming on the web. It provides a complete web-based programming environment with IDE, documentation viewer, and various runner interfaces.
 
 ## Development Commands
-- `npm install` - Install NPM dependencies
-- `npm run dev` - Start local development server with hot reloading
-- `npm run build` - Build the project (TypeScript compilation + Vite build)
-- `npm run test` - Run Jest tests
-- `npm run deploy` - Deploy Scamper to production server
+
+### Essential Commands
+- `npm install` - Install dependencies  
+- `npm run dev` - Start Vite development server for local development
+- `npm run build` - Full production build (TypeScript compilation + Vite build)
+- `npm test` - Run all Jest tests
+- `npm run deploy` - Deploy to production server (requires Mac/Linux and compsci host)
 - `npm run clean` - Remove dist directory
-- `npm run preview` - Preview the built application
 
-## Project Architecture
-Scamper is a mini-Scheme implementation for teaching multimedia programming on the web. The architecture consists of:
+### Testing
+- Tests are located in `/test/` directory with `.test.ts` extension
+- Jest runs in jsdom environment with TypeScript support
+- Key test files: `libs.test.ts`, `prelude.test.ts`, `runtime.test.ts`, `lpm/machine.test.ts`
+- Individual test files can be run with: `npm test -- <filename>`
 
-### Core Runtime Components
-- **Parser** (`src/parser.ts`) - Parses Scamper source code into AST
-- **Semantics** (`src/sem.ts`) - Core evaluation engine and runtime
-- **Language definitions** (`src/lang.ts`) - Core language types and structures
-- **LPM (Local Parameter Machine)** (`src/lpm/`) - Low-level virtual machine implementation
-  - `runtime.ts` - Runtime execution engine
-  - `machine.ts` - Virtual machine state and operations
-  - `ops.ts` - Operation definitions
+## Architecture Overview
 
-### Library System
-- **Built-in libraries** (`src/lib/`) - Core Scheme libraries implemented in TypeScript
-  - `builtin.ts` - Registry mapping library names to implementations
-  - `prelude.ts` - Standard library functions always available
-  - Domain-specific libraries: `image.ts`, `canvas.ts`, `audio.ts`, `music.ts`, `html.ts`, `reactive.ts`, `test.ts`, `lab.ts`
-- **Library architecture** - Each library exports a mapping of `[string, any][]` where strings are Scamper identifiers
+### Core Language Pipeline
+1. **Lexing/Reading** (`src/scheme/reader.ts`) - S-expression parsing
+2. **AST Parsing** (`src/scheme/ast.ts`) - Convert to abstract syntax tree
+3. **Macro Expansion** (`src/scheme/expansion.ts`) - Expand Scheme macros
+4. **Scope Checking** (`src/scheme/scope.ts`) - Variable resolution
+5. **Code Generation** (`src/scheme/codegen.ts`) - Lower to LPM bytecode
+6. **Execution** (`src/lpm/`) - Language Processing Machine runtime
 
-### Web Integration
-- **IDE** (`src/web/ide.ts`) - Web-based development environment
-- **Runner** (`src/web/runner.ts`) - Code execution interface
-- **File system** (`src/web/fs/`) - Virtual file system for web environment
-- **CodeMirror integration** (`src/codemirror/`) - Syntax highlighting and editing
+### Key Source Directories
+- `src/scheme/` - Scheme language implementation (parser, AST, codegen, etc.)
+- `src/lpm/` - LPM runtime execution engine
+- `src/lib/` - Built-in libraries (multimedia, audio, canvas, image, reactive, etc.)
+- `src/web/` - Web interface components (IDE, file system, runners)
+- `src/codemirror/` - Code editor integration with Scheme syntax highlighting
+- `src/docs/` - Documentation generation system
 
-### Type System
-Scamper-to-JavaScript type mapping:
-- Primitives: boolean, number, string, null (void), Array (vector)
-- Tagged objects: `{ _scamperTag: 'pair'|'struct'|'closure'|'jsfunc' }`
-- Functions can be Scamper closures, wrapped JS functions, or raw JS functions
+### Main Classes
+- `Scamper` class in `scamper.ts` - Main orchestrator for compilation and execution
 
-## Testing
-- Tests are located in `test/` directory
-- Jest configuration in `jest.config.ts` with TypeScript support
-- Test files follow `*.test.ts` pattern
-- Uses jsdom environment for DOM testing
-
-## Build System
-- TypeScript with ESNext target
-- Vite for bundling and development server
-- ESLint for linting (standard TypeScript configuration)
-- Source maps and declarations enabled for debugging
+### Web Interfaces (Multiple Entry Points)
+- `ide.html` - Full IDE with split-pane editor and output
+- `runner.html` - Simple program runner  
+- `docs.html` - Documentation viewer
+- `web.html` - Alternative web interface
+- `index.html` - File chooser/main entry point
 
 ## Library Development
-When adding new libraries:
-1. Create library file in `src/lib/`
-2. Export library mapping as `[string, any][]`
-3. Add entry to `builtinLibs` map in `src/lib/builtin.ts`
-4. Use `mkJsFunction` from `sem.ts` to wrap JavaScript functions with arity checking
-5. Follow existing patterns in other library files
 
-## Development Notes
-- The project uses ES modules throughout
-- Strict TypeScript configuration with comprehensive linting
-- Libraries should throw `ScamperError` for runtime errors and `ICE` for internal compiler errors.
-- Use `callFunction` from `sem.ts` to invoke higher-order functions safely
+Built-in libraries are in `/src/lib/`. Each library exports a mapping of `[string, any][]` from Scamper identifiers to values/functions.
+
+### Type Mappings
+- JavaScript primitives map directly: `boolean`, `number`, `string`, `null` (null), `undefined` (void), `Array` (vector)
+- Scamper objects use `##scamperTag##` fields: pairs, lists, structs, closures, wrapped JS functions
+
+### Key Utilities
+- `ScamperError` in `lang.ts` - Primary exception type for libraries
+- `callScamperFn()` in `lpm` - Invoke higher-order functions
+- Library registration in `builtin.ts` for import statements
+
+## Build Configuration
+
+- **Vite** (main build tool) with TypeScript compilation
+- **Multi-entry build** creates versioned assets for each interface
+- **ES2023 target** with strict TypeScript configuration
+- **Source maps** generated for both JS and TS
+- Output: `dist/` for web assets, `types/` for TypeScript declarations
+
+## Current Development
+
+- Active branch: `lpm` (Little Pattern Machine development)
+- Version: 3.0.0
+- Key changes appear to be in the LPM runtime system
