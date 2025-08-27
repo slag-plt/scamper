@@ -1,158 +1,139 @@
-import { ScamperError, Value } from '../lpm'
-import * as L from '../lpm'
+import { ICE, ScamperError } from '../lpm'
 import * as A from './ast.js'
+import * as L from '../lpm'
 
-/**
- * @return the recorded De Brujin index of the given variable name. Note that
- * because of scoping this will be the most recent index recorded for the name
- * in the locals array.
- */
-function getIndexOfLocal (locals: string[], name: string): number {
-  for (let i = locals.length - 1; i >= 0; i--) {
-    if (locals[i] === name) {
-      return i
+function checkDuplicateVars (errors: ScamperError[], vars: string[], range: L.Range) {
+  const seen = new Set<string>()
+  for (const v of vars) {
+    if (seen.has(v)) {
+      errors.push(new ScamperError('Parser', `Duplicate variable '${v}' encountered in binding list`, undefined, range))
     }
+    seen.add(v)
   }
-  return -1 
 }
 
-function scopeCheckSingle (errors: ScamperError[], globals: string[], locals: string[], v: Value): Value {
-  const { metadata, value: uv } = A.unpackSyntax(v)
-  // N.B., this is the key operation! We resolve variables by using the maps
-  // to determine whether they are local or global. Global variables are left
-  // as is. However, local variables are annotated with a 'local' metadata
-  // field that contains their calculated De Brujin index.
-  if (L.isSym(uv)) {
-    const name = uv.value
-    const localIndex = getIndexOfLocal(locals, name)
-    if (localIndex === -1) {
-      if (globals.includes(name)) {
-        return A.mkSyntax(uv, ...metadata)
+function scopeCheckPat (errors: ScamperError[], locals: Set<string>, p: A.Pat) {
+  switch (p.tag) {
+    case 'pvar': {
+      if (locals.has(p.name)) {
+        errors.push(new ScamperError('Parser', `Duplicate binding variable '${p.name}' encountered in pattern`, undefined, p.range))
       } else {
-        errors.push(new ScamperError('Parser', `Variable '${name}' is undefined`, undefined, metadata.get('range')))
+        locals.add(p.name)
       }
-    } else {
-      return A.mkSyntax(uv, ...metadata, ['local', localIndex])
+      return
     }
-  } else {
-    return v
+
+    case 'pwild': return
+    case 'plit': return
+
+    case 'pctor': {
+      p.args.forEach((p) => scopeCheckPat(errors, locals, p))
+      return
+    }
   }
 }
 
-function scopeCheckExpr (errors: ScamperError[], globals: string[], locals: string[], v: Value): Value {
-  if (A.isAtom(v)) {
-    return scopeCheckSingle(errors, globals, locals, v)
-  } else if (A.isLambda(v)) {
-    let { params, body, metadata } = A.asLambda(v)
-    const localBase = locals.length
-    const boundVars: string[] = params.map((v) => (A.stripSyntax(v) as L.Sym).value)
-    body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(L.mkList(L.mkSym('lambda'), L.mkList(...params), body), ['localBase', localBase], ...metadata)
-  } else if (A.isLet(v)) {
-    let { bindings, body, metadata } = A.asLet(v)
-    bindings = bindings.map(({ fst, snd, metadata }) => ({
-      fst,
-      snd: scopeCheckExpr(errors, globals, locals, snd),
-      metadata
-    }))
-    const localBase = locals.length
-    const boundVars: string[] = bindings.map(({ fst }) => (A.stripSyntax(fst) as L.Sym).value)
-    body = scopeCheckExpr(errors, globals, [...locals, ...boundVars], body)
-    return A.mkSyntax(L.mkList(L.mkSym('let'), L.mkList(...bindings), body), ['localBase', localBase], ...metadata)
-  } else if (A.isBegin(v)) {
-    let { values, metadata } = A.asBegin(v)
-    values = values.map((v) => scopeCheckExpr(errors, globals, locals, v))
-    return A.mkSyntax(L.mkList(L.mkSym('begin'), ...values), ...metadata)
-  } else if (A.isIf(v)) {
-    const { guard, ifB, elseB, metadata } = A.asIf(v)
-    const guardExpr = scopeCheckExpr(errors, globals, locals, guard)
-    const ifExpr = scopeCheckExpr(errors, globals, locals, ifB)
-    const elseExpr = scopeCheckExpr(errors, globals, locals, elseB)
-    return A.mkSyntax(L.mkList(L.mkSym('if'), guardExpr, ifExpr, elseExpr), ...metadata)
-  } else if (A.isMatch(v)) {
-    // TODO: need to handle binders in the patterns... darn!
-  } else if (A.isQuote(v)) {
-    const { value, metadata } = A.asQuote(v)
-    const body = scopeCheckExpr(errors, globals, locals, value)
-    return A.mkSyntax(L.mkList(L.mkSym('quote'), body), ...metadata)
-  } else {
-    const { values, metadata } = A.asApp(v)
-    return A.mkSyntax(L.mkList(...values.map((v) => scopeCheckExpr(errors, globals, locals, v))), ...metadata)
+function scopeCheckExp (errors: ScamperError[], globals: string[], locals: string[], e: A.Exp) {
+  switch (e.tag) {
+    case 'var': {
+      if (!locals.includes(e.name) && !globals.includes(e.name)) {
+        errors.push(new ScamperError('Parser', `Undefined variable '${e.name}'`, undefined, e.range))
+      }
+      return
+    }
+
+    case 'lit': return
+
+    case 'app': {
+      scopeCheckExp(errors, globals, locals, e.head)
+      e.args.forEach((e) => scopeCheckExp(errors, globals, locals, e))
+      return
+    }
+
+    case 'lam': {
+      // N.B., do we want to warn in the case of shadowed variables?
+      checkDuplicateVars(errors, e.params, e.range)
+      scopeCheckExp(errors, globals, [...locals, ...e.params], e.body)
+      return
+    }
+    case 'let': {
+      const vars = e.bindings.map(b => b.name)
+      checkDuplicateVars(errors, vars, e.range)
+      e.bindings.forEach(b => scopeCheckExp(errors, globals, locals, b.value))
+      scopeCheckExp(errors, globals, [...locals, ...vars], e.body)
+      return
+    }
+    case 'begin': {
+      e.exps.forEach((e) => scopeCheckExp(errors, globals, locals, e))
+      return
+    }
+
+    case 'if': {
+      scopeCheckExp(errors, globals, locals, e.guard)
+      scopeCheckExp(errors, globals, locals, e.ifB)
+      scopeCheckExp(errors, globals, locals, e.elseB)
+      return
+    }
+    case 'match': {
+      scopeCheckExp(errors, globals, locals, e.scrutinee)
+      e.branches.forEach((b) => {
+        const bindingVars: Set<string> = new Set()
+        scopeCheckPat(errors, bindingVars, b.pat)
+        scopeCheckExp(errors, globals, [...locals, ...bindingVars], b.body)
+      })
+      return
+    }
+    case 'quote': {
+      // N.B., no need to scope check a "frozen" AST
+      return
+    }
+    default:
+      throw new ICE('scopeCheckExp', `Non-core expression encountered ${e.tag}`)
   }
 }
 
-function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Library>, globals: string[], v: Value): Value {
-  if (A.isImport(v)) {
-    const { name: ident, metadata } = A.asImport(v)
-    const { name, metadata: _nm } = A.asIdentifier(ident)
-    if (!builtinLibs.has(name)) {
-      errors.push(new ScamperError('Parser', `Library '${name}' is not defined`, undefined, metadata.get('range')))
-    } else {
-      const lib = builtinLibs.get(name)!
-      for (const [name, _v] of lib.lib) {
-        if (globals.includes(name)) {
-          // TODO: push a warning noting that shadowing is occuring!
-        } else {
-          globals.push(name)
-        }
+function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Library>, globals: string[], s: A.Stmt) {
+  switch (s.tag) {
+    case 'import': {
+      if (!builtinLibs.has(s.module)) {
+        errors.push(new ScamperError('Parser', `Library '${s.module}' is not defined`, undefined, s.range))
       }
+      for (const [name, _] of builtinLibs.get(s.module)!.lib) {
+        globals.push(name)
+      }
+      return
     }
-    return v
-  } else if (A.isDefine(v)) {
-    const { name: sym, value, metadata } = A.asDefine(v)
-    const name = (A.stripSyntax(sym) as L.Sym).value
-    if (globals.includes(name)) {
-      errors.push(new ScamperError('Parser',  `Global variable '${name}' is already defined`, undefined, metadata.get('range')))
-    } else {
-      globals.push(name)
-    }
-    const body = scopeCheckExpr(errors, globals, [name], value)
-    return A.mkSyntax(L.mkList(L.mkSym('define'), name, body), ...metadata)
-  } else if (A.isDisplay(v)) {
-    const { value, metadata } = A.asDisplay(v)
-    const body = scopeCheckExpr(errors, globals, [], value)
-    return A.mkSyntax(L.mkList(L.mkSym('display'), body), ...metadata)
-  } else if (A.isStruct(v)) {
-    const { name, fields, metadata: _metadata } = A.asStruct(v)
-    const { name: nameValue, metadata: nameMetadata } = A.asIdentifier(name)
-    // Constructor
-    if (globals.includes(nameValue)) {
-      errors.push(new ScamperError('Parser',  `Global variable '${nameValue}' is already defined`, undefined, nameMetadata.get('range')))
-    } else {
-      globals.push(nameValue)
-    }
-    // Predicate
-    const pred = A.structPredName(nameValue)
-    if (globals.includes(pred)) {
-      errors.push(new ScamperError('Parser',  `Global variable '${pred}' is already defined`, undefined, nameMetadata.get('range')))
-    } else {
-      globals.push(pred)
-    }
-    // Fields
-    fields.forEach((f) => {
-      const { name: fieldName, metadata: fieldMetadata } = A.asIdentifier(f)
-      const getter = A.structFieldName(nameValue, fieldName)
-      if (globals.includes(getter)) {
-        errors.push(new ScamperError('Parser', `Global variable '${getter}' is already defined`, undefined, fieldMetadata.get('range')))
+      
+    case 'define': {
+      if (globals.includes(s.name)) {
+        errors.push(new ScamperError('Parser', `Global variable '${s.name}' is already defined`, undefined, s.range))
       } else {
-        globals.push(getter)
+        globals.push(s.name)
       }
-    })
-    return v
-  } else {
-    return scopeCheckExpr(errors, globals, [], v)
+      return
+    }
+
+    case 'display': {
+      scopeCheckExp(errors, globals, [], s.value)
+      return
+    }
+
+    case 'stmtexp': {
+      scopeCheckExp(errors, globals, [], s.expr)
+      return
+    }
+
+    default:
+      throw new ICE('scopeCheckStmt', `Non-core statement encountered ${s.tag}`)
   }
 }
 
-export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, vs: Value[]): { program: Value[], errors: ScamperError[] } {
-  const errors: ScamperError[] = []
+export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, errors: ScamperError[], prog: A.Prog) {
   const globals: string[] = []
-  const program: Value[] = []
   for (const [name, _] of builtinLibs.get('prelude')!.lib) {
     globals.push(name)
   }
-  for (const v of vs) {
-    program.push(scopeCheckStmt(errors, builtinLibs, globals, v))
+  for (const s of prog) {
+    scopeCheckStmt(errors, builtinLibs, globals, s)
   }
-  return { program, errors }
 }

@@ -2,35 +2,25 @@ import * as L from '../lpm'
 import builtinLibs from '../lib'
 import { lowerProgram } from './codegen'
 import { expandProgram } from './expansion'
-import { stringToTokens, parseValues } from './reader.js'
+import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
-import { checkSyntaxProgram } from './syntax.js'
+import { parseProgram } from './parser.js'
 
 export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
-  // Tokenization
-  let tokens = undefined 
+  // Tokenization and reading (to Sexps)
+  let sexps = undefined 
   try {
-    tokens = stringToTokens(src)
+    sexps = read(src)
   } catch (e: any) {
-    err.err(e)
+    err.report(e)
     return undefined
   }
 
-  // Parsing (to S-expressions)
-  let program = undefined
-  try {
-    program = parseValues(tokens)
-  } catch (e: any) {
-    err.err(e)
-    return undefined
-  }
-
-  // Syntax check
-  let errors = checkSyntaxProgram(program)
+  // Parsing (to AST)
+  let errors: L.ScamperError[] = []
+  let program = parseProgram(errors, sexps)
   if (errors.length > 0) {
-    for (const e of errors) {
-      err.err(e)
-    }
+    errors.forEach((e) => err.report(e))
     return undefined
   }
 
@@ -38,13 +28,10 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   program = expandProgram(program)
 
   // Scope checking
-  const scopeCheckResult = scopeCheckProgram(builtinLibs, program)
-  program = scopeCheckResult.program
-  errors = scopeCheckResult.errors
+  errors = []
+  scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
-    for (const e of errors) {
-      err.err(e)
-    }
+    errors.forEach((e) => err.report(e))
     return undefined
   }
 

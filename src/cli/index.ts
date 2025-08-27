@@ -9,7 +9,7 @@ class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
     console.log(LPM.toString(v))
   }
 
-  err (e: LPM.ScamperError): void {
+  report (e: LPM.ScamperError): void {
     this.seenError = true
     console.error(e.toString())
   }

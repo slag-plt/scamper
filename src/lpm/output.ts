@@ -22,7 +22,7 @@ export class LoggingOutputChannel implements OutputChannel {
 
 /** A "console" that can receive errors from LPM. */
 export interface ErrorChannel {
-  err: (e: ScamperError) => void
+  report: (e: ScamperError) => void
 }
 
 /** An error channel that simply logs any errors that arise. */
@@ -33,7 +33,7 @@ export class LoggingErrorChannel implements ErrorChannel {
     this.log = []
   }
 
-  err (err: ScamperError): void {
+  report (err: ScamperError): void {
     this.log.push(err)
   }
 }
@@ -50,7 +50,7 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
     this.log.push(toString(v))
   }
 
-  err (e: ScamperError): void {
+  report (e: ScamperError): void {
     this.log.push(e.toString())
   }
 }

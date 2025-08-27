@@ -1,5 +1,5 @@
 import * as L from '../lpm'
-import { mkSyntax, Syntax } from './ast.js'
+import { mkSyntax, Syntax } from './syntax.js'
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
@@ -295,26 +295,26 @@ export const namedCharValues = new Map([
   ['tab', String.fromCharCode(9)]
 ])
 
-export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
+export function readSingle (t: Token, wildAllowed: boolean): Syntax {
   const text = t.text
   if (intRegex.test(text)) {
-    return mkSyntax(parseInt(text), ['range', t.range])
+    return mkSyntax(parseInt(text), t.range)
   } else if (floatRegex.test(text)) {
-    return mkSyntax(parseFloat(text), ['range', t.range])
+    return mkSyntax(parseFloat(text), t.range)
   } else if (text === '#t') {
-    return mkSyntax(true, ['range', t.range])
+    return mkSyntax(true, t.range)
   } else if (text === '#f') {
-    return mkSyntax(false, ['range', t.range])
+    return mkSyntax(false, t.range)
   } else if (text === 'null') {
-    return mkSyntax(null, ['range', t.range])
+    return mkSyntax(null, t.range)
   } else if (text.startsWith('"')) {
-    return mkSyntax(parseStringLiteral(text, t.range), ['range', t.range])
+    return mkSyntax(parseStringLiteral(text, t.range), t.range)
   } else if (text.startsWith('#\\')) {
     const escapedChar = text.slice(2)
     if (escapedChar.length === 1) {
-      return mkSyntax(L.mkChar(escapedChar), ['range', t.range])
+      return mkSyntax(L.mkChar(escapedChar), t.range)
     } else if (namedCharValues.has(escapedChar)) {
-      return mkSyntax(L.mkChar(namedCharValues.get(escapedChar)!), ['range', t.range])
+      return mkSyntax(L.mkChar(namedCharValues.get(escapedChar)!), t.range)
     } else {
       throw new L.ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }
@@ -324,16 +324,16 @@ export function parseSingle (t: Token, wildAllowed: boolean): Syntax {
     if (text.startsWith('_') && !wildAllowed) {
       throw new L.ScamperError('Parser', 'Identifiers cannot begin with "_" unless inside of "section" or patterns', undefined, t.range)
     }
-    return mkSyntax(L.mkSym(text), ['range', t.range])
+    return mkSyntax(L.mkSym(text), t.range)
   }
 }
 
-export function parseValue (tokens: Token[]): Syntax {
+export function readValue (tokens: Token[]): Syntax {
   const beg = tokens.shift()!
   if (isOpeningBracket(beg.text)) {
     const values = []
     while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-      values.push(parseValue(tokens))
+      values.push(readValue(tokens))
     }
     if (tokens.length === 0) {
       // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
@@ -347,19 +347,24 @@ export function parseValue (tokens: Token[]): Syntax {
         // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
         // we ever allow '{' to imply an dictionary/object.
         beg.text === '[' ? values : L.mkList(...values),
-        ['range', new L.Range(beg.range.begin, end.range.end)])
+        new L.Range(beg.range.begin, end.range.end))
     }
   } else if (beg.text === "'") {
-    return mkSyntax(L.mkList(L.mkSym('quote'), parseValue(tokens)), ['range', beg.range])
+    return mkSyntax(L.mkList(L.mkSym('quote'), readValue(tokens)), beg.range)
   } else {
-    return parseSingle(beg, true)
+    return readSingle(beg, true)
   }
 }
 
-export function parseValues (tokens: Token[]): Syntax[] {
+export function readValues (tokens: Token[]): Syntax[] {
   const ret = []
   while (tokens.length > 0) {
-    ret.push(parseValue(tokens))
+    ret.push(readValue(tokens))
   }
   return ret
+}
+
+export function read (src: string): Syntax[] {
+  const tokens = stringToTokens(src)
+  return readValues(tokens)
 }

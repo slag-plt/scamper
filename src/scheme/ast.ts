@@ -1,5 +1,6 @@
-import { Value } from '../lpm'
 import * as L from '../lpm'
+
+///// Language Definition //////////////////////////////////////////////////////
 
 // e ::= n | b | s | c
 //     | null | void
@@ -29,264 +30,146 @@ import * as L from '../lpm'
 //     -- Sugared form
 //     | (struct S (f1 ... fk))
 
-///// Syntax Wrappers //////////////////////////////////////////////////////////
+///// Patterns /////
 
-export type Metadata = Map<string, any>
-export type MetadataEntry = [string, any]
+export type PWild = { tag: 'pwild', range: L.Range }
+export type PVar  = { tag: 'pvar', name: string, range: L.Range }
+export type PLit  = { tag: 'plit', value: L.Value, range: L.Range }
+export type PCtor = { tag: 'pctor', name: string, args: Pat[], range: L.Range }
+export type Pat = PWild | PVar | PLit | PCtor
 
-/**
- * A syntax value wraps a value that serves as a Scheme AST. It provides
- * metadata information, e.g., source ranges, for the underlying AST.
- */
-export interface Syntax extends L.Struct {
-  [L.scamperTag]: 'struct'
-  [L.structKind]: 'syntax'
-  metadata: Metadata
-  value: Value
-}
+///// Expressions /////
 
-export const mkSyntax = (value: Value, ...metadata: MetadataEntry[]): Syntax =>
-  ({ [L.scamperTag]: 'struct', [L.structKind]: 'syntax', metadata: new Map(metadata), value })
+// Core Forms
+export type Lit   = { tag: 'lit', value: L.Value, range: L.Range }
+export type Var   = { tag: 'var', name: string, range: L.Range }
+export type App   = { tag: 'app', head: Exp, args: Exp[], range: L.Range }
+export type Lam   = { tag: 'lam', params: string[], body: Exp, range: L.Range }
+export type Let   = { tag: 'let', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
+export type Begin = { tag: 'begin', exps: Exp[], range: L.Range }
+export type If    = { tag: 'if', guard: Exp, ifB: Exp, elseB: Exp, range: L.Range }
+export type Match = { tag: 'match', scrutinee: Exp, branches: { pat: Pat, body: Exp }[], range: L.Range }
+export type Quote = { tag: 'quote', value: L.Value, range: L.Range }
 
-export const isSyntax = (v: Value): v is Syntax => L.isStructKind(v, 'syntax')
+// Sugared Forms
+export type LetS  = { tag: 'let*', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
+export type And   = { tag: 'and', exps: Exp[], range: L.Range }
+export type Or    = { tag: 'or', exps: Exp[], range: L.Range }
+export type Cond  = { tag: 'cond', branches: { test: Exp, body: Exp }[], range: L.Range }
+export type Section = { tag: 'section', exps: Exp[], range: L.Range }
 
-/** @return v but with its top-level syntax wrapper removed, if it exists. */
-export const stripSyntax = (v: Value): Value => isSyntax(v) ? v.value : v
+export type Exp = Lit | Var | App | Lam | Let | Begin | If | Match | Quote | LetS | And | Or | Cond | Section
 
-/** @return v but with all syntax wrappers removed, recursively. */
-export function stripAllSyntax (v: Value): Value {
-  if (isSyntax(v)) {
-    return stripAllSyntax((v as Syntax).value)
-  } else if (L.isList(v)) {
-    return L.mkList(...L.listToVector(v).map(stripAllSyntax))
-  } else if (L.isPair(v)) {
-    return L.mkPair(stripAllSyntax(v.fst), stripAllSyntax(v.snd))
-  } else if (L.isArray(v)) {
-    return v.map(stripAllSyntax)
-  } else if (L.isStruct(v)) {
-    const fields = L.getFieldsOfStruct(v)
-    return L.mkStruct(v[L.structKind], fields, fields.map((f) => stripAllSyntax(v[f])))
-  } else {
-    return v
+///// Statements /////
+
+// Core Forms
+export type Import  = { tag: 'import', module: string, range: L.Range }
+export type Define  = { tag: 'define', name: string, value: Exp, range: L.Range }
+export type Disp    = { tag: 'display', value: Exp, range: L.Range }
+export type StmtExp = { tag: 'stmtexp', expr: Exp, range: L.Range }
+
+// Sugared Forms
+export type Struct  = { tag: 'struct', name: string, fields: string[], range: L.Range }
+
+export type Stmt = Import | Define | Disp | StmtExp | Struct
+
+///// Programs /////
+
+export type Prog = Stmt[]
+
+///// Constructor Functions ////////////////////////////////////////////////////
+
+// Patterns (pat)
+export const mkPWild = (range: L.Range = L.Range.none): PWild => ({ tag: 'pwild', range })
+export const mkPVar = (name: string, range: L.Range = L.Range.none): PVar => ({ tag: 'pvar', name, range })
+export const mkPLit = (value: L.Value, range: L.Range = L.Range.none): PLit => ({ tag: 'plit', value, range })
+export const mkPCtor = (name: string, args: Pat[], range: L.Range = L.Range.none): PCtor => ({ tag: 'pctor', name, args, range })
+
+// Expressions (exp)
+export const mkLit = (value: L.Value, range: L.Range = L.Range.none): Lit => ({ tag: 'lit', value, range })
+export const mkVar = (name: string, range: L.Range = L.Range.none): Var => ({ tag: 'var', name, range })
+export const mkApp = (head: Exp, args: Exp[], range: L.Range = L.Range.none): App => ({ tag: 'app', head, args, range })
+export const mkLam = (params: string[], body: Exp, range: L.Range = L.Range.none): Lam => ({ tag: 'lam', params, body, range })
+export const mkLet = (bindings: { name: string, value: Exp }[], body: Exp, range: L.Range = L.Range.none): Let => ({ tag: 'let', bindings, body, range })
+export const mkBegin = (exps: Exp[], range: L.Range = L.Range.none): Begin => ({ tag: 'begin', exps, range })
+export const mkIf = (guard: Exp, ifB: Exp, elseB: Exp, range: L.Range = L.Range.none): If => ({ tag: 'if', guard, ifB, elseB, range })
+export const mkMatch = (scrutinee: Exp, branches: { pat: Pat, body: Exp }[], range: L.Range = L.Range.none): Match => ({ tag: 'match', scrutinee, branches, range })
+export const mkQuote = (value: L.Value, range: L.Range = L.Range.none): Quote => ({ tag: 'quote', value, range })
+export const mkLetS = (bindings: { name: string, value: Exp }[], body: Exp, range: L.Range = L.Range.none): LetS => ({ tag: 'let*', bindings, body, range })
+export const mkAnd = (exps: Exp[], range: L.Range = L.Range.none): And => ({ tag: 'and', exps, range })
+export const mkOr = (exps: Exp[], range: L.Range = L.Range.none): Or => ({ tag: 'or', exps, range })
+export const mkCond = (branches: { test: Exp, body: Exp }[], range: L.Range = L.Range.none): Cond => ({ tag: 'cond', branches, range })
+export const mkSection = (exps: Exp[], range: L.Range = L.Range.none): Section => ({ tag: 'section', exps, range })
+
+// Statements (stmt)
+export const mkImport = (module: string, range: L.Range = L.Range.none): Import => ({ tag: 'import', module, range })
+export const mkDefine = (name: string, value: Exp, range: L.Range = L.Range.none): Define => ({ tag: 'define', name, value, range })
+export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({ tag: 'display', value, range })
+export const mkStmtExp = (expr: Exp, range: L.Range = L.Range.none): StmtExp => ({ tag: 'stmtexp', expr, range })
+export const mkStruct = (name: string, fields: string[], range: L.Range = L.Range.none): Struct => ({ tag: 'struct', name, fields, range })
+
+///// Utility Functions ////////////////////////////////////////////////////////
+
+export function patToString (pat: Pat): string {
+  switch (pat.tag) {
+    case 'pwild': return '_'
+    case 'pvar': return pat.name
+    case 'plit': return JSON.stringify(pat.value)
+    case 'pctor': {
+      if (pat.args.length === 0) {
+        return `(${pat.name})`
+      } else {
+        return `(${pat.name} ${pat.args.map(patToString).join(' ')})`
+      }
+    }
   }
 }
 
-/**
- * @return a pair of a value and its associated metadata if it is a syntax object
- *         or a fresh metadata map if it is a raw value.
- */
-export const unpackSyntax = (v: Value): { value: Value, metadata: Metadata } =>
-  isSyntax(v) ?
-    { value: v.value, metadata: v.metadata } :
-    { value: v, metadata: new Map() }
-
-////// Query Functions /////////////////////////////////////////////////////////
-
-export function isAtom (v: Value): boolean {
-  return !L.isList(stripSyntax(v))
-}
-
-export function isApp (v: Value): boolean {
-  return L.isList(stripSyntax(v))
-}
-
-export function isIdentifier (v: Value): boolean {
-  return isAtom(v) && L.isSym(stripSyntax(v))
-}
-
-export function isIdentifierNamed (v: Value, s: string): boolean {
-  return isIdentifier(v) && (stripSyntax(v) as L.Sym).value === s
-}
-
-export function asIdentifier (v: Value): { name: string, metadata: Metadata } {
-  const { value, metadata } = unpackSyntax(v)
-  v = value
-  return {
-    name: L.isSym(v) ? v.value : v as string,
-    metadata
+export function expToString (e: Exp): string {
+  switch (e.tag) {
+    case 'lit': return JSON.stringify(e)
+    case 'var': return e.name
+    case 'app': {
+      if (e.args.length === 0) {
+        return `(${e.head})`
+      } else {
+        return `(${e.head} ${e.args.map(expToString).join(' ')})`
+      }
+    }
+    case 'lam': return `(lambda (${e.params.join(' ')}) ${expToString(e.body)})`
+    case 'let':
+      return `(let (${e.bindings.map(({name, value}) => `[${name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+    case 'begin':
+      return `(begin ${e.exps.map(expToString).join(' ')})`
+    case 'if':
+      return `(if ${expToString(e.guard)} ${expToString(e.ifB)} ${expToString(e.elseB)})`
+    case 'match':
+      return `(match ${expToString(e.scrutinee)} ${e.branches.map(({pat, body}) => `[${patToString(pat)} ${expToString(body)}]`).join(' ')})`
+    case 'quote':
+      return `(quote ${JSON.stringify(e.value)})`
+    case 'let*':
+      return `(let* (${e.bindings.map(({name, value}) => `[${name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+    case 'and':
+      return `(and ${e.exps.map(expToString).join(' ')})`
+    case 'or':
+      return `(or ${e.exps.map(expToString).join(' ')})`
+    case 'cond':
+      return `(cond ${e.branches.map(({test, body}) => `[${expToString(test)} ${expToString(body)}]`).join(' ')})`
+    case 'section':
+      return `(section ${e.exps.map(expToString).join(' ')})`
   }
 }
 
-export function nameFromIdentifier (v: Value): string {
-  const { name, metadata: _metadata } = asIdentifier(v)
-  return name
-}
-
-export function isSpecialForm (v: Value, expected: string): boolean {
-  if (!isApp(v)) { return false }
-  const lst = stripSyntax(v) as L.List
-  if (lst === null) { return false }
-  const head = stripSyntax(lst.head)
-  return L.isSym(head) && (head as L.Sym).value === expected
-}
-
-// Special Forms
-export const isLambda = (v: Value) => isSpecialForm(v, 'lambda')
-export const isLet = (v: Value) => isSpecialForm(v, 'let')
-export const isLetStar = (v: Value) => isSpecialForm(v, 'let*')
-export const isAnd = (v: Value) => isSpecialForm(v, 'and')
-export const isOr = (v: Value) => isSpecialForm(v, 'or')
-export const isBegin = (v: Value) => isSpecialForm(v, 'begin')
-export const isIf = (v: Value) => isSpecialForm(v, 'if')
-export const isCond = (v: Value) => isSpecialForm(v, 'cond')
-export const isMatch = (v: Value) => isSpecialForm(v, 'match')
-export const isQuote = (v: Value) => isSpecialForm(v, 'quote')
-export const isSection = (v: Value) => isSpecialForm(v, 'section')
-
-export type Pair = { fst: Value, snd: Value, metadata: Metadata }
-
-function asPair (v: Value): Pair {
-  const { value, metadata } = unpackSyntax(v)
-  v = value
-  return { fst: L.listNth(0, v as L.List), snd: L.listNth(1, v as L.List), metadata }
-}
-
-export function asApp (v: Value): { values: Value[], metadata: Metadata } {
-  const { value, metadata } = unpackSyntax(v)
-  v = value
-  return {
-    values: L.listToVector(v as L.List),
-    metadata
+export function stmtToString (s: Stmt): string {
+  switch (s.tag) {
+    case 'import': return `(import ${s.module})`
+    case 'define': return `(define ${s.name} ${expToString(s.value)})`
+    case 'display': return `(display ${expToString(s.value)})`
+    case 'stmtexp': return expToString(s.expr)
+    case 'struct': return `(struct ${s.name} (${s.fields.join(' ')}))`
   }
 }
 
-export function asLambda (v: Value): { params: Value[], body: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    params: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List),
-    body: L.listNth(2, v as L.List),
-    metadata
-  }
-}
-
-export function asLet (v: Value): { bindings: Pair[], body: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    bindings: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List).map(asPair),
-    body: L.listNth(2, v as L.List),
-    metadata
-  }
-}
-
-export function asLetStar (v: Value): { bindings: Pair[], body: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    bindings: L.listToVector(stripSyntax(L.listNth(1, v as L.List)) as L.List).map(asPair),
-    body: L.listNth(2, v as L.List),
-    metadata
-  }
-}
-
-export function asAnd (v: Value): { values: Value[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    values: L.listToVector(stripSyntax((v as L.List)!.tail) as L.List),
-    metadata
-  }
-}
-
-export function asOr (v: Value): { values: Value[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    values: L.listToVector(stripSyntax((v as L.List)!.tail) as L.List),
-    metadata
-  }
-}
-
-export function asBegin (v: Value): { values: Value[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    values: L.listToVector(stripSyntax((v as L.List)!.tail) as L.List),
-    metadata
-  }
-}
-
-export function asIf (v: Value): { guard: Value, ifB: Value, elseB: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    guard: L.listNth(1, v as L.List),
-    ifB: L.listNth(2, v as L.List),
-    elseB: L.listNth(3, v as L.List),
-    metadata
-  }
-}
-
-export function asCond (v: Value): { clauses: Pair[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    clauses: L.listToVector((v as L.Pair).tail as L.List).map(asPair),
-    metadata
-  }
-}
-
-export function asMatch (v: Value): { scrutinee: Value, clauses: Pair[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    scrutinee: L.listNth(1, v as L.List),
-    clauses: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List).map(asPair),
-    metadata
-  }
-}
-
-export function asQuote (v: Value): { value: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return { value: L.listNth(1, v as L.List), metadata }
-}
-
-export function asSection (v: Value): { values: Value[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return { values: L.listToVector(stripSyntax((v as L.List)!.tail) as L.List), metadata }
-}
-
-// Statement forms
-export const isImport = (v: Value) => isSpecialForm(v, 'import')
-export const isDefine = (v: Value) => isSpecialForm(v, 'define')
-export const isDisplay = (v: Value) => isSpecialForm(v, 'display')
-export const isStruct = (v: Value) => isSpecialForm(v, 'struct')
-
-export function asImport (v: Value): { name: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return { name: L.listNth(1, v as L.List), metadata }
-}
-
-export function asDefine (v: Value): { name: Value, value: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return { name: L.listNth(1, v as L.List), value: L.listNth(2, v as L.List), metadata }
-}
-
-export function asDisplay (v: Value): { value: Value, metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return { value: L.listNth(1, v as L.List), metadata }
-}
-
-export function asStruct (v: Value): { name: Value, fields: Value[], metadata: Metadata } {
-  const { metadata, value } = unpackSyntax(v)
-  v = value
-  return {
-    name: L.listNth(1, v as L.List),
-    fields: L.listToVector(stripSyntax(L.listNth(2, v as L.List)) as L.List),
-    metadata
-  }
-}
-
-export function structPredName (name: string): string {
-  return `${name}?`
-}
-
-export function structFieldName (name: string, field: string): string {
-  return `${name}-${field}`
+export function progToString (p: Prog): string {
+  return `${p.map(stmtToString).join('\n')}`
 }

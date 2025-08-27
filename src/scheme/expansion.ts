@@ -1,4 +1,3 @@
-import * as L from '../lpm'
 import * as A from './ast.js'
 
 let holeSymCounter = 0
@@ -6,171 +5,149 @@ function genHoleSym(): string {
   return `_${holeSymCounter++}`
 }
 
-function collectSectionHoles (bvars: string[], v: L.Value): L.Value {
-  const orig = v
-  let { value, metadata } = A.unpackSyntax(v)
-  v = value
-  if (L.isSymName(A.stripSyntax(v), '_')) {
-    const x = genHoleSym()
-    bvars.push(x)
-    return A.mkSyntax(L.mkSym(x), ...metadata)
-  } else if (v === null) {
-    return orig
-  } else if (L.isList(v)) {
-    const values = L.listToVector(v)
-    // N.B., do _not_ recursively collect holes in enclosed section forms
-    if (L.isSymName(A.stripSyntax(values[0]), 'section')) {
-      return orig
-    } else {
-      return A.mkSyntax(L.mkList(...values.map((v) => collectSectionHoles(bvars, v))), ...metadata)
+function collectSectionHoles (bvars: string[], e: A.Exp): A.Exp {
+  switch (e.tag) {
+    case 'var': {
+      if (e.name === '_') {
+        const newName = genHoleSym()
+        bvars.push(newName)
+        return A.mkVar(newName, e.range)
+      } else {
+        return e
+      }
     }
-  } else if (L.isPair(v)) {
-    return A.mkSyntax(L.mkPair(
-      collectSectionHoles(bvars, (v as L.Pair).fst),
-      collectSectionHoles(bvars, (v as L.Pair).snd)), ...metadata)
-  } else if (L.isArray(v)) {
-    return A.mkSyntax((v as L.Vector).map((v) => collectSectionHoles(bvars, v)), ...metadata)
-  } else {
-    return orig
+    case 'lit': return e
+    case 'app': return A.mkApp(collectSectionHoles(bvars, e.head), e.args.map((a) => collectSectionHoles(bvars, a)), e.range)
+    case 'lam': return A.mkLam(e.params, collectSectionHoles(bvars, e.body), e.range)
+    case 'let': return A.mkLet(e.bindings.map((b) => ({name: b.name, value: collectSectionHoles(bvars, b.value)})), collectSectionHoles(bvars, e.body), e.range)
+    case 'begin': return A.mkBegin(e.exps.map((a) => collectSectionHoles(bvars, a)), e.range)
+    case 'if': return A.mkIf(collectSectionHoles(bvars, e.guard), collectSectionHoles(bvars, e.ifB), collectSectionHoles(bvars, e.elseB), e.range)
+    case 'match': return A.mkMatch(collectSectionHoles(bvars, e.scrutinee), e.branches.map((b) => ({pat: b.pat, body: collectSectionHoles(bvars, b.body)})), e.range)
+    case 'quote': return e
+    case 'let*': return A.mkLetS(e.bindings.map((b) => ({name: b.name, value: collectSectionHoles(bvars, b.value)})), collectSectionHoles(bvars, e.body), e.range)
+    case 'and': return A.mkAnd(e.exps.map((a) => collectSectionHoles(bvars, a)), e.range)
+    case 'or': return A.mkOr(e.exps.map((a) => collectSectionHoles(bvars, a)), e.range)
+    case 'cond': return A.mkCond(e.branches.map((b) => ({test: collectSectionHoles(bvars, b.test), body: collectSectionHoles(bvars, b.body)})), e.range)
+    case 'section': {
+      // N.B., we do not collect holes in embedded sections
+      return A.mkSection(e.exps, e.range)
+    }
+  } 
+}
+
+export function expandExpr (e: A.Exp): A.Exp {
+  switch (e.tag) {
+    // Core forms
+    case 'var': return e
+    case 'lit': return e
+    case 'app': return A.mkApp(expandExpr(e.head), e.args.map(expandExpr), e.range)
+    case 'lam': return A.mkLam(e.params, expandExpr(e.body), e.range)
+    case 'let': return A.mkLet(e.bindings.map((b) => ({name: b.name, value: expandExpr(b.value)})), expandExpr(e.body), e.range)
+    case 'begin': return A.mkBegin(e.exps.map(expandExpr), e.range)
+    case 'if': return A.mkIf(expandExpr(e.guard), expandExpr(e.ifB), expandExpr(e.elseB), e.range)
+    case 'match': return A.mkMatch(expandExpr(e.scrutinee), e.branches.map((b) => ({pat: b.pat, body: expandExpr(b.body)})), e.range)
+    case 'quote': return e
+
+    // Derived forms
+
+    case 'let*': {
+      // (let* [x1 e1] ... [xk ek] e)
+      // -->
+      // (let [x1 e1]
+      //   ...
+      //     (let [xk ek] e))
+      const bindings = e.bindings.map((b) => ({name: b.name, value: expandExpr(b.value)}))
+      const body = expandExpr(e.body)
+      let ret = body
+      for (let i = bindings.length - 1; i >= 0; i--) {
+        ret = A.mkLet([bindings[i]], ret, e.range)
+      }
+      return ret
+    }
+    case 'and': {
+      // (and e1 ... ek)
+      // -->
+      // (if e1
+      //   ...
+      //     (if ek
+      //       #t
+      //       #f)
+      //   ...
+      //   #f)
+      const exps = e.exps.map(expandExpr)
+      let ret: A.Exp = A.mkLit(true)
+      for (let i = exps.length - 1; i >= 0; i--) {
+        ret = A.mkIf(exps[i], ret, A.mkLit(false), e.range)
+      }
+      return ret
+    }
+    case 'or': {
+      // (or e1 ... ek)
+      // -->
+      // (if e1
+      //   #t
+      //   ...
+      //     (if ek
+      //       #t
+      //       #f))
+      const exps = e.exps.map(expandExpr)
+      let ret: A.Exp = A.mkLit(false)
+      for (let i = exps.length - 1; i >= 0; i--) {
+        ret = A.mkIf(exps[i], A.mkLit(true), ret, e.range)
+      }
+      return ret
+    }
+    case 'cond': {
+      // (cond [e11 e12] ... [ek1 ek2])
+      // -->
+      // (if e11 e12
+      //   ...
+      //     (if ek1 ek2 (error "No matching clause in cond"))
+      const branches = e.branches.map((c) => ({test: expandExpr(c.test), body: expandExpr(c.body)}))
+      let ret: A.Exp = A.mkApp(A.mkVar('error'), [A.mkLit('No matching clause in cond')], e.range)
+      for (let i = branches.length - 1; i >= 0; i--) {
+        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range)
+      }
+      return ret
+    }
+    case 'section': {
+      // (section e1 ... ek)
+      // -->
+      // (lambda (x1 ... xm) (e1' ... ek'))
+      //   where occurrences of _ are replaced with fresh x1 ... xm
+      const bvars: string[] = []
+      const exps = e.exps.map((arg) => collectSectionHoles(bvars, arg))
+      return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
+    }
   }
 }
 
-export function expandExpr (v: L.Value): L.Value {
-  if (A.isAtom(v)) {
-    return v
-  } else if (A.isLambda(v)) {
-    const { params, body, metadata } = A.asLambda(v)
-    return A.mkSyntax(L.mkList(L.mkSym('lambda'), L.vectorToList(params), expandExpr(body)), ...metadata)
-  } else if (A.isLet(v)) {
-    let { bindings, body, metadata } = A.asLet(v)
-    bindings = bindings.map(({fst, snd, metadata }) => ({ fst, snd: expandExpr(snd), metadata }))
-    body = expandExpr(body)
-    return A.mkSyntax(L.mkList(L.mkSym('let'), L.mkList(...bindings), body), ...metadata)
-  } else if (A.isLetStar(v)) {
-    // (let* ([x1 e1] ... [xk ek]) e)
-    // --> (let ([x1 e1]) (let ([x2 e2]) ... (let ([xk ek]) e) ...))
-    let { bindings, body, metadata: _metadata } = A.asLetStar(v)
-    bindings = bindings.map(({fst, snd, metadata }) => ({ fst, snd: expandExpr(snd), metadata }))
-    body = expandExpr(body)
-    let expr: L.Value = body
-    for (let i = bindings.length - 1; i >= 0; i--) {
-      let { fst, snd, metadata } = bindings[i]
-      expr = A.mkSyntax(L.mkList(L.mkSym('let'), fst, snd, expr), ...metadata, ['desugared', 'let*'])
+export function expandStmt (s: A.Stmt): A.Stmt[] {
+  switch (s.tag) {
+    case 'import': return [s]
+    case 'define': return [A.mkDefine(s.name, expandExpr(s.value), s.range)]
+    case 'display': return [A.mkDisp(expandExpr(s.value), s.range)]
+    case 'struct': {
+      const ctor = A.mkDefine(
+        s.name,
+        A.mkApp(A.mkVar('##mkCtorFn##'), s.fields.map((f) => A.mkVar(f))),
+        s.range
+      )
+      const pred = A.mkDefine(
+        `${s.name}?`,
+        A.mkApp(A.mkVar('##mkPredFn##'), [A.mkVar(s.name)], s.range)
+      )
+      const accessors = s.fields.map((f) => A.mkDefine(
+        `${s.name}-${f}`,
+        A.mkApp(A.mkVar('##mkGetFn##'), [A.mkVar(s.name), A.mkVar(f)]),
+        s.range
+      ))
+      return [ctor, pred, ...accessors]
     }
-    // TODO: same deal as cond: the range of the top-level let is the first binding, is that ok?
-    return expr
-  } else if (A.isAnd(v)) {
-    // (and e1 ... ek)
-    // ---> (if e1 (if e2 ... (if ek true false) ... false) false)
-    const { values, metadata } = A.asAnd(v)
-    let expr: L.Value = true
-    for (let i = values.length - 1; i >= 0; i--) {
-      let b = values[i]
-      expr = A.mkSyntax(L.mkList(L.mkSym('if'), b, expr, false), ...metadata, ['desugared', 'and'])
-    }
-    return A.mkSyntax(expr, ...metadata)
-  } else if (A.isOr(v)) {
-    // (or e1 ... ek)
-    // ---> (if e1 true (if e2 ... (if ek true false)
-    const { values, metadata } = A.asOr(v)
-    let expr: L.Value = false
-    for (let i = values.length - 1; i >= 0; i--) {
-      let b = values[i]
-      expr = A.mkSyntax(L.mkList(L.mkSym('if'), b, true, expr), ...metadata, ['desugared', 'or'])
-    }
-    return A.mkSyntax(expr, ...metadata)
-  } else if (A.isBegin(v)) {
-    // (begin e)
-    // --> e
-    // (begin e1 ... ek)
-    // --> (let ([_ e1]) ([_ e2]) ... ([_ ek-1]) ek)
-    const { values, metadata } = A.asBegin(v)
-    let expr: L.Value = values[values.length - 1]
-    for (let i = values.length - 2; i >= 0; i--) {
-      expr = A.mkSyntax(L.mkList(L.mkSym('let'), L.mkList(L.mkSym('_'), values[i]), expr), ...metadata, ['desugared', 'begin'])
-    }
-    return expr
-  } else if (A.isIf(v)) {
-    const { guard, ifB, elseB, metadata } = A.asIf(v)
-    return A.mkSyntax(L.mkList(L.mkSym('if'), expandExpr(guard), expandExpr(ifB), expandExpr(elseB)), ...metadata)
-  } else if (A.isCond(v)) {
-    // (cond [e11 e12] ... [ek1 ek2])
-    // --> (if e11 e12 (if e21 e22 ... (if ek1 e2k void) ...))
-    let { clauses, metadata: _metadata } = A.asCond(v)
-    clauses = clauses.map(({ fst, snd, metadata }) => ({ fst: expandExpr(fst), snd: expandExpr(snd), metadata }))
-    let expr: L.Value = undefined
-    for (let i = clauses.length - 1; i >= 0; i--) {
-      expr = A.mkSyntax(L.mkList(L.mkSym('if'), clauses[i].fst, clauses[i].snd, expr), ...clauses[i].metadata, ['desugared', 'cond'])
-    }
-    // N.B., the range of the top if is the range of the first clause and not the overall cond.
-    // Will that be ok for error reporting?
-    return expr
-  } else if (A.isMatch(v)) {
-    const { clauses, metadata } = A.asMatch(v)
-    return A.mkSyntax(L.mkList(L.mkSym('match'), ...clauses.map(({ fst, snd, metadata }) => ({
-      fst,
-      snd: expandExpr(snd),
-      metadata
-    }))), ...metadata)
-  } else if (A.isQuote(v)) {
-    const { value, metadata } = A.asQuote(v)
-    return A.mkSyntax(L.mkList(L.mkSym('quote'), value), ...metadata)
-  } else if (A.isSection(v)) {
-    const { values, metadata } = A.asSection(v)
-    const params: string[] = []
-    const app = L.mkList(...values.map((arg) => collectSectionHoles(params, arg)))
-    return A.mkSyntax(
-        L.mkList(
-          L.mkSym('lambda'), L.mkList(...params.map((p) => L.mkSym(p))), app),
-        ['desugared', 'section'],
-        ...metadata
-    )
-  } else {
-    const { values, metadata } = A.asApp(v)
-    return A.mkSyntax(L.mkList(...values.map(expandExpr)), ...metadata)
+    case 'stmtexp': return [A.mkStmtExp(s.expr)]
   }
 }
 
-export function expandStmt (v: L.Value): L.Value[] {
-  if (A.isImport(v)) {
-    return [v]
-  } else if (A.isDefine(v)) {
-    const { name, value, metadata } = A.asDefine(v)
-    return [A.mkSyntax(L.mkList(L.mkSym('define'), name, expandExpr(value)), ...metadata)]
-  } else if (A.isDisplay(v)) {
-    const { value, metadata } = A.asDisplay(v)
-    return [A.mkSyntax(L.mkList(L.mkSym('display'), expandExpr(value)), ...metadata)]
-  } else if (A.isStruct(v)) {
-    // (struct S (f1 ... fk))
-    // -->
-    // (define S (##mkCtorFn## S f1 ... fk))
-    // (define S? (##mkPredFn## S))
-    // (define S-f1 (##mkGetFn## S f1))
-    // ...
-    // (define S-fk (##mkGetFn## S fk))
-    const { name: ident, fields, metadata } = A.asStruct(v)
-    const name = A.nameFromIdentifier(ident)
-    const ctor = A.mkSyntax(L.mkList(L.mkSym('define'), name,
-      L.mkList(
-        L.mkSym('##mkCtorFn##'),
-        L.mkSym(name),
-        fields.map(A.nameFromIdentifier))),
-      ['desugared', 'struct'], ['struct', name], ...metadata)
-    const pred = A.mkSyntax(L.mkList(L.mkSym('define'), L.mkSym(A.structPredName(name)),
-        L.mkList(L.mkSym('##mkPredFn##'), L.mkSym(name))),
-      ['desugared', 'struct'], ['struct', name], ...metadata)
-    const accessors = fields.map((ident) => {
-      const fielName = A.nameFromIdentifier(ident)
-      return A.mkSyntax(L.mkList(L.mkSym('define'), L.mkSym(A.structFieldName(name, fielName)),
-        L.mkList(L.mkSym('##mkGetFn##'), L.mkSym(name), L.mkSym(fielName))),
-        ['desugared', 'struct'], ['struct', name], ...metadata)
-    })
-    return [ctor, pred, ...accessors]
-  } else {
-    return [expandExpr(v)]
-  }
-}
-
-export function expandProgram (vs: L.Value[]): L.Value[] {
-  return vs.flatMap(expandStmt)
+export function expandProgram (prog: A.Prog): A.Prog {
+  return prog.flatMap(expandStmt)
 }
