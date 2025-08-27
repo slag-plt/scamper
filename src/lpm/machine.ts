@@ -129,7 +129,7 @@ export class Machine {
         }
         const values = current.values.splice(-(instr.numArgs + 1))
         const fn = values[0]
-        const args = values.splice(-instr.numArgs)
+        const args = instr.numArgs === 0 ? [] : values.splice(-instr.numArgs)
         if (typeof fn === 'function') {
           let result = undefined 
           try {

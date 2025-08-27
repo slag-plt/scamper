@@ -253,7 +253,8 @@ export function toString (v: L.Value): string {
       } else if (isSym(v)) {
         return v.value
       } else if (isArray(v)) {
-        return `[${v.map(toString).join(', ')}]`
+        return v.length === 0 ? '(vector)' :
+          `(vector ${v.map(toString).join(' ')})`
       } else if (isClosure(v)) {
         return `[Function: ${v.name ?? '##anonymous##'}]`
       } else if (isFunction(v)) {

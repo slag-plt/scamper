@@ -5,17 +5,16 @@ import * as Scheme from '../../src/scheme'
 import * as LPM from '../../src/lpm'
 
 function checkMachineOutput (src: string, expected: LPM.Value[]) {
-    const out = new LPM.LoggingOutputChannel() 
-    const err = new LPM.LoggingErrorChannel()
+    const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(err, src)
-    expect(err.log).toEqual([])
+    const prog = Scheme.compile(out, src)
+    expect(out.log).toEqual([])
     const machine = new LPM.Machine(
       builtinLibs,
       env,
       prog!,
       out,
-      err
+      out
     )
     machine.evaluate()
     expect(out.log).toEqual(expected)
@@ -59,6 +58,13 @@ describe('End-to-end cases', () => {
       (struct point (x y))
       (define p (point 1 2))
       (display (point-x p))
+    `, [1])
+  })
+
+  test('nullary functions', () => {
+    checkMachineOutput(`
+      (define f (lambda () 1))
+      (f)
     `, [1])
   })
 })

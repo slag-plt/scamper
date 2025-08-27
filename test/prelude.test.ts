@@ -1,19 +1,27 @@
 import {expect, test} from '@jest/globals'
 
-import { mkOptions, Scamper } from '../src/scamper'
+import builtinLibs from '../src/lib'
+import * as Scheme from '../src/scheme'
+import * as LPM from '../src/lpm'
 
-function runProgram (src: string): string {
-  const output = document.createElement('div')
-  const opts = mkOptions()
-  opts.defaultDisplay = true
-  const scamper = new Scamper(output, src, opts)
-  scamper.runProgram()
-  return output.textContent!
+function runProgram (src: string): string[] {
+    const out = new LPM.LoggingChannel()
+    const env = Scheme.mkInitialEnv()
+    const prog = Scheme.compile(out, src)
+    if (out.log.length !== 0) { return out.log }
+    const machine = new LPM.Machine(
+      builtinLibs,
+      env,
+      prog!,
+      out,
+      out
+    )
+    machine.evaluate()
+    return out.log
 }
 
-export function 
-scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+export function scamperTest (label: string, src: string, expected: string[]) {
+  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -224,16 +232,16 @@ updated-inventory
 ])
 
 scamperTest('car-cdr', `
-(car (cons #t #f))
-(car (cons 1 2))
-(car (cons "hi" "bye"))
-(car (cons "a" "b"))
-(car (cons 0.003 100))
-(cdr (cons 1 2))
-(cdr (cons #t #f))
-(cdr (cons "hi" "bye"))
-(cdr (cons "a" "b"))
-(cdr (cons 0.003 100))
+(car (pair #t #f))
+(car (pair 1 2))
+(car (pair "hi" "bye"))
+(car (pair "a" "b"))
+(car (pair 0.003 100))
+(cdr (pair 1 2))
+(cdr (pair #t #f))
+(cdr (pair "hi" "bye"))
+(cdr (pair "a" "b"))
+(cdr (pair 0.003 100))
 
 `, [
   '#t',
@@ -460,11 +468,11 @@ scamperTest('cons-pair', `
 (pair "a" "b")
 (pair 0.003 100)
 `, [
-  '(pair #t #f)',
-  '(pair 1 2)',
-  '(pair "hi" "bye")',
-  '(pair "a" "b")',
-  '(pair 0.003 100)',
+  'Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list',
+  'Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list',
+  'Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list',
+  'Runtime error [4:1-4:14]: (cons) The second argument to cons should be a list',
+  'Runtime error [5:1-5:16]: (cons) The second argument to cons should be a list',
   '(pair 1 2)',
   '(pair #t #f)',
   '(pair "hi" "bye")',
@@ -557,7 +565,7 @@ scamperTest('filter-fold-reduce', `
 (reduce-right - (list 10 9 8 7 6 5))
 `, [
   '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
-  '(list string-length list? + - = string?)',
+  '(list [Function: string-length] [Function: list?] [Function: +] [Function: -] [Function: =] [Function: string?])',
   '(list null)',
   '(list null (list 4 5 6))',
   '15',
@@ -944,10 +952,10 @@ scamperTest('odd-even', `
 ])
 
 scamperTest('pairQ', `
-(pair? (cons #t #f))
+(pair? (pair #t #f))
 (pair? (+ 1 2))
 (pair? "bye")
-(pair? (cons "a" "b"))
+(pair? (pair "a" "b"))
 (pair? (/ 100 1))
 `, [
   '#t',
@@ -1384,12 +1392,12 @@ scamperTest('string-split-append', `
 ])
 
 scamperTest('stringQ-procedure', `
-(string? (cons #t #f))
+(string? (pair #t #f))
 (string? 1)
 (string? "bye")
 (string? "a")
 (string? 100)
-(procedure? (cons #t #f))
+(procedure? (pair #t #f))
 (procedure? list)
 (procedure? "bye")
 (procedure? +)
