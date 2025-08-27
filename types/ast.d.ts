@@ -1,7 +1,7 @@
-import { Value } from "./lang";
+import * as S from './scheme/syntax.js';
 import { EditorView } from "@codemirror/view";
 declare class SyntaxNode {
-    syntax: Value.Syntax;
+    syntax: S.Syntax;
     value: string;
     name: string;
     parentname: string | null;
@@ -9,14 +9,14 @@ declare class SyntaxNode {
     index: number | null;
     children: SyntaxNode[];
     parent: SyntaxNode | null;
-    constructor(syntax: Value.Syntax, parent?: string | null, index?: number | null);
+    constructor(syntax: S.Syntax, parent?: string | null, index?: number | null);
     toString(indent?: string): string;
 }
 export declare class AST {
-    syntax: Value.Syntax[];
+    syntax: S.Syntax[];
     nodes: SyntaxNode[];
     labelMap: Map<SyntaxNode, HTMLButtonElement>;
-    constructor(syntax: Value.Syntax[]);
+    constructor(syntax: S.Syntax[]);
     renderNode(node: SyntaxNode, level: number, isLast: boolean, editor: EditorView, indexInParent?: number, totalSiblings?: number): HTMLElement;
     render(output: HTMLElement, editor: EditorView): void;
     buildTreeHTML(node: SyntaxNode): HTMLElement;

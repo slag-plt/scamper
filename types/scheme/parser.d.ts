@@ -1,15 +1,7 @@
-import { Range } from '../lpm/runtime.js';
-import { Syntax } from './ast.js';
-declare class Token {
-    text: string;
-    range: Range;
-    constructor(text: string, range: Range);
-    toString(): string;
-}
-export declare function stringToTokens(src: string): Token[];
-export declare const namedCharValues: Map<string, string>;
-export declare function parseSingle(t: Token, wildAllowed: boolean): Syntax;
-export declare function parseValue(tokens: Token[]): Syntax;
-export declare function parseValues(tokens: Token[]): Syntax[];
-export {};
+import * as A from './ast.js';
+import * as L from '../lpm';
+export declare function parseSingle(errors: L.ScamperError[], v: L.Value, range: L.Range): A.Exp;
+export declare function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp;
+export declare function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt;
+export declare function parseProgram(errors: L.ScamperError[], values: L.Value[]): A.Prog;
 //# sourceMappingURL=parser.d.ts.map

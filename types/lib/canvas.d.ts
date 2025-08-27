@@ -1,4 +1,4 @@
-import * as R from '../lpm/runtime.js';
-declare const Canvas: R.Library;
+import * as L from '../lpm';
+declare const Canvas: L.Library;
 export default Canvas;
 //# sourceMappingURL=canvas.d.ts.map

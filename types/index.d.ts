@@ -1,4 +1,4 @@
 export { Scamper } from './scamper.js';
-export { builtinLibs } from './lib/builtin.js';
+export { builtinLibs } from './lib/index.js';
 export { Prelude } from './lib/prelude.js';
 //# sourceMappingURL=index.d.ts.map

@@ -1,62 +1,62 @@
-import { Library, Value } from '../../lang.js';
+import * as L from '../../lpm';
 import { Rgb } from './color.js';
 import { Font } from './font.js';
-export declare const lib: Library;
+export declare const lib: L.Library;
 type Mode = 'solid' | 'outline';
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText;
-interface Ellipse extends Value.Struct {
-    [Value.structKind]: 'ellipse';
+interface Ellipse extends L.Struct {
+    [L.structKind]: 'ellipse';
     width: number;
     height: number;
     mode: Mode;
     color: Rgb;
 }
-interface Rectangle extends Value.Struct {
-    [Value.structKind]: 'rectangle';
+interface Rectangle extends L.Struct {
+    [L.structKind]: 'rectangle';
     width: number;
     height: number;
     mode: Mode;
     color: Rgb;
 }
-interface Triangle extends Value.Struct {
-    [Value.structKind]: 'triangle';
+interface Triangle extends L.Struct {
+    [L.structKind]: 'triangle';
     width: number;
     height: number;
     mode: Mode;
     color: Rgb;
 }
-interface Path extends Value.Struct {
-    [Value.structKind]: 'path';
+interface Path extends L.Struct {
+    [L.structKind]: 'path';
     width: number;
     height: number;
     points: [number, number][];
     mode: Mode;
     color: Rgb;
 }
-interface Beside extends Value.Struct {
-    [Value.structKind]: 'beside';
+interface Beside extends L.Struct {
+    [L.structKind]: 'beside';
     align: string;
     width: number;
     height: number;
     drawings: Drawing[];
 }
-interface Above extends Value.Struct {
-    [Value.structKind]: 'above';
+interface Above extends L.Struct {
+    [L.structKind]: 'above';
     align: string;
     width: number;
     height: number;
     drawings: Drawing[];
 }
-interface Overlay extends Value.Struct {
-    [Value.structKind]: 'overlay';
+interface Overlay extends L.Struct {
+    [L.structKind]: 'overlay';
     xAlign: string;
     yAlign: string;
     width: number;
     height: number;
     drawings: Drawing[];
 }
-interface OverlayOffset extends Value.Struct {
-    [Value.structKind]: 'overlayOffset';
+interface OverlayOffset extends L.Struct {
+    [L.structKind]: 'overlayOffset';
     dx: number;
     dy: number;
     width: number;
@@ -64,8 +64,8 @@ interface OverlayOffset extends Value.Struct {
     d1: Drawing;
     d2: Drawing;
 }
-interface Rotate extends Value.Struct {
-    [Value.structKind]: 'rotate';
+interface Rotate extends L.Struct {
+    [L.structKind]: 'rotate';
     width: number;
     height: number;
     dx: number;
@@ -73,15 +73,15 @@ interface Rotate extends Value.Struct {
     angle: number;
     drawing: Drawing;
 }
-interface WithDash extends Value.Struct {
-    [Value.structKind]: 'withDash';
+interface WithDash extends L.Struct {
+    [L.structKind]: 'withDash';
     dashSpec: number[];
     drawing: Drawing;
     width: number;
     height: number;
 }
-interface DText extends Value.Struct {
-    [Value.structKind]: 'text';
+interface DText extends L.Struct {
+    [L.structKind]: 'text';
     width: number;
     height: number;
     text: string;

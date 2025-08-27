@@ -1,4 +1,4 @@
-import { ICE } from '../../lang.js'
+import { ICE } from '../../lpm'
 import { FsRequest, FsResponse } from './message-types.js'
 
 function storageAvailable(type: any) {

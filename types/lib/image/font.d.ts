@@ -1,8 +1,8 @@
-import * as C from '../../contract.js';
-import { Library, Value } from '../../lang.js';
-export declare const lib: Library;
-export interface Font extends Value.Struct {
-    [Value.structKind]: 'font';
+import * as C from '../contract.js';
+import * as L from '../../lpm';
+export declare const lib: L.Library;
+export interface Font extends L.Struct {
+    [L.structKind]: 'font';
     face: string;
     system: string;
     isBold: boolean;

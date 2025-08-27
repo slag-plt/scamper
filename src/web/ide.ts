@@ -1,11 +1,10 @@
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { EditorView, keymap } from "@codemirror/view"
-import * as Parser from '../parser.js'
 
 import FS from './fs/fs.js'
 import Split from 'split.js'
-import { Scamper, mkOptions } from '../scamper.js'
+import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
@@ -34,10 +33,10 @@ class IDE {
 
   startScamper (isTracing: boolean): void {
     outputPane!.innerHTML = ''
-    const opts = mkOptions()
-    opts.isTracing = isTracing
     try {
-      this.scamper = new Scamper(outputPane, this.getDoc(), opts)
+      this.scamper = new Scamper(outputPane, this.getDoc())
+      // TODO: reimplement once tracing is back in!
+      isTracing = false
       if (isTracing) {
         stepOnceButton.disabled = false
         stepStmtButton.disabled = false
@@ -67,21 +66,22 @@ class IDE {
       }
       return
     } try {
-      const parsed = Parser.parseProgram(this.getDoc())
-      const labelEl = document.createElement('h2')
-      labelEl.setAttribute('id', 'ast-label')
-      labelEl.innerText = "Abstract Syntax Tree"
-      labelEl.setAttribute('tabindex', '0')
-      labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
-      outputPane!.appendChild(labelEl)
-      parsed.ast.render(outputPane, this.editor)
-      const descriptionEl = document.createElement('div')
-      descriptionEl.setAttribute('id', 'ast-desc')
-      descriptionEl.innerText = parsed.ast.describe()
-      descriptionEl.setAttribute('tabindex', '0')
-      descriptionEl.setAttribute('role', 'region')
-      outputPane!.appendChild(descriptionEl)
-      this.makeClean()
+      // TODO: reimplement with new backend!
+      // const parsed = Parser.parseProgram(this.getDoc())
+      // const labelEl = document.createElement('h2')
+      // labelEl.setAttribute('id', 'ast-label')
+      // labelEl.innerText = "Abstract Syntax Tree"
+      // labelEl.setAttribute('tabindex', '0')
+      // labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
+      // outputPane!.appendChild(labelEl)
+      // parsed.ast.render(outputPane, this.editor)
+      // const descriptionEl = document.createElement('div')
+      // descriptionEl.setAttribute('id', 'ast-desc')
+      // descriptionEl.innerText = parsed.ast.describe()
+      // descriptionEl.setAttribute('tabindex', '0')
+      // descriptionEl.setAttribute('role', 'region')
+      // outputPane!.appendChild(descriptionEl)
+      // this.makeClean()
     } catch (e) {
       renderToOutput(outputPane, e)
     }

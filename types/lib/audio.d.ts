@@ -1,12 +1,12 @@
-import * as R from '../lpm/runtime.js';
-declare const Audio: R.Library;
+import * as L from '../lpm';
+declare const Audio: L.Library;
 export declare const getCtx: () => AudioContext;
-interface SampleNode extends R.Struct {
-    [R.structKind]: 'sample';
+interface SampleNode extends L.Struct {
+    [L.structKind]: 'sample';
     data: Float32Array;
 }
-interface AudioPipeline extends R.Struct {
-    [R.structKind]: 'audio-pipeline';
+interface AudioPipeline extends L.Struct {
+    [L.structKind]: 'audio-pipeline';
     ctx: AudioContext;
     pipeline: AudioNode;
     onOffNode: GainNode;
