@@ -102,10 +102,10 @@ export const listof = (spec: Spec) => ({
     }
     let lst = v
     while (lst !== null) {
-      if (!spec.predicate(lst.fst)) {
+      if (!spec.predicate(lst.head)) {
         return false
       }
-      lst = lst.snd
+      lst = lst.tail
     }
     return true
   },
@@ -115,10 +115,10 @@ export const listof = (spec: Spec) => ({
     } else {
       let lst = actual
       while (lst !== null) {
-        if (!spec.predicate(lst.fst)) {
-          return spec.errorMsg(lst.fst)
+        if (!spec.predicate(lst.head)) {
+          return spec.errorMsg(lst.head)
         }
-        lst = lst.snd
+        lst = lst.tail
       }
       throw new L.ICE('listofC.errorMsg', 'listofC should have found a failing spec!')
     }

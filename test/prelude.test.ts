@@ -1562,7 +1562,8 @@ scamperTest('with-handler', `
 
 `, [
   '6',
-  '"This is the error that was generated: oh no, an error!"'
+  'Runtime error [8:19-8:44]: (error) oh no, an error!',
+  'void'
 ])
 
 scamperTest('zero', `

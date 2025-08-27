@@ -25,7 +25,7 @@ describe('Basic codegen', () => {
   test('simple arithmetic', () => {
     checkMachineOutput(`
       (display (+ 1 1))  
-    `, [2])
+    `, ['2'])
   })
 })
 
@@ -39,7 +39,7 @@ describe('End-to-end cases', () => {
               (* n (fact (- n 1))))))
 
       (display (fact 5))
-    `, [120])
+    `, ['120'])
   })
 
   test('basic list operations', () => {
@@ -50,7 +50,7 @@ describe('End-to-end cases', () => {
               0
               (+ 1 (list-length (cdr l))))))
       (display (list-length '()))
-    `, [0])
+    `, ['0'])
   })
 
   test('basic struct operations', () => {
@@ -58,13 +58,13 @@ describe('End-to-end cases', () => {
       (struct point (x y))
       (define p (point 1 2))
       (display (point-x p))
-    `, [1])
+    `, ['1'])
   })
 
   test('nullary functions', () => {
     checkMachineOutput(`
       (define f (lambda () 1))
       (f)
-    `, [1])
+    `, ['1'])
   })
 })
