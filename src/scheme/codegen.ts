@@ -74,7 +74,7 @@ function lowerExpr (v: L.Value): L.Blk {
   }
 }
 
-function lowerStmt (v: L.Value): L.Blk {
+function lowerStmt (v: L.Value, displayStmtExpr: boolean = true): L.Blk {
   if (A.isImport(v)) {
     const { name, metadata: metadata } = A.asImport(v)
     return [L.mkImport(A.nameFromIdentifier(name), metadata.get('range'))]
@@ -86,12 +86,12 @@ function lowerStmt (v: L.Value): L.Blk {
     return [...lowerExpr(value), L.mkDisp(metadata.get('range'))]
   } else {
     // N.B., statement-expression case
-    return [...lowerExpr(v), L.mkPopv()]
+    return [...lowerExpr(v), displayStmtExpr ? L.mkDisp() : L.mkPopv()]
   }
 }
 
-export function lowerProgram (v: L.Value[]): L.Blk {
-  const ret = v.flatMap(lowerStmt)
+export function lowerProgram (v: L.Value[], displayStmtExpr: boolean = true): L.Blk {
+  const ret = v.flatMap((e) => lowerStmt(e, displayStmtExpr))
   // N.B., the main block must return a value to successfully exit
   ret.push(L.mkLit(0))
   return ret

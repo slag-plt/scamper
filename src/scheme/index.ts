@@ -12,7 +12,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   try {
     tokens = stringToTokens(src)
   } catch (e: any) {
-    err.send(e)
+    err.err(e)
     return undefined
   }
 
@@ -21,7 +21,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   try {
     program = parseValues(tokens)
   } catch (e: any) {
-    err.send(e)
+    err.err(e)
     return undefined
   }
 
@@ -29,7 +29,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   let errors = checkSyntaxProgram(program)
   if (errors.length > 0) {
     for (const e of errors) {
-      err.send(e)
+      err.err(e)
     }
     return undefined
   }
@@ -43,7 +43,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   errors = scopeCheckResult.errors
   if (errors.length > 0) {
     for (const e of errors) {
-      err.send(e)
+      err.err(e)
     }
     return undefined
   }

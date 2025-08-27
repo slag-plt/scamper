@@ -1,22 +1,31 @@
 import {expect, test} from '@jest/globals'
 
-import { mkOptions, Scamper } from '../src/scamper'
+import builtinLibs from '../src/lib'
+import * as Scheme from '../src/scheme'
+import * as LPM from '../src/lpm'
 
-function runProgram (src: string): string {
-  const output = document.createElement('div')
-  const opts = mkOptions()
-  opts.defaultDisplay = true
-  const scamper = new Scamper(output, src, opts)
-  scamper.runProgram()
-  return output.textContent!
+function runProgram (src: string): string[] {
+    const out = new LPM.LoggingChannel()
+    const env = Scheme.mkInitialEnv()
+    const prog = Scheme.compile(out, src)
+    expect(out.log).toEqual([])
+    const machine = new LPM.Machine(
+      builtinLibs,
+      env,
+      prog!,
+      out,
+      out
+    )
+    machine.evaluate()
+    return out.log
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.failing(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+  test.failing(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
