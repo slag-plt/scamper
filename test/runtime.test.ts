@@ -8,7 +8,7 @@ function runProgram (src: string): string[] {
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)
-    expect(out.log).toEqual([])
+    if (out.log.length !== 0) { return out.log }
     const machine = new LPM.Machine(
       builtinLibs,
       env,
@@ -239,9 +239,9 @@ scamperTest('let-binding-errors', `
    [y3 5])
   (+ x3 y3))
 `, [
-  'Runtime error [4:11-4:12]: Referenced unbound identifier "x1".',
-  'Runtime error [10:8-10:9]: Referenced unbound identifier "y2".',
-  'Runtime error [15:8-15:9]: Referenced unbound identifier "y3".'
+  "Parser error [4:11-4:12]: Undefined variable 'x1'",
+  "Parser error [10:8-10:9]: Undefined variable 'y2'",
+  "Parser error [15:8-15:9]: Undefined variable 'y3'"
 ])
 
 scamperTest('let-binding', `
@@ -554,7 +554,7 @@ t1
 scamperTest('undefined-variable', `
 (+ x 1)
 `, [
-  'Runtime error [1:4-1:4]: Referenced unbound identifier "x".'
+  "Parser error [1:4-1:4]: Undefined variable 'x'"
 ])
 
 scamperTest('section', `

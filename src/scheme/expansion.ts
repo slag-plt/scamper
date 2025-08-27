@@ -116,7 +116,7 @@ export function expandExpr (e: A.Exp): A.Exp {
       // (lambda (x1 ... xm) (e1' ... ek'))
       //   where occurrences of _ are replaced with fresh x1 ... xm
       const bvars: string[] = []
-      const exps = e.exps.map((arg) => collectSectionHoles(bvars, arg))
+      const exps = e.exps.map((arg) => collectSectionHoles(bvars, expandExpr(arg)))
       return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
     }
   }
@@ -128,18 +128,24 @@ export function expandStmt (s: A.Stmt): A.Stmt[] {
     case 'define': return [A.mkDefine(s.name, expandExpr(s.value), s.range)]
     case 'display': return [A.mkDisp(expandExpr(s.value), s.range)]
     case 'struct': {
+      // (struct S (f1 ... fk))
+      // -->
+      // (define S (##mkCtorFn## S f1 ... fk))
+      // (define S? (##mkPredFn## S))
+      // ...
+      // (define S-fk (##mkGetFn## S fk))
       const ctor = A.mkDefine(
         s.name,
-        A.mkApp(A.mkVar('##mkCtorFn##'), s.fields.map((f) => A.mkVar(f))),
+        A.mkApp(A.mkVar('##mkCtorFn##'), [A.mkLit(s.name), A.mkLit(s.fields)], s.range),
         s.range
       )
       const pred = A.mkDefine(
         `${s.name}?`,
-        A.mkApp(A.mkVar('##mkPredFn##'), [A.mkVar(s.name)], s.range)
+        A.mkApp(A.mkVar('##mkPredFn##'), [A.mkLit(s.name)], s.range)
       )
       const accessors = s.fields.map((f) => A.mkDefine(
         `${s.name}-${f}`,
-        A.mkApp(A.mkVar('##mkGetFn##'), [A.mkVar(s.name), A.mkVar(f)]),
+        A.mkApp(A.mkVar('##mkGetFn##'), [A.mkLit(s.name), A.mkLit(f)]),
         s.range
       ))
       return [ctor, pred, ...accessors]
