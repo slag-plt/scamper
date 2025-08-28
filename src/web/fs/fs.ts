@@ -263,6 +263,16 @@ export class FS {
     const file = await fileHandle.getFile();
     return await file.text();
   }
+
+  async closeFile (filename: string): Promise<void> {
+    let workerResult = await this.messageWorker({
+      type: 'CloseFile',
+      path: filename,
+    })
+    if (workerResult.type === 'Error') {
+      throw new Error(workerResult.message)
+    }
+  }
 }
 
 export default FS

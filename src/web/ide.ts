@@ -17,6 +17,13 @@ const runWindowButton = document.getElementById('run-window')!
 const astWindowButton = document.getElementById('ast-window')!
 const stepButton      = document.getElementById('step')!
 
+const createFileButton = document.getElementById('create-file')! as HTMLButtonElement
+const uploadFileButton = document.getElementById('upload-file')! as HTMLButtonElement
+const downloadArchiveButton = document.getElementById('download-archive')! as HTMLButtonElement
+const renameFileButton = document.getElementById('rename-file')! as HTMLButtonElement
+const deleteFileButton = document.getElementById('delete-file')! as HTMLButtonElement
+const downloadFileButton = document.getElementById('download-file')! as HTMLButtonElement
+
 const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
 const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
@@ -148,6 +155,68 @@ class IDE {
       this.currentFile = new FS().getLastOpened()
     }
 
+    createFileButton.addEventListener('click', async () => {
+      if (!this.fs) return
+      const filename = prompt('Enter a file name for your new program.')
+      if (filename !== null) {
+        if (await this.fs.fileExists(filename)) {
+          alert(`File ${filename} already exists!`)
+        } else {
+          await this.fs.saveFile(filename, `; ${filename}`)
+          this.populateFileDrawer()
+        }
+      }
+    })
+    uploadFileButton.addEventListener('click', async () => {
+      // TODO: maybe make this a file input button?
+    })
+    downloadArchiveButton.addEventListener('click', async () => {
+      // TODO: implement logic for zipping all the files in the
+      // file system as a backup
+    })
+    renameFileButton.addEventListener('click', async () => {
+      if (!this.fs) return
+      const newName = prompt(`Enter a new filename for ${this.currentFile}`)
+      if (newName !== null && newName !== this.currentFile) {
+        if (await this.fs.fileExists(newName)) {
+          alert(`File ${newName} already exists!`)
+        } else {
+          try {
+            // N.B., in renaming the file, the FS webworker will close
+            // its handle to the current file, so we should be able to
+            // just load it as if no file was open.
+            await this.fs.renameFile(this.currentFile, newName)
+            this.currentFile = newName
+            this.loadCurrentFile()
+            this.populateFileDrawer()
+          } catch (e) {
+            if (e instanceof Error) {
+              this.displayError(e.message)
+            }
+          }
+        }
+      }
+    })
+    deleteFileButton.addEventListener('click', async () => {
+      if (!this.fs) return
+      const shouldDelete = confirm(`Are you sure you want to delete ${this.currentFile}?`)
+      if (shouldDelete) {
+        await this.fs.closeFile(this.currentFile)
+        await this.fs.deleteFile(this.currentFile)
+        // this.currentFile = undefined
+        this.populateFileDrawer()
+      }
+    })
+    downloadFileButton.addEventListener('click', async () => {
+      if (!this.fs) return
+      const contents = await this.fs.loadFile(this.currentFile)
+      const hidden = document.createElement('a')
+      hidden.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
+      hidden.target = '_blank'
+      hidden.download = this.currentFile
+      hidden.click()
+    })
+
     runButton.addEventListener('click', () => {
       this.startScamper(false)
       this.scamper!.runProgram()
@@ -213,10 +282,10 @@ class IDE {
     }
   }
 
-  // stopAutosaving () {
-  //   window.clearInterval(this.autosaveId)
-  //   this.autosaveId = -1
-  // }
+  stopAutosaving () {
+    window.clearInterval(this.autosaveId)
+    this.autosaveId = -1
+  }
 
   getDoc (): string {
     return this.editor!.state.doc.toString()
@@ -259,15 +328,31 @@ class IDE {
     const currentFileLabel = document.getElementById('current-file')!
     currentFileLabel.innerText = this.currentFile
     try {
-      console.log(`--- ${this.currentFile}`)
       const src = await this.fs.loadFile(this.currentFile, true)
-      console.log(src)
       this.setDoc(src)
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
       }
     }
+  }
+
+  async switchToFile (filename: string): Promise<void> {
+    if (!this.fs) return
+    // Stop autosaving to make this transaction atomic
+    this.stopAutosaving()
+
+    // Save the current file and close our handle to it
+    await this.saveCurrentFile()
+    await this.fs.closeFile(this.currentFile)
+
+    // Do the load!
+    this.currentFile = filename
+    await this.loadCurrentFile()
+   
+    // Clear the output pane and restart autosaving.
+    outputPane!.innerHTML = ''
+    this.startAutosaving()
   }
 
   displayError (error: string) {
@@ -281,7 +366,6 @@ class IDE {
     }
 
     const fileDrawer = document.getElementById('file-drawer')!
-
     // N.B., empty the container and repopulate from scratch
     fileDrawer.innerHTML = ''
     const files = await this.fs.getFileList()
@@ -298,15 +382,15 @@ class IDE {
         }
         ret.textContent = file.name
         ret.addEventListener('click', async () => {
-          this.currentFile = file.name
-          await this.loadCurrentFile()
+          await this.switchToFile(file.name)
+          // N.B., maybe we should only redraw what is necessary versus
+          // re-rendering the entire file drawer...
           await this.populateFileDrawer()
         })
         fileDrawer.appendChild(ret)
       }
     }
   }
-
 }
 
 await IDE.create()

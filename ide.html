@@ -28,7 +28,9 @@
     #sidebar {
       border-right: 1px solid #ddd;
       background: #f6f6f6;
-      width: 200px;
+      width: 250px;
+      min-width: 250px;
+      max-width: 250px;
       overflow-x: hidden;
       overflow-y: scroll;
     }
@@ -214,12 +216,13 @@
       Scamper <span id="version">{{ver}}</span> 
     </div>
     <div id="sidebar-actions">
-      <button class="fa-solid fa-file" aria-label="Create file"></button>
-      <button class="fa-solid fa-upload" aria-label="Upload file"></button>
-      <button class="fa-solid fa-file-zipper" aria-label="Download zip archive"></button>
+      <button id="create-file" class="fa-solid fa-file" aria-label="Create file"></button>
+      <button id="upload-file" class="fa-solid fa-upload" aria-label="Upload file"></button>
+      <button id="download-archive" class="fa-solid fa-file-zipper" aria-label="Download zip archive"></button>
       ⋅
-      <button class="fa-solid fa-pencil" aria-label="Rename file"></button>
-      <button class="fa-solid fa-download" aria-label="Download file"></button>
+      <button id="rename-file" class="fa-solid fa-pencil" aria-label="Rename file"></button>
+      <button id="delete-file" class="fa-solid fa-trash" aria-label="Delete file"></button>
+      <button id="download-file" class="fa-solid fa-download" aria-label="Download file"></button>
     </div>
     <div id="file-drawer">
       <div class="file">example.scm</div>
