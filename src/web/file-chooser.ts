@@ -167,6 +167,39 @@ class FileChooser {
   }
 }
 
+function loadFile (file: File) {
+  console.log(`Loading ${file.name}...`)
+  const reader = new FileReader()
+  reader.onload = () => {
+    console.log(reader.result)
+  }
+  reader.readAsText(file)
+}
+
+// N.B., taken from MDN:
+// https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
+document.getElementById('content')!.addEventListener('drop', (ev) => {
+  console.log('file(s) dropped')
+  ev.preventDefault()
+  if (ev.dataTransfer?.items) {
+    [...ev.dataTransfer.items].forEach((item) => {
+      if (item.kind === 'file') {
+        loadFile(item.getAsFile()!)
+      }
+    })
+  } else {
+    [...(ev.dataTransfer?.files ?? [])].forEach((file) => {
+      loadFile(file)
+    })
+  }
+})
+
+
+document.getElementById('content')!.addEventListener('dragover', (ev) => {
+  console.log('file(s) in drop zone')
+  ev.preventDefault()
+})
+
 document.getElementById('version')!.innerText = `(${APP_VERSION})`
 
 const chooser = await FileChooser.create(document.getElementById('content')!)
