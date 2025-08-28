@@ -196,8 +196,8 @@ class IDE {
 
   async init (): Promise<void> {
     this.fs = await FS.create()
-
     await this.loadCurrentFile()
+    await this.populateFileDrawer()
     this.startAutosaving()
   }
 
@@ -259,7 +259,10 @@ class IDE {
     const currentFileLabel = document.getElementById('current-file')!
     currentFileLabel.innerText = this.currentFile
     try {
-      this.setDoc(await this.fs.loadFile(this.currentFile, true))
+      console.log(`--- ${this.currentFile}`)
+      const src = await this.fs.loadFile(this.currentFile, true)
+      console.log(src)
+      this.setDoc(src)
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
@@ -271,6 +274,39 @@ class IDE {
     document.getElementById("loading-content")!.innerText = error
     document.getElementById("loading")!.style.display = "block"
   }
+
+  async populateFileDrawer () {
+    if (!this.fs) {
+      throw new Error('FileChooser: must call init() before usage')
+    }
+
+    const fileDrawer = document.getElementById('file-drawer')!
+
+    // N.B., empty the container and repopulate from scratch
+    fileDrawer.innerHTML = ''
+    const files = await this.fs.getFileList()
+    let tabIndex = 0
+    for (const file of files) {
+      if (!file.isDirectory) {
+        const ret = document.createElement('div')
+        ret.setAttribute('role', 'button')
+        ret.setAttribute('aria-label', `Open ${file.name}`)
+        ret.setAttribute('tabindex', (tabIndex++).toString())
+        ret.classList.add('file')
+        if (file.name === this.currentFile) {
+          ret.classList.add('selected')
+        }
+        ret.textContent = file.name
+        ret.addEventListener('click', async () => {
+          this.currentFile = file.name
+          await this.loadCurrentFile()
+          await this.populateFileDrawer()
+        })
+        fileDrawer.appendChild(ret)
+      }
+    }
+  }
+
 }
 
 await IDE.create()

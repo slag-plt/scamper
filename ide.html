@@ -20,8 +20,48 @@
       font-size: 1em;
     }
 
+    body {
+      display: flex;
+      flex-direction: row;
+    }
+
+    #sidebar {
+      border-right: 1px solid #ddd;
+      background: #f6f6f6;
+      width: 200px;
+      overflow-x: hidden;
+      overflow-y: scroll;
+    }
+
+    #sidebar #title {
+      padding: 0.5em;
+      text-align: center;
+      font-weight: bold;
+      font-style: italic;
+      border-bottom: 1pt dotted;
+    }
+
+    #sidebar #sidebar-actions {
+      padding: 0.25em;
+      text-align: center;
+    }
+
+    #sidebar #file-drawer {
+      padding: 0.5em;
+    }
+
+    #sidebar .file {
+      padding: 0.25em;
+    }
+
+    #sidebar #file-drawer .file.selected {
+      background: green;
+      color: white;
+    }
+
     #ide {
       height: 100%;
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
     }
@@ -169,10 +209,28 @@
   </style>
 </head>
 <body>
+  <div id="sidebar">
+    <div id="title">
+      Scamper <span id="version">{{ver}}</span> 
+    </div>
+    <div id="sidebar-actions">
+      <button class="fa-solid fa-file" aria-label="Create file"></button>
+      <button class="fa-solid fa-upload" aria-label="Upload file"></button>
+      <button class="fa-solid fa-file-zipper" aria-label="Download zip archive"></button>
+      ⋅
+      <button class="fa-solid fa-pencil" aria-label="Rename file"></button>
+      <button class="fa-solid fa-download" aria-label="Download file"></button>
+    </div>
+    <div id="file-drawer">
+      <div class="file">example.scm</div>
+      <div class="file selected">another-file.scm</div>
+      <div class="file">foo.scm</div>
+    </div>
+  </div>
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        <a href="index.html" aria-label="Return to Index">Scamper</a> <span id="version">{{ver}}</span> ⋅ <span id="current-file"></span> ⋅
+        <span id="current-file"></span> ⋅
         <button id="run" class="fa-solid fa-play" aria-label="Run" accesskey="w" aria-keyshortcuts="w"></button>
         <button id="step" class="fa-solid fa-route" aria-label="Trace"></button>
         <button id="run-window" class="fa-solid fa-window-maximize" aria-label="Maximize Output Window "></button>
