@@ -93,27 +93,77 @@ class IDE {
     this.autosaveId = -1
     this.isDirty = false
 
-    // const params = new URLSearchParams(window.location.search)
-    // if (params.has('filename')) {
-    //   this.currentFile = params.get('filename')!
-    // } else {
-    //   // TODO: probably can delete this at some point---we'll (probably)
-    //   // never invoke the IDE without a filename parameter.
-    //   this.currentFile = new FS().getLastOpened()
-    // }
-
     Split(['#editor', '#results'], {
       sizes: [65, 35]
     })
 
     this.initButtons()
+    this.initFileDropZone()
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
     window.addEventListener('beforeunload', async (_e) => {
       await this.saveCurrentFile()
     })
   }
 
+  private initFileDropZone () {
+    const sidebar = document.getElementById('sidebar')!
+
+    sidebar.addEventListener('dragover', (event) => {
+      event.preventDefault()
+      event.dataTransfer!.dropEffect = 'copy'
+      sidebar.classList.add('drag-over')
+    })
+
+    sidebar.addEventListener('dragleave', (event) => {
+      event.preventDefault()
+      sidebar.classList.remove('drag-over')
+    })
+
+    sidebar.addEventListener('drop', async (event) => {
+      event.preventDefault()
+      sidebar.classList.remove('drag-over')
+      
+      if (!this.fs) { return }
+      
+      const files = event.dataTransfer?.files
+      if (!files || files.length === 0) { return }
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        try {
+          const content = await file.text()
+          const filename = file.name
+          
+          // Check if file already exists
+          if (await this.fs.fileExists(filename)) {
+            const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
+            if (!shouldOverwrite) {
+              continue
+            }
+            // Delete existing file
+            this.stopAutosaving()
+            await this.fs.closeFile(filename)
+            await this.fs.deleteFile(filename)
+          }
+          
+          await this.fs.saveFile(filename, content)
+          this.currentFile = null
+          await this.switchToFile(filename)
+        } catch (e) {
+          if (e instanceof Error) {
+            this.displayError(`Failed to upload file "${file.name}": ${e.message}`)
+          }
+        }
+      }
+    })
+  }
+
   private initButtons () {
+    document.getElementById('toggle-sidebar')!.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar')!
+      const isVisible = sidebar.style.display !== 'none'
+      sidebar.style.display = isVisible ? 'none' : 'block'
+    })
     createFileButton.addEventListener('click', async () => {
       if (!this.fs) return
       const filename = prompt('Enter a file name for your new program.')
@@ -421,8 +471,6 @@ class IDE {
 
     // Load the file!
     this.currentFile = filename
-    const currentFileLabel = document.getElementById('current-file')!
-    currentFileLabel.innerText = this.currentFile
     try {
       const src = await this.fs.loadFile(this.currentFile, true)
       this.setDoc(src)

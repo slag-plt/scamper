@@ -64,6 +64,12 @@
       color: white;
     }
 
+    #sidebar.drag-over {
+      opacity: 0.5;
+      background: #e0e0e0;
+      transition: opacity 0.2s ease, background 0.2s ease;
+    }
+
     #ide {
       height: 100%;
       flex-grow: 1;
@@ -237,12 +243,15 @@
   <div id="ide">
     <div id="header">
       <div class="text-align: left;">
-        <span id="current-file"></span> ⋅
+        <button id="toggle-sidebar" class="fa fa-bars" aria-label="Toggle sidebar"></button>
+        ⋅
         <button id="run" class="fa-solid fa-play" aria-label="Run" accesskey="w" aria-keyshortcuts="w"></button>
         <button id="step" class="fa-solid fa-route" aria-label="Trace"></button>
         <button id="run-window" class="fa-solid fa-window-maximize" aria-label="Maximize Output Window "></button>
-        <button id="ast-window" class="fa-solid fa-tree" aria-label="Display Syntax Tree"></button> ⋅
-        <a href="docs.html">Docs</a> ⋅
+        <button id="ast-window" class="fa-solid fa-tree" aria-label="Display Syntax Tree"></button>
+        ⋅
+        <a href="docs.html">Docs</a>
+        ⋅
         <a href="reference.html">Reference</a>
       </div>
       <div class="text-align: right; font-size: 0.75em; color: #333;">
