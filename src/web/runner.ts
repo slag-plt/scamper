@@ -1,5 +1,5 @@
 import FS from './fs/fs.js'
-import { Scamper, mkOptions } from '../scamper.js'
+import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 
 class Runner {
@@ -27,9 +27,9 @@ class Runner {
     outputPane!.innerHTML = ''
     try {
       if (runTree) {
-        new Scamper(outputPane, src, mkOptions()).runnerTree()
+        new Scamper(outputPane, src).runnerTree()
       } else {
-        new Scamper(outputPane, src, mkOptions()).runProgram()
+        new Scamper(outputPane, src).runProgram()
       }
     } catch (e) {
       renderToOutput(outputPane, e)

@@ -1,4 +1,4 @@
-import { Scamper, mkOptions } from '../scamper.js'
+import { Scamper } from '../scamper.js'
 import { mkSourceBlock, renderToOutput } from '../display.js'
 
 export function replaceCodeWidget(base: HTMLElement): void {
@@ -8,15 +8,15 @@ export function replaceCodeWidget(base: HTMLElement): void {
   if (base.classList.contains('source-only')) {
     base.appendChild(mkSourceBlock(src))
   } else {
-    const opts = mkOptions()
-    opts.isPrintingCode = base.classList.contains('source')
-    opts.isTracing = base.classList.contains('trace')
+    // TODO: make sure to respect these options in the future!
+    // opts.isPrintingCode = base.classList.contains('source')
+    // opts.isTracing = base.classList.contains('trace')
     try {
-      new Scamper(base, src, opts).runProgram()
+      new Scamper(base, src).runProgram()
     } catch (e) {
-      if (opts.isPrintingCode) {
-        base.appendChild(mkSourceBlock(src))
-      }
+      // if (opts.isPrintingCode) {
+      //   base.appendChild(mkSourceBlock(src))
+      // }
       renderToOutput(base, e)
     }
   }

@@ -1,9 +1,9 @@
-import { Library, Value } from '../../lang.js';
+import * as L from '../../lpm';
 /***** Image loading **********************************************************/
-export interface ReactiveImageFile extends Value.Struct {
-    [Value.structKind]: 'reactive-image-file';
-    callback: Value.ScamperFn;
+export interface ReactiveImageFile extends L.Struct {
+    [L.structKind]: 'reactive-image-file';
+    callback: L.ScamperFn;
 }
 /***** Exports ****************************************************************/
-export declare const lib: Library;
+export declare const lib: L.Library;
 //# sourceMappingURL=image.d.ts.map

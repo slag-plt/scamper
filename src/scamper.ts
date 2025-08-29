@@ -1,69 +1,47 @@
-import {Env, ParserOutput, Prog} from './lang.js'
-import * as Parser from './parser.js'
-import * as Sem from './sem.js'
-
-import builtinLibs from './lib/builtin.js'
-import Prelude from './lib/prelude.js'
-
-export type ScamperOptions = {
-  isTracing: boolean
-  isPrintingCode: boolean
-  initialEnv?: Env
-  defaultDisplay: boolean
-}
-
-export function mkOptions(): ScamperOptions {
-  return {
-    isTracing: false,
-    isPrintingCode: false,
-    initialEnv: undefined,
-    defaultDisplay: true
-  }
-}
+import * as Scheme from './scheme'
+import * as LPM from './lpm'
+import * as D from './display'
+import builtinLibs from './lib'
 
 export class Scamper {
-  env: Env
-  display: HTMLElement
-  isTracing: boolean
-  parseroutput: ParserOutput
-  prog: Prog
-  sem: Sem.Sem
 
-  constructor (display: HTMLElement, src: string, opts: ScamperOptions) {
-    this.display = display
-    this.isTracing = opts.isTracing
-    if (opts.initialEnv !== undefined) {
-      this.env = opts.initialEnv
-    } else {
-      if (Prelude.initializer !== undefined) {
-        Prelude.initializer()
-      }
-      this.env = new Env([...Prelude.lib,])
+  display: D.HTMLDisplay
+  prog: LPM.Blk | undefined
+  machine: LPM.Machine | undefined
+
+  constructor (target: HTMLElement, src: string) {
+    this.display = new D.HTMLDisplay(target)
+    this.prog = Scheme.compile(this.display, src)
+    if (this.prog) {
+      this.machine = new LPM.Machine(
+        builtinLibs,
+        Scheme.mkInitialEnv(),
+        this.prog,
+        this.display,
+        this.display,
+      )
     }
-    this.parseroutput = Parser.parseProgram(src)
-    this.prog = this.parseroutput.prog;
-    this.sem = new Sem.Sem(
-      this.display,
-      builtinLibs,
-      // TODO: probably should just pass opts through...
-      opts.isTracing,
-      opts.defaultDisplay,
-      opts.isPrintingCode,
-      this.env,
-      this.prog,
-      src)
   }
 
   runProgram () {
-    this.sem.execute();
+    if (this.machine) {
+      this.machine.evaluate()
+    }
   }
 
   runnerTree () {
-    this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);
+    // TODO: need to update! 
+    // this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);
   }
 
-  stepProgram () { this.sem.step() }
-  stepStmtProgram () { this.sem.stepToNextStmt() }
+  stepProgram () {
+    // TOOD: need to reimplement this!
+    // this.sem.step()
+  }
+  stepStmtProgram () {
+    // TODO: need to reimplement this!
+    // this.sem.stepToNextStmt()
+  }
 }
 
 export default Scamper

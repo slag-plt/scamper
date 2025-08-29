@@ -1,1 +1,1 @@
-{"version":3,"file":"linter.d.ts","sourceRoot":"","sources":["../../src/codemirror/linter.ts"],"names":[],"mappings":"AAIA,iBAAS,iBAAiB,CAAE,QAAQ,EAAE,WAAW,yCAyBhD;AAED,eAAe,iBAAiB,CAAA"}
+{"version":3,"file":"linter.d.ts","sourceRoot":"","sources":["../../src/codemirror/linter.ts"],"names":[],"mappings":"AA2BA,iBAAS,iBAAiB,CAAE,SAAS,EAAE,WAAW,yCAkBjD;AAED,eAAe,iBAAiB,CAAA"}

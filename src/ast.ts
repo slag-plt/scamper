@@ -1,20 +1,11 @@
-import {Value} from "./lang";
-import T = Value.T;
-import isPair = Value.isPair;
-import Pair = Value.Pair;
-import mkSyntax = Value.mkSyntax;
-import isArray = Value.isArray;
-import Syntax = Value.Syntax;
-import isSym = Value.isSym;
-import Sym = Value.Sym;
-import Vector = Value.Vector;
-import isChar = Value.isChar;
-import Char = Value.Char;
+import * as LPM from './lpm'
+import * as S from './scheme/syntax.js'
+
 import {EditorView} from "@codemirror/view";
 import {EditorSelection} from "@codemirror/state";
 
 class SyntaxNode {
-    syntax: Value.Syntax
+    syntax: S.Syntax
     value: string = ''
     name: string = ''
     parentname: string | null = null;
@@ -23,11 +14,11 @@ class SyntaxNode {
     children: SyntaxNode[] = [];
     parent: SyntaxNode | null = null;
 
-    constructor(syntax: Value.Syntax, parent: string | null = null, index: number | null = null) {
+    constructor(syntax: S.Syntax, parent: string | null = null, index: number | null = null) {
         this.syntax = syntax; 
         this.parentname = parent;
         this.index = index;
-        let v: T = this.syntax.value;
+        let v: LPM.Value = this.syntax.value;
 
         switch (typeof v) {
             case 'boolean':
@@ -56,24 +47,24 @@ class SyntaxNode {
                 this.simplename = 'a function';
                 break;
             case 'object':
-                if (isPair(v)) {
-                    let tail: T = (v as Pair).snd;
+                if (LPM.isPair(v)) {
+                    let tail: LPM.Value = v.snd;
                     const first = new SyntaxNode(
-                        mkSyntax(((v as Pair).fst as Syntax).range, ((v as Pair).fst as Syntax).value)
+                        S.mkSyntax((v.fst as S.Syntax).value, (v.fst as S.Syntax).range)
                     );
                       first.parent = this;
                       this.children.push(first);
                       let i: number = 1;
-                    while (isPair(tail)) {
+                    while (LPM.isPair(tail)) {
                         const child = new SyntaxNode(
-                            mkSyntax(((tail as Pair).fst as Syntax).range, ((tail as Pair).fst as Syntax).value),
+                            S.mkSyntax((tail.fst as S.Syntax).value, (tail.fst as S.Syntax).range),
                             this.children[0].simplename,
                             i
                         );
                         child.parent = this;
                         this.children.push(child);
                         i += 1;
-                        tail = (tail as Pair).snd;
+                        tail = tail.snd;
                       }
 
                     this.value = "Parenthesis List";
@@ -83,7 +74,7 @@ class SyntaxNode {
                         this.name = "the parenthesis starting with " + this.children[0].name;
                     }
                     this.simplename = 'a parenthesis list';
-                } else if (isArray(v)) {
+                } else if (LPM.isArray(v)) {
                     this.simplename = 'a square bracket array';
                     this.value = "Square bracket array";
                     this.name = "the square bracket array at "+this.syntax.range;
@@ -93,8 +84,8 @@ class SyntaxNode {
                     }
 
                     let i: number = 0;
-                    for (let c of (v as Vector)) {
-                        const child = new SyntaxNode(mkSyntax((c as Syntax).range, (c as Syntax).value), this.name, i);
+                    for (let c of (v as LPM.Vector)) {
+                        const child = new SyntaxNode(S.mkSyntax((c as S.Syntax).value, (c as S.Syntax).range), this.name, i);
                         child.parent = this;
                         this.children.push(child);
                         i += 1;
@@ -103,14 +94,14 @@ class SyntaxNode {
                     if (this.parentname == null) {
                         this.name = "the square bracket array starting with " + this.children[0].name;
                     }
-                } else if (isSym(v)) {
-                    this.value = "Symbol " + (v as Sym).value;
-                    this.name = "the symbol "+(v as Sym).value;
-                    this.simplename = ''+(v as Sym).value;
-                } else if (isChar(v)) {
-                    this.value = "Character " + (v as Char).value;
-                    this.name = "the character " + (v as Char).value;
-                    this.simplename = ''+(v as Char).value;
+                } else if (LPM.isSym(v)) {
+                    this.value = "Symbol " + v.value;
+                    this.name = "the symbol "+ v.value;
+                    this.simplename = ''+ v.value;
+                } else if (LPM.isChar(v)) {
+                    this.value = "Character " + v.value;
+                    this.name = "the character " + v.value;
+                    this.simplename = ''+ v.value;
                 } else if (v === null) {
                     this.value = "null";
                     this.name = "null";
@@ -142,11 +133,11 @@ class SyntaxNode {
 }
 
 export class AST {
-    syntax: Value.Syntax[]
+    syntax: S.Syntax[]
     nodes: SyntaxNode[] = [];
     labelMap: Map<SyntaxNode, HTMLButtonElement> = new Map()
 
-    constructor(syntax: Value.Syntax[]) {
+    constructor(syntax: S.Syntax[]) {
         this.syntax = syntax;
 
         for (let s of this.syntax) {
@@ -248,7 +239,7 @@ export class AST {
         const dummySyntax = {
             range: { begin: { idx: 0 }, end: { idx: 0 } },
             value: null
-          } as Value.Syntax;
+          } as S.Syntax;
           
         const topParent = new SyntaxNode(dummySyntax);
         topParent.children = this.nodes;

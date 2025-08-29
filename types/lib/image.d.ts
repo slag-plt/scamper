@@ -1,3 +1,3 @@
-import { Library } from '../lang.js';
-export declare const imageLib: Library;
+import * as L from '../lpm';
+export declare const imageLib: L.Library;
 //# sourceMappingURL=image.d.ts.map

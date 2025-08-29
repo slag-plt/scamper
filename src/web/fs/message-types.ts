@@ -2,9 +2,11 @@ export type FsRequest =
   | { type: 'ReadFile'; path: string; lock?: boolean }
   | { type: 'WriteFile'; path: string; content: string; lock?: boolean }
   | { type: 'MoveFile'; source: string; destination: string }
+  | { type: 'CloseFile'; path: string }
 
 export type FsResponse =
   | { type: 'FileContent'; content: string }
   | { type: 'WriteComplete' }
   | { type: 'MoveComplete' }
+  | { type: 'CloseComplete' }
   | { type: 'Error'; message: string }

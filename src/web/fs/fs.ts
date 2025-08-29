@@ -1,4 +1,4 @@
-import { ICE } from '../../lang.js'
+import { ICE } from '../../lpm'
 import { FsRequest, FsResponse } from './message-types.js'
 
 function storageAvailable(type: any) {
@@ -236,6 +236,7 @@ export class FS {
       destination: to,
     })
     if (workerResult.type === 'Error') {
+      console.log('error from worker!')
       throw new Error(workerResult.message)
     }
   }
@@ -262,6 +263,16 @@ export class FS {
     const fileHandle = await directoryHandle.getFileHandle(filename);
     const file = await fileHandle.getFile();
     return await file.text();
+  }
+
+  async closeFile (filename: string): Promise<void> {
+    let workerResult = await this.messageWorker({
+      type: 'CloseFile',
+      path: filename,
+    })
+    if (workerResult.type === 'Error') {
+      throw new Error(workerResult.message)
+    }
   }
 }
 

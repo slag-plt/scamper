@@ -1,22 +1,31 @@
 import {expect, test} from '@jest/globals'
 
-import { mkOptions, Scamper } from '../src/scamper'
+import builtinLibs from '../src/lib'
+import * as Scheme from '../src/scheme'
+import * as LPM from '../src/lpm'
 
-function runProgram (src: string): string {
-  const output = document.createElement('div')
-  const opts = mkOptions()
-  opts.defaultDisplay = true
-  const scamper = new Scamper(output, src, opts)
-  scamper.runProgram()
-  return output.textContent!
+function runProgram (src: string): string[] {
+    const out = new LPM.LoggingChannel()
+    const env = Scheme.mkInitialEnv()
+    const prog = Scheme.compile(out, src)
+    if (out.log.length !== 0) { return out.log }
+    const machine = new LPM.Machine(
+      builtinLibs,
+      env,
+      prog!,
+      out,
+      out
+    )
+    machine.evaluate()
+    return out.log
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.failing(label, () => expect(runProgram(src.trim())).toBe(expected.join('')))
+  test.failing(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,9 +239,9 @@ scamperTest('let-binding-errors', `
    [y3 5])
   (+ x3 y3))
 `, [
-  'Runtime error [4:11-4:12]: Referenced unbound identifier "x1".',
-  'Runtime error [10:8-10:9]: Referenced unbound identifier "y2".',
-  'Runtime error [15:8-15:9]: Referenced unbound identifier "y3".'
+  "Parser error [4:11-4:12]: Undefined variable 'x1'",
+  "Parser error [10:8-10:9]: Undefined variable 'y2'",
+  "Parser error [15:8-15:9]: Undefined variable 'y3'"
 ])
 
 scamperTest('let-binding', `
@@ -545,7 +554,7 @@ t1
 scamperTest('undefined-variable', `
 (+ x 1)
 `, [
-  'Runtime error [1:4-1:4]: Referenced unbound identifier "x".'
+  "Parser error [1:4-1:4]: Undefined variable 'x'"
 ])
 
 scamperTest('section', `

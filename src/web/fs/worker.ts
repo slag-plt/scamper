@@ -1,48 +1,91 @@
 import { FsRequest, FsResponse } from './message-types'
 
+class OpenSyncFileHandles {
+  private handles: Map<string, FileSystemSyncAccessHandle>
+  rootDir?: FileSystemDirectoryHandle 
+
+  constructor() {
+    this.handles = new Map()
+  }
+
+  isInitialized (): boolean { return this.rootDir !== undefined }
+
+  async init () {
+    if (!this.rootDir) {
+      const navigator: WorkerNavigator = self.navigator
+      this.rootDir = await navigator.storage.getDirectory()
+    }
+  }
+
+  async get (path: string): Promise<FileSystemSyncAccessHandle> {
+    if (this.handles.has(path)) {
+      return this.handles.get(path)!
+    } else {
+      const fileHandle = await this.rootDir!.getFileHandle(path)
+      try {
+        const handle = await (fileHandle as any).createSyncAccessHandle()
+        this.handles.set(path, handle)
+        return handle
+      } catch {
+        throw new Error(`File ${path} open in another tab`)
+      }
+    }
+  }
+
+  close (path: string) {
+    if (this.handles.has(path)) {
+      this.handles.get(path)!.close()
+      this.handles.delete(path)
+    }
+  }
+
+  cleanup () {
+    for (const [_, handle] of this.handles) {
+      handle.close()
+    }
+    this.handles.clear()
+  }
+}
+
 class FsWorker {
-  private rootDir?: FileSystemDirectoryHandle
-  private currFile: FileSystemSyncAccessHandle | null = null
+  private handles: OpenSyncFileHandles
 
   constructor() {
     self.onmessage = this.handleMessage.bind(this)
+    this.handles = new OpenSyncFileHandles()
   }
 
   private async handleMessage(event: MessageEvent<FsRequest>) {
     try {
-      if (!this.rootDir) {
-        const navigator: WorkerNavigator = self.navigator
-        this.rootDir = await navigator.storage.getDirectory()
+      if (this.handles.isInitialized() === false) {
+        await this.handles.init()
+
+        // N.B., for debugging purposes, report the current storage limits
+        // to the console on each request
+        const storageInfo = await navigator.storage.estimate()
+        console.log(`Storage usage: ${storageInfo.usage} / ${storageInfo.quota}`)
       }
 
       const request = event.data
-
-      if (!this.currFile && request.type !== 'MoveFile') {
-        const path =
-          request.type === 'ReadFile'
-            ? request.path
-            : request.type === 'WriteFile'
-              ? request.path
-              : ''
-        this.currFile = await this.getFileHandle(path)
-      }
-
       switch (request.type) {
         case 'ReadFile':
-          await this.handleReadFile()
+          await this.handleReadFile(request.path)
           break
         case 'WriteFile':
-          await this.handleWriteFile(request.content)
+          await this.handleWriteFile(request.path, request.content)
           break
         case 'MoveFile':
           await this.handleMoveFile(request.source, request.destination)
           break
+        case 'CloseFile':
+          this.handles.close(request.path)
+          this.sendResponse({ type: 'CloseComplete' })
+          break
       }
 
-      if (request.type !== 'MoveFile') {
+      if (request.type !== 'MoveFile' && request.type !== 'CloseFile') {
         if (!request.lock) {
-          this.currFile?.close()
-          this.currFile = null
+          this.handles.close(request.path)
         }
       }
     } catch (error) {
@@ -57,72 +100,55 @@ class FsWorker {
     self.postMessage(response)
   }
 
-  private async handleReadFile() {
-    if (!this.currFile) {
-      throw new Error('No file handle available')
-    }
-    const content = await this.readFile(this.currFile)
+  private async handleReadFile(path: string) {
+    const handle = await this.handles.get(path)
+    const content = await this.readFromHandle(handle)
     this.sendResponse({ type: 'FileContent', content })
   }
 
-  private async handleWriteFile(content: string) {
-    if (!this.currFile) {
-      throw new Error('No file handle available')
-    }
-    await this.writeFile(this.currFile, content)
+  private async handleWriteFile(path: string, content: string) {
+    const handle = await this.handles.get(path)
+    await this.writeToHandle(handle, content)
     this.sendResponse({ type: 'WriteComplete' })
   }
 
   private async handleMoveFile(oldPath: string, newPath: string) {
-    // get old file handle
-    const oldHandle = await this.rootDir!.getFileHandle(oldPath)
-
-    // get sync handle to check if file is accessible
-    try {
-      const syncHandle = await (oldHandle as any).createSyncAccessHandle()
-      syncHandle.close()
-    } catch {
-      this.sendResponse({ type: 'Error', message: 'File open in another tab' })
-      return
-    }
-
     // read old file contents
-    const file = await oldHandle.getFile()
-    const contents = await file.text()
+    console.log('reading old file')
+    const oldHandle = await this.handles.get(oldPath)!
+    const contents = await this.readFromHandle(oldHandle)
+    const rootDir = this.handles.rootDir!
 
     // create new file
-    const newHandle = await this.rootDir!.getFileHandle(newPath, {
+    console.log('getting new file handle')
+    const newHandle = await rootDir.getFileHandle(newPath, {
       create: true,
     })
-    const newSyncHandle = await (newHandle as any).createSyncAccessHandle()
-    await this.writeFile(newSyncHandle, contents)
-    newSyncHandle.close()
+    console.log('writing to new file')
+    try {
+      const newSyncHandle = await (newHandle as any).createSyncAccessHandle()
+      await this.writeToHandle(newSyncHandle, contents)
+      newSyncHandle.close()
+    } catch {
+      throw new Error(`File ${newPath} open in another tab`)
+    }
 
     // remove old file
-    await this.rootDir!.removeEntry(oldPath)
+    console.log(`removing old file ${oldPath}`)
+    this.handles.close(oldPath)
+    rootDir.removeEntry(oldPath, { recursive: true })
 
     this.sendResponse({ type: 'MoveComplete' })
   }
 
-  private async getFileHandle(
-    path: string,
-  ): Promise<FileSystemSyncAccessHandle> {
-    const fileHandle = await this.rootDir!.getFileHandle(path)
-    try {
-      return await (fileHandle as any).createSyncAccessHandle()
-    } catch {
-      throw new Error('File open in another tab')
-    }
-  }
-
-  private async readFile(handle: FileSystemSyncAccessHandle): Promise<string> {
+  private async readFromHandle(handle: FileSystemSyncAccessHandle): Promise<string> {
     const size = handle.getSize()
     const buffer = new Uint8Array(size)
     handle.read(buffer, { at: 0 })
     return new TextDecoder().decode(buffer)
   }
 
-  private async writeFile(
+  private async writeToHandle(
     handle: FileSystemSyncAccessHandle,
     content: string,
   ): Promise<void> {
@@ -134,10 +160,7 @@ class FsWorker {
   }
 
   public cleanup() {
-    if (this.currFile) {
-      this.currFile.close()
-      this.currFile = null
-    }
+    this.handles.cleanup()
   }
 }
 

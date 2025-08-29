@@ -1,13 +1,12 @@
-import { Value } from '../lang.js';
-import * as L from '../lang.js';
+import * as L from '../lpm';
 declare const Audio: L.Library;
 export declare const getCtx: () => AudioContext;
-interface SampleNode extends Value.Struct {
-    [Value.structKind]: 'sample';
+interface SampleNode extends L.Struct {
+    [L.structKind]: 'sample';
     data: Float32Array;
 }
-interface AudioPipeline extends Value.Struct {
-    [Value.structKind]: 'audio-pipeline';
+interface AudioPipeline extends L.Struct {
+    [L.structKind]: 'audio-pipeline';
     ctx: AudioContext;
     pipeline: AudioNode;
     onOffNode: GainNode;

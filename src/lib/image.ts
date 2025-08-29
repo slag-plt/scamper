@@ -2,9 +2,9 @@ import * as Drawing from './image/drawing.js'
 import * as Font from './image/font.js'
 import * as Img from './image/image.js'
 import * as Rgb from './image/color.js'
-import { Library, emptyLibrary } from '../lang.js'
+import * as L from '../lpm'
 
-export const imageLib: Library = emptyLibrary()
+export const imageLib: L.Library = new L.Library()
 
 imageLib.lib =[
   ...Drawing.lib.lib,
