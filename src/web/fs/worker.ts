@@ -59,12 +59,12 @@ class FsWorker {
     try {
       if (this.handles.isInitialized() === false) {
         await this.handles.init()
-      }
 
-      // N.B., for debugging purposes, report the current storage limits
-      // to the console on each request
-      const storageInfo = await navigator.storage.estimate()
-      console.log(`Storage usage: ${storageInfo.usage} / ${storageInfo.quota}`)
+        // N.B., for debugging purposes, report the current storage limits
+        // to the console on each request
+        const storageInfo = await navigator.storage.estimate()
+        console.log(`Storage usage: ${storageInfo.usage} / ${storageInfo.quota}`)
+      }
 
       const request = event.data
       switch (request.type) {
@@ -134,9 +134,9 @@ class FsWorker {
     }
 
     // remove old file
-    console.log('removing old file')
-    await rootDir.removeEntry(oldPath)
+    console.log(`removing old file ${oldPath}`)
     this.handles.close(oldPath)
+    rootDir.removeEntry(oldPath, { recursive: true })
 
     this.sendResponse({ type: 'MoveComplete' })
     console.log('completed!')

@@ -236,6 +236,7 @@ export class FS {
       destination: to,
     })
     if (workerResult.type === 'Error') {
+      console.log('error from worker!')
       throw new Error(workerResult.message)
     }
   }
