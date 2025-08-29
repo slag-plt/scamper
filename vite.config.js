@@ -11,8 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'scamper-docs': resolve(__dirname, 'docs.html'),
-        'scamper-file-chooser': resolve(__dirname, 'index.html'),
-        'scamper-ide': resolve(__dirname, 'ide.html'),
+        'scamper-ide': resolve(__dirname, 'index.html'),
         'scamper-runner': resolve(__dirname, 'runner.html'),
         'scamper-web': resolve(__dirname, 'web.html'),
       },
