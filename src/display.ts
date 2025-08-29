@@ -72,23 +72,25 @@ export function renderToHTML (v: LPM.Value): HTMLElement {
         return mkCodeElement(`#\\${LPM.charToName((v as LPM.Char).value)}`)
       } else if (LPM.isList(v)) {
         const ret = mkCodeElement('(')
-        let lst: any = v
+        let cur: LPM.List = v
         // N.B., we know the list is non-empty because we cover the null case already
-        ret.appendChild(renderToHTML(lst.fst))
-        lst = lst.snd
-        while (lst !== null) {
+        console.log(LPM.toString(cur))
+        ret.appendChild(renderToHTML(cur.head))
+        cur = cur.tail
+        while (cur !== null) {
+          console.log(LPM.toString(cur))
           ret.appendChild(mkCodeElement(' '))
-          ret.appendChild(renderToHTML(lst.fst))
-          lst = lst.snd
+          ret.appendChild(renderToHTML(cur.head))
+          cur = cur.tail
         }
         ret.append(mkCodeElement(')'))
         return ret
       } else if (LPM.isPair(v)) {
         // TODO: do we introduce `( . `)` for pairs again?
         const ret = mkCodeElement('(pair ')
-        ret.appendChild(renderToHTML((v as LPM.Pair).fst))
+        ret.appendChild(renderToHTML(v.fst))
         ret.appendChild(mkCodeElement(' '))
-        ret.appendChild(renderToHTML((v as LPM.Pair).snd))
+        ret.appendChild(renderToHTML(v.snd))
         ret.append(mkCodeElement(')'))
         return ret
       } else if (v instanceof HTMLElement) {
