@@ -11,6 +11,9 @@ export type FsRequest = {
     type: 'MoveFile';
     source: string;
     destination: string;
+} | {
+    type: 'CloseFile';
+    path: string;
 };
 export type FsResponse = {
     type: 'FileContent';
@@ -19,6 +22,8 @@ export type FsResponse = {
     type: 'WriteComplete';
 } | {
     type: 'MoveComplete';
+} | {
+    type: 'CloseComplete';
 } | {
     type: 'Error';
     message: string;

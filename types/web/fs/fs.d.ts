@@ -28,6 +28,7 @@ export declare class FS {
     renameFile(from: string, to: string): Promise<void>;
     makeUntitledFile(): Promise<string>;
     directReadFile(filename: string): Promise<string>;
+    closeFile(filename: string): Promise<void>;
 }
 export default FS;
 //# sourceMappingURL=fs.d.ts.map
