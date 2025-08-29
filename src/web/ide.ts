@@ -127,7 +127,44 @@ class IDE {
       }
     })
     uploadFileButton.addEventListener('click', async () => {
-      // TODO: maybe make this a file input button?
+      const fileInput = document.getElementById('upload-file-input')! as HTMLInputElement
+      fileInput.click()
+    })
+    document.getElementById('upload-file-input')!.addEventListener('change', async (event) => {
+      if (!this.fs) { return }
+      const target = event.target as HTMLInputElement
+      const file = target.files?.[0]
+      if (!file) { return }
+
+      try {
+        const content = await file.text()
+        const filename = file.name
+        
+        // Check if file already exists
+        if (await this.fs.fileExists(filename)) {
+          const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
+          if (!shouldOverwrite) {
+            target.value = '' // Reset the input
+            return
+          }
+          // Delete existing file
+          this.stopAutosaving()
+          await this.fs.closeFile(filename)
+          await this.fs.deleteFile(filename)
+        }
+        
+        await this.fs.saveFile(filename, content)
+        this.currentFile = null
+        await this.switchToFile(filename)
+        
+        // Reset the file input for future uploads
+        target.value = ''
+      } catch (e) {
+        if (e instanceof Error) {
+          this.displayError(`Failed to upload file: ${e.message}`)
+        }
+        target.value = '' // Reset the input on error
+      }
     })
     downloadArchiveButton.addEventListener('click', async () => {
       // TODO: implement logic for zipping all the files in the
