@@ -139,7 +139,6 @@ class FsWorker {
     rootDir.removeEntry(oldPath, { recursive: true })
 
     this.sendResponse({ type: 'MoveComplete' })
-    console.log('completed!')
   }
 
   private async readFromHandle(handle: FileSystemSyncAccessHandle): Promise<string> {
