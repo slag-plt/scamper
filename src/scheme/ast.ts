@@ -144,13 +144,13 @@ export function patToString (pat: Pat): string {
 
 export function expToString (e: Exp): string {
   switch (e.tag) {
-    case 'lit': return JSON.stringify(e)
+    case 'lit': return JSON.stringify(e.value)
     case 'var': return e.name
     case 'app': {
       if (e.args.length === 0) {
-        return `(${e.head})`
+        return `(${expToString(e.head)})`
       } else {
-        return `(${e.head} ${e.args.map(expToString).join(' ')})`
+        return `(${expToString(e.head)} ${e.args.map(expToString).join(' ')})`
       }
     }
     case 'lam': return `(lambda (${e.params.join(' ')}) ${expToString(e.body)})`
