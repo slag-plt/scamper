@@ -7,15 +7,32 @@ import * as L from '../lpm'
 //     | (e1 ... ek)
 //
 //     -- Special forms
-//     | (lambda (x1 ... xk) e)
-//     | (let ([x1 e1] ... [xk ek]) e)
-//     | (begin e1 ... ek)
-//     | (if e1 e2 e3)
-//     | (match e [p1 e1] ... [pk ek])
+//     | (lambda (x1 ... xk) 
+//         e)
+//     | (let
+//         ([x1 e1]
+//          ...
+//          [xk ek])
+//         e)
+//     | (begin
+//         e1
+//         ...
+//         ek)
+//     | (if e1
+//         e2
+//         e3)
+//     | (match e
+//         [p1 e1]
+//         ...
+//         [pk ek])
 //     | (quote e)
 //
 //     -- Sugared forms
-//     | (let* ([x1 e1] ... [xk ek]) e)
+//     | (let*
+//         ([x1 e1]
+//          ...
+//          [xk ek])
+//    e)
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])

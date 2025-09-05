@@ -169,20 +169,24 @@ export type List = null | Cons
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit    = { tag: 'lit', value: Value, range: Range, startsStmt: boolean }
-export type Var    = { tag: 'var', name: string, range: Range, startsStmt: boolean }
-export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range, startsStmt: boolean }
-export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range, startsStmt: boolean }
-export type Ap     = { tag: 'ap', numArgs: number, range: Range, startsStmt: boolean }
-export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range, startsStmt: boolean }
-export type Disp   = { tag: 'disp', range: Range, startsStmt: boolean }
-export type Import = { tag: 'import', name: string, range: Range, startsStmt: boolean }
-export type Define = { tag: 'define', name: string, range: Range, startsStmt: boolean }
-export type Raise  = { tag: 'raise', msg: string, range: Range, startsStmt: boolean }
-export type PopS   = { tag: 'pops', startsStmt: boolean }
-export type PopV   = { tag: 'popv', startsStmt: boolean }
-export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Disp | Import | Define | Raise | PopS | PopV
+export type Lit    = { tag: 'lit', value: Value, range: Range }
+export type Var    = { tag: 'var', name: string, range: Range }
+export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range }
+export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
+export type Ap     = { tag: 'ap', numArgs: number, range: Range }
+export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range }
+export type Raise  = { tag: 'raise', msg: string, range: Range }
+export type PopS   = { tag: 'pops' }
+export type PopV   = { tag: 'popv' }
+export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
 export type Blk    = Ops[]
+
+export type Disp    = { tag: 'disp', expr: Blk, range: Range }
+export type Import  = { tag: 'import', name: string, range: Range }
+export type Define  = { tag: 'define', name: string, expr: Blk, range: Range }
+export type StmtExp = { tag: 'stmtexp', expr: Blk, range: Range }
+export type Stmt    = Disp | Import | Define | StmtExp
+export type Prog    = Stmt[]
 
 export type PWild  = { tag: 'pwild', range: Range }
 export type PLit   = { tag: 'plit', value: Value, range: Range }
@@ -221,16 +225,57 @@ export class Frame {
 
 /** A single thread of execution in LPM. */
 export class Thread {
+  name: string
+  prog: Prog
+  curStmt: number
+  env: Env
   frames: Frame[]
-  result: Value
+  results: Value[]
 
-  constructor (name: string, env: Env, blk: Blk) { 
-    this.frames = [new Frame(name, env, blk)]
-    this.result = undefined
+  constructor (name: string, env: Env, prog: Prog) { 
+    this.name = name
+    this.prog = prog
+    this.curStmt = 0
+    this.env = env
+    this.frames = []
+    this.results = []
+    this.setupNextStmt()
+  }
+
+  setupNextStmt (): void {
+    const stmt = this.getCurrentStmt()
+    switch (stmt.tag) {
+      case 'disp': {
+        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        break
+      }
+      case 'import': {
+        // N.B., no frame setup required
+        break
+      }
+      case 'define': {
+        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        break
+      }
+      case 'stmtexp': {
+        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        break
+      }
+    }
+  }
+
+  advanceStmt (): void {
+    this.frames = []
+    this.curStmt++
+    if (!this.isFinished()) { this.setupNextStmt() }
+  }
+
+  getCurrentStmt (): Stmt {
+    return this.prog[this.curStmt]
   }
 
   isFinished (): boolean {
-    return this.frames.length === 0
+    return this.curStmt >= this.prog.length
   }
 
   getCurrentFrame (): Frame {
@@ -246,14 +291,8 @@ export class Thread {
   }
 
   unwindToNextStatement (): void {
-    if (this.getCurrentFrame().isFinished()) { 
-      this.pop()
-    }
-    while (!this.isFinished() && !this.getCurrentFrame().ops[this.getCurrentFrame().ops.length - 1].startsStmt) {
-      this.getCurrentFrame().popInstr()
-      if (this.getCurrentFrame().isFinished()) {
-        this.pop()
-      }
-    }
+    this.frames = []
+    this.results.push(undefined)
+    this.advanceStmt()
   }
 }

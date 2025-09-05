@@ -6,7 +6,7 @@ import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
 
-export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
+export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   // Tokenization and reading (to Sexps)
   let sexps = undefined 
   try {

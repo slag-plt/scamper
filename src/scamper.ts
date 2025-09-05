@@ -6,7 +6,7 @@ import builtinLibs from './lib'
 export class Scamper {
 
   display: D.HTMLDisplay
-  prog: LPM.Blk | undefined
+  prog: LPM.Prog | undefined
   machine: LPM.Machine | undefined
 
   constructor (target: HTMLElement, src: string) {
