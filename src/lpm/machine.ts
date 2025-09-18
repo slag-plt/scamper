@@ -3,22 +3,39 @@ import * as U from './util.js'
 import { ICE, ScamperError } from './error.js'
 import { OutputChannel, ErrorChannel } from './output.js'
 
+export type Options = {
+  maxCallStackDepth: number
+  stepMatch: boolean
+  isTracing: boolean
+  raisingTarget: string
+}
+
+export const defaultOptions: Options = {
+  maxCallStackDepth: 10000,
+  stepMatch: false,
+  isTracing: false,
+  raisingTarget: 'scheme'
+}
+
+/** The type of functions responsible for raising LPM threads back to a surface language. */
+type Raiser = (thread: L.Thread) => L.Value
+
 /** The Little Pattern Machine */
 export class Machine {
   builtinLibs: Map<string, L.Library>
-  maxCallStackDepth: number
-  stepMatch: boolean
+  raisingProviders: Map<string, Raiser>
+  options: Options
   out: OutputChannel
   err: ErrorChannel
   mainThread: L.Thread
 
-  constructor (builtinLibs: Map<string, L.Library>, env: L.Env, prog: L.Prog,
-               out: OutputChannel, err: ErrorChannel, maxCallStackDepth = 10000, stepMatch = false) {
+  constructor (builtinLibs: Map<string, L.Library>, raisingProviders: Map<string, Raiser>, env: L.Env, prog: L.Prog,
+               out: OutputChannel, err: ErrorChannel, options: Options = defaultOptions) {
     this.builtinLibs = builtinLibs
+    this.raisingProviders = raisingProviders
     this.out = out
     this.err = err
-    this.maxCallStackDepth = maxCallStackDepth
-    this.stepMatch = stepMatch
+    this.options = options
     this.mainThread = new L.Thread('##main##', env, prog)
   }
 
@@ -71,57 +88,56 @@ export class Machine {
     thread.unwindToNextStatement()
   }
 
-  stepThread (thread: L.Thread): void {
-    if (!thread.isFinished()) {
-      const stmt = thread.getCurrentStmt()
-      switch (stmt.tag) {
-        case 'disp': {
-          if (thread.frames.length > 0) {
-            this.stepFrame(thread)
-          } else {
-            const result = thread.results[thread.curStmt]
-            this.out.send(result)
-            thread.advanceStmt()
-          }
-          break
-        }
-
-        case 'import': {
-          if (this.builtinLibs.has(stmt.name)) {
-            const lib = this.builtinLibs.get(stmt.name)!
-            if (lib.initializer) { lib.initializer() }
-            for (const [name, value] of lib.lib) {
-              thread.env.set(name, value)
-            }
-          }
+  stepThread (thread: L.Thread): boolean {
+    if (thread.isFinished()) { return false }
+    const stmt = thread.getCurrentStmt()
+    switch (stmt.tag) {
+      case 'disp': {
+        if (thread.frames.length > 0) {
+          return this.stepFrame(thread)
+        } else {
+          const result = thread.results[thread.curStmt]
+          this.out.send(result)
           thread.advanceStmt()
-          break
+          return false
         }
+      }
 
-        case 'define': {
-          if (thread.frames.length > 0) {
-            this.stepFrame(thread)
-          } else {
-            const result = thread.results[thread.curStmt]
-            thread.env.set(stmt.name, result)
-            thread.advanceStmt()
+      case 'import': {
+        if (this.builtinLibs.has(stmt.name)) {
+          const lib = this.builtinLibs.get(stmt.name)!
+          if (lib.initializer) { lib.initializer() }
+          for (const [name, value] of lib.lib) {
+            thread.env.set(name, value)
           }
-          break
         }
+        thread.advanceStmt()
+        return false
+      }
 
-        case 'stmtexp': {
-          if (thread.frames.length > 0) {
-            this.stepFrame(thread)
-          } else {
-            thread.advanceStmt()
-          }
-          break
+      case 'define': {
+        if (thread.frames.length > 0) {
+          return this.stepFrame(thread)
+        } else {
+          const result = thread.results[thread.curStmt]
+          thread.env.set(stmt.name, result)
+          thread.advanceStmt()
+          return false
+        }
+      }
+
+      case 'stmtexp': {
+        if (thread.frames.length > 0) {
+          return this.stepFrame(thread)
+        } else {
+          thread.advanceStmt()
+          return false
         }
       }
     }
   }
 
-  stepFrame (thread: L.Thread): void {
+  stepFrame (thread: L.Thread): boolean {
     const current = thread.getCurrentFrame()
     if (current.isFinished()) {
       if (current.values.length !== 1) {
@@ -134,13 +150,13 @@ export class Machine {
       } else {
         thread.getCurrentFrame().values.push(ret)
       }
-      return
+      return false
     }
     const instr = current.popInstr()
     switch (instr.tag) {
       case 'lit': {
         current.values.push(instr.value)
-        break
+        return false
       }
       
       case 'var': {
@@ -149,13 +165,14 @@ export class Machine {
         } else {
           current.values.push(current.env.get(instr.name)!)
         }
-        break
+        return false
       }
       
-      case 'ctor':
+      case 'ctor': {
         current.values.push(U.mkStruct(
           instr.name, instr.fields, current.values.splice(-instr.fields.length)))
-        break
+        return false
+      }
       
       case 'cls': {
         current.values.push(U.mkClosure(
@@ -170,7 +187,7 @@ export class Machine {
             ))
           }
         ))
-        break
+        return false
       }
       
       case 'ap': {
@@ -194,30 +211,32 @@ export class Machine {
             this.reportAndUnwind(thread,
               new ScamperError('Runtime', `Error applying function: ${e}`, undefined, instr.range, fn.name ?? '##anonymous##'))
             }
-            return
           }
           current.values.push(result)
+          return false
         } else if (U.isClosure(fn)) {
-          if (thread.frames.length >= this.maxCallStackDepth) {
-            this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`))
-            return
+          if (thread.frames.length >= this.options.maxCallStackDepth) {
+            this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.options.maxCallStackDepth} exceeded`))
+            return false
           } else if (current.isFinished()) {
             // N.B., if this thread is finished, then tail-call optimize by
             // overwriting the current frame instead of pushing a new one.
             current.name = fn.name ?? '##anonymous##'
             current.env = fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][])
             current.pushBlk(fn.code)
+            return false
           } else {
             thread.push(
               fn.name ?? '##anonymous##',
               fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
               fn.code
             )
+            return false
           }
         } else {
           this.reportAndUnwind(thread, new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`))
+          return false
         }
-        break
       }
       
       case 'match': {
@@ -227,9 +246,10 @@ export class Machine {
         const scrutinee = current.values.pop()!
         if (instr.branches.length === 0) {
           this.reportAndUnwind(thread, new ScamperError('Runtime', 'Inexhaustive pattern match failure'))
-          return
+          return false
         }
-        if (this.stepMatch) {
+        // N.B., if we step a match, then we only peel one branch off at a time
+        if (this.options.stepMatch) {
           const [pat, blk] = instr.branches[0]
           instr.branches = instr.branches.slice(1)
           const bindings = Machine.tryMatch(scrutinee, pat)
@@ -239,33 +259,34 @@ export class Machine {
           } else {
             current.pushBlk([instr])
           }
+          return false
         } else {
           for (const [pat, blk] of instr.branches) {
             const bindings = Machine.tryMatch(scrutinee, pat)
             if (bindings) {
               current.env = current.env.extend(...bindings)
               current.pushBlk(blk)
-              return
+              return false
             }
           }
           this.reportAndUnwind(thread, new ScamperError('Runtime', 'Inexhaustive pattern match failure'))
+          return false
         }
-        break
       }
 
       case 'raise': {
         this.reportAndUnwind(thread, new ScamperError('Runtime', instr.msg))
-        break
+        return false
       }
       
       case 'pops': {
         current.env = current.env.pop()
-        break
+        return true
       }
 
       case 'popv': {
         current.values.pop()
-        break
+        return true
       }
     }
   }
@@ -278,6 +299,12 @@ export class Machine {
     return thread.results[thread.curStmt - 1]
   }
 
-  step (): void { this.stepThread(this.mainThread) }
+  step (): void { 
+    let shouldContinue = true
+    while (shouldContinue)  {
+      shouldContinue = this.stepThread(this.mainThread)
+    }
+  }
+
   evaluate (): L.Value { return this.evaluateThread(this.mainThread) }
 }
