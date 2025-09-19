@@ -3,7 +3,7 @@ import { ICE, ScamperError } from '../error.js'
 import * as R from './index.js'
 import * as U from '../util.js'
 
-export class TextRenderer extends R.Renderer<string> {
+class Renderer extends R.Renderer<string> {
   public render(v: Value): string {
     const customRenderer = this.getCustomRendererFor(v)
     if (customRenderer) {
@@ -57,3 +57,6 @@ export class TextRenderer extends R.Renderer<string> {
     }
   }
 }
+
+const TextRenderer = new Renderer()
+export default TextRenderer

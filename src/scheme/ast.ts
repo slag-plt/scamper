@@ -1,4 +1,5 @@
 import * as L from '../lpm'
+import TextRenderer from '../lpm/renderers/text-renderer.js'
 
 ///// Language Definition //////////////////////////////////////////////////////
 
@@ -125,7 +126,28 @@ export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({ ta
 export const mkStmtExp = (expr: Exp, range: L.Range = L.Range.none): StmtExp => ({ tag: 'stmtexp', expr, range })
 export const mkStruct = (name: string, fields: string[], range: L.Range = L.Range.none): Struct => ({ tag: 'struct', name, fields, range })
 
-///// Utility Functions ////////////////////////////////////////////////////////
+///// Query Functions //////////////////////////////////////////////////////////
+
+export function isPat (v: any): v is Pat {
+  return typeof v === 'object' && v !== null && [
+    'pwild', 'pvar', 'plit', 'pctor'
+  ].includes(v.tag)
+}
+
+export function isExp (v: any): v is Exp {
+  return typeof v === 'object' && v !== null && [
+    'lit', 'var', 'app', 'lam', 'let', 'begin', 'if', 'match',
+    'quote', 'let*', 'and', 'or', 'cond', 'section'
+  ].includes(v.tag)
+}
+
+export function isStmt (v: any): v is Stmt {
+  return typeof v === 'object' && v !== null && [
+    'import', 'define', 'display', 'stmtexp', 'struct'
+  ].includes(v.tag)
+}
+
+///// Stringifying Functions ///////////////////////////////////////////////////
 
 export function patToString (pat: Pat): string {
   switch (pat.tag) {
@@ -190,3 +212,8 @@ export function stmtToString (s: Stmt): string {
 export function progToString (p: Prog): string {
   return `${p.map(stmtToString).join('\n')}`
 }
+
+TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
+TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
+TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
+

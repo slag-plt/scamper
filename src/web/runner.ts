@@ -1,6 +1,6 @@
 import FS from './fs/fs.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/html-display.js'
 
 class Runner {
   constructor () {}

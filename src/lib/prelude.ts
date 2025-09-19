@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import * as Display from '../display.js'
+import HtmlRenderer from '../lpm/renderers/html-renderer.js'
 
 export const Prelude: L.Library = new L.Library()
 
@@ -1027,9 +1027,9 @@ function renderReactiveFile (v: any): HTMLElement {
         outp.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, e.target.result as string)
-          outp.appendChild(Display.renderToHTML(v))
+          outp.appendChild(HtmlRenderer.render(v))
         } catch (e) {
-          outp.appendChild(Display.renderToHTML(e as L.ScamperError))
+          outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
         }
       } else {
         outp.innerText = ''
@@ -1046,7 +1046,7 @@ function renderReactiveFile (v: any): HTMLElement {
   ret.appendChild(outp)
   return ret
 }
-Display.addCustomWebRenderer(
+HtmlRenderer.registerCustomRenderer(
   (v) => L.isStructKind(v, 'reactive-file'), renderReactiveFile)
 
 // Vectors (6.8)

@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import * as Display from '../display.js'
+import HtmlRenderer from '../lpm/renderers/html-renderer.js'
 import { waf } from './webaudiofont/webaudiofont.js'
 
 const Music: L.Library = new L.Library()
@@ -532,7 +532,7 @@ export function render (v: any): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer(compositionQ, render)
+HtmlRenderer.registerCustomRenderer(compositionQ, render)
 
 Music.initializer = function initializer(): void {
   console.log('Initializing music library...')

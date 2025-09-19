@@ -1,26 +1,35 @@
 import * as Scheme from './scheme'
 import * as LPM from './lpm'
-import * as D from './display'
+import HtmlDisplay from './lpm/html-display'
 import builtinLibs from './lib'
 
 export class Scamper {
-
-  display: D.HTMLDisplay
+  display: HtmlDisplay
   prog: LPM.Prog | undefined
   machine: LPM.Machine | undefined
 
   constructor (target: HTMLElement, src: string) {
-    this.display = new D.HTMLDisplay(target)
+    this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
       this.machine = new LPM.Machine(
         builtinLibs,
+        // TODO: fill with appropriate raising providers
+        new Map(),
         Scheme.mkInitialEnv(),
         this.prog,
         this.display,
         this.display,
       )
     }
+  }
+
+  send (v: LPM.Value) {
+    this.display.send(v)
+  }
+
+  report (err: LPM.ScamperError) {
+    this.display.report(err)
   }
 
   runProgram () {

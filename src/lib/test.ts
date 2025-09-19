@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import * as Display from '../display.js'
+import HtmlRenderer from '../lpm/renderers/html-renderer.js'
 
 const Test: L.Library = new L.Library()
 
@@ -30,18 +30,18 @@ function testCase (desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L
       return testOk(desc)
     } else if (isEqual === false) {
       const reason = document.createElement('span')
-      reason.appendChild(Display.mkCodeElement('Expected '))
-      reason.appendChild(Display.renderToHTML(expected))
-      reason.appendChild(Display.mkCodeElement(', received '))
-      reason.appendChild(Display.renderToHTML(actual))
+      reason.appendChild(document.createTextNode('Expected '))
+      reason.appendChild(HtmlRenderer.render(expected))
+      reason.appendChild(document.createTextNode(', received '))
+      reason.appendChild(HtmlRenderer.render(actual))
       return testError(desc, reason)
     } else {
       throw new L.ScamperError('Runtime', `Test case function should have produced a boolean, produced ${L.typeOf(actual)} instead`)
     }
   } catch (e) {
     const reason = document.createElement('span')
-    reason.appendChild(Display.mkCodeElement('Test case threw an exception: '))
-    reason.appendChild(Display.renderToHTML(e as L.Value))
+    reason.appendChild(document.createTextNode('Test case threw an exception: '))
+    reason.appendChild(HtmlRenderer.render(e as L.Value))
     return testError(desc, reason)
   }
 }
@@ -50,7 +50,7 @@ Test.registerValue('test-case', testCase)
 function testExn (desc: string, testFn: L.ScamperFn): Result {
   try {
     L.callScamperFn(testFn, [])
-    return testError(desc, Display.mkCodeElement(`Test case did not throw an exception`))
+    return testError(desc, HtmlRenderer.render(`Test case did not throw an exception`))
   } catch (e) {
     return testOk(desc)
   }
@@ -78,6 +78,6 @@ function render (v: any): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer(isResult, render)
+HtmlRenderer.registerCustomRenderer(isResult, render)
 
 export default Test

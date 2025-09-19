@@ -5,7 +5,7 @@ import { EditorView, keymap } from "@codemirror/view"
 import FS from './fs/fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/html-display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { indentSelection } from "@codemirror/commands"

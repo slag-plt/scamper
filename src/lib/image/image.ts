@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Render from '../../display.js'
+import HtmlRenderer from '../../lpm/renderers/html-renderer.js'
 import * as L from '../../lpm'
 import { rgb } from './color.js'
 
@@ -183,7 +183,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
   return ret
 }
 
-Render.addCustomWebRenderer(isReactiveImageFile, render)
+HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
 
 /***** Exports ****************************************************************/
 

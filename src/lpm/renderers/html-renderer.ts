@@ -3,19 +3,14 @@ import { ICE, ScamperError } from '../error.js'
 import * as R from './index.js'
 import * as U from '../util.js'
 
-// N.B., do we want to syntax highlight _all_ html output?
-import hljs from 'highlight.js'
-
-function mkCodeElement(text: string): HTMLElement {
-  const elt = hljs.highlight(text, {language: 'scheme', ignoreIllegals: true})
+function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
-  ret.classList.add('hljs')
-  ret.innerHTML = elt.value
+  ret.textContent = text
   ret.tabIndex = 0;
   return ret
 }
 
-export class HtmlRenderer extends R.Renderer<HTMLElement> {
+export class Renderer extends R.Renderer<HTMLElement> {
   render(v: Value): HTMLElement {
     switch (typeof v) {
       case 'boolean':
@@ -108,3 +103,6 @@ export class HtmlRenderer extends R.Renderer<HTMLElement> {
     }
   }
 }
+
+const HTMLRenderer = new Renderer()
+export default HTMLRenderer
