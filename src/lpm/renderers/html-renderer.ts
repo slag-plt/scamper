@@ -28,15 +28,15 @@ export class Renderer extends R.Renderer<HTMLElement> {
           return mkCodeElement(v.value)
         } else if (U.isArray(v)) {
           if (v.length === 0) {
-            return mkCodeElement('[]')
+            return mkCodeElement('(vector)')
           }
-          const ret = mkCodeElement('[')
+          const ret = mkCodeElement('(vector ')
           ret.appendChild(this.render(v[0]))
           v.slice(1).forEach((e) => {
             ret.appendChild(mkCodeElement(' '))
             ret.appendChild(this.render(e))
           })
-          ret.append(mkCodeElement(']'))
+          ret.append(mkCodeElement(')'))
           return ret
         } else if (U.isClosure(v)) {
           return mkCodeElement(`[Function (closure)]`)
@@ -45,7 +45,7 @@ export class Renderer extends R.Renderer<HTMLElement> {
         } else if (U.isChar(v)) {
           return mkCodeElement(`#\\${U.charToName(v.value)}`)
         } else if (U.isList(v)) {
-          const ret = mkCodeElement('(')
+          const ret = mkCodeElement('(list ')
           let cur: List = v
           // N.B., we know the list is non-empty because we cover the null case already
           console.log(U.toString(cur))

@@ -4,6 +4,7 @@
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
   "scripts": {
+    "cli": "tsx src/cli/index.ts",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -48,6 +49,7 @@
     "highlight.js": "^11.10.0",
     "showdown": "^2.1.0",
     "split.js": "^1.6.5",
+    "tsx": "^4.20.5",
     "webaudiofont": "^3.0.4"
   }
 }

@@ -21,7 +21,7 @@ class Renderer extends R.Renderer<string> {
             return v.value
           } else if (U.isArray(v)) {
             return v.length === 0 ? '(vector)' :
-              `(vector ${v.map(toString).join(' ')})`
+              `(vector ${v.map((v) => this.render(v)).join(' ')})`
           } else if (U.isClosure(v)) {
             return `[Function: ${v.name ?? '##anonymous##'}]`
           } else if (U.isFunction(v)) {
@@ -29,12 +29,9 @@ class Renderer extends R.Renderer<string> {
           } else if (U.isChar(v)) {
             return `#\\${U.charToName(v.value)}`
           } else if (U.isList(v)) {
-            return `(list ${U.listToVector(v)!.map(toString).join(' ')})`
+            return `(list ${U.listToVector(v)!.map((v) => this.render(v)).join(' ')})`
           } else if (U.isPair(v)) {
             return `(pair ${this.render(v.fst)} ${this.render(v.snd)})`
-          } else if (v instanceof HTMLElement) {
-            // N.B., shouldn't encounter this? Need to be in browser to render...
-            return '[HTMLElement]'
           } else if (U.isStruct(v)) {
             const name = v[structKind]
             const fields = U.getFieldsOfStruct(v)
