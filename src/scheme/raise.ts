@@ -90,3 +90,7 @@ export function raiseFrames (frames: LPM.Frame[]): A.Exp {
   }
   return ret
 }
+
+export function raiseThread (thread: LPM.Thread): LPM.Value {
+  return raiseFrames(thread.frames)
+}

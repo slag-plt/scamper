@@ -14,8 +14,9 @@ export class Scamper {
     if (this.prog) {
       this.machine = new LPM.Machine(
         builtinLibs,
-        // TODO: fill with appropriate raising providers
-        new Map(),
+        new Map([
+          ['scheme', Scheme.raiseThread]
+        ]),
         Scheme.mkInitialEnv(),
         this.prog,
         this.display,

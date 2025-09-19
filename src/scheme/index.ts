@@ -6,6 +6,8 @@ import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
 
+export { raiseThread } from './raise.js'
+
 export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   // Tokenization and reading (to Sexps)
   let sexps = undefined 
