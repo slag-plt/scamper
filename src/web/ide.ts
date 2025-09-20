@@ -1,5 +1,6 @@
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
+import { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
 
 import FS from './fs/fs.js'
@@ -40,10 +41,9 @@ class IDE {
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  constructor () {
-    this.currentFile = null
-    this.editor = new EditorView({
-      doc: '',
+  newEditorState (doc: string): EditorState {
+    return EditorState.create({
+      doc,
       extensions: [
         basicSetup,
         keymap.of([
@@ -88,14 +88,20 @@ class IDE {
             this.makeDirty()
           }
         })
-      ], parent: editorPane!
+      ]
+    })
+  }
+
+  constructor () {
+    this.currentFile = null
+    this.editor = new EditorView({
+      state: this.newEditorState(''),
+      parent: editorPane!
     })
     this.autosaveId = -1
     this.isDirty = false
 
-    Split(['#editor', '#results'], {
-      sizes: [65, 35]
-    })
+    Split(['#editor', '#results'], { sizes: [65, 35] })
 
     this.initButtons()
     this.initFileDropZone()
@@ -255,7 +261,7 @@ class IDE {
 
         // Remove the file from output in the IDE
         this.currentFile = null
-        this.setDoc('')
+        this.initializeDoc('')
         outputPane!.innerHTML = ''
         
         this.populateFileDrawer()
@@ -368,10 +374,8 @@ class IDE {
     return this.editor!.state.doc.toString()
   }
 
-  setDoc (src: string) {
-    this.editor.dispatch(this.editor.state.update({
-      changes: { from: 0, to: this.editor.state.doc.length, insert: src }
-    }))
+  initializeDoc (src: string) {
+    this.editor!.setState(this.newEditorState(src))
   }
 
   makeDirty () {
@@ -473,7 +477,7 @@ class IDE {
     this.currentFile = filename
     try {
       const src = await this.fs.loadFile(this.currentFile, true)
-      this.setDoc(src)
+      this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
