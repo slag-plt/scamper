@@ -30,6 +30,7 @@ const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElemen
 const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
 const astTextButton = document.getElementById('ast-text')! as HTMLButtonElement
 
+const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 
 class IDE {
   fs?: FS
@@ -41,11 +42,12 @@ class IDE {
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  newEditorState (doc: string): EditorState {
+  mkEditorState (doc: string, isReadOnly: boolean = false): EditorState {
     return EditorState.create({
       doc,
       extensions: [
         basicSetup,
+        EditorState.readOnly.of(isReadOnly),
         keymap.of([
           indentWithTab,
           {
@@ -95,7 +97,7 @@ class IDE {
   constructor () {
     this.currentFile = null
     this.editor = new EditorView({
-      state: this.newEditorState(''),
+      state: this.mkEditorState(noLoadedFileText, true),
       parent: editorPane!
     })
     this.autosaveId = -1
@@ -261,7 +263,7 @@ class IDE {
 
         // Remove the file from output in the IDE
         this.currentFile = null
-        this.initializeDoc('')
+        this.initializeDoc(noLoadedFileText, true)
         outputPane!.innerHTML = ''
         
         this.populateFileDrawer()
@@ -374,8 +376,8 @@ class IDE {
     return this.editor!.state.doc.toString()
   }
 
-  initializeDoc (src: string) {
-    this.editor!.setState(this.newEditorState(src))
+  initializeDoc (src: string, isReadOnly: boolean = false) {
+    this.editor!.setState(this.mkEditorState(src ,isReadOnly))
   }
 
   makeDirty () {
