@@ -6,6 +6,6 @@ VER=$1
 
 echo "Deploying ${VER}"
 
-tsc
+tsc -noEmit
 vite build --base=/${VER}/
 rsync -crtvz --progress dist/ ${SERVER}:${ROOT}/${VER}
