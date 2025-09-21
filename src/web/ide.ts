@@ -1,5 +1,5 @@
 import { basicSetup } from 'codemirror'
-import { indentWithTab } from '@codemirror/commands'
+import { historyField, indentWithTab } from '@codemirror/commands'
 import { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
 
@@ -11,6 +11,7 @@ import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { indentSelection } from "@codemirror/commands"
 import * as Lock from './lockfile.js'
+import { loadSwapFile, saveSwapFile } from './swapfile.js'
 
 const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
@@ -52,7 +53,9 @@ class IDE {
   scamper?: Scamper
   isDirty: boolean
   config: Config
-  isLoadingFile: boolean = false
+  isLoadingFile = false
+  // N.B., showDotFiles should normally be false except when are debugging
+  showDotFiles = true
 
   ///// Initialization /////////////////////////////////////////////////////////
 
@@ -122,16 +125,40 @@ class IDE {
     })
 
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
-    window.addEventListener('beforeunload', async (_e) => {
+
+    // N.B., this section is wonky. I'm trying to set up hooks to save on exit
+    // but nothing is consistent! I think we eventually want to use just
+    // visibilitychange and beforeunload. It seems like beforeunload is the
+    // most consistent at the cost of killing bfcache... whicih I don't mind
+    // for this particular application.
+    document.addEventListener('visibilitychange', async () => {
+      console.log('visibility changed: ', document.visibilityState)
+      if (document.visibilityState === 'hidden') {
+        await this.saveCurrentFile()
+        await this.saveConfig()
+        await Lock.releaseLockFile(this.fs)
+      } else if (document.visibilityState === 'visible') {
+        await Lock.acquireLockFile(this.fs)
+      }
+    })
+
+    document.addEventListener('pagehide', async () => {
       await this.saveCurrentFile()
       await this.saveConfig()
       await Lock.releaseLockFile(this.fs)
     })
 
+    window.addEventListener('beforeunload', async (e) => {
+      // N.B., ensure the "are you sure" dialog pops
+      e.preventDefault()
+      await this.saveCurrentFile()
+      await this.saveConfig()
+      await Lock.releaseLockFile(this.fs)
+      return true
+    })
+
     this.initButtons()
     this.initFileDropZone()
-
-    this.loadConfig()
   }
 
   private initFileDropZone () {
@@ -200,7 +227,7 @@ class IDE {
           alert(`File ${filename} already exists!`)
         } else {
           await this.fs.saveFile(filename, `; ${filename}`)
-          this.switchToFile(filename)
+          await this.switchToFile(filename)
         }
       }
     })
@@ -262,7 +289,7 @@ class IDE {
             // just load it as if no file was open.
             await this.fs.renameFile(this.currentFile, newName)
             this.currentFile = null
-            this.switchToFile(newName)
+            await this.switchToFile(newName)
           } catch (e) {
             if (e instanceof Error) {
               this.displayError(e.message)
@@ -348,7 +375,7 @@ class IDE {
     const files = await this.fs.getFileList()
     let tabIndex = 0
     for (const file of files) {
-      if (!file.isDirectory && file.name !== Lock.lockfileName && file.name !== configFilename) {
+      if (!file.isDirectory && (this.showDotFiles || !file.name.startsWith('.'))) {
         const ret = document.createElement('div')
         ret.setAttribute('role', 'button')
         ret.setAttribute('aria-label', `Open ${file.name}`)
@@ -370,19 +397,19 @@ class IDE {
   }
 
   async saveConfig () {
-    await this.fs.saveFile(configFilename, JSON.stringify(this.config)/*, true*/)
+    await this.fs.saveFile(configFilename, JSON.stringify(this.config))
   }
 
   async loadConfig () {
     if (await this.fs.fileExists(configFilename)) {
-      this.config = JSON.parse(await this.fs.loadFile(configFilename/*, true*/))
+      this.config = JSON.parse(await this.fs.loadFile(configFilename))
     } else {
       this.config = defaultConfig 
       await this.saveConfig()
     }
     if (this.config.lastOpenedFilename !== null) {
       if (await this.fs.fileExists(this.config.lastOpenedFilename)) {
-        this.switchToFile(this.config.lastOpenedFilename)
+        await this.switchToFile(this.config.lastOpenedFilename)
       } else {
         this.config.lastOpenedFilename = null
       }
@@ -406,7 +433,9 @@ class IDE {
 
   startAutosaving () {
     if (this.autosaveId === -1) {
-      this.autosaveId = window.setInterval(async () => await this.saveCurrentFile(), 3000)
+      this.autosaveId = window.setInterval(async () => {
+        await this.saveCurrentFile()
+      }, 3000)
     }
   }
 
@@ -420,7 +449,7 @@ class IDE {
   }
 
   initializeDoc (src: string, isReadOnly: boolean = false) {
-    this.editor!.setState(this.mkEditorState(src ,isReadOnly))
+    this.editor!.setState(this.mkEditorState(src, isReadOnly))
   }
 
   makeDirty () {
@@ -500,6 +529,10 @@ class IDE {
     if (!this.fs || !this.currentFile) return
     try {
       await this.fs.saveFile(this.currentFile, this.getDoc())
+      await saveSwapFile(this.fs, this.currentFile, {
+        editorState: this.editor.state.toJSON({ history: historyField }),
+        priorVersions: []
+      })
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
@@ -514,7 +547,7 @@ class IDE {
     this.stopAutosaving()
 
     // Save the current file and close our handle to it, if open
-    if (this.currentFile) {
+    if (this.currentFile !== null) {
       await this.saveCurrentFile()
     }
 
@@ -522,7 +555,8 @@ class IDE {
     this.currentFile = filename
     try {
       const src = await this.fs.loadFile(this.currentFile)
-      console.log(`Loading file ${filename}: ${src.slice(0, 10)}...`)
+      // N.B., currently doing nothing with the swap data
+      const _swap = await loadSwapFile(this.fs, this.currentFile)
       this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {

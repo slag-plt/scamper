@@ -122,3 +122,5 @@ src/version.ts
 # js and js.map files shoved in src directory
 src/**/*.js
 src/**/*.js.map
+
+.claude
