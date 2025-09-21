@@ -1,5 +1,5 @@
 import { basicSetup } from 'codemirror'
-import { historyField, indentWithTab } from '@codemirror/commands'
+import { indentWithTab } from '@codemirror/commands'
 import { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
 
@@ -11,7 +11,6 @@ import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { indentSelection } from "@codemirror/commands"
 import * as Lock from './lockfile.js'
-import { loadSwapFile, saveSwapFile } from './swapfile.js'
 
 const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
@@ -58,6 +57,8 @@ class IDE {
   showDotFiles = true
 
   ///// Initialization /////////////////////////////////////////////////////////
+
+  
 
   mkEditorState (doc: string, isReadOnly: boolean = false): EditorState {
     return EditorState.create({
@@ -448,7 +449,7 @@ class IDE {
     return this.editor!.state.doc.toString()
   }
 
-  initializeDoc (src: string, isReadOnly: boolean = false) {
+initializeDoc (src: string, isReadOnly: boolean = false) {
     this.editor!.setState(this.mkEditorState(src, isReadOnly))
   }
 
@@ -529,10 +530,6 @@ class IDE {
     if (!this.fs || !this.currentFile) return
     try {
       await this.fs.saveFile(this.currentFile, this.getDoc())
-      await saveSwapFile(this.fs, this.currentFile, {
-        editorState: this.editor.state.toJSON({ history: historyField }),
-        priorVersions: []
-      })
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
@@ -555,12 +552,10 @@ class IDE {
     this.currentFile = filename
     try {
       const src = await this.fs.loadFile(this.currentFile)
-      // N.B., currently doing nothing with the swap data
-      const _swap = await loadSwapFile(this.fs, this.currentFile)
       this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {
-        this.displayError(e.message)
+        this.displayError(`${e.message}\n\n${e.stack}`)
       }
     }
    

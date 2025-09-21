@@ -19,6 +19,7 @@ export function computeSwapFilename (filename: string) { return `.${filename}.sw
 
 /** Saves the given file's swap data to the file system. */
 export function saveSwapFile (fs: FS, filename: string, swap: SwapData) {
+  console.log(swap.editorState)
   if (!filename.startsWith('.')) {
     const swapFilename = computeSwapFilename(filename)
     return fs.saveFile(swapFilename, JSON.stringify(swap))
