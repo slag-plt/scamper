@@ -1,37 +1,15 @@
-import { basicSetup } from 'codemirror'
-import { indentWithTab } from '@codemirror/commands'
-import { EditorState } from "@codemirror/state"
-import { EditorView, keymap } from "@codemirror/view"
+import { EditorView } from "@codemirror/view"
 
 import FS from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
-import { ScamperSupport } from '../codemirror/language.js'
-import makeScamperLinter from '../codemirror/linter.js'
-import { indentSelection } from "@codemirror/commands"
 import * as Lock from './lockfile.js'
+import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 
-const editorPane      = document.getElementById('editor')!
-const outputPane      = document.getElementById('output')!
-const runButton       = document.getElementById('run')!
-const runWindowButton = document.getElementById('run-window')!
-const astWindowButton = document.getElementById('ast-window')!
-const stepButton      = document.getElementById('step')!
+const editorPane = document.getElementById('editor')!
+const outputPane = document.getElementById('output')!
 
-const createFileButton = document.getElementById('create-file')! as HTMLButtonElement
-const uploadFileButton = document.getElementById('upload-file')! as HTMLButtonElement
-const downloadArchiveButton = document.getElementById('download-archive')! as HTMLButtonElement
-const renameFileButton = document.getElementById('rename-file')! as HTMLButtonElement
-const deleteFileButton = document.getElementById('delete-file')! as HTMLButtonElement
-const downloadFileButton = document.getElementById('download-file')! as HTMLButtonElement
-
-const stepOnceButton = document.getElementById('step-once')! as HTMLButtonElement
-const stepStmtButton = document.getElementById('step-stmt')! as HTMLButtonElement
-const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
-const astTextButton = document.getElementById('ast-text')! as HTMLButtonElement
-
-const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 const configFilename = '.scamper.config'
 
 type Config = {
@@ -54,65 +32,11 @@ class IDE {
   config: Config
   isLoadingFile = false
   // N.B., showDotFiles should normally be false except when are debugging
-  showDotFiles = true
+  showDotFiles = false
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  
-
-  mkEditorState (doc: string, isReadOnly: boolean = false): EditorState {
-    return EditorState.create({
-      doc,
-      extensions: [
-        basicSetup,
-        EditorState.readOnly.of(isReadOnly),
-        keymap.of([
-          indentWithTab,
-          {
-            key: "Ctrl-Shift-i",
-            run: (view) => {
-              const doc = view.state.doc
-              const sel = view.state.selection.main
-              const line = doc.lineAt(sel.head)
-              const visualColumn = sel.head - line.from
-              view.dispatch({
-                selection: { anchor: 0, head: doc.length }
-              })     
-              const success = indentSelection(view)
-              const updatedLine = view.state.doc.line(line.number)
-              const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0         
-              const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
-              view.dispatch({
-                selection: { anchor: newHead },
-                scrollIntoView: true
-              })
-              return success
-            }
-          },
-          {
-            key: "'",
-            run: (view) => {
-              const { from, to } = view.state.selection.main
-              view.dispatch({
-                changes: { from, to, insert: "'" },
-                selection: { anchor: from + 1 }
-              })
-              return true
-            }
-          }
-          ]),
-        ScamperSupport(),
-        makeScamperLinter(outputPane),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            this.makeDirty()
-          }
-        })
-      ]
-    })
-  }
-
-  private constructor (fs: FS) {
+  private constructor(fs: FS) {
     this.fs = fs
     this.config = defaultConfig    // N.B., loaded asynchronously from disk in IDE.create()
     this.currentFile = null
@@ -121,7 +45,7 @@ class IDE {
 
     Split(['#editor', '#results'], { sizes: [65, 35] })
     this.editor = new EditorView({
-      state: this.mkEditorState(noLoadedFileText, true),
+      state: mkNoFileEditorState(outputPane),
       parent: editorPane!
     })
 
@@ -133,7 +57,6 @@ class IDE {
     // most consistent at the cost of killing bfcache... whicih I don't mind
     // for this particular application.
     document.addEventListener('visibilitychange', async () => {
-      console.log('visibility changed: ', document.visibilityState)
       if (document.visibilityState === 'hidden') {
         await this.saveCurrentFile()
         await this.saveConfig()
@@ -151,18 +74,23 @@ class IDE {
 
     window.addEventListener('beforeunload', async (e) => {
       // N.B., ensure the "are you sure" dialog pops
-      e.preventDefault()
       await this.saveCurrentFile()
       await this.saveConfig()
       await Lock.releaseLockFile(this.fs)
-      return true
+      if (this.isDirty) {
+        e.preventDefault()
+        return true
+      } else {
+        return false
+      }
     })
 
-    this.initButtons()
     this.initFileDropZone()
+    this.initButtons()
   }
 
-  private initFileDropZone () {
+  /** Initializes the sidebar's dropzone */
+  private initFileDropZone() {
     const sidebar = document.getElementById('sidebar')!
 
     sidebar.addEventListener('dragover', (event) => {
@@ -179,9 +107,7 @@ class IDE {
     sidebar.addEventListener('drop', async (event) => {
       event.preventDefault()
       sidebar.classList.remove('drag-over')
-      
-      if (!this.fs) { return }
-      
+      this.stopAutosaving()
       const files = event.dataTransfer?.files
       if (!files || files.length === 0) { return }
 
@@ -190,7 +116,7 @@ class IDE {
         try {
           const content = await file.text()
           const filename = file.name
-          
+
           // Check if file already exists
           if (await this.fs.fileExists(filename)) {
             const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
@@ -201,7 +127,7 @@ class IDE {
             this.stopAutosaving()
             await this.fs.deleteFile(filename)
           }
-          
+
           await this.fs.saveFile(filename, content)
           this.currentFile = null
           await this.switchToFile(filename)
@@ -214,13 +140,16 @@ class IDE {
     })
   }
 
-  private initButtons () {
+  private initButtons() {
     document.getElementById('toggle-sidebar')!.addEventListener('click', () => {
       const sidebar = document.getElementById('sidebar')!
       const isVisible = sidebar.style.display !== 'none'
       sidebar.style.display = isVisible ? 'none' : 'block'
     })
-    createFileButton.addEventListener('click', async () => {
+
+    ///// File Buttons ////////////////////////////////////////////////////
+
+    document.getElementById('create-file')!.addEventListener('click', async () => {
       if (!this.fs) return
       const filename = prompt('Enter a file name for your new program.')
       if (filename !== null) {
@@ -232,10 +161,12 @@ class IDE {
         }
       }
     })
-    uploadFileButton.addEventListener('click', async () => {
+
+    document.getElementById('upload-file')!.addEventListener('click', async () => {
       const fileInput = document.getElementById('upload-file-input')! as HTMLInputElement
       fileInput.click()
     })
+
     document.getElementById('upload-file-input')!.addEventListener('change', async (event) => {
       if (!this.fs) { return }
       const target = event.target as HTMLInputElement
@@ -245,7 +176,7 @@ class IDE {
       try {
         const content = await file.text()
         const filename = file.name
-        
+
         // Check if file already exists
         if (await this.fs.fileExists(filename)) {
           const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
@@ -257,11 +188,11 @@ class IDE {
           this.stopAutosaving()
           await this.fs.deleteFile(filename)
         }
-        
+
         await this.fs.saveFile(filename, content)
         this.currentFile = null
         await this.switchToFile(filename)
-        
+
         // Reset the file input for future uploads
         target.value = ''
       } catch (e) {
@@ -271,11 +202,13 @@ class IDE {
         target.value = '' // Reset the input on error
       }
     })
-    downloadArchiveButton.addEventListener('click', async () => {
+
+    document.getElementById('download-archive')!.addEventListener('click', async () => {
       // TODO: implement logic for zipping all the files in the
       // file system as a backup
     })
-    renameFileButton.addEventListener('click', async () => {
+
+    document.getElementById('rename-file')!.addEventListener('click', async () => {
       if (!this.fs) { return }
       if (!this.currentFile) { return }
       const newName = prompt(`Enter a new filename for ${this.currentFile}`)
@@ -299,7 +232,8 @@ class IDE {
         }
       }
     })
-    deleteFileButton.addEventListener('click', async () => {
+
+    document.getElementById('delete-file')!.addEventListener('click', async () => {
       if (!this.fs) return
       if (!this.currentFile) { return }
       const shouldDelete = confirm(`Are you sure you want to delete ${this.currentFile}?`)
@@ -309,15 +243,16 @@ class IDE {
 
         // Remove the file from output in the IDE
         this.currentFile = null
-        this.initializeDoc(noLoadedFileText, true)
+        this.initializeDummyDoc()
         this.config.lastOpenedFilename = null
         outputPane!.innerHTML = ''
-        
+
         this.populateFileDrawer()
         this.startAutosaving()
       }
     })
-    downloadFileButton.addEventListener('click', async () => {
+
+    document.getElementById('download-file')!.addEventListener('click', async () => {
       if (!this.fs) return
       if (!this.currentFile) { return }
       const contents = await this.fs.loadFile(this.currentFile)
@@ -327,45 +262,63 @@ class IDE {
       hidden.download = this.currentFile
       hidden.click()
     })
-    runButton.addEventListener('click', () => {
+
+    ///// Execution Buttons ////////////////////////////////////////////////////
+
+    document.getElementById('run')!.addEventListener('click', () => {
       this.startScamper(false)
       this.scamper!.runProgram()
     })
-    runWindowButton.addEventListener('click', async () => {
+
+    document.getElementById('run-window')!.addEventListener('click', async () => {
       if (!this.currentFile) { return }
       await this.saveCurrentFile()
       const params = new URLSearchParams({ filename: this.currentFile, isTree: "false" })
       window.open(`runner.html?${params.toString()}`)
     })
-    stepButton.addEventListener('click', () => this.startScamper(true))
-    stepOnceButton.addEventListener('click', () => {
+
+    document.getElementById('step')!.addEventListener('click', () => this.startScamper(true))
+
+    document.getElementById('step-once')!.addEventListener('click', () => {
       this.scamper!.stepProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
-    stepStmtButton.addEventListener('click', () => {
+
+    document.getElementById('step-stmt')!.addEventListener('click', () => {
       this.scamper!.stepStmtProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
-    stepAllButton.addEventListener('click', () => {
+
+    document.getElementById('step-all')!.addEventListener('click', () => {
       this.scamper!.runProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
-    astTextButton.addEventListener('click', () => {
+
+    document.getElementById('ast-text')!.addEventListener('click', () => {
       this.showASTText()
     })
-    astWindowButton.addEventListener('click', () => {
+
+    document.getElementById('ast-window')!.addEventListener('click', () => {
       if (!this.currentFile) { return }
       this.saveCurrentFile()
-      const params = new URLSearchParams({filename: this.currentFile, isTree: "true"})
+      const params = new URLSearchParams({ filename: this.currentFile, isTree: "true" })
       window.open(`runner.html?${params.toString()}`)
-    })
-    
-    stepOnceButton.disabled = true
-    stepStmtButton.disabled = true
-    stepAllButton.disabled = true
+    });
+    this.toggleStepButtons(false)
   }
 
-  private async populateFileDrawer () {
+  /** Toggles the step buttons on (true) or off (false). */
+  private toggleStepButtons (enabled: boolean) {
+    const stepOnce = document.getElementById('step-once')! as HTMLButtonElement
+    const stepStmt = document.getElementById('step-stmt')! as HTMLButtonElement
+    const stepAll = document.getElementById('step-all')! as HTMLButtonElement
+    stepOnce.disabled = !enabled
+    stepStmt.disabled = !enabled
+    stepAll.disabled = !enabled
+  }
+
+  /** Populates the file drawer with entries. */
+  private async populateFileDrawer() {
     if (!this.fs) {
       throw new Error('FileChooser: must call init() before usage')
     }
@@ -397,27 +350,22 @@ class IDE {
     }
   }
 
-  async saveConfig () {
+  /** Saves the current configuration to disk */
+  async saveConfig() {
     await this.fs.saveFile(configFilename, JSON.stringify(this.config))
   }
 
-  async loadConfig () {
+  /** Loads the configuration from disk */
+  async loadConfig() {
     if (await this.fs.fileExists(configFilename)) {
       this.config = JSON.parse(await this.fs.loadFile(configFilename))
     } else {
-      this.config = defaultConfig 
+      this.config = defaultConfig
       await this.saveConfig()
-    }
-    if (this.config.lastOpenedFilename !== null) {
-      if (await this.fs.fileExists(this.config.lastOpenedFilename)) {
-        await this.switchToFile(this.config.lastOpenedFilename)
-      } else {
-        this.config.lastOpenedFilename = null
-      }
     }
   }
 
-  static async create () {
+  static async create() {
     const fs = await FS.create()
     const obtainedLock = await Lock.acquireLockFile(fs)
     if (!obtainedLock) {
@@ -427,12 +375,19 @@ class IDE {
       const ide = new IDE(fs)
       await ide.populateFileDrawer()
       await ide.loadConfig()
+      if (ide.config.lastOpenedFilename !== null) {
+        if (await fs.fileExists(ide.config.lastOpenedFilename)) {
+          await ide.switchToFile(ide.config.lastOpenedFilename)
+        } else {
+          ide.config.lastOpenedFilename = null
+        }
+      }
     }
   }
 
   ///// IDE utility functions //////////////////////////////////////////////////
 
-  startAutosaving () {
+  startAutosaving() {
     if (this.autosaveId === -1) {
       this.autosaveId = window.setInterval(async () => {
         await this.saveCurrentFile()
@@ -440,20 +395,28 @@ class IDE {
     }
   }
 
-  stopAutosaving () {
+  stopAutosaving() {
     window.clearInterval(this.autosaveId)
     this.autosaveId = -1
   }
 
-  getDoc (): string {
+  getDoc(): string {
     return this.editor!.state.doc.toString()
   }
 
-initializeDoc (src: string, isReadOnly: boolean = false) {
-    this.editor!.setState(this.mkEditorState(src, isReadOnly))
+  initializeDoc (src: string) {
+    this.editor!.setState(mkFreshEditorState(src, {
+      output: outputPane,
+      dirtyAction: () => this.makeDirty(),
+      isReadOnly: false
+    }))
   }
 
-  makeDirty () {
+  initializeDummyDoc () {
+    this.editor!.setState(mkNoFileEditorState(outputPane))
+  }
+
+  makeDirty() {
     if (this.scamper !== undefined && !this.isDirty) {
       this.isDirty = true
       // const status = document.getElementById('results-status')!
@@ -463,27 +426,23 @@ initializeDoc (src: string, isReadOnly: boolean = false) {
     }
   }
 
-  makeClean () {
+  makeClean() {
     document.getElementById('results-status')!.innerHTML = ''
     this.isDirty = false
   }
 
   ///// IDE actions ////////////////////////////////////////////////////////////
 
-  startScamper (isTracing: boolean): void {
+  startScamper(isTracing: boolean): void {
     outputPane!.innerHTML = ''
     try {
       this.scamper = new Scamper(outputPane, this.getDoc())
       // TODO: reimplement once tracing is back in!
       isTracing = false
       if (isTracing) {
-        stepOnceButton.disabled = false
-        stepStmtButton.disabled = false
-        stepAllButton.disabled = false
+        this.toggleStepButtons(true)
       } else {
-        stepOnceButton.disabled = true
-        stepStmtButton.disabled = true
-        stepAllButton.disabled = true
+        this.toggleStepButtons(false)
       }
     } catch (e) {
       renderToOutput(outputPane, e)
@@ -526,8 +485,8 @@ initializeDoc (src: string, isReadOnly: boolean = false) {
     }
   }
 
-  async saveCurrentFile () {
-    if (!this.fs || !this.currentFile) return
+  async saveCurrentFile() {
+    if (!this.currentFile) { return }
     try {
       await this.fs.saveFile(this.currentFile, this.getDoc())
     } catch (e) {
@@ -537,7 +496,7 @@ initializeDoc (src: string, isReadOnly: boolean = false) {
     }
   }
 
-  async switchToFile (filename: string): Promise<void> {
+  async switchToFile(filename: string): Promise<void> {
     this.isLoadingFile = true
     if (!this.fs) return
     // Stop autosaving to make the transaction atomic
@@ -558,7 +517,7 @@ initializeDoc (src: string, isReadOnly: boolean = false) {
         this.displayError(`${e.message}\n\n${e.stack}`)
       }
     }
-   
+
     // Reset the UI: output panel and file drawer, also restart saving
     outputPane!.innerHTML = ''
     this.populateFileDrawer()
@@ -567,7 +526,7 @@ initializeDoc (src: string, isReadOnly: boolean = false) {
     this.isLoadingFile = false
   }
 
-  displayError (error: string) {
+  displayError(error: string) {
     document.getElementById("loading-content")!.innerText = error
     document.getElementById("loading")!.style.display = "block"
   }

@@ -81,7 +81,6 @@ export class FS {
 
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile (filename: string, contents: string): Promise<void> {
-    console.log(`Saving ${filename}: ${contents.slice(0, 10)}...`)
     const handle = await this.root!.getFileHandle(filename, { create: true })
     const stream = await handle.createWritable()
     await stream.write(contents)
