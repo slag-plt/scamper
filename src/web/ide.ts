@@ -3,13 +3,14 @@ import { indentWithTab } from '@codemirror/commands'
 import { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
 
-import FS from './fs/fs.js'
+import FS from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import { ScamperSupport } from '../codemirror/language.js'
 import makeScamperLinter from '../codemirror/linter.js'
 import { indentSelection } from "@codemirror/commands"
+import * as Lock from './lockfile.js'
 
 const editorPane      = document.getElementById('editor')!
 const outputPane      = document.getElementById('output')!
@@ -31,14 +32,26 @@ const stepAllButton  = document.getElementById('step-all')! as HTMLButtonElement
 const astTextButton = document.getElementById('ast-text')! as HTMLButtonElement
 
 const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
+const configFilename = '.scamper.config'
+
+type Config = {
+  lastOpenedFilename: string | null
+  lastVersionAccessed: string
+}
+
+const defaultConfig: Config = {
+  lastOpenedFilename: null,
+  lastVersionAccessed: '0.0.0'
+}
 
 class IDE {
-  fs?: FS
+  fs: FS
   editor: EditorView
   currentFile: string | null
   autosaveId: number
   scamper?: Scamper
   isDirty: boolean
+  config: Config
 
   ///// Initialization /////////////////////////////////////////////////////////
 
@@ -94,23 +107,30 @@ class IDE {
     })
   }
 
-  constructor () {
+  private constructor (fs: FS) {
+    this.fs = fs
+    this.config = defaultConfig    // N.B., loaded asynchronously from disk in IDE.create()
     this.currentFile = null
-    this.editor = new EditorView({
-      state: this.mkEditorState(noLoadedFileText, true),
-      parent: editorPane!
-    })
     this.autosaveId = -1
     this.isDirty = false
 
     Split(['#editor', '#results'], { sizes: [65, 35] })
+    this.editor = new EditorView({
+      state: this.mkEditorState(noLoadedFileText, true),
+      parent: editorPane!
+    })
 
-    this.initButtons()
-    this.initFileDropZone()
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
     window.addEventListener('beforeunload', async (_e) => {
       await this.saveCurrentFile()
+      await this.saveConfig()
+      await Lock.releaseLockFile(this.fs)
     })
+
+    this.initButtons()
+    this.initFileDropZone()
+
+    this.loadConfig()
   }
 
   private initFileDropZone () {
@@ -150,7 +170,6 @@ class IDE {
             }
             // Delete existing file
             this.stopAutosaving()
-            await this.fs.closeFile(filename)
             await this.fs.deleteFile(filename)
           }
           
@@ -207,7 +226,6 @@ class IDE {
           }
           // Delete existing file
           this.stopAutosaving()
-          await this.fs.closeFile(filename)
           await this.fs.deleteFile(filename)
         }
         
@@ -258,12 +276,12 @@ class IDE {
       const shouldDelete = confirm(`Are you sure you want to delete ${this.currentFile}?`)
       if (shouldDelete) {
         this.stopAutosaving()
-        await this.fs.closeFile(this.currentFile)
         await this.fs.deleteFile(this.currentFile)
 
         // Remove the file from output in the IDE
         this.currentFile = null
         this.initializeDoc(noLoadedFileText, true)
+        this.config.lastOpenedFilename = null
         outputPane!.innerHTML = ''
         
         this.populateFileDrawer()
@@ -347,16 +365,37 @@ class IDE {
     }
   }
 
-  private async init (): Promise<void> {
-    this.fs = await FS.create()
-    await this.populateFileDrawer()
-    this.startAutosaving()
+  async saveConfig () {
+    await this.fs.saveFile(configFilename, JSON.stringify(this.config)/*, true*/)
   }
 
-  static async create (): Promise<IDE> {
-    const ide = new IDE()
-    await ide.init()
-    return ide
+  async loadConfig () {
+    if (await this.fs.fileExists(configFilename)) {
+      this.config = JSON.parse(await this.fs.loadFile(configFilename/*, true*/))
+    } else {
+      this.config = defaultConfig 
+      await this.saveConfig()
+    }
+    if (this.config.lastOpenedFilename !== null) {
+      if (await this.fs.fileExists(this.config.lastOpenedFilename)) {
+        this.switchToFile(this.config.lastOpenedFilename)
+      } else {
+        this.config.lastOpenedFilename = null
+      }
+    }
+  }
+
+  static async create () {
+    const fs = await FS.create()
+    const obtainedLock = await Lock.acquireLockFile(fs)
+    if (!obtainedLock) {
+      document.getElementById("loading-content")!.innerText = 'Another instance of Scamper is open. Please close that instance and try again.'
+      document.getElementById("loading")!.style.display = "block"
+    } else {
+      const ide = new IDE(fs)
+      await ide.populateFileDrawer()
+      await ide.loadConfig()
+    }
   }
 
   ///// IDE utility functions //////////////////////////////////////////////////
@@ -456,7 +495,7 @@ class IDE {
   async saveCurrentFile () {
     if (!this.fs || !this.currentFile) return
     try {
-      await this.fs.saveFile(this.currentFile, this.getDoc(), true)
+      await this.fs.saveFile(this.currentFile, this.getDoc())
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
@@ -472,13 +511,13 @@ class IDE {
     // Save the current file and close our handle to it, if open
     if (this.currentFile) {
       await this.saveCurrentFile()
-      await this.fs.closeFile(this.currentFile)
     }
 
     // Load the file!
     this.currentFile = filename
     try {
-      const src = await this.fs.loadFile(this.currentFile, true)
+      const src = await this.fs.loadFile(this.currentFile)
+      console.log(`Loading file ${filename}: ${src.slice(0, 10)}...`)
       this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {
@@ -489,6 +528,7 @@ class IDE {
     // Reset the UI: output panel and file drawer, also restart saving
     outputPane!.innerHTML = ''
     this.populateFileDrawer()
+    this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()
   }
 
@@ -498,4 +538,4 @@ class IDE {
   }
 }
 
-await IDE.create()
+export const ide = await IDE.create()
