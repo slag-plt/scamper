@@ -348,7 +348,7 @@ class IDE {
     const files = await this.fs.getFileList()
     let tabIndex = 0
     for (const file of files) {
-      if (!file.isDirectory) {
+      if (!file.isDirectory && file.name !== Lock.lockfileName && file.name !== configFilename) {
         const ret = document.createElement('div')
         ret.setAttribute('role', 'button')
         ret.setAttribute('aria-label', `Open ${file.name}`)
