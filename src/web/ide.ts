@@ -303,7 +303,7 @@ class IDE {
       this.saveCurrentFile()
       const params = new URLSearchParams({ filename: this.currentFile, isTree: "true" })
       window.open(`runner.html?${params.toString()}`)
-    });
+    })
     this.toggleStepButtons(false)
   }
 
