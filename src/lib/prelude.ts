@@ -480,6 +480,24 @@ function cdr (x: L.Value): L.Value {
 }
 Prelude.registerValue('cdr', cdr)
 
+const listAccessors = [
+  'caar', 'cadr', 'cdar', 'cddr',
+  'caaar', 'cadar', 'cdaar', 'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr',
+  'caaaar', 'cadaar', 'cdaaar', 'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar', 'caaadr', 'cadadr', 'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
+]
+listAccessors.forEach((name) => {
+  const path = name.slice(1, name.length - 1)
+  const fn = function (x: L.Value): L.Value {
+    checkContract(arguments, contract(name, [C.or(C.pair, C.list)]))
+    let ret = path[path.length - 1] === 'a' ? car(x) : cdr(x)
+    for (let i = path.length - 2; i >= 0; i--) {
+      ret = path[i] === 'a' ? car(ret) : cdr(ret)
+    }
+    return ret
+  }
+  Prelude.registerValue(name, fn)
+})
+
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
 

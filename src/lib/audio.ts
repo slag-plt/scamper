@@ -105,8 +105,8 @@ function playSample (pipeline: SampleNode): void {
     const data = pipeline.data
     // N.B., for now, make the audio sample stereo (2 channels)
     const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
-    buffer.copyToChannel(data, 0)
-    buffer.copyToChannel(data, 1)
+    buffer.copyToChannel(data as any, 0)
+    buffer.copyToChannel(data as any, 1)
     const source = ctx.createBufferSource()
     source.buffer = buffer
     source.connect(ctx.destination)
@@ -125,7 +125,7 @@ function drawOscilloscope (data: Uint8Array, canvas: HTMLCanvasElement, analyser
   requestAnimationFrame(() => drawOscilloscope(data, canvas, analyser))
 
   const bufferLength = analyser.frequencyBinCount
-  analyser.getByteTimeDomainData(data)
+  analyser.getByteTimeDomainData(data as any)
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = 'rgb(200, 200, 200)'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -171,8 +171,8 @@ export function sampleRenderer (sample: SampleNode): HTMLElement {
   const data = sample.data as Float32Array
   // N.B., for now, make the audio sample stereo (2 channels)
   const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
-  buffer.copyToChannel(data, 0)
-  buffer.copyToChannel(data, 1)
+  buffer.copyToChannel(data as any, 0)
+  buffer.copyToChannel(data as any, 1)
   let source: AudioBufferSourceNode | undefined
   playButton.onclick = () => {
     source = ctx.createBufferSource()
