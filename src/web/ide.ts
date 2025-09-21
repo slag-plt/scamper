@@ -52,6 +52,7 @@ class IDE {
   scamper?: Scamper
   isDirty: boolean
   config: Config
+  isLoadingFile: boolean = false
 
   ///// Initialization /////////////////////////////////////////////////////////
 
@@ -358,7 +359,10 @@ class IDE {
         }
         ret.textContent = file.name
         ret.addEventListener('click', async () => {
-          await this.switchToFile(file.name)
+          // N.B., try to avoid double-clicking causing multiple file loads to occur at once
+          if (!this.isLoadingFile) {
+            await this.switchToFile(file.name)
+          }
         })
         fileDrawer.appendChild(ret)
       }
@@ -504,6 +508,7 @@ class IDE {
   }
 
   async switchToFile (filename: string): Promise<void> {
+    this.isLoadingFile = true
     if (!this.fs) return
     // Stop autosaving to make the transaction atomic
     this.stopAutosaving()
@@ -530,6 +535,7 @@ class IDE {
     this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()
+    this.isLoadingFile = false
   }
 
   displayError (error: string) {
