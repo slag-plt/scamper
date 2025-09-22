@@ -29,14 +29,14 @@ Data.registerValue('string->chars', stringToChars)
 
 function stringToWords (s: string): L.List {
   checkContract(arguments, contract('string->words', [C.string]))
-  const words = s.split(/\s+/g) || []
+  const words = s.split(/\s+/g)
   return L.vectorToList(words)
 }
 Data.registerValue('string->words', stringToWords)
 
 function stringToLines (s: string): L.List {
   checkContract(arguments, contract('string->lines', [C.string]))
-  const lines = s.split(/\r?\n/g) || []
+  const lines = s.split(/\r?\n/g)
   return L.vectorToList(lines)
 }
 Data.registerValue('string->lines', stringToLines)
