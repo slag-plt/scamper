@@ -7,6 +7,7 @@ import Audio from './audio.js'
 import Canvas from './canvas.js'
 import Html from './html.js'
 import Reactive from './reactive.js'
+import Data from './data.js'
 
 export const builtinLibs: Map<string, Library> = new Map([
   ['image', imageLib],
@@ -16,9 +17,10 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['audio', Audio],
   ['canvas', Canvas],
   ['html', Html],
-  ['reactive', Reactive]
+  ['reactive', Reactive],
+  ['data', Data]
 ])
 
-export { Prelude } from './prelude.js'
+export { Prelude } from './prelude/index.js'
 export { Runtime } from './runtime.js'
 export default builtinLibs

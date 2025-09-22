@@ -9,14 +9,14 @@ export interface FileEntry {
  * A wrapper around the OPFS API that simplifies access to files with a
  * higher-level API.
  */
-export class FS {
+export class OPFSFileSystem {
   private root?: FileSystemDirectoryHandle
 
   private constructor() { }
 
   /** @returns a new file system instance for accessing the OPFS */
-  static async create(): Promise<FS> {
-    const ret = new FS()
+  static async create(): Promise<OPFSFileSystem> {
+    const ret = new OPFSFileSystem()
     ret.root = await navigator.storage.getDirectory()
     return ret
   }
@@ -102,4 +102,5 @@ export class FS {
   }
 }
 
+export const FS = await OPFSFileSystem.create()
 export default FS

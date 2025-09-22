@@ -1,4 +1,4 @@
-import FS from "./fs.js";
+import OPFSFileSystem from "./fs.js";
 
 /**
  * The contents of a swap file are a JSON object containing relevant metadata
@@ -18,7 +18,7 @@ export type SwapData = {
 export function computeSwapFilename (filename: string) { return `.${filename}.swp` }
 
 /** Saves the given file's swap data to the file system. */
-export function saveSwapFile (fs: FS, filename: string, swap: SwapData) {
+export function saveSwapFile (fs: OPFSFileSystem, filename: string, swap: SwapData) {
   // Debug log removed
   if (!filename.startsWith('.')) {
     const swapFilename = computeSwapFilename(filename)
@@ -27,7 +27,7 @@ export function saveSwapFile (fs: FS, filename: string, swap: SwapData) {
 }
 
 /** Loads the given file's swap data from the file system, if it exists. */
-export async function loadSwapFile (fs: FS, filename: string): Promise<SwapData | undefined> {
+export async function loadSwapFile (fs: OPFSFileSystem, filename: string): Promise<SwapData | undefined> {
   if (!filename.startsWith('.')) {
     const swapFilename = computeSwapFilename(filename)
     if (await fs.fileExists(swapFilename)) {
@@ -43,7 +43,7 @@ export async function loadSwapFile (fs: FS, filename: string): Promise<SwapData 
 }
 
 /** Deletes the given file's swap file, if it exists. */
-export async function deleteSwapFile (fs: FS, filename: string) {
+export async function deleteSwapFile (fs: OPFSFileSystem, filename: string) {
   if (!filename.startsWith('.')) {
     const swapFilename = computeSwapFilename(filename)
     if (await fs.fileExists(swapFilename)) {
