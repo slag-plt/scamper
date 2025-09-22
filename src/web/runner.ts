@@ -1,4 +1,4 @@
-import OPFSFileSystem from './fs.js'
+import FS from './fs.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 
@@ -6,7 +6,7 @@ class Runner {
   constructor () {}
 
   static async create (runTree: boolean): Promise<void> {
-    const fs = await OPFSFileSystem.create()
+    const fs = FS
     const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
 

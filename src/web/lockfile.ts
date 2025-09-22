@@ -1,4 +1,4 @@
-import OPFSFileSystem from './fs.js'
+import { OPFSFileSystem } from './fs.js'
 
 export const lockfileName = '.scamper.lock'
 

@@ -1,4 +1,4 @@
-import OPFSFileSystem from "./fs.js";
+import { OPFSFileSystem } from "./fs.js";
 
 /**
  * The contents of a swap file are a JSON object containing relevant metadata
