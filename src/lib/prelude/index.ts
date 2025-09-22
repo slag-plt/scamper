@@ -1,7 +1,8 @@
-import * as L from '../lpm'
-import { checkContract, contract } from './contract.js'
-import * as C from './contract.js'
-import * as Display from '../display.js'
+import * as L from '../../lpm'
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
+
+import { lib as filesLib } from './files.js'
 
 export const Prelude: L.Library = new L.Library()
 
@@ -1007,65 +1008,12 @@ function stringSplit (s: string, sep: string): L.List {
 }
 Prelude.registerValue('string-split', stringSplit)
 
-
 function stringSplitVector (s: string, sep: string): string[] {
   checkContract(arguments, contract('string-split-vector', [C.string, C.string])) 
   return s.split(sep)
 }
 Prelude.registerValue('string-split-vector', stringSplitVector)
 
-// TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
-// TODO: need to add a custom renderer for reactive file blobs
-
-export interface ReactiveFile extends L.Struct {
-  [L.structKind]: 'reactive-file',
-  callback: L.ScamperFn
-}
-
-function withFile (callback: L.ScamperFn): ReactiveFile {
-  checkContract(arguments, contract('with-file', [C.func]))  
-  return {
-    [L.scamperTag]: 'struct',
-    [L.structKind]: 'reactive-file',
-    callback
-  }
-}
-Prelude.registerValue('with-file', withFile)
-
-function renderReactiveFile (v: any): HTMLElement {
-  const rf = v as ReactiveFile
-  const ret = document.createElement('code')
-  const inp = document.createElement('input')
-  const outp = document.createElement('code')
-  inp.type = 'file'
-  inp.addEventListener('change', () => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
-        outp.innerHTML = ''
-        try {
-          const v = L.callScamperFn(rf.callback, e.target.result as string)
-          outp.appendChild(Display.renderToHTML(v))
-        } catch (e) {
-          outp.appendChild(Display.renderToHTML(e as L.ScamperError))
-        }
-      } else {
-        outp.innerText = ''
-      }
-    }
-    if (inp.files !== null && inp.files.length > 0) {
-      outp.innerText = 'Loading...'
-      reader.readAsText(inp.files[0])
-    }
-  }, false)
-
-  ret.appendChild(inp)
-  ret.appendChild(document.createElement('br'))
-  ret.appendChild(outp)
-  return ret
-}
-Display.addCustomWebRenderer(
-  (v) => L.isStructKind(v, 'reactive-file'), renderReactiveFile)
 
 // Vectors (6.8)
 
@@ -1565,5 +1513,7 @@ Prelude.registerValue('null', nullConst)
 Prelude.registerValue('pi', piConst)
 Prelude.registerValue('π', piConst)
 Prelude.registerValue('void', voidConst)
+
+Prelude.lib.push(...filesLib.lib)
 
 export default Prelude
