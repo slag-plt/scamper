@@ -482,9 +482,13 @@ function cdr (x: L.Value): L.Value {
 Prelude.registerValue('cdr', cdr)
 
 const listAccessors = [
+  // 4-character accessors
   'caar', 'cadr', 'cdar', 'cddr',
+  // 5-character accessors
   'caaar', 'cadar', 'cdaar', 'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr',
-  'caaaar', 'cadaar', 'cdaaar', 'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar', 'caaadr', 'cadadr', 'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
+  // 6-character accessors
+  'caaaar', 'cadaar', 'cdaaar', 'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar',
+  'caaadr', 'cadadr', 'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
 ]
 listAccessors.forEach((name) => {
   const path = name.slice(1, name.length - 1)
