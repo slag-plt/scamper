@@ -364,6 +364,11 @@ class IDE {
   }
 
   static async create() {
+    // TODO: there is a potential async timing issue with this and
+    // the global FS object that is also asynchronously initialized.
+    // Might need to un-globalize FS to fix this. Luckily, the libs
+    // have initialization functions we can use to give them their
+    // own FS instance as needed.
     const obtainedLock = await Lock.acquireLockFile(FS)
     if (!obtainedLock) {
       document.getElementById("loading-content")!.innerText = 'Another instance of Scamper is open. Please close that instance and try again.'
