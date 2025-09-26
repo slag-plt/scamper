@@ -62,4 +62,21 @@ describe('Expanded expressions', () => {
         A.mkApp(A.mkVar('+'), [A.mkVar('_0'), A.mkLit(1)]))
     expect(actual).toEqual(expected)
   })
+
+  test('let parallel bindings', () => {
+    // This test verifies that let bindings should be evaluated in parallel
+    // The second binding (y) should use the outer x, not the let-bound x
+    const actual = expandExpr(A.mkLet([
+      { name: 'x', value: A.mkApp(A.mkVar('+'), [A.mkVar('x'), A.mkLit(1)]) },
+      { name: 'y', value: A.mkApp(A.mkVar('+'), [A.mkVar('x'), A.mkLit(1)]) }
+    ], A.mkApp(A.mkVar('list'), [A.mkVar('x'), A.mkVar('y')])))
+    
+    // The expansion should remain the same - let bindings are core forms
+    const expected = A.mkLet([
+      { name: 'x', value: A.mkApp(A.mkVar('+'), [A.mkVar('x'), A.mkLit(1)]) },
+      { name: 'y', value: A.mkApp(A.mkVar('+'), [A.mkVar('x'), A.mkLit(1)]) }
+    ], A.mkApp(A.mkVar('list'), [A.mkVar('x'), A.mkVar('y')]))
+    
+    expect(actual).toEqual(expected)
+  })
 })

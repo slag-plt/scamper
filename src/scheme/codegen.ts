@@ -23,14 +23,28 @@ function lowerExpr (e: A.Exp): L.Blk {
       L.mkCls(e.params, lowerExpr(e.body), '##anonymous##', e.range)
     ]
     case 'let': {
-      let ret = lowerExpr(e.body)
+      // For parallel let semantics, all binding expressions must be evaluated
+      // before any variables are bound. The current implementation creates
+      // sequential nesting which allows later bindings to see earlier ones.
+      //
+      // We need to evaluate all expressions first, then bind all variables.
+      // This can be achieved by putting all expressions on the stack, then
+      // using multiple match operations to bind them in reverse order.
+      
+      const body = lowerExpr(e.body)
+      
+      // Evaluate all binding expressions first (left to right)
+      const bindingExprs = e.bindings.flatMap(b => lowerExpr(b.value))
+      
+      // Now create nested matches, but in forward order so the stack is consumed correctly
+      let result = body
       for (let i = e.bindings.length - 1; i >= 0; i--) {
-        const blk = lowerExpr(e.bindings[i].value)
-        ret = [...blk, L.mkMatch([
-          [L.mkPVar(e.bindings[i].name, e.range), ret]
+        result = [L.mkMatch([
+          [L.mkPVar(e.bindings[i].name, e.range), result]
         ])]
       }
-      return ret
+      
+      return [...bindingExprs, ...result]
     }
     case 'begin': {
       const last = lowerExpr(e.exps[e.exps.length - 1])
