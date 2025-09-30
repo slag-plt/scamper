@@ -27,3 +27,10 @@ export const charsToLines: Doc = new Doc(
   [ new ArgDoc('chars', 'list?') ],
   'Converts a list of char values into a list of strings, where each string is a line of text.'
 )
+
+export const tallyAll: Doc = new Doc (
+  'tally-all',
+  'list?',
+  [ new ArgDoc('lst', 'list?') ],
+  'Takes a list `lst` and returns a list of pairs where each pair consists of an element from `lst` and the number of times that element appears in `lst`.'
+)
