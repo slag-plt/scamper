@@ -41,4 +41,39 @@ function stringToLines (s: string): L.List {
 }
 Data.registerValue('string->lines', stringToLines)
 
+/**
+ * A simple association list over LPM values for the purposes of tallying. We
+ * reimplement the basic functionality of a dictionary because the JS Map
+ * datatype does not allow for arbitrary equality over keys.
+ */
+class TallyList {
+  public data: { key: L.Value, value: number }[]
+
+  constructor () {
+    this.data = []
+  }
+
+  update (key: L.Value, updater: (value: number) => number, def: number): void {
+    for (let i = 0; i < this.data.length; i++) {
+      if (L.equals(this.data[i].key, key)) {
+        this.data[i].value = updater(this.data[i].value)
+        return
+      }
+    }
+    this.data.push({ key, value: def })
+  }
+}
+
+function tallyAll (lst: L.List): L.List {
+  const tally = new TallyList()
+  let cur: L.List = lst
+  while (cur !== null) {
+    const value = cur.head
+    tally.update(value, v => v + 1, 1)
+    cur = cur.tail
+  }
+  return L.vectorToList(tally.data.map(p => L.mkPair(p.key, p.value)))
+}
+Data.registerValue('tally-all', tallyAll)
+
 export default Data
