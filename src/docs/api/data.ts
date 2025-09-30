@@ -21,11 +21,11 @@ export const stringToWords: Doc = new Doc(
   'Splits the string `s` into a list of words, using whitespace as the delimiter.'
 )
 
-export const charsToLines: Doc = new Doc(
-  'chars->lines',
+export const stringToLines: Doc = new Doc(
+  'string->lines',
   'list?',
   [ new ArgDoc('chars', 'list?') ],
-  'Converts a list of char values into a list of strings, where each string is a line of text.'
+  'Splits the string `s` into a list of strings, where each string is a line of text..'
 )
 
 export const tallyAll: Doc = new Doc (
