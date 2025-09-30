@@ -1,11 +1,12 @@
 import { EditorView } from "@codemirror/view"
 
-import FS from './fs.js'
+import OPFSFileSystem from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
 import * as Lock from './lockfile.js'
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
+import { initializeLibs } from "../lib/index.js"
 
 const editorPane = document.getElementById('editor')!
 const outputPane = document.getElementById('output')!
@@ -23,6 +24,7 @@ const defaultConfig: Config = {
 }
 
 class IDE {
+  fs: OPFSFileSystem
   editor: EditorView
   currentFile: string | null
   autosaveId: number
@@ -35,11 +37,12 @@ class IDE {
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  private constructor() {
+  private constructor (fs: OPFSFileSystem) {
     this.config = defaultConfig    // N.B., loaded asynchronously from disk in IDE.create()
     this.currentFile = null
     this.autosaveId = -1
     this.isDirty = false
+    this.fs = fs
 
     Split(['#editor', '#results'], { sizes: [65, 35] })
     this.editor = new EditorView({
@@ -58,23 +61,23 @@ class IDE {
       if (document.visibilityState === 'hidden') {
         await this.saveCurrentFile()
         await this.saveConfig()
-        await Lock.releaseLockFile(FS)
+        await Lock.releaseLockFile(this.fs)
       } else if (document.visibilityState === 'visible') {
-        await Lock.acquireLockFile(FS)
+        await Lock.acquireLockFile(this.fs)
       }
     })
 
     document.addEventListener('pagehide', async () => {
       await this.saveCurrentFile()
       await this.saveConfig()
-      await Lock.releaseLockFile(FS)
+      await Lock.releaseLockFile(this.fs)
     })
 
     window.addEventListener('beforeunload', async (e) => {
       // N.B., ensure the "are you sure" dialog pops
       await this.saveCurrentFile()
       await this.saveConfig()
-      await Lock.releaseLockFile(FS)
+      await Lock.releaseLockFile(this.fs)
       if (this.isDirty) {
         e.preventDefault()
         return true
@@ -116,17 +119,17 @@ class IDE {
           const filename = file.name
 
           // Check if file already exists
-          if (await FS.fileExists(filename)) {
+          if (await this.fs.fileExists(filename)) {
             const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
             if (!shouldOverwrite) {
               continue
             }
             // Delete existing file
             this.stopAutosaving()
-            await FS.deleteFile(filename)
+            await this.fs.deleteFile(filename)
           }
 
-          await FS.saveFile(filename, content)
+          await this.fs.saveFile(filename, content)
           this.currentFile = null
           await this.switchToFile(filename)
         } catch (e) {
@@ -148,13 +151,13 @@ class IDE {
     ///// File Buttons ////////////////////////////////////////////////////
 
     document.getElementById('create-file')!.addEventListener('click', async () => {
-      if (!FS) return
+      if (!this.fs) return
       const filename = prompt('Enter a file name for your new program.')
       if (filename !== null) {
-        if (await FS.fileExists(filename)) {
+        if (await this.fs.fileExists(filename)) {
           alert(`File ${filename} already exists!`)
         } else {
-          await FS.saveFile(filename, `; ${filename}`)
+          await this.fs.saveFile(filename, `; ${filename}`)
           await this.switchToFile(filename)
         }
       }
@@ -166,7 +169,7 @@ class IDE {
     })
 
     document.getElementById('upload-file-input')!.addEventListener('change', async (event) => {
-      if (!FS) { return }
+      if (!this.fs) { return }
       const target = event.target as HTMLInputElement
       const file = target.files?.[0]
       if (!file) { return }
@@ -176,7 +179,7 @@ class IDE {
         const filename = file.name
 
         // Check if file already exists
-        if (await FS.fileExists(filename)) {
+        if (await this.fs.fileExists(filename)) {
           const shouldOverwrite = confirm(`File "${filename}" already exists. Do you want to overwrite it?`)
           if (!shouldOverwrite) {
             target.value = '' // Reset the input
@@ -184,10 +187,10 @@ class IDE {
           }
           // Delete existing file
           this.stopAutosaving()
-          await FS.deleteFile(filename)
+          await this.fs.deleteFile(filename)
         }
 
-        await FS.saveFile(filename, content)
+        await this.fs.saveFile(filename, content)
         this.currentFile = null
         await this.switchToFile(filename)
 
@@ -207,11 +210,11 @@ class IDE {
     })
 
     document.getElementById('rename-file')!.addEventListener('click', async () => {
-      if (!FS) { return }
+      if (!this.fs) { return }
       if (!this.currentFile) { return }
       const newName = prompt(`Enter a new filename for ${this.currentFile}`)
       if (newName !== null && newName !== this.currentFile) {
-        if (await FS.fileExists(newName)) {
+        if (await this.fs.fileExists(newName)) {
           alert(`File ${newName} already exists!`)
         } else {
           try {
@@ -219,7 +222,7 @@ class IDE {
             // N.B., in renaming the file, the FS webworker will close
             // its handle to the current file, so we should be able to
             // just load it as if no file was open.
-            await FS.renameFile(this.currentFile, newName)
+            await this.fs.renameFile(this.currentFile, newName)
             this.currentFile = null
             await this.switchToFile(newName)
           } catch (e) {
@@ -232,12 +235,12 @@ class IDE {
     })
 
     document.getElementById('delete-file')!.addEventListener('click', async () => {
-      if (!FS) return
+      if (!this.fs) return
       if (!this.currentFile) { return }
       const shouldDelete = confirm(`Are you sure you want to delete ${this.currentFile}?`)
       if (shouldDelete) {
         this.stopAutosaving()
-        await FS.deleteFile(this.currentFile)
+        await this.fs.deleteFile(this.currentFile)
 
         // Remove the file from output in the IDE
         this.currentFile = null
@@ -251,9 +254,9 @@ class IDE {
     })
 
     document.getElementById('download-file')!.addEventListener('click', async () => {
-      if (!FS) return
+      if (!this.fs) return
       if (!this.currentFile) { return }
-      const contents = await FS.loadFile(this.currentFile)
+      const contents = await this.fs.loadFile(this.currentFile)
       const hidden = document.createElement('a')
       hidden.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
       hidden.target = '_blank'
@@ -317,14 +320,14 @@ class IDE {
 
   /** Populates the file drawer with entries. */
   private async populateFileDrawer() {
-    if (!FS) {
+    if (!this.fs) {
       throw new Error('FileChooser: must call init() before usage')
     }
 
     const fileDrawer = document.getElementById('file-drawer')!
     // N.B., empty the container and repopulate from scratch
     fileDrawer.innerHTML = ''
-    const files = await FS.getFileList()
+    const files = await this.fs.getFileList()
     let tabIndex = 0
     for (const file of files) {
       if (!file.isDirectory && (this.showDotFiles || !file.name.startsWith('.'))) {
@@ -350,13 +353,13 @@ class IDE {
 
   /** Saves the current configuration to disk */
   async saveConfig() {
-    await FS.saveFile(configFilename, JSON.stringify(this.config))
+    await this.fs.saveFile(configFilename, JSON.stringify(this.config))
   }
 
   /** Loads the configuration from disk */
   async loadConfig() {
-    if (await FS.fileExists(configFilename)) {
-      this.config = JSON.parse(await FS.loadFile(configFilename))
+    if (await this.fs.fileExists(configFilename)) {
+      this.config = JSON.parse(await this.fs.loadFile(configFilename))
     } else {
       this.config = defaultConfig
       await this.saveConfig()
@@ -364,22 +367,20 @@ class IDE {
   }
 
   static async create() {
-    // TODO: there is a potential async timing issue with this and
-    // the global FS object that is also asynchronously initialized.
-    // Might need to un-globalize FS to fix this. Luckily, the libs
-    // have initialization functions we can use to give them their
-    // own FS instance as needed.
-    const obtainedLock = await Lock.acquireLockFile(FS)
+    const fs = await OPFSFileSystem.create()
+    const obtainedLock = await Lock.acquireLockFile(fs)
     if (!obtainedLock) {
       document.getElementById("loading-content")!.innerText = 'Another instance of Scamper is open. Please close that instance and try again.'
       document.getElementById("loading")!.style.display = "block"
     } else {
-      const ide = new IDE()
+      const ide = new IDE(fs)
+      await initializeLibs()
       await ide.populateFileDrawer()
       await ide.loadConfig()
       if (ide.config.lastOpenedFilename !== null) {
-        if (await FS.fileExists(ide.config.lastOpenedFilename)) {
-          await ide.switchToFile(ide.config.lastOpenedFilename)
+        if (await fs.fileExists(ide.config.lastOpenedFilename)) {
+          // TODO: re-enable once we have a better handle on large-file loading
+          // await ide.switchToFile(ide.config.lastOpenedFilename)
         } else {
           ide.config.lastOpenedFilename = null
         }
@@ -490,7 +491,7 @@ class IDE {
   async saveCurrentFile() {
     if (!this.currentFile) { return }
     try {
-      await FS.saveFile(this.currentFile, this.getDoc())
+      await this.fs.saveFile(this.currentFile, this.getDoc())
     } catch (e) {
       if (e instanceof Error) {
         this.displayError(e.message)
@@ -500,7 +501,7 @@ class IDE {
 
   async switchToFile(filename: string): Promise<void> {
     this.isLoadingFile = true
-    if (!FS) return
+    if (!this.fs) return
     // Stop autosaving to make the transaction atomic
     this.stopAutosaving()
 
@@ -512,7 +513,7 @@ class IDE {
     // Load the file!
     this.currentFile = filename
     try {
-      const src = await FS.loadFile(this.currentFile)
+      const src = await this.fs.loadFile(this.currentFile)
       this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {

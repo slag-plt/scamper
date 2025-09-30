@@ -102,5 +102,4 @@ export class OPFSFileSystem {
   }
 }
 
-export const FS = await OPFSFileSystem.create()
-export default FS
+export default OPFSFileSystem
