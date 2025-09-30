@@ -1,4 +1,4 @@
-import FS from './fs/fs.js'
+import { OPFSFileSystem } from './fs.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../lpm/html-display.js'
 
@@ -6,7 +6,7 @@ class Runner {
   constructor () {}
 
   static async create (runTree: boolean): Promise<void> {
-    const fs = new FS()
+    const fs = await OPFSFileSystem.create()
     const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
 
@@ -23,7 +23,7 @@ class Runner {
       return
     }
 
-    const src = await fs.directReadFile(filename)
+    const src = await fs.loadFile(filename)
     outputPane!.innerHTML = ''
     try {
       if (runTree) {

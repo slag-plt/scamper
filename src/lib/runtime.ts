@@ -41,3 +41,5 @@ export function mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
   }
 }
 Runtime.registerValue('##mkGetFn##', mkGetFn)
+
+export default Runtime

@@ -416,7 +416,7 @@ export const cons: Doc = new Doc(
     new ArgDoc('v1', 'any'),
     new ArgDoc('v2', 'any')
   ],
-  'Returns a new pair containing `v1` and `v2`.'
+  'Returns a new cons cell containing `v1` and `v2`.'
 )
 
 export const pair: Doc = new Doc(
@@ -432,15 +432,22 @@ export const pair: Doc = new Doc(
 export const car: Doc = new Doc(
   'car',
   'any',
-  [ new ArgDoc('v', 'pair?') ],
+  [ new ArgDoc('v', 'pair? or list?') ],
   'Returns the first element of `v`.'
 )
 
 export const cdr: Doc = new Doc(
   'cdr',
   'any',
-  [ new ArgDoc('v', 'pair?') ],
+  [ new ArgDoc('v', 'pair? or list?') ],
   'Returns the second element of `v`.'
+)
+
+export const cxxr: Doc = new Doc(
+  'c...r',
+  'any',
+  [ new ArgDoc('v', 'pair? or list?') ],
+  'Chains together `car` and `cdr` operations according to the sequence of `a` and `d` characters in the function name, up to four levels deep. For example, `(caddr v)` is equivalent to `(car (cdr (cdr v)))`.'
 )
 
 export const nullQ: Doc = new Doc(
@@ -916,8 +923,15 @@ export const fileLines: Doc = new Doc(
 export const withFile: Doc = new Doc(
   'with-file',
   'void',
+  [ new ArgDoc('filename', 'string?'), new ArgDoc('fn', 'procedure?') ],
+  "Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen."
+)
+
+export const withFileChooser: Doc = new Doc(
+  'with-file-chooser',
+  'void',
   [ new ArgDoc('fn', 'procedure?') ],
-  "Creates a file chooser widget. When a file is selected, `fn` is called and passed the file's contents as input"
+  "Renders a file chooser widget. When the user selects a file, its contents are passed to `fn` as input. The output of `fn` is then rendered to the screen."
 )
 
 export const vectorQ: Doc = new Doc(

@@ -20,6 +20,7 @@ function makeMachine (prog: L.Prog): [L.Machine, LoggingOutputChannel, LoggingEr
   const err = new LoggingErrorChannel()
   const machine = new L.Machine(
     builtinLibs,
+    new Map(),
     env,
     prog,
     out,

@@ -1,7 +1,9 @@
-import * as L from '../lpm'
-import { checkContract, contract } from './contract.js'
-import * as C from './contract.js'
-import HtmlRenderer from '../lpm/renderers/html-renderer.js'
+import * as L from '../../lpm'
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
+
+import HtmlRenderer from '../../lpm/renderers/html-renderer.js'
+import { lib as filesLib } from './files.js'
 
 export const Prelude: L.Library = new L.Library()
 
@@ -479,6 +481,28 @@ function cdr (x: L.Value): L.Value {
   }
 }
 Prelude.registerValue('cdr', cdr)
+
+const listAccessors = [
+  // 4-character accessors
+  'caar', 'cadr', 'cdar', 'cddr',
+  // 5-character accessors
+  'caaar', 'cadar', 'cdaar', 'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr',
+  // 6-character accessors
+  'caaaar', 'cadaar', 'cdaaar', 'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar',
+  'caaadr', 'cadadr', 'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
+]
+listAccessors.forEach((name) => {
+  const path = name.slice(1, name.length - 1)
+  const fn = function (x: L.Value): L.Value {
+    checkContract(arguments, contract(name, [C.or(C.pair, C.list)]))
+    let ret = path[path.length - 1] === 'a' ? car(x) : cdr(x)
+    for (let i = path.length - 2; i >= 0; i--) {
+      ret = path[i] === 'a' ? car(ret) : cdr(ret)
+    }
+    return ret
+  }
+  Prelude.registerValue(name, fn)
+})
 
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
@@ -989,65 +1013,12 @@ function stringSplit (s: string, sep: string): L.List {
 }
 Prelude.registerValue('string-split', stringSplit)
 
-
 function stringSplitVector (s: string, sep: string): string[] {
   checkContract(arguments, contract('string-split-vector', [C.string, C.string])) 
   return s.split(sep)
 }
 Prelude.registerValue('string-split-vector', stringSplitVector)
 
-// TODO: what should the type of a reactive-file object be? A struct? Or a JS object?
-// TODO: need to add a custom renderer for reactive file blobs
-
-export interface ReactiveFile extends L.Struct {
-  [L.structKind]: 'reactive-file',
-  callback: L.ScamperFn
-}
-
-function withFile (callback: L.ScamperFn): ReactiveFile {
-  checkContract(arguments, contract('with-file', [C.func]))  
-  return {
-    [L.scamperTag]: 'struct',
-    [L.structKind]: 'reactive-file',
-    callback
-  }
-}
-Prelude.registerValue('with-file', withFile)
-
-function renderReactiveFile (v: any): HTMLElement {
-  const rf = v as ReactiveFile
-  const ret = document.createElement('code')
-  const inp = document.createElement('input')
-  const outp = document.createElement('code')
-  inp.type = 'file'
-  inp.addEventListener('change', () => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
-        outp.innerHTML = ''
-        try {
-          const v = L.callScamperFn(rf.callback, e.target.result as string)
-          outp.appendChild(HtmlRenderer.render(v))
-        } catch (e) {
-          outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
-        }
-      } else {
-        outp.innerText = ''
-      }
-    }
-    if (inp.files !== null && inp.files.length > 0) {
-      outp.innerText = 'Loading...'
-      reader.readAsText(inp.files[0])
-    }
-  }, false)
-
-  ret.appendChild(inp)
-  ret.appendChild(document.createElement('br'))
-  ret.appendChild(outp)
-  return ret
-}
-HtmlRenderer.registerCustomRenderer(
-  (v) => L.isStructKind(v, 'reactive-file'), renderReactiveFile)
 
 // Vectors (6.8)
 
@@ -1547,5 +1518,12 @@ Prelude.registerValue('null', nullConst)
 Prelude.registerValue('pi', piConst)
 Prelude.registerValue('π', piConst)
 Prelude.registerValue('void', voidConst)
+
+// TODO: library initialization is a problem, this really needs to be a
+// upfront thing, not performed lazily unless we want to async the runtime.
+Prelude.lib.push(...filesLib.lib)
+Prelude.initializer = () => {
+  if (filesLib.initializer) { filesLib.initializer() }
+}
 
 export default Prelude

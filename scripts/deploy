@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+SERVER=compsci
+ROOT=scamper.cs.grinnell.edu
+VER=$1
+
+echo "Deploying ${VER}"
+
+tsc -noEmit
+vite build --base=/${VER}/
+rsync -crtvz --progress dist/ ${SERVER}:${ROOT}/${VER}

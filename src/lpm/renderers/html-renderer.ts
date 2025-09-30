@@ -48,11 +48,9 @@ export class Renderer extends R.Renderer<HTMLElement> {
           const ret = mkCodeElement('(list ')
           let cur: List = v
           // N.B., we know the list is non-empty because we cover the null case already
-          console.log(U.toString(cur))
           ret.appendChild(this.render(cur.head))
           cur = cur.tail
           while (cur !== null) {
-            console.log(U.toString(cur))
             ret.appendChild(mkCodeElement(' '))
             ret.appendChild(this.render(cur.head))
             cur = cur.tail
