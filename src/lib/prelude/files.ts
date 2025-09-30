@@ -2,9 +2,16 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as Display from '../../display.js'
-import FS from '../../web/fs.js'
+import { OPFSFileSystem } from '../../web/fs.js'
 
-export const lib: L.Library = new L.Library()
+
+let fs: OPFSFileSystem | null = null
+
+export const lib: L.Library = new L.Library(async () => {
+  if (navigator.storage !== undefined) {
+    fs = await OPFSFileSystem.create()
+  }
+})
 export default lib
 
 ///// Reactive file ////////////////////////////////////////////////////////////
@@ -29,12 +36,16 @@ lib.registerValue('with-file', withFile)
 function renderReactiveFile (v: any): HTMLElement {
   const rf = v as ReactiveFile
   const ret = document.createElement('code')
-  FS.fileExists(rf.filename).then((exists) => {
+  if (!fs) {
+    ret.innerText = 'OPFS not supported'
+    return ret
+  }
+  fs.fileExists(rf.filename).then((exists: boolean) => {
     if (!exists) {
       const err = new L.ScamperError('Runtime', `File not found: ${rf.filename}`)
       ret.appendChild(Display.renderToHTML(err))
     } else {
-      FS.loadFile(rf.filename).then((data) => {
+      fs!.loadFile(rf.filename).then((data: string) => {
         ret.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, data)

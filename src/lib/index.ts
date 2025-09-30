@@ -8,6 +8,8 @@ import Canvas from './canvas.js'
 import Html from './html.js'
 import Reactive from './reactive.js'
 import Data from './data.js'
+import Prelude from './prelude/index.js'
+import Runtime from './runtime.js'
 
 export const builtinLibs: Map<string, Library> = new Map([
   ['image', imageLib],
@@ -21,6 +23,15 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['data', Data]
 ])
 
-export { Prelude } from './prelude/index.js'
-export { Runtime } from './runtime.js'
+async function initializeLibs () {
+  await Prelude.initializer?.()
+  await Runtime.initializer?.()
+  for (const lib of builtinLibs.values()) {
+    if (lib.initializer !== undefined) {
+      await lib.initializer?.()
+    }
+  }
+}
+
+export { Prelude, Runtime, initializeLibs }
 export default builtinLibs

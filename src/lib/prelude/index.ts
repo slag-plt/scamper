@@ -1519,5 +1519,8 @@ Prelude.registerValue('π', piConst)
 Prelude.registerValue('void', voidConst)
 
 Prelude.lib.push(...filesLib.lib)
+Prelude.initializer = async () => {
+  await filesLib.initializer?.()
+}
 
 export default Prelude

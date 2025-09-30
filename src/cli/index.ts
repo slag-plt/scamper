@@ -1,5 +1,5 @@
 import * as Scheme from '../scheme'
-import builtinLibs from '../lib'
+import { builtinLibs, initializeLibs } from '../lib'
 import * as LPM from '../lpm'
 import fs from 'fs'
 
@@ -15,6 +15,7 @@ class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
   }
 }
 
+await initializeLibs()
 const src = fs.readFileSync(process.stdin.fd, 'utf-8');
 const out = new ConsoleOutput()
 const program = Scheme.compile(out, src)
