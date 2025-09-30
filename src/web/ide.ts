@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view"
 
-import OPFSFileSystem from './fs.js'
+import { OPFSFileSystem } from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../display.js'
