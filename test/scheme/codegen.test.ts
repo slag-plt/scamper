@@ -1,4 +1,4 @@
-import { expect, test, describe } from "@jest/globals"
+import { expect, test, describe } from 'vitest'
 
 import builtinLibs from '../../src/lib'
 import * as Scheme from '../../src/scheme'
