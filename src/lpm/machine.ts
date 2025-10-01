@@ -136,7 +136,6 @@ export class Machine {
             result = fn(...args)
           } catch (e) {
             if (e instanceof ScamperError) {
-              Thi sis a a build error!
               // N.B., annotate the error from the runtime with additional info
               e.source = fn.name ?? '##anonymous##'
               e.range = instr.range
