@@ -2,6 +2,7 @@ import * as L from './lang.js'
 import * as U from './util.js'
 import { ICE, ScamperError } from './error.js'
 import { OutputChannel, ErrorChannel } from './output.js'
+import { mkTraceOutput } from './trace.js'
 
 export type Options = {
   maxCallStackDepth: number
@@ -134,6 +135,14 @@ export class Machine {
           return false
         }
       }
+    }
+  }
+
+  outputTrace (thread: L.Thread) {
+    if (this.options.isTracing) {
+      const raiser = this.raisingProviders.get(this.options.raisingTarget)!
+      const source = raiser(thread)
+      this.out.send(mkTraceOutput(source))
     }
   }
 
