@@ -63,10 +63,12 @@ class Player {
   }
 }
 
-export function waf(): Player {
+export function waf(): Player | undefined {
   // N.B., we want a _per-browser_ singleton, so we'll send this up to window!
-  if ((window as any)['wafInstance'] === undefined) {
-    (window as any)['wafInstance']= new Player()
+  if (typeof window !== 'undefined' && (window as any)['wafInstance'] === undefined) {
+    (window as any)['wafInstance'] = new Player()
+    return (window as any)['wafInstance']
+  } else {
+    return undefined
   }
-  return (window as any)['wafInstance']
 }
