@@ -43,6 +43,7 @@ class IDE {
     this.currentFile = null
     this.autosaveId = -1
     this.isDirty = false
+    this.fs = fs
 
     Split(['#editor', '#results'], { sizes: [65, 35] })
     this.editor = new EditorView({
@@ -379,7 +380,8 @@ class IDE {
       await ide.loadConfig()
       if (ide.config.lastOpenedFilename !== null) {
         if (await fs.fileExists(ide.config.lastOpenedFilename)) {
-          await ide.switchToFile(ide.config.lastOpenedFilename)
+          // TODO: re-enable once we have a better handle on large-file loading
+          // await ide.switchToFile(ide.config.lastOpenedFilename)
         } else {
           ide.config.lastOpenedFilename = null
         }

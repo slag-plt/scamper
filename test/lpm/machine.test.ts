@@ -1,4 +1,4 @@
-import { expect, test, describe } from "@jest/globals"
+import { expect, test, describe } from 'vitest'
 import * as L from '../../src/lpm'
 import * as U from '../../src/lpm/util.js'
 import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output.js"

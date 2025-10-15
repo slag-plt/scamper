@@ -35,12 +35,16 @@ lib.registerValue('with-file', withFile)
 function renderReactiveFile (v: any): HTMLElement {
   const rf = v as ReactiveFile
   const ret = document.createElement('code')
-  fs!.fileExists(rf.filename).then((exists) => {
+  if (!fs) {
+    ret.innerText = 'OPFS not supported'
+    return ret
+  }
+  fs.fileExists(rf.filename).then((exists: boolean) => {
     if (!exists) {
       const err = new L.ScamperError('Runtime', `File not found: ${rf.filename}`)
       ret.appendChild(HTMLRenderer.render(err))
     } else {
-      fs!.loadFile(rf.filename).then((data) => {
+      fs!.loadFile(rf.filename).then((data: string) => {
         ret.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, data)

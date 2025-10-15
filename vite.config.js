@@ -29,5 +29,12 @@ export default defineConfig({
 
   define: {
     'APP_VERSION': JSON.stringify(AppVersion)
-  }
+  },
+
+  test: {
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+    },
+  },
 })

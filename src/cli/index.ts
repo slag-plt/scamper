@@ -1,5 +1,5 @@
 import * as Scheme from '../scheme'
-import builtinLibs from '../lib'
+import { builtinLibs, initializeLibs } from '../lib'
 import * as LPM from '../lpm'
 import TextRenderer from '../lpm/renderers/text-renderer'
 
@@ -53,6 +53,7 @@ if (program === undefined) { process.exit(1) }
 const options = LPM.defaultOptions
 options.isTracing = values.trace ?? false
 
+await initializeLibs()
 const machine = new LPM.Machine(builtinLibs, new Map([
   ['scheme', Scheme.raiseThread] 
 ]), Scheme.mkInitialEnv(), program, out, out, options)

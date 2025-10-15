@@ -1,12 +1,14 @@
 import { OPFSFileSystem } from './fs.js'
 import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../lpm/html-display.js'
+import { initializeLibs } from '../lib/index.js'
 
 class Runner {
   constructor () {}
 
   static async create (runTree: boolean): Promise<void> {
     const fs = await OPFSFileSystem.create()
+    await initializeLibs()
     const params = new URLSearchParams(window.location.search)
     const outputPane = document.getElementById('output')!
 

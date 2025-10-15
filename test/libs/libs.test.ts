@@ -1,8 +1,8 @@
-import {expect, test} from '@jest/globals'
+import { expect, test } from 'vitest'
 
-import builtinLibs from '../src/lib'
-import * as Scheme from '../src/scheme'
-import * as LPM from '../src/lpm'
+import builtinLibs from '../../src/lib'
+import * as Scheme from '../../src/scheme'
+import * as LPM from '../../src/lpm'
 
 function runProgram (src: string): string[] {
     const out = new LPM.LoggingChannel()

@@ -1522,8 +1522,8 @@ Prelude.registerValue('void', voidConst)
 // TODO: library initialization is a problem, this really needs to be a
 // upfront thing, not performed lazily unless we want to async the runtime.
 Prelude.lib.push(...filesLib.lib)
-Prelude.initializer = () => {
-  if (filesLib.initializer) { filesLib.initializer() }
+Prelude.initializer = async () => {
+  await filesLib.initializer?.()
 }
 
 export default Prelude

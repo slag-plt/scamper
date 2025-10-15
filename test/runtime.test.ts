@@ -1,4 +1,4 @@
-import {expect, test} from '@jest/globals'
+import {expect, test} from 'vitest'
 
 import builtinLibs from '../src/lib'
 import * as Scheme from '../src/scheme'
@@ -26,7 +26,7 @@ export function scamperTest (label: string, src: string, expected: string[]) {
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.failing(label, () => expect(runProgram(src.trim())).toEqual(expected))
+  test.fails(label, () => expect(runProgram(src.trim())).toEqual(expected))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

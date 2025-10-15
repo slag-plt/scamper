@@ -1,4 +1,4 @@
-import { expect, test, describe } from "@jest/globals"
+import { expect, test, describe } from 'vitest'
 import { expandExpr } from '../../src/scheme/expansion.js'
 import * as A from '../../src/scheme/ast.js'
 

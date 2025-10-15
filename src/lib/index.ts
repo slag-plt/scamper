@@ -24,10 +24,12 @@ export const builtinLibs: Map<string, Library> = new Map([
 ])
 
 async function initializeLibs () {
-  Prelude.initializer?.()
-  Runtime.initializer?.()
+  await Prelude.initializer?.()
+  await Runtime.initializer?.()
   for (const lib of builtinLibs.values()) {
-    await lib.initializer?.()
+    if (lib.initializer !== undefined) {
+      await lib.initializer?.()
+    }
   }
 }
 

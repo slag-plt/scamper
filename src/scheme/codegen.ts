@@ -23,14 +23,25 @@ function lowerExpr (e: A.Exp): L.Blk {
       L.mkCls(e.params, lowerExpr(e.body), '##anonymous##', e.range)
     ]
     case 'let': {
+      // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
+      // we must proceed by first evaluating all binding expressions (without binding), then
+      // bind the variables, and finally evaluate the body.
+      //
+      // This behavior _really_ makes me want to embrace Clojure-style Scheme more and more
+      // where let telescopes by default, i.e., is let*. But we support traditional Scheme
+      // behavior for now.
+      let bindings = e.bindings.flatMap((b) => lowerExpr(b.value))
+
       let ret = lowerExpr(e.body)
-      for (let i = e.bindings.length - 1; i >= 0; i--) {
-        const blk = lowerExpr(e.bindings[i].value)
-        ret = [...blk, L.mkMatch([
+      // We must ensure that the inner-most match corresponds to the _first_ binding since
+      // we're building the matches inside-out.
+      // for (let i = e.bindings.length - 1; i >= 0; i--) {
+      for (let i = 0; i < e.bindings.length; i++) {
+        ret = [L.mkMatch([
           [L.mkPVar(e.bindings[i].name, e.range), ret]
         ])]
       }
-      return ret
+      return [...bindings, ...ret]
     }
     case 'begin': {
       const last = lowerExpr(e.exps[e.exps.length - 1])
