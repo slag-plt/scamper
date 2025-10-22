@@ -3,6 +3,7 @@ import * as U from './util.js'
 import { ICE, ScamperError } from './error.js'
 import { OutputChannel, ErrorChannel } from './output.js'
 import { mkTraceOutput } from './trace.js'
+import { Raiser } from './raiser.js'
 
 export type Options = {
   maxCallStackDepth: number
@@ -18,19 +19,17 @@ export const defaultOptions: Options = {
   raisingTarget: 'scheme'
 }
 
-/** The type of functions responsible for raising LPM threads back to a surface language. */
-type Raiser = (thread: L.Thread) => L.Value
-
 /** The Little Pattern Machine */
 export class Machine {
   builtinLibs: Map<string, L.Library>
-  raisingProviders: Map<string, Raiser>
+  raisingProviders: Map<string, Raiser<any>>
   options: Options
   out: OutputChannel
   err: ErrorChannel
   mainThread: L.Thread
+  lastStep: L.Value | undefined
 
-  constructor (builtinLibs: Map<string, L.Library>, raisingProviders: Map<string, Raiser>, env: L.Env, prog: L.Prog,
+  constructor (builtinLibs: Map<string, L.Library>, raisingProviders: Map<string, Raiser<any>>, env: L.Env, prog: L.Prog,
                out: OutputChannel, err: ErrorChannel, options: Options = defaultOptions) {
     this.builtinLibs = builtinLibs
     this.raisingProviders = raisingProviders
@@ -38,6 +37,7 @@ export class Machine {
     this.err = err
     this.options = options
     this.mainThread = new L.Thread('##main##', env, prog)
+    this.lastStep = undefined
   }
 
   isFinished (): boolean {
@@ -135,14 +135,6 @@ export class Machine {
           return false
         }
       }
-    }
-  }
-
-  outputTrace (thread: L.Thread) {
-    if (this.options.isTracing) {
-      const raiser = this.raisingProviders.get(this.options.raisingTarget)!
-      const source = raiser(thread)
-      this.out.send(mkTraceOutput(source))
     }
   }
 
@@ -308,12 +300,24 @@ export class Machine {
     return thread.results[thread.curStmt - 1]
   }
 
-  step (): void { 
-    let shouldContinue = true
-    while (shouldContinue)  {
-      shouldContinue = this.stepThread(this.mainThread)
+  evaluate (): L.Value { return this.evaluateThread(this.mainThread) }
+
+  stepWithTrace (): void { 
+    this.stepThread(this.mainThread)
+    const provider = this.raisingProviders.get(this.options.raisingTarget)!
+    let raisedStep = provider.raise(this.mainThread)
+    if (!this.mainThread.isFinished() && provider.equals(this.lastStep, raisedStep)) {
+      this.stepThread(this.mainThread)
     }
+    if (this.options.isTracing) {
+      this.out.send(mkTraceOutput(raisedStep))
+    }
+    this.lastStep = raisedStep
   }
 
-  evaluate (): L.Value { return this.evaluateThread(this.mainThread) }
+  evaluateWithTrace (): void {
+    while (!this.mainThread.isFinished()) {
+      this.stepWithTrace()
+    }
+  }
 }

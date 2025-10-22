@@ -15,7 +15,7 @@ export class Scamper {
       this.machine = new LPM.Machine(
         builtinLibs,
         new Map([
-          ['scheme', Scheme.raiseThread]
+          ['scheme', Scheme.raiser]
         ]),
         Scheme.mkInitialEnv(),
         this.prog,

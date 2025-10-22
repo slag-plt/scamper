@@ -1,8 +1,6 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-
-import HtmlRenderer from '../../lpm/renderers/html-renderer.js'
 import { lib as filesLib } from './files.js'
 
 export const Prelude: L.Library = new L.Library()

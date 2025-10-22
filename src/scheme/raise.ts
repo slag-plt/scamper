@@ -35,7 +35,6 @@ export function raiseFrame (values: A.Exp[], ops: LPM.Ops[]): A.Exp {
 
       case 'cls': {
         const body = raiseFrame([], op.body)
-        // TODO: maybe lambdas need to carry names for raising purposes?
         values.push(A.mkLam(op.params, body))
         break
       }
@@ -91,6 +90,6 @@ export function raiseFrames (frames: LPM.Frame[]): A.Exp {
   return ret
 }
 
-export function raiseThread (thread: LPM.Thread): LPM.Value {
+export function raiseThread (thread: LPM.Thread): A.Exp {
   return raiseFrames(thread.frames)
 }

@@ -55,6 +55,11 @@ options.isTracing = values.trace ?? false
 
 await initializeLibs()
 const machine = new LPM.Machine(builtinLibs, new Map([
-  ['scheme', Scheme.raiseThread] 
+  ['scheme', Scheme.raiser] 
 ]), Scheme.mkInitialEnv(), program, out, out, options)
-machine.evaluate()
+
+if (options.isTracing) {
+  machine.evaluateWithTrace()
+} else {
+  machine.evaluate()
+}

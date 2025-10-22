@@ -43,12 +43,12 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
         ctx.drawImage(img, 0, 0)
         try {
           const v = L.callScamperFn(callback, canvas)
-          container.appendChild(Render.renderToHTML(v))
+          container.appendChild(HtmlRenderer.render(v))
         } catch (e) {
           if (e instanceof DOMException && e.name === 'SecurityError') {
             container.innerHTML = `Failed to load ${url}: cannot manipulate images from domains other than scamper.cs.grinnell.edu`
           } else {
-            container.appendChild(Render.renderToHTML(e as L.ScamperError))
+            container.appendChild(HtmlRenderer.render(e as L.ScamperError))
           }
         }
     } 
@@ -163,9 +163,9 @@ function render(rif: ReactiveImageFile): HTMLElement {
           }
           try {
             const v = L.callScamperFn(rif.callback, canvas)
-            outp.appendChild(Render.renderToHTML(v))
+            outp.appendChild(HtmlRenderer.render(v))
           } catch (e) {
-            outp.appendChild(Render.renderToHTML(e as L.ScamperError))
+            outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
           }
         }
         img.src = e.target.result as string;

@@ -5,8 +5,14 @@ import { expandProgram } from './expansion.js'
 import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
+import { raiseThread } from './raise.js'
+import { Raiser } from '../lpm/raiser.js'
+import { Exp } from './ast.js'
 
-export { raiseThread } from './raise.js'
+export const raiser: Raiser<Exp> = {
+  raise: raiseThread,
+  equals: L.equals
+}
 
 export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   // Tokenization and reading (to Sexps)
