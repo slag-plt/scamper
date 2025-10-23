@@ -4,7 +4,6 @@ import * as C from '../contract.js'
 import { addCustomWebRenderer } from '../../display.js'
 
 import Chart from 'chart.js/auto'
-import { title } from 'process'
 
 const viz: L.Library = new L.Library()
 
@@ -80,7 +79,7 @@ export function plotBar (title: string, data: L.List): Plot {
       },
       options: {
         scales: {
-          x: { type: 'linear' }
+          x: { type: 'category' }
         }
       }
     }
