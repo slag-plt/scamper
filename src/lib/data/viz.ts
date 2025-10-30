@@ -7,9 +7,19 @@ import Chart from 'chart.js/auto'
 
 const viz: L.Library = new L.Library()
 
+interface Dataset extends L.Struct {
+  [L.structKind]: 'dataset'
+  scale: 'linear' | 'category'
+  opts: object
+}
+
+export function datasetQ (v: L.Value): boolean {
+  return L.isStructKind(v, 'dataset')
+}
+viz.registerValue('dataset?', datasetQ)
+
 interface Plot extends L.Struct {
   [L.structKind]: 'plot'
-  title: string
   opts: object
 }
 
@@ -18,8 +28,31 @@ export function plotQ (v: L.Value): boolean {
 }
 viz.registerValue('plot?', plotQ)
 
-export function plotLine (title: string, data: L.List): Plot {
-  checkContract(arguments, contract('plot-line', [
+export function plot (...args: L.Value[]): Plot {
+  // TODO: hand-check arguments: datasets with an optional opts record
+  const datasets: Dataset[] = args as Dataset[]
+  // TODO: check to ensure dataasets all have consistent x-axis scales
+  const scale = datasets[0].scale
+  console.log(datasets[0])
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: {
+      data: {
+        datasets: datasets.map(ds => ds.opts)
+      },
+      options: {
+        scales: {
+          x: { type: scale }
+        }
+      }
+    }
+  }
+}
+viz.registerValue('plot', plot)
+
+export function datasetLine (title: string, data: L.List): Dataset {
+  checkContract(arguments, contract('dataset-line', [
     C.string,
     C.listof(C.pairof(C.or(C.number, C.string), C.number))
   ]))
@@ -28,97 +61,71 @@ export function plotLine (title: string, data: L.List): Plot {
     return { x: p.fst as number | string, y: p.snd as number }
   })
   if (points.length === 0) {
-    throw new L.ScamperError('Runtime', 'plot-line requires at least one data point')
+    throw new L.ScamperError('Runtime', 'dataset-line requires at least one data point')
   }
-  const hasCategoryLabels = typeof points[0].x === 'string'
+  const scale = typeof points[0].x === 'string' ? 'category' : 'linear'
   return {
     [L.scamperTag]: 'struct', 
-    [L.structKind]: 'plot',
-    title,
+    [L.structKind]: 'dataset',
+    scale,
     opts: {
       type: 'line',
-      data: {
-        datasets: [{
-          label: title,
-          data: points
-        }]
-      },
-      options: {
-        scales: {
-          x: { type: hasCategoryLabels ? 'category' : 'linear', }
-        }
-      }
+      label: title,
+      data: points,
     }
   }
 }
-viz.registerValue('plot-line', plotLine)
+viz.registerValue('dataset-line', datasetLine)
 
-export function plotBar (title: string, data: L.List): Plot {
+export function datasetBar (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('plot-bar', [
     C.string,
     C.listof(C.pairof(C.or(C.string), C.number))
   ]))
-  const points = L.listToVector(data).map(v => {
+  const points: {x: number | string, y: number}[] = L.listToVector(data).map(v => {
     const p = v as L.Pair
-    return { x: p.fst as string, y: p.snd as number }
+    return { x: p.fst as number | string, y: p.snd as number }
   })
   if (points.length === 0) {
-    throw new L.ScamperError('Runtime', 'plot-bar requires at least one data point')
+    throw new L.ScamperError('Runtime', 'dataset-bar requires at least one data point')
   }
   return {
     [L.scamperTag]: 'struct', 
-    [L.structKind]: 'plot',
-    title,
+    [L.structKind]: 'dataset',
+    scale: 'category',
     opts: {
       type: 'bar',
-      data: {
-        datasets: [{
-          label: title,
-          data: points
-        }]
-      },
-      options: {
-        scales: {
-          x: { type: 'category' }
-        }
-      }
+      label: title,
+      data: points,
     }
   }
 }
-viz.registerValue('plot-bar', plotBar)
+viz.registerValue('dataset-bar', datasetBar)
 
-export function plotScatter (title: string, data: L.List): Plot {
-  checkContract(arguments, contract('plot-scatter', [C.string, C.listof(C.pairof(C.number, C.number))]))
-  const points = L.listToVector(data).map(v => {
+export function datasetScatter (title: string, data: L.List): Dataset {
+  checkContract(arguments, contract('dataset-scatter', [C.string, C.listof(C.pairof(C.number, C.number))]))
+  const points: {x: number | string, y: number}[] = L.listToVector(data).map(v => {
     const p = v as L.Pair
     return { x: p.fst as number, y: p.snd as number }
   })
   if (points.length === 0) {
-    throw new L.ScamperError('Runtime', 'plot-scatter requires at least one data point')
+    throw new L.ScamperError('Runtime', 'dataset-scatter requires at least one data point')
   }
   return {
     [L.scamperTag]: 'struct', 
-    [L.structKind]: 'plot',
-    title,
+    [L.structKind]: 'dataset',
+    scale: 'linear',
     opts: {
       type: 'scatter',
-      data: {
-        datasets: [{
-          label: title,
-          data: points
-        }]
-      },
-      options: {
-        scales: {
-          x: { type: 'linear' }
-        }
-      }
+      label: title,
+      data: points,
     }
   }
 }
-viz.registerValue('plot-scatter', plotScatter)
+viz.registerValue('dataset-scatter', datasetScatter)
 
-addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => { const canvas = document.createElement('canvas')
+addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => {
+  const canvas = document.createElement('canvas')
   canvas.width = 800
   const plot = v as Plot
   canvas.ariaLabel = plot.title
