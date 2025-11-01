@@ -148,6 +148,10 @@ export class Machine {
           }
           current.values.push(result)
         } else if (U.isClosure(fn)) {
+          if (fn.params.length !== args.length) {
+            this.reportAndUnwind(thread, new ScamperError('Runtime', `Arity mismatch in function call: expected ${fn.params.length} arguments but got ${args.length}`))
+            return
+          }
           if (thread.frames.length >= this.maxCallStackDepth) {
             this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`))
             return
