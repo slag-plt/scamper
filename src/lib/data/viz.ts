@@ -184,7 +184,7 @@ function makeDataset (type: string, label: string, data: any[]): Dataset {
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'dataset',
-    opts: { type, label, data, }
+    opts: { type, label, data }
   }
 }
 
@@ -207,7 +207,7 @@ export function datasetLine (title: string, data: L.List): Dataset {
 }
 
 export function datasetBar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('plot-bar', [
+  checkContract(arguments, contract('dataset-bar', [
     C.string,
     C.listof(C.number)
   ]))
@@ -271,7 +271,7 @@ export function datasetPolar (title: string, data: L.List): Dataset {
   if (values.length === 0) {
     throw new L.ScamperError('Runtime', 'dataset-polar requires at least one data point')
   }
-  return makeDataset('polarArea', title, values )
+  return makeDataset('polarArea', title, values)
 }
 
 export function datasetRadar (title: string, data: L.List): Dataset {
@@ -292,9 +292,9 @@ addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => {
   const canvas = document.createElement('canvas')
   canvas.width = 800
   const plot = v as Plot
-  canvas.ariaLabel = plot.title
+  canvas.ariaLabel = "Plot"
   canvas.role = 'img'
-  canvas.innerText = plot.title
+  canvas.innerText = "Plot"
   new Chart(canvas, plot.opts as any)
   return canvas
 })

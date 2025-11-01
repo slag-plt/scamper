@@ -135,7 +135,7 @@ export const datasetScatter: Doc = new Doc (
   'dataset?',
   [
     new ArgDoc('title', 'string?'),
-    new ArgDoc('data', 'list of pairs of numbers'),
+    new ArgDoc('data', 'list of numbers'),
   ],
   'Creates a scatter dataset with the given `title` and `data` points.'
 )
@@ -165,7 +165,7 @@ export const datasetPolar: Doc = new Doc (
   'dataset?',
   [
     new ArgDoc('title', 'string?'),
-    new ArgDoc('data', 'list of pairs of numbers'),
+    new ArgDoc('data', 'list of numbers'),
   ],
   'Creates a polar dataset with the given `title` and `data` points.'
 )
