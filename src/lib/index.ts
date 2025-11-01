@@ -7,7 +7,7 @@ import Audio from './audio.js'
 import Canvas from './canvas.js'
 import Html from './html.js'
 import Reactive from './reactive.js'
-import Data from './data.js'
+import Data from './data'
 import Prelude from './prelude/index.js'
 import Runtime from './runtime.js'
 
@@ -20,12 +20,12 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['canvas', Canvas],
   ['html', Html],
   ['reactive', Reactive],
-  ['data', Data]
+  ['data', Data],
+  ['prelude', Prelude],
+  ['runtime', Runtime]
 ])
 
 async function initializeLibs () {
-  await Prelude.initializer?.()
-  await Runtime.initializer?.()
   for (const lib of builtinLibs.values()) {
     if (lib.initializer !== undefined) {
       await lib.initializer?.()

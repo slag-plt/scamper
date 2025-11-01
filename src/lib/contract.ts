@@ -95,6 +95,29 @@ export const nonemptyList = {
   errorMsg: (actual: any) => `expected a non-empty list, received ${L.typeOf(actual)}`
 }
 
+export const pairof = (spec1: Spec, spec2: Spec) => ({
+  predicate: (v: any) => {
+    if (!L.isPair(v)) {
+      return false
+    }
+    const p = v as L.Pair
+    return spec1.predicate(p.fst) && spec2.predicate(p.snd)
+  },
+  errorMsg: (actual: any) => {
+    if (!L.isPair(actual)) {
+      return `expected a pair, received ${L.typeOf(actual)}`
+    }
+    const p = actual as L.Pair
+    if (!spec1.predicate(p.fst)) {
+      return spec1.errorMsg(p.fst)
+    }
+    if (!spec2.predicate(p.snd)) {
+      return spec2.errorMsg(p.snd)
+    }
+    throw new L.ICE('pairofC.errorMsg', 'pairofC should have found a failing spec!')
+  }
+})
+
 export const listof = (spec: Spec) => ({
   predicate: (v: any) => {
     if (!L.isList(v)) {
