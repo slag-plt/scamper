@@ -7,6 +7,8 @@ import Chart from 'chart.js/auto'
 
 const viz: L.Library = new L.Library()
 
+///// Basic Types //////////////////////////////////////////////////////////////
+
 interface Dataset extends L.Struct {
   [L.structKind]: 'dataset'
   opts: object
@@ -24,6 +26,106 @@ interface Plot extends L.Struct {
 export function plotQ (v: L.Value): boolean {
   return L.isStructKind(v, 'plot')
 }
+
+///// Options Management ///////////////////////////////////////////////////////
+
+function updateObject (path: string[], value: any, obj: any): void {
+  let cur = obj
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i]
+    if (!(key in cur)) {
+      cur[key] = {}
+    }
+    cur = cur[key]
+  }
+  cur[path[path.length - 1]] = value
+}
+
+function updatePlotOption (key: string, value: any, opts: object): void {
+  switch (key) {
+    case 'x-min':
+      updateObject(['options', 'scales', 'x', 'min'], value, opts)
+      return
+    case 'x-max':
+      updateObject(['options', 'scales', 'x', 'max'], value, opts)
+      return
+    case 'y-min':
+      updateObject(['options', 'scales', 'y', 'min'], value, opts)
+      return
+    case 'y-max':
+      updateObject(['options', 'scales', 'y', 'max'], value, opts)
+      return
+    case 'x-label':
+      updateObject(['options', 'scales', 'x', 'title', 'display'], true, opts)
+      updateObject(['options', 'scales', 'x', 'title', 'text'], value, opts)
+      return
+    case 'y-label':
+      updateObject(['options', 'scales', 'y', 'title', 'display'], true, opts)
+      updateObject(['options', 'scales', 'y', 'title', 'text'], value, opts)
+      return
+    case 'title':
+      updateObject(['options', 'plugins', 'title', 'display'], true, opts)
+      updateObject(['options', 'plugins', 'title', 'text'], value, opts)
+      return
+    default:
+      throw new L.ScamperError('Runtime', `Unknown plot option provided: ${key}`)
+  }
+}
+
+export function withPlotOptions (options: L.List, plot: Plot): Plot {
+  checkContract(arguments, contract('with-plot-options', [
+    C.listof(C.pairof(C.string, C.any)),
+    C.struct('plot')
+  ]))
+  const newOpts = { ...plot.opts }
+  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+    const p = v as L.Pair
+    return [p.fst as string, p.snd]
+  })
+  for (const [key, value] of optionPairs) {
+    updatePlotOption(key, value, newOpts)
+  }
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: newOpts
+  }
+}
+
+function updateDatasetOption (key: string, value: any, opts: object): void {
+  switch (key) {
+    case 'background-color':
+      updateObject(['backgroundColor'], value, opts)
+      return
+    case 'border-color':
+      updateObject(['borderColor'], value, opts)
+      return
+    default:
+      throw new L.ScamperError('Runtime', `Unknown dataset option provided: ${key}`)
+  }
+}
+
+export function withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
+  checkContract(arguments, contract('with-dataset-options', [
+    C.listof(C.pairof(C.string, C.any)),
+    C.struct('dataset')
+  ]))
+  const newOpts = { ...dataset.opts }
+  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+    const p = v as L.Pair
+    return [p.fst as string, p.snd]
+  })
+  for (const [key, value] of optionPairs) {
+    updateDatasetOption(key, value, newOpts)
+  }
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'dataset',
+    opts: newOpts
+  }
+}
+
+///// Plot Functions ///////////////////////////////////////////////////////////
 
 export function plotLinear (...datasets: Dataset[]): Plot {
   checkContract(arguments, contract('plot-linear', [], C.struct('dataset')))
@@ -75,6 +177,8 @@ function plotRadial (labels: L.List, ...datasets: Dataset[]): Plot {
     }
   }
 }
+
+///// Dataset Functions ////////////////////////////////////////////////////////
 
 function makeDataset (type: string, label: string, data: any[]): Dataset {
   return {
@@ -182,6 +286,8 @@ export function datasetRadar (title: string, data: L.List): Dataset {
   return makeDataset('radar', title, values)
 }
 
+///// Registration and Setup ///////////////////////////////////////////////////
+
 addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => {
   const canvas = document.createElement('canvas')
   canvas.width = 800
@@ -195,9 +301,14 @@ addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => {
 
 viz.registerValue('dataset?', datasetQ)
 viz.registerValue('plot?', plotQ)
+
+viz.registerValue('with-plot-options', withPlotOptions)
+viz.registerValue('with-dataset-options', withDatasetOptions)
+
 viz.registerValue('plot-linear', plotLinear)
 viz.registerValue('plot-category', plotCategory)
 viz.registerValue('plot-radial', plotRadial)
+
 viz.registerValue('dataset-line', datasetLine)
 viz.registerValue('dataset-bar', datasetBar)
 viz.registerValue('dataset-scatter', datasetScatter)
