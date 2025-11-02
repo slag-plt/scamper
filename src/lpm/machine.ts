@@ -171,6 +171,7 @@ export class Machine {
               fn.code
             )
           }
+        } else {
           this.reportAndUnwind(thread, new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`))
         }
         break
