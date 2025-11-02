@@ -155,8 +155,7 @@ export class Machine {
           if (fn.params.length !== args.length) {
             this.reportAndUnwind(thread, new ScamperError('Runtime', `Arity mismatch in function call: expected ${fn.params.length} arguments but got ${args.length}`))
             return
-          }
-          else if (current.isFinished()) {
+          } else if (current.isFinished()) {
             // N.B., if this thread is finished, then tail-call optimize by
             // overwriting the current frame instead of pushing a new one.
             current.name = fn.name ?? '##anonymous##'
@@ -172,7 +171,6 @@ export class Machine {
               fn.code
             )
           }
-        } else {
           this.reportAndUnwind(thread, new ScamperError('Runtime', `Not a function or closure: ${JSON.stringify(fn)}`))
         }
         break
