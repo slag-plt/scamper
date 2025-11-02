@@ -124,6 +124,10 @@ export class Machine {
       }
       
       case 'ap': {
+        if (thread.frames.length >= this.maxCallStackDepth) {
+          this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`))
+          return
+        }
         if (current.values.length < instr.numArgs + 1) {
           throw new ICE('Machine.stepThread', `Not enough values for application: ${instr.numArgs + 1}`) 
         }
@@ -148,8 +152,8 @@ export class Machine {
           }
           current.values.push(result)
         } else if (U.isClosure(fn)) {
-          if (thread.frames.length >= this.maxCallStackDepth) {
-            this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.maxCallStackDepth} exceeded`))
+          if (fn.params.length !== args.length) {
+            this.reportAndUnwind(thread, new ScamperError('Runtime', `Arity mismatch in function call: expected ${fn.params.length} arguments but got ${args.length}`))
             return
           } else if (current.isFinished()) {
             // N.B., if this thread is finished, then tail-call optimize by
