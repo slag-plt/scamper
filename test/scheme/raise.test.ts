@@ -1,4 +1,4 @@
-import { expect, test, describe } from "@jest/globals"
+import { expect, test } from 'vitest'
 import { expToString } from '../../src/scheme/ast.js'
 import { raiseFrames } from '../../src/scheme/raise.js'
 import * as LPM from '../../src/lpm/'

@@ -534,14 +534,15 @@ export function render (v: any): HTMLElement {
 
 HtmlRenderer.registerCustomRenderer(compositionQ, render)
 
-Music.initializer = function initializer(): void {
+Music.initializer = async function initializer(): Promise<void> {
   // Initialize webaudiofont
-  if (waf()) {
-    waf()!.loadInstrument(0)         // 0: Acoustic Grand Piano
-    waf()!.loadInstrument(35, true)  // 35: Acoustic Bass
-    waf()!.loadInstrument(38, true)  // 38: Acoustic Snare
-    waf()!.loadInstrument(42, true)  // 42: Closed Hi-Hat
-    waf()!.loadInstrument(49, true)  // 49: Crash Cymbal 1
+  const player = waf()
+  if (player !== undefined) {
+    player.loadInstrument(0)         // 0: Acoustic Grand Piano
+    player.loadInstrument(35, true)  // 35: Acoustic Bass
+    player.loadInstrument(38, true)  // 38: Acoustic Snare
+    player.loadInstrument(42, true)  // 42: Closed Hi-Hat
+    player.loadInstrument(49, true)  // 49: Crash Cymbal 1
   }
 }
 
