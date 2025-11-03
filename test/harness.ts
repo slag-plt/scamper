@@ -4,7 +4,8 @@ import builtinLibs from '../src/lib'
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 
-function runProgram (src: string): string[] {
+export function runProgram (src: string): string[] {
+    src = src.trim()
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)

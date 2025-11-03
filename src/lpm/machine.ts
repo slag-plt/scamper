@@ -192,6 +192,10 @@ export class Machine {
       }
       
       case 'ap': {
+        if (thread.frames.length >= this.options.maxCallStackDepth) {
+          this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.options.maxCallStackDepth} exceeded`))
+          return false
+        }
         if (current.values.length < instr.numArgs + 1) {
           throw new ICE('Machine.stepThread', `Not enough values for application: ${instr.numArgs + 1}`) 
         }
@@ -219,7 +223,10 @@ export class Machine {
           if (thread.frames.length >= this.options.maxCallStackDepth) {
             this.reportAndUnwind(thread, new ScamperError('Runtime', `Maximum call stack depth ${this.options.maxCallStackDepth} exceeded`))
             return false
-          } else if (current.isFinished()) {
+          } else if  (fn.params.length !== args.length) {
+            this.reportAndUnwind(thread, new ScamperError('Runtime', `Arity mismatch in function call: expected ${fn.params.length} arguments but got ${args.length}`))
+            return false
+         } else if (current.isFinished()) {
             // N.B., if this thread is finished, then tail-call optimize by
             // overwriting the current frame instead of pushing a new one.
             current.name = fn.name ?? '##anonymous##'

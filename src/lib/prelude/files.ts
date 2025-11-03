@@ -34,7 +34,7 @@ lib.registerValue('with-file', withFile)
 
 function renderReactiveFile (v: any): HTMLElement {
   const rf = v as ReactiveFile
-  const ret = document.createElement('code')
+  const ret = document.createElement('div')
   if (!fs) {
     ret.innerText = 'OPFS not supported'
     return ret
@@ -80,9 +80,9 @@ lib.registerValue('with-file-chooser', withFileChooser)
 
 function renderReactiveFileChooser (v: any): HTMLElement {
   const rf = v as ReactiveFileChooser
-  const ret = document.createElement('code')
+  const ret = document.createElement('div')
   const inp = document.createElement('input')
-  const outp = document.createElement('code')
+  const outp = document.createElement('div')
   inp.type = 'file'
   inp.addEventListener('change', () => {
     const reader = new FileReader()

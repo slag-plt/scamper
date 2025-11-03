@@ -67,6 +67,23 @@ export class Library {
     }
     this.lib.push([name, v])
   }
+
+  static fromLibs (...libs: Library[]): Library {
+    const initializer = async () => {
+      for (const lib of libs) {
+        if (lib.initializer !== undefined) {
+          await lib.initializer()
+        }
+      }
+    }
+    const ret = new Library(initializer)
+    for (const lib of libs) {
+      for (const [name, value] of lib.lib) {
+        ret.registerValue(name, value)
+      } 
+    }
+    return ret
+  }
 }
 
 /** Tagged objects are Scamper values with a queryable runtime identity. */

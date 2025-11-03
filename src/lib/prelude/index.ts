@@ -1255,6 +1255,7 @@ function foldRight (f: L.Closure | Function, init: L.Value, lst: L.List): L.Valu
   const values = L.listToVector(lst)
   let acc = init
   for (let i = values.length - 1; i >= 0; i--) {
+    // N.B., the type of the higher-order function is a -> b -> b!
     acc = L.callScamperFn(f, values[i], acc)
   }
   return acc
@@ -1266,6 +1267,8 @@ function reduceRight (f: L.Closure | Function, lst: L.List): L.Value {
   const values = L.listToVector(lst)
   let acc = values.pop()
   for (let i = values.length - 1; i >= 0; i--) {
+
+    // N.B., the type of the higher-order function is a -> b -> b!
     acc = L.callScamperFn(f, values[i], acc)
   }
   return acc

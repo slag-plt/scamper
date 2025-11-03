@@ -1,10 +1,10 @@
-import * as L from '../lpm'
-import { checkContract, contract } from './contract.js'
-import * as C from './contract.js'
+import * as L from '../../lpm'
+import { checkContract, contract } from '../contract.js'
+import * as C from '../contract.js'
 
 import Papa from 'papaparse'
 
-const Data: L.Library = new L.Library()
+const Utils: L.Library = new L.Library()
 
 function parseCsv (data: string): L.List {
   checkContract(arguments, contract('parse-csv', [C.string]))
@@ -18,28 +18,28 @@ function parseCsv (data: string): L.List {
     return L.vectorToList((result.data as string[][]).map(L.vectorToList))
   }
 }
-Data.registerValue('parse-csv', parseCsv)
+Utils.registerValue('parse-csv', parseCsv)
 
 function stringToChars (s: string): L.List {
   checkContract(arguments, contract('string->chars', [C.string]))
   const chars = Array.from(s).map(c => L.mkChar(c))
   return L.vectorToList(chars)
 }
-Data.registerValue('string->chars', stringToChars)
+Utils.registerValue('string->chars', stringToChars)
 
 function stringToWords (s: string): L.List {
   checkContract(arguments, contract('string->words', [C.string]))
   const words = s.split(/\s+/g)
   return L.vectorToList(words)
 }
-Data.registerValue('string->words', stringToWords)
+Utils.registerValue('string->words', stringToWords)
 
 function stringToLines (s: string): L.List {
   checkContract(arguments, contract('string->lines', [C.string]))
   const lines = s.split(/\r?\n/g)
   return L.vectorToList(lines)
 }
-Data.registerValue('string->lines', stringToLines)
+Utils.registerValue('string->lines', stringToLines)
 
 /**
  * A simple association list over LPM values for the purposes of tallying. We
@@ -74,6 +74,6 @@ function tallyAll (lst: L.List): L.List {
   }
   return L.vectorToList(tally.data.map(p => L.mkPair(p.key, p.value)))
 }
-Data.registerValue('tally-all', tallyAll)
+Utils.registerValue('tally-all', tallyAll)
 
-export default Data
+export default Utils
