@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import * as Display from '../display.js'
+import HtmlRenderer from '../lpm/renderers/html-renderer.js'
 import { waf } from './webaudiofont/webaudiofont.js'
 
 const Music: L.Library = new L.Library()
@@ -232,22 +232,22 @@ const compositionC: C.Spec = {
 
 function loadInstrument(n: number): void {
   C.checkContract(arguments, contract('load-instrument', [C.nat]))
-  waf().loadInstrument(n)
+  waf()!.loadInstrument(n)
 }
 Music.registerValue('load-instrument', loadInstrument)
 
 function loadPercussion(n: number): void {
   C.checkContract(arguments, contract('load-percussion', [C.nat]))
-  waf().loadInstrument(n, true)
+  waf()!.loadInstrument(n, true)
 }
 Music.registerValue('load-percussion', loadPercussion)
 
 function useHighQualityInstruments(enable: boolean): void {
   C.checkContract(arguments, contract('use-high-quality-instruments', [C.boolean]))
   if (enable) {
-    waf().fontName = 'FluidR3_GM'
+    waf()!.fontName = 'FluidR3_GM'
   } else {
-    waf().fontName = 'Chaos'
+    waf()!.fontName = 'Chaos'
   }
 }
 Music.registerValue('use-high-quality-instruments', useHighQualityInstruments)
@@ -452,7 +452,7 @@ export function playComposition (composition: Composition): number {
   checkContract(arguments, contract('play-composition', [compositionC]))
   const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, [], composition).msgs
   const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event') as (TriggerMsg | EventMsg)[]
-  const startTime = waf().audioContext.currentTime
+  const startTime = waf()!.audioContext.currentTime
 
   // Enqueue notes
   for (const msg of msgs) {
@@ -460,9 +460,9 @@ export function playComposition (composition: Composition): number {
     if (msg.tag === 'midi') {
       const isPercussion = msg.instrument === 128
       const instr = isPercussion ? msg.note : msg.instrument
-      waf().player.queueWaveTable(waf().audioContext,
-        waf().audioContext.destination,
-        waf().getInstrument(instr, isPercussion),
+      waf()!.player.queueWaveTable(waf()!.audioContext,
+        waf()!.audioContext.destination,
+        waf()!.getInstrument(instr, isPercussion),
         startTime + msg.time / 1000,
         msg.note,
         msg.duration / 1000,
@@ -475,7 +475,7 @@ export function playComposition (composition: Composition): number {
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const id = window.setInterval(async () => {
     // N.B., in milliseconds
-    const now = waf().audioContext.currentTime
+    const now = waf()!.audioContext.currentTime
     while (idx < events.length) {
       const ev = events[idx]
       if (ev.time / 1000 + startTime <= now) {
@@ -516,15 +516,15 @@ export function render (v: any): HTMLElement {
   stopButton.textContent = '■'
   let timer: number | undefined
   playButton.onclick = function (_e) {
-    if (waf().audioContext.state === 'suspended') {
-      waf().audioContext.resume().catch(console.error)
+    if (waf()!.audioContext.state === 'suspended') {
+      waf()!.audioContext.resume().catch(console.error)
     }
     timer = playComposition(composition)
   }
   stopButton.onclick = function (_e) {
     if (timer !== undefined) {
       clearInterval(timer)
-      waf().player.cancelQueue(waf().audioContext)
+      waf()!.player.cancelQueue(waf()!.audioContext)
     }
   }
   ret.appendChild(playButton)
@@ -532,19 +532,18 @@ export function render (v: any): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer(compositionQ, render)
+HtmlRenderer.registerCustomRenderer(compositionQ, render)
 
-Music.initializer = function initializer(): void {
-  console.log('Initializing music library...')
+Music.initializer = async function initializer(): Promise<void> {
   // Initialize webaudiofont
-  waf()
-
-  // Pre-load common, low bandwidth instruments
-  waf().loadInstrument(0)         // 0: Acoustic Grand Piano
-  waf().loadInstrument(35, true)  // 35: Acoustic Bass
-  waf().loadInstrument(38, true)  // 38: Acoustic Snare
-  waf().loadInstrument(42, true)  // 42: Closed Hi-Hat
-  waf().loadInstrument(49, true)  // 49: Crash Cymbal 1
+  const player = waf()
+  if (player !== undefined) {
+    player.loadInstrument(0)         // 0: Acoustic Grand Piano
+    player.loadInstrument(35, true)  // 35: Acoustic Bass
+    player.loadInstrument(38, true)  // 38: Acoustic Snare
+    player.loadInstrument(42, true)  // 42: Closed Hi-Hat
+    player.loadInstrument(49, true)  // 49: Crash Cymbal 1
+  }
 }
 
 export default Music

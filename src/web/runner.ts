@@ -1,6 +1,6 @@
 import { OPFSFileSystem } from './fs.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/html-display.js'
 import { initializeLibs } from '../lib/index.js'
 
 class Runner {

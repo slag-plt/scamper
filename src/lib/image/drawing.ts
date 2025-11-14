@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Render from '../../display.js'
+import HtmlRenderer from '../../lpm/renderers/html-renderer.js'
 import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
@@ -859,4 +859,4 @@ function renderer (drawing: Drawing): HTMLElement {
   return canvas
 }
 
-Render.addCustomWebRenderer(drawingQ, renderer)
+HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))

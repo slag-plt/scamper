@@ -65,33 +65,18 @@ function lowerExpr (e: A.Exp): L.Blk {
 
 }
 
-function lowerStmt (s: A.Stmt, displayStmtExpr: boolean = true): L.Blk {
+function lowerStmt (s: A.Stmt, displayStmtExpr: boolean = true): L.Stmt {
   switch (s.tag) {
-    case 'import':
-      return [L.mkImport(s.module, s.range, true)]
-    case 'define': {
-      const blk = lowerExpr(s.value)
-      blk[0].startsStmt = true
-      return [...blk, L.mkDefine(s.name, s.range)]
-    }
-    case 'display': {
-      const blk = lowerExpr(s.value)
-      blk[0].startsStmt = true
-      return [...blk, L.mkDisp(s.range)]
-    }
-    case 'stmtexp': {
-      const blk = lowerExpr(s.expr)
-      blk[0].startsStmt = true
-      return [...blk, displayStmtExpr ? L.mkDisp() : L.mkPopv()]
-    }
-    default:
-      throw new L.ICE('lowerStmt', `Non-core statement encountered: ${s.tag}`)
+    case 'import': return L.mkImport(s.module, s.range)
+    case 'define': return L.mkDefine(s.name, lowerExpr(s.value), s.range)
+    case 'display': return L.mkDisp(lowerExpr(s.value), s.range)
+    case 'stmtexp': return displayStmtExpr ?
+      L.mkDisp(lowerExpr(s.expr), s.range) :
+      L.mkStmtExp(lowerExpr(s.expr), s.range)
+    default: throw new L.ICE('lowerStmt', `Unknown expected statement type: ${s.tag}`)
   }
 }
 
-export function lowerProgram (prog: A.Prog, displayStmtExpr: boolean = true): L.Blk {
-  const ret = prog.flatMap((s) => lowerStmt(s, displayStmtExpr))
-  // N.B., the main block must return a value to successfully exit
-  ret.push(L.mkLit(0))
-  return ret
+export function lowerProgram (prog: A.Prog, displayStmtExpr: boolean = true): L.Prog {
+  return prog.map((s) => lowerStmt(s, displayStmtExpr))
 }

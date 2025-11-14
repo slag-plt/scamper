@@ -1,7 +1,7 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import { addCustomWebRenderer } from '../../display.js'
+import HTMLRenderer from '../../lpm/renderers/html-renderer.js'
 
 import Chart from 'chart.js/auto'
 
@@ -288,7 +288,7 @@ export function datasetRadar (title: string, data: L.List): Dataset {
 
 ///// Registration and Setup ///////////////////////////////////////////////////
 
-addCustomWebRenderer(plotQ, (v: L.Value): HTMLElement => {
+HTMLRenderer.registerCustomRenderer(plotQ, (v: L.Value): HTMLElement => {
   const canvas = document.createElement('canvas')
   canvas.width = 800
   const plot = v as Plot

@@ -1,7 +1,6 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-
 import { lib as filesLib } from './files.js'
 
 export const Prelude: L.Library = new L.Library()
@@ -1521,6 +1520,8 @@ Prelude.registerValue('pi', piConst)
 Prelude.registerValue('π', piConst)
 Prelude.registerValue('void', voidConst)
 
+// TODO: library initialization is a problem, this really needs to be a
+// upfront thing, not performed lazily unless we want to async the runtime.
 Prelude.lib.push(...filesLib.lib)
 Prelude.initializer = async () => {
   await filesLib.initializer?.()

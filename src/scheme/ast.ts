@@ -1,4 +1,5 @@
 import * as L from '../lpm'
+import TextRenderer from '../lpm/renderers/text-renderer.js'
 
 ///// Language Definition //////////////////////////////////////////////////////
 
@@ -7,15 +8,32 @@ import * as L from '../lpm'
 //     | (e1 ... ek)
 //
 //     -- Special forms
-//     | (lambda (x1 ... xk) e)
-//     | (let ([x1 e1] ... [xk ek]) e)
-//     | (begin e1 ... ek)
-//     | (if e1 e2 e3)
-//     | (match e [p1 e1] ... [pk ek])
+//     | (lambda (x1 ... xk) 
+//         e)
+//     | (let
+//         ([x1 e1]
+//          ...
+//          [xk ek])
+//         e)
+//     | (begin
+//         e1
+//         ...
+//         ek)
+//     | (if e1
+//         e2
+//         e3)
+//     | (match e
+//         [p1 e1]
+//         ...
+//         [pk ek])
 //     | (quote e)
 //
 //     -- Sugared forms
-//     | (let* ([x1 e1] ... [xk ek]) e)
+//     | (let*
+//         ([x1 e1]
+//          ...
+//          [xk ek])
+//    e)
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
@@ -108,7 +126,28 @@ export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({ ta
 export const mkStmtExp = (expr: Exp, range: L.Range = L.Range.none): StmtExp => ({ tag: 'stmtexp', expr, range })
 export const mkStruct = (name: string, fields: string[], range: L.Range = L.Range.none): Struct => ({ tag: 'struct', name, fields, range })
 
-///// Utility Functions ////////////////////////////////////////////////////////
+///// Query Functions //////////////////////////////////////////////////////////
+
+export function isPat (v: any): v is Pat {
+  return typeof v === 'object' && v !== null && [
+    'pwild', 'pvar', 'plit', 'pctor'
+  ].includes(v.tag)
+}
+
+export function isExp (v: any): v is Exp {
+  return typeof v === 'object' && v !== null && [
+    'lit', 'var', 'app', 'lam', 'let', 'begin', 'if', 'match',
+    'quote', 'let*', 'and', 'or', 'cond', 'section'
+  ].includes(v.tag)
+}
+
+export function isStmt (v: any): v is Stmt {
+  return typeof v === 'object' && v !== null && [
+    'import', 'define', 'display', 'stmtexp', 'struct'
+  ].includes(v.tag)
+}
+
+///// Stringifying Functions ///////////////////////////////////////////////////
 
 export function patToString (pat: Pat): string {
   switch (pat.tag) {
@@ -127,13 +166,13 @@ export function patToString (pat: Pat): string {
 
 export function expToString (e: Exp): string {
   switch (e.tag) {
-    case 'lit': return JSON.stringify(e)
+    case 'lit': return JSON.stringify(e.value)
     case 'var': return e.name
     case 'app': {
       if (e.args.length === 0) {
-        return `(${e.head})`
+        return `(${expToString(e.head)})`
       } else {
-        return `(${e.head} ${e.args.map(expToString).join(' ')})`
+        return `(${expToString(e.head)} ${e.args.map(expToString).join(' ')})`
       }
     }
     case 'lam': return `(lambda (${e.params.join(' ')}) ${expToString(e.body)})`
@@ -172,4 +211,99 @@ export function stmtToString (s: Stmt): string {
 
 export function progToString (p: Prog): string {
   return `${p.map(stmtToString).join('\n')}`
+}
+
+TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
+TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
+TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
+
+///// Equality /////////////////////////////////////////////////////////////////
+
+export function patEquals (p1: Pat, p2: Pat): boolean {
+  if (p1.tag === 'pwild' && p2.tag === 'pwild') {
+    return true
+  } else if (p1.tag === 'pvar' && p2.tag === 'pvar') {
+    return p1.name === p2.name
+  } else if (p1.tag === 'plit' && p2.tag === 'plit') {
+    return L.equals(p1.value, p2.value)
+  } else if (p1.tag === 'pctor' && p2.tag === 'pctor') {
+    return p1.name === p2.name &&
+           p1.args.length === p2.args.length &&
+           p1.args.every((arg, i) => patEquals(arg, p2.args[i]))
+  } else {
+    return false
+  }
+}
+
+export function expEquals (e1: Exp, e2: Exp): boolean {
+  if (e1.tag === 'lit' && e2.tag === 'lit') {
+    return L.equals(e1.value, e2.value)
+  } else if (e1.tag === 'var' && e2.tag === 'var') {
+    return e1.name === e2.name
+  } else if (e1.tag === 'app' && e2.tag === 'app') {
+    return expEquals(e1.head, e2.head) &&
+           e1.args.length === e2.args.length &&
+           e1.args.every((arg, i) => expEquals(arg, e2.args[i]))
+  } else if (e1.tag === 'lam' && e2.tag === 'lam') {
+    return e1.params.length === e2.params.length &&
+           e1.params.every((param, i) => param === e2.params[i]) &&
+           expEquals(e1.body, e2.body)
+  } else if (e1.tag === 'let' && e2.tag === 'let') {
+    return e1.bindings.length === e2.bindings.length &&
+           e1.bindings.every(({name}, i) => name === e2.bindings[i].name) && 
+           e1.bindings.every(({value}, i) => expEquals(value, e2.bindings[i].value)) &&
+           expEquals(e1.body, e2.body)
+  } else if (e1.tag === 'begin' && e2.tag === 'begin') {
+    return e1.exps.length === e2.exps.length &&
+           e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
+  } else if (e1.tag === 'if' && e2.tag === 'if') {
+    return expEquals(e1.guard, e2.guard) &&
+           expEquals(e1.ifB, e2.ifB) &&
+           expEquals(e1.elseB, e2.elseB)
+  } else if (e1.tag === 'match' && e2.tag === 'match') {
+    return expEquals(e1.scrutinee, e2.scrutinee) &&
+           e1.branches.length === e2.branches.length &&
+           e1.branches.every(({pat}, i) => patEquals(pat, e2.branches[i].pat)) &&
+           e1.branches.every(({body}, i) => expEquals(body, e2.branches[i].body))
+  } else if (e1.tag === 'quote' && e2.tag === 'quote') {
+    return L.equals(e1.value, e2.value)
+  } else if (e1.tag === 'let*' && e2.tag === 'let*') {
+    return e1.bindings.length === e2.bindings.length &&
+           e1.bindings.every(({name}, i) => name === e2.bindings[i].name) && 
+           e1.bindings.every(({value}, i) => expEquals(value, e2.bindings[i].value)) &&
+           expEquals(e1.body, e2.body)
+  } else if (e1.tag === 'and' && e2.tag === 'and') {
+    return e1.exps.length === e2.exps.length &&
+           e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
+  } else if (e1.tag === 'or' && e2.tag === 'or') {
+    return e1.exps.length === e2.exps.length &&
+           e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
+  } else if (e1.tag === 'cond' && e2.tag === 'cond') {
+    return e1.branches.length === e2.branches.length &&
+           e1.branches.every(({test}, i) => expEquals(test, e2.branches[i].test)) &&
+           e1.branches.every(({body}, i) => expEquals(body, e2.branches[i].body))
+  } else if (e1.tag === 'section' && e2.tag === 'section') {
+    return e1.exps.length === e2.exps.length &&
+           e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
+  } else {
+    return false
+  }
+}
+
+export function stmtEquals (s1: Stmt, s2: Stmt): boolean {
+  if (s1.tag === 'import' && s2.tag === 'import') {
+    return s1.module === s2.module
+  } else if (s1.tag === 'define' && s2.tag === 'define') {
+    return s1.name === s2.name && expEquals(s1.value, s2.value)
+  } else if (s1.tag === 'display' && s2.tag === 'display') {
+    return expEquals(s1.value, s2.value)
+  } else if (s1.tag === 'stmtexp' && s2.tag === 'stmtexp') {
+    return expEquals(s1.expr, s2.expr)
+  } else if (s1.tag === 'struct' && s2.tag === 'struct') {
+    return s1.name === s2.name &&
+           s1.fields.length === s2.fields.length &&
+           s1.fields.every((field, i) => field === s2.fields[i])
+  } else {
+    return false
+  }
 }

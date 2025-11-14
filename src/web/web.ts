@@ -1,5 +1,16 @@
 import { Scamper } from '../scamper.js'
-import { mkSourceBlock, renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/html-display.js'
+
+import hljs from 'highlight.js'
+
+export function mkSourceBlock (text: string): HTMLElement {
+  const elt = hljs.highlight(text, {language: 'scheme', ignoreIllegals: true})
+  const ret = document.createElement('pre')
+  ret.classList.add('hljs')
+  ret.innerHTML = elt.value
+  ret.tabIndex = 0;
+  return ret
+}
 
 export function replaceCodeWidget(base: HTMLElement): void {
   const src = base.innerText

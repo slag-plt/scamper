@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import * as Display from '../display.js'
+import HtmlRenderer from '../lpm/renderers/html-renderer.js'
 
 const Audio: L.Library = new L.Library()
 
@@ -229,5 +229,5 @@ export function audioPipelineRenderer (blob: AudioPipeline): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer((v) => L.isStructKind(v, 'sample'), sampleRenderer)
-Display.addCustomWebRenderer((v) => L.isStructKind(v, 'audio-pipeline'), audioPipelineRenderer)
+HtmlRenderer.registerCustomRenderer((v) => L.isStructKind(v, 'sample'), (v: any) => sampleRenderer(v as SampleNode))
+HtmlRenderer.registerCustomRenderer((v) => L.isStructKind(v, 'audio-pipeline'), (v: any) => audioPipelineRenderer(v as AudioPipeline))
