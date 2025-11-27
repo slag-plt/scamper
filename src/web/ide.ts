@@ -1,9 +1,9 @@
 import { EditorView } from "@codemirror/view"
 
-import { OPFSFileSystem } from './fs.js'
+import OPFSFileSystem from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/html-display.js'
 import * as Lock from './lockfile.js'
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
@@ -37,7 +37,8 @@ class IDE {
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  private constructor (fs: OPFSFileSystem) {
+  private constructor(fs: OPFSFileSystem) {
+    this.fs = fs
     this.config = defaultConfig    // N.B., loaded asynchronously from disk in IDE.create()
     this.currentFile = null
     this.autosaveId = -1
@@ -219,7 +220,7 @@ class IDE {
         } else {
           try {
             this.stopAutosaving()
-            // N.B., in renaming the file, the FS webworker will close
+            // N.B., in renaming the file, the this.fs webworker will close
             // its handle to the current file, so we should be able to
             // just load it as if no file was open.
             await this.fs.renameFile(this.currentFile, newName)
@@ -368,13 +369,13 @@ class IDE {
 
   static async create() {
     const fs = await OPFSFileSystem.create()
+    await initializeLibs()
     const obtainedLock = await Lock.acquireLockFile(fs)
     if (!obtainedLock) {
       document.getElementById("loading-content")!.innerText = 'Another instance of Scamper is open. Please close that instance and try again.'
       document.getElementById("loading")!.style.display = "block"
     } else {
       const ide = new IDE(fs)
-      await initializeLibs()
       await ide.populateFileDrawer()
       await ide.loadConfig()
       if (ide.config.lastOpenedFilename !== null) {

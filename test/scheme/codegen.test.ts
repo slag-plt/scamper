@@ -11,6 +11,7 @@ function checkMachineOutput (src: string, expected: LPM.Value[]) {
     expect(out.log).toEqual([])
     const machine = new LPM.Machine(
       builtinLibs,
+      new Map(),
       env,
       prog!,
       out,

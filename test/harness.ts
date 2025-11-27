@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest'
+import { expect, test } from 'vitest'
 
 import builtinLibs from '../src/lib'
 import * as Scheme from '../src/scheme'
@@ -12,6 +12,7 @@ export function runProgram (src: string): string[] {
     if (out.log.length !== 0) { return out.log }
     const machine = new LPM.Machine(
       builtinLibs,
+      new Map(),
       env,
       prog!,
       out,
