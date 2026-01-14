@@ -11,6 +11,7 @@ import * as Canvas from './api/canvas.js'
 import * as Html from './api/html.js'
 import * as Reactive from './api/reactive.js'
 import * as Data from './api/data.js'
+import * as Rex from './api/rex.js'
 
 const converter = new showdown.Converter()
 
@@ -24,7 +25,8 @@ const libs: [string, object][] = [
   ['canvas', Canvas],
   ['html', Html],
   ['reactive', Reactive],
-  ['data', Data]
+  ['data', Data],
+  ['rex', Rex]
 ]
 
 // https://stackoverflow.com/questions/5251520/how-do-i-escape-some-html-in-javascript

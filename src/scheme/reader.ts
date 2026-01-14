@@ -270,6 +270,9 @@ function parseStringLiteral (src: string, range: L.Range): string {
             throw new L.ScamperError('Parser', 'Unicode escape codes not supported', undefined, range)
           } else if (ch === '\n') {
             // Skip over newline characters but continue processing the literal
+          } else {
+            // Any other escape sequence is the identity escape sequence
+            ret += ch
           }
       }
       // NOTE: skip the extra \ that we parsed in this case. If/when we support

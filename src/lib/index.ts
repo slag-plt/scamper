@@ -8,6 +8,7 @@ import Canvas from './canvas.js'
 import Html from './html.js'
 import Reactive from './reactive.js'
 import Data from './data'
+import Rex from './rex.js'
 import Prelude from './prelude/index.js'
 import Runtime from './runtime.js'
 
@@ -21,6 +22,7 @@ export const builtinLibs: Map<string, Library> = new Map([
   ['html', Html],
   ['reactive', Reactive],
   ['data', Data],
+  ['rex', Rex],
   ['prelude', Prelude],
   ['runtime', Runtime]
 ])
