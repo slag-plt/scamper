@@ -3,7 +3,7 @@ import { EditorView } from "@codemirror/view"
 import OPFSFileSystem from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../lpm/html-display.js'
+import { renderToOutput } from '../lpm/output/html.js'
 import * as Lock from './lockfile.js'
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"

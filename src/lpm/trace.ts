@@ -1,7 +1,7 @@
 import * as L from './lang'
 import * as U from './util'
-import HTMLRenderer from './renderers/html-renderer.js'
-import TextRenderer from './renderers/text-renderer'
+import HTMLRenderer from './renderers/html.js'
+import TextRenderer from './renderers/text'
 
 export interface TraceOutput extends L.Struct {
   [L.structKind]: 'trace-output'

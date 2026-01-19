@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import HtmlRenderer from '../lpm/renderers/html-renderer.js'
+import HtmlRenderer from '../lpm/renderers/html.js'
 import { waf } from './webaudiofont/webaudiofont.js'
 
 const Music: L.Library = new L.Library()

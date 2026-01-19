@@ -1,7 +1,7 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import HTMLRenderer from '../../lpm/renderers/html-renderer'
+import HTMLRenderer from '../../lpm/renderers/html'
 import OPFSFileSystem from '../../web/fs.js'
 
 let fs: OPFSFileSystem | null = null

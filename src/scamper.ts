@@ -1,6 +1,6 @@
 import * as Scheme from './scheme'
 import * as LPM from './lpm'
-import HtmlDisplay from './lpm/html-display'
+import HtmlDisplay from './lpm/output/html'
 import builtinLibs from './lib'
 
 export class Scamper {

@@ -1,7 +1,7 @@
 import * as L from './lang.js'
 import * as U from './util.js'
 import { ICE, ScamperError } from './error.js'
-import { OutputChannel, ErrorChannel } from './output.js'
+import { OutputChannel, ErrorChannel } from './output'
 import { mkTraceOutput } from './trace.js'
 import { Raiser } from './raiser.js'
 

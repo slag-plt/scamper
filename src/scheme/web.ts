@@ -1,5 +1,5 @@
 import * as AST from './ast.js'
-import HtmlRenderer from '../lpm/renderers/html-renderer.js'
+import HtmlRenderer from '../lpm/renderers/html.js'
 import hljs from 'highlight.js'
 
 function mkHljsCode (text: string): HTMLElement {

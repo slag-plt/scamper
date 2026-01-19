@@ -1,7 +1,9 @@
 import * as Scheme from '../scheme'
 import { builtinLibs, initializeLibs } from '../lib'
 import * as LPM from '../lpm'
-import TextRenderer from '../lpm/renderers/text-renderer'
+import TextRenderer from '../lpm/renderers/text'
+
+import { Thread } from '../lpm/thread.js'
 
 import { parseArgs } from 'node:util'
 import fs from 'fs'
@@ -16,6 +18,9 @@ class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
     this.seenError = true
     console.error(TextRenderer.render(e))
   }
+
+  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  popLevel () { /* nothing to do! */}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,12 +59,21 @@ const options = LPM.defaultOptions
 options.isTracing = values.trace ?? false
 
 await initializeLibs()
-const machine = new LPM.Machine(builtinLibs, new Map([
-  ['scheme', Scheme.raiser] 
-]), Scheme.mkInitialEnv(), program, out, out, options)
+const thread = new Thread(
+  '##main##',
+  Scheme.mkInitialEnv(), 
+  program,
+  options,
+  builtinLibs,
+  out,
+  out,
+  new Map([['scheme', Scheme.raiser]]))
+// const machine = new LPM.Machine(builtinLibs, new Map([
+//   ['scheme', Scheme.raiser] 
+// ]), Scheme.mkInitialEnv(), program, out, out, options)
 
 if (options.isTracing) {
-  machine.evaluateWithTrace()
+  thread.evaluateWithTrace()
 } else {
-  machine.evaluate()
+  thread.evaluate()
 }

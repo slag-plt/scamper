@@ -1,8 +1,8 @@
 import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
-import TextRenderer from '../lpm/renderers/text-renderer.js'
-import HtmlRenderer from '../lpm/renderers/html-renderer.js'
+import TextRenderer from '../lpm/renderers/text.js'
+import HtmlRenderer from '../lpm/renderers/html.js'
 
 const Test: L.Library = new L.Library()
 

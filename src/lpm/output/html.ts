@@ -1,5 +1,7 @@
-import * as LPM from '.'
-import HtmlRenderer from './renderers/html-renderer.js'
+import * as LPM from '..'
+import HtmlRenderer from '../renderers/html.js'
+import { OutputChannel, ErrorChannel } from './channel.js'
+
 // import hljs from 'highlight.js'
 
 // export function mkCodeElement (text: string): HTMLElement {
@@ -27,19 +29,30 @@ export function renderToOutput(output: HTMLElement, v: any) {
   output!.appendChild(div)
 }
 
-export class HTMLDisplay implements LPM.OutputChannel, LPM.ErrorChannel {
-  display: HTMLElement
+export class HTMLDisplay implements OutputChannel, ErrorChannel {
+  levels: HTMLElement[]
 
-  constructor (display: HTMLElement) {
-    this.display = display
+  constructor (root: HTMLElement) {
+    this.levels = [root]
   }
 
   send (v: LPM.Value): void {
-    renderToOutput(this.display, v)
+    renderToOutput(this.levels[this.levels.length - 1], v)
   }
 
   report (err: LPM.ScamperError): void {
-    renderToOutput(this.display, err)
+    renderToOutput(this.levels[this.levels.length - 1], err)
+  }
+
+  pushLevel (label: string, attrs: string[] = []) {
+    const div = document.createElement('div')
+    div.classList.add(label, ...attrs)
+    this.levels[this.levels.length - 1].appendChild(div)
+    this.levels.push(div)
+  }
+
+  popLevel () {
+    this.levels.pop()
   }
 }
 

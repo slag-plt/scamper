@@ -1,5 +1,5 @@
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../lpm/html-display.js'
+import { renderToOutput } from '../lpm/output/html.js'
 
 import hljs from 'highlight.js'
 

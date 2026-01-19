@@ -1,11 +1,7 @@
-import { Value } from './lang.js'
-import { ScamperError } from './error.js'
-import { toString } from './util.js'
-
-/** A "console" that can receive output from LPM. */
-export interface OutputChannel {
-  send: (v: Value) => void
-}
+import { Value } from '../lang.js'
+import { ScamperError } from '../error.js'
+import { toString } from '../util.js'
+import { OutputChannel, ErrorChannel } from './channel.js'
 
 /** A channel that simply logs any output that it is fed. */
 export class LoggingOutputChannel implements OutputChannel {
@@ -14,16 +10,14 @@ export class LoggingOutputChannel implements OutputChannel {
   constructor () {
     this.log = []
   }
+  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  popLevel () { /* nothing to do! */ }
 
   send (v: Value): void {
     this.log.push(v)
   }
 }
 
-/** A "console" that can receive errors from LPM. */
-export interface ErrorChannel {
-  report: (e: ScamperError) => void
-}
 
 /** An error channel that simply logs any errors that arise. */
 export class LoggingErrorChannel implements ErrorChannel {
@@ -53,4 +47,7 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
   report (e: ScamperError): void {
     this.log.push(e.toString())
   }
+
+  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  popLevel () { /* nothing to do! */ }
 }

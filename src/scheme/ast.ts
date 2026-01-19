@@ -1,5 +1,5 @@
 import * as L from '../lpm'
-import TextRenderer from '../lpm/renderers/text-renderer.js'
+import TextRenderer from '../lpm/renderers/text.js'
 
 ///// Language Definition //////////////////////////////////////////////////////
 

@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import HtmlRenderer from '../../lpm/renderers/html-renderer.js'
+import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 
 import * as colorsys from 'colorsys'
