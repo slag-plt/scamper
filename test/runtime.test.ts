@@ -1,39 +1,10 @@
-import {expect, test} from 'vitest'
-
-import builtinLibs from '../src/lib'
-import * as Scheme from '../src/scheme'
-import * as LPM from '../src/lpm'
-
-function runProgram (src: string): string[] {
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
-    if (out.log.length !== 0) { return out.log }
-    const machine = new LPM.Thread(
-      'test',
-      env,
-      prog!,
-      LPM.defaultOptions,
-      builtinLibs,
-      out,
-      out,
-      new Map()
-    )
-    machine.evaluate()
-    return out.log
-}
-
-export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
-}
-
-export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.fails(label, () => expect(runProgram(src.trim())).toEqual(expected))
-}
+import { expect, test } from 'vitest'
+import { runProgram } from './harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
-scamperTest('and-or-short-circuit', `
+test('and-or-short-circuit', () => {
+  expect(runProgram(`
 (and (error "hello")
      #f)
 
@@ -45,14 +16,16 @@ scamperTest('and-or-short-circuit', `
 
 (or #t
     (error "hello"))
-`, [
+`)).toEqual([
   'Runtime error [1:6-1:20]: (error) hello',
   '#f',
   'Runtime error [7:5-7:19]: (error) hello',
   '#t'
 ])
+})
 
-scamperTest('chained-defs', `
+test('chained-defs', () => {
+  expect(runProgram(`
 (define x 10)
 (define y x)
 (define z y)
@@ -65,12 +38,14 @@ scamperTest('chained-defs', `
 (define i h)
 
 (i x y z)
-`, [
+`)).toEqual([
   '60',
   '30'
 ])
+})
 
-scamperTest('closures', `
+test('closures', () => {
+  expect(runProgram(`
 (define x 10)
 
 (define f1
@@ -97,16 +72,18 @@ scamperTest('closures', `
          [f (lambda (y) (+ x y))]
          [g (lambda (x) (+ (f x) 1))])
     g))
-  
+
 (f4 100)
-`, [
+`)).toEqual([
   '30',
   '120',
   '21',
   '152'
 ])
+})
 
-scamperTest('cond-else-test', `
+test('cond-else-test', () => {
+  expect(runProgram(`
 (import image)
 
 (define factorial
@@ -128,45 +105,53 @@ scamperTest('cond-else-test', `
 
 (type-of red-square)
 
-`, [
+`)).toEqual([
   '120',
   '"some-other-type"'
 ])
+})
 
-scamperTest('contract-check', `
+test('contract-check', () => {
+  expect(runProgram(`
 (string-length (list 1 2 3))
 
 (+ 1 2 3 "bye")
 
 (map char-upcase (list "h" "e" "l" "l" "o"))
-`, [
+`)).toEqual([
   'Runtime error [1:1-1:28]: (string-length) expected a string, received list',
   'Runtime error [3:1-3:15]: (+) expected a number, received string',
   'Runtime error [5:1-5:44]: (map) expected a character, received string'
 ])
+})
 
-scamperTest('define-test1', `
+test('define-test1', () => {
+  expect(runProgram(`
 (define x 10)
 
 (define f
   (lambda (y) (+ x y)))
 
 (f x)
-`, [
+`)).toEqual([
   '20'
 ])
+})
 
-failingScamperTest('duplicate-binders', `
+test.fails('duplicate-binders', () => {
+  expect(runProgram(`
 (lambda (x x y) (+ x x))
 
 (struct foo (z y z))
-`, [
+`)).toEqual([
   ':8:0: Parser error:',
   'Duplicate name x given in definition.',
   'In program: (x x y)'
 ])
+})
 
-scamperTest('fact', `
+test('fact', () => {
+  expect(runProgram(`
 (define fact
   (lambda (n)
     (if (zero? n)
@@ -176,12 +161,14 @@ scamperTest('fact', `
 (fact 0)
 
 (fact 5)
-`, [
+`)).toEqual([
   '1',
   '120'
 ])
+})
 
-scamperTest('fizzbuzz', `
+test('fizzbuzz', () => {
+  expect(runProgram(`
 (define fizzbuzz
   (lambda (n)
     (cond
@@ -205,7 +192,7 @@ scamperTest('fizzbuzz', `
 (fizzbuzz 13)
 (fizzbuzz 14)
 (fizzbuzz 15)
-`, [
+`)).toEqual([
   '"1"',
   '"2"',
   '"fizz"',
@@ -222,8 +209,10 @@ scamperTest('fizzbuzz', `
   '"14"',
   '"fizzbuzz"'
 ])
+})
 
-scamperTest('let-binding-errors', `
+test('let-binding-errors', () => {
+  expect(runProgram(`
 ; let bindings telescope
 (let
   ([x1 1]
@@ -241,13 +230,15 @@ scamperTest('let-binding-errors', `
   ([x3 y3]
    [y3 5])
   (+ x3 y3))
-`, [
+`)).toEqual([
   "Parser error [4:11-4:12]: Undefined variable 'x1'",
   "Parser error [10:8-10:9]: Undefined variable 'y2'",
   "Parser error [15:8-15:9]: Undefined variable 'y3'"
 ])
+})
 
-scamperTest('let-binding', `
+test('let-binding', () => {
+  expect(runProgram(`
 ; bindings are not dependent on each other
 (let
   ([x 1]
@@ -267,13 +258,15 @@ scamperTest('let-binding', `
    [y (+ x 6)]
    [z (+ y 4)])
   (+ x y z))
-`, [
+`)).toEqual([
   '19',
   '19',
   '19'
 ])
+})
 
-scamperTest('list-length', `
+test('list-length', () => {
+  expect(runProgram(`
 (define list-length
   (lambda (l)
     (if (null? l)
@@ -287,14 +280,16 @@ scamperTest('list-length', `
 (list-length (cons 9 (cons 9 (cons 9 (cons 9 (cons 9 null))))))
 
 (list-length (cons "a" (cons "b" (cons "c" (cons "d" (cons "e" null))))))
-`, [
+`)).toEqual([
   '0',
   '1',
   '5',
   '5'
 ])
+})
 
-scamperTest('match-lists', `
+test('match-lists', () => {
+  expect(runProgram(`
 (define list-length
   (lambda (l)
     (match l
@@ -323,15 +318,17 @@ scamperTest('match-lists', `
       [(cons x1 (cons x2 tail)) (cons x1 (cons x (intersperse x (cons x2 tail))))])))
 
 (intersperse "," (list "a" "b" "c"))
-`, [
+`)).toEqual([
   '5',
   '0',
   '10',
   '(list 1 2 3 4 5 6)',
   '(list "a" "," "b" "," "c")'
 ])
+})
 
-scamperTest('match-lit', `
+test('match-lit', () => {
+  expect(runProgram(`
 (match 5
   [1 "fail"]
   [5 "numbers"])
@@ -340,7 +337,7 @@ scamperTest('match-lit', `
   ["foo" "fail"]
   ["bar" "fail"]
   ["baz" "strings"]
-  ["boop" "fail"]) 
+  ["boop" "fail"])
 
 (match #\\q
   [#\\a "fail"]
@@ -357,7 +354,7 @@ scamperTest('match-lit', `
 (match (list "lists" "a" "b")
   [null "fail"]
   [(cons head _) head])
-`, [
+`)).toEqual([
   '"numbers"',
   '"strings"',
   '"chars"',
@@ -365,20 +362,24 @@ scamperTest('match-lit', `
   '"null"',
   '"lists"'
 ])
+})
 
-failingScamperTest('match-repeated-bindings', `
+test.fails('match-repeated-bindings', () => {
+  expect(runProgram(`
 (match (list 1 2 3)
   [null "fail"]
   [(cons x x) "fail"])
-`, [
+`)).toEqual([
   ':3:2: Scope error:',
   'Variable x is repeated in the pattern',
   'In program: (match (list 1 2 3)',
   '[null "fail"]',
   '[(cons x x) "fail"])'
 ])
+})
 
-scamperTest('match-struct', `
+test('match-struct', () => {
+  expect(runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -396,22 +397,26 @@ scamperTest('match-struct', `
         (node (leaf "b")
               (node (leaf "c")
                     (leaf "d")))))
-`, [
+`)).toEqual([
   '1',
   '4'
 ])
+})
 
-scamperTest('mixed-brackets', `
+test('mixed-brackets', () => {
+  expect(runProgram(`
 {- {* 3
      (+ {* 1
            { / 5 8}}
          12)}
    (- 5 1)}
-`, [
+`)).toEqual([
   '33.875'
 ])
+})
 
-scamperTest('numbers', `
+test('numbers', () => {
+  expect(runProgram(`
 4129
 0
 -48902
@@ -446,7 +451,7 @@ scamperTest('numbers', `
 -.3e2
 -3e-2
 -.3e-2
-`, [
+`)).toEqual([
   '4129',
   '0',
   '-48902',
@@ -477,8 +482,10 @@ scamperTest('numbers', `
   '-0.03',
   '-0.003'
 ])
+})
 
-failingScamperTest('shadowing', `
+test.fails('shadowing', () => {
+  expect(runProgram(`
 (define x 3)
 
 (define y (+ x 2))
@@ -500,23 +507,27 @@ failingScamperTest('shadowing', `
   (+ x z))
 
 x
-`, [
+`)).toEqual([
   '0',
   '6',
   '105',
   '-5'
 ])
+})
 
-scamperTest('simple-exp', `
+test('simple-exp', () => {
+  expect(runProgram(`
 (let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
 
 (+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
-`, [
+`)).toEqual([
   '43',
   '103'
 ])
+})
 
-scamperTest('tree-test', `
+test('tree-test', () => {
+  expect(runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -547,26 +558,31 @@ t1
 (tree-size t1)
 
 (tree-to-list t1)
-`, [
+`)).toEqual([
   '(node (leaf "a") (node (leaf "b") (leaf "c")))',
   '"b"',
   '3',
   '(list "a" "b" "c")'
 ])
+})
 
-scamperTest('undefined-variable', `
+test('undefined-variable', () => {
+  expect(runProgram(`
 (+ x 1)
-`, [
+`)).toEqual([
   "Parser error [1:4-1:4]: Undefined variable 'x'"
 ])
+})
 
-scamperTest('section', `
+test('section', () => {
+  expect(runProgram(`
 ((section + _ 1) 1)
 
 (|> (list "a" "b" "c" "d" "e")
     (section map (section string-upcase _) _))
 
-`, [
+`)).toEqual([
   '2',
   '(list "A" "B" "C" "D" "E")'
 ])
+})

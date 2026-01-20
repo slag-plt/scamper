@@ -23,7 +23,6 @@ function checkMachineOutput (src: string, expected: LPM.Value[]) {
     expect(out.log).toEqual(expected)
 }
 
-
 describe('Basic codegen', () => {
   test('simple arithmetic', () => {
     checkMachineOutput(`
