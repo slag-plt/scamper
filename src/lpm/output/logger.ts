@@ -1,51 +1,32 @@
 import { Value } from '../lang.js'
 import { ScamperError } from '../error.js'
-import { toString } from '../util.js'
 import { OutputChannel, ErrorChannel } from './channel.js'
-
-/** A channel that simply logs any output that it is fed. */
-export class LoggingOutputChannel implements OutputChannel {
-  log: Value[]
-
-  constructor () {
-    this.log = []
-  }
-  pushLevel (..._attrs: string[]) { /* nothing to do! */ }
-  popLevel () { /* nothing to do! */ }
-
-  send (v: Value): void {
-    this.log.push(v)
-  }
-}
-
-
-/** An error channel that simply logs any errors that arise. */
-export class LoggingErrorChannel implements ErrorChannel {
-  log: ScamperError[]
-
-  constructor () {
-    this.log = []
-  }
-
-  report (err: ScamperError): void {
-    this.log.push(err)
-  }
-}
+import TextRenderer from '../renderers/text'
 
 /** A unified output and error channel that logs by line */
 export class LoggingChannel implements OutputChannel, ErrorChannel {
-  log: string[]
+  log: Value[]
+  errLog: string[]
+  renderOutput: boolean
+  combineLogs: boolean
 
-  constructor () {
+  constructor (renderOutput: boolean = true, combineLogs: boolean = true) {
     this.log = []
+    this.errLog = []
+    this.renderOutput = renderOutput
+    this.combineLogs = combineLogs
   }
 
   send (v: Value): void {
-    this.log.push(toString(v))
+    this.log.push(this.renderOutput ? TextRenderer.render(v): v)
   }
 
   report (e: ScamperError): void {
-    this.log.push(e.toString())
+    if (this.combineLogs) {
+      this.log.push(e.toString())
+    } else {
+      this.errLog.push(e.toString())
+    }
   }
 
   pushLevel (..._attrs: string[]) { /* nothing to do! */ }

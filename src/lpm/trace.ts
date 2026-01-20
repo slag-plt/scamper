@@ -5,17 +5,20 @@ import TextRenderer from './renderers/text'
 
 export interface TraceStart extends L.Struct {
   [L.structKind]: 'trace-start'
-  output: L.Value
+  preamble: string
+  output?: L.Value
 }
 
-export function mkTraceStart (output: L.Value): TraceStart {
-  return U.mkStruct('trace-start', ['output'], [output]) as TraceStart
+export function mkTraceStart (preamble: string, output?: L.Value): TraceStart {
+  return U.mkStruct('trace-start', ['preamble', 'output'], [preamble, output]) as TraceStart
 }
 
 TextRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-start'),
   (v) => {
-    return `${TextRenderer.render((v as TraceStart).output)}`
+    const t = v as TraceStart
+    const output = t.output ? ` ${TextRenderer.render(t.output)}` : ''
+    return `${t.preamble}${output}`
   })
 
 HTMLRenderer.registerCustomRenderer(

@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'vitest'
 import * as L from '../../src/lpm'
 import * as U from '../../src/lpm/util.js'
-import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output"
+import { LoggingChannel } from "../../src/lpm/output"
 
 // A stub builtin libraries map for testing purposes
 const builtinLibs: Map<string, L.Library> = new Map()
@@ -15,9 +15,8 @@ const env = (() => {
   return ret
 })()
 
-function makeMachine (prog: L.Prog): [L.Thread, LoggingOutputChannel, LoggingErrorChannel] {
-  const out = new LoggingOutputChannel()
-  const err = new LoggingErrorChannel()
+function makeMachine (prog: L.Prog): [L.Thread, LoggingChannel, LoggingChannel] {
+  const out = new LoggingChannel(false, false)
   const machine = new L.Thread(
     'test',
     env,
@@ -25,10 +24,10 @@ function makeMachine (prog: L.Prog): [L.Thread, LoggingOutputChannel, LoggingErr
     L.defaultOptions,
     builtinLibs,
     out,
-    err,
+    out,
     new Map()
   )
-  return [machine, out, err]
+  return [machine, out, out]
 }
 
 describe('basic ops', () => {
@@ -139,7 +138,7 @@ describe('basic ops', () => {
   test('raise', () => {
     const [machine, _out, err] = makeMachine([U.mkDisp([U.mkRaise('test error')])])
     machine.evaluate()
-    expect(err.log.length).toBe(1)
+    expect(err.errLog.length).toBe(1)
   })
 
   // TODO: need a pop test?

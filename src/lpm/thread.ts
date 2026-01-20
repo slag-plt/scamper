@@ -162,15 +162,18 @@ export class Thread {
   /**
    * Checks if the thread is currently processing an expression. If not, it
    * begins processing the given expression.
+   * @param preamble the preamble to use when tracing
    * @param expr the expression to proces next
    */
-  private checkIfProcessingExpr (expr: L.Blk): void {
+  private checkIfProcessingExpr (preamble: string, expr: L.Blk): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
       this.push(`##stmt_{thread.curStmt}##`, this.env, expr)
       if (this.options.isTracing) {
         this.out.pushLevel('trace-block')
-        this.out.send(mkTraceStart(this.raisingProviders.get(this.options.raisingTarget)!.raise(this)))
+        this.out.send(mkTraceStart(
+          preamble,
+          this.raisingProviders.get(this.options.raisingTarget)!.raise(this)))
       }
     }
   }
@@ -232,7 +235,7 @@ export class Thread {
     switch (stmt.tag) {
       // disp case
       case 'disp': {
-        this.checkIfProcessingExpr(stmt.expr)
+        this.checkIfProcessingExpr('Displaying', stmt.expr)
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
@@ -258,7 +261,7 @@ export class Thread {
 
       // define case
       case 'define': {
-        this.checkIfProcessingExpr(stmt.expr)
+        this.checkIfProcessingExpr(`Defining ${stmt.name} as`, stmt.expr)
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
@@ -271,7 +274,7 @@ export class Thread {
 
       // stmtexp case
       case 'stmtexp': {
-        this.checkIfProcessingExpr(stmt.expr)
+        this.checkIfProcessingExpr(`Evaluating`, stmt.expr)
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {

@@ -1,27 +1,11 @@
-import * as Scheme from '../scheme'
+import fs from 'fs'
+import { parseArgs } from 'node:util'
+
 import { builtinLibs, initializeLibs } from '../lib'
 import * as LPM from '../lpm'
-import TextRenderer from '../lpm/renderers/text'
-
+import { ConsoleOutput } from '../lpm/output'
 import { Thread } from '../lpm/thread.js'
-
-import { parseArgs } from 'node:util'
-import fs from 'fs'
-
-class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
-  seenError: boolean = false
-  send (v: LPM.Value): void {
-    console.log(TextRenderer.render(v))
-  }
-
-  report (e: LPM.ScamperError): void {
-    this.seenError = true
-    console.error(TextRenderer.render(e))
-  }
-
-  pushLevel (..._attrs: string[]) { /* nothing to do! */ }
-  popLevel () { /* nothing to do! */}
-}
+import * as Scheme from '../scheme'
 
 ////////////////////////////////////////////////////////////////////////////////
 

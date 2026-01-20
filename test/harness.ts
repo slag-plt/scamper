@@ -1,10 +1,9 @@
 import { expect, test } from 'vitest'
-
 import builtinLibs from '../src/lib'
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 
-export function runProgram (src: string): string[] {
+export function runProgram (src: string, ops: LPM.Options = LPM.defaultOptions): string[] {
     src = src.trim()
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
@@ -14,11 +13,11 @@ export function runProgram (src: string): string[] {
       'test',
       env,
       prog!,
-      LPM.defaultOptions,
+      ops,
       builtinLibs,
       out,
       out,
-      new Map()
+      new Map([['scheme', Scheme.raiser]])
     )
     machine.evaluate()
     return out.log
