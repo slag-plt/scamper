@@ -1,4 +1,4 @@
-import { Thread } from './lang.js'
+import { Thread } from './thread.js'
 
 /**
  * Language services bundle together related functions that allow LPM to work

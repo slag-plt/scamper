@@ -10,7 +10,7 @@ export class LoggingOutputChannel implements OutputChannel {
   constructor () {
     this.log = []
   }
-  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  pushLevel (..._attrs: string[]) { /* nothing to do! */ }
   popLevel () { /* nothing to do! */ }
 
   send (v: Value): void {
@@ -48,6 +48,6 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
     this.log.push(e.toString())
   }
 
-  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  pushLevel (..._attrs: string[]) { /* nothing to do! */ }
   popLevel () { /* nothing to do! */ }
 }

@@ -44,9 +44,9 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
     renderToOutput(this.levels[this.levels.length - 1], err)
   }
 
-  pushLevel (label: string, attrs: string[] = []) {
+  pushLevel (...attrs: string[]) {
     const div = document.createElement('div')
-    div.classList.add(label, ...attrs)
+    div.classList.add(...attrs)
     this.levels[this.levels.length - 1].appendChild(div)
     this.levels.push(div)
   }

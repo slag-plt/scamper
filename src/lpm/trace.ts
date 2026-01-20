@@ -3,6 +3,29 @@ import * as U from './util'
 import HTMLRenderer from './renderers/html.js'
 import TextRenderer from './renderers/text'
 
+export interface TraceStart extends L.Struct {
+  [L.structKind]: 'trace-start'
+  output: L.Value
+}
+
+export function mkTraceStart (output: L.Value): TraceStart {
+  return U.mkStruct('trace-start', ['output'], [output]) as TraceStart
+}
+
+TextRenderer.registerCustomRenderer(
+  (v) => U.isStructKind(v, 'trace-start'),
+  (v) => {
+    return `${TextRenderer.render((v as TraceStart).output)}`
+  })
+
+HTMLRenderer.registerCustomRenderer(
+  (v) => U.isStructKind(v, 'trace-start'),
+  (v) => {
+    // TODO: fix this up!
+    const container = document.createElement('div')
+    return container
+  })
+
 export interface TraceOutput extends L.Struct {
   [L.structKind]: 'trace-output'
   output: L.Value
@@ -21,6 +44,7 @@ TextRenderer.registerCustomRenderer(
 HTMLRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-output'),
   (v) => {
+    // TODO: fix this up!
     const trace = v as TraceOutput
     const container = document.createElement('div')
     container.classList.add('scamper-trace')

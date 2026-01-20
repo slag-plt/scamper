@@ -19,7 +19,7 @@ class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
     console.error(TextRenderer.render(e))
   }
 
-  pushLevel (_label: string, _attrs: string[]) { /* nothing to do! */ }
+  pushLevel (..._attrs: string[]) { /* nothing to do! */ }
   popLevel () { /* nothing to do! */}
 }
 
@@ -59,7 +59,7 @@ const options = LPM.defaultOptions
 options.isTracing = values.trace ?? false
 
 await initializeLibs()
-const thread = new Thread(
+new Thread(
   '##main##',
   Scheme.mkInitialEnv(), 
   program,
@@ -67,13 +67,4 @@ const thread = new Thread(
   builtinLibs,
   out,
   out,
-  new Map([['scheme', Scheme.raiser]]))
-// const machine = new LPM.Machine(builtinLibs, new Map([
-//   ['scheme', Scheme.raiser] 
-// ]), Scheme.mkInitialEnv(), program, out, out, options)
-
-if (options.isTracing) {
-  thread.evaluateWithTrace()
-} else {
-  thread.evaluate()
-}
+  new Map([['scheme', Scheme.raiser]])).evaluate()

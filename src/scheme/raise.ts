@@ -12,7 +12,7 @@ export function valuesToExps (values: LPM.Value[]): A.Exp[] {
   })
 }
 
-export function raiseFrame (values: A.Exp[], ops: LPM.Ops[]): A.Exp { 
+export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Exp { 
   for (let i = ops.length - 1; i >= 0; i--) {
     const op = ops[i]
     switch (op.tag) {
@@ -22,7 +22,16 @@ export function raiseFrame (values: A.Exp[], ops: LPM.Ops[]): A.Exp {
       }
 
       case 'var': {
-        values.push(A.mkVar(op.name))
+        if (env.has(op.name)) {
+          const v = env.get(op.name)!
+          if (LPM.isFunction(v)) {
+            values.push(A.mkVar(op.name))
+          } else {
+            values.push(A.mkLit(env.get(op.name)!))
+          }
+        } else {
+          values.push(A.mkVar(op.name))
+        }
         break
       }
 
@@ -34,7 +43,7 @@ export function raiseFrame (values: A.Exp[], ops: LPM.Ops[]): A.Exp {
       }
 
       case 'cls': {
-        const body = raiseFrame([], op.body)
+        const body = raiseFrame([], env.without(...op.params), op.body.toReversed())
         values.push(A.mkLam(op.params, body))
         break
       }
@@ -50,7 +59,7 @@ export function raiseFrame (values: A.Exp[], ops: LPM.Ops[]): A.Exp {
       case 'match': {
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
-          const bodyExp = raiseFrame([], body)
+          const bodyExp = raiseFrame([], env, body.toReversed())
           return { pat, body: bodyExp }
         })
         values.push(A.mkMatch(scrutinee, matches))
@@ -81,11 +90,11 @@ export function raiseFrames (frames: LPM.Frame[]): A.Exp {
     throw new LPM.ICE('raiseFrames', 'no frames to raise')
   }
   const lastFrame = frames[frames.length - 1]
-  let ret = raiseFrame(valuesToExps(lastFrame.values), lastFrame.ops)
+  let ret = raiseFrame(valuesToExps(lastFrame.values), lastFrame.env, lastFrame.ops)
   for (let i = frames.length - 2; i >= 0; i--) {
     const values = valuesToExps(frames[i].values)
     values.push(ret)
-    ret = raiseFrame(values, frames[i].ops)
+    ret = raiseFrame(values, frames[i].env, frames[i].ops)
   }
   return ret
 }

@@ -14,10 +14,9 @@ export interface OutputChannel {
 
   /**
    * Pushes a new output level to this channel.
-   * @param label the label for this new level
    * @param attrs attributes associated with this level
    */
-  pushLevel: (label: string, attrs: string[]) => void
+  pushLevel: (...attrs: string[]) => void
 
   /**
    * Pops the current output level from this channel.

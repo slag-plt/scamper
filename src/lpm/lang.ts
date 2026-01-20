@@ -46,6 +46,16 @@ export class Env {
     return ret
   }
 
+  without (...names: string[]): Env {
+    const ret = new Env(this.parent?.without(...names))
+    for (const [name, value] of this.bindings) {
+      if (!names.includes(name)) {
+        ret.set(name, value)
+      }
+    }
+    return ret
+  }
+
   pop (): Env {
     return this.parent === undefined ? new Env() : this.parent
   }
@@ -263,7 +273,7 @@ export class Thread {
     const stmt = this.getCurrentStmt()
     switch (stmt.tag) {
       case 'disp': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        this.push(`##stmt_{this.curStmt}##`, this.env, stmt.expr)
         break
       }
       case 'import': {
@@ -271,11 +281,11 @@ export class Thread {
         break
       }
       case 'define': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        this.push(`##stmt_{this.curStmt}##`, this.env, stmt.expr)
         break
       }
       case 'stmtexp': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
+        this.push(`##stmt_{this.curStmt}##`, this.env, stmt.expr)
         break
       }
     }
