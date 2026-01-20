@@ -8,7 +8,7 @@ export function runProgram (src: string, ops: LPM.Options = LPM.defaultOptions):
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)
-    if (out.log.length !== 0) { return out.log }
+    if (out.log.length !== 0) { return out.log as string[] }
     const machine = new LPM.Thread(
       'test',
       env,
@@ -20,7 +20,7 @@ export function runProgram (src: string, ops: LPM.Options = LPM.defaultOptions):
       new Map([['scheme', Scheme.raiser]])
     )
     machine.evaluate()
-    return out.log
+    return out.log as string[]
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
