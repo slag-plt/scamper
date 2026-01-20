@@ -20,7 +20,7 @@ TextRenderer.registerCustomRenderer(
 
 HTMLRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-start'),
-  (v) => {
+  (_v) => {
     // TODO: fix this up!
     const container = document.createElement('div')
     return container

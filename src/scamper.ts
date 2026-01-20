@@ -6,21 +6,23 @@ import builtinLibs from './lib'
 export class Scamper {
   display: HtmlDisplay
   prog: LPM.Prog | undefined
-  machine: LPM.Machine | undefined
+  machine: LPM.Thread | undefined
 
   constructor (target: HTMLElement, src: string) {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
-      this.machine = new LPM.Machine(
-        builtinLibs,
-        new Map([
-          ['scheme', Scheme.raiser]
-        ]),
+      this.machine = new LPM.Thread(
+        '##main##',
         Scheme.mkInitialEnv(),
         this.prog,
+        LPM.defaultOptions,
+        builtinLibs,
         this.display,
         this.display,
+        new Map([
+          ['scheme', Scheme.raiser]
+        ])
       )
     }
   }
