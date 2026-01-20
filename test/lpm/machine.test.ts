@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'vitest'
 import * as L from '../../src/lpm'
 import * as U from '../../src/lpm/util.js'
-import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output.js"
+import { LoggingOutputChannel, LoggingErrorChannel } from "../../src/lpm/output"
 
 // A stub builtin libraries map for testing purposes
 const builtinLibs: Map<string, L.Library> = new Map()
@@ -15,16 +15,18 @@ const env = (() => {
   return ret
 })()
 
-function makeMachine (prog: L.Prog): [L.Machine, LoggingOutputChannel, LoggingErrorChannel] {
+function makeMachine (prog: L.Prog): [L.Thread, LoggingOutputChannel, LoggingErrorChannel] {
   const out = new LoggingOutputChannel()
   const err = new LoggingErrorChannel()
-  const machine = new L.Machine(
-    builtinLibs,
-    new Map(),
+  const machine = new L.Thread(
+    'test',
     env,
-    prog,
+    prog!,
+    L.defaultOptions,
+    builtinLibs,
     out,
-    err
+    err,
+    new Map()
   )
   return [machine, out, err]
 }

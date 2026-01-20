@@ -65,7 +65,7 @@ export class Thread {
   prog: L.Prog
   curStmt: number
   env: L.Env
-  frames: L.Frame[]
+  frames: Frame[]
   results: L.Value[]
   isProcessingExpr: boolean
 
@@ -84,44 +84,6 @@ export class Thread {
     this.frames = []
     this.results = []
     this.isProcessingExpr = false
-  }
-
-  /**
-   * Prepares the thread to execute the next statement, e.g., by pushing an
-   * initial frame onto the stack.
-   */
-  private setupNextStmt(): void {
-    const stmt = this.getCurrentStmt()
-    switch (stmt.tag) {
-      case 'disp': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
-        if (this.options.isTracing) {
-          this.out.pushLevel('trace-block')
-          this.out.send(mkTraceStart(this.raisingProviders.get(this.options.raisingTarget)!.raise(this)))
-        }
-        break
-      }
-      case 'import': {
-        // N.B., no frame setup required
-        break
-      }
-      case 'define': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
-        if (this.options.isTracing) {
-          this.out.pushLevel('trace-block')
-          this.out.send(mkTraceStart(this.raisingProviders.get(this.options.raisingTarget)!.raise(this)))
-        }
-        break
-      }
-      case 'stmtexp': {
-        this.push(`##stmt_{thread.curStmt}##`, this.env, stmt.expr)
-        if (this.options.isTracing) {
-          this.out.pushLevel('trace-block')
-          this.out.send(mkTraceStart(this.raisingProviders.get(this.options.raisingTarget)!.raise(this)))
-        }
-        break
-      }
-    }
   }
 
   /** Advances this thread to the next statement. */
@@ -144,12 +106,12 @@ export class Thread {
     return this.curStmt >= this.prog.length
   }
 
-  getCurrentFrame(): L.Frame {
+  getCurrentFrame(): Frame {
     return this.frames[this.frames.length - 1]
   }
 
   push(name: string, env: L.Env, blk: L.Blk): void {
-    this.frames.push(new L.Frame(name, env, blk))
+    this.frames.push(new Frame(name, env, blk))
   }
 
   pop(): void {
@@ -329,7 +291,7 @@ export class Thread {
     // N.B., LPM has no explicit return instruction; a frame is finished when
     // it runs out of instructions
     const current = this.getCurrentFrame()
-    if (!current.isFinished()) {
+    if (!current || !current.isFinished()) {
       return false
     } else {
       if (current.values.length !== 1) {

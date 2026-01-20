@@ -10,13 +10,15 @@ export function runProgram (src: string): string[] {
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)
     if (out.log.length !== 0) { return out.log }
-    const machine = new LPM.Machine(
-      builtinLibs,
-      new Map(),
+    const machine = new LPM.Thread(
+      'test',
       env,
       prog!,
+      LPM.defaultOptions,
+      builtinLibs,
       out,
-      out
+      out,
+      new Map()
     )
     machine.evaluate()
     return out.log

@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest'
 import { runProgram } from '../harness.js'
-import rex from '../../src/lib/rex.js'
 
 // Adapted froM: https://eikmeier.sites.grinnell.edu/csc-151-fall-2025/readings/regexp.html
 
