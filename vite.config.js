@@ -35,6 +35,7 @@ export default defineConfig({
     environment: 'jsdom',
     coverage: {
       provider: 'v8',
+      reporter: ['lcov']
     },
   },
 })
