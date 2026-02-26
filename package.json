@@ -5,7 +5,7 @@
   "main": "./_build/js/index.js",
   "scripts": {
     "cli": "tsx src/cli/index.ts",
-    "dev": "vite",
+    "dev": "npm run build && vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "deploy": "./scripts/deploy $npm_package_version",
