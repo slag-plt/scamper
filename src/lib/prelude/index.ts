@@ -780,15 +780,15 @@ function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): v
 }
 
 mkCharCompareFn('char=?', (a, b) => a === b)
-mkCharCompareFn('char<?', (a, b) => a.codePointAt(0)! < b.codePointAt(0)!)
-mkCharCompareFn('char>?', (a, b) => a.codePointAt(0)! > b.codePointAt(0)!)
-mkCharCompareFn('char<=?', (a, b) => a.codePointAt(0)! <= b.codePointAt(0)!)
-mkCharCompareFn('char>=?', (a, b) => a.codePointAt(0)! >= b.codePointAt(0)!)
+mkCharCompareFn('char<?', (a, b) => a < b)
+mkCharCompareFn('char>?', (a, b) => a > b)
+mkCharCompareFn('char<=?', (a, b) => a <= b)
+mkCharCompareFn('char>=?', (a, b) => a >= b)
 mkCharCompareFn('char-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
-mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase().codePointAt(0)! < b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase().codePointAt(0)! > b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase().codePointAt(0)! <= b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase().codePointAt(0)! >= b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
+mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
+mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
+mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
 
 function mkCharPredicatePrim (name: string, f: (a: string) => boolean): void {
   const fn = function (x: L.Char) {

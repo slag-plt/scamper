@@ -1,4 +1,6 @@
 import * as L from '../lpm'
+import HTMLRenderer from '../lpm/renderers/html'
+import { mkCodeElement } from '../lpm/renderers/html'
 import TextRenderer from '../lpm/renderers/text.js'
 
 ///// Language Definition //////////////////////////////////////////////////////
@@ -216,6 +218,10 @@ export function progToString (p: Prog): string {
 TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
 TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
 TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
+
+HTMLRenderer.registerCustomRenderer(isPat, (v) => mkCodeElement(patToString(v as Pat)))
+HTMLRenderer.registerCustomRenderer(isExp, (v) => mkCodeElement(expToString(v as Exp)))
+HTMLRenderer.registerCustomRenderer(isStmt, (v) => mkCodeElement(stmtToString(v as Stmt)))
 
 ///// Equality /////////////////////////////////////////////////////////////////
 

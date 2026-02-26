@@ -23,9 +23,14 @@ TextRenderer.registerCustomRenderer(
 
 HTMLRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-start'),
-  (_v) => {
-    // TODO: fix this up!
+  (v) => {
     const container = document.createElement('div')
+    container.classList.add('scamper-trace-start')
+    const t = v as TraceStart
+    container.appendChild(document.createTextNode(`${t.preamble} `))
+    if (t.output) {
+      container.appendChild(HTMLRenderer.render(t.output))
+    }
     return container
   })
 
@@ -47,13 +52,12 @@ TextRenderer.registerCustomRenderer(
 HTMLRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-output'),
   (v) => {
-    // TODO: fix this up!
     const trace = v as TraceOutput
     const container = document.createElement('div')
     container.classList.add('scamper-trace')
 
     const prompt = document.createElement('code')
-    prompt.textContent = '> '
+    prompt.textContent = '--> '
     container.appendChild(prompt)
 
     container.appendChild(HTMLRenderer.render(trace.output))

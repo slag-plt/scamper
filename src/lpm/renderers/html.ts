@@ -3,7 +3,7 @@ import { ICE, ScamperError } from '../error.js'
 import * as R from './index.js'
 import * as U from '../util.js'
 
-function mkCodeElement (text: string): HTMLElement {
+export function mkCodeElement (text: string): HTMLElement {
   const ret = document.createElement('code')
   ret.textContent = text
   ret.tabIndex = 0;

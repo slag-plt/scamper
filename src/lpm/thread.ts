@@ -168,7 +168,7 @@ export class Thread {
   private checkIfProcessingExpr (preamble: string, expr: L.Blk): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
-      this.push(`##stmt_{thread.curStmt}##`, this.env, expr)
+      this.push(`##stmt_${this.curStmt}##`, this.env, expr)
       if (this.options.isTracing) {
         this.out.pushLevel('trace-block')
         this.out.send(mkTraceStart(
@@ -254,6 +254,11 @@ export class Thread {
           for (const [name, value] of lib.lib) {
             this.env.set(name, value)
           }
+        }
+        if (this.options.isTracing) {
+          this.out.pushLevel('trace-block')
+          this.out.send(`Imported library: ${stmt.name}`)
+          this.out.popLevel()
         }
         this.advanceStmt()
         return

@@ -306,6 +306,7 @@ class IDE {
       const params = new URLSearchParams({ filename: this.currentFile, isTree: "true" })
       window.open(`runner.html?${params.toString()}`)
     })
+
     this.toggleStepButtons(false)
   }
 
@@ -440,9 +441,7 @@ class IDE {
   startScamper(isTracing: boolean): void {
     outputPane!.innerHTML = ''
     try {
-      this.scamper = new Scamper(outputPane, this.getDoc())
-      // TODO: reimplement once tracing is back in!
-      isTracing = false
+      this.scamper = new Scamper(outputPane, this.getDoc(), isTracing)
       if (isTracing) {
         this.toggleStepButtons(true)
       } else {

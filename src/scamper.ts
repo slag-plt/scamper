@@ -8,15 +8,17 @@ export class Scamper {
   prog: LPM.Prog | undefined
   machine: LPM.Thread | undefined
 
-  constructor (target: HTMLElement, src: string) {
+  constructor (target: HTMLElement, src: string, isTracing: boolean = false) {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
+      const opts = LPM.defaultOptions
+      opts.isTracing = isTracing
       this.machine = new LPM.Thread(
         '##main##',
         Scheme.mkInitialEnv(),
         this.prog,
-        LPM.defaultOptions,
+        opts,
         builtinLibs,
         this.display,
         this.display,
@@ -47,9 +49,11 @@ export class Scamper {
   }
 
   stepProgram () {
-    // TOOD: need to reimplement this!
-    // this.sem.step()
+    if (this.machine) {
+      this.machine.step()
+    }
   }
+
   stepStmtProgram () {
     // TODO: need to reimplement this!
     // this.sem.stepToNextStmt()
