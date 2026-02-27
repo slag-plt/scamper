@@ -52,6 +52,9 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
   }
 
   popLevel () {
+    if (this.levels.length === 1) {
+      throw new Error('Cannot pop the root level')
+    }
     this.levels.pop()
   }
 }
