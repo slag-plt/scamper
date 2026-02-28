@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@testing-library/jest-dom/vitest"]
+  },
+  "include": ["./**/*", "./setup.ts"],
+  "exclude": []
+}
