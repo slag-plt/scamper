@@ -1,9 +1,10 @@
-import { ICE, ScamperError } from './error.js'
+import {ICE, ScamperError} from './error.js'
 import * as L from './lang.js'
 import { OutputChannel, ErrorChannel } from './output/index.js'
 import { Raiser } from './raiser.js'
 import { mkTraceStart, mkTraceOutput } from './trace.js'
 import * as U from './util.js'
+import {SimpleErrorChannel} from "./output/simple-error";
 
 /** The type of runtime options. */
 export type Options = {
@@ -153,8 +154,14 @@ export class Thread {
     const newOpts = cloneOptions(this.options)
     newOpts.isTracing = false
     newOpts.stepMatch = false
-    const subthread = new Thread(name, env, prog, newOpts, this.builtinLibs, this.out, this.err, this.raisingProviders)
-    return subthread.evaluate()
+    const errChannel = new SimpleErrorChannel()
+    const subthread = new Thread(name, env, prog, newOpts, this.builtinLibs, this.out, errChannel, this.raisingProviders)
+    const result = subthread.evaluate()
+    const errs = errChannel.errors;
+    if (errs.length > 0) {
+      throw errChannel.getSubthreadErrors()
+    }
+    return result
   }
 
   ///// Stepping ///////////////////////////////////////////////////////////////

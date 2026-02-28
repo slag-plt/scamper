@@ -3,6 +3,7 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html'
 import OPFSFileSystem from '../../web/fs.js'
+import {SubthreadErrors} from "../../lpm";
 
 let fs: OPFSFileSystem | null = null
 
@@ -50,7 +51,13 @@ function renderReactiveFile (v: any): HTMLElement {
           const v = L.callScamperFn(rf.callback, data)
           ret.appendChild(HTMLRenderer.render(v))
         } catch (e) {
-          ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
+          if (e instanceof SubthreadErrors) {
+            for (const err of e.errors) {
+              ret.appendChild(HTMLRenderer.render(err))
+            }
+          } else {
+            ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
+          }
         }
       })
     }
