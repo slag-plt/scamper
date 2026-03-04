@@ -52,44 +52,44 @@ import TextRenderer from '../lpm/renderers/text.js'
 
 ///// Patterns /////
 
-export type PWild = { tag: 'pwild', range: L.Range }
-export type PVar  = { tag: 'pvar', name: string, range: L.Range }
-export type PLit  = { tag: 'plit', value: L.Value, range: L.Range }
-export type PCtor = { tag: 'pctor', name: string, args: Pat[], range: L.Range }
+export interface PWild { tag: 'pwild', range: L.Range }
+export interface PVar { tag: 'pvar', name: string, range: L.Range }
+export interface PLit { tag: 'plit', value: L.Value, range: L.Range }
+export interface PCtor { tag: 'pctor', name: string, args: Pat[], range: L.Range }
 export type Pat = PWild | PVar | PLit | PCtor
 
 ///// Expressions /////
 
 // Core Forms
-export type Lit   = { tag: 'lit', value: L.Value, range: L.Range }
-export type Var   = { tag: 'var', name: string, range: L.Range }
-export type App   = { tag: 'app', head: Exp, args: Exp[], range: L.Range }
-export type Lam   = { tag: 'lam', params: string[], body: Exp, range: L.Range }
-export type Let   = { tag: 'let', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
-export type Begin = { tag: 'begin', exps: Exp[], range: L.Range }
-export type If    = { tag: 'if', guard: Exp, ifB: Exp, elseB: Exp, range: L.Range }
-export type Match = { tag: 'match', scrutinee: Exp, branches: { pat: Pat, body: Exp }[], range: L.Range }
-export type Quote = { tag: 'quote', value: L.Value, range: L.Range }
+export interface Lit { tag: 'lit', value: L.Value, range: L.Range }
+export interface Var { tag: 'var', name: string, range: L.Range }
+export interface App { tag: 'app', head: Exp, args: Exp[], range: L.Range }
+export interface Lam { tag: 'lam', params: string[], body: Exp, range: L.Range }
+export interface Let { tag: 'let', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
+export interface Begin { tag: 'begin', exps: Exp[], range: L.Range }
+export interface If { tag: 'if', guard: Exp, ifB: Exp, elseB: Exp, range: L.Range }
+export interface Match { tag: 'match', scrutinee: Exp, branches: { pat: Pat, body: Exp }[], range: L.Range }
+export interface Quote { tag: 'quote', value: L.Value, range: L.Range }
 
 // Sugared Forms
-export type LetS  = { tag: 'let*', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
-export type And   = { tag: 'and', exps: Exp[], range: L.Range }
-export type Or    = { tag: 'or', exps: Exp[], range: L.Range }
-export type Cond  = { tag: 'cond', branches: { test: Exp, body: Exp }[], range: L.Range }
-export type Section = { tag: 'section', exps: Exp[], range: L.Range }
+export interface LetS { tag: 'let*', bindings: { name: string, value: Exp }[], body: Exp, range: L.Range }
+export interface And { tag: 'and', exps: Exp[], range: L.Range }
+export interface Or { tag: 'or', exps: Exp[], range: L.Range }
+export interface Cond { tag: 'cond', branches: { test: Exp, body: Exp }[], range: L.Range }
+export interface Section { tag: 'section', exps: Exp[], range: L.Range }
 
 export type Exp = Lit | Var | App | Lam | Let | Begin | If | Match | Quote | LetS | And | Or | Cond | Section
 
 ///// Statements /////
 
 // Core Forms
-export type Import  = { tag: 'import', module: string, range: L.Range }
-export type Define  = { tag: 'define', name: string, value: Exp, range: L.Range }
-export type Disp    = { tag: 'display', value: Exp, range: L.Range }
-export type StmtExp = { tag: 'stmtexp', expr: Exp, range: L.Range }
+export interface Import { tag: 'import', module: string, range: L.Range }
+export interface Define { tag: 'define', name: string, value: Exp, range: L.Range }
+export interface Disp { tag: 'display', value: Exp, range: L.Range }
+export interface StmtExp { tag: 'stmtexp', expr: Exp, range: L.Range }
 
 // Sugared Forms
-export type Struct  = { tag: 'struct', name: string, fields: string[], range: L.Range }
+export interface Struct { tag: 'struct', name: string, fields: string[], range: L.Range }
 
 export type Stmt = Import | Define | Disp | StmtExp | Struct
 
@@ -212,7 +212,7 @@ export function stmtToString (s: Stmt): string {
 }
 
 export function progToString (p: Prog): string {
-  return `${p.map(stmtToString).join('\n')}`
+  return p.map(stmtToString).join('\n')
 }
 
 TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))

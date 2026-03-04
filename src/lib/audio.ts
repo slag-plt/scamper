@@ -21,7 +21,7 @@ interface SampleNode extends L.Struct { [L.structKind]: 'sample', data: Float32A
 function sampleNode (data: number[]): SampleNode {
   checkContract(arguments, contract('sample-node', [C.vector]))
   for (let i = 0; i < data.length; i++) {
-    if (typeof data[i] !== 'number' || data[i] as number < -1.0 || data[i] as number > 1.0) {
+    if (typeof data[i] !== 'number' || data[i] < -1.0 || data[i] > 1.0) {
       throw new L.ScamperError('Runtime', `expected a list of numbers between -1.0 and 1.0, received ${data[i]}`)
     }
   }
@@ -54,7 +54,7 @@ function audioPipeline (ctx: AudioContext, pipeline: AudioNode, ...nodes: AudioN
   }
   const onOffNode = new GainNode(ctx);
   if (nodes.length > 0) {
-    (nodes[nodes.length - 1] as AudioNode).connect(onOffNode)
+    (nodes[nodes.length - 1]).connect(onOffNode)
   } else {
     pipeline.connect(onOffNode)
   }
@@ -122,7 +122,7 @@ export default Audio
 ///// Audio Rendering //////////////////////////////////////////////////////////
 
 function drawOscilloscope (data: Uint8Array, canvas: HTMLCanvasElement, analyser: AnalyserNode) {
-  requestAnimationFrame(() => drawOscilloscope(data, canvas, analyser))
+  requestAnimationFrame(() => { drawOscilloscope(data, canvas, analyser); })
 
   const bufferLength = analyser.frequencyBinCount
   analyser.getByteTimeDomainData(data as any)
@@ -168,7 +168,7 @@ export function sampleRenderer (sample: SampleNode): HTMLElement {
   const dataArray = new Uint8Array(bufferLength)
   analyser.getByteTimeDomainData(dataArray)
   
-  const data = sample.data as Float32Array
+  const data = sample.data
   // N.B., for now, make the audio sample stereo (2 channels)
   const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
   buffer.copyToChannel(data as any, 0)

@@ -8,7 +8,7 @@ import {SimpleErrorChannel} from "./output/simple-error";
 import {Range} from "./range";
 
 /** The type of runtime options. */
-export type Options = {
+export interface Options {
   maxCallStackDepth: number
   stepMatch: boolean
   isTracing: boolean
@@ -135,7 +135,7 @@ export class Thread {
     if (this.options.isTracing && this.isProcessingExpr) {
       const provider = this.raisingProviders.get(this.options.raisingTarget)!
       if (this.frames.length > 0) {
-        this.out.send(mkTraceOutput(provider.raise(this)!))
+        this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
       }
@@ -307,7 +307,7 @@ export class Thread {
     // N.B., LPM has no explicit return instruction; a frame is finished when
     // it runs out of instructions
     const current = this.getCurrentFrame()
-    if (!current || !current.isFinished()) {
+    if (!current?.isFinished()) {
       return false
     } else {
       if (current.values.length !== 1) {
@@ -364,7 +364,7 @@ export class Thread {
           if (!current.env.has(instr.name)) {
             this.reportAndUnwind(new ScamperError('Runtime', `Variable not found: ${instr.name}`))
           } else {
-            current.values.push(current.env.get(instr.name)!)
+            current.values.push(current.env.get(instr.name))
           }
           break
         }
@@ -385,7 +385,7 @@ export class Thread {
             (...args: L.Value[]): L.Value => {
               return this.evaluateSubthread(
                 instr.name ?? '##anonymous##',
-                current.env.extend(...instr.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
+                current.env.extend(...instr.params.map((p, i) => [p, args[i]])),
                 [U.mkStmtExp(instr.body, instr.range)]
               )
             }))
@@ -423,12 +423,12 @@ export class Thread {
               // N.B., if this thread is finished, then tail-call optimize by
               // overwriting the current frame instead of pushing a new one.
               current.name = fn.name ?? '##anonymous##'
-              current.env = fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][])
+              current.env = fn.env.extend(...fn.params.map((p, i) => [p, args[i]]))
               current.pushBlk(fn.code)
             } else {
               this.push(
                 fn.name ?? '##anonymous##',
-                fn.env.extend(...fn.params.map((p, i) => [p, args[i]]) as [string, L.Value][]),
+                fn.env.extend(...fn.params.map((p, i) => [p, args[i]])),
                 fn.code
               )
             }

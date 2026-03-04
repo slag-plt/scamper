@@ -12,7 +12,7 @@ import Rex from './rex.js'
 import Prelude from './prelude/index.js'
 import Runtime from './runtime.js'
 
-export const builtinLibs: Map<string, Library> = new Map([
+export const builtinLibs = new Map<string, Library>([
   ['image', imageLib],
   ['lab', Lab],
   ['music', Music],

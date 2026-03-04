@@ -30,7 +30,7 @@ function lowerExpr (e: A.Exp): L.Blk {
       // This behavior _really_ makes me want to embrace Clojure-style Scheme more and more
       // where let telescopes by default, i.e., is let*. But we support traditional Scheme
       // behavior for now.
-      let bindings = e.bindings.flatMap((b) => lowerExpr(b.value))
+      const bindings = e.bindings.flatMap((b) => lowerExpr(b.value))
 
       let ret = lowerExpr(e.body)
       // We must ensure that the inner-most match corresponds to the _first_ binding since
@@ -65,7 +65,7 @@ function lowerExpr (e: A.Exp): L.Blk {
 
 }
 
-function lowerStmt (s: A.Stmt, displayStmtExpr: boolean = true): L.Stmt {
+function lowerStmt (s: A.Stmt, displayStmtExpr = true): L.Stmt {
   switch (s.tag) {
     case 'import': return L.mkImport(s.module, s.range)
     case 'define': return L.mkDefine(s.name, lowerExpr(s.value), s.range)
@@ -77,6 +77,6 @@ function lowerStmt (s: A.Stmt, displayStmtExpr: boolean = true): L.Stmt {
   }
 }
 
-export function lowerProgram (prog: A.Prog, displayStmtExpr: boolean = true): L.Prog {
+export function lowerProgram (prog: A.Prog, displayStmtExpr = true): L.Prog {
   return prog.map((s) => lowerStmt(s, displayStmtExpr))
 }

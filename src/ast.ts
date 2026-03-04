@@ -6,10 +6,10 @@ import {EditorSelection} from "@codemirror/state";
 
 class SyntaxNode {
     syntax: S.Syntax
-    value: string = ''
-    name: string = ''
+    value = ''
+    name = ''
     parentname: string | null = null;
-    simplename: string = '';
+    simplename = '';
     index: number | null = null;
     children: SyntaxNode[] = [];
     parent: SyntaxNode | null = null;
@@ -18,7 +18,7 @@ class SyntaxNode {
         this.syntax = syntax; 
         this.parentname = parent;
         this.index = index;
-        let v: LPM.Value = this.syntax.value;
+        const v: LPM.Value = this.syntax.value;
 
         switch (typeof v) {
             case 'boolean':
@@ -54,7 +54,7 @@ class SyntaxNode {
                     );
                       first.parent = this;
                       this.children.push(first);
-                      let i: number = 1;
+                      let i = 1;
                     while (LPM.isPair(tail)) {
                         const child = new SyntaxNode(
                             S.mkSyntax((tail.fst as S.Syntax).value, (tail.fst as S.Syntax).range),
@@ -83,8 +83,8 @@ class SyntaxNode {
                         this.name = "the square bracket array in argument "+this.index+" of "+this.parentname;
                     }
 
-                    let i: number = 0;
-                    for (let c of (v as LPM.Vector)) {
+                    let i = 0;
+                    for (const c of (v as LPM.Vector)) {
                         const child = new SyntaxNode(S.mkSyntax((c as S.Syntax).value, (c as S.Syntax).range), this.name, i);
                         child.parent = this;
                         this.children.push(child);
@@ -121,10 +121,10 @@ class SyntaxNode {
         //this.value += " " + this.syntax.range;
     }
 
-    toString(indent: string = ""): string {
+    toString(indent = ""): string {
         let ret: string = indent+this.value;
 
-        for (let c of this.children) {
+        for (const c of this.children) {
             ret += "\n" + c.toString(indent+"  ");
         }
 
@@ -135,12 +135,12 @@ class SyntaxNode {
 export class AST {
     syntax: S.Syntax[]
     nodes: SyntaxNode[] = [];
-    labelMap: Map<SyntaxNode, HTMLButtonElement> = new Map()
+    labelMap = new Map<SyntaxNode, HTMLButtonElement>()
 
     constructor(syntax: S.Syntax[]) {
         this.syntax = syntax;
 
-        for (let s of this.syntax) {
+        for (const s of this.syntax) {
             this.nodes.push(new SyntaxNode(s));
         }
     }
@@ -150,8 +150,8 @@ export class AST {
         level: number,
         isLast: boolean,
         editor: EditorView,
-        indexInParent: number = 0,
-        totalSiblings: number = 1,
+        indexInParent = 0,
+        totalSiblings = 1,
       ): HTMLElement {
         node.index = indexInParent;
         const div = document.createElement('div');
@@ -292,22 +292,22 @@ export class AST {
     describe() : string {
         if (this.nodes.length === 0) {return "The source file is empty!";}
 
-        let queue: SyntaxNode[] = [];
+        const queue: SyntaxNode[] = [];
 
-        let ret: string = ""
-        for (let c of this.nodes) {
+        let ret = ""
+        for (const c of this.nodes) {
             ret += "The source file contains "+c.name + ". ";
             if (c.children.length !== 0) {
                 queue.push(c);
             }
 
             while (queue.length > 0) {
-                let parent = queue.shift();
+                const parent = queue.shift();
                 if (parent === undefined) {
                     break;
                 }
                 ret += parent.name + " contains: ";
-                for (let c of parent.children) {
+                for (const c of parent.children) {
                     ret += c.simplename + ", ";
                     if (c.children.length !== 0) {
                         queue.push(c);

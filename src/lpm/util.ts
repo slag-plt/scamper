@@ -10,7 +10,7 @@ export const isString = (v: L.Value): v is string => typeof v === 'string'
 export const isSymName = (v: L.Value, name: string): boolean => isSym(v) && v.value === name
 export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
-export const isArray = (v: L.Value): v is Array<L.Value> => Array.isArray(v)
+export const isArray = (v: L.Value): v is L.Value[] => Array.isArray(v)
 export const isTaggedObject = (v: L.Value): v is L.TaggedObject =>
   v !== null && typeof v === 'object' && v.hasOwnProperty(L.scamperTag)
 export const isJsFunction = (v: L.Value): v is Function => typeof v === 'function'
@@ -136,7 +136,7 @@ export function listToVector (l: L.List): L.Value[] {
   let cur = l
   while (cur !== null) {
     ret.push(cur.head)
-    cur = cur.tail as L.List
+    cur = cur.tail
   }
   return ret
 }
@@ -263,7 +263,7 @@ export function toString (v: L.Value): string {
       } else if (isChar(v)) {
         return `#\\${charToName(v.value)}`
       } else if (isList(v)) {
-        return `(list ${listToVector(v)!.map(toString).join(' ')})`
+        return `(list ${listToVector(v).map(toString).join(' ')})`
       } else if (isPair(v)) {
         return `(pair ${toString(v.fst)} ${toString(v.snd)})`
       } else if (v instanceof HTMLElement) {

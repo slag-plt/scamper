@@ -14,7 +14,7 @@ Html.registerValue('text-area', textArea)
 
 function textAreaGet (textArea: HTMLTextAreaElement): string {
   checkContract(arguments, contract('text-area-get', [C.any]))
-  return textArea.textContent!
+  return textArea.textContent
 }
 Html.registerValue('text-area-get', textAreaGet)
 
@@ -38,7 +38,7 @@ function tag (name: string, ...children: L.Value[]): HTMLElement {
   checkContract(arguments, contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
   if (children.length > 0 && L.isList(children[0])) {
-    const attrs = L.listToVector(children[0] as L.List)
+    const attrs = L.listToVector(children[0])
     for (const attr of attrs) {
       if (L.isPair(attr)) {
         const pair = attr
@@ -47,7 +47,7 @@ function tag (name: string, ...children: L.Value[]): HTMLElement {
         } else if (!L.isString(pair.snd)) {
           throw new L.ScamperError('Runtime', `attribute value must be a string: ${L.toString(pair.snd)}`)
         } else {
-          elt.setAttribute(pair.fst as string, pair.snd as string)
+          elt.setAttribute(pair.fst, pair.snd)
         }
       }
     }

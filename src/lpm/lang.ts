@@ -196,27 +196,27 @@ export type List = null | Cons
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit    = { tag: 'lit', value: Value, range: Range }
-export type Var    = { tag: 'var', name: string, range: Range }
-export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range }
-export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
-export type Ap     = { tag: 'ap', numArgs: number, range: Range }
-export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range }
-export type Raise  = { tag: 'raise', msg: string, range: Range }
-export type PopS   = { tag: 'pops' }
-export type PopV   = { tag: 'popv' }
+export interface Lit { tag: 'lit', value: Value, range: Range }
+export interface Var { tag: 'var', name: string, range: Range }
+export interface Ctor { tag: 'ctor', name: string, fields: string[], range: Range }
+export interface Cls { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
+export interface Ap { tag: 'ap', numArgs: number, range: Range }
+export interface Match { tag: 'match', branches: [Pat, Blk][], range: Range }
+export interface Raise { tag: 'raise', msg: string, range: Range }
+export interface PopS { tag: 'pops' }
+export interface PopV { tag: 'popv' }
 export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
 export type Blk    = Ops[]
 
-export type Disp    = { tag: 'disp', expr: Blk, range: Range }
-export type Import  = { tag: 'import', name: string, range: Range }
-export type Define  = { tag: 'define', name: string, expr: Blk, range: Range }
-export type StmtExp = { tag: 'stmtexp', expr: Blk, range: Range }
+export interface Disp { tag: 'disp', expr: Blk, range: Range }
+export interface Import { tag: 'import', name: string, range: Range }
+export interface Define { tag: 'define', name: string, expr: Blk, range: Range }
+export interface StmtExp { tag: 'stmtexp', expr: Blk, range: Range }
 export type Stmt    = Disp | Import | Define | StmtExp
 export type Prog    = Stmt[]
 
-export type PWild  = { tag: 'pwild', range: Range }
-export type PLit   = { tag: 'plit', value: Value, range: Range }
-export type PVar   = { tag: 'pvar', name: string, range: Range }
-export type PCtor  = { tag: 'pctor', name: string, args: Pat[], range: Range }
+export interface PWild { tag: 'pwild', range: Range }
+export interface PLit { tag: 'plit', value: Value, range: Range }
+export interface PVar { tag: 'pvar', name: string, range: Range }
+export interface PCtor { tag: 'pctor', name: string, args: Pat[], range: Range }
 export type Pat    = PWild | PLit | PVar | PCtor
