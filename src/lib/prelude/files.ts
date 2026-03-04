@@ -3,7 +3,7 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html'
 import OPFSFileSystem from '../../web/fs.js'
-import {SubthreadErrors} from "../../lpm";
+import { SubthreadErrors } from "../../lpm";
 
 let fs: OPFSFileSystem | null = null
 
