@@ -1,10 +1,11 @@
-import {ICE, ScamperError} from './error.js'
+import {ICE, ScamperError, SubthreadErrors} from './error.js'
 import * as L from './lang.js'
 import { OutputChannel, ErrorChannel } from './output/index.js'
 import { Raiser } from './raiser.js'
 import { mkTraceStart, mkTraceOutput } from './trace.js'
 import * as U from './util.js'
 import {SimpleErrorChannel} from "./output/simple-error";
+import {Range} from "./range";
 
 /** The type of runtime options. */
 export type Options = {
@@ -323,6 +324,26 @@ export class Thread {
     }
   }
 
+  private addressFunctionError(e: unknown, apRange: Range, fnName?: string) {
+    if (e instanceof SubthreadErrors) {
+      for (const err of e.errors) {
+        this.addressFunctionError(err, apRange, fnName);
+      }
+      return;
+    }
+
+    const source = fnName ?? '##anonymous##';
+    if (e instanceof ScamperError) {
+      // N.B., annotate the error from the runtime with additional info
+      e.source = source
+      e.range = apRange
+      this.reportAndUnwind(e)
+      return;
+    }
+    this.reportAndUnwind(
+        new ScamperError('Runtime', `Error applying function: ${e}`, undefined, apRange, source))
+  }
+
   private stepFrame(): void {
     const current = this.getCurrentFrame()
     // N.B., continue stepping until a "major" step occurs where the program
@@ -390,15 +411,7 @@ export class Thread {
             try {
               result = fn(...args)
             } catch (e) {
-              if (e instanceof ScamperError) {
-                // N.B., annotate the error from the runtime with additional info
-                e.source = fn.name ?? '##anonymous##'
-                e.range = instr.range
-                this.reportAndUnwind(e)
-              } else {
-                this.reportAndUnwind(
-                  new ScamperError('Runtime', `Error applying function: ${e}`, undefined, instr.range, fn.name ?? '##anonymous##'))
-              }
+              this.addressFunctionError(e, instr.range, fn.name);
             }
             current.values.push(result)
           } else if (U.isClosure(fn)) {
