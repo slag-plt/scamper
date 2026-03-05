@@ -10,7 +10,7 @@ export class Doc {
    * @param args An array of ArgDoc descriptors for each argument of the function.
    * @param desc A prose description of the behavior of the function.
    */
-  // eslint-disable-next-line no-useless-constructor
+   
   constructor (public name: string,
                public returnType: string, 
                public args: ArgDoc[],

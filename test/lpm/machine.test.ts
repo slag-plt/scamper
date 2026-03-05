@@ -4,7 +4,7 @@ import * as U from '../../src/lpm/util.js'
 import { LoggingChannel } from "../../src/lpm/output"
 
 // A stub builtin libraries map for testing purposes
-const builtinLibs: Map<string, L.Library> = new Map()
+const builtinLibs = new Map<string, L.Library>()
 
 const env = (() => {
   const ret = new L.Env()
@@ -20,7 +20,7 @@ function makeMachine (prog: L.Prog): [L.Thread, LoggingChannel, LoggingChannel] 
   const machine = new L.Thread(
     'test',
     env,
-    prog!,
+    prog,
     L.defaultOptions,
     builtinLibs,
     out,
@@ -46,7 +46,7 @@ describe('basic ops', () => {
   test('ctor', () => {
     const [machine, out, _] = makeMachine([U.mkDisp([U.mkLit('test'), U.mkLit(2), U.mkCtor('test-ctor', ['a', 'b'])])])
     machine.evaluate()
-    const result = out.log[0] as L.Value
+    const result = out.log[0]
     expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
   })
 
@@ -58,7 +58,7 @@ describe('basic ops', () => {
       U.mkAp(1)])
     ])
     machine.evaluate()
-    const result = out.log[0] as L.Value
+    const result = out.log[0]
     expect(result).toBe(2)
   })
 

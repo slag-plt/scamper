@@ -39,7 +39,7 @@ function makeScamperLinter (_outputId: HTMLElement) {
         addError(e, diagnostics)
       }
     }
-    errors.forEach((e) => addError(e, diagnostics))
+    errors.forEach((e) => { addError(e, diagnostics); })
     // TODO: should also fix diagnostics going to some window in the UI
     return diagnostics
   })

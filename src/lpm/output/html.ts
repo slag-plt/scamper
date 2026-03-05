@@ -26,7 +26,7 @@ export function renderToOutput(output: HTMLElement, v: any) {
   const div = document.createElement('div')
   div.classList.add('scamper-output')
   div.appendChild(HtmlRenderer.render(v))
-  output!.appendChild(div)
+  output.appendChild(div)
 }
 
 export class HTMLDisplay implements OutputChannel, ErrorChannel {

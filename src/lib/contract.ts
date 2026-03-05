@@ -100,14 +100,14 @@ export const pairof = (spec1: Spec, spec2: Spec) => ({
     if (!L.isPair(v)) {
       return false
     }
-    const p = v as L.Pair
+    const p = v
     return spec1.predicate(p.fst) && spec2.predicate(p.snd)
   },
   errorMsg: (actual: any) => {
     if (!L.isPair(actual)) {
       return `expected a pair, received ${L.typeOf(actual)}`
     }
-    const p = actual as L.Pair
+    const p = actual
     if (!spec1.predicate(p.fst)) {
       return spec1.errorMsg(p.fst)
     }
@@ -168,7 +168,7 @@ export const html = ({
   errorMsg: (actual: any) => `expected an HTML element, received ${L.typeOf(actual)}`
 })
 
-export type Contract = { funcName: string, params: Spec[], varargs?: Spec }
+export interface Contract { funcName: string, params: Spec[], varargs?: Spec }
 export const contract = (funcName: string, params: Spec[], varargs?: Spec): Contract => ({ funcName, params, varargs })
 
 export function checkContract (args: IArguments, contract: Contract): void {

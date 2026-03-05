@@ -26,7 +26,7 @@ class Runner {
     }
 
     const src = await fs.loadFile(filename)
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     try {
       if (runTree) {
         new Scamper(outputPane, src).runnerTree()

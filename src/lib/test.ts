@@ -77,7 +77,7 @@ TextRenderer.registerCustomRenderer(isResult, (v: any) => {
     case 'exp':
       return `Test "${result.desc}"\n❌ Failed! Expected ${TextRenderer.render(result.expected)}, received ${TextRenderer.render(result.actual)}`
     case 'exn':
-      return `Test "${result.desc}"\n❌ Failed! Exception thrown: ${TextRenderer.render(result.exn as L.Value)}`
+      return `Test "${result.desc}"\n❌ Failed! Exception thrown: ${TextRenderer.render(result.exn)}`
     case 'gen':
       return `Test "${result.desc}"\n❌ Failed! ${result.reason}`
   }
@@ -111,7 +111,7 @@ HtmlRenderer.registerCustomRenderer(isResult, (v: any) => {
       ret.appendChild(document.createElement('hr'))
       const reason = document.createElement('span')
       reason.appendChild(document.createTextNode('Test case threw an exception: '))
-      reason.appendChild(HtmlRenderer.render(result.exn as L.Value))
+      reason.appendChild(HtmlRenderer.render(result.exn))
       ret.appendChild(reason)
       break
     }

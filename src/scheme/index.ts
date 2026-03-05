@@ -28,7 +28,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   let errors: L.ScamperError[] = []
   let program = parseProgram(errors, sexps)
   if (errors.length > 0) {
-    errors.forEach((e) => err.report(e))
+    errors.forEach((e) => { err.report(e); })
     return undefined
   }
 
@@ -39,7 +39,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   errors = []
   scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
-    errors.forEach((e) => err.report(e))
+    errors.forEach((e) => { err.report(e); })
     return undefined
   }
 

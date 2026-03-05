@@ -8,7 +8,7 @@ export class Scamper {
   prog: LPM.Prog | undefined
   machine: LPM.Thread | undefined
 
-  constructor (target: HTMLElement, src: string, isTracing: boolean = false) {
+  constructor (target: HTMLElement, src: string, isTracing = false) {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {

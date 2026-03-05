@@ -120,7 +120,7 @@ function rgbDistance (rgba1: Rgb, rgba2: Rgb): number {
 
 /***** Color Names ************************************************************/
 
-const namedCssColors: Map<string, Rgb> = new Map([
+const namedCssColors = new Map<string, Rgb>([
   ['aliceblue', rgb(240, 248, 255)],
   ['antiquewhite', rgb(250, 235, 215)],
   ['aqua', rgb(0, 255, 255)],

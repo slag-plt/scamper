@@ -55,7 +55,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.isDirty = true
     this.finished = false
 
-    var blob = this
+    const blob = this
     function doFrame(_time: number) {
       blob.draw()
       if (!blob.finished) {
@@ -101,7 +101,7 @@ function reactiveCanvas<T> (
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLCanvasElement {
   checkContract(arguments, contract('reactive-canvas', [C.nonneg, C.nonneg, C.any, C.func, C.func], C.struct('subscription')))
-  var react = new ReactiveCanvas(width, height, init, view, update)
+  const react = new ReactiveCanvas(width, height, init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   return react.getElement() as HTMLCanvasElement
 }
@@ -159,7 +159,7 @@ function reactiveContainer<T>(
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLDivElement {
   checkContract(arguments, contract('reactive-container', [C.any, C.func, C.func], C.struct('subscription')))
-  var react = new ReactiveContainer(init, view, update)
+  const react = new ReactiveContainer(init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   react.draw()
   return react.getElement() as HTMLDivElement
