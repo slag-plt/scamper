@@ -358,7 +358,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
     case 'overlay': {
       return drawing.drawings.reverse().flatMap((d) => {
         return getDrawingPoints(d)
-          .map(([x, y]) => [
+          .map(([x, y]): [number, number] => [
             drawing.xAlign === 'left'
             ? x
             : drawing.xAlign === 'right'

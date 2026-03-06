@@ -385,7 +385,7 @@ export class Thread {
             (...args: L.Value[]): L.Value => {
               return this.evaluateSubthread(
                 instr.name ?? '##anonymous##',
-                current.env.extend(...instr.params.map((p, i) => [p, args[i]])),
+                  current.env.extend(...instr.params.map((p, i): [string, L.Value] => [p, args[i]])),
                 [U.mkStmtExp(instr.body, instr.range)]
               )
             }))
@@ -423,12 +423,12 @@ export class Thread {
               // N.B., if this thread is finished, then tail-call optimize by
               // overwriting the current frame instead of pushing a new one.
               current.name = fn.name ?? '##anonymous##'
-              current.env = fn.env.extend(...fn.params.map((p, i) => [p, args[i]]))
+              current.env = fn.env.extend(...fn.params.map((p, i): [string, L.Value] => [p, args[i]]))
               current.pushBlk(fn.code)
             } else {
               this.push(
                 fn.name ?? '##anonymous##',
-                fn.env.extend(...fn.params.map((p, i) => [p, args[i]])),
+                fn.env.extend(...fn.params.map((p, i): [string, L.Value] => [p, args[i]])),
                 fn.code
               )
             }
