@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import { lib as filesLib } from './files.js'
+import {SubthreadErrors} from "../../lpm";
 
 export const Prelude: L.Library = new L.Library()
 
@@ -1425,6 +1426,14 @@ function withHandler (handler: L.Closure | Function, fn: L.Closure | Function, .
   try {
     return L.callScamperFn(fn, ...args)
   } catch (e) {
+    // TODO: subthreads could theoretically throw multiple errors, don't know how we will address that
+    if (e instanceof SubthreadErrors && e.errors.length == 1) {
+      return L.callScamperFn(handler, e.errors[0].message)
+    }
+    if (e instanceof L.ScamperError) {
+      return L.callScamperFn(handler, e.message)
+    }
+    // shouldn't happen, but if it's not a ScamperError, just try to cast and see what happens.
     return L.callScamperFn(handler, (e as L.ScamperError).message)
   }
 }

@@ -1654,8 +1654,7 @@ test('with-handler', () => {
 
 `)).toEqual([
   '6',
-  'Runtime error [8:19-8:44]: (error) oh no, an error!',
-  'void'
+  '"This is the error that was generated: oh no, an error!"'
 ])
 })
 
