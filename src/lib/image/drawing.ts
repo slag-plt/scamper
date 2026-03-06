@@ -850,8 +850,11 @@ function clearDrawing (canvas: HTMLCanvasElement) {
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
+// TODO: aria labels should be in a central location
+export const canvasAriaLabel = 'scamper-canvas';
 function renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
+  canvas.setAttribute('aria-label', canvasAriaLabel);
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
   clearDrawing(canvas)

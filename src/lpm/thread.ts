@@ -258,7 +258,7 @@ export class Thread {
         if (this.options.isTracing) {
           this.out.pushLevel('trace-block')
           this.out.send(`Imported library: ${stmt.name}`)
-          this.out.popLevel()
+          // we don't pop here because advanceStmt pops for us
         }
         this.advanceStmt()
         return
