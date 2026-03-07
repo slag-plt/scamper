@@ -1,9 +1,18 @@
-import { expect, test } from "vitest"
+import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { runProgram } from "../harness.js"
 import { cloneOptions, defaultOptions } from "../../src/lpm/index.js"
 
 const opts = cloneOptions(defaultOptions)
 opts.isTracing = true
+
+beforeEach(() => {
+  vi.stubGlobal("window", {
+    AudioContext: vi.fn(),
+  })
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 test("basic tracing", () => {
   expect(
@@ -41,5 +50,26 @@ test("basic tracing", () => {
     "--> (+ 15 15)",
     "--> 30",
     "30",
+  ])
+})
+
+// TODO: odd output: do we want to show structs differently?
+test("tracing music structs", () => {
+  expect(
+    runProgram(
+      `
+      (import music)
+      (list (dur 1 2) (dur 2 (+ 1 1)))
+      `,
+      opts,
+    ),
+  ).toEqual([
+    '"Imported library: music"',
+    "Displaying (list (dur 1 2) (dur 2 (+ 1 1)))",
+    "--> (list (dur 1 2) (dur 2 (+ 1 1)))",
+    "--> (list (dur 1 2) (dur 2 2))",
+    "--> (list (dur 1 2) (dur 2 2))",
+    "--> (list (dur 1 2) (dur 2 2))",
+    "(list (dur 1 2) (dur 2 2))",
   ])
 })
