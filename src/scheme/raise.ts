@@ -27,7 +27,7 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
           if (LPM.isFunction(v)) {
             values.push(A.mkVar(op.name))
           } else {
-            values.push(A.mkLit(env.get(op.name)!))
+            values.push(A.mkLit(env.get(op.name)))
           }
         } else {
           values.push(A.mkVar(op.name))

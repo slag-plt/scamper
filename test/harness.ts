@@ -45,9 +45,9 @@ export function runProgramWithHTML (src: string, out: HTMLDisplay, ops: LPM.Opti
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
+  test(label, () => { expect(runProgram(src.trim())).toEqual(expected); })
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.fails(label, () => expect(runProgram(src.trim())).toEqual(expected))
+  test.fails(label, () => { expect(runProgram(src.trim())).toEqual(expected); })
 }

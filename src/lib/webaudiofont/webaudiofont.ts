@@ -29,7 +29,7 @@ class Player {
   player: any
   audioContext: AudioContext
 
-  loadInstrument(instr: number, isPercussion: boolean = false): void {
+  loadInstrument(instr: number, isPercussion = false): void {
     const path = isPercussion ? mkPercPath(instr, this.fontName)
                               : mkTonePath(instr, this.fontName)
     const name = isPercussion ? mkPercId(instr, this.fontName)
@@ -57,7 +57,7 @@ class Player {
     this.audioContext = new window.AudioContext()
   }
 
-  getInstrument (id: number, isPercussion: boolean = false): any {
+  getInstrument (id: number, isPercussion = false): any {
     this.loadInstrument(id, isPercussion)
     return (window as any)[isPercussion ? mkPercId(id, this.fontName) : mkToneId(id, this.fontName)]
   }
@@ -65,9 +65,9 @@ class Player {
 
 export function waf(): Player | undefined {
   // N.B., we want a _per-browser_ singleton, so we'll send this up to window!
-  if (typeof window !== 'undefined' && (window as any)['wafInstance'] === undefined) {
-    (window as any)['wafInstance'] = new Player()
-    return (window as any)['wafInstance']
+  if (typeof window !== 'undefined' && (window as any).wafInstance === undefined) {
+    (window as any).wafInstance = new Player()
+    return (window as any).wafInstance
   } else {
     return undefined
   }

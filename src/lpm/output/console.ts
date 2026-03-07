@@ -4,7 +4,7 @@ import { ScamperError } from '../error.js'
 import TextRenderer from '../renderers/text'
 
 export class ConsoleOutput implements OutputChannel, ErrorChannel {
-  seenError: boolean = false
+  seenError = false
   send (v: Value): void {
     console.log(TextRenderer.render(v))
   }

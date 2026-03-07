@@ -6,7 +6,7 @@ import { OPFSFileSystem } from "./fs.js";
  * generate swap files for hidden files (i.e., files that start with a dot) to
  * avoid cluttering the file system with swap files of swap files, etc.
  */
-export type SwapData = {
+export interface SwapData {
   // The most recent frozen state of the editor (incl. undo stack)
   editorState: string | null
   // The document history, mappings from (JSONed) Date objects to their contents

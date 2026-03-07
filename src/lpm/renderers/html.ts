@@ -41,7 +41,7 @@ export class Renderer extends R.Renderer<HTMLElement> {
         } else if (U.isClosure(v)) {
           return mkCodeElement(`[Function (closure)]`)
         } else if (U.isJsFunction(v)) {
-          return mkCodeElement(`[Function (${(v as Function).name})]`)
+          return mkCodeElement(`[Function (${(v).name})]`)
         } else if (U.isChar(v)) {
           return mkCodeElement(`#\\${U.charToName(v.value)}`)
         } else if (U.isList(v)) {

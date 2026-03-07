@@ -269,7 +269,7 @@ Music.registerValue('make-note-handlers', makeNoteHandlers)
 
 /***** Rendering **************************************************************/
 
-type MidiMsg = {
+interface MidiMsg {
   tag: 'midi',
   time: number,
   duration: number,
@@ -278,13 +278,13 @@ type MidiMsg = {
   velocity: number
 }
 
-type TriggerMsg = {
+interface TriggerMsg {
   tag: 'trigger',
   time: number,
   callback: L.ScamperFn
 }
 
-type EventMsg = {
+interface EventMsg {
   tag: 'event',
   time: number,
   id: string,
@@ -451,7 +451,7 @@ function compositionToMsgs (
 export function playComposition (composition: Composition): number {
   checkContract(arguments, contract('play-composition', [compositionC]))
   const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, [], composition).msgs
-  const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event') as (TriggerMsg | EventMsg)[]
+  const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event')
   const startTime = waf()!.audioContext.currentTime
 
   // Enqueue notes

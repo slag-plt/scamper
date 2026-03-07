@@ -31,7 +31,7 @@ const libs: [string, object][] = [
 
 // https://stackoverflow.com/questions/5251520/how-do-i-escape-some-html-in-javascript
 function escape(s: string): string {
-  let lookup: any = {
+  const lookup: any = {
     '&': "&amp;",
     '"': "&quot;",
     '\'': "&apos;",

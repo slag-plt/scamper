@@ -10,7 +10,7 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
   renderOutput: boolean
   combineLogs: boolean
 
-  constructor (renderOutput: boolean = true, combineLogs: boolean = true) {
+  constructor (renderOutput = true, combineLogs = true) {
     this.log = []
     this.errLog = []
     this.renderOutput = renderOutput

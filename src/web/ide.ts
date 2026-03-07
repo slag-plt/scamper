@@ -13,7 +13,7 @@ const outputPane = document.getElementById('output')!
 
 const configFilename = '.scamper.config'
 
-type Config = {
+interface Config {
   lastOpenedFilename: string | null
   lastVersionAccessed: string
 }
@@ -48,7 +48,7 @@ class IDE {
     Split(['#editor', '#results'], { sizes: [65, 35] })
     this.editor = new EditorView({
       state: mkNoFileEditorState(outputPane),
-      parent: editorPane!
+      parent: editorPane
     })
 
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
@@ -247,7 +247,7 @@ class IDE {
         this.currentFile = null
         this.initializeDummyDoc()
         this.config.lastOpenedFilename = null
-        outputPane!.innerHTML = ''
+        outputPane.innerHTML = ''
 
         this.populateFileDrawer()
         this.startAutosaving()
@@ -279,7 +279,7 @@ class IDE {
       window.open(`runner.html?${params.toString()}`)
     })
 
-    document.getElementById('step')!.addEventListener('click', () => this.startScamper(true))
+    document.getElementById('step')!.addEventListener('click', () => { this.startScamper(true); })
 
     document.getElementById('step-once')!.addEventListener('click', () => {
       this.scamper!.stepProgram()
@@ -406,19 +406,19 @@ class IDE {
   }
 
   getDoc(): string {
-    return this.editor!.state.doc.toString()
+    return this.editor.state.doc.toString()
   }
 
   initializeDoc (src: string) {
-    this.editor!.setState(mkFreshEditorState(src, {
+    this.editor.setState(mkFreshEditorState(src, {
       output: outputPane,
-      dirtyAction: () => this.makeDirty(),
+      dirtyAction: () => { this.makeDirty(); },
       isReadOnly: false
     }))
   }
 
   initializeDummyDoc () {
-    this.editor!.setState(mkNoFileEditorState(outputPane))
+    this.editor.setState(mkNoFileEditorState(outputPane))
   }
 
   makeDirty() {
@@ -439,7 +439,7 @@ class IDE {
   ///// IDE actions ////////////////////////////////////////////////////////////
 
   startScamper(isTracing: boolean): void {
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     try {
       this.scamper = new Scamper(outputPane, this.getDoc(), isTracing)
       if (isTracing) {
@@ -522,7 +522,7 @@ class IDE {
     }
 
     // Reset the UI: output panel and file drawer, also restart saving
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()

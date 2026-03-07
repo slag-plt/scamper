@@ -61,7 +61,7 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
 function pixelMap (fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
   checkContract(arguments, contract('pixel-map', [C.func, imageS]))
   const ctx = canvas.getContext('2d')!
-  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
+  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const src = inpImg.data
 
   const outImg = ctx.createImageData(canvas.width, canvas.height)
@@ -96,7 +96,7 @@ function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): L.Stru
 function imageToPixels (canvas: HTMLCanvasElement): L.Struct[] {
   checkContract(arguments, contract('image-to-pixels', [imageS]))
   const ctx = canvas.getContext('2d')!
-  const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
     ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
@@ -154,7 +154,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
         const img = new Image()
         img.onload = () => {
           outp.innerHTML = ''
-          var canvas = document.createElement('canvas')
+          const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
           if (ctx) {
             canvas.width = img.width
