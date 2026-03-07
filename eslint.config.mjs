@@ -5,7 +5,6 @@ import { defineConfig, globalIgnores } from "eslint/config"
 import tseslint from "typescript-eslint"
 import globals from "globals"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
-import "eslint-plugin-only-warn"
 
 export default defineConfig(
   eslint.configs.recommended,
