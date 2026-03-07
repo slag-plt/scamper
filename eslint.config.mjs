@@ -1,22 +1,22 @@
 // @ts-check
 
-import eslint from '@eslint/js';
-import { defineConfig, globalIgnores } from 'eslint/config'
-import tseslint from 'typescript-eslint';
-import globals from 'globals'
-import eslintConfigPrettier from "eslint-config-prettier/flat";
+import eslint from "@eslint/js"
+import { defineConfig, globalIgnores } from "eslint/config"
+import tseslint from "typescript-eslint"
+import globals from "globals"
+import eslintConfigPrettier from "eslint-config-prettier/flat"
 
 export default defineConfig(
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,
   eslintConfigPrettier,
-  [globalIgnores(["dist/*", "types/*"])],
+  [globalIgnores(["dist/*", "types/*", "src/lib/webaudiofont/*"])],
   {
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.mjs', 'vite.config.ts']
+          allowDefaultProject: ["eslint.config.mjs", "vite.config.ts"],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -27,7 +27,7 @@ export default defineConfig(
     languageOptions: {
       globals: {
         ...globals.node,
-      }
-    }
-  }
-);
+      },
+    },
+  },
+)
