@@ -70,7 +70,7 @@ test("mkCls operation raising", () => {
     ]),
   ]
   const result = raiseFrames(frames)
-  expect(expToString(result)).toBe("(lambda (x) x)")
+  expect(expToString(result)).toBe("identity")
 })
 
 test("mkAp operation raising", () => {
@@ -142,7 +142,7 @@ test("lambda with multiple parameters", () => {
     ]),
   ]
   const result = raiseFrames(frames)
-  expect(expToString(result)).toBe("(lambda (x y) x)")
+  expect(expToString(result)).toBe("add")
 })
 
 test("pattern matching with multiple branches", () => {

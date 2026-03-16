@@ -49,7 +49,7 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
     // HACK: if we're pushing a trace block, infuse it with an onclick to
     // collapse its enclosing trace-block, if it has one.
     if (attrs.includes('trace')) {
-      elt.addEventListener('click', (e) => {
+      elt.addEventListener('click', (_e) => {
         for (const child of elt.children) {
           if (child instanceof HTMLElement && child.classList.contains('trace-block')) {
             child.classList.toggle('collapsed')

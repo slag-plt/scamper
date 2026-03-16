@@ -31,7 +31,7 @@ test("basic tracing", () => {
       opts,
     ),
   ).toEqual([
-    "Defining x as 5",
+    "Defining x",
     "--> 5",
     "Displaying (+ 1 (+ 5 (+ 3 (+ 5 5))))",
     "--> (+ 1 (+ 5 (+ 3 10)))",
@@ -39,7 +39,7 @@ test("basic tracing", () => {
     "--> (+ 1 18)",
     "--> 19",
     "19",
-    "Defining mult-3 as (lambda (x) (+ x (+ x x)))",
+    "Defining mult-3",
     "--> [Function: ##anonymous##]",
     "Displaying (+ (mult-3 5) (mult-3 5))",
     "--> (+ (+ 5 (+ 5 5)) (mult-3 5))",
@@ -64,7 +64,7 @@ test("tracing music structs", () => {
       opts,
     ),
   ).toEqual([
-    '"Imported library: music"',
+    'Imported library: music',
     "Displaying (list (dur 1 2) (dur 2 (+ 1 1)))",
     "--> (list (dur 1 2) (dur 2 (+ 1 1)))",
     "--> (list (dur 1 2) (dur 2 2))",

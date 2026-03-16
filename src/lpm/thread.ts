@@ -282,7 +282,7 @@ export class Thread {
           this.stepFrame()
         } else {
           const result = this.results[this.curStmt]
-          this.out.popLevel() // pops trace-block
+          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
           this.out.send(result)
           this.advanceStmt() // pops trace
         }
@@ -317,7 +317,7 @@ export class Thread {
         } else {
           const result = this.results[this.curStmt]
           this.env.set(stmt.name, result)
-          this.out.popLevel() // pops trace-block
+          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
@@ -329,7 +329,7 @@ export class Thread {
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
-          this.out.popLevel() // pops trace-block
+          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
