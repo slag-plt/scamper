@@ -5,12 +5,13 @@ import { expandProgram } from './expansion.js'
 import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
+import { sugarExpr } from './sugarer.js'
 import { raiseThread } from './raise.js'
 import { Raiser } from '../lpm/raiser.js'
 import { Exp } from './ast.js'
 
 export const raiser: Raiser<Exp> = {
-  raise: raiseThread,
+  raise: (t) => sugarExpr(raiseThread(t)),
   equals: L.equals
 }
 

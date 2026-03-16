@@ -44,7 +44,11 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
 
       case 'cls': {
         const body = raiseFrame([], env.without(...op.params), op.body.toReversed())
-        values.push(A.mkLam(op.params, body))
+        if (op.name) {
+          values.push(A.mkVar(op.name))
+        } else {
+          values.push(A.mkLam(op.params, body))
+        }
         break
       }
 
