@@ -10,7 +10,7 @@ export const isString = (v: L.Value): v is string => typeof v === 'string'
 export const isSymName = (v: L.Value, name: string): boolean => isSym(v) && v.value === name
 export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
-export const isArray = (v: L.Value): v is Array<L.Value> => Array.isArray(v)
+export const isArray = (v: L.Value): v is L.Value[] => Array.isArray(v)
 export const isTaggedObject = (v: L.Value): v is L.TaggedObject =>
   v !== null && typeof v === 'object' && v.hasOwnProperty(L.scamperTag)
 export const isJsFunction = (v: L.Value): v is Function => typeof v === 'function'
@@ -61,18 +61,19 @@ export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
 export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
 
 // Op constructors
-export const mkLit = (value: L.Value, range: Range = Range.none, startsStmt: boolean = false): L.Lit => ({ tag: 'lit', value, range, startsStmt})
-export const mkVar = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Var => ({ tag: 'var', name, range, startsStmt})
-export const mkCtor = (name: string, fields: string[], range: Range = Range.none, startsStmt: boolean = false): L.Ctor => ({ tag: 'ctor', name, fields, range, startsStmt})
-export const mkCls = (params: string[], body: L.Blk, name?: string, range: Range = Range.none, startsStmt: boolean = false): L.Cls => ({ tag: 'cls', params, body, name, range, startsStmt})
-export const mkAp = (numArgs: number, range: Range = Range.none, startsStmt: boolean = false): L.Ap => ({ tag: 'ap', numArgs, range, startsStmt})
-export const mkMatch = (branches: [L.Pat, L.Blk][], range: Range = Range.none, startsStmt: boolean = false): L.Match => ({ tag: 'match', branches, range, startsStmt})
-export const mkDisp = (range: Range = Range.none, startsStmt: boolean = false): L.Disp => ({ tag: 'disp', range, startsStmt})
-export const mkDefine = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Define => ({ tag: 'define', name, range, startsStmt})
-export const mkImport = (name: string, range: Range = Range.none, startsStmt: boolean = false): L.Import => ({ tag: 'import', name, range, startsStmt})
-export const mkRaise = (msg: string, range: Range = Range.none, startsStmt: boolean = false): L.Raise => ({ tag: 'raise', msg, range, startsStmt})
-export const mkPops = (startsStmt: boolean = false): L.PopS => ({ tag: 'pops', startsStmt})
-export const mkPopv = (startsStmt: boolean = false): L.PopV => ({ tag: 'popv', startsStmt})
+export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({ tag: 'lit', value, range})
+export const mkVar = (name: string, range: Range = Range.none): L.Var => ({ tag: 'var', name, range})
+export const mkCtor = (name: string, fields: string[], range: Range = Range.none): L.Ctor => ({ tag: 'ctor', name, fields, range})
+export const mkCls = (params: string[], body: L.Blk, name?: string, range: Range = Range.none): L.Cls => ({ tag: 'cls', params, body, name, range})
+export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({ tag: 'ap', numArgs, range})
+export const mkMatch = (branches: [L.Pat, L.Blk][], range: Range = Range.none): L.Match => ({ tag: 'match', branches, range})
+export const mkDisp = (expr: L.Blk, range: Range = Range.none): L.Disp => ({ tag: 'disp', expr, range})
+export const mkDefine = (name: string, expr: L.Blk, range: Range = Range.none): L.Define => ({ tag: 'define', name, expr, range})
+export const mkImport = (name: string, range: Range = Range.none): L.Import => ({ tag: 'import', name, range})
+export const mkStmtExp = (expr: L.Blk, range: Range = Range.none): L.StmtExp => ({ tag: 'stmtexp', expr, range})
+export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({ tag: 'raise', msg, range})
+export const mkPops = (): L.PopS => ({ tag: 'pops'})
+export const mkPopv = (): L.PopV => ({ tag: 'popv'})
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({ tag: 'pwild', range })
@@ -135,7 +136,7 @@ export function listToVector (l: L.List): L.Value[] {
   let cur = l
   while (cur !== null) {
     ret.push(cur.head)
-    cur = cur.tail as L.List
+    cur = cur.tail
   }
   return ret
 }
@@ -262,7 +263,7 @@ export function toString (v: L.Value): string {
       } else if (isChar(v)) {
         return `#\\${charToName(v.value)}`
       } else if (isList(v)) {
-        return `(list ${listToVector(v)!.map(toString).join(' ')})`
+        return `(list ${listToVector(v).map(toString).join(' ')})`
       } else if (isPair(v)) {
         return `(pair ${toString(v.fst)} ${toString(v.snd)})`
       } else if (v instanceof HTMLElement) {

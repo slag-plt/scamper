@@ -30,8 +30,8 @@ const reservedWords = [
 const phExp = A.mkLit(undefined)
 const phStmt = A.mkStmtExp(A.mkLit(undefined))
 
-function parseIdentifier (errors: L.ScamperError[], v: L.Value, errorMsg: string = 'Expected an identifier'): string {
-  let { value, range } = S.unpackSyntax(v)
+function parseIdentifier (errors: L.ScamperError[], v: L.Value, errorMsg = 'Expected an identifier'): string {
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isSym(v)) {
     errors.push(new L.ScamperError('Parser', errorMsg, undefined, range))
@@ -46,7 +46,7 @@ function parseIdentifier (errors: L.ScamperError[], v: L.Value, errorMsg: string
 }
 
 function parsePat (errors: L.ScamperError[], v: L.Value): A.Pat {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   const orig = v
   v = value
   if (L.isList(v)) {
@@ -66,22 +66,22 @@ function parsePat (errors: L.ScamperError[], v: L.Value): A.Pat {
 }
 
 function parseIdentifierList (errors: L.ScamperError[], v: L.Value,
-                             listErrorMsg: string = 'Expected a list of identifiers',
-                             identErrorMsg: string = 'Expected an identifier'): string[] {
-  let { value, range } = S.unpackSyntax(v)
+                             listErrorMsg = 'Expected a list of identifiers',
+                             identErrorMsg = 'Expected an identifier'): string[] {
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
     errors.push(new L.ScamperError('Parser', listErrorMsg, undefined, range))
     return ['<error>']
   } else {
-    const arr = L.listToVector(v as L.List)
+    const arr = L.listToVector(v)
     const idents = arr.map((v) => parseIdentifier(errors, v, identErrorMsg))
     return idents
   }
 }
 
 function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body: A.Exp } {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
     errors.push(new L.ScamperError('Parser', 'Expected a vector for a match branch', undefined, range))
@@ -98,7 +98,7 @@ function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body:
 }
 
 function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, body: A.Exp } {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
     errors.push(new L.ScamperError('Parser', 'Expected a vector for a cond branch', undefined, range))
@@ -115,7 +115,7 @@ function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, 
 }
 
 function parseLetBinder (errors: L.ScamperError[], v: L.Value): { name: string, value: A.Exp } {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
     errors.push(new L.ScamperError('Parser', 'Expected a vector for a binder', undefined, range))
@@ -132,7 +132,7 @@ function parseLetBinder (errors: L.ScamperError[], v: L.Value): { name: string, 
 }
 
 function parseLetBinders (errors: L.ScamperError[], v: L.Value): { name: string, value: A.Exp }[] {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
     errors.push(new L.ScamperError('Parser', 'Expected a list of binding pairs', undefined, range))
@@ -158,7 +158,7 @@ export function parseSingle (errors: L.ScamperError[], v: L.Value, range: L.Rang
 }
 
 export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
 
   if (!L.isList(v)) {
@@ -168,7 +168,7 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
     if (arr.length == 0) {
       return A.mkLit(null, range)
     } else {
-      let { value: hv, range: hr } = S.unpackSyntax(arr[0])
+      const { value: hv, range: hr } = S.unpackSyntax(arr[0])
       if (L.isSym(hv)) {
         const head = hv.value
         switch (head) {
@@ -284,16 +284,16 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
 
 export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
   const orig = v
-  let { value, range } = S.unpackSyntax(v)
+  const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
     return A.mkStmtExp(parseExp(errors, orig), range)
   } else {
-    const arr = L.listToVector(v as L.List)
+    const arr = L.listToVector(v)
     if (arr.length == 0) {
       return A.mkStmtExp(A.mkLit(null), range)
     } else {
-      let { value: hv, range: hr } = S.unpackSyntax(arr[0])
+      const { value: hv, range: hr } = S.unpackSyntax(arr[0])
       if (L.isSym(hv)) {
         const head = hv.value
         switch (head) {

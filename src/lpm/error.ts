@@ -38,3 +38,10 @@ export class ICE extends Error {
     return `ICE (${this.funcName}): ${this.message}\n${this.stack}`
   }
 }
+
+export class SubthreadErrors {
+  errors: ScamperError[]
+  constructor(errors: ScamperError[]) {
+    this.errors = [...errors]
+  }
+}

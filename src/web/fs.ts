@@ -67,7 +67,7 @@ export class OPFSFileSystem {
 
   /** @return true iff the given file exists */
   async fileExists(filename: string): Promise<boolean> {
-    let list = await this.getFileList()
+    const list = await this.getFileList()
     return list.some((file) => file.name === filename)
   }
 

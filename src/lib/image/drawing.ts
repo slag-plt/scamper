@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Render from '../../display.js'
+import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
@@ -294,7 +294,7 @@ interface Rotate extends L.Struct {
 }
 
 function getDrawingPoints (drawing: Drawing): [number, number][] {
-  let points: [number, number][] = []
+  const points: [number, number][] = []
   switch(drawing[L.structKind]) {
     case 'ellipse':
       const n = 100;
@@ -324,7 +324,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
     case 'beside':
       let xOffset = 0
       drawing.drawings.forEach((subimage) => {
-        let subPoints: [number, number][] = getDrawingPoints(subimage)
+        const subPoints: [number, number][] = getDrawingPoints(subimage)
           .map(([x, y]) => [
             x + xOffset,
             drawing.align === 'top'
@@ -339,9 +339,9 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
       })
       return points
     case 'above':
-      let yOffset = 0
+      const yOffset = 0
       drawing.drawings.forEach((subimage) => {
-        let subPoints: [number, number][] = getDrawingPoints(subimage)
+        const subPoints: [number, number][] = getDrawingPoints(subimage)
           .map(([x, y]) => [
             drawing.align === 'left'
               ? x
@@ -358,7 +358,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
     case 'overlay': {
       return drawing.drawings.reverse().flatMap((d) => {
         return getDrawingPoints(d)
-          .map(([x, y]) => [
+          .map(([x, y]): [number, number] => [
             drawing.xAlign === 'left'
             ? x
             : drawing.xAlign === 'right'
@@ -371,7 +371,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
               ? y + drawing.height - d.height
               // N.B., assumed to be 'center'
               : y + (drawing.height - d.height) / 2
-          ]) as Array<[number, number]>
+          ])
       })
     }
     case 'overlayOffset':
@@ -599,8 +599,8 @@ function imageColor (drawing: Drawing): Rgb {
     case 'beside':
     case 'above':
     case 'overlay': {
-      var avg = imageColor(drawing.drawings[0])
-      for (var i = 1; i < drawing.drawings.length; i++) {
+      let avg = imageColor(drawing.drawings[0])
+      for (let i = 1; i < drawing.drawings.length; i++) {
         avg = rgbAverage(avg, imageColor(drawing.drawings[i]))
       }
       return avg
@@ -649,7 +649,7 @@ function drawingToPixels(drawing: Drawing): Rgb[] {
   checkContract(arguments, contract('drawing->pixels', [drawingS]))
   const canvas = renderer(drawing) as HTMLCanvasElement
   const ctx = canvas.getContext('2d')!
-  const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
     ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
@@ -850,8 +850,11 @@ function clearDrawing (canvas: HTMLCanvasElement) {
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
+// TODO: aria labels should be in a central location
+export const canvasAriaLabel = 'scamper-canvas';
 function renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
+  canvas.setAttribute('aria-label', canvasAriaLabel);
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
   clearDrawing(canvas)
@@ -859,4 +862,4 @@ function renderer (drawing: Drawing): HTMLElement {
   return canvas
 }
 
-Render.addCustomWebRenderer(drawingQ, renderer)
+HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))

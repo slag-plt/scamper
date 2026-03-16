@@ -1,28 +1,5 @@
-import {expect, test} from 'vitest'
-
-import builtinLibs from '../src/lib'
-import * as Scheme from '../src/scheme'
-import * as LPM from '../src/lpm'
-
-function runProgram (src: string): string[] {
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
-    if (out.log.length !== 0) { return out.log }
-    const machine = new LPM.Machine(
-      builtinLibs,
-      env,
-      prog!,
-      out,
-      out
-    )
-    machine.evaluate()
-    return out.log
-}
-
-export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
-}
+import { expect, test } from 'vitest'
+import { runProgram } from './harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -33,40 +10,125 @@ function mkAccessorTestSource (list: string, fn: string): string {
   `
 }
 
-scamperTest('car', mkAccessorTestSource('(list "a" "b" "c")', 'car'), ['"a"'])
-scamperTest('cdr', mkAccessorTestSource('(list "a" "b" "c")', 'cdr'), ['(list "b" "c")'])
+test('car', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'car'))).toEqual(['"a"'])
+})
+
+test('cdr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cdr'))).toEqual(['(list "b" "c")'])
+})
 
 // 4-character accessor tests
-scamperTest('caar', mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'caar'), ['"a"'])
-scamperTest('cadr', mkAccessorTestSource('(list "a" "b" "c")', 'cadr'), ['"b"'])
-scamperTest('cdar', mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'cdar'), ['(list "b")'])
-scamperTest('cddr', mkAccessorTestSource('(list "a" "b" "c")', 'cddr'), ['(list "c")'])
+test('caar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'caar'))).toEqual(['"a"'])
+})
+
+test('cadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cadr'))).toEqual(['"b"'])
+})
+
+test('cdar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'cdar'))).toEqual(['(list "b")'])
+})
+
+test('cddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cddr'))).toEqual(['(list "c")'])
+})
 
 // 5-character accessor tests
-scamperTest('caaar', mkAccessorTestSource('(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))', 'caaar'), ['"a"'])
-scamperTest('cadar', mkAccessorTestSource('(list (list "a" (list "b" "c")) (list "d" (list "e" "f")))', 'cadar'), ['(list "b" "c")'])
-scamperTest('cdaar', mkAccessorTestSource('(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))', 'cdaar'), ['(list "b")'])
-scamperTest('cddar', mkAccessorTestSource('(list (list "a" "b" "c") (list "d" "e" "f"))', 'cddar'), ['(list "c")'])
-scamperTest('caadr', mkAccessorTestSource('(list "a" (list "b" "c") "d")', 'caadr'), ['"b"'])
-scamperTest('caddr', mkAccessorTestSource('(list "a" "b" "c" "d")', 'caddr'), ['"c"'])
-scamperTest('cdadr', mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cdadr'), ['(list "c" "d")'])
-scamperTest('cdddr', mkAccessorTestSource('(list "a" "b" "c" "d")', 'cdddr'), ['(list "d")'])
+test('caaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))', 'caaar'))).toEqual(['"a"'])
+})
+
+test('cadar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" (list "b" "c")) (list "d" (list "e" "f")))', 'cadar'))).toEqual(['(list "b" "c")'])
+})
+
+test('cdaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))', 'cdaar'))).toEqual(['(list "b")'])
+})
+
+test('cddar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" "b" "c") (list "d" "e" "f"))', 'cddar'))).toEqual(['(list "c")'])
+})
+
+test('caadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list "b" "c") "d")', 'caadr'))).toEqual(['"b"'])
+})
+
+test('caddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', 'caddr'))).toEqual(['"c"'])
+})
+
+test('cdadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cdadr'))).toEqual(['(list "c" "d")'])
+})
+
+test('cdddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', 'cdddr'))).toEqual(['(list "d")'])
+})
 
 // 6-character accessor tests
-scamperTest('caaaar', mkAccessorTestSource('(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))', 'caaaar'), ['"a"'])
-scamperTest('cadaar', mkAccessorTestSource('(list (list (list "a" (list "b" "c")) (list "d" (list "e" "f"))) (list (list "g" (list "h" "i")) (list "j" (list "k" "l"))))', 'cadaar'), ['(list "b" "c")'])
-scamperTest('cdaaar', mkAccessorTestSource('(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))', 'cdaaar'), ['(list "b")'])
-scamperTest('cddaar', mkAccessorTestSource('(list (list (list "a" "b" "c") (list "d" "e" "f")) (list (list "g" "h" "i") (list "j" "k" "l")))', 'cddaar'), ['(list "c")'])
-scamperTest('caadar', mkAccessorTestSource('(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))', 'caadar'), ['(list "b" "c")'])
-scamperTest('caddar', mkAccessorTestSource('(list (list "a" "b" (list "c" "d")) (list "e" "f" (list "g" "h")))', 'caddar'), ['(list "c" "d")'])
-scamperTest('cdadar', mkAccessorTestSource('(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))', 'cdadar'), ['(list (list "d" "e"))'])
-scamperTest('cdddar', mkAccessorTestSource('(list (list "a" "b" "c" "d") (list "e" "f" "g" "h"))', 'cdddar'), ['(list "d")'])
-scamperTest('caaadr', mkAccessorTestSource('(list "a" (list (list "b" "c") (list "d" "e")) "f")', 'caaadr'), ['"b"'])
-scamperTest('cadadr', mkAccessorTestSource('(list "a" (list "b" (list "c" "d")) "e")', 'cadadr'), ['(list "c" "d")'])
-scamperTest('cdaadr', mkAccessorTestSource('(list "a" (list (list "b" "c") (list "d" "e")) "f")', 'cdaadr'), ['(list "c")'])
-scamperTest('cddadr', mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cddadr'), ['(list "d")'])
-scamperTest('caaddr', mkAccessorTestSource('(list "a" "b" (list "c" "d") "e")', 'caaddr'), ['"c"'])
-scamperTest('cadddr', mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cadddr'), ['"d"'])
-scamperTest('cdaddr', mkAccessorTestSource('(list "a" "b" (list "c" "d" "e") "f")', 'cdaddr'), ['(list "d" "e")'])
-scamperTest('cddddr', mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cddddr'), ['(list "e")'])
+test('caaaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))', 'caaaar'))).toEqual(['"a"'])
+})
 
+test('cadaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list "a" (list "b" "c")) (list "d" (list "e" "f"))) (list (list "g" (list "h" "i")) (list "j" (list "k" "l"))))', 'cadaar'))).toEqual(['(list "b" "c")'])
+})
+
+test('cdaaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))', 'cdaaar'))).toEqual(['(list "b")'])
+})
+
+test('cddaar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list (list "a" "b" "c") (list "d" "e" "f")) (list (list "g" "h" "i") (list "j" "k" "l")))', 'cddaar'))).toEqual(['(list "c")'])
+})
+
+test('caadar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))', 'caadar'))).toEqual(['(list "b" "c")'])
+})
+
+test('caddar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" "b" (list "c" "d")) (list "e" "f" (list "g" "h")))', 'caddar'))).toEqual(['(list "c" "d")'])
+})
+
+test('cdadar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))', 'cdadar'))).toEqual(['(list (list "d" "e"))'])
+})
+
+test('cdddar', () => {
+  expect(runProgram(mkAccessorTestSource('(list (list "a" "b" "c" "d") (list "e" "f" "g" "h"))', 'cdddar'))).toEqual(['(list "d")'])
+})
+
+test('caaadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list (list "b" "c") (list "d" "e")) "f")', 'caaadr'))).toEqual(['"b"'])
+})
+
+test('cadadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list "b" (list "c" "d")) "e")', 'cadadr'))).toEqual(['(list "c" "d")'])
+})
+
+test('cdaadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list (list "b" "c") (list "d" "e")) "f")', 'cdaadr'))).toEqual(['(list "c")'])
+})
+
+test('cddadr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cddadr'))).toEqual(['(list "d")'])
+})
+
+test('caaddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" (list "c" "d") "e")', 'caaddr'))).toEqual(['"c"'])
+})
+
+test('cadddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cadddr'))).toEqual(['"d"'])
+})
+
+test('cdaddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" (list "c" "d" "e") "f")', 'cdaddr'))).toEqual(['(list "d" "e")'])
+})
+
+test('cddddr', () => {
+  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cddddr'))).toEqual(['(list "e")'])
+})

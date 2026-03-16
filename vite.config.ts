@@ -1,10 +1,10 @@
-// vite.config.js
+// vite.config.ts
 import { resolve } from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 import { lezer } from "@lezer/generator/rollup"
 
-const AppVersion = process.env.npm_package_version
+const AppVersion = process.env.npm_package_version ?? "unknown";
 
 export default defineConfig({
   build: {
@@ -33,8 +33,10 @@ export default defineConfig({
 
   test: {
     environment: 'jsdom',
+    setupFiles: './test/setup.ts',
     coverage: {
       provider: 'v8',
+      reporter: ['lcov']
     },
   },
 })

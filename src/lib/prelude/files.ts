@@ -1,9 +1,9 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Display from '../../display.js'
-import { OPFSFileSystem } from '../../web/fs.js'
-
+import HTMLRenderer from '../../lpm/renderers/html'
+import OPFSFileSystem from '../../web/fs.js'
+import { SubthreadErrors } from "../../lpm";
 
 let fs: OPFSFileSystem | null = null
 
@@ -43,15 +43,21 @@ function renderReactiveFile (v: any): HTMLElement {
   fs.fileExists(rf.filename).then((exists: boolean) => {
     if (!exists) {
       const err = new L.ScamperError('Runtime', `File not found: ${rf.filename}`)
-      ret.appendChild(Display.renderToHTML(err))
+      ret.appendChild(HTMLRenderer.render(err))
     } else {
       fs!.loadFile(rf.filename).then((data: string) => {
         ret.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, data)
-          ret.appendChild(Display.renderToHTML(v))
+          ret.appendChild(HTMLRenderer.render(v))
         } catch (e) {
-          ret.appendChild(Display.renderToHTML(e as L.ScamperError))
+          if (e instanceof SubthreadErrors) {
+            for (const err of e.errors) {
+              ret.appendChild(HTMLRenderer.render(err))
+            }
+          } else {
+            ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
+          }
         }
       })
     }
@@ -59,7 +65,7 @@ function renderReactiveFile (v: any): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer(
+HTMLRenderer.registerCustomRenderer(
   (v) => L.isStructKind(v, 'reactive-file'), renderReactiveFile)
 
 ///// Reactive file chooser ////////////////////////////////////////////////////
@@ -92,9 +98,9 @@ function renderReactiveFileChooser (v: any): HTMLElement {
         outp.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, e.target.result as string)
-          outp.appendChild(Display.renderToHTML(v))
+          outp.appendChild(HTMLRenderer.render(v))
         } catch (e) {
-          outp.appendChild(Display.renderToHTML(e as L.ScamperError))
+          outp.appendChild(HTMLRenderer.render(e as L.ScamperError))
         }
       } else {
         outp.innerText = ''
@@ -112,5 +118,5 @@ function renderReactiveFileChooser (v: any): HTMLElement {
   return ret
 }
 
-Display.addCustomWebRenderer(
+HTMLRenderer.registerCustomRenderer(
   (v) => L.isStructKind(v, 'reactive-file-chooser'), renderReactiveFileChooser)

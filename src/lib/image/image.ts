@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Render from '../../display.js'
+import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 import { rgb } from './color.js'
 
@@ -43,12 +43,12 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
         ctx.drawImage(img, 0, 0)
         try {
           const v = L.callScamperFn(callback, canvas)
-          container.appendChild(Render.renderToHTML(v))
+          container.appendChild(HtmlRenderer.render(v))
         } catch (e) {
           if (e instanceof DOMException && e.name === 'SecurityError') {
             container.innerHTML = `Failed to load ${url}: cannot manipulate images from domains other than scamper.cs.grinnell.edu`
           } else {
-            container.appendChild(Render.renderToHTML(e as L.ScamperError))
+            container.appendChild(HtmlRenderer.render(e as L.ScamperError))
           }
         }
     } 
@@ -61,7 +61,7 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
 function pixelMap (fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
   checkContract(arguments, contract('pixel-map', [C.func, imageS]))
   const ctx = canvas.getContext('2d')!
-  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)!
+  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const src = inpImg.data
 
   const outImg = ctx.createImageData(canvas.width, canvas.height)
@@ -96,7 +96,7 @@ function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): L.Stru
 function imageToPixels (canvas: HTMLCanvasElement): L.Struct[] {
   checkContract(arguments, contract('image-to-pixels', [imageS]))
   const ctx = canvas.getContext('2d')!
-  const src = ctx.getImageData(0, 0, canvas.width, canvas.height)!.data
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
     ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
@@ -154,7 +154,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
         const img = new Image()
         img.onload = () => {
           outp.innerHTML = ''
-          var canvas = document.createElement('canvas')
+          const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
           if (ctx) {
             canvas.width = img.width
@@ -163,9 +163,9 @@ function render(rif: ReactiveImageFile): HTMLElement {
           }
           try {
             const v = L.callScamperFn(rif.callback, canvas)
-            outp.appendChild(Render.renderToHTML(v))
+            outp.appendChild(HtmlRenderer.render(v))
           } catch (e) {
-            outp.appendChild(Render.renderToHTML(e as L.ScamperError))
+            outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
           }
         }
         img.src = e.target.result as string;
@@ -183,7 +183,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
   return ret
 }
 
-Render.addCustomWebRenderer(isReactiveImageFile, render)
+HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
 
 /***** Exports ****************************************************************/
 

@@ -46,6 +46,16 @@ export class Env {
     return ret
   }
 
+  without (...names: string[]): Env {
+    const ret = new Env(this.parent?.without(...names))
+    for (const [name, value] of this.bindings) {
+      if (!names.includes(name)) {
+        ret.set(name, value)
+      }
+    }
+    return ret
+  }
+
   pop (): Env {
     return this.parent === undefined ? new Env() : this.parent
   }
@@ -186,91 +196,27 @@ export type List = null | Cons
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
-export type Lit    = { tag: 'lit', value: Value, range: Range, startsStmt: boolean }
-export type Var    = { tag: 'var', name: string, range: Range, startsStmt: boolean }
-export type Ctor   = { tag: 'ctor', name: string, fields: string[], range: Range, startsStmt: boolean }
-export type Cls    = { tag: 'cls', params: string[], body: Blk, name?: string, range: Range, startsStmt: boolean }
-export type Ap     = { tag: 'ap', numArgs: number, range: Range, startsStmt: boolean }
-export type Match  = { tag: 'match', branches: [Pat, Blk][], range: Range, startsStmt: boolean }
-export type Disp   = { tag: 'disp', range: Range, startsStmt: boolean }
-export type Import = { tag: 'import', name: string, range: Range, startsStmt: boolean }
-export type Define = { tag: 'define', name: string, range: Range, startsStmt: boolean }
-export type Raise  = { tag: 'raise', msg: string, range: Range, startsStmt: boolean }
-export type PopS   = { tag: 'pops', startsStmt: boolean }
-export type PopV   = { tag: 'popv', startsStmt: boolean }
-export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Disp | Import | Define | Raise | PopS | PopV
+export interface Lit { tag: 'lit', value: Value, range: Range }
+export interface Var { tag: 'var', name: string, range: Range }
+export interface Ctor { tag: 'ctor', name: string, fields: string[], range: Range }
+export interface Cls { tag: 'cls', params: string[], body: Blk, name?: string, range: Range }
+export interface Ap { tag: 'ap', numArgs: number, range: Range }
+export interface Match { tag: 'match', branches: [Pat, Blk][], range: Range }
+export interface Raise { tag: 'raise', msg: string, range: Range }
+export interface PopS { tag: 'pops' }
+export interface PopV { tag: 'popv' }
+export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
 export type Blk    = Ops[]
 
-export type PWild  = { tag: 'pwild', range: Range }
-export type PLit   = { tag: 'plit', value: Value, range: Range }
-export type PVar   = { tag: 'pvar', name: string, range: Range }
-export type PCtor  = { tag: 'pctor', name: string, args: Pat[], range: Range }
+export interface Disp { tag: 'disp', expr: Blk, range: Range }
+export interface Import { tag: 'import', name: string, range: Range }
+export interface Define { tag: 'define', name: string, expr: Blk, range: Range }
+export interface StmtExp { tag: 'stmtexp', expr: Blk, range: Range }
+export type Stmt    = Disp | Import | Define | StmtExp
+export type Prog    = Stmt[]
+
+export interface PWild { tag: 'pwild', range: Range }
+export interface PLit { tag: 'plit', value: Value, range: Range }
+export interface PVar { tag: 'pvar', name: string, range: Range }
+export interface PCtor { tag: 'pctor', name: string, args: Pat[], range: Range }
 export type Pat    = PWild | PLit | PVar | PCtor
-
-/**
- * A stack frame records all relevant to track the execution of a single function call.
- */
-export class Frame {
-  name: string
-  env: Env
-  values: Value[]
-  ops: Ops[]
-
-  constructor (name: string, env: Env, blk: Blk) {
-    this.name = name
-    this.env = env
-    this.values = []
-    this.ops = blk.toReversed()
-  }
-
-  isFinished (): boolean {
-    return this.ops.length === 0
-  }
-
-  pushBlk (blk: Blk) {
-    this.ops.push(...blk.toReversed())
-  }
-
-  popInstr (): Ops {
-    return this.ops.pop()!
-  }
-}
-
-/** A single thread of execution in LPM. */
-export class Thread {
-  frames: Frame[]
-  result: Value
-
-  constructor (name: string, env: Env, blk: Blk) { 
-    this.frames = [new Frame(name, env, blk)]
-    this.result = undefined
-  }
-
-  isFinished (): boolean {
-    return this.frames.length === 0
-  }
-
-  getCurrentFrame (): Frame {
-    return this.frames[this.frames.length - 1]
-  }
-
-  push (name: string, env: Env, blk: Blk): void {
-    this.frames.push(new Frame(name, env, blk))
-  }
-
-  pop (): void {
-    this.frames.pop()
-  }
-
-  unwindToNextStatement (): void {
-    if (this.getCurrentFrame().isFinished()) { 
-      this.pop()
-    }
-    while (!this.isFinished() && !this.getCurrentFrame().ops[this.getCurrentFrame().ops.length - 1].startsStmt) {
-      this.getCurrentFrame().popInstr()
-      if (this.getCurrentFrame().isFinished()) {
-        this.pop()
-      }
-    }
-  }
-}

@@ -1,41 +1,22 @@
 import { expect, test } from 'vitest'
-
-import builtinLibs from '../../src/lib'
-import * as Scheme from '../../src/scheme'
-import * as LPM from '../../src/lpm'
-
-function runProgram (src: string): string[] {
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
-    if (out.log.length !== 0) { return out.log }
-    const machine = new LPM.Machine(
-      builtinLibs,
-      env,
-      prog!,
-      out,
-      out
-    )
-    machine.evaluate()
-    return out.log
-}
-
-export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
-}
+import { runProgram } from '../harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
-scamperTest('begin', `
+test('begin', () => {
+  expect(runProgram(`
 (begin
   (+ 1 1)
   5
   "hello!"
   "goodbye!")
-`, [
+`)).toEqual([
   '"goodbye!"'
 ])
-scamperTest('ceiling', `
+})
+
+test('ceiling', () => {
+  expect(runProgram(`
 (ceiling 3.2)
 
 (ceiling 4)
@@ -45,14 +26,17 @@ scamperTest('ceiling', `
 (ceiling -2.1)
 
 (ceiling 0.0)
-`, [
+`)).toEqual([
   '4',
   '4',
   '4',
   '-2',
   '0'
 ])
-scamperTest('control', `
+})
+
+test('control', () => {
+  expect(runProgram(`
 (define inc
   (lambda (x) (+ x 1)))
 
@@ -94,7 +78,7 @@ scamperTest('control', `
 
 (fold + 0 l)
 (reduce + l)
-`, [
+`)).toEqual([
   '(list 2 3 4 5 6 7 8 9 10 11)',
   '(list "a" "c" "e")',
   'null',
@@ -108,75 +92,103 @@ scamperTest('control', `
   '55',
   '55'
 ])
-scamperTest('error', `
+})
+
+test('error', () => {
+  expect(runProgram(`
 (error "This is an example runtime error")
-`, [
+`)).toEqual([
   'Runtime error [1:1-1:42]: (error) This is an example runtime error'
 ])
-scamperTest('length', `
+})
+
+test('length', () => {
+  expect(runProgram(`
 (length (list 1 2 3 4 5))
 (length (list))
 (length (list "a" "b" "c"))
 
-`, [
+`)).toEqual([
   '5',
   '0',
   '3'
 ])
-scamperTest('max', `
+})
+
+test('max', () => {
+  expect(runProgram(`
 (max 3 2 8 4 10 -4 5)
 (max -5)
 (max 1 1 1 1 1 1 1)
-`, [
+`)).toEqual([
   '10',
   '-5',
   '1'
 ])
-scamperTest('min', `
+})
+
+test('min', () => {
+  expect(runProgram(`
 (min 3 2 8 4 10 -4 5)
 (min -5)
 (min 1 1 1 1 1 1 1)
-`, [
+`)).toEqual([
   '-4',
   '-5',
   '1'
 ])
-scamperTest('qq', `
+})
+
+test('qq', () => {
+  expect(runProgram(`
 (+ (??) 1)
-`, [
+`)).toEqual([
   'Runtime error [1:4-1:7]: (??) Hole encountered in program!'
 ])
-scamperTest('reverse', `
+})
+
+test('reverse', () => {
+  expect(runProgram(`
 (reverse (list 1 2 3 4 5))
 
 (reverse (list))
 
 (reverse (reverse (list 1 2 3 4 5 6 7 8 9 10)))
-`, [
+`)).toEqual([
   '(list 5 4 3 2 1)',
   'null',
   '(list 1 2 3 4 5 6 7 8 9 10)'
 ])
-scamperTest('string-append', `
+})
+
+test('string-append', () => {
+  expect(runProgram(`
 (string-append "hello" " " "world!")
 
 (string-append "hi")
-`, [
+`)).toEqual([
   '"hello world!"',
   '"hi"'
 ])
-scamperTest('string-length', `
+})
+
+test('string-length', () => {
+  expect(runProgram(`
 (string-length "hello world")
 (string-length "")
 (string-length "\n\n\n\n\n")
-`, [
+`)).toEqual([
   '11',
   '0',
   '5'
 ])
-scamperTest('string-split', `
+})
+
+test('string-split', () => {
+  expect(runProgram(`
 (string-split "Twas brillig and the slithy toves" " ")
 
-`, [
+`)).toEqual([
   '(list "Twas" "brillig" "and" "the" "slithy" "toves")'
 ])
+})

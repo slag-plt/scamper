@@ -1,24 +1,54 @@
-import * as Scheme from '../scheme'
+import fs from 'fs'
+import { parseArgs } from 'node:util'
+
 import { builtinLibs, initializeLibs } from '../lib'
 import * as LPM from '../lpm'
-import fs from 'fs'
+import { ConsoleOutput } from '../lpm/output'
+import { Thread } from '../lpm/thread.js'
+import * as Scheme from '../scheme'
 
-class ConsoleOutput implements LPM.OutputChannel, LPM.ErrorChannel {
-  seenError: boolean = false
-  send (v: LPM.Value): void {
-    console.log(LPM.toString(v))
-  }
+////////////////////////////////////////////////////////////////////////////////
 
-  report (e: LPM.ScamperError): void {
-    this.seenError = true
-    console.error(e.toString())
-  }
+const { values, positionals } = parseArgs({
+  options: {
+    help: {
+      type: 'boolean',
+      short: '?',
+      default: false,
+    },
+    trace: {
+      type: 'boolean',
+    },
+    // Define other options as needed
+  },
+  allowPositionals: true, // Set to true if your CLI accepts positional arguments
+});
+
+if (values.help || positionals.length !== 1) {
+  console.log('Usage: scamper [options] filename')
+  console.log('Options:')
+  console.log('  -?, --help       Show this help message')
+  console.log('  --trace          Enabling step-by-step tracing')
+  process.exit(0)
 }
 
-await initializeLibs()
-const src = fs.readFileSync(process.stdin.fd, 'utf-8');
+const filename = positionals[0]
+
+const src = fs.readFileSync(filename, 'utf-8');
 const out = new ConsoleOutput()
 const program = Scheme.compile(out, src)
 if (program === undefined) { process.exit(1) }
-const machine = new LPM.Machine(builtinLibs, Scheme.mkInitialEnv(), program, out, out)
-machine.evaluate()
+
+const options = LPM.defaultOptions
+options.isTracing = values.trace ?? false
+
+await initializeLibs()
+new Thread(
+  '##main##',
+  Scheme.mkInitialEnv(), 
+  program,
+  options,
+  builtinLibs,
+  out,
+  out,
+  new Map([['scheme', Scheme.raiser]])).evaluate()

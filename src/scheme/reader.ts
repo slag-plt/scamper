@@ -225,7 +225,7 @@ const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
 function parseStringLiteral (src: string, range: L.Range): string {
   if (src.length === 0) {
     throw new L.ICE('parseStringLiteral', 'Empty string literal (with no quote!)')
-  } else if (src[0] !== '"') {
+  } else if (!src.startsWith('"')) {
     throw new L.ScamperError('Parser', 'String literal must begin with a quote', undefined, range)
   }
 

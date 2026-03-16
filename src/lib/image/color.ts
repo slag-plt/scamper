@@ -1,6 +1,6 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import * as Render from '../../display.js'
+import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 
 import * as colorsys from 'colorsys'
@@ -120,7 +120,7 @@ function rgbDistance (rgba1: Rgb, rgba2: Rgb): number {
 
 /***** Color Names ************************************************************/
 
-const namedCssColors: Map<string, Rgb> = new Map([
+const namedCssColors = new Map<string, Rgb>([
   ['aliceblue', rgb(240, 248, 255)],
   ['antiquewhite', rgb(250, 235, 215)],
   ['aqua', rgb(0, 255, 255)],
@@ -631,7 +631,7 @@ function renderRgb(rgb: Rgb): HTMLElement {
   return div
 }
 
-Render.addCustomWebRenderer(isRgb, renderRgb)
+HtmlRenderer.registerCustomRenderer(isRgb, (v: any) => renderRgb(v as Rgb))
 
 function renderHsv(hsv: Hsv): HTMLElement {
   const div = document.createElement('div')
@@ -646,7 +646,7 @@ function renderHsv(hsv: Hsv): HTMLElement {
   return div
 }
 
-Render.addCustomWebRenderer(isHsv, renderHsv)
+HtmlRenderer.registerCustomRenderer(isHsv, (v: any) => renderHsv(v as Hsv))
 
 
 /***** Exports ****************************************************************/

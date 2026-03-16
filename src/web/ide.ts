@@ -1,9 +1,9 @@
 import { EditorView } from "@codemirror/view"
 
-import { OPFSFileSystem } from './fs.js'
+import OPFSFileSystem from './fs.js'
 import Split from 'split.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/output/html.js'
 import * as Lock from './lockfile.js'
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
@@ -13,7 +13,7 @@ const outputPane = document.getElementById('output')!
 
 const configFilename = '.scamper.config'
 
-type Config = {
+interface Config {
   lastOpenedFilename: string | null
   lastVersionAccessed: string
 }
@@ -37,7 +37,8 @@ class IDE {
 
   ///// Initialization /////////////////////////////////////////////////////////
 
-  private constructor (fs: OPFSFileSystem) {
+  private constructor(fs: OPFSFileSystem) {
+    this.fs = fs
     this.config = defaultConfig    // N.B., loaded asynchronously from disk in IDE.create()
     this.currentFile = null
     this.autosaveId = -1
@@ -47,7 +48,7 @@ class IDE {
     Split(['#editor', '#results'], { sizes: [65, 35] })
     this.editor = new EditorView({
       state: mkNoFileEditorState(outputPane),
-      parent: editorPane!
+      parent: editorPane
     })
 
     document.getElementById('version')!.innerText = `(${APP_VERSION})`
@@ -219,7 +220,7 @@ class IDE {
         } else {
           try {
             this.stopAutosaving()
-            // N.B., in renaming the file, the FS webworker will close
+            // N.B., in renaming the file, the this.fs webworker will close
             // its handle to the current file, so we should be able to
             // just load it as if no file was open.
             await this.fs.renameFile(this.currentFile, newName)
@@ -246,7 +247,7 @@ class IDE {
         this.currentFile = null
         this.initializeDummyDoc()
         this.config.lastOpenedFilename = null
-        outputPane!.innerHTML = ''
+        outputPane.innerHTML = ''
 
         this.populateFileDrawer()
         this.startAutosaving()
@@ -278,7 +279,7 @@ class IDE {
       window.open(`runner.html?${params.toString()}`)
     })
 
-    document.getElementById('step')!.addEventListener('click', () => this.startScamper(true))
+    document.getElementById('step')!.addEventListener('click', () => { this.startScamper(true); })
 
     document.getElementById('step-once')!.addEventListener('click', () => {
       this.scamper!.stepProgram()
@@ -305,6 +306,7 @@ class IDE {
       const params = new URLSearchParams({ filename: this.currentFile, isTree: "true" })
       window.open(`runner.html?${params.toString()}`)
     })
+
     this.toggleStepButtons(false)
   }
 
@@ -368,13 +370,13 @@ class IDE {
 
   static async create() {
     const fs = await OPFSFileSystem.create()
+    await initializeLibs()
     const obtainedLock = await Lock.acquireLockFile(fs)
     if (!obtainedLock) {
       document.getElementById("loading-content")!.innerText = 'Another instance of Scamper is open. Please close that instance and try again.'
       document.getElementById("loading")!.style.display = "block"
     } else {
       const ide = new IDE(fs)
-      await initializeLibs()
       await ide.populateFileDrawer()
       await ide.loadConfig()
       if (ide.config.lastOpenedFilename !== null) {
@@ -404,19 +406,19 @@ class IDE {
   }
 
   getDoc(): string {
-    return this.editor!.state.doc.toString()
+    return this.editor.state.doc.toString()
   }
 
   initializeDoc (src: string) {
-    this.editor!.setState(mkFreshEditorState(src, {
+    this.editor.setState(mkFreshEditorState(src, {
       output: outputPane,
-      dirtyAction: () => this.makeDirty(),
+      dirtyAction: () => { this.makeDirty(); },
       isReadOnly: false
     }))
   }
 
   initializeDummyDoc () {
-    this.editor!.setState(mkNoFileEditorState(outputPane))
+    this.editor.setState(mkNoFileEditorState(outputPane))
   }
 
   makeDirty() {
@@ -437,11 +439,9 @@ class IDE {
   ///// IDE actions ////////////////////////////////////////////////////////////
 
   startScamper(isTracing: boolean): void {
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     try {
-      this.scamper = new Scamper(outputPane, this.getDoc())
-      // TODO: reimplement once tracing is back in!
-      isTracing = false
+      this.scamper = new Scamper(outputPane, this.getDoc(), isTracing)
       if (isTracing) {
         this.toggleStepButtons(true)
       } else {
@@ -522,7 +522,7 @@ class IDE {
     }
 
     // Reset the UI: output panel and file drawer, also restart saving
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()

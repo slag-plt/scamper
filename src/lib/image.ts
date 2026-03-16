@@ -6,7 +6,7 @@ import * as L from '../lpm'
 
 export const imageLib: L.Library = new L.Library()
 
-imageLib.lib =[
+imageLib.lib = [
   ...Drawing.lib.lib,
   ...Font.lib.lib,
   ...Img.lib.lib,

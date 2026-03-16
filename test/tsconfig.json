@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@testing-library/jest-dom/vitest"]
+  },
+  "include": ["./**/*", "./setup.ts"],
+  // empty exclude needed to override base tsconfig
+  "exclude": []
+}

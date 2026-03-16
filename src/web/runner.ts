@@ -1,6 +1,6 @@
 import { OPFSFileSystem } from './fs.js'
 import { Scamper } from '../scamper.js'
-import { renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/output/html.js'
 import { initializeLibs } from '../lib/index.js'
 
 class Runner {
@@ -26,7 +26,7 @@ class Runner {
     }
 
     const src = await fs.loadFile(filename)
-    outputPane!.innerHTML = ''
+    outputPane.innerHTML = ''
     try {
       if (runTree) {
         new Scamper(outputPane, src).runnerTree()

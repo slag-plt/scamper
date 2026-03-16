@@ -5,8 +5,17 @@ import { expandProgram } from './expansion.js'
 import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
+import { sugarExpr } from './sugarer.js'
+import { raiseThread } from './raise.js'
+import { Raiser } from '../lpm/raiser.js'
+import { Exp } from './ast.js'
 
-export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
+export const raiser: Raiser<Exp> = {
+  raise: (t) => sugarExpr(raiseThread(t)),
+  equals: L.equals
+}
+
+export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   // Tokenization and reading (to Sexps)
   let sexps = undefined 
   try {
@@ -20,7 +29,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   let errors: L.ScamperError[] = []
   let program = parseProgram(errors, sexps)
   if (errors.length > 0) {
-    errors.forEach((e) => err.report(e))
+    errors.forEach((e) => { err.report(e); })
     return undefined
   }
 
@@ -31,7 +40,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Blk | undefined {
   errors = []
   scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
-    errors.forEach((e) => err.report(e))
+    errors.forEach((e) => { err.report(e); })
     return undefined
   }
 

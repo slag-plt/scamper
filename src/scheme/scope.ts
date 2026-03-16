@@ -28,7 +28,7 @@ function scopeCheckPat (errors: ScamperError[], locals: Set<string>, p: A.Pat) {
     case 'plit': return
 
     case 'pctor': {
-      p.args.forEach((p) => scopeCheckPat(errors, locals, p))
+      p.args.forEach((p) => { scopeCheckPat(errors, locals, p); })
       return
     }
   }
@@ -47,7 +47,7 @@ function scopeCheckExp (errors: ScamperError[], globals: string[], locals: strin
 
     case 'app': {
       scopeCheckExp(errors, globals, locals, e.head)
-      e.args.forEach((e) => scopeCheckExp(errors, globals, locals, e))
+      e.args.forEach((e) => { scopeCheckExp(errors, globals, locals, e); })
       return
     }
 
@@ -60,12 +60,12 @@ function scopeCheckExp (errors: ScamperError[], globals: string[], locals: strin
     case 'let': {
       const vars = e.bindings.map(b => b.name)
       checkDuplicateVars(errors, vars, e.range)
-      e.bindings.forEach(b => scopeCheckExp(errors, globals, locals, b.value))
+      e.bindings.forEach(b => { scopeCheckExp(errors, globals, locals, b.value); })
       scopeCheckExp(errors, globals, [...locals, ...vars], e.body)
       return
     }
     case 'begin': {
-      e.exps.forEach((e) => scopeCheckExp(errors, globals, locals, e))
+      e.exps.forEach((e) => { scopeCheckExp(errors, globals, locals, e); })
       return
     }
 
@@ -78,7 +78,7 @@ function scopeCheckExp (errors: ScamperError[], globals: string[], locals: strin
     case 'match': {
       scopeCheckExp(errors, globals, locals, e.scrutinee)
       e.branches.forEach((b) => {
-        const bindingVars: Set<string> = new Set()
+        const bindingVars = new Set<string>()
         scopeCheckPat(errors, bindingVars, b.pat)
         scopeCheckExp(errors, globals, [...locals, ...bindingVars], b.body)
       })

@@ -1,8 +1,8 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-
 import { lib as filesLib } from './files.js'
+import {SubthreadErrors} from "../../lpm";
 
 export const Prelude: L.Library = new L.Library()
 
@@ -494,7 +494,7 @@ listAccessors.forEach((name) => {
   const path = name.slice(1, name.length - 1)
   const fn = function (x: L.Value): L.Value {
     checkContract(arguments, contract(name, [C.or(C.pair, C.list)]))
-    let ret = path[path.length - 1] === 'a' ? car(x) : cdr(x)
+    let ret = path.endsWith('a') ? car(x) : cdr(x)
     for (let i = path.length - 2; i >= 0; i--) {
       ret = path[i] === 'a' ? car(ret) : cdr(ret)
     }
@@ -555,12 +555,12 @@ function appendOne_ (l1: L.List, l2: L.List): L.List {
   if (l1 === null) {
     return l2
   } else {
-    let head = L.mkCons(l1.head, null)
+    const head = L.mkCons(l1.head, null)
     let last = head
     let cur = l1.tail
     while (cur !== null) {
       last.tail = L.mkCons(cur.head, null)
-      last = last.tail as L.Cons
+      last = last.tail
       cur = cur.tail
     }
     last.tail = l2
@@ -588,7 +588,7 @@ function reverse (l: L.List): L.List {
   queue.reverse()
   let ret = null
   while (queue.length > 0) {
-    const next = queue.pop() as L.Cons
+    const next = queue.pop()!
     ret = L.mkCons(next.head, ret)
   }
   return ret
@@ -607,7 +607,7 @@ Prelude.registerValue('list-tail', listTail)
 
 function listTake (l: L.List, k: number): L.List {
   checkContract(arguments, contract('list-take', [C.list, C.nonneg]))
-  let elts = []
+  const elts = []
   // N.B., push in reverse order so we built the list right-to-left
   while (l !== null && k > 0) {
     elts.push(l.head)
@@ -670,7 +670,7 @@ function indexOf (l: L.List, v: L.Value): number {
     if (L.equals(l.head, v)) {
       return i
     }
-    l = l.tail as L.List
+    l = l.tail
     i += 1
   }
   return -1
@@ -695,7 +695,7 @@ function assocRef (v: L.Value, l: L.List): L.Value {
     if (L.equals((l.head as L.Pair).fst, v)) {
       return (l.head as L.Pair).snd
     }
-    l = l.tail as L.List
+    l = l.tail
   }
   throw new L.ScamperError('Runtime', `assoc-ref: key ${v} not found in association list`)
 }
@@ -709,14 +709,14 @@ function assocSet (k: L.Value, v: L.Value, l: L.List): L.List {
     const entry = l.head as L.Pair
     if (L.equals(entry.fst, k)) {
       front.push(L.mkPair(k, v))
-      let ret = l.tail as L.List
+      let ret = l.tail
       for (let i = front.length - 1; i >= 0; i--) {
         ret = L.mkCons(front[i], ret)
       }
       return ret
     } else {
       front.push(l.head)
-      l = l.tail as L.List
+      l = l.tail
     }
   }
   return L.vectorToList(front.concat([L.mkPair(k, v)]))
@@ -781,15 +781,15 @@ function mkCharCompareFn (name: string, f: (a: string, b: string) => boolean): v
 }
 
 mkCharCompareFn('char=?', (a, b) => a === b)
-mkCharCompareFn('char<?', (a, b) => a.codePointAt(0)! < b.codePointAt(0)!)
-mkCharCompareFn('char>?', (a, b) => a.codePointAt(0)! > b.codePointAt(0)!)
-mkCharCompareFn('char<=?', (a, b) => a.codePointAt(0)! <= b.codePointAt(0)!)
-mkCharCompareFn('char>=?', (a, b) => a.codePointAt(0)! >= b.codePointAt(0)!)
+mkCharCompareFn('char<?', (a, b) => a < b)
+mkCharCompareFn('char>?', (a, b) => a > b)
+mkCharCompareFn('char<=?', (a, b) => a <= b)
+mkCharCompareFn('char>=?', (a, b) => a >= b)
 mkCharCompareFn('char-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
-mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase().codePointAt(0)! < b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase().codePointAt(0)! > b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase().codePointAt(0)! <= b.toLowerCase().codePointAt(0)!)
-mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase().codePointAt(0)! >= b.toLowerCase().codePointAt(0)!)
+mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
+mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
+mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
+mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
 
 function mkCharPredicatePrim (name: string, f: (a: string) => boolean): void {
   const fn = function (x: L.Char) {
@@ -957,7 +957,7 @@ function listToString (l: L.List): string {
     if (!L.isChar(l.head)) {
       throw new L.ScamperError('Runtime', `list->string: list contains non-character element: ${L.typeOf(l.head)}`)
     }
-    ret += (l.head as L.Char).value
+    ret += (l.head).value
     l = l.tail
   } 
   return ret
@@ -1145,7 +1145,7 @@ Prelude.registerValue('apply', apply)
 
 function stringMap (f: L.Closure | Function, s: string): string {
   checkContract(arguments, contract('string-map', [C.func, C.string]))
-  let chs = []
+  const chs = []
   for (let i = 0; i < s.length; i++) {
     chs.push(L.mkChar(s[i]))
   }
@@ -1234,7 +1234,7 @@ function reduce (f: L.Closure | Function, lst: L.List): L.Value {
   lst = lst!.tail
   while (lst !== null) {
     acc = L.callScamperFn(f, acc, lst.head)
-    lst = lst.tail as L.List
+    lst = lst.tail
   }
   return acc
 }
@@ -1371,7 +1371,7 @@ Prelude.registerValue('??', qq)
 
 function compose (...fss: (L.Closure | Function)[]): L.Closure | Function {
   checkContract(arguments, contract('compose', [C.func], C.func))
-  let first = fss[fss.length - 1]
+  const first = fss[fss.length - 1]
   return (x: L.Value) => {
     let ret = L.callScamperFn(first, x)
     for (let i = fss.length - 2; i >= 0; i--) {
@@ -1426,6 +1426,14 @@ function withHandler (handler: L.Closure | Function, fn: L.Closure | Function, .
   try {
     return L.callScamperFn(fn, ...args)
   } catch (e) {
+    // TODO: subthreads could theoretically throw multiple errors, don't know how we will address that
+    if (e instanceof SubthreadErrors && e.errors.length == 1) {
+      return L.callScamperFn(handler, e.errors[0].message)
+    }
+    if (e instanceof L.ScamperError) {
+      return L.callScamperFn(handler, e.message)
+    }
+    // shouldn't happen, but if it's not a ScamperError, just try to cast and see what happens.
     return L.callScamperFn(handler, (e as L.ScamperError).message)
   }
 }
@@ -1521,6 +1529,8 @@ Prelude.registerValue('pi', piConst)
 Prelude.registerValue('π', piConst)
 Prelude.registerValue('void', voidConst)
 
+// TODO: library initialization is a problem, this really needs to be a
+// upfront thing, not performed lazily unless we want to async the runtime.
 Prelude.lib.push(...filesLib.lib)
 Prelude.initializer = async () => {
   await filesLib.initializer?.()

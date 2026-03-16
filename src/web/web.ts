@@ -1,5 +1,16 @@
 import { Scamper } from '../scamper.js'
-import { mkSourceBlock, renderToOutput } from '../display.js'
+import { renderToOutput } from '../lpm/output/html.js'
+
+import hljs from 'highlight.js'
+
+export function mkSourceBlock (text: string): HTMLElement {
+  const elt = hljs.highlight(text, {language: 'scheme', ignoreIllegals: true})
+  const ret = document.createElement('pre')
+  ret.classList.add('hljs')
+  ret.innerHTML = elt.value
+  ret.tabIndex = 0;
+  return ret
+}
 
 export function replaceCodeWidget(base: HTMLElement): void {
   const src = base.innerText
@@ -24,7 +35,7 @@ export function replaceCodeWidget(base: HTMLElement): void {
 
 export function replaceCodeWidgets() {
   const widgets = document.getElementsByClassName('scamper')
-  for (var i = 0; i < widgets.length; i++) {
+  for (let i = 0; i < widgets.length; i++) {
     replaceCodeWidget(widgets[i] as HTMLElement)
   }
 }

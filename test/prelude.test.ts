@@ -1,32 +1,10 @@
-import {expect, test} from 'vitest'
-
-import builtinLibs from '../src/lib'
-import * as Scheme from '../src/scheme'
-import * as LPM from '../src/lpm'
-
-function runProgram (src: string): string[] {
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
-    if (out.log.length !== 0) { return out.log }
-    const machine = new LPM.Machine(
-      builtinLibs,
-      env,
-      prog!,
-      out,
-      out
-    )
-    machine.evaluate()
-    return out.log
-}
-
-export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => expect(runProgram(src.trim())).toEqual(expected))
-}
+import { expect, test } from 'vitest'
+import { runProgram } from './harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
-scamperTest('abs-quotient', `
+test('abs-quotient', () => {
+  expect(runProgram(`
 (abs 13)
 (abs 0.71)
 (abs 111)
@@ -40,7 +18,7 @@ scamperTest('abs-quotient', `
 (quotient 7 2)
 (quotient 100 1)
 (quotient 2 2)
-`, [
+`)).toEqual([
   '13',
   '0.71',
   '111',
@@ -55,8 +33,10 @@ scamperTest('abs-quotient', `
   '100',
   '1',
 ])
+})
 
-scamperTest('append-reverse', `
+test('append-reverse', () => {
+  expect(runProgram(`
 (append (list "ab" "ba") (list 1 2 3) (list))
 (append (list) (list))
 (append (list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")
@@ -68,7 +48,7 @@ scamperTest('append-reverse', `
 (reverse (list "Hello" "World"))
 (reverse (list "abab" "abab"))
 (reverse (list 1 2 3))
-`, [
+`)).toEqual([
   '(list "ab" "ba" 1 2 3)',
   'null',
   '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "Hello" "World")',
@@ -80,8 +60,10 @@ scamperTest('append-reverse', `
   '(list "abab" "abab")',
   '(list 3 2 1)'
 ])
+})
 
-scamperTest('apply-map', `
+test('apply-map', () => {
+  expect(runProgram(`
 (apply string-length (list "HelloWorld"))
 (apply list (list "HelloWorld" "HelloWorld" "HelloWorld"))
 (apply string-split (list "HelloWorld" "l"))
@@ -91,7 +73,7 @@ scamperTest('apply-map', `
 (map procedure? (list string-length list + -) )
 (map car (list (pair 2 4) (pair "a" "b") (pair "first" "second")))
 (map cdr (list (pair 2 4) (pair "a" "b") (pair "first" "second")))
-`, [
+`)).toEqual([
   '10',
   '(list "HelloWorld" "HelloWorld" "HelloWorld")',
   '(list "He" "" "oWor" "d")',
@@ -102,20 +84,24 @@ scamperTest('apply-map', `
   '(list 2 "a" "first")',
   '(list 4 "b" "second")'
 ])
+})
 
-scamperTest('apply', `
+test('apply', () => {
+  expect(runProgram(`
 (apply (lambda (x) (+ x 1)) (list 1))
 
 (apply + (list 3 4))
 
 (apply min (list 3 1 8 9 2 -5 0 3 5 1))
-`, [
+`)).toEqual([
   '2',
   '7',
   '-5'
 ])
+})
 
-scamperTest('arithmetic', `
+test('arithmetic', () => {
+  expect(runProgram(`
 (+ 1 2 3 4 5)
 (- 22 7 2 1 8)
 (* 1 2 3 4 5)
@@ -124,7 +110,7 @@ scamperTest('arithmetic', `
 (- 5)
 (* 5)
 (/ 5)
-`, [
+`)).toEqual([
   '15',
   '4',
   '120',
@@ -134,8 +120,10 @@ scamperTest('arithmetic', `
   '5',
   '0.2'
 ])
+})
 
-scamperTest('asin-acos-atan', `
+test('asin-acos-atan', () => {
+  expect(runProgram(`
 (asin 0.4201670368266409)
 (asin 0.6518337710215366)
 (asin -0.8645514486106083)
@@ -163,7 +151,7 @@ scamperTest('asin-acos-atan', `
 (atan -0.8253361052690248)
 (atan 1.6858253705060158)
 (atan 0)
-`, [
+`)).toEqual([
   '0.43362938564082704',
   '0.71',
   '-1.0442571243572367',
@@ -192,8 +180,10 @@ scamperTest('asin-acos-atan', `
   '1.0354056994857894',
   '0'
 ])
+})
 
-scamperTest('assoc', `
+test('assoc', () => {
+  expect(runProgram(`
 (define inventory (list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8)))
 
 inventory
@@ -218,7 +208,7 @@ updated-inventory
 
 (assoc-ref "oranges" updated-inventory)
 
-`, [
+`)).toEqual([
   '(list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8))',
   '#t',
   '#f',
@@ -230,8 +220,10 @@ updated-inventory
   '2',
   '8'
 ])
+})
 
-scamperTest('car-cdr', `
+test('car-cdr', () => {
+  expect(runProgram(`
 (car (pair #t #f))
 (car (pair 1 2))
 (car (pair "hi" "bye"))
@@ -243,7 +235,7 @@ scamperTest('car-cdr', `
 (cdr (pair "a" "b"))
 (cdr (pair 0.003 100))
 
-`, [
+`)).toEqual([
   '#t',
   '1',
   '"hi"',
@@ -255,8 +247,10 @@ scamperTest('car-cdr', `
   '"b"',
   '100'
 ])
+})
 
-scamperTest('char-comp', `
+test('char-comp', () => {
+  expect(runProgram(`
 (define c1 #\\c)
 (define c2 #\\f)
 
@@ -312,7 +306,7 @@ scamperTest('char-comp', `
 (char-ci>=? c3 c4)
 (char-ci>=? c4 c3)
 (char-ci>=? c4 c4)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#f',
@@ -354,8 +348,10 @@ scamperTest('char-comp', `
   '#t',
   '#t'
 ])
+})
 
-scamperTest('char-ops', `
+test('char-ops', () => {
+  expect(runProgram(`
 (digit-value #\\5)
 (digit-value #\\0)
 
@@ -368,7 +364,7 @@ scamperTest('char-ops', `
 (char-downcase #\\A)
 (char-foldcase #\\a)
 (char-foldcase #\\A)
-`, [
+`)).toEqual([
   '5',
   '0',
   '97',
@@ -380,8 +376,10 @@ scamperTest('char-ops', `
   '#\\a',
   '#\\a'
 ])
+})
 
-scamperTest('char-pred', `
+test('char-pred', () => {
+  expect(runProgram(`
 (char-alphabetic? #\\c)
 (char-alphabetic? #\\5)
 (char-alphabetic? #\\space)
@@ -401,7 +399,7 @@ scamperTest('char-pred', `
 (char-lower-case? #\\c)
 (char-lower-case? #\\F)
 (char-lower-case? #\\newline)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#f',
@@ -418,8 +416,10 @@ scamperTest('char-pred', `
   '#f',
   '#f'
 ])
+})
 
-scamperTest('compose', `
+test('compose', () => {
+  expect(runProgram(`
 (define inc
   (lambda (x) (+ x 1)))
 
@@ -445,7 +445,7 @@ scamperTest('compose', `
 (define string-reverse (o list->string reverse string->list))
 
 (string-reverse "hello")
-`, [
+`)).toEqual([
   '2',
   '2',
   '6',
@@ -455,8 +455,10 @@ scamperTest('compose', `
   '5',
   '"olleh"'
 ])
+})
 
-scamperTest('cons-pair', `
+test('cons-pair', () => {
+  expect(runProgram(`
 (cons #t #f)
 (cons 1 2)
 (cons "hi" "bye")
@@ -467,7 +469,7 @@ scamperTest('cons-pair', `
 (pair "hi" "bye")
 (pair "a" "b")
 (pair 0.003 100)
-`, [
+`)).toEqual([
   'Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list',
   'Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list',
   'Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list',
@@ -479,15 +481,17 @@ scamperTest('cons-pair', `
   '(pair "a" "b")',
   '(pair 0.003 100)'
 ])
+})
 
-scamperTest('equal', `
+test('equal', () => {
+  expect(runProgram(`
 (equal? 4 4)
 (equal? 10 20)
 (equal? "Hello" "Hello")
 (equal? "Hello" "HELLO")
 (equal? 4 "4")
 (equal? 4 4.0)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#t',
@@ -495,16 +499,20 @@ scamperTest('equal', `
   '#f',
   '#t'
 ])
+})
 
-scamperTest('error-qq', `
+test('error-qq', () => {
+  expect(runProgram(`
 (error "existing")
 (+ 5 (??))
-`, [
+`)).toEqual([
   'Runtime error [1:1-1:18]: (error) existing',
   'Runtime error [2:6-2:9]: (??) Hole encountered in program!'
 ])
+})
 
-scamperTest('exp-log', `
+test('exp-log', () => {
+  expect(runProgram(`
 (exp 13)
 (exp 0.71)
 (exp 111)
@@ -520,7 +528,7 @@ scamperTest('exp-log', `
 (log 111)
 (log 4)
 (log 6.1)
-`, [
+`)).toEqual([
   '442413.3920089205',
   '2.0339912586467506',
   '1.609487066961518e+48',
@@ -537,22 +545,26 @@ scamperTest('exp-log', `
   '1.3862943611198906',
   '1.8082887711792655'
 ])
+})
 
-scamperTest('expt', `
+test('expt', () => {
+  expect(runProgram(`
 (expt 7 2)
 (expt 0.2 0.5)
 (expt 100 1)
 (expt 2.0 2)
 (expt 3.0 3.1)
-`, [
+`)).toEqual([
   '49',
   '0.4472135954999579',
   '100',
   '4',
   '30.135325698915423'
 ])
+})
 
-scamperTest('filter-fold-reduce', `
+test('filter-fold-reduce', () => {
+  expect(runProgram(`
 (filter string? (list 4 "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" #t "HelloWorld" "HelloWorld" "HelloWorld" list))
 (filter procedure? (list string-length list? + - "true" #f = string?))
 (filter null? (list (pair 2 4) (pair "a" "b") (pair "first" "second") (list) (list 4 5 6)))
@@ -563,7 +575,7 @@ scamperTest('filter-fold-reduce', `
 (reduce - (list 5 10 9 8 7 6))
 (fold-right - 5 (list 10 9 8 7 6))
 (reduce-right - (list 10 9 8 7 6 5))
-`, [
+`)).toEqual([
   '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
   '(list [Function: string-length] [Function: list?] [Function: +] [Function: -] [Function: =] [Function: string?])',
   '(list null)',
@@ -575,8 +587,10 @@ scamperTest('filter-fold-reduce', `
   '3',
   '3'
 ])
+})
 
-scamperTest('floor-ceiling', `
+test('floor-ceiling', () => {
+  expect(runProgram(`
 (floor 0.71)
 (floor 111)
 (floor 6.1)
@@ -589,7 +603,7 @@ scamperTest('floor-ceiling', `
 (ceiling 0.69)
 (ceiling 0.10000000000000009)
 (ceiling 0)
-`, [
+`)).toEqual([
   '0',
   '111',
   '6',
@@ -603,8 +617,10 @@ scamperTest('floor-ceiling', `
   '1',
   '0'
 ])
+})
 
-scamperTest('gt-geq', `
+test('gt-geq', () => {
+  expect(runProgram(`
 (> 4 5)
 (> 5.0 4.99)
 (> 0 0.1)
@@ -614,7 +630,7 @@ scamperTest('gt-geq', `
 (>= 10 5)
 (>= 0.02 0.03)
 (>= 0.01 0.02)
-`, [
+`)).toEqual([
   '#f',
   '#t',
   '#f',
@@ -625,8 +641,10 @@ scamperTest('gt-geq', `
   '#f',
   '#f'
 ])
+})
 
-scamperTest('implies-xor', `
+test('implies-xor', () => {
+  expect(runProgram(`
 (implies #t #f)
 (implies #f #f)
 (implies #t #t)
@@ -635,7 +653,7 @@ scamperTest('implies-xor', `
 (xor #f #f)
 (xor #t #t)
 (xor #f #t)
-`, [
+`)).toEqual([
   '#f',
   '#t',
   '#t',
@@ -645,8 +663,10 @@ scamperTest('implies-xor', `
   '#f',
   '#t'
 ])
+})
 
-scamperTest('index-of', `
+test('index-of', () => {
+  expect(runProgram(`
 (define l (list "a" "b" "c" "d" "e"))
 
 (index-of l "a")
@@ -655,7 +675,7 @@ scamperTest('index-of', `
 (index-of l "d")
 (index-of l "e")
 (index-of l "f")
-`, [
+`)).toEqual([
   '0',
   '1',
   '2',
@@ -663,28 +683,34 @@ scamperTest('index-of', `
   '4',
   '-1'
 ])
+})
 
-scamperTest('integer', `
+test('integer', () => {
+  expect(runProgram(`
 (integer? 5)
 (integer? 78.0)
 (integer? "5")
 (integer? (/ 10 2))
 (integer? 5.5)
-`, [
+`)).toEqual([
   '#t',
   '#t',
   '#f',
   '#t',
   '#f'
 ])
+})
 
-scamperTest('length', `
+test('length', () => {
+  expect(runProgram(`
 (length (list 28 0 "know"))
-`, [
+`)).toEqual([
   '3'
 ])
+})
 
-scamperTest('list-makeList', `
+test('list-makeList', () => {
+  expect(runProgram(`
 (list "ab" "ba")
 (list 1 2 3)
 (list)
@@ -696,7 +722,7 @@ scamperTest('list-makeList', `
 (make-list 2 #t)
 (make-list 2 "abab")
 (make-list 0 "")
-`, [
+`)).toEqual([
   '(list "ab" "ba")',
   '(list 1 2 3)',
   'null',
@@ -709,8 +735,10 @@ scamperTest('list-makeList', `
   '(list "abab" "abab")',
   'null'
 ])
+})
 
-scamperTest('list-ref', `
+test('list-ref', () => {
+  expect(runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-ref l 0)
@@ -718,15 +746,17 @@ scamperTest('list-ref', `
 (list-ref l 2)
 (list-ref l 3)
 (list-ref l 4)
-`, [
+`)).toEqual([
   '1',
   '2',
   '3',
   '4',
   '5'
 ])
+})
 
-scamperTest('list-tail', `
+test('list-tail', () => {
+  expect(runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-tail l 0)
@@ -740,7 +770,7 @@ scamperTest('list-tail', `
 (list-drop l 3)
 
 (list-drop l 5)
-`, [
+`)).toEqual([
   '(list 1 2 3 4 5)',
   '(list 4 5)',
   'null',
@@ -748,8 +778,10 @@ scamperTest('list-tail', `
   '(list 4 5)',
   'null'
 ])
+})
 
-scamperTest('list-take', `
+test('list-take', () => {
+  expect(runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-take l 0)
@@ -757,13 +789,15 @@ scamperTest('list-take', `
 (list-take l 3)
 
 (list-take l 5)
-`, [
+`)).toEqual([
   'null',
   '(list 1 2 3)',
   '(list 1 2 3 4 5)'
 ])
+})
 
-scamperTest('lt-leq', `
+test('lt-leq', () => {
+  expect(runProgram(`
 (< 4 5)
 (< 5.0 5)
 (< 0 0.1)
@@ -773,7 +807,7 @@ scamperTest('lt-leq', `
 (<= 10 5)
 (<= 0.02 0.02)
 (<= 0.01 0.02)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#t',
@@ -784,8 +818,10 @@ scamperTest('lt-leq', `
   '#t',
   '#t'
 ])
+})
 
-scamperTest('min-max', `
+test('min-max', () => {
+  expect(runProgram(`
 (min 4 7 2)
 (min 0.01 0.2 0.5)
 (min 100 10 1)
@@ -796,7 +832,7 @@ scamperTest('min-max', `
 (max 100 10 1)
 (max 2.0 2)
 (max 3.0 3.1)
-`, [
+`)).toEqual([
   '2',
   '0.01',
   '1',
@@ -808,22 +844,26 @@ scamperTest('min-max', `
   '2',
   '3.1'
 ])
+})
 
-scamperTest('nanQ', `
+test('nanQ', () => {
+  expect(runProgram(`
 (nan? "nan")
 (nan? 34)
 (nan? 0.1)
 (nan? 0.0)
 (nan? -3)
-`, [
+`)).toEqual([
   '#f',
   '#f',
   '#f',
   '#f',
   '#f'
 ])
+})
 
-scamperTest('nand-nor', `
+test('nand-nor', () => {
+  expect(runProgram(`
 (nand #t #f #t #f #t #f)
 (nand #f #f #f)
 (nand #t #t #t)
@@ -834,7 +874,7 @@ scamperTest('nand-nor', `
 (nor #t #t #t)
 (nor #t #f)
 (nor #t #f #f #f)
-`, [
+`)).toEqual([
   '#t',
   '#t',
   '#f',
@@ -846,8 +886,10 @@ scamperTest('nand-nor', `
   '#f',
   '#f'
 ])
+})
 
-scamperTest('not-boolean', `
+test('not-boolean', () => {
+  expect(runProgram(`
 (not #t)
 (not #f)
 (not 1)
@@ -856,7 +898,7 @@ scamperTest('not-boolean', `
 (boolean? 0)
 (boolean? 2)
 (boolean? 1)
-`, [
+`)).toEqual([
   '#f',
   '#t',
   'Runtime error [3:1-3:7]: (not) expected a boolean, received number',
@@ -866,8 +908,10 @@ scamperTest('not-boolean', `
   '#f',
   '#f'
 ])
+})
 
-scamperTest('nullQ-listQ', `
+test('nullQ-listQ', () => {
+  expect(runProgram(`
 (null? (list))
 (null? (list "ab" "ba"))
 (null? (list 1 2 3))
@@ -878,7 +922,7 @@ scamperTest('nullQ-listQ', `
 (list? (list 1 2 3))
 (list? (list ""))
 (list? (pair "hello" "world"))
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#f',
@@ -890,22 +934,26 @@ scamperTest('nullQ-listQ', `
   '#t',
   '#f'
 ])
+})
 
-scamperTest('number', `
+test('number', () => {
+  expect(runProgram(`
 (number? 56)
 (number? "56")
 (number? 56.2)
 (number? (/ 56 2))
 (number? 56.0)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#t',
   '#t',
   '#t'
 ])
+})
 
-scamperTest('numeq', `
+test('numeq', () => {
+  expect(runProgram(`
 (= 4 5)
 (= 5.0 5)
 (= 0 0.1)
@@ -915,7 +963,7 @@ scamperTest('numeq', `
 (= 10 5)
 (= 0.02 0.03)
 (= 0.01 0.01)
-`, [
+`)).toEqual([
   '#f',
   '#t',
   '#f',
@@ -926,8 +974,10 @@ scamperTest('numeq', `
   '#f',
   '#t'
 ])
+})
 
-scamperTest('odd-even', `
+test('odd-even', () => {
+  expect(runProgram(`
 (odd? 2)
 (odd? (- 10 9))
 (odd? 0.0)
@@ -938,7 +988,7 @@ scamperTest('odd-even', `
 (even? (- 7 3))
 (even? 8)
 (even? 0.0)
-`, [
+`)).toEqual([
   '#f',
   '#t',
   '#f',
@@ -950,22 +1000,26 @@ scamperTest('odd-even', `
   '#t',
   '#t'
 ])
+})
 
-scamperTest('pairQ', `
+test('pairQ', () => {
+  expect(runProgram(`
 (pair? (pair #t #f))
 (pair? (+ 1 2))
 (pair? "bye")
 (pair? (pair "a" "b"))
 (pair? (/ 100 1))
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#f',
   '#t',
   '#f'
 ])
+})
 
-scamperTest('plus-minus', `
+test('plus-minus', () => {
+  expect(runProgram(`
 (+ 4 7 2)
 (+ 0.01 0.2 0.5)
 (+ 100 10 1)
@@ -976,7 +1030,7 @@ scamperTest('plus-minus', `
 (- 100 10 1)
 (- 2.0 2)
 (- 3.0 3.1)
-`, [
+`)).toEqual([
   '13',
   '0.71',
   '111',
@@ -988,8 +1042,10 @@ scamperTest('plus-minus', `
   '0',
   '-0.10000000000000009'
 ])
+})
 
-scamperTest('positive-negative', `
+test('positive-negative', () => {
+  expect(runProgram(`
 (positive? -0.002)
 (positive? (- 7 10))
 (positive? 0.0)
@@ -1000,7 +1056,7 @@ scamperTest('positive-negative', `
 (negative? (- 7 10))
 (negative? 0)
 (negative? (- 7 4))
-`, [
+`)).toEqual([
   '#f',
   '#f',
   '#f',
@@ -1012,8 +1068,10 @@ scamperTest('positive-negative', `
   '#f',
   '#f'
 ])
+})
 
-scamperTest('random', `
+test('random', () => {
+  expect(runProgram(`
 (define max-value 5)
 (define num-tests 100)
 
@@ -1038,12 +1096,14 @@ scamperTest('random', `
     (lambda (l) (reduce (lambda (b1 b2) (and b1 b2)) l))
     )
 
-`, [
+`)).toEqual([
   '#t',
   '#t'
 ])
+})
 
-scamperTest('range', `
+test('range', () => {
+  expect(runProgram(`
 (range 10)
 
 (range 50)
@@ -1065,7 +1125,7 @@ scamperTest('range', `
 (range 10 5 -1)
 
 (range 10 0 -3)
-`, [
+`)).toEqual([
   '(list 0 1 2 3 4 5 6 7 8 9)',
   '(list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)',
   'null',
@@ -1078,29 +1138,33 @@ scamperTest('range', `
   '(list 10 9 8 7 6)',
   '(list 10 7 4 1)'
 ])
+})
 
-scamperTest('real', `
+test('real', () => {
+  expect(runProgram(`
 (real? 56)
 (real? 56.2)
 (real? "56.2")
 (real? (/ 50 2))
 (real? (/ 51 2))
-`, [
+`)).toEqual([
   '#f',
   '#t',
   '#f',
   '#f',
   '#t'
 ])
+})
 
-scamperTest('remainder-modulo', `
+test('remainder-modulo', () => {
+  expect(runProgram(`
 (remainder 7 2)
 (remainder 35 9)
 (remainder 2 2)
 (modulo 7 2)
 (modulo 35 9)
 (modulo 2 2)
-`, [
+`)).toEqual([
   '1',
   '8',
   '0',
@@ -1108,8 +1172,10 @@ scamperTest('remainder-modulo', `
   '8',
   '0',
 ])
+})
 
-scamperTest('sin-cos-tan', `
+test('sin-cos-tan', () => {
+  expect(runProgram(`
 (sin 13)
 (sin 0.71)
 (sin 111)
@@ -1137,7 +1203,7 @@ scamperTest('sin-cos-tan', `
 (tan -0.69)
 (tan 89)
 (tan 0)
-`, [
+`)).toEqual([
   '0.4201670368266409',
   '0.6518337710215366',
   '-0.8645514486106083',
@@ -1166,8 +1232,10 @@ scamperTest('sin-cos-tan', `
   '1.6858253705060158',
   '0'
 ])
+})
 
-scamperTest('square-sqrt', `
+test('square-sqrt', () => {
+  expect(runProgram(`
 (square 0.71)
 (square 111)
 (square 6.1)
@@ -1180,7 +1248,7 @@ scamperTest('square-sqrt', `
 (sqrt 0.4761)
 (sqrt 0.01)
 (sqrt 0)
-`, [
+`)).toEqual([
   '0.5041',
   '12321',
   '37.209999999999994',
@@ -1194,8 +1262,10 @@ scamperTest('square-sqrt', `
   '0.1',
   '0'
 ])
+})
 
-scamperTest('string-comp', `
+test('string-comp', () => {
+  expect(runProgram(`
 (define s1 "hello world!")
 (define s2 "hello zoo!")
 
@@ -1251,7 +1321,7 @@ scamperTest('string-comp', `
 (string-ci>=? s3 s4)
 (string-ci>=? s4 s3)
 (string-ci>=? s4 s4)
-`, [
+`)).toEqual([
   '#t',
   '#f',
   '#f',
@@ -1293,8 +1363,10 @@ scamperTest('string-comp', `
   '#t',
   '#t'
 ])
+})
 
-scamperTest('string-length-ref', `
+test('string-length-ref', () => {
+  expect(runProgram(`
 (string-length "HelloWorld")
 (string-length "Hello woww World")
 (string-length "")
@@ -1305,7 +1377,7 @@ scamperTest('string-length-ref', `
 (string-ref " " 0)
 (string-ref "00110011" 3)
 (string-ref "1234567" 5)
-`, [
+`)).toEqual([
   '10',
   '16',
   '0',
@@ -1317,17 +1389,21 @@ scamperTest('string-length-ref', `
   '#\\1',
   '#\\6'
 ])
+})
 
-scamperTest('string-map', `
+test('string-map', () => {
+  expect(runProgram(`
 (string-map char-upcase "hello world")
 
 (string-map char-downcase "")
-`, [
+`)).toEqual([
   '"HELLO WORLD"',
   '""'
 ])
+})
 
-scamperTest('string-number-conversions', `
+test('string-number-conversions', () => {
+  expect(runProgram(`
 (number->string 9)
 (number->string 0.4472135954999579)
 (number->string 100)
@@ -1338,7 +1414,7 @@ scamperTest('string-number-conversions', `
 (string->number "100")
 (string->number "4")
 (string->number "30.135325698915423")
-`, [
+`)).toEqual([
   '"9"',
   '"0.4472135954999579"',
   '"100"',
@@ -1350,8 +1426,10 @@ scamperTest('string-number-conversions', `
   '4',
   '30.135325698915423'
 ])
+})
 
-scamperTest('string-ops', `
+test('string-ops', () => {
+  expect(runProgram(`
 (make-string 5 #\\a)
 (make-string 0 #\\c)
 (string-upcase "aCcD01-E")
@@ -1360,7 +1438,7 @@ scamperTest('string-ops', `
 (substring "hello world" 3 7)
 (string->list "hello world")
 (list->string (list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d))
-`, [
+`)).toEqual([
   '"aaaaa"',
   '""',
   '"ACCD01-E"',
@@ -1370,8 +1448,10 @@ scamperTest('string-ops', `
   '(list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d)',
   '"hello world"'
 ])
+})
 
-scamperTest('string-split-append', `
+test('string-split-append', () => {
+  expect(runProgram(`
 (string-split "HelloWorld" "w")
 (string-split "Hello woww World" "w")
 (string-split "" "")
@@ -1380,7 +1460,7 @@ scamperTest('string-split-append', `
 (string-append "HelloWorld" "Hello woww World" )
 (string-append " " "00110011" "1234567" )
 (string-append "1234567" "89101112" "13141516")
-`, [
+`)).toEqual([
   '(list "HelloWorld")',
   '(list "Hello " "o" "" " World")',
   'null',
@@ -1390,8 +1470,10 @@ scamperTest('string-split-append', `
   '" 001100111234567"',
   '"12345678910111213141516"'
 ])
+})
 
-scamperTest('stringQ-procedure', `
+test('stringQ-procedure', () => {
+  expect(runProgram(`
 (string? (pair #t #f))
 (string? 1)
 (string? "bye")
@@ -1402,7 +1484,7 @@ scamperTest('stringQ-procedure', `
 (procedure? "bye")
 (procedure? +)
 (procedure? string-length)
-`, [
+`)).toEqual([
   '#f',
   '#f',
   '#t',
@@ -1414,8 +1496,10 @@ scamperTest('stringQ-procedure', `
   '#t',
   '#t'
 ])
+})
 
-scamperTest('times-div', `
+test('times-div', () => {
+  expect(runProgram(`
 (* 4 7 2)
 (* 0.01 0.2 0.5)
 (* 100 10 1)
@@ -1426,7 +1510,7 @@ scamperTest('times-div', `
 (/ 100 10 1)
 (/ 2.0 2)
 (/ 3.0 3.1)
-`, [
+`)).toEqual([
   '56',
   '0.001',
   '1000',
@@ -1438,8 +1522,10 @@ scamperTest('times-div', `
   '1',
   '0.9677419354838709'
 ])
+})
 
-scamperTest('truncate-round', `
+test('truncate-round', () => {
+  expect(runProgram(`
 (truncate 0.71)
 (truncate 111)
 (truncate 6.1)
@@ -1452,7 +1538,7 @@ scamperTest('truncate-round', `
 (round 0.69)
 (round 0.10000000000000009)
 (round 0)
-`, [
+`)).toEqual([
   '0',
   '111',
   '6',
@@ -1466,8 +1552,10 @@ scamperTest('truncate-round', `
   '0',
   '0'
 ])
+})
 
-scamperTest('vector-immutable', `
+test('vector-immutable', () => {
+  expect(runProgram(`
 (define empty (vector))
 
 empty
@@ -1507,7 +1595,7 @@ append-result
 (vector-append)
 
 (vector-append (vector) (vector 1 2) (vector) (vector 3) (vector) (vector 4 5))
-`, [
+`)).toEqual([
   '(vector)',
   '#t',
   '0',
@@ -1525,8 +1613,10 @@ append-result
   '(vector)',
   '(vector 1 2 3 4 5)'
 ])
+})
 
-scamperTest('vector-mutable', `
+test('vector-mutable', () => {
+  expect(runProgram(`
 (define sample-vector (vector "alpha" "beta" "gamma" "delta" "epsilon"))
 sample-vector
 (vector-set! sample-vector 2 "zeta")
@@ -1537,7 +1627,7 @@ sample-vector
 sample-vector
 (vector-fill! sample-vector "woot")
 sample-vector
-`, [
+`)).toEqual([
   '(vector "alpha" "beta" "gamma" "delta" "epsilon")',
   'void',
   '(vector "alpha" "beta" "zeta" "delta" "epsilon")',
@@ -1548,8 +1638,10 @@ sample-vector
   'void',
   '(vector "woot" "woot" "woot" "woot" "woot")'
 ])
+})
 
-scamperTest('with-handler', `
+test('with-handler', () => {
+  expect(runProgram(`
 (with-handler
   (lambda (err) (string-append "This is the error that was generated: " err))
   (lambda (x y z) (+ x y z))
@@ -1560,22 +1652,24 @@ scamperTest('with-handler', `
   (lambda (x y z) (error "oh no, an error!"))
   1 2 3)
 
-`, [
+`)).toEqual([
   '6',
-  'Runtime error [8:19-8:44]: (error) oh no, an error!',
-  'void'
+  '"This is the error that was generated: oh no, an error!"'
 ])
+})
 
-scamperTest('zero', `
+test('zero', () => {
+  expect(runProgram(`
 (zero? 0.002)
 (zero? 0.1)
 (zero? 0.0)
 (zero? 0)
 (zero? 1)
-`, [
+`)).toEqual([
   '#f',
   '#f',
   '#t',
   '#t',
   '#f'
 ])
+})

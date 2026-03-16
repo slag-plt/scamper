@@ -11,7 +11,7 @@ import * as Html from './api/html.js'
 
 import * as scamper from '../index.js'
 
-const docLibs: Map<string, object> = new Map([
+const docLibs = new Map<string, object>([
   ['prelude', Prelude as object],
   ['image', Image],
   ['lab', Lab],
