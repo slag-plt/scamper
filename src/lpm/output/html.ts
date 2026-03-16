@@ -45,10 +45,21 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
   }
 
   pushLevel (...attrs: string[]) {
-    const div = document.createElement('div')
-    div.classList.add(...attrs)
-    this.levels[this.levels.length - 1].appendChild(div)
-    this.levels.push(div)
+    const elt = document.createElement('div')
+    // HACK: if we're pushing a trace block, infuse it with an onclick to
+    // collapse its enclosing trace-block, if it has one.
+    if (attrs.includes('trace')) {
+      elt.addEventListener('click', (e) => {
+        for (const child of elt.children) {
+          if (child instanceof HTMLElement && child.classList.contains('trace-block')) {
+            child.classList.toggle('collapsed')
+          }
+        }
+      })
+    }
+    elt.classList.add(...attrs)
+    this.levels[this.levels.length - 1].appendChild(elt)
+    this.levels.push(elt)
   }
 
   popLevel () {

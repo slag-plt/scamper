@@ -197,19 +197,21 @@ export class Thread {
    * begins processing the given expression.
    * @param preamble the preamble to use when tracing
    * @param expr the expression to proces next
+   * @param printExpr whether to print the expression in the trace output (defaults to `true`)
    */
-  private checkIfProcessingExpr(preamble: string, expr: L.Blk): void {
+  private checkIfProcessingExpr(preamble: string, expr: L.Blk, printExpr = true): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
       this.push(`##stmt_${this.curStmt}##`, this.env, expr)
       if (this.options.isTracing) {
-        this.out.pushLevel("trace-block")
+        this.out.pushLevel("trace")
         this.out.send(
           mkTraceStart(
             preamble,
-            this.raisingProviders.get(this.options.raisingTarget)!.raise(this),
+            printExpr ? this.raisingProviders.get(this.options.raisingTarget)!.raise(this) : undefined,
           ),
         )
+        this.out.pushLevel("trace-block")
       }
     }
   }
@@ -280,8 +282,9 @@ export class Thread {
           this.stepFrame()
         } else {
           const result = this.results[this.curStmt]
+          this.out.popLevel() // pops trace-block
           this.out.send(result)
-          this.advanceStmt()
+          this.advanceStmt() // pops trace
         }
         return
       }
@@ -298,8 +301,8 @@ export class Thread {
           }
         }
         if (this.options.isTracing) {
-          this.out.pushLevel("trace-block")
-          this.out.send(`Imported library: ${stmt.name}`)
+          this.out.pushLevel("trace")
+          this.out.send(mkTraceStart(`Imported library: ${stmt.name}`))
           // we don't pop here because advanceStmt pops for us
         }
         this.advanceStmt()
@@ -308,24 +311,26 @@ export class Thread {
 
       // define case
       case "define": {
-        this.checkIfProcessingExpr(`Defining ${stmt.name} as`, stmt.expr)
+        this.checkIfProcessingExpr(`Defining ${stmt.name}`, stmt.expr, false)
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
           const result = this.results[this.curStmt]
           this.env.set(stmt.name, result)
-          this.advanceStmt()
+          this.out.popLevel() // pops trace-block
+          this.advanceStmt() // pops trace
         }
         return
       }
 
       // stmtexp case
       case "stmtexp": {
-        this.checkIfProcessingExpr(`Evaluating`, stmt.expr)
+        this.checkIfProcessingExpr(`Evaluating `, stmt.expr)
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
-          this.advanceStmt()
+          this.out.popLevel() // pops trace-block
+          this.advanceStmt() // pops trace
         }
         return
       }
