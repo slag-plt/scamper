@@ -1,62 +1,61 @@
-import * as Scheme from './scheme'
-import * as LPM from './lpm'
-import HtmlDisplay from './lpm/output/html'
-import builtinLibs from './lib'
+import * as Scheme from "./scheme"
+import * as LPM from "./lpm"
+import HtmlDisplay from "./lpm/output/html"
+import builtinLibs from "./lib"
 
 export class Scamper {
   display: HtmlDisplay
   prog: LPM.Prog | undefined
   machine: LPM.Thread | undefined
 
-  constructor (target: HTMLElement, src: string, isTracing = false) {
+  constructor(target: HTMLElement, src: string, isTracing = false) {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
       const opts = LPM.defaultOptions
       opts.isTracing = isTracing
       this.machine = new LPM.Thread(
-        '##main##',
+        "##main##",
         Scheme.mkInitialEnv(),
         this.prog,
         opts,
         builtinLibs,
         this.display,
         this.display,
-        new Map([
-          ['scheme', Scheme.raiser]
-        ])
+        new Map([["scheme", Scheme.raiser]]),
       )
     }
   }
 
-  send (v: LPM.Value) {
+  send(v: LPM.Value) {
     this.display.send(v)
   }
 
-  report (err: LPM.ScamperError) {
+  report(err: LPM.ScamperError) {
     this.display.report(err)
   }
 
-  runProgram () {
+  runProgram() {
     if (this.machine) {
       this.machine.evaluate()
     }
   }
 
-  runnerTree () {
-    // TODO: need to update! 
+  runnerTree() {
+    // TODO: need to update!
     // this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);
   }
 
-  stepProgram () {
+  stepProgram() {
     if (this.machine) {
       this.machine.step()
     }
   }
 
-  stepStmtProgram () {
-    // TODO: need to reimplement this!
-    // this.sem.stepToNextStmt()
+  stepStmtProgram() {
+    if (this.machine) {
+      this.machine.stepExpr()
+    }
   }
 }
 
