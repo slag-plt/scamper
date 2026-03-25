@@ -47,6 +47,13 @@ export class Scamper {
     }
   }
 
+  cancel() {
+    console.debug("attempted to cancel")
+    if (this.machine) {
+      this.machine.cancel()
+    }
+  }
+
   runnerTree() {
     // TODO: need to update!
     // this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);

@@ -88,6 +88,10 @@ body {
   width: 80%;
 }
 
+#in-progress, #in-progress-trace {
+  display: none;
+}
+
 #header {
   background: #eee;
   color: #333;

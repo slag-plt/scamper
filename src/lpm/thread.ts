@@ -71,6 +71,7 @@ export class Thread {
   frames: Frame[]
   results: L.Value[]
   isProcessingExpr: boolean
+  cancelled = false
 
   constructor(
     name: string,
@@ -141,7 +142,6 @@ export class Thread {
   ///// Evaluation /////////////////////////////////////////////////////////////
 
   step(): void {
-    console.debug("stepping!")
     this.stepThread()
     if (this.options.isTracing && this.isProcessingExpr) {
       const provider = this.raisingProviders.get(this.options.raisingTarget)!
@@ -161,11 +161,17 @@ export class Thread {
     } while (this.isProcessingExpr)
   }
 
-  async evaluateAsync(stepsPerYield = 10_000): Promise<L.Value> {
-    while (!this.isFinished()) {
+  cancel() {
+    this.cancelled = true
+  }
+
+  async evaluateAsync(stepsPerYield = 100): Promise<L.Value> {
+    while (!this.isFinished() && !this.cancelled) {
       for (let i = 0; i < stepsPerYield && !this.isFinished(); i++) {
+        console.debug("stepping")
         this.step()
       }
+      console.debug("yielding")
       await scheduler.yield()
     }
     return this.results[this.curStmt - 1]

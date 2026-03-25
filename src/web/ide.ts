@@ -306,14 +306,31 @@ class IDE {
 
     ///// Execution Buttons ////////////////////////////////////////////////////
 
-    document.getElementById("run")?.addEventListener("click", async () => {
+    const runBtn = document.getElementById("run")
+    const inProgress = document.getElementById("in-progress")
+    if (!runBtn || !inProgress)
+      throw new Error("runBtn or inProgress not found")
+    runBtn.addEventListener("click", async () => {
       this.startScamper(false)
-      await this.scamper?.runProgramAsync()
+      runBtn.style.display = "none"
+      inProgress.style.display = "inline"
+      try {
+        await this.scamper?.runProgramAsync()
+      } finally {
+        inProgress.style.display = "none"
+        runBtn.style.display = ""
+      }
+    })
+
+    const stopBtn = document.getElementById("stop")
+    if (!stopBtn) throw new Error("stopBtn not found")
+    stopBtn.addEventListener("click", () => {
+      this.scamper?.cancel()
     })
 
     document
-      .getElementById("run-window")!
-      .addEventListener("click", async () => {
+      .getElementById("run-window")
+      ?.addEventListener("click", async () => {
         if (!this.currentFile) {
           return
         }
@@ -339,9 +356,27 @@ class IDE {
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
 
-    document.getElementById("step-all")?.addEventListener("click", async () => {
-      await this.scamper?.runProgramAsync()
+    const stepAllBtn = document.getElementById("step-all")
+    const traceInProgress = document.getElementById("in-progress-trace")
+    if (!stepAllBtn || !traceInProgress)
+      throw new Error("trace related buttons not found?")
+    stepAllBtn.addEventListener("click", async () => {
+      // switch visibility of the step-all button and the trace in progress div
+      stepAllBtn.style.display = "none"
+      traceInProgress.style.display = "inline"
+      try {
+        await this.scamper?.runProgramAsync()
+      } finally {
+        stepAllBtn.style.display = ""
+        traceInProgress.style.display = "none"
+      }
       outputPane.scrollTo(0, outputPane.scrollHeight)
+    })
+
+    const stopTraceBtn = document.getElementById("stop-trace")
+    if (!stopTraceBtn) throw new Error("stopTraceBtn not found")
+    stopTraceBtn.addEventListener("click", () => {
+      this.scamper?.cancel()
     })
 
     document.getElementById("ast-text")!.addEventListener("click", () => {

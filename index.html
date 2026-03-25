@@ -39,6 +39,11 @@
         <button id="toggle-sidebar" class="fa fa-bars" aria-label="Toggle sidebar"></button>
         ⋅
         <button id="run" class="fa-solid fa-play" aria-label="Run" accesskey="w" aria-keyshortcuts="w"></button>
+        <!-- TODO: we should really be using react... this is repeated for tracing -->
+        <div id="in-progress">
+          <button id="stop" class="fa-solid fa-stop" aria-label="Stop"></button>
+          <div class="fa-solid fa-spinner fa-spin"></div>
+        </div>
         <button id="step" class="fa-solid fa-route" aria-label="Trace"></button>
         <button id="run-window" class="fa-solid fa-window-maximize" aria-label="Maximize Output Window "></button>
         <button id="ast-window" class="fa-solid fa-tree" aria-label="Display Syntax Tree" disabled></button>
@@ -60,6 +65,10 @@
             <button id="step-once" class="fa-solid fa-shoe-prints" aria-label="Step once"></button>
             <button id="step-stmt" class="fa-solid fa-forward-step" aria-label="Step Statement"></button>
             <button id="step-all" class="fa-solid fa-forward" aria-label="Step All"></button>
+            <div id="in-progress-trace">
+              <button id="stop-trace" class="fa-solid fa-stop" aria-label="Stop Trace"></button>
+              <div class="fa-solid fa-spinner fa-spin"></div>
+            </div>
             <button id="ast-text" class="fa-solid fa-tree" aria-label="Show AST" disabled></button>
           </div>
           <div id="results-status" class="text-align: right;"></div>
