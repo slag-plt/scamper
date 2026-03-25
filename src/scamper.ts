@@ -41,6 +41,12 @@ export class Scamper {
     }
   }
 
+  async runProgramAsync() {
+    if (this.machine) {
+      await this.machine.evaluateAsync()
+    }
+  }
+
   runnerTree() {
     // TODO: need to update!
     // this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);

@@ -6,6 +6,7 @@ import { mkTraceStart, mkTraceOutput } from "./trace.js"
 import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
+import "scheduler-polyfill"
 
 /** The type of runtime options. */
 export interface Options {
@@ -140,6 +141,7 @@ export class Thread {
   ///// Evaluation /////////////////////////////////////////////////////////////
 
   step(): void {
+    console.debug("stepping!")
     this.stepThread()
     if (this.options.isTracing && this.isProcessingExpr) {
       const provider = this.raisingProviders.get(this.options.raisingTarget)!
@@ -152,10 +154,21 @@ export class Thread {
   }
 
   /** Steps until next expression is finished. */
+  // TODO: update this to be async as well
   stepExpr(): void {
     do {
       this.step()
     } while (this.isProcessingExpr)
+  }
+
+  async evaluateAsync(stepsPerYield = 10_000): Promise<L.Value> {
+    while (!this.isFinished()) {
+      for (let i = 0; i < stepsPerYield && !this.isFinished(); i++) {
+        this.step()
+      }
+      await scheduler.yield()
+    }
+    return this.results[this.curStmt - 1]
   }
 
   evaluate(): L.Value {
@@ -199,7 +212,11 @@ export class Thread {
    * @param expr the expression to proces next
    * @param printExpr whether to print the expression in the trace output (defaults to `true`)
    */
-  private checkIfProcessingExpr(preamble: string, expr: L.Blk, printExpr = true): void {
+  private checkIfProcessingExpr(
+    preamble: string,
+    expr: L.Blk,
+    printExpr = true,
+  ): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
       this.push(`##stmt_${this.curStmt}##`, this.env, expr)
@@ -208,7 +225,11 @@ export class Thread {
         this.out.send(
           mkTraceStart(
             preamble,
-            printExpr ? this.raisingProviders.get(this.options.raisingTarget)!.raise(this) : undefined,
+            printExpr
+              ? this.raisingProviders
+                  .get(this.options.raisingTarget)!
+                  .raise(this)
+              : undefined,
           ),
         )
         this.out.pushLevel("trace-block")
@@ -282,7 +303,9 @@ export class Thread {
           this.stepFrame()
         } else {
           const result = this.results[this.curStmt]
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.out.send(result)
           this.advanceStmt() // pops trace
         }
@@ -317,7 +340,9 @@ export class Thread {
         } else {
           const result = this.results[this.curStmt]
           this.env.set(stmt.name, result)
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
@@ -329,7 +354,9 @@ export class Thread {
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
