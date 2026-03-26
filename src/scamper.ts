@@ -65,9 +65,9 @@ export class Scamper {
     }
   }
 
-  stepStmtProgram() {
+  async stepStmtProgram() {
     if (this.machine) {
-      this.machine.stepExpr()
+      await this.machine.stepExprAsync()
     }
   }
 }

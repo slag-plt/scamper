@@ -153,16 +153,37 @@ export class Thread {
     }
   }
 
+  /**
+   * Cancels the evaluation of this thread.
+   * This is useful for interrupting long-running evaluations, i.e. infinite recursion.
+   */
+  cancel() {
+    this.cancelled = true
+  }
+
+  private handleCancelled() {
+    if (this.cancelled) {
+      this.out.send(new ScamperError("Runtime", "Evaluation cancelled"))
+    }
+  }
+
   /** Steps until next expression is finished. */
-  // TODO: update this to be async as well
+  async stepExprAsync(stepsPerYield = 100): Promise<void> {
+    let i = 0
+    do {
+      this.step()
+      i++
+      if (i >= stepsPerYield) {
+        i = 0
+        await scheduler.yield()
+      }
+    } while (this.isProcessingExpr && !this.cancelled)
+    this.handleCancelled()
+  }
   stepExpr(): void {
     do {
       this.step()
     } while (this.isProcessingExpr)
-  }
-
-  cancel() {
-    this.cancelled = true
   }
 
   async evaluateAsync(stepsPerYield = 100): Promise<L.Value> {
@@ -174,6 +195,7 @@ export class Thread {
       console.debug("yielding")
       await scheduler.yield()
     }
+    this.handleCancelled()
     return this.results[this.curStmt - 1]
   }
 

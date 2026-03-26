@@ -7,6 +7,7 @@ import { renderToOutput } from "../lpm/output/html.js"
 import * as Lock from "./lockfile.js"
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
+import { mkInProgress } from "./in-progress"
 
 const editorPane = document.getElementById("editor")!
 const outputPane = document.getElementById("output")!
@@ -307,23 +308,26 @@ class IDE {
     ///// Execution Buttons ////////////////////////////////////////////////////
 
     const runBtn = document.getElementById("run")
-    const inProgress = document.getElementById("in-progress")
-    if (!runBtn || !inProgress)
-      throw new Error("runBtn or inProgress not found")
+    if (!runBtn) throw new Error("runBtn or inProgress not found")
+    const {
+      el: inProgress,
+      stopBtn,
+      showProgress,
+      hideProgress,
+    } = mkInProgress("stop")
+    runBtn.after(inProgress)
+
     runBtn.addEventListener("click", async () => {
       this.startScamper(false)
       runBtn.style.display = "none"
-      inProgress.style.display = "inline"
+      showProgress()
       try {
         await this.scamper?.runProgramAsync()
       } finally {
-        inProgress.style.display = "none"
         runBtn.style.display = ""
+        hideProgress()
       }
     })
-
-    const stopBtn = document.getElementById("stop")
-    if (!stopBtn) throw new Error("stopBtn not found")
     stopBtn.addEventListener("click", () => {
       this.scamper?.cancel()
     })
@@ -351,31 +355,54 @@ class IDE {
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
 
-    document.getElementById("step-stmt")!.addEventListener("click", () => {
-      this.scamper!.stepStmtProgram()
+    const stepStmtBtn = document.getElementById("step-stmt")
+    if (!stepStmtBtn) throw new Error("step-stmt button not found?")
+    const {
+      el: inProgressTraceStmt,
+      stopBtn: stopBtnTraceStmt,
+      hideProgress: hideProgressTraceStmt,
+      showProgress: showProgressTraceStmt,
+    } = mkInProgress("stop-trace-stmt")
+    stepStmtBtn.after(inProgressTraceStmt)
+    stepStmtBtn.addEventListener("click", async () => {
+      // switch visibility of the step-all button and the trace in progress div
+      stepStmtBtn.style.display = "none"
+      showProgressTraceStmt()
+      try {
+        await this.scamper?.stepStmtProgram()
+      } finally {
+        stepStmtBtn.style.display = ""
+        hideProgressTraceStmt()
+      }
       outputPane.scrollTo(0, outputPane.scrollHeight)
+    })
+    stopBtnTraceStmt.addEventListener("click", () => {
+      this.scamper?.cancel()
     })
 
     const stepAllBtn = document.getElementById("step-all")
-    const traceInProgress = document.getElementById("in-progress-trace")
-    if (!stepAllBtn || !traceInProgress)
-      throw new Error("trace related buttons not found?")
+    if (!stepAllBtn) throw new Error("trace all button not found?")
+    const {
+      el: inProgressTraceAll,
+      stopBtn: stopBtnTraceAll,
+      hideProgress: hideProgressTraceAll,
+      showProgress: showProgressTraceAll,
+    } = mkInProgress("stop-trace-all")
+    stepAllBtn.after(inProgressTraceAll)
+
     stepAllBtn.addEventListener("click", async () => {
       // switch visibility of the step-all button and the trace in progress div
       stepAllBtn.style.display = "none"
-      traceInProgress.style.display = "inline"
+      showProgressTraceAll()
       try {
         await this.scamper?.runProgramAsync()
       } finally {
         stepAllBtn.style.display = ""
-        traceInProgress.style.display = "none"
+        hideProgressTraceAll()
       }
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
-
-    const stopTraceBtn = document.getElementById("stop-trace")
-    if (!stopTraceBtn) throw new Error("stopTraceBtn not found")
-    stopTraceBtn.addEventListener("click", () => {
+    stopBtnTraceAll.addEventListener("click", () => {
       this.scamper?.cancel()
     })
 
