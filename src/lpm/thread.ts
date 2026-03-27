@@ -17,7 +17,7 @@ export interface Options {
 }
 
 export const defaultOptions: Options = {
-  maxCallStackDepth: 10000,
+  maxCallStackDepth: 10_000,
   stepMatch: false,
   isTracing: false,
   raisingTarget: "scheme",
@@ -167,43 +167,69 @@ export class Thread {
     }
   }
 
-  /** Steps until next expression is finished. */
-  async stepExprAsync(stepsPerYield = 100): Promise<void> {
-    let i = 0
-    do {
-      this.step()
-      i++
-      if (i >= stepsPerYield) {
-        i = 0
-        await scheduler.yield()
-      }
-    } while (this.isProcessingExpr && !this.cancelled)
-    this.handleCancelled()
+  /**
+   * For tracing, the steps per scheduler yield should be proportional to the
+   * number of sent output messages, since long outputs will cause the DOM to
+   * slow down.
+   * TODO: this probably isn't needed once we switch to a not terrible UI framework
+   */
+  private getTracingStepsPerYield(stepsPerYield: number, maxLogs = 1_000) {
+    const scalingFactor = stepsPerYield / maxLogs
+    const logCount = Math.max(this.out.totalSends, 1)
+    const tracingStepsPerYield = Math.ceil(
+      stepsPerYield / (logCount * scalingFactor),
+    )
+    // console.debug("tracing steps:", tracingStepsPerYield)
+    return tracingStepsPerYield
   }
+
+  /** Steps until next expression is finished. */
+  // TODO: should deprecate this in favor of stepExprAsync
   stepExpr(): void {
     do {
       this.step()
     } while (this.isProcessingExpr)
   }
 
-  async evaluateAsync(stepsPerYield = 100): Promise<L.Value> {
-    while (!this.isFinished() && !this.cancelled) {
-      for (let i = 0; i < stepsPerYield && !this.isFinished(); i++) {
-        console.debug("stepping")
-        this.step()
+  async stepExprAsync(stepsPerYield = 10_000): Promise<void> {
+    let i = 0
+    do {
+      this.step()
+      i++
+      if (i >= this.getTracingStepsPerYield(stepsPerYield)) {
+        i = 0
+        await scheduler.yield()
       }
-      console.debug("yielding")
-      await scheduler.yield()
-    }
+    } while (this.isProcessingExpr && !this.cancelled)
     this.handleCancelled()
-    return this.results[this.curStmt - 1]
   }
 
+  // TODO: should deprecate this in favor of evaluateAsync
   evaluate(): L.Value {
     while (!this.isFinished()) {
       this.step()
     }
     // N.B., return the results of the last statement of the thread as the final result
+    return this.results[this.curStmt - 1]
+  }
+
+  async evaluateAsync(stepsPerYield = 10_000): Promise<L.Value> {
+    while (!this.isFinished() && !this.cancelled) {
+      for (
+        let i = 0;
+        i <
+          (this.options.isTracing
+            ? this.getTracingStepsPerYield(stepsPerYield)
+            : stepsPerYield) && !this.isFinished();
+        i++
+      ) {
+        // console.debug("stepping")
+        this.step()
+      }
+      // console.debug("yielding, curr frames", this.frames.length)
+      await scheduler.yield()
+    }
+    this.handleCancelled()
     return this.results[this.curStmt - 1]
   }
 
@@ -454,7 +480,7 @@ export class Thread {
     // state changes significantly. Probably should make this an option (where
     // skipping is the default.)
     let cont = true
-    while (cont && !this.getCurrentFrame().isFinished()) {
+    while (cont && !this.getCurrentFrame().isFinished() && !this.cancelled) {
       const instr = current.popInstr()
       switch (instr.tag) {
         // lit case (minor step)

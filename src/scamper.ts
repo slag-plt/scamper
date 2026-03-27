@@ -43,12 +43,13 @@ export class Scamper {
 
   async runProgramAsync() {
     if (this.machine) {
+      this.machine.cancelled = false
       await this.machine.evaluateAsync()
     }
   }
 
   cancel() {
-    console.debug("attempted to cancel")
+    // console.debug("attempted to cancel")
     if (this.machine) {
       this.machine.cancel()
     }

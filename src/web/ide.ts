@@ -395,6 +395,7 @@ class IDE {
       stepAllBtn.style.display = "none"
       showProgressTraceAll()
       try {
+        // smaller steps per yield due to no virtualized lists
         await this.scamper?.runProgramAsync()
       } finally {
         stepAllBtn.style.display = ""

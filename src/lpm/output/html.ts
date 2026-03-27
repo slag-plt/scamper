@@ -1,6 +1,6 @@
-import * as LPM from '..'
-import HtmlRenderer from '../renderers/html.js'
-import { OutputChannel, ErrorChannel } from './channel.js'
+import * as LPM from ".."
+import HtmlRenderer from "../renderers/html.js"
+import { OutputChannel, ErrorChannel } from "./channel.js"
 
 // import hljs from 'highlight.js'
 
@@ -23,36 +23,41 @@ import { OutputChannel, ErrorChannel } from './channel.js'
 // }
 
 export function renderToOutput(output: HTMLElement, v: any) {
-  const div = document.createElement('div')
-  div.classList.add('scamper-output')
+  const div = document.createElement("div")
+  div.classList.add("scamper-output")
   div.appendChild(HtmlRenderer.render(v))
   output.appendChild(div)
 }
 
 export class HTMLDisplay implements OutputChannel, ErrorChannel {
   levels: HTMLElement[]
+  #totalSends = 0
 
-  constructor (root: HTMLElement) {
+  constructor(root: HTMLElement) {
     this.levels = [root]
   }
 
-  send (v: LPM.Value): void {
+  send(v: LPM.Value): void {
     renderToOutput(this.levels[this.levels.length - 1], v)
+    this.#totalSends++
   }
 
-  report (err: LPM.ScamperError): void {
+  report(err: LPM.ScamperError): void {
     renderToOutput(this.levels[this.levels.length - 1], err)
   }
 
-  pushLevel (...attrs: string[]) {
-    const elt = document.createElement('div')
+  pushLevel(...attrs: string[]) {
+    const elt = document.createElement("div")
     // HACK: if we're pushing a trace block, infuse it with an onclick to
     // collapse its enclosing trace-block, if it has one.
-    if (attrs.includes('trace')) {
-      elt.addEventListener('click', (_e) => {
+    if (attrs.includes("trace")) {
+      elt.addEventListener("click", (_e) => {
         for (const child of elt.children) {
-          if (child instanceof HTMLElement && child.classList.contains('trace-block')) {
-            child.classList.toggle('collapsed')
+          if (
+            child instanceof HTMLElement &&
+            child.classList.contains("trace-block")
+          ) {
+            child.classList.toggle("collapsed")
           }
         }
       })
@@ -62,12 +67,20 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
     this.levels.push(elt)
   }
 
-  popLevel () {
+  popLevel() {
     if (this.levels.length === 1) {
-      throw new Error('Cannot pop the root level')
+      throw new Error("Cannot pop the root level")
     }
     this.levels.pop()
   }
+
+  get totalSends() {
+    return this.#totalSends
+  }
+}
+
+export function isHTMLDisplay(out: OutputChannel): out is HTMLDisplay {
+  return out instanceof HTMLDisplay
 }
 
 export default HTMLDisplay

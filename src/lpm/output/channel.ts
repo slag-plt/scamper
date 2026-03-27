@@ -1,5 +1,5 @@
-import { Value } from '../lang.js'
-import { ScamperError } from '../error.js'
+import { Value } from "../lang.js"
+import { ScamperError } from "../error.js"
 
 /**
  * An abstract sink that can receive output from LPM. Output channels are also
@@ -22,6 +22,8 @@ export interface OutputChannel {
    * Pops the current output level from this channel.
    */
   popLevel: () => void
+
+  readonly totalSends: number
 }
 
 /** An abstract sink that can receive errors from LPM. */
