@@ -14,6 +14,7 @@ export interface Options {
   stepMatch: boolean
   isTracing: boolean
   raisingTarget: string
+  maxStepsPerYield: number
 }
 
 export const defaultOptions: Options = {
@@ -21,11 +22,11 @@ export const defaultOptions: Options = {
   stepMatch: false,
   isTracing: false,
   raisingTarget: "scheme",
+  maxStepsPerYield: 1_000_000,
 }
 
 export function cloneOptions(opt: Options): Options {
-  const { maxCallStackDepth, stepMatch, isTracing, raisingTarget } = opt
-  return { maxCallStackDepth, stepMatch, isTracing, raisingTarget }
+  return structuredClone(opt)
 }
 
 /**
@@ -173,11 +174,11 @@ export class Thread {
    * slow down.
    * TODO: this probably isn't needed once we switch to a not terrible UI framework
    */
-  private getTracingStepsPerYield(stepsPerYield: number, maxLogs = 1_000) {
-    const scalingFactor = stepsPerYield / maxLogs
+  private getTracingStepsPerYield(maxLogs = 1_000) {
+    const scalingFactor = this.options.maxStepsPerYield / maxLogs
     const logCount = Math.max(this.out.totalSends, 1)
     const tracingStepsPerYield = Math.ceil(
-      stepsPerYield / (logCount * scalingFactor),
+      this.options.maxStepsPerYield / (logCount * scalingFactor),
     )
     // console.debug("tracing steps:", tracingStepsPerYield)
     return tracingStepsPerYield
@@ -191,12 +192,12 @@ export class Thread {
     } while (this.isProcessingExpr)
   }
 
-  async stepExprAsync(stepsPerYield = 10_000): Promise<void> {
+  async stepExprAsync(): Promise<void> {
     let i = 0
     do {
       this.step()
       i++
-      if (i >= this.getTracingStepsPerYield(stepsPerYield)) {
+      if (i >= this.getTracingStepsPerYield()) {
         i = 0
         await scheduler.yield()
       }
@@ -213,20 +214,20 @@ export class Thread {
     return this.results[this.curStmt - 1]
   }
 
-  async evaluateAsync(stepsPerYield = 10_000): Promise<L.Value> {
+  async evaluateAsync(): Promise<L.Value> {
     while (!this.isFinished() && !this.cancelled) {
       for (
         let i = 0;
         i <
           (this.options.isTracing
-            ? this.getTracingStepsPerYield(stepsPerYield)
-            : stepsPerYield) && !this.isFinished();
+            ? this.getTracingStepsPerYield()
+            : this.options.maxStepsPerYield) && !this.isFinished();
         i++
       ) {
         // console.debug("stepping")
         this.step()
       }
-      // console.debug("yielding, curr frames", this.frames.length)
+      console.debug("yielding, curr frames", this.frames.length)
       await scheduler.yield()
     }
     this.handleCancelled()
