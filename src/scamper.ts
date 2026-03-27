@@ -35,13 +35,7 @@ export class Scamper {
     this.display.report(err)
   }
 
-  runProgram() {
-    if (this.machine) {
-      this.machine.evaluate()
-    }
-  }
-
-  async runProgramAsync() {
+  async runProgram() {
     if (this.machine) {
       this.machine.cancelled = false
       await this.machine.evaluateAsync()
@@ -68,7 +62,7 @@ export class Scamper {
 
   async stepStmtProgram() {
     if (this.machine) {
-      await this.machine.stepExprAsync()
+      await this.machine.stepExpr()
     }
   }
 }

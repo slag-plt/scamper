@@ -185,14 +185,7 @@ export class Thread {
   }
 
   /** Steps until next expression is finished. */
-  // TODO: should deprecate this in favor of stepExprAsync
-  stepExpr(): void {
-    do {
-      this.step()
-    } while (this.isProcessingExpr)
-  }
-
-  async stepExprAsync(): Promise<void> {
+  async stepExpr(): Promise<void> {
     let i = 0
     do {
       this.step()

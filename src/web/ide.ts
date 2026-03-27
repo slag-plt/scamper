@@ -322,7 +322,7 @@ class IDE {
       runBtn.style.display = "none"
       showProgress()
       try {
-        await this.scamper?.runProgramAsync()
+        await this.scamper?.runProgram()
       } finally {
         runBtn.style.display = ""
         hideProgress()
@@ -396,7 +396,7 @@ class IDE {
       showProgressTraceAll()
       try {
         // smaller steps per yield due to no virtualized lists
-        await this.scamper?.runProgramAsync()
+        await this.scamper?.runProgram()
       } finally {
         stepAllBtn.style.display = ""
         hideProgressTraceAll()
