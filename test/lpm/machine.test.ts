@@ -32,19 +32,21 @@ function makeMachine (prog: L.Prog): [L.Thread, LoggingChannel, LoggingChannel] 
 
 describe('basic ops', () => {
   test('lit', () => {
-    const [machine, out, _] = makeMachine([U.mkDisp([U.mkLit(42)])])
+    const [machine, out] = makeMachine([U.mkDisp([U.mkLit(42)])])
     machine.evaluate()
     expect(out.log).toEqual([42])
   })
 
   test('var', () => {
-    const [machine, out, _] = makeMachine([U.mkDisp([U.mkVar('+')])])
+    const [machine, out] = makeMachine([U.mkDisp([U.mkVar('+')])])
     machine.evaluate()
-    expect(out.log).toEqual([env.get('+')!])
+    const plusFn = env.get('+')
+    expect(plusFn).toBeDefined()
+    expect(out.log).toEqual([plusFn])
   })
 
   test('ctor', () => {
-    const [machine, out, _] = makeMachine([U.mkDisp([U.mkLit('test'), U.mkLit(2), U.mkCtor('test-ctor', ['a', 'b'])])])
+    const [machine, out] = makeMachine([U.mkDisp([U.mkLit('test'), U.mkLit(2), U.mkCtor('test-ctor', ['a', 'b'])])])
     machine.evaluate()
     const result = out.log[0]
     expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
@@ -52,7 +54,7 @@ describe('basic ops', () => {
 
   test('cls', () => {
     const body = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkCls(['x'], body, 'add-one'),
       U.mkLit(1),
       U.mkAp(1)])
@@ -63,7 +65,7 @@ describe('basic ops', () => {
   })
 
   test('ap', () => {
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkVar('+'),
       U.mkLit(3),
       U.mkLit(4),
@@ -76,7 +78,7 @@ describe('basic ops', () => {
   test('match - successful pattern', () => {
     const ifBranch = [U.mkLit('matched')]
     const elseBranch = [U.mkLit('not matched')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit(42),
       U.mkMatch([
         [U.mkPLit(42), ifBranch],
@@ -90,7 +92,7 @@ describe('basic ops', () => {
   test('match - failed pattern', () => {
     const ifBranch = [U.mkLit('matched')]
     const elseBranch = [U.mkLit('not matched')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit(42),
       U.mkMatch([
         [U.mkPLit(99), ifBranch],
@@ -104,7 +106,7 @@ describe('basic ops', () => {
   test('match - variable pattern', () => {
     const ifBranch = [U.mkVar('+'), U.mkVar('x'), U.mkLit(10), U.mkAp(2)]
     const elseBranch = [U.mkLit(0)]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit(5),
       U.mkMatch([
         [U.mkPVar('x'), ifBranch],
@@ -118,7 +120,7 @@ describe('basic ops', () => {
   test('match - wildcard pattern', () => {
     const ifBranch = [U.mkLit('always matches')]
     const elseBranch = [U.mkLit('never reached')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit('anything'),
       U.mkMatch([
         [U.mkPWild(), ifBranch],
@@ -130,13 +132,13 @@ describe('basic ops', () => {
   })
 
   test('disp', () => {
-    const [machine, out, _] = makeMachine([U.mkDisp([U.mkLit('hello world')])])
+    const [machine, out] = makeMachine([U.mkDisp([U.mkLit('hello world')])])
     machine.evaluate()
     expect(out.log).toEqual(['hello world'])
   })
 
   test('raise', () => {
-    const [machine, _out, err] = makeMachine([U.mkDisp([U.mkRaise('test error')])])
+    const [machine, , err] = makeMachine([U.mkDisp([U.mkRaise('test error')])])
     machine.evaluate()
     expect(err.errLog.length).toBe(1)
   })
@@ -148,7 +150,7 @@ describe('pattern matching', () => {
   test('pwild - matches anything', () => {
     const ifBranch = [U.mkLit('matched')]
     const elseBranch = [U.mkLit('not matched')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit('any value'),
       U.mkMatch([
         [U.mkPWild(), ifBranch],
@@ -162,7 +164,7 @@ describe('pattern matching', () => {
   test('plit - literal pattern match', () => {
     const ifBranch = [U.mkLit('number matched')]
     const elseBranch = [U.mkLit('number not matched')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit(123),
       U.mkMatch([
         [U.mkPLit(123), ifBranch], 
@@ -176,7 +178,7 @@ describe('pattern matching', () => {
   test('pvar - variable binding', () => {
     const ifBranch = [U.mkVar('+'), U.mkVar('captured'), U.mkLit(' was captured'), U.mkAp(2)]
     const elseBranch = [U.mkLit('no match')]
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       U.mkLit('hello'),
       U.mkMatch([
         [U.mkPVar('captured'), ifBranch],
@@ -194,7 +196,7 @@ describe('pattern matching', () => {
     const elseBranch = [U.mkRaise('no match'), U.mkPops()]
     const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
     
-    const [machine, out, _] = makeMachine([U.mkDisp([
+    const [machine, out] = makeMachine([U.mkDisp([
       ...setupStruct,
       U.mkMatch([
         [pattern, ifBranch],
@@ -224,7 +226,7 @@ describe('pattern matching', () => {
               U.mkAp(2)
             ]]
       ])], 'fact')]
-    const [machine, out, _] = makeMachine([
+    const [machine, out] = makeMachine([
       U.mkDefine('fact', factorial), 
       U.mkDisp([
         U.mkVar('fact'),
