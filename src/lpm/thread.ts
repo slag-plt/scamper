@@ -6,6 +6,7 @@ import { mkTraceStart, mkTraceOutput } from "./trace.js"
 import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
+import "scheduler-polyfill"
 
 /** The type of runtime options. */
 export interface Options {
@@ -13,18 +14,19 @@ export interface Options {
   stepMatch: boolean
   isTracing: boolean
   raisingTarget: string
+  maxStepsPerYield: number
 }
 
 export const defaultOptions: Options = {
-  maxCallStackDepth: 10000,
+  maxCallStackDepth: 10_000,
   stepMatch: false,
   isTracing: false,
   raisingTarget: "scheme",
+  maxStepsPerYield: 1_000_000,
 }
 
 export function cloneOptions(opt: Options): Options {
-  const { maxCallStackDepth, stepMatch, isTracing, raisingTarget } = opt
-  return { maxCallStackDepth, stepMatch, isTracing, raisingTarget }
+  return structuredClone(opt)
 }
 
 /**
@@ -70,6 +72,7 @@ export class Thread {
   frames: Frame[]
   results: L.Value[]
   isProcessingExpr: boolean
+  cancelled = false
 
   constructor(
     name: string,
@@ -151,18 +154,76 @@ export class Thread {
     }
   }
 
-  /** Steps until next expression is finished. */
-  stepExpr(): void {
-    do {
-      this.step()
-    } while (this.isProcessingExpr)
+  /**
+   * Cancels the evaluation of this thread.
+   * This is useful for interrupting long-running evaluations, i.e. infinite recursion.
+   */
+  cancel() {
+    this.cancelled = true
   }
 
+  private handleCancelled() {
+    if (this.cancelled) {
+      this.out.send(new ScamperError("Runtime", "Evaluation cancelled"))
+    }
+  }
+
+  /**
+   * For tracing, the steps per scheduler yield should be proportional to the
+   * number of sent output messages, since long outputs will cause the DOM to
+   * slow down.
+   * TODO: this probably isn't needed once we switch to a not terrible UI framework
+   */
+  private getTracingStepsPerYield(maxLogs = 1_000) {
+    const scalingFactor = this.options.maxStepsPerYield / maxLogs
+    const logCount = Math.max(this.out.totalSends, 1)
+    const tracingStepsPerYield = Math.ceil(
+      this.options.maxStepsPerYield / (logCount * scalingFactor),
+    )
+    // console.debug("tracing steps:", tracingStepsPerYield)
+    return tracingStepsPerYield
+  }
+
+  /** Steps until next expression is finished. */
+  async stepExpr(): Promise<void> {
+    let i = 0
+    do {
+      this.step()
+      i++
+      if (i >= this.getTracingStepsPerYield()) {
+        i = 0
+        await scheduler.yield()
+      }
+    } while (this.isProcessingExpr && !this.cancelled)
+    this.handleCancelled()
+  }
+
+  // TODO: should deprecate this in favor of evaluateAsync
   evaluate(): L.Value {
     while (!this.isFinished()) {
       this.step()
     }
     // N.B., return the results of the last statement of the thread as the final result
+    return this.results[this.curStmt - 1]
+  }
+
+  async evaluateAsync(): Promise<L.Value> {
+    while (!this.isFinished() && !this.cancelled) {
+      for (
+        let i = 0;
+        i <
+          (this.options.isTracing
+            ? this.getTracingStepsPerYield()
+            : this.options.maxStepsPerYield) && !this.isFinished();
+        i++
+      ) {
+        // console.debug("stepping")
+        this.step()
+      }
+      console.debug("yielding, curr frames", this.frames.length)
+      await scheduler.yield()
+    }
+    this.handleCancelled()
     return this.results[this.curStmt - 1]
   }
 
@@ -199,7 +260,11 @@ export class Thread {
    * @param expr the expression to proces next
    * @param printExpr whether to print the expression in the trace output (defaults to `true`)
    */
-  private checkIfProcessingExpr(preamble: string, expr: L.Blk, printExpr = true): void {
+  private checkIfProcessingExpr(
+    preamble: string,
+    expr: L.Blk,
+    printExpr = true,
+  ): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
       this.push(`##stmt_${this.curStmt}##`, this.env, expr)
@@ -208,7 +273,11 @@ export class Thread {
         this.out.send(
           mkTraceStart(
             preamble,
-            printExpr ? this.raisingProviders.get(this.options.raisingTarget)!.raise(this) : undefined,
+            printExpr
+              ? this.raisingProviders
+                  .get(this.options.raisingTarget)!
+                  .raise(this)
+              : undefined,
           ),
         )
         this.out.pushLevel("trace-block")
@@ -282,7 +351,9 @@ export class Thread {
           this.stepFrame()
         } else {
           const result = this.results[this.curStmt]
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.out.send(result)
           this.advanceStmt() // pops trace
         }
@@ -317,7 +388,9 @@ export class Thread {
         } else {
           const result = this.results[this.curStmt]
           this.env.set(stmt.name, result)
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
@@ -329,7 +402,9 @@ export class Thread {
         if (this.frames.length > 0) {
           this.stepFrame()
         } else {
-          if (this.options.isTracing) { this.out.popLevel() } // pops trace-block
+          if (this.options.isTracing) {
+            this.out.popLevel()
+          } // pops trace-block
           this.advanceStmt() // pops trace
         }
         return
@@ -399,7 +474,7 @@ export class Thread {
     // state changes significantly. Probably should make this an option (where
     // skipping is the default.)
     let cont = true
-    while (cont && !this.getCurrentFrame().isFinished()) {
+    while (cont && !this.getCurrentFrame().isFinished() && !this.cancelled) {
       const instr = current.popInstr()
       switch (instr.tag) {
         // lit case (minor step)

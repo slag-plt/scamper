@@ -12,6 +12,7 @@ export class SvelteDisplay implements OutputChannel, ErrorChannel {
   #pushChild: DisplayCallbacks["PushChildCallback"]
   #popLevel: DisplayCallbacks["PopLevelCallback"]
   #sendToCurrentLevel: DisplayCallbacks["SendToCurrentLevelCallback"]
+  #totalSends = 0
 
   constructor({
     PushChildCallback,
@@ -25,6 +26,7 @@ export class SvelteDisplay implements OutputChannel, ErrorChannel {
 
   send(v: Value) {
     this.#sendToCurrentLevel(v)
+    this.#totalSends++
   }
   pushLevel(...attrs: string[]) {
     const elt = document.createElement("div")
@@ -50,5 +52,9 @@ export class SvelteDisplay implements OutputChannel, ErrorChannel {
   }
   report(e: ScamperError) {
     this.#sendToCurrentLevel(e)
+  }
+
+  get totalSends() {
+    return this.#totalSends
   }
 }
