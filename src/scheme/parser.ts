@@ -1,6 +1,6 @@
-import * as A from './ast.js'
-import * as L from '../lpm'
-import * as S from './syntax.js'
+import * as A from "./ast.js"
+import * as L from "../lpm"
+import * as S from "./syntax.js"
 
 // TODO: need to check whether _ is used correctly here, i.e., only under a section
 
@@ -9,43 +9,54 @@ import * as S from './syntax.js'
 ////////////////////////////////////////////////////////////////////////////////
 
 const reservedWords = [
-  'and',
-  'begin',
-  'cond',
-  'define',
-  'if',
-  'import',
-  'lambda',
-  'let',
-  'let*',
-  'letrec',
-  'match',
-  'or',
-  'quote',
-  'section',
-  'struct',
+  "and",
+  "begin",
+  "cond",
+  "define",
+  "if",
+  "import",
+  "lambda",
+  "let",
+  "let*",
+  "letrec",
+  "match",
+  "or",
+  "quote",
+  "section",
+  "struct",
 ]
 
 // Placeholders for incomplete programs to allow parsing to continue in the presence of errors
 const phExp = A.mkLit(undefined)
 const phStmt = A.mkStmtExp(A.mkLit(undefined))
 
-function parseIdentifier (errors: L.ScamperError[], v: L.Value, errorMsg = 'Expected an identifier'): string {
+function parseIdentifier(
+  errors: L.ScamperError[],
+  v: L.Value,
+  errorMsg = "Expected an identifier",
+): string {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isSym(v)) {
-    errors.push(new L.ScamperError('Parser', errorMsg, undefined, range))
-    return '<error>'
+    errors.push(new L.ScamperError("Parser", errorMsg, undefined, range))
+    return "<error>"
   }
-  const ret = v.value 
+  const ret = v.value
   if (reservedWords.includes(ret)) {
-    errors.push(new L.ScamperError('Parser', `The identifier "${ret}" is a reserved word and cannot be used as a variable name`, undefined, range))
-    return '<error>'
+    errors.push(
+      new L.ScamperError(
+        "Parser",
+        `The identifier "${ret}" is a reserved word and cannot be used as a variable name`,
+        undefined,
+        range,
+      ),
+    )
+    return "<error>"
   }
   return ret
 }
 
-function parsePat (errors: L.ScamperError[], v: L.Value): A.Pat {
+function parsePat(errors: L.ScamperError[], v: L.Value): A.Pat {
   const { value, range } = S.unpackSyntax(v)
   const orig = v
   v = value
@@ -54,25 +65,36 @@ function parsePat (errors: L.ScamperError[], v: L.Value): A.Pat {
     if (arr.length === 0) {
       return A.mkPLit(null, range)
     }
-    const head = parseIdentifier(errors, arr[0], 'The first element of a pattern list must be a constructor name')
+    const head = parseIdentifier(
+      errors,
+      arr[0],
+      "The first element of a pattern list must be a constructor name",
+    )
     const args = arr.slice(1).map((v) => parsePat(errors, v))
     return A.mkPCtor(head, args, range)
   } else if (L.isSym(v)) {
-    const name = parseIdentifier(errors, orig, 'Expected a valid constructor name')
+    const name = parseIdentifier(
+      errors,
+      orig,
+      "Expected a valid constructor name",
+    )
     return A.mkPVar(name, range)
   } else {
     return L.mkPLit(v)
   }
 }
 
-function parseIdentifierList (errors: L.ScamperError[], v: L.Value,
-                             listErrorMsg = 'Expected a list of identifiers',
-                             identErrorMsg = 'Expected an identifier'): string[] {
+function parseIdentifierList(
+  errors: L.ScamperError[],
+  v: L.Value,
+  listErrorMsg = "Expected a list of identifiers",
+  identErrorMsg = "Expected an identifier",
+): string[] {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
-    errors.push(new L.ScamperError('Parser', listErrorMsg, undefined, range))
-    return ['<error>']
+    errors.push(new L.ScamperError("Parser", listErrorMsg, undefined, range))
+    return ["<error>"]
   } else {
     const arr = L.listToVector(v)
     const idents = arr.map((v) => parseIdentifier(errors, v, identErrorMsg))
@@ -80,16 +102,33 @@ function parseIdentifierList (errors: L.ScamperError[], v: L.Value,
   }
 }
 
-function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body: A.Exp } {
+function parseBranch(
+  errors: L.ScamperError[],
+  v: L.Value,
+): { pat: A.Pat; body: A.Exp } {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a vector for a match branch', undefined, range))
-    return { pat: L.mkPLit('<error>'), body: phExp }
+    errors.push(
+      new L.ScamperError(
+        "Parser",
+        "Expected a vector for a match branch",
+        undefined,
+        range,
+      ),
+    )
+    return { pat: L.mkPLit("<error>"), body: phExp }
   } else {
     if (v.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a vecotr of size 2 for a match branch', undefined, range))
-      return { pat: L.mkPLit('<error>'), body: phExp }
+      errors.push(
+        new L.ScamperError(
+          "Parser",
+          "Expected a vector of size 2 for a match branch",
+          undefined,
+          range,
+        ),
+      )
+      return { pat: L.mkPLit("<error>"), body: phExp }
     }
     const pat = parsePat(errors, v[0])
     const body = parseExp(errors, v[1])
@@ -97,16 +136,33 @@ function parseBranch (errors: L.ScamperError[], v: L.Value): { pat: A.Pat, body:
   }
 }
 
-function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, body: A.Exp } {
+function parseCondBranch(
+  errors: L.ScamperError[],
+  v: L.Value,
+): { test: A.Exp; body: A.Exp } {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a vector for a cond branch', undefined, range))
-    return { test: L.mkLit('<error>'), body: phExp }
+    errors.push(
+      new L.ScamperError(
+        "Parser",
+        "Expected a vector for a cond branch",
+        undefined,
+        range,
+      ),
+    )
+    return { test: L.mkLit("<error>"), body: phExp }
   } else {
     if (v.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a vector of size 2 for a cond branch', undefined, range))
-      return { test: L.mkLit('<error>'), body: phExp }
+      errors.push(
+        new L.ScamperError(
+          "Parser",
+          "Expected a vector of size 2 for a cond branch",
+          undefined,
+          range,
+        ),
+      )
+      return { test: L.mkLit("<error>"), body: phExp }
     }
     const test = parseExp(errors, v[0])
     const body = parseExp(errors, v[1])
@@ -114,29 +170,60 @@ function parseCondBranch (errors: L.ScamperError[], v: L.Value): { test: A.Exp, 
   }
 }
 
-function parseLetBinder (errors: L.ScamperError[], v: L.Value): { name: string, value: A.Exp } {
+function parseLetBinder(
+  errors: L.ScamperError[],
+  v: L.Value,
+): { name: string; value: A.Exp } {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isArray(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a vector for a binder', undefined, range))
-    return { name: '<error>', value: phExp }
+    errors.push(
+      new L.ScamperError(
+        "Parser",
+        "Expected a vector for a binder",
+        undefined,
+        range,
+      ),
+    )
+    return { name: "<error>", value: phExp }
   } else {
     if (v.length !== 2) {
-      errors.push(new L.ScamperError('Parser', 'Expected a vector of size 2 for a binder', undefined, range))
-      return { name: '<error>', value: phExp }
+      errors.push(
+        new L.ScamperError(
+          "Parser",
+          "Expected a vector of size 2 for a binder",
+          undefined,
+          range,
+        ),
+      )
+      return { name: "<error>", value: phExp }
     }
-    const name = parseIdentifier(errors, v[0], 'Binding pair expects an identifier in the first position')
+    const name = parseIdentifier(
+      errors,
+      v[0],
+      "Binding pair expects an identifier in the first position",
+    )
     const value = parseExp(errors, v[1])
     return { name, value }
   }
 }
 
-function parseLetBinders (errors: L.ScamperError[], v: L.Value): { name: string, value: A.Exp }[] {
+function parseLetBinders(
+  errors: L.ScamperError[],
+  v: L.Value,
+): { name: string; value: A.Exp }[] {
   const { value, range } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
-    errors.push(new L.ScamperError('Parser', 'Expected a list of binding pairs', undefined, range))
-    return [{ name: '<error>', value: phExp }]
+    errors.push(
+      new L.ScamperError(
+        "Parser",
+        "Expected a list of binding pairs",
+        undefined,
+        range,
+      ),
+    )
+    return [{ name: "<error>", value: phExp }]
   } else {
     const arr = L.listToVector(v)
     return arr.map((v) => parseLetBinder(errors, v))
@@ -145,11 +232,15 @@ function parseLetBinders (errors: L.ScamperError[], v: L.Value): { name: string,
 
 ///// Main entry points ////////////////////////////////////////////////////////
 
-export function parseSingle (errors: L.ScamperError[], v: L.Value, range: L.Range): A.Exp {
+export function parseSingle(
+  errors: L.ScamperError[],
+  v: L.Value,
+  range: L.Range,
+): A.Exp {
   // N.B., only need to check for syntactic correctness of identifier
   // expressions. Other atomic expressions are checked at parsing time.
   if (L.isSym(v)) {
-    const name = parseIdentifier(errors, v, 'Expected an identifier')
+    const name = parseIdentifier(errors, v, "Expected an identifier")
     return A.mkVar(name, range)
   } else {
     // This covers numbers, booleans, strings, null, undefined, and tagged objects (e.g., chars)
@@ -157,7 +248,7 @@ export function parseSingle (errors: L.ScamperError[], v: L.Value, range: L.Rang
   }
 }
 
-export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
+export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
   const { value, range } = S.unpackSyntax(v)
   v = value
 
@@ -172,21 +263,38 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
       if (L.isSym(hv)) {
         const head = hv.value
         switch (head) {
-          case 'lambda': {
+          case "lambda": {
             if (arr.length !== 3) {
-              errors.push(new L.ScamperError('Parser', 'Lambda expressions must have 2 sub-components, a list of identifiers and a body', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Lambda expressions must have 2 sub-components, a list of identifiers and a body",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
-            const params = parseIdentifierList(errors, arr[1],
-              'The first component of a lambda expression must be a list of identifiers',
-              'The parameters of a lambda expression must be identifiers')
+            const params = parseIdentifierList(
+              errors,
+              arr[1],
+              "The first component of a lambda expression must be a list of identifiers",
+              "The parameters of a lambda expression must be identifiers",
+            )
             const body = parseExp(errors, arr[2])
             return A.mkLam(params, body, range)
           }
 
-          case 'let': {
+          case "let": {
             if (arr.length !== 3) {
-              errors.push(new L.ScamperError('Parser', 'Let expressions must have 2 sub-components, a list of binding pairs and a body', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Let expressions must have 2 sub-components, a list of binding pairs and a body",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
             const binders = parseLetBinders(errors, arr[1])
@@ -194,9 +302,16 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
             return A.mkLet(binders, body, range)
           }
 
-          case 'let*': {
+          case "let*": {
             if (arr.length !== 3) {
-              errors.push(new L.ScamperError('Parser', 'Let* expressions must have 2 sub-components, a list of binding pairs and a body', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Let* expressions must have 2 sub-components, a list of binding pairs and a body",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
             const binders = parseLetBinders(errors, arr[1])
@@ -204,17 +319,30 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
             return A.mkLetS(binders, body, range)
           }
 
-          case 'and': {
-            return A.mkAnd(arr.slice(1).map((v) => parseExp(errors, v)), range)
+          case "and": {
+            return A.mkAnd(
+              arr.slice(1).map((v) => parseExp(errors, v)),
+              range,
+            )
           }
 
-          case 'or': {
-            return A.mkOr(arr.slice(1).map((v) => parseExp(errors, v)), range)
+          case "or": {
+            return A.mkOr(
+              arr.slice(1).map((v) => parseExp(errors, v)),
+              range,
+            )
           }
 
-          case 'if': {
+          case "if": {
             if (arr.length !== 4) {
-              errors.push(new L.ScamperError('Parser', 'If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
             const guard = parseExp(errors, arr[1])
@@ -223,17 +351,34 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
             return A.mkIf(guard, ifBranch, elseBranch, range)
           }
 
-          case 'begin': {
+          case "begin": {
             if (arr.length === 1) {
-              errors.push(new L.ScamperError('Parser', 'Begin expressions must have at least one sub-component', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Begin expressions must have at least one sub-component",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
-            return A.mkBegin(arr.slice(1).map((v) => parseExp(errors, v)), range)
+            return A.mkBegin(
+              arr.slice(1).map((v) => parseExp(errors, v)),
+              range,
+            )
           }
 
-          case 'match': {
+          case "match": {
             if (arr.length < 2) {
-              errors.push(new L.ScamperError('Parser', 'Match expressions must have at least 1 sub-component: a scrutine', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Match expressions must have at least 1 sub-component: a scrutine",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
             const scrutinee = parseExp(errors, arr[1])
@@ -241,13 +386,23 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
             return A.mkMatch(scrutinee, branches, range)
           }
 
-          case 'cond': {
-            return A.mkCond(arr.slice(1).map((v) => parseCondBranch(errors, v)), range)
+          case "cond": {
+            return A.mkCond(
+              arr.slice(1).map((v) => parseCondBranch(errors, v)),
+              range,
+            )
           }
 
-          case 'quote': {
+          case "quote": {
             if (arr.length === 1) {
-              errors.push(new L.ScamperError('Parser', 'Quote expressions must have at least one sub-component', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Quote expressions must have at least one sub-component",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             } else {
               // N.B., We _don't_ check the syntax of the quoted expression!
@@ -257,12 +412,22 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
             }
           }
 
-          case 'section': {
+          case "section": {
             if (arr.length === 1) {
-              errors.push(new L.ScamperError('Parser', 'Section expressions must have at least one sub-component', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Section expressions must have at least one sub-component",
+                  undefined,
+                  hr,
+                ),
+              )
               return phExp
             }
-            return A.mkSection(arr.slice(1).map((v) => parseExp(errors, v)), range)
+            return A.mkSection(
+              arr.slice(1).map((v) => parseExp(errors, v)),
+              range,
+            )
           }
 
           default: {
@@ -282,7 +447,7 @@ export function parseExp (errors: L.ScamperError[], v: L.Value): A.Exp {
   }
 }
 
-export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
+export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
   const orig = v
   const { value, range } = S.unpackSyntax(v)
   v = value
@@ -297,43 +462,86 @@ export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
       if (L.isSym(hv)) {
         const head = hv.value
         switch (head) {
-          case 'import': {
+          case "import": {
             if (arr.length !== 2) {
-              errors.push(new L.ScamperError('Parser', 'Import statements must have 2 sub-components, a module name and an alias', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Import statements must have 2 sub-components, a module name and an alias",
+                  undefined,
+                  hr,
+                ),
+              )
               return phStmt
             }
-            const name = parseIdentifier(errors, arr[1], 'The first component of an import statement must be an identifier')
+            const name = parseIdentifier(
+              errors,
+              arr[1],
+              "The first component of an import statement must be an identifier",
+            )
             return A.mkImport(name, range)
           }
 
-          case 'define': {
+          case "define": {
             if (arr.length !== 3) {
-              errors.push(new L.ScamperError('Parser', 'Define statements must have 2 sub-components, an identifier and a body', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Define statements must have 2 sub-components, an identifier and a body",
+                  undefined,
+                  hr,
+                ),
+              )
               return phStmt
             }
-            const name = parseIdentifier(errors, arr[1], 'The first component of a define statement must be an identifier')
+            const name = parseIdentifier(
+              errors,
+              arr[1],
+              "The first component of a define statement must be an identifier",
+            )
             const body = parseExp(errors, arr[2])
             return A.mkDefine(name, body, range)
           }
 
-          case 'display': {
+          case "display": {
             if (arr.length !== 2) {
-              errors.push(new L.ScamperError('Parser', 'Display statements must have 1 argument, the expression to display', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Display statements must have 1 argument, the expression to display",
+                  undefined,
+                  hr,
+                ),
+              )
               return phStmt
             }
             const body = parseExp(errors, arr[1])
             return A.mkDisp(body, range)
           }
 
-          case 'struct': {
+          case "struct": {
             if (arr.length !== 3) {
-              errors.push(new L.ScamperError('Parser', 'Struct statements must have 2 arguments, the name of the struct and a list of fields', undefined, hr))
+              errors.push(
+                new L.ScamperError(
+                  "Parser",
+                  "Struct statements must have 2 arguments, the name of the struct and a list of fields",
+                  undefined,
+                  hr,
+                ),
+              )
               return phStmt
             }
-            const name = parseIdentifier(errors, arr[1], 'The first component of a struct statement must be an identifier')
-            const fields = parseIdentifierList(errors, arr[2],
-              'The second component of a struct statement must be a list of identifiers',
-              'The fields of a struct must be identifiers')
+            const name = parseIdentifier(
+              errors,
+              arr[1],
+              "The first component of a struct statement must be an identifier",
+            )
+            const fields = parseIdentifierList(
+              errors,
+              arr[2],
+              "The second component of a struct statement must be a list of identifiers",
+              "The fields of a struct must be identifiers",
+            )
             return A.mkStruct(name, fields, range)
           }
 
@@ -351,6 +559,9 @@ export function parseStmt (errors: L.ScamperError[], v: L.Value): A.Stmt {
   }
 }
 
-export function parseProgram (errors: L.ScamperError[], values: L.Value[]): A.Prog {
+export function parseProgram(
+  errors: L.ScamperError[],
+  values: L.Value[],
+): A.Prog {
   return values.map((v, _) => parseStmt(errors, v))
 }
