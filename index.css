@@ -145,6 +145,7 @@ body {
   min-height: 0;
   overflow: scroll;
   white-space: pre-wrap;
+  content-visibility: auto;
 }
 
 #output code {
