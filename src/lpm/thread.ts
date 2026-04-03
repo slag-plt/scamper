@@ -22,7 +22,7 @@ export const defaultOptions: Options = {
   stepMatch: false,
   isTracing: false,
   raisingTarget: "scheme",
-  maxStepsPerYield: 1_000_000,
+  maxStepsPerYield: 100_000,
 }
 
 export function cloneOptions(opt: Options): Options {
