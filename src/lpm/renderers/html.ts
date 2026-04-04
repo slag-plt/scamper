@@ -39,6 +39,7 @@ export class Renderer extends R.Renderer<HTMLElement> {
           ret.append(mkCodeElement(")"))
           return ret
         } else if (U.isClosure(v)) {
+          // TODO: should really make this more readable
           return mkCodeElement(`[Function (closure)]`)
         } else if (U.isJsFunction(v)) {
           return mkCodeElement(`[Function (${v.name || "##anonymous##"})]`)

@@ -94,6 +94,7 @@
     sectionStack = []
   }
 
+  // TODO: this should be replaced with a svelte component to render values
   function mountValue(container: HTMLElement, element: HTMLElement) {
     container.appendChild(element)
     return {
