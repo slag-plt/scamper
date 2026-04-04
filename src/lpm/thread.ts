@@ -58,6 +58,11 @@ export class Frame {
   }
 }
 
+export const TraceAttrs = {
+  block: "trace-start",
+  steps: "trace-steps-start",
+}
+
 /** A single thread of execution in LPM. */
 export class Thread {
   name: string
@@ -168,31 +173,29 @@ export class Thread {
     }
   }
 
-  /**
-   * For tracing, the steps per scheduler yield should be proportional to the
-   * number of sent output messages, since long outputs will cause the DOM to
-   * slow down.
-   * TODO: this probably isn't needed once we switch to a not terrible UI framework
-   */
-  private getTracingStepsPerYield(maxLogs = 1_000) {
+  private get stepsPerYield(): number {
+    if (!this.options.isTracing) {
+      return this.options.maxStepsPerYield
+    }
+    const maxLogs = 1_000
     const scalingFactor = this.options.maxStepsPerYield / maxLogs
     const logCount = Math.max(this.out.totalSends, 1)
-    const tracingStepsPerYield = Math.ceil(
+    return Math.max(1, Math.ceil(
       this.options.maxStepsPerYield / (logCount * scalingFactor),
-    )
-    // console.debug("tracing steps:", tracingStepsPerYield)
-    return tracingStepsPerYield
+    ))
   }
 
   /** Steps until next expression is finished. */
   async stepExpr(): Promise<void> {
     let i = 0
+    let yieldInterval = this.stepsPerYield
     do {
       this.step()
       i++
-      if (i >= this.getTracingStepsPerYield()) {
+      if (i >= yieldInterval) {
         i = 0
         await scheduler.yield()
+        yieldInterval = this.stepsPerYield
       }
     } while (this.isProcessingExpr && !this.cancelled)
     this.handleCancelled()
@@ -209,18 +212,16 @@ export class Thread {
 
   async evaluateAsync(): Promise<L.Value> {
     while (!this.isFinished() && !this.cancelled) {
+      const yieldInterval = this.stepsPerYield
       for (
         let i = 0;
-        i <
-          (this.options.isTracing
-            ? this.getTracingStepsPerYield()
-            : this.options.maxStepsPerYield) && !this.isFinished();
+        i < yieldInterval && !this.isFinished() && !this.cancelled;
         i++
       ) {
         // console.debug("stepping")
         this.step()
       }
-      console.debug("yielding, curr frames", this.frames.length)
+      // console.debug("yielding, curr frames", this.frames.length)
       await scheduler.yield()
     }
     this.handleCancelled()
@@ -269,18 +270,18 @@ export class Thread {
       this.isProcessingExpr = true
       this.push(`##stmt_${this.curStmt}##`, this.env, expr)
       if (this.options.isTracing) {
-        this.out.pushLevel("trace")
+        this.out.pushLevel(TraceAttrs.block)
         this.out.send(
           mkTraceStart(
             preamble,
             printExpr
               ? this.raisingProviders
-                  .get(this.options.raisingTarget)!
-                  .raise(this)
+                .get(this.options.raisingTarget)!
+                .raise(this)
               : undefined,
           ),
         )
-        this.out.pushLevel("trace-block")
+        this.out.pushLevel(TraceAttrs.steps)
       }
     }
   }
@@ -372,7 +373,7 @@ export class Thread {
           }
         }
         if (this.options.isTracing) {
-          this.out.pushLevel("trace")
+          this.out.pushLevel(TraceAttrs.block)
           this.out.send(mkTraceStart(`Imported library: ${stmt.name}`))
           // we don't pop here because advanceStmt pops for us
         }
