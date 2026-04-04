@@ -108,10 +108,8 @@ export class Thread {
     this.frames = []
     this.isProcessingExpr = false
     this.curStmt++
-    if (!this.isFinished()) {
-      if (this.options.isTracing) {
-        this.out.popLevel()
-      }
+    if (this.options.isTracing) {
+      this.out.popLevel()
     }
   }
 

@@ -48,6 +48,7 @@
   // non-reactive buffer to flush every animation frame instead to prioritize user input
   let buffer: TraceBlock[] = []
   let isFlushing = false
+  let sectionStack: string[] = []
 
   // batching function synchronized with the browser's paint cycle
   function scheduleFlush() {
@@ -66,15 +67,21 @@
   }
   const displayInput: DisplayCallbacks = {
     StartSectionCallback: (...attrs) => {
-      // push the header of the section
-      buffer.push({ attrs })
+      const section = attrs[0]
+      sectionStack.push(section)
+      buffer.push({ attrs: [section, `${section}-top`] })
       scheduleFlush()
     },
     EndSectionCallback: () => {
-      // TODO: will push an ending block thing eventually, for now don't do anything
+      const section = sectionStack.pop()
+      if (section) {
+        buffer.push({ attrs: [section, `${section}-bottom`] })
+      }
+      scheduleFlush()
     },
     SendCallback: (value) => {
-      buffer.push({ attrs: ["trace-step"], value: HTMLRenderer.render(value) })
+      const section = sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : "base";
+      buffer.push({ attrs: [`${section}-item`], value: HTMLRenderer.render(value) })
       scheduleFlush()
     },
   }
@@ -84,6 +91,7 @@
   export function reset(): void {
     // https://medium.com/@lauenroth/how-to-empty-a-const-array-365a81916e10
     blocks = []
+    sectionStack = []
   }
 
   function mountValue(container: HTMLElement, element: HTMLElement) {
@@ -109,7 +117,7 @@
         class={block.attrs.join(" ")}
         use:measureItem
         data-index={row.index}
-        style="position: absolute; top: 0; left: 0; width: 100%; transform: translateY({row.start}px);"
+        style="position: absolute; top: 0; left: 0; width: 100%; box-sizing: border-box; transform: translateY({row.start}px);"
       >
         {#if block.value}
           <div use:mountValue={block.value}></div>
@@ -119,18 +127,134 @@
   </div>
 </div>
 
-<!-- TODO: should rename these classes when we give them a good name -->
-<!-- also get rid of these colors when we actually have fake corners and such -->
 <style>
-  .trace-start {
-    background-color: red;
-    min-height: 5vh;
+  /* Outer Trace Block */
+  .trace-start-top {
+    height: 0.75em;
+    position: relative;
   }
-  .trace-steps-start {
-    background-color: blue;
-    min-height: 5vh;
+  .trace-start-top::after {
+    content: "";
+    position: absolute;
+    top: 0.25em; /* Separation gap measured perfectly! */
+    bottom: 0; left: 0; right: 0;
+    background-color: #f6f8fa;
+    border: 0.1em solid #d0d7de;
+    border-bottom: none;
+    border-top-left-radius: 0.5em;
+    border-top-right-radius: 0.5em;
+    z-index: -1;
   }
-  .trace-step {
-    background-color: green;
+
+  .trace-start-item {
+    position: relative;
+    padding: 0.25em 0.5em;
+  }
+  .trace-start-item::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background-color: #f6f8fa;
+    border-left: 0.1em solid #d0d7de;
+    border-right: 0.1em solid #d0d7de;
+    z-index: -1;
+  }
+
+  .trace-start-bottom {
+    height: 0.75em;
+    position: relative;
+  }
+  .trace-start-bottom::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0.25em; left: 0; right: 0;
+    background-color: #f6f8fa;
+    border: 0.1em solid #d0d7de;
+    border-top: none;
+    border-bottom-left-radius: 0.5em;
+    border-bottom-right-radius: 0.5em;
+    z-index: -1;
+  }
+
+  /* Inner Trace Steps Block */
+  .trace-steps-start-top {
+    height: 0.5em;
+    position: relative;
+  }
+  .trace-steps-start-top::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background-color: #f6f8fa; /* Maintain outer frame color cleanly! */
+    border-left: 0.1em solid #d0d7de;
+    border-right: 0.1em solid #d0d7de;
+    z-index: -2;
+  }
+  .trace-steps-start-top::after {
+    content: "";
+    position: absolute;
+    top: 0.25em; bottom: 0;
+    left: 1em; right: 1em; /* Indented frame layout horizontally shortened */
+    background-color: #ffffff;
+    border: 0.1em dashed #d0d7de;
+    border-bottom: none;
+    border-top-left-radius: 0.5em;
+    border-top-right-radius: 0.5em;
+    z-index: -1;
+  }
+
+  .trace-steps-start-item {
+    position: relative;
+    padding: 0.25em 1.5em; /* Deeply indented physical content */
+  }
+  .trace-steps-start-item::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background-color: #f6f8fa;
+    border-left: 0.1em solid #d0d7de;
+    border-right: 0.1em solid #d0d7de;
+    z-index: -2;
+  }
+  .trace-steps-start-item::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 1em; right: 1em;
+    background-color: #ffffff;
+    border-left: 0.1em dashed #d0d7de;
+    border-right: 0.1em dashed #d0d7de;
+    z-index: -1;
+  }
+
+  .trace-steps-start-bottom {
+    height: 0.5em;
+    position: relative;
+  }
+  .trace-steps-start-bottom::before {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background-color: #f6f8fa;
+    border-left: 0.1em solid #d0d7de;
+    border-right: 0.1em solid #d0d7de;
+    z-index: -2;
+  }
+  .trace-steps-start-bottom::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0.25em;
+    left: 1em; right: 1em;
+    background-color: #ffffff;
+    border: 0.1em dashed #d0d7de;
+    border-top: none;
+    border-bottom-left-radius: 0.5em;
+    border-bottom-right-radius: 0.5em;
+    z-index: -1;
+  }
+
+  /* Standard isolated outputs */
+  .base-item {
+    padding: 0.25em;
   }
 </style>
