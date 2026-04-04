@@ -59,8 +59,8 @@ export class Frame {
 }
 
 export const TraceAttrs = {
-  block: "trace-start",
-  steps: "trace-steps-start",
+  block: "trace",
+  steps: "trace-steps",
 }
 
 /** A single thread of execution in LPM. */

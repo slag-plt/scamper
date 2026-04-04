@@ -129,11 +129,11 @@
 
 <style>
   /* Outer Trace Block */
-  .trace-start-top {
+  .trace-top {
     height: 0.75em;
     position: relative;
   }
-  .trace-start-top::after {
+  .trace-top::after {
     content: "";
     position: absolute;
     top: 0.25em; /* Separation gap measured perfectly! */
@@ -146,11 +146,11 @@
     z-index: -1;
   }
 
-  .trace-start-item {
+  .trace-item {
     position: relative;
     padding: 0.25em 0.5em;
   }
-  .trace-start-item::after {
+  .trace-item::after {
     content: "";
     position: absolute;
     top: 0; bottom: 0; left: 0; right: 0;
@@ -160,11 +160,11 @@
     z-index: -1;
   }
 
-  .trace-start-bottom {
+  .trace-bottom {
     height: 0.75em;
     position: relative;
   }
-  .trace-start-bottom::after {
+  .trace-bottom::after {
     content: "";
     position: absolute;
     top: 0; bottom: 0.25em; left: 0; right: 0;
@@ -177,11 +177,11 @@
   }
 
   /* Inner Trace Steps Block */
-  .trace-steps-start-top {
+  .trace-steps-top {
     height: 0.5em;
     position: relative;
   }
-  .trace-steps-start-top::before {
+  .trace-steps-top::before {
     content: "";
     position: absolute;
     top: 0; bottom: 0; left: 0; right: 0;
@@ -190,7 +190,7 @@
     border-right: 0.1em solid #d0d7de;
     z-index: -2;
   }
-  .trace-steps-start-top::after {
+  .trace-steps-top::after {
     content: "";
     position: absolute;
     top: 0.25em; bottom: 0;
@@ -203,11 +203,11 @@
     z-index: -1;
   }
 
-  .trace-steps-start-item {
+  .trace-steps-item {
     position: relative;
     padding: 0.25em 1.5em; /* Deeply indented physical content */
   }
-  .trace-steps-start-item::before {
+  .trace-steps-item::before {
     content: "";
     position: absolute;
     top: 0; bottom: 0; left: 0; right: 0;
@@ -216,7 +216,7 @@
     border-right: 0.1em solid #d0d7de;
     z-index: -2;
   }
-  .trace-steps-start-item::after {
+  .trace-steps-item::after {
     content: "";
     position: absolute;
     top: 0; bottom: 0;
@@ -227,11 +227,11 @@
     z-index: -1;
   }
 
-  .trace-steps-start-bottom {
+  .trace-steps-bottom {
     height: 0.5em;
     position: relative;
   }
-  .trace-steps-start-bottom::before {
+  .trace-steps-bottom::before {
     content: "";
     position: absolute;
     top: 0; bottom: 0; left: 0; right: 0;
@@ -240,7 +240,7 @@
     border-right: 0.1em solid #d0d7de;
     z-index: -2;
   }
-  .trace-steps-start-bottom::after {
+  .trace-steps-bottom::after {
     content: "";
     position: absolute;
     top: 0; bottom: 0.25em;
