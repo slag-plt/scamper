@@ -57,16 +57,16 @@ export class Env {
   }
 
   pop (): Env {
-    return this.parent === undefined ? new Env() : this.parent
+    return this.parent ?? new Env()
   }
 }
 
 /** A library is a collection of importable top-level definitions. */
 export class Library {
   lib: [string, Value][]
-  initializer: Function | undefined
+  initializer: (() => void | Promise<void>) | undefined
 
-  constructor (initializer?: Function) {
+  constructor (initializer?: () => void | Promise<void>) {
     this.lib = []
     this.initializer = initializer
   }
@@ -82,7 +82,8 @@ export class Library {
     const initializer = async () => {
       for (const lib of libs) {
         if (lib.initializer !== undefined) {
-          await lib.initializer()
+          const initializer = lib.initializer
+          await initializer()
         }
       }
     }
@@ -139,7 +140,7 @@ export interface Sym extends TaggedObject {
 export interface Struct extends TaggedObject {
   [scamperTag]: 'struct',
   [structKind]: string,
-  [key: string]: any,
+  [key: string]: Value,
   [key: number]: never
 }
 
@@ -147,10 +148,11 @@ export interface Struct extends TaggedObject {
 export type Vector = Value[]
 
 /** A Scamper function is either a closure or a raw Javascript function. */
-export type ScamperFn = Closure | Function
+export type JsFunction = (...args: Value[]) => Value
+export type ScamperFn = Closure | JsFunction
 
 /** Calls a ScamperFn function with the provided arguments */
-export function callScamperFn (fn: ScamperFn, ...args: Value[]): any {
+export function callScamperFn (fn: ScamperFn, ...args: Value[]): Value {
   if (typeof fn === 'function') {
     return fn(...args)
   } else {

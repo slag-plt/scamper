@@ -3,24 +3,27 @@ import { Scamper } from '../scamper.js'
 import { renderToOutput } from '../lpm/output/html.js'
 import { initializeLibs } from '../lib/index.js'
 
-class Runner {
-  constructor () {}
 
-  static async create (runTree: boolean): Promise<void> {
+async function createRunner(runTree: boolean): Promise<void> {
     const fs = await OPFSFileSystem.create()
     await initializeLibs()
     const params = new URLSearchParams(window.location.search)
-    const outputPane = document.getElementById('output')!
-
-    if (!params.has('filename')) {
+    const outputPane = document.getElementById('output')
+    if (outputPane === null) {
+      throw new Error('Missing output element')
+    }
+    
+    const filename = params.get('filename')
+    if (filename === null) {
       renderToOutput(outputPane, new Error('No filename specified'))
       return
     }
-    
-    const filename = params.get('filename')!
-    document.getElementById('current-file')!.innerText = filename
-    
-    if (!fs.fileExists(filename)) {
+    const currentFile = document.getElementById('current-file')
+    if (currentFile === null) {
+      throw new Error('Missing current-file element')
+    }
+    currentFile.innerText = filename    
+    if (!(await fs.fileExists(filename))) {
       renderToOutput(outputPane, new Error(`File ${filename} does not exist`))
       return
     }
@@ -36,11 +39,13 @@ class Runner {
     } catch (e) {
       renderToOutput(outputPane, e)
     }
-    document.getElementById('version')!.innerText = `(${APP_VERSION})`
-  }
-}
+    const version = document.getElementById('version')
+    if (version === null) {
+      throw new Error('Missing version element')
+    }
+    version.innerText = `(${APP_VERSION})`  }
 
 
 const params = new URLSearchParams(window.location.search);
 const isTree = params.get("isTree") === "true";
-await Runner.create(isTree)
+await createRunner(isTree)

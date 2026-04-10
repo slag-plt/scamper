@@ -12,8 +12,6 @@ export interface FileEntry {
 export class OPFSFileSystem {
   private root?: FileSystemDirectoryHandle
 
-  private constructor() { }
-
   /** @returns a new file system instance for accessing the OPFS */
   static async create(): Promise<OPFSFileSystem> {
     const ret = new OPFSFileSystem()
@@ -23,12 +21,20 @@ export class OPFSFileSystem {
 
   /** @return the list of files found at the root of the file system */
   async getFileList(): Promise<FileEntry[]> {
+    const root = this.root
+    if (root === undefined) {
+      throw new Error('File system root is not initialized')
+    }
+  
     const fileEntries: FileEntry[] = []
 
     // N.B., this.root doesn't have an entries field according to the type
     // checker... but it does!
     // https://developer.mozilla.org/en-US/docs/Web/API/FileSystemDirectoryHandle/entries
-    for await (const [_, handle] of (this.root as any).entries()) {
+    const rootWithEntries = root as FileSystemDirectoryHandle & {
+      entries(): AsyncIterable<[string, FileSystemHandle]>
+    }
+    for await (const [, handle] of rootWithEntries.entries()) {
       const isDirectory = handle.kind === 'directory'
       let preview: string | null = null
 
@@ -61,7 +67,7 @@ export class OPFSFileSystem {
       const text = await file.text()
       return text.split('\n').slice(0, 5).join('\n')
     } catch (e) {
-      throw new Error(`Failed to get file preview: ${e}`)
+      throw new Error(`Failed to get file preview: ${String(e)}`, { cause: e })
     }
   }
 
@@ -74,21 +80,33 @@ export class OPFSFileSystem {
 
   /** @return the contents of the given file, assumed to exist */
   async loadFile (filename: string): Promise<string> {
-    const handle = await this.root!.getFileHandle(filename)
+  const root = this.root
+  if (root === undefined) {
+  throw new Error('File system root is not initialized')
+  }
+    const handle = await root.getFileHandle(filename)
     const file = await handle.getFile()
     return await file.text()
   }
 
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile (filename: string, contents: string): Promise<void> {
-    const handle = await this.root!.getFileHandle(filename, { create: true })
+  const root = this.root
+  if (root === undefined) {
+  throw new Error('File system root is not initialized')
+  }
+    const handle = await root.getFileHandle(filename, { create: true })
     const stream = await handle.createWritable()
     await stream.write(contents)
     await stream.close()
   }
 
   async deleteFile (filename: string): Promise<void> {
-    await this.root!.removeEntry(filename)
+    const root = this.root
+    if (root === undefined) {
+    throw new Error('File system root is not initialized')
+    }
+    await root.removeEntry(filename)
   }
 
   /** Renames the `from` file to the `to`. */

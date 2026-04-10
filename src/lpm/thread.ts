@@ -52,7 +52,11 @@ export class Frame {
   }
 
   popInstr(): L.Ops {
-    return this.ops.pop()!
+    const instr = this.ops.pop()
+    if (instr === undefined) {
+      throw new ICE('Frame.popInstr', 'Tried to pop an instruction from an empty frame')
+    }
+    return instr
   }
 }
 
@@ -63,7 +67,7 @@ export class Thread {
   builtinLibs: Map<string, L.Library>
   out: OutputChannel
   err: ErrorChannel
-  raisingProviders: Map<string, Raiser<any>>
+  raisingProviders: Map<string, Raiser<L.Value>>
   prog: L.Prog
   curStmt: number
   env: L.Env
@@ -79,7 +83,7 @@ export class Thread {
     builtinLibs: Map<string, L.Library>,
     out: OutputChannel,
     err: ErrorChannel,
-    raisingProviders: Map<string, Raiser<any>>,
+    raisingProviders: Map<string, Raiser<L.Value>>,
   ) {
     this.name = name
     this.prog = prog
@@ -137,12 +141,29 @@ export class Thread {
     this.advanceStmt()
   }
 
+  private getRaisingProvider(): Raiser<L.Value> {
+    const provider = this.raisingProviders.get(this.options.raisingTarget)
+    if (provider === undefined) {
+      throw new ICE(
+        'Thread.getRaisingProvider',
+        `Missing raising provider: ${this.options.raisingTarget}`,
+      )
+    }
+    return provider
+  }
+
   ///// Evaluation /////////////////////////////////////////////////////////////
 
   step(): void {
     this.stepThread()
     if (this.options.isTracing && this.isProcessingExpr) {
-      const provider = this.raisingProviders.get(this.options.raisingTarget)!
+      const provider = this.raisingProviders.get(this.options.raisingTarget)
+      if (provider === undefined) {
+        throw new ICE(
+          'Thread.step',
+          `Missing raising provider: ${this.options.raisingTarget}`,
+        )
+      }
       if (this.frames.length > 0) {
         this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
@@ -185,7 +206,11 @@ export class Thread {
     const result = subthread.evaluate()
     const errs = errChannel.errors
     if (errs.length > 0) {
-      throw errChannel.getSubthreadErrors()
+      const subthreadErrors = errChannel.getSubthreadErrors()
+      if (subthreadErrors instanceof Error) {
+        throw subthreadErrors
+      }
+      throw new ICE('Thread.evaluateSubthread', 'Subthread error channel returned a non-error')
     }
     return result
   }
@@ -202,13 +227,13 @@ export class Thread {
   private checkIfProcessingExpr(preamble: string, expr: L.Blk, printExpr = true): void {
     if (!this.isProcessingExpr) {
       this.isProcessingExpr = true
-      this.push(`##stmt_${this.curStmt}##`, this.env, expr)
+      this.push(`##stmt_${String(this.curStmt)}##`, this.env, expr)
       if (this.options.isTracing) {
         this.out.pushLevel("trace")
         this.out.send(
           mkTraceStart(
             preamble,
-            printExpr ? this.raisingProviders.get(this.options.raisingTarget)!.raise(this) : undefined,
+            printExpr ? this.getRaisingProvider().raise(this) : undefined,
           ),
         )
         this.out.pushLevel("trace-block")
@@ -250,7 +275,7 @@ export class Thread {
           const bindings: [string, L.Value][] = []
           for (let i = 0; i < flds.length; i++) {
             const pat = p.args[i]
-            const val = v[flds[i]]
+            const val = v[flds[i]] as L.Value
             const match = Thread.tryMatch(val, pat)
             if (!match) {
               return undefined
@@ -292,9 +317,13 @@ export class Thread {
       // import case
       case "import": {
         if (this.builtinLibs.has(stmt.name)) {
-          const lib = this.builtinLibs.get(stmt.name)!
-          if (lib.initializer) {
-            lib.initializer()
+          const lib = this.builtinLibs.get(stmt.name)
+          if (lib === undefined) {
+            throw new ICE('Thread.stepThread', `Missing library: ${stmt.name}`)
+          }
+          if (lib.initializer !== undefined) {
+            const initializer = lib.initializer as () => void
+            initializer()
           }
           for (const [name, value] of lib.lib) {
             this.env.set(name, value)
@@ -346,13 +375,13 @@ export class Thread {
     // N.B., LPM has no explicit return instruction; a frame is finished when
     // it runs out of instructions
     const current = this.getCurrentFrame()
-    if (!current?.isFinished()) {
+    if (!current.isFinished()) {
       return false
     } else {
       if (current.values.length !== 1) {
         throw new ICE(
           "Machine.stepFrame",
-          `Frame must finish with exactly one value on the stack, finished with ${current.values.length} instead`,
+          `Frame must finish with exactly one value on the stack, finished with ${String(current.values.length)} instead`,
         )
       }
       const ret = current.values.pop()
@@ -385,7 +414,7 @@ export class Thread {
     this.reportAndUnwind(
       new ScamperError(
         "Runtime",
-        `Error applying function: ${e}`,
+        `Error applying function: ${String(e)}`,
         undefined,
         apRange,
         source,
@@ -463,7 +492,7 @@ export class Thread {
             this.reportAndUnwind(
               new ScamperError(
                 "Runtime",
-                `Maximum call stack depth ${this.options.maxCallStackDepth} exceeded`,
+                `Maximum call stack depth ${String(this.options.maxCallStackDepth)} exceeded`
               ),
             )
             break
@@ -472,18 +501,20 @@ export class Thread {
             // NOTE: should this be a runtime error instead of an ICE?
             throw new ICE(
               "Machine.stepThread",
-              `Not enough values for application: ${instr.numArgs + 1}`,
+              `Not enough values for application: ${String(instr.numArgs + 1)}`,
             )
           }
           const values = current.values.splice(-(instr.numArgs + 1))
           const fn = values[0]
           const args = instr.numArgs === 0 ? [] : values.splice(-instr.numArgs)
-          if (typeof fn === "function") {
-            let result = undefined
+          if (U.isJsFunction(fn)) {
+            const jsFn = fn as (...args: L.Value[]) => L.Value
+            let result: L.Value = undefined
             try {
-              result = fn(...args)
+              result = jsFn(...args)
             } catch (e) {
-              this.addressFunctionError(e, instr.range, fn.name)
+              const fnName = 'name' in fn && typeof fn.name === 'string' ? fn.name : undefined
+              this.addressFunctionError(e, instr.range, fnName)
             }
             current.values.push(result)
           } else if (U.isClosure(fn)) {
@@ -491,14 +522,14 @@ export class Thread {
               this.reportAndUnwind(
                 new ScamperError(
                   "Runtime",
-                  `Maximum call stack depth ${this.options.maxCallStackDepth} exceeded`,
+                  `Maximum call stack depth ${String(this.options.maxCallStackDepth)} exceeded`,
                 ),
               )
             } else if (fn.params.length !== args.length) {
               this.reportAndUnwind(
                 new ScamperError(
                   "Runtime",
-                  `Arity mismatch in function call: expected ${fn.params.length} arguments but got ${args.length}`,
+                  `Arity mismatch in function call: expected ${String(fn.params.length)} arguments but got ${String(args.length)}`,
                 ),
               )
             } else if (current.isFinished()) {
@@ -538,7 +569,10 @@ export class Thread {
               "Match requires at least one value",
             )
           }
-          const scrutinee = current.values.pop()!
+          const scrutinee = current.values.pop()
+          if (scrutinee === undefined) {
+            throw new ICE('Thread.stepFrame', 'Match requires a scrutinee value')
+          }
           if (instr.branches.length === 0) {
             this.reportAndUnwind(
               new ScamperError("Runtime", "Inexhaustive pattern match failure"),

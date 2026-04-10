@@ -22,18 +22,18 @@ interface Re {
   toRegexString(): string
 }
 
-class RexEmpty implements L.Struct, Re {
+class RexEmpty implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-empty';
   toRegexString(): string {
     return ''
   }
 }
 
-class RexString implements L.Struct, Re {
+class RexString implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-string';
   value: string
   constructor (value: string) {
@@ -44,9 +44,9 @@ class RexString implements L.Struct, Re {
   }
 }
 
-class RexRepeat implements L.Struct, Re {
+class RexRepeat implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-repeat';
   value: Re
   constructor (value: Re) {
@@ -57,9 +57,9 @@ class RexRepeat implements L.Struct, Re {
   }
 }
 
-class RexRepeat0 implements L.Struct, Re {
+class RexRepeat0 implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-repeat-0';
   value: Re
   constructor (value: Re) {
@@ -70,9 +70,9 @@ class RexRepeat0 implements L.Struct, Re {
   }
 }
 
-class RegExConcat implements L.Struct, Re {
+class RegExConcat implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-concat'
   values: Re[]
   constructor (values: Re[]) {
@@ -83,18 +83,18 @@ class RegExConcat implements L.Struct, Re {
   }
 }
 
-class RexAnyChar implements L.Struct, Re {
+class RexAnyChar implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-char';
   toRegexString(): string {
     return `.`
   }
 }
 
-class RegCharSet implements L.Struct, Re {
+class RegCharSet implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-set'
   chars: string
   constructor (chars: string) {
@@ -105,9 +105,9 @@ class RegCharSet implements L.Struct, Re {
   }
 }
 
-class RegCharAntiset implements L.Struct, Re {
+class RegCharAntiset implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-antiset'
   chars: string
   constructor (chars: string) {
@@ -118,9 +118,9 @@ class RegCharAntiset implements L.Struct, Re {
   }
 }
 
-class RegCharRange implements L.Struct, Re {
+class RegCharRange implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-range'
   start: L.Char
   end: L.Char
@@ -134,9 +134,9 @@ class RegCharRange implements L.Struct, Re {
   }
 }
 
-class RexAnyOf implements L.Struct, Re {
+class RexAnyOf implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-of'
   values: Re[]
   constructor (values: Re[]) {
@@ -147,9 +147,9 @@ class RexAnyOf implements L.Struct, Re {
   }
 }
 
-class RexOptional implements L.Struct, Re {
+class RexOptional implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-optional'
   value: Re
   constructor (value: Re) {
@@ -160,9 +160,9 @@ class RexOptional implements L.Struct, Re {
   }
 }
 
-class RexRegex implements L.Struct, Re {
+class RexRegex implements Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'regex'
   pattern: string
   constructor (pattern: string) {
@@ -173,7 +173,7 @@ class RexRegex implements L.Struct, Re {
   }
 }
 
-export function isRegex (value: any): value is Re {
+export function isRegex (value: L.Value): value is Re {
   return L.isStructKind(value, 'rex-empty') ||
     L.isStructKind(value, 'rex-string') ||
     L.isStructKind(value, 'rex-repeat') ||
@@ -190,71 +190,80 @@ export function isRegex (value: any): value is Re {
 
 const specRex: C.Spec = ({
   predicate: isRegex,
-  errorMsg: (actual: any) => `expected a regex, received ${L.typeOf(actual)}` 
+  errorMsg: (actual: L.Value) => `expected a regex, received ${L.typeOf(actual)}`
 })
 
-export function rexEmpty(): Re {
-  checkContract(arguments, contract('rex-empty', []))
+export function rexEmpty (...args: []): Re {
+  checkContract(args, contract('rex-empty', []))
   return new RexEmpty()
 }
 
-export function rexString(s: string): Re {
-  checkContract(arguments, contract('rex-string', [C.string]))
+export function rexString (...args: [string]): Re {
+  checkContract(args, contract('rex-string', [C.string]))
+  const [s] = args
   return new RexString(s)
 }
 
-export function rexRepeat(r: Re): Re {
-  checkContract(arguments, contract('rex-repeat', [specRex] ))
+export function rexRepeat (...args: [Re]): Re {
+  checkContract(args, contract('rex-repeat', [specRex]))
+  const [r] = args
   return new RexRepeat(r)
 }
 
-export function rexRepeat0(r: Re): Re {
-  checkContract(arguments, contract('rex-repeat-0', [specRex] ))
+export function rexRepeat0 (...args: [Re]): Re {
+  checkContract(args, contract('rex-repeat-0', [specRex]))
+  const [r] = args
   return new RexRepeat0(r)
 }
 
-export function rexConcat(...args: Re[]): Re {
-  checkContract(arguments, contract('rex-concat', [], specRex))
+export function rexConcat (...args: Re[]): Re {
+  checkContract(args, contract('rex-concat', [], specRex))
   return new RegExConcat(args)
 }
 
-export function rexAnyChar(): Re {
-  checkContract(arguments, contract('rex-any-char', []))
+export function rexAnyChar (...args: []): Re {
+  checkContract(args, contract('rex-any-char', []))
   return new RexAnyChar()
 }
 
-export function rexCharSet(s: string): Re {
-  checkContract(arguments, contract('rex-char-set', [C.string]))
+export function rexCharSet (...args: [string]): Re {
+  checkContract(args, contract('rex-char-set', [C.string]))
+  const [s] = args
   return new RegCharSet(s)
 }
 
-export function rexCharAntiset(s: string): Re {
-  checkContract(arguments, contract('rex-char-antiset', [C.string]))
+export function rexCharAntiset (...args: [string]): Re {
+  checkContract(args, contract('rex-char-antiset', [C.string]))
+  const [s] = args
   return new RegCharAntiset(s)
 }
 
-export function rexCharRange(start: L.Char, end: L.Char): Re {
-  checkContract(arguments, contract('rex-char-range', [C.char, C.char]))
+export function rexCharRange (...args: [L.Char, L.Char]): Re {
+  checkContract(args, contract('rex-char-range', [C.char, C.char]))
+  const [start, end] = args
   return new RegCharRange(start, end)
 }
 
-export function rexAnyOf(...args: Re[]): Re {
-  checkContract(arguments, contract('rex-any-of', [], specRex))
+export function rexAnyOf (...args: Re[]): Re {
+  checkContract(args, contract('rex-any-of', [], specRex))
   return new RexAnyOf(args)
 }
 
-export function rexOptional(r: Re): Re {
-  checkContract(arguments, contract('rex-optional', [specRex] ))
+export function rexOptional (...args: [Re]): Re {
+  checkContract(args, contract('rex-optional', [specRex]))
+  const [r] = args
   return new RexOptional(r)
 }
 
-export function rexRegex(pattern: string): Re {
-  checkContract(arguments, contract('regex', [C.string]))
+export function rexRegex (...args: [string]): Re {
+  checkContract(args, contract('regex', [C.string]))
+  const [pattern] = args
   return new RexRegex(pattern)
 }
 
-export function rexFindMatches (r: Re, s: string): L.List {
-  checkContract(arguments, contract('rex-find-matches', [specRex, C.string]))
+export function rexFindMatches (...args: [Re, string]): L.List {
+  checkContract(args, contract('rex-find-matches', [specRex, C.string]))
+  const [r, s] = args
   const regex = new RegExp(r.toRegexString(), 'g')
   const matches: string[] = []
   let match: RegExpExecArray | null
@@ -267,21 +276,24 @@ export function rexFindMatches (r: Re, s: string): L.List {
   return L.vectorToList(matches)
 }
 
-export function rexMatches (r: Re, s: string): boolean {
-  checkContract(arguments, contract('rex-matches?', [specRex, C.string]))
+export function rexMatches (...args: [Re, string]): boolean {
+  checkContract(args, contract('rex-matches?', [specRex, C.string]))
+  const [r, s] = args
   const regex = new RegExp(`^${r.toRegexString()}$`)
   return regex.test(s)
 }
 
-export function rexSplitString (r: Re, s: string): L.List {
-  checkContract(arguments, contract('rex-split-string', [specRex, C.string]))
+export function rexSplitString (...args: [Re, string]): L.List {
+  checkContract(args, contract('rex-split-string', [specRex, C.string]))
+  const [r, s] = args
   const regex = new RegExp(r.toRegexString(), 'g')
   const parts = s.split(regex)
   return L.vectorToList(parts)
 }
 
-export function rexToString (r: Re): string {
-  checkContract(arguments, contract('rex->string', [specRex]))
+export function rexToString (...args: [Re]): string {
+  checkContract(args, contract('rex->string', [specRex]))
+  const [r] = args
   return r.toRegexString()
 }
 

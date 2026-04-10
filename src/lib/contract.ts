@@ -171,7 +171,7 @@ export const html = ({
 export interface Contract { funcName: string, params: Spec[], varargs?: Spec }
 export const contract = (funcName: string, params: Spec[], varargs?: Spec): Contract => ({ funcName, params, varargs })
 
-export function checkContract (args: IArguments, contract: Contract): void {
+export function checkContract(args: L.Value[], c: Contract): void {
   if (contract.varargs === undefined && args.length !== contract.params.length) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to ${contract.funcName} provided. Expected ${contract.params.length}, received ${args.length}.`)
   }

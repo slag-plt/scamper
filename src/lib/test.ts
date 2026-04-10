@@ -12,35 +12,39 @@ interface ErrExp extends L.Struct { [L.structKind]: 'exp', desc: string, expecte
 interface ErrExn extends L.Struct { [L.structKind]: 'exn', desc: string, exn: L.Value }
 interface ErrGen extends L.Struct { [L.structKind]: 'gen', desc: string, reason: string }
 
-function testResultOk (desc: string): Ok {
-  checkContract(arguments, contract('test-result-ok', [C.string]))
+function testResultOk (...args: [string]): Ok {
+  checkContract(args, contract('test-result-ok', [C.string]))
+  const [desc] = args
   return { [L.scamperTag]: 'struct', [L.structKind]: 'ok', desc }
 }
 Test.registerValue('test-result-ok', testResultOk)
 
-function testResultErrorExpected (desc: string, expected: L.Value, actual: L.Value): ErrExp {
-  checkContract(arguments, contract('test-result-error-expected', [C.string, C.any, C.any]))
+function testResultErrorExpected (...args: [string, L.Value, L.Value]): ErrExp {
+  checkContract(args, contract('test-result-error-expected', [C.string, C.any, C.any]))
+  const [desc, expected, actual] = args
   return { [L.scamperTag]: 'struct', [L.structKind]: 'exp', desc, expected, actual }
 }
 Test.registerValue('test-result-error-expected', testResultErrorExpected)
 
-function testResultErrorExn (desc: string, exn: L.Value): ErrExn {
-  checkContract(arguments, contract('test-result-error-exn', [C.string, C.any]))
+function testResultErrorExn (...args: [string, L.Value]): ErrExn {
+  checkContract(args, contract('test-result-error-exn', [C.string, C.any]))
+  const [desc, exn] = args
   return { [L.scamperTag]: 'struct', [L.structKind]: 'exn', desc, exn }
 }
 Test.registerValue('test-result-error-exn', testResultErrorExn)
 
-function testResultErrorGeneric(desc: string, reason: string): ErrGen {
-  checkContract(arguments, contract('test-result-error-generic', [C.string, C.html]))
+function testResultErrorGeneric (...args: [string, string]): ErrGen {
+  checkContract(args, contract('test-result-error-generic', [C.string, C.html]))
+  const [desc, reason] = args
   return { [L.scamperTag]: 'struct', [L.structKind]: 'gen', desc, reason }
 }
 Test.registerValue('test-result-error-gen', testResultErrorGeneric)
-
-function testCase (desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L.ScamperFn): Result {
-  checkContract(arguments, contract('test-case', [C.string, C.func, C.any, C.func]))
+function testCase (...args: [string, L.ScamperFn, L.Value, L.ScamperFn]): Result {
+  checkContract(args, contract('test-case', [C.string, C.func, C.any, C.func]))
+  const [desc, eqFn, expected, testFn] = args
   try {
-    const actual = L.callScamperFn(testFn)
-    const isEqual = L.callScamperFn(eqFn, expected, actual) 
+    const actual = L.callScamperFn(testFn) as L.Value
+    const isEqual = L.callScamperFn(eqFn, expected, actual) as L.Value
     if (isEqual === true) {
       return testResultOk(desc)
     } else if (isEqual === false) {
@@ -58,18 +62,18 @@ function testExn (desc: string, testFn: L.ScamperFn): Result {
   try {
     L.callScamperFn(testFn, [])
     return testResultErrorGeneric(desc, 'Test case did not throw an exception')
-  } catch (e) {
+  } catch {
     return testResultOk(desc)
   }
 }
 Test.registerValue('test-exn', testExn)
 
-function isResult (v: any): boolean {
+function isResult (v: L.Value): boolean {
   return L.isStructKind(v, 'ok') || L.isStructKind(v, 'exp')
       || L.isStructKind(v, 'exn') || L.isStructKind(v, 'gen')
 }
 
-TextRenderer.registerCustomRenderer(isResult, (v: any) => {
+TextRenderer.registerCustomRenderer(isResult, (v: L.Value) => {
   const result = v as Result
   switch (result[L.structKind]) {
     case 'ok':
@@ -83,7 +87,7 @@ TextRenderer.registerCustomRenderer(isResult, (v: any) => {
   }
 })
 
-HtmlRenderer.registerCustomRenderer(isResult, (v: any) => {
+HtmlRenderer.registerCustomRenderer(isResult, (v: L.Value) => {
   const result = v as Result
   const ret = document.createElement('div')
   ret.classList.add('test-result')

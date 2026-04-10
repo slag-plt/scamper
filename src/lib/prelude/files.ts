@@ -8,9 +8,7 @@ import { SubthreadErrors } from "../../lpm";
 let fs: OPFSFileSystem | null = null
 
 export const lib: L.Library = new L.Library(async () => {
-  if (navigator.storage !== undefined) {
-    fs = await OPFSFileSystem.create()
-  }
+  fs = await OPFSFileSystem.create()
 })
 export default lib
 
@@ -22,8 +20,9 @@ interface ReactiveFile extends L.Struct {
   callback: L.ScamperFn
 }
 
-function withFile (filename: string, callback: L.ScamperFn): ReactiveFile {
-  checkContract(arguments, contract('with-file', [C.string, C.func]))  
+function withFile (...args: [string, L.ScamperFn]): ReactiveFile {
+  checkContract(args, contract('with-file', [C.string, C.func]))
+  const [filename, callback] = args
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-file',
@@ -33,35 +32,41 @@ function withFile (filename: string, callback: L.ScamperFn): ReactiveFile {
 }
 lib.registerValue('with-file', withFile)
 
-function renderReactiveFile (v: any): HTMLElement {
+function renderReactiveFile (v: L.Value): HTMLElement {
   const rf = v as ReactiveFile
   const ret = document.createElement('div')
-  if (!fs) {
+  const currentFs = fs
+
+  if (currentFs === null) {
     ret.innerText = 'OPFS not supported'
     return ret
   }
-  fs.fileExists(rf.filename).then((exists: boolean) => {
+
+  const loadReactiveFile = async (): Promise<void> => {
+    const exists = await currentFs.fileExists(rf.filename)
     if (!exists) {
       const err = new L.ScamperError('Runtime', `File not found: ${rf.filename}`)
       ret.appendChild(HTMLRenderer.render(err))
-    } else {
-      fs!.loadFile(rf.filename).then((data: string) => {
-        ret.innerHTML = ''
-        try {
-          const v = L.callScamperFn(rf.callback, data)
-          ret.appendChild(HTMLRenderer.render(v))
-        } catch (e) {
-          if (e instanceof SubthreadErrors) {
-            for (const err of e.errors) {
-              ret.appendChild(HTMLRenderer.render(err))
-            }
-          } else {
-            ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
-          }
-        }
-      })
+      return
     }
-  })
+
+    const data = await currentFs.loadFile(rf.filename)
+    ret.innerHTML = ''
+    try {
+      const value = L.callScamperFn(rf.callback, data)
+      ret.appendChild(HTMLRenderer.render(value))
+    } catch (e) {
+      if (e instanceof SubthreadErrors) {
+        for (const err of e.errors) {
+          ret.appendChild(HTMLRenderer.render(err))
+        }
+      } else {
+        ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
+      }
+    }
+  }
+
+  void loadReactiveFile()
   return ret
 }
 
@@ -75,8 +80,9 @@ interface ReactiveFileChooser extends L.Struct {
   callback: L.ScamperFn
 }
 
-function withFileChooser (callback: L.ScamperFn): ReactiveFileChooser {
-  checkContract(arguments, contract('with-file-chooser', [C.func]))  
+function withFileChooser (...args: [L.ScamperFn]): ReactiveFileChooser {
+  checkContract(args, contract('with-file-chooser', [C.func]))
+  const [callback] = args
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-file-chooser',
@@ -85,7 +91,7 @@ function withFileChooser (callback: L.ScamperFn): ReactiveFileChooser {
 }
 lib.registerValue('with-file-chooser', withFileChooser)
 
-function renderReactiveFileChooser (v: any): HTMLElement {
+function renderReactiveFileChooser (v: L.Value): HTMLElement {
   const rf = v as ReactiveFileChooser
   const ret = document.createElement('div')
   const inp = document.createElement('input')
@@ -94,13 +100,13 @@ function renderReactiveFileChooser (v: any): HTMLElement {
   inp.addEventListener('change', () => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         outp.innerHTML = ''
         try {
-          const v = L.callScamperFn(rf.callback, e.target.result as string)
-          outp.appendChild(HTMLRenderer.render(v))
-        } catch (e) {
-          outp.appendChild(HTMLRenderer.render(e as L.ScamperError))
+          const value = L.callScamperFn(rf.callback, e.target.result as string)
+          outp.appendChild(HTMLRenderer.render(value))
+        } catch (err) {
+          outp.appendChild(HTMLRenderer.render(err as L.ScamperError))
         }
       } else {
         outp.innerText = ''
