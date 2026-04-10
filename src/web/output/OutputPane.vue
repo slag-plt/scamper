@@ -55,7 +55,7 @@ defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
 .trace-top::after {
   content: "";
   position: absolute;
-  top: 0.25em; /* Separation gap measured perfectly! */
+  top: 0.25em;
   bottom: 0;
   left: 0;
   right: 0;
@@ -115,7 +115,7 @@ defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa; /* Maintain outer frame color cleanly! */
+  background-color: #f6f8fa;
   border-left: 0.1em solid #d0d7de;
   border-right: 0.1em solid #d0d7de;
   z-index: -2;

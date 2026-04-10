@@ -1,7 +1,7 @@
 import { ref, shallowRef } from "vue"
 import { useVirtualizer } from "@tanstack/vue-virtual"
-import HTMLRenderer from "../lpm/renderers/html"
-import { DisplayCallbacks, TraceBlock, VueDisplay } from "../lpm/output/vue"
+import HTMLRenderer from "../../lpm/renderers/html"
+import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
 
 export function useOutputPane() {
   // prevent Vue from making blocks deep reactive

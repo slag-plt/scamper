@@ -10,8 +10,8 @@ import { mkInProgress } from "./in-progress"
 import ScamperVue from "../scamper-vue"
 import { throwNull } from "../util"
 import { createApp } from "vue"
-import OutputPane from "./OutputPane.vue"
-import { OutputPaneType } from "./use-output-pane"
+import OutputPane from "./output/OutputPane.vue"
+import { OutputPaneType } from "./output/use-output-pane"
 
 const editorPane = document.getElementById("editor")!
 const outputPaneEl =
