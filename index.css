@@ -1,9 +1,23 @@
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0px;
   padding: 0px;
-  font-family:  -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    avenir next,
+    avenir,
+    segoe ui,
+    helvetica neue,
+    helvetica,
+    Cantarell,
+    Ubuntu,
+    roboto,
+    noto,
+    arial,
+    sans-serif;
   font-size: 1em;
 }
 
@@ -54,7 +68,9 @@ body {
 #sidebar.drag-over {
   opacity: 0.5;
   background: #e0e0e0;
-  transition: opacity 0.2s ease, background 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease;
 }
 
 #ide {
@@ -76,8 +92,8 @@ body {
   width: 100%; /* Full width */
   height: 100%; /* Full height */
   overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  background-color: rgb(0, 0, 0); /* Fallback color */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
 }
 
 #loading-content {
@@ -88,7 +104,8 @@ body {
   width: 80%;
 }
 
-#in-progress, #in-progress-trace {
+#in-progress,
+#in-progress-trace {
   display: none;
 }
 
@@ -115,7 +132,13 @@ body {
 }
 
 #editor {
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
   font-size: 1em;
   width: 100%;
   height: 100%;
@@ -143,40 +166,51 @@ body {
   color: #333;
   flex: 1;
   min-height: 0;
-  overflow: scroll;
   white-space: pre-wrap;
   content-visibility: auto;
 }
 
 #output code {
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
   font-size: 1em;
 }
 
-#output .trace {
-  border: solid 1px black;
-  margin: 0.5em;
-}
+/*#output .trace {*/
+/*  border: solid 1px black;*/
+/*  margin: 0.5em;*/
+/*}*/
 
-#output .trace-block {
-  border: dotted 1px black;
-  margin: 0.5em;
-}
+/*#output .trace-block {*/
+/*  border: dotted 1px black;*/
+/*  margin: 0.5em;*/
+/*}*/
 
-#output .trace-block.collapsed {
-  display: none;
-}
+/*#output .trace-block.collapsed {*/
+/*  display: none;*/
+/*}*/
 
 #output .scamper-output {
-  margin: 0.5em;
+  padding: 0.5em; /* N.B. Use padding instead of margin for Virtual List items to calculate height properly */
 }
 
 #output .scamper-trace {
-  margin: 0.0em;
+  margin: 0em;
 }
 
 #output .test-result {
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
   font-size: 1em;
   margin: 0.5em;
   padding: 0.25em;
@@ -194,7 +228,13 @@ body {
 #interactions {
   background-color: "Cornsilk";
   color: #333;
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
   overflow: auto;
 }
 
@@ -205,7 +245,7 @@ body {
 }
 
 .gutter.gutter-horizontal {
-  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
   cursor: col-resize;
 }
 
@@ -219,6 +259,12 @@ body {
 }
 
 .cm-editor .cm-content {
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
   font-size: 1em;
 }

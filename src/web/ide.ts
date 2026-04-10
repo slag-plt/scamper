@@ -2,15 +2,20 @@ import { EditorView } from "@codemirror/view"
 
 import OPFSFileSystem from "./fs.js"
 import Split from "split.js"
-import { Scamper } from "../scamper.js"
 import { renderToOutput } from "../lpm/output/html.js"
 import * as Lock from "./lockfile.js"
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
 import { mkInProgress } from "./in-progress"
+import ScamperVue from "../scamper-vue"
+import { throwNull } from "../util"
+import { createApp } from "vue"
+import OutputPane from "./OutputPane.vue"
+import { OutputPaneType } from "./use-output-pane"
 
 const editorPane = document.getElementById("editor")!
-const outputPane = document.getElementById("output")!
+const outputPaneEl =
+  document.getElementById("output") ?? throwNull("no output pane?")
 
 const configFilename = ".scamper.config"
 
@@ -24,12 +29,17 @@ const defaultConfig: Config = {
   lastVersionAccessed: "0.0.0",
 }
 
+const outputApp = createApp(OutputPane)
+const outputComponent = outputApp.mount(
+  outputPaneEl,
+) as unknown as OutputPaneType
+
 class IDE {
   fs: OPFSFileSystem
   editor: EditorView
   currentFile: string | null
   autosaveId: number
-  scamper?: Scamper
+  scamper?: ScamperVue
   isDirty: boolean
   config: Config
   isLoadingFile = false
@@ -48,7 +58,7 @@ class IDE {
 
     Split(["#editor", "#results"], { sizes: [65, 35] })
     this.editor = new EditorView({
-      state: mkNoFileEditorState(outputPane),
+      state: mkNoFileEditorState(outputPaneEl),
       parent: editorPane,
     })
 
@@ -282,7 +292,7 @@ class IDE {
           this.currentFile = null
           this.initializeDummyDoc()
           this.config.lastOpenedFilename = null
-          outputPane.innerHTML = ""
+          outputComponent.reset()
 
           this.populateFileDrawer()
           this.startAutosaving()
@@ -352,7 +362,7 @@ class IDE {
 
     document.getElementById("step-once")!.addEventListener("click", () => {
       this.scamper!.stepProgram()
-      outputPane.scrollTo(0, outputPane.scrollHeight)
+      outputComponent.scrollToBottom()
     })
 
     const stepStmtBtn = document.getElementById("step-stmt")
@@ -374,7 +384,7 @@ class IDE {
         stepStmtBtn.style.display = ""
         hideProgressTraceStmt()
       }
-      outputPane.scrollTo(0, outputPane.scrollHeight)
+      outputComponent.scrollToBottom()
     })
     stopBtnTraceStmt.addEventListener("click", () => {
       this.scamper?.cancel()
@@ -401,7 +411,7 @@ class IDE {
         stepAllBtn.style.display = ""
         hideProgressTraceAll()
       }
-      outputPane.scrollTo(0, outputPane.scrollHeight)
+      outputComponent.scrollToBottom()
     })
     stopBtnTraceAll.addEventListener("click", () => {
       this.scamper?.cancel()
@@ -532,7 +542,7 @@ class IDE {
   initializeDoc(src: string) {
     this.editor.setState(
       mkFreshEditorState(src, {
-        output: outputPane,
+        output: outputPaneEl,
         dirtyAction: () => {
           this.makeDirty()
         },
@@ -542,7 +552,7 @@ class IDE {
   }
 
   initializeDummyDoc() {
-    this.editor.setState(mkNoFileEditorState(outputPane))
+    this.editor.setState(mkNoFileEditorState(outputPaneEl))
   }
 
   makeDirty() {
@@ -563,16 +573,20 @@ class IDE {
   ///// IDE actions ////////////////////////////////////////////////////////////
 
   startScamper(isTracing: boolean): void {
-    outputPane.innerHTML = ""
+    outputComponent.reset()
     try {
-      this.scamper = new Scamper(outputPane, this.getDoc(), isTracing)
+      this.scamper = new ScamperVue(
+        outputComponent.display,
+        this.getDoc(),
+        isTracing,
+      )
       if (isTracing) {
         this.toggleStepButtons(true)
       } else {
         this.toggleStepButtons(false)
       }
     } catch (e) {
-      renderToOutput(outputPane, e)
+      renderToOutput(outputPaneEl, e)
     }
     this.makeClean()
   }
@@ -609,7 +623,7 @@ class IDE {
       // outputPane!.appendChild(descriptionEl)
       // this.makeClean()
     } catch (e) {
-      renderToOutput(outputPane, e)
+      renderToOutput(outputPaneEl, e)
     }
   }
 
@@ -649,7 +663,7 @@ class IDE {
     }
 
     // Reset the UI: output panel and file drawer, also restart saving
-    outputPane.innerHTML = ""
+    outputComponent.reset()
     this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()

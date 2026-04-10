@@ -1,5 +1,3 @@
-// @ts-check
-
 import eslint from "@eslint/js"
 import { defineConfig, globalIgnores } from "eslint/config"
 import tseslint from "typescript-eslint"
@@ -30,6 +28,7 @@ export default defineConfig(
           allowDefaultProject: ["eslint.config.mjs", "vite.config.ts"],
         },
         tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: [".vue"],
       },
     },
   },
