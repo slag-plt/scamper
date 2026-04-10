@@ -3,7 +3,7 @@ import { resolve } from "path"
 import { defineConfig } from "vitest/config"
 
 import { lezer } from "@lezer/generator/rollup"
-import { svelte } from "@sveltejs/vite-plugin-svelte"
+import vue from "@vitejs/plugin-vue"
 
 const AppVersion = process.env.npm_package_version ?? "unknown"
 
@@ -24,7 +24,7 @@ export default defineConfig({
     },
   },
 
-  plugins: [lezer(), svelte()],
+  plugins: [lezer(), vue()],
 
   define: {
     APP_VERSION: JSON.stringify(AppVersion),
