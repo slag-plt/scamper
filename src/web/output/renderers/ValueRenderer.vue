@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Value } from "../../lpm"
+import { Value } from "../../../lpm"
 import { computed } from "vue"
 import { renderStrategies } from "./render-strategies"
-import FallbackRenderer from "./renderers/FallbackRenderer.vue"
+import FallbackRenderer from "./FallbackRenderer.vue"
 
 const props = defineProps<{ value: Value }>()
 

@@ -1,7 +1,7 @@
-import { isArray, isSym, Sym, Value } from "../../lpm"
+import { isArray, isSym, Sym, Value } from "../../../lpm"
 import { Component, defineComponent, h, PropType } from "vue"
-import CodeElement from "./renderers/CodeElement.vue"
-import VectorRenderer from "./renderers/VectorRenderer.vue"
+import CodeElement from "./CodeElement.vue"
+import VectorRenderer from "./VectorRenderer.vue"
 
 interface VueRenderProps {
   type: "vue"

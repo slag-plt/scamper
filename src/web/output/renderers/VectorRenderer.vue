@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Value } from "../../../lpm"
 import CodeElement from "./CodeElement.vue"
-import ValueRenderer from "../ValueRenderer.vue"
+import ValueRenderer from "./ValueRenderer.vue"
 
 defineProps<{ value: Value[] }>()
 </script>
