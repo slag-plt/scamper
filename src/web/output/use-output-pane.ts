@@ -1,6 +1,5 @@
 import { ref, shallowRef } from "vue"
 import { useVirtualizer } from "@tanstack/vue-virtual"
-import HTMLRenderer from "../../lpm/renderers/html"
 import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
 
 export function useOutputPane() {
@@ -20,27 +19,6 @@ export function useOutputPane() {
     estimateSize: () => 50,
     overscan: 40,
   })
-
-  /**
-   * custom directive to mount native DOM elements into Vue
-   */
-  const vMountValue = {
-    mounted(el: HTMLElement, binding: { value: HTMLElement }) {
-      if (binding.value) el.appendChild(binding.value)
-    },
-    updated(
-      el: HTMLElement,
-      binding: { value: HTMLElement; oldValue?: HTMLElement },
-    ) {
-      if (binding.value !== binding.oldValue) {
-        if (binding.value) el.replaceChildren(binding.value)
-        else el.replaceChildren()
-      }
-    },
-    unmounted(el: HTMLElement) {
-      el.replaceChildren()
-    },
-  }
 
   /**
    * display / batching logic
@@ -87,7 +65,7 @@ export function useOutputPane() {
         sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : "base"
       buffer.push({
         attrs: [`${section}-item`],
-        value: HTMLRenderer.render(value),
+        value,
       })
       scheduleFlush()
     },
@@ -110,7 +88,6 @@ export function useOutputPane() {
   return {
     displayInput,
     reset,
-    vMountValue,
     virtualizer,
     blocks,
     scrollEl,

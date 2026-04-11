@@ -17,6 +17,9 @@ export default defineConfig(
       parserOptions: {
         parser: tseslint.parser,
       },
+      globals: {
+        ...globals.browser,
+      },
     },
   },
   eslintConfigPrettier,

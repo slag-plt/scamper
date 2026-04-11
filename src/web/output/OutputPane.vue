@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useOutputPane } from "./use-output-pane"
+import ValueRenderer from "./ValueRenderer.vue"
 const {
   displayInput,
   reset,
   blocks,
   virtualizer,
   scrollEl,
-  vMountValue,
   display,
   scrollToBottom,
 } = useOutputPane()
@@ -37,10 +37,10 @@ defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
           transform: `translateY(${row.start}px)`,
         }"
       >
-        <div
-          v-if="blocks[row.index].value"
-          v-mount-value="blocks[row.index].value"
-        ></div>
+        <ValueRenderer
+          v-if="'value' in blocks[row.index]"
+          :value="blocks[row.index].value"
+        />
       </div>
     </div>
   </div>

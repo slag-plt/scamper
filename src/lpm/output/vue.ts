@@ -10,8 +10,7 @@ export interface DisplayCallbacks {
 
 export interface TraceBlock {
   attrs: string[]
-  // TODO: should be a Value and render as a component
-  value?: HTMLElement
+  value?: Value
 }
 
 export class VueDisplay implements OutputChannel, ErrorChannel {
