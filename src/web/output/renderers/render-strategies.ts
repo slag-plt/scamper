@@ -31,8 +31,12 @@ export function createSimpleVueRenderer<T>(
   }
 }
 
+export const FallbackRenderer = createTextRenderer(
+  (v) => `[Blob: ${JSON.stringify(v)}]`,
+)
+
 /**
- * strategies
+ * simple strategies
  */
 const booleanStrategy: Strategy = {
   predicate: (v) => v === true || v === false,
@@ -58,6 +62,10 @@ const symbolStrategy: Strategy = {
   predicate: (v) => isSym(v),
   ...createSimpleVueRenderer<Sym>((v) => v.value),
 }
+
+/**
+ * non-trivial vue strategies
+ */
 const vectorStrategy: Strategy = {
   predicate: (v) => isArray(v),
   type: "vue",
