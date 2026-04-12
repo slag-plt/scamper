@@ -1,4 +1,4 @@
-import { markRaw, ref, shallowRef } from "vue"
+import { markRaw, ref, shallowRef, triggerRef } from "vue"
 import { useVirtualizer } from "@tanstack/vue-virtual"
 import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
 
@@ -32,14 +32,14 @@ export function useOutputPane() {
       isFlushing = true
       requestAnimationFrame(() => {
         if (buffer.length > 0) {
-          // Create a new array reference so `shallowRef` triggers reactivity updates
-          const nextBlocks = [...blocks.value]
-
-          // Empty buffer and push chunks iteratively to avoid max call stack size exceptions
-          while (buffer.length > 0) {
-            nextBlocks.push(...buffer.splice(0, 10_000))
+          // push items sequentially to avoid max call stack size exceptions
+          // and expensive spread operator usage
+          for (const block of buffer) {
+            blocks.value.push(block)
           }
-          blocks.value = nextBlocks
+          buffer = []
+          // manually trigger reactivity b/c we mutated shallow ref
+          triggerRef(blocks)
         }
         isFlushing = false
       })
