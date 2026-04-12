@@ -1,27 +1,15 @@
-import { isArray, isSym, Sym, Value } from "../../../lpm"
-import { Component, defineComponent, h, PropType } from "vue"
-import CodeElement from "./CodeElement.vue"
-import VectorRenderer from "./VectorRenderer.vue"
+import {
+  Char,
+  charToName,
+  Closure,
+  isChar,
+  isClosure,
+  isJsFunction,
+  isSym,
+  Sym,
+} from "../../../lpm"
+import { createTextRenderer, Strategy, VueRenderProps } from "./VueRenderer"
 
-interface VueRenderProps {
-  type: "vue"
-  renderer: Component
-}
-export type Strategy = {
-  predicate: (v: Value) => boolean
-} & (VueRenderProps | { type: "dom"; renderFn: (v: Value) => HTMLElement })
-
-/**
- * helper functions
- */
-function createTextRenderer<T>(formatFn: (val: T) => string): Component {
-  return defineComponent({
-    props: { value: { type: null as unknown as PropType<T>, required: true } },
-    setup(props) {
-      return () => h(CodeElement, () => formatFn(props.value as T))
-    },
-  })
-}
 export function createSimpleVueRenderer<T>(
   formatFn: (val: T) => string,
 ): VueRenderProps {
@@ -30,11 +18,6 @@ export function createSimpleVueRenderer<T>(
     renderer: createTextRenderer<T>(formatFn),
   }
 }
-
-export const FallbackRenderer = createTextRenderer(
-  (v) => `[Blob: ${JSON.stringify(v)}]`,
-)
-
 /**
  * simple strategies
  */
@@ -62,22 +45,32 @@ const symbolStrategy: Strategy = {
   predicate: (v) => isSym(v),
   ...createSimpleVueRenderer<Sym>((v) => v.value),
 }
-
-/**
- * non-trivial vue strategies
- */
-const vectorStrategy: Strategy = {
-  predicate: (v) => isArray(v),
-  type: "vue",
-  renderer: VectorRenderer,
+const closureStrategy: Strategy = {
+  predicate: (v) => isClosure(v),
+  ...createSimpleVueRenderer(
+    (v) =>
+      `(lambda (${(v as Closure).params.reduce((acc, curr) => `${acc} ${curr}`)}) ...)`,
+  ),
+}
+const jsFunctionStrategy: Strategy = {
+  predicate: (v) => isJsFunction(v),
+  ...createSimpleVueRenderer<() => void>(
+    (v) => `js.${v.name || "##anonymous##"}`,
+  ),
+}
+const charStrategy: Strategy = {
+  predicate: (v) => isChar(v),
+  ...createSimpleVueRenderer<Char>((v) => `#\\${charToName(v.value)}`),
 }
 
-export const renderStrategies: Strategy[] = [
+export const simpleRenderers: Strategy[] = [
   booleanStrategy,
   numberStrategy,
   stringStrategy,
   undefinedStrategy,
   nullStrategy,
   symbolStrategy,
-  vectorStrategy,
+  closureStrategy,
+  jsFunctionStrategy,
+  charStrategy,
 ]
