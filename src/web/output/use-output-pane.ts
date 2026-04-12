@@ -1,9 +1,9 @@
-import { ref, shallowRef } from "vue"
+import { markRaw, ref, shallowRef } from "vue"
 import { useVirtualizer } from "@tanstack/vue-virtual"
 import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
 
 export function useOutputPane() {
-  // prevent Vue from making blocks deep reactive
+  // prevent Vue from making blocks deeply reactive
   const blocks = shallowRef<TraceBlock[]>([])
 
   /**
@@ -65,7 +65,9 @@ export function useOutputPane() {
         sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : "base"
       buffer.push({
         attrs: [`${section}-item`],
-        value,
+        // mark the object as raw to prevent deep reactivity proxying of complex ASTs
+        value:
+          typeof value === "object" && value !== null ? markRaw(value) : value,
       })
       scheduleFlush()
     },

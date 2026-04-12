@@ -2,9 +2,9 @@ import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
 import HtmlRenderer from "../lpm/renderers/html.js"
 import VueRenderer from "../web/output/renderers/vue"
-import ASTPatRenderer from "./ASTPatRenderer.vue"
-import ASTExpRenderer from "./ASTExpRenderer.vue"
-import ASTStmtRenderer from "./ASTStmtRenderer.vue"
+import PatRenderer from "./ast-components/PatRenderer.vue"
+import ExpRenderer from "./ast-components/ExpRenderer.vue"
+import StmtRenderer from "./ast-components/StmtRenderer.vue"
 
 export interface Tagged {
   tag: string
@@ -466,7 +466,8 @@ function mkCode(text: string): HTMLElement {
   return ret
 }
 
-function mkCodeParens(...args: (string | Pat | Exp | Stmt)[]): HTMLElement {
+export type ASTArg = string | Pat | Exp | Stmt
+function mkCodeParens(...args: ASTArg[]): HTMLElement {
   const ret = document.createElement("code")
   ret.appendChild(document.createTextNode("("))
   if (args.length > 0) {
@@ -504,6 +505,12 @@ function addBinder(
   container.appendChild(document.createTextNode("]"))
 }
 
+export interface HljsBindings {
+  head: string
+  pairs: { lhs: string | Pat | Exp; rhs: Exp }[]
+  body?: Exp
+  scrutinee?: Exp
+}
 function mkHljsBindingForm(
   head: string,
   pairs: { lhs: string | Pat | Exp; rhs: Exp }[],
@@ -628,9 +635,9 @@ HtmlRenderer.registerCustomRenderer(isPat, (v) => patToHTML(v as Pat))
 HtmlRenderer.registerCustomRenderer(isExp, (v) => expToHTML(v as Exp))
 HtmlRenderer.registerCustomRenderer(isStmt, (v) => stmtToHTML(v as Stmt))
 
-VueRenderer.registerCustomRenderer(isPat, () => ASTPatRenderer)
-VueRenderer.registerCustomRenderer(isExp, () => ASTExpRenderer)
-VueRenderer.registerCustomRenderer(isStmt, () => ASTStmtRenderer)
+VueRenderer.registerCustomRenderer(isPat, () => PatRenderer)
+VueRenderer.registerCustomRenderer(isExp, () => ExpRenderer)
+VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 
