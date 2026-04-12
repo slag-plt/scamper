@@ -1,6 +1,10 @@
 import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
-import HtmlRenderer from '../lpm/renderers/html.js'
+import HtmlRenderer from "../lpm/renderers/html.js"
+import VueRenderer from "../web/output/renderers/vue"
+import ASTPatRenderer from "./ASTPatRenderer.vue"
+import ASTExpRenderer from "./ASTExpRenderer.vue"
+import ASTStmtRenderer from "./ASTStmtRenderer.vue"
 
 export interface Tagged {
   tag: string
@@ -455,67 +459,79 @@ TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
 
 ///// Web Rendering ////////////////////////////////////////////////////////////
 
-function mkCode (text: string): HTMLElement {
-  const ret = document.createElement('code')
+function mkCode(text: string): HTMLElement {
+  const ret = document.createElement("code")
   ret.innerText = text
-  ret.tabIndex = 0;
+  ret.tabIndex = 0
   return ret
 }
 
-function mkCodeParens (...args: (string | Pat | Exp | Stmt)[]): HTMLElement {
-  const ret = document.createElement('code')
-  ret.appendChild(document.createTextNode('('))
+function mkCodeParens(...args: (string | Pat | Exp | Stmt)[]): HTMLElement {
+  const ret = document.createElement("code")
+  ret.appendChild(document.createTextNode("("))
   if (args.length > 0) {
-    ret.appendChild(typeof args[0] === 'string' ? mkCode(args[0]) : HtmlRenderer.render(args[0]))
+    ret.appendChild(
+      typeof args[0] === "string"
+        ? mkCode(args[0])
+        : HtmlRenderer.render(args[0]),
+    )
     for (const arg of args.slice(1)) {
-      ret.appendChild(document.createTextNode(' '))
-      if (typeof arg === 'string') {
+      ret.appendChild(document.createTextNode(" "))
+      if (typeof arg === "string") {
         ret.appendChild(document.createTextNode(arg))
       } else {
         ret.appendChild(HtmlRenderer.render(arg))
       }
     }
   }
-  ret.appendChild(document.createTextNode(')'))
-  ret.tabIndex = 0;
+  ret.appendChild(document.createTextNode(")"))
+  ret.tabIndex = 0
   return ret
 }
 
-function addBinder (container: HTMLElement, pair: { lhs: string | Pat | Exp; rhs: Exp }): void {
-  container.appendChild(document.createTextNode('['))
-  if (typeof pair.lhs === 'string') {
+function addBinder(
+  container: HTMLElement,
+  pair: { lhs: string | Pat | Exp; rhs: Exp },
+): void {
+  container.appendChild(document.createTextNode("["))
+  if (typeof pair.lhs === "string") {
     container.appendChild(document.createTextNode(pair.lhs))
   } else {
     container.appendChild(HtmlRenderer.render(pair.lhs))
   }
-  container.appendChild(document.createTextNode(' '))
+  container.appendChild(document.createTextNode(" "))
   container.appendChild(HtmlRenderer.render(pair.rhs))
-  container.appendChild(document.createTextNode(']'))
+  container.appendChild(document.createTextNode("]"))
 }
 
-function mkHljsBindingForm (head: string, pairs: { lhs: string | Pat | Exp; rhs: Exp }[], body?: Exp, scrutinee?: Exp): HTMLElement {
-  const ret = document.createElement('code')
-  ret.classList.add('hljs')
+function mkHljsBindingForm(
+  head: string,
+  pairs: { lhs: string | Pat | Exp; rhs: Exp }[],
+  body?: Exp,
+  scrutinee?: Exp,
+): HTMLElement {
+  const ret = document.createElement("code")
+  ret.classList.add("hljs")
   ret.appendChild(document.createTextNode(`(${head}`))
   if (scrutinee) {
-    ret.appendChild(document.createTextNode(' '))
+    ret.appendChild(document.createTextNode(" "))
     ret.appendChild(HtmlRenderer.render(scrutinee))
   }
   if (pairs.length > 0) {
-    ret.appendChild(document.createTextNode(' '))
+    ret.appendChild(document.createTextNode(" "))
     addBinder(ret, pairs[0])
     for (const pair of pairs.slice(1)) {
-      ret.appendChild(document.createTextNode(' '))
+      ret.appendChild(document.createTextNode(" "))
       addBinder(ret, pair)
     }
   }
   if (body) {
-    ret.appendChild(document.createTextNode(' '))
+    ret.appendChild(document.createTextNode(" "))
     ret.appendChild(HtmlRenderer.render(body))
   }
-  ret.appendChild(document.createTextNode(')'))
-  ret.classList.add('hljs')
-  ret.tabIndex = 0;
+  ret.appendChild(document.createTextNode(")"))
+  ret.classList.add("hljs")
+  ret.tabIndex = 0
   return ret
 }
 
@@ -549,23 +565,39 @@ export function expToHTML(e: Exp): HTMLElement {
     case "lam":
       return mkCodeParens("lambda", ...e.params, e.body)
     case "let":
-      return mkHljsBindingForm("let", e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })), e.body)
+      return mkHljsBindingForm(
+        "let",
+        e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
+        e.body,
+      )
     case "begin":
       return mkCodeParens("begin", ...e.exps)
     case "if":
       return mkCodeParens("if", e.guard, e.ifB, e.elseB)
     case "match":
-      return mkHljsBindingForm("match", e.branches.map(({ pat, body }) => ({ lhs: pat, rhs: body })), undefined, e.scrutinee)
+      return mkHljsBindingForm(
+        "match",
+        e.branches.map(({ pat, body }) => ({ lhs: pat, rhs: body })),
+        undefined,
+        e.scrutinee,
+      )
     case "quote":
       return mkCodeParens("quote", mkLit(e.value))
     case "let*":
-      return mkHljsBindingForm("let*", e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })), e.body)
+      return mkHljsBindingForm(
+        "let*",
+        e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
+        e.body,
+      )
     case "and":
       return mkCodeParens("and", ...e.exps)
     case "or":
       return mkCodeParens("or", ...e.exps)
     case "cond":
-      return mkHljsBindingForm("cond", e.branches.map(({ test, body }) => ({ lhs: test, rhs: body })))
+      return mkHljsBindingForm(
+        "cond",
+        e.branches.map(({ test, body }) => ({ lhs: test, rhs: body })),
+      )
     case "section":
       return mkCodeParens("section", ...e.exps)
   }
@@ -587,7 +619,7 @@ export function stmtToHTML(s: Stmt): HTMLElement {
 }
 
 export function progToHTML(p: Prog): HTMLElement {
-  const ret = document.createElement('div')
+  const ret = document.createElement("div")
   ret.append(...p.map(stmtToHTML))
   return ret
 }
@@ -595,6 +627,10 @@ export function progToHTML(p: Prog): HTMLElement {
 HtmlRenderer.registerCustomRenderer(isPat, (v) => patToHTML(v as Pat))
 HtmlRenderer.registerCustomRenderer(isExp, (v) => expToHTML(v as Exp))
 HtmlRenderer.registerCustomRenderer(isStmt, (v) => stmtToHTML(v as Stmt))
+
+VueRenderer.registerCustomRenderer(isPat, () => ASTPatRenderer)
+VueRenderer.registerCustomRenderer(isExp, () => ASTExpRenderer)
+VueRenderer.registerCustomRenderer(isStmt, () => ASTStmtRenderer)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 

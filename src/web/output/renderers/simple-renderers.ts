@@ -8,11 +8,11 @@ import {
   isSym,
   Sym,
 } from "../../../lpm"
-import { createTextRenderer, Strategy, VueRenderProps } from "./VueRenderer"
+import { createTextRenderer, Strategy, VueStrategyProps } from "./vue"
 
 export function createSimpleVueRenderer<T>(
   formatFn: (val: T) => string,
-): VueRenderProps {
+): VueStrategyProps {
   return {
     type: "vue",
     renderer: createTextRenderer<T>(formatFn),
