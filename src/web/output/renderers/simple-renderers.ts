@@ -49,7 +49,10 @@ const closureStrategy: Strategy = {
   predicate: (v) => isClosure(v),
   ...createSimpleVueRenderer(
     (v) =>
-      `(lambda (${(v as Closure).params.reduce((acc, curr) => `${acc} ${curr}`)}) ...)`,
+      `(lambda (${(v as Closure).params.reduce(
+        (acc, curr) => `${acc} ${curr}`,
+        "",
+      )}) ...)`,
   ),
 }
 const jsFunctionStrategy: Strategy = {

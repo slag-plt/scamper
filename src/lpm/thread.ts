@@ -171,30 +171,32 @@ export class Thread {
     }
   }
 
-  private get stepsPerYield(): number {
-    if (!this.options.isTracing) {
-      return this.options.maxStepsPerYield
+  private lastYieldTime = performance.now()
+  private stepsSinceLastCheck = 0
+  private readonly TIME_BUDGET_MS = 1000 / 60
+  private readonly STEPS_PER_CLOCK_CHECK = 1000
+
+  private shouldYield(): boolean {
+    // since perf.now has non-negligible performance overhead, we should only check occasionally
+    this.stepsSinceLastCheck++
+    if (this.stepsSinceLastCheck >= this.STEPS_PER_CLOCK_CHECK) {
+      this.stepsSinceLastCheck = 0
+      const now = performance.now()
+      if (now - this.lastYieldTime >= this.TIME_BUDGET_MS) {
+        this.lastYieldTime = now
+        return true
+      }
     }
-    const maxLogs = 1_000
-    const scalingFactor = this.options.maxStepsPerYield / maxLogs
-    const logCount = Math.max(this.out.totalSends, 1)
-    return Math.max(
-      1,
-      Math.ceil(this.options.maxStepsPerYield / (logCount * scalingFactor)),
-    )
+    return false
   }
 
   /** Steps until next expression is finished. */
   async stepExpr(): Promise<void> {
-    let i = 0
-    let yieldInterval = this.stepsPerYield
+    this.lastYieldTime = performance.now()
     do {
       this.step()
-      i++
-      if (i >= yieldInterval) {
-        i = 0
+      if (this.shouldYield()) {
         await scheduler.yield()
-        yieldInterval = this.stepsPerYield
       }
     } while (this.isProcessingExpr && !this.cancelled)
     this.handleCancelled()
@@ -210,18 +212,12 @@ export class Thread {
   }
 
   async evaluateAsync(): Promise<L.Value> {
+    this.lastYieldTime = performance.now()
     while (!this.isFinished() && !this.cancelled) {
-      const yieldInterval = this.stepsPerYield
-      for (
-        let i = 0;
-        i < yieldInterval && !this.isFinished() && !this.cancelled;
-        i++
-      ) {
-        // console.debug("stepping")
-        this.step()
+      this.step()
+      if (this.shouldYield()) {
+        await scheduler.yield()
       }
-      // console.debug("yielding, curr frames", this.frames.length)
-      await scheduler.yield()
     }
     this.handleCancelled()
     return this.results[this.curStmt - 1]
