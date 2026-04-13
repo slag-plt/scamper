@@ -2,7 +2,7 @@ import * as L from "./lang"
 import * as U from "./util"
 import HTMLRenderer from "./renderers/html.js"
 import TextRenderer from "./renderers/text"
-import VueRenderer from "../web/output/renderers/vue"
+import VueRenderer from "./renderers/vue"
 import TraceStartRenderer from "./TraceStartRenderer.vue"
 import TraceOutputRenderer from "../TraceOutputRenderer.vue"
 

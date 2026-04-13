@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ASTArg, Exp, HljsBindings, mkLit } from "../ast"
-import ValueRenderer from "../../web/output/renderers/ValueRenderer.vue"
+import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 import CodeParens from "./CodeParens.vue"
 import HljsBindingForm from "./HljsBindingForm.vue"
-import CodeElement from "../../web/output/renderers/components/CodeElement.vue"
+import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
 
 const { value: e } = defineProps<{ value: Exp }>()
 

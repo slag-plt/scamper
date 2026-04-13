@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { List, Value } from "../../../../lpm"
+import { List, Value } from "../../../index"
 import CodeElement from "./CodeElement.vue"
 import ValueRenderer from "../ValueRenderer.vue"
 import { computed } from "vue"

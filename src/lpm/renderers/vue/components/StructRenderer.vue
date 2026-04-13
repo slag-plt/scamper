@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getFieldsOfStruct, Struct, structKind } from "../../../../lpm"
+import { getFieldsOfStruct, Struct, structKind } from "../../../index"
 import { computed } from "vue"
 import CodeElement from "./CodeElement.vue"
 import ValueRenderer from "../ValueRenderer.vue"

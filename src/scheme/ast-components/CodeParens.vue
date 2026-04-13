@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ASTArg } from "../ast"
-import CodeElement from "../../web/output/renderers/components/CodeElement.vue"
-import ValueRenderer from "../../web/output/renderers/ValueRenderer.vue"
+import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
+import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 
 defineProps<{ args: ASTArg[] }>()
 </script>

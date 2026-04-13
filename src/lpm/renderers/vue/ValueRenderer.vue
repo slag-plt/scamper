@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Value } from "../../../lpm"
+import { Value } from "../../index"
 import { computed } from "vue"
-import VueRenderer from "./vue"
+import VueRenderer from "../vue"
 
 const props = defineProps<{ value: Value }>()
 

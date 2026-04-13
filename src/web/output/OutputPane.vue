@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useOutputPane } from "./use-output-pane"
-import ValueRenderer from "./renderers/ValueRenderer.vue"
+import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 const {
   displayInput,
   reset,

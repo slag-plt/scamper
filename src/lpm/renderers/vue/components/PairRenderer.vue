@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pair } from "../../../../lpm"
+import { Pair } from "../../../index"
 import CodeElement from "./CodeElement.vue"
 import ValueRenderer from "../ValueRenderer.vue"
 

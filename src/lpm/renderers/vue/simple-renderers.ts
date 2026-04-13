@@ -7,8 +7,8 @@ import {
   isJsFunction,
   isSym,
   Sym,
-} from "../../../lpm"
-import { createTextRenderer, Strategy, VueStrategyProps } from "./vue"
+} from "../../index"
+import { createTextRenderer, Strategy, VueStrategyProps } from "../vue"
 
 export function createSimpleVueRenderer<T>(
   formatFn: (val: T) => string,

@@ -1,7 +1,7 @@
-import { Range } from './range.js'
+import { Range } from "./range.js"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
-type Phase = 'Parser' | 'Runtime'
+type Phase = "Parser" | "Runtime"
 
 /** Errors that arise during Scamper compilation and execution. */
 export class ScamperError extends Error {
@@ -10,7 +10,13 @@ export class ScamperError extends Error {
   range?: Range
   source?: string
 
-  constructor (phase: Phase, msg: string, modName?: string, range?: Range, source?: string) {
+  constructor(
+    phase: Phase,
+    msg: string,
+    modName?: string,
+    range?: Range,
+    source?: string,
+  ) {
     super(msg)
     this.phase = phase
     this.modName = modName
@@ -19,9 +25,9 @@ export class ScamperError extends Error {
   }
 
   toString(): string {
-    const detail = `${this.modName ? this.modName : ''}${(this.range && this.range !== Range.none) ? this.range.toString() : ''}`
-    const src = this.source ? `(${this.source}) ` : ''
-    return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
+    const detail = `${this.modName ? this.modName : ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
+    const src = this.source ? `(${this.source}) ` : ""
+    return `${this.phase} error${detail.length > 0 ? " [" + detail + "]" : ""}: ${src}${this.message}`
   }
 }
 
@@ -29,7 +35,7 @@ export class ScamperError extends Error {
 export class ICE extends Error {
   funcName: string
 
-  constructor (funcName: string, msg: string) {
+  constructor(funcName: string, msg: string) {
     super(msg)
     this.funcName = funcName
   }
@@ -39,9 +45,10 @@ export class ICE extends Error {
   }
 }
 
-export class SubthreadErrors {
+export class SubthreadErrors extends Error {
   errors: ScamperError[]
   constructor(errors: ScamperError[]) {
+    super()
     this.errors = [...errors]
   }
 }

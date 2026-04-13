@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Pat, PCtor, PVar } from "../ast"
-import { createSimpleVueRenderer } from "../../web/output/renderers/simple-renderers"
-import ValueRenderer from "../../web/output/renderers/ValueRenderer.vue"
+import { createSimpleVueRenderer } from "../../lpm/renderers/vue/simple-renderers"
+import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 import CodeParens from "./CodeParens.vue"
-import { FallbackRenderer } from "../../web/output/renderers/vue"
+import { FallbackRenderer } from "../../lpm/renderers/vue"
 
 const { value: pat } = defineProps<{ value: Pat }>()
 
@@ -13,14 +13,18 @@ switch (pat.tag) {
     computedComponent = createSimpleVueRenderer(() => "_").renderer
     break
   case "pvar":
-    computedComponent = createSimpleVueRenderer<PVar>((pat) => pat.name).renderer
+    computedComponent = createSimpleVueRenderer<PVar>(
+      (pat) => pat.name,
+    ).renderer
     break
   case "plit":
     computedComponent = ValueRenderer
     break
   case "pctor": {
     if (pat.args.length === 0) {
-      computedComponent = createSimpleVueRenderer<PCtor>((pat) => `(${pat.name})`).renderer
+      computedComponent = createSimpleVueRenderer<PCtor>(
+        (pat) => `(${pat.name})`,
+      ).renderer
     } else {
       computedComponent = CodeParens
     }

@@ -1,7 +1,7 @@
 import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
 import HtmlRenderer from "../lpm/renderers/html.js"
-import VueRenderer from "../web/output/renderers/vue"
+import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
 import StmtRenderer from "./ast-components/StmtRenderer.vue"
