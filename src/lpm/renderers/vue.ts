@@ -7,6 +7,7 @@ import ListRenderer from "./vue/components/ListRenderer.vue"
 import PairRenderer from "./vue/components/PairRenderer.vue"
 import { simpleRenderers } from "./vue/simple-renderers"
 import StructRenderer from "./vue/components/StructRenderer.vue"
+import DOMElementRenderer from "./vue/components/DOMElementRenderer.vue"
 
 export interface VueStrategyProps {
   type: "vue"
@@ -18,7 +19,6 @@ interface BaseStrategy {
 interface VueStrategy extends BaseStrategy, VueStrategyProps {}
 interface DOMStrategy extends BaseStrategy {
   type: "dom"
-  renderFn: (v: Value) => HTMLElement
 }
 export type Strategy = VueStrategy | DOMStrategy
 
@@ -57,11 +57,17 @@ const pairStrategy: VueStrategy = {
   renderer: PairRenderer,
 }
 
+const htmlElementStrategy: DOMStrategy = {
+  predicate: (v) => v instanceof HTMLElement,
+  type: "dom",
+}
+
 const standardStrategies: Strategy[] = [
   ...simpleRenderers,
   vectorStrategy,
   listStrategy,
   pairStrategy,
+  htmlElementStrategy,
 ]
 
 const genericStructStrategy: VueStrategy = {
@@ -76,12 +82,14 @@ const errorStrategy: VueStrategy = {
 }
 
 class _VueRenderer extends Renderer<Component> {
+  getStrategy(value: Value): Strategy | undefined {
+    return standardStrategies.find((s) => s.predicate(value))
+  }
+
   render(value: Value): Component {
-    const strategy = standardStrategies.find((s) => s.predicate(value))
+    const strategy = this.getStrategy(value)
     if (strategy) {
-      if (strategy.type === "vue") return strategy.renderer
-      // TODO: implement DOM type renderer
-      return FallbackRenderer
+      return strategy.type === "vue" ? strategy.renderer : DOMElementRenderer
     }
 
     // there may be a custom renderer for this value

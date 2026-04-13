@@ -48,7 +48,8 @@ export class ICE extends Error {
 export class SubthreadErrors extends Error {
   errors: ScamperError[]
   constructor(errors: ScamperError[]) {
-    super()
+    const msg = errors.map((e) => e.toString()).join(" ")
+    super(msg)
     this.errors = [...errors]
   }
 }

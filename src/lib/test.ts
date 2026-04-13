@@ -3,14 +3,16 @@ import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
 import TextRenderer from '../lpm/renderers/text.js'
 import HtmlRenderer from '../lpm/renderers/html.js'
+import VueRenderer from '../lpm/renderers/vue.js'
+import TestResultRenderer from './TestResultRenderer.vue'
 
 const Test: L.Library = new L.Library()
 
-type Result = Ok | ErrExp | ErrExn | ErrGen
-interface Ok extends L.Struct { [L.structKind]: 'ok', desc: string }
-interface ErrExp extends L.Struct { [L.structKind]: 'exp', desc: string, expected: L.Value, actual: L.Value }
-interface ErrExn extends L.Struct { [L.structKind]: 'exn', desc: string, exn: L.Value }
-interface ErrGen extends L.Struct { [L.structKind]: 'gen', desc: string, reason: string }
+export type Result = Ok | ErrExp | ErrExn | ErrGen
+export interface Ok extends L.Struct { [L.structKind]: 'ok', desc: string }
+export interface ErrExp extends L.Struct { [L.structKind]: 'exp', desc: string, expected: L.Value, actual: L.Value }
+export interface ErrExn extends L.Struct { [L.structKind]: 'exn', desc: string, exn: L.Value }
+export interface ErrGen extends L.Struct { [L.structKind]: 'gen', desc: string, reason: string }
 
 function testResultOk (desc: string): Ok {
   checkContract(arguments, contract('test-result-ok', [C.string]))
@@ -125,5 +127,7 @@ HtmlRenderer.registerCustomRenderer(isResult, (v: any) => {
   }
   return ret
 })
+
+VueRenderer.registerCustomRenderer(isResult, () => TestResultRenderer)
 
 export default Test
