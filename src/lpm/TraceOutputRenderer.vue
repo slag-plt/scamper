@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { TraceOutput } from "./lpm/trace"
-import CodeElement from "./lpm/renderers/vue/components/CodeElement.vue"
-import ValueRenderer from "./lpm/renderers/vue/ValueRenderer.vue"
+import { TraceOutput } from "./trace"
+import CodeElement from "./renderers/vue/components/CodeElement.vue"
+import ValueRenderer from "./renderers/vue/ValueRenderer.vue"
 
 defineProps<{ value: TraceOutput }>()
 </script>

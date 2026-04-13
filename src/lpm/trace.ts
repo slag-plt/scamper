@@ -4,7 +4,7 @@ import HTMLRenderer from "./renderers/html.js"
 import TextRenderer from "./renderers/text"
 import VueRenderer from "./renderers/vue"
 import TraceStartRenderer from "./TraceStartRenderer.vue"
-import TraceOutputRenderer from "../TraceOutputRenderer.vue"
+import TraceOutputRenderer from "./TraceOutputRenderer.vue"
 
 export interface TraceStart extends L.Struct {
   [L.structKind]: "trace-start"
