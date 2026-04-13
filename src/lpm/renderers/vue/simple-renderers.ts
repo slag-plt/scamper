@@ -47,12 +47,11 @@ const symbolStrategy: Strategy = {
 }
 const closureStrategy: Strategy = {
   predicate: (v) => isClosure(v),
-  ...createSimpleVueRenderer(
+  ...createSimpleVueRenderer<Closure>(
     (v) =>
-      `(lambda (${(v as Closure).params.reduce(
-        (acc, curr) => `${acc} ${curr}`,
-        "",
-      )}) ...)`,
+      `(lambda (${v.params.length > 0 ? v.params.reduce(
+        (acc, curr) => `${acc} ${curr}`
+      ) : ""}) ...)`,
   ),
 }
 const jsFunctionStrategy: Strategy = {

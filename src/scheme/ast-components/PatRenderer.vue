@@ -36,12 +36,12 @@ switch (pat.tag) {
 </script>
 
 <template>
-  <component
-    :is="computedComponent"
-    v-if="computedComponent !== CodeParens"
-    :value="pat"
+  <ValueRenderer v-if="pat.tag === 'plit'" :value="pat.value" />
+  <CodeParens
+    v-else-if="pat.tag === 'pctor' && pat.args.length > 0"
+    :args="[pat.name, ...pat.args]"
   />
-  <CodeParens v-else :args="(pat as PCtor).args" />
+  <component v-else :is="computedComponent" :value="pat" />
 </template>
 
 <style scoped></style>
