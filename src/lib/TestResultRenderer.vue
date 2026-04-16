@@ -32,5 +32,25 @@ defineProps<{ value: Result }>()
 </template>
 
 <style scoped>
-/* Base styles are in index.css */
+.test-result {
+  font-family:
+    Menlo,
+    Consolas,
+    Monaco,
+    Liberation Mono,
+    Lucida Console,
+    monospace;
+  font-size: 1em;
+  margin: 0.5em;
+  padding: 0.25em;
+  border: dashed 1px black;
+}
+
+.test-result.ok {
+  background-color: #e5ffe5;
+}
+
+.test-result.error {
+  background-color: #ffe5e5;
+}
 </style>

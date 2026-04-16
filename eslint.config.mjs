@@ -19,6 +19,7 @@ export default defineConfig(
       },
       globals: {
         ...globals.browser,
+        APP_VERSION: "readonly",
       },
     },
   },
