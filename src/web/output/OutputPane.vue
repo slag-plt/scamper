@@ -14,7 +14,7 @@ defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
 </script>
 
 <template>
-  <div ref="scrollEl" style="overflow: auto; height: 100%">
+  <div ref="scrollEl" class="output-scroll">
     <div
       :style="{
         position: 'relative',
@@ -47,6 +47,13 @@ defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
 </template>
 
 <style scoped>
+.output-scroll {
+  overflow: auto;
+  height: 100%;
+  white-space: pre-wrap;
+  content-visibility: auto;
+}
+
 /* Outer Trace Block */
 .trace-top {
   height: 0.75em;

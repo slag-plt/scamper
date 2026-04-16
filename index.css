@@ -166,19 +166,6 @@ body {
   color: #333;
   flex: 1;
   min-height: 0;
-  white-space: pre-wrap;
-  content-visibility: auto;
-}
-
-#output code {
-  font-family:
-    Menlo,
-    Consolas,
-    Monaco,
-    Liberation Mono,
-    Lucida Console,
-    monospace;
-  font-size: 1em;
 }
 
 /*#output .trace {*/

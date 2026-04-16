@@ -21,7 +21,14 @@ watch(() => props.value, renderChart, { deep: true })
 </script>
 
 <template>
-  <div class="plot-container" style="width: 800px; max-width: 100%">
+  <div class="plot-container">
     <canvas ref="canvas" aria-label="Plot" role="img">Plot</canvas>
   </div>
 </template>
+
+<style scoped>
+.plot-container {
+  width: 800px;
+  max-width: 100%;
+}
+</style>

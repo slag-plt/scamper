@@ -26,5 +26,11 @@ watch(
 </script>
 
 <template>
-  <span ref="container" class="scamper-dom-element" style="display: contents"></span>
+  <span ref="container" class="scamper-dom-element"></span>
 </template>
+
+<style scoped>
+.scamper-dom-element {
+  display: contents;
+}
+</style>
