@@ -6,16 +6,15 @@ import { renderToOutput } from "../lpm/output/html.js"
 import * as Lock from "./lockfile.js"
 import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
-import { mkInProgress } from "./in-progress"
 import ScamperVue from "../scamper-vue"
 import { throwNull } from "../util"
 import { createApp } from "vue"
-import OutputPane from "./output/OutputPane.vue"
-import { OutputPaneType } from "./output/use-output-pane"
+import ResultsPane from "./ResultsPane.vue"
+import type { ResultsPaneType } from "./use-results-pane"
 
 const editorPane = document.getElementById("editor")!
-const outputPaneEl =
-  document.getElementById("output") ?? throwNull("no output pane?")
+const resultsPaneEl =
+  document.getElementById("results") ?? throwNull("no results pane?")
 
 const configFilename = ".scamper.config"
 
@@ -29,10 +28,6 @@ const defaultConfig: Config = {
   lastVersionAccessed: "0.0.0",
 }
 
-const outputApp = createApp(OutputPane)
-const outputComponent = outputApp.mount(
-  outputPaneEl,
-) as unknown as OutputPaneType
 
 class IDE {
   fs: OPFSFileSystem
@@ -45,6 +40,7 @@ class IDE {
   isLoadingFile = false
   // N.B., showDotFiles should normally be false except when are debugging
   showDotFiles = false
+  resultsComponent: ResultsPaneType
 
   ///// Initialization /////////////////////////////////////////////////////////
 
@@ -56,9 +52,33 @@ class IDE {
     this.isDirty = false
     this.fs = fs
 
+    const resultsApp = createApp(ResultsPane, {
+      stepOnce: () => {
+        this.scamper?.stepProgram()
+        this.resultsComponent.scrollToBottom()
+      },
+      stepStmt: async () => {
+        await this.scamper?.stepStmtProgram()
+        this.resultsComponent.scrollToBottom()
+      },
+      stepAll: async () => {
+        await this.scamper?.runProgram()
+        this.resultsComponent.scrollToBottom()
+      },
+      astText: () => {
+        this.showASTText()
+      },
+      cancel: () => {
+        this.scamper?.cancel()
+      },
+    })
+    this.resultsComponent = resultsApp.mount(
+      resultsPaneEl,
+    ) as unknown as ResultsPaneType
+
     Split(["#editor", "#results"], { sizes: [65, 35] })
     this.editor = new EditorView({
-      state: mkNoFileEditorState(outputPaneEl),
+      state: mkNoFileEditorState(),
       parent: editorPane,
     })
 
@@ -292,7 +312,7 @@ class IDE {
           this.currentFile = null
           this.initializeDummyDoc()
           this.config.lastOpenedFilename = null
-          outputComponent.reset()
+          this.resultsComponent.reset()
 
           this.populateFileDrawer()
           this.startAutosaving()
@@ -318,27 +338,30 @@ class IDE {
     ///// Execution Buttons ////////////////////////////////////////////////////
 
     const runBtn = document.getElementById("run")
-    if (!runBtn) throw new Error("runBtn or inProgress not found")
-    const {
-      el: inProgress,
-      stopBtn,
-      showProgress,
-      hideProgress,
-    } = mkInProgress("stop")
-    runBtn.after(inProgress)
+    if (!runBtn) throw new Error("runBtn not found")
+    const runInProgress = document.createElement("div")
+    runInProgress.style.display = "none"
+    const runStopBtn = document.createElement("button")
+    runStopBtn.className = "fa-solid fa-stop"
+    runStopBtn.setAttribute("aria-label", "Stop")
+    runInProgress.appendChild(runStopBtn)
+    const runSpinner = document.createElement("div")
+    runSpinner.className = "fa-solid fa-spinner fa-spin"
+    runInProgress.appendChild(runSpinner)
+    runBtn.after(runInProgress)
 
     runBtn.addEventListener("click", async () => {
       this.startScamper(false)
       runBtn.style.display = "none"
-      showProgress()
+      runInProgress.style.display = "inline"
       try {
         await this.scamper?.runProgram()
       } finally {
         runBtn.style.display = ""
-        hideProgress()
+        runInProgress.style.display = "none"
       }
     })
-    stopBtn.addEventListener("click", () => {
+    runStopBtn.addEventListener("click", () => {
       this.scamper?.cancel()
     })
 
@@ -360,67 +383,6 @@ class IDE {
       this.startScamper(true)
     })
 
-    document.getElementById("step-once")!.addEventListener("click", () => {
-      this.scamper!.stepProgram()
-      outputComponent.scrollToBottom()
-    })
-
-    const stepStmtBtn = document.getElementById("step-stmt")
-    if (!stepStmtBtn) throw new Error("step-stmt button not found?")
-    const {
-      el: inProgressTraceStmt,
-      stopBtn: stopBtnTraceStmt,
-      hideProgress: hideProgressTraceStmt,
-      showProgress: showProgressTraceStmt,
-    } = mkInProgress("stop-trace-stmt")
-    stepStmtBtn.after(inProgressTraceStmt)
-    stepStmtBtn.addEventListener("click", async () => {
-      // switch visibility of the step-all button and the trace in progress div
-      stepStmtBtn.style.display = "none"
-      showProgressTraceStmt()
-      try {
-        await this.scamper?.stepStmtProgram()
-      } finally {
-        stepStmtBtn.style.display = ""
-        hideProgressTraceStmt()
-      }
-      outputComponent.scrollToBottom()
-    })
-    stopBtnTraceStmt.addEventListener("click", () => {
-      this.scamper?.cancel()
-    })
-
-    const stepAllBtn = document.getElementById("step-all")
-    if (!stepAllBtn) throw new Error("trace all button not found?")
-    const {
-      el: inProgressTraceAll,
-      stopBtn: stopBtnTraceAll,
-      hideProgress: hideProgressTraceAll,
-      showProgress: showProgressTraceAll,
-    } = mkInProgress("stop-trace-all")
-    stepAllBtn.after(inProgressTraceAll)
-
-    stepAllBtn.addEventListener("click", async () => {
-      // switch visibility of the step-all button and the trace in progress div
-      stepAllBtn.style.display = "none"
-      showProgressTraceAll()
-      try {
-        // smaller steps per yield due to no virtualized lists
-        await this.scamper?.runProgram()
-      } finally {
-        stepAllBtn.style.display = ""
-        hideProgressTraceAll()
-      }
-      outputComponent.scrollToBottom()
-    })
-    stopBtnTraceAll.addEventListener("click", () => {
-      this.scamper?.cancel()
-    })
-
-    document.getElementById("ast-text")!.addEventListener("click", () => {
-      this.showASTText()
-    })
-
     document.getElementById("ast-window")!.addEventListener("click", () => {
       if (!this.currentFile) {
         return
@@ -432,18 +394,6 @@ class IDE {
       })
       window.open(`runner.html?${params.toString()}`)
     })
-
-    this.toggleStepButtons(false)
-  }
-
-  /** Toggles the step buttons on (true) or off (false). */
-  private toggleStepButtons(enabled: boolean) {
-    const stepOnce = document.getElementById("step-once")! as HTMLButtonElement
-    const stepStmt = document.getElementById("step-stmt")! as HTMLButtonElement
-    const stepAll = document.getElementById("step-all")! as HTMLButtonElement
-    stepOnce.disabled = !enabled
-    stepStmt.disabled = !enabled
-    stepAll.disabled = !enabled
   }
 
   /** Populates the file drawer with entries. */
@@ -542,7 +492,6 @@ class IDE {
   initializeDoc(src: string) {
     this.editor.setState(
       mkFreshEditorState(src, {
-        output: outputPaneEl,
         dirtyAction: () => {
           this.makeDirty()
         },
@@ -552,41 +501,34 @@ class IDE {
   }
 
   initializeDummyDoc() {
-    this.editor.setState(mkNoFileEditorState(outputPaneEl))
+    this.editor.setState(mkNoFileEditorState())
   }
 
   makeDirty() {
     if (this.scamper !== undefined && !this.isDirty) {
       this.isDirty = true
-      // const status = document.getElementById('results-status')!
-      const msg = document.createElement("em")
-      msg.innerText = "(Warning: results out of sync with updated code)"
-      document.getElementById("results-status")!.appendChild(msg)
+      this.resultsComponent.makeDirty()
     }
   }
 
   makeClean() {
-    document.getElementById("results-status")!.innerHTML = ""
+    this.resultsComponent.makeClean()
     this.isDirty = false
   }
 
   ///// IDE actions ////////////////////////////////////////////////////////////
 
   startScamper(isTracing: boolean): void {
-    outputComponent.reset()
+    this.resultsComponent.reset()
     try {
       this.scamper = new ScamperVue(
-        outputComponent.display,
+        this.resultsComponent.display,
         this.getDoc(),
         isTracing,
       )
-      if (isTracing) {
-        this.toggleStepButtons(true)
-      } else {
-        this.toggleStepButtons(false)
-      }
+      this.resultsComponent.setTracing(isTracing)
     } catch (e) {
-      renderToOutput(outputPaneEl, e)
+      renderToOutput(resultsPaneEl, e)
     }
     this.makeClean()
   }
@@ -607,23 +549,8 @@ class IDE {
     }
     try {
       // TODO: reimplement with new backend!
-      // const parsed = Parser.parseProgram(this.getDoc())
-      // const labelEl = document.createElement('h2')
-      // labelEl.setAttribute('id', 'ast-label')
-      // labelEl.innerText = "Abstract Syntax Tree"
-      // labelEl.setAttribute('tabindex', '0')
-      // labelEl.setAttribute('aria-label', 'Abstract Syntax Tree... Navigation instructions: use tab to traverse the tree in the order of node position on the code, or use "left/right" arrows for visiting neighbors, "down arrow" to visit children, and "up arrow" to go to parent')
-      // outputPane!.appendChild(labelEl)
-      // parsed.ast.render(outputPane, this.editor)
-      // const descriptionEl = document.createElement('div')
-      // descriptionEl.setAttribute('id', 'ast-desc')
-      // descriptionEl.innerText = parsed.ast.describe()
-      // descriptionEl.setAttribute('tabindex', '0')
-      // descriptionEl.setAttribute('role', 'region')
-      // outputPane!.appendChild(descriptionEl)
-      // this.makeClean()
     } catch (e) {
-      renderToOutput(outputPaneEl, e)
+      renderToOutput(resultsPaneEl, e)
     }
   }
 
@@ -663,7 +590,7 @@ class IDE {
     }
 
     // Reset the UI: output panel and file drawer, also restart saving
-    outputComponent.reset()
+    this.resultsComponent.reset()
     this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()

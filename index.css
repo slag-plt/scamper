@@ -151,7 +151,7 @@ body {
   min-height: 0;
 }
 
-#results-toolbar {
+.results-toolbar {
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -159,35 +159,6 @@ body {
   justify-content: space-between;
   margin-left: 0.25em;
   margin-right: 0.25em;
-}
-
-#output {
-  background: #fff;
-  color: #333;
-  flex: 1;
-  min-height: 0;
-}
-
-/*#output .trace {*/
-/*  border: solid 1px black;*/
-/*  margin: 0.5em;*/
-/*}*/
-
-/*#output .trace-block {*/
-/*  border: dotted 1px black;*/
-/*  margin: 0.5em;*/
-/*}*/
-
-/*#output .trace-block.collapsed {*/
-/*  display: none;*/
-/*}*/
-
-#output .scamper-output {
-  padding: 0.5em; /* N.B. Use padding instead of margin for Virtual List items to calculate height properly */
-}
-
-#output .scamper-trace {
-  margin: 0em;
 }
 
 #interactions {
