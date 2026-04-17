@@ -31,7 +31,8 @@ export async function loadSwapFile (fs: OPFSFileSystem, filename: string): Promi
   if (!filename.startsWith('.')) {
     const swapFilename = computeSwapFilename(filename)
     if (await fs.fileExists(swapFilename)) {
-      return JSON.parse(await fs.loadFile(swapFilename))
+      const parsed = JSON.parse(await fs.loadFile(swapFilename)) as SwapData
+      return parsed
     } else {
       const state = { editorState: null, priorVersions: [] }
       await fs.saveFile(swapFilename, JSON.stringify(state))

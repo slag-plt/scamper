@@ -35,8 +35,8 @@ export function replaceCodeWidget(base: HTMLElement): void {
 
 export function replaceCodeWidgets() {
   const widgets = document.getElementsByClassName('scamper')
-  for (let i = 0; i < widgets.length; i++) {
-    replaceCodeWidget(widgets[i] as HTMLElement)
+  for (const widget of widgets) {
+    replaceCodeWidget(widget as HTMLElement)
   }
 }
 

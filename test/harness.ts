@@ -10,10 +10,13 @@ export function runProgram (src: string, ops: LPM.Options = LPM.defaultOptions):
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)
     if (out.log.length !== 0) { return out.log as string[] }
+    if (prog === undefined) {
+      throw new Error('Expected Scheme.compile to return a program')
+    }
     const machine = new LPM.Thread(
       'test',
       env,
-      prog!,
+      prog,
       ops,
       builtinLibs,
       out,
@@ -30,10 +33,13 @@ export function runProgramWithHTML (src: string, out: HTMLDisplay, ops: LPM.Opti
     const prog = Scheme.compile(out, src)
 
     if (out.levels.length > 1) { return out.levels }
+    if (prog === undefined) {
+      throw new Error('Expected Scheme.compile to return a program')
+    }
     const machine = new LPM.Thread(
       'test',
       env,
-      prog!,
+      prog,
       ops,
       builtinLibs,
       out,

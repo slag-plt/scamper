@@ -5,8 +5,8 @@ import * as L from '../../lpm'
 import { rgb } from './color.js'
 
 const imageS: C.Spec = {
-  predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => v instanceof HTMLCanvasElement,
+  errorMsg: (actual: L.Value) => `expected an image, received ${L.typeOf(actual)}`
 }
 
 /***** Image loading **********************************************************/
@@ -17,7 +17,7 @@ export interface ReactiveImageFile extends L.Struct {
 }
 
 function withImageFile (callback: L.ScamperFn): ReactiveImageFile {
-  checkContract(arguments, contract('with-image-file', [C.func]))  
+  checkContract([callback], contract('with-image-file', [C.func]))  
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-image-file',
@@ -25,12 +25,12 @@ function withImageFile (callback: L.ScamperFn): ReactiveImageFile {
   }
 }
 
-function isReactiveImageFile (v: any): boolean {
+function isReactiveImageFile (v: L.Value): boolean {
   return L.isStructKind(v, 'reactive-image-file')
 }
 
 function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
-    checkContract(arguments, contract('with-image-from-url', [C.string, C.func]))
+    checkContract([url, callback], contract('with-image-from-url', [C.string, C.func]))
     const container = document.createElement('div')
     container.innerHTML = `Loading ${url}...`
     const img = new Image()
@@ -39,7 +39,10 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
         const canvas = document.createElement('canvas')
         canvas.width = img.width
         canvas.height = img.height
-        const ctx = canvas.getContext('2d')!
+        const ctx = canvas.getContext('2d')
+        if (ctx === null) {
+          throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+        }
         ctx.drawImage(img, 0, 0)
         try {
           const v = L.callScamperFn(callback, canvas)
@@ -59,19 +62,26 @@ function withImageFromUrl (url: string, callback: L.ScamperFn): HTMLElement {
 /***** Per-pixel manipulation *************************************************/
 
 function pixelMap (fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
-  checkContract(arguments, contract('pixel-map', [C.func, imageS]))
-  const ctx = canvas.getContext('2d')!
+  checkContract([fn, canvas], contract('pixel-map', [C.func, imageS]))
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const src = inpImg.data
 
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const dst = outImg.data
   for (let i = 0; i < src.length; i += 4) {
-    const c = L.callScamperFn(fn, rgb(src[i], src[i + 1], src[i+2], src[i+3]))
-    dst[i] = c.red
-    dst[i + 1] = c.green
-    dst[i + 2] = c.blue
-    dst[i + 3] = c.alpha
+    const c = L.callScamperFn(fn, rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
+    if (!L.isStructKind(c, 'rgb')) {
+      throw new L.ScamperError('Runtime', `pixel-map expected an rgb value, received ${L.typeOf(c)}`)
+    }
+    const color = c as ReturnType<typeof rgb>
+    dst[i] = color.red
+    dst[i + 1] = color.green
+    dst[i + 2] = color.blue
+    dst[i + 3] = color.alpha
   }
 
   // NOTE: clone the results to a new canvas. Will likely need to implement a
@@ -80,24 +90,33 @@ function pixelMap (fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElemen
   const ret = document.createElement('canvas')
   ret.width = canvas.width
   ret.height = canvas.height
-  const retCtx = ret.getContext('2d')!
+  const retCtx = ret.getContext('2d')
+  if (retCtx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   retCtx.putImageData(outImg, 0, 0)
   return ret
 }
 
 function imageGetPixel (canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
-  checkContract(arguments, contract('image-get-pixel', [imageS, C.integer, C.integer]))
-  const ctx = canvas.getContext('2d')!
+  checkContract([canvas, x, y], contract('image-get-pixel', [imageS, C.integer, C.integer]))
+  const ctx = canvas.getContext('2d')
+if (ctx === null) {
+  throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+}
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
   return rgb(data[0], data[1], data[2], data[3])
 }
 
 function imageToPixels (canvas: HTMLCanvasElement): L.Struct[] {
-  checkContract(arguments, contract('image-to-pixels', [imageS]))
-  const ctx = canvas.getContext('2d')!
+  checkContract([canvas], contract('image-to-pixels', [imageS]))
+  const ctx = canvas.getContext('2d')
+if (ctx === null) {
+  throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+}
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
-  const ret = []
+  const ret: L.Struct[] = []
   for (let i = 0; i < src.length; i += 4) {
     ret.push(rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
   }
@@ -105,35 +124,49 @@ function imageToPixels (canvas: HTMLCanvasElement): L.Struct[] {
 }
 
 function pixelsToImage (pixels: L.Struct[], width: number, height: number): HTMLCanvasElement {
-  checkContract(arguments, contract('pixels-to-image', [C.vector, C.integer, C.integer]))
+  checkContract([pixels, width, height], contract('pixels-to-image', [C.vector, C.integer, C.integer]))
   const ret = document.createElement('canvas')
   ret.width = width
   ret.height = height
-  const ctx = ret.getContext('2d')!
-  const outImg = ctx.createImageData(width, height)
+  const retCtx = ret.getContext('2d')
+  if (retCtx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
+  const outImg = retCtx.createImageData(width, height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
     const c = pixels[i]
-    data[i*4] = c.red
-    data[i*4 + 1] = c.green
-    data[i*4 + 2] = c.blue
-    data[i*4 + 3] = c.alpha
+    if (!L.isStructKind(c, 'rgb')) {
+      throw new L.ScamperError('Runtime', `pixels->image expected rgb values, received ${L.typeOf(c)}`)
+    }
+    const color = c as ReturnType<typeof rgb>
+    data[i * 4] = color.red
+    data[i * 4 + 1] = color.green
+    data[i * 4 + 2] = color.blue
+    data[i * 4 + 3] = color.alpha
   }
-  ctx.putImageData(outImg, 0, 0)
+  retCtx.putImageData(outImg, 0, 0)
   return ret
 }
 
 function canvasSetPixels (canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
-  checkContract(arguments, contract('canvas-set-pixels!', [imageS, C.vector]))
-  const ctx = canvas.getContext('2d')!
+  checkContract([canvas, pixels], contract('canvas-set-pixels!', [imageS, C.vector]))
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
     const c = pixels[i]
-    data[i*4] = c.red
-    data[i*4 + 1] = c.green
-    data[i*4 + 2] = c.blue
-    data[i*4 + 3] = c.alpha
+    if (!L.isStructKind(c, 'rgb')) {
+      throw new L.ScamperError('Runtime', `canvas-set-pixels! expected rgb values, received ${L.typeOf(c)}`)
+    }
+    const color = c as ReturnType<typeof rgb>
+    data[i * 4] = color.red
+    data[i * 4 + 1] = color.green
+    data[i * 4 + 2] = color.blue
+    data[i * 4 + 3] = color.alpha
   }
   ctx.putImageData(outImg, 0, 0)
 }
@@ -150,26 +183,34 @@ function render(rif: ReactiveImageFile): HTMLElement {
   inp.addEventListener('change', () => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
-        const img = new Image()
-        img.onload = () => {
-          outp.innerHTML = ''
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0)
-          }
-          try {
-            const v = L.callScamperFn(rif.callback, canvas)
-            outp.appendChild(HtmlRenderer.render(v))
-          } catch (e) {
-            outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
-          }
-        }
-        img.src = e.target.result as string;
+      const target = e.target
+      if (target === null) {
+        return
       }
+      const result = target.result
+      if (typeof result !== 'string') {
+        throw new L.ScamperError('Runtime', 'failed to load image as data URL')
+      }
+    
+      const img = new Image()
+      img.onload = () => {
+        outp.innerHTML = ''
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        if (ctx === null) {
+          throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+        }
+        ctx.drawImage(img, 0, 0)
+        try {
+          const v = L.callScamperFn(rif.callback, canvas)
+          outp.appendChild(HtmlRenderer.render(v))
+        } catch (e) {
+          outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
+        }
+      }
+      img.src = result
     }
     if (inp.files !== null && inp.files.length > 0) {
       outp.innerText = 'Loading...'
@@ -183,7 +224,7 @@ function render(rif: ReactiveImageFile): HTMLElement {
   return ret
 }
 
-HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
+HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: L.Value) => render(v as ReactiveImageFile))
 
 /***** Exports ****************************************************************/
 

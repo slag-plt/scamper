@@ -9,10 +9,13 @@ function checkMachineOutput (src: string, expected: LPM.Value[]) {
     const env = Scheme.mkInitialEnv()
     const prog = Scheme.compile(out, src)
     expect(out.log).toEqual([])
+    if (prog === undefined) {
+      throw new Error('Expected Scheme.compile to return a program')
+    }
     const machine = new LPM.Thread(
       'test',
       env,
-      prog!,
+      prog,
       LPM.defaultOptions,
       builtinLibs,
       out,
