@@ -1,43 +1,14 @@
-import { Scamper } from "../scamper.js"
-import { renderToOutput } from "../lpm/output/html.js"
+import { createApp } from "vue"
+import { initializeLibs } from "../lib/index.js"
+import WebEmbedWidget from "./WebEmbedWidget.vue"
 
-import hljs from "highlight.js"
+await initializeLibs()
 
-export function mkSourceBlock(text: string): HTMLElement {
-  const elt = hljs.highlight(text, { language: "scheme", ignoreIllegals: true })
-  const ret = document.createElement("pre")
-  ret.classList.add("hljs")
-  ret.innerHTML = elt.value
-  ret.tabIndex = 0
-  return ret
+const widgets = Array.from(document.getElementsByClassName("scamper"))
+for (const widget of widgets) {
+  const el = widget as HTMLElement
+  const src = el.innerText
+  const sourceOnly = el.classList.contains("source-only")
+  el.innerHTML = ""
+  createApp(WebEmbedWidget, { src, sourceOnly }).mount(el)
 }
-
-export async function replaceCodeWidget(base: HTMLElement) {
-  const src = base.innerText
-  base.innerHTML = ""
-
-  if (base.classList.contains("source-only")) {
-    base.appendChild(mkSourceBlock(src))
-  } else {
-    // TODO: make sure to respect these options in the future!
-    // opts.isPrintingCode = base.classList.contains('source')
-    // opts.isTracing = base.classList.contains('trace')
-    try {
-      await new Scamper(base, src).runProgram()
-    } catch (e) {
-      // if (opts.isPrintingCode) {
-      //   base.appendChild(mkSourceBlock(src))
-      // }
-      renderToOutput(base, e)
-    }
-  }
-}
-
-export async function replaceCodeWidgets() {
-  const widgets = document.getElementsByClassName("scamper")
-  for (const widget of widgets) {
-    await replaceCodeWidget(widget as HTMLElement)
-  }
-}
-
-await replaceCodeWidgets()
