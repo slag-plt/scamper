@@ -127,11 +127,14 @@ declare module "colorsys" {
   export function cmykToRgb(c: number, m: number, y: number, k: number): RGB;
   export function cmykToRgb(cmyk: CMYK): RGB;
 
-
+  export type ColorObject = RGB | HSV | HSL | CMYK;
+  export type Color = ColorObject | string;
+  export type ColorEncoding = "unknown" | "hex" | "rgb" | "hsv" | "hsl" | "cmyk";
+  export type TransformFunction = (color: Color) => ColorObject | string;
   //others
-  export function parseCss(cssString: string): any;
-  export function parse_css(cssString: string): any;
-  export function stringify(obj: RGB | HSV | HSL | CMYK): string;
+  export function parseCss(cssString: string): Color;
+  export function parse_css(cssString: string): Color;
+  export function stringify(obj: ColorObject): string;
   export function hex_to_decimal(hexColor: string): number;
   export function hexToDecimal(hexColor: string): number;
   export function hex2Decimal(hexColor: string): number;
@@ -140,10 +143,13 @@ declare module "colorsys" {
   export function decimal2Hex(decimalColor: number | string): string;
   export function random(): string;
   export function rotateHue<T extends number | HSL | HSV>(hue: T, amount: number): T;
-  export function getColorEncoding(color: any): "unknown" | "hex" | "rgb" | "hsv" | "hsl" | "cmyk";
-  export function any2Hsl(color: any): HSL | "unknown";
-  export function any_to_hsl(color: any): HSL | "unknown";
-  export function anyToHsl(color: any): HSL | "unknown";
-  export function getTransformEncodingFunction(color: any, desiredEncoding: any): any;
-  export function darken(color: any, percentage: any): any;
+  export function getColorEncoding(color: Color): ColorEncoding;
+  export function any2Hsl(color: Color): HSL | "unknown";
+  export function any_to_hsl(color: Color): HSL | "unknown";
+  export function anyToHsl(color: Color): HSL | "unknown";
+  export function getTransformEncodingFunction(
+    color: Color,
+    desiredEncoding: ColorEncoding
+  ): TransformFunction | "unknown";
+  export function darken(color: Color, percentage: number): Color;
 }

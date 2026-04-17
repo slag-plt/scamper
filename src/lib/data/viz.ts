@@ -2,8 +2,7 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html.js'
-
-import Chart from 'chart.js/auto'
+import Chart, { type ChartConfiguration } from 'chart.js/auto'
 
 const viz: L.Library = new L.Library()
 
@@ -29,19 +28,30 @@ export function plotQ (v: L.Value): boolean {
 
 ///// Options Management ///////////////////////////////////////////////////////
 
-function updateObject (path: string[], value: any, obj: any): void {
-  let cur = obj
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i]
-    if (!(key in cur)) {
-      cur[key] = {}
-    }
-    cur = cur[key]
-  }
-  cur[path[path.length - 1]] = value
+type NestedObject = Record<string, unknown>
+
+function isNestedObject (v: unknown): v is NestedObject {
+  return typeof v === 'object' && v !== null
 }
 
-function updatePlotOption (key: string, value: any, opts: object): void {
+function updateObject (path: string[], value: unknown, obj: NestedObject): void {
+  let cur: NestedObject = obj
+  for (const key of path.slice(0, -1)) {
+    const next = cur[key]
+    if (!isNestedObject(next)) {
+      const fresh: NestedObject = {}
+      cur[key] = fresh
+      cur = fresh
+    } else {
+      cur = next
+    }
+  }
+  const lastKey = path[path.length - 1]
+  cur[lastKey] = value
+  
+}
+
+function updatePlotOption (key: string, value: unknown, opts: NestedObject): void {
   switch (key) {
     case 'x-min':
       updateObject(['options', 'scales', 'x', 'min'], value, opts)
@@ -73,12 +83,12 @@ function updatePlotOption (key: string, value: any, opts: object): void {
 }
 
 export function withPlotOptions (options: L.List, plot: Plot): Plot {
-  checkContract(arguments, contract('with-plot-options', [
+  checkContract([options, plot], contract('with-plot-options', [
     C.listof(C.pairof(C.string, C.any)),
     C.struct('plot')
   ]))
-  const newOpts = { ...plot.opts }
-  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+  const newOpts: NestedObject = { ...plot.opts } as NestedObject
+  const optionPairs: [string, unknown][] = L.listToVector(options).map(v => {
     const p = v as L.Pair
     return [p.fst as string, p.snd]
   })
@@ -92,7 +102,7 @@ export function withPlotOptions (options: L.List, plot: Plot): Plot {
   }
 }
 
-function updateDatasetOption (key: string, value: any, opts: object): void {
+function updateDatasetOption (key: string, value: unknown, opts: NestedObject): void {
   switch (key) {
     case 'background-color':
       updateObject(['backgroundColor'], value, opts)
@@ -106,12 +116,12 @@ function updateDatasetOption (key: string, value: any, opts: object): void {
 }
 
 export function withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
-  checkContract(arguments, contract('with-dataset-options', [
+  checkContract([options, dataset], contract('with-dataset-options', [
     C.listof(C.pairof(C.string, C.any)),
     C.struct('dataset')
   ]))
   const newOpts = { ...dataset.opts }
-  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+  const optionPairs: [string, unknown][] = L.listToVector(options).map(v => {
     const p = v as L.Pair
     return [p.fst as string, p.snd]
   })
@@ -128,7 +138,7 @@ export function withDatasetOptions (options: L.List, dataset: Dataset): Dataset 
 ///// Plot Functions ///////////////////////////////////////////////////////////
 
 export function plotLinear (...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-linear', [], C.struct('dataset')))
+  checkContract(datasets, contract('plot-linear', [], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -146,7 +156,7 @@ export function plotLinear (...datasets: Dataset[]): Plot {
 }
 
 function plotCategory (labels: L.List, ...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-category', [C.listof(C.string)], C.struct('dataset')))
+  checkContract([labels, ...datasets], contract('plot-category', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -165,7 +175,7 @@ function plotCategory (labels: L.List, ...datasets: Dataset[]): Plot {
 }
 
 function plotRadial (labels: L.List, ...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-radial', [C.listof(C.string)], C.struct('dataset')))
+  checkContract([labels, ...datasets], contract('plot-radial', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -180,7 +190,11 @@ function plotRadial (labels: L.List, ...datasets: Dataset[]): Plot {
 
 ///// Dataset Functions ////////////////////////////////////////////////////////
 
-function makeDataset (type: string, label: string, data: any[]): Dataset {
+function makeDataset (
+  type: string,
+  label: string,
+  data: unknown[]
+): Dataset {
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'dataset',
@@ -189,7 +203,7 @@ function makeDataset (type: string, label: string, data: any[]): Dataset {
 }
 
 export function datasetLine (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-line', [
+  checkContract([title, data], contract('dataset-line', [
     C.string,
     C.listof(C.or(C.number, C.pairof(C.number, C.number)))
   ]))
@@ -207,7 +221,7 @@ export function datasetLine (title: string, data: L.List): Dataset {
 }
 
 export function datasetBar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-bar', [
+  checkContract([title, data], contract('dataset-bar', [
     C.string,
     C.listof(C.number)
   ]))
@@ -219,7 +233,7 @@ export function datasetBar (title: string, data: L.List): Dataset {
 }
 
 export function datasetScatter (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-scatter', [
+  checkContract([title, data], contract('dataset-scatter', [
     C.string, C.listof(C.pairof(C.number, C.number))
   ]))
   const points: {x: number | string, y: number}[] = L.listToVector(data).map(v => {
@@ -233,7 +247,7 @@ export function datasetScatter (title: string, data: L.List): Dataset {
 }
 
 export function datasetBubble (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-bubble', [
+  checkContract([title, data], contract('dataset-bubble', [
     C.string,
     C.listof(C.listof(C.number))
   ]))
@@ -251,7 +265,7 @@ export function datasetBubble (title: string, data: L.List): Dataset {
 }
 
 export function datasetPie (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-pie', [
+  checkContract([title, data], contract('dataset-pie', [
     C.string,
     C.listof(C.number)
   ]))
@@ -263,7 +277,7 @@ export function datasetPie (title: string, data: L.List): Dataset {
 }
 
 export function datasetPolar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-polar', [
+  checkContract([title, data], contract('dataset-polar', [
     C.string,
     C.listof(C.number)
   ]))
@@ -275,7 +289,7 @@ export function datasetPolar (title: string, data: L.List): Dataset {
 }
 
 export function datasetRadar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-radar', [
+  checkContract([title, data], contract('dataset-radar', [
     C.string,
     C.listof(C.number)
   ]))
@@ -295,7 +309,7 @@ HTMLRenderer.registerCustomRenderer(plotQ, (v: L.Value): HTMLElement => {
   canvas.ariaLabel = "Plot"
   canvas.role = 'img'
   canvas.innerText = "Plot"
-  new Chart(canvas, plot.opts as any)
+  new Chart(canvas, plot.opts as ChartConfiguration)
   return canvas
 })
 

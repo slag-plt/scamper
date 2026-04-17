@@ -5,7 +5,7 @@ import * as C from './contract.js'
 const Lab: L.Library = new L.Library()
 
 function title (text: string) {
-  checkContract(arguments, contract('title', [C.string]))
+  checkContract([text], contract('title', [C.string]))
   const ret = document.createElement('h1')
   ret.innerText = text
   return ret
@@ -13,7 +13,7 @@ function title (text: string) {
 Lab.registerValue('title', title)
 
 function part (text: string) {
-  checkContract(arguments, contract('part', [C.string]))
+  checkContract([text], contract('part', [C.string]))
   const ret = document.createElement('h2')
   ret.innerText = text
   return ret
@@ -21,7 +21,7 @@ function part (text: string) {
 Lab.registerValue('part', part)
 
 function problem (text: string) {
-  checkContract(arguments, contract('problem', [C.string]))
+  checkContract([text], contract('problem', [C.string]))
   const ret = document.createElement('h3')
   ret.innerText = text
   return ret
@@ -29,7 +29,7 @@ function problem (text: string) {
 Lab.registerValue('problem', problem)
 
 function description (text: string) {
-  checkContract(arguments, contract('description', [C.string]))
+  checkContract([text], contract('description', [C.string]))
   const ret = document.createElement('p')
   const em = document.createElement('em')
   em.innerText = text

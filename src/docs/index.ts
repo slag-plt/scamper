@@ -31,14 +31,14 @@ const libs: [string, object][] = [
 
 // https://stackoverflow.com/questions/5251520/how-do-i-escape-some-html-in-javascript
 function escape(s: string): string {
-  const lookup: any = {
+  const lookup: Record<string, string> = {
     '&': "&amp;",
     '"': "&quot;",
     '\'': "&apos;",
     '<': "&lt;",
     '>': "&gt;"
   }
-  return s.replace(/[&"'<>]/g, c => lookup[c])
+  return s.replace(/[&"'<>]/g, c => lookup[c] ?? c)
 }
 
 function entryId (module: string, name: string): string {
@@ -50,16 +50,22 @@ function makeEntry (converter: showdown.Converter, module: string, name: string,
 }
 
 function populateApi (mod: string, lib: object): void {
-  const index = document.querySelector<HTMLDivElement>('#index')!
+  const index = document.querySelector<HTMLDivElement>('#index')
+  const content = document.querySelector<HTMLDivElement>('#entries')
+  
+  if (index === null || content === null) {
+    return
+  }
+  
   index.innerHTML = `<strong>${mod}</strong>`
-
-  const content = document.querySelector<HTMLDivElement>('#entries')!
 
   const indexEntries: string[] = []
   const docEntries: string[] = []
 
-  for (const entry in lib) {
-    const doc = (lib as any)[entry] as Doc
+  const docs = lib as Record<string, Doc>
+
+  for (const entry in docs) {
+    const doc = docs[entry]
     indexEntries.push(`<li><a href="#${entryId(mod, entry)}">${escape(doc.name)}</a></li>`)
     docEntries.push(makeEntry(converter, mod, entry, doc))
   }
@@ -68,20 +74,30 @@ function populateApi (mod: string, lib: object): void {
 }
 
 function populateModules (): void {
-  const div = document.querySelector<HTMLDivElement>('#modules')!
+  const div = document.querySelector<HTMLDivElement>('#modules')
+  if (div === null) {
+    return
+  }
   const items: string[] = []
-  for (const [name, _] of libs) {
+  for (const [name] of libs) {
     items.push(`<button id="module-${name}">${name}</button>`)
   }
   div.innerHTML = `<ul>${items.join(' ⋅ ')}</ul>`
   for (const [name, lib] of libs) {
-    document.querySelector<HTMLButtonElement>(`#module-${name}`)!
-      .addEventListener('click', () => {
+    const button = document.querySelector<HTMLButtonElement>(`#module-${name}`)
+
+    if (button !== null) {
+      button.addEventListener('click', () => {
         populateApi(name, lib)
       })
+    }
   }
 }
 
-document.getElementById('version')!.innerText = `(${APP_VERSION})`
+const version = document.getElementById('version')
+
+if (version !== null) {
+  version.innerText = `(${APP_VERSION})`
+}
 populateModules()
 populateApi('prelude', Prelude)

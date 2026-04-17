@@ -9,8 +9,12 @@ import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
 import { initializeLibs } from "../lib/index.js"
 import { mkInProgress } from "./in-progress"
 
-const editorPane = document.getElementById("editor")!
-const outputPane = document.getElementById("output")!
+const editorPane = document.getElementById("editor")
+const outputPane = document.getElementById("output")
+
+if (editorPane === null || outputPane === null) {
+  throw new Error("editor or output pane not found")
+}
 
 const configFilename = ".scamper.config"
 
@@ -52,39 +56,46 @@ class IDE {
       parent: editorPane,
     })
 
-    document.getElementById("version")!.innerText = `(${APP_VERSION})`
+    const version = document.getElementById("version")
+    if (version === null) {
+      throw new Error("version element not found")
+    }
+    version.innerText = `(${APP_VERSION})`
 
     // N.B., this section is wonky. I'm trying to set up hooks to save on exit
     // but nothing is consistent! I think we eventually want to use just
     // visibilitychange and beforeunload. It seems like beforeunload is the
     // most consistent at the cost of killing bfcache... whicih I don't mind
     // for this particular application.
-    document.addEventListener("visibilitychange", async () => {
-      if (document.visibilityState === "hidden") {
+    document.addEventListener("visibilitychange", () => {
+      void (async () => {
+        if (document.visibilityState === "hidden") {
+          await this.saveCurrentFile()
+          await this.saveConfig()
+          await Lock.releaseLockFile(this.fs)
+        } else {
+          await Lock.acquireLockFile(this.fs)
+        }
+      })()
+    })
+
+    document.addEventListener("pagehide", () => {
+      void (async () => {
         await this.saveCurrentFile()
         await this.saveConfig()
         await Lock.releaseLockFile(this.fs)
-      } else if (document.visibilityState === "visible") {
-        await Lock.acquireLockFile(this.fs)
-      }
+      })()
     })
 
-    document.addEventListener("pagehide", async () => {
-      await this.saveCurrentFile()
-      await this.saveConfig()
-      await Lock.releaseLockFile(this.fs)
-    })
-
-    window.addEventListener("beforeunload", async (e) => {
-      // N.B., ensure the "are you sure" dialog pops
-      await this.saveCurrentFile()
-      await this.saveConfig()
-      await Lock.releaseLockFile(this.fs)
+    window.addEventListener("beforeunload", (e) => {
+      void (async () => {
+        await this.saveCurrentFile()
+        await this.saveConfig()
+        await Lock.releaseLockFile(this.fs)
+      })()
+    
       if (this.isDirty) {
         e.preventDefault()
-        return true
-      } else {
-        return false
       }
     })
 
@@ -94,11 +105,16 @@ class IDE {
 
   /** Initializes the sidebar's dropzone */
   private initFileDropZone() {
-    const sidebar = document.getElementById("sidebar")!
+    const sidebar = document.getElementById("sidebar")
+    if (sidebar === null) {
+      throw new Error("sidebar not found")
+    }
 
     sidebar.addEventListener("dragover", (event) => {
       event.preventDefault()
-      event.dataTransfer!.dropEffect = "copy"
+      if (event.dataTransfer !== null) {
+        event.dataTransfer.dropEffect = "copy"
+      }
       sidebar.classList.add("drag-over")
     })
 
@@ -107,61 +123,73 @@ class IDE {
       sidebar.classList.remove("drag-over")
     })
 
-    sidebar.addEventListener("drop", async (event) => {
-      event.preventDefault()
-      sidebar.classList.remove("drag-over")
-      this.stopAutosaving()
-      const files = event.dataTransfer?.files
-      if (!files || files.length === 0) {
-        return
-      }
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        try {
-          const content = await file.text()
-          const filename = file.name
-
-          // Check if file already exists
-          if (await this.fs.fileExists(filename)) {
-            const shouldOverwrite = confirm(
-              `File "${filename}" already exists. Do you want to overwrite it?`,
-            )
-            if (!shouldOverwrite) {
-              continue
+    sidebar.addEventListener("drop", (event) => {
+      void (async () => {
+        event.preventDefault()
+        sidebar.classList.remove("drag-over")
+        this.stopAutosaving()
+    
+        const files = event.dataTransfer?.files
+        if (!files || files.length === 0) {
+          return
+        }
+    
+        for (const file of files) {
+          try {
+            const content = await file.text()
+            const filename = file.name
+    
+            if (await this.fs.fileExists(filename)) {
+              const shouldOverwrite = confirm(
+                `File "${filename}" already exists. Do you want to overwrite it?`,
+              )
+              if (!shouldOverwrite) {
+                continue
+              }
+    
+              this.stopAutosaving()
+              await this.fs.deleteFile(filename)
             }
-            // Delete existing file
-            this.stopAutosaving()
-            await this.fs.deleteFile(filename)
-          }
-
-          await this.fs.saveFile(filename, content)
-          this.currentFile = null
-          await this.switchToFile(filename)
-        } catch (e) {
-          if (e instanceof Error) {
-            this.displayError(
-              `Failed to upload file "${file.name}": ${e.message}`,
-            )
+    
+            await this.fs.saveFile(filename, content)
+            this.currentFile = null
+            await this.switchToFile(filename)
+    
+          } catch (e) {
+            if (e instanceof Error) {
+              this.displayError(
+                `Failed to upload file "${file.name}": ${e.message}`,
+              )
+            }
           }
         }
-      }
+      })()
     })
-  }
+  }    
 
   private initButtons() {
-    document.getElementById("toggle-sidebar")!.addEventListener("click", () => {
-      const sidebar = document.getElementById("sidebar")!
+    const toggleSidebar = document.getElementById("toggle-sidebar")
+    const sidebarButton = document.getElementById("sidebar")
+    
+    if (toggleSidebar === null || sidebarButton === null) {
+      throw new Error("toggle-sidebar or sidebar not found")
+    }
+    
+    toggleSidebar.addEventListener("click", () => {
+      const sidebar = sidebarButton
       const isVisible = sidebar.style.display !== "none"
       sidebar.style.display = isVisible ? "none" : "block"
     })
 
     ///// File Buttons ////////////////////////////////////////////////////
 
-    document
-      .getElementById("create-file")!
-      .addEventListener("click", async () => {
-        if (!this.fs) return
+    const createFile = document.getElementById("create-file")
+    if (createFile === null) {
+      throw new Error("create-file button not found")
+    }
+    
+    createFile.addEventListener("click", () => {
+      void (async () => {
         const filename = prompt("Enter a file name for your new program.")
         if (filename !== null) {
           if (await this.fs.fileExists(filename)) {
@@ -171,23 +199,22 @@ class IDE {
             await this.switchToFile(filename)
           }
         }
-      })
+      })()
+    })
 
-    document
-      .getElementById("upload-file")!
-      .addEventListener("click", async () => {
-        const fileInput = document.getElementById(
-          "upload-file-input",
-        )! as HTMLInputElement
-        fileInput.click()
-      })
+    const uploadFile = document.getElementById("upload-file")
+    const uploadFileInput = document.getElementById("upload-file-input")
+    
+    if (uploadFile === null || !(uploadFileInput instanceof HTMLInputElement)) {
+      throw new Error("upload-file or upload-file-input not found")
+    }
+    
+    uploadFile.addEventListener("click", () => {
+      uploadFileInput.click()
+    })
 
-    document
-      .getElementById("upload-file-input")!
-      .addEventListener("change", async (event) => {
-        if (!this.fs) {
-          return
-        }
+    uploadFileInput.addEventListener("change", (event) => {
+      void (async () => {
         const target = event.target as HTMLInputElement
         const file = target.files?.[0]
         if (!file) {
@@ -224,21 +251,25 @@ class IDE {
           }
           target.value = "" // Reset the input on error
         }
-      })
+      }) ()
+    })
+    const downloadArchive = document.getElementById("download-archive")
+    if (downloadArchive === null) {
+      throw new Error("download-archive button not found")
+    }
+    
+    downloadArchive.addEventListener("click", () => {
+      // TODO: implement logic for zipping all the files in the
+      // file system as a backup
+    })
 
-    document
-      .getElementById("download-archive")!
-      .addEventListener("click", async () => {
-        // TODO: implement logic for zipping all the files in the
-        // file system as a backup
-      })
-
-    document
-      .getElementById("rename-file")!
-      .addEventListener("click", async () => {
-        if (!this.fs) {
-          return
-        }
+      const renameFile = document.getElementById("rename-file")
+      if (renameFile === null) {
+        throw new Error("rename-file button not found")
+      }
+      
+      renameFile.addEventListener("click", () => {
+        void (async () => {
         if (!this.currentFile) {
           return
         }
@@ -262,12 +293,16 @@ class IDE {
             }
           }
         }
-      })
+      }) ()
+    })
 
-    document
-      .getElementById("delete-file")!
-      .addEventListener("click", async () => {
-        if (!this.fs) return
+    const deleteFile = document.getElementById("delete-file")
+    if (deleteFile === null) {
+      throw new Error("delete-file button not found")
+    }
+    
+    deleteFile.addEventListener("click", () => {
+      void (async () => {
         if (!this.currentFile) {
           return
         }
@@ -284,15 +319,19 @@ class IDE {
           this.config.lastOpenedFilename = null
           outputPane.innerHTML = ""
 
-          this.populateFileDrawer()
+          void this.populateFileDrawer()
           this.startAutosaving()
         }
-      })
+      }) ()
+    })
 
-    document
-      .getElementById("download-file")!
-      .addEventListener("click", async () => {
-        if (!this.fs) return
+    const downloadFile = document.getElementById("download-file")
+    if (downloadFile === null) {
+      throw new Error("download-file button not found")
+    }
+    
+    downloadFile.addEventListener("click", () => {
+      void (async () => {
         if (!this.currentFile) {
           return
         }
@@ -303,7 +342,8 @@ class IDE {
         hidden.target = "_blank"
         hidden.download = this.currentFile
         hidden.click()
-      })
+      }) ()
+    })
 
     ///// Execution Buttons ////////////////////////////////////////////////////
 
@@ -317,7 +357,8 @@ class IDE {
     } = mkInProgress("stop")
     runBtn.after(inProgress)
 
-    runBtn.addEventListener("click", async () => {
+    runBtn.addEventListener("click", () => {
+      void (async () => {
       this.startScamper(false)
       runBtn.style.display = "none"
       showProgress()
@@ -327,14 +368,17 @@ class IDE {
         runBtn.style.display = ""
         hideProgress()
       }
+    }) ()
     })
+    
     stopBtn.addEventListener("click", () => {
       this.scamper?.cancel()
-    })
+    }) 
 
     document
-      .getElementById("run-window")
-      ?.addEventListener("click", async () => {
+    .getElementById("run-window")
+    ?.addEventListener("click", () => {
+      void (async () => {
         if (!this.currentFile) {
           return
         }
@@ -344,14 +388,28 @@ class IDE {
           isTree: "false",
         })
         window.open(`runner.html?${params.toString()}`)
-      })
+      })()
+    })
 
-    document.getElementById("step")!.addEventListener("click", () => {
+      const step = document.getElementById("step")
+      if (step === null) {
+        throw new Error("step button not found")
+      }
+      
+      step.addEventListener("click", () => {
       this.startScamper(true)
     })
 
-    document.getElementById("step-once")!.addEventListener("click", () => {
-      this.scamper!.stepProgram()
+    const stepOnce = document.getElementById("step-once")
+    if (stepOnce === null) {
+      throw new Error("step-once button not found")
+    }
+    
+    stepOnce.addEventListener("click", () => {
+      if (this.scamper === undefined) {
+        return
+      }
+      this.scamper.stepProgram()
       outputPane.scrollTo(0, outputPane.scrollHeight)
     })
 
@@ -364,7 +422,8 @@ class IDE {
       showProgress: showProgressTraceStmt,
     } = mkInProgress("stop-trace-stmt")
     stepStmtBtn.after(inProgressTraceStmt)
-    stepStmtBtn.addEventListener("click", async () => {
+    stepStmtBtn.addEventListener("click", () => {
+      void (async () => {
       // switch visibility of the step-all button and the trace in progress div
       stepStmtBtn.style.display = "none"
       showProgressTraceStmt()
@@ -375,7 +434,9 @@ class IDE {
         hideProgressTraceStmt()
       }
       outputPane.scrollTo(0, outputPane.scrollHeight)
+    }) ()
     })
+
     stopBtnTraceStmt.addEventListener("click", () => {
       this.scamper?.cancel()
     })
@@ -390,7 +451,8 @@ class IDE {
     } = mkInProgress("stop-trace-all")
     stepAllBtn.after(inProgressTraceAll)
 
-    stepAllBtn.addEventListener("click", async () => {
+    stepAllBtn.addEventListener("click", () => {
+      void (async () => {
       // switch visibility of the step-all button and the trace in progress div
       stepAllBtn.style.display = "none"
       showProgressTraceAll()
@@ -402,20 +464,31 @@ class IDE {
         hideProgressTraceAll()
       }
       outputPane.scrollTo(0, outputPane.scrollHeight)
+    }) ()
     })
     stopBtnTraceAll.addEventListener("click", () => {
       this.scamper?.cancel()
     })
 
-    document.getElementById("ast-text")!.addEventListener("click", () => {
+    const astText = document.getElementById("ast-text")
+    if (astText === null) {
+      throw new Error("ast-text button not found")
+    }
+
+astText.addEventListener("click", () => {
       this.showASTText()
     })
 
-    document.getElementById("ast-window")!.addEventListener("click", () => {
+    const astWindow = document.getElementById("ast-window")
+    if (astWindow === null) {
+      throw new Error("ast-window button not found")
+    }
+    
+    astWindow.addEventListener("click", () => {
       if (!this.currentFile) {
         return
       }
-      this.saveCurrentFile()
+      void this.saveCurrentFile()
       const params = new URLSearchParams({
         filename: this.currentFile,
         isTree: "true",
@@ -428,9 +501,17 @@ class IDE {
 
   /** Toggles the step buttons on (true) or off (false). */
   private toggleStepButtons(enabled: boolean) {
-    const stepOnce = document.getElementById("step-once")! as HTMLButtonElement
-    const stepStmt = document.getElementById("step-stmt")! as HTMLButtonElement
-    const stepAll = document.getElementById("step-all")! as HTMLButtonElement
+    const stepOnce = document.getElementById("step-once")
+    const stepStmt = document.getElementById("step-stmt")
+    const stepAll = document.getElementById("step-all")
+    
+    if (
+      !(stepOnce instanceof HTMLButtonElement) ||
+      !(stepStmt instanceof HTMLButtonElement) ||
+      !(stepAll instanceof HTMLButtonElement)
+    ) {
+      throw new Error("step buttons not found")
+    }
     stepOnce.disabled = !enabled
     stepStmt.disabled = !enabled
     stepAll.disabled = !enabled
@@ -438,11 +519,10 @@ class IDE {
 
   /** Populates the file drawer with entries. */
   private async populateFileDrawer() {
-    if (!this.fs) {
-      throw new Error("FileChooser: must call init() before usage")
+    const fileDrawer = document.getElementById("file-drawer")
+    if (fileDrawer === null) {
+      throw new Error("file-drawer not found")
     }
-
-    const fileDrawer = document.getElementById("file-drawer")!
     // N.B., empty the container and repopulate from scratch
     fileDrawer.innerHTML = ""
     const files = await this.fs.getFileList()
@@ -461,11 +541,13 @@ class IDE {
           ret.classList.add("selected")
         }
         ret.textContent = file.name
-        ret.addEventListener("click", async () => {
+        ret.addEventListener("click", () => {
+          void (async () => {
           // N.B., try to avoid double-clicking causing multiple file loads to occur at once
           if (!this.isLoadingFile) {
             await this.switchToFile(file.name)
           }
+        }) ()
         })
         fileDrawer.appendChild(ret)
       }
@@ -480,7 +562,7 @@ class IDE {
   /** Loads the configuration from disk */
   async loadConfig() {
     if (await this.fs.fileExists(configFilename)) {
-      this.config = JSON.parse(await this.fs.loadFile(configFilename))
+      this.config = JSON.parse(await this.fs.loadFile(configFilename)) as Config
     } else {
       this.config = defaultConfig
       await this.saveConfig()
@@ -492,9 +574,16 @@ class IDE {
     await initializeLibs()
     const obtainedLock = await Lock.acquireLockFile(fs)
     if (!obtainedLock) {
-      document.getElementById("loading-content")!.innerText =
+      const loadingContent = document.getElementById("loading-content")
+      const loading = document.getElementById("loading")
+      
+      if (loadingContent === null || loading === null) {
+        throw new Error("loading elements not found")
+      }
+      
+      loadingContent.innerText =
         "Another instance of Scamper is open. Please close that instance and try again."
-      document.getElementById("loading")!.style.display = "block"
+      loading.style.display = "block"
     } else {
       const ide = new IDE(fs)
       await ide.populateFileDrawer()
@@ -514,8 +603,8 @@ class IDE {
 
   startAutosaving() {
     if (this.autosaveId === -1) {
-      this.autosaveId = window.setInterval(async () => {
-        await this.saveCurrentFile()
+      this.autosaveId = window.setInterval(() => {
+        void this.saveCurrentFile()
       }, 3000)
     }
   }
@@ -551,12 +640,20 @@ class IDE {
       // const status = document.getElementById('results-status')!
       const msg = document.createElement("em")
       msg.innerText = "(Warning: results out of sync with updated code)"
-      document.getElementById("results-status")!.appendChild(msg)
+      const resultsStatus = document.getElementById("results-status")
+      if (resultsStatus === null) {
+        throw new Error("results-status not found")
+      }
+      resultsStatus.appendChild(msg)
     }
   }
 
   makeClean() {
-    document.getElementById("results-status")!.innerHTML = ""
+    const resultsStatus = document.getElementById("results-status")
+    if (resultsStatus === null) {
+      throw new Error("results-status not found")
+    }
+    resultsStatus.innerHTML = ""
     this.isDirty = false
   }
 
@@ -628,7 +725,6 @@ class IDE {
 
   async switchToFile(filename: string): Promise<void> {
     this.isLoadingFile = true
-    if (!this.fs) return
     // Stop autosaving to make the transaction atomic
     this.stopAutosaving()
 
@@ -644,22 +740,31 @@ class IDE {
       this.initializeDoc(src)
     } catch (e) {
       if (e instanceof Error) {
-        this.displayError(`${e.message}\n\n${e.stack}`)
+        this.displayError(`${e.message}\n\n${String(e.stack)}`)
       }
     }
 
     // Reset the UI: output panel and file drawer, also restart saving
     outputPane.innerHTML = ""
-    this.populateFileDrawer()
+    void this.populateFileDrawer()
     this.config.lastOpenedFilename = this.currentFile
     this.startAutosaving()
     this.isLoadingFile = false
   }
 
   displayError(error: string) {
-    document.getElementById("loading-content")!.innerText = error
-    document.getElementById("loading")!.style.display = "block"
+    const loadingContent = document.getElementById("loading-content")
+    const loading = document.getElementById("loading")
+    
+    if (loadingContent === null || loading === null) {
+      throw new Error("loading elements not found")
+    }
+    
+    loadingContent.innerText = error
+    loading.style.display = "block"
   }
 }
 
-export const ide = await IDE.create()
+const idePromise = IDE.create()
+void idePromise
+export const ide = idePromise

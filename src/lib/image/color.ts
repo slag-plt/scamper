@@ -16,12 +16,12 @@ import * as colorsys from 'colorsys'
 // N.B., color is a legacy function from the htdp library. Currently, we standardize
 // on Rgb as the stored color type for shapes.
 function color (r: number, g: number, b: number, a: number): Rgb {
-  checkContract(arguments, contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
+  checkContract([r, g, b, a], contract('color', [C.nonneg, C.nonneg, C.nonneg, C.nonneg]))
   return rgb(r, g, b, a)
 }
 
 /** Converts between various representations of color in Scamper. */
-export function colorToRgb (v: any): Rgb {
+export function colorToRgb (v: L.Value): Rgb {
   if (L.isStructKind(v, 'rgba')) {
     return v as Rgb
   } else if (typeof v === 'string') {
@@ -33,7 +33,7 @@ export function colorToRgb (v: any): Rgb {
   }
 }
 
-export function colorQ (v: any): boolean {
+export function colorQ (v: L.Value): boolean {
   return (typeof v === 'string' && isColorName(v)) ||
     L.isStructKind(v, 'rgba') ||
     L.isStructKind(v, 'hsv')
@@ -41,7 +41,7 @@ export function colorQ (v: any): boolean {
 
 export const colorS: C.Spec = {
   predicate: colorQ,
-  errorMsg: (actual: any) => `expected a color, received ${L.typeOf(actual)}`
+  errorMsg: (actual: L.Value) => `expected a color, received ${L.typeOf(actual)}`
 }
 
 /***** RGB(A) Colors **********************************************************/
@@ -55,29 +55,29 @@ export interface Rgb extends L.Struct {
 }
 
 function isRgbComponent (n: number): boolean {
-  checkContract(arguments, contract('rgb-component?', [C.number]))
+  checkContract([n], contract('rgb-component?', [C.number]))
   return n >= 0 && n <= 255
 }
 
-export function isRgb (v: any): boolean {
-  checkContract(arguments, contract('rgb?', [C.any]))
+export function isRgb (v: L.Value): boolean {
+  checkContract([v], contract('rgb?', [C.any]))
   return L.isStructKind(v, 'rgba')
 }
 
 const rgbNumS: C.Spec = {
-  predicate: (v: any) => typeof v === 'number' && isRgbComponent(v),
-  errorMsg: (actual: any) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? actual : L.typeOf(actual)}`
+  predicate: (v: L.Value) => typeof v === 'number' && isRgbComponent(v),
+  errorMsg: (actual: L.Value) => `expected a number in the range 0–255, received ${typeof actual === 'number' ? String(actual) : L.typeOf(actual)}`
 }
 
 const rgbS: C.Spec = {
   predicate: isRgb,
-  errorMsg: (actual: any) => `expected an RGB value, received ${L.typeOf(actual)}`
+  errorMsg: (actual: L.Value) => `expected an RGB value, received ${L.typeOf(actual)}`
 }
 
 export function rgb(...args: number[]): Rgb {
-  checkContract(arguments, contract('rgb', [], rgbNumS))
+  checkContract(args, contract('rgb', [], rgbNumS))
   if (args.length !== 3 && args.length !== 4) {
-    throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${String(args.length)}`)
   }
   const red = Math.min(args[0], 255)
   const green = Math.min(args[1], 255)
@@ -90,27 +90,27 @@ export function rgb(...args: number[]): Rgb {
 }
 
 function rgbRed (rgba: Rgb): number {
-  checkContract(arguments, contract('rgb-red', [rgbS]))
+  checkContract([rgba], contract('rgb-red', [rgbS]))
   return rgba.red
 }
 
 function rgbGreen (rgba: Rgb): number {
-  checkContract(arguments, contract('rgb-green', [rgbS]))
+  checkContract([rgba], contract('rgb-green', [rgbS]))
   return rgba.green
 }
 
 function rgbBlue (rgba: Rgb): number {
-  checkContract(arguments, contract('rgb-blue', [rgbS]))
+  checkContract([rgba], contract('rgb-blue', [rgbS]))
   return rgba.blue
 }
 
 function rgbAlpha (rgba: Rgb): number {
-  checkContract(arguments, contract('rgb-alpha', [rgbS]))
+  checkContract([rgba], contract('rgb-alpha', [rgbS]))
   return rgba.alpha
 }
 
 function rgbDistance (rgba1: Rgb, rgba2: Rgb): number {
-  checkContract(arguments, contract('rgb-distance', [rgbS, rgbS]))
+  checkContract([rgba1, rgba2], contract('rgb-distance', [rgbS, rgbS]))
   return Math.sqrt(
     Math.pow(rgba1.red - rgba2.red, 2) +
     Math.pow(rgba1.green - rgba2.green, 2) +
@@ -265,19 +265,19 @@ const namedCssColors = new Map<string, Rgb>([
 ]);
 
 function isColorName(name: string): boolean {
-  checkContract(arguments, contract('color-name?', [C.string]))
+  checkContract([name], contract('color-name?', [C.string]))
   return namedCssColors.has(name.toLowerCase())
 }
 
 function allColorNames(): L.List {
-  checkContract(arguments, contract('all-color-names', []))
+  checkContract([], contract('all-color-names', []))
   return L.mkList(...Array.from(namedCssColors.keys()))
 }
 
 function findColors (name: string): L.List {
-  checkContract(arguments, contract('find-colors', [C.string]))
+  checkContract([name], contract('find-colors', [C.string]))
   const results = []
-  for (const [key, _value] of namedCssColors) {
+  for (const key of namedCssColors.keys()) {
     if (key.includes(name.toLowerCase())) {
       results.push(key)
     }
@@ -291,12 +291,12 @@ function findColors (name: string): L.List {
 // rgb-string->rgb
 
 function fracToPercentString(n: number, m: number): string {
-  return `${Math.trunc(n/m * 100)}%`
+  return `${String(Math.trunc(n / m * 100))}%`
 }
 
 export function rgbToString (rgba: Rgb): string {
-  checkContract(arguments, contract('rgb->string', [rgbS]))
-  return `rgb(${rgba.red}  ${rgba.green}  ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
+  checkContract([rgba], contract('rgb->string', [rgbS]))
+  return `rgb(${String(rgba.red)}  ${String(rgba.green)}  ${String(rgba.blue)} / ${fracToPercentString(rgba.alpha, 255)})`
 }
 
 // color->string (variable type "color" argument to rgb string)
@@ -319,42 +319,42 @@ interface Hsv extends L.Struct {
   alpha: number
 }
 
-function isHsv(v: any): boolean {
+function isHsv(v: L.Value): boolean {
   return L.isStructKind(v, 'hsv')
 }
 
 const hsvS: C.Spec = {
   predicate: isHsv,
-  errorMsg: (actual: any) => `expected an hsv value but received ${L.typeOf(actual)}`
+  errorMsg: (actual: L.Value) => `expected an hsv value but received ${L.typeOf(actual)}`
 }
 
 // hsv
 
 function hsv(...args: number[]): Hsv {
-  checkContract(arguments, contract('hsv', [], C.number))
+  checkContract(args, contract('hsv', [], C.number))
   if (args.length !== 3 && args.length !== 4) {
-    throw new L.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${String(args.length)}`)
   }
   
   if (args[0] < 0 || args[0] > 360) {
-    throw new L.ScamperError('Runtime', `hsv: expects hue to be in the an angle (0–360), but got ${args[0]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects hue to be in the an angle (0–360), but got ${String(args[0])}`)
   }
   const hue = args[0]
 
   if (args[1] < 0 || args[1] > 100) {
-    throw new L.ScamperError('Runtime', `hsv: expects saturation to be a percentage (0–100), but got ${args[1]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects saturation to be a percentage (0–100), but got ${String(args[1])}`)
   }
   const saturation = args[1]
 
   if (args[2] < 0 || args[2] > 100) {
-    throw new L.ScamperError('Runtime', `hsv: expects value to be a percentage (0–100), but got ${args[2]}`)
+    throw new L.ScamperError('Runtime', `hsv: expects value to be a percentage (0–100), but got ${String(args[2])}`)
   }
   const value = args[2]
 
-  if (args[3] !== undefined && (args[3] < 0 || args[3] > 255)) {
-    throw new L.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${args[3]}`)
+  const alpha = args.length === 4 ? args[3] : 255
+  if (alpha < 0 || alpha > 255) {
+    throw new L.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${String(alpha)}`)
   }
-  const alpha = args[3] ?? 255
   return ({
     [L.scamperTag]: 'struct', [L.structKind]: 'hsv',
     hue, saturation, value, alpha
@@ -362,27 +362,27 @@ function hsv(...args: number[]): Hsv {
 }
 
 function hsvHue(hsv: Hsv): number {
-  checkContract(arguments, contract('hsv-hue', [hsvS]))
+  checkContract([hsv], contract('hsv-hue', [hsvS]))
   return hsv.hue
 }
 
 function hsvSaturation(hsv: Hsv): number {
-  checkContract(arguments, contract('hsv-saturation', [hsvS]))
+  checkContract([hsv], contract('hsv-saturation', [hsvS]))
   return hsv.saturation
 }
 
 function hsvValue(hsv: Hsv): number {
-  checkContract(arguments, contract('hsv-value', [hsvS]))
+  checkContract([hsv], contract('hsv-value', [hsvS]))
   return hsv.value
 }
 
 function hsvAlpha(hsv: Hsv): number {
-  checkContract(arguments, contract('hsv-alpha', [hsvS]))
+  checkContract([hsv], contract('hsv-alpha', [hsvS]))
   return hsv.alpha
 }
 
 function hsvComplement(h: Hsv): Hsv {
-  checkContract(arguments, contract('hsv-complement', [hsvS]))
+  checkContract([h], contract('hsv-complement', [hsvS]))
   return hsv((h.hue + 180) % 360, h.saturation, h.value, h.alpha)
 }
 
@@ -390,7 +390,7 @@ function hsvComplement(h: Hsv): Hsv {
 // https://github.com/grinnell-cs/csc151/blob/8dbcc594fbb5e3579e08ccc897c5fba7d973b779/colors.rkt#L379
 
 function rgbHue(r: Rgb): number {
-  checkContract(arguments, contract('rgb-hue', [rgbS]))
+  checkContract([r], contract('rgb-hue', [rgbS]))
   return rgbHueHelper(r.red, r.green, r.blue)
 }
 
@@ -415,7 +415,7 @@ function fixHue(h: number): number {
 }
 
 function rgbSaturation(r: Rgb): number {
-  checkContract(arguments, contract('rgb-saturation', [rgbS]))
+  checkContract([r], contract('rgb-saturation', [rgbS]))
   return rgbSaturationHelper(Math.max(r.red, r.green, r.blue),
                              Math.min(r.red, r.green, r.blue))
 }
@@ -425,19 +425,19 @@ function rgbSaturationHelper(min: number, max: number): number {
 }
 
 function rgbValue(r: Rgb): number {
-  checkContract(arguments, contract('rgb-value', [rgbS]))
+  checkContract([r], contract('rgb-value', [rgbS]))
   return Math.round(100 * (Math.max(r.red, r.green, r.blue) / 255))
 }
 
 function rgbToHsv(r: Rgb) {
-  checkContract(arguments, contract('rgb->hsv', [rgbS]))
+  checkContract([r], contract('rgb->hsv', [rgbS]))
   const ret = colorsys.rgbToHsv(r.red, r.green, r.blue)
   return hsv(ret.h, ret.s, ret.v, r.alpha)
 }
 
 function hsvToString(hsv: Hsv): string {
-  checkContract(arguments, contract('hsv->string', [hsvS]))
-  return `hsv(${hsv.hue} ${fracToPercentString(hsv.saturation, 100)}  ${fracToPercentString(hsv.value, 100)} / ${fracToPercentString(hsv.alpha, 255)})`
+  checkContract([hsv], contract('hsv->string', [hsvS]))
+  return `hsv(${String(hsv.hue)} ${fracToPercentString(hsv.saturation, 100)}  ${fracToPercentString(hsv.value, 100)} / ${fracToPercentString(hsv.alpha, 255)})`
 }
 
 /***** Other predicates *******************************************************/
@@ -447,18 +447,22 @@ function hsvToString(hsv: Hsv): string {
 /***** Color conversion *******************************************************/
 
 export function colorNameToRgb(name: string): Rgb {
-  checkContract(arguments, contract('color-name->rgb', [C.string]))
+  checkContract([name], contract('color-name->rgb', [C.string]))
   if (!isColorName(name)) {
     throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
   }
-  return namedCssColors.get(name)!
+  const color = namedCssColors.get(name)
+  if (color === undefined) {  
+    throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
+  }
+  return color
 }
 
 // rgb->color-name
 // color->rgb
 
 export function hsvToRgb(hsv: Hsv): Rgb {
-  C.checkContract(arguments, contract('hsv->rgb', [hsvS]))
+  C.checkContract([hsv], contract('hsv->rgb', [hsvS]))
   const ret = colorsys.hsvToRgb(hsv.hue, hsv.saturation, hsv.value)
   return rgb(ret.r, ret.g, ret.b, hsv.alpha)
 }
@@ -482,7 +486,7 @@ export function hsvToRgb(hsv: Hsv): Rgb {
 /***** Color transformations **************************************************/
 
 function rgbDarker(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-darker', [rgbS]))
+  checkContract([rgba], contract('rgb-darker', [rgbS]))
   return rgb(
     Math.max(0, rgba.red - 16),
     Math.max(0, rgba.green - 16),
@@ -492,7 +496,7 @@ function rgbDarker(rgba: Rgb): Rgb {
 }
 
 function rgbLighter(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-lighter', [rgbS]))
+  checkContract([rgba], contract('rgb-lighter', [rgbS]))
   return rgb(
     Math.min(255, rgba.red + 16),
     Math.min(255, rgba.green + 16),
@@ -502,7 +506,7 @@ function rgbLighter(rgba: Rgb): Rgb {
 }
 
 function rgbRedder(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-redder', [rgbS]))
+  checkContract([rgba], contract('rgb-redder', [rgbS]))
   return rgb(
     Math.min(255, rgba.red + 32),
     Math.max(0, rgba.green - 16),
@@ -512,7 +516,7 @@ function rgbRedder(rgba: Rgb): Rgb {
 }
 
 function rgbBluer(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-bluer', [rgbS]))
+  checkContract([rgba], contract('rgb-bluer', [rgbS]))
   return rgb(
     Math.max(0, rgba.red - 16),
     Math.max(0, rgba.green - 16),
@@ -522,7 +526,7 @@ function rgbBluer(rgba: Rgb): Rgb {
 }
 
 function rgbGreener(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-greener', [rgbS]))
+  checkContract([rgba], contract('rgb-greener', [rgbS]))
   return rgb(
     Math.max(0, rgba.red - 16),
     Math.min(255, rgba.green + 32),
@@ -532,7 +536,7 @@ function rgbGreener(rgba: Rgb): Rgb {
 }
 
 function rgbPseudoComplement(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-pseudo-complement', [rgbS]))
+  checkContract([rgba], contract('rgb-pseudo-complement', [rgbS]))
   return rgb(
     255 - rgba.red,
     255 - rgba.green,
@@ -544,13 +548,13 @@ function rgbPseudoComplement(rgba: Rgb): Rgb {
 // rgb-complement
 
 function rgbGreyscale(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-greyscale', [rgbS]))
+  checkContract([rgba], contract('rgb-greyscale', [rgbS]))
   const avg = (0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue) / 3
   return rgb(avg, avg, avg, rgba.alpha)
 }
 
 function rgbPhaseshift(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-phaseshift', [rgbS]))
+  checkContract([rgba], contract('rgb-phaseshift', [rgbS]))
   const shift = 128
   return rgb(
     (rgba.red + shift) % 256,
@@ -561,12 +565,12 @@ function rgbPhaseshift(rgba: Rgb): Rgb {
 }
 
 function rgbRotateComponents(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-rotate-components', [rgbS]))
+  checkContract([rgba], contract('rgb-rotate-components', [rgbS]))
   return rgb(rgba.green, rgba.blue, rgba.red, rgba.alpha)
 }
 
 function rgbThin(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-thin', [rgbS]))
+  checkContract([rgba], contract('rgb-thin', [rgbS]))
   return rgb(
     rgba.red,
     rgba.green,
@@ -576,7 +580,7 @@ function rgbThin(rgba: Rgb): Rgb {
 }
 
 function rgbThicken(rgba: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-thicken', [rgbS]))
+  checkContract([rgba], contract('rgb-thicken', [rgbS]))
   return rgb(
     rgba.red,
     rgba.green,
@@ -588,7 +592,7 @@ function rgbThicken(rgba: Rgb): Rgb {
 /***** Color combinations *****************************************************/
 
 function rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-add', [rgbS, rgbS]))
+  checkContract([rgba1], contract('rgb-add', [rgbS, rgbS]))
   return rgb(
     Math.min(255, rgba1.red + rgba2.red),
     Math.min(255, rgba1.green + rgba2.green),
@@ -598,7 +602,7 @@ function rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
 }
 
 function rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-subtract', [rgbS, rgbS]))
+  checkContract([rgba1], contract('rgb-subtract', [rgbS, rgbS]))
   return rgb(
     Math.max(0, rgba1.red - rgba2.red),
     Math.max(0, rgba1.green - rgba2.green),
@@ -608,7 +612,7 @@ function rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
 }
 
 export function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
-  checkContract(arguments, contract('rgb-average', [rgbS, rgbS]))
+  checkContract([rgba1, rgba2], contract('rgb-average', [rgbS, rgbS]))
   return rgb(
     (rgba1.red + rgba2.red) / 2,
     (rgba1.green + rgba2.green) / 2,
@@ -631,7 +635,7 @@ function renderRgb(rgb: Rgb): HTMLElement {
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(isRgb, (v: any) => renderRgb(v as Rgb))
+HtmlRenderer.registerCustomRenderer(isRgb, (v: L.Value) => renderRgb(v as Rgb))
 
 function renderHsv(hsv: Hsv): HTMLElement {
   const div = document.createElement('div')
@@ -646,7 +650,7 @@ function renderHsv(hsv: Hsv): HTMLElement {
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(isHsv, (v: any) => renderHsv(v as Hsv))
+HtmlRenderer.registerCustomRenderer(isHsv, (v: L.Value) => renderHsv(v as Hsv))
 
 
 /***** Exports ****************************************************************/

@@ -213,8 +213,8 @@ export function equals (v: L.Value, u: L.Value): boolean {
       return false
     }
     for (const f of vFields) {
-      const vField = v[f] as L.Value
-      const uField = u[f] as L.Value
+      const vField = v[f]
+      const uField = u[f]
       if (!equals(vField, uField)) {
         return false
       }
@@ -293,7 +293,7 @@ export function toString (v: L.Value): string {
         if (fields.length === 0) {
           return `(${name})`
         } else {
-          const args = fields.map((f) => toString(v[f] as L.Value)).join(' ')
+          const args = fields.map((f) => toString(v[f])).join(' ')
           return `(${name} ${args})`
         }
       } else if (v instanceof ScamperError) {

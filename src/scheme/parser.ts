@@ -563,5 +563,5 @@ export function parseProgram(
   errors: L.ScamperError[],
   values: L.Value[],
 ): A.Prog {
-  return values.map((v, _) => parseStmt(errors, v))
+  return values.map((v) => parseStmt(errors, v))
 }

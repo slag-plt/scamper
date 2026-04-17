@@ -16,19 +16,19 @@ export interface Duration extends L.Struct {
 }
 
 function dur (numerator: number, denominator: number): Duration {
-  checkContract(arguments, contract('dur', [C.number, C.number]))
+  checkContract([numerator, denominator], contract('dur', [C.number, C.number]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'dur', numerator, denominator }
 }
 Music.registerValue('dur', dur)
 
 function numerator (dur: Duration): number {
-  checkContract(arguments, contract('numerator', [durC]))
+  checkContract([dur], contract('numerator', [durC]))
   return dur.numerator
 }
 Music.registerValue('numerator', numerator)
 
 function denominator (dur: Duration): number {
-  checkContract(arguments, contract('denominator', [durC]))
+  checkContract([dur], contract('denominator', [durC]))
   return dur.denominator
 }
 Music.registerValue('denominator', denominator)
@@ -41,36 +41,36 @@ Music.registerValue('sn', dur(1, 16))
 Music.registerValue('tn', dur(1, 32))
 
 function isPitchClass (s: string): boolean {
-  checkContract(arguments, contract('pitch?', [C.string]))
+  checkContract([s], contract('pitch?', [C.string]))
   return /^[A-Ga-g][#b]{0,2}$/.test(s)
 }
 Music.registerValue('pitch?', isPitchClass)
 
 function isOctave (n: number): boolean {
-  checkContract(arguments, contract('octave?', [C.number]))
+  checkContract([n], contract('octave?', [C.number]))
   return n >= 0 && n <= 10
 }
 Music.registerValue('octave?', isOctave)
 
 function isValidMidiNote (n: number): boolean {
-  checkContract(arguments, contract('note?', [C.number]))
+  checkContract([n], contract('note?', [C.number]))
   return n >= 0 && n <= 127
 }
 Music.registerValue('note-value?', isValidMidiNote)
 
 const durC: C.Spec = {
-  predicate: (v: any) => L.isStructKind(v, 'dur'),
-  errorMsg: (actual: any) => `expected a duration, received ${L.typeOf(actual)}`,
+  predicate: (v: L.Value) => L.isStructKind(v, 'dur'),
+  errorMsg: (actual: L.Value) => `expected a duration, received ${L.typeOf(actual)}`,
 }
 
 const noteC: C.Spec = {
-  predicate: (v: any) => isValidMidiNote(v),
-  errorMsg: (actual: any) => `expected a midi note (0--127), received ${L.typeOf(actual)}`,
+  predicate: (v: L.Value) => typeof v === 'number' && isValidMidiNote(v),
+  errorMsg: (actual: L.Value) => `expected a midi note (0--127), received ${L.typeOf(actual)}`,
 }
 
 export interface Note extends L.Struct { [L.structKind]: 'note', note: number, duration: Duration }
 function note (note: number, duration: Duration): Note {
-  checkContract(arguments, contract('note', [noteC, durC]))
+  checkContract([note, duration], contract('note', [noteC, durC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note', note, duration }
 }
 Music.registerValue('note', note)
@@ -81,13 +81,13 @@ export interface NoteFreq extends L.Struct {
   duration: Duration
 }
 function noteFreq (freq: number, duration: Duration): NoteFreq {
-  checkContract(arguments, contract('note-freq', [C.number, durC]))  
+  checkContract([freq, duration], contract('note-freq', [C.number, durC]))  
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note-freq', freq, duration }
 }
 Music.registerValue('note-freq', noteFreq)
 
 function repeat (n: number, composition: Composition): Composition {
-  checkContract(arguments, contract('repeat', [C.nat, compositionC]))
+  checkContract([n, composition], contract('repeat', [C.nat, compositionC]))
   if (n === 0) {
     return empty()
   } else {
@@ -102,35 +102,35 @@ Music.registerValue('empty', empty)
 
 interface Rest extends L.Struct { [L.structKind]: 'rest', duration: Duration }
 function rest (duration: Duration): Rest {
-  checkContract(arguments, contract('rest', [durC]))
+  checkContract([duration], contract('rest', [durC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'rest', duration }
 }
 Music.registerValue('rest', rest)
 
 interface Trigger extends L.Struct { [L.structKind]: 'trigger', fn: L.ScamperFn }
 function trigger (fn: L.ScamperFn): Trigger {
-  checkContract(arguments, contract('trigger', [C.func]))
+  checkContract([fn], contract('trigger', [C.func]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'trigger', fn }
 }
 Music.registerValue('trigger', trigger)
 
 interface Par extends L.Struct { [L.structKind]: 'par', notes: Composition[] }
 function par (...notes: Composition[]): Par {
-  checkContract(arguments, contract('par', [], compositionC))
+  checkContract(notes, contract('par', [], compositionC))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'par', notes }
 }
 Music.registerValue('par', par)
 
 interface Seq extends L.Struct { [L.structKind]: 'seq', notes: Composition[] }
 function seq (...notes: Composition[]): Seq {
-  checkContract(arguments, contract('seq', [], compositionC)) 
+  checkContract(notes, contract('seq', [], compositionC)) 
   return { [L.scamperTag]: 'struct', [L.structKind]: 'seq', notes }
 }
 Music.registerValue('seq', seq)
 
 interface Pickup extends L.Struct { [L.structKind]: 'pickup', pickup: Composition, notes: Composition }
 function pickup (pickup: Composition, notes: Composition): Composition {
-  checkContract(arguments, contract('pickup', [compositionC, compositionC]))
+  checkContract([pickup, notes], contract('pickup', [compositionC, compositionC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'pickup', pickup, notes }
 }
 Music.registerValue('pickup', pickup)
@@ -139,7 +139,7 @@ Music.registerValue('pickup', pickup)
 
 type ModKind = Percussion | Tempo | Dynamics | Instrument | NoteHandlersMod
 
-function modQ (v: any): boolean {
+function modQ (v: L.Value): boolean {
   return L.isStructKind(v, 'percussion') ||
     //R.isStructKind(v, 'pitchBend') ||
     L.isStructKind(v, 'tempo') ||
@@ -151,7 +151,7 @@ Music.registerValue('mod?', modQ)
 
 const modC: C.Spec = {
   predicate: modQ,
-  errorMsg: (actual: any) => `expected a mod, received ${L.typeOf(actual)}`,
+  errorMsg: (actual: L.Value) => `expected a mod, received ${L.typeOf(actual)}`,
 }
 
 interface Percussion extends L.Struct { kind: 'percussion' }
@@ -169,49 +169,49 @@ Music.registerValue('percussion', percussion)
 
 interface Tempo extends L.Struct { [L.structKind]: 'tempo', beat: Duration, bpm: number }
 function tempo (beat: Duration, bpm: number): Tempo {
-  checkContract(arguments, contract('tempo', [durC, C.nonneg]))
+  checkContract([beat, bpm], contract('tempo', [durC, C.nonneg]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'tempo', beat, bpm }
 }
 Music.registerValue('tempo', tempo)
 
 interface Dynamics extends L.Struct { [L.structKind]: 'dynamics', amount: number }
 function dynamics (amount: number): Dynamics {
-  checkContract(arguments, contract('dynamics', [C.numRange(0, 127)])) 
+  checkContract([amount], contract('dynamics', [C.numRange(0, 127)])) 
   return { [L.scamperTag]: 'struct', [L.structKind]: 'dynamics', amount }
 }
 Music.registerValue('dynamics', dynamics)
 
 interface Instrument extends L.Struct { [L.structKind]: 'instrument', program: number }
 function instrument (program: number): Instrument {
-  checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
+  checkContract([program], contract('instrument', [C.numRange(0, 127)]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'instrument', program }
 }
 Music.registerValue('instrument', instrument)
 
 interface NoteHandlersMod extends L.Struct { [L.structKind]: 'noteHandlers', handlers: NoteHandlers }
 function noteHandlers (handlers: NoteHandlers): NoteHandlersMod {
-  checkContract(arguments, contract('note-handlers', [C.vector]))
+  checkContract([handlers], contract('note-handlers', [C.vector]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'noteHandlers', handlers }
 }
 Music.registerValue('note-handlers', noteHandlers)
 
 interface Mod extends L.Struct { [L.structKind]: 'mod', note: Composition, mod: ModKind }
 function mod (mod: ModKind, note: Composition): Mod {
-  checkContract(arguments, contract('mod', [modC, compositionC]))
+  checkContract([mod, note], contract('mod', [modC, compositionC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'mod', note, mod }
 }
 Music.registerValue('mod', mod)
 
 interface NoteEvent extends L.Struct { [L.structKind]: 'note-event', id: string }
 function noteEvent (id: string): NoteEvent {
-  checkContract(arguments, contract('note-event', [C.string]))
+  checkContract([id], contract('note-event', [C.string]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note-event', id }
 }
 Music.registerValue('note-event', noteEvent)
 
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod | NoteEvent
 
-function compositionQ (v: any): boolean {
+function compositionQ (v: L.Value): boolean {
   return L.isStructKind(v, 'empty') ||
     L.isStructKind(v, 'note') ||
     L.isStructKind(v, 'note-freq') ||
@@ -227,27 +227,39 @@ Music.registerValue('composition?', compositionQ)
 
 const compositionC: C.Spec = {
   predicate: compositionQ,
-  errorMsg: (actual: any) => `expected a composition, received ${L.typeOf(actual)}`,
+  errorMsg: (actual: L.Value) => `expected a composition, received ${L.typeOf(actual)}`,
 }
 
 function loadInstrument(n: number): void {
-  C.checkContract(arguments, contract('load-instrument', [C.nat]))
-  waf()!.loadInstrument(n)
+  C.checkContract([n], contract('load-instrument', [C.nat]))
+  const player = waf()
+  if (player === undefined) {
+    throw new L.ScamperError('Runtime', 'load-instrument: audio system unavailable')
+  }
+  player.loadInstrument(n)
 }
 Music.registerValue('load-instrument', loadInstrument)
 
 function loadPercussion(n: number): void {
-  C.checkContract(arguments, contract('load-percussion', [C.nat]))
-  waf()!.loadInstrument(n, true)
+  C.checkContract([n], contract('load-percussion', [C.nat]))
+  const player = waf()
+  if (player === undefined) {
+    throw new L.ScamperError('Runtime', 'load-percussion: audio system unavailable')
+  }
+  player.loadInstrument(n, true)
 }
 Music.registerValue('load-percussion', loadPercussion)
 
-function useHighQualityInstruments(enable: boolean): void {
-  C.checkContract(arguments, contract('use-high-quality-instruments', [C.boolean]))
+function useHighQualityInstruments (enable: boolean): void {
+  C.checkContract([enable], contract('use-high-quality-instruments', [C.boolean]))
+  const player = waf()
+  if (player === undefined) {
+    throw new L.ScamperError('Runtime', 'use-high-quality-instruments: audio system unavailable')
+  }
   if (enable) {
-    waf()!.fontName = 'FluidR3_GM'
+    player.fontName = 'FluidR3_GM'
   } else {
-    waf()!.fontName = 'Chaos'
+    player.fontName = 'Chaos'
   }
 }
 Music.registerValue('use-high-quality-instruments', useHighQualityInstruments)
@@ -262,7 +274,7 @@ export interface NoteMsg extends L.Struct {
 export type NoteHandlers = ((note: NoteMsg) => void)[]
 
 function makeNoteHandlers (): NoteHandlers {
-  checkContract(arguments, contract('make-note-handlers', []))
+  checkContract([], contract('make-note-handlers', []))
   return []
 }
 Music.registerValue('make-note-handlers', makeNoteHandlers)
@@ -435,7 +447,7 @@ function compositionToMsgs (
       } else if (composition.mod[L.structKind] === 'noteHandlers') {
         return compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.mod.handlers, composition.note)
       } else {
-        throw new L.ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
+        throw new L.ICE('compositionToMsgs', 'unknown mod tag')
       }
     }
 
@@ -447,12 +459,27 @@ function compositionToMsgs (
     }
   }
 }
+const queuePlayer = player.player as {
+  queueWaveTable: (
+    audioContext: AudioContext,
+    destination: AudioNode,
+    instrument: unknown,
+    when: number,
+    pitch: number,
+    duration: number,
+    volume: number
+  ) => void
+}
 
 export function playComposition (composition: Composition): number {
-  checkContract(arguments, contract('play-composition', [compositionC]))
+  checkContract([composition], contract('play-composition', [compositionC]))
   const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, [], composition).msgs
   const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event')
-  const startTime = waf()!.audioContext.currentTime
+  const player = waf()
+  if (player === undefined) {
+    throw new L.ScamperError('Runtime', 'play-composition: audio system unavailable')
+  }
+  const startTime = player.audioContext.currentTime
 
   // Enqueue notes
   for (const msg of msgs) {
@@ -460,9 +487,9 @@ export function playComposition (composition: Composition): number {
     if (msg.tag === 'midi') {
       const isPercussion = msg.instrument === 128
       const instr = isPercussion ? msg.note : msg.instrument
-      waf()!.player.queueWaveTable(waf()!.audioContext,
-        waf()!.audioContext.destination,
-        waf()!.getInstrument(instr, isPercussion),
+      queuePlayer.queueWaveTable(player.audioContext,
+        player.audioContext.destination,
+        player.getInstrument(instr, isPercussion),
         startTime + msg.time / 1000,
         msg.note,
         msg.duration / 1000,
@@ -472,10 +499,9 @@ export function playComposition (composition: Composition): number {
 
   // Set up a timer to discharge triggers and events
   let idx = 0
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  const id = window.setInterval(async () => {
+  const id = window.setInterval(() => {
     // N.B., in milliseconds
-    const now = waf()!.audioContext.currentTime
+    const now = player.audioContext.currentTime
     while (idx < events.length) {
       const ev = events[idx]
       if (ev.time / 1000 + startTime <= now) {
@@ -507,7 +533,7 @@ export function playComposition (composition: Composition): number {
 }
 Music.registerValue('play-composition', playComposition)
 
-export function render (v: any): HTMLElement {
+export function render (v: L.Value): HTMLElement {
   const composition: Composition = v as Composition
   const ret = document.createElement('span')
   const playButton = document.createElement('button')
@@ -515,16 +541,27 @@ export function render (v: any): HTMLElement {
   const stopButton = document.createElement('button')
   stopButton.textContent = '■'
   let timer: number | undefined
-  playButton.onclick = function (_e) {
-    if (waf()!.audioContext.state === 'suspended') {
-      waf()!.audioContext.resume().catch(console.error)
+  playButton.onclick = function () {
+    const player = waf()
+    if (player === undefined) {
+      alert('Audio system unavailable')
+      return
+    }
+    if (player.audioContext.state === 'suspended') {
+      void player.audioContext.resume().catch(console.error)
     }
     timer = playComposition(composition)
   }
-  stopButton.onclick = function (_e) {
+  stopButton.onclick = function () {
     if (timer !== undefined) {
       clearInterval(timer)
-      waf()!.player.cancelQueue(waf()!.audioContext)
+      const player = waf()
+      if (player !== undefined) {
+        const queuePlayer = player.player as {
+          cancelQueue: (audioContext: AudioContext) => void
+        }
+        queuePlayer.cancelQueue(player.audioContext)
+      }
     }
   }
   ret.appendChild(playButton)
@@ -534,16 +571,16 @@ export function render (v: any): HTMLElement {
 
 HtmlRenderer.registerCustomRenderer(compositionQ, render)
 
-Music.initializer = async function initializer(): Promise<void> {
-  // Initialize webaudiofont
+Music.initializer = function initializer(): Promise<void> {
   const player = waf()
   if (player !== undefined) {
-    player.loadInstrument(0)         // 0: Acoustic Grand Piano
-    player.loadInstrument(35, true)  // 35: Acoustic Bass
-    player.loadInstrument(38, true)  // 38: Acoustic Snare
-    player.loadInstrument(42, true)  // 42: Closed Hi-Hat
-    player.loadInstrument(49, true)  // 49: Crash Cymbal 1
+    player.loadInstrument(0)
+    player.loadInstrument(35, true)
+    player.loadInstrument(38, true)
+    player.loadInstrument(42, true)
+    player.loadInstrument(49, true)
   }
+  return Promise.resolve()
 }
 
 export default Music

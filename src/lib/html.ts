@@ -5,7 +5,7 @@ import * as C from './contract.js'
 const Html: L.Library = new L.Library()
 
 function textArea (id: string): HTMLTextAreaElement {
-  checkContract(arguments, contract('text-area', [C.string]))
+  checkContract([id], contract('text-area', [C.string]))
   const ret = new HTMLTextAreaElement()
   ret.id = id
   return ret
@@ -13,13 +13,14 @@ function textArea (id: string): HTMLTextAreaElement {
 Html.registerValue('text-area', textArea)
 
 function textAreaGet (textArea: HTMLTextAreaElement): string {
-  checkContract(arguments, contract('text-area-get', [C.any]))
-  return textArea.textContent
+  checkContract([textArea], contract('text-area-get', [C.any]))
+  return textArea.value
 }
+
 Html.registerValue('text-area-get', textAreaGet)
 
-function button (label: string, fn: Function): HTMLButtonElement {
-  checkContract(arguments, contract('button', [C.string, C.any]))
+function button (label: string, fn: (...args: L.Value[]) => L.Value): HTMLButtonElement {
+  checkContract([label, fn], contract('button', [C.string, C.any]))
   const ret = document.createElement('button')
   ret.textContent = label
   ret.onclick = () => {
@@ -35,7 +36,7 @@ function button (label: string, fn: Function): HTMLButtonElement {
 Html.registerValue('button', button)
 
 function tag (name: string, ...children: L.Value[]): HTMLElement {
-  checkContract(arguments, contract('tag', [C.string], C.any))
+  checkContract([name, ...children], contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
   if (children.length > 0 && L.isList(children[0])) {
     const attrs = L.listToVector(children[0])
@@ -66,13 +67,16 @@ function tag (name: string, ...children: L.Value[]): HTMLElement {
 Html.registerValue('tag', tag)
 
 function tagSetChildren (elt: HTMLElement, ...children: L.Value[]) {
-  checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
+  checkContract([elt, ...children], contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
     throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
   } else {
     children.forEach((e, i) => {
       if (!(e instanceof HTMLElement)) {
-        throw new L.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.typeOf(elt)}$.`)
+        throw new L.ScamperError(
+  'Runtime',
+  `tag-set-children! expects all children to be HTML elements, but position ${String(i)} is a ${L.typeOf(e)}.`
+)
       }
     })
     // N.B., clear the current set of children
@@ -85,8 +89,8 @@ function tagSetChildren (elt: HTMLElement, ...children: L.Value[]) {
 }
 Html.registerValue('tag-set-children!', tagSetChildren)
 
-function onKeydown (fn: Function): void {
-  checkContract(arguments, contract('on-keydown!', [C.func]))
+function onKeydown (fn: (...args: L.Value[]) => L.Value): void {
+  checkContract([fn], contract('on-keydown!', [C.func]))
   window.addEventListener('keydown', (e) => {
     try {
       L.callScamperFn(fn, e.key)

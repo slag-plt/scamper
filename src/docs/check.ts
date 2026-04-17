@@ -23,19 +23,29 @@ const docLibs = new Map<string, object>([
 ])
 
 const scamperLibs = new Map<string, string[]>()
-scamperLibs.set('prelude', scamper.Prelude.lib.map(([id, _]) => id))
+scamperLibs.set('prelude', scamper.Prelude.lib.map(([id]) => id))
 for (const libName of scamper.builtinLibs.keys()) {
-  scamperLibs.set(libName, scamper.builtinLibs.get(libName)!.lib.map(([id, _]) => id))
+  const lib = scamper.builtinLibs.get(libName)
+
+  if (lib !== undefined) {
+    scamperLibs.set(libName, lib.lib.map(([id]) => id))
+  }
 }
 
 for (const name of scamperLibs.keys()) {
   console.log(`Checking ${name}...`)
-  const docs = Object.values(docLibs.get(name)!) as Doc[]
-  const documentedFns = docs.map(d => d.name) 
-  const fns = scamperLibs.get(name)!
-  fns.forEach(fn => {
-    if (!documentedFns.includes(fn)) {
-      console.log(`Missing ${fn}`)
-    }
-  })
+
+  const docLib = docLibs.get(name)
+  const fns = scamperLibs.get(name)
+
+  if (docLib !== undefined && fns !== undefined) {
+    const docs = Object.values(docLib) as Doc[]
+    const documentedFns = docs.map(d => d.name)
+
+    fns.forEach(fn => {
+      if (!documentedFns.includes(fn)) {
+        console.log(`Missing ${fn}`)
+      }
+    })
+  }
 }

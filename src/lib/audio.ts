@@ -24,7 +24,7 @@ interface SampleNode extends L.Struct {
 }
 
 function sampleNode(data: number[]): SampleNode {
-  checkContract(arguments, contract("sample-node", [C.vector]));
+  checkContract([data], contract("sample-node", [C.vector]));
   for (const sample of data) {
     if (typeof sample !== "number" || sample < -1.0 || sample > 1.0) {
       throw new L.ScamperError(
@@ -42,7 +42,7 @@ function sampleNode(data: number[]): SampleNode {
 Audio.registerValue("sample-node", sampleNode);
 
 function audioContext(sampleRate: number): AudioContext {
-  checkContract(arguments, contract("audio-context", [C.integer]));
+  checkContract([sampleRate], contract("audio-context", [C.integer]));
   const AudioContext = window.AudioContext;
   return new AudioContext({ sampleRate });
 }
@@ -61,7 +61,7 @@ function audioPipeline(
   ...nodes: AudioNode[]
 ) {
   // TODO: need to check types on the anys... but they're JS types!
-  checkContract(arguments, contract("audio-pipeline", [C.any, C.any], C.any));
+  checkContract([ctx, pipeline, ...nodes], contract("audio-pipeline", [C.any, C.any], C.any));
   for (let i = 0; i < nodes.length - 1; i++) {
     nodes[i].connect(nodes[i + 1]);
   }
@@ -91,7 +91,7 @@ function oscillatorNode(
   freq: number,
 ): OscillatorNode {
   checkContract(
-    arguments,
+    [ctx, type, freq],
     contract("oscillator-node", [C.any, C.string, C.integer]),
   );
   const oscillator = ctx.createOscillator();
@@ -116,7 +116,7 @@ function audioFileNode(
   ctx: AudioContext,
   filename: string,
 ): MediaElementAudioSourceNode {
-  checkContract(arguments, contract("audio-file-node", [C.any, C.string]));
+  checkContract([ctx,filename], contract("audio-file-node", [C.any, C.string]));
   const mediaElement = document.createElement("audio");
   mediaElement.src = filename;
   const source = new MediaElementAudioSourceNode(ctx, { mediaElement });
@@ -125,13 +125,13 @@ function audioFileNode(
 Audio.registerValue("audio-file-node", audioFileNode);
 
 function delayNode(ctx: AudioContext, delayTime: number): DelayNode {
-  checkContract(arguments, contract("delay-node", [C.any, C.integer]));
+  checkContract([ctx, delayTime], contract("delay-node", [C.any, C.integer]));
   return new DelayNode(ctx, { delayTime });
 }
 Audio.registerValue("delay-node", delayNode);
 
 function playSample(pipeline: SampleNode): void {
-  checkContract(arguments, contract("play-sample", [C.any]));
+  checkContract([pipeline], contract("play-sample", [C.any]));
   // TODO: this should never happen, when does it happen?
   // if (!L.isStructKind(pipeline, "sample")) {
   //   throw new L.ScamperError(

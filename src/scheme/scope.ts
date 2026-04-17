@@ -99,8 +99,12 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
       if (!builtinLibs.has(s.module)) {
         errors.push(new ScamperError('Parser', `Library '${s.module}' is not defined`, undefined, s.range))
       }
-      for (const [name, _] of builtinLibs.get(s.module)!.lib) {
-        globals.push(name)
+      const lib = builtinLibs.get(s.module)
+
+      if (lib !== undefined) {
+        for (const [name] of lib.lib) {
+          globals.push(name)
+        }
       }
       return
     }
@@ -132,10 +136,10 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
 
 export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, errors: ScamperError[], prog: A.Prog) {
   const globals: string[] = []
-  for (const [name, _] of Runtime.lib) {
+  for (const [name] of Runtime.lib) {
     globals.push(name)
   }
-  for (const [name, _] of Prelude.lib) {
+  for (const [name] of Prelude.lib) {
     globals.push(name)
   }
   for (const s of prog) {

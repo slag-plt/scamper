@@ -142,7 +142,7 @@ class Tokenizer {
 
   // TODO: need to handle comments and whether they appear in the token stream
   next (): Token {
-    let ch = this.peek()
+    const ch = this.peek()
     // Case: brackets
     if (isBracket(ch)) {
       this.beginTracking()
@@ -158,7 +158,6 @@ class Tokenizer {
       this.beginTracking() 
       this.advance()
       while (!this.isEmpty()) {
-        ch = this.peek()
         if (this.peek() === '"') {
           this.advance()
           return this.emitToken()
@@ -183,7 +182,7 @@ class Tokenizer {
       this.beginTracking()
       this.advance()
       while (!this.isEmpty()) {
-        ch = this.peek()
+        const ch = this.peek()
         if (isWhitespace(ch) || isBracket(ch) || ch === ';' || ch === "'") {
           // N.B., don't include the terminating char in this token!
           return this.emitToken()
@@ -305,7 +304,11 @@ export function readSingle (t: Token, wildAllowed: boolean): Syntax {
     if (escapedChar.length === 1) {
       return mkSyntax(L.mkChar(escapedChar), t.range)
     } else if (L.namedCharValues.has(escapedChar)) {
-      return mkSyntax(L.mkChar(L.namedCharValues.get(escapedChar)!), t.range)
+      const namedChar = L.namedCharValues.get(escapedChar)
+      if (namedChar === undefined) {
+        throw new L.ICE('readSingle', `named character missing for ${escapedChar}`)
+      }
+      return mkSyntax(L.mkChar(namedChar), t.range)
     } else {
       throw new L.ScamperError('Parser', `Invalid character literal: ${text}`, undefined, t.range)
     }
@@ -320,7 +323,10 @@ export function readSingle (t: Token, wildAllowed: boolean): Syntax {
 }
 
 export function readValue (tokens: Token[]): Syntax {
-  const beg = tokens.shift()!
+  const beg = tokens.shift()
+  if (beg === undefined) {
+    throw new L.ICE('readValue', 'expected a token, but token list was empty')
+  }
   if (isOpeningBracket(beg.text)) {
     const values = []
     while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
@@ -333,7 +339,10 @@ export function readValue (tokens: Token[]): Syntax {
       throw new L.ScamperError('Parser', `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
         undefined, new L.Range(beg.range.begin, tokens[0].range.end))
     } else {
-      const end = tokens.shift()!
+      const end = tokens.shift()
+      if (end === undefined) {
+        throw new L.ICE('readValue', 'expected closing bracket token')
+      }
       return mkSyntax(
         // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
         // we ever allow '{' to imply an dictionary/object.

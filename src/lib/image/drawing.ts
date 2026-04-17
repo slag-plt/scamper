@@ -10,25 +10,25 @@ export const lib: L.Library = new L.Library()
 /***** Core Functions *********************************************************/
 
 const modeS: C.Spec = {
-  predicate: (v: any) => v === 'solid' || v === 'outline',
-  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => v === 'solid' || v === 'outline',
+  errorMsg: (actual: L.Value) => `expected a mode ("solid" or "outline"), received ${L.typeOf(actual)}`
 }
 
 const alignVS: C.Spec = {
-  predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => v === 'top' || v === 'center' || v === 'bottom',
+  errorMsg: (actual: L.Value) => `expected a vertical alignment ("top", "center", or "bottom"), received ${L.typeOf(actual)}`
 }
 
 const alignHS: C.Spec = {
-  predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => v === 'left' || v === 'middle' || v === 'right',
+  errorMsg: (actual: L.Value) => `expected a horizontal alignment ("left", "middle", or "right"), received ${L.typeOf(actual)}`
 }
 
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
-function drawingQ (v: any): boolean {
-  checkContract(arguments, contract('image?', [C.any]))
+function drawingQ (v: L.Value): boolean {
+  checkContract([v], contract('image?', [C.any]))
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
          L.isStructKind(v, 'beside') || L.isStructKind(v, 'above') ||
@@ -45,7 +45,7 @@ lib.registerValue('shape?', drawingQ)
 
 const drawingS = {
   predicate: drawingQ,
-  errorMsg: (actual: any) => `expected a drawing, received ${L.typeOf(actual)}`
+  errorMsg: (actual: L.Value) => `expected a drawing, received ${L.typeOf(actual)}`
 }
 
 interface Ellipse extends L.Struct {
@@ -56,19 +56,19 @@ interface Ellipse extends L.Struct {
   color: Rgb
 }
 
-const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ellipse => ({
+const ellipsePrim = (width: number, height: number, mode: Mode, color: L.Value): Ellipse => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'ellipse',
   width, height, mode, color: colorToRgb(color)
 })
 
-function ellipse (width: number, height: number, mode: Mode, color: any): Ellipse {
-  checkContract(arguments, contract('ellipse', [C.nonneg, C.nonneg, modeS, colorS]))
+function ellipse (width: number, height: number, mode: Mode, color: L.Value): Ellipse {
+  checkContract([width], contract('ellipse', [C.nonneg, C.nonneg, modeS, colorS]))
   return ellipsePrim(width, height, mode, color)
 }
 lib.registerValue('ellipse', ellipse)
 
-function circle (radius: number, mode: Mode, color: any): Ellipse {
-  checkContract(arguments, contract('circle', [C.nonneg, modeS, colorS]))
+function circle (radius: number, mode: Mode, color: L.Value): Ellipse {
+  checkContract([radius], contract('circle', [C.nonneg, modeS, colorS]))
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
 lib.registerValue('circle', circle)
@@ -81,19 +81,19 @@ interface Rectangle extends L.Struct {
   color: Rgb
 }
 
-const rectanglePrim = (width: number, height: number, mode: Mode, color: any): Rectangle => ({
+const rectanglePrim = (width: number, height: number, mode: Mode, color: L.Value): Rectangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'rectangle',
   width, height, mode, color: colorToRgb(color)
 })
 
-function rectangle (width: number, height: number, mode: Mode, color: any): Rectangle {
-  checkContract(arguments, contract('rectangle', [C.nonneg, C.nonneg, modeS, colorS]))
+function rectangle (width: number, height: number, mode: Mode, color: L.Value): Rectangle {
+  checkContract([width, height, mode, color], contract('rectangle', [C.nonneg, C.nonneg, modeS, colorS]))
   return rectanglePrim(width, height, mode, color)
 }
 lib.registerValue('rectangle', rectangle)
 
-function square (length: number, mode: Mode, color: any): Rectangle {
-  checkContract(arguments, contract('square', [C.nonneg, modeS, colorS]))
+function square (length: number, mode: Mode, color: L.Value): Rectangle {
+  checkContract([length, mode, color], contract('square', [C.nonneg, modeS, colorS]))
   return rectanglePrim(length, length, mode, color)
 }
 lib.registerValue('square', square)
@@ -106,19 +106,19 @@ interface Triangle extends L.Struct {
   color: Rgb
 }
 
-const trianglePrim = (width: number, height: number, mode: Mode, color: any): Triangle => ({
+const trianglePrim = (width: number, height: number, mode: Mode, color: L.Value): Triangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'triangle',
   width, height, mode, color: colorToRgb(color)
 })
 
-function triangle (length: number, mode: Mode, color: any): Triangle {
-  checkContract(arguments, contract('triangle', [C.nonneg, modeS, colorS]))
+function triangle (length: number, mode: Mode, color: L.Value): Triangle {
+  checkContract([length, mode, color], contract('triangle', [C.nonneg, modeS, colorS]))
   return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
 }
 lib.registerValue('triangle', triangle)
 
-function isoscelesTriangle (width: number, height: number, mode: Mode, color: any): Triangle {
-  checkContract(arguments, contract('isosceles-triangle', [C.nonneg, C.nonneg, modeS, colorS]))
+function isoscelesTriangle (width: number, height: number, mode: Mode, color: L.Value): Triangle {
+  checkContract([width, height, mode, color], contract('isosceles-triangle', [C.nonneg, C.nonneg, modeS, colorS]))
   return trianglePrim(width, height, mode, color)
 }
 lib.registerValue('isosceles-triangle', isoscelesTriangle)
@@ -132,13 +132,13 @@ interface Path extends L.Struct {
   color: Rgb
 }
 
-const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: any): Path => ({
+const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: L.Value): Path => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'path',
   width, height, points, mode, color: colorToRgb(color)
 })
 
-function path (width: number, height: number, points: L.List, mode: Mode, color: any): Path {
-  checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
+function path (width: number, height: number, points: L.List, mode: Mode, color: L.Value): Path {
+  checkContract([width, height, points, mode, color], contract('path', [C.nonneg, C.nonneg, C.list, modeS, colorS]))
   return pathPrim(width, height,
     L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
     mode, color)
@@ -162,13 +162,13 @@ const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
 })
 
 function beside (...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside', [], drawingS)) 
+  checkContract(drawings, contract('beside', [], drawingS)) 
   return besideAlignPrim('center', ...drawings)
 }
 lib.registerValue('beside', beside)
 
 function besideAlign (align: string, ...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside/align', [alignVS], drawingS))
+  checkContract([align], contract('beside/align', [alignVS], drawingS))
   return besideAlignPrim(align, ...drawings)
 }
 lib.registerValue('beside/align', besideAlign)
@@ -190,13 +190,13 @@ const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
 })
 
 function above (...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above', [], drawingS))
+  checkContract(drawings, contract('above', [], drawingS))
   return aboveAlignPrim('middle', ...drawings)
 }
 lib.registerValue('above', above)
 
 function aboveAlign (align: string, ...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above/align', [alignHS], drawingS))
+  checkContract([align], contract('above/align', [alignHS], drawingS))
   return aboveAlignPrim(align, ...drawings)
 }
 lib.registerValue('above/align', aboveAlign)
@@ -220,13 +220,13 @@ const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]
 })
 
 function overlay (...drawings: Drawing[]) {
-  checkContract(arguments, contract('overlay', [], drawingS))
+  checkContract(drawings, contract('overlay', [], drawingS))
   return overlayAlignPrim('middle', 'center', ...drawings)
 }
 lib.registerValue('overlay', overlay)
 
 function overlayAlign (xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
-  checkContract(arguments, contract('overlay/align', [alignHS, alignVS], drawingS))
+  checkContract([xAlign, yAlign, ...drawings], contract('overlay/align', [alignHS, alignVS], drawingS))
   return overlayAlignPrim(xAlign, yAlign, ...drawings)
 }
 lib.registerValue('overlay/align', overlayAlign)
@@ -254,7 +254,7 @@ function overlayOffsetPrim (dx: number, dy: number, width: number, height: numbe
 }
 
 function overlayOffset (dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
-  checkContract(arguments, contract('overlay/offset', [C.number, C.number, drawingS, drawingS]))
+  checkContract([dx, dy, d1, d2], contract('overlay/offset', [C.number, C.number, drawingS, drawingS]))
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
   // or larger image and (b) whether we are shifting it positively or
   // negatively.
@@ -296,7 +296,7 @@ interface Rotate extends L.Struct {
 function getDrawingPoints (drawing: Drawing): [number, number][] {
   const points: [number, number][] = []
   switch(drawing[L.structKind]) {
-    case 'ellipse':
+    case 'ellipse': {
       const n = 100;
       for (let i = 1; i < n; i++) {
         const t = 2 * Math.PI * i / n;
@@ -306,6 +306,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
         ])
       }
       return points
+  }
     case 'rectangle':
       return [
         [0, 0],
@@ -321,7 +322,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
       ]
     case 'path':
       return drawing.points
-    case 'beside':
+    case 'beside': {
       let xOffset = 0
       drawing.drawings.forEach((subimage) => {
         const subPoints: [number, number][] = getDrawingPoints(subimage)
@@ -338,8 +339,9 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
         xOffset += subimage.width
       })
       return points
-    case 'above':
-      const yOffset = 0
+    }
+    case 'above': {
+      let yOffset = 0
       drawing.drawings.forEach((subimage) => {
         const subPoints: [number, number][] = getDrawingPoints(subimage)
           .map(([x, y]) => [
@@ -352,9 +354,10 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
             y + yOffset
         ])
         points.push(...subPoints)
-        xOffset += subimage.width
+        yOffset += subimage.height
       })
       return points
+    }
     case 'overlay': {
       return drawing.drawings.reverse().flatMap((d) => {
         return getDrawingPoints(d)
@@ -374,7 +377,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
           ])
       })
     }
-    case 'overlayOffset':
+    case 'overlayOffset': {
       const x1 = drawing.dx > 0 ? 0 : Math.abs(drawing.dx)
       const y1 = drawing.dy > 0 ? 0 : Math.abs(drawing.dy)
       const x2 = drawing.dx > 0 ? drawing.dx : 0
@@ -384,16 +387,18 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
       const d2Points: [number, number][] = getDrawingPoints(drawing.d2)
         .map(([x, y]) => [x + x2, y + y2])
       return d1Points.concat(d2Points)
-    case 'rotate':
+    }
+    case 'rotate': {
       const angle = drawing.angle * Math.PI / 180
       const rotatedPoints = getDrawingPoints(drawing.drawing)
         .map(([x, y]) => [
           x * Math.cos(angle) - y * Math.sin(angle),
           x * Math.sin(angle) + y * Math.cos(angle)
         ])
-      const xMin = Math.min(...rotatedPoints.map(([x, _]) => x))
-      const yMin = Math.min(...rotatedPoints.map(([_, y]) => y))
+        const xMin = Math.min(...rotatedPoints.map(([x]) => x))
+        const yMin = Math.min(...rotatedPoints.map(([, y]) => y))
       return rotatedPoints.map(([x, y]) => [x - xMin, y - yMin])
+      }
     case 'withDash':
       return getDrawingPoints(drawing.drawing)
     case 'text':
@@ -418,10 +423,10 @@ function calculateRotatedBox (points: [number, number][], degrees: number): { wi
 
   // Determine the width and height of the bounding
   // box by taking mins and maxes of the points.
-  const xMin = Math.min(...rotatedPoints.map(([x, _]) => x))
-  const xMax = Math.max(...rotatedPoints.map(([x, _]) => x))
-  const yMin = Math.min(...rotatedPoints.map(([_, y]) => y))
-  const yMax = Math.max(...rotatedPoints.map(([_, y]) => y))
+  const xMin = Math.min(...rotatedPoints.map(([x]) => x))
+  const xMax = Math.max(...rotatedPoints.map(([x]) => x))
+  const yMin = Math.min(...rotatedPoints.map(([, y]) => y))
+  const yMax = Math.max(...rotatedPoints.map(([, y]) => y))
 
   return {
     width: xMax - xMin,
@@ -432,7 +437,7 @@ function calculateRotatedBox (points: [number, number][], degrees: number): { wi
 }
 
 function rotate (angle: number, drawing: Drawing): Rotate {
-  checkContract(arguments, contract('rotate', [C.number, drawingS]))
+  checkContract([angle, drawing], contract('rotate', [C.number, drawingS]))
   const dims = calculateRotatedBox(getDrawingPoints(drawing), angle)
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'rotate',
@@ -455,7 +460,7 @@ interface WithDash extends L.Struct {
 }
 
 function withDash (dashSpec: number[], drawing: Drawing): WithDash {
-  checkContract(arguments, contract('with-dash', [C.list, drawingS])) 
+  checkContract([dashSpec, drawing], contract('with-dash', [C.list, drawingS])) 
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
     dashSpec,
@@ -476,18 +481,18 @@ interface DText extends L.Struct {
 }
 
 function textPrim (width: number, height: number, text: string,
-    font: Font, size: number, color: any): DText {
+    font: Font, size: number, color: L.Value): DText {
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'text',
     width, height, text, size, color: colorToRgb(color), font
   }
 }
 
-function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
-  checkContract(arguments, contract('text', [C.string, C.nonneg, colorS], C.any))
+function text (text: string, size: number, color: Rgb, ...rest: L.Value[]): DText {
+  checkContract([text, size, color, ...rest], contract('text', [C.string, C.nonneg, colorS], C.any))
   let f: Font = font('Arial')
   if (rest.length > 1) {
-    throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
+    throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${String(3 + rest.length)}.`)
   } else if (rest.length == 1 && fontS.predicate(rest[0])) {
     if (fontS.predicate(rest[0])) {
       f = rest[0] as Font
@@ -499,7 +504,10 @@ function text (text: string, size: number, color: Rgb, ...rest: any[]): DText {
   // N.B., to calculate the width and height of text, we need to make a
   // temporary canvas to measure the text's dimensions.
   const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   ctx.font = fontToFontString(f, size)
   console.log(fontToFontString(f, size))
   const met = ctx.measureText(text)
@@ -512,51 +520,51 @@ lib.registerValue('text', text)
 
 /***** Extended Functions *****************************************************/
 
-function solidSquare(length: number, color: any): Rectangle {
+function solidSquare(length: number, color: L.Value): Rectangle {
   return square(length, 'solid', color)
 }
 
-function outlinedSquare(length: number, color: any): Rectangle {
+function outlinedSquare(length: number, color: L.Value): Rectangle {
   return square(length, 'outline', color)
 }
 
-function solidRectangle(width: number, height: number, color: any): Rectangle {
+function solidRectangle(width: number, height: number, color: L.Value): Rectangle {
   return rectangle(width, height, 'solid', color)
 }
 
-function outlinedRectangle(width: number, height: number, color: any): Rectangle {
+function outlinedRectangle(width: number, height: number, color: L.Value): Rectangle {
   return rectangle(width, height, 'outline', color)
 }
 
-function solidCircle(radius: number, color: any): Ellipse {
+function solidCircle(radius: number, color: L.Value): Ellipse {
   return circle(radius, 'solid', color)
 }
 
-function outlinedCircle(radius: number, color: any): Ellipse {
+function outlinedCircle(radius: number, color: L.Value): Ellipse {
   return circle(radius, 'outline', color)
 }
 
-function solidEllipse(width: number, height: number, color: any): Ellipse {
+function solidEllipse(width: number, height: number, color: L.Value): Ellipse {
   return ellipse(width, height, 'solid', color)
 }
 
-function outlinedEllipse(width: number, height: number, color: any): Ellipse {
+function outlinedEllipse(width: number, height: number, color: L.Value): Ellipse {
   return ellipse(width, height, 'outline', color)
 }
 
-function solidTriangle(length: number, color: any): Triangle {
+function solidTriangle(length: number, color: L.Value): Triangle {
   return triangle(length, 'solid', color)
 }
 
-function outlinedTriangle(length: number, color: any): Triangle {
+function outlinedTriangle(length: number, color: L.Value): Triangle {
   return triangle(length, 'outline', color)
 }
 
-function solidIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+function solidIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
   return isoscelesTriangle(width, height, 'solid', color)
 }
 
-function outlinedIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+function outlinedIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
   return isoscelesTriangle(width, height, 'outline', color)
 }
 
@@ -564,13 +572,13 @@ function outlinedIsoscelesTriangle(width: number, height: number, color: any): T
 // drawings and canvases.
 
 const imageS: C.Spec = {
-  predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => v instanceof HTMLCanvasElement,
+  errorMsg: (actual: L.Value) => `expected an image, received ${L.typeOf(actual)}`
 }
 
 
 function imageWidth (drawing: Drawing): number {
-  checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
+  checkContract([drawing], contract('image-width', [C.or(drawingS, imageS)]))
   if (drawingS.predicate(drawing)) {
     return drawing.width
   } else {
@@ -579,7 +587,7 @@ function imageWidth (drawing: Drawing): number {
 }
 
 function imageHeight (drawing: Drawing): number {
-  checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
+  checkContract([drawing], contract('image-height', [C.or(drawingS, imageS)]))
   if (drawingS.predicate(drawing)) {
     return drawing.height
   } else {
@@ -588,7 +596,7 @@ function imageHeight (drawing: Drawing): number {
 }
 
 function imageColor (drawing: Drawing): Rgb {
-  checkContract(arguments, contract('image-color', [drawingS]))
+  checkContract([drawing], contract('image-color', [drawingS]))
   switch(drawing[L.structKind]) {
     case 'ellipse':
     case 'rectangle':
@@ -616,8 +624,8 @@ function imageColor (drawing: Drawing): Rgb {
   }
 }
 
-function imageRecolor (drawing: Drawing, color: any): Drawing {
-  checkContract(arguments, contract('image-recolor', [drawingS, colorS]))
+function imageRecolor (drawing: Drawing, color: L.Value): Drawing {
+  checkContract([drawing, color], contract('image-recolor', [drawingS, colorS]))
   switch(drawing[L.structKind]) {
     case 'ellipse':
       return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
@@ -646,9 +654,12 @@ function imageRecolor (drawing: Drawing, color: any): Drawing {
 }
 
 function drawingToPixels(drawing: Drawing): Rgb[] {
-  checkContract(arguments, contract('drawing->pixels', [drawingS]))
+  checkContract([drawing], contract('drawing->pixels', [drawingS]))
   const canvas = renderer(drawing) as HTMLCanvasElement
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
@@ -658,7 +669,7 @@ function drawingToPixels(drawing: Drawing): Rgb[] {
 }
 
 function drawingToImage(drawing: Drawing): HTMLCanvasElement {
-  checkContract(arguments, contract('drawing->image', [drawingS]))
+  checkContract([drawing], contract('drawing->image', [drawingS]))
   return renderer(drawing) as HTMLCanvasElement
 }
 
@@ -686,7 +697,10 @@ lib.registerValue('drawing->image', drawingToImage)
 /***** Rendering **************************************************************/
 
 export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   switch (drawing[L.structKind]) {
     case 'ellipse': {
       ctx.fillStyle = rgbToString(drawing.color)
@@ -699,7 +713,7 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI)
       if (drawing.mode === 'solid') {
         ctx.fill()
-      } else if (drawing.mode === 'outline') {
+      } else {
         ctx.stroke()
       }
       break
@@ -708,9 +722,9 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       ctx.fillStyle = rgbToString(drawing.color)
       ctx.strokeStyle = rgbToString(drawing.color)
       if (drawing.mode === 'solid') {
-        ctx.fillRect(x, y, drawing.width, drawing.height)
-      } else if (drawing.mode === 'outline') {
-        ctx.strokeRect(x, y, drawing.width, drawing.height)
+        ctx.fill()
+      } else {
+        ctx.stroke()
       }
       break
     }
@@ -728,7 +742,7 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
       ctx.lineTo(x, y + drawing.height)
       if (drawing.mode === 'solid') {
         ctx.fill()
-      } else if (drawing.mode === 'outline') {
+      } else {
         ctx.stroke()
       }
       break
@@ -844,7 +858,10 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
 }
 
 function clearDrawing (canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (ctx === null) {
+    throw new L.ScamperError('Runtime', 'could not get 2d rendering context')
+  }
   ctx.fillStyle = 'white'
   ctx.strokeStyle = 'black'
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
@@ -862,4 +879,4 @@ function renderer (drawing: Drawing): HTMLElement {
   return canvas
 }
 
-HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))
+HtmlRenderer.registerCustomRenderer(drawingQ, (v: L.Value) => renderer(v as Drawing))

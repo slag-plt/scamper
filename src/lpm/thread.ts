@@ -298,15 +298,7 @@ export class Thread {
         this.out.send(
           mkTraceStart(
             preamble,
-<<<<<<< HEAD
-            printExpr
-              ? this.raisingProviders
-                  .get(this.options.raisingTarget)!
-                  .raise(this)
-              : undefined,
-=======
             printExpr ? this.getRaisingProvider().raise(this) : undefined,
->>>>>>> f9c3f44 (Eslint Fixes)
           ),
         )
         this.out.pushLevel("trace-block")

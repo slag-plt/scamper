@@ -13,13 +13,13 @@ export interface Font extends L.Struct {
 }
 
 export const fontS: C.Spec = {
-  predicate: (v: any) => L.isStructKind(v, 'font'),
-  errorMsg: (actual: any) => `expected a font, received ${L.typeOf(actual)}`
+  predicate: (v: L.Value) => L.isStructKind(v, 'font'),
+  errorMsg: (actual: L.Value) => `expected a font, received ${L.typeOf(actual)}`
 }
 
 export function fontToFontString (f: Font, size: number): string {
   const fontString = `"${f.face}"${f.system ? `, ${f.system}` : ''}`
-  return `${f.isItalic ? 'italic ' : ''}${f.isBold ? 'bold ' : ''}${size}px ${fontString}`
+  return `${f.isItalic ? 'italic ' : ''}${f.isBold ? 'bold ' : ''}${String(size)}px ${fontString}`
 }
 
 function fontPrim (face: string, system: string, isBold: boolean, isItalic: boolean): Font {
@@ -31,7 +31,7 @@ function fontPrim (face: string, system: string, isBold: boolean, isItalic: bool
 
 export function font (name: string, system?: string,
     isBold?: boolean, isItalic?: boolean): Font {
-  checkContract(arguments, contract('font', [C.string], C.any))
-  return fontPrim(name, system || 'sans-serif', isBold || false, isItalic || false)
+  checkContract([name, system, isBold, isItalic], contract('font', [C.string], C.any))
+  return fontPrim(name, system ?? 'sans-serif', isBold ?? false, isItalic ?? false)
 }
 lib.registerValue('font', font)

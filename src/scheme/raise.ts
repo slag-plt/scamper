@@ -22,12 +22,12 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
       }
 
       case 'var': {
-        if (env.has(op.name)) {
-          const v = env.get(op.name)!
+        const v = env.get(op.name)
+        if (v !== undefined) {
           if (LPM.isFunction(v)) {
             values.push(A.mkVar(op.name))
           } else {
-            values.push(A.mkLit(env.get(op.name)))
+            values.push(A.mkLit(v))
           }
         } else {
           values.push(A.mkVar(op.name))
@@ -61,7 +61,10 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
       }
 
       case 'match': {
-        const scrutinee = values.pop()!
+        const scrutinee = values.pop()
+        if (scrutinee === undefined) {
+          throw new LPM.ICE('raiseFrame', 'missing scrutinee for match')
+        }
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame([], env, body.toReversed())
           return { pat, body: bodyExp }
@@ -79,14 +82,17 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
         // N.B., pops the local environment, but we don't track that here!
         break
       }
-
       case 'popv': {
-        values.pop()!
+        values.pop()
         break
       }
     }
   }
-  return values.pop()!
+  const result = values.pop()
+  if (result === undefined) {
+    throw new LPM.ICE('raiseFrame', 'no expression to return')
+  }
+  return result
 }
 
 export function raiseFrames (frames: LPM.Frame[]): A.Exp {
