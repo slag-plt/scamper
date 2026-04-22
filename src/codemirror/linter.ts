@@ -25,7 +25,7 @@ function addError (err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   })
 }
 
-function makeScamperLinter (_outputId: HTMLElement) {
+function makeScamperLinter (_outputId?: HTMLElement) {
   return linter((view) => {
     const errors: LPM.ScamperError[] = []
     const diagnostics: Diagnostic[] = []

@@ -17,9 +17,9 @@ export const isJsFunction = (v: L.Value): v is Function => typeof v === 'functio
 export const isClosure = (v: L.Value): v is L.Closure => isTaggedObject(v) && v[L.scamperTag] === 'closure'
 export const isFunction = (v: L.Value): v is L.ScamperFn => isJsFunction(v) || isClosure(v)
 export const isChar = (v: L.Value): v is L.Char => isTaggedObject(v) && v[L.scamperTag] === 'char'
-export const isSym = (v: L.Value): v is L.Sym  => isTaggedObject(v) && v[L.scamperTag] === 'sym'
+export const isSym = (v: L.Value): v is L.Sym => isTaggedObject(v) && v[L.scamperTag] === 'sym'
 export const isStruct = (v: L.Value): v is L.Struct => isTaggedObject(v) && v[L.scamperTag] === 'struct'
-export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
+export const isStructKind = <T extends L.Struct>(v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
 
 export const isPair = (v: L.Value): v is L.Pair => isStructKind<L.Pair>(v, 'pair')
 export const isList = (v: L.Value): v is L.List => v === null || isStructKind<L.Cons>(v, 'cons')
@@ -61,19 +61,19 @@ export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
 export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
 
 // Op constructors
-export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({ tag: 'lit', value, range})
-export const mkVar = (name: string, range: Range = Range.none): L.Var => ({ tag: 'var', name, range})
-export const mkCtor = (name: string, fields: string[], range: Range = Range.none): L.Ctor => ({ tag: 'ctor', name, fields, range})
-export const mkCls = (params: string[], body: L.Blk, name?: string, range: Range = Range.none): L.Cls => ({ tag: 'cls', params, body, name, range})
-export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({ tag: 'ap', numArgs, range})
-export const mkMatch = (branches: [L.Pat, L.Blk][], range: Range = Range.none): L.Match => ({ tag: 'match', branches, range})
-export const mkDisp = (expr: L.Blk, range: Range = Range.none): L.Disp => ({ tag: 'disp', expr, range})
-export const mkDefine = (name: string, expr: L.Blk, range: Range = Range.none): L.Define => ({ tag: 'define', name, expr, range})
-export const mkImport = (name: string, range: Range = Range.none): L.Import => ({ tag: 'import', name, range})
-export const mkStmtExp = (expr: L.Blk, range: Range = Range.none): L.StmtExp => ({ tag: 'stmtexp', expr, range})
-export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({ tag: 'raise', msg, range})
-export const mkPops = (): L.PopS => ({ tag: 'pops'})
-export const mkPopv = (): L.PopV => ({ tag: 'popv'})
+export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({ tag: 'lit', value, range })
+export const mkVar = (name: string, range: Range = Range.none): L.Var => ({ tag: 'var', name, range })
+export const mkCtor = (name: string, fields: string[], range: Range = Range.none): L.Ctor => ({ tag: 'ctor', name, fields, range })
+export const mkCls = (params: string[], body: L.Blk, name?: string, range: Range = Range.none): L.Cls => ({ tag: 'cls', params, body, name, range })
+export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({ tag: 'ap', numArgs, range })
+export const mkMatch = (branches: [L.Pat, L.Blk][], range: Range = Range.none): L.Match => ({ tag: 'match', branches, range })
+export const mkDisp = (expr: L.Blk, range: Range = Range.none): L.Disp => ({ tag: 'disp', expr, range })
+export const mkDefine = (name: string, expr: L.Blk, range: Range = Range.none): L.Define => ({ tag: 'define', name, expr, range })
+export const mkImport = (name: string, range: Range = Range.none): L.Import => ({ tag: 'import', name, range })
+export const mkStmtExp = (expr: L.Blk, range: Range = Range.none): L.StmtExp => ({ tag: 'stmtexp', expr, range })
+export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({ tag: 'raise', msg, range })
+export const mkPops = (): L.PopS => ({ tag: 'pops' })
+export const mkPopv = (): L.PopV => ({ tag: 'popv' })
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({ tag: 'pwild', range })
@@ -84,12 +84,12 @@ export const mkPCtor = (name: string, args: L.Pat[], range: Range = Range.none):
 ///// Utility Functions ////////////////////////////////////////////////////////
 
 /** @return true iff the given field name is a hidden field of a struct. */
-export function isHiddenField (fld: string): boolean {
+export function isHiddenField(fld: string): boolean {
   return fld.startsWith('##') && fld.endsWith('##')
 }
 
 /** @return a list of the fields of the given struct. */
-export function getFieldsOfStruct (s: L.Struct): string[] {
+export function getFieldsOfStruct(s: L.Struct): string[] {
   const ret: string[] = []
   for (const f in s) {
     if (!isHiddenField(f)) {
@@ -123,7 +123,7 @@ export const charNamedValues = new Map(
   [...namedCharValues.entries()].map(([k, v]) => [v, k])
 )
 
-export function charToName (c: string): string {
+export function charToName(c: string): string {
   if (charNamedValues.has(c)) {
     return charNamedValues.get(c)!
   } else {
@@ -131,7 +131,7 @@ export function charToName (c: string): string {
   }
 }
 /** @return a vector (array) representation of the input list. */
-export function listToVector (l: L.List): L.Value[] {
+export function listToVector(l: L.List): L.Value[] {
   const ret: L.Value[] = []
   let cur = l
   while (cur !== null) {
@@ -142,7 +142,7 @@ export function listToVector (l: L.List): L.Value[] {
 }
 
 /** @return a list representation of the input vector (array). */
-export function vectorToList (arr: L.Value[]): L.List {
+export function vectorToList(arr: L.Value[]): L.List {
   let ret: L.List = null
   for (let i = arr.length - 1; i >= 0; i--) {
     ret = mkCons(arr[i], ret)
@@ -151,7 +151,7 @@ export function vectorToList (arr: L.Value[]): L.List {
 }
 
 /** @returns the nth element of the list */
-export function listNth (n: number, l: L.List): L.Value {
+export function listNth(n: number, l: L.List): L.Value {
   if (n < 0) {
     throw new ScamperError('Runtime', `Cannot access negative index ${n} in list`)
   }
@@ -170,7 +170,7 @@ export function listNth (n: number, l: L.List): L.Value {
 }
 
 /** @return true if the two L.Values are structurally equal to each other. */
-export function equals (v: L.Value, u: L.Value): boolean {
+export function equals(v: L.Value, u: L.Value): boolean {
   // N.B., performing a strict equality check covers atomic L.Values and pointer
   // equality without the need for excessive identity checks. We reserve the
   // identity checks for our aggregate L.Values.
@@ -209,7 +209,7 @@ export function equals (v: L.Value, u: L.Value): boolean {
 }
 
 /** @returns the type of the given value as a string (for debugging purposes) */
-export function typeOf (v: L.Value): string {
+export function typeOf(v: L.Value): string {
   if (isNumber(v)) {
     return 'number'
   } else if (isBoolean(v)) {
@@ -242,13 +242,13 @@ export function typeOf (v: L.Value): string {
 }
 
 /** @return a generic string representation of value v. */
-export function toString (v: L.Value): string {
+export function toString(v: L.Value): string {
   switch (typeof v) {
     case 'boolean': return v ? '#t' : '#f'
     case 'number': return v.toString()
     case 'string': return `"${v}"`
     case 'undefined': return 'void'
-    default: 
+    default:
       if (v === null) {
         return 'null'
       } else if (isSym(v)) {
