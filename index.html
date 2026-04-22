@@ -13,25 +13,7 @@
   <link href="index.css" rel="stylesheet">
 </head>
 <body>
-  <div id="sidebar"></div>
-  <div id="ide">
-    <div id="header"></div>
-    <div id="content">
-      <div id="editor"></div>
-      <div id="results"></div>
-    </div>
-  </div>
-  <div id="loading">
-    <div id="loading-content">
-      Loading Scamper...
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", (event) => {
-      document.getElementById("loading").style.display = "none";
-    })
-  </script>
+  <div id="app"></div>
   <script type="module" src="/src/web/ide.ts"></script>
 </body>
 </html>
