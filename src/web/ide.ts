@@ -11,6 +11,8 @@ import { throwNull } from "../util"
 import { createApp } from "vue"
 import ResultsPane from "./ResultsPane.vue"
 import type { ResultsPaneType } from "./use-results-pane"
+import IdeHeader from "./IdeHeader.vue"
+import type { IdeHeaderType } from "./use-ide-header"
 
 const editorPane = document.getElementById("editor")!
 const resultsPaneEl =
@@ -32,7 +34,8 @@ const defaultConfig: Config = {
 class IDE {
   fs: OPFSFileSystem
   editor: EditorView
-  currentFile: string | null
+  private _currentFile: string | null = null
+  headerComponent: IdeHeaderType | null = null
   autosaveId: number
   scamper?: ScamperVue
   isDirty: boolean
@@ -42,15 +45,22 @@ class IDE {
   showDotFiles = false
   resultsComponent: ResultsPaneType
 
+  get currentFile(): string | null {
+    return this._currentFile
+  }
+
+  set currentFile(v: string | null) {
+    this._currentFile = v
+    this.headerComponent?.setCurrentFile(v)
+  }
+
   ///// Initialization /////////////////////////////////////////////////////////
 
   private constructor(fs: OPFSFileSystem) {
     this.fs = fs
     this.config = defaultConfig // N.B., loaded asynchronously from disk in IDE.create()
-    this.currentFile = null
     this.autosaveId = -1
     this.isDirty = false
-    this.fs = fs
 
     const resultsApp = createApp(ResultsPane, {
       stepOnce: () => {
@@ -75,6 +85,37 @@ class IDE {
     this.resultsComponent = resultsApp.mount(
       resultsPaneEl,
     ) as unknown as ResultsPaneType
+
+    const headerEl =
+      document.getElementById("header") ?? throwNull("no header element?")
+    const headerApp = createApp(IdeHeader, {
+      run: async () => {
+        this.startScamper(false)
+        await this.scamper?.runProgram()
+      },
+      trace: () => {
+        this.startScamper(true)
+      },
+      cancel: () => {
+        this.scamper?.cancel()
+      },
+      onRunWindow: async () => {
+        if (!this.currentFile) return
+        await this.saveCurrentFile()
+        const params = new URLSearchParams({
+          filename: this.currentFile,
+          isTree: "false",
+        })
+        window.open(`runner.html?${params.toString()}`)
+      },
+      onToggleSidebar: () => {
+        const sidebar = document.getElementById("sidebar")
+        if (!sidebar) return
+        const isVisible = sidebar.style.display !== "none"
+        sidebar.style.display = isVisible ? "none" : "block"
+      },
+    })
+    this.headerComponent = headerApp.mount(headerEl) as unknown as IdeHeaderType
 
     Split(["#editor", "#results"], { sizes: [65, 35] })
     this.editor = new EditorView({
@@ -180,12 +221,6 @@ class IDE {
   }
 
   private initButtons() {
-    document.getElementById("toggle-sidebar")!.addEventListener("click", () => {
-      const sidebar = document.getElementById("sidebar")!
-      const isVisible = sidebar.style.display !== "none"
-      sidebar.style.display = isVisible ? "none" : "block"
-    })
-
     ///// File Buttons ////////////////////////////////////////////////////
 
     document
@@ -335,65 +370,6 @@ class IDE {
         hidden.click()
       })
 
-    ///// Execution Buttons ////////////////////////////////////////////////////
-
-    const runBtn = document.getElementById("run")
-    if (!runBtn) throw new Error("runBtn not found")
-    const runInProgress = document.createElement("div")
-    runInProgress.style.display = "none"
-    const runStopBtn = document.createElement("button")
-    runStopBtn.className = "fa-solid fa-stop"
-    runStopBtn.setAttribute("aria-label", "Stop")
-    runInProgress.appendChild(runStopBtn)
-    const runSpinner = document.createElement("div")
-    runSpinner.className = "fa-solid fa-spinner fa-spin"
-    runInProgress.appendChild(runSpinner)
-    runBtn.after(runInProgress)
-
-    runBtn.addEventListener("click", async () => {
-      this.startScamper(false)
-      runBtn.style.display = "none"
-      runInProgress.style.display = "inline"
-      try {
-        await this.scamper?.runProgram()
-      } finally {
-        runBtn.style.display = ""
-        runInProgress.style.display = "none"
-      }
-    })
-    runStopBtn.addEventListener("click", () => {
-      this.scamper?.cancel()
-    })
-
-    document
-      .getElementById("run-window")
-      ?.addEventListener("click", async () => {
-        if (!this.currentFile) {
-          return
-        }
-        await this.saveCurrentFile()
-        const params = new URLSearchParams({
-          filename: this.currentFile,
-          isTree: "false",
-        })
-        window.open(`runner.html?${params.toString()}`)
-      })
-
-    document.getElementById("step")!.addEventListener("click", () => {
-      this.startScamper(true)
-    })
-
-    document.getElementById("ast-window")!.addEventListener("click", () => {
-      if (!this.currentFile) {
-        return
-      }
-      this.saveCurrentFile()
-      const params = new URLSearchParams({
-        filename: this.currentFile,
-        isTree: "true",
-      })
-      window.open(`runner.html?${params.toString()}`)
-    })
   }
 
   /** Populates the file drawer with entries. */

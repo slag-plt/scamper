@@ -110,15 +110,7 @@ body {
 }
 
 #header {
-  background: #eee;
-  color: #333;
-  padding: 0.5em;
   flex: 0 0 auto;
-
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
 }
 
 #content {
