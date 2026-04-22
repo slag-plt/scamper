@@ -3,6 +3,7 @@ import * as LPM from "./lpm"
 import HtmlDisplay from "./lpm/output/html"
 import builtinLibs from "./lib"
 
+/** @deprecated Use ScamperVue from scamper-vue.ts instead. */
 export class Scamper {
   display: HtmlDisplay
   prog: LPM.Prog | undefined

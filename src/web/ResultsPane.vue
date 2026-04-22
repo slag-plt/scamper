@@ -2,10 +2,11 @@
 import { computed, shallowRef } from "vue"
 import ResultsToolbar from "./ResultsToolbar.vue"
 import OutputPane from "./output/OutputPane.vue"
-import { useResultsPane } from "./use-results-pane"
 import type { OutputPaneType } from "./output/use-output-pane"
 
 defineProps<{
+  isTracing?: boolean
+  isDirty?: boolean
   stepOnce?: () => void
   stepStmt?: () => Promise<void>
   stepAll?: () => Promise<void>
@@ -13,18 +14,11 @@ defineProps<{
   cancel?: () => void
 }>()
 
-const { isTracing, isDirty, setTracing, makeDirty, makeClean } = useResultsPane()
-
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 
 const display = computed(() => outputPaneRef.value?.display)
 
 defineExpose({
-  isTracing,
-  isDirty,
-  setTracing,
-  makeDirty,
-  makeClean,
   reset: () => outputPaneRef.value?.reset(),
   scrollToBottom: () => outputPaneRef.value?.scrollToBottom(),
   display,

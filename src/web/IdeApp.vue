@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, watch } from "vue"
+import { onMounted, onUnmounted, ref, shallowRef } from "vue"
 import { Splitpanes, Pane } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
 import * as Lock from "./lockfile.js"
@@ -12,8 +12,6 @@ import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
-import type { IdeSidebarType } from "./use-ide-sidebar.js"
-import type { IdeHeaderType } from "./use-ide-header.js"
 import type { ResultsPaneType } from "./use-results-pane.js"
 import type { CodeMirrorEditorType } from "./use-codemirror-editor.js"
 
@@ -45,6 +43,8 @@ let isLoadingFile = false
 
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
+const isTracing = ref(false)
+const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref("Loading Scamper...")
@@ -53,25 +53,15 @@ const loadingContent = ref("Loading Scamper...")
 
 const editorRef = shallowRef<CodeMirrorEditorType | null>(null)
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
-const headerRef = shallowRef<IdeHeaderType | null>(null)
-const sidebarRef = shallowRef<IdeSidebarType | null>(null)
-
-// ---------- sync currentFile to children ----------
-
-watch(currentFile, (v) => {
-  headerRef.value?.setCurrentFile(v)
-  sidebarRef.value?.setCurrentFile(v)
-})
 
 // ---------- file drawer ----------
 
 async function populateFileDrawer() {
   if (!fs) throw new Error("FileSystem not initialized")
   const allFiles = await fs.getFileList()
-  const visible = allFiles.filter(
+  files.value = allFiles.filter(
     (f: FileEntry) => !f.isDirectory && !f.name.startsWith("."),
   )
-  sidebarRef.value?.setFiles(visible)
 }
 
 // ---------- config persistence ----------
@@ -116,24 +106,22 @@ function getDoc(): string {
 function makeDirty() {
   if (scamper !== undefined && !isDirty.value) {
     isDirty.value = true
-    resultsRef.value?.makeDirty()
   }
 }
 
 function makeClean() {
-  resultsRef.value?.makeClean()
   isDirty.value = false
 }
 
 // ---------- scamper execution ----------
 
-function startScamper(isTracing: boolean): void {
+function startScamper(tracing: boolean): void {
   resultsRef.value?.reset()
   const display = resultsRef.value?.display
   if (!display) return
+  isTracing.value = tracing
   try {
-    scamper = new ScamperVue(display, getDoc(), isTracing)
-    resultsRef.value?.setTracing(isTracing)
+    scamper = new ScamperVue(display, getDoc(), tracing)
   } catch (e) {
     if (e instanceof ScamperError) {
       display.report(e)
@@ -412,8 +400,9 @@ onUnmounted(() => {
   <div class="ide-app">
     <div v-show="isSidebarVisible" class="sidebar-wrapper">
       <IdeSidebar
-        ref="sidebarRef"
         :version="appVersion"
+        :files="files"
+        :current-file="currentFile"
         :create="handleCreate"
         :rename="handleRename"
         :delete-file="handleDelete"
@@ -425,7 +414,7 @@ onUnmounted(() => {
     </div>
     <div class="ide-main">
       <IdeHeader
-        ref="headerRef"
+        :current-file="currentFile"
         :run="handleRun"
         :trace="handleTrace"
         :cancel="handleCancel"
@@ -440,6 +429,8 @@ onUnmounted(() => {
           <Pane :size="35" class="results-pane">
             <ResultsPane
               ref="resultsRef"
+              :is-dirty="isDirty"
+              :is-tracing="isTracing"
               :step-once="handleStepOnce"
               :step-stmt="handleStepStmt"
               :step-all="handleStepAll"

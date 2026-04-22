@@ -1,16 +1,15 @@
-import { markRaw, ref, shallowRef, triggerRef } from "vue"
+import { markRaw, shallowRef, triggerRef } from "vue"
+import type { Ref } from "vue"
 import { useVirtualizer } from "@tanstack/vue-virtual"
 import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
 
-export function useOutputPane() {
+export function useOutputPane(scrollEl: Ref<HTMLDivElement | null>) {
   // prevent Vue from making blocks deeply reactive
   const blocks = shallowRef<TraceBlock[]>([])
 
   /**
    * virtualizer setup
    */
-  const scrollEl = ref<HTMLDivElement | null>(null)
-
   const virtualizer = useVirtualizer({
     get count() {
       return blocks.value.length
@@ -92,10 +91,12 @@ export function useOutputPane() {
     reset,
     virtualizer,
     blocks,
-    scrollEl,
     display,
     scrollToBottom,
   }
 }
 
-export type OutputPaneType = ReturnType<typeof useOutputPane>
+export type OutputPaneType = Pick<
+  ReturnType<typeof useOutputPane>,
+  "display" | "reset" | "scrollToBottom"
+>

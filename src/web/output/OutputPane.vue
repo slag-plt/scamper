@@ -1,16 +1,12 @@
 <script setup lang="ts">
+import { ref } from "vue"
 import { useOutputPane } from "./use-output-pane"
 import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
-const {
-  displayInput,
-  reset,
-  blocks,
-  virtualizer,
-  scrollEl,
-  display,
-  scrollToBottom,
-} = useOutputPane()
-defineExpose({ displayInput, reset, display, scrollToBottom, scrollEl })
+
+const scrollEl = ref<HTMLDivElement | null>(null)
+const { reset, blocks, virtualizer, display, scrollToBottom } = useOutputPane(scrollEl)
+
+defineExpose({ display, reset, scrollToBottom })
 </script>
 
 <template>

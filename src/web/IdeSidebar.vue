@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { useIdeSidebar } from "./use-ide-sidebar"
+import type { FileEntry } from "./fs.js"
 
 const props = defineProps<{
   version?: string
+  files?: FileEntry[]
+  currentFile?: string | null
   create?: () => void
   rename?: () => void
   deleteFile?: () => void
@@ -13,8 +15,6 @@ const props = defineProps<{
   uploadFile?: (file: File) => Promise<void>
   fileDrop?: (files: FileList) => Promise<void>
 }>()
-
-const { files, currentFile, setFiles, setCurrentFile } = useIdeSidebar()
 
 const isDragOver = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -54,7 +54,6 @@ async function handleFileInputChange(event: Event) {
   target.value = ""
 }
 
-defineExpose({ setFiles, setCurrentFile })
 </script>
 
 <template>
@@ -95,30 +94,30 @@ defineExpose({ setFiles, setCurrentFile })
       <button
         class="fa-solid fa-pencil"
         aria-label="Rename file"
-        :disabled="!currentFile"
+        :disabled="!props.currentFile"
         @click="rename?.()"
       ></button>
       <button
         class="fa-solid fa-trash"
         aria-label="Delete file"
-        :disabled="!currentFile"
+        :disabled="!props.currentFile"
         @click="deleteFile?.()"
       ></button>
       <button
         class="fa-solid fa-download"
         aria-label="Download file"
-        :disabled="!currentFile"
+        :disabled="!props.currentFile"
         @click="download?.()"
       ></button>
     </div>
     <div class="file-drawer">
       <div
-        v-for="file in files"
+        v-for="file in props.files"
         :key="file.name"
         role="button"
         :aria-label="`Open ${file.name}`"
         class="file"
-        :class="{ selected: file.name === currentFile }"
+        :class="{ selected: file.name === props.currentFile }"
         @click="selectFile?.(file.name)"
       >
         {{ file.name }}

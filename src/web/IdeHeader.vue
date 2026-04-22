@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { useIdeHeader } from "./use-ide-header"
 
 const props = defineProps<{
+  currentFile?: string | null
   run?: () => Promise<void>
   trace?: () => void
   cancel?: () => void
@@ -13,7 +13,6 @@ const emit = defineEmits<{
   toggleSidebar: []
 }>()
 
-const { currentFile, setCurrentFile } = useIdeHeader()
 const isRunInProgress = ref(false)
 
 async function handleRun() {
@@ -24,8 +23,6 @@ async function handleRun() {
     isRunInProgress.value = false
   }
 }
-
-defineExpose({ currentFile, setCurrentFile })
 </script>
 
 <template>
