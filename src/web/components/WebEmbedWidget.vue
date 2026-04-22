@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { shallowRef, onMounted } from "vue"
-import { ScamperVue } from "../scamper-vue.js"
-import { ScamperError } from "../lpm/error.js"
-import OutputPane from "./output/OutputPane.vue"
-import type { OutputPaneType } from "./output/use-output-pane"
+import { ScamperVue } from "../../scamper-vue"
+import { ScamperError } from "../../lpm/error"
+import OutputPane from "./OutputPane.vue"
+import type { OutputPaneType } from "./use-output-pane"
 import hljs from "highlight.js"
 
 const props = defineProps<{
@@ -14,7 +14,8 @@ const props = defineProps<{
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 
 function highlightedSource(text: string): string {
-  return hljs.highlight(text, { language: "scheme", ignoreIllegals: true }).value
+  return hljs.highlight(text, { language: "scheme", ignoreIllegals: true })
+    .value
 }
 
 onMounted(async () => {

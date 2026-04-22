@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue"
 import ResultsToolbar from "./ResultsToolbar.vue"
-import OutputPane from "./output/OutputPane.vue"
-import type { OutputPaneType } from "./output/use-output-pane"
+import OutputPane from "./OutputPane.vue"
+import type { OutputPaneType } from "./use-output-pane"
 
 defineProps<{
   isTracing?: boolean

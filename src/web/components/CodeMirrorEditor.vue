@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
-import { mkFreshEditorState, mkNoFileEditorState } from "./codemirror.js"
+import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
 
 const emit = defineEmits<{ dirty: [] }>()
 
@@ -49,8 +49,8 @@ defineExpose({ getDoc, initializeDoc, initializeDummyDoc })
 
 <style scoped>
 .codemirror-editor {
-  font-family: Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console",
-    monospace;
+  font-family:
+    Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
   font-size: 1em;
   height: 100%;
   overflow: hidden;
@@ -66,8 +66,8 @@ defineExpose({ getDoc, initializeDoc, initializeDummyDoc })
 }
 
 :deep(.cm-editor .cm-content) {
-  font-family: Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console",
-    monospace;
+  font-family:
+    Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
   font-size: 1em;
 }
 </style>

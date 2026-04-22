@@ -1,4 +1,4 @@
 import { createApp } from "vue"
-import IdeApp from "./IdeApp.vue"
+import IdeApp from "./components/IdeApp.vue"
 
 createApp(IdeApp).mount("#app")

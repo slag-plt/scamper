@@ -68,7 +68,7 @@ async function handleRun() {
         disabled
       ></button>
       ⋅
-      <a href="docs.html">Docs</a>
+      <a href="../../../docs.html">Docs</a>
       ⋅
       <a href="reference.html">Reference</a>
     </div>
@@ -77,9 +77,14 @@ async function handleRun() {
         href="https://github.com/slag-plt/scamper"
         role="button"
         aria-label="Scamper Repository"
-      ><i class="fa-brands fa-github"></i></a>
+        ><i class="fa-brands fa-github"></i
+      ></a>
       ⋅
-      <em><a href="https://github.com/slag-plt/scamper/issues">Report an issue</a></em>
+      <em
+        ><a href="https://github.com/slag-plt/scamper/issues"
+          >Report an issue</a
+        ></em
+      >
     </div>
   </div>
 </template>

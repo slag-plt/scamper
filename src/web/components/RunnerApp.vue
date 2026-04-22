@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { shallowRef, onMounted } from "vue"
-import { OPFSFileSystem } from "./fs.js"
-import { ScamperVue } from "../scamper-vue.js"
-import { ScamperError } from "../lpm/error.js"
-import { initializeLibs } from "../lib/index.js"
-import OutputPane from "./output/OutputPane.vue"
-import type { OutputPaneType } from "./output/use-output-pane"
+import { OPFSFileSystem } from "../fs"
+import { ScamperVue } from "../../scamper-vue"
+import { ScamperError } from "../../lpm/error"
+import { initializeLibs } from "../../lib"
+import OutputPane from "./OutputPane.vue"
+import type { OutputPaneType } from "./use-output-pane"
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 const version = shallowRef("")
@@ -30,7 +30,9 @@ onMounted(async () => {
   currentFile.value = filename
 
   if (!(await fs.fileExists(filename))) {
-    display.report(new ScamperError("Runtime", `File ${filename} does not exist`))
+    display.report(
+      new ScamperError("Runtime", `File ${filename} does not exist`),
+    )
     return
   }
 
@@ -67,8 +69,19 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui,
-    helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial,
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    avenir next,
+    avenir,
+    segoe ui,
+    helvetica neue,
+    helvetica,
+    Cantarell,
+    Ubuntu,
+    roboto,
+    noto,
+    arial,
     sans-serif;
   font-size: 1em;
 }

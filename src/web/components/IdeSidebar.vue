@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import type { FileEntry } from "./fs.js"
+import type { FileEntry } from "../fs"
 
 const props = defineProps<{
   version?: string
@@ -53,7 +53,6 @@ async function handleFileInputChange(event: Event) {
   }
   target.value = ""
 }
-
 </script>
 
 <template>

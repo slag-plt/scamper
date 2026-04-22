@@ -1,6 +1,6 @@
 import { createApp } from "vue"
 import { initializeLibs } from "../lib/index.js"
-import WebEmbedWidget from "./WebEmbedWidget.vue"
+import WebEmbedWidget from "./components/WebEmbedWidget.vue"
 
 await initializeLibs()
 

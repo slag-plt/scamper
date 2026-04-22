@@ -1,4 +1,4 @@
-import type { VueDisplay } from "../lpm/output/vue"
+import type { VueDisplay } from "../../lpm/output/vue"
 
 /**
  * Public interface of ResultsPane.vue exposed via defineExpose.
