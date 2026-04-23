@@ -30,9 +30,9 @@ interface Subscription extends L.Struct {
 /**
  * A ReactiveCanvas is a canvas that acts as a view over a model of type T.
  */
-class ReactiveCanvas<T> implements ReactiveElement {
+class ReactiveCanvas implements ReactiveElement {
   canvas: HTMLCanvasElement
-  state: T
+  state: L.Value
   /* (state: T, canvas: HTMLCanvasElement) => void */
   viewFunc: L.ScamperFn
   /* (msg: Msg, state: T) => T */
@@ -43,7 +43,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
   constructor(
       width: number,
       height: number,
-      state: T,
+      state: L.Value,
       view: L.ScamperFn,
       update: L.ScamperFn) {
     this.canvas = document.createElement('canvas')
@@ -55,10 +55,9 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.isDirty = true
     this.finished = false
 
-    const blob = this
-    function doFrame(_time: number) {
-      blob.draw()
-      if (!blob.finished) {
+    const doFrame = (): void => {
+      this.draw()
+      if (!this.finished) {
         requestAnimationFrame(doFrame)
       }
     }
@@ -69,9 +68,13 @@ class ReactiveCanvas<T> implements ReactiveElement {
 
   draw () {
     if (this.isDirty) {
-      this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      const ctx = this.canvas.getContext('2d')
+      if (ctx === null) {
+        throw new Error('2d canvas context is not available')
+      }
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
       try {
-        L.callScamperFn(this.viewFunc, this.state as L.Value, this.canvas)
+        L.callScamperFn(this.viewFunc, this.state, this.canvas)
       } catch (e) {
         alert(`reactive-canvas: view function generated an error:\n\n${(e as Error).toString()}`)
         this.finished = true
@@ -82,7 +85,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
 
   update (msg: Msg) {
     try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value)
+      this.state = L.callScamperFn(this.updateFunc, msg, this.state)
     } catch (e) {
       alert(`reactive-canvas: update function generated an error:\n\n${(e as Error).toString()}`)
       this.finished = true
@@ -93,32 +96,28 @@ class ReactiveCanvas<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.canvas }
 }
 
-function reactiveCanvas<T> (
-    width: number,
-    height: number,
-    init: T,
-    view: L.ScamperFn,
-    update: L.ScamperFn,
-    ...subscriptions: Subscription[]): HTMLCanvasElement {
-  checkContract(arguments, contract('reactive-canvas', [C.nonneg, C.nonneg, C.any, C.func, C.func], C.struct('subscription')))
-  const react = new ReactiveCanvas(width, height, init, view, update)
-  subscriptions.forEach(sub => { sub.register(react) })
-  return react.getElement() as HTMLCanvasElement
+function reactiveCanvas (
+  ...args: [number, number, L.Value, L.ScamperFn, L.ScamperFn, ...Subscription[]]): HTMLCanvasElement {
+checkContract(args, contract('reactive-canvas', [C.nonneg, C.nonneg, C.any, C.func, C.func], C.struct('subscription')))
+const [width, height, init, view, update, ...subscriptions] = args
+const react = new ReactiveCanvas(width, height, init, view, update)
+subscriptions.forEach(sub => { sub.register(react) })
+return react.canvas
 }
 
 /**
  * A ReactiveContainer is an HTML subtree that acts as a view over a model of
  * type T.
  */
-class ReactiveContainer<T> implements ReactiveElement {
+class ReactiveContainer implements ReactiveElement {
   container: HTMLDivElement
-  state: T
+  state: L.Value
   /* (state: T) => HTMLElement */
   viewFunc: L.ScamperFn
   /* (msg: Msg, state: T) => T */
   updateFunc: L.ScamperFn
 
-  constructor(state: T, view: L.ScamperFn, update: L.ScamperFn) {
+  constructor(state: L.Value, view: L.ScamperFn, update: L.ScamperFn) {
     this.container = document.createElement('div')
     this.state = state
     this.viewFunc = view
@@ -130,7 +129,7 @@ class ReactiveContainer<T> implements ReactiveElement {
     // react would be much more efficient.
     this.container.innerHTML = ''
     try {
-      const result = L.callScamperFn(this.viewFunc, this.state as L.Value)
+      const result = L.callScamperFn(this.viewFunc, this.state)
       if (result instanceof HTMLElement) {
         this.container.appendChild(result)
       } else {
@@ -143,7 +142,7 @@ class ReactiveContainer<T> implements ReactiveElement {
 
   update (msg: Msg) {
     try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value)
+      this.state = L.callScamperFn(this.updateFunc, msg, this.state)
     } catch (e) {
       alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
     }
@@ -153,16 +152,14 @@ class ReactiveContainer<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.container }
 }
 
-function reactiveContainer<T>(
-    init: T,
-    view: L.ScamperFn,
-    update: L.ScamperFn,
-    ...subscriptions: Subscription[]): HTMLDivElement {
-  checkContract(arguments, contract('reactive-container', [C.any, C.func, C.func], C.struct('subscription')))
-  const react = new ReactiveContainer(init, view, update)
-  subscriptions.forEach(sub => { sub.register(react) })
-  react.draw()
-  return react.getElement() as HTMLDivElement
+function reactiveContainer (
+  ...args: [L.Value, L.ScamperFn, L.ScamperFn, ...Subscription[]]): HTMLDivElement {
+checkContract(args, contract('reactive-container', [C.any, C.func, C.func], C.struct('subscription')))
+const [init, view, update, ...subscriptions] = args
+const react = new ReactiveContainer(init, view, update)
+subscriptions.forEach(sub => { sub.register(react) })
+react.draw()
+return react.getElement() as HTMLDivElement
 }
 
 /***** Messages and Events ****************************************************/
@@ -210,8 +207,9 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
   return { [L.scamperTag]: 'struct', [L.structKind]: 'subscription', register: sub }
 }
 
-function onButtonClick (button: HTMLButtonElement): Subscription {
-  checkContract(arguments, contract('on-button-click', [C.html]))
+function onButtonClick (...args: [HTMLButtonElement]): Subscription {
+  checkContract(args, contract('on-button-click', [C.html]))
+  const [button] = args
   return subscription((react) => {
     button.addEventListener('click', () => {
       react.update({ 
@@ -222,8 +220,8 @@ function onButtonClick (button: HTMLButtonElement): Subscription {
   })
 }
 
-function onMouseClick (): Subscription {
-  checkContract(arguments, contract('on-mouse-click', []))
+function onMouseClick (...args: []): Subscription {
+  checkContract(args, contract('on-mouse-click', []))
   return subscription((react) => {
     react.getElement().addEventListener('click', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -235,8 +233,8 @@ function onMouseClick (): Subscription {
   })
 }
 
-function onMouseHover (): Subscription {
-  checkContract(arguments, contract('on-mouse-hover', []))
+function onMouseHover (...args: []): Subscription {
+  checkContract(args, contract('on-mouse-hover', []))
   return subscription((react) => {
     react.getElement().addEventListener('mousemove', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -248,8 +246,8 @@ function onMouseHover (): Subscription {
   })
 }
 
-function onKeyDown (): Subscription {
-  checkContract(arguments, contract('on-key-down', []))
+function onKeyDown (...args: []): Subscription {
+  checkContract(args, contract('on-key-down', []))
   return subscription((react) => {
     document.addEventListener('keydown', (event) => {
       react.update({
@@ -260,8 +258,8 @@ function onKeyDown (): Subscription {
   })
 }
 
-function onKeyUp (): Subscription {
-  checkContract(arguments, contract('on-key-up', []))
+function onKeyUp (...args: []): Subscription {
+  checkContract(args, contract('on-key-up', []))
   return subscription((react) => {
     document.addEventListener('keyup', (event) => {
       react.update({
@@ -272,8 +270,9 @@ function onKeyUp (): Subscription {
   })
 }
 
-function onTimer (interval: number): Subscription {
-  checkContract(arguments, contract('on-timer', [C.nonneg]))
+function onTimer (...args: [number]): Subscription {
+  checkContract(args, contract('on-timer', [C.nonneg]))
+  const [interval] = args
   return subscription((react) => {
     let time = performance.now()
     setInterval(() => {
@@ -287,8 +286,9 @@ function onTimer (interval: number): Subscription {
   })
 }
 
-function onNote (handlers: NoteHandlers): Subscription {
-  checkContract(arguments, contract('on-note', [C.any]))
+function onNote (...args: [NoteHandlers]): Subscription {
+  checkContract(args, contract('on-note', [C.any]))
+  const [handlers] = args
   return subscription((react) => {
     handlers.push((msg) => { react.update(msg) })
   })

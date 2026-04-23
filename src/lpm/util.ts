@@ -12,21 +12,29 @@ export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
 export const isArray = (v: L.Value): v is L.Value[] => Array.isArray(v)
 export const isTaggedObject = (v: L.Value): v is L.TaggedObject =>
-  v !== null && typeof v === 'object' && v.hasOwnProperty(L.scamperTag)
-export const isJsFunction = (v: L.Value): v is Function => typeof v === 'function'
+  v !== null && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, L.scamperTag)
+export const isJsFunction = (v: L.Value): v is (...args: unknown[]) => unknown => typeof v === 'function'
 export const isClosure = (v: L.Value): v is L.Closure => isTaggedObject(v) && v[L.scamperTag] === 'closure'
 export const isFunction = (v: L.Value): v is L.ScamperFn => isJsFunction(v) || isClosure(v)
 export const isChar = (v: L.Value): v is L.Char => isTaggedObject(v) && v[L.scamperTag] === 'char'
 export const isSym = (v: L.Value): v is L.Sym  => isTaggedObject(v) && v[L.scamperTag] === 'sym'
 export const isStruct = (v: L.Value): v is L.Struct => isTaggedObject(v) && v[L.scamperTag] === 'struct'
-export const isStructKind = <T extends L.Struct> (v: L.Value, k: string): v is T => isStruct(v) && v[L.structKind] === k
+export const isStructKind = (v: L.Value, k: string): v is L.Struct => isStruct(v) && v[L.structKind] === k
+export const isPair = (v: L.Value): v is L.Pair =>
+  isStructKind(v, 'pair') && 'fst' in v && 'snd' in v
 
-export const isPair = (v: L.Value): v is L.Pair => isStructKind<L.Pair>(v, 'pair')
-export const isList = (v: L.Value): v is L.List => v === null || isStructKind<L.Cons>(v, 'cons')
+export const isList = (v: L.Value): v is L.List =>
+  v === null || (isStructKind(v, 'cons') && 'head' in v && 'tail' in v)
 
 ///// Constructors /////////////////////////////////////////////////////////////
 
-export const mkClosure = (params: L.Id[], code: L.Blk, env: L.Env, call: (...args: any) => any, name?: L.Id): L.Closure =>
+export const mkClosure = (
+  params: L.Id[],
+  code: L.Blk,
+  env: L.Env,
+  call: (...args: L.Value[]) => L.Value,
+  name?: L.Id
+): L.Closure =>
   ({ [L.scamperTag]: 'closure', params, code, env, call, name })
 export const mkChar = (v: string): L.Char => ({ [L.scamperTag]: 'char', value: v })
 export const mkSym = (v: string): L.Sym => ({ [L.scamperTag]: 'sym', value: v })
@@ -100,8 +108,11 @@ export function getFieldsOfStruct (s: L.Struct): string[] {
 }
 
 /** Mutates a Javascript function to contain a `name` field with that function's name. */
-export const nameFn = (name: string, fn: Function): Function =>
-  Object.defineProperty(fn, 'name', { value: name })
+export const nameFn = (
+  name: string,
+  fn: (...args: unknown[]) => unknown
+): (...args: unknown[]) => unknown =>
+  Object.defineProperty(fn, 'name', { value: name }) as (...args: unknown[]) => unknown
 
 // N.B., the char-value conversions are actually language specific,
 // so there's probably a need to refactor this and all dependent
@@ -125,7 +136,11 @@ export const charNamedValues = new Map(
 
 export function charToName (c: string): string {
   if (charNamedValues.has(c)) {
-    return charNamedValues.get(c)!
+    const value = charNamedValues.get(c)
+    if (value === undefined) {
+      return c
+    }
+    return value
   } else {
     return c
   }
@@ -153,17 +168,17 @@ export function vectorToList (arr: L.Value[]): L.List {
 /** @returns the nth element of the list */
 export function listNth (n: number, l: L.List): L.Value {
   if (n < 0) {
-    throw new ScamperError('Runtime', `Cannot access negative index ${n} in list`)
+    throw new ScamperError('Runtime', `Cannot access negative index ${String(n)} in list`)
   }
   let cur = l
   for (let i = 0; i < n; i++) {
     if (cur === null) {
-      throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
+      throw new ScamperError('Runtime', `List index out of bounds: ${String(n)}`)
     }
     cur = cur.tail
   }
   if (cur == null) {
-    throw new ScamperError('Runtime', `List index out of bounds: ${n}`)
+    throw new ScamperError('Runtime', `List index out of bounds: ${String(n)}`)
   } else {
     return cur.head
   }
@@ -198,7 +213,9 @@ export function equals (v: L.Value, u: L.Value): boolean {
       return false
     }
     for (const f of vFields) {
-      if (!equals(v[f], u[f])) {
+      const vField = v[f] as L.Value
+      const uField = u[f] as L.Value
+      if (!equals(vField, uField)) {
         return false
       }
     }
@@ -223,7 +240,8 @@ export function typeOf (v: L.Value): string {
   } else if (isArray(v)) {
     return 'vector'
   } else if (isJsFunction(v)) {
-    return `[Function: ${(v as any).name}]`
+    const fn = v as { name?: string }
+    return `[Function: ${fn.name ?? '##anonymous##'}]`
   } else if (isClosure(v)) {
     return `[Function: ${v.name ?? '##anonymous##'}]`
   } else if (isChar(v)) {
@@ -275,7 +293,7 @@ export function toString (v: L.Value): string {
         if (fields.length === 0) {
           return `(${name})`
         } else {
-          const args = fields.map((f) => toString(v[f])).join(' ')
+          const args = fields.map((f) => toString(v[f] as L.Value)).join(' ')
           return `(${name} ${args})`
         }
       } else if (v instanceof ScamperError) {
