@@ -1,8 +1,13 @@
 import { Plugin } from "prettier"
-import { Node } from "../lpm"
-import { SchemeParser } from "./scheme-parser"
+import { SchemeNode } from "../scheme/ast"
+import {
+  SchemeParser,
+  SchemeParserASTFormat,
+  SchemeParserName,
+} from "./scheme/parser"
+import { SchemePrinter } from "./scheme/printer"
 
-const ScamperPlugin: Plugin<Node> = {
+const ScamperPlugin: Plugin<SchemeNode> = {
   languages: [
     {
       name: "Scamper",
@@ -10,7 +15,10 @@ const ScamperPlugin: Plugin<Node> = {
     },
   ],
   parsers: {
-    "scamper-scheme": SchemeParser,
+    [SchemeParserName]: SchemeParser,
+  },
+  printers: {
+    [SchemeParserASTFormat]: SchemePrinter,
   },
 }
 
