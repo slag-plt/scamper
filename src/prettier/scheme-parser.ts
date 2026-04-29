@@ -15,7 +15,7 @@ const parse: ScamperParser["parse"] = (text) => {
   )
 }
 
-const astFormat = "scamper-prog"
+const astFormat = "scamper-scheme-ast"
 
 const locStart: ScamperParser["locStart"] = (node) => node.range.begin.idx
 
