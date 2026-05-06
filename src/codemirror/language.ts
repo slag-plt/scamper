@@ -27,6 +27,7 @@ export const ScamperLanguage = LRLanguage.define({
         Boolean: t.bool,
         Number: t.number,
         String: t.string,
+        Char: t.character,
         LineComment: t.lineComment,
         "( )": t.paren,
         "[ ]": t.squareBracket,
