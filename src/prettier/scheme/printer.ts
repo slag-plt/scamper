@@ -2,7 +2,7 @@ import { doc, Printer, AstPath, Doc } from "prettier"
 import * as A from "../../scheme/ast"
 import TextRenderer from "../../lpm/renderers/text"
 
-const { builders: { group, indent, join, line, hardline, softline } } = doc
+const { builders: { group, indent, join, line, hardline } } = doc
 
 // ---- Type predicates -------------------------------------------------------
 //
@@ -115,8 +115,8 @@ export const SchemePrinter: Printer = {
           return group(["[", raw.name, " ", bindingPath.call(print, "value"), "]"])
         }, "bindings")
         return group([
-          "(let ",
-          group(["(", indent([softline, join(line, bindingDocs)]), softline, ")"]),
+          "(let",
+          indent([line, group(["(", join(line, bindingDocs), ")"])]),
           indent([line, path.call(print, "body")]),
           ")"
         ])
@@ -131,12 +131,9 @@ export const SchemePrinter: Printer = {
 
       case "if":
         return group([
-          "(if",
-          indent([
-            line, path.call(print, "guard"),
-            line, path.call(print, "ifB"),
-            line, path.call(print, "elseB"),
-          ]),
+          "(if ",
+          path.call(print, "guard"),
+          indent([line, path.call(print, "ifB"), line, path.call(print, "elseB")]),
           ")"
         ])
 
@@ -153,8 +150,8 @@ export const SchemePrinter: Printer = {
           ])
         }, "branches")
         return group([
-          "(match",
-          indent([line, path.call(print, "scrutinee")]),
+          "(match ",
+          path.call(print, "scrutinee"),
           indent([line, join(line, branchDocs)]),
           ")"
         ])
@@ -170,8 +167,8 @@ export const SchemePrinter: Printer = {
           return group(["[", raw.name, " ", bindingPath.call(print, "value"), "]"])
         }, "bindings")
         return group([
-          "(let* ",
-          group(["(", indent([softline, join(line, bindingDocs)]), softline, ")"]),
+          "(let*",
+          indent([line, group(["(", join(line, bindingDocs), ")"])]),
           indent([line, path.call(print, "body")]),
           ")"
         ])
