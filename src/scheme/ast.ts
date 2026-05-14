@@ -4,7 +4,6 @@ import HtmlRenderer from "../lpm/renderers/html.js"
 import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
-import StmtRenderer from "./ast-components/StmtRenderer.vue"
 
 export interface Tagged {
   tag: string
@@ -637,7 +636,9 @@ HtmlRenderer.registerCustomRenderer(isStmt, (v) => stmtToHTML(v as Stmt))
 
 VueRenderer.registerCustomRenderer(isPat, () => PatRenderer)
 VueRenderer.registerCustomRenderer(isExp, () => ExpRenderer)
-VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
+// StmtRenderer is never rendered since Raiser only raises expressions
+// TODO: change if this ever changes!
+// VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 
