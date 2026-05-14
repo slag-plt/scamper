@@ -2,6 +2,8 @@ import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
 import HtmlRenderer from '../lpm/renderers/html.js'
+import VueRenderer from '../lpm/renderers/vue.js'
+import MusicRenderer from './MusicRenderer.vue'
 import { waf } from './webaudiofont/webaudiofont.js'
 
 const Music: L.Library = new L.Library()
@@ -533,6 +535,8 @@ export function render (v: any): HTMLElement {
 }
 
 HtmlRenderer.registerCustomRenderer(compositionQ, render)
+
+VueRenderer.registerCustomRenderer(compositionQ, () => MusicRenderer)
 
 Music.initializer = async function initializer(): Promise<void> {
   // Initialize webaudiofont

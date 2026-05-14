@@ -2,6 +2,9 @@ import * as L from "../lpm";
 import { checkContract, contract } from "./contract.js";
 import * as C from "./contract.js";
 import HtmlRenderer from "../lpm/renderers/html.js";
+import VueRenderer from "../lpm/renderers/vue.js";
+import SampleRenderer from "./SampleRenderer.vue";
+import AudioPipelineRenderer from "./AudioPipelineRenderer.vue";
 
 const Audio: L.Library = new L.Library();
 
@@ -18,7 +21,7 @@ export const getCtx = (): AudioContext => {
   return ctx;
 };
 
-interface SampleNode extends L.Struct {
+export interface SampleNode extends L.Struct {
   [L.structKind]: "sample";
   data: Float32Array<ArrayBuffer>;
 }
@@ -48,7 +51,7 @@ function audioContext(sampleRate: number): AudioContext {
 }
 Audio.registerValue("audio-context", audioContext);
 
-interface AudioPipeline extends L.Struct {
+export interface AudioPipeline extends L.Struct {
   [L.structKind]: "audio-pipeline";
   ctx: AudioContext;
   pipeline: AudioNode;
@@ -157,7 +160,7 @@ export default Audio;
 
 ///// Audio Rendering //////////////////////////////////////////////////////////
 
-function drawOscilloscope(
+export function drawOscilloscope(
   data: Uint8Array<ArrayBuffer>,
   canvas: HTMLCanvasElement,
   analyser: AnalyserNode,
@@ -236,11 +239,13 @@ export function sampleRenderer(sample: SampleNode): HTMLElement {
   return ret;
 }
 
-interface MediaElementSource extends AudioNode {
+export interface MediaElementSource extends AudioNode {
   mediaElement: HTMLMediaElement;
 }
 
-function isMediaElementSource(node: AudioNode): node is MediaElementSource {
+export function isMediaElementSource(
+  node: AudioNode,
+): node is MediaElementSource {
   const maybeSource = node as unknown as Record<string, unknown>;
   return (
     "mediaElement" in node &&
@@ -298,4 +303,13 @@ HtmlRenderer.registerCustomRenderer(
 HtmlRenderer.registerCustomRenderer(
   (v) => L.isStructKind(v, "audio-pipeline"),
   (v) => audioPipelineRenderer(v as AudioPipeline),
+);
+
+VueRenderer.registerCustomRenderer(
+  (v) => L.isStructKind(v, "sample"),
+  () => SampleRenderer,
+);
+VueRenderer.registerCustomRenderer(
+  (v) => L.isStructKind(v, "audio-pipeline"),
+  () => AudioPipelineRenderer,
 );

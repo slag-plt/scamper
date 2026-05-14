@@ -1,6 +1,9 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HtmlRenderer from '../../lpm/renderers/html.js'
+import VueRenderer from '../../lpm/renderers/vue.js'
+import RgbRenderer from './RgbRenderer.vue'
+import HsvRenderer from './HsvRenderer.vue'
 import * as L from '../../lpm'
 
 import * as colorsys from 'colorsys'
@@ -311,7 +314,7 @@ export function rgbToString (rgba: Rgb): string {
 
 /***** HSV colors *************************************************************/
 
-interface Hsv extends L.Struct {
+export interface Hsv extends L.Struct {
   [L.structKind]: 'hsv'
   hue: number,
   saturation: number,
@@ -435,7 +438,7 @@ function rgbToHsv(r: Rgb) {
   return hsv(ret.h, ret.s, ret.v, r.alpha)
 }
 
-function hsvToString(hsv: Hsv): string {
+export function hsvToString(hsv: Hsv): string {
   checkContract(arguments, contract('hsv->string', [hsvS]))
   return `hsv(${hsv.hue} ${fracToPercentString(hsv.saturation, 100)}  ${fracToPercentString(hsv.value, 100)} / ${fracToPercentString(hsv.alpha, 255)})`
 }
@@ -531,7 +534,7 @@ function rgbGreener(rgba: Rgb): Rgb {
   )
 }
 
-function rgbPseudoComplement(rgba: Rgb): Rgb {
+export function rgbPseudoComplement(rgba: Rgb): Rgb {
   checkContract(arguments, contract('rgb-pseudo-complement', [rgbS]))
   return rgb(
     255 - rgba.red,
@@ -647,6 +650,9 @@ function renderHsv(hsv: Hsv): HTMLElement {
 }
 
 HtmlRenderer.registerCustomRenderer(isHsv, (v: any) => renderHsv(v as Hsv))
+
+VueRenderer.registerCustomRenderer(isRgb, () => RgbRenderer)
+VueRenderer.registerCustomRenderer(isHsv, () => HsvRenderer)
 
 
 /***** Exports ****************************************************************/

@@ -3,6 +3,7 @@ import * as LPM from "./lpm"
 import HtmlDisplay from "./lpm/output/html"
 import builtinLibs from "./lib"
 
+/** @deprecated Use ScamperVue from scamper-vue.ts instead. */
 export class Scamper {
   display: HtmlDisplay
   prog: LPM.Prog | undefined
@@ -12,7 +13,7 @@ export class Scamper {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
-      const opts = LPM.defaultOptions
+      const opts = LPM.cloneOptions(LPM.defaultOptions)
       opts.isTracing = isTracing
       this.machine = new LPM.Thread(
         "##main##",

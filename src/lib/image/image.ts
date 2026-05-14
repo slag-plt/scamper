@@ -1,6 +1,8 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HtmlRenderer from '../../lpm/renderers/html.js'
+import VueRenderer from '../../lpm/renderers/vue.js'
+import ReactiveImageFileRenderer from './ReactiveImageFileRenderer.vue'
 import * as L from '../../lpm'
 import { rgb } from './color.js'
 
@@ -184,6 +186,8 @@ function render(rif: ReactiveImageFile): HTMLElement {
 }
 
 HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
+
+VueRenderer.registerCustomRenderer(isReactiveImageFile, () => ReactiveImageFileRenderer)
 
 /***** Exports ****************************************************************/
 

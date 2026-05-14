@@ -1,6 +1,8 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HtmlRenderer from '../../lpm/renderers/html.js'
+import VueRenderer from '../../lpm/renderers/vue.js'
+import DrawingRenderer from './DrawingRenderer.vue'
 import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
@@ -843,7 +845,7 @@ export function render (x: number, y: number, drawing: Drawing, canvas: HTMLCanv
   }
 }
 
-function clearDrawing (canvas: HTMLCanvasElement) {
+export function clearDrawing (canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = 'white'
   ctx.strokeStyle = 'black'
@@ -863,3 +865,5 @@ function renderer (drawing: Drawing): HTMLElement {
 }
 
 HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))
+
+VueRenderer.registerCustomRenderer(drawingQ, () => DrawingRenderer)

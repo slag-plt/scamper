@@ -22,7 +22,7 @@ export const defaultOptions: Options = {
   stepMatch: false,
   isTracing: false,
   raisingTarget: "scheme",
-  maxStepsPerYield: 1_000_000,
+  maxStepsPerYield: 100_000,
 }
 
 export function cloneOptions(opt: Options): Options {
@@ -56,6 +56,11 @@ export class Frame {
   popInstr(): L.Ops {
     return this.ops.pop()!
   }
+}
+
+export const TraceAttrs = {
+  block: "trace",
+  steps: "trace-steps",
 }
 
 /** A single thread of execution in LPM. */
@@ -103,10 +108,8 @@ export class Thread {
     this.frames = []
     this.isProcessingExpr = false
     this.curStmt++
-    if (!this.isFinished()) {
-      if (this.options.isTracing) {
-        this.out.popLevel()
-      }
+    if (this.options.isTracing) {
+      this.out.popLevel()
     }
   }
 
@@ -168,30 +171,31 @@ export class Thread {
     }
   }
 
-  /**
-   * For tracing, the steps per scheduler yield should be proportional to the
-   * number of sent output messages, since long outputs will cause the DOM to
-   * slow down.
-   * TODO: this probably isn't needed once we switch to a not terrible UI framework
-   */
-  private getTracingStepsPerYield(maxLogs = 1_000) {
-    const scalingFactor = this.options.maxStepsPerYield / maxLogs
-    const logCount = Math.max(this.out.totalSends, 1)
-    const tracingStepsPerYield = Math.ceil(
-      this.options.maxStepsPerYield / (logCount * scalingFactor),
-    )
-    // console.debug("tracing steps:", tracingStepsPerYield)
-    return tracingStepsPerYield
+  private lastYieldTime = performance.now()
+  private stepsSinceLastCheck = 0
+  private readonly TIME_BUDGET_MS = 1000 / 60
+  private readonly STEPS_PER_CLOCK_CHECK = 1000
+
+  private shouldYield(): boolean {
+    // since perf.now has non-negligible performance overhead, we should only check occasionally
+    this.stepsSinceLastCheck++
+    if (this.stepsSinceLastCheck >= this.STEPS_PER_CLOCK_CHECK) {
+      this.stepsSinceLastCheck = 0
+      const now = performance.now()
+      if (now - this.lastYieldTime >= this.TIME_BUDGET_MS) {
+        this.lastYieldTime = now
+        return true
+      }
+    }
+    return false
   }
 
   /** Steps until next expression is finished. */
   async stepExpr(): Promise<void> {
-    let i = 0
+    this.lastYieldTime = performance.now()
     do {
       this.step()
-      i++
-      if (i >= this.getTracingStepsPerYield()) {
-        i = 0
+      if (this.shouldYield()) {
         await scheduler.yield()
       }
     } while (this.isProcessingExpr && !this.cancelled)
@@ -208,20 +212,12 @@ export class Thread {
   }
 
   async evaluateAsync(): Promise<L.Value> {
+    this.lastYieldTime = performance.now()
     while (!this.isFinished() && !this.cancelled) {
-      for (
-        let i = 0;
-        i <
-          (this.options.isTracing
-            ? this.getTracingStepsPerYield()
-            : this.options.maxStepsPerYield) && !this.isFinished();
-        i++
-      ) {
-        // console.debug("stepping")
-        this.step()
+      this.step()
+      if (this.shouldYield()) {
+        await scheduler.yield()
       }
-      console.debug("yielding, curr frames", this.frames.length)
-      await scheduler.yield()
     }
     this.handleCancelled()
     return this.results[this.curStmt - 1]
@@ -269,7 +265,7 @@ export class Thread {
       this.isProcessingExpr = true
       this.push(`##stmt_${this.curStmt}##`, this.env, expr)
       if (this.options.isTracing) {
-        this.out.pushLevel("trace")
+        this.out.pushLevel(TraceAttrs.block)
         this.out.send(
           mkTraceStart(
             preamble,
@@ -280,7 +276,7 @@ export class Thread {
               : undefined,
           ),
         )
-        this.out.pushLevel("trace-block")
+        this.out.pushLevel(TraceAttrs.steps)
       }
     }
   }
@@ -372,7 +368,7 @@ export class Thread {
           }
         }
         if (this.options.isTracing) {
-          this.out.pushLevel("trace")
+          this.out.pushLevel(TraceAttrs.block)
           this.out.send(mkTraceStart(`Imported library: ${stmt.name}`))
           // we don't pop here because advanceStmt pops for us
         }

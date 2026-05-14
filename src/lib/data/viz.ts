@@ -2,6 +2,8 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html.js'
+import VueRenderer from '../../lpm/renderers/vue.js'
+import PlotRenderer from './PlotRenderer.vue'
 
 import Chart from 'chart.js/auto'
 
@@ -18,7 +20,7 @@ export function datasetQ (v: L.Value): boolean {
   return L.isStructKind(v, 'dataset')
 }
 
-interface Plot extends L.Struct {
+export interface Plot extends L.Struct {
   [L.structKind]: 'plot'
   opts: object
 }
@@ -298,6 +300,8 @@ HTMLRenderer.registerCustomRenderer(plotQ, (v: L.Value): HTMLElement => {
   new Chart(canvas, plot.opts as any)
   return canvas
 })
+
+VueRenderer.registerCustomRenderer(plotQ, () => PlotRenderer)
 
 viz.registerValue('dataset?', datasetQ)
 viz.registerValue('plot?', plotQ)

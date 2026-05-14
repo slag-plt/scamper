@@ -22,7 +22,7 @@ import makeScamperLinter from "../codemirror/linter"
 const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 
 export type EditorStateConfig = {
-  output: HTMLElement
+  output?: HTMLElement
   dirtyAction: () => void
   isReadOnly: boolean
 }
@@ -107,11 +107,10 @@ export function mkFreshEditorState (doc: string, config: EditorStateConfig): Edi
   })
 }
 
-export function mkNoFileEditorState (output: HTMLElement): EditorState {
+export function mkNoFileEditorState (): EditorState {
   return EditorState.create({
     doc: noLoadedFileText,
     extensions: mkExtensions({
-      output,
       dirtyAction: () => { },
       isReadOnly: true
     })

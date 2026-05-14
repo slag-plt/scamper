@@ -2,10 +2,13 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html'
+import VueRenderer from '../../lpm/renderers/vue'
 import OPFSFileSystem from '../../web/fs.js'
 import { SubthreadErrors } from "../../lpm";
+import ReactiveFileRenderer from './ReactiveFileRenderer.vue'
+import ReactiveFileChooserRenderer from './ReactiveFileChooserRenderer.vue'
 
-let fs: OPFSFileSystem | null = null
+export let fs: OPFSFileSystem | null = null
 
 export const lib: L.Library = new L.Library(async () => {
   if (navigator.storage !== undefined) {
@@ -16,7 +19,7 @@ export default lib
 
 ///// Reactive file ////////////////////////////////////////////////////////////
 
-interface ReactiveFile extends L.Struct {
+export interface ReactiveFile extends L.Struct {
   [L.structKind]: 'reactive-file',
   filename: string,
   callback: L.ScamperFn
@@ -70,7 +73,7 @@ HTMLRenderer.registerCustomRenderer(
 
 ///// Reactive file chooser ////////////////////////////////////////////////////
 
-interface ReactiveFileChooser extends L.Struct {
+export interface ReactiveFileChooser extends L.Struct {
   [L.structKind]: 'reactive-file-chooser',
   callback: L.ScamperFn
 }
@@ -120,3 +123,8 @@ function renderReactiveFileChooser (v: any): HTMLElement {
 
 HTMLRenderer.registerCustomRenderer(
   (v) => L.isStructKind(v, 'reactive-file-chooser'), renderReactiveFileChooser)
+
+VueRenderer.registerCustomRenderer(
+  (v) => L.isStructKind(v, 'reactive-file'), () => ReactiveFileRenderer)
+VueRenderer.registerCustomRenderer(
+  (v) => L.isStructKind(v, 'reactive-file-chooser'), () => ReactiveFileChooserRenderer)

@@ -19,26 +19,26 @@ export class Env {
   bindings: Map<string, Value>
   parent?: Env
 
-  constructor (parent?: Env) {
+  constructor(parent?: Env) {
     this.bindings = new Map()
     this.parent = parent
   }
 
-  get (name: string): Value | undefined {
+  get(name: string): Value | undefined {
     return this.bindings.has(name) ?
       this.bindings.get(name) : this.parent?.get(name)
   }
 
-  set (name: string, value: Value): void {
+  set(name: string, value: Value): void {
     this.bindings.set(name, value)
   }
 
-  has (name: string): boolean {
-    return this.bindings.has(name) || 
+  has(name: string): boolean {
+    return this.bindings.has(name) ||
       ((this.parent === undefined) ? false : this.parent.has(name))
   }
 
-  extend (...bindings: [string, Value][]): Env {
+  extend(...bindings: [string, Value][]): Env {
     const ret = new Env(this)
     for (const [name, value] of bindings) {
       ret.set(name, value)
@@ -46,7 +46,7 @@ export class Env {
     return ret
   }
 
-  without (...names: string[]): Env {
+  without(...names: string[]): Env {
     const ret = new Env(this.parent?.without(...names))
     for (const [name, value] of this.bindings) {
       if (!names.includes(name)) {
@@ -56,7 +56,7 @@ export class Env {
     return ret
   }
 
-  pop (): Env {
+  pop(): Env {
     return this.parent === undefined ? new Env() : this.parent
   }
 }
@@ -66,19 +66,19 @@ export class Library {
   lib: [string, Value][]
   initializer: Function | undefined
 
-  constructor (initializer?: Function) {
+  constructor(initializer?: Function) {
     this.lib = []
     this.initializer = initializer
   }
 
-  registerValue (name: string, v: Value) {
+  registerValue(name: string, v: Value) {
     if (typeof v === 'function') {
       Object.defineProperty(v, 'name', { value: name })
     }
     this.lib.push([name, v])
   }
 
-  static fromLibs (...libs: Library[]): Library {
+  static fromLibs(...libs: Library[]): Library {
     const initializer = async () => {
       for (const lib of libs) {
         if (lib.initializer !== undefined) {
@@ -90,7 +90,7 @@ export class Library {
     for (const lib of libs) {
       for (const [name, value] of lib.lib) {
         ret.registerValue(name, value)
-      } 
+      }
     }
     return ret
   }
@@ -150,7 +150,7 @@ export type Vector = Value[]
 export type ScamperFn = Closure | Function
 
 /** Calls a ScamperFn function with the provided arguments */
-export function callScamperFn (fn: ScamperFn, ...args: Value[]): any {
+export function callScamperFn(fn: ScamperFn, ...args: Value[]): any {
   if (typeof fn === 'function') {
     return fn(...args)
   } else {
@@ -205,18 +205,18 @@ export interface Match { tag: 'match', branches: [Pat, Blk][], range: Range }
 export interface Raise { tag: 'raise', msg: string, range: Range }
 export interface PopS { tag: 'pops' }
 export interface PopV { tag: 'popv' }
-export type Ops    = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
-export type Blk    = Ops[]
+export type Ops = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
+export type Blk = Ops[]
 
 export interface Disp { tag: 'disp', expr: Blk, range: Range }
 export interface Import { tag: 'import', name: string, range: Range }
 export interface Define { tag: 'define', name: string, expr: Blk, range: Range }
 export interface StmtExp { tag: 'stmtexp', expr: Blk, range: Range }
-export type Stmt    = Disp | Import | Define | StmtExp
-export type Prog    = Stmt[]
+export type Stmt = Disp | Import | Define | StmtExp
+export type Prog = Stmt[]
 
 export interface PWild { tag: 'pwild', range: Range }
 export interface PLit { tag: 'plit', value: Value, range: Range }
 export interface PVar { tag: 'pvar', name: string, range: Range }
 export interface PCtor { tag: 'pctor', name: string, args: Pat[], range: Range }
-export type Pat    = PWild | PLit | PVar | PCtor
+export type Pat = PWild | PLit | PVar | PCtor
