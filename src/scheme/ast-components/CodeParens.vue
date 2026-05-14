@@ -3,9 +3,12 @@ import { ASTArg } from "../ast"
 import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
 import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 
-defineProps<{ args: ASTArg[] }>()
+const { args } = defineProps<{ args: ASTArg[] }>()
+if (args.length <= 0) console.warn("!! code parens args is null?", args)
 </script>
 
+<!-- if we ever pass in an empty args array to CodeParens, nothing would show up.
+      if this is ever an issue, this is where it would be. -->
 <template v-if="args.length > 0">
   <CodeElement>(</CodeElement>
   <CodeElement v-if="typeof args[0] === 'string'">{{ args[0] }}</CodeElement>
