@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
 
 const appVersion = APP_VERSION
 import ModuleList from "./ModuleList.vue"
@@ -33,9 +33,9 @@ const libs: [string, object][] = [
 
 const selectedModule = ref("prelude")
 
-function selectedLib(): object {
-  return libs.find(([name]) => name === selectedModule.value)?.[1] ?? {}
-}
+const selectedLib = computed(
+  () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
+)
 </script>
 
 <template>
@@ -48,9 +48,14 @@ function selectedLib(): object {
       </div>
       <div class="header-right">
         <a href="https://github.com/slag-plt/scamper"
-          ><i class="fa-brands fa-github"></i></a>
+          ><i class="fa-brands fa-github"></i
+        ></a>
         ⋅
-        <em><a href="https://github.com/slag-plt/scamper/issues">Report an issue</a></em>
+        <em
+          ><a href="https://github.com/slag-plt/scamper/issues"
+            >Report an issue</a
+          ></em
+        >
       </div>
     </div>
     <div class="docs">
@@ -59,7 +64,7 @@ function selectedLib(): object {
         :selected-module="selectedModule"
         @select="selectedModule = $event"
       />
-      <ApiEntries :module-name="selectedModule" :lib="selectedLib()" />
+      <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
     </div>
   </div>
 </template>
@@ -72,8 +77,19 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui,
-    helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial,
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    avenir next,
+    avenir,
+    segoe ui,
+    helvetica neue,
+    helvetica,
+    Cantarell,
+    Ubuntu,
+    roboto,
+    noto,
+    arial,
     sans-serif;
   font-size: 1em;
 }
