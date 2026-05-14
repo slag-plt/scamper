@@ -6,9 +6,11 @@ import ValueRenderer from "./renderers/vue/ValueRenderer.vue"
 defineProps<{ value: TraceOutput }>()
 </script>
 
-<template class="scamper-trace">
-  <CodeElement>{{ "--> " }}</CodeElement>
-  <ValueRenderer :value="value.output" />
+<template>
+  <div class="scamper-trace">
+    <CodeElement>{{ "--> " }}</CodeElement>
+    <ValueRenderer :value="value.output" />
+  </div>
 </template>
 
 <style scoped></style>

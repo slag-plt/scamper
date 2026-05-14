@@ -5,9 +5,11 @@ import ValueRenderer from "./renderers/vue/ValueRenderer.vue"
 defineProps<{ value: TraceStart }>()
 </script>
 
-<template class="scamper-trace-start">
-  {{ `${value.preamble} ` }}
-  <ValueRenderer v-if="value.output != null" :value="value.output" />
+<template>
+  <div class="scamper-trace-start">
+    {{ `${value.preamble} ` }}
+    <ValueRenderer v-if="value.output != null" :value="value.output" />
+  </div>
 </template>
 
 <style scoped></style>
