@@ -5,29 +5,12 @@ import TextRenderer from "../../lpm/renderers/text"
 const { builders: { group, indent, join, line, hardline } } = doc
 
 // ---- Type predicates -------------------------------------------------------
-//
-// With Printer<any>, path.node is typed as `any` at the Prettier API boundary.
-// We immediately widen to `unknown` and narrow with type predicates so that
-// all field accesses below are fully type-safe — `any` never escapes into
-// our own logic.
-//
-// Note: Prettier's path.call / path.map overloads require CallProperties<T>
-// to include the key. For union types this collapses to `never` (keyof union
-// = intersection of keys), making those overloads unreachable without `any`.
-// Printer<any> gives CallProperties<any> = string | number | symbol, which
-// lets every string key resolve against the typed overload rather than the
-// unreachable PropertyKey fallback.
 
 export function isSchemeNode(v: unknown): v is A.SchemeNode {
   if (typeof v !== "object" || v === null) return false
   if (!("tag" in v)) return false
   return typeof v.tag === "string"
 }
-
-// Intermediate structures inside let/let* bindings, match branches, and cond
-// branches. These are not SchemeNodes but contain SchemeNode children. The
-// path.map callback receives AstPath<any>; we widen .node to unknown and
-// narrow with these predicates before accessing any fields.
 
 function isLetBinding(v: unknown): v is { name: string; value: A.Exp } {
   return typeof v === "object" && v !== null && "name" in v && "value" in v

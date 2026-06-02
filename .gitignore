@@ -124,3 +124,4 @@ src/**/*.js
 src/**/*.js.map
 
 .claude
+.zed
