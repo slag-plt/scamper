@@ -23,6 +23,7 @@ export const isStructKind = <T extends L.Struct>(v: L.Value, k: string): v is T 
 
 export const isPair = (v: L.Value): v is L.Pair => isStructKind<L.Pair>(v, 'pair')
 export const isList = (v: L.Value): v is L.List => v === null || isStructKind<L.Cons>(v, 'cons')
+export const isComment = (v: L.Value): v is L.Comment => isTaggedObject(v) && v[L.scamperTag] === 'comment'
 
 ///// Constructors /////////////////////////////////////////////////////////////
 
@@ -59,6 +60,7 @@ export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
 }
 
 export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
+export const mkComment = (text: string): L.Comment => ({ [L.scamperTag]: 'comment', value: text })
 
 // Op constructors
 export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({ tag: 'lit', value, range })

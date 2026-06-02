@@ -121,7 +121,7 @@ export const SchemePrinter: Printer = {
         ])
 
       case "match": {
-        const branchDocs: Doc[] = path.map((branchPath: AstPath<any>) => {
+        const branchDocs: Doc[] = path.map((branchPath: AstPath) => {
           const raw: unknown = branchPath.node
           if (!isMatchBranch(raw)) return ""
           return group([
@@ -144,7 +144,7 @@ export const SchemePrinter: Printer = {
         return `'${TextRenderer.render(node.value)}`
 
       case "let*": {
-        const bindingDocs: Doc[] = path.map((bindingPath: AstPath<any>) => {
+        const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node
           if (!isLetBinding(raw)) return ""
           return group(["[", raw.name, " ", bindingPath.call(print, "value"), "]"])
