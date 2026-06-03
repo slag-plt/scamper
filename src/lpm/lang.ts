@@ -143,7 +143,7 @@ export interface Sym extends TaggedObject {
 export interface Struct extends TaggedObject {
   [scamperTag]: "struct"
   [structKind]: string
-  [key: string]: any
+  [key: string]: Value
   [key: number]: never
 }
 
@@ -151,7 +151,8 @@ export interface Struct extends TaggedObject {
 export type Vector = Value[]
 
 /** A Scamper function is either a closure or a raw Javascript function. */
-export type ScamperFn = Closure | Function
+export type JsFunction = ((...args: Value[]) => Value)
+export type ScamperFn = Closure | JsFunction
 
 /** Calls a ScamperFn function with the provided arguments */
 export function callScamperFn(fn: ScamperFn, ...args: Value[]): any {

@@ -5,10 +5,10 @@ import { Fiber } from "./lpm/fiber"
 import { compile } from "./scheme"
 
 interface ExecutionConfig {
-  src: string;
-  out: OutputChannel;
-  err: ErrorChannel;
-  isTracing?: boolean; // whether to enable tracing of execution steps
+  src: string
+  out: OutputChannel
+  err: ErrorChannel
+  isTracing?: boolean // whether to enable tracing of execution steps
 }
 
 export class ScamperInstance {
@@ -43,30 +43,41 @@ export class ScamperInstance {
     return lib
   }
 
-  public async execute({src, out, err, isTracing}: ExecutionConfig): Promise<void> {
+  public async execute({
+    src,
+    out,
+    err,
+    isTracing,
+  }: ExecutionConfig): Promise<void> {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
-      throw new ScamperError("Runtime", `Failed to compile source code: ${err.errors.join("\n")}`)
+      throw new ScamperError(
+        "Runtime",
+        `Failed to compile source code: ${err.errors.join("\n")}`,
+      )
     }
 
     // make new fiber with prelude as initial environment
     const fiber = new Fiber(compiled)
     await fiber.loadLib("prelude")
-    
+
+    // TODO: do actual scheduling
+    // this should just push to a queue and our scamper init? will take care of it
+
     // execute fiber until it's done
     while (!fiber.isDone) {
       try {
         // skip minor steps
-        if (!await fiber.step()) continue
-        
+        if (!(await fiber.step())) continue
+
         // there are two types of major steps:
         // 1. steps we always want to output, and
         // 2. steps that we only want to output when tracing.
         // ideally, we always output the final result of executing a top-level statement.
         // so, we address the first type of major step by checking if the fiber is currently processing a top-level statement (i.e. not in the middle of processing a Blk statement).
         if (!fiber.isProcessingBlk) {
-          out.send(fiber.lastResult)  
+          out.send(fiber.lastResult)
         }
         // for the tracing kind of major step, we will reraise the state of the fiber back to an expression.
         else if (isTracing) {
@@ -77,7 +88,12 @@ export class ScamperInstance {
           err.report(e)
           return
         }
-        err.report(new ScamperError("Runtime", `Unexpected error: ${e instanceof Error ? e.message : String(e)}`))
+        err.report(
+          new ScamperError(
+            "Runtime",
+            `Unexpected error: ${e instanceof Error ? e.message : String(e)}`,
+          ),
+        )
       }
     }
   }
