@@ -7,7 +7,7 @@ import {
   StmtExpHandler,
 } from "./handlers/stmt-handlers"
 import { Frame } from "./thread"
-import { ScamperError } from "./error"
+import { ICE, ScamperError } from "./error"
 import {
   ApHandler,
   ClsHandler,
@@ -21,14 +21,13 @@ import {
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
 export class Fiber {
-  isDone = false
   topLevelEnv: Env = new Env()
+  frames: Frame[] = []
   lastResult: Value | null = null
 
-  #scamperInstance: ScamperInstance = ScamperInstance.getInstance()
+  #scamperInstance: ScamperInstance = ScamperInstance.instance
   #prog: Stmt[]
   #currStmtIdx = 0
-  #frames: Frame[] = []
   #isProcessingBlk = false
   #maxCallStackDepth = 10_000
 
@@ -41,8 +40,11 @@ export class Fiber {
    * If the completed step also completes a statement, it will move on to the next statement.
    * @returns true if the step is a major step of execution, false if it's a minor step (e.g. variable loading)
    */
-  async step() {
-    const currStmt = this.#prog[this.#currStmtIdx]
+  async step(): Promise<boolean> {
+    const currStmt = this.#prog.at(this.#currStmtIdx)
+    if (!currStmt) {
+      throw new ICE("Fiber.step", "Attempted to step but no statements remain!")
+    }
     switch (currStmt.tag) {
       case "import":
         return ImportHandler(currStmt, this)
@@ -57,12 +59,15 @@ export class Fiber {
 
   /* Statement execution helper functions */
   advanceStmt() {
-    this.#frames = []
+    this.frames = []
     this.#currStmtIdx++
     this.#isProcessingBlk = false
   }
   get isProcessingBlk() {
     return this.#isProcessingBlk
+  }
+  get isDone() {
+    return this.#currStmtIdx >= this.#prog.length
   }
   // Populate the stack frames for a Blk statement, and set the isProcessingBlk flag to true
   beginProcessingBlk(expr: Blk) {
@@ -80,59 +85,98 @@ export class Fiber {
 
   /* Stack frame helper functions */
   get currentFrame() {
-    return this.#frames.at(-1)
+    return this.frames.at(-1)
   }
   pushFrame(frame: Frame) {
-    if (this.#frames.length >= this.#maxCallStackDepth) {
-      throw new ScamperError("Runtime", `Max call stack depth ${this.#maxCallStackDepth.toString()} exceeded!`)
+    if (this.frames.length >= this.#maxCallStackDepth) {
+      throw new ScamperError(
+        "Runtime",
+        `Max call stack depth ${this.#maxCallStackDepth.toString()} exceeded!`,
+      )
     }
-    this.#frames.push(frame)
+    this.frames.push(frame)
   }
   popFrame() {
-    this.#frames.pop()
-  }
-  hasFramesRemaining() {
-    return this.#frames.length > 0
+    this.frames.pop()
   }
   replaceFrame(frame: Frame) {
     this.popFrame()
     this.pushFrame(frame)
+  }
+  hasFramesRemaining() {
+    return this.frames.length > 0
+  }
+  /**
+   * @returns the output of the current frame
+   * @throws if the frame was completed in a bad state
+   */
+  private completeCurrentFrame() {
+    const currFrame = this.currentFrame
+    if (!currFrame) {
+      throw new ICE("Fiber.completeCurrentFrame", "Attempted to complete a frame when none remain")
+    }
+    if (currFrame.values.length !== 1) {
+      throw new ICE(
+        "Fiber.stepFrame",
+        `Frame must finish with exactly one value on the stack, finished with ${currFrame.values.length.toString()} instead`,
+      )
+    }
+    const ret = currFrame.values.pop()
+    this.popFrame()
+    if (this.hasFramesRemaining()) {
+      this.currentFrame.values.push(ret)
+    } else {
+      this.lastResult = ret
+    }
   }
   /**
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step
    */
   stepFrame(): boolean {
-    const currFrame = this.currentFrame
-    if (!currFrame)
+    if (!this.currentFrame) {
       throw new ScamperError(
         "Runtime",
         "Attempted to step stack frame when none exist!",
       )
-    const currOp = currFrame.popInstr()
-    // TODO: switch on operation type and execute accordingly
+    }
+
+    // handle op and save if it was a major step or not
+    const currOp = this.currentFrame.popInstr()
+    let isMajorStep: boolean
     switch (currOp.tag) {
       case "lit":
-        return LitHandler(currOp, this.currentFrame, this)
+        isMajorStep = LitHandler(currOp, this.currentFrame, this)
+        break
       case "var":
-        return VarHandler(currOp, this.currentFrame, this)
+        isMajorStep = VarHandler(currOp, this.currentFrame, this)
+        break
       case "ctor":
-        return CtorHandler(currOp, this.currentFrame, this)
+        isMajorStep = CtorHandler(currOp, this.currentFrame, this)
+        break
       case "cls":
-        return ClsHandler(currOp, this.currentFrame, this)
+        isMajorStep = ClsHandler(currOp, this.currentFrame, this)
+        break
       case "ap":
-        return ApHandler(currOp, this.currentFrame, this)
+        isMajorStep = ApHandler(currOp, this.currentFrame, this)
+        break
       case "match":
-        return MatchHandler(currOp, this.currentFrame, this)
+        isMajorStep = MatchHandler(currOp, this.currentFrame, this)
+        break
       case "popv":
-        return PopVHandler(currOp, this.currentFrame, this)
+        isMajorStep = PopVHandler(currOp, this.currentFrame, this)
+        break
       // TODO: the following instructions are useless
       // should be removed later
       case "raise":
-        return false
       case "pops":
-        return false
+        throw new ICE("Fiber.stepFrame", `${currOp.tag} is deprecated!`)
     }
+
+    if (this.currentFrame.isFinished()) {
+      this.completeCurrentFrame()
+    }
+    return isMajorStep
   }
 
   /* Library importing helper functions */

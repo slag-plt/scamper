@@ -24,17 +24,23 @@ export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   return true
 }
 export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
-  fiber.beginProcessingBlk(stmt.expr)
+  if (!fiber.isProcessingBlk) {
+    fiber.beginProcessingBlk(stmt.expr)
+    return false
+  }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
   }
   // execute should know that lastResult is the value to be printed, and print it to the output channel
   // so, do nothing
-  fiber.advanceStmt() // pops trace
+  fiber.advanceStmt()
   return true
 }
 export const StmtExpHandler: StatementHandler<"stmtexp"> = (stmt, fiber) => {
-  fiber.beginProcessingBlk(stmt.expr)
+  if (!fiber.isProcessingBlk) {
+    fiber.beginProcessingBlk(stmt.expr)
+    return false
+  }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
   }

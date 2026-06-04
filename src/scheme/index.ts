@@ -6,12 +6,16 @@ import { read } from './reader.js'
 import { scopeCheckProgram } from './scope.js'
 import { parseProgram } from './parser.js'
 import { sugarExpr } from './sugarer.js'
-import { raiseThread } from './raise.js'
-import { Raiser } from '../lpm/raiser.js'
+import { raiseFiber, raiseThread } from './raise.js'
+import { FiberRaiser, Raiser } from '../lpm/raiser.js'
 import { Exp } from './ast.js'
 
 export const raiser: Raiser<Exp> = {
   raise: (t) => sugarExpr(raiseThread(t)),
+  equals: L.equals
+}
+export const fiberRaiser: FiberRaiser<Exp> = {
+  raise: (fiber) => sugarExpr(raiseFiber(fiber)),
   equals: L.equals
 }
 

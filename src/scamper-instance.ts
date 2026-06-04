@@ -2,7 +2,8 @@
 import builtinLibs from "./lib"
 import { ErrorChannel, Library, OutputChannel, ScamperError } from "./lpm"
 import { Fiber } from "./lpm/fiber"
-import { compile } from "./scheme"
+import { mkTraceOutput } from "./lpm/trace"
+import { compile, fiberRaiser } from "./scheme"
 
 interface ExecutionConfig {
   src: string
@@ -14,7 +15,7 @@ interface ExecutionConfig {
 export class ScamperInstance {
   // singleton structure
   static #instance: ScamperInstance | null
-  public static getInstance(): ScamperInstance {
+  public static get instance(): ScamperInstance {
     ScamperInstance.#instance ??= new ScamperInstance()
     return ScamperInstance.#instance
   }
@@ -52,49 +53,18 @@ export class ScamperInstance {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
-      throw new ScamperError(
-        "Runtime",
-        `Failed to compile source code: ${err.errors.join("\n")}`,
-      )
+      return
     }
 
     // make new fiber with prelude as initial environment
     const fiber = new Fiber(compiled)
-    await fiber.loadLib("prelude")
+    // TODO: we can't load prelude yet until the rewrite of the library as a module
+    // await fiber.loadLib("prelude")
 
     // TODO: do actual scheduling
     // this should just push to a queue and our scamper init? will take care of it
-
-    // execute fiber until it's done
-    while (!fiber.isDone) {
-      try {
-        // skip minor steps
-        if (!(await fiber.step())) continue
-
-        // there are two types of major steps:
-        // 1. steps we always want to output, and
-        // 2. steps that we only want to output when tracing.
-        // ideally, we always output the final result of executing a top-level statement.
-        // so, we address the first type of major step by checking if the fiber is currently processing a top-level statement (i.e. not in the middle of processing a Blk statement).
-        if (!fiber.isProcessingBlk) {
-          out.send(fiber.lastResult)
-        }
-        // for the tracing kind of major step, we will reraise the state of the fiber back to an expression.
-        else if (isTracing) {
-          // TODO: something like out.send(mkTraceOutput(provider.raise(fiber)))
-        }
-      } catch (e) {
-        if (e instanceof ScamperError) {
-          err.report(e)
-          return
-        }
-        err.report(
-          new ScamperError(
-            "Runtime",
-            `Unexpected error: ${e instanceof Error ? e.message : String(e)}`,
-          ),
-        )
-      }
-    }
+    void fiber
+    void out
+    void isTracing
   }
 }
