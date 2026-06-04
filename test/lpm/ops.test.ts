@@ -29,17 +29,17 @@ describe("basic ops", () => {
     out = new LoggingChannel(false, false)
   })
 
-  async function expectSuccessfulExecution(fiber: Fiber) {
+  async function expectSuccessfulExec(fiber: Fiber) {
     await expect(testExecute(fiber, out)).resolves.not.toThrow()
   }
-  async function expectFailedExecution(fiber: Fiber) {
+  async function expectFailedExec(fiber: Fiber) {
     await expect(testExecute(fiber, out)).rejects.toThrow()
   }
 
   const litCases: Value[] = [42, "hi", false, null]
   test.for(litCases)("lit %o", async (lit) => {
     const fiber = makeTestFiber([U.mkDisp([U.mkLit(lit)])])
-    await expectSuccessfulExecution(fiber)
+    await expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([lit])
   })
 
@@ -53,13 +53,13 @@ describe("basic ops", () => {
     test.for(varCases)("exists: %s -> %o", async ([name, value]) => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar(name)])])
       fiber.topLevelEnv.set(name, value)
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([value])
     })
 
     test("doesn't exist", async () => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar("test-bad-var")])])
-      await expectFailedExecution(fiber)
+      await expectFailedExec(fiber)
     })
   })
 
@@ -71,7 +71,7 @@ describe("basic ops", () => {
         U.mkCtor("test-ctor", ["a", "b"]),
       ]),
     ])
-    await expectSuccessfulExecution(fiber)
+    await expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(
       U.mkStruct("test-ctor", ["a", "b"], ["test", 2]),
     )
@@ -82,7 +82,7 @@ describe("basic ops", () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkCls(["x"], clsBody, "add-one"), U.mkLit(1), U.mkAp(1)]),
     ])
-    await expectSuccessfulExecution(fiber)
+    await expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(2)
   })
 
@@ -90,7 +90,7 @@ describe("basic ops", () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkVar("+"), U.mkLit(3), U.mkLit(4), U.mkAp(2)]),
     ])
-    await expectSuccessfulExecution(fiber)
+    await expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([7])
   })
 
@@ -107,7 +107,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toEqual(["matched"])
     })
 
@@ -123,7 +123,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toEqual(["other one"])
     })
 
@@ -139,7 +139,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectFailedExecution(fiber)
+      await expectFailedExec(fiber)
     })
 
     test("w/ pvar", async () => {
@@ -154,7 +154,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([15])
     })
 
@@ -170,7 +170,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual(["always matches"])
     })
 
@@ -197,7 +197,7 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExecution(fiber)
+      await expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([3])
     })
   })
@@ -231,7 +231,7 @@ describe("basic ops", () => {
       U.mkDefine("fact", [factorialCls]),
       U.mkDisp([U.mkVar("fact"), U.mkLit(5), U.mkAp(1)]),
     ])
-    await expectSuccessfulExecution(fiber)
+    await expectSuccessfulExec(fiber)
     // TODO: the test executor outputs define statements
     expect(out.log).toStrictEqual([120])
   })
