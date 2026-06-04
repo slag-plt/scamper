@@ -7,6 +7,7 @@ import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
 import "scheduler-polyfill"
+//import * as D from "./draw.ts"
 
 /** The type of runtime options. */
 export interface Options {
@@ -15,6 +16,7 @@ export interface Options {
   isTracing: boolean
   raisingTarget: string
   maxStepsPerYield: number
+  isDrawing: boolean
 }
 
 export const defaultOptions: Options = {
@@ -23,6 +25,7 @@ export const defaultOptions: Options = {
   isTracing: false,
   raisingTarget: "scheme",
   maxStepsPerYield: 100_000,
+  isDrawing: false
 }
 
 export function cloneOptions(opt: Options): Options {
@@ -153,7 +156,10 @@ export class Thread {
         this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
+        console.log(this.results[this.curStmt])
+        //draw(this)
       }
+      
     }
   }
 
