@@ -89,11 +89,13 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
 
 export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
   const scrutinee = currFrame.values.pop()
-  if (!scrutinee) {
+  if (scrutinee === undefined) {
     throw new ICE("Fiber.MatchHandler", "Match requires at least one value")
   }
   // we will always step match to abide by a small work quantum
-  const currBranch = op.branches.shift()
+  // TODO: we need to figure out if we want to keep this, hack fix for now
+  op.currBranchIdx ??= 0;
+  const currBranch = op.branches.at(op.currBranchIdx++)
   if (!currBranch) {
     throw new ScamperError("Runtime", `Inexhaustive pattern match failure`)
   }
@@ -105,6 +107,7 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
     currFrame.values.push(scrutinee)
   } else {
     currFrame.env = currFrame.env.extend(...bindings)
+    op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
   return true

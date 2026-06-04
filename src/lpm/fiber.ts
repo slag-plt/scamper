@@ -69,6 +69,17 @@ export class Fiber {
   get isDone() {
     return this.#currStmtIdx >= this.#prog.length
   }
+  // TODO: this may be unnecessary later
+  get lastStatement(): Stmt {
+    const stmt = this.#prog.at(this.#currStmtIdx - 1)
+    if (!stmt) {
+      throw new ICE(
+        "Fiber.lastStatement",
+        `Attempted to get the last completed statement in fiber when none exist at index ${(this.#currStmtIdx - 1).toString()}`,
+      )
+    }
+    return stmt
+  }
   // Populate the stack frames for a Blk statement, and set the isProcessingBlk flag to true
   beginProcessingBlk(expr: Blk) {
     this.#isProcessingBlk = true
@@ -113,7 +124,10 @@ export class Fiber {
   private completeCurrentFrame() {
     const currFrame = this.currentFrame
     if (!currFrame) {
-      throw new ICE("Fiber.completeCurrentFrame", "Attempted to complete a frame when none remain")
+      throw new ICE(
+        "Fiber.completeCurrentFrame",
+        "Attempted to complete a frame when none remain",
+      )
     }
     if (currFrame.values.length !== 1) {
       throw new ICE(
