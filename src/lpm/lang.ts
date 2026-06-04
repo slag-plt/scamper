@@ -246,13 +246,10 @@ export interface Raise {
   msg: string
   range: Range
 }
-export interface PopS {
-  tag: "pops"
-}
 export interface PopV {
   tag: "popv"
 }
-export type Ops = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
+export type Ops = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopV
 export type Blk = Ops[]
 
 export interface Disp {

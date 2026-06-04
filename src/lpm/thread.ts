@@ -662,11 +662,6 @@ export class Thread {
           break
         }
 
-        case "pops": {
-          current.env = current.env.pop()
-          break
-        }
-
         case "popv": {
           current.values.pop()
           break

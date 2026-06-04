@@ -169,7 +169,6 @@ export class Fiber {
       // TODO: the following instructions are useless
       // should be removed later
       case "raise":
-      case "pops":
         throw new ICE("Fiber.stepFrame", `${currOp.tag} is deprecated!`)
     }
 
