@@ -101,6 +101,8 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
   const bindings = pMatch(scrutinee, pat)
   if (!bindings) {
     currFrame.pushBlk([op])
+    // make sure to push the scrutinee back for the next branch!
+    currFrame.values.push(scrutinee)
   } else {
     currFrame.env = currFrame.env.extend(...bindings)
     currFrame.pushBlk(blk)

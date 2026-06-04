@@ -17,11 +17,13 @@ const env = (() => {
 
 function makeMachine (prog: L.Prog): [L.Thread, LoggingChannel, LoggingChannel] {
   const out = new LoggingChannel(false, false)
+  const opts = L.cloneOptions(L.defaultOptions)
+  opts.stepMatch = true
   const machine = new L.Thread(
     'test',
     env,
     prog,
-    L.defaultOptions,
+    opts,
     builtinLibs,
     out,
     out,
