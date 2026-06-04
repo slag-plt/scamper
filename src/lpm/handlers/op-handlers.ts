@@ -108,7 +108,7 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
   return true
 }
 
-export const PopVHandler: OpHandler<"popv"> = (op, currFrame) => {
+export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   currFrame.values.pop()
   return true
 }
