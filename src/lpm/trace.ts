@@ -82,3 +82,39 @@ VueRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, "trace-output"),
   () => TraceOutputRenderer,
 )
+
+export interface DrawOutput extends L.Struct {
+  [L.structKind]: "draw-output"
+  output: L.Value
+}
+
+export function mkDrawOutput(output: L.Value): DrawOutput {
+  return U.mkStruct("draw-output", ["output"], [output]) as DrawOutput
+}
+
+TextRenderer.registerCustomRenderer(
+  (v) => U.isStructKind(v, "draw-output"),
+  (v) => {
+    return `${TextRenderer.render((v as DrawOutput).output)}`
+  },
+)
+
+HTMLRenderer.registerCustomRenderer(
+  (v) => U.isStructKind(v, "draw-output"),
+  (v) => {
+    const trace = v as DrawOutput
+    const container = document.createElement("div")
+    container.classList.add("scamper-draw")
+
+    const prompt = document.createElement("code")
+    prompt.textContent = "--> "
+    container.appendChild(prompt)
+
+    container.appendChild(HTMLRenderer.render(trace.output))
+    return container
+  },
+)
+VueRenderer.registerCustomRenderer(
+  (v) => U.isStructKind(v, "draw-output"),
+  () => TraceOutputRenderer,
+)

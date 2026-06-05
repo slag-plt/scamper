@@ -4,6 +4,7 @@ import { isArray, isList, isPair, isStruct, Value } from "../index"
 import CodeElement from "./vue/components/CodeElement.vue"
 import VectorRenderer from "./vue/components/VectorRenderer.vue"
 import ListRenderer from "./vue/components/ListRenderer.vue"
+import ListDrawer from "./vue/components/ListDrawer.vue"
 import PairRenderer from "./vue/components/PairRenderer.vue"
 import { simpleRenderers } from "./vue/simple-renderers"
 import StructRenderer from "./vue/components/StructRenderer.vue"
@@ -51,6 +52,11 @@ const listStrategy: VueStrategy = {
   type: "vue",
   renderer: ListRenderer,
 }
+const listDrawStrategy: VueStrategy = {
+  predicate: (v) => isList(v),
+  type: "vue",
+  renderer: ListDrawer,
+}
 const pairStrategy: VueStrategy = {
   predicate: (v) => isPair(v),
   type: "vue",
@@ -66,7 +72,14 @@ const standardStrategies: Strategy[] = [
   ...simpleRenderers,
   vectorStrategy,
   listStrategy,
+  listDrawStrategy,
   pairStrategy,
+  htmlElementStrategy,
+]
+
+const drawStrategies: Strategy[] = [
+  ...simpleRenderers,
+  listDrawStrategy,
   htmlElementStrategy,
 ]
 
@@ -86,10 +99,19 @@ class _VueRenderer extends Renderer<Component> {
     return standardStrategies.find((s) => s.predicate(value))
   }
 
+  getDrawStrategy(value: Value): Strategy | undefined {
+    return drawStrategies.find((s) => s.predicate(value))
+  }
+
   render(value: Value): Component {
     const strategy = this.getStrategy(value)
     if (strategy) {
       return strategy.type === "vue" ? strategy.renderer : DOMElementRenderer
+    }
+
+    const drawStrategy = this.getDrawStrategy(value)
+    if (drawStrategy) {
+      return drawStrategy.type === "vue" ? drawStrategy.renderer : DOMElementRenderer
     }
 
     // there may be a custom renderer for this value

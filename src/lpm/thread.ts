@@ -2,12 +2,12 @@ import { ICE, ScamperError, SubthreadErrors } from "./error.js"
 import * as L from "./lang.js"
 import { OutputChannel, ErrorChannel } from "./output/index.js"
 import { Raiser } from "./raiser.js"
-import { mkTraceStart, mkTraceOutput } from "./trace.js"
+import { mkTraceStart, mkTraceOutput, mkDrawOutput } from "./trace.js"
 import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
 import "scheduler-polyfill"
-//import * as D from "./draw.ts"
+//import { drawVectorHTML } from "./draw.js"
 
 /** The type of runtime options. */
 export interface Options {
@@ -156,7 +156,10 @@ export class Thread {
         this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
+        this.out.send(mkDrawOutput(this.results[this.curStmt]))
         console.log(this.results[this.curStmt])
+        //this.out.send(drawVectorHTML(this.curStmt))
+
         //draw(this)
       }
       

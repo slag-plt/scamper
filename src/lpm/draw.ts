@@ -5,32 +5,36 @@ import HTMLRenderer from "./renderers/html.js"
 import TextRenderer from "./renderers/text"
 import VueRenderer from "./renderers/vue"
 
+
+
 function vectorHeight(vec: any, index: number = 0): number {
     let height = 1;
     for(let i = index; i < vec.length; i++) {
       let e = vec[i]
       if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
         height = height + 1
-      } else if(Value.isPair(e)) {
-        if(e.isList) {
-          height = height + listHeight(e) + 1
-        } else {
-          height = height + pairHeight(e)
-        }
-      } else if(Value.typeOf(e) === 'vector') {
-        height = height + vectorHeight(e, 0) 
-      } else if (Value.isStruct(e)) {
-        height = height + structHeight(e)
-        height = height + 1
-      }
+      } 
+      // else if(Value.isPair(e)) {
+      //   if(e.isList) {
+      //     height = height + listHeight(e) + 1
+      //   } else {
+      //     height = height + pairHeight(e)
+      //   }
+      // } else if(Value.typeOf(e) === 'vector') {
+      //   height = height + vectorHeight(e, 0) 
+      // } else if (Value.isStruct(e)) {
+      //   height = height + structHeight(e)
+      //   height = height + 1
+      // }
     }
     return height + 3
   }
   
+  import { Vector } from "./index"
   //ASCII
-  function drawVector(vector: any): any {
-    let str = ''
-    vector.forEach((e: any) => {
+  export function drawVector(vector: Vector): any {
+    let str = vector
+    /*vector?.forEach((e: any) => {
       if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
         str = str + '[' + e + ']'
       } else if (Value.isPair(e)) {
@@ -47,7 +51,7 @@ function vectorHeight(vec: any, index: number = 0): number {
     return str
   }
   
-  function drawVectorHTML(vector: any, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
+  export function drawVectorHTML(vector: any, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
     //Container for html elements
     let div = document.createElement('div');
     div.ariaLabel = 'object type vector';
@@ -75,19 +79,19 @@ function vectorHeight(vec: any, index: number = 0): number {
       box.className = 'vector-box';
       box.tabIndex = 0;
       box.id = `${nesting}:${i}:${parent}:${imgID} val`
-      box.addEventListener('keydown', (e) => {
-        keyHandler(e.key, box, 'vector', imgID);
-      })
-      if(e.isList) {
-        box.ariaDescription = `vector index ${indexVal} contains a list`
-        box.ariaLabel = `vector index ${indexVal} contains a list`
-      } else if(Value.typeOf(e) === 'vector') {
-        box.ariaDescription = `vector index ${indexVal} contains a vector`
-        box.ariaLabel = `vector index ${indexVal} contains a vector`
-      } else {
-        box.ariaDescription = `vector index ${indexVal} contains ${e.toString()}`
-        box.ariaLabel = `vector index ${indexVal} contains ${e.toString()}`
-      }
+      // box.addEventListener('keydown', (e) => {
+      //   keyHandler(e.key, box, 'vector', imgID);
+      // })
+      // if(e.isList) {
+      //   box.ariaDescription = `vector index ${indexVal} contains a list`
+      //   box.ariaLabel = `vector index ${indexVal} contains a list`
+      // } else if(Value.typeOf(e) === 'vector') {
+      //   box.ariaDescription = `vector index ${indexVal} contains a vector`
+      //   box.ariaLabel = `vector index ${indexVal} contains a vector`
+      // } else {
+      //   box.ariaDescription = `vector index ${indexVal} contains ${e.toString()}`
+      //   box.ariaLabel = `vector index ${indexVal} contains ${e.toString()}`
+      // }
       col.appendChild(box);
   
       //creates the arrow element for the vector
@@ -111,23 +115,23 @@ function vectorHeight(vec: any, index: number = 0): number {
           val2.textContent = e + '';
         }
         col.appendChild(val2);
-      } else if (Value.isPair(e)) {
-        if(e.isList) {
-          col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
-        } else {
-          col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
-        }
-      } else if (Value.typeOf(e) === 'vector') {
-        col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
-      } else if (Value.isStruct(e)) {
-        col.appendChild(drawStructHTML(e))
-      }
+      } //else if (Value.isPair(e)) {
+      //   if(e.isList) {
+      //     col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
+      //   } else {
+      //     col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
+      //   }
+      // } else if (Value.typeOf(e) === 'vector') {
+      //   col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
+      // } else if (Value.isStruct(e)) {
+      //   col.appendChild(drawStructHTML(e))
+      // }
   
       div.appendChild(col);
     })
     return div
   }
-  
+  /*
   function lengthList(lst: any, count: number = 0) {
     if(lst.snd === null) {
       return count + 1
@@ -586,7 +590,7 @@ function vectorHeight(vec: any, index: number = 0): number {
       row.style.display = 'flex'
       row.style.flexDirection = 'row'
   
-      if(/*countThings > 1 && countThings !== numberOfElements) {
+      if(countThings > 1 && countThings !== numberOfElements) {
         const line = document.createElement('div');
         line.className = 'struct-line';
         row.appendChild(line!);
@@ -872,4 +876,4 @@ function vectorHeight(vec: any, index: number = 0): number {
     }
     
   }
-  */
+    */
