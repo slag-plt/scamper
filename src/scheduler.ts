@@ -14,7 +14,7 @@ export interface SchedulerTask {
 
 export class Scheduler {
   #tasks: SchedulerTask[] = []
-  #isRunning = true
+  #isRunning = false
   // allows for resuming execution
   #currTaskIdx = 0
   #timeQuantum = 1000 / DEFAULT_REFRESH_RATE
@@ -25,7 +25,7 @@ export class Scheduler {
   async init(): Promise<this> {
     this.#timeQuantum = 1000 / (await this.#getRefreshRate())
     // we just start the execution and don't wait for it so we don't block the event loop
-    void this.#execute()
+    this.resumeExecution()
     return this
   }
 
@@ -36,6 +36,9 @@ export class Scheduler {
     this.#isRunning = false
   }
   resumeExecution() {
+    if (this.#isRunning) {
+      return
+    }
     this.#isRunning = true
     void this.#execute()
   }
