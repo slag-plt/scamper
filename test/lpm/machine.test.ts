@@ -4,7 +4,7 @@ import * as U from '../../src/lpm/util.js'
 import { LoggingChannel } from "../../src/lpm/output"
 
 // A stub builtin libraries map for testing purposes
-const builtinLibs = new Map<string, L.Library>()
+const builtinLibs = new Map<string, L.Module>()
 
 const env = (() => {
   const ret = new L.Env()

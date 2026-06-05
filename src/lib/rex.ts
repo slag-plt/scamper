@@ -2,7 +2,7 @@ import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
 
-const Re: L.Library = new L.Library()
+const Re: L.Module = new L.Module()
 
 // From: https://simonwillison.net/2006/Jan/20/escape/
 // TODO: replace with RegEx.escape once it is commonly supported

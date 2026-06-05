@@ -6,7 +6,7 @@ import VueRenderer from "../lpm/renderers/vue.js";
 import SampleRenderer from "./SampleRenderer.vue";
 import AudioPipelineRenderer from "./AudioPipelineRenderer.vue";
 
-const Audio: L.Library = new L.Library();
+const Audio: L.Module = new L.Module();
 
 function throwError(msg: string): never {
   throw new L.ScamperError("Runtime", msg);

@@ -10,7 +10,7 @@ import ReactiveFileChooserRenderer from './ReactiveFileChooserRenderer.vue'
 
 export let fs: OPFSFileSystem | null = null
 
-export const lib: L.Library = new L.Library(async () => {
+export const lib: L.Module = new L.Module(async () => {
   if (navigator.storage !== undefined) {
     fs = await OPFSFileSystem.create()
   }

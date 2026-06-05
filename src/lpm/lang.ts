@@ -65,8 +65,10 @@ export class Env {
 }
 
 type InitializerFunction = () => Promise<void>
-/** A library is a collection of importable top-level definitions. */
-export class Library {
+/** A module is a collection of importable top-level definitions. */
+export class Module {
+  // TODO: add the name of the module as a field
+  // TODO: will need to add additional module metadata here
   lib: [string, Value][]
   initializer?: InitializerFunction
 
@@ -82,7 +84,7 @@ export class Library {
     this.lib.push([name, v])
   }
 
-  static fromLibs(...libs: Library[]): Library {
+  static fromModules(...libs: Module[]): Module {
     const initializer = async () => {
       for (const lib of libs) {
         if (lib.initializer !== undefined) {
@@ -90,7 +92,7 @@ export class Library {
         }
       }
     }
-    const ret = new Library(initializer)
+    const ret = new Module(initializer)
     for (const lib of libs) {
       for (const [name, value] of lib.lib) {
         ret.registerValue(name, value)

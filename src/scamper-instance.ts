@@ -1,6 +1,6 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
-import { ErrorChannel, Library, OutputChannel, ScamperError } from "./lpm"
+import { ErrorChannel, Module, OutputChannel, ScamperError } from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { mkTraceOutput } from "./lpm/trace"
 import { compile, fiberRaiser } from "./scheme"
@@ -21,12 +21,12 @@ export class ScamperInstance {
   }
 
   // we will lazy load all libraries
-  #libs: Map<string, Library>
+  #libs: Map<string, Module>
   private constructor() {
     this.#libs = new Map()
   }
 
-  public async getLib(name: string): Promise<Library> {
+  public async getLib(name: string): Promise<Module> {
     const cached = this.#libs.get(name)
     if (cached) {
       return cached

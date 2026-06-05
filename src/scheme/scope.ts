@@ -93,7 +93,7 @@ function scopeCheckExp (errors: ScamperError[], globals: string[], locals: strin
   }
 }
 
-function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Library>, globals: string[], s: A.Stmt) {
+function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Module>, globals: string[], s: A.Stmt) {
   switch (s.tag) {
     case 'import': {
       if (!builtinLibs.has(s.module)) {
@@ -130,7 +130,7 @@ function scopeCheckStmt (errors: ScamperError[], builtinLibs: Map<string, L.Libr
   }
 }
 
-export function scopeCheckProgram (builtinLibs: Map<string, L.Library>, errors: ScamperError[], prog: A.Prog) {
+export function scopeCheckProgram (builtinLibs: Map<string, L.Module>, errors: ScamperError[], prog: A.Prog) {
   const globals: string[] = []
   for (const [name, _] of Runtime.lib) {
     globals.push(name)

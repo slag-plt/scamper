@@ -2,7 +2,7 @@ import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
 
-const Html: L.Library = new L.Library()
+const Html: L.Module = new L.Module()
 
 function textArea (id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))

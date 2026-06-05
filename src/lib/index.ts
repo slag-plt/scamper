@@ -1,4 +1,4 @@
-import { Library } from "../lpm"
+import { Module } from "../lpm"
 import { imageLib } from "./image.js"
 import Lab from "./lab.js"
 import Music from "./music.js"
@@ -12,7 +12,7 @@ import Rex from "./rex.js"
 import Prelude from "./prelude/index.js"
 import Runtime from "./runtime.js"
 
-export const builtinLibs = new Map<string, Library>([
+export const builtinLibs = new Map<string, Module>([
   ["image", imageLib],
   ["lab", Lab],
   ["music", Music],

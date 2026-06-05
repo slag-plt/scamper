@@ -73,7 +73,7 @@ export const TraceAttrs = {
 export class Thread {
   name: string
   options: Options
-  builtinLibs: Map<string, L.Library>
+  builtinLibs: Map<string, L.Module>
   out: OutputChannel
   err: ErrorChannel
   raisingProviders: Map<string, Raiser<any>>
@@ -90,7 +90,7 @@ export class Thread {
     env: L.Env,
     prog: L.Prog,
     options: Options,
-    builtinLibs: Map<string, L.Library>,
+    builtinLibs: Map<string, L.Module>,
     out: OutputChannel,
     err: ErrorChannel,
     raisingProviders: Map<string, Raiser<any>>,

@@ -4,7 +4,7 @@ import * as Img from './image/image.js'
 import * as Rgb from './image/color.js'
 import * as L from '../lpm'
 
-export const imageLib: L.Library = new L.Library()
+export const imageLib: L.Module = new L.Module()
 
 imageLib.lib = [
   ...Drawing.lib.lib,
