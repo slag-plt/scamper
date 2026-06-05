@@ -25,7 +25,6 @@ export class Fiber {
   frames: Frame[] = []
   lastResult: Value | null = null
 
-  #scamperInstance: ScamperInstance = ScamperInstance.instance
   #prog: Stmt[]
   #currStmtIdx = 0
   #isProcessingBlk = false
@@ -195,7 +194,8 @@ export class Fiber {
 
   /* Library importing helper functions */
   async loadLib(libName: string) {
-    const lib = await this.#scamperInstance.getLib(libName)
+    const scamper = await ScamperInstance.getInstance()
+    const lib = await scamper.getLib(libName)
     for (const [name, value] of lib.lib) {
       this.topLevelEnv.set(name, value)
     }

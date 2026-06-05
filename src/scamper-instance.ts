@@ -2,8 +2,8 @@
 import builtinLibs from "./lib"
 import { ErrorChannel, Library, OutputChannel, ScamperError } from "./lpm"
 import { Fiber } from "./lpm/fiber"
-import { mkTraceOutput } from "./lpm/trace"
-import { compile, fiberRaiser } from "./scheme"
+import { Scheduler } from "./scheduler"
+import { compile } from "./scheme"
 
 interface ExecutionConfig {
   src: string
@@ -14,16 +14,22 @@ interface ExecutionConfig {
 
 export class ScamperInstance {
   // singleton structure
-  static #instance: ScamperInstance | null
-  public static get instance(): ScamperInstance {
-    ScamperInstance.#instance ??= new ScamperInstance()
-    return ScamperInstance.#instance
-  }
-
+  static #instance?: ScamperInstance
   // we will lazy load all libraries
   #libs: Map<string, Library>
+  #scheduler: Scheduler
+
+  static async getInstance(): Promise<ScamperInstance> {
+    ScamperInstance.#instance ??= await new ScamperInstance().#init()
+    return ScamperInstance.#instance
+  }
   private constructor() {
     this.#libs = new Map()
+    this.#scheduler = new Scheduler()
+  }
+  async #init(): Promise<this> {
+    this.#scheduler = await this.#scheduler.init()
+    return this
   }
 
   public async getLib(name: string): Promise<Library> {
@@ -44,15 +50,11 @@ export class ScamperInstance {
     return lib
   }
 
-  public async execute({
-    src,
-    out,
-    err,
-    isTracing,
-  }: ExecutionConfig): Promise<void> {
+  public execute({ src, out, err, isTracing }: ExecutionConfig): void {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
+      // err channel should have caught the error
       return
     }
 
@@ -61,10 +63,7 @@ export class ScamperInstance {
     // TODO: we can't load prelude yet until the rewrite of the library as a module
     // await fiber.loadLib("prelude")
 
-    // TODO: do actual scheduling
-    // this should just push to a queue and our scamper init? will take care of it
-    void fiber
-    void out
-    void isTracing
+    // schedule task
+    this.#scheduler.schedule({ fiber, out, err, isTracing: isTracing ?? false })
   }
 }
