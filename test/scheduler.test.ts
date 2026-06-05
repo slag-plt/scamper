@@ -1,13 +1,18 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { Scheduler } from "../src/scheduler"
 import { ICE, ScamperError } from "../src/lpm"
 import { mkTraceOutput } from "../src/lpm/trace"
+import * as U from "../src/lpm/util"
 import {
   MockFiber,
   QUANTUM_WAIT_MS,
+  makeNeverCompletingFiber,
   makeTask,
+  makeTestFiber,
   patchSchedulerYieldForTests,
+  runFiberToCompletion,
   sleep,
+  trackFiberSteps,
   withSuppressedRejections,
 } from "./test-utils"
 import { MinorStep, TraceStep, YieldStep } from "../src/lpm/fiber"
@@ -15,10 +20,14 @@ import { MinorStep, TraceStep, YieldStep } from "../src/lpm/fiber"
 patchSchedulerYieldForTests()
 
 describe("Scheduler", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   describe("execution and output", () => {
     test("steps a scheduled fiber while running", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(fiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -27,9 +36,7 @@ describe("Scheduler", () => {
 
     test("sends fiber.lastResult on a completed disp statement", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
-      fiber.lastStatement = { tag: "disp" }
-      fiber.lastResult = 42
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(42)])])
       const task = makeTask(fiber, false)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
@@ -53,9 +60,7 @@ describe("Scheduler", () => {
 
     test("does not send output for non-disp major steps when not tracing", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
-      fiber.lastStatement = { tag: "stmtexp" }
-      fiber.lastResult = "value"
+      const fiber = makeTestFiber([U.mkStmtExp([U.mkLit("value")])])
       const task = makeTask(fiber, false)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
@@ -65,33 +70,27 @@ describe("Scheduler", () => {
 
     test("sends trace output for non-disp major steps when tracing", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
-      fiber.lastStatement = { tag: "stmtexp" }
-      fiber.lastResult = "traced"
+      const fiber = makeTestFiber([U.mkStmtExp([U.mkLit("traced")])])
       const task = makeTask(fiber, true)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log.length).toBeGreaterThan(0)
-      // every entry should be a trace-output wrapping the result
-      const expected = mkTraceOutput("traced")
-      for (const v of task.ch.log) {
-        expect(v).toEqual(expected)
-      }
+      // the stmtexp's final major step should trace the computed result
+      expect(task.ch.log.at(-1)).toEqual(mkTraceOutput("traced"))
     })
 
     test("disp output is sent raw even with tracing enabled", async () => {
       // disp output takes precedence over the trace-wrapping branch
       const sched = new Scheduler()
-      const fiber = new MockFiber()
-      fiber.lastStatement = { tag: "disp" }
-      fiber.lastResult = 7
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(7)])])
       const task = makeTask(fiber, true)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log.length).toBeGreaterThan(0)
-      expect(task.ch.log.every((v) => v === 7)).toBe(true)
+      // disp sends raw output even when tracing; earlier trace steps may appear too
+      expect(task.ch.log).toContain(7)
     })
 
     test("minor steps never produce output, even with tracing", async () => {
@@ -114,8 +113,8 @@ describe("Scheduler", () => {
   describe("scheduling contract", () => {
     test("schedule throws when given an already-completed fiber", () => {
       const sched = new Scheduler()
-      const done = new MockFiber()
-      done.isDone = () => true
+      const done = makeTestFiber([U.mkDisp([U.mkLit(1)])])
+      runFiberToCompletion(done)
       expect(() => {
         sched.schedule(makeTask(done))
       }).toThrow()
@@ -123,7 +122,7 @@ describe("Scheduler", () => {
 
     test("schedule accepts a fresh (non-done) fiber", () => {
       const sched = new Scheduler()
-      const live = new MockFiber()
+      const live = makeTestFiber([U.mkDisp([U.mkLit(1)])])
       expect(() => {
         sched.schedule(makeTask(live))
       }).not.toThrow()
@@ -139,7 +138,7 @@ describe("Scheduler", () => {
           doneFiber.isDone = () => true
           return TraceStep
         }
-        const liveFiber = new MockFiber()
+        const liveFiber = trackFiberSteps(makeNeverCompletingFiber())
 
         sched.schedule(makeTask(doneFiber))
         sched.schedule(makeTask(liveFiber))
@@ -164,7 +163,7 @@ describe("Scheduler", () => {
       const sched = new Scheduler()
       await sleep(QUANTUM_WAIT_MS)
 
-      const fiber = new MockFiber()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(fiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -177,9 +176,9 @@ describe("Scheduler", () => {
   describe("multiple tasks", () => {
     test("round-robins through all scheduled fibers", async () => {
       const sched = new Scheduler()
-      const f1 = new MockFiber()
-      const f2 = new MockFiber()
-      const f3 = new MockFiber()
+      const f1 = trackFiberSteps(makeNeverCompletingFiber())
+      const f2 = trackFiberSteps(makeNeverCompletingFiber())
+      const f3 = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(f1))
       sched.schedule(makeTask(f2))
       sched.schedule(makeTask(f3))
@@ -195,10 +194,10 @@ describe("Scheduler", () => {
 
     test("a fiber scheduled while running is picked up on wrap-around", async () => {
       const sched = new Scheduler()
-      const f1 = new MockFiber()
+      const f1 = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(f1))
       // schedule the second fiber while the loop is already running
-      const f2 = new MockFiber()
+      const f2 = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(f2))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -266,7 +265,7 @@ describe("Scheduler", () => {
       bad.stepImpl = () => {
         throw new ScamperError("Runtime", "bad task")
       }
-      const good = new MockFiber()
+      const good = trackFiberSteps(makeNeverCompletingFiber())
       const badTask = makeTask(bad)
       const goodTask = makeTask(good)
       sched.schedule(badTask)
@@ -304,7 +303,7 @@ describe("Scheduler", () => {
   describe("pause/resume", () => {
     test("pauseExecution stops further stepping", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(fiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -318,7 +317,7 @@ describe("Scheduler", () => {
 
     test("resumeExecution restarts a paused scheduler", async () => {
       const sched = new Scheduler()
-      const fiber = new MockFiber()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(fiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -348,7 +347,7 @@ describe("Scheduler", () => {
 
     test("starts execution on construction so scheduled tasks make progress", async () => {
       sched = new Scheduler()
-      const fiber = new MockFiber()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
       sched.schedule(makeTask(fiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()

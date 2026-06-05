@@ -1,13 +1,18 @@
+import { vi } from "vitest"
 import {
   DisplayStep,
   Fiber,
   StepResult,
   TraceStep,
 } from "../src/lpm/fiber"
-import { LoggingChannel, Prog, Value } from "../src/lpm"
+import { LoggingChannel, Prog, Stmt } from "../src/lpm"
 import { SchedulerTask } from "../src/scheduler"
+import { ScamperInstance } from "../src/scamper-instance"
+import * as U from "../src/lpm/util"
 
 export type { SchedulerTask }
+
+const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
@@ -15,6 +20,46 @@ export function makeTestFiber(prog: Prog): Fiber {
   fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
   fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
   return fiber
+}
+
+/** Run a real fiber to completion (for schedule-invariant tests). */
+export function runFiberToCompletion(fiber: Fiber): void {
+  while (!fiber.isDone()) {
+    fiber.step()
+  }
+}
+
+/**
+ * A fiber whose first statement is an import that never resolves, so the
+ * scheduler can keep stepping it without the fiber completing.
+ */
+export function makeNeverCompletingFiber(): Fiber {
+  vi.spyOn(ScamperInstance.getInstance(), "tryGetLib").mockReturnValue(
+    undefined,
+  )
+  return makeTestFiber([U.mkImport("canvas")])
+}
+
+export interface StepTrackedFiber extends Fiber {
+  readonly stepCallCount: number
+}
+
+/**
+ * Wrap a real fiber's step() with a vitest spy that delegates to the
+ * original implementation while counting calls.
+ */
+export function trackFiberSteps(fiber: Fiber): StepTrackedFiber {
+  let stepCallCount = 0
+  const realStep = fiber.step.bind(fiber)
+  vi.spyOn(fiber, "step").mockImplementation(() => {
+    stepCallCount++
+    return realStep()
+  })
+  Object.defineProperty(fiber, "stepCallCount", {
+    get: () => stepCallCount,
+    configurable: true,
+  })
+  return fiber as StepTrackedFiber
 }
 
 // The scheduler runs its inner loop for one time quantum (default ~17ms at
@@ -50,15 +95,39 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export class MockFiber {
-  isProcessingBlk = false
-  isDone: () => boolean = () => false
-  lastResult: Value = null
-  lastStatement: { tag: string } = { tag: "stmtexp" }
+/**
+ * Scheduler test double that extends the real Fiber class so interface drift
+ * in `src/lpm/fiber.ts` surfaces as type errors. step() is overridden to
+ * simulate controlled stepping behavior; everything else stays tied to Fiber.
+ */
+export class MockFiber extends Fiber {
   stepCallCount = 0
   stepImpl: () => StepResult = () => TraceStep
 
-  step(): StepResult {
+  #mockIsProcessingBlk?: boolean
+  #mockLastStatement?: { tag: string }
+
+  constructor() {
+    super(MOCK_FIBER_PROG)
+  }
+
+  override get isProcessingBlk(): boolean {
+    return this.#mockIsProcessingBlk ?? super.isProcessingBlk
+  }
+
+  set isProcessingBlk(value: boolean) {
+    this.#mockIsProcessingBlk = value
+  }
+
+  override get lastStatement(): Stmt {
+    return (this.#mockLastStatement ?? super.lastStatement) as Stmt
+  }
+
+  set lastStatement(value: { tag: string }) {
+    this.#mockLastStatement = value
+  }
+
+  override step(): StepResult {
     this.stepCallCount++
     const result = this.stepImpl()
     if (
@@ -82,7 +151,7 @@ export function makeTask(
 ): TestTask {
   const ch = new LoggingChannel(false, false)
   return {
-    fiber: fiber as unknown as Fiber,
+    fiber,
     out: ch,
     err: ch,
     isTracing,
