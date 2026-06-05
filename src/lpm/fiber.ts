@@ -65,7 +65,7 @@ export class Fiber {
   get isProcessingBlk() {
     return this.#isProcessingBlk
   }
-  get isDone() {
+  isDone(): boolean {
     return this.#currStmtIdx >= this.#prog.length
   }
   // TODO: this may be unnecessary later

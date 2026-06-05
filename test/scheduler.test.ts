@@ -3,18 +3,18 @@ import { Scheduler } from "../src/scheduler"
 import { ICE, ScamperError } from "../src/lpm"
 import { mkTraceOutput } from "../src/lpm/trace"
 import {
-  FakeFiber,
+  MockFiber,
   QUANTUM_WAIT_MS,
   makeTask,
   sleep,
   withSuppressedRejections,
-} from "./scheduler-utils"
+} from "./test-utils"
 
 describe("Scheduler", () => {
   describe("execution and output", () => {
     test("steps a scheduled fiber while running", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
       sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
@@ -24,7 +24,7 @@ describe("Scheduler", () => {
 
     test("sends fiber.lastResult on a completed disp statement", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = 42
       const task = makeTask(fiber, false)
@@ -38,7 +38,7 @@ describe("Scheduler", () => {
 
     test("does not send disp output while fiber is mid-block", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = "should not appear"
       fiber.isProcessingBlk = true
@@ -52,7 +52,7 @@ describe("Scheduler", () => {
 
     test("does not send output for non-disp major steps when not tracing", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       fiber.lastStatement = { tag: "stmtexp" }
       fiber.lastResult = "value"
       const task = makeTask(fiber, false)
@@ -65,7 +65,7 @@ describe("Scheduler", () => {
 
     test("sends trace output for non-disp major steps when tracing", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       fiber.lastStatement = { tag: "stmtexp" }
       fiber.lastResult = "traced"
       const task = makeTask(fiber, true)
@@ -84,7 +84,7 @@ describe("Scheduler", () => {
     test("disp output is sent raw even with tracing enabled", async () => {
       // disp output takes precedence over the trace-wrapping branch
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = 7
       const task = makeTask(fiber, true)
@@ -98,12 +98,12 @@ describe("Scheduler", () => {
 
     test("minor steps never produce output, even with tracing", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       // even setting lastStatement to disp shouldn't matter: minor step skips
       // the output branch entirely.
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = "ignored"
-      fiber.stepImpl = async () => false
+      fiber.stepImpl = () => Promise.resolve(false)
       const task = makeTask(fiber, true)
       sched.schedule(task)
       sched.resumeExecution()
@@ -114,12 +114,77 @@ describe("Scheduler", () => {
     })
   })
 
+  describe("scheduling contract", () => {
+    test("schedule throws when given an already-completed fiber", () => {
+      const sched = new Scheduler()
+      const done = new MockFiber()
+      done.isDone = () => true
+      expect(() => {
+        sched.schedule(makeTask(done))
+      }).toThrow()
+    })
+
+    test("schedule accepts a fresh (non-done) fiber", () => {
+      const sched = new Scheduler()
+      const live = new MockFiber()
+      expect(() => {
+        sched.schedule(makeTask(live))
+      }).not.toThrow()
+    })
+
+    test("a fiber that becomes done mid-execution is removed and does not halt siblings", async () => {
+      // The scheduler's #tasks invariant says only non-done fibers are in
+      // the queue, so #execute must remove a fiber as soon as it completes.
+      await withSuppressedRejections(async () => {
+        const sched = new Scheduler()
+        const doneFiber = new MockFiber()
+        doneFiber.stepImpl = () => {
+          doneFiber.isDone = () => true
+          return Promise.resolve(true)
+        }
+        const liveFiber = new MockFiber()
+
+        sched.schedule(makeTask(doneFiber))
+        sched.schedule(makeTask(liveFiber))
+        sched.resumeExecution()
+        await sleep(QUANTUM_WAIT_MS)
+        sched.pauseExecution()
+        await sleep(QUANTUM_WAIT_MS)
+
+        // doneFiber should have been stepped exactly once before removal.
+        expect(doneFiber.stepCallCount).toBe(1)
+        // liveFiber should continue running normally.
+        expect(liveFiber.stepCallCount).toBeGreaterThan(1)
+      })
+    })
+  })
+
+  describe("daemon behavior", () => {
+    test("a running scheduler picks up tasks scheduled into an empty queue", async () => {
+      // The scheduler is a daemon: an empty queue is just an idle state,
+      // not a terminal one. Scheduling a task into a running-but-idle
+      // scheduler must wake the loop and start stepping the new task
+      // without any further nudging from the caller.
+      const sched = new Scheduler()
+      sched.resumeExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      const fiber = new MockFiber()
+      sched.schedule(makeTask(fiber))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(fiber.stepCallCount).toBeGreaterThan(0)
+    })
+  })
+
   describe("multiple tasks", () => {
     test("round-robins through all scheduled fibers", async () => {
       const sched = new Scheduler()
-      const f1 = new FakeFiber()
-      const f2 = new FakeFiber()
-      const f3 = new FakeFiber()
+      const f1 = new MockFiber()
+      const f2 = new MockFiber()
+      const f3 = new MockFiber()
       sched.schedule(makeTask(f1))
       sched.schedule(makeTask(f2))
       sched.schedule(makeTask(f3))
@@ -136,11 +201,11 @@ describe("Scheduler", () => {
 
     test("a fiber scheduled while running is picked up on wrap-around", async () => {
       const sched = new Scheduler()
-      const f1 = new FakeFiber()
+      const f1 = new MockFiber()
       sched.schedule(makeTask(f1))
       sched.resumeExecution()
       // schedule the second fiber while the loop is already running
-      const f2 = new FakeFiber()
+      const f2 = new MockFiber()
       sched.schedule(makeTask(f2))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -152,10 +217,9 @@ describe("Scheduler", () => {
   describe("error handling", () => {
     test("ScamperError is caught and reported via the error channel", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
-      fiber.stepImpl = async () => {
-        throw new ScamperError("Runtime", "boom")
-      }
+      const fiber = new MockFiber()
+      fiber.stepImpl = () =>
+        Promise.reject(new ScamperError("Runtime", "boom"))
       const task = makeTask(fiber)
       sched.schedule(task)
       sched.resumeExecution()
@@ -169,11 +233,10 @@ describe("Scheduler", () => {
 
     test("ScamperError on one task does not halt other tasks", async () => {
       const sched = new Scheduler()
-      const bad = new FakeFiber()
-      bad.stepImpl = async () => {
-        throw new ScamperError("Runtime", "bad task")
-      }
-      const good = new FakeFiber()
+      const bad = new MockFiber()
+      bad.stepImpl = () =>
+        Promise.reject(new ScamperError("Runtime", "bad task"))
+      const good = new MockFiber()
       const badTask = makeTask(bad)
       const goodTask = makeTask(good)
       sched.schedule(badTask)
@@ -193,10 +256,8 @@ describe("Scheduler", () => {
       // it doesn't fail the test runner, then assert on the observable effects.
       await withSuppressedRejections(async () => {
         const sched = new Scheduler()
-        const fiber = new FakeFiber()
-        fiber.stepImpl = async () => {
-          throw new ICE("test", "internal")
-        }
+        const fiber = new MockFiber()
+        fiber.stepImpl = () => Promise.reject(new ICE("test", "internal"))
         const task = makeTask(fiber)
         sched.schedule(task)
         sched.resumeExecution()
@@ -213,7 +274,7 @@ describe("Scheduler", () => {
   describe("pause/resume", () => {
     test("pauseExecution stops further stepping", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
       sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
@@ -228,7 +289,7 @@ describe("Scheduler", () => {
 
     test("resumeExecution restarts a paused scheduler", async () => {
       const sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
       sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
@@ -241,23 +302,6 @@ describe("Scheduler", () => {
       expect(fiber.stepCallCount).toBeGreaterThan(pausedCount)
     })
 
-    test("execute loop exits when the task list is empty", async () => {
-      // resumeExecution into an empty queue should cause #execute to bail
-      // out. We verify by showing that a task added afterward does NOT get
-      // stepped until we call resumeExecution again.
-      const sched = new Scheduler()
-      sched.resumeExecution()
-      await sleep(QUANTUM_WAIT_MS)
-      const fiber = new FakeFiber()
-      sched.schedule(makeTask(fiber))
-      await sleep(QUANTUM_WAIT_MS)
-      expect(fiber.stepCallCount).toBe(0)
-      // and a fresh resume should pick it up
-      sched.resumeExecution()
-      await sleep(QUANTUM_WAIT_MS)
-      sched.pauseExecution()
-      expect(fiber.stepCallCount).toBeGreaterThan(0)
-    })
   })
 
   describe("init", () => {
@@ -279,7 +323,7 @@ describe("Scheduler", () => {
 
     test("starts execution so scheduled tasks make progress", async () => {
       sched = new Scheduler()
-      const fiber = new FakeFiber()
+      const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
       await sched.init()
       await sleep(QUANTUM_WAIT_MS)
