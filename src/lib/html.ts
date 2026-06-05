@@ -18,7 +18,7 @@ function textAreaGet (textArea: HTMLTextAreaElement): string {
 }
 Html.registerValue('text-area-get', textAreaGet)
 
-function button (label: string, fn: Function): HTMLButtonElement {
+function button (label: string, fn: L.ScamperFn): HTMLButtonElement {
   checkContract(arguments, contract('button', [C.string, C.any]))
   const ret = document.createElement('button')
   ret.textContent = label
@@ -85,7 +85,7 @@ function tagSetChildren (elt: HTMLElement, ...children: L.Value[]) {
 }
 Html.registerValue('tag-set-children!', tagSetChildren)
 
-function onKeydown (fn: Function): void {
+function onKeydown (fn: L.ScamperFn): void {
   checkContract(arguments, contract('on-keydown!', [C.func]))
   window.addEventListener('keydown', (e) => {
     try {
