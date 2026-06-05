@@ -10,7 +10,7 @@ import {
   sleep,
   withSuppressedRejections,
 } from "./test-utils"
-import { MinorStep, TraceStep } from "../src/lpm/fiber"
+import { MinorStep, TraceStep, YieldStep } from "../src/lpm/fiber"
 
 patchSchedulerYieldForTests()
 
@@ -204,6 +204,42 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       expect(f1.stepCallCount).toBeGreaterThan(0)
       expect(f2.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("runs other fibers while one fiber is yielding, then resumes the yielding fiber", async () => {
+      const sched = new Scheduler()
+      const yieldCount = 10
+      let yieldsRemaining = yieldCount
+      let otherStepsWhileYielding = 0
+
+      const yieldingFiber = new MockFiber()
+      yieldingFiber.stepImpl = () => {
+        if (yieldsRemaining > 0) {
+          yieldsRemaining--
+          return YieldStep
+        }
+        return TraceStep
+      }
+
+      const otherFiber = new MockFiber()
+      otherFiber.stepImpl = () => {
+        if (yieldsRemaining > 0) {
+          otherStepsWhileYielding++
+        }
+        return TraceStep
+      }
+
+      sched.schedule(makeTask(yieldingFiber))
+      sched.schedule(makeTask(otherFiber))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      // round-robin should have stepped the other fiber during the yield window
+      expect(otherStepsWhileYielding).toBeGreaterThan(0)
+      // the yielding fiber should have exhausted its yields and continued stepping
+      expect(yieldsRemaining).toBe(0)
+      expect(yieldingFiber.stepCallCount).toBeGreaterThan(yieldCount)
+      expect(otherFiber.stepCallCount).toBeGreaterThan(0)
     })
   })
 
