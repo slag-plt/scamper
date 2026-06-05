@@ -18,6 +18,12 @@ import {
   VarHandler,
 } from "./handlers/op-handlers"
 
+export const DisplayStep = "Display"
+export const TraceStep = "Trace"
+export const MinorStep = "Minor"
+export const YieldStep = "Yield"
+export type StepResult = typeof DisplayStep | typeof TraceStep | typeof MinorStep | typeof YieldStep
+
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
 export class Fiber {
@@ -29,6 +35,7 @@ export class Fiber {
   #currStmtIdx = 0
   #isProcessingBlk = false
   #maxCallStackDepth = 10_000
+  #scamperInstance = ScamperInstance.getInstance()
 
   constructor(prog: Prog) {
     this.#prog = prog
@@ -39,7 +46,7 @@ export class Fiber {
    * If the completed step also completes a statement, it will move on to the next statement.
    * @returns true if the step is a major step of execution, false if it's a minor step (e.g. variable loading)
    */
-  async step(): Promise<boolean> {
+  step(): StepResult {
     const currStmt = this.#prog.at(this.#currStmtIdx)
     if (!currStmt) {
       throw new ICE("Fiber.step", "Attempted to step but no statements remain!")
@@ -146,7 +153,7 @@ export class Fiber {
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step
    */
-  stepFrame(): boolean {
+  stepFrame(): StepResult {
     if (!this.currentFrame) {
       throw new ScamperError(
         "Runtime",
@@ -156,7 +163,7 @@ export class Fiber {
 
     // handle op and save if it was a major step or not
     const currOp = this.currentFrame.popInstr()
-    let isMajorStep: boolean
+    let isMajorStep: StepResult
     switch (currOp.tag) {
       case "lit":
         isMajorStep = LitHandler(currOp, this.currentFrame, this)
@@ -192,11 +199,15 @@ export class Fiber {
   }
 
   /* Library importing helper functions */
-  async loadLib(libName: string) {
-    const scamper = await ScamperInstance.getInstance()
-    const lib = await scamper.getLib(libName)
+  loadLib(libName: string): StepResult {
+    const lib = this.#scamperInstance.tryGetLib(libName)
+    if (!lib) {
+      // we didn't throw in tryGetLib, so we know that the library is just loading and not that it doesn't exist
+      return YieldStep
+    }
     for (const [name, value] of lib.lib) {
       this.topLevelEnv.set(name, value)
     }
+    return TraceStep
   }
 }

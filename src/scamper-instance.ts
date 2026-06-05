@@ -19,20 +19,16 @@ export class ScamperInstance {
   #libs: Map<string, Module>
   #scheduler: Scheduler
 
-  static async getInstance(): Promise<ScamperInstance> {
-    ScamperInstance.#instance ??= await new ScamperInstance().#init()
+  static getInstance(): ScamperInstance {
+    ScamperInstance.#instance ??= new ScamperInstance()
     return ScamperInstance.#instance
   }
   private constructor() {
     this.#libs = new Map()
     this.#scheduler = new Scheduler()
   }
-  async #init(): Promise<this> {
-    this.#scheduler = await this.#scheduler.init()
-    return this
-  }
 
-  public async getLib(name: string): Promise<Module> {
+  public tryGetLib(name: string): Module | undefined {
     const cached = this.#libs.get(name)
     if (cached) {
       return cached
@@ -44,10 +40,13 @@ export class ScamperInstance {
       throw new ScamperError("Runtime", `Library ${name} not found`)
     }
 
-    await lib.initializer?.()
-    // memoize the library so that we don't have to initialize it again
-    this.#libs.set(name, lib)
-    return lib
+    // start loading the library in the background
+    void (async () => {
+      await lib.initializer?.()
+      // memoize the library so that we don't have to initialize it again
+      this.#libs.set(name, lib)
+    })()
+    return undefined
   }
 
   public execute({ src, out, err, isTracing }: ExecutionConfig): void {
