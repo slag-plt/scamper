@@ -6,9 +6,13 @@ import {
   MockFiber,
   QUANTUM_WAIT_MS,
   makeTask,
+  patchSchedulerYieldForTests,
   sleep,
   withSuppressedRejections,
 } from "./test-utils"
+import { MinorStep, TraceStep } from "../src/lpm/fiber"
+
+patchSchedulerYieldForTests()
 
 describe("Scheduler", () => {
   describe("execution and output", () => {
@@ -16,7 +20,6 @@ describe("Scheduler", () => {
       const sched = new Scheduler()
       const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(fiber.stepCallCount).toBeGreaterThan(0)
@@ -29,7 +32,6 @@ describe("Scheduler", () => {
       fiber.lastResult = 42
       const task = makeTask(fiber, false)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log.length).toBeGreaterThan(0)
@@ -44,7 +46,6 @@ describe("Scheduler", () => {
       fiber.isProcessingBlk = true
       const task = makeTask(fiber, false)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log).toEqual([])
@@ -57,7 +58,6 @@ describe("Scheduler", () => {
       fiber.lastResult = "value"
       const task = makeTask(fiber, false)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log).toEqual([])
@@ -70,7 +70,6 @@ describe("Scheduler", () => {
       fiber.lastResult = "traced"
       const task = makeTask(fiber, true)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log.length).toBeGreaterThan(0)
@@ -89,7 +88,6 @@ describe("Scheduler", () => {
       fiber.lastResult = 7
       const task = makeTask(fiber, true)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.log.length).toBeGreaterThan(0)
@@ -103,10 +101,9 @@ describe("Scheduler", () => {
       // the output branch entirely.
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = "ignored"
-      fiber.stepImpl = () => Promise.resolve(false)
+      fiber.stepImpl = () => MinorStep
       const task = makeTask(fiber, true)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(fiber.stepCallCount).toBeGreaterThan(0)
@@ -140,13 +137,12 @@ describe("Scheduler", () => {
         const doneFiber = new MockFiber()
         doneFiber.stepImpl = () => {
           doneFiber.isDone = () => true
-          return Promise.resolve(true)
+          return TraceStep
         }
         const liveFiber = new MockFiber()
 
         sched.schedule(makeTask(doneFiber))
         sched.schedule(makeTask(liveFiber))
-        sched.resumeExecution()
         await sleep(QUANTUM_WAIT_MS)
         sched.pauseExecution()
         await sleep(QUANTUM_WAIT_MS)
@@ -166,7 +162,6 @@ describe("Scheduler", () => {
       // scheduler must wake the loop and start stepping the new task
       // without any further nudging from the caller.
       const sched = new Scheduler()
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
 
       const fiber = new MockFiber()
@@ -188,7 +183,6 @@ describe("Scheduler", () => {
       sched.schedule(makeTask(f1))
       sched.schedule(makeTask(f2))
       sched.schedule(makeTask(f3))
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(f1.stepCallCount).toBeGreaterThan(0)
@@ -203,7 +197,6 @@ describe("Scheduler", () => {
       const sched = new Scheduler()
       const f1 = new MockFiber()
       sched.schedule(makeTask(f1))
-      sched.resumeExecution()
       // schedule the second fiber while the loop is already running
       const f2 = new MockFiber()
       sched.schedule(makeTask(f2))
@@ -218,11 +211,11 @@ describe("Scheduler", () => {
     test("ScamperError is caught and reported via the error channel", async () => {
       const sched = new Scheduler()
       const fiber = new MockFiber()
-      fiber.stepImpl = () =>
-        Promise.reject(new ScamperError("Runtime", "boom"))
+      fiber.stepImpl = () => {
+        throw new ScamperError("Runtime", "boom")
+      }
       const task = makeTask(fiber)
       sched.schedule(task)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(task.ch.errLog.length).toBeGreaterThan(0)
@@ -234,14 +227,14 @@ describe("Scheduler", () => {
     test("ScamperError on one task does not halt other tasks", async () => {
       const sched = new Scheduler()
       const bad = new MockFiber()
-      bad.stepImpl = () =>
-        Promise.reject(new ScamperError("Runtime", "bad task"))
+      bad.stepImpl = () => {
+        throw new ScamperError("Runtime", "bad task")
+      }
       const good = new MockFiber()
       const badTask = makeTask(bad)
       const goodTask = makeTask(good)
       sched.schedule(badTask)
       sched.schedule(goodTask)
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(badTask.ch.errLog.length).toBeGreaterThan(0)
@@ -257,10 +250,11 @@ describe("Scheduler", () => {
       await withSuppressedRejections(async () => {
         const sched = new Scheduler()
         const fiber = new MockFiber()
-        fiber.stepImpl = () => Promise.reject(new ICE("test", "internal"))
+        fiber.stepImpl = () => {
+          throw new ICE("test", "internal")
+        }
         const task = makeTask(fiber)
         sched.schedule(task)
-        sched.resumeExecution()
         await sleep(QUANTUM_WAIT_MS)
         sched.pauseExecution()
         // ICE shouldn't be reported as a Scamper error
@@ -276,7 +270,6 @@ describe("Scheduler", () => {
       const sched = new Scheduler()
       const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       // wait for the in-flight quantum to drain
@@ -291,7 +284,6 @@ describe("Scheduler", () => {
       const sched = new Scheduler()
       const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
-      sched.resumeExecution()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
@@ -304,7 +296,7 @@ describe("Scheduler", () => {
 
   })
 
-  describe("init", () => {
+  describe("construction", () => {
     let sched: Scheduler | null = null
     beforeEach(() => {
       sched = null
@@ -313,22 +305,18 @@ describe("Scheduler", () => {
       sched?.pauseExecution()
     })
 
-    // init() measures the refresh rate over ~1s of wall time, so we bump the
-    // per-test timeout.
-    test("returns the scheduler instance", async () => {
+    test("constructor initializes a runnable scheduler", () => {
       sched = new Scheduler()
-      const result = await sched.init()
-      expect(result).toBe(sched)
-    }, 5000)
+      expect(sched).toBeInstanceOf(Scheduler)
+    })
 
-    test("starts execution so scheduled tasks make progress", async () => {
+    test("starts execution on construction so scheduled tasks make progress", async () => {
       sched = new Scheduler()
       const fiber = new MockFiber()
       sched.schedule(makeTask(fiber))
-      await sched.init()
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
       expect(fiber.stepCallCount).toBeGreaterThan(0)
-    }, 5000)
+    })
   })
 })

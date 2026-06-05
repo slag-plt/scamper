@@ -1,5 +1,5 @@
 import { ErrorChannel, ICE, OutputChannel, ScamperError } from "./lpm"
-import { Fiber } from "./lpm/fiber"
+import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -22,16 +22,12 @@ export class Scheduler {
   #isRunning = false
   // allows for resuming execution
   #currTaskIdx = 0
-  #timeQuantum = 1000 / DEFAULT_REFRESH_RATE
+  #timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
 
-  /**
-   * @returns this scheduler with the time quantum initialized and the execution queue running.
-   */
-  async init(): Promise<this> {
-    this.#timeQuantum = 1000 / (await this.#getRefreshRate())
-    // we just start the execution and don't wait for it so we don't block the event loop
+  constructor() {
+    // we throw away the promise here because we don't want to block the event loop
+    void this.#setTimeQuantumFromFPS()
     this.resumeExecution()
-    return this
   }
 
   schedule(task: SchedulerTask): void {
@@ -86,9 +82,9 @@ export class Scheduler {
           )
         }
 
-        let majorStep
+        let stepResult: StepResult
         try {
-          majorStep = await fiber.step()
+          stepResult = fiber.step()
         } catch (e) {
           if (e instanceof ScamperError) {
             err.report(e)
@@ -103,14 +99,16 @@ export class Scheduler {
 
         // we don't output minor steps (for now)
         // TODO: maybe consider fine-grained tracing?
-        if (!majorStep) {
+        if (stepResult === MinorStep || stepResult === YieldStep) {
           this.#currTaskIdx++
           continue
         }
         // we always output if we just completed a display statement
-        if (!fiber.isProcessingBlk && fiber.lastStatement.tag === "disp") {
+        if (stepResult === DisplayStep) {
           out.send(fiber.lastResult)
-        } else if (isTracing) {
+        }
+        // implied that stepResult === TraceStep
+        else if (isTracing) {
           // package it up in a nice little trace output and send it
           out.send(mkTraceOutput(fiber.lastResult))
         }
@@ -139,8 +137,8 @@ export class Scheduler {
   #wasPaused(): boolean {
     return !this.#isRunning
   }
-  async #getRefreshRate(): Promise<number> {
-    return new Promise((resolve) => {
+  async #setTimeQuantumFromFPS(): Promise<void> {
+    const timeQuantum = await new Promise<number>((resolve) => {
       let numFrames = 0
       const startTime = performance.now()
 
@@ -150,7 +148,7 @@ export class Scheduler {
 
         if (duration >= 1000) {
           const fps = Math.floor((numFrames * 1000) / duration)
-          resolve(fps)
+          resolve(1000 / fps)
           return
         }
 
@@ -159,5 +157,6 @@ export class Scheduler {
 
       requestAnimationFrame(checkRate)
     })
+    this.#timeQuantum = timeQuantum
   }
 }

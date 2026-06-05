@@ -4,8 +4,12 @@ import {
   MockFiber,
   QUANTUM_WAIT_MS,
   makeTask,
+  patchSchedulerYieldForTests,
   sleep,
 } from "../test-utils"
+import { TraceStep } from "../../src/lpm/fiber"
+
+patchSchedulerYieldForTests()
 
 // Regressions for unintended bugs in `src/scheduler.ts`. Each `describe`
 // block documents one bug and asserts the *desired* (post-fix) behavior,
@@ -15,12 +19,12 @@ import {
 // N.B., contract / intended-behavior tests live in test/scheduler.test.ts.
 
 /**
- * Bug: `resumeExecution()` (and `init()`) unconditionally fire
- * `void this.#execute()` with no guard against an already-running loop.
- * Calling either method while a loop is already in flight spawns a second
- * concurrent `#execute()`, which races on `#currTaskIdx` and on each
- * fiber's `step()`. The visible symptoms are (a) the same fiber being
- * stepped concurrently and (b) the overall stepping rate roughly doubling.
+ * Bug: `resumeExecution()` unconditionally fires `void this.#execute()`
+ * with no guard against an already-running loop. Calling it while a loop
+ * is already in flight spawns a second concurrent `#execute()`, which races
+ * on `#currTaskIdx` and on each fiber's `step()`. The visible symptoms are
+ * (a) the same fiber being stepped concurrently and (b) the overall stepping
+ * rate roughly doubling.
  */
 describe("no concurrent #execute() loops", () => {
   test("a second resumeExecution() does not double-step the same fiber", async () => {
@@ -32,17 +36,15 @@ describe("no concurrent #execute() loops", () => {
     // synchronous stepCallCount bump).
     let inFlight = 0
     let maxInFlight = 0
-    fiber.stepImpl = async () => {
+    fiber.stepImpl = () => {
       inFlight++
       maxInFlight = Math.max(maxInFlight, inFlight)
-      await sleep(5)
       inFlight--
-      return true
+      return TraceStep
     }
 
     sched.schedule(makeTask(fiber))
-    sched.resumeExecution()
-    // Second resume should be a no-op for an already-running scheduler.
+    // Constructor already started execution
     sched.resumeExecution()
     await sleep(QUANTUM_WAIT_MS)
     sched.pauseExecution()
@@ -57,7 +59,6 @@ describe("no concurrent #execute() loops", () => {
     const sched = new Scheduler()
     const f1 = new MockFiber()
     sched.schedule(makeTask(f1))
-    sched.resumeExecution()
     await sleep(QUANTUM_WAIT_MS)
     const baseline = f1.stepCallCount
     sched.pauseExecution()
@@ -92,14 +93,13 @@ describe("pauseExecution takes effect promptly", () => {
     const sched = new Scheduler()
     const fiber = new MockFiber()
     sched.schedule(makeTask(fiber))
-    sched.resumeExecution()
     await sleep(QUANTUM_WAIT_MS)
 
     const beforePause = fiber.stepCallCount
     sched.pauseExecution()
     // Wait less than a full quantum (~17ms) but long enough for several
-    // MockFiber.step iterations (~1ms each) to slip through if the inner
-    // loop does NOT honor the pause flag promptly.
+    // MockFiber.step iterations to slip through if the inner loop does NOT
+    // honor the pause flag promptly.
     await sleep(10)
     const afterPause = fiber.stepCallCount
 

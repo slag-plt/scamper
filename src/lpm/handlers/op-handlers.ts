@@ -1,5 +1,5 @@
 import { ICE, ScamperError } from "../error"
-import { Fiber } from "../fiber"
+import { Fiber, MinorStep, StepResult, TraceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../thread"
 import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch } from "../util"
@@ -9,12 +9,12 @@ type OpHandler<T extends Ops["tag"]> = (
   op: Extract<Ops, { tag: T }>,
   currFrame: Frame,
   fiber: Fiber,
-) => boolean
+) => StepResult
 
 /* Handlers */
 export const LitHandler: OpHandler<"lit"> = (op, currFrame) => {
   currFrame.values.push(op.value)
-  return false
+  return MinorStep
 }
 
 export const VarHandler: OpHandler<"var"> = (op, currFrame) => {
@@ -22,14 +22,14 @@ export const VarHandler: OpHandler<"var"> = (op, currFrame) => {
     throw new ScamperError("Runtime", `Variable not found: ${op.name}`)
   }
   currFrame.values.push(currFrame.env.get(op.name))
-  return false
+  return MinorStep
 }
 
 export const CtorHandler: OpHandler<"ctor"> = (op, currFrame) => {
   currFrame.values.push(
     mkStruct(op.name, op.fields, currFrame.values.splice(-op.fields.length)),
   )
-  return false
+  return MinorStep
 }
 
 export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
@@ -44,7 +44,7 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
       },
     ),
   )
-  return false
+  return MinorStep
 }
 
 export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
@@ -59,7 +59,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
   if (isJsFunction(fn)) {
     currFrame.values.push(fn(...args))
-    return true
+    return TraceStep
   }
   if (isClosure(fn)) {
     if (fn.params.length !== args.length) {
@@ -79,7 +79,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     } else {
       fiber.pushFrame(newFrame)
     }
-    return true
+    return TraceStep
   }
   throw new ScamperError(
     "Runtime",
@@ -110,10 +110,10 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
-  return true
+  return TraceStep
 }
 
 export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   currFrame.values.pop()
-  return true
+  return TraceStep
 }

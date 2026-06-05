@@ -1,4 +1,9 @@
-import { Fiber } from "../src/lpm/fiber"
+import {
+  DisplayStep,
+  Fiber,
+  StepResult,
+  TraceStep,
+} from "../src/lpm/fiber"
 import { LoggingChannel, Prog, Value } from "../src/lpm"
 import { SchedulerTask } from "../src/scheduler"
 
@@ -15,41 +20,55 @@ export function makeTestFiber(prog: Prog): Fiber {
 // The scheduler runs its inner loop for one time quantum (default ~17ms at
 // 60fps) before yielding. We sleep long enough that the scheduler will have
 // burned through several quanta and (importantly) so that pauseExecution has
-// time to take effect after the current quantum drains. With our setTimeout(0)
-// inside MockFiber.step (~1-4ms per step), 100ms gives us comfortably more
-// than a single quantum's worth of steps.
+// time to take effect after the current quantum drains.
 export const QUANTUM_WAIT_MS = 100
+
+let schedulerYieldPatched = false
+
+/**
+ * In vitest/jsdom the scheduler-polyfill's `yield()` resolves without handing
+ * off to timer macrotasks, so a running `#execute()` loop can starve
+ * `setTimeout`-based sleeps. Patch yield once per test file so quanta still
+ * use the real API but timers can interleave.
+ */
+export function patchSchedulerYieldForTests(): void {
+  if (schedulerYieldPatched) {
+    return
+  }
+  schedulerYieldPatched = true
+  const origYield = scheduler.yield.bind(scheduler)
+  scheduler.yield = () =>
+    origYield().then(
+      () =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 0)
+        }),
+    )
+}
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/**
- * A minimal stand-in for {@link Fiber} that implements just what `Scheduler`
- * reads off of it. Each test wires up the behavior it cares about.
- *
- * NOTE: `step()` yields to the macrotask queue via `setTimeout(0)`. Without
- * this, the scheduler's tight `await` inner loop will monopolize the microtask
- * queue and starve the test's own setTimeout-based sleeps -- causing hangs.
- * Real fibers do non-trivial work and are also throttled by `scheduler.yield`,
- * so this matches realistic execution closely enough.
- *
- * NOTE: `isDone` is a function field (not a plain boolean) to match the
- * real `Fiber.isDone()` method signature. Tests can swap it for stateful
- * behavior, e.g. `mock.isDone = () => someFlag`.
- */
 export class MockFiber {
   isProcessingBlk = false
   isDone: () => boolean = () => false
   lastResult: Value = null
   lastStatement: { tag: string } = { tag: "stmtexp" }
   stepCallCount = 0
-  stepImpl: () => Promise<boolean> = () => Promise.resolve(true)
+  stepImpl: () => StepResult = () => TraceStep
 
-  async step(): Promise<boolean> {
+  step(): StepResult {
     this.stepCallCount++
-    await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    return this.stepImpl()
+    const result = this.stepImpl()
+    if (
+      result === TraceStep &&
+      this.lastStatement.tag === "disp" &&
+      !this.isProcessingBlk
+    ) {
+      return DisplayStep
+    }
+    return result
   }
 }
 
