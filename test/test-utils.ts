@@ -1,14 +1,22 @@
 import { Fiber } from "../src/lpm/fiber"
-import { LoggingChannel, Value } from "../src/lpm"
+import { LoggingChannel, Prog, Value } from "../src/lpm"
 import { SchedulerTask } from "../src/scheduler"
 
 export type { SchedulerTask }
+
+export function makeTestFiber(prog: Prog): Fiber {
+  const fiber = new Fiber(prog)
+  fiber.topLevelEnv.set("+", (a: number, b: number) => a + b)
+  fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
+  fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
+  return fiber
+}
 
 // The scheduler runs its inner loop for one time quantum (default ~17ms at
 // 60fps) before yielding. We sleep long enough that the scheduler will have
 // burned through several quanta and (importantly) so that pauseExecution has
 // time to take effect after the current quantum drains. With our setTimeout(0)
-// inside FakeFiber.step (~1-4ms per step), 100ms gives us comfortably more
+// inside MockFiber.step (~1-4ms per step), 100ms gives us comfortably more
 // than a single quantum's worth of steps.
 export const QUANTUM_WAIT_MS = 100
 
@@ -25,13 +33,18 @@ export function sleep(ms: number): Promise<void> {
  * queue and starve the test's own setTimeout-based sleeps -- causing hangs.
  * Real fibers do non-trivial work and are also throttled by `scheduler.yield`,
  * so this matches realistic execution closely enough.
+ *
+ * NOTE: `isDone` is a function field (not a plain boolean) to match the
+ * real `Fiber.isDone()` method signature. Tests can swap it for stateful
+ * behavior, e.g. `mock.isDone = () => someFlag`.
  */
-export class FakeFiber {
+export class MockFiber {
   isProcessingBlk = false
+  isDone: () => boolean = () => false
   lastResult: Value = null
   lastStatement: { tag: string } = { tag: "stmtexp" }
   stepCallCount = 0
-  stepImpl: () => Promise<boolean> = async () => true
+  stepImpl: () => Promise<boolean> = () => Promise.resolve(true)
 
   async step(): Promise<boolean> {
     this.stepCallCount++
@@ -44,7 +57,10 @@ export interface TestTask extends SchedulerTask {
   ch: LoggingChannel
 }
 
-export function makeTask(fiber: FakeFiber, isTracing = false): TestTask {
+export function makeTask(
+  fiber: MockFiber | Fiber,
+  isTracing = false,
+): TestTask {
   const ch = new LoggingChannel(false, false)
   return {
     fiber: fiber as unknown as Fiber,
@@ -64,7 +80,10 @@ export function makeTask(fiber: FakeFiber, isTracing = false): TestTask {
 export async function withSuppressedRejections<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
-  const swallow = () => {}
+  const swallow = () => {
+    /* intentionally a no-op: we only need a handler attached so the
+       unhandled rejection doesn't fail the test runner. */
+  }
   process.on("unhandledRejection", swallow)
   try {
     return await fn()

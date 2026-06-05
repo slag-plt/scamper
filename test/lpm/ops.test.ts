@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, test } from "vitest"
 import { Fiber } from "../../src/lpm/fiber"
 import * as U from "../../src/lpm/util"
-import { LoggingChannel, OutputChannel, Prog, Value } from "../../src/lpm"
+import { LoggingChannel, OutputChannel, Value } from "../../src/lpm"
+import { makeTestFiber } from "../test-utils"
 
 async function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
-  while (!fiber.isDone) {
+  while (!fiber.isDone()) {
     // skip minor steps
     if (!(await fiber.step())) continue
     if (fiber.isProcessingBlk) continue
@@ -13,14 +14,6 @@ async function testExecute(fiber: Fiber, out: OutputChannel) {
     // we only display output when we're done with a statement AND the statement we just finished was a disp.
     out.send(fiber.lastResult)
   }
-}
-
-function makeTestFiber(prog: Prog): Fiber {
-  const fiber = new Fiber(prog)
-  fiber.topLevelEnv.set("+", (a: number, b: number) => a + b)
-  fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
-  fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
-  return fiber
 }
 
 describe("basic ops", () => {
