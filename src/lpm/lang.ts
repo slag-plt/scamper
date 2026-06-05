@@ -242,6 +242,8 @@ export interface Match {
   tag: "match"
   branches: [Pat, Blk][]
   range: Range
+  // TODO: hack fix to not modify original branch, run by pm
+  currBranchIdx?: number
 }
 export interface Raise {
   tag: "raise"

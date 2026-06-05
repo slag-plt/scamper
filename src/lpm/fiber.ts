@@ -25,7 +25,6 @@ export class Fiber {
   frames: Frame[] = []
   lastResult: Value | null = null
 
-  #scamperInstance: ScamperInstance = ScamperInstance.instance
   #prog: Stmt[]
   #currStmtIdx = 0
   #isProcessingBlk = false
@@ -68,6 +67,17 @@ export class Fiber {
   }
   get isDone() {
     return this.#currStmtIdx >= this.#prog.length
+  }
+  // TODO: this may be unnecessary later
+  get lastStatement(): Stmt {
+    const stmt = this.#prog.at(this.#currStmtIdx - 1)
+    if (!stmt) {
+      throw new ICE(
+        "Fiber.lastStatement",
+        `Attempted to get the last completed statement in fiber when none exist at index ${(this.#currStmtIdx - 1).toString()}`,
+      )
+    }
+    return stmt
   }
   // Populate the stack frames for a Blk statement, and set the isProcessingBlk flag to true
   beginProcessingBlk(expr: Blk) {
@@ -113,7 +123,10 @@ export class Fiber {
   private completeCurrentFrame() {
     const currFrame = this.currentFrame
     if (!currFrame) {
-      throw new ICE("Fiber.completeCurrentFrame", "Attempted to complete a frame when none remain")
+      throw new ICE(
+        "Fiber.completeCurrentFrame",
+        "Attempted to complete a frame when none remain",
+      )
     }
     if (currFrame.values.length !== 1) {
       throw new ICE(
@@ -180,7 +193,8 @@ export class Fiber {
 
   /* Library importing helper functions */
   async loadLib(libName: string) {
-    const lib = await this.#scamperInstance.getLib(libName)
+    const scamper = await ScamperInstance.getInstance()
+    const lib = await scamper.getLib(libName)
     for (const [name, value] of lib.lib) {
       this.topLevelEnv.set(name, value)
     }
