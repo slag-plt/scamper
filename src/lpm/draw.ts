@@ -9,16 +9,14 @@ import VueRenderer from "./renderers/vue"
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
     for(let i = index; i < vec.length; i++) {
-      let e = vec[i]
+      const e = vec[i]
       if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
         height = height + 1
       } 
-      else if(U.isPair(e)) {
-        if(e.isList) {
-          height = height + listHeight(e) + 1
-        } else {
-          height = height + pairHeight(e)
-        }
+      else if(U.isList(e)) {
+        height = height + listHeight(e) + 1
+      } else if(U.isPair(e)) {
+        height = height + pairHeight(e)
       } else if(U.isArray(e)) {
         height = height + vectorHeight(e, 0)
       } else if (U.isStruct(e)) {
@@ -113,29 +111,33 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     return div
   }
   
-  function lengthList(lst: any, count = 0) {
-    if(lst?.snd === null) {
+  function lengthList(lst: L.List | null, count = 0) {
+    if(lst === null) {
+      return 0
+    }
+    if(lst.snd === null) {
       return count + 1
     } else {
       count = count + 1
-      return lengthList(U.isList(lst.snd)? lst.snd : null, count)
+      return lengthList(lst.snd, count)
     }
   }
   
-  function listHeight(list: L.List): number {
+  function listHeight(list: L.List | null): number {
     let height = 0
     if(U.isList(list)) {
+      if(list === null) {
+        return 1
+      }
       const fst = list.fst
       if(list.snd === null) {
         if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
           height = height + 2 //1
-        } else if(Value.isPair(fst)) {
-          if(fst.isList) {
-            height = height + listHeight(fst) + 1
-          } else {
-            height = height + pairHeight(fst)
-          }
-        } else if(Value.typeOf(fst) === 'vector') {
+        } else if(U.isList(fst)) {
+          height = height + listHeight(fst) + 1
+        } else if(U.isPair(fst)) {
+          height = height + pairHeight(fst)
+        } else if(U.isArray(fst)) {
           height = height + vectorHeight(fst)
         } else if (Value.isStruct(fst)) {
           height = height + structHeight(fst)
@@ -223,15 +225,15 @@ function vectorHeight(vec: L.Vector, index = 0): number {
   }
   
   //if variable is given a default value, should always be called with default value outside of the function
-  function drawListHTML(list: any, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
+  function drawListHTML(list: L.List, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
     //declares overall html object to be appended to page
     const div = document.createElement('div');
     div.ariaDescription = 'object type list';
     //div.tabIndex = 0;
     div.style.position = 'relative';
   
-    if(list.isList) {
-      let len = lengthList(list);
+    if(U.isList(list)) {
+      const len = lengthList(list);
   
       //loops through the list creating pairs and arrows for each element
       for(let i = 0; i < len!; i++) {
