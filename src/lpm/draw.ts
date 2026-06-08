@@ -1,4 +1,3 @@
-/*
 import * as L from "./lang"
 import * as U from "./util"
 import HTMLRenderer from "./renderers/html.js"
@@ -7,59 +6,38 @@ import VueRenderer from "./renderers/vue"
 
 
 
-function vectorHeight(vec: any, index: number = 0): number {
+function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
     for(let i = index; i < vec.length; i++) {
       let e = vec[i]
       if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
         height = height + 1
       } 
-      // else if(Value.isPair(e)) {
-      //   if(e.isList) {
-      //     height = height + listHeight(e) + 1
-      //   } else {
-      //     height = height + pairHeight(e)
-      //   }
-      // } else if(Value.typeOf(e) === 'vector') {
-      //   height = height + vectorHeight(e, 0) 
-      // } else if (Value.isStruct(e)) {
-      //   height = height + structHeight(e)
-      //   height = height + 1
-      // }
+      else if(U.isPair(e)) {
+        if(e.isList) {
+          height = height + listHeight(e) + 1
+        } else {
+          height = height + pairHeight(e)
+        }
+      } else if(U.isArray(e)) {
+        height = height + vectorHeight(e, 0)
+      } else if (U.isStruct(e)) {
+        height = height + structHeight(e)
+        height = height + 1
+      }
     }
     return height + 3
   }
   
-  import { Vector } from "./index"
-  //ASCII
-  export function drawVector(vector: Vector): any {
-    let str = vector
-    /*vector?.forEach((e: any) => {
-      if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
-        str = str + '[' + e + ']'
-      } else if (Value.isPair(e)) {
-        if(e.isList) {
-          str = str + '[' + drawList(e) + ']'
-        } else {
-          str = str + '[' +  drawPair(e) + ']'
-        }
-      } else if (Value.typeOf(e) === 'vector') {
-        str = str + '[' + drawVector(e) + ']'
-      }
-    })
-  
-    return str
-  }
-  
-  export function drawVectorHTML(vector: any, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
+  export function drawVectorHTML(vector: L.Vector, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
     //Container for html elements
-    let div = document.createElement('div');
+    const div = document.createElement('div');
     div.ariaLabel = 'object type vector';
     div.tabIndex = 0;
     div.style.position = 'relative';
   
     //loops through the vector, making the visualization pieces for each element
-    vector.forEach((e: any, i: number) => {
+    vector.forEach((e: L.Value, i: number) => {
       //container for all the html elements for one vector element
       const col = document.createElement('div');
       col.className = 'vector-style';
@@ -79,19 +57,22 @@ function vectorHeight(vec: any, index: number = 0): number {
       box.className = 'vector-box';
       box.tabIndex = 0;
       box.id = `${nesting}:${i}:${parent}:${imgID} val`
-      // box.addEventListener('keydown', (e) => {
-      //   keyHandler(e.key, box, 'vector', imgID);
-      // })
-      // if(e.isList) {
-      //   box.ariaDescription = `vector index ${indexVal} contains a list`
-      //   box.ariaLabel = `vector index ${indexVal} contains a list`
-      // } else if(Value.typeOf(e) === 'vector') {
-      //   box.ariaDescription = `vector index ${indexVal} contains a vector`
-      //   box.ariaLabel = `vector index ${indexVal} contains a vector`
-      // } else {
-      //   box.ariaDescription = `vector index ${indexVal} contains ${e.toString()}`
-      //   box.ariaLabel = `vector index ${indexVal} contains ${e.toString()}`
-      // }
+      box.addEventListener('keydown', (e) => {
+        keyHandler(e.key, box, 'vector', imgID);
+      })
+      if(U.isList(e)) {
+        box.ariaDescription = `vector index ${indexVal} contains a list`
+        box.ariaLabel = `vector index ${indexVal} contains a list`
+      }if(U.isPair(e)) {
+        box.ariaDescription = `vector index ${indexVal} contains a pair`
+        box.ariaLabel = `vector index ${indexVal} contains a pair`
+      } else if(U.isArray(e)) {
+        box.ariaDescription = `vector index ${indexVal} contains a vector`
+        box.ariaLabel = `vector index ${indexVal} contains a vector`
+      } else {
+        box.ariaDescription = `vector index ${indexVal} contains object`//${e.toString()}`
+        box.ariaLabel = `vector index ${indexVal} contains object`//${e.toString()}`
+      }
       col.appendChild(box);
   
       //creates the arrow element for the vector
@@ -106,7 +87,7 @@ function vectorHeight(vec: any, index: number = 0): number {
       col.appendChild(val);
   
       //creates the box containing the value in the element
-      let val2 = document.createElement('div');
+      const val2 = document.createElement('div');
       val2.className = 'val-box';
       if(typeof e === 'string' || typeof e === 'number' || typeof e === 'boolean') {
         if(typeof e === 'string'){
@@ -115,63 +96,35 @@ function vectorHeight(vec: any, index: number = 0): number {
           val2.textContent = e + '';
         }
         col.appendChild(val2);
-      } //else if (Value.isPair(e)) {
-      //   if(e.isList) {
-      //     col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
-      //   } else {
-      //     col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
-      //   }
-      // } else if (Value.typeOf(e) === 'vector') {
-      //   col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
-      // } else if (Value.isStruct(e)) {
-      //   col.appendChild(drawStructHTML(e))
-      // }
+      } else if (U.isPair(e)) {
+        if(U.isList(e)) {
+          col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
+        } else {
+          col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
+        }
+      } else if (U.isArray(e)) {
+        col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
+      } else if (U.isStruct(e)) {
+        col.appendChild(drawStructHTML(e))
+      }
   
       div.appendChild(col);
     })
     return div
   }
-  /*
-  function lengthList(lst: any, count: number = 0) {
-    if(lst.snd === null) {
+  
+  function lengthList(lst: any, count = 0) {
+    if(lst?.snd === null) {
       return count + 1
     } else {
       count = count + 1
-      return lengthList(lst.snd, count)
+      return lengthList(U.isList(lst.snd)? lst.snd : null, count)
     }
   }
   
-  //ASCII
-  function drawList(list: any): any {
-    if(list.isList) {
-      let str = '{ '
-      let val = list.fst
-      let next = list.snd
-      if(typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
-      //  console.log(val)
-        str = str + val + ''
-      } else if (Value.isPair(val)) {
-        if(val.isList) {
-          str = str + drawList(val)
-        } else {
-          str = str + drawPair(val) + ''
-        }
-      } else if (Value.typeOf(val) === 'vector') {
-        str = str + drawVector(val) + ''
-      }
-      if(next === null) {
-        return str + ' }{ /}'
-      } else {
-        return str = str + ' }{ -}-> ' + drawList(next)
-      }
-      
-    }
-  }
-  
-  
-  function listHeight(list: any): number {
+  function listHeight(list: L.List): number {
     let height = 0
-    if(list.isList) {
+    if(U.isList(list)) {
       const fst = list.fst
       if(list.snd === null) {
         if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
@@ -876,4 +829,3 @@ function vectorHeight(vec: any, index: number = 0): number {
     }
     
   }
-    */

@@ -116,15 +116,13 @@ class _VueRenderer extends Renderer<Component> {
   render(value: Value): Component {
     const strategy = this.getStrategy(value)
     if (strategy) {
-      console.log("moooo")
       return strategy.type === "vue" ? strategy.renderer : DOMElementRenderer
     }
 
-    const drawStrategy = this.getDrawStrategy(value)
-    if (drawStrategy) {
-      console.log("drrr")
-      return drawStrategy.type === "draw" ? drawStrategy.renderer : DOMElementRenderer
-    }
+    // const drawStrategy = this.getDrawStrategy(value)
+    // if (drawStrategy) {
+    //   return drawStrategy.type === "draw" ? drawStrategy.renderer : DOMElementRenderer
+    // }
 
     // there may be a custom renderer for this value
     const customRenderer = this.getCustomRendererFor(value)

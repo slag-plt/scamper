@@ -2,7 +2,7 @@ import { ICE, ScamperError, SubthreadErrors } from "./error.js"
 import * as L from "./lang.js"
 import { OutputChannel, ErrorChannel } from "./output/index.js"
 import { Raiser } from "./raiser.js"
-import { mkTraceStart, mkTraceOutput, mkDrawStart } from "./trace.js"
+import { mkTraceStart, mkTraceOutput, mkDrawStart} from "./trace.js"
 import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
@@ -156,13 +156,6 @@ export class Thread {
         this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
-        console.log("see 1")
-        this.out.pushLevel(mkDrawStart(this.results[this.curStmt]))
-        console.log("see da 2")
-        console.log(this.results[this.curStmt])
-        //this.out.send(drawVectorHTML(this.curStmt))
-
-        //draw(this)
       }
       
     }
@@ -398,7 +391,11 @@ export class Thread {
           if (this.options.isTracing) {
             this.out.popLevel()
           } // pops trace-block
+          const div = document.createElement("div")
+          div.textContent = "gog"
+          
           this.advanceStmt() // pops trace
+          this.out.send(div) // to be outputted with HTML bindings / environment
         }
         return
       }
