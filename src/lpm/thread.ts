@@ -107,6 +107,11 @@ export class Thread {
     this.isProcessingExpr = false
   }
 
+  lengthOfLibs(): number {
+    const length = this.builtinLibs.size
+    return length
+  }
+
   /** Advances this thread to the next statement. */
   advanceStmt(): void {
     this.frames = []
@@ -394,9 +399,10 @@ export class Thread {
           } // pops trace-block
           const div = document.createElement("div")
           if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result))
-          
+          const save = this.draw()
           this.advanceStmt() // pops trace
           this.out.send(div) // to be outputted with HTML bindings / environment
+          this.out.send(save)
         }
         return
       }
@@ -678,28 +684,26 @@ export class Thread {
       cont = !this.checkFrameReturn() && cont
     }
   }
-    /*
-    draw (): void {
+    
+    draw (): HTMLDivElement {
       const envState = this.env
-      let initialLibNum = 0
-  
-      this.builtinLibs.forEach(l => {
-        initialLibNum += l.lib.length
-      })
+      const initialLibNum = this.lengthOfLibs()
+      const mainDiv = document.createElement('div')
   
       //if(envState != undefined){
   
         //grabs bounded values from the environment
-        const bounded = envState.bindings
+        const bounded = envState.returnEnv(initialLibNum)
+        console.log(bounded)
         
         //grabs the stack
-        let stack = this.frames
+        const stack = this.frames
         console.log(stack)
         //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
-        if(!stack[0]) {
+        //if(!stack[0]) {
   
           //and bounded variables exist
-          if(bounded.size > 0) {
+          if(bounded.length > 0) {
             
             //environment begin line
             const div1 = document.createElement('div')
@@ -707,6 +711,7 @@ export class Thread {
             div1.ariaDescription = "Begin environment"
             div1.textContent = "------------------------------~"
             div1.tabIndex = 0
+            mainDiv.appendChild(div1)
             // div1.addEventListener('keydown', (event) => {
             //   if(event.key === 'j' && event.ctrlKey) {
             //     if(this.jumpToList![this.jumpToList!.indexOf(div1) + 1]) {
@@ -717,54 +722,55 @@ export class Thread {
             // renderToDraw(this.display, div1)
             // this.jumpToList?.push(div1)
   
-            // // parallel arrays for keeping divs and their names
-            // let list_names: String[] = [];
-            // let list_div: HTMLElement[] = [];
+            // parallel arrays for keeping divs and their names
+            let list_names: String[] = [];
+            let list_div: HTMLElement[] = [];
   
             // for each bounded variable
             bounded.forEach(([id, value]) => {
-              let strVal: string = value?.toString()
+              //let strVal: string = value.toString()
   
               let HTMLVal: any = ''
               let ariaType = ""
               let structName = false;
   
               //typecheck the variable(s) and convert to string or HTML elements
-              if (!strVal || !value) {
+              if (!value) {
                 return;
               }
-              if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || strVal === "0") {
-                strVal = strVal
+              if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
                 if (typeof value === 'string') {
                   HTMLVal = "\"" + value + "\""
+                } else if (typeof value === 'boolean'){
+                  HTMLVal = value
                 } else {
                   HTMLVal = value.toString()
                 }
                 ariaType = typeof value
-              } else if (Value.typeOf(value) === 'vector') {
-                strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
-                HTMLVal = drawVectorHTML(value)
+              } else if (U.isArray(value)) {
+                //strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
+                HTMLVal = D.drawVectorHTML(value)
                 ariaType = "vector"
-              } else if (Value.typeOf(value) === 'list') {
-                strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
-                HTMLVal = drawListHTML(value)
+              } else if (U.isList(value)) {
+                //strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
+                HTMLVal = D.drawListHTML(value)
                 ariaType = "list"
-              } else if (Value.isPair(value)) {
-                strVal = drawPair(value)
-                HTMLVal = drawPairHTML(value)
+              } else if (U.isPair(value)) {
+                //strVal = drawPair(value)
+                HTMLVal = D.drawPairHTML(value)
                 ariaType = "pair"
-              } else if (Value.isFunction(value)) {
-                strVal = ("PROCEDURE")
+              } else if (U.isFunction(value)) {
+                //strVal = ("PROCEDURE")
                 ariaType = "procedure"
                 HTMLVal = "PROCEDURE"
-              } else if (Value.isStruct(value)) {
-                HTMLVal = drawStructHTML(value)
+              } else if (U.isStruct(value)) {
+                HTMLVal = D.drawStructHTML(value)
                 ariaType = 'struct'
                 //console.log("STRUCT")
                 //console.log(value[0])
                 structName = value[0];
               } else {
-                console.log("Found none for type " + Value.typeOf(value))
+                console.log("Found none for type " + U.typeOf(value))
               }
   
               //make mini div for name and arrow
@@ -804,18 +810,20 @@ export class Thread {
               list_div.push(div)
               //console.log(this.jumpToList)
             })
-            list_div.forEach(e => renderToDraw(this.display, e) );
+
+            list_div.forEach(e => mainDiv.appendChild(e) );
             
             //environment end line
-            let div2 = document.createElement('div')
+            const div2 = document.createElement('div')
             div2.ariaLabel = "End environment"
             div2.ariaDescription = "End environment"
             div2.textContent = "------------------------------~"
             div2.tabIndex = 0
-            renderToDraw(this.display, div2)
+            mainDiv.appendChild(div2)
           }
-        }
+        //}
   
+        /*
         let stackString;
         let stackHTML;
   
@@ -868,9 +876,9 @@ export class Thread {
           if(stackHTML){//if there is an element, then append it
             this.appendToCurrentTrace(stackHTML)
           }
-        }
+        } */
       //}
-      
-    } */
+      return mainDiv
+    }
 
 }

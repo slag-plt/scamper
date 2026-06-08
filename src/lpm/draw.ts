@@ -364,29 +364,6 @@ by webrender
 by GokturkSM
   */
 
-  // //ASCII
-  // function drawPair(pair: any): any {
-  //   let str = ''
-  //   let fst = pair.fst
-  //   let snd = pair.snd
-  //   if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
-  //     str = str + '{ ' + fst
-  //   } else if(Value.isPair(fst)) {
-  //     str = str + drawPair(fst) + ' }'
-  //   } else if(Value.typeOf(fst) === 'list') {
-  //     str = str + drawList(fst) + ' }'
-  //   }
-  //   str = str + ' }-{ '
-  //   if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean') {
-  //     str = str + snd + ' }'
-  //   } else if(Value.isPair(snd)) {
-  //     str = str + drawPair(snd) + ' }'
-  //   } else if(Value.typeOf(snd) === 'list') {
-  //     str = str + drawList(snd) + ' }'
-  //   }
-  //   return str
-  // }
-  
   function pairHeight(pair: L.Pair) {
     let height = 3
     const fst = pair.fst

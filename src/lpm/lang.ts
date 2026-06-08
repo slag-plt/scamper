@@ -59,6 +59,91 @@ export class Env {
   pop(): Env {
     return this.parent === undefined ? new Env() : this.parent
   }
+
+  public returnEnv(libNum: number) {
+    const bounds: [Id, Value][] = []
+
+    let parent = this.parent
+    //const iterator1 = this.bindings[Symbol.iterator]();
+    
+    //if there is no parent environment
+    if(this.parent === undefined) {
+      const iterator1 = this.bindings[Symbol.iterator]();
+      let count = -7
+      for (const item of iterator1) {
+        if(count > libNum) {
+          bounds.push(item)
+        }
+        count += 1;
+      }
+    } else { // there are structs and nested environments
+      let kernel = [] // array to be flipped later
+      const iterator0 = this.bindings[Symbol.iterator]();
+      //let count0 = 0
+      
+      let structString = null;
+      for (const item of iterator0) {
+        
+        if(!structString) {
+          structString = item[0].substring(0, item[0].length - 1) //remove -? from end
+        }
+        
+        if(!(item[0].includes(structString) || item[0].includes(structString + "-") || item[0].includes(structString + "?"))) {
+          kernel.push(item)
+        }
+        
+        
+      }
+      kernel.reverse()
+
+      //this is repeated for all children
+      for(let i = 0; i < kernel.length; i++) {
+        bounds.push(kernel[i])
+      }
+
+      while(parent!.parent !== undefined) {
+        const kernel = []
+        const iterator2 = parent!.bindings[Symbol.iterator]();
+        //let count = 0
+        let structString = null;
+        for (const item of iterator2) {
+          
+          if(!structString) {
+            structString = item[0].substring(0, item[0].length - 1) //remove -? from end
+          }
+          //console.log("structString is " + structString)
+          if(!(item[0].includes(structString) || item[0].includes(structString + "-") || item[0].includes(structString + "?"))) {
+            kernel.push(item)
+            //console.log("WINNERRRRRRR")
+          }
+
+        }
+        kernel.reverse()
+        for(let i = 0; i < kernel.length; i++) {
+          bounds.push(kernel[i])
+        }
+        parent = parent!.parent
+      }
+
+      //the same as no nested environments, but with a kernel
+      const iterator3 = parent!.bindings[Symbol.iterator]();
+      kernel = []
+      let count = -7
+      for (const item of iterator3) {
+        if(count > libNum) {
+          kernel.push(item)
+        }
+        count += 1;
+      }
+      kernel.reverse()
+      for(let i = 0; i < kernel.length; i++) {
+        bounds.push(kernel[i])
+      }
+
+      return bounds.reverse()
+    }
+    return bounds
+  }
 }
 
 /** A library is a collection of importable top-level definitions. */
