@@ -1,9 +1,6 @@
 import * as L from "./lang"
 import * as U from "./util"
-import HTMLRenderer from "./renderers/html.js"
-import TextRenderer from "./renderers/text"
-import VueRenderer from "./renderers/vue"
-import './styles.css'
+import '../../public/css/styles.css'
 
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
@@ -222,7 +219,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
   }
   
   //if variable is given a default value, should always be called with default value outside of the function
-  function drawListHTML(list: L.List | null, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
+  export function drawListHTML(list: L.List | null, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
     //declares overall html object to be appended to page
     const div = document.createElement('div');
     div.ariaDescription = 'object type list';
@@ -363,8 +360,10 @@ by Jaakko
 by Nícolas D. Schmidt
   Synthwave x Fluoromachine
 by webrender
-
+  Nebula Pandas
+by GokturkSM
   */
+
   // //ASCII
   // function drawPair(pair: any): any {
   //   let str = ''
@@ -422,7 +421,7 @@ by webrender
     return height
   }
   
-  function drawPairHTML(pair: L.Pair, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
+  export function drawPairHTML(pair: L.Pair, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
     //Container for html elements
     const div = document.createElement('div');
     div.ariaLabel = 'object type pair';
@@ -532,7 +531,7 @@ by webrender
     return height
   }
   
-  function drawStructHTML(struct: L.Struct) {
+  export function drawStructHTML(struct: L.Struct) {
     const div = document.createElement('div');
     div.tabIndex = 0;
     
@@ -648,6 +647,7 @@ by webrender
     return div
   }
 
+  /*
   function draw (): void {
     let envState = this.state
     let initialLibNum = 0
@@ -841,3 +841,4 @@ by webrender
     }
     
   }
+    */

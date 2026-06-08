@@ -2,12 +2,13 @@ import { ICE, ScamperError, SubthreadErrors } from "./error.js"
 import * as L from "./lang.js"
 import { OutputChannel, ErrorChannel } from "./output/index.js"
 import { Raiser } from "./raiser.js"
-import { mkTraceStart, mkTraceOutput, mkDrawStart} from "./trace.js"
+import { mkTraceStart, mkTraceOutput } from "./trace.js"
 import * as U from "./util.js"
 import { SimpleErrorChannel } from "./output/simple-error"
 import { Range } from "./range"
 import "scheduler-polyfill"
-//import { drawVectorHTML } from "./draw.js"
+import '../../public/css/styles.css'
+import * as D from "./draw.js"
 
 /** The type of runtime options. */
 export interface Options {
@@ -392,7 +393,7 @@ export class Thread {
             this.out.popLevel()
           } // pops trace-block
           const div = document.createElement("div")
-          div.textContent = "gog"
+          if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result))
           
           this.advanceStmt() // pops trace
           this.out.send(div) // to be outputted with HTML bindings / environment
@@ -677,4 +678,199 @@ export class Thread {
       cont = !this.checkFrameReturn() && cont
     }
   }
+    /*
+    draw (): void {
+      const envState = this.env
+      let initialLibNum = 0
+  
+      this.builtinLibs.forEach(l => {
+        initialLibNum += l.lib.length
+      })
+  
+      //if(envState != undefined){
+  
+        //grabs bounded values from the environment
+        const bounded = envState.bindings
+        
+        //grabs the stack
+        let stack = this.frames
+        console.log(stack)
+        //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
+        if(!stack[0]) {
+  
+          //and bounded variables exist
+          if(bounded.size > 0) {
+            
+            //environment begin line
+            const div1 = document.createElement('div')
+            div1.ariaLabel = "Begin environment"
+            div1.ariaDescription = "Begin environment"
+            div1.textContent = "------------------------------~"
+            div1.tabIndex = 0
+            // div1.addEventListener('keydown', (event) => {
+            //   if(event.key === 'j' && event.ctrlKey) {
+            //     if(this.jumpToList![this.jumpToList!.indexOf(div1) + 1]) {
+            //       this.jumpToList![this.jumpToList!.indexOf(div1) + 1].focus()
+            //    }
+            //   }
+            // })
+            // renderToDraw(this.display, div1)
+            // this.jumpToList?.push(div1)
+  
+            // // parallel arrays for keeping divs and their names
+            // let list_names: String[] = [];
+            // let list_div: HTMLElement[] = [];
+  
+            // for each bounded variable
+            bounded.forEach(([id, value]) => {
+              let strVal: string = value?.toString()
+  
+              let HTMLVal: any = ''
+              let ariaType = ""
+              let structName = false;
+  
+              //typecheck the variable(s) and convert to string or HTML elements
+              if (!strVal || !value) {
+                return;
+              }
+              if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || strVal === "0") {
+                strVal = strVal
+                if (typeof value === 'string') {
+                  HTMLVal = "\"" + value + "\""
+                } else {
+                  HTMLVal = value.toString()
+                }
+                ariaType = typeof value
+              } else if (Value.typeOf(value) === 'vector') {
+                strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
+                HTMLVal = drawVectorHTML(value)
+                ariaType = "vector"
+              } else if (Value.typeOf(value) === 'list') {
+                strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
+                HTMLVal = drawListHTML(value)
+                ariaType = "list"
+              } else if (Value.isPair(value)) {
+                strVal = drawPair(value)
+                HTMLVal = drawPairHTML(value)
+                ariaType = "pair"
+              } else if (Value.isFunction(value)) {
+                strVal = ("PROCEDURE")
+                ariaType = "procedure"
+                HTMLVal = "PROCEDURE"
+              } else if (Value.isStruct(value)) {
+                HTMLVal = drawStructHTML(value)
+                ariaType = 'struct'
+                //console.log("STRUCT")
+                //console.log(value[0])
+                structName = value[0];
+              } else {
+                console.log("Found none for type " + Value.typeOf(value))
+              }
+  
+              //make mini div for name and arrow
+              let miniDiv = document.createElement('div')
+              miniDiv.textContent = id + ' → '
+              miniDiv.style.whiteSpace = 'nowrap'
+              
+              // make div to be drawn later
+              let div = document.createElement('div')
+              
+              div.style.display = 'flex'
+              div.ariaLabel = id + " points to " + ariaType
+              div.ariaDescription = id + " points to " + ariaType
+              div.appendChild(miniDiv)
+              div.append(HTMLVal)
+              // this.jumpToList!.push(HTMLVal)
+              // div.addEventListener('keydown', (event) => {
+              //   if (event.key === 'j' && event.ctrlKey) {
+              //     if (this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1]) {
+              //       this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1].focus()
+              //     }
+              //   }
+              // })
+              //console.log(structName + id)
+              if(structName) {
+                  //console.log(list_names)
+                  //console.log(list_div)
+                for(let i = 0; i < list_names.length; i++) {
+                  
+                  if(list_names[i].startsWith(structName)) {
+                    list_names.splice(i, 1);
+                    list_div.splice(i,1);
+                  }
+                }
+              }
+              list_names.push(id);
+              list_div.push(div)
+              //console.log(this.jumpToList)
+            })
+            list_div.forEach(e => renderToDraw(this.display, e) );
+            
+            //environment end line
+            let div2 = document.createElement('div')
+            div2.ariaLabel = "End environment"
+            div2.ariaDescription = "End environment"
+            div2.textContent = "------------------------------~"
+            div2.tabIndex = 0
+            renderToDraw(this.display, div2)
+          }
+        }
+  
+        let stackString;
+        let stackHTML;
+  
+        //if there is anything in the stack ( we are inside the gray tracing box)
+        if(stack[0]) {
+          //console.log(stack[0])
+          //convert to string (probs not used)
+          stackString = stack[stack.length - 1]?.toString()
+  
+          //type check and convert to string or HTML element
+          if(typeof stack[0] != 'string' && typeof stack[0] != 'number' && typeof stack[0] != 'boolean' || stack[0] === 0) {
+            if(stack[0] != undefined && Value.typeOf(stack[0]) === 'vector') {
+              stackString = drawVector(stack[0])
+              stackHTML = drawVectorHTML(stack[0])
+            } else if (stack[0] != undefined && Value.typeOf(stack[0]) === 'list') {
+              stackString = drawList(stack[0])
+              stackHTML = drawListHTML(stack[0])
+            } else if (stack[0] != undefined && Value.isPair(stack[0])) {
+              stackString = drawPair(stack[0])
+              stackHTML = drawPairHTML(stack[0])
+            } else if (stack[0] != undefined && Value.isFunction(stack[0])) {
+              //@ts-ignore
+              if(stack[0].name) {
+                //@ts-ignore
+                if(stack[0].name === 'cons') {
+                  let last: any = stack[stack.length - 1]
+                  if(last.snd === null) {
+                    stackString = drawList(Value.mkList(last.fst))
+                    stackHTML = drawListHTML(Value.mkList(last.fst))
+                  } else if(last.snd.isList) {
+                    stackString = drawList(Value.mkPair(last.fst, last.snd))
+                    stackHTML = drawListHTML(Value.mkPair(last.fst, last.snd))
+                  } else {
+                    stackString = drawPair(Value.mkPair(last.fst, last.snd))
+                    stackHTML = drawPairHTML(Value.mkPair(last.fst, last.snd))
+                  }
+  
+                  //attempt at drawing map (ignore)
+                  //@ts-ignore
+                } else if(stack[0].name === 'map') {
+                  //forEachstack.push(Value.mkList)
+                  console.log("mapping")
+                }
+              } else {//catch
+                stackString = ("PROCEDURE")
+                console.log(stackString)
+              }
+            }
+          }
+          if(stackHTML){//if there is an element, then append it
+            this.appendToCurrentTrace(stackHTML)
+          }
+        }
+      //}
+      
+    } */
+
 }
