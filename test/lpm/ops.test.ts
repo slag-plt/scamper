@@ -179,7 +179,7 @@ describe("basic ops", () => {
         U.mkVar("b"),
         U.mkAp(2),
       ]
-      const elseBranch = [U.mkRaise("no match"), U.mkPops()]
+      const elseBranch = [U.mkRaise("no match")]
       const pattern = U.mkPCtor("test-struct", [U.mkPVar("a"), U.mkPVar("b")])
       const fiber = makeTestFiber([
         U.mkDisp([

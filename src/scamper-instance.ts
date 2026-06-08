@@ -58,7 +58,7 @@ export class ScamperInstance {
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled)
+    const fiber = new Fiber(out, err, isTracing ?? false, compiled)
     // TODO: we can't load prelude yet until the rewrite of the library as a module
     // await fiber.loadLib("prelude")
 

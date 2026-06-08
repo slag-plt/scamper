@@ -17,12 +17,12 @@ import {
   PopVHandler,
   VarHandler,
 } from "./handlers/op-handlers"
+import { ErrorChannel, OutputChannel } from "./output"
 
-export const DisplayStep = "Display"
 export const TraceStep = "Trace"
 export const MinorStep = "Minor"
 export const YieldStep = "Yield"
-export type StepResult = typeof DisplayStep | typeof TraceStep | typeof MinorStep | typeof YieldStep
+export type StepResult = typeof TraceStep | typeof MinorStep | typeof YieldStep
 
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
@@ -37,7 +37,14 @@ export class Fiber {
   #maxCallStackDepth = 10_000
   #scamperInstance = ScamperInstance.getInstance()
 
-  constructor(prog: Prog) {
+  out: OutputChannel
+  err: ErrorChannel
+  isTracing: boolean
+
+  constructor(out: OutputChannel, err: ErrorChannel, isTracing: boolean, prog: Prog) {
+    this.out = out
+    this.err = err
+    this.isTracing = isTracing  
     this.#prog = prog
   }
 

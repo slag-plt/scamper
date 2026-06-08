@@ -1,5 +1,5 @@
 import { ErrorChannel, ICE, OutputChannel, ScamperError } from "./lpm"
-import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
+import { Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -102,10 +102,6 @@ export class Scheduler {
         if (stepResult === MinorStep || stepResult === YieldStep) {
           this.#currTaskIdx++
           continue
-        }
-        // we always output if we just completed a display statement
-        if (stepResult === DisplayStep) {
-          out.send(fiber.lastResult)
         }
         // implied that stepResult === TraceStep
         else if (isTracing) {

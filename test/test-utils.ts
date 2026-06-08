@@ -1,11 +1,11 @@
 import { vi } from "vitest"
 import {
-  DisplayStep,
   Fiber,
+  MinorStep,
   StepResult,
   TraceStep,
 } from "../src/lpm/fiber"
-import { LoggingChannel, Prog, Stmt } from "../src/lpm"
+import { ErrorChannel, LoggingChannel, OutputChannel, Prog, Stmt } from "../src/lpm"
 import { SchedulerTask } from "../src/scheduler"
 import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
@@ -15,7 +15,8 @@ export type { SchedulerTask }
 const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 
 export function makeTestFiber(prog: Prog): Fiber {
-  const fiber = new Fiber(prog)
+  const out = new LoggingChannel(false, false)
+  const fiber = new Fiber(out, out, false, prog)
   fiber.topLevelEnv.set("+", (a: number, b: number) => a + b)
   fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
   fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
@@ -107,8 +108,8 @@ export class MockFiber extends Fiber {
   #mockIsProcessingBlk?: boolean
   #mockLastStatement?: { tag: string }
 
-  constructor() {
-    super(MOCK_FIBER_PROG)
+  constructor(out: OutputChannel, err: ErrorChannel, isTracing: boolean) {
+    super(out, err, isTracing, MOCK_FIBER_PROG)
   }
 
   override get isProcessingBlk(): boolean {
@@ -135,7 +136,8 @@ export class MockFiber extends Fiber {
       this.lastStatement.tag === "disp" &&
       !this.isProcessingBlk
     ) {
-      return DisplayStep
+      this.out.send(this.lastResult)
+      return MinorStep
     }
     return result
   }

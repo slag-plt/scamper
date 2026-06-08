@@ -1,4 +1,4 @@
-import { DisplayStep, Fiber, StepResult, TraceStep } from "../fiber"
+import { Fiber, MinorStep, StepResult, TraceStep } from "../fiber"
 import { Stmt } from "../lang"
 
 type StatementHandler<T extends Stmt["tag"]> = (
@@ -36,7 +36,8 @@ export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
   // execute should know that lastResult is the value to be printed, and print it to the output channel
   // so, do nothing
   fiber.advanceStmt()
-  return DisplayStep
+  fiber.out.send(fiber.lastResult)
+  return MinorStep
 }
 export const StmtExpHandler: StatementHandler<"stmtexp"> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {

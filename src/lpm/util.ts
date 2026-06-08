@@ -142,7 +142,6 @@ export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({
   msg,
   range,
 })
-export const mkPops = (): L.PopS => ({ tag: "pops" })
 export const mkPopv = (): L.PopV => ({ tag: "popv" })
 
 // Pattern constructors
