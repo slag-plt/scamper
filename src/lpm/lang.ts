@@ -126,11 +126,6 @@ export interface Sym extends TaggedObject {
   value: string
 }
 
-export interface Comment extends TaggedObject {
-  [scamperTag]: 'comment',
-  value: string
-}  
-
 // NOTE: to maximize interoperability, a struct is an object with at least
 // a ##scamperTag## and ##kind## field. The rest of the fields are the fields of the
 // the struct.

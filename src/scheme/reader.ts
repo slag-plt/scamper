@@ -1,10 +1,9 @@
 import * as L from "../lpm"
-import { mkComment } from "../lpm"
 import { mkSyntax, Syntax } from "./syntax.js"
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
-export class Token {
+class Token {
   text: string
   range: L.Range
 
@@ -66,7 +65,7 @@ class Tokenizer {
     // N.B., chomp whitespace so we maintain the invariant that the
     // tokenizer is always pointing to a valid token if there are tokens
     // left to process
-    this.chompWhitespace()
+    this.chompWhitespaceAndComments()
   }
 
   isEmpty(): boolean {
@@ -126,7 +125,7 @@ class Tokenizer {
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
       // always pointing to a valid token if there are any left
-      this.chompWhitespace()
+      this.chompWhitespaceAndComments()
       return token
     }
   }
@@ -147,8 +146,17 @@ class Tokenizer {
     this.idx += 1
   }
 
-  chompWhitespace(): void {
-    while (!this.isEmpty() && isWhitespace(this.peek())) {
+  chompWhitespaceAndComments(): void {
+    let inComment = false
+    while (
+      !this.isEmpty() &&
+      (inComment || isWhitespace(this.peek()) || this.peek() === ";")
+    ) {
+      if (this.peek() === ";") {
+        inComment = true
+      } else if (inComment && this.peek() === "\n") {
+        inComment = false
+      }
       this.advance()
     }
   }
@@ -202,15 +210,6 @@ class Tokenizer {
           this.endIdx,
         ),
       )
-      // Case: comments
-    } else if (ch === ";") {
-      this.beginTracking()
-      while (!this.isEmpty() && this.peek() !== "\n") {
-        this.advance()
-      }
-      // N.B., don't include the newline in the comment token, but do include
-      // all other characters, including the ';' that starts the comment.
-      return this.emitToken()
       // Case: any other sequence of non-whitespace, non-delimiting characters
     } else {
       this.beginTracking()
@@ -402,9 +401,6 @@ export function readSingle(t: Token, wildAllowed: boolean): Syntax {
         t.range,
       )
     }
-  } else if (text.startsWith(";")) {
-    // Case: comments
-    return mkSyntax(mkComment(text.slice(1)), t.range)
   } else {
     // TODO: ensure identifiers don't have invalid characters, i.e., #
     // Probably should be done in the lexer, not the parser...
