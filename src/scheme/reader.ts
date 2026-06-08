@@ -4,13 +4,11 @@ import { mkSyntax, Syntax } from "./syntax.js"
 ///// Tokenization /////////////////////////////////////////////////////////////
 
 class Token {
-  text: string
-  range: L.Range
-
-  constructor(text: string, range: L.Range) {
-    this.text = text
-    this.range = range
-  }
+  constructor(
+    public text: string,
+    public range: L.Range,
+    public comment?: string,
+  ) {}
 
   public toString(): string {
     return `["${this.text}" ${this.range.toString()}]`
@@ -32,6 +30,8 @@ const areMatchingBrackets = (open: string, close: string): boolean => {
   )
 }
 
+export type Comment = string
+
 class Tokenizer {
   private src: string
   private idx: number
@@ -45,6 +45,7 @@ class Tokenizer {
   private endCol: number
   private endIdx: number
   private tokenLen: number
+  private currComment?: Comment
 
   constructor(src: string) {
     this.src = src
@@ -90,6 +91,7 @@ class Tokenizer {
     this.endCol = -1
     this.endIdx = -1
     this.tokenLen = 0
+    this.currComment = undefined
   }
 
   beginTracking(): void {
@@ -121,6 +123,7 @@ class Tokenizer {
           this.endCol,
           this.endIdx,
         ),
+        this.currComment,
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -152,11 +155,27 @@ class Tokenizer {
       !this.isEmpty() &&
       (inComment || isWhitespace(this.peek()) || this.peek() === ";")
     ) {
-      if (this.peek() === ";") {
+      const ch = this.peek()
+      if (ch === ";") {
+        // starting a new comment
+        this.currComment = ""
         inComment = true
-      } else if (inComment && this.peek() === "\n") {
-        inComment = false
+        this.advance()
+        continue
       }
+      if (!inComment) {
+        this.advance()
+        continue
+      }
+      // inComment = true
+      if (ch === "\n") {
+        inComment = false
+        this.advance()
+        continue
+      }
+      // add on to the current comment
+      this.currComment ??= ""
+      this.currComment += ch
       this.advance()
     }
   }
@@ -417,41 +436,50 @@ export function readSingle(t: Token, wildAllowed: boolean): Syntax {
 }
 
 export function readValue(tokens: Token[]): Syntax {
-  const beg = tokens.shift()!
-  if (isOpeningBracket(beg.text)) {
-    const values = []
-    while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
-      values.push(readValue(tokens))
-    }
-    if (tokens.length === 0) {
-      // NOTE: error is localized to the open bracket. We could go the end of file here, instead.
-      throw new L.ScamperError(
-        "Parser",
-        `Missing closing bracket for "${beg.text}"`,
-        undefined,
-        puffRange(beg.range),
-      )
-    } else if (!areMatchingBrackets(beg.text, tokens[0].text)) {
-      throw new L.ScamperError(
-        "Parser",
-        `Mismatched brackets. "${beg.text}" closed with "${tokens[0].text}"`,
-        undefined,
-        new L.Range(beg.range.begin, tokens[0].range.end),
-      )
-    } else {
-      const end = tokens.shift()!
-      return mkSyntax(
-        // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
-        // we ever allow '{' to imply an dictionary/object.
-        beg.text === "[" ? values : L.mkList(...values),
-        new L.Range(beg.range.begin, end.range.end),
-      )
-    }
-  } else if (beg.text === "'") {
-    return mkSyntax(L.mkList(L.mkSym("quote"), readValue(tokens)), beg.range)
-  } else {
-    return readSingle(beg, true)
+  const beg = tokens.shift()
+  if (!beg) {
+    throw new L.ICE(
+      "Reader.readValue",
+      "Could not get first token: readValue was incorrectly called on an empty token array?",
+    )
   }
+
+  if (!isOpeningBracket(beg.text)) {
+    return beg.text === "'"
+      ? mkSyntax(L.mkList(L.mkSym("quote"), readValue(tokens)), beg.range)
+      : readSingle(beg, true)
+  }
+
+  const values = []
+  while (tokens.length > 0 && !isClosingBracket(tokens[0].text)) {
+    values.push(readValue(tokens))
+  }
+
+  const end = tokens.shift()
+  if (!end) {
+    throw new L.ScamperError(
+      "Parser",
+      `Missing closing bracket for "${beg.text}"`,
+      undefined,
+      puffRange(beg.range),
+    )
+  }
+  if (!areMatchingBrackets(beg.text, end.text)) {
+    throw new L.ScamperError(
+      "Parser",
+      `Mismatched brackets. "${beg.text}" closed with "${end.text}"`,
+      undefined,
+      new L.Range(beg.range.begin, end.range.end),
+    )
+  }
+
+  return mkSyntax(
+    // N.B., non '[' brackets are lists, i.e., '('. Will need to change if
+    // we ever allow '{' to imply an dictionary/object.
+    beg.text === "[" ? values : L.mkList(...values),
+    new L.Range(beg.range.begin, end.range.end),
+    beg.comment,
+  )
 }
 
 export function readValues(tokens: Token[]): Syntax[] {

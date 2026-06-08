@@ -449,112 +449,112 @@ export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
 
 export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
   const orig = v
-  const { value, range } = S.unpackSyntax(v)
+  const { value, range, comment } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
     return A.mkStmtExp(parseExp(errors, orig), range)
-  } else {
-    const arr = L.listToVector(v)
-    if (arr.length == 0) {
-      return A.mkStmtExp(A.mkLit(null), range)
-    } else {
-      const { value: hv, range: hr } = S.unpackSyntax(arr[0])
-      if (L.isSym(hv)) {
-        const head = hv.value
-        switch (head) {
-          case "import": {
-            if (arr.length !== 2) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Import statements must have 2 sub-components, a module name and an alias",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phStmt
-            }
-            const name = parseIdentifier(
-              errors,
-              arr[1],
-              "The first component of an import statement must be an identifier",
-            )
-            return A.mkImport(name, range)
-          }
-
-          case "define": {
-            if (arr.length !== 3) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Define statements must have 2 sub-components, an identifier and a body",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phStmt
-            }
-            const name = parseIdentifier(
-              errors,
-              arr[1],
-              "The first component of a define statement must be an identifier",
-            )
-            const body = parseExp(errors, arr[2])
-            return A.mkDefine(name, body, range)
-          }
-
-          case "display": {
-            if (arr.length !== 2) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Display statements must have 1 argument, the expression to display",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phStmt
-            }
-            const body = parseExp(errors, arr[1])
-            return A.mkDisp(body, range)
-          }
-
-          case "struct": {
-            if (arr.length !== 3) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Struct statements must have 2 arguments, the name of the struct and a list of fields",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phStmt
-            }
-            const name = parseIdentifier(
-              errors,
-              arr[1],
-              "The first component of a struct statement must be an identifier",
-            )
-            const fields = parseIdentifierList(
-              errors,
-              arr[2],
-              "The second component of a struct statement must be a list of identifiers",
-              "The fields of a struct must be identifiers",
-            )
-            return A.mkStruct(name, fields, range)
-          }
-
-          default: {
-            // N.B., in this case, the identifier at the front is assumed to
-            // be a variable, so parse this like a statement-expression
-            return A.mkStmtExp(parseExp(errors, orig), range)
-          }
-        }
-      } else {
-        // N.B., otherwise, we have a statement-expression
-        return A.mkStmtExp(parseExp(errors, orig), range)
+  }
+  // v is a list
+  const arr = L.listToVector(v)
+  if (arr.length == 0) {
+    return A.mkStmtExp(A.mkLit(null), range)
+  }
+  // v is not equivalent to null
+  const { value: hVal, range: hRange } = S.unpackSyntax(arr[0])
+  if (!L.isSym(hVal)) {
+    // N.B., otherwise, we have a statement-expression
+    return A.mkStmtExp(parseExp(errors, orig), range)
+  }
+  // starts with identifier
+  const head = hVal.value
+  switch (head) {
+    case "import": {
+      if (arr.length !== 2) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Import statements must have 2 sub-components, a module name and an alias",
+            undefined,
+            hRange,
+          ),
+        )
+        return phStmt
       }
+      const name = parseIdentifier(
+        errors,
+        arr[1],
+        "The first component of an import statement must be an identifier",
+      )
+      return A.mkImport(name, range)
+    }
+
+    case "define": {
+      if (arr.length !== 3) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Define statements must have 2 sub-components, an identifier and a body",
+            undefined,
+            hRange,
+          ),
+        )
+        return phStmt
+      }
+      const name = parseIdentifier(
+        errors,
+        arr[1],
+        "The first component of a define statement must be an identifier",
+      )
+      const body = parseExp(errors, arr[2])
+      return A.mkDefine(name, body, range, comment)
+    }
+
+    case "display": {
+      if (arr.length !== 2) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Display statements must have 1 argument, the expression to display",
+            undefined,
+            hRange,
+          ),
+        )
+        return phStmt
+      }
+      const body = parseExp(errors, arr[1])
+      return A.mkDisp(body, range)
+    }
+
+    case "struct": {
+      if (arr.length !== 3) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Struct statements must have 2 arguments, the name of the struct and a list of fields",
+            undefined,
+            hRange,
+          ),
+        )
+        return phStmt
+      }
+      const name = parseIdentifier(
+        errors,
+        arr[1],
+        "The first component of a struct statement must be an identifier",
+      )
+      const fields = parseIdentifierList(
+        errors,
+        arr[2],
+        "The second component of a struct statement must be a list of identifiers",
+        "The fields of a struct must be identifiers",
+      )
+      return A.mkStruct(name, fields, range)
+    }
+
+    default: {
+      // N.B., in this case, the identifier at the front is assumed to
+      // be a variable, so parse this like a statement-expression
+      return A.mkStmtExp(parseExp(errors, orig), range)
     }
   }
 }

@@ -5,6 +5,7 @@ import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
 import StmtRenderer from "./ast-components/StmtRenderer.vue"
+import { Comment } from "./reader"
 
 export interface Tagged {
   tag: string
@@ -176,6 +177,7 @@ export interface Define extends Tagged, Node {
   tag: "define"
   name: string
   value: Exp
+  doc?: Comment
 }
 export interface Disp extends Tagged, Node {
   tag: "display"
@@ -209,9 +211,10 @@ export type SchemeNode = ProgNode | Stmt | Exp | Pat
 ///// Helper functions /////////////////////////////////////////////////////////
 
 export function progToNode(prog: Prog): ProgNode {
-  const range = prog.length === 0
-    ? L.Range.none
-    : new L.Range(prog[0].range.begin, prog[prog.length - 1].range.end)
+  const range =
+    prog.length === 0
+      ? L.Range.none
+      : new L.Range(prog[0].range.begin, prog[prog.length - 1].range.end)
   return { tag: "prog", body: prog, range }
 }
 
@@ -316,7 +319,8 @@ export const mkDefine = (
   name: string,
   value: Exp,
   range: L.Range = L.Range.none,
-): Define => ({ tag: "define", name, value, range })
+  doc?: Comment,
+): Define => ({ tag: "define", name, value, range, doc })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: "display",
   value,
