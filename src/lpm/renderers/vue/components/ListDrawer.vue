@@ -19,12 +19,15 @@ const flatList = computed(() => {
 </script>
 
 <template>
-  <CodeElement>[ </CodeElement>
+  
   <template v-for="(val, index) in flatList" :key="index">
     <!-- <CodeElement>{{ " " }}</CodeElement> -->
+    <CodeElement>[ </CodeElement>
     <ValueRenderer :value="val" />
+    <CodeElement> ][  ―]―▶</CodeElement>
   </template>
-  <CodeElement> ][  ―]―▶</CodeElement>
+  <CodeElement>NULL</CodeElement>
+  
 </template>
 
 <style scoped></style>

@@ -14,14 +14,19 @@ export interface VueStrategyProps {
   type: "vue"
   renderer: Component
 }
+export interface DrawStrategyProps {
+  type: "draw"
+  renderer: Component
+}
 interface BaseStrategy {
   predicate: (v: Value) => boolean
 }
 interface VueStrategy extends BaseStrategy, VueStrategyProps {}
+interface DrawStrategy extends BaseStrategy, DrawStrategyProps {}
 interface DOMStrategy extends BaseStrategy {
   type: "dom"
 }
-export type Strategy = VueStrategy | DOMStrategy
+export type Strategy = DrawStrategy | VueStrategy | DOMStrategy
 
 /**
  * helper functions
@@ -52,15 +57,19 @@ const listStrategy: VueStrategy = {
   type: "vue",
   renderer: ListRenderer,
 }
-const listDrawStrategy: VueStrategy = {
-  predicate: (v) => isList(v),
-  type: "vue",
-  renderer: ListDrawer,
-}
 const pairStrategy: VueStrategy = {
   predicate: (v) => isPair(v),
   type: "vue",
   renderer: PairRenderer,
+}
+
+/**
+ * visualization vue strategies
+ */
+const listDrawStrategy: DrawStrategy = {
+  predicate: (v) => isList(v),
+  type: "draw",
+  renderer: ListDrawer,
 }
 
 const htmlElementStrategy: DOMStrategy = {
@@ -88,6 +97,7 @@ const genericStructStrategy: VueStrategy = {
   type: "vue",
   renderer: StructRenderer,
 }
+
 const errorStrategy: VueStrategy = {
   predicate: (v) => v instanceof Error,
   type: "vue",
@@ -106,12 +116,14 @@ class _VueRenderer extends Renderer<Component> {
   render(value: Value): Component {
     const strategy = this.getStrategy(value)
     if (strategy) {
+      console.log("moooo")
       return strategy.type === "vue" ? strategy.renderer : DOMElementRenderer
     }
 
     const drawStrategy = this.getDrawStrategy(value)
     if (drawStrategy) {
-      return drawStrategy.type === "vue" ? drawStrategy.renderer : DOMElementRenderer
+      console.log("drrr")
+      return drawStrategy.type === "draw" ? drawStrategy.renderer : DOMElementRenderer
     }
 
     // there may be a custom renderer for this value

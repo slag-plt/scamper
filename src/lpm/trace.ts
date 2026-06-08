@@ -5,6 +5,7 @@ import TextRenderer from "./renderers/text"
 import VueRenderer from "./renderers/vue"
 import TraceStartRenderer from "./TraceStartRenderer.vue"
 import TraceOutputRenderer from "./TraceOutputRenderer.vue"
+import DrawStartRenderer from "./DrawStartRenderer.vue"
 
 export interface TraceStart extends L.Struct {
   [L.structKind]: "trace-start"
@@ -83,38 +84,78 @@ VueRenderer.registerCustomRenderer(
   () => TraceOutputRenderer,
 )
 
-export interface DrawOutput extends L.Struct {
-  [L.structKind]: "draw-output"
-  output: L.Value
+// export interface DrawOutput extends L.Struct {
+//   [L.structKind]: "draw-output"
+//   output: L.Value
+// }
+
+// export function mkDrawOutput(output: L.Value): DrawOutput {
+//   return U.mkStruct("draw-output", ["output"], [output]) as DrawOutput
+// }
+
+// TextRenderer.registerCustomRenderer(
+//   (v) => U.isStructKind(v, "draw-output"),
+//   (v) => {
+//     return `${TextRenderer.render((v as DrawOutput).output)}`
+//   },
+// )
+
+// HTMLRenderer.registerCustomRenderer(
+//   (v) => U.isStructKind(v, "draw-output"),
+//   (v) => {
+//     const trace = v as DrawOutput
+//     const container = document.createElement("div")
+//     container.classList.add("scamper-draw")
+
+//     const prompt = document.createElement("code")
+//     container.appendChild(prompt)
+
+//     container.appendChild(HTMLRenderer.render(trace.output))
+//     return container
+//   },
+// )
+// VueRenderer.registerCustomRenderer(
+//   (v) => U.isStructKind(v, "draw-output"),
+//   () => TraceOutputRenderer,
+// )
+
+export interface DrawStart extends L.Struct {
+  [L.structKind]: "draw-start"
+  preamble: string
+  output?: L.Value
 }
 
-export function mkDrawOutput(output: L.Value): DrawOutput {
-  return U.mkStruct("draw-output", ["output"], [output]) as DrawOutput
+export function mkDrawStart(preamble: string, output?: L.Value): DrawStart {
+  return U.mkStruct(
+    "draw-start",
+    ["preamble", "output"],
+    [preamble, output],
+  ) as DrawStart
 }
 
 TextRenderer.registerCustomRenderer(
-  (v) => U.isStructKind(v, "draw-output"),
+  (v) => U.isStructKind(v, "draw-start"),
   (v) => {
-    return `${TextRenderer.render((v as DrawOutput).output)}`
+    const t = v as DrawStart
+    const output = t.output ? ` ${TextRenderer.render(t.output)}` : ""
+    return `${t.preamble}${output}`
   },
 )
 
 HTMLRenderer.registerCustomRenderer(
-  (v) => U.isStructKind(v, "draw-output"),
+  (v) => U.isStructKind(v, "draw-start"),
   (v) => {
-    const trace = v as DrawOutput
     const container = document.createElement("div")
-    container.classList.add("scamper-draw")
-
-    const prompt = document.createElement("code")
-    prompt.textContent = "--> "
-    container.appendChild(prompt)
-
-    container.appendChild(HTMLRenderer.render(trace.output))
+    container.classList.add("scamper-draw-start")
+    const t = v as DrawStart
+    container.appendChild(document.createTextNode(`${t.preamble} `))
+    if (t.output) {
+      container.appendChild(HTMLRenderer.render(t.output))
+    }
     return container
   },
 )
 VueRenderer.registerCustomRenderer(
-  (v) => U.isStructKind(v, "draw-output"),
-  () => TraceOutputRenderer,
+  (v) => U.isStructKind(v, "draw-start"),
+  () => DrawStartRenderer,
 )
