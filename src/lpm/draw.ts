@@ -3,8 +3,7 @@ import * as U from "./util"
 import HTMLRenderer from "./renderers/html.js"
 import TextRenderer from "./renderers/text"
 import VueRenderer from "./renderers/vue"
-
-
+import './styles.css'
 
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
@@ -139,21 +138,19 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           height = height + pairHeight(fst)
         } else if(U.isArray(fst)) {
           height = height + vectorHeight(fst)
-        } else if (Value.isStruct(fst)) {
+        } else if (U.isStruct(fst)) {
           height = height + structHeight(fst)
         }
       } else {
         if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
           height = height + listHeight(list.snd) + 1
-        } else if(Value.isPair(fst)) {
-          if(fst.isList) {
-            height = height + listHeight(fst) + listHeight(list.snd) //1
-          } else {
-            height = height + pairHeight(fst) + listHeight(list.snd) //1
-          }
-        } else if(Value.typeOf(fst) === 'vector') {
+        } else if(U.isList(fst)) {
+          height = height + listHeight(fst) + listHeight(list.snd) //1
+        } else if(U.isPair(fst)) {
+          height = height + pairHeight(fst) + listHeight(list.snd) //1
+        } else if(U.isArray(fst)) {
           height = height + vectorHeight(fst) - 1 + listHeight(list.snd)
-        } else if (Value.isStruct(fst)) {
+        } else if (U.isStruct(fst)) {
           height = height + structHeight(fst) + listHeight(list.snd)
           height = height + 3
         }
@@ -225,7 +222,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
   }
   
   //if variable is given a default value, should always be called with default value outside of the function
-  function drawListHTML(list: L.List, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
+  function drawListHTML(list: L.List | null, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
     //declares overall html object to be appended to page
     const div = document.createElement('div');
     div.ariaDescription = 'object type list';
@@ -233,10 +230,16 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     div.style.position = 'relative';
   
     if(U.isList(list)) {
+      if(list === null) {
+        const div = document.createElement('div')
+        div.className = 'null-box'
+        return div
+      }
+
       const len = lengthList(list);
   
       //loops through the list creating pairs and arrows for each element
-      for(let i = 0; i < len!; i++) {
+      for(let i = 0; i < len; i++) {
         //creates the container for the individual list element and the sub element that contains the list pair
         const col = document.createElement('div');
         col.className = 'vector-style';
@@ -255,15 +258,15 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           })
           if(j === 0) {
             box.id = `${nesting}:${i}:${parent}:${imgID} val`
-            if(list.fst.isList) {
+            if(U.isList(list!.fst)) {
               box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains another list`;
               box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains another list`;
-            } else if(Value.typeOf(list.fst) === 'vector') {
+            } else if(U.isArray(list!.fst)) {
               box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains a vector`;
               box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains a vector`;
             } else {
-              box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains ${list.fst}`;
-              box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains ${list.fst}`;
+              box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains ${list!.fst}`;
+              box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains ${list!.fst}`;
             }
           } else {
             box.id = `${nesting}:${i}:${parent}:${imgID} next`
@@ -294,9 +297,9 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
         col.appendChild(top);
   
-        if(list.snd !== null) {
+        if(list!.snd !== null) {
           //creates the arrow pointing to the contained element
-          for(let j = 0; j < listHeight(list.snd); j++) {
+          for(let j = 0; j < listHeight(list!.snd); j++) {
             const arrow = document.createElement('div');
             arrow.className = 'list-arrow-down'
             col.appendChild(arrow);
@@ -308,104 +311,120 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
         
         //creates the container for the value contained in the first element of a list pair
-        let el = list.fst
+        let el = list!.fst
         const val = document.createElement('div');
         val.className = 'val-box';
         val.textContent = '▼'
         col.appendChild(val);
         const val2 = document.createElement('div');
         val2.className = 'val-box';
-        if(typeof el === 'string' || typeof el === 'number' || typeof el === 'boolean') {
+        if(el === null) {
+          val2.textContent = 'null';
+        } else if(typeof el === 'string' || typeof el === 'number' || typeof el === 'boolean') {
           if(typeof el === 'string'){
             val2.textContent = "\"" + el + "\""
           } else {
             val2.textContent = el + '';
           }
           col.appendChild(val2);
-        } else if (Value.isPair(el)) {
-          if(el.isList) {
-            col.appendChild(drawListHTML(el, nesting + 1, i, imgID));
-          } else {
-            col.appendChild(drawPairHTML(el, nesting + 1, i, imgID));
-          }
-        } else if (Value.typeOf(el) === 'vector') {
+        } else if(el !== null && U.isList(el)) {
+          col.appendChild(drawListHTML(el, nesting + 1, i, imgID));
+        } else if (U.isPair(el)) {
+          col.appendChild(drawPairHTML(el, nesting + 1, i, imgID));
+        } else if (U.isArray(el)) {
           col.appendChild(drawVectorHTML(el, nesting + 1, i, imgID));
-        } else if (Value.isStruct(el)) {
+        } else if (U.isStruct(el)) {
           col.appendChild(drawStructHTML(el))
         }
         
         //iterates the list
-        list = list.snd;
+        list = list!.snd;
         div.appendChild(col);
       }
     }
     return div;
   }
+  /*
+  Catppuccin for VSCode 
+by Catppuccin
+  Omni Theme 
+by Rocketseat
+  Panda Theme 
+by Panda Theme
+  Monokai Night Theme 
+by Fabio Spampinato
+  Rosé Pine
+by Rosé Pine
+  Pink-Cat-Boo Theme
+by Fiona Fan
+  Black
+by Jaakko
+  Lunar Pink Theme
+by Nícolas D. Schmidt
+  Synthwave x Fluoromachine
+by webrender
+
+  */
+  // //ASCII
+  // function drawPair(pair: any): any {
+  //   let str = ''
+  //   let fst = pair.fst
+  //   let snd = pair.snd
+  //   if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
+  //     str = str + '{ ' + fst
+  //   } else if(Value.isPair(fst)) {
+  //     str = str + drawPair(fst) + ' }'
+  //   } else if(Value.typeOf(fst) === 'list') {
+  //     str = str + drawList(fst) + ' }'
+  //   }
+  //   str = str + ' }-{ '
+  //   if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean') {
+  //     str = str + snd + ' }'
+  //   } else if(Value.isPair(snd)) {
+  //     str = str + drawPair(snd) + ' }'
+  //   } else if(Value.typeOf(snd) === 'list') {
+  //     str = str + drawList(snd) + ' }'
+  //   }
+  //   return str
+  // }
   
-  //ASCII
-  function drawPair(pair: any): any {
-    let str = ''
-    let fst = pair.fst
-    let snd = pair.snd
-    if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean') {
-      str = str + '{ ' + fst
-    } else if(Value.isPair(fst)) {
-      str = str + drawPair(fst) + ' }'
-    } else if(Value.typeOf(fst) === 'list') {
-      str = str + drawList(fst) + ' }'
-    }
-    str = str + ' }-{ '
-    if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean') {
-      str = str + snd + ' }'
-    } else if(Value.isPair(snd)) {
-      str = str + drawPair(snd) + ' }'
-    } else if(Value.typeOf(snd) === 'list') {
-      str = str + drawList(snd) + ' }'
-    }
-    return str
-  }
-  
-  function pairHeight(pair: any) {
+  function pairHeight(pair: L.Pair) {
     let height = 3
-    let fst = pair.fst
-    let snd = pair.snd
+    const fst = pair.fst
+    const snd = pair.snd
     
     //height of pair.snd
     if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
       height = height + 1
-    } else if (Value.isPair(snd)) {
-      if(snd.isList) {
-        height = height + listHeight(snd)
-      } else {
-        height = height + pairHeight(snd)
-      }
-    } else if (Value.typeOf(snd) === 'vector') {
+    } else if (U.isList(snd)) {
+      height = height + listHeight(snd)
+    } else if (U.isPair(snd)) {
+      height = height + pairHeight(snd)
+    } else if (U.isArray(snd)) {
       height = height + vectorHeight(snd)
-    } else if (Value.isStruct(snd)) {
+    } else if (U.isStruct(snd)) {
       height = structHeight(snd)
     }
   
     //height of pair.fst
     if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean' ) {
       height = height + 1
-    } else if (Value.isPair(fst)) {
-      if(fst.isList) {
-        height = height + listHeight(fst)
-      } else {
-        height = height + pairHeight(fst)
-      }
-    } else if (Value.typeOf(fst) === 'vector') {
+    } else if (U.isList(fst)) {
+      height = height + listHeight(fst)
+    } else if (U.isPair(fst)) {
+      height = height + pairHeight(fst)
+    } else if (U.isArray(fst)) {
       height = height + vectorHeight(fst) - 1
-    } else if (Value.isStruct(fst)) {
+    } else if (U.isStruct(fst)) {
       height = structHeight(fst)
     }
   
     return height
   }
   
-  function drawPairHTML(pair: any, nesting: number = 0, parent: number = 0, imgID: number = Math.random()): any {
+  function drawPairHTML(pair: L.Pair, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
     //Container for html elements
-    let div = document.createElement('div');
+    const div = document.createElement('div');
     div.ariaLabel = 'object type pair';
     //div.tabIndex = 0;
     div.style.position = 'relative';
@@ -443,15 +462,13 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       if(k === 0) {
         if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
           height = height + 1
-        } else if (Value.isPair(snd)) {
-          if(snd.isList) {
-            height = height + listHeight(snd)
-          } else {
-            height = height + pairHeight(snd)
-          }
-        } else if (Value.typeOf(snd) === 'vector') {
+        } else if (U.isList(snd)) {
+          height = height + listHeight(snd)
+        } else if (U.isPair(snd)) {
+          height = height + pairHeight(snd)
+        } else if (U.isArray(snd)) {
           height = height + vectorHeight(snd)
-        } else if (Value.isStruct(snd)) {
+        } else if (U.isStruct(snd)) {
           height = structHeight(snd)
         }
       }
@@ -481,15 +498,13 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           val2.textContent = e + '';
         }
         col.appendChild(val2);
-      } else if (Value.isPair(e)) {
-        if(e.isList) {
-          col.appendChild(drawListHTML(e, nesting + 1, k, imgID));
-        } else {
-          col.appendChild(drawPairHTML(e, nesting + 1, k, imgID));
-        }
-      } else if (Value.typeOf(e) === 'vector') {
+      } else if (U.isList(e)) {
+        col.appendChild(drawListHTML(e, nesting + 1, k, imgID));
+      } else if (U.isPair(e)) {
+        col.appendChild(drawPairHTML(e, nesting + 1, k, imgID));
+      } else if (U.isArray(e)) {
         col.appendChild(drawVectorHTML(e, nesting + 1, k, imgID));
-      } else if (Value.isStruct(e)) {
+      } else if (U.isStruct(e)) {
         col.appendChild(drawStructHTML(e))
       }
        div.appendChild(col);
@@ -498,30 +513,27 @@ function vectorHeight(vec: L.Vector, index = 0): number {
   }
   
   
-  function structHeight(struct: Value.Struct) {
+  function structHeight(struct: L.Struct) : number {
     let height = 0
     for (let thing in struct) {
       thing = struct[thing]
       if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
         height = height + 3
-      } else if (Value.isPair(thing)) {
-        //@ts-ignore
-        if(thing.isList) {
-          height = height + listHeight(thing)
-        } else {
-          height = height + pairHeight(thing)
-        }
-      } else if (Value.typeOf(thing) === 'vector') {
+      } else if (U.isPair(thing)) {
+        height = height + listHeight(thing)
+      } else if (U.isPair(thing)) {
+        height = height + pairHeight(thing)
+      } else if (U.isArray(thing)) {
         height = height + vectorHeight(thing)
-      } else if (Value.isStruct(thing)) {
+      } else if (U.isStruct(thing)) {
         height = height + structHeight(thing)
       }
     }
     return height
   }
   
-  function drawStructHTML(struct: Value.Struct) {
-    let div = document.createElement('div');
+  function drawStructHTML(struct: L.Struct) {
+    const div = document.createElement('div');
     div.tabIndex = 0;
     
   
@@ -581,7 +593,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         let HTMLVal = document.createElement('div'); // div to hold element to be drawn
         
         if(typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean') {
-          let val2 = document.createElement('div');
+          const val2 = document.createElement('div');
             val2.className = 'val-box';
             val2.innerHTML = t.toString();
           if(typeof t === 'string') {
@@ -590,15 +602,13 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             val2.style.paddingTop = '5px'
             val2.style.whiteSpace = 'noWrap';
           HTMLVal = val2;
-        } else if (Value.isPair(t)) {
-          if(t.isList) {
-            HTMLVal = drawListHTML(t);
-          } else {
-            HTMLVal = drawPairHTML(t);
-          }
-        } else if (Value.typeOf(t) === 'vector') {
+        } else if (U.isList(t)) {
+          HTMLVal = drawListHTML(t);
+        } else if (U.isPair(t)) {
+          HTMLVal = drawPairHTML(t);
+        } else if (U.isArray(t)) {
           HTMLVal = drawVectorHTML(t);
-        } else if (Value.isStruct(t)) {
+        } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t);
         }
   

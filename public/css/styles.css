@@ -1,0 +1,147 @@
+.vector-box {
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    border: 2px solid black;
+    margin: 0px;
+    box-sizing: border-box;
+}
+
+.vector-box:focus {
+    background: black
+}
+
+.list-box {
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    border: 2px solid black;
+    margin: 0px;
+    box-sizing: border-box;
+    display: inline-block;
+}
+
+.list-box:focus-within{
+    background-color: black;
+}
+
+.null-box {
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    background: linear-gradient(to bottom right, transparent calc(50% - 1px), black calc(50% - 1px), black 50%, transparent 50%);
+    border: 2px solid black;
+    margin: 0px;
+    box-sizing: border-box;
+    display: inline-block;
+}
+
+.null-box:focus-within {
+    background: linear-gradient(to bottom right, transparent calc(50% - 1px), white calc(50% - 1px), white 50%, transparent 50%);
+    background-color: black;
+}
+
+.val-box {
+    width: 30px;
+    height: 10px;
+    padding: 0px;
+    margin-left: 1px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.down-arrow-box {
+    width: 30px;
+    height: 10px;
+    padding: 0px;
+    margin-left: 1px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+.arrow-box {
+    width: 15px;
+    height: 20px;
+    padding: 0px;
+    margin-top: 7px;
+    box-sizing: border-box;
+    display: inline-block
+}
+
+.index-box {
+    width: 5px;
+    height: 15px;
+    margin-left: 0px;
+    margin-right: 15px;
+    padding: 0px;
+    margin-top: 0;
+    margin-bottom: 1px;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.vec-arrow {
+    width: 1px;
+    height: 30px;
+    border: 2px solid black;
+    margin-left: 12px;
+    margin-right: 13px;
+    padding: 1px;
+    margin-top: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.list-arrow-down {
+    width: 1px;
+    height: 30px;
+    border: 2px solid black;
+    margin-left: 14px;
+    margin-right: 14px;
+    margin-top: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.list-arrow {
+    width: 30px;
+    height: 2px;
+    border: 2px solid black;
+    margin-bottom: 0px;
+    margin-top: 14px;
+    box-sizing: border-box;
+    display: inline-block;
+    vertical-align: middle;
+    flex: 1;
+}
+
+.list-style {
+    display: inline-flex;
+}
+
+.vector-style {
+    display: inline-flex;
+    /* Using column layout to stack child elements vertically within the struct-box */
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-wrap: unset;
+    
+}
+
+.struct-box {
+    border: 2px solid black;
+    padding: 5px; 
+    width: 50px;
+    height: 50px;
+    margin: 3px;
+}
+
+.struct-line {
+    border: 3px solid black;
+    width: 0px;
+    margin-right: -5px;
+    margin-top: 3px;
+    margin-bottom: -3px;
+    margin-left: 3px;
+}
