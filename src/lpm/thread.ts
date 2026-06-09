@@ -82,6 +82,7 @@ export class Thread {
   results: L.Value[]
   isProcessingExpr: boolean
   cancelled = false
+  definedVars: [string, L.Value][]
 
   constructor(
     name: string,
@@ -91,7 +92,7 @@ export class Thread {
     builtinLibs: Map<string, L.Library>,
     out: OutputChannel,
     err: ErrorChannel,
-    raisingProviders: Map<string, Raiser<any>>,
+    raisingProviders: Map<string, Raiser<any>>
   ) {
     this.name = name
     this.prog = prog
@@ -105,6 +106,7 @@ export class Thread {
     this.frames = []
     this.results = []
     this.isProcessingExpr = false
+    this.definedVars = []
   }
 
   lengthOfLibs(): number {
@@ -401,7 +403,8 @@ export class Thread {
             this.out.popLevel()
           } // pops trace-block
           //const div = document.createElement("div")
-          //if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result))
+          //if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result)))
+          this.definedVars.push([stmt.name, result])
           const save = this.draw()
           this.advanceStmt() // pops trace
           //this.out.send(div) // to be outputted with HTML bindings / environment
@@ -688,211 +691,209 @@ export class Thread {
     }
   }
     
-    draw (): HTMLDivElement {
-      const envState = this.env
-      const initialLibNum = this.lengthOfLibs()
-      console.log("Initial Lib Num " + initialLibNum)
-      const mainDiv = document.createElement('div')
-  
-      //if(envState != undefined){
-  
-        //grabs bounded values from the environment
-        const bounded = envState.returnEnv(initialLibNum)
-        console.log(bounded)
-        
-        //grabs the stack
-        const stack = this.frames
-        console.log(stack)
-        //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
-        //if(!stack[0]) {
-  
-          //and bounded variables exist
-          if(bounded.length > 0) {
+  draw (): HTMLDivElement {
+    //grabs bounded collected suring runtime
+      const bounded = this.definedVars
+      console.log(bounded)
+    //const initialLibNum = this.lengthOfLibs()
+    //console.log("Initial Lib Num " + initialLibNum)
+    const mainDiv = document.createElement('div')
+
+    //if(envState != undefined){
+      //grabs the stack
+      const stack = this.frames
+      console.log(stack)
+      //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
+      //if(!stack[0]) {
+
+        //and bounded variables exist
+        if(bounded.length > 0) {
+          
+          //environment begin line
+          const div1 = document.createElement('div')
+          div1.ariaLabel = "Begin environment"
+          div1.ariaDescription = "Begin environment"
+          div1.textContent = "------------------------------~"
+          div1.tabIndex = 0
+          mainDiv.appendChild(div1)
+          // div1.addEventListener('keydown', (event) => {
+          //   if(event.key === 'j' && event.ctrlKey) {
+          //     if(this.jumpToList![this.jumpToList!.indexOf(div1) + 1]) {
+          //       this.jumpToList![this.jumpToList!.indexOf(div1) + 1].focus()
+          //    }
+          //   }
+          // })
+          // renderToDraw(this.display, div1)
+          // this.jumpToList?.push(div1)
+
+          // parallel arrays for keeping divs and their names
+          let list_names: String[] = [];
+          let list_div: HTMLElement[] = [];
+
+          // for each bounded variable
+          bounded.forEach(([id, value]) => {
+            //let strVal: string = value.toString()
+
+            let HTMLVal: any = ''
+            let ariaType = ""
+            let structName = false;
+
+            if(U.isNull(value)) {
+              console.log("NU>LLB OXX" + "  " + typeof(value))
+              const div = document.createElement('div')
+              div.className = 'null-box'
+              HTMLVal = div
+            }
+            // //typecheck the variable(s) and convert to string or HTML elements
+            // if (!value) {
+            //   return;
+            // }
+            if(U.isNull(value)) {
+              // console.log("NU>LLB OXX" + "  " + typeof(value))
+              const div = document.createElement('div')
+              div.className = 'null-box'
+              div.style.marginBottom = '5px'
+              HTMLVal = div
+            } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+              if (typeof value === 'string') {
+                HTMLVal = "\"" + value + "\""
+              } else if (typeof value === 'boolean'){
+                HTMLVal = value
+              } else {
+                HTMLVal = value.toString()
+              }
+              ariaType = typeof value
+            } else if (U.isArray(value)) {
+              //strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
+              HTMLVal = D.drawVectorHTML(value)
+              ariaType = "vector"
+            } else if (U.isList(value)) {
+              //strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
+              HTMLVal = D.drawListHTML(value)
+              ariaType = "list"
+            } else if (U.isPair(value)) {
+              //strVal = drawPair(value)
+              HTMLVal = D.drawPairHTML(value)
+              ariaType = "pair"
+            } else if (U.isFunction(value)) {
+              //strVal = ("PROCEDURE")
+              ariaType = "procedure"
+              HTMLVal = "PROCEDURE"
+            } else if (U.isStruct(value)) {
+              HTMLVal = D.drawStructHTML(value)
+              ariaType = 'struct'
+              //console.log("STRUCT")
+              //console.log(value[0])
+              structName = value[0];
+            } else {
+              console.log("Found none for type " + U.typeOf(value))
+            }
+            //make mini div for name and arrow
+            let miniDiv = document.createElement('div')
+            miniDiv.textContent = id + ' → '
+            miniDiv.style.whiteSpace = 'nowrap'
             
-            //environment begin line
-            const div1 = document.createElement('div')
-            div1.ariaLabel = "Begin environment"
-            div1.ariaDescription = "Begin environment"
-            div1.textContent = "------------------------------~"
-            div1.tabIndex = 0
-            mainDiv.appendChild(div1)
-            // div1.addEventListener('keydown', (event) => {
-            //   if(event.key === 'j' && event.ctrlKey) {
-            //     if(this.jumpToList![this.jumpToList!.indexOf(div1) + 1]) {
-            //       this.jumpToList![this.jumpToList!.indexOf(div1) + 1].focus()
-            //    }
+            // make div to be drawn later
+            let div = document.createElement('div')
+            
+            div.style.display = 'flex'
+            div.ariaLabel = id + " points to " + ariaType
+            div.ariaDescription = id + " points to " + ariaType
+            div.appendChild(miniDiv)
+            div.append(HTMLVal)
+            // this.jumpToList!.push(HTMLVal)
+            // div.addEventListener('keydown', (event) => {
+            //   if (event.key === 'j' && event.ctrlKey) {
+            //     if (this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1]) {
+            //       this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1].focus()
+            //     }
             //   }
             // })
-            // renderToDraw(this.display, div1)
-            // this.jumpToList?.push(div1)
-  
-            // parallel arrays for keeping divs and their names
-            let list_names: String[] = [];
-            let list_div: HTMLElement[] = [];
-  
-            // for each bounded variable
-            bounded.forEach(([id, value]) => {
-              //let strVal: string = value.toString()
-  
-              let HTMLVal: any = ''
-              let ariaType = ""
-              let structName = false;
-  
-              if(U.isNull(value)) {
-                console.log("NU>LLB OXX" + "  " + typeof(value))
-                const div = document.createElement('div')
-                div.className = 'null-box'
-                HTMLVal = div
-              }
-              // //typecheck the variable(s) and convert to string or HTML elements
-              // if (!value) {
-              //   return;
-              // }
-              if(U.isNull(value)) {
-                // console.log("NU>LLB OXX" + "  " + typeof(value))
-                const div = document.createElement('div')
-                div.className = 'null-box'
-                HTMLVal = div
-              } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                if (typeof value === 'string') {
-                  HTMLVal = "\"" + value + "\""
-                } else if (typeof value === 'boolean'){
-                  HTMLVal = value
-                } else {
-                  HTMLVal = value.toString()
+            //console.log(structName + id)
+            if(structName) {
+                //console.log(list_names)
+                //console.log(list_div)
+              for(let i = 0; i < list_names.length; i++) {
+                
+                if(list_names[i].startsWith(structName)) {
+                  list_names.splice(i, 1);
+                  list_div.splice(i,1);
                 }
-                ariaType = typeof value
-              } else if (U.isArray(value)) {
-                //strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
-                HTMLVal = D.drawVectorHTML(value)
-                ariaType = "vector"
-              } else if (U.isList(value)) {
-                //strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
-                HTMLVal = D.drawListHTML(value)
-                ariaType = "list"
-              } else if (U.isPair(value)) {
-                //strVal = drawPair(value)
-                HTMLVal = D.drawPairHTML(value)
-                ariaType = "pair"
-              } else if (U.isFunction(value)) {
-                //strVal = ("PROCEDURE")
-                ariaType = "procedure"
-                HTMLVal = "PROCEDURE"
-              } else if (U.isStruct(value)) {
-                HTMLVal = D.drawStructHTML(value)
-                ariaType = 'struct'
-                //console.log("STRUCT")
-                //console.log(value[0])
-                structName = value[0];
-              } else {
-                console.log("Found none for type " + U.typeOf(value))
-              }
-              //make mini div for name and arrow
-              let miniDiv = document.createElement('div')
-              miniDiv.textContent = id + ' → '
-              miniDiv.style.whiteSpace = 'nowrap'
-              
-              // make div to be drawn later
-              let div = document.createElement('div')
-              
-              div.style.display = 'flex'
-              div.ariaLabel = id + " points to " + ariaType
-              div.ariaDescription = id + " points to " + ariaType
-              div.appendChild(miniDiv)
-              div.append(HTMLVal)
-              // this.jumpToList!.push(HTMLVal)
-              // div.addEventListener('keydown', (event) => {
-              //   if (event.key === 'j' && event.ctrlKey) {
-              //     if (this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1]) {
-              //       this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1].focus()
-              //     }
-              //   }
-              // })
-              //console.log(structName + id)
-              if(structName) {
-                  //console.log(list_names)
-                  //console.log(list_div)
-                for(let i = 0; i < list_names.length; i++) {
-                  
-                  if(list_names[i].startsWith(structName)) {
-                    list_names.splice(i, 1);
-                    list_div.splice(i,1);
-                  }
-                }
-              }
-              list_names.push(id);
-              list_div.push(div)
-              //console.log(this.jumpToList)
-            })
-
-            list_div.forEach(e => mainDiv.appendChild(e) );
-            
-            //environment end line
-            const div2 = document.createElement('div')
-            div2.ariaLabel = "End environment"
-            div2.ariaDescription = "End environment"
-            div2.textContent = "------------------------------~"
-            div2.tabIndex = 0
-            mainDiv.appendChild(div2)
-          }
-        //}
-  
-        /*
-        let stackString;
-        let stackHTML;
-  
-        //if there is anything in the stack ( we are inside the gray tracing box)
-        if(stack[0]) {
-          //console.log(stack[0])
-          //convert to string (probs not used)
-          stackString = stack[stack.length - 1]?.toString()
-  
-          //type check and convert to string or HTML element
-          if(typeof stack[0] != 'string' && typeof stack[0] != 'number' && typeof stack[0] != 'boolean' || stack[0] === 0) {
-            if(stack[0] != undefined && Value.typeOf(stack[0]) === 'vector') {
-              stackString = drawVector(stack[0])
-              stackHTML = drawVectorHTML(stack[0])
-            } else if (stack[0] != undefined && Value.typeOf(stack[0]) === 'list') {
-              stackString = drawList(stack[0])
-              stackHTML = drawListHTML(stack[0])
-            } else if (stack[0] != undefined && Value.isPair(stack[0])) {
-              stackString = drawPair(stack[0])
-              stackHTML = drawPairHTML(stack[0])
-            } else if (stack[0] != undefined && Value.isFunction(stack[0])) {
-              //@ts-ignore
-              if(stack[0].name) {
-                //@ts-ignore
-                if(stack[0].name === 'cons') {
-                  let last: any = stack[stack.length - 1]
-                  if(last.snd === null) {
-                    stackString = drawList(Value.mkList(last.fst))
-                    stackHTML = drawListHTML(Value.mkList(last.fst))
-                  } else if(last.snd.isList) {
-                    stackString = drawList(Value.mkPair(last.fst, last.snd))
-                    stackHTML = drawListHTML(Value.mkPair(last.fst, last.snd))
-                  } else {
-                    stackString = drawPair(Value.mkPair(last.fst, last.snd))
-                    stackHTML = drawPairHTML(Value.mkPair(last.fst, last.snd))
-                  }
-  
-                  //attempt at drawing map (ignore)
-                  //@ts-ignore
-                } else if(stack[0].name === 'map') {
-                  //forEachstack.push(Value.mkList)
-                  console.log("mapping")
-                }
-              } else {//catch
-                stackString = ("PROCEDURE")
-                console.log(stackString)
               }
             }
-          }
-          if(stackHTML){//if there is an element, then append it
-            this.appendToCurrentTrace(stackHTML)
-          }
-        } */
+            list_names.push(id);
+            list_div.push(div)
+            //console.log(this.jumpToList)
+          })
+
+          list_div.forEach(e => mainDiv.appendChild(e) );
+          
+          //environment end line
+          const div2 = document.createElement('div')
+          div2.ariaLabel = "End environment"
+          div2.ariaDescription = "End environment"
+          div2.textContent = "------------------------------~"
+          div2.tabIndex = 0
+          mainDiv.appendChild(div2)
+        }
       //}
-      return mainDiv
-    }
+
+      /*
+      let stackString;
+      let stackHTML;
+
+      //if there is anything in the stack ( we are inside the gray tracing box)
+      if(stack[0]) {
+        //console.log(stack[0])
+        //convert to string (probs not used)
+        stackString = stack[stack.length - 1]?.toString()
+
+        //type check and convert to string or HTML element
+        if(typeof stack[0] != 'string' && typeof stack[0] != 'number' && typeof stack[0] != 'boolean' || stack[0] === 0) {
+          if(stack[0] != undefined && Value.typeOf(stack[0]) === 'vector') {
+            stackString = drawVector(stack[0])
+            stackHTML = drawVectorHTML(stack[0])
+          } else if (stack[0] != undefined && Value.typeOf(stack[0]) === 'list') {
+            stackString = drawList(stack[0])
+            stackHTML = drawListHTML(stack[0])
+          } else if (stack[0] != undefined && Value.isPair(stack[0])) {
+            stackString = drawPair(stack[0])
+            stackHTML = drawPairHTML(stack[0])
+          } else if (stack[0] != undefined && Value.isFunction(stack[0])) {
+            //@ts-ignore
+            if(stack[0].name) {
+              //@ts-ignore
+              if(stack[0].name === 'cons') {
+                let last: any = stack[stack.length - 1]
+                if(last.snd === null) {
+                  stackString = drawList(Value.mkList(last.fst))
+                  stackHTML = drawListHTML(Value.mkList(last.fst))
+                } else if(last.snd.isList) {
+                  stackString = drawList(Value.mkPair(last.fst, last.snd))
+                  stackHTML = drawListHTML(Value.mkPair(last.fst, last.snd))
+                } else {
+                  stackString = drawPair(Value.mkPair(last.fst, last.snd))
+                  stackHTML = drawPairHTML(Value.mkPair(last.fst, last.snd))
+                }
+
+                //attempt at drawing map (ignore)
+                //@ts-ignore
+              } else if(stack[0].name === 'map') {
+                //forEachstack.push(Value.mkList)
+                console.log("mapping")
+              }
+            } else {//catch
+              stackString = ("PROCEDURE")
+              console.log(stackString)
+            }
+          }
+        }
+        if(stackHTML){//if there is an element, then append it
+          this.appendToCurrentTrace(stackHTML)
+        }
+      } */
+    //}
+    return mainDiv
+  }
 
 }
