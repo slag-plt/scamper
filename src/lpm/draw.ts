@@ -521,14 +521,14 @@ by GokturkSM
       
     for (const thing in struct) {
       countThings++;
-  
+      if(countThings > 2) {
       const row = document.createElement('div');
       row.id = "struct-row" + countThings
       row.style.left = `${30}px`
       row.style.display = 'flex'
       row.style.flexDirection = 'row'
   
-      if(countThings > 1 && countThings !== numberOfElements) {
+      if(countThings !== numberOfElements) {
         const line = document.createElement('div');
         line.className = 'struct-line';
         row.appendChild(line!);
@@ -586,7 +586,7 @@ by GokturkSM
       
       row.appendChild(HTMLVal)
       col.appendChild(row)
-      
+      }
     }
   
     if(countThings === 0) {
