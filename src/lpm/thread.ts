@@ -737,18 +737,16 @@ export class Thread {
               let HTMLVal: any = ''
               let ariaType = ""
               let structName = false;
-  
-              if(U.isNull(value)) {
-                console.log("NU>LLB OXX" + "  " + typeof(value))
-                const div = document.createElement('div')
-                div.className = 'null-box'
-                HTMLVal = div
-              }
               // //typecheck the variable(s) and convert to string or HTML elements
               // if (!value) {
               //   return;
               // }
-              if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+              if(U.isNull(value)) {
+                // console.log("NU>LLB OXX" + "  " + typeof(value))
+                const div = document.createElement('div')
+                div.className = 'null-box'
+                HTMLVal = div
+              } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
                 if (typeof value === 'string') {
                   HTMLVal = "\"" + value + "\""
                 } else if (typeof value === 'boolean'){
