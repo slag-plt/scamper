@@ -4,6 +4,7 @@ import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { mkDefine, mkLit } from "../../src/scheme/ast"
 import { Range } from "../../src/lpm"
+import { nextDocLine } from "../../src/scheme/docstring"
 
 const identifier = "x"
 const value = 1
@@ -54,5 +55,33 @@ describe("Comments", () => {
       comment,
     )
     expect(prog).toEqual(expect.arrayContaining([expectedDefine]))
+  })
+})
+
+describe("Docstring parsing", () => {
+  describe("nextDocLine", () => {
+    describe("prefix", () => {
+      test("throws when too many semicolons", () => {
+        const testDocString = ";;;; a lot of semicolons!"
+        const docChars = testDocString.split("").toReversed()
+        expect(() => nextDocLine(docChars)).toThrow("many semicolons")
+      })
+      test("throws when not enough semicolons", () => {
+        const testDocString = ";; not many semicolons!"
+        const docChars = testDocString.split("").toReversed()
+        expect(() => nextDocLine(docChars)).toThrow("enough semicolons")
+      })
+      test("throws when bad prefix", () => {
+        const testDocString = ";%; why is there a % in the prefix"
+        const docChars = testDocString.split("").toReversed()
+        expect(() => nextDocLine(docChars)).toThrow("Malformed")
+      })
+    })
+    test("returns the rest of the line", () => {
+      const restOfLine = "good comment :)"
+      const testDocString = `;;; ${restOfLine}`
+      const docChars = testDocString.split("").toReversed()
+      expect(nextDocLine(docChars)).toEqual(restOfLine)
+    })
   })
 })

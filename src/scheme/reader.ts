@@ -15,7 +15,7 @@ class Token {
   }
 }
 
-const isWhitespace = (c: string): boolean => /\s/.test(c)
+export const isWhitespace = (c: string): boolean => /\s/.test(c)
 const isOpeningBracket = (ch: string): boolean =>
   ["(", "#(", "{", "["].includes(ch)
 const isClosingBracket = (ch: string): boolean => [")", "}", "]"].includes(ch)
