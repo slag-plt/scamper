@@ -158,10 +158,13 @@ class Tokenizer {
       const ch = this.peek()
       if (ch === ";") {
         // starting a new comment
-        this.currComment = ""
         inComment = true
+        // add on to the current comment
+        this.currComment ??= ""
+        this.currComment += ch
         this.advance()
         continue
+      
       }
       if (!inComment) {
         this.advance()
