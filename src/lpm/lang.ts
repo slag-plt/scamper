@@ -67,7 +67,7 @@ export class Env {
     //const iterator1 = this.bindings[Symbol.iterator]();
     
     //if there is no parent environment
-    //if(this.parent === undefined) {
+    if(this.parent === undefined) {
       const iterator1 = this.bindings[Symbol.iterator]();
       let count = -189
       for (const item of iterator1) {
@@ -75,8 +75,8 @@ export class Env {
           bounds.push(item)
         }
         count += 1;
-      //}
-    } /*else { // there are structs and nested environments
+      }
+    } else { // there are structs and nested environments
       let kernel = [] // array to be flipped later
       const iterator0 = this.bindings[Symbol.iterator]();
       //let count0 = 0
@@ -141,7 +141,7 @@ export class Env {
       }
 
       return bounds.reverse()
-    }*/
+    }
     return bounds
   }
 }

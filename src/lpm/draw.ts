@@ -225,14 +225,8 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     div.ariaDescription = 'object type list';
     //div.tabIndex = 0;
     div.style.position = 'relative';
-  
+    
     if(U.isList(list)) {
-      if(list === null) {
-        const div = document.createElement('div')
-        div.className = 'null-box'
-        return div
-      }
-
       const len = lengthList(list);
   
       //loops through the list creating pairs and arrows for each element
