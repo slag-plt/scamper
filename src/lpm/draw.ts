@@ -17,7 +17,6 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         height = height + vectorHeight(e, 0)
       } else if (U.isStruct(e)) {
         height = height + structHeight(e)
-        height = height + 1
       }
     }
     return height + 3
@@ -90,12 +89,10 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           val2.textContent = e + '';
         }
         col.appendChild(val2);
+      } else if (U.isList(e)) {
+        col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
       } else if (U.isPair(e)) {
-        if(U.isList(e)) {
-          col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
-        } else {
-          col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
-        }
+        col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
       } else if (U.isArray(e)) {
         col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
       } else if (U.isStruct(e)) {
@@ -364,7 +361,7 @@ by GokturkSM
     const fst = pair.fst
     const snd = pair.snd
     
-    //height of pair.tail
+    //height of pair.snd
     if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
       height = height + 1
     } else if (U.isList(snd)) {
@@ -377,7 +374,7 @@ by GokturkSM
       height = structHeight(snd)
     }
   
-    //height of pair.head
+    //height of pair.fst
     if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean' ) {
       height = height + 1
     } else if (U.isList(fst)) {
@@ -486,20 +483,38 @@ by GokturkSM
   
   function structHeight(struct: L.Struct) : number {
     let height = 0
+    let count = 0
+    console.log(struct)
     for (let thing in struct) {
+      console.log(count + " is COUNT")
       thing = struct[thing]
-      if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
-        height = height + 3
-      } else if (U.isList(thing)) {
-        height = height + listHeight(thing)
-      } else if (U.isPair(thing)) {
-        height = height + pairHeight(thing)
-      } else if (U.isArray(thing)) {
-        height = height + vectorHeight(thing)
-      } else if (U.isStruct(thing)) {
-        height = height + structHeight(thing)
+      console.log("this is what you want  1 " + thing)
+
+      if (count > 1) {
+        console.log("INSIDE")
+        if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
+          height = height + 3
+          console.log("literal height: " + height)
+        } else if (U.isList(thing)) {
+          height = height + listHeight(thing)
+          console.log("list height: " + height)
+        } else if (U.isPair(thing)) {
+          height = height + pairHeight(thing)
+          console.log("pair height: " + height)
+        } else if (U.isArray(thing)) {
+          height = height + vectorHeight(thing)
+          console.log("array height: " + height)
+        } else if (U.isStruct(thing)) {
+          height = height + structHeight(thing)
+          console.log("struct height: " + height)
+        } else {
+          height = height + 3
+          console.log("else height: " + height)
+        }
       }
+      count = count + 1
     }
+    console.log("FINAL height: " + height)
     return height
   }
   
