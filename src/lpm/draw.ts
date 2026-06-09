@@ -37,7 +37,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       col.className = 'vector-style';
       if (i > 0){
         col.style.marginLeft = '-3px'
-        //col.style.position = 'absolute';
+        col.style.position = 'absolute';
       }
       col.style.left = `${30 * vector.indexOf(e)}px`
   
@@ -309,8 +309,9 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         col.appendChild(val);
         const val2 = document.createElement('div');
         val2.className = 'val-box';
-        if(el === null) {
+        if(U.isNull(el)) {
           val2.textContent = 'null';
+          col.appendChild(val2)
         } else if(typeof el === 'string' || typeof el === 'number' || typeof el === 'boolean') {
           if(typeof el === 'string'){
             val2.textContent = "\"" + el + "\""
