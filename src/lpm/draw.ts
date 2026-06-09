@@ -39,21 +39,21 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         col.style.marginLeft = '-3px'
         col.style.position = 'absolute';
       }
-      col.style.left = `${30 * vector.indexOf(e)}px`
+      col.style.left = `${30 * i}px`
   
       //creates the box elements of the vector
       const box = document.createElement('div');
       const index = document.createElement('div');
-      const indexVal = vector.indexOf(e).toString();
+      const indexVal = i;
       index.className = 'index-box';
-      index.textContent = indexVal;
+      index.textContent = indexVal + '';
       col.appendChild(index);
       box.className = 'vector-box';
       box.tabIndex = 0;
       box.id = `${nesting}:${i}:${parent}:${imgID} val`
-      box.addEventListener('keydown', (e) => {
-        keyHandler(e.key, box, 'vector', imgID);
-      })
+      // box.addEventListener('keydown', (e) => {
+      //   keyHandler(e.key, box, 'vector', imgID);
+      // })
       if(U.isList(e)) {
         box.ariaDescription = `vector index ${indexVal} contains a list`
         box.ariaLabel = `vector index ${indexVal} contains a list`
