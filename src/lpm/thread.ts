@@ -742,7 +742,7 @@ export class Thread {
                 console.log("NU>LLB OXX" + "  " + typeof(value))
                 const div = document.createElement('div')
                 div.className = 'null-box'
-                return div
+                HTMLVal = div
               }
               // //typecheck the variable(s) and convert to string or HTML elements
               // if (!value) {
