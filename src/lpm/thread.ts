@@ -739,7 +739,7 @@ export class Thread {
               let structName = false;
   
               if(U.isNull(value)) {
-                console.log("NU>LLB OXX" + "  " + typeof(value))
+                console.log("NU>LLB OXX  " + typeof(value))
                 const div = document.createElement('div')
                 div.className = 'null-box'
                 HTMLVal = div
