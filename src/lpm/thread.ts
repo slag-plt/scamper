@@ -108,6 +108,9 @@ export class Thread {
   }
 
   lengthOfLibs(): number {
+    let count = 0
+    this.builtinLibs.forEach( (e) => count = count + e.lib.length)
+    console.log("Count " + count)
     const length = this.builtinLibs.size
     return length
   }
@@ -397,11 +400,11 @@ export class Thread {
           if (this.options.isTracing) {
             this.out.popLevel()
           } // pops trace-block
-          const div = document.createElement("div")
-          if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result))
+          //const div = document.createElement("div")
+          //if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result))
           const save = this.draw()
           this.advanceStmt() // pops trace
-          this.out.send(div) // to be outputted with HTML bindings / environment
+          //this.out.send(div) // to be outputted with HTML bindings / environment
           this.out.send(save)
         }
         return
@@ -688,6 +691,7 @@ export class Thread {
     draw (): HTMLDivElement {
       const envState = this.env
       const initialLibNum = this.lengthOfLibs()
+      console.log("Initial Lib Num " + initialLibNum)
       const mainDiv = document.createElement('div')
   
       //if(envState != undefined){
