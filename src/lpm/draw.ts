@@ -51,9 +51,9 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       box.className = 'vector-box';
       box.tabIndex = 0;
       box.id = `${nesting}:${i}:${parent}:${imgID} val`
-      // box.addEventListener('keydown', (e) => {
-      //   keyHandler(e.key, box, 'vector', imgID);
-      // })
+      box.addEventListener('keydown', (e) => {
+        keyHandler(e.key, box, 'vector', imgID);
+      })
       if(U.isList(e)) {
         box.ariaDescription = `vector index ${indexVal} contains a list`
         box.ariaLabel = `vector index ${indexVal} contains a list`
@@ -361,33 +361,33 @@ by GokturkSM
 
   function pairHeight(pair: L.Pair) {
     let height = 3
-    const head = pair.head
-    const tail = pair.tail
+    const fst = pair.fst
+    const snd = pair.snd
     
     //height of pair.tail
-    if(typeof tail === 'string' || typeof tail === 'number' || typeof tail === 'boolean' ) {
+    if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
       height = height + 1
-    } else if (U.isList(tail)) {
-      height = height + listHeight(tail)
-    } else if (U.isPair(tail)) {
-      height = height + pairHeight(tail)
-    } else if (U.isArray(tail)) {
-      height = height + vectorHeight(tail)
-    } else if (U.isStruct(tail)) {
-      height = structHeight(tail)
+    } else if (U.isList(snd)) {
+      height = height + listHeight(snd)
+    } else if (U.isPair(snd)) {
+      height = height + pairHeight(snd)
+    } else if (U.isArray(snd)) {
+      height = height + vectorHeight(snd)
+    } else if (U.isStruct(snd)) {
+      height = structHeight(snd)
     }
   
     //height of pair.head
-    if(typeof head === 'string' || typeof head === 'number' || typeof head === 'boolean' ) {
+    if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean' ) {
       height = height + 1
-    } else if (U.isList(head)) {
-      height = height + listHeight(head)
-    } else if (U.isPair(head)) {
-      height = height + pairHeight(head)
-    } else if (U.isArray(head)) {
-      height = height + vectorHeight(head) - 1
-    } else if (U.isStruct(head)) {
-      height = structHeight(head)
+    } else if (U.isList(fst)) {
+      height = height + listHeight(fst)
+    } else if (U.isPair(fst)) {
+      height = height + pairHeight(fst)
+    } else if (U.isArray(fst)) {
+      height = height + vectorHeight(fst) - 1
+    } else if (U.isStruct(fst)) {
+      height = structHeight(fst)
     }
   
     return height
@@ -490,7 +490,7 @@ by GokturkSM
       thing = struct[thing]
       if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
         height = height + 3
-      } else if (U.isPair(thing)) {
+      } else if (U.isList(thing)) {
         height = height + listHeight(thing)
       } else if (U.isPair(thing)) {
         height = height + pairHeight(thing)
