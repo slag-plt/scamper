@@ -5,7 +5,7 @@ export const builtinLibs = new Map<string, string[]>([
     ["list", ["append", "apply", "assoc-key ?", "assoc-ref", "assoc-set", "car", "cdr", "cons", "c...r", "filter", "fold", "fold-left", 
             "fold-right", "index-of", "length", "list", "list-drop", "list-of", "list?", "list-ref", "list->string", "list-tail", 
             "list-take", "list->vector", "make-list", "map", "null?", "null", "pair", "range", "reduce", "reduce-right", "reverse",
-            "sort", "string -> list", "vector -> list", "tally-all"]] ,
+            "sort", "string -> list", "tally-all", "vector -> list"]] ,
     ["list manipulation", ["append", "apply", "assoc-key?", "assoc-ref", "assoc-set", "car", "cdr", "c...r", "filter", "fold", "fold-left",
             "fold-right", "index-of", "length", "list-drop", "list->string", "list-tail", "list-take", "list->vector", "map", 
             "reduce", "reduce-right", "reverse", "sort"]],

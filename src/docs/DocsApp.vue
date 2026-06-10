@@ -36,6 +36,15 @@ const selectedModule = ref("prelude")
 const selectedLib = computed(
   () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
 )
+
+
+const searchTerm = ref("")
+
+function search(event : Event) {
+  alert(searchTerm.value)
+  alert(event)
+  searchTerm.value = ""
+}
 </script>
 
 <template>
@@ -44,7 +53,8 @@ const selectedLib = computed(
       <div>
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
-        <a href="reference.html">Reference</a>
+        <a href="reference.html">Reference</a> ⋅
+        <input v-model="searchTerm" @keyup.enter="search" placeholder="Enter search here"/>
       </div>
       <div class="header-right">
         <a href="https://github.com/slag-plt/scamper"
