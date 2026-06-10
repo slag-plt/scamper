@@ -30,7 +30,7 @@ const reservedWords = [
 const phExp = A.mkLit(undefined)
 const phStmt = A.mkStmtExp(A.mkLit(undefined))
 
-function parseIdentifier(
+export function parseIdentifier(
   errors: L.ScamperError[],
   v: L.Value,
   errorMsg = "Expected an identifier",

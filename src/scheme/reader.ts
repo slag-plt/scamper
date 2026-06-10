@@ -3,7 +3,7 @@ import { mkSyntax, Syntax } from "./syntax.js"
 
 ///// Tokenization /////////////////////////////////////////////////////////////
 
-class Token {
+export class Token {
   constructor(
     public text: string,
     public range: L.Range,
@@ -164,7 +164,6 @@ class Tokenizer {
         this.currComment += ch
         this.advance()
         continue
-      
       }
       if (!inComment) {
         this.advance()

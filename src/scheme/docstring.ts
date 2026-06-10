@@ -1,8 +1,15 @@
-import { ScamperError } from "../lpm"
-import { Comment, isWhitespace } from "./reader"
+import { Range, ScamperError } from "../lpm"
+import { Comment, isWhitespace, readSingle, Token } from "./reader"
+import { Exp } from "./ast"
+import { parseExp, parseIdentifier } from "./parser"
 
 type Signature = unknown
-type Params = unknown[]
+export interface Param {
+  name: string
+  predicate: Exp
+  description?: string
+}
+type Params = Param[]
 type Description = unknown
 type Tags = unknown[]
 interface CommentStruct {
@@ -11,6 +18,19 @@ interface CommentStruct {
   description: Description
   tags: Tags
 }
+
+const ParseStage = {
+  Params: 0,
+  Description: 1,
+  Tags: 2,
+} as const
+type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
+const WhitespaceLocation = {
+  Beginning: "beginning",
+  PrePredicate: "pre-predicate",
+} as const
+type WhitespaceLocation =
+  (typeof WhitespaceLocation)[keyof typeof WhitespaceLocation]
 
 /**
  * @param docString looks like ";;; \n;;; \n..."
@@ -39,9 +59,27 @@ export function parseDocString(docString: Comment): CommentStruct {
   const description: Description = null
   const tags: Tags = []
   let line: string | undefined
-  // let stage = 0
+  let stage: ParseStage = ParseStage.Params
   while ((line = docLines.shift()) !== undefined) {
-    void line
+    if (stage === ParseStage.Params) {
+      try {
+        params.push(parseParam(line))
+      } catch (e) {
+        if (!(e instanceof ParamWhitespaceError)) {
+          throw e
+        }
+        if (e.loc !== WhitespaceLocation.Beginning) {
+          throw e
+        }
+        stage = ParseStage.Description
+      }
+    }
+    if (stage === ParseStage.Description) {
+      // TODO: implement
+      void null
+    }
+    // if (stage === ParseStage.Tags) {
+    // }
   }
   // return the comment struct
   return { signature, params, description, tags }
@@ -115,4 +153,100 @@ function parseSignature(docLine: string): Signature {
   // TODO: implement
   void docLine
   return null
+}
+
+class ParamParseError extends ScamperError {
+  constructor(message: string) {
+    super("Parser", `Error while parsing param in doc string: ${message}`)
+  }
+}
+class ParamWhitespaceError extends ParamParseError {
+  constructor(
+    public loc: WhitespaceLocation,
+    message: string,
+  ) {
+    super(message)
+  }
+}
+class ParamMissingFieldError extends ParamParseError {}
+class ParamMalformedFieldError extends ParamParseError {}
+
+const minBeginningWhitespace = 1
+const minPrePredicateWhitespace = 1
+/**
+ * @returns constructed param object if successful
+ * @throws ParamParseError when docLine does not parse into a correct Params object
+ */
+export function parseParam(docLine: string): Param {
+  // check and chomp beginning whitespace
+  const beginningWhitespaces = getLeadingWhitespaceCount(
+    docLine,
+    minBeginningWhitespace,
+    WhitespaceLocation.Beginning,
+  )
+  // get param name
+  const splitDocLine = docLine.slice(beginningWhitespaces).split(":", 2)
+  if (splitDocLine.length < 2) {
+    throw new ParamMissingFieldError(
+      "Line is missing separating colon between name and predicate",
+    )
+  }
+  const [untrimmedName, postNameDocLine] = splitDocLine
+  const err: ScamperError[] = []
+  // TODO: range should actually be populated
+  const nameSyn = readSingle(
+    new Token(untrimmedName.trimEnd(), Range.none),
+    false,
+  )
+  const name = parseIdentifier(err, nameSyn)
+  if (err.length > 0) {
+    throw new ParamMalformedFieldError(
+      `Name field is malformed, ${err[0].message}`,
+    )
+  }
+
+  // check and chomp pre-predicate whitespace
+  const prePredicateWhitespace = getLeadingWhitespaceCount(
+    postNameDocLine,
+    minPrePredicateWhitespace,
+    WhitespaceLocation.PrePredicate,
+  )
+  // get predicate
+  // two cases for the predicate: either it's a simple predicate identifier i.e. "pred?"
+  // or it's a complex predicate expression i.e. "(complexPred? pred1? pred2? ...)"
+  const predicateStr = postNameDocLine.slice(prePredicateWhitespace)
+  // TODO: range should actually be populated
+  const predSyn = readSingle(new Token(predicateStr, Range.none), false)
+  const predicate = parseExp(err, predSyn)
+  if (err.length > 0) {
+    throw new ParamMalformedFieldError(
+      `Predicate field is malformed, ${err[0].message}`,
+    )
+  }
+  return { name, predicate }
+  // predicate signature does not have line
+}
+
+function getLeadingWhitespaceCount(
+  line: string,
+  minWhitespaces: number,
+  loc: WhitespaceLocation,
+): number {
+  let whitespaces = 0
+  for (const ch of line) {
+    if (isWhitespace(ch)) {
+      whitespaces++
+      continue
+    }
+    // ch isn't whitespace then
+    if (whitespaces < minWhitespaces) {
+      throw new ParamWhitespaceError(
+        loc,
+        `Line does not have enough ${loc} whitespace, expected at least ${minWhitespaces.toString()} but got ${whitespaces.toString()}`,
+      )
+    }
+    // we're good, break out of this for loop
+    break
+  }
+  return whitespaces
 }

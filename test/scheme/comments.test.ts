@@ -3,8 +3,8 @@ import { read } from "../../src/scheme/reader"
 import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { mkDefine, mkLit } from "../../src/scheme/ast"
-import { Range } from "../../src/lpm"
-import { nextDocLine } from "../../src/scheme/docstring"
+import { mkVar, Range } from "../../src/lpm"
+import { nextDocLine, Param, parseParam } from "../../src/scheme/docstring"
 
 const identifier = "x"
 const value = 1
@@ -33,7 +33,8 @@ describe("Comments", () => {
       expect.arrayContaining([expect.objectContaining({ comment: comment2 })]),
     )
   })
-  const comment3 = "; this should appear in the comment!;;; this should appear in the comment!"
+  const comment3 =
+    "; this should appear in the comment!;;; this should appear in the comment!"
   const testSrc3 = `
   ${comment}
   ${comment2}
@@ -77,11 +78,32 @@ describe("Docstring parsing", () => {
         expect(() => nextDocLine(docChars)).toThrow("Malformed")
       })
     })
-    test("returns the rest of the line", () => {
+    test("returns the line with the docstring prefix stripped", () => {
       const restOfLine = "good comment :)"
       const testDocString = `;;; ${restOfLine}`
       const docChars = testDocString.split("").toReversed()
       expect(nextDocLine(docChars)).toEqual(restOfLine)
+    })
+  })
+  describe("parseParam", () => {
+    describe("valid line works", () => {
+      const name = "param"
+      test("w/ simple predicate", () => {
+        const predId = "pred?"
+        const predicate = mkVar(predId, expect.anything() as Range)
+        const testDocLine = ` ${name} : ${predId}`
+        const expectedParam: Param = {
+          name,
+          predicate,
+        }
+        expect(parseParam(testDocLine)).toEqual(expectedParam)
+      })
+      test("w/ complex predicate", () => {
+        const predExp = "(complex-pred? pred1? pred2?)"
+        const testDocLine = ` ${name} : ${predExp}`
+        // TODO: finish complex predicates
+        expect(parseParam(testDocLine)).toEqual("what should it be?")
+      })
     })
   })
 })
