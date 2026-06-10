@@ -9,6 +9,7 @@ import { Range } from "./range"
 import "scheduler-polyfill"
 import '../../public/css/styles.css'
 import * as D from "./draw.js"
+import { mkGetFn } from "../lib/runtime.js"
 
 /** The type of runtime options. */
 export interface Options {
@@ -402,13 +403,20 @@ export class Thread {
           if (this.options.isTracing) {
             this.out.popLevel()
           } // pops trace-block
-          //const div = document.createElement("div")
-          //if(U.isArray(result)) div.appendChild(D.drawVectorHTML(result)))
-          this.definedVars.push([stmt.name, result])
-          const save = this.draw()
+
+          let save;
+          // conditional to exclude struct constructors, getters, and type check functions
+          if(!(result?.toString().includes("L.mkStruct(t, fieldNames, args)")
+            || result?.toString().includes("L.isStructKind(v, t)"))) {
+            this.definedVars.push([stmt.name, result])
+            save = this.draw()
+          }
           this.advanceStmt() // pops trace
-          //this.out.send(div) // to be outputted with HTML bindings / environment
-          this.out.send(save)
+
+          // to be outputted with HTML bindings / environment
+          if (save) {
+            this.out.send(save)
+          }
         }
         return
       }
