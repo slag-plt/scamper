@@ -4,7 +4,8 @@ import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { mkApp, mkDefine, mkLit } from "../../src/scheme/ast"
 import { mkVar, Range } from "../../src/lpm"
-import { nextDocLine, Param, parseParam } from "../../src/scheme/docstring"
+import { nextDocLine } from "../../src/scheme/docstring"
+import { Param, parseParamSignature } from "../../src/scheme/doc-param"
 
 const identifier = "x"
 const value = 1
@@ -96,7 +97,7 @@ describe("Docstring parsing", () => {
           name,
           predicate,
         }
-        expect(parseParam(testDocLine)).toEqual(expectedParam)
+        expect(parseParamSignature(testDocLine)).toEqual(expectedParam)
       })
       test("w/ complex predicate", () => {
         const predHeadId = "complex-pred?"
@@ -116,7 +117,7 @@ describe("Docstring parsing", () => {
           predicate,
         }
         // TODO: finish complex predicates
-        expect(parseParam(testDocLine)).toEqual(expectedParam)
+        expect(parseParamSignature(testDocLine)).toEqual(expectedParam)
       })
     })
   })
