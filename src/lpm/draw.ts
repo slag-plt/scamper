@@ -365,26 +365,26 @@ by GokturkSM
     if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
       height = height + 1
     } else if (U.isList(snd)) {
-      height = height + listHeight(snd)
+      height = height + listHeight(snd) + 1
     } else if (U.isPair(snd)) {
       height = height + pairHeight(snd)
     } else if (U.isArray(snd)) {
       height = height + vectorHeight(snd)
     } else if (U.isStruct(snd)) {
-      height = structHeight(snd)
+      height = height + structHeight(snd)
     }
   
     //height of pair.fst
     if(typeof fst === 'string' || typeof fst === 'number' || typeof fst === 'boolean' ) {
       height = height + 1
     } else if (U.isList(fst)) {
-      height = height + listHeight(fst)
+      height = height + listHeight(fst) + 1
     } else if (U.isPair(fst)) {
       height = height + pairHeight(fst)
     } else if (U.isArray(fst)) {
-      height = height + vectorHeight(fst) - 1
+      height = height + vectorHeight(fst)
     } else if (U.isStruct(fst)) {
-      height = structHeight(fst)
+      height = height + structHeight(fst)
     }
   
     return height
@@ -431,13 +431,13 @@ by GokturkSM
         if(typeof snd === 'string' || typeof snd === 'number' || typeof snd === 'boolean' ) {
           height = height + 1
         } else if (U.isList(snd)) {
-          height = height + listHeight(snd)
+          height = height + listHeight(snd) + 1
         } else if (U.isPair(snd)) {
           height = height + pairHeight(snd)
         } else if (U.isArray(snd)) {
           height = height + vectorHeight(snd)
         } else if (U.isStruct(snd)) {
-          height = structHeight(snd)
+          height = height + structHeight(snd)
         }
       }
   
