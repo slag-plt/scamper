@@ -1,11 +1,6 @@
 import { ScamperError } from "../lpm"
 import { Comment, isWhitespace } from "./reader"
-import {
-  Param,
-  ParamWhitespaceError,
-  parseParamSignature,
-  WhitespaceLocation,
-} from "./doc-param"
+import { Param, parseAllParams } from "./doc-param"
 
 type Signature = unknown
 type Params = Param[]
@@ -18,12 +13,12 @@ interface CommentStruct {
   tags: Tags
 }
 
-const ParseStage = {
-  Params: 0,
-  Description: 1,
-  Tags: 2,
+export const ParseStage = {
+  Params: "params",
+  Description: "description",
+  Tags: "tags",
 } as const
-type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
+export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 
 /**
  * @param docString looks like ";;; \n;;; \n..."
@@ -51,29 +46,17 @@ export function parseDocString(docString: Comment): CommentStruct {
   const params: Params = []
   const description: Description = null
   const tags: Tags = []
-  let line: string | undefined
   let stage: ParseStage = ParseStage.Params
-  while ((line = docLines.shift()) !== undefined) {
+  while (docLines.length > 0) {
+    const line = docLines.shift()
+    if (line === undefined) {
+      break
+    }
     if (stage === ParseStage.Params) {
-      let param: Param
-      // get param signature
-      try {
-        param = parseParamSignature(line)
-      } catch (e) {
-        if (
-          !(e instanceof ParamWhitespaceError) ||
-          e.loc !== WhitespaceLocation.Beginning
-        ) {
-          throw e
-        }
-
-        stage = ParseStage.Description
-        // put the line back
-        docLines.unshift(line)
-        continue
+      const result = parseAllParams(line, docLines)
+      if (result !== undefined) {
+        stage = result
       }
-      // get optional param description
-      void param
     }
     if (stage === ParseStage.Description) {
       // TODO: implement

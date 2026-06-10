@@ -4,6 +4,8 @@ import { isWhitespace, readSingle, Token } from "./reader"
 import { parseIdentifier } from "./parser"
 import { SimpleErrorChannel } from "../lpm/output/simple-error"
 import { tokenizeAndParse } from "./index"
+import { catchIf } from "./util"
+import { ParseStage } from "./docstring"
 
 export interface Param {
   name: string
@@ -37,18 +39,72 @@ class ParamMissingFieldError extends ParamParseError {}
 
 class ParamMalformedFieldError extends ParamParseError {}
 
-const minBeginningWhitespace = 1
+// TODO: test
+export function parseAllParams(
+  line: string,
+  docLines: string[],
+): ParseStage | undefined {
+  // get param signature
+  const parsedSignature = catchIf(
+    () => parseParamSignature(line),
+    isRecoverableParamParseError,
+  )
+  if (!parsedSignature) {
+    // put the line back and switch to description stage
+    docLines.push(line)
+    return ParseStage.Description
+  }
+  const { param, beginningWhitespaces } = parsedSignature
+  // get optional param description
+  // get first description line
+  const nextLine = docLines.shift()
+  if (nextLine === undefined) {
+    throw new ScamperError(
+      "Parser",
+      "Doc string is missing function description",
+    )
+  }
+  param.description = catchIf(
+    () => parseParamDescriptionLine(nextLine, beginningWhitespaces),
+    isRecoverableParamParseError,
+  )
+  if (param.description === undefined) {
+    docLines.push(line)
+    // we might still have more params to look for, so don't change stage
+    return
+  }
+  while (docLines.length > 0) {
+    const nextDescLine = catchIf(
+      () => parseParamDescriptionLine(nextLine, beginningWhitespaces),
+      isRecoverableParamParseError,
+    )
+    if (nextDescLine === undefined) {
+      docLines.push(line)
+      continue
+    }
+    param.description += " " + nextDescLine
+  }
+  return
+}
+
+const minSignatureBeginningWhitespace = 1
 const minPrePredicateWhitespace = 1
 
+interface ParseParamSignatureResult {
+  param: Param
+  beginningWhitespaces: number
+}
 /**
  * @returns constructed param object if successful
  * @throws ParamParseError when docLine does not parse into a correct Params object
  */
-export function parseParamSignature(docLine: string): Param {
+export function parseParamSignature(
+  docLine: string,
+): ParseParamSignatureResult {
   // check and chomp beginning whitespace
   const beginningWhitespaces = getLeadingWhitespaceCount(
     docLine,
-    minBeginningWhitespace,
+    minSignatureBeginningWhitespace,
     WhitespaceLocation.Beginning,
   )
   // get param name
@@ -98,8 +154,23 @@ export function parseParamSignature(docLine: string): Param {
   }
   // TODO: range should actually be populated
   const predicate = parsedStmt.expr
-  return { name, predicate }
+  return { param: { name, predicate }, beginningWhitespaces }
   // predicate signature does not have line
+}
+
+const minDescriptionPadding = 1
+
+export function parseParamDescriptionLine(
+  docLine: string,
+  sigBeginningWhitespaces: number,
+): string {
+  // check and chomp leading padding
+  const padding = getLeadingWhitespaceCount(
+    docLine,
+    sigBeginningWhitespaces + minDescriptionPadding,
+    WhitespaceLocation.Beginning,
+  )
+  return docLine.slice(padding)
 }
 
 function getLeadingWhitespaceCount(
@@ -124,4 +195,11 @@ function getLeadingWhitespaceCount(
     break
   }
   return whitespaces
+}
+
+function isRecoverableParamParseError(e: unknown) {
+  return (
+    !(e instanceof ParamWhitespaceError) ||
+    e.loc !== WhitespaceLocation.Beginning
+  )
 }
