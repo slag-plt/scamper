@@ -1,7 +1,9 @@
 import { Range, ScamperError } from "../lpm"
 import { Comment, isWhitespace, readSingle, Token } from "./reader"
-import { Exp } from "./ast"
-import { parseExp, parseIdentifier } from "./parser"
+import { Exp, isStmtExp } from "./ast"
+import { parseIdentifier } from "./parser"
+import { tokenizeAndParse } from "./index"
+import { SimpleErrorChannel } from "../lpm/output/simple-error"
 
 type Signature = unknown
 export interface Param {
@@ -192,16 +194,16 @@ export function parseParam(docLine: string): Param {
     )
   }
   const [untrimmedName, postNameDocLine] = splitDocLine
-  const err: ScamperError[] = []
+  const errs: ScamperError[] = []
   // TODO: range should actually be populated
   const nameSyn = readSingle(
     new Token(untrimmedName.trimEnd(), Range.none),
     false,
   )
-  const name = parseIdentifier(err, nameSyn)
-  if (err.length > 0) {
+  const name = parseIdentifier(errs, nameSyn)
+  if (errs.length > 0) {
     throw new ParamMalformedFieldError(
-      `Name field is malformed, ${err[0].message}`,
+      `Name field is malformed, ${errs[0].message}`,
     )
   }
 
@@ -214,15 +216,23 @@ export function parseParam(docLine: string): Param {
   // get predicate
   // two cases for the predicate: either it's a simple predicate identifier i.e. "pred?"
   // or it's a complex predicate expression i.e. "(complexPred? pred1? pred2? ...)"
-  const predicateStr = postNameDocLine.slice(prePredicateWhitespace)
-  // TODO: range should actually be populated
-  const predSyn = readSingle(new Token(predicateStr, Range.none), false)
-  const predicate = parseExp(err, predSyn)
-  if (err.length > 0) {
+  const predicateStr = postNameDocLine.slice(prePredicateWhitespace).trim()
+  const errChannel = new SimpleErrorChannel()
+  const parsed = tokenizeAndParse(errChannel, predicateStr)
+  if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
     throw new ParamMalformedFieldError(
-      `Predicate field is malformed, ${err[0].message}`,
+      `Predicate field is malformed, ${errChannel.errors[0].message}`,
     )
   }
+  if (parsed.length < 1) {
+    throw new ParamMissingFieldError("Predicate field is missing")
+  }
+  const parsedStmt = parsed[0]
+  if (!isStmtExp(parsedStmt)) {
+    throw new ParamMalformedFieldError("Predicate should be an expression")
+  }
+  // TODO: range should actually be populated
+  const predicate = parsedStmt.expr
   return { name, predicate }
   // predicate signature does not have line
 }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest"
 import { read } from "../../src/scheme/reader"
 import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
-import { mkDefine, mkLit } from "../../src/scheme/ast"
+import { mkApp, mkDefine, mkLit } from "../../src/scheme/ast"
 import { mkVar, Range } from "../../src/lpm"
 import { nextDocLine, Param, parseParam } from "../../src/scheme/docstring"
 
@@ -86,7 +86,7 @@ describe("Docstring parsing", () => {
     })
   })
   describe("parseParam", () => {
-    describe("valid line works", () => {
+    describe("valid param signature", () => {
       const name = "param"
       test("w/ simple predicate", () => {
         const predId = "pred?"
@@ -99,10 +99,24 @@ describe("Docstring parsing", () => {
         expect(parseParam(testDocLine)).toEqual(expectedParam)
       })
       test("w/ complex predicate", () => {
-        const predExp = "(complex-pred? pred1? pred2?)"
-        const testDocLine = ` ${name} : ${predExp}`
+        const predHeadId = "complex-pred?"
+        const subPredId1 = "pred1?"
+        const subPredId2 = "pred2?"
+        const testDocLine = ` ${name} : (${predHeadId} ${subPredId1} ${subPredId2})`
+        const predicate = mkApp(
+          mkVar(predHeadId, expect.anything() as Range),
+          [
+            mkVar(subPredId1, expect.anything() as Range),
+            mkVar(subPredId2, expect.anything() as Range),
+          ],
+          expect.anything() as Range,
+        )
+        const expectedParam: Param = {
+          name,
+          predicate,
+        }
         // TODO: finish complex predicates
-        expect(parseParam(testDocLine)).toEqual("what should it be?")
+        expect(parseParam(testDocLine)).toEqual(expectedParam)
       })
     })
   })

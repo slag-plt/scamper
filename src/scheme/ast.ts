@@ -375,6 +375,9 @@ export function isStmt(v: unknown): v is Stmt {
   )
 }
 
+export const isStmtExp = (s: Stmt): s is StmtExp =>
+  isTagged(s) && s.tag === "stmtexp"
+
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
 export function patToString(pat: Pat): string {
