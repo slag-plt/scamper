@@ -11,7 +11,11 @@ import {
   parseParamDescriptionLine,
   parseParamSignature,
 } from "../../src/scheme/doc-param"
-import { matchesDocTagFormat } from "../../src/scheme/doc-tag"
+import {
+  DocTag,
+  matchesDocTagFormat,
+  parseAllTags,
+} from "../../src/scheme/doc-tag"
 import { parseFunctionDescription } from "../../src/scheme/doc-description"
 
 const identifier = "x"
@@ -114,7 +118,7 @@ describe("Docstring parsing", () => {
       test("w/ complex predicate", () => {
         const predHeadId = "complex-pred?"
         const subPredId1 = "pred1?"
-        const subPredId2 = "pred2?"
+        const subPredId2 = "pred:2?"
         const testDocLine = ` ${name} : (${predHeadId} ${subPredId1} ${subPredId2})`
         const predicate = mkApp(
           mkVar(predHeadId, expect.anything() as Range),
@@ -222,12 +226,18 @@ describe("Docstring parsing", () => {
     })
   })
 
+  const exTag1 = "@tag"
+  const exTag1Contents = "tag1 tag2"
+  const exTagLine1 = `${exTag1} ${exTag1Contents}`
+
+  const exTag2 = "@another-tag"
+  const exTag2Contents = "tag3"
+  const exTagLine2 = `${exTag2} ${exTag2Contents}`
+
   describe("parseFunctionDescription", () => {
     const testDescriptionLine1 = "this is the first line of the description"
     const testDescriptionLine2 = "this is the SECOND line!"
     const expectedDescription = `${testDescriptionLine1} ${testDescriptionLine2}`
-    const exTagLine1 = "@tag tag1 tag2"
-    const exTagLine2 = "@another-tag tag3"
     const expectedRemainder = [exTagLine1, exTagLine2]
     test("empty string when begins with tag line", () => {
       const testDocLines = [exTagLine1, exTagLine2]
@@ -259,6 +269,36 @@ describe("Docstring parsing", () => {
         expectedDescription,
       )
       expect(testDocLines).toStrictEqual([])
+    })
+  })
+
+  describe("parseAllTags", () => {
+    test("extracts all tags", () => {
+      const testDocLines = [exTagLine1, exTagLine2]
+      const tags: DocTag[] = []
+      parseAllTags(testDocLines, tags)
+
+      const expectedTag1: DocTag = {
+        tag: exTag1,
+        contents: exTag1Contents,
+      }
+      const expectedTag2: DocTag = {
+        tag: exTag2,
+        contents: exTag2Contents,
+      }
+      expect(tags).toStrictEqual([expectedTag1, expectedTag2])
+      expect(testDocLines).toStrictEqual([])
+    })
+    test("throws when we have a non-tag in the tag section", () => {
+      const testDocLines = [
+        exTagLine1,
+        "@ bad bad bad! even though we start with @! bad!",
+        exTagLine2,
+      ]
+      const tags: DocTag[] = []
+      expect(() => {
+        parseAllTags(testDocLines, tags)
+      }).toThrow("non-tag")
     })
   })
 

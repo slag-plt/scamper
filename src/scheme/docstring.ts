@@ -3,12 +3,13 @@ import { Comment, isWhitespace } from "./reader"
 import { Param, parseSingleParam } from "./doc-param"
 import { parseFunctionDescription } from "./doc-description"
 import { hasTag, makeTagged } from "./util"
+import { DocTag, parseAllTags } from "./doc-tag"
 
 type Signature = unknown
 type Params = Param[]
-type Description = unknown
-type Tags = unknown[]
-interface CommentStruct {
+type Description = string
+type Tags = DocTag[]
+interface FunctionDoc {
   signature: Signature
   params: Params
   description: Description
@@ -26,7 +27,7 @@ export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 /**
  * @param docString looks like ";;; \n;;; \n..."
  */
-export function parseDocString(docString: Comment): CommentStruct {
+export function parseDocString(docString: Comment): FunctionDoc {
   // we reverse docChars to make popping the first character O(1)
   const docChars = docString.split("").toReversed()
   // retrieve all doc lines or throw
@@ -46,7 +47,7 @@ export function parseDocString(docString: Comment): CommentStruct {
   // get the params
   const params: Params = []
   // get the description
-  let description: Description
+  let description: Description = ""
   // get the tags
   const tags: Tags = []
   let stage: ParseStage = ParseStage.Params
@@ -71,11 +72,16 @@ export function parseDocString(docString: Comment): CommentStruct {
         break
       }
       case ParseStage.Tags: {
-        // TODO: implement
-        void null
+        parseAllTags(docLines, tags)
         break
       }
     }
+  }
+  if (description === "") {
+    throw new ScamperError(
+      "Parser",
+      "Doc string must have a function description!",
+    )
   }
   // return the comment struct
   return { signature, params, description, tags }

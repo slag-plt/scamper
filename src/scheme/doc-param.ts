@@ -119,13 +119,14 @@ export function parseParamSignature(
     WhitespaceLocation.Beginning,
   )
   // get param name
-  const splitDocLine = docLine.slice(beginningWhitespaces).split(":", 2)
+  const splitDocLine = docLine.slice(beginningWhitespaces).split(":")
   if (splitDocLine.length < 2) {
     throw new ParamMissingFieldError(
       "Line is missing separating colon between name and predicate",
     )
   }
-  const [untrimmedName, postNameDocLine] = splitDocLine
+  const [untrimmedName, ...rest] = splitDocLine
+  const postNameDocLine = rest.join(":")
   const errs: ScamperError[] = []
   // TODO: range should actually be populated
   const nameSyn = readSingle(
