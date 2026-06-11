@@ -1,7 +1,7 @@
 import { ScamperError } from "../lpm"
 import { Comment } from "./reader"
 import { Param, parseSingleParam } from "./doc-param"
-import { App, Exp, isStmtExp, StmtExp } from "./ast"
+import { App, Exp, isStmtExp, StmtExp, Var } from "./ast"
 import { SimpleErrorChannel } from "../lpm/output/simple-error"
 import { tokenizeAndParse } from "."
 
@@ -10,6 +10,7 @@ import { hasTag, makeTagged } from "./util"
 import { DocTag, parseAllTags } from "./doc-tag"
 
 type Params = Param[]
+type Pred = Var | VarApp
 type Description = string
 type Tags = DocTag[]
 interface FunctionDoc {
@@ -27,10 +28,15 @@ export const ParseStage = {
 } as const
 export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 
+interface VarApp extends App {
+  head: Var
+  args: Var[]
+}
+
 interface Signature {
   // Function should get changed to App at some point
-  Function: Exp
-  Predicate: Exp
+  function: VarApp
+  predicate: Pred
 }
 
 /**
@@ -147,12 +153,6 @@ function parseFunctionSignature(docLine: string): Exp {
       `Not a function signature. Expected an expression`,
     )
   }
-  if (!isStmtExp(parsedStmt)) {
-    throw new ScamperError(
-      "Parser",
-      `Not a function signature. Expected an expression`,
-    )
-  }
   // Missing check for whether the expression is an application
   const funct = parsedStmt.expr
   return funct;
@@ -184,16 +184,6 @@ function parseContractSignature(docLine: string): Exp {
   return predicate;
 }
 
-//////isfunctionsignature
-// treat fucntion signature as its own scamper program, tokenize and parse
-// verify no starting whitespace
-/// verify exactly one statement
-/// verify is expression
-/// verify expression is an application 
-// all pass then valid.
-//////contract
-// copy what julian does for contract
-// maybe sep to a diff utility function
 function parseSignature(docLine: string): Signature {
   // TODO: implement
   // Check form function name, space, parameter. (separate function and call it)
@@ -209,12 +199,11 @@ function parseSignature(docLine: string): Signature {
       `Missing separator in doc string signature`,
     )
   }
-
   const funct = parseFunctionSignature(functStr)
   const predicate = parseContractSignature(predStr)
 
   return {
-    Function: funct,
-    Predicate: predicate,
+    function: funct,
+    predicate: predicate,
   }
 }
