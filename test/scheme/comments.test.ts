@@ -4,7 +4,11 @@ import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { mkApp, mkDefine, mkLit } from "../../src/scheme/ast"
 import { mkVar, Range } from "../../src/lpm"
-import { nextDocLine, ParseStage } from "../../src/scheme/docstring"
+import {
+  verifyDocLine,
+  parseDocString,
+  ParseStage,
+} from "../../src/scheme/docstring"
 import {
   Param,
   parseSingleParam,
@@ -71,31 +75,41 @@ describe("Comments", () => {
   })
 })
 
+const testComment = `;;; (func p1 p2) -> (complex-pred1? pred1?)
+;;;  p1 : pred2?
+;;;  p2 : (complex-pred2? pred3? pred4?)
+;;; this test function is really cool...
+;;; isn't it?
+;;; @tag stuff1 stuff2
+;;; @another-tag stuff3`
 // TODO: should move this to diff file, this one getting long
 describe("Docstring parsing", () => {
-  describe("nextDocLine", () => {
+  describe("parseDocString", () => {
+    test("outputs when input string is good", () => {
+      // TODO: wait until parseSignature done
+      expect(parseDocString(testComment)).toStrictEqual("no")
+    })
+  })
+
+  describe("verifyDocLine", () => {
     describe("prefix", () => {
       test("throws when too many semicolons", () => {
-        const testDocString = ";;;; a lot of semicolons!"
-        const docChars = testDocString.split("").toReversed()
-        expect(() => nextDocLine(docChars)).toThrow("many semicolons")
+        const testDocLine = ";;;; a lot of semicolons!"
+        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
       })
       test("throws when not enough semicolons", () => {
-        const testDocString = ";; not many semicolons!"
-        const docChars = testDocString.split("").toReversed()
-        expect(() => nextDocLine(docChars)).toThrow("enough semicolons")
+        const testDocLine = ";; not many semicolons!"
+        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
       })
       test("throws when bad prefix", () => {
-        const testDocString = ";%; why is there a % in the prefix"
-        const docChars = testDocString.split("").toReversed()
-        expect(() => nextDocLine(docChars)).toThrow("Malformed")
+        const testDocLine = ";%; why is there a % in the prefix"
+        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
       })
     })
     test("returns the line with the docstring prefix stripped", () => {
       const restOfLine = "good comment :)"
-      const testDocString = `;;; ${restOfLine}`
-      const docChars = testDocString.split("").toReversed()
-      expect(nextDocLine(docChars)).toStrictEqual(restOfLine)
+      const testDocLine = `;;; ${restOfLine}`
+      expect(verifyDocLine(testDocLine)).toStrictEqual(restOfLine)
     })
   })
 
