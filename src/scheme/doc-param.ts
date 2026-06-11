@@ -39,10 +39,14 @@ class ParamMissingFieldError extends ParamParseError {}
 
 class ParamMalformedFieldError extends ParamParseError {}
 
-export function parseSingleParam(
-  line: string,
-  docLines: string[],
-): ParseStage | Param {
+export function parseSingleParam(docLines: string[]): ParseStage | Param {
+  const line = docLines.shift()
+  if (line === undefined) {
+    throw new ScamperError(
+      "Parser",
+      "Doc lines expected to be not empty when calling parseSingleParam",
+    )
+  }
   // get param signature
   const parsedSignature = catchIf(
     () => parseParamSignature(line),

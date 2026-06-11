@@ -1,6 +1,8 @@
 import { ScamperError } from "../lpm"
 import { Comment, isWhitespace } from "./reader"
-import { isParam, Param, parseSingleParam } from "./doc-param"
+import { Param, parseSingleParam } from "./doc-param"
+import { parseFunctionDescription } from "./doc-description"
+import { hasTag, makeTagged } from "./util"
 
 type Signature = unknown
 type Params = Param[]
@@ -13,10 +15,11 @@ interface CommentStruct {
   tags: Tags
 }
 
+const ParseStageTag = Symbol("ParseStageTag")
 export const ParseStage = {
-  Params: "params",
-  Description: "description",
-  Tags: "tags",
+  Params: makeTagged(ParseStageTag, "params"),
+  Description: makeTagged(ParseStageTag, "description"),
+  Tags: makeTagged(ParseStageTag, "tags"),
 } as const
 export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 
@@ -41,35 +44,37 @@ export function parseDocString(docString: Comment): CommentStruct {
   }
   const signature = parseSignature(firstLine)
   // get the params
-  // get the description
-  // get the tags
   const params: Params = []
-  const description: Description = null
+  // get the description
+  let description: Description
+  // get the tags
   const tags: Tags = []
   let stage: ParseStage = ParseStage.Params
   while (docLines.length > 0) {
-    const line = docLines.shift()
-    if (line === undefined) {
-      throw new ScamperError(
-        "Parser",
-        "Atomicity violation: doc lines changed while parsing?",
-      )
-    }
-    if (stage === ParseStage.Params) {
-      const result = parseSingleParam(line, docLines)
-      if (isParam(result)) {
-        params.push(result)
-        continue
+    switch (stage) {
+      case ParseStage.Params: {
+        const result = parseSingleParam(docLines)
+        if (hasTag(result, ParseStageTag)) {
+          stage = result
+        } else {
+          params.push(result)
+        }
+        break
       }
-      stage = result
-    }
-    if (stage === ParseStage.Description) {
-      // TODO: implement
-      void null
-    }
-    if (stage === ParseStage.Tags) {
-      // TODO: implement
-      void null
+      case ParseStage.Description: {
+        const result = parseFunctionDescription(docLines)
+        if (hasTag(result, ParseStageTag)) {
+          stage = result
+        } else {
+          description = result
+        }
+        break
+      }
+      case ParseStage.Tags: {
+        // TODO: implement
+        void null
+        break
+      }
     }
   }
   // return the comment struct

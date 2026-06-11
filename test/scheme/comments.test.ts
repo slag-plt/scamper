@@ -173,7 +173,12 @@ describe("Docstring parsing", () => {
       const paramDescPart2 = "something really cool!"
       const paramDescLine1 = `  ${paramDescPart1}`
       const paramDescLine2 = `  ${paramDescPart2}`
-      const testDocLines = [paramDescLine1, paramDescLine2, remainingLine]
+      const testDocLines = [
+        goodParamSignature,
+        paramDescLine1,
+        paramDescLine2,
+        remainingLine,
+      ]
 
       const description = `${paramDescPart1} ${paramDescPart2}`
       const expectedParam: Param = {
@@ -182,28 +187,24 @@ describe("Docstring parsing", () => {
         description,
       }
 
-      expect(parseSingleParam(goodParamSignature, testDocLines)).toStrictEqual(
-        expectedParam,
-      )
+      expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
       expect(testDocLines).toStrictEqual([remainingLine])
     })
 
     test("returns param w/o description", () => {
-      const testDocLines = [remainingLine]
+      const testDocLines = [goodParamSignature, remainingLine]
       const expectedParam: Param = {
         name,
         predicate,
         description: undefined,
       }
-      expect(parseSingleParam(goodParamSignature, testDocLines)).toStrictEqual(
-        expectedParam,
-      )
+      expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
       expect(testDocLines).toStrictEqual([remainingLine])
     })
 
     test("signals to move to description stage when param parsing failure", () => {
-      const testDocLines = [remainingLine]
-      expect(parseSingleParam(remainingLine, testDocLines)).toStrictEqual(
+      const testDocLines = [remainingLine, remainingLine]
+      expect(parseSingleParam(testDocLines)).toStrictEqual(
         ParseStage.Description,
       )
       // it should have pushed back the consumed line
