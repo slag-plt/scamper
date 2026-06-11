@@ -147,12 +147,17 @@ function parseFunctionSignature(docLine: string): VarApp {
       `Not a function signature. Expected an expression`,
     )
   }
-  // Missing check for whether the expression is an application
+  if (!isVarApp(parsedStmt.expr)) {
+    throw new ScamperError(
+      "Parser",
+      `Not a function signature. Expected an application of a variable with variable arguments`,
+    )
+  }
   const funct = parsedStmt.expr
   return funct
 }
 
-function parseContractSignature(docLine: string): Exp {
+function parseContractSignature(docLine: string): Pred {
   const errChannel = new SimpleErrorChannel()
   const parsed = tokenizeAndParse(errChannel, docLine)
   if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
@@ -164,6 +169,12 @@ function parseContractSignature(docLine: string): Exp {
   const parsedStmt = parsed[0]
   if (!isStmtExp(parsedStmt)) {
     throw new ScamperError("Parser", `Not a contract signature`)
+  }
+  if (!isVarApp(parsedStmt.expr) && !isVar(parsedStmt.expr)) {
+    throw new ScamperError(
+      "Parser",
+      `Not a contract signature. Expected a variable or variable application`,
+    )
   }
   const predicate = parsedStmt.expr
   return predicate
