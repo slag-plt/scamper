@@ -41,7 +41,7 @@ export const builtinLibs = new Map<string, string[]>([
     ["vectors", ["list->vector", "make-vector", "string-split-vector", "string->vector", "vector", "vector-append",
             "vector-fill!", "vector-filter", "vector-for-each", "vector-length", "vector->list", "vector-map", "vector-map!",
             "vector?", "vector-range", "vector-ref", "vector-set!", "vector->string"]],
-["mutation", ["set-maximum-recursion-depth!", "set-ref!", "vector-fill!", "vector-map!", "vector-set!", "canvas-set-pixels!",
+    ["mutation", ["set-maximum-recursion-depth!", "set-ref!", "vector-fill!", "vector-map!", "vector-set!", "canvas-set-pixels!",
             "canvas-circle!", "canvas-drawing!", "canvas-ellipse!", "canvas-onclick!", "canvas-path!", "canvas-rectangle!",
             "canvas-text!", "on-keydown!", "tag-set-children!"]],
     ["predicates", ["assoc-key?", "boolean?", "char-alphabetic?", "char=?", "char-ci=?", "char>=?", "char-ci>=?", "char>?",
