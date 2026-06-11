@@ -1,6 +1,6 @@
-import { ScamperError } from "../lpm"
+import { ScamperError } from "../../lpm"
 import { ParseStage } from "./docstring"
-import { matchesDocTagFormat } from "./doc-tag"
+import { matchesDocTagFormat } from "./tag"
 
 export function parseFunctionDescription(
   docLines: string[],

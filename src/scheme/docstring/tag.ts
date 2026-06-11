@@ -1,4 +1,4 @@
-import { ScamperError } from "../lpm"
+import { ScamperError } from "../../lpm"
 
 export function matchesDocTagFormat(line: string): boolean {
   const splitLine = line.split("@", 2)

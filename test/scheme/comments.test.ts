@@ -9,19 +9,19 @@ import {
   parseDocString,
   ParseStage,
   isVarApp,
-} from "../../src/scheme/docstring"
+} from "../../src/scheme/docstring/docstring"
 import {
   Param,
   parseSingleParam,
   parseParamDescriptionLine,
   parseParamSignature,
-} from "../../src/scheme/doc-param"
+} from "../../src/scheme/docstring/param"
 import {
   DocTag,
   matchesDocTagFormat,
   parseAllTags,
-} from "../../src/scheme/doc-tag"
-import { parseFunctionDescription } from "../../src/scheme/doc-description"
+} from "../../src/scheme/docstring/tag"
+import { parseFunctionDescription } from "../../src/scheme/docstring/description"
 
 const identifier = "x"
 const value = 1
@@ -76,18 +76,40 @@ describe("Comments", () => {
   })
 })
 
-const testComment = `;;; (func p1 p2) -> (complex-pred1? pred1?)
-;;;  p1 : pred2?
-;;;  p2 : (complex-pred2? pred3? pred4?)
-;;; this test function is really cool...
-;;; isn't it?
-;;; @tag stuff1 stuff2
-;;; @another-tag stuff3`
 // TODO: should move this to diff file, this one getting long
 describe("Docstring parsing", () => {
   describe("parseDocString", () => {
     test("outputs when input string is good", () => {
-      // TODO: wait until parseSignature done
+      const funcName = "func"
+      const paramName1 = "p1"
+      const paramName2 = "p2"
+
+      const complexPredName1 = "complex-pred1?"
+      const predName1 = "pred1?"
+
+      const predName2 = "pred2?"
+
+      const complexPredName2 = "complex-pred2?"
+      const predName3 = "pred3?"
+      const predName4 = "pred4?"
+
+      const descriptionLine1 = "this test function is really cool..."
+      const descriptionLine2 = "isn't it?"
+
+      const tag1 = "@tag"
+      const tagContents1 = "stuff1 stuff2"
+
+      const tag2 = "@another-tag"
+      const tagContents2 = "stuff3"
+
+      const testComment = `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
+;;;  ${paramName1} : ${predName2}
+;;;  ${paramName2} : (${complexPredName2} ${predName3} ${predName4})
+;;; ${descriptionLine1}
+;;; ${descriptionLine2}
+;;; ${tag1} ${tagContents1}
+;;; ${tag2} ${tagContents2}`
+
       expect(parseDocString(testComment)).toStrictEqual("no")
     })
   })

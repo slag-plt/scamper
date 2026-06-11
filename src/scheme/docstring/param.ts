@@ -1,10 +1,10 @@
-import { isStmtExp, isVar } from "./ast"
-import { Range, ScamperError } from "../lpm"
-import { isWhitespace, readSingle, Token } from "./reader"
-import { parseIdentifier } from "./parser"
-import { SimpleErrorChannel } from "../lpm/output/simple-error"
-import { tokenizeAndParse } from "./index"
-import { catchIf } from "./util"
+import { isStmtExp, isVar } from "../ast"
+import { Range, ScamperError } from "../../lpm"
+import { isWhitespace, readSingle, Token } from "../reader"
+import { parseIdentifier } from "../parser"
+import { SimpleErrorChannel } from "../../lpm/output/simple-error"
+import { tokenizeAndParse } from "../index"
+import { catchIf } from "../util"
 import { isVarApp, ParseStage, Pred } from "./docstring"
 
 export interface Param {
