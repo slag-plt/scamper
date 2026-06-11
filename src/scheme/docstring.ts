@@ -1,7 +1,7 @@
 import { ScamperError } from "../lpm"
 import { Comment } from "./reader"
 import { Param, parseSingleParam } from "./doc-param"
-import { App, Exp, isStmtExp, StmtExp, Var } from "./ast"
+import { App, Exp, isApp, isStmtExp, StmtExp, Var, isVar } from "./ast"
 import { SimpleErrorChannel } from "../lpm/output/simple-error"
 import { tokenizeAndParse } from "."
 
@@ -31,6 +31,10 @@ export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 interface VarApp extends App {
   head: Var
   args: Var[]
+}
+
+function isVarApp(e: Exp): e is VarApp {
+  return isApp(e) && isVar(e.head) && e.args.every(isVar)
 }
 
 interface Signature {
@@ -119,7 +123,7 @@ export function verifyDocLine(line: string): string {
 }
 
 
-function parseFunctionSignature(docLine: string): Exp {
+function parseFunctionSignature(docLine: string): VarApp {
   const errChannel = new SimpleErrorChannel()
   const parsed = tokenizeAndParse(errChannel, docLine)
   if (docLine.startsWith(" ")) {

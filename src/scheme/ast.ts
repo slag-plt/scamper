@@ -378,6 +378,12 @@ export function isStmt(v: unknown): v is Stmt {
 export const isStmtExp = (s: Stmt): s is StmtExp =>
   isTagged(s) && s.tag === "stmtexp"
 
+export const isVar = (e: Exp): e is Var =>
+  isTagged(e) && e.tag === "var"
+
+export const isApp = (e: Exp): e is App =>
+  isTagged(e) && e.tag === "app" && isExp(e.head)
+
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
 export function patToString(pat: Pat): string {
