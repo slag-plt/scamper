@@ -39,7 +39,6 @@ class ParamMissingFieldError extends ParamParseError {}
 
 class ParamMalformedFieldError extends ParamParseError {}
 
-// TODO: test
 export function parseSingleParam(
   line: string,
   docLines: string[],

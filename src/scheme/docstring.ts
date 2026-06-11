@@ -67,8 +67,10 @@ export function parseDocString(docString: Comment): CommentStruct {
       // TODO: implement
       void null
     }
-    // if (stage === ParseStage.Tags) {
-    // }
+    if (stage === ParseStage.Tags) {
+      // TODO: implement
+      void null
+    }
   }
   // return the comment struct
   return { signature, params, description, tags }
@@ -82,6 +84,7 @@ const maxWhitespaceCount = docLinePrefix.split(" ").length - 1
  * @returns one unparsed doc line
  */
 export function nextDocLine(docChars: string[]): string {
+  // TODO: this can be simplified by splitting by prefix and checking if the resulting array is length 2
   // parse the beginning of the doc line ";;; "
   let semicolonCount = 0
   let canCheckWhitespace = false
