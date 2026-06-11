@@ -8,6 +8,7 @@ import {
   verifyDocLine,
   parseDocString,
   ParseStage,
+  isVarApp,
 } from "../../src/scheme/docstring"
 import {
   Param,
@@ -113,6 +114,21 @@ describe("Docstring parsing", () => {
     })
   })
 
+  const predHeadId = "complex-pred?"
+  const subPredId1 = "pred1?"
+  const subPredId2 = "pred2?"
+  const predApp = mkApp(
+    mkVar(predHeadId, expect.anything() as Range),
+    [
+      mkVar(subPredId1, expect.anything() as Range),
+      mkVar(subPredId2, expect.anything() as Range),
+    ],
+    expect.anything() as Range,
+  )
+  if (!isVarApp(predApp)) {
+    throw new Error("this should never happen")
+  }
+  const predicate = predApp
   describe("parseParamSignature", () => {
     describe("valid param signature", () => {
       const name = "param"
@@ -130,18 +146,7 @@ describe("Docstring parsing", () => {
       })
 
       test("w/ complex predicate", () => {
-        const predHeadId = "complex-pred?"
-        const subPredId1 = "pred1?"
-        const subPredId2 = "pred:2?"
         const testDocLine = ` ${name} : (${predHeadId} ${subPredId1} ${subPredId2})`
-        const predicate = mkApp(
-          mkVar(predHeadId, expect.anything() as Range),
-          [
-            mkVar(subPredId1, expect.anything() as Range),
-            mkVar(subPredId2, expect.anything() as Range),
-          ],
-          expect.anything() as Range,
-        )
         const expectedParam: Param = {
           name,
           predicate,
@@ -177,14 +182,7 @@ describe("Docstring parsing", () => {
 
   describe("parseSingleParam", () => {
     const name = "param"
-    const complexPredId = "pred?"
-    const subPredId = "pred1?"
-    const predicate = mkApp(
-      mkVar(complexPredId, expect.anything() as Range),
-      [mkVar(subPredId, expect.anything() as Range)],
-      expect.anything() as Range,
-    )
-    const goodParamSignature = ` ${name} : (${complexPredId} ${subPredId})`
+    const goodParamSignature = ` ${name} : (${predHeadId} ${subPredId1} ${subPredId2})`
     const remainingLine =
       "this one is just here since parseAllParams expects it"
     const otherRemainingLine =

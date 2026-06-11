@@ -8,6 +8,8 @@ export function matchesDocTagFormat(line: string): boolean {
   )
 }
 
+// TODO: contents should depend on the tag
+// also, we are just going to make tags codified in scamper, no runtime-defined tags
 export interface DocTag {
   tag: string
   contents: string

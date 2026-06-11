@@ -1,15 +1,15 @@
-import { Exp, isStmtExp } from "./ast"
+import { isStmtExp, isVar } from "./ast"
 import { Range, ScamperError } from "../lpm"
 import { isWhitespace, readSingle, Token } from "./reader"
 import { parseIdentifier } from "./parser"
 import { SimpleErrorChannel } from "../lpm/output/simple-error"
 import { tokenizeAndParse } from "./index"
 import { catchIf } from "./util"
-import { ParseStage } from "./docstring"
+import { isVarApp, ParseStage, Pred } from "./docstring"
 
 export interface Param {
   name: string
-  predicate: Exp
+  predicate: Pred
   description?: string
 }
 
@@ -165,7 +165,12 @@ export function parseParamSignature(
     throw new ParamMalformedFieldError("Predicate should be an expression")
   }
   // TODO: range should actually be populated
-  const predicate = parsedStmt.expr
+  if (!isVar(parsedStmt.expr) && !isVarApp(parsedStmt.expr)) {
+    throw new ParamMalformedFieldError(
+      "Predicate should be either a simple predicate identifier or a complex predicate application",
+    )
+  }
+  const predicate: Pred = parsedStmt.expr
   return { param: { name, predicate }, beginningWhitespaces }
   // predicate signature does not have line
 }

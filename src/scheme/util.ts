@@ -11,6 +11,8 @@ export function catchIf<T>(
 }
 
 // TODO: we have 3 different version of this, we should consolidate and use this one
+// scamper object tag (runtime values)
+// struct-level tag
 const IS_TAGGED = Symbol("##SCAMPER_TAGGED##")
 
 export interface Tagged<Sym extends symbol, T = unknown> {
