@@ -1,13 +1,8 @@
 import { describe, expect, test } from "vitest"
 import { read } from "../../src/scheme/reader"
-import { tokenizeAndParse } from "../../src/scheme"
-import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
-import { mkDefine, mkLit } from "../../src/scheme/ast"
-import { Range } from "../../src/lpm"
 
 const identifier = "x"
 const value = 1
-const lit = mkLit(value, expect.anything() as Range)
 
 describe("Comments", () => {
   const comment = "; this should appear in the comment!"
@@ -44,16 +39,5 @@ describe("Comments", () => {
     expect(vals).toStrictEqual(
       expect.arrayContaining([expect.objectContaining({ comment: comment3 })]),
     )
-  })
-  test("are attached to define statements", () => {
-    const err = new SimpleErrorChannel()
-    const prog = tokenizeAndParse(err, testSrc)
-    const expectedDefine = mkDefine(
-      identifier,
-      lit,
-      expect.anything() as Range,
-      comment,
-    )
-    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
   })
 })

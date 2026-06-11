@@ -1,6 +1,7 @@
 import * as A from "./ast.js"
 import * as L from "../lpm"
 import * as S from "./syntax.js"
+import { FunctionDoc, parseDocString } from "./docstring/docstring"
 
 // TODO: need to check whether _ is used correctly here, i.e., only under a section
 
@@ -506,7 +507,16 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
         "The first component of a define statement must be an identifier",
       )
       const body = parseExp(errors, arr[2])
-      return A.mkDefine(name, body, range, comment)
+      let doc: FunctionDoc | undefined
+      try {
+        if (comment !== undefined) {
+          doc = parseDocString(comment)
+        }
+      } catch (e) {
+        errors.push(e as L.ScamperError)
+        doc = undefined
+      }
+      return A.mkDefine(name, body, range, doc)
     }
 
     case "display": {

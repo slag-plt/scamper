@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
-import { mkApp, mkVar } from "../../src/scheme/ast"
-import { Range } from "../../src/lpm"
+import { mkApp, mkDefine, mkVar } from "../../src/scheme/ast"
+import { mkLit, Range } from "../../src/lpm"
 import {
   Param,
   parseParamDescriptionLine,
@@ -21,83 +21,35 @@ import {
   matchesDocTagFormat,
   parseAllTags,
 } from "../../src/scheme/docstring/tag"
+import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
+import { tokenizeAndParse } from "../../src/scheme"
 
 const anyRange = expect.anything() as Range
 describe("Docstring parsing", () => {
+  test("are attached to define statements", () => {
+    const { testComment, expectedFunctionDoc } = makeTestDocstring()
+
+    const identifier = "x"
+    const value = 1
+    const lit = mkLit(value, anyRange)
+
+    const testSrc = `${testComment}
+(define ${identifier} ${value.toString()})`
+
+    const err = new SimpleErrorChannel()
+    const prog = tokenizeAndParse(err, testSrc)
+    const expectedDefine = mkDefine(
+      identifier,
+      lit,
+      anyRange,
+      expectedFunctionDoc,
+    )
+    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
+  })
+
   describe("parseDocString", () => {
     test("outputs when input string is good", () => {
-      const funcName = "func"
-      const paramName1 = "p1"
-      const paramName2 = "p2"
-      const funcApp = mkApp(
-        mkVar(funcName, anyRange),
-        [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
-        anyRange,
-      ) as VarApp
-
-      const complexPredName1 = "complex-pred1?"
-      const predName1 = "pred1?"
-      const predicate1 = mkApp(
-        mkVar(complexPredName1, anyRange),
-        [mkVar(predName1, anyRange)],
-        anyRange,
-      ) as VarApp
-
-      const predName2 = "pred2?"
-      const predicate2 = mkVar(predName2, anyRange)
-
-      const paramDescLine1 = "this parameter is amazing"
-      const paramDescLine2 = "i really like it"
-      const paramDescription = `${paramDescLine1} ${paramDescLine2}`
-
-      const complexPredName2 = "complex-pred2?"
-      const predName3 = "pred3?"
-      const predName4 = "pred4?"
-      const predicate3 = mkApp(
-        mkVar(complexPredName2, anyRange),
-        [mkVar(predName3, anyRange), mkVar(predName4, anyRange)],
-        anyRange,
-      ) as VarApp
-
-      const descriptionLine1 = "this test function is really cool..."
-      const descriptionLine2 = "isn't it?"
-      const description = `${descriptionLine1} ${descriptionLine2}`
-
-      const tag1 = "@tag"
-      const tagContents1 = "stuff1 stuff2"
-
-      const tag2 = "@another-tag"
-      const tagContents2 = "stuff3"
-
-      const testComment = `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
-;;;  ${paramName1} : ${predName2}
-;;;   ${paramDescLine1}
-;;;   ${paramDescLine2}
-;;;  ${paramName2} : (${complexPredName2} ${predName3} ${predName4})
-;;; ${descriptionLine1}
-;;; ${descriptionLine2}
-;;; ${tag1} ${tagContents1}
-;;; ${tag2} ${tagContents2}`
-
-      const expectedFunctionDoc: FunctionDoc = {
-        signature: {
-          function: funcApp,
-          predicate: predicate1,
-        },
-        params: [
-          {
-            name: paramName1,
-            predicate: predicate2,
-            description: paramDescription,
-          },
-          { name: paramName2, predicate: predicate3, description: undefined },
-        ],
-        description,
-        tags: [
-          { tag: tag1, contents: tagContents1 },
-          { tag: tag2, contents: tagContents2 },
-        ],
-      }
+      const { testComment, expectedFunctionDoc } = makeTestDocstring()
 
       expect(parseDocString(testComment)).toStrictEqual(expectedFunctionDoc)
     })
@@ -334,3 +286,80 @@ describe("Docstring parsing", () => {
     })
   })
 })
+
+function makeTestDocstring() {
+  const funcName = "func"
+  const paramName1 = "p1"
+  const paramName2 = "p2"
+  const funcApp = mkApp(
+    mkVar(funcName, anyRange),
+    [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
+    anyRange,
+  ) as VarApp
+
+  const complexPredName1 = "complex-pred1?"
+  const predName1 = "pred1?"
+  const predicate1 = mkApp(
+    mkVar(complexPredName1, anyRange),
+    [mkVar(predName1, anyRange)],
+    anyRange,
+  ) as VarApp
+
+  const predName2 = "pred2?"
+  const predicate2 = mkVar(predName2, anyRange)
+
+  const paramDescLine1 = "this parameter is amazing"
+  const paramDescLine2 = "i really like it"
+  const paramDescription = `${paramDescLine1} ${paramDescLine2}`
+
+  const complexPredName2 = "complex-pred2?"
+  const predName3 = "pred3?"
+  const predName4 = "pred4?"
+  const predicate3 = mkApp(
+    mkVar(complexPredName2, anyRange),
+    [mkVar(predName3, anyRange), mkVar(predName4, anyRange)],
+    anyRange,
+  ) as VarApp
+
+  const descriptionLine1 = "this test function is really cool..."
+  const descriptionLine2 = "isn't it?"
+  const description = `${descriptionLine1} ${descriptionLine2}`
+
+  const tag1 = "@tag"
+  const tagContents1 = "stuff1 stuff2"
+
+  const tag2 = "@another-tag"
+  const tagContents2 = "stuff3"
+
+  const testComment = `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
+;;;  ${paramName1} : ${predName2}
+;;;   ${paramDescLine1}
+;;;   ${paramDescLine2}
+;;;  ${paramName2} : (${complexPredName2} ${predName3} ${predName4})
+;;; ${descriptionLine1}
+;;; ${descriptionLine2}
+;;; ${tag1} ${tagContents1}
+;;; ${tag2} ${tagContents2}`
+
+  const expectedFunctionDoc: FunctionDoc = {
+    signature: {
+      function: funcApp,
+      predicate: predicate1,
+    },
+    params: [
+      {
+        name: paramName1,
+        predicate: predicate2,
+        description: paramDescription,
+      },
+      { name: paramName2, predicate: predicate3, description: undefined },
+    ],
+    description,
+    tags: [
+      { tag: tag1, contents: tagContents1 },
+      { tag: tag2, contents: tagContents2 },
+    ],
+  }
+
+  return { testComment, expectedFunctionDoc }
+}

@@ -5,7 +5,7 @@ import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
 import StmtRenderer from "./ast-components/StmtRenderer.vue"
-import { Comment } from "./reader"
+import { FunctionDoc } from "./docstring/docstring"
 
 export interface Tagged {
   tag: string
@@ -177,7 +177,7 @@ export interface Define extends Tagged, Node {
   tag: "define"
   name: string
   value: Exp
-  doc?: Comment
+  doc?: FunctionDoc
 }
 export interface Disp extends Tagged, Node {
   tag: "display"
@@ -319,7 +319,7 @@ export const mkDefine = (
   name: string,
   value: Exp,
   range: L.Range = L.Range.none,
-  doc?: Comment,
+  doc?: FunctionDoc,
 ): Define => ({ tag: "define", name, value, range, doc })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: "display",
@@ -378,8 +378,7 @@ export function isStmt(v: unknown): v is Stmt {
 export const isStmtExp = (s: Stmt): s is StmtExp =>
   isTagged(s) && s.tag === "stmtexp"
 
-export const isVar = (e: Exp): e is Var =>
-  isTagged(e) && e.tag === "var"
+export const isVar = (e: Exp): e is Var => isTagged(e) && e.tag === "var"
 
 export const isApp = (e: Exp): e is App =>
   isTagged(e) && e.tag === "app" && isExp(e.head)

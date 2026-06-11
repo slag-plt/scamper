@@ -102,9 +102,11 @@ const docLinePrefix = ";;; "
  */
 export function parseDocLineContents(line: string): string | undefined {
   const [shouldBeEmpty, ...rest] = line.split(docLinePrefix)
+  // check at least 2
   // check starts with prefix
-  if (shouldBeEmpty !== "") {
+  if (rest.length === 0 || shouldBeEmpty !== "") {
     return undefined
   }
+
   return rest.join(docLinePrefix)
 }

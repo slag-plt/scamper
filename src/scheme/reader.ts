@@ -171,6 +171,9 @@ class Tokenizer {
       }
       // inComment = true
       if (ch === "\n") {
+        if (this.currComment !== undefined) {
+          this.currComment += ch
+        }
         inComment = false
         this.advance()
         continue
