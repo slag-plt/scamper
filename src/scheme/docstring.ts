@@ -1,11 +1,14 @@
 import { ScamperError } from "../lpm"
 import { Comment } from "./reader"
 import { Param, parseSingleParam } from "./doc-param"
+import { App, Exp, isStmtExp, StmtExp } from "./ast"
+import { SimpleErrorChannel } from "../lpm/output/simple-error"
+import { tokenizeAndParse } from "."
+
 import { parseFunctionDescription } from "./doc-description"
 import { hasTag, makeTagged } from "./util"
 import { DocTag, parseAllTags } from "./doc-tag"
 
-type Signature = unknown
 type Params = Param[]
 type Description = string
 type Tags = DocTag[]
@@ -23,6 +26,12 @@ export const ParseStage = {
   Tags: makeTagged(ParseStageTag, "tags"),
 } as const
 export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
+
+interface Signature {
+  // Function should get changed to App at some point
+  Function: Exp
+  Predicate: Exp
+}
 
 /**
  * @param docString looks like ";;; \n;;; \n..."
@@ -103,8 +112,109 @@ export function verifyDocLine(line: string): string {
   return rest.join(docLinePrefix)
 }
 
+
+function parseFunctionSignature(docLine: string): Exp {
+  const errChannel = new SimpleErrorChannel()
+  const parsed = tokenizeAndParse(errChannel, docLine)
+  if (docLine.startsWith(" ")) {
+    throw new ScamperError(
+      "Parser",
+      `Function signature cannot start with whitespace`,
+    )
+  }
+  if (!parsed || errChannel.errors.length > 0) {
+    throw new ScamperError(
+      "Parser",
+      `Malformed function signature`,
+    )
+  }
+  if (parsed.length < 1) {
+    throw new ScamperError(
+      "Parser",
+      `Function signature is missing`,
+    )
+  }
+  if (parsed.length > 1) {
+    throw new ScamperError(
+      "Parser",
+      `More than one function signature found`,
+    )
+  }
+  const parsedStmt = parsed[0]
+  if (!isStmtExp(parsedStmt)) {
+    throw new ScamperError(
+      "Parser",
+      `Not a function signature. Expected an expression`,
+    )
+  }
+  if (!isStmtExp(parsedStmt)) {
+    throw new ScamperError(
+      "Parser",
+      `Not a function signature. Expected an expression`,
+    )
+  }
+  // Missing check for whether the expression is an application
+  const funct = parsedStmt.expr
+  return funct;
+}
+
+function parseContractSignature(docLine: string): Exp {
+  const errChannel = new SimpleErrorChannel()
+  const parsed = tokenizeAndParse(errChannel, docLine)
+  if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
+    throw new ScamperError(
+      "Parser",
+      `Malformed predicate field`,
+    )
+  }
+  if (parsed.length < 1) {
+    throw new ScamperError(
+      "Parser",
+      `Predicate field is missing`,
+    )
+  }
+  const parsedStmt = parsed[0]
+  if (!isStmtExp(parsedStmt)) {
+    throw new ScamperError(
+      "Parser",
+      `Not a contract signature`,
+    )
+  }
+  const predicate = parsedStmt.expr
+  return predicate;
+}
+
+//////isfunctionsignature
+// treat fucntion signature as its own scamper program, tokenize and parse
+// verify no starting whitespace
+/// verify exactly one statement
+/// verify is expression
+/// verify expression is an application 
+// all pass then valid.
+//////contract
+// copy what julian does for contract
+// maybe sep to a diff utility function
 function parseSignature(docLine: string): Signature {
   // TODO: implement
-  void docLine
-  return null
+  // Check form function name, space, parameter. (separate function and call it)
+  // Check contract.
+
+  // verify no split (?) 
+  const separator = " -> "
+  const [functStr, predStr] = docLine.split(separator, 2)
+  
+  if (docLine.split(separator).length < 2) {
+    throw new ScamperError(
+      "Parser",
+      `Missing separator in doc string signature`,
+    )
+  }
+
+  const funct = parseFunctionSignature(functStr)
+  const predicate = parseContractSignature(predStr)
+
+  return {
+    Function: funct,
+    Predicate: predicate,
+  }
 }
