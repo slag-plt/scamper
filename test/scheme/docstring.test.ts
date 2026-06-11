@@ -8,9 +8,11 @@ import {
   parseSingleParam,
 } from "../../src/scheme/docstring/param"
 import {
+  FunctionDoc,
   isVarApp,
   parseDocString,
   ParseStage,
+  VarApp,
   verifyDocLine,
 } from "../../src/scheme/docstring/docstring"
 import { parseFunctionDescription } from "../../src/scheme/docstring/description"
@@ -20,24 +22,46 @@ import {
   parseAllTags,
 } from "../../src/scheme/docstring/tag"
 
+const anyRange = expect.anything() as Range
 describe("Docstring parsing", () => {
   describe("parseDocString", () => {
     test("outputs when input string is good", () => {
       const funcName = "func"
       const paramName1 = "p1"
       const paramName2 = "p2"
+      const funcApp = mkApp(
+        mkVar(funcName, anyRange),
+        [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
+        anyRange,
+      ) as VarApp
 
       const complexPredName1 = "complex-pred1?"
       const predName1 = "pred1?"
+      const predicate1 = mkApp(
+        mkVar(complexPredName1, anyRange),
+        [mkVar(predName1, anyRange)],
+        anyRange,
+      ) as VarApp
 
       const predName2 = "pred2?"
+      const predicate2 = mkVar(predName2, anyRange)
+
+      const paramDescLine1 = "this parameter is amazing"
+      const paramDescLine2 = "i really like it"
+      const paramDescription = `${paramDescLine1} ${paramDescLine2}`
 
       const complexPredName2 = "complex-pred2?"
       const predName3 = "pred3?"
       const predName4 = "pred4?"
+      const predicate3 = mkApp(
+        mkVar(complexPredName2, anyRange),
+        [mkVar(predName3, anyRange), mkVar(predName4, anyRange)],
+        anyRange,
+      ) as VarApp
 
       const descriptionLine1 = "this test function is really cool..."
       const descriptionLine2 = "isn't it?"
+      const description = `${descriptionLine1} ${descriptionLine2}`
 
       const tag1 = "@tag"
       const tagContents1 = "stuff1 stuff2"
@@ -47,13 +71,35 @@ describe("Docstring parsing", () => {
 
       const testComment = `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
 ;;;  ${paramName1} : ${predName2}
+;;;   ${paramDescLine1}
+;;;   ${paramDescLine2}
 ;;;  ${paramName2} : (${complexPredName2} ${predName3} ${predName4})
 ;;; ${descriptionLine1}
 ;;; ${descriptionLine2}
 ;;; ${tag1} ${tagContents1}
 ;;; ${tag2} ${tagContents2}`
 
-      expect(parseDocString(testComment)).toStrictEqual("no")
+      const expectedFunctionDoc: FunctionDoc = {
+        signature: {
+          function: funcApp,
+          predicate: predicate1,
+        },
+        params: [
+          {
+            name: paramName1,
+            predicate: predicate2,
+            description: paramDescription,
+          },
+          { name: paramName2, predicate: predicate3, description: undefined },
+        ],
+        description,
+        tags: [
+          { tag: tag1, contents: tagContents1 },
+          { tag: tag2, contents: tagContents2 },
+        ],
+      }
+
+      expect(parseDocString(testComment)).toStrictEqual(expectedFunctionDoc)
     })
   })
 
@@ -83,12 +129,9 @@ describe("Docstring parsing", () => {
   const subPredId1 = "pred1?"
   const subPredId2 = "pred2?"
   const predApp = mkApp(
-    mkVar(predHeadId, expect.anything() as Range),
-    [
-      mkVar(subPredId1, expect.anything() as Range),
-      mkVar(subPredId2, expect.anything() as Range),
-    ],
-    expect.anything() as Range,
+    mkVar(predHeadId, anyRange),
+    [mkVar(subPredId1, anyRange), mkVar(subPredId2, anyRange)],
+    anyRange,
   )
   if (!isVarApp(predApp)) {
     throw new Error("this should never happen")
@@ -99,7 +142,7 @@ describe("Docstring parsing", () => {
       const name = "param"
       test("w/ simple predicate", () => {
         const predId = "pred?"
-        const predicate = mkVar(predId, expect.anything() as Range)
+        const predicate = mkVar(predId, anyRange)
         const testDocLine = ` ${name} : ${predId}`
         const expectedParam: Param = {
           name,

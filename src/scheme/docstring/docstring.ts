@@ -11,7 +11,7 @@ import { parseSignature, Signature } from "./signature"
 type Params = Param[]
 export type Pred = Var | VarApp
 type Tags = DocTag[]
-interface FunctionDoc {
+export interface FunctionDoc {
   signature: Signature
   params: Params
   description: string
