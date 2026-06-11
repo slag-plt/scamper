@@ -39,12 +39,11 @@ export function isVarApp(e: Exp): e is VarApp {
  * @param docString looks like ";;; \n;;; \n..."
  */
 export function parseDocString(docString: Comment): FunctionDoc {
-  // split by newline and verify each
-  const linesToCheck = docString.split("\n")
-  const docLines: string[] = []
-  for (const line of linesToCheck) {
-    docLines.push(verifyDocLine(line))
-  }
+  // split by newline and throw away non-doc lines
+  const docLines: string[] = docString
+    .split("\n")
+    .map(parseDocLineContents)
+    .filter((line) => line !== undefined)
   // get the signature
   const firstLine = docLines.shift()
   if (firstLine === undefined) {
@@ -99,17 +98,13 @@ export function parseDocString(docString: Comment): FunctionDoc {
 
 const docLinePrefix = ";;; "
 /**
- * @returns line without doc line prefix
- * @throws ScamperError if not a doc line
+ * @returns line without doc line prefix, undefined if not a doc line
  */
-export function verifyDocLine(line: string): string {
+export function parseDocLineContents(line: string): string | undefined {
   const [shouldBeEmpty, ...rest] = line.split(docLinePrefix)
   // check starts with prefix
   if (shouldBeEmpty !== "") {
-    throw new ScamperError(
-      "Parser",
-      `Expected doc line to start with "${docLinePrefix}", but doesn't: got "${line}" instead`,
-    )
+    return undefined
   }
   return rest.join(docLinePrefix)
 }

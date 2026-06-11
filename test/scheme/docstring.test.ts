@@ -10,10 +10,10 @@ import {
 import {
   FunctionDoc,
   isVarApp,
+  parseDocLineContents,
   parseDocString,
   ParseStage,
   VarApp,
-  verifyDocLine,
 } from "../../src/scheme/docstring/docstring"
 import { parseFunctionDescription } from "../../src/scheme/docstring/description"
 import {
@@ -103,25 +103,25 @@ describe("Docstring parsing", () => {
     })
   })
 
-  describe("verifyDocLine", () => {
+  describe("parseDocLineContents", () => {
     describe("prefix", () => {
-      test("throws when too many semicolons", () => {
+      test("undefined when too many semicolons", () => {
         const testDocLine = ";;;; a lot of semicolons!"
-        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
+        expect(parseDocLineContents(testDocLine)).toBeUndefined()
       })
-      test("throws when not enough semicolons", () => {
+      test("undefined when not enough semicolons", () => {
         const testDocLine = ";; not many semicolons!"
-        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
+        expect(parseDocLineContents(testDocLine)).toBeUndefined()
       })
-      test("throws when bad prefix", () => {
+      test("undefined when bad prefix", () => {
         const testDocLine = ";%; why is there a % in the prefix"
-        expect(() => verifyDocLine(testDocLine)).toThrow("to start with")
+        expect(parseDocLineContents(testDocLine)).toBeUndefined()
       })
     })
     test("returns the line with the docstring prefix stripped", () => {
       const restOfLine = "good comment :)"
       const testDocLine = `;;; ${restOfLine}`
-      expect(verifyDocLine(testDocLine)).toStrictEqual(restOfLine)
+      expect(parseDocLineContents(testDocLine)).toStrictEqual(restOfLine)
     })
   })
 
