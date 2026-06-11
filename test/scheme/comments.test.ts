@@ -4,8 +4,13 @@ import { tokenizeAndParse } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { mkApp, mkDefine, mkLit } from "../../src/scheme/ast"
 import { mkVar, Range } from "../../src/lpm"
-import { nextDocLine } from "../../src/scheme/docstring"
-import { Param, parseParamSignature } from "../../src/scheme/doc-param"
+import { nextDocLine, ParseStage } from "../../src/scheme/docstring"
+import {
+  Param,
+  parseSingleParam,
+  parseParamDescriptionLine,
+  parseParamSignature,
+} from "../../src/scheme/doc-param"
 
 const identifier = "x"
 const value = 1
@@ -19,7 +24,7 @@ describe("Comments", () => {
   `
   test("are read and attached to syntax", () => {
     const vals = read(testSrc)
-    expect(vals).toEqual(
+    expect(vals).toStrictEqual(
       expect.arrayContaining([expect.objectContaining({ comment })]),
     )
   })
@@ -30,7 +35,7 @@ describe("Comments", () => {
   `
   test("triple semicolon comments are saved in the comment", () => {
     const vals = read(testSrc2)
-    expect(vals).toEqual(
+    expect(vals).toStrictEqual(
       expect.arrayContaining([expect.objectContaining({ comment: comment2 })]),
     )
   })
@@ -43,7 +48,7 @@ describe("Comments", () => {
   `
   test("multiple line comments are saved as one comment", () => {
     const vals = read(testSrc3)
-    expect(vals).toEqual(
+    expect(vals).toStrictEqual(
       expect.arrayContaining([expect.objectContaining({ comment: comment3 })]),
     )
   })
@@ -56,10 +61,11 @@ describe("Comments", () => {
       expect.anything() as Range,
       comment,
     )
-    expect(prog).toEqual(expect.arrayContaining([expectedDefine]))
+    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
   })
 })
 
+// TODO: should move this to diff file, this one getting long
 describe("Docstring parsing", () => {
   describe("nextDocLine", () => {
     describe("prefix", () => {
@@ -83,10 +89,11 @@ describe("Docstring parsing", () => {
       const restOfLine = "good comment :)"
       const testDocString = `;;; ${restOfLine}`
       const docChars = testDocString.split("").toReversed()
-      expect(nextDocLine(docChars)).toEqual(restOfLine)
+      expect(nextDocLine(docChars)).toStrictEqual(restOfLine)
     })
   })
-  describe("parseParam", () => {
+
+  describe("parseParamSignature", () => {
     describe("valid param signature", () => {
       const name = "param"
       test("w/ simple predicate", () => {
@@ -97,8 +104,11 @@ describe("Docstring parsing", () => {
           name,
           predicate,
         }
-        expect(parseParamSignature(testDocLine)).toEqual(expectedParam)
+        expect(parseParamSignature(testDocLine).param).toStrictEqual(
+          expectedParam,
+        )
       })
+
       test("w/ complex predicate", () => {
         const predHeadId = "complex-pred?"
         const subPredId1 = "pred1?"
@@ -116,9 +126,88 @@ describe("Docstring parsing", () => {
           name,
           predicate,
         }
-        // TODO: finish complex predicates
-        expect(parseParamSignature(testDocLine)).toEqual(expectedParam)
+        expect(parseParamSignature(testDocLine).param).toStrictEqual(
+          expectedParam,
+        )
       })
+    })
+    describe("illegal param signature", () => {
+      // TODO: test
+    })
+  })
+
+  describe("parseParamDescriptionLine", () => {
+    const leadPaddingCount = 2
+    test("returns line if padding is good", () => {
+      const expectedResult = "hey this is a test description"
+      const leadPadding = " ".repeat(leadPaddingCount)
+      const testDescLine = `${leadPadding} ${expectedResult}`
+      expect(
+        parseParamDescriptionLine(testDescLine, leadPaddingCount),
+      ).toStrictEqual(expectedResult)
+    })
+    test("throws if lead padding is bad", () => {
+      const contents = "this should NOT appear..."
+      const testDescLine = ` ${contents}`
+      expect(() =>
+        parseParamDescriptionLine(testDescLine, leadPaddingCount),
+      ).toThrow("beginning whitespace")
+    })
+  })
+
+  describe("parseSingleParam", () => {
+    const name = "param"
+    const complexPredId = "pred?"
+    const subPredId = "pred1?"
+    const predicate = mkApp(
+      mkVar(complexPredId, expect.anything() as Range),
+      [mkVar(subPredId, expect.anything() as Range)],
+      expect.anything() as Range,
+    )
+    const goodParamSignature = ` ${name} : (${complexPredId} ${subPredId})`
+    const remainingLine =
+      "this one is just here since parseAllParams expects it"
+
+    test("returns param w/ description", () => {
+      const paramDescPart1 = "this param does"
+      const paramDescPart2 = "something really cool!"
+      const paramDescLine1 = `  ${paramDescPart1}`
+      const paramDescLine2 = `  ${paramDescPart2}`
+      const testDocLines = [paramDescLine1, paramDescLine2, remainingLine]
+
+      const description = `${paramDescPart1} ${paramDescPart2}`
+      const expectedParam: Param = {
+        name,
+        predicate,
+        description,
+      }
+
+      expect(parseSingleParam(goodParamSignature, testDocLines)).toStrictEqual(
+        expectedParam,
+      )
+      expect(testDocLines).toStrictEqual([remainingLine])
+    })
+
+    test("returns param w/o description", () => {
+      const testDocLines = [remainingLine]
+      const expectedParam: Param = {
+        name,
+        predicate,
+        description: undefined,
+      }
+      expect(parseSingleParam(goodParamSignature, testDocLines)).toStrictEqual(
+        expectedParam,
+      )
+      expect(testDocLines).toStrictEqual([remainingLine])
+    })
+
+    test("signals to move to description stage when param parsing failure", () => {
+      const testDocLines = [remainingLine]
+      expect(parseSingleParam(remainingLine, testDocLines)).toStrictEqual(
+        ParseStage.Description,
+      )
+      // it should have pushed back the consumed line
+      expect(testDocLines).toStrictEqual([remainingLine, remainingLine])
     })
   })
 })

@@ -1,6 +1,6 @@
 import { ScamperError } from "../lpm"
 import { Comment, isWhitespace } from "./reader"
-import { Param, parseAllParams } from "./doc-param"
+import { isParam, Param, parseSingleParam } from "./doc-param"
 
 type Signature = unknown
 type Params = Param[]
@@ -50,13 +50,18 @@ export function parseDocString(docString: Comment): CommentStruct {
   while (docLines.length > 0) {
     const line = docLines.shift()
     if (line === undefined) {
-      break
+      throw new ScamperError(
+        "Parser",
+        "Atomicity violation: doc lines changed while parsing?",
+      )
     }
     if (stage === ParseStage.Params) {
-      const result = parseAllParams(line, docLines)
-      if (result !== undefined) {
-        stage = result
+      const result = parseSingleParam(line, docLines)
+      if (isParam(result)) {
+        params.push(result)
+        continue
       }
+      stage = result
     }
     if (stage === ParseStage.Description) {
       // TODO: implement

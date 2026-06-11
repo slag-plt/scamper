@@ -40,10 +40,10 @@ class ParamMissingFieldError extends ParamParseError {}
 class ParamMalformedFieldError extends ParamParseError {}
 
 // TODO: test
-export function parseAllParams(
+export function parseSingleParam(
   line: string,
   docLines: string[],
-): ParseStage | undefined {
+): ParseStage | Param {
   // get param signature
   const parsedSignature = catchIf(
     () => parseParamSignature(line),
@@ -69,22 +69,30 @@ export function parseAllParams(
     isRecoverableParamParseError,
   )
   if (param.description === undefined) {
-    docLines.push(line)
+    docLines.push(nextLine)
     // we might still have more params to look for, so don't change stage
-    return
+    return param
   }
   while (docLines.length > 0) {
-    const nextDescLine = catchIf(
-      () => parseParamDescriptionLine(nextLine, beginningWhitespaces),
+    const nextDescLine = docLines.shift()
+    if (nextDescLine === undefined) {
+      throw new ScamperError(
+        "Parser",
+        "Doc string is missing function description",
+      )
+    }
+    const remainingDesc = catchIf(
+      () => parseParamDescriptionLine(nextDescLine, beginningWhitespaces),
       isRecoverableParamParseError,
     )
-    if (nextDescLine === undefined) {
-      docLines.push(line)
-      continue
+    if (remainingDesc === undefined) {
+      docLines.push(nextDescLine)
+      return param
     }
-    param.description += " " + nextDescLine
+    param.description += " " + remainingDesc
   }
-  return
+  // if we broke out of the while loop, we ran out of lines
+  throw new ScamperError("Parser", "Doc string is missing function description")
 }
 
 const minSignatureBeginningWhitespace = 1
@@ -170,7 +178,7 @@ export function parseParamDescriptionLine(
     sigBeginningWhitespaces + minDescriptionPadding,
     WhitespaceLocation.Beginning,
   )
-  return docLine.slice(padding)
+  return docLine.slice(padding).trim()
 }
 
 function getLeadingWhitespaceCount(
@@ -202,4 +210,8 @@ function isRecoverableParamParseError(e: unknown) {
     !(e instanceof ParamWhitespaceError) ||
     e.loc !== WhitespaceLocation.Beginning
   )
+}
+
+export function isParam(v: unknown): v is Param {
+  return typeof v === "object" && v !== null && "name" in v && "predicate" in v
 }

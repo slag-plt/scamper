@@ -3,7 +3,7 @@ export function catchIf<T>(
   predicate: (err: unknown) => boolean,
 ): T | undefined {
   try {
-    fn()
+    return fn()
   } catch (e) {
     if (predicate(e)) throw e
     return undefined
