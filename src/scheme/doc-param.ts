@@ -54,7 +54,7 @@ export function parseSingleParam(docLines: string[]): ParseStage | Param {
   )
   if (!parsedSignature) {
     // put the line back and switch to description stage
-    docLines.push(line)
+    docLines.unshift(line)
     return ParseStage.Description
   }
   const { param, beginningWhitespaces } = parsedSignature
@@ -72,7 +72,7 @@ export function parseSingleParam(docLines: string[]): ParseStage | Param {
     isRecoverableParamParseError,
   )
   if (param.description === undefined) {
-    docLines.push(nextLine)
+    docLines.unshift(nextLine)
     // we might still have more params to look for, so don't change stage
     return param
   }
@@ -89,7 +89,7 @@ export function parseSingleParam(docLines: string[]): ParseStage | Param {
       isRecoverableParamParseError,
     )
     if (remainingDesc === undefined) {
-      docLines.push(nextDescLine)
+      docLines.unshift(nextDescLine)
       return param
     }
     param.description += " " + remainingDesc

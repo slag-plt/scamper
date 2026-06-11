@@ -63,8 +63,8 @@ export function parseDocString(docString: Comment): CommentStruct {
       }
       case ParseStage.Description: {
         const result = parseFunctionDescription(docLines)
-        if (hasTag(result, ParseStageTag)) {
-          stage = result
+        if (typeof result === "object" && "stage" in result) {
+          ;({ stage, description } = result)
         } else {
           description = result
         }

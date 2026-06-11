@@ -11,6 +11,8 @@ import {
   parseParamDescriptionLine,
   parseParamSignature,
 } from "../../src/scheme/doc-param"
+import { matchesDocTagFormat } from "../../src/scheme/doc-tag"
+import { parseFunctionDescription } from "../../src/scheme/doc-description"
 
 const identifier = "x"
 const value = 1
@@ -167,6 +169,9 @@ describe("Docstring parsing", () => {
     const goodParamSignature = ` ${name} : (${complexPredId} ${subPredId})`
     const remainingLine =
       "this one is just here since parseAllParams expects it"
+    const otherRemainingLine =
+      "this is to check that we don't change the order of stuff"
+    const expectedRemainder = [remainingLine, otherRemainingLine]
 
     test("returns param w/ description", () => {
       const paramDescPart1 = "this param does"
@@ -178,6 +183,7 @@ describe("Docstring parsing", () => {
         paramDescLine1,
         paramDescLine2,
         remainingLine,
+        otherRemainingLine,
       ]
 
       const description = `${paramDescPart1} ${paramDescPart2}`
@@ -188,27 +194,83 @@ describe("Docstring parsing", () => {
       }
 
       expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
-      expect(testDocLines).toStrictEqual([remainingLine])
+      expect(testDocLines).toStrictEqual(expectedRemainder)
     })
 
     test("returns param w/o description", () => {
-      const testDocLines = [goodParamSignature, remainingLine]
+      const testDocLines = [
+        goodParamSignature,
+        remainingLine,
+        otherRemainingLine,
+      ]
       const expectedParam: Param = {
         name,
         predicate,
         description: undefined,
       }
       expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
-      expect(testDocLines).toStrictEqual([remainingLine])
+      expect(testDocLines).toStrictEqual(expectedRemainder)
     })
 
     test("signals to move to description stage when param parsing failure", () => {
-      const testDocLines = [remainingLine, remainingLine]
+      const testDocLines = [remainingLine, otherRemainingLine]
       expect(parseSingleParam(testDocLines)).toStrictEqual(
         ParseStage.Description,
       )
       // it should have pushed back the consumed line
-      expect(testDocLines).toStrictEqual([remainingLine, remainingLine])
+      expect(testDocLines).toStrictEqual(expectedRemainder)
+    })
+  })
+
+  describe("parseFunctionDescription", () => {
+    const testDescriptionLine1 = "this is the first line of the description"
+    const testDescriptionLine2 = "this is the SECOND line!"
+    const expectedDescription = `${testDescriptionLine1} ${testDescriptionLine2}`
+    const exTagLine1 = "@tag tag1 tag2"
+    const exTagLine2 = "@another-tag tag3"
+    const expectedRemainder = [exTagLine1, exTagLine2]
+    test("empty string when begins with tag line", () => {
+      const testDocLines = [exTagLine1, exTagLine2]
+      const expectedResult = { stage: ParseStage.Tags, description: "" }
+      expect(parseFunctionDescription(testDocLines)).toStrictEqual(
+        expectedResult,
+      )
+      expect(testDocLines).toStrictEqual(expectedRemainder)
+    })
+    test("works w/ tag lines after", () => {
+      const testDocLines = [
+        testDescriptionLine1,
+        testDescriptionLine2,
+        exTagLine1,
+        exTagLine2,
+      ]
+      const expectedResult = {
+        stage: ParseStage.Tags,
+        description: expectedDescription,
+      }
+      expect(parseFunctionDescription(testDocLines)).toStrictEqual(
+        expectedResult,
+      )
+      expect(testDocLines).toStrictEqual(expectedRemainder)
+    })
+    test("doesn't bundle stage when no tag lines after", () => {
+      const testDocLines = [testDescriptionLine1, testDescriptionLine2]
+      expect(parseFunctionDescription(testDocLines)).toStrictEqual(
+        expectedDescription,
+      )
+      expect(testDocLines).toStrictEqual([])
+    })
+  })
+
+  describe("matchesDocTagFormat", () => {
+    test("good doc tag line", () => {
+      const testLine = "@tag tag1 tag2 tag3"
+      expect(matchesDocTagFormat(testLine)).toBe(true)
+    })
+    test("not a doc tag line", () => {
+      const testLine =
+        "@ this is definitely NOT a tagged line even though it starts with @"
+      expect(matchesDocTagFormat(testLine)).toBe(false)
     })
   })
 })
