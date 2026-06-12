@@ -8,11 +8,13 @@ import {
   parseSingleParam,
 } from "../../src/scheme/docstring/param"
 import {
+  ComplexPred,
   FunctionDoc,
-  isVarApp,
+  isComplexPred,
   parseDocLineContents,
   parseDocString,
   ParseStage,
+  Pred,
   VarApp,
 } from "../../src/scheme/docstring/docstring"
 import { parseFunctionDescription } from "../../src/scheme/docstring/description"
@@ -80,15 +82,11 @@ describe("Docstring parsing", () => {
   const predHeadId = "complex-pred?"
   const subPredId1 = "pred1?"
   const subPredId2 = "pred2?"
-  const predApp = mkApp(
+  const predicate = mkApp(
     mkVar(predHeadId, anyRange),
     [mkVar(subPredId1, anyRange), mkVar(subPredId2, anyRange)],
     anyRange,
-  )
-  if (!isVarApp(predApp)) {
-    throw new Error("this should never happen")
-  }
-  const predicate = predApp
+  ) as Pred
   describe("parseParamSignature", () => {
     describe("valid param signature", () => {
       const name = "param"
@@ -283,6 +281,35 @@ describe("Docstring parsing", () => {
       const testLine =
         "@ this is definitely NOT a tagged line even though it starts with @"
       expect(matchesDocTagFormat(testLine)).toBe(false)
+    })
+  })
+
+  describe("isComplexPred", () => {
+    const name = "complex-pred?"
+    test("works on simple complex pred", () => {
+      const subPred1 = "pred1?"
+      const subPred2 = "pred2?"
+      const testComplexPred: ComplexPred = mkApp(mkVar(name), [
+        mkVar(subPred1),
+        mkVar(subPred2),
+      ]) as ComplexPred
+
+      expect(isComplexPred(testComplexPred)).toBe(true)
+    })
+    test("works on nested complex pred", () => {
+      const nestedName = "nested-complex?"
+      const subPred1 = "pred1?"
+      const subNestedName = "another-nested?"
+      const subPred2 = "pred2?"
+      const subPred3 = "pred3?"
+      const testComplexPred: ComplexPred = mkApp(mkVar(name), [
+        mkVar(subPred1),
+        mkApp(mkVar(nestedName), [
+          mkApp(mkVar(subNestedName), [mkVar(subPred2), mkVar(subPred3)]),
+        ]),
+      ]) as ComplexPred
+
+      expect(isComplexPred(testComplexPred)).toBe(true)
     })
   })
 })

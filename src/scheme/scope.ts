@@ -2,6 +2,8 @@ import { Prelude, Runtime } from "../lib"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
+import { isVar } from "./ast.js"
+import { ComplexPred } from "./docstring/docstring"
 
 function checkDuplicateVars(
   errors: ScamperError[],
@@ -134,11 +136,107 @@ function scopeCheckExp(
   }
 }
 
-function scopeCheckFunctionDoc() {
+function scopeCheckComplexPred(
+  errors: ScamperError[],
+  complexPred: ComplexPred,
+  globals: string[],
+) {
   // TODO: implement
+  void errors
+  void complexPred
+  void globals
 }
-// TODO: remove when implemented
-void scopeCheckFunctionDoc
+
+// example function doc + function definition combo
+// ;;; (append lst val) -> list?
+// ;;;   lst : list?
+// ;;;   val : any
+// ;;; Appends val to lst and returns the resulting list.
+// ;;; @example (append (list 1 2 3) 4) -> (list 1 2 3 4)
+// ;;; @tag list ...
+// (define append
+//   (lambda (lst val) ...))
+function scopeCheckFunctionDoc(
+  errors: ScamperError[],
+  { name, value, doc }: A.Define,
+  globals: string[],
+) {
+  if (!doc) {
+    // can't scope check a doc that doesn't exist
+    return
+  }
+  if (!A.isLam(value)) {
+    // can't attach function docs onto non-function definitions
+    errors.push(
+      new ScamperError(
+        "Parser",
+        "Function docstring attached to non-function definition",
+      ),
+    )
+    return
+  }
+
+  const { params } = value
+  const {
+    signature: {
+      function: {
+        head: { name: docName },
+        args,
+      },
+      predicate,
+    },
+    params: docParamDescriptions,
+    // TODO: maybe we need to scope check the example too?
+    // tags
+  } = doc
+  const docParams = [...args.map((v) => v.name)]
+
+  // (append...
+  if (name !== docName) {
+    errors.push(
+      new ScamperError(
+        "Parser",
+        `Docstring function name "${docName}" does not match defined name "${name}"`,
+      ),
+    )
+    // this is not a catastrophic error, continue parsing
+  }
+
+  // ... lst val)...
+  for (const param of params) {
+    const nextDocParam = docParams.shift()
+    if (nextDocParam === undefined) {
+      errors.push(
+        new ScamperError(
+          "Parser",
+          `Docstring signature does not define enough parameters; expected parameter "${param}" to be defined`,
+        ),
+      )
+      continue
+    }
+    if (param !== nextDocParam) {
+      errors.push(
+        new ScamperError(
+          "Parser",
+          `Function signature defines parameter "${param}" in this position but docstring signature instead defines "${nextDocParam}"`,
+        ),
+      )
+    }
+  }
+  // don't check for remaining parameters, docstring param description check will get that
+
+  // ... -> list?...
+  if (isVar(predicate)) {
+    if (!globals.includes(predicate.name)) {
+      errors.push(new ScamperError("Parser", ``))
+    }
+  } else {
+    scopeCheckComplexPred(errors, predicate, globals)
+  }
+
+  // TODO: finish
+  void docParamDescriptions
+}
 
 function scopeCheckStmt(
   errors: ScamperError[],
@@ -178,7 +276,7 @@ function scopeCheckStmt(
         globals.push(s.name)
       }
       scopeCheckExp(errors, globals, [], s.value)
-      // TODO: scope check function doc
+      scopeCheckFunctionDoc(errors, s, globals)
       return
     }
 

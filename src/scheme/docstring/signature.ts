@@ -1,8 +1,8 @@
 import { ScamperError } from "../../lpm"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
-import { isStmtExp, isVar } from "../ast"
-import { isVarApp, Pred, VarApp } from "./docstring"
+import { isStmtExp } from "../ast"
+import { isPred, isVarApp, Pred, VarApp } from "./docstring"
 
 export interface Signature {
   // Function should get changed to App at some point
@@ -58,7 +58,7 @@ function parseContractSignature(docLine: string): Pred {
   if (!isStmtExp(parsedStmt)) {
     throw new ScamperError("Parser", `Not a contract signature`)
   }
-  if (!isVarApp(parsedStmt.expr) && !isVar(parsedStmt.expr)) {
+  if (!isPred(parsedStmt.expr)) {
     throw new ScamperError(
       "Parser",
       `Not a contract signature. Expected a variable or variable application`,

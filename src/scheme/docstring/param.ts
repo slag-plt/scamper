@@ -1,11 +1,11 @@
-import { isStmtExp, isVar } from "../ast"
+import { isStmtExp } from "../ast"
 import { Range, ScamperError } from "../../lpm"
 import { isWhitespace, readSingle, Token } from "../reader"
 import { parseIdentifier } from "../parser"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
 import { catchIf } from "../util"
-import { isVarApp, ParseStage, Pred } from "./docstring"
+import { isPred, ParseStage, Pred } from "./docstring"
 
 export interface Param {
   name: string
@@ -165,7 +165,7 @@ export function parseParamSignature(
     throw new ParamMalformedFieldError("Predicate should be an expression")
   }
   // TODO: range should actually be populated
-  if (!isVar(parsedStmt.expr) && !isVarApp(parsedStmt.expr)) {
+  if (!isPred(parsedStmt.expr)) {
     throw new ParamMalformedFieldError(
       "Predicate should be either a simple predicate identifier or a complex predicate application",
     )

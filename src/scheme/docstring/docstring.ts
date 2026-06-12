@@ -9,13 +9,27 @@ import { DocTag, parseAllTags } from "./tag"
 import { parseSignature, Signature } from "./signature"
 
 type Params = Param[]
-export type Pred = Var | VarApp
 type Tags = DocTag[]
 export interface FunctionDoc {
   signature: Signature
   params: Params
   description: string
   tags: Tags
+}
+
+export interface ComplexPred extends App {
+  head: Var
+  args: Pred[]
+}
+export type Pred = Var | ComplexPred
+export function isComplexPred(a: App): a is ComplexPred {
+  return (
+    isVar(a.head) &&
+    a.args.every((e) => isVar(e) || (isApp(e) && isComplexPred(e)))
+  )
+}
+export function isPred(e: Exp): e is Pred {
+  return isVar(e) || (isApp(e) && isComplexPred(e))
 }
 
 const ParseStageTag = Symbol("ParseStageTag")
