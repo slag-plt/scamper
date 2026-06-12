@@ -7,7 +7,7 @@ export class Token {
   constructor(
     public text: string,
     public range: L.Range,
-    public comment?: string,
+    public comment?: Comment,
   ) {}
 
   public toString(): string {
@@ -30,7 +30,10 @@ const areMatchingBrackets = (open: string, close: string): boolean => {
   )
 }
 
-export type Comment = string
+export interface Comment {
+  contents: string
+  range?: L.Range
+}
 
 class Tokenizer {
   private src: string
@@ -91,7 +94,6 @@ class Tokenizer {
     this.endCol = -1
     this.endIdx = -1
     this.tokenLen = 0
-    this.currComment = undefined
   }
 
   beginTracking(): void {
@@ -109,6 +111,15 @@ class Tokenizer {
     }
   }
 
+  consumeComment(): Comment | undefined {
+    if (this.currComment !== undefined) {
+      const ret = this.currComment
+      this.currComment = undefined
+      return ret
+    }
+    return undefined
+  }
+
   emitToken(): Token {
     if (!this.isTracking()) {
       throw new L.ICE("parser.emitToken", "Not tracking a token")
@@ -123,7 +134,7 @@ class Tokenizer {
           this.endCol,
           this.endIdx,
         ),
-        this.currComment,
+        this.consumeComment(),
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -151,6 +162,7 @@ class Tokenizer {
 
   chompWhitespaceAndComments(): void {
     let inComment = false
+    let canResetTracking = false
     while (
       !this.isEmpty() &&
       (inComment || isWhitespace(this.peek()) || this.peek() === ";")
@@ -160,8 +172,24 @@ class Tokenizer {
         // starting a new comment
         inComment = true
         // add on to the current comment
-        this.currComment ??= ""
-        this.currComment += ch
+        if (this.currComment === undefined) {
+          // TODO: comments should now be CommentLine[]
+          //  so, the logic would need to change:
+          //  - if we weren't in a comment and we just encountered our first comment character, then our comment line starts
+          //  - if we just hit a newline and we were in a comment, push our comment line
+          //  we still effectively get line by line ranges set by the tokenizer,
+          //  and all we do is just do our docstring line splitting early
+          //  DON'T categorize into specific doc line type since that's assigning meaning to tokens i.e. parsing
+
+          if (!this.isTracking()) {
+            canResetTracking = true
+            this.beginTracking()
+          }
+          this.currComment = {
+            contents: "",
+          }
+        }
+        this.currComment.contents += ch
         this.advance()
         continue
       }
@@ -172,16 +200,31 @@ class Tokenizer {
       // inComment = true
       if (ch === "\n") {
         if (this.currComment !== undefined) {
-          this.currComment += ch
+          this.currComment.contents += ch
         }
         inComment = false
         this.advance()
         continue
       }
       // add on to the current comment
-      this.currComment ??= ""
-      this.currComment += ch
+      this.currComment ??= {
+        contents: "",
+      }
+      this.currComment.contents += ch
       this.advance()
+    }
+    if (this.currComment !== undefined) {
+      this.currComment.range = L.Range.of(
+        this.startRow,
+        this.startCol,
+        this.startIdx,
+        this.endRow,
+        this.endCol,
+        this.endIdx,
+      )
+      if (canResetTracking) {
+        this.resetTracking()
+      }
     }
   }
 

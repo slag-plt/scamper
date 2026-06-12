@@ -1,4 +1,4 @@
-import { ScamperError } from "../../lpm"
+import { Range, ScamperError } from "../../lpm"
 import { Comment } from "../reader"
 import { Param, parseSingleParam } from "./param"
 import { App, Exp, isApp, isVar, Var } from "../ast"
@@ -15,6 +15,7 @@ export interface FunctionDoc {
   params: Params
   description: string
   tags: Tags
+  range?: Range
 }
 
 export interface ComplexPred extends App {
@@ -52,7 +53,10 @@ export function isVarApp(e: Exp): e is VarApp {
 /**
  * @param docString looks like ";;; \n;;; \n..."
  */
-export function parseDocString(docString: Comment): FunctionDoc {
+export function parseDocString({
+  contents: docString,
+  range,
+}: Comment): FunctionDoc {
   // split by newline and throw away non-doc lines
   const docLines: string[] = docString
     .split("\n")
@@ -113,7 +117,7 @@ export function parseDocString(docString: Comment): FunctionDoc {
     )
   }
   // return the comment struct
-  return { signature, params, description, tags }
+  return { signature, params, description, tags, range }
 }
 
 const docLinePrefix = ";;; "

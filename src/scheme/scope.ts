@@ -179,13 +179,13 @@ function scopeCheckComplexPred(
 //   (lambda (lst val) ...))
 // TODO: test this
 function scopeCheckFunctionDoc(
-  errors: ScamperError[],
   { name, value, doc }: A.Define,
   globals: string[],
-) {
+): ScamperError[] {
+  const errors: ScamperError[] = []
   if (!doc) {
     // can't scope check a doc that doesn't exist
-    return
+    return errors
   }
   if (!A.isLam(value)) {
     // can't attach function docs onto non-function definitions
@@ -195,7 +195,7 @@ function scopeCheckFunctionDoc(
         "Function docstring attached to non-function definition",
       ),
     )
-    return
+    return errors
   }
 
   const { params } = value
@@ -277,6 +277,7 @@ function scopeCheckFunctionDoc(
       ),
     )
   }
+  return errors
 }
 
 function scopeCheckStmt(
@@ -317,7 +318,13 @@ function scopeCheckStmt(
         globals.push(s.name)
       }
       scopeCheckExp(errors, globals, [], s.value)
-      scopeCheckFunctionDoc(errors, s, globals)
+      if (s.doc) {
+        const funcDocErrs = scopeCheckFunctionDoc(s, globals)
+        for (const err of funcDocErrs) {
+          err.range = s.doc.range
+        }
+        errors.push(...funcDocErrs)
+      }
       return
     }
 
