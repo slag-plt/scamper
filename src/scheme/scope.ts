@@ -3,7 +3,7 @@ import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
 import { isVar } from "./ast.js"
-import { ComplexPred } from "./docstring/docstring"
+import { ComplexPred, Pred } from "./docstring/docstring"
 
 function checkDuplicateVars(
   errors: ScamperError[],
@@ -136,26 +136,48 @@ function scopeCheckExp(
   }
 }
 
-function scopeCheckComplexPred(
+// TODO: test this
+function scopeCheckPred(
   errors: ScamperError[],
-  complexPred: ComplexPred,
+  predicate: Pred,
   globals: string[],
 ) {
-  // TODO: implement
-  void errors
-  void complexPred
-  void globals
+  if (isVar(predicate)) {
+    if (!globals.includes(predicate.name)) {
+      errors.push(
+        new ScamperError("Parser", `Undefined predicate ${predicate.name}`),
+      )
+    }
+  } else {
+    scopeCheckComplexPred(errors, predicate, globals)
+  }
+}
+
+// TODO: test this
+function scopeCheckComplexPred(
+  errors: ScamperError[],
+  { head: { name }, args }: ComplexPred,
+  globals: string[],
+) {
+  if (!globals.includes(name)) {
+    errors.push(new ScamperError("Parser", `Undefined predicate ${name}`))
+  }
+  for (const arg of args) {
+    scopeCheckPred(errors, arg, globals)
+  }
 }
 
 // example function doc + function definition combo
 // ;;; (append lst val) -> list?
 // ;;;   lst : list?
+// ;;;     The list to append to.
 // ;;;   val : any
 // ;;; Appends val to lst and returns the resulting list.
 // ;;; @example (append (list 1 2 3) 4) -> (list 1 2 3 4)
 // ;;; @tag list ...
 // (define append
 //   (lambda (lst val) ...))
+// TODO: test this
 function scopeCheckFunctionDoc(
   errors: ScamperError[],
   { name, value, doc }: A.Define,
@@ -209,7 +231,7 @@ function scopeCheckFunctionDoc(
       errors.push(
         new ScamperError(
           "Parser",
-          `Docstring signature does not define enough parameters; expected parameter "${param}" to be defined`,
+          `Expected function parameter "${param}" to be defined in docstring signature`,
         ),
       )
       continue
@@ -226,16 +248,20 @@ function scopeCheckFunctionDoc(
   // don't check for remaining parameters, docstring param description check will get that
 
   // ... -> list?...
-  if (isVar(predicate)) {
-    if (!globals.includes(predicate.name)) {
-      errors.push(new ScamperError("Parser", ``))
-    }
-  } else {
-    scopeCheckComplexPred(errors, predicate, globals)
-  }
+  scopeCheckPred(errors, predicate, globals)
 
-  // TODO: finish
-  void docParamDescriptions
+  // ...lst : list?... (param descriptions)
+  for (const { name: pName, predicate: pPred } of docParamDescriptions) {
+    if (!params.includes(pName)) {
+      errors.push(
+        new ScamperError(
+          "Parser",
+          `Docstring signature defines unknown function parameter "${pName}"`,
+        ),
+      )
+    }
+    scopeCheckPred(errors, pPred, globals)
+  }
 }
 
 function scopeCheckStmt(
