@@ -79,6 +79,12 @@ export function parseDocString(docString: Comment): FunctionDoc {
       case ParseStage.Params: {
         const result = parseSingleParam(docLines)
         if (hasTag(result, ParseStageTag)) {
+          if (params.length !== signature.function.args.length) {
+            throw new ScamperError(
+              "Parser",
+              "Encountered function description before all parameters were described",
+            )
+          }
           stage = result
         } else {
           params.push(result)
@@ -103,7 +109,7 @@ export function parseDocString(docString: Comment): FunctionDoc {
   if (description === "") {
     throw new ScamperError(
       "Parser",
-      "Doc string must have a function description!",
+      "Docstring must have a function description",
     )
   }
   // return the comment struct

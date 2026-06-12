@@ -1,6 +1,5 @@
 import { ScamperError } from "../../lpm"
 import { ParseStage } from "./docstring"
-import { matchesDocTagFormat } from "./tag"
 
 export function parseFunctionDescription(
   docLines: string[],
@@ -14,7 +13,9 @@ export function parseFunctionDescription(
         "Atomicity violation: doc lines changed while parsing?",
       )
     }
-    if (matchesDocTagFormat(line)) {
+    // description lines cannot start with @
+    // we won't check if it's actually a correct tag line, that's the next stage
+    if (line.startsWith("@")) {
       // put the line back
       docLines.unshift(line)
       return { stage: ParseStage.Tags, description: description.trim() }

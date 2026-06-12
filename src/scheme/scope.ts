@@ -145,7 +145,7 @@ function scopeCheckPred(
   if (isVar(predicate)) {
     if (!globals.includes(predicate.name)) {
       errors.push(
-        new ScamperError("Parser", `Undefined predicate ${predicate.name}`),
+        new ScamperError("Parser", `Undefined predicate "${predicate.name}"`),
       )
     }
   } else {
@@ -160,7 +160,7 @@ function scopeCheckComplexPred(
   globals: string[],
 ) {
   if (!globals.includes(name)) {
-    errors.push(new ScamperError("Parser", `Undefined predicate ${name}`))
+    errors.push(new ScamperError("Parser", `Undefined predicate "${name}"`))
   }
   for (const arg of args) {
     scopeCheckPred(errors, arg, globals)
@@ -251,16 +251,31 @@ function scopeCheckFunctionDoc(
   scopeCheckPred(errors, predicate, globals)
 
   // ...lst : list?... (param descriptions)
+  const paramWasChecked = new Map<string, boolean>(
+    [...params].map((p) => [p, false]),
+  )
   for (const { name: pName, predicate: pPred } of docParamDescriptions) {
     if (!params.includes(pName)) {
       errors.push(
         new ScamperError(
           "Parser",
-          `Docstring signature defines unknown function parameter "${pName}"`,
+          `Docstring describes unknown function parameter "${pName}"`,
         ),
       )
     }
+    paramWasChecked.set(pName, true)
     scopeCheckPred(errors, pPred, globals)
+  }
+  for (const [pName, wasChecked] of paramWasChecked) {
+    if (wasChecked) {
+      continue
+    }
+    errors.push(
+      new ScamperError(
+        "Parser",
+        `Description of function parameter "${pName}" missing`,
+      ),
+    )
   }
 }
 
