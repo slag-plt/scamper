@@ -1,10 +1,10 @@
-import { Range, ScamperError } from "../../lpm"
+import { ICE, Range } from "../../lpm"
 import { Comment } from "../reader"
 import { Param, parseSingleParam } from "./param"
 import { App, Exp, isApp, isVar, Var } from "../ast"
 
 import { parseFunctionDescription } from "./description"
-import { hasTag, makeTagged } from "../util"
+import { hasTag, makeTagged, mkScamperErrorWithRange } from "../util"
 import { DocTag, parseAllTags } from "./tag"
 import { parseSignature, Signature } from "./signature"
 
@@ -15,14 +15,18 @@ export interface FunctionDoc {
   params: Params
   description: string
   tags: Tags
-  range?: Range
+  range: Range
 }
 
+interface SimplePred extends Var {
+  range: Range
+}
 export interface ComplexPred extends App {
   head: Var
   args: Pred[]
+  range: Range
 }
-export type Pred = Var | ComplexPred
+export type Pred = SimplePred | ComplexPred
 export function isComplexPred(a: App): a is ComplexPred {
   return (
     isVar(a.head) &&
@@ -50,43 +54,44 @@ export function isVarApp(e: Exp): e is VarApp {
   return isApp(e) && isVar(e.head) && e.args.every(isVar)
 }
 
+export type DocComment = Comment
+
 /**
  * @param docString looks like ";;; \n;;; \n..."
  */
-export function parseDocString({
-  contents: docString,
-  range,
-}: Comment): FunctionDoc {
+export function parseDocString(comments: Comment[]): FunctionDoc {
   // split by newline and throw away non-doc lines
-  const docLines: string[] = docString
-    .split("\n")
+  const docComments: DocComment[] = comments
     .map(parseDocLineContents)
     .filter((line) => line !== undefined)
   // get the signature
-  const firstLine = docLines.shift()
-  if (firstLine === undefined) {
-    throw new ScamperError(
-      "Parser",
-      "Doc string is too short to be able to parse the function signature!",
+  const firstDocComment = docComments.shift()
+  if (firstDocComment === undefined) {
+    throw new ICE(
+      "Docstring.parseDocString",
+      "Attempted to parse docstring from comment block with no doc lines!",
     )
   }
-  const signature = parseSignature(firstLine)
-  // get the params
+  const firstRange = docComments[0].range
+  const lastRange = docComments[docComments.length - 1].range
+
+  const signature = parseSignature(firstDocComment)
   const params: Params = []
-  // get the description
   let description = ""
-  // get the tags
   const tags: Tags = []
+
   let stage: ParseStage = ParseStage.Params
-  while (docLines.length > 0) {
+  while (docComments.length > 0) {
     switch (stage) {
       case ParseStage.Params: {
-        const result = parseSingleParam(docLines)
+        const result = parseSingleParam(docComments)
         if (hasTag(result, ParseStageTag)) {
           if (params.length !== signature.function.args.length) {
-            throw new ScamperError(
+            // TODO: should do more granular range
+            throw mkScamperErrorWithRange(
               "Parser",
               "Encountered function description before all parameters were described",
+              firstRange,
             )
           }
           stage = result
@@ -96,7 +101,7 @@ export function parseDocString({
         break
       }
       case ParseStage.Description: {
-        const result = parseFunctionDescription(docLines)
+        const result = parseFunctionDescription(docComments)
         if (typeof result === "object" && "stage" in result) {
           ;({ stage, description } = result)
         } else {
@@ -105,26 +110,36 @@ export function parseDocString({
         break
       }
       case ParseStage.Tags: {
-        parseAllTags(docLines, tags)
+        parseAllTags(docComments, tags)
         break
       }
     }
   }
   if (description === "") {
-    throw new ScamperError(
+    throw mkScamperErrorWithRange(
       "Parser",
       "Docstring must have a function description",
+      lastRange,
     )
   }
   // return the comment struct
-  return { signature, params, description, tags, range }
+  return {
+    signature,
+    params,
+    description,
+    tags,
+    range: new Range(firstRange.begin, lastRange.end),
+  }
 }
 
 const docLinePrefix = ";;; "
 /**
  * @returns line without doc line prefix, undefined if not a doc line
  */
-export function parseDocLineContents(line: string): string | undefined {
+export function parseDocLineContents({
+  line,
+  range,
+}: Comment): DocComment | undefined {
   const [shouldBeEmpty, ...rest] = line.split(docLinePrefix)
   // check at least 2
   // check starts with prefix
@@ -132,5 +147,5 @@ export function parseDocLineContents(line: string): string | undefined {
     return undefined
   }
 
-  return rest.join(docLinePrefix)
+  return { line: rest.join(docLinePrefix), range }
 }

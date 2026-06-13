@@ -10,19 +10,19 @@ export interface Syntax extends L.Struct {
   [L.structKind]: "syntax"
   value: L.Value
   range: L.Range
-  comment?: Comment
+  comments?: Comment[]
 }
 
 export const mkSyntax = (
   value: L.Value,
   range: L.Range = L.Range.none,
-  comment?: Comment,
+  comments?: Comment[],
 ): Syntax => ({
   [L.scamperTag]: "struct",
   [L.structKind]: "syntax",
   value,
   range,
-  comment,
+  comments,
 })
 
 export const isSyntax = (v: L.Value): v is Syntax => L.isStructKind(v, "syntax")
@@ -58,7 +58,7 @@ export function stripAllSyntax(v: L.Value): L.Value {
  */
 export const unpackSyntax = (
   v: L.Value,
-): { value: L.Value; range: L.Range; comment?: Comment } =>
+): { value: L.Value; range: L.Range; comments?: Comment[] } =>
   isSyntax(v)
-    ? { value: v.value, range: v.range, comment: v.comment }
+    ? { value: v.value, range: v.range, comments: v.comments }
     : { value: v, range: L.Range.none }

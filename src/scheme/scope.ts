@@ -4,6 +4,7 @@ import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
 import { isVar } from "./ast.js"
 import { ComplexPred, Pred } from "./docstring/docstring"
+import { mkScamperErrorWithRange } from "./util"
 
 function checkDuplicateVars(
   errors: ScamperError[],
@@ -145,7 +146,11 @@ function scopeCheckPred(
   if (isVar(predicate)) {
     if (!globals.includes(predicate.name)) {
       errors.push(
-        new ScamperError("Parser", `Undefined predicate "${predicate.name}"`),
+        mkScamperErrorWithRange(
+          "Parser",
+          `Undefined predicate "${predicate.name}"`,
+          predicate.range,
+        ),
       )
     }
   } else {
@@ -156,11 +161,13 @@ function scopeCheckPred(
 // TODO: test this
 function scopeCheckComplexPred(
   errors: ScamperError[],
-  { head: { name }, args }: ComplexPred,
+  { head: { name }, args, range }: ComplexPred,
   globals: string[],
 ) {
   if (!globals.includes(name)) {
-    errors.push(new ScamperError("Parser", `Undefined predicate "${name}"`))
+    errors.push(
+      mkScamperErrorWithRange("Parser", `Undefined predicate "${name}"`, range),
+    )
   }
   for (const arg of args) {
     scopeCheckPred(errors, arg, globals)
@@ -179,23 +186,24 @@ function scopeCheckComplexPred(
 //   (lambda (lst val) ...))
 // TODO: test this
 function scopeCheckFunctionDoc(
+  errors: ScamperError[],
   { name, value, doc }: A.Define,
   globals: string[],
-): ScamperError[] {
-  const errors: ScamperError[] = []
+): void {
   if (!doc) {
     // can't scope check a doc that doesn't exist
-    return errors
+    return
   }
   if (!A.isLam(value)) {
     // can't attach function docs onto non-function definitions
     errors.push(
-      new ScamperError(
+      mkScamperErrorWithRange(
         "Parser",
         "Function docstring attached to non-function definition",
+        doc.range,
       ),
     )
-    return errors
+    return
   }
 
   const { params } = value
@@ -206,19 +214,22 @@ function scopeCheckFunctionDoc(
         args,
       },
       predicate,
+      range: sigRange,
     },
     params: docParamDescriptions,
     // TODO: maybe we need to scope check the example too?
     // tags
+    range: docRange,
   } = doc
   const docParams = [...args.map((v) => v.name)]
 
   // (append...
   if (name !== docName) {
     errors.push(
-      new ScamperError(
+      mkScamperErrorWithRange(
         "Parser",
         `Docstring function name "${docName}" does not match defined name "${name}"`,
+        sigRange,
       ),
     )
     // this is not a catastrophic error, continue parsing
@@ -229,18 +240,20 @@ function scopeCheckFunctionDoc(
     const nextDocParam = docParams.shift()
     if (nextDocParam === undefined) {
       errors.push(
-        new ScamperError(
+        mkScamperErrorWithRange(
           "Parser",
           `Expected function parameter "${param}" to be defined in docstring signature`,
+          sigRange,
         ),
       )
       continue
     }
     if (param !== nextDocParam) {
       errors.push(
-        new ScamperError(
+        mkScamperErrorWithRange(
           "Parser",
           `Function signature defines parameter "${param}" in this position but docstring signature instead defines "${nextDocParam}"`,
+          sigRange,
         ),
       )
     }
@@ -254,12 +267,17 @@ function scopeCheckFunctionDoc(
   const paramWasChecked = new Map<string, boolean>(
     [...params].map((p) => [p, false]),
   )
-  for (const { name: pName, predicate: pPred } of docParamDescriptions) {
+  for (const {
+    name: pName,
+    predicate: pPred,
+    range: pRange,
+  } of docParamDescriptions) {
     if (!params.includes(pName)) {
       errors.push(
-        new ScamperError(
+        mkScamperErrorWithRange(
           "Parser",
           `Docstring describes unknown function parameter "${pName}"`,
+          pRange,
         ),
       )
     }
@@ -271,13 +289,14 @@ function scopeCheckFunctionDoc(
       continue
     }
     errors.push(
-      new ScamperError(
+      mkScamperErrorWithRange(
         "Parser",
         `Description of function parameter "${pName}" missing`,
+        docRange,
       ),
     )
   }
-  return errors
+  return
 }
 
 function scopeCheckStmt(
@@ -319,11 +338,7 @@ function scopeCheckStmt(
       }
       scopeCheckExp(errors, globals, [], s.value)
       if (s.doc) {
-        const funcDocErrs = scopeCheckFunctionDoc(s, globals)
-        for (const err of funcDocErrs) {
-          err.range = s.doc.range
-        }
-        errors.push(...funcDocErrs)
+        scopeCheckFunctionDoc(errors, s, globals)
       }
       return
     }

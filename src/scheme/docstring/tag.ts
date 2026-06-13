@@ -1,4 +1,6 @@
-import { ScamperError } from "../../lpm"
+import { ICE, Range } from "../../lpm"
+import { DocComment } from "./docstring"
+import { mkScamperErrorWithRange } from "../util"
 
 export function matchesDocTagFormat(line: string): boolean {
   const splitLine = line.split("@", 2)
@@ -13,23 +15,26 @@ export function matchesDocTagFormat(line: string): boolean {
 export interface DocTag {
   tag: string
   contents: string
+  range: Range
 }
-export function parseAllTags(docLines: string[], tags: DocTag[]) {
-  while (docLines.length > 0) {
-    const line = docLines.shift()
-    if (line === undefined) {
-      throw new ScamperError(
-        "Parser",
+export function parseAllTags(docComments: DocComment[], tags: DocTag[]) {
+  while (docComments.length > 0) {
+    const comment = docComments.shift()
+    if (comment === undefined) {
+      throw new ICE(
+        "Docstring.parseAllTags",
         "Atomicity violation: doc lines changed while parsing?",
       )
     }
+    const { line, range } = comment
     if (!matchesDocTagFormat(line)) {
-      throw new ScamperError(
+      throw mkScamperErrorWithRange(
         "Parser",
         `Expected only tags at the end of docstring, but encountered a non-tag: ${line}`,
+        range,
       )
     }
     const [tag, ...rest] = line.split(" ")
-    tags.push({ tag, contents: rest.join(" ") })
+    tags.push({ tag, contents: rest.join(" "), range })
   }
 }

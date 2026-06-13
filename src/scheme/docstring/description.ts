@@ -1,27 +1,27 @@
-import { ScamperError } from "../../lpm"
-import { ParseStage } from "./docstring"
+import { ICE } from "../../lpm"
+import { DocComment, ParseStage } from "./docstring"
 
 export function parseFunctionDescription(
-  docLines: string[],
+  docComments: DocComment[],
 ): string | { stage: ParseStage; description: string } {
   let description = ""
-  while (docLines.length > 0) {
-    const line = docLines.shift()
-    if (line === undefined) {
-      throw new ScamperError(
-        "Parser",
+  while (docComments.length > 0) {
+    const comment = docComments.shift()
+    if (comment === undefined) {
+      throw new ICE(
+        "Docstring.parseFunctionDescription",
         "Atomicity violation: doc lines changed while parsing?",
       )
     }
     // description lines cannot start with @
-    // we won't check if it's actually a correct tag line, that's the next stage
-    if (line.startsWith("@")) {
-      // put the line back
-      docLines.unshift(line)
+    // we won't check if it's actually a correct tag comment, that's the next stage
+    if (comment.line.startsWith("@")) {
+      // put the comment back
+      docComments.unshift(comment)
       return { stage: ParseStage.Tags, description: description.trim() }
     }
-    // just append the line onto the string
-    description += line + " "
+    // just append the comment onto the string
+    description += comment.line + " "
   }
   return description.trim()
 }

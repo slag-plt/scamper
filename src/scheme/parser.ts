@@ -450,7 +450,7 @@ export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
 
 export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
   const orig = v
-  const { value, range, comment } = S.unpackSyntax(v)
+  const { value, range, comments } = S.unpackSyntax(v)
   v = value
   if (!L.isList(v)) {
     return A.mkStmtExp(parseExp(errors, orig), range)
@@ -508,13 +508,14 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
       )
       const body = parseExp(errors, arr[2])
       let doc: FunctionDoc | undefined = undefined
-      if (comment !== undefined) {
+      if (comments !== undefined) {
         try {
-          doc = parseDocString(comment)
+          doc = parseDocString(comments)
         } catch (e) {
-          const err = e as L.ScamperError
-          err.range = comment.range
-          errors.push(err)
+          if (!(e instanceof L.ScamperError)) {
+            throw e
+          }
+          errors.push(e)
         }
       }
       return A.mkDefine(name, body, range, doc)

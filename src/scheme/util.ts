@@ -1,3 +1,5 @@
+import { ScamperError } from "../lpm"
+
 export function catchIf<T>(
   fn: () => T,
   predicate: (err: unknown) => boolean,
@@ -36,4 +38,14 @@ export function hasTag<Sym extends symbol>(
   sym: Sym,
 ): val is Tagged<Sym> {
   return isTagged(val) && val[IS_TAGGED] === sym
+}
+
+export function mkScamperErrorWithRange(
+  phase: ScamperError["phase"],
+  message: ScamperError["message"],
+  range: ScamperError["range"],
+) {
+  const err = new ScamperError(phase, message)
+  err.range = range
+  return err
 }

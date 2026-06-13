@@ -7,7 +7,7 @@ export class Token {
   constructor(
     public text: string,
     public range: L.Range,
-    public comment?: Comment,
+    public comments?: Comment[],
   ) {}
 
   public toString(): string {
@@ -31,8 +31,8 @@ const areMatchingBrackets = (open: string, close: string): boolean => {
 }
 
 export interface Comment {
-  contents: string
-  range?: L.Range
+  line: string
+  range: L.Range
 }
 
 class Tokenizer {
@@ -48,7 +48,7 @@ class Tokenizer {
   private endCol: number
   private endIdx: number
   private tokenLen: number
-  private currComment?: Comment
+  private currComments: Comment[] = []
 
   constructor(src: string) {
     this.src = src
@@ -111,13 +111,11 @@ class Tokenizer {
     }
   }
 
-  consumeComment(): Comment | undefined {
-    if (this.currComment !== undefined) {
-      const ret = this.currComment
-      this.currComment = undefined
-      return ret
-    }
-    return undefined
+  consumeAllComments(): Comment[] | undefined {
+    if (this.currComments.length === 0) return undefined
+    const ret = [...this.currComments]
+    this.currComments = []
+    return ret
   }
 
   emitToken(): Token {
@@ -134,7 +132,7 @@ class Tokenizer {
           this.endCol,
           this.endIdx,
         ),
-        this.consumeComment(),
+        this.consumeAllComments(),
       )
       this.resetTracking()
       // N.B., also chomp whitespace here to ensure that the tokenizer is
@@ -161,70 +159,56 @@ class Tokenizer {
   }
 
   chompWhitespaceAndComments(): void {
-    let inComment = false
-    let canResetTracking = false
+    const wasTracking = this.isTracking()
+    let trackedComment: string | undefined = undefined
     while (
       !this.isEmpty() &&
-      (inComment || isWhitespace(this.peek()) || this.peek() === ";")
+      (trackedComment !== undefined ||
+        isWhitespace(this.peek()) ||
+        this.peek() === ";")
     ) {
       const ch = this.peek()
       if (ch === ";") {
-        // starting a new comment
-        inComment = true
-        // add on to the current comment
-        if (this.currComment === undefined) {
-          // TODO: comments should now be CommentLine[]
-          //  so, the logic would need to change:
-          //  - if we weren't in a comment and we just encountered our first comment character, then our comment line starts
-          //  - if we just hit a newline and we were in a comment, push our comment line
-          //  we still effectively get line by line ranges set by the tokenizer,
-          //  and all we do is just do our docstring line splitting early
-          //  DON'T categorize into specific doc line type since that's assigning meaning to tokens i.e. parsing
-
-          if (!this.isTracking()) {
-            canResetTracking = true
+        if (trackedComment === undefined) {
+          // starting a new comment
+          if (!wasTracking) {
             this.beginTracking()
           }
-          this.currComment = {
-            contents: "",
-          }
+          trackedComment = ""
         }
-        this.currComment.contents += ch
+        trackedComment += ch
         this.advance()
         continue
       }
-      if (!inComment) {
+      if (trackedComment === undefined) {
         this.advance()
         continue
       }
-      // inComment = true
+      // currently tracking comment
       if (ch === "\n") {
-        if (this.currComment !== undefined) {
-          this.currComment.contents += ch
+        // flush comment
+        this.currComments.push({
+          line: trackedComment,
+          range: L.Range.of(
+            this.startRow,
+            this.startCol,
+            this.startIdx,
+            this.endRow,
+            this.endCol,
+            this.endIdx,
+          ),
+        })
+        // reset comment
+        trackedComment = undefined
+        if (!wasTracking) {
+          this.resetTracking()
         }
-        inComment = false
         this.advance()
         continue
       }
-      // add on to the current comment
-      this.currComment ??= {
-        contents: "",
-      }
-      this.currComment.contents += ch
+      // just add on to comment
+      trackedComment += ch
       this.advance()
-    }
-    if (this.currComment !== undefined) {
-      this.currComment.range = L.Range.of(
-        this.startRow,
-        this.startCol,
-        this.startIdx,
-        this.endRow,
-        this.endCol,
-        this.endIdx,
-      )
-      if (canResetTracking) {
-        this.resetTracking()
-      }
     }
   }
 
@@ -526,7 +510,7 @@ export function readValue(tokens: Token[]): Syntax {
     // we ever allow '{' to imply an dictionary/object.
     beg.text === "[" ? values : L.mkList(...values),
     new L.Range(beg.range.begin, end.range.end),
-    beg.comment,
+    beg.comments,
   )
 }
 

@@ -1,16 +1,17 @@
 import { isStmtExp } from "../ast"
-import { Range, ScamperError } from "../../lpm"
+import { ICE, Range, ScamperError } from "../../lpm"
 import { isWhitespace, readSingle, Token } from "../reader"
 import { parseIdentifier } from "../parser"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
-import { catchIf } from "../util"
-import { isPred, ParseStage, Pred } from "./docstring"
+import { catchIf, mkScamperErrorWithRange } from "../util"
+import { DocComment, isPred, ParseStage, Pred } from "./docstring"
 
 export interface Param {
   name: string
   predicate: Pred
   description?: string
+  range: Range
 }
 
 export const WhitespaceLocation = {
@@ -21,7 +22,10 @@ type WhitespaceLocation =
   (typeof WhitespaceLocation)[keyof typeof WhitespaceLocation]
 
 class ParamParseError extends ScamperError {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public range: Range,
+  ) {
     super("Parser", `Error while parsing param in doc string: ${message}`)
   }
 }
@@ -30,8 +34,9 @@ export class ParamWhitespaceError extends ParamParseError {
   constructor(
     public loc: WhitespaceLocation,
     message: string,
+    range: Range,
   ) {
-    super(message)
+    super(message, range)
   }
 }
 
@@ -39,63 +44,73 @@ class ParamMissingFieldError extends ParamParseError {}
 
 class ParamMalformedFieldError extends ParamParseError {}
 
-export function parseSingleParam(docLines: string[]): ParseStage | Param {
-  const line = docLines.shift()
-  if (line === undefined) {
-    throw new ScamperError(
-      "Parser",
+export function parseSingleParam(
+  docComments: DocComment[],
+): ParseStage | Param {
+  const firstComment = docComments.shift()
+  if (firstComment === undefined) {
+    throw new ICE(
+      "Docstring.parseSingleParam",
       "Doc lines expected to be not empty when calling parseSingleParam",
     )
   }
   // get param signature
   const parsedSignature = catchIf(
-    () => parseParamSignature(line),
+    () => parseParamSignature(firstComment),
     isRecoverableParamParseError,
   )
   if (!parsedSignature) {
     // put the line back and switch to description stage
-    docLines.unshift(line)
+    docComments.unshift(firstComment)
     return ParseStage.Description
   }
   const { param, beginningWhitespaces } = parsedSignature
   // get optional param description
   // get first description line
-  const nextLine = docLines.shift()
-  if (nextLine === undefined) {
-    throw new ScamperError(
+  const firstDescComment = docComments.shift()
+  if (firstDescComment === undefined) {
+    throw mkScamperErrorWithRange(
       "Parser",
       "Doc string is missing function description",
+      firstComment.range,
     )
   }
   param.description = catchIf(
-    () => parseParamDescriptionLine(nextLine, beginningWhitespaces),
+    () => parseParamDescriptionLine(firstDescComment, beginningWhitespaces),
     isRecoverableParamParseError,
   )
   if (param.description === undefined) {
-    docLines.unshift(nextLine)
+    docComments.unshift(firstDescComment)
     // we might still have more params to look for, so don't change stage
     return param
   }
-  while (docLines.length > 0) {
-    const nextDescLine = docLines.shift()
-    if (nextDescLine === undefined) {
-      throw new ScamperError(
+  let lastRange: Range = firstDescComment.range
+  while (docComments.length > 0) {
+    const nextDescComment = docComments.shift()
+    if (nextDescComment === undefined) {
+      throw mkScamperErrorWithRange(
         "Parser",
         "Doc string is missing function description",
+        firstDescComment.range,
       )
     }
+    lastRange = nextDescComment.range
     const remainingDesc = catchIf(
-      () => parseParamDescriptionLine(nextDescLine, beginningWhitespaces),
+      () => parseParamDescriptionLine(nextDescComment, beginningWhitespaces),
       isRecoverableParamParseError,
     )
     if (remainingDesc === undefined) {
-      docLines.unshift(nextDescLine)
+      docComments.unshift(nextDescComment)
       return param
     }
     param.description += " " + remainingDesc
   }
   // if we broke out of the while loop, we ran out of lines
-  throw new ScamperError("Parser", "Doc string is missing function description")
+  throw mkScamperErrorWithRange(
+    "Parser",
+    "Doc string is missing function description",
+    lastRange,
+  )
 }
 
 const minSignatureBeginningWhitespace = 1
@@ -107,22 +122,24 @@ interface ParseParamSignatureResult {
 }
 /**
  * @returns constructed param object if successful
- * @throws ParamParseError when docLine does not parse into a correct Params object
+ * @throws ParamParseError when line does not parse into a correct Params object
  */
 export function parseParamSignature(
-  docLine: string,
+  docComment: DocComment,
 ): ParseParamSignatureResult {
   // check and chomp beginning whitespace
   const beginningWhitespaces = getLeadingWhitespaceCount(
-    docLine,
+    docComment,
     minSignatureBeginningWhitespace,
     WhitespaceLocation.Beginning,
   )
+  const { line, range } = docComment
   // get param name
-  const splitDocLine = docLine.slice(beginningWhitespaces).split(":")
+  const splitDocLine = line.slice(beginningWhitespaces).split(":")
   if (splitDocLine.length < 2) {
     throw new ParamMissingFieldError(
       "Line is missing separating colon between name and predicate",
+      range,
     )
   }
   const [untrimmedName, ...rest] = splitDocLine
@@ -137,12 +154,14 @@ export function parseParamSignature(
   if (errs.length > 0) {
     throw new ParamMalformedFieldError(
       `Name field is malformed, ${errs[0].message}`,
+      range,
     )
   }
 
   // check and chomp pre-predicate whitespace
   const prePredicateWhitespace = getLeadingWhitespaceCount(
-    postNameDocLine,
+    // TODO: should get more granular ranges in the future
+    { line: postNameDocLine, range },
     minPrePredicateWhitespace,
     WhitespaceLocation.PrePredicate,
   )
@@ -154,44 +173,51 @@ export function parseParamSignature(
   const parsed = tokenizeAndParse(errChannel, predicateStr)
   if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
     throw new ParamMalformedFieldError(
-      `Predicate field is malformed, ${errChannel.errors[0].message}`,
+      `Predicate field is malformed${errChannel.errors.length > 0 ? ", " + errChannel.errors[0].message : ""}`,
+      range,
     )
   }
   if (parsed.length < 1) {
-    throw new ParamMissingFieldError("Predicate field is missing")
+    throw new ParamMissingFieldError("Predicate field is missing", range)
   }
   const parsedStmt = parsed[0]
   if (!isStmtExp(parsedStmt)) {
-    throw new ParamMalformedFieldError("Predicate should be an expression")
+    throw new ParamMalformedFieldError(
+      "Predicate should be an expression",
+      range,
+    )
   }
-  // TODO: range should actually be populated
+
   if (!isPred(parsedStmt.expr)) {
     throw new ParamMalformedFieldError(
       "Predicate should be either a simple predicate identifier or a complex predicate application",
+      range,
     )
   }
   const predicate: Pred = parsedStmt.expr
-  return { param: { name, predicate }, beginningWhitespaces }
+  // TODO: more granular range is possible
+  predicate.range = range
+  return { param: { name, predicate, range }, beginningWhitespaces }
   // predicate signature does not have line
 }
 
 const minDescriptionPadding = 1
 
 export function parseParamDescriptionLine(
-  docLine: string,
+  docComment: DocComment,
   sigBeginningWhitespaces: number,
 ): string {
   // check and chomp leading padding
   const padding = getLeadingWhitespaceCount(
-    docLine,
+    docComment,
     sigBeginningWhitespaces + minDescriptionPadding,
     WhitespaceLocation.Beginning,
   )
-  return docLine.slice(padding).trim()
+  return docComment.line.slice(padding).trim()
 }
 
 function getLeadingWhitespaceCount(
-  line: string,
+  { line, range }: DocComment,
   minWhitespaces: number,
   loc: WhitespaceLocation,
 ): number {
@@ -206,6 +232,7 @@ function getLeadingWhitespaceCount(
       throw new ParamWhitespaceError(
         loc,
         `Line does not have enough ${loc} whitespace, expected at least ${minWhitespaces.toString()} but got ${whitespaces.toString()}`,
+        range,
       )
     }
     // we're good, break out of this for loop
