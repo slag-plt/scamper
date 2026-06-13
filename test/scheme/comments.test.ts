@@ -1,19 +1,28 @@
 import { describe, expect, test } from "vitest"
-import { read } from "../../src/scheme/reader"
+import { Comment, read } from "../../src/scheme/reader"
+import { anyRange } from "./util"
 
 const identifier = "x"
 const value = 1
 
 describe("Comments", () => {
-  const comment = "; this should appear in the comment!"
+  const comment1 = "; this should appear in the comment!"
   const testSrc = `
-  ${comment}
+  ${comment1}
   (define ${identifier} ${value.toString()})
   `
+  const expectedComment: Comment = {
+    line: comment1,
+    range: anyRange,
+  }
   test("are read and attached to syntax", () => {
     const vals = read(testSrc)
     expect(vals).toStrictEqual(
-      expect.arrayContaining([expect.objectContaining({ comment })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          comments: [expectedComment],
+        }),
+      ]),
     )
   })
   const comment2 = ";;; this should appear in the comment!"
@@ -21,23 +30,34 @@ describe("Comments", () => {
   ${comment2}
   (define ${identifier} ${value.toString()})
   `
+  const expectedComment2: Comment = {
+    line: comment2,
+    range: anyRange,
+  }
   test("triple semicolon comments are saved in the comment", () => {
     const vals = read(testSrc2)
     expect(vals).toStrictEqual(
-      expect.arrayContaining([expect.objectContaining({ comment: comment2 })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          comments: [expectedComment2],
+        }),
+      ]),
     )
   })
-  const comment3 =
-    "; this should appear in the comment!;;; this should appear in the comment!"
   const testSrc3 = `
-  ${comment}
+  ${comment1}
   ${comment2}
   (define ${identifier} ${value.toString()})
   `
+  const expectedComments: Comment[] = [expectedComment, expectedComment2]
   test("multiple line comments are saved as one comment", () => {
     const vals = read(testSrc3)
     expect(vals).toStrictEqual(
-      expect.arrayContaining([expect.objectContaining({ comment: comment3 })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          comments: expectedComments,
+        }),
+      ]),
     )
   })
 })
