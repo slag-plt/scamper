@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 import { mkApp, mkDefine, mkVar } from "../../src/scheme/ast"
-import { mkLit, Range } from "../../src/lpm"
+import { mkLit } from "../../src/lpm"
 import {
   Param,
   parseParamDescriptionLine,
@@ -25,17 +25,18 @@ import {
 } from "../../src/scheme/docstring/tag"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { tokenizeAndParse } from "../../src/scheme"
+import { anyRange } from "./util"
+import { Comment } from "../../src/scheme/reader"
 
-const anyRange = expect.anything() as Range
 describe("Docstring parsing", () => {
   test("are attached to define statements", () => {
-    const { testComment, expectedFunctionDoc } = makeTestDocstring()
+    const { testComments, expectedFunctionDoc } = makeTestDocstring()
 
     const identifier = "x"
     const value = 1
     const lit = mkLit(value, anyRange)
 
-    const testSrc = `${testComment}
+    const testSrc = `${testComments.map((c) => c.line).join("\n")}
 (define ${identifier} ${value.toString()})`
 
     const err = new SimpleErrorChannel()
@@ -51,9 +52,9 @@ describe("Docstring parsing", () => {
 
   describe("parseDocString", () => {
     test("outputs when input string is good", () => {
-      const { testComment, expectedFunctionDoc } = makeTestDocstring()
+      const { testComments, expectedFunctionDoc } = makeTestDocstring()
 
-      expect(parseDocString(testComment)).toStrictEqual(expectedFunctionDoc)
+      expect(parseDocString(testComments)).toStrictEqual(expectedFunctionDoc)
     })
   })
 
@@ -61,21 +62,29 @@ describe("Docstring parsing", () => {
     describe("prefix", () => {
       test("undefined when too many semicolons", () => {
         const testDocLine = ";;;; a lot of semicolons!"
-        expect(parseDocLineContents(testDocLine)).toBeUndefined()
+        expect(
+          parseDocLineContents(makeTestComment(testDocLine)),
+        ).toBeUndefined()
       })
       test("undefined when not enough semicolons", () => {
         const testDocLine = ";; not many semicolons!"
-        expect(parseDocLineContents(testDocLine)).toBeUndefined()
+        expect(
+          parseDocLineContents(makeTestComment(testDocLine)),
+        ).toBeUndefined()
       })
       test("undefined when bad prefix", () => {
         const testDocLine = ";%; why is there a % in the prefix"
-        expect(parseDocLineContents(testDocLine)).toBeUndefined()
+        expect(
+          parseDocLineContents(makeTestComment(testDocLine)),
+        ).toBeUndefined()
       })
     })
     test("returns the line with the docstring prefix stripped", () => {
       const restOfLine = "good comment :)"
       const testDocLine = `;;; ${restOfLine}`
-      expect(parseDocLineContents(testDocLine)).toStrictEqual(restOfLine)
+      expect(parseDocLineContents(makeTestComment(testDocLine))).toStrictEqual(
+        makeTestComment(restOfLine),
+      )
     })
   })
 
@@ -97,10 +106,11 @@ describe("Docstring parsing", () => {
         const expectedParam: Param = {
           name,
           predicate,
+          range: anyRange,
         }
-        expect(parseParamSignature(testDocLine).param).toStrictEqual(
-          expectedParam,
-        )
+        expect(
+          parseParamSignature(makeTestComment(testDocLine)).param,
+        ).toStrictEqual(expectedParam)
       })
 
       test("w/ complex predicate", () => {
@@ -108,10 +118,11 @@ describe("Docstring parsing", () => {
         const expectedParam: Param = {
           name,
           predicate,
+          range: anyRange,
         }
-        expect(parseParamSignature(testDocLine).param).toStrictEqual(
-          expectedParam,
-        )
+        expect(
+          parseParamSignature(makeTestComment(testDocLine)).param,
+        ).toStrictEqual(expectedParam)
       })
     })
     describe("illegal param signature", () => {
@@ -126,14 +137,20 @@ describe("Docstring parsing", () => {
       const leadPadding = " ".repeat(leadPaddingCount)
       const testDescLine = `${leadPadding} ${expectedResult}`
       expect(
-        parseParamDescriptionLine(testDescLine, leadPaddingCount),
+        parseParamDescriptionLine(
+          makeTestComment(testDescLine),
+          leadPaddingCount,
+        ),
       ).toStrictEqual(expectedResult)
     })
     test("throws if lead padding is bad", () => {
       const contents = "this should NOT appear..."
       const testDescLine = ` ${contents}`
       expect(() =>
-        parseParamDescriptionLine(testDescLine, leadPaddingCount),
+        parseParamDescriptionLine(
+          makeTestComment(testDescLine),
+          leadPaddingCount,
+        ),
       ).toThrow("beginning whitespace")
     })
   })
@@ -145,26 +162,30 @@ describe("Docstring parsing", () => {
       "this one is just here since parseAllParams expects it"
     const otherRemainingLine =
       "this is to check that we don't change the order of stuff"
-    const expectedRemainder = [remainingLine, otherRemainingLine]
+    const expectedRemainder = convertLinesToComments([
+      remainingLine,
+      otherRemainingLine,
+    ])
 
     test("returns param w/ description", () => {
       const paramDescPart1 = "this param does"
       const paramDescPart2 = "something really cool!"
       const paramDescLine1 = `  ${paramDescPart1}`
       const paramDescLine2 = `  ${paramDescPart2}`
-      const testDocLines = [
+      const testDocLines = convertLinesToComments([
         goodParamSignature,
         paramDescLine1,
         paramDescLine2,
         remainingLine,
         otherRemainingLine,
-      ]
+      ])
 
       const description = `${paramDescPart1} ${paramDescPart2}`
       const expectedParam: Param = {
         name,
         predicate,
         description,
+        range: anyRange,
       }
 
       expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
@@ -172,22 +193,26 @@ describe("Docstring parsing", () => {
     })
 
     test("returns param w/o description", () => {
-      const testDocLines = [
+      const testDocLines = convertLinesToComments([
         goodParamSignature,
         remainingLine,
         otherRemainingLine,
-      ]
+      ])
       const expectedParam: Param = {
         name,
         predicate,
         description: undefined,
+        range: anyRange,
       }
       expect(parseSingleParam(testDocLines)).toStrictEqual(expectedParam)
       expect(testDocLines).toStrictEqual(expectedRemainder)
     })
 
     test("signals to move to description stage when param parsing failure", () => {
-      const testDocLines = [remainingLine, otherRemainingLine]
+      const testDocLines = convertLinesToComments([
+        remainingLine,
+        otherRemainingLine,
+      ])
       expect(parseSingleParam(testDocLines)).toStrictEqual(
         ParseStage.Description,
       )
@@ -208,9 +233,9 @@ describe("Docstring parsing", () => {
     const testDescriptionLine1 = "this is the first line of the description"
     const testDescriptionLine2 = "this is the SECOND line!"
     const expectedDescription = `${testDescriptionLine1} ${testDescriptionLine2}`
-    const expectedRemainder = [exTagLine1, exTagLine2]
+    const expectedRemainder = convertLinesToComments([exTagLine1, exTagLine2])
     test("empty string when begins with tag line", () => {
-      const testDocLines = [exTagLine1, exTagLine2]
+      const testDocLines = convertLinesToComments([exTagLine1, exTagLine2])
       const expectedResult = { stage: ParseStage.Tags, description: "" }
       expect(parseFunctionDescription(testDocLines)).toStrictEqual(
         expectedResult,
@@ -218,12 +243,12 @@ describe("Docstring parsing", () => {
       expect(testDocLines).toStrictEqual(expectedRemainder)
     })
     test("works w/ tag lines after", () => {
-      const testDocLines = [
+      const testDocLines = convertLinesToComments([
         testDescriptionLine1,
         testDescriptionLine2,
         exTagLine1,
         exTagLine2,
-      ]
+      ])
       const expectedResult = {
         stage: ParseStage.Tags,
         description: expectedDescription,
@@ -234,7 +259,10 @@ describe("Docstring parsing", () => {
       expect(testDocLines).toStrictEqual(expectedRemainder)
     })
     test("doesn't bundle stage when no tag lines after", () => {
-      const testDocLines = [testDescriptionLine1, testDescriptionLine2]
+      const testDocLines = convertLinesToComments([
+        testDescriptionLine1,
+        testDescriptionLine2,
+      ])
       expect(parseFunctionDescription(testDocLines)).toStrictEqual(
         expectedDescription,
       )
@@ -244,17 +272,19 @@ describe("Docstring parsing", () => {
 
   describe("parseAllTags", () => {
     test("extracts all tags", () => {
-      const testDocLines = [exTagLine1, exTagLine2]
+      const testDocLines = convertLinesToComments([exTagLine1, exTagLine2])
       const tags: DocTag[] = []
       parseAllTags(testDocLines, tags)
 
       const expectedTag1: DocTag = {
         tag: exTag1,
         contents: exTag1Contents,
+        range: anyRange,
       }
       const expectedTag2: DocTag = {
         tag: exTag2,
         contents: exTag2Contents,
+        range: anyRange,
       }
       expect(tags).toStrictEqual([expectedTag1, expectedTag2])
       expect(testDocLines).toStrictEqual([])
@@ -267,7 +297,7 @@ describe("Docstring parsing", () => {
       ]
       const tags: DocTag[] = []
       expect(() => {
-        parseAllTags(testDocLines, tags)
+        parseAllTags(convertLinesToComments(testDocLines), tags)
       }).toThrow("non-tag")
     })
   })
@@ -314,7 +344,10 @@ describe("Docstring parsing", () => {
   })
 })
 
-function makeTestDocstring() {
+function makeTestDocstring(): {
+  testComments: Comment[]
+  expectedFunctionDoc: FunctionDoc
+} {
   const funcName = "func"
   const paramName1 = "p1"
   const paramName2 = "p2"
@@ -358,7 +391,8 @@ function makeTestDocstring() {
   const tag2 = "@another-tag"
   const tagContents2 = "stuff3"
 
-  const testComment = `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
+  const testComments =
+    `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
 ;;;  ${paramName1} : ${predName2}
 ;;;   ${paramDescLine1}
 ;;;   ${paramDescLine2}
@@ -367,26 +401,44 @@ function makeTestDocstring() {
 ;;; ${descriptionLine2}
 ;;; ${tag1} ${tagContents1}
 ;;; ${tag2} ${tagContents2}`
+      .split("\n")
+      .map((line): Comment => ({ line, range: anyRange }))
 
   const expectedFunctionDoc: FunctionDoc = {
     signature: {
       function: funcApp,
       predicate: predicate1,
+      range: anyRange,
     },
     params: [
       {
         name: paramName1,
         predicate: predicate2,
         description: paramDescription,
+        range: anyRange,
       },
-      { name: paramName2, predicate: predicate3, description: undefined },
+      {
+        name: paramName2,
+        predicate: predicate3,
+        description: undefined,
+        range: anyRange,
+      },
     ],
     description,
     tags: [
-      { tag: tag1, contents: tagContents1 },
-      { tag: tag2, contents: tagContents2 },
+      { tag: tag1, contents: tagContents1, range: anyRange },
+      { tag: tag2, contents: tagContents2, range: anyRange },
     ],
+    range: anyRange,
   }
 
-  return { testComment, expectedFunctionDoc }
+  return { testComments: testComments, expectedFunctionDoc }
+}
+
+function makeTestComment(line: string): Comment {
+  return { line, range: anyRange }
+}
+
+function convertLinesToComments(lines: string[]): Comment[] {
+  return lines.map((line): Comment => ({ line, range: anyRange }))
 }
