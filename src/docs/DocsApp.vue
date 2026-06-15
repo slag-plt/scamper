@@ -37,20 +37,11 @@ const selectedLib = computed(
   () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
 )
 
-<<<<<<< Updated upstream
 
-const searchTerm = ref("")
-
-function search(event : Event) {
-  alert(searchTerm.value)
-  alert(event)
-  searchTerm.value = ""
-=======
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
   window.open("../docs copy.html?search=" + encodeURIComponent(searchTerm), "_blank")
->>>>>>> Stashed changes
 }
 </script>
 
@@ -61,16 +52,14 @@ function searchForFunction(searchTerm: string) {
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
-<<<<<<< Updated upstream
-        <input v-model="searchTerm" @keyup.enter="search" placeholder="Enter search here"/>
-=======
+
         <input
       v-model="search"  
       size = "30"
       placeholder="Search function or ''just search''..."
       @keyup.enter="searchForFunction(search)"
         >
->>>>>>> Stashed changes
+
       </div>
       <div class="header-right">
         <a href="https://github.com/slag-plt/scamper"
