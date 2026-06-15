@@ -1,3 +1,5 @@
+import "./docstring/test-tags"
+
 import { describe, expect, test } from "vitest"
 import { mkApp, mkDefine, mkVar } from "../../src/scheme/ast"
 import { mkLit } from "../../src/lpm"
@@ -19,10 +21,13 @@ import {
 } from "../../src/scheme/docstring/docstring"
 import { parseFunctionDescription } from "../../src/scheme/docstring/description"
 import {
-  DocTag,
-  matchesDocTagFormat,
-  parseAllTags,
-} from "../../src/scheme/docstring/tag"
+  testTag1,
+  testTag1Contents,
+  testTagLine1,
+  testTag2,
+  testTag2Contents,
+  testTagLine2,
+} from "./docstring/test-tags"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { tokenizeAndParse } from "../../src/scheme"
 import { anyRange } from "./util"
@@ -221,21 +226,13 @@ describe("Docstring parsing", () => {
     })
   })
 
-  const exTag1 = "@tag"
-  const exTag1Contents = "tag1 tag2"
-  const exTagLine1 = `${exTag1} ${exTag1Contents}`
-
-  const exTag2 = "@another-tag"
-  const exTag2Contents = "tag3"
-  const exTagLine2 = `${exTag2} ${exTag2Contents}`
-
   describe("parseFunctionDescription", () => {
     const testDescriptionLine1 = "this is the first line of the description"
     const testDescriptionLine2 = "this is the SECOND line!"
     const expectedDescription = `${testDescriptionLine1} ${testDescriptionLine2}`
-    const expectedRemainder = convertLinesToComments([exTagLine1, exTagLine2])
+    const expectedRemainder = convertLinesToComments([testTagLine1, testTagLine2])
     test("empty string when begins with tag line", () => {
-      const testDocLines = convertLinesToComments([exTagLine1, exTagLine2])
+      const testDocLines = convertLinesToComments([testTagLine1, testTagLine2])
       const expectedResult = { stage: ParseStage.Tags, description: "" }
       expect(parseFunctionDescription(testDocLines)).toStrictEqual(
         expectedResult,
@@ -246,8 +243,8 @@ describe("Docstring parsing", () => {
       const testDocLines = convertLinesToComments([
         testDescriptionLine1,
         testDescriptionLine2,
-        exTagLine1,
-        exTagLine2,
+        testTagLine1,
+        testTagLine2,
       ])
       const expectedResult = {
         stage: ParseStage.Tags,
@@ -267,50 +264,6 @@ describe("Docstring parsing", () => {
         expectedDescription,
       )
       expect(testDocLines).toStrictEqual([])
-    })
-  })
-
-  describe("parseAllTags", () => {
-    test("extracts all tags", () => {
-      const testDocLines = convertLinesToComments([exTagLine1, exTagLine2])
-      const tags: DocTag[] = []
-      parseAllTags(testDocLines, tags)
-
-      const expectedTag1: DocTag = {
-        tag: exTag1,
-        contents: exTag1Contents,
-        range: anyRange,
-      }
-      const expectedTag2: DocTag = {
-        tag: exTag2,
-        contents: exTag2Contents,
-        range: anyRange,
-      }
-      expect(tags).toStrictEqual([expectedTag1, expectedTag2])
-      expect(testDocLines).toStrictEqual([])
-    })
-    test("throws when we have a non-tag in the tag section", () => {
-      const testDocLines = [
-        exTagLine1,
-        "@ bad bad bad! even though we start with @! bad!",
-        exTagLine2,
-      ]
-      const tags: DocTag[] = []
-      expect(() => {
-        parseAllTags(convertLinesToComments(testDocLines), tags)
-      }).toThrow("non-tag")
-    })
-  })
-
-  describe("matchesDocTagFormat", () => {
-    test("good doc tag line", () => {
-      const testLine = "@tag tag1 tag2 tag3"
-      expect(matchesDocTagFormat(testLine)).toBe(true)
-    })
-    test("not a doc tag line", () => {
-      const testLine =
-        "@ this is definitely NOT a tagged line even though it starts with @"
-      expect(matchesDocTagFormat(testLine)).toBe(false)
     })
   })
 
@@ -385,10 +338,10 @@ function makeTestDocstring(): {
   const descriptionLine2 = "isn't it?"
   const description = `${descriptionLine1} ${descriptionLine2}`
 
-  const tag1 = "@tag"
+  const tag1 = testTag1
   const tagContents1 = "stuff1 stuff2"
 
-  const tag2 = "@another-tag"
+  const tag2 = testTag2
   const tagContents2 = "stuff3"
 
   const testComments =

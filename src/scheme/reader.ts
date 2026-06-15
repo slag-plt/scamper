@@ -212,7 +212,6 @@ class Tokenizer {
     }
   }
 
-  // TODO: need to handle comments and whether they appear in the token stream
   next(): Token {
     let ch = this.peek()
     // Case: brackets

@@ -5,7 +5,7 @@ import { App, Exp, isApp, isVar, Var } from "../ast"
 
 import { parseFunctionDescription } from "./description"
 import { hasTag, makeTagged, mkScamperErrorWithRange } from "../util"
-import { DocTag, parseAllTags } from "./tag"
+import { DocTag, parseAllTags } from "./tags"
 import { parseSignature, Signature } from "./signature"
 
 type Params = Param[]

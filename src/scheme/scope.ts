@@ -217,8 +217,7 @@ function scopeCheckFunctionDoc(
       range: sigRange,
     },
     params: docParamDescriptions,
-    // TODO: maybe we need to scope check the example too?
-    // tags
+    tags,
     range: docRange,
   } = doc
   const docParams = [...args.map((v) => v.name)]
@@ -296,6 +295,8 @@ function scopeCheckFunctionDoc(
       ),
     )
   }
+  // TODO: validate @example calls the documented function with the correct arity
+  // TODO: validate @example results satisfy the signature return predicate
   return
 }
 

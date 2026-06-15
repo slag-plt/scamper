@@ -385,6 +385,8 @@ export const isApp = (e: Exp): e is App =>
 
 export const isLam = (e: Exp): e is Lam => isTagged(e) && e.tag === "lam"
 
+export const isLit = (e: Exp): e is Lit => isTagged(e) && e.tag === "lit"
+
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
 export function patToString(pat: Pat): string {
