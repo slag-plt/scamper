@@ -46,6 +46,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       const indexVal = i;
       index.className = 'index-box';
       index.textContent = indexVal + '';
+      index.setAttribute('aria-hidden', 'true');
       col.appendChild(index);
       box.className = 'vector-box';
       box.tabIndex = 0;
@@ -77,6 +78,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       const val = document.createElement('div');
       val.className = 'down-arrow-box';
       val.textContent = '  ▽';
+      val.setAttribute('aria-hidden', 'true');
       col.appendChild(val);
   
       //creates the box containing the value in the element
