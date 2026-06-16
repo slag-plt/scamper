@@ -229,7 +229,6 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        // loc = loc.join(':') + ' next'
         loc = `${imgID}:${loc} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
@@ -280,7 +279,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
               box.ariaLabel = `list pair ${i}, first element contains ${list!.head}`;
             }
           } else {
-            box.id = `${imgID}:` + ancestor + `:` + i + ` val`
+            box.id = `${imgID}:` + ancestor + `:` + i + ` next`
               box.style.marginLeft = '-2px';
             box.ariaDescription = `list pair ${i}, second element contains a list pair`;
             box.ariaLabel = `list pair ${i}, second element contains a list pair`;
