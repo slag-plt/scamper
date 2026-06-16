@@ -4,9 +4,13 @@ import HtmlRenderer from "../lpm/renderers/html.js"
 import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
+import { FunctionDoc } from "./docstring/docstring"
 
 export interface Tagged {
   tag: string
+}
+export interface Node {
+  range: L.Range
 }
 
 ///// Language Definition //////////////////////////////////////////////////////
@@ -58,109 +62,91 @@ export interface Tagged {
 
 ///// Patterns /////
 
-export interface PWild extends Tagged {
+export interface PWild extends Tagged, Node {
   tag: "pwild"
-  range: L.Range
 }
-export interface PVar extends Tagged {
+export interface PVar extends Tagged, Node {
   tag: "pvar"
   name: string
-  range: L.Range
 }
-export interface PLit extends Tagged {
+export interface PLit extends Tagged, Node {
   tag: "plit"
   value: L.Value
-  range: L.Range
 }
-export interface PCtor extends Tagged {
+export interface PCtor extends Tagged, Node {
   tag: "pctor"
   name: string
   args: Pat[]
-  range: L.Range
 }
 export type Pat = PWild | PVar | PLit | PCtor
 
 ///// Expressions /////
 
 // Core Forms
-export interface Lit extends Tagged {
+export interface Lit extends Tagged, Node {
   tag: "lit"
   value: L.Value
-  range: L.Range
 }
-export interface Var extends Tagged {
+export interface Var extends Tagged, Node {
   tag: "var"
   name: string
-  range: L.Range
 }
-export interface App extends Tagged {
+export interface App extends Tagged, Node {
   tag: "app"
   head: Exp
   args: Exp[]
-  range: L.Range
 }
-export interface Lam extends Tagged {
+export interface Lam extends Tagged, Node {
   tag: "lam"
   params: string[]
   body: Exp
-  range: L.Range
 }
-export interface Let extends Tagged {
+export interface Let extends Tagged, Node {
   tag: "let"
   bindings: { name: string; value: Exp }[]
   body: Exp
-  range: L.Range
 }
-export interface Begin extends Tagged {
+export interface Begin extends Tagged, Node {
   tag: "begin"
   exps: Exp[]
-  range: L.Range
 }
-export interface If extends Tagged {
+export interface If extends Tagged, Node {
   tag: "if"
   guard: Exp
   ifB: Exp
   elseB: Exp
-  range: L.Range
 }
-export interface Match extends Tagged {
+export interface Match extends Tagged, Node {
   tag: "match"
   scrutinee: Exp
   branches: { pat: Pat; body: Exp }[]
-  range: L.Range
 }
-export interface Quote extends Tagged {
+export interface Quote extends Tagged, Node {
   tag: "quote"
   value: L.Value
-  range: L.Range
 }
 
 // Sugared Forms
-export interface LetS extends Tagged {
+export interface LetS extends Tagged, Node {
   tag: "let*"
   bindings: { name: string; value: Exp }[]
   body: Exp
-  range: L.Range
 }
-export interface And extends Tagged {
+export interface And extends Tagged, Node {
   tag: "and"
   exps: Exp[]
-  range: L.Range
 }
-export interface Or extends Tagged {
+export interface Or extends Tagged, Node {
   tag: "or"
   exps: Exp[]
-  range: L.Range
 }
-export interface Cond extends Tagged {
+export interface Cond extends Tagged, Node {
   tag: "cond"
   branches: { test: Exp; body: Exp }[]
-  range: L.Range
 }
-export interface Section extends Tagged {
+export interface Section extends Tagged, Node {
   tag: "section"
   exps: Exp[]
-  range: L.Range
 }
 
 export type Exp =
@@ -182,34 +168,30 @@ export type Exp =
 ///// Statements /////
 
 // Core Forms
-export interface Import extends Tagged {
+export interface Import extends Tagged, Node {
   tag: "import"
   module: string
-  range: L.Range
 }
-export interface Define extends Tagged {
+export interface Define extends Tagged, Node {
   tag: "define"
   name: string
   value: Exp
-  range: L.Range
+  doc?: FunctionDoc
 }
-export interface Disp extends Tagged {
+export interface Disp extends Tagged, Node {
   tag: "display"
   value: Exp
-  range: L.Range
 }
-export interface StmtExp extends Tagged {
+export interface StmtExp extends Tagged, Node {
   tag: "stmtexp"
   expr: Exp
-  range: L.Range
 }
 
 // Sugared Forms
-export interface Struct extends Tagged {
+export interface Struct extends Tagged, Node {
   tag: "struct"
   name: string
   fields: string[]
-  range: L.Range
 }
 
 export type Stmt = Import | Define | Disp | StmtExp | Struct
@@ -217,6 +199,23 @@ export type Stmt = Import | Define | Disp | StmtExp | Struct
 ///// Programs /////
 
 export type Prog = Stmt[]
+export interface ProgNode extends Node {
+  tag: "prog"
+  body: Prog
+}
+
+/** Union of every AST node type — the Prettier plugin's canonical node type. */
+export type SchemeNode = ProgNode | Stmt | Exp | Pat
+
+///// Helper functions /////////////////////////////////////////////////////////
+
+export function progToNode(prog: Prog): ProgNode {
+  const range =
+    prog.length === 0
+      ? L.Range.none
+      : new L.Range(prog[0].range.begin, prog[prog.length - 1].range.end)
+  return { tag: "prog", body: prog, range }
+}
 
 ///// Constructor Functions ////////////////////////////////////////////////////
 
@@ -319,7 +318,8 @@ export const mkDefine = (
   name: string,
   value: Exp,
   range: L.Range = L.Range.none,
-): Define => ({ tag: "define", name, value, range })
+  doc?: FunctionDoc,
+): Define => ({ tag: "define", name, value, range, doc })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: "display",
   value,
@@ -373,6 +373,18 @@ export function isStmt(v: unknown): v is Stmt {
     ["import", "define", "display", "stmtexp", "struct"].includes(v.tag)
   )
 }
+
+export const isStmtExp = (s: Stmt): s is StmtExp =>
+  isTagged(s) && s.tag === "stmtexp"
+
+export const isVar = (e: Exp): e is Var => isTagged(e) && e.tag === "var"
+
+export const isApp = (e: Exp): e is App =>
+  isTagged(e) && e.tag === "app" && isExp(e.head)
+
+export const isLam = (e: Exp): e is Lam => isTagged(e) && e.tag === "lam"
+
+export const isLit = (e: Exp): e is Lit => isTagged(e) && e.tag === "lit"
 
 ///// Stringifying Functions ///////////////////////////////////////////////////
 

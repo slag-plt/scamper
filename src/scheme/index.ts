@@ -1,39 +1,53 @@
-import * as L from '../lpm'
-import { Prelude, Runtime, builtinLibs } from '../lib'
-import { lowerProgram } from './codegen.js'
-import { expandProgram } from './expansion.js'
-import { read } from './reader.js'
-import { scopeCheckProgram } from './scope.js'
-import { parseProgram } from './parser.js'
-import { sugarExpr } from './sugarer.js'
-import { raiseFiber, raiseThread } from './raise.js'
-import { FiberRaiser, Raiser } from '../lpm/raiser.js'
-import { Exp } from './ast.js'
+import * as L from "../lpm"
+import { Prelude, Runtime, builtinLibs } from "../lib"
+import { lowerProgram } from "./codegen.js"
+import { expandProgram } from "./expansion.js"
+import { scopeCheckProgram } from "./scope.js"
+import { sugarExpr } from "./sugarer.js"
+import { raiseFiber, raiseThread } from "./raise.js"
+import { FiberRaiser, Raiser } from "../lpm/raiser.js"
+import { read } from "./reader.js"
+import { parseProgram } from "./parser.js"
+import { Exp, Prog } from "./ast.js"
+import { ScamperError } from "../lpm"
 
 export const raiser: Raiser<Exp> = {
   raise: (t) => sugarExpr(raiseThread(t)),
-  equals: L.equals
+  equals: L.equals,
 }
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
   equals: L.equals
 }
 
-export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
-  // Tokenization and reading (to Sexps)
-  let sexps = undefined 
+export function tokenizeAndParse(
+  err: L.ErrorChannel,
+  src: string,
+): Prog | undefined {
+  let sexps
   try {
     sexps = read(src)
-  } catch (e: any) {
-    err.report(e)
+  } catch (e) {
+    if (e instanceof ScamperError) {
+      err.report(e)
+      return undefined
+    }
+    throw e
+  }
+  const errors: L.ScamperError[] = []
+  const program = parseProgram(errors, sexps)
+  if (errors.length > 0) {
+    errors.forEach((e) => {
+      err.report(e)
+    })
     return undefined
   }
+  return program
+}
 
-  // Parsing (to AST)
-  let errors: L.ScamperError[] = []
-  let program = parseProgram(errors, sexps)
-  if (errors.length > 0) {
-    errors.forEach((e) => { err.report(e); })
+export function compile(err: L.ErrorChannel, src: string): L.Prog | undefined {
+  let program = tokenizeAndParse(err, src)
+  if (program === undefined) {
     return undefined
   }
 
@@ -41,10 +55,12 @@ export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   program = expandProgram(program)
 
   // Scope checking
-  errors = []
+  const errors: L.ScamperError[] = []
   scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
-    errors.forEach((e) => { err.report(e); })
+    errors.forEach((e) => {
+      err.report(e)
+    })
     return undefined
   }
 
@@ -52,7 +68,7 @@ export function compile (err: L.ErrorChannel, src: string): L.Prog | undefined {
   return lowerProgram(program)
 }
 
-export function mkInitialEnv (): L.Env {
+export function mkInitialEnv(): L.Env {
   const env = new L.Env()
   for (const [name, fn] of Runtime.lib) {
     env.set(name, fn)
