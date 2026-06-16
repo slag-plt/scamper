@@ -1,48 +1,49 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { ref } from "vue"
 
 const appVersion = APP_VERSION
-import ModuleList from "./ModuleList.vue"
-import ApiEntries from "./ApiEntries.vue"
+// import ModuleList from "./ModuleList.vue"
+// import ApiEntries from "./ApiEntries.vue"
 
-import * as Audio from "./api/audio.js"
-import * as Prelude from "./api/prelude.js"
-import * as Image from "./api/image.js"
-import * as Lab from "./api/lab.js"
-import * as Music from "./api/music.js"
-import * as Test from "./api/test.js"
-import * as Canvas from "./api/canvas.js"
-import * as Html from "./api/html.js"
-import * as Reactive from "./api/reactive.js"
-import * as Data from "./api/data.js"
-import * as Rex from "./api/rex.js"
+// import * as Audio from "./api/audio.js"
+// import * as Prelude from "./api/prelude.js"
+// import * as Image from "./api/image.js"
+// import * as Lab from "./api/lab.js"
+// import * as Music from "./api/music.js"
+// import * as Test from "./api/test.js"
+// import * as Canvas from "./api/canvas.js"
+// import * as Html from "./api/html.js"
+// import * as Reactive from "./api/reactive.js"
+// import * as Data from "./api/data.js"
+// import * as Rex from "./api/rex.js"
 
-const libs: [string, object][] = [
-  ["prelude", Prelude],
-  ["image", Image],
-  ["lab", Lab],
-  ["music", Music],
-  ["test", Test],
-  ["audio", Audio],
-  ["canvas", Canvas],
-  ["html", Html],
-  ["reactive", Reactive],
-  ["data", Data],
-  ["rex", Rex],
-]
+// const libs: [string, object][] = [
+//   ["prelude", Prelude],
+//   ["image", Image],
+//   ["lab", Lab],
+//   ["music", Music],
+//   ["test", Test],
+//   ["audio", Audio],
+//   ["canvas", Canvas],
+//   ["html", Html],
+//   ["reactive", Reactive],
+//   ["data", Data],
+//   ["rex", Rex],
+// ]
 
-const selectedModule = ref("prelude")
+// const selectedModule = ref("prelude")
 
-const selectedLib = computed(
-  () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
-)
-
+// const selectedLib = computed(
+//   () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
+// )
 
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
   window.open("../docs copy.html?search=" + encodeURIComponent(searchTerm), "_blank")
 }
+const urlParams = new URLSearchParams(window.location.search);
+const searched = urlParams.get('search');
 </script>
 
 <template>
@@ -52,14 +53,12 @@ function searchForFunction(searchTerm: string) {
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
-
         <input
       v-model="search"  
       size = "30"
       placeholder="Search function or ''just search''..."
       @keyup.enter="searchForFunction(search)"
         >
-
       </div>
       <div class="header-right">
         <a href="https://github.com/slag-plt/scamper"
@@ -74,13 +73,12 @@ function searchForFunction(searchTerm: string) {
       </div>
     </div>
     <div class="docs">
-      <ModuleList
-        :libs="libs"
-        :selected-module="selectedModule"
-        @select="selectedModule = $event"
-      />
-      <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
+      
+    <div v-if="searched">
+      <h2>Search results for "{{ searched }}"</h2>
+      <p>TODO: implement search results page</p>
     </div>
+  </div>
   </div>
 </template>
 
@@ -118,7 +116,7 @@ body,
 }
 
 .header {
-  background: #eee;
+  background: #f2abc7;
   color: #333;
   padding: 0.5em;
   flex: 0 0 auto;

@@ -23,6 +23,12 @@ async function handleRun() {
     isRunInProgress.value = false
   }
 }
+
+const search = ref("")
+
+function searchForFunction(searchTerm: string) {
+  window.open("../../../docs copy.html?search=" + encodeURIComponent(searchTerm), "_blank")
+}
 </script>
 
 <template>
@@ -71,6 +77,13 @@ async function handleRun() {
       <a href="../../../docs.html">Docs</a>
       ⋅
       <a href="reference.html">Reference</a>
+      ⋅
+      <input
+      v-model="search"  
+      size = "30"
+      placeholder="Search function or ''just search''..."
+      @keyup.enter="searchForFunction(search)"
+        >
     </div>
     <div class="header-right">
       <a
