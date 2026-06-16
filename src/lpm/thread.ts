@@ -9,7 +9,7 @@ import { Range } from "./range"
 import "scheduler-polyfill"
 import '../../public/css/styles.css'
 import * as D from "./draw.js"
-import { mkGetFn } from "../lib/runtime.js"
+// import { mkGetFn } from "../lib/runtime.js"
 
 /** The type of runtime options. */
 export interface Options {
