@@ -4,7 +4,6 @@ import HtmlRenderer from "../lpm/renderers/html.js"
 import VueRenderer from "../lpm/renderers/vue"
 import PatRenderer from "./ast-components/PatRenderer.vue"
 import ExpRenderer from "./ast-components/ExpRenderer.vue"
-import StmtRenderer from "./ast-components/StmtRenderer.vue"
 import { FunctionDoc } from "./docstring/docstring"
 
 export interface Tagged {
