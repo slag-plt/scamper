@@ -268,7 +268,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             keyHandler(e.key, box, 'list', imgID);
           })
           if(j === 0) {
-            box.id = '${imgID}:' + ancestor + ' val'
+            box.id = `${imgID}:` + ancestor + ` val`
             if(U.isList(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains another list`;
               box.ariaLabel = `list pair ${i}, first element contains another list`;
@@ -433,7 +433,7 @@ by GokturkSM
       //creates the elements for the box elements of the pair
       const box = document.createElement('div');
       box.className = 'vector-box';
-      box.id = '${imgID}:' + ancestor + ' val'
+      box.id = `${imgID}:` + ancestor + ` val`
       //box.role = 'img'
       box.tabIndex = 0;
       box.addEventListener('keydown', (e) => {
