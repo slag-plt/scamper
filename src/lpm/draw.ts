@@ -203,7 +203,6 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         }
       } 
-      //handles checks in a list if in the second element of a list pair
     } else if(loc.includes('next')) {
       if(key === 'ArrowDown') {
         loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
