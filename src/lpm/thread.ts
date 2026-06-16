@@ -729,7 +729,6 @@ export class Thread {
               console.log("JUMP FROM: " + div1)
               console.log(div1)
               if (this.jumpToList[this.jumpToList.indexOf(div1) + 1]) {
-                event.preventDefault();
                 //this.jumpToList[this.jumpToList.indexOf(div1)].blur()
                 this.jumpToList[this.jumpToList.indexOf(div1) + 1].focus()
                 console.log("JUMP TO: " + this.jumpToList[this.jumpToList.indexOf(div1) + 1])
