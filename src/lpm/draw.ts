@@ -160,22 +160,22 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     //handles checks when key is pressed in a vector
     if(mode === 'vector') {
       if(key === 'ArrowDown') {
-        loc = `${imgID}:${loc}:0 val`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowUp') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}${Number(loc.substring(loc.lastIndexOf(":")))+1} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))+1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}${Number(loc.substring(loc.lastIndexOf(":")))-1} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))-1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -183,48 +183,45 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       //handles checks in a list when in the first element of a list pair
     } else if(loc.includes('val')) {
       if(key === 'ArrowDown') {
-        loc = `${imgID}:${loc}:0 val`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
         if(document.getElementById(loc)) {
-          console.log('testing')
           document.getElementById(loc)!.focus()
         }
       } else if(key === 'ArrowUp') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight'){
-        loc = `${imgID}:${loc} next`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))} next`
         if(document.getElementById(loc)) {
-          console.log('testing')
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}${Number(loc.substring(loc.lastIndexOf(":"))) - 1} next`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" "))) - 1} next`
         if(document.getElementById(loc)) {
-          console.log('testing')
           document.getElementById(loc)?.focus()
         }
       } 
       //handles checks in a list if in the second element of a list pair
     } else if(loc.includes('next')) {
       if(key === 'ArrowDown') {
-        loc = `${imgID}:${loc}:0 val`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowUp') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}${Number(loc.substring(loc.lastIndexOf(":"))) + 1} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" "))) + 1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${imgID}:${loc} val`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -258,7 +255,6 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           const box = document.createElement('div');
           box.tabIndex = 0;
           box.addEventListener('keydown', (e) => {
-            console.log('testing')
             keyHandler(e.key, box, 'list', imgID);
           })
           if(j === 0) {
