@@ -359,19 +359,20 @@ const beforeUnloadWrapper = (e: Event) => {
 // ---------- lifecycle ----------
 
 onMounted(async () => {
-  document.addEventListener("visibilitychange", visibilityChangeWrapper)
-  document.addEventListener("pagehide", pageHideWrapper)
-  window.addEventListener("beforeunload", beforeUnloadWrapper)
-
   fs = await OPFSFileSystem.create()
-  await initializeLibs()
-
+  
   const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
     loadingContent.value =
       "Another instance of Scamper is open. Please close that instance and try again."
     return
   }
+  
+  document.addEventListener("visibilitychange", visibilityChangeWrapper)
+  document.addEventListener("pagehide", pageHideWrapper)
+  window.addEventListener("beforeunload", beforeUnloadWrapper)
+
+  await initializeLibs()
 
   await loadConfig()
   await populateFileDrawer()

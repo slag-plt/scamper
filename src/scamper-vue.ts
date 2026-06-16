@@ -12,7 +12,7 @@ export class ScamperVue {
     this.display = display
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
-      const opts = LPM.defaultOptions
+      const opts = LPM.cloneOptions(LPM.defaultOptions)
       opts.isTracing = isTracing
       this.machine = new LPM.Thread(
         "##main##",

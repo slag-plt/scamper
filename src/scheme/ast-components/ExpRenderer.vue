@@ -4,6 +4,7 @@ import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 import CodeParens from "./CodeParens.vue"
 import HljsBindingForm from "./HljsBindingForm.vue"
 import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
+import { FallbackRenderer } from "../../lpm/renderers/vue"
 
 const { value: e } = defineProps<{ value: Exp }>()
 
@@ -74,6 +75,7 @@ switch (e.tag) {
   <ValueRenderer v-else-if="e.tag === 'lit'" :value="e.value" />
   <CodeParens v-else-if="args !== null" :args="args" />
   <HljsBindingForm v-else-if="hljsBindings !== null" :bindings="hljsBindings" />
+  <FallbackRenderer v-else :value="e" />
 </template>
 
 <style scoped></style>

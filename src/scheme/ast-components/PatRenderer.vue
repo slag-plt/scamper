@@ -7,7 +7,8 @@ import { FallbackRenderer } from "../../lpm/renderers/vue"
 
 const { value: pat } = defineProps<{ value: Pat }>()
 
-let computedComponent: any
+// `plit` / `pctor`+args use the template branches (non-`value` props).
+let computedComponent: unknown = FallbackRenderer
 switch (pat.tag) {
   case "pwild":
     computedComponent = createSimpleVueRenderer(() => "_").renderer
@@ -17,21 +18,13 @@ switch (pat.tag) {
       (pat) => pat.name,
     ).renderer
     break
-  case "plit":
-    computedComponent = ValueRenderer
-    break
-  case "pctor": {
+  case "pctor":
     if (pat.args.length === 0) {
       computedComponent = createSimpleVueRenderer<PCtor>(
         (pat) => `(${pat.name})`,
       ).renderer
-    } else {
-      computedComponent = CodeParens
     }
     break
-  }
-  default:
-    computedComponent = FallbackRenderer
 }
 </script>
 
@@ -41,7 +34,7 @@ switch (pat.tag) {
     v-else-if="pat.tag === 'pctor' && pat.args.length > 0"
     :args="[pat.name, ...pat.args]"
   />
-  <component v-else :is="computedComponent" :value="pat" />
+  <component :is="computedComponent" v-else :value="pat" />
 </template>
 
 <style scoped></style>

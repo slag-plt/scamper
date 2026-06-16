@@ -649,7 +649,9 @@ HtmlRenderer.registerCustomRenderer(isStmt, (v) => stmtToHTML(v as Stmt))
 
 VueRenderer.registerCustomRenderer(isPat, () => PatRenderer)
 VueRenderer.registerCustomRenderer(isExp, () => ExpRenderer)
-VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
+// StmtRenderer is never rendered since Raiser only raises expressions
+// TODO: change if this ever changes!
+// VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 
