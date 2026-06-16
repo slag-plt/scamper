@@ -730,7 +730,7 @@ export class Thread {
               console.log(div1)
               if (this.jumpToList[this.jumpToList.indexOf(div1) + 1]) {
                 this.jumpToList[this.jumpToList.indexOf(div1) + 1].focus()
-              }
+             }
             }
           })
           mainDiv.appendChild(div1)
@@ -814,8 +814,14 @@ export class Thread {
             this.jumpToList.push(HTMLVal)
             div.addEventListener('keydown', (event) => {
               if (event.key === 'j' && event.ctrlKey) {
+                console.log("JUMP FROM: " + HTMLVal)
+                console.log(HTMLVal)
                 if (this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1]) {
+                  event.preventDefault();
+                  //this.jumpToList[this.jumpToList.indexOf(HTMLVal)].blur()
                   this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1].focus()
+                  console.log("JUMP TO: " + this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1])
+                  console.log(this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1])
                 }
               }
             })
