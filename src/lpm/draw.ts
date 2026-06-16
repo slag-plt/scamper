@@ -22,7 +22,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     return height + 3
   }
   
-  export function drawVectorHTML(vector: L.Vector, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
+  export function drawVectorHTML(vector: L.Vector, ancestor = "0", imgID: number = Math.random()): HTMLDivElement {
     //Container for html elements
     const div = document.createElement('div');
     div.ariaLabel = 'object type vector';
@@ -50,7 +50,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       col.appendChild(index);
       box.className = 'vector-box';
       box.tabIndex = 0;
-      box.id = `${nesting}:${i}:${parent}:${imgID} val`
+      box.id = '${imgID}:' + ancestor + ' val'
       box.addEventListener('keydown', (e) => {
         keyHandler(e.key, box, 'vector', imgID);
       })
@@ -92,11 +92,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
         col.appendChild(val2);
       } else if (U.isList(e)) {
-        col.appendChild(drawListHTML(e, nesting + 1, i, imgID));
+        col.appendChild(drawListHTML(e, ancestor+ `:${Number(i)}`, imgID));
       } else if (U.isPair(e)) {
-        col.appendChild(drawPairHTML(e, nesting + 1, i, imgID));
+        col.appendChild(drawPairHTML(e, ancestor+ `:${Number(i)}`, imgID));
       } else if (U.isArray(e)) {
-        col.appendChild(drawVectorHTML(e, nesting + 1, i, imgID));
+        col.appendChild(drawVectorHTML(e, ancestor+ `:${Number(i)}`, imgID));
       } else if (U.isStruct(e)) {
         col.appendChild(drawStructHTML(e))
       }
@@ -160,7 +160,12 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     //handles checks when key is pressed in a vector
     if(mode === 'vector') {
       if(key === 'ArrowDown') {
-        loc = `${Number(loc[0] ) + 1}:0:${loc[2]}:${imgID} val`
+        loc = `${imgID}:${loc}:0 val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } if(key === 'ArrowUp') {
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -170,12 +175,12 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
-        loc = `${loc[0]}:${Number(loc[2]) + 1}:${loc[4]}:${imgID} val`
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")))+1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${loc[0]}:${Number(loc[2]) - 1}:${loc[4]}:${imgID} val`
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")))-1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -183,19 +188,24 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       //handles checks in a list when in the first element of a list pair
     } else if(loc.includes('val')) {
       if(key === 'ArrowDown') {
-        loc = `${Number(loc[0]) + 1}:0:${loc[2]}:${imgID} val`
+        loc = `${imgID}:${loc}:0 val`
         if(document.getElementById(loc)) {
           console.log('testing')
           document.getElementById(loc)!.focus()
         }
+      } if(key === 'ArrowUp') {
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
       } else if(key === 'ArrowRight'){
-        loc = `${loc[0]}:${loc[2]}:${loc[4]}:${imgID} next`
+        loc = `${imgID}:${loc} next`
         if(document.getElementById(loc)) {
           console.log('testing')
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${loc[0]}:${Number(loc[2]) - 1}:${loc[4]}:${imgID} next`
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":"))) - 1} next`
         if(document.getElementById(loc)) {
           console.log('testing')
           document.getElementById(loc)?.focus()
@@ -204,17 +214,23 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       //handles checks in a list if in the second element of a list pair
     } else if(loc.includes('next')) {
       if(key === 'ArrowDown') {
-        loc = `${Number(loc[0] + 1)}:0:${loc[2]}:${imgID} val`
+        loc = `${imgID}:${loc}:0 val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } if(key === 'ArrowUp') {
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
-        loc = `${loc[0]}:${Number(loc[2]) + 1}:${loc[4]}:${imgID} val`
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":"))) + 1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${loc[0]}:${loc[2]}:${loc[4]}:${imgID} val`
+        // loc = loc.join(':') + ' next'
+        loc = `${imgID}:${loc} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -223,7 +239,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
   }
   
   //if variable is given a default value, should always be called with default value outside of the function
-  export function drawListHTML(list: L.List | null, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
+  export function drawListHTML(list: L.List | null, ancestor = "0", imgID: number = Math.random()): HTMLDivElement {
     //declares overall html object to be appended to page
     const div = document.createElement('div');
     div.ariaDescription = 'object type list';
@@ -252,19 +268,19 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             keyHandler(e.key, box, 'list', imgID);
           })
           if(j === 0) {
-            box.id = `${nesting}:${i}:${parent}:${imgID} val`
+            box.id = '${imgID}:' + ancestor + ' val'
             if(U.isList(list!.head)) {
-              box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains another list`;
-              box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains another list`;
+              box.ariaDescription = `list pair ${i}, first element contains another list`;
+              box.ariaLabel = `list pair ${i}, first element contains another list`;
             } else if(U.isArray(list!.head)) {
-              box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains a vector`;
-              box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains a vector`;
+              box.ariaDescription = `list pair ${i}, first element contains a vector`;
+              box.ariaLabel = `list pair ${i}, first element contains a vector`;
             } else {
-              box.ariaDescription = `list pair ${i}, nesting level ${nesting} first element contains ${list!.head}`;
-              box.ariaLabel = `list pair ${i}, nesting level ${nesting} first element contains ${list!.head}`;
+              box.ariaDescription = `list pair ${i}, first element contains ${list!.head}`;
+              box.ariaLabel = `list pair ${i}, first element contains ${list!.head}`;
             }
           } else {
-            box.id = `${nesting}:${i}:${parent}:${imgID} next`
+            box.id = '${imgID}:' + ancestor + ' val'
               box.style.marginLeft = '-2px';
             box.ariaDescription = `list pair ${i}, second element contains a list pair`;
             box.ariaLabel = `list pair ${i}, second element contains a list pair`;
@@ -324,11 +340,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           }
           col.appendChild(val2);
         } else if(el !== null && U.isList(el)) {
-          col.appendChild(drawListHTML(el, nesting + 1, i, imgID));
+          col.appendChild(drawListHTML(el, ancestor+ `:${Number(i)}`, imgID));
         } else if (U.isPair(el)) {
-          col.appendChild(drawPairHTML(el, nesting + 1, i, imgID));
+          col.appendChild(drawPairHTML(el, ancestor+ `:${Number(i)}`, imgID));
         } else if (U.isArray(el)) {
-          col.appendChild(drawVectorHTML(el, nesting + 1, i, imgID));
+          col.appendChild(drawVectorHTML(el, ancestor+ `:${Number(i)}`, imgID));
         } else if (U.isStruct(el)) {
           col.appendChild(drawStructHTML(el))
         }
@@ -397,7 +413,7 @@ by GokturkSM
     return height
   }
   
-  export function drawPairHTML(pair: L.Pair, nesting = 0, parent = 0, imgID: number = Math.random()): HTMLDivElement {
+  export function drawPairHTML(pair: L.Pair, ancestor = "0", imgID: number = Math.random()): HTMLDivElement {
     //Container for html elements
     const div = document.createElement('div');
     div.ariaLabel = 'object type pair';
@@ -417,7 +433,7 @@ by GokturkSM
       //creates the elements for the box elements of the pair
       const box = document.createElement('div');
       box.className = 'vector-box';
-      box.id = `${nesting}:${k}:${parent}:${imgID} val`
+      box.id = '${imgID}:' + ancestor + ' val'
       //box.role = 'img'
       box.tabIndex = 0;
       box.addEventListener('keydown', (e) => {
@@ -474,11 +490,11 @@ by GokturkSM
         }
         col.appendChild(val2);
       } else if (U.isList(e)) {
-        col.appendChild(drawListHTML(e, nesting + 1, k, imgID));
+        col.appendChild(drawListHTML(e, ancestor+ `:${Number(k)}`, imgID));
       } else if (U.isPair(e)) {
-        col.appendChild(drawPairHTML(e, nesting + 1, k, imgID));
+        col.appendChild(drawPairHTML(e, ancestor+ `:${Number(k)}`, imgID));
       } else if (U.isArray(e)) {
-        col.appendChild(drawVectorHTML(e, nesting + 1, k, imgID));
+        col.appendChild(drawVectorHTML(e, ancestor+ `:${Number(k)}`, imgID));
       } else if (U.isStruct(e)) {
         col.appendChild(drawStructHTML(e))
       }
