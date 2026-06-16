@@ -45,6 +45,7 @@ export class ICE extends Error {
   }
 }
 
+// TODO: likely deprecated after fiber change
 export class SubthreadErrors extends Error {
   errors: ScamperError[]
   constructor(errors: ScamperError[]) {
@@ -52,4 +53,9 @@ export class SubthreadErrors extends Error {
     super(msg)
     this.errors = [...errors]
   }
+}
+
+const ReportErrorTag = Symbol("##scamper-report##")
+export class ReportError extends Error {
+  [ReportErrorTag] = true
 }

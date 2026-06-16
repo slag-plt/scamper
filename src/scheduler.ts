@@ -1,5 +1,17 @@
-import { ErrorChannel, ICE, OutputChannel, ScamperError } from "./lpm"
-import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
+import {
+  ErrorChannel,
+  ICE,
+  OutputChannel,
+  ReportError,
+  ScamperError,
+} from "./lpm"
+import {
+  DisplayStep,
+  Fiber,
+  MinorStep,
+  StepResult,
+  YieldStep,
+} from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -10,6 +22,7 @@ export interface SchedulerTask {
   out: OutputChannel
   err: ErrorChannel
   isTracing: boolean
+  rep?: ErrorChannel
 }
 
 export class Scheduler {
@@ -86,6 +99,9 @@ export class Scheduler {
         try {
           stepResult = fiber.step()
         } catch (e) {
+          if (e instanceof ReportError) {
+            // TODO: implement
+          }
           if (e instanceof ScamperError) {
             err.report(e)
             this.#currTaskIdx++
