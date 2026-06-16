@@ -52,7 +52,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       box.tabIndex = 0;
       box.id = `${imgID}:` + ancestor + `:` + i + ` val`
       box.addEventListener('keydown', (e) => {
-        keyHandler(e.key, box, 'vector', imgID);
+        keyHandler(e.key, box, 'vector');
       })
       if(U.isList(e)) {
         box.ariaDescription = `vector index ${indexVal} contains a list`
@@ -155,7 +155,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     return height + 1
   }
   
-  function keyHandler(key: any, box: HTMLElement, mode: string, imgID: number) {
+  function keyHandler(key: any, box: HTMLElement, mode: string) {
     let loc = box.id
     //handles checks when key is pressed in a vector
     if(mode === 'vector') {
@@ -255,7 +255,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           const box = document.createElement('div');
           box.tabIndex = 0;
           box.addEventListener('keydown', (e) => {
-            keyHandler(e.key, box, 'list', imgID);
+            keyHandler(e.key, box, 'list');
           })
           if(j === 0) {
             box.id = `${imgID}:${ancestor}:${i} val`
@@ -427,7 +427,7 @@ by GokturkSM
       //box.role = 'img'
       box.tabIndex = 0;
       box.addEventListener('keydown', (e) => {
-        keyHandler(e.key, box, 'vector', imgID);
+        keyHandler(e.key, box, 'vector');
       })
       if(k > 0) {
         box.ariaDescription = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
