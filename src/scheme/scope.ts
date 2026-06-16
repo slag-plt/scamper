@@ -2,7 +2,6 @@ import { Prelude, Runtime } from "../lib"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
-import { isVar } from "./ast.js"
 import { ComplexPred, Pred } from "./docstring/docstring"
 import { mkScamperErrorWithRange } from "./util"
 
@@ -143,7 +142,7 @@ function scopeCheckPred(
   predicate: Pred,
   globals: string[],
 ) {
-  if (isVar(predicate)) {
+  if (A.isVar(predicate)) {
     if (!globals.includes(predicate.name)) {
       errors.push(
         mkScamperErrorWithRange(
@@ -217,7 +216,8 @@ function scopeCheckFunctionDoc(
       range: sigRange,
     },
     params: docParamDescriptions,
-    tags,
+    // TODO: we don't scope check tags for now
+    // tags,
     range: docRange,
   } = doc
   const docParams = [...args.map((v) => v.name)]
