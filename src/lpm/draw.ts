@@ -267,7 +267,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             keyHandler(e.key, box, 'list', imgID);
           })
           if(j === 0) {
-            box.id = `${imgID}:` + ancestor + `:` + i + ` val`
+            box.id = `${imgID}:${ancestor}:${i} val`
             if(U.isList(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains another list`;
               box.ariaLabel = `list pair ${i}, first element contains another list`;
@@ -279,7 +279,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
               box.ariaLabel = `list pair ${i}, first element contains ${list!.head}`;
             }
           } else {
-            box.id = `${imgID}:` + ancestor + `:` + i + ` next`
+            box.id = `${imgID}:${ancestor}:${i} next`
               box.style.marginLeft = '-2px';
             box.ariaDescription = `list pair ${i}, second element contains a list pair`;
             box.ariaLabel = `list pair ${i}, second element contains a list pair`;
