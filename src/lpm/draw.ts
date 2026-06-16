@@ -50,7 +50,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       col.appendChild(index);
       box.className = 'vector-box';
       box.tabIndex = 0;
-      box.id = '${imgID}:' + ancestor + ' val'
+      box.id = `${imgID}:` + ancestor + `:` + i + ` val`
       box.addEventListener('keydown', (e) => {
         keyHandler(e.key, box, 'vector', imgID);
       })
@@ -268,7 +268,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             keyHandler(e.key, box, 'list', imgID);
           })
           if(j === 0) {
-            box.id = `${imgID}:` + ancestor + ` val`
+            box.id = `${imgID}:` + ancestor + `:` + i + ` val`
             if(U.isList(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains another list`;
               box.ariaLabel = `list pair ${i}, first element contains another list`;
@@ -280,7 +280,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
               box.ariaLabel = `list pair ${i}, first element contains ${list!.head}`;
             }
           } else {
-            box.id = '${imgID}:' + ancestor + ' val'
+            box.id = `${imgID}:` + ancestor + `:` + i + ` val`
               box.style.marginLeft = '-2px';
             box.ariaDescription = `list pair ${i}, second element contains a list pair`;
             box.ariaLabel = `list pair ${i}, second element contains a list pair`;
@@ -433,7 +433,7 @@ by GokturkSM
       //creates the elements for the box elements of the pair
       const box = document.createElement('div');
       box.className = 'vector-box';
-      box.id = `${imgID}:` + ancestor + ` val`
+      box.id = `${imgID}:` + ancestor + `:` + k + ` val`
       //box.role = 'img'
       box.tabIndex = 0;
       box.addEventListener('keydown', (e) => {
