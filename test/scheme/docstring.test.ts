@@ -22,10 +22,8 @@ import {
 import { parseFunctionDescription } from "../../src/scheme/docstring/description"
 import {
   testTag1,
-  testTag1Contents,
-  testTagLine1,
   testTag2,
-  testTag2Contents,
+  testTagLine1,
   testTagLine2,
 } from "./docstring/test-tags"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
@@ -130,9 +128,9 @@ describe("Docstring parsing", () => {
         ).toStrictEqual(expectedParam)
       })
     })
-    describe("illegal param signature", () => {
-      // TODO: test
-    })
+    // TODO: test
+    // describe("illegal param signature", () => {
+    // })
   })
 
   describe("parseParamDescriptionLine", () => {
@@ -230,7 +228,10 @@ describe("Docstring parsing", () => {
     const testDescriptionLine1 = "this is the first line of the description"
     const testDescriptionLine2 = "this is the SECOND line!"
     const expectedDescription = `${testDescriptionLine1} ${testDescriptionLine2}`
-    const expectedRemainder = convertLinesToComments([testTagLine1, testTagLine2])
+    const expectedRemainder = convertLinesToComments([
+      testTagLine1,
+      testTagLine2,
+    ])
     test("empty string when begins with tag line", () => {
       const testDocLines = convertLinesToComments([testTagLine1, testTagLine2])
       const expectedResult = { stage: ParseStage.Tags, description: "" }
