@@ -164,6 +164,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
+      } else if(key === 'ArrowUp') {
+        loc = `${Number(loc[0] ) - 1}:0:${loc[2]}:${imgID} val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
       } else if(key === 'ArrowRight') {
         loc = `${loc[0]}:${Number(loc[2]) + 1}:${loc[4]}:${imgID} val`
         if(document.getElementById(loc)) {

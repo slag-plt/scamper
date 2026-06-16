@@ -83,6 +83,7 @@ export class Thread {
   isProcessingExpr: boolean
   cancelled = false
   definedVars: [string, L.Value][]
+  jumpToList: HTMLElement[]
 
   constructor(
     name: string,
@@ -107,6 +108,7 @@ export class Thread {
     this.results = []
     this.isProcessingExpr = false
     this.definedVars = []
+    this.jumpToList = []
   }
 
   lengthOfLibs(): number {
@@ -722,20 +724,19 @@ export class Thread {
           div1.ariaDescription = "Begin environment"
           div1.textContent = "------------------------------~"
           div1.tabIndex = 0
+          div1.addEventListener('keydown', (event) => {
+            if(event.key === 'j' && event.ctrlKey) {
+              if(this.jumpToList[this.jumpToList.indexOf(div1) + 1]) {
+                this.jumpToList[this.jumpToList.indexOf(div1) + 1].focus()
+             }
+            }
+          })
           mainDiv.appendChild(div1)
-          // div1.addEventListener('keydown', (event) => {
-          //   if(event.key === 'j' && event.ctrlKey) {
-          //     if(this.jumpToList![this.jumpToList!.indexOf(div1) + 1]) {
-          //       this.jumpToList![this.jumpToList!.indexOf(div1) + 1].focus()
-          //    }
-          //   }
-          // })
-          // renderToDraw(this.display, div1)
-          // this.jumpToList?.push(div1)
+          this.jumpToList.push(div1)
 
           // parallel arrays for keeping divs and their names
-          let list_names: String[] = [];
-          let list_div: HTMLElement[] = [];
+          const list_names: string[] = [];
+          const list_div: HTMLElement[] = [];
 
           // for each bounded variable
           bounded.forEach(([id, value]) => {
@@ -808,14 +809,14 @@ export class Thread {
             div.ariaDescription = id + " points to " + ariaType
             div.appendChild(miniDiv)
             div.append(HTMLVal)
-            // this.jumpToList!.push(HTMLVal)
-            // div.addEventListener('keydown', (event) => {
-            //   if (event.key === 'j' && event.ctrlKey) {
-            //     if (this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1]) {
-            //       this.jumpToList![this.jumpToList!.indexOf(HTMLVal) + 1].focus()
-            //     }
-            //   }
-            // })
+            this.jumpToList.push(HTMLVal)
+            div.addEventListener('keydown', (event) => {
+              if (event.key === 'j' && event.ctrlKey) {
+                if (this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1]) {
+                  this.jumpToList[this.jumpToList.indexOf(HTMLVal) + 1].focus()
+                }
+              }
+            })
             //console.log(structName + id)
             if(structName) {
                 //console.log(list_names)
@@ -830,7 +831,8 @@ export class Thread {
             }
             list_names.push(id);
             list_div.push(div)
-            //console.log(this.jumpToList)
+            console.log('JJJJJJJJJ')
+            console.log(this.jumpToList)
           })
 
           list_div.forEach(e => mainDiv.appendChild(e) );
