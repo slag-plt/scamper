@@ -164,13 +164,8 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
-      } if(key === 'ArrowUp') {
-        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
-          document.getElementById(loc)?.focus()
-        }
       } else if(key === 'ArrowUp') {
-        loc = `${Number(loc[0] ) - 1}:0:${loc[2]}:${imgID} val`
+        loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -193,7 +188,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           console.log('testing')
           document.getElementById(loc)!.focus()
         }
-      } if(key === 'ArrowUp') {
+      } else if(key === 'ArrowUp') {
         loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
@@ -218,7 +213,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
-      } if(key === 'ArrowUp') {
+      } else if(key === 'ArrowUp') {
         loc = `${imgID}:${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
