@@ -12,12 +12,15 @@ import {
   defaultHighlightStyle, syntaxHighlighting, indentOnInput, bracketMatching,
   foldGutter, foldKeymap
 } from "@codemirror/language"
-import { defaultKeymap, history, historyKeymap, indentSelection, indentWithTab } from "@codemirror/commands"
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete"
 import { lintKeymap } from "@codemirror/lint"
 import { ScamperSupport } from "../codemirror/language"
 import makeScamperLinter from "../codemirror/linter"
+import { format } from "prettier"
+import ScamperPlugin from "../prettier/prettier-plugin-scamper"
+import { diff } from "@codemirror/merge"
 
 const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 
@@ -26,6 +29,50 @@ export type EditorStateConfig = {
   dirtyAction: () => void
   isReadOnly: boolean
 }
+
+const prettierExtension: Extension = keymap.of([
+  {
+    // Prefer Mod on macOS (Cmd) and Ctrl elsewhere
+    key: "Mod-Shift-i",
+    run: (view) => {
+      const doc = view.state.doc
+      const sel = view.state.selection.main
+      const oldAnchor = sel.anchor
+      const oldHead = sel.head
+      const oldText = doc.toString()
+
+      void format(oldText, {
+        parser: "scamper-scheme",
+        plugins: [ScamperPlugin],
+      }).then((formatted) => {
+        // Normalize line endings to match CodeMirror's internal model
+        const newText = formatted.replace(/\r\n?/g, "\n")
+        if (newText === oldText) { return }
+
+        // Compute a minimal edit script so selection positions can be mapped.
+        const chunks = diff(oldText, newText)
+        const changes = chunks.map((c) => ({
+          from: c.fromA,
+          to: c.toA,
+          insert: newText.slice(c.fromB, c.toB),
+        }))
+        const changeSet = view.state.changes(changes)
+        const newAnchor = changeSet.mapPos(oldAnchor, 1)
+        const newHead = changeSet.mapPos(oldHead, 1)
+
+        view.dispatch({
+          changes,
+          selection: { anchor: newAnchor, head: newHead },
+          scrollIntoView: true,
+        })
+      }).catch(() => {
+        // If formatting fails, do nothing; keep editor state unchanged.
+      })
+
+      return true
+    }
+  },
+])
 
 function mkExtensions(config: EditorStateConfig): Extension {
   return [
@@ -58,29 +105,9 @@ function mkExtensions(config: EditorStateConfig): Extension {
     ]),
     // Scamper-specific extensions,
     EditorState.readOnly.of(config.isReadOnly),
+    prettierExtension,
     keymap.of([
       indentWithTab,
-      {
-        key: "Ctrl-Shift-i",
-        run: (view) => {
-          const doc = view.state.doc
-          const sel = view.state.selection.main
-          const line = doc.lineAt(sel.head)
-          const visualColumn = sel.head - line.from
-          view.dispatch({
-            selection: { anchor: 0, head: doc.length }
-          })
-          const success = indentSelection(view)
-          const updatedLine = view.state.doc.line(line.number)
-          const nonWhitespacePrefix = updatedLine.text.match(/^\s*/)?.[0].length || 0
-          const newHead = Math.min(updatedLine.from + nonWhitespacePrefix + visualColumn, updatedLine.to)
-          view.dispatch({
-            selection: { anchor: newHead },
-            scrollIntoView: true
-          })
-          return success
-        }
-      },
       {
         key: "'",
         run: (view) => {
