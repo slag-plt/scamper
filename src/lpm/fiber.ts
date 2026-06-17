@@ -22,7 +22,11 @@ export const DisplayStep = "Display"
 export const TraceStep = "Trace"
 export const MinorStep = "Minor"
 export const YieldStep = "Yield"
-export type StepResult = typeof DisplayStep | typeof TraceStep | typeof MinorStep | typeof YieldStep
+export type StepResult =
+  | typeof DisplayStep
+  | typeof TraceStep
+  | typeof MinorStep
+  | typeof YieldStep
 
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
@@ -185,6 +189,10 @@ export class Fiber {
         break
       case "popv":
         isMajorStep = PopVHandler(currOp, this.currentFrame, this)
+        break
+      case "rept":
+        // TODO: implement
+        isMajorStep = "Minor"
         break
       // TODO: the following instructions are useless
       // should be removed later

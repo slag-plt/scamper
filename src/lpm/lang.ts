@@ -151,7 +151,7 @@ export interface Struct extends TaggedObject {
 export type Vector = Value[]
 
 /** A Scamper function is either a closure or a raw Javascript function. */
-export type JsFunction = ((...args: Value[]) => Value)
+export type JsFunction = (...args: Value[]) => Value
 export type ScamperFn = Closure | JsFunction
 
 /** Calls a ScamperFn function with the provided arguments */
@@ -240,7 +240,8 @@ export interface Match {
   tag: "match"
   branches: [Pat, Blk][]
   range: Range
-  // TODO: hack fix to not modify original branch, run by pm
+  // hack fix to not modify original branch
+  // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
 export interface Raise {
@@ -254,7 +255,21 @@ export interface PopS {
 export interface PopV {
   tag: "popv"
 }
-export type Ops = Lit | Var | Ctor | Cls | Ap | Match | Raise | PopS | PopV
+export interface Rept {
+  tag: "rept"
+  range: Range
+}
+export type Ops =
+  | Lit
+  | Var
+  | Ctor
+  | Cls
+  | Ap
+  | Match
+  | Raise
+  | PopS
+  | PopV
+  | Rept
 export type Blk = Ops[]
 
 export interface Disp {
