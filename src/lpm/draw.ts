@@ -553,39 +553,29 @@ by GokturkSM
     let height = 0
     let count = 0
     for (let thing in struct) {
-      console.log(count + " is COUNT")
       thing = struct[thing]
-      console.log("this is what you want  1 " + thing)
 
       if (count > 1) {
-        console.log("INSIDE")
         if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
           height = height + 3
-          console.log("literal height: " + height)
         } else if (U.isList(thing)) {
           height = height + listHeight(thing)
-          console.log("list height: " + height)
         } else if (U.isPair(thing)) {
           height = height + pairHeight(thing)
-          console.log("pair height: " + height)
         } else if (U.isArray(thing)) {
           height = height + vectorHeight(thing)
-          console.log("array height: " + height)
         } else if (U.isStruct(thing)) {
           height = height + structHeight(thing)
-          console.log("struct height: " + height)
         } else {
           height = height + 3
-          console.log("else height: " + height)
         }
       }
       count = count + 1
     }
-    console.log("FINAL height: " + height)
     return height
   }
   
-  export function drawStructHTML(struct: L.Struct) {
+  export function drawStructHTML(struct: L.Struct, ancestor = "0", imgID: number = Math.random()): HTMLDivElement {
     const div = document.createElement('div');
     div.tabIndex = 0;
     
@@ -602,8 +592,6 @@ by GokturkSM
     const numberOfElements = Object.keys(struct).length;
       
     for (const thing in struct) {
-      console.log("here we have a struct")
-      console.log(struct)
       countThings++;
       if(countThings > 2) {
       const row = document.createElement('div');
@@ -648,7 +636,7 @@ by GokturkSM
         row.appendChild(miniDiv);
   
         let HTMLVal = document.createElement('div'); // div to hold element to be drawn
-        
+        let tHeight = 0
         if(typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean') {
           const val2 = document.createElement('div');
             val2.className = 'val-box';
@@ -659,16 +647,20 @@ by GokturkSM
             val2.style.paddingTop = '5px'
             val2.style.whiteSpace = 'noWrap';
           HTMLVal = val2;
+          tHeight = 50
         } else if (U.isList(t)) {
           HTMLVal = drawListHTML(t);
+          tHeight = listHeight(t) + 50
         } else if (U.isPair(t)) {
           HTMLVal = drawPairHTML(t);
+          tHeight = pairHeight(t) + 50
         } else if (U.isArray(t)) {
           HTMLVal = drawVectorHTML(t);
+          tHeight = vectorHeight(t) + 50
         } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t);
-        } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
-          console.log(mkCtorFn.toString())
+          tHeight = structHeight(t) + 50
+        } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) { //leaf node
           const box = document.createElement('div');
           box.id = "empty struct"
           box.className = 'struct-box';
@@ -676,10 +668,19 @@ by GokturkSM
           box.tabIndex = 0;
           box.ariaDescription = `empty value`
           box.ariaLabel = `empty value`
+          box.id = `${imgID}:${ancestor}:${countThings} next`
           
           box.innerHTML = "empty struct"
           HTMLVal = box;
+          tHeight = 50
         }
+box.style.marginBottom = `${tHeight}px`
+        if(countThings !== numberOfElements) {
+          1
+        }
+        box.addEventListener('keydown', (e) => {
+          keyHandler(e.key, box, 'struct');
+        })
 
       row.appendChild(HTMLVal)
       col.appendChild(row)
