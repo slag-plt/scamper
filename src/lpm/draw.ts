@@ -234,7 +234,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
     //declares overall html object to be appended to page
     const div = document.createElement('div');
     div.ariaDescription = 'object type list';
-    //div.tabIndex = 0;
+    div.tabIndex = 0;
     div.style.position = 'relative';
     
     if(U.isList(list)) {
@@ -407,7 +407,7 @@ by GokturkSM
     //Container for html elements
     const div = document.createElement('div');
     div.ariaLabel = 'object type pair';
-    //div.tabIndex = 0;
+    div.tabIndex = 0;
     div.style.position = 'relative';
   
     //loops through the pair, making the visualization pieces for each element
