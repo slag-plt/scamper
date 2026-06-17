@@ -1,6 +1,7 @@
 import * as L from "./lang"
 import * as U from "./util"
 import '../../public/css/styles.css'
+import { mkCtorFn } from "../lib/runtime";
 
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
@@ -226,6 +227,29 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         }
       }
+    } if(mode === 'struct') {
+      if(key === 'ArrowDown') {
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowUp') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowRight') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))+1} val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowLeft') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))-1} val`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      }
+      //handles checks in a list when in the first element of a list pair
     }
   }
   
@@ -528,7 +552,6 @@ by GokturkSM
   function structHeight(struct: L.Struct) : number {
     let height = 0
     let count = 0
-    console.log(struct)
     for (let thing in struct) {
       console.log(count + " is COUNT")
       thing = struct[thing]
@@ -579,6 +602,8 @@ by GokturkSM
     const numberOfElements = Object.keys(struct).length;
       
     for (const thing in struct) {
+      console.log("here we have a struct")
+      console.log(struct)
       countThings++;
       if(countThings > 2) {
       const row = document.createElement('div');
@@ -600,10 +625,12 @@ by GokturkSM
         box.id = "struct-box"
         box.className = 'struct-box';
         box.tabIndex = 0;
-        box.ariaDescription = `struct element`
-        box.ariaLabel = `no`
+        box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
+        box.ariaLabel = `struct element ${thing.toString()} contains ${t.toString()}`
         if(countThings === numberOfElements) {
           box.style.borderLeft = '6px solid black'
+        } else {
+          box.style.marginBottom = '50px'
         }
         box.innerHTML = s
         
@@ -640,36 +667,25 @@ by GokturkSM
           HTMLVal = drawVectorHTML(t);
         } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t);
+        } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
+          console.log(mkCtorFn.toString())
+          const box = document.createElement('div');
+          box.id = "empty struct"
+          box.className = 'struct-box';
+          
+          box.tabIndex = 0;
+          box.ariaDescription = `empty value`
+          box.ariaLabel = `empty value`
+          
+          box.innerHTML = "empty struct"
+          HTMLVal = box;
         }
-  
-      
+
       row.appendChild(HTMLVal)
       col.appendChild(row)
       }
     }
-  
-    if(countThings === 0) {
-      console.log("LEAF")
-      console.log(struct)
-      const row = document.createElement('div');
-      row.style.left = `${30}px`
-      row.style.display = 'flex'
-      row.style.flexDirection = 'row'
-  
-      const box = document.createElement('div');
-        box.id = "empty struct"
-        box.className = 'struct-box';
-        
-        box.tabIndex = 0;
-        box.ariaDescription = `no`
-        box.ariaLabel = `no`
-        
-        box.innerHTML = "empty struct"
-        
-        row.appendChild(box)
-        col.appendChild(row)
-    }
-  
+
   
     //col.style.borderLeft = '2px solid black
     div.appendChild(col);
