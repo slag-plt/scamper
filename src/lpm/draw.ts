@@ -262,7 +262,10 @@ function vectorHeight(vec: L.Vector, index = 0): number {
             if(U.isList(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains another list`;
               box.ariaLabel = `list pair ${i}, first element contains another list`;
-            } else if(U.isArray(list!.head)) {
+            } else if(U.isPair(list!.head)) {
+              box.ariaDescription = `list pair ${i}, first element contains a pair`;
+              box.ariaLabel = `list pair ${i}, first element contains a pair`;
+            }else if(U.isArray(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains a vector`;
               box.ariaLabel = `list pair ${i}, first element contains a vector`;
             } else {
@@ -430,11 +433,39 @@ by GokturkSM
         keyHandler(e.key, box, 'vector');
       })
       if(k > 0) {
-        box.ariaDescription = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
-        box.ariaLabel = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
+        if(U.isList(pair!.snd)) {
+          box.ariaDescription = `non-list pair element 2 contains list`;
+          box.ariaLabel = `non-list pair element 2 contains list`;
+        } else if(U.isPair(pair!.snd)) {
+          box.ariaDescription = `non-list pair element 2 contains another pair`;
+          box.ariaLabel = `non-list pair element 2 contains another pair`;
+        }else if(U.isArray(pair!.snd)) {
+          box.ariaDescription = `non-list pair element 2 contains vector`;
+          box.ariaLabel = `non-list pair element 2 contains vector`;
+        } else {
+          box.ariaDescription = `non-list pair element 2 contains ${pair!.snd}`;
+          box.ariaLabel = `non-list pair element 2 contains ${pair!.snd}`;
+        }
+        
+        // box.ariaDescription = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
+        // box.ariaLabel = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
       } else {
-        box.ariaDescription = `non-list pair element 1, first element contains ${k === 0? pair.fst : pair.snd}`
-        box.ariaLabel = `non-list pair element 1, first element contains ${k === 0? pair.fst : pair.snd}`
+        if(U.isList(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains list`;
+          box.ariaLabel = `non-list pair element 1 contains list`;
+        } else if(U.isPair(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains another pair`;
+          box.ariaLabel = `non-list pair element 1 contains another pair`;
+        }else if(U.isArray(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains vector`;
+          box.ariaLabel = `non-list pair element 1 contains vector`;
+        } else {
+          box.ariaDescription = `non-list pair element 1 contains ${pair!.fst}`;
+          box.ariaLabel = `non-list pair element 1 contains ${pair!.fst}`;
+        }
+        
+        // box.ariaDescription = `non-list pair element 1, first element contains ${k === 0? pair.fst : pair.snd}`
+        // box.ariaLabel = `non-list pair element 1, first element contains ${k === 0? pair.fst : pair.snd}`
       }
       col.appendChild(box);
       let snd = pair.snd
@@ -554,7 +585,7 @@ by GokturkSM
       row.id = "struct-row" + countThings
       row.style.left = `${30}px`
       row.style.display = 'flex'
-      row.style.flexDirection = 'row'
+      row.style.flexDirection = 'column'
   
       if(countThings !== numberOfElements) {
         const line = document.createElement('div');
@@ -569,7 +600,7 @@ by GokturkSM
         box.id = "struct-box"
         box.className = 'struct-box';
         box.tabIndex = 0;
-        box.ariaDescription = `no`
+        box.ariaDescription = `struct element`
         box.ariaLabel = `no`
         if(countThings === numberOfElements) {
           box.style.borderLeft = '6px solid black'
