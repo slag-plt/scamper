@@ -2,6 +2,7 @@ import * as L from "./lang"
 import * as U from "./util"
 import '../../public/css/styles.css'
 import { mkCtorFn } from "../lib/runtime";
+import { count } from "console";
 
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
@@ -99,7 +100,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       } else if (U.isArray(e)) {
         col.appendChild(drawVectorHTML(e, ancestor+ `:${Number(i)}`, imgID));
       } else if (U.isStruct(e)) {
-        col.appendChild(drawStructHTML(e))
+        col.appendChild(drawStructHTML(e, ancestor+ `:${Number(i)}`, imgID));
       }
   
       div.appendChild(col);
@@ -182,6 +183,31 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
       }
       //handles checks in a list when in the first element of a list pair
+    } else if (mode === 'struct') {
+      console.log("LOCCCC")
+      console.log(loc)
+      if(key === 'ArrowDown') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) + 1}`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowUp') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) - 1}`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowRight') {
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      } else if(key === 'ArrowLeft') {
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}`
+        if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+        }
+      }
+      //handles checks in a list when in the first element of a list pair
     } else if(loc.includes('val')) {
       if(key === 'ArrowDown') {
         loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
@@ -227,30 +253,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         }
       }
-    } if(mode === 'struct') {
-      if(key === 'ArrowDown') {
-        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
-        if(document.getElementById(loc)) {
-          document.getElementById(loc)?.focus()
-        }
-      } else if(key === 'ArrowUp') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
-          document.getElementById(loc)?.focus()
-        }
-      } else if(key === 'ArrowRight') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))+1} val`
-        if(document.getElementById(loc)) {
-          document.getElementById(loc)?.focus()
-        }
-      } else if(key === 'ArrowLeft') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))-1} val`
-        if(document.getElementById(loc)) {
-          document.getElementById(loc)?.focus()
-        }
-      }
-      //handles checks in a list when in the first element of a list pair
-    }
+    } 
   }
   
   //if variable is given a default value, should always be called with default value outside of the function
@@ -363,7 +366,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         } else if (U.isArray(el)) {
           col.appendChild(drawVectorHTML(el, ancestor+ `:${Number(i)}`, imgID));
         } else if (U.isStruct(el)) {
-          col.appendChild(drawStructHTML(el))
+          col.appendChild(drawStructHTML(el, ancestor+ `:${Number(i)}`, imgID));
         }
         
         //iterates the list
@@ -541,7 +544,7 @@ by GokturkSM
       } else if (U.isArray(e)) {
         col.appendChild(drawVectorHTML(e, ancestor+ `:${Number(k)}`, imgID));
       } else if (U.isStruct(e)) {
-        col.appendChild(drawStructHTML(e))
+        col.appendChild(drawStructHTML(e, ancestor+ `:${Number(k)}`, imgID));
       }
        div.appendChild(col);
     }
@@ -610,7 +613,7 @@ by GokturkSM
       let s = thing.toString() + "      "
   
       const box = document.createElement('div');
-        box.id = "struct-box"
+        box.id = `${imgID}:` + ancestor + `:` + `${countThings-2}`
         box.className = 'struct-box';
         box.tabIndex = 0;
         box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
@@ -649,17 +652,19 @@ by GokturkSM
           HTMLVal = val2;
           tHeight = 50
         } else if (U.isList(t)) {
-          HTMLVal = drawListHTML(t);
+          HTMLVal = drawListHTML(t, ancestor+ `:${countThings-2}`, imgID);
           tHeight = listHeight(t) + 50
         } else if (U.isPair(t)) {
-          HTMLVal = drawPairHTML(t);
+          HTMLVal = drawPairHTML(t, ancestor+ `:${countThings-2}`, imgID);
           tHeight = pairHeight(t) + 50
         } else if (U.isArray(t)) {
-          HTMLVal = drawVectorHTML(t);
+          HTMLVal = drawVectorHTML(t, ancestor+ `:${countThings-2}`, imgID);
           tHeight = vectorHeight(t) + 50
         } else if (U.isStruct(t)) {
-          HTMLVal = drawStructHTML(t);
+          HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-2}`, imgID);
           tHeight = structHeight(t) + 50
+          console.log("STRUCTTTTT")
+          console.log(HTMLVal)
         } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) { //leaf node
           const box = document.createElement('div');
           box.id = "empty struct"
@@ -668,16 +673,13 @@ by GokturkSM
           box.tabIndex = 0;
           box.ariaDescription = `empty value`
           box.ariaLabel = `empty value`
-          box.id = `${imgID}:${ancestor}:${countThings} next`
+          box.id = `${imgID}:${ancestor}:0`
           
           box.innerHTML = "empty struct"
           HTMLVal = box;
           tHeight = 50
         }
-box.style.marginBottom = `${tHeight}px`
-        if(countThings !== numberOfElements) {
-          1
-        }
+        box.style.marginBottom = `${tHeight}px`
         box.addEventListener('keydown', (e) => {
           keyHandler(e.key, box, 'struct');
         })

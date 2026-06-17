@@ -138,6 +138,11 @@
     overflow-y: scroll;
 }
 
+.struct-box:focus-within{
+    background-color: black;
+    color: white;
+}
+
 .struct-line {
     border: 3px solid black;
     width: 0px;
