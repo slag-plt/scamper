@@ -468,7 +468,7 @@ by GokturkSM
         // box.ariaLabel = `non-list pair element 1, first element contains ${k === 0? pair.fst : pair.snd}`
       }
       col.appendChild(box);
-      let snd = pair.snd
+      const snd = pair.snd
   
       let height = 1
       if(k === 0) {
@@ -585,7 +585,7 @@ by GokturkSM
       row.id = "struct-row" + countThings
       row.style.left = `${30}px`
       row.style.display = 'flex'
-      row.style.flexDirection = 'column'
+      row.style.flexDirection = 'row'
   
       if(countThings !== numberOfElements) {
         const line = document.createElement('div');
