@@ -184,25 +184,25 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       }
       //handles checks in a list when in the first element of a list pair
     } else if (mode === 'struct') {
-      console.log("LOCCCC")
-      console.log(loc)
+      // console.log("LOCCCC")
+      // console.log(loc)
       if(key === 'ArrowDown') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) + 1}`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) + 1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowUp') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) - 1}`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) - 1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
-        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0`
+        loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowLeft') {
-        loc = `${loc.substring(0,loc.lastIndexOf(":"))}`
+        loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
         }
@@ -613,7 +613,7 @@ by GokturkSM
       let s = thing.toString() + "      "
   
       const box = document.createElement('div');
-        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3}`
+        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3} val`
         box.className = 'struct-box';
         box.tabIndex = 0;
         box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
