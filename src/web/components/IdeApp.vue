@@ -324,6 +324,17 @@ async function handleSelectFile(filename: string) {
   if (!isLoadingFile) await switchToFile(filename)
 }
 
+// ---------- accessibility ----------
+
+function headerListener(doc: Document) {
+  doc.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+      e.preventDefault()
+      document.getElementById("ide-header")?.focus()
+    }
+  })
+}
+
 // ---------- page lifecycle handlers ----------
 
 async function handleVisibilityChange() {
