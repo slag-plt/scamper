@@ -17,6 +17,7 @@ export const reservedWords = [
   "define",
   "if",
   "import",
+  "display",
   "lambda",
   "let",
   "let*",
