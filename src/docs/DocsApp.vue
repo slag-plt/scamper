@@ -41,7 +41,7 @@ const selectedLib = computed(
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../docs copy.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
 }
 </script>
 
@@ -52,6 +52,7 @@ function searchForFunction(searchTerm: string) {
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
+        <a href="search.html">Search</a> ⋅ 
 
         <input
       v-model="search"  

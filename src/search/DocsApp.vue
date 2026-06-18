@@ -40,7 +40,7 @@ const appVersion = APP_VERSION
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../docs copy.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
 }
 const urlParams = new URLSearchParams(window.location.search);
 const searched = urlParams.get('search');
