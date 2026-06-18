@@ -484,9 +484,12 @@ by GokturkSM
         } else if(U.isPair(pair!.snd)) {
           box.ariaDescription = `non-list pair element 2 contains another pair`;
           box.ariaLabel = `non-list pair element 2 contains another pair`;
-        }else if(U.isArray(pair!.snd)) {
+        } else if(U.isArray(pair!.snd)) {
           box.ariaDescription = `non-list pair element 2 contains vector`;
           box.ariaLabel = `non-list pair element 2 contains vector`;
+        } else if(U.isNull(pair!.snd)) {
+          box.ariaDescription = `non-list pair element 2 contains null`;
+          box.ariaLabel = `non-list pair element 2 contains null`;
         } else {
           box.ariaDescription = `non-list pair element 2 contains ${pair!.snd}`;
           box.ariaLabel = `non-list pair element 2 contains ${pair!.snd}`;
@@ -507,6 +510,9 @@ by GokturkSM
         } else if(U.isStruct(pair!.fst)) {
           box.ariaDescription = `non-list pair element 1 contains struct`;
           box.ariaLabel = `non-list pair element 1 contains struct`;
+        } else if(U.isNull(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains null`;
+          box.ariaLabel = `non-list pair element 1 contains null`;
         } else {
           box.ariaDescription = `non-list pair element 1 contains ${pair!.fst}`;
           box.ariaLabel = `non-list pair element 1 contains ${pair!.fst}`;
@@ -530,6 +536,8 @@ by GokturkSM
           height = height + vectorHeight(snd)
         } else if (U.isStruct(snd)) {
           height = height + structHeight(snd)
+        } else {
+          height = height + 1
         }
       }
   
@@ -566,8 +574,12 @@ by GokturkSM
         col.appendChild(drawVectorHTML(e, ancestor+ `:${Number(k)}`, imgID));
       } else if (U.isStruct(e)) {
         col.appendChild(drawStructHTML(e, ancestor+ `:${Number(k)}`, imgID));
+      } if(U.isNull(e)) {
+        val2.textContent = 'null';
+        col.appendChild(val2)
+      } else {
+        div.appendChild(col);
       }
-       div.appendChild(col);
     }
     return div;
   }
@@ -703,6 +715,11 @@ by GokturkSM
         } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = structHeight(t) + 50
+        } else if(U.isNull(t)) {
+          const val2 = document.createElement('div');
+            val2.className = 'val-box';
+            val2.innerHTML = "null";
+          HTMLVal = val2
         } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) { //leaf node
           const box = document.createElement('div');
           box.id = "empty struct"
