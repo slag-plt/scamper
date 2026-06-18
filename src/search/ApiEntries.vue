@@ -1,50 +1,20 @@
 <script setup lang="ts">
-import { computed } from "vue"
-import { Doc } from "./api/docs.js"
-import DocEntry from "./DocEntry.vue"
+import { ref } from "vue"
 
-const props = defineProps<{
-  moduleName: string
-  lib: object
-}>()
+//import { Doc } from "./api/docs.js"
+//import DocEntry from "./DocEntry.vue"
 
-interface Entry {
-  id: string
-  name: string
-  doc: Doc
-}
 
-function entryId(module: string, name: string): string {
-  return `${module}-${name}`
-}
-
-const entries = computed<Entry[]>(() => {
-  return Object.entries(props.lib).map(([name, doc]) => ({
-    id: entryId(props.moduleName, name),
-    name: (doc as Doc).name,
-    doc: doc as Doc,
-  }))
-})
+const tags = ref([])
 </script>
 
+<!-- Tag selection goes here -->
 <template>
-  <div class="api">
-    <div class="index">
-      <strong>{{ moduleName }}</strong>
-      <ul>
-        <li v-for="entry in entries" :key="entry.id">
-          <a :href="`#${entry.id}`">{{ entry.name }}</a>
-        </li>
-      </ul>
-    </div>
-    <div class="entries">
-      <DocEntry
-        v-for="entry in entries"
-        :id="entry.id"
-        :key="entry.id"
-        :doc="entry.doc"
-      />
-    </div>
+  <div class="index">
+    <p>{{ tags }}</p>
+      <p><input type="checkbox" v-model="tags" label="One" value="One"> One </p>
+      <p><input type="checkbox" v-model="tags" label="Two" value="Two"> Two</p>
+  <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
   </div>
 </template>
 

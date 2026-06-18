@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue"
+import ApiEntries from './ApiEntries.vue';
+
+
 
 const appVersion = APP_VERSION
 // import ModuleList from "./ModuleList.vue"
@@ -31,11 +34,6 @@ const appVersion = APP_VERSION
 //   ["rex", Rex],
 // ]
 
-// const selectedModule = ref("prelude")
-
-// const selectedLib = computed(
-//   () => libs.find(([name]) => name === selectedModule.value)?.[1] ?? {},
-// )
 
 const search = ref("")
 
@@ -45,7 +43,12 @@ function searchForFunction(searchTerm: string) {
 const urlParams = new URLSearchParams(window.location.search);
 const searched = urlParams.get('search');
 </script>
-
+<!-- <input
+v-model="search"  
+size = "30"
+placeholder="Search function or ''just search''..."
+@keyup.enter="searchForFunction(search)"
+  > -->
 <template>
   <div class="docs-root">
     <div class="header">
@@ -53,12 +56,8 @@ const searched = urlParams.get('search');
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
-        <input
-      v-model="search"  
-      size = "30"
-      placeholder="Search function or ''just search''..."
-      @keyup.enter="searchForFunction(search)"
-        >
+        <a href="search.html">Search</a>
+
       </div>
       <div class="header-right">
         <a href="https://github.com/slag-plt/scamper"
@@ -77,6 +76,9 @@ const searched = urlParams.get('search');
     <div v-if="searched">
       <h2>Search results for "{{ searched }}"</h2>
       <p>TODO: implement search results page</p>
+    </div>
+    <div>
+      <ApiEntries/>
     </div>
   </div>
   </div>
@@ -116,7 +118,7 @@ body,
 }
 
 .header {
-  background: #f2abc7;
+  background: #ff9898;
   color: #333;
   padding: 0.5em;
   flex: 0 0 auto;
