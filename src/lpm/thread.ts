@@ -720,10 +720,10 @@ export class Thread {
           
           //environment begin line
           const div1 = document.createElement('div')
-          div1.ariaLabel = "Begin environment"
-          div1.ariaDescription = "Begin environment"
-          div1.textContent = "------------------------------~"
-          div1.tabIndex = 0
+            div1.ariaLabel = "Begin environment"
+            div1.ariaDescription = "Begin environment"
+            div1.textContent = "------------------------------~"
+            div1.tabIndex = 0
           div1.addEventListener('keydown', (event) => {
             if (event.key === 'j' && event.ctrlKey) {
               if (this.jumpToList[this.jumpToList.indexOf(div1) + 1]) {
@@ -744,27 +744,16 @@ export class Thread {
 
           // for each bounded variable
           bounded.forEach(([id, value]) => {
-            //let strVal: string = value.toString()
 
             let HTMLVal: any = ''
             let ariaType = ""
             let structName = false;
 
-            if(U.isNull(value)) {
-              console.log("NU>LLB OXX" + "  " + typeof(value))
-              const div = document.createElement('div')
-              div.className = 'null-box'
-              HTMLVal = div
-            }
             // //typecheck the variable(s) and convert to string or HTML elements
-            // if (!value) {
-            //   return;
-            // }
             if(U.isNull(value)) {
-              // console.log("NU>LLB OXX" + "  " + typeof(value))
               const div = document.createElement('div')
-              div.className = 'null-box'
-              div.style.marginBottom = '5px'
+                div.className = 'null-box'
+                div.style.marginBottom = '5px'
               HTMLVal = div
             } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
               if (typeof value === 'string') {
@@ -776,27 +765,20 @@ export class Thread {
               }
               ariaType = typeof value
             } else if (U.isArray(value)) {
-              //strVal = drawVector(value) + ' Vetcor Height ' + (vectorHeight(value) + 1)
               HTMLVal = D.drawVectorHTML(value)
               ariaType = "vector"
             } else if (U.isList(value)) {
-              //strVal = drawList(value) + ' List Height == ' + (listHeight(value) + 1)
               HTMLVal = D.drawListHTML(value)
               ariaType = "list"
             } else if (U.isPair(value)) {
-              //strVal = drawPair(value)
               HTMLVal = D.drawPairHTML(value)
               ariaType = "pair"
             } else if (U.isFunction(value)) {
-              //strVal = ("PROCEDURE")
               ariaType = "procedure"
               HTMLVal = "PROCEDURE"
             } else if (U.isStruct(value)) {
               HTMLVal = D.drawStructHTML(value)
               ariaType = 'struct'
-              //HTMLVal.style.marginBottom = '-50px'
-              //console.log("STRUCT")
-              //console.log(value[0])
               structName = value[0];
             } else {
               console.log("Found none for type " + U.typeOf(value))
@@ -808,10 +790,9 @@ export class Thread {
             
             // make div to be drawn later
             let div = document.createElement('div')
-            
-            div.style.display = 'flex'
-            div.ariaLabel = id + " points to " + ariaType
-            div.ariaDescription = id + " points to " + ariaType
+              div.style.display = 'flex'
+              div.ariaLabel = id + " points to " + ariaType
+              div.ariaDescription = id + " points to " + ariaType
             div.appendChild(miniDiv)
             div.append(HTMLVal)
             this.jumpToList.push(HTMLVal)
@@ -829,10 +810,8 @@ export class Thread {
                }
               }
             })
-            //console.log(structName + id)
+
             if(structName) {
-                //console.log(list_names)
-                //console.log(list_div)
               for(let i = 0; i < list_names.length; i++) {
                 
                 if(list_names[i].startsWith(structName)) {
@@ -841,10 +820,9 @@ export class Thread {
                 }
               }
             }
+
             list_names.push(id);
             list_div.push(div)
-            console.log('JJJJJJJJJ')
-            console.log(this.jumpToList)
           })
 
           list_div.forEach(e => mainDiv.appendChild(e) );
