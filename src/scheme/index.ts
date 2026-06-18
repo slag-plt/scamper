@@ -62,8 +62,12 @@ export function tokenizeAndParse(
   return program
 }
 
-export function compile(err: L.ErrorChannel, src: string): L.Prog | undefined {
-  let program = tokenizeAndParse(err, src)
+export function compile(
+  err: L.ErrorChannel,
+  src: string,
+  queryLoc?: Loc,
+): L.Prog | undefined {
+  let program = tokenizeAndParse(err, src, queryLoc)
   if (program === undefined) {
     return undefined
   }

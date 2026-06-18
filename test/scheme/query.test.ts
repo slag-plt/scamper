@@ -1,9 +1,21 @@
 import { describe, expect, test } from "vitest"
 import { read } from "../../src/scheme/reader"
 import { getQueriedAST, getReportedSyntax } from "../../src/scheme/query"
-import { Loc, mkList, mkSym } from "../../src/lpm"
+import {
+  Loc,
+  mkAp,
+  mkDisp,
+  mkList,
+  mkLit,
+  mkRept,
+  mkSym,
+  mkVar,
+  Prog,
+} from "../../src/lpm"
 import { mkSyntax, Syntax } from "../../src/scheme/syntax"
 import { anyRange } from "./util"
+import { compile } from "../../src/scheme"
+import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 
 const testLit = `test lit`
 const testDispLit = 2
@@ -41,7 +53,7 @@ describe("AST querying", () => {
       const testSyntax = testSexps[0]
       const testQueryLoc = new Loc(0, 2, 2)
       const expectedSyntax: Syntax = mkSyntax(
-        mkList("report", testLit),
+        mkList(getReportSym(), testLit),
         anyRange,
       )
       expectSexp(testSyntax, testQueryLoc, expectedSyntax)
@@ -49,7 +61,10 @@ describe("AST querying", () => {
     test("wraps null list in report", () => {
       const testSyntax = testSexps[1]
       const testQueryLoc = new Loc(1, 1, 14)
-      const expectedSyntax: Syntax = mkSyntax(mkList("report", null), anyRange)
+      const expectedSyntax: Syntax = mkSyntax(
+        mkList(getReportSym(), null),
+        anyRange,
+      )
       expectSexp(testSyntax, testQueryLoc, expectedSyntax)
     })
     test("wraps entire func app in report if queried ending bracket", () => {
@@ -57,7 +72,7 @@ describe("AST querying", () => {
       const testQueryLoc = new Loc(2, 10, 27)
       const expectedSyntax: Syntax = mkSyntax(
         mkList(
-          "report",
+          getReportSym(),
           mkList(
             mkSyntax(mkSym("display"), anyRange),
             mkSyntax(testDispLit, anyRange),
@@ -74,7 +89,7 @@ describe("AST querying", () => {
         const expectedSyntax: Syntax = mkSyntax(
           mkList(
             mkSyntax(mkSym("test-func1"), anyRange),
-            mkSyntax(mkList("report", "yo"), anyRange),
+            mkSyntax(mkList(getReportSym(), "yo"), anyRange),
             mkSyntax(
               mkList(
                 mkSyntax(mkSym("test-func2"), anyRange),
@@ -97,7 +112,7 @@ describe("AST querying", () => {
             mkSyntax(
               mkList(
                 mkSyntax(mkSym("test-func2"), anyRange),
-                mkSyntax(mkList("report", "what's up"), anyRange),
+                mkSyntax(mkList(getReportSym(), "what's up"), anyRange),
               ),
               anyRange,
             ),
@@ -120,7 +135,7 @@ describe("AST querying", () => {
               mkSyntax(
                 mkList(
                   mkSyntax(mkSym("test-func2"), anyRange),
-                  mkSyntax(mkList("report", "what's up"), anyRange),
+                  mkSyntax(mkList(getReportSym(), "what's up"), anyRange),
                 ),
                 anyRange,
               ),
@@ -136,7 +151,7 @@ describe("AST querying", () => {
         const testQueryLoc = new Loc(9, 3, 109)
         const expectedSyntax: Syntax = mkSyntax(
           mkList(
-            "report",
+            getReportSym(),
             mkList(
               mkSyntax(mkSym("if"), anyRange),
               mkSyntax(true, anyRange),
@@ -153,7 +168,7 @@ describe("AST querying", () => {
         const testQueryLoc = new Loc(7, 4, 76)
         const expectedSyntax: Syntax = mkSyntax(
           mkList(
-            mkSyntax(mkList("report", "not-a-fn"), anyRange),
+            mkSyntax(mkList(getReportSym(), "not-a-fn"), anyRange),
             mkSyntax(1, anyRange),
           ),
           anyRange,
@@ -169,7 +184,7 @@ describe("AST querying", () => {
               mkList(
                 mkSyntax(mkSym("lambda"), anyRange),
                 mkSyntax(mkList(mkSyntax(mkSym("x"), anyRange)), anyRange),
-                mkSyntax(mkList("report", mkSym("x")), anyRange),
+                mkSyntax(mkList(getReportSym(), mkSym("x")), anyRange),
               ),
               anyRange,
             ),
@@ -179,6 +194,32 @@ describe("AST querying", () => {
         )
         expectSexp(testSyntax, testQueryLoc, expectedSyntax)
       })
+    })
+  })
+
+  describe("compilation with query loc", () => {
+    test("report operation is contained in bytecode", () => {
+      const funcName = "+"
+      const lit1 = 1
+      const lit2 = 2
+      const src = `(${funcName} ${lit1.toString()} ${lit2.toString()})`
+      const queryLoc = new Loc(0, 1, 1)
+      const err = new SimpleErrorChannel()
+
+      const expectedProg: Prog = [
+        mkDisp(
+          [
+            mkVar(funcName, anyRange),
+            mkRept(anyRange),
+            mkLit(lit1, anyRange),
+            mkLit(lit2, anyRange),
+            mkAp(2, anyRange),
+          ],
+          anyRange,
+        ),
+      ]
+
+      expect(compile(err, src, queryLoc)).toStrictEqual(expectedProg)
     })
   })
 })
@@ -191,4 +232,8 @@ function expectSexp(
   expect(getReportedSyntax(testSyntax, testQueryLoc)).toStrictEqual(
     expectedSyntax,
   )
+}
+
+function getReportSym() {
+  return mkSym("report")
 }

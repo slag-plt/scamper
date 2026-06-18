@@ -439,7 +439,7 @@ export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
     }
 
     case "report": {
-      if (arr.length !== 1) {
+      if (arr.length !== 2) {
         errors.push(
           mkScamperErrorWithRange(
             "Parser",
@@ -449,7 +449,7 @@ export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
         )
         return phExp
       }
-      return A.mkReport(parseExp(errors, arr[0]), range)
+      return A.mkReport(parseExp(errors, arr[1]), range)
     }
 
     default: {

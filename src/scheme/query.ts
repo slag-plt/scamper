@@ -5,6 +5,7 @@ import {
   listToVector,
   Loc,
   mkList,
+  mkSym,
   ScamperError,
 } from "../lpm"
 import { isSyntax, mkSyntax, Syntax } from "./syntax"
@@ -121,5 +122,5 @@ function makeWrappedSyntax(
   value: Syntax["value"],
   range: Syntax["range"],
 ): Syntax {
-  return mkSyntax(mkList("report", value), range)
+  return mkSyntax(mkList(mkSym("report"), value), range)
 }
