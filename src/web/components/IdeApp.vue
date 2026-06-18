@@ -44,6 +44,7 @@ let isLoadingFile = false
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
 const isTracing = ref(false)
+const isDrawing = ref(false)
 const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
@@ -115,13 +116,14 @@ function makeClean() {
 
 // ---------- scamper execution ----------
 
-function startScamper(tracing: boolean): void {
+function startScamper(tracing: boolean, drawing: boolean): void {
   resultsRef.value?.reset()
   const display = resultsRef.value?.display
   if (!display) return
   isTracing.value = tracing
+  isDrawing.value = drawing
   try {
-    scamper = new ScamperVue(display, getDoc(), tracing)
+    scamper = new ScamperVue(display, getDoc(), tracing, drawing)
   } catch (e) {
     if (e instanceof ScamperError) {
       display.report(e)
@@ -174,12 +176,16 @@ function displayError(error: string) {
 // ---------- header event handlers ----------
 
 async function handleRun() {
-  startScamper(false)
+  startScamper(false, false)
   await scamper?.runProgram()
 }
 
 function handleTrace() {
-  startScamper(true)
+  startScamper(true, false)
+}
+
+function handleDraw() {
+  startScamper(true, true)
 }
 
 function handleCancel() {
@@ -418,6 +424,7 @@ onUnmounted(() => {
         :current-file="currentFile"
         :run="handleRun"
         :trace="handleTrace"
+        :draw="handleDraw"
         :cancel="handleCancel"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
@@ -432,6 +439,7 @@ onUnmounted(() => {
               ref="resultsRef"
               :is-dirty="isDirty"
               :is-tracing="isTracing"
+              :is-drawing="isDrawing"
               :step-once="handleStepOnce"
               :step-stmt="handleStepStmt"
               :step-all="handleStepAll"

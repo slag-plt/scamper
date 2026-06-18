@@ -5,6 +5,7 @@ const props = defineProps<{
   currentFile?: string | null
   run?: () => Promise<void>
   trace?: () => void
+  draw?: () => void
   cancel?: () => void
 }>()
 
@@ -54,6 +55,11 @@ async function handleRun() {
         class="fa-solid fa-route"
         aria-label="Trace"
         @click="trace?.()"
+      ></button>
+      <button
+        class="fa-solid fa-eye"
+        aria-label="Visualize"
+        @click="draw?.()"
       ></button>
       <button
         class="fa-solid fa-window-maximize"

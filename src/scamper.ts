@@ -9,12 +9,13 @@ export class Scamper {
   prog: LPM.Prog | undefined
   machine: LPM.Thread | undefined
 
-  constructor(target: HTMLElement, src: string, isTracing = false) {
+  constructor(target: HTMLElement, src: string, isTracing = false, isDrawing = false) {
     this.display = new HtmlDisplay(target)
     this.prog = Scheme.compile(this.display, src)
     if (this.prog) {
       const opts = LPM.cloneOptions(LPM.defaultOptions)
       opts.isTracing = isTracing
+      opts.isDrawing = isDrawing
       this.machine = new LPM.Thread(
         "##main##",
         Scheme.mkInitialEnv(),

@@ -415,7 +415,7 @@ export class Thread {
           this.advanceStmt() // pops trace
 
           // to be outputted with HTML bindings / environment
-          if (save) {
+          if (save && this.options.isDrawing) {
             this.out.send(save)
           }
         }
@@ -703,15 +703,15 @@ export class Thread {
   draw (): HTMLDivElement {
     //grabs bounded collected suring runtime
       const bounded = this.definedVars
-      console.log(bounded)
+      //console.log(bounded)
     //const initialLibNum = this.lengthOfLibs()
     //console.log("Initial Lib Num " + initialLibNum)
     const mainDiv = document.createElement('div')
 
     //if(envState != undefined){
       //grabs the stack
-      const stack = this.frames
-      console.log(stack)
+      //const stack = this.frames       stacks come out empty...
+      //console.log(stack)
       //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
       //if(!stack[0]) {
 

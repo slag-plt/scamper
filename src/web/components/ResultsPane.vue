@@ -6,6 +6,7 @@ import type { OutputPaneType } from "./use-output-pane"
 
 defineProps<{
   isTracing?: boolean
+  isDrawing?: boolean
   isDirty?: boolean
   stepOnce?: () => void
   stepStmt?: () => Promise<void>
@@ -28,6 +29,7 @@ defineExpose({
 <template>
   <ResultsToolbar
     :is-tracing="isTracing"
+    :is-drawing="isDrawing"
     :is-dirty="isDirty"
     :step-once="stepOnce"
     :step-stmt="stepStmt"

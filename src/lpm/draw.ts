@@ -1,8 +1,6 @@
 import * as L from "./lang"
 import * as U from "./util"
 import '../../public/css/styles.css'
-import { mkCtorFn } from "../lib/runtime";
-import { count } from "console";
 
 function vectorHeight(vec: L.Vector, index = 0): number {
     let height = 1;
@@ -703,7 +701,7 @@ by GokturkSM
             val2.className = 'val-box';
             val2.innerHTML = t.toString();
           if(typeof t === 'string') {
-            val2.innerHTML = '\"' + t.toString() + '\"'
+            val2.innerHTML = '"' + t + '"'
           }
             val2.style.paddingTop = '5px'
             val2.style.whiteSpace = 'noWrap';

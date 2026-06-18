@@ -3,6 +3,7 @@ import { ref } from "vue"
 
 const props = defineProps<{
   isTracing: boolean
+  isDrawing: boolean
   isDirty: boolean
   stepOnce?: () => void
   stepStmt?: () => Promise<void>
