@@ -581,9 +581,9 @@ by GokturkSM
 
       if (count > 1) {
         if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
-          height = height + 3
+          height = height + 4
         } else if (U.isList(thing)) {
-          height = height + listHeight(thing)
+          height = height + listHeight(thing) + 1
         } else if (U.isPair(thing)) {
           height = height + pairHeight(thing)
         } else if (U.isArray(thing)) {
