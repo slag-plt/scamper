@@ -613,7 +613,7 @@ by GokturkSM
       let s = thing.toString() + "      "
   
       const box = document.createElement('div');
-        box.id = `${imgID}:` + ancestor + `:` + `${countThings-2}`
+        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3}`
         box.className = 'struct-box';
         box.tabIndex = 0;
         box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
