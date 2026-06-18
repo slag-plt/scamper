@@ -180,6 +180,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" ")))-1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
+        } else {
+          loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
+          if(document.getElementById(loc)) {
+            document.getElementById(loc)?.focus()
+          }
         }
       }
       //handles checks in a list when in the first element of a list pair
@@ -195,6 +200,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) - 1} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
+        } else {
+          loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
+          if(document.getElementById(loc)) {
+          document.getElementById(loc)?.focus()
+          }
         }
       } else if(key === 'ArrowRight') {
         loc = `${loc.substring(0,loc.lastIndexOf(" "))}:0 val`
@@ -228,6 +238,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1,loc.lastIndexOf(" "))) - 1} next`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
+        } else {
+          loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
+          if(document.getElementById(loc)) {
+            document.getElementById(loc)?.focus()
+          }
         }
       } 
       //handles checks in a list if in the second element of a list pair
@@ -251,6 +266,11 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         loc = `${loc.substring(0,loc.lastIndexOf(" "))} val`
         if(document.getElementById(loc)) {
           document.getElementById(loc)?.focus()
+        } else {
+          loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
+          if(document.getElementById(loc)) {
+            document.getElementById(loc)?.focus()
+          }
         }
       }
     } 
