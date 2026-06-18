@@ -652,16 +652,16 @@ by GokturkSM
           HTMLVal = val2;
           tHeight = 50
         } else if (U.isList(t)) {
-          HTMLVal = drawListHTML(t, ancestor+ `:${countThings-2}`, imgID);
+          HTMLVal = drawListHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = listHeight(t) + 50
         } else if (U.isPair(t)) {
-          HTMLVal = drawPairHTML(t, ancestor+ `:${countThings-2}`, imgID);
+          HTMLVal = drawPairHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = pairHeight(t) + 50
         } else if (U.isArray(t)) {
-          HTMLVal = drawVectorHTML(t, ancestor+ `:${countThings-2}`, imgID);
+          HTMLVal = drawVectorHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = vectorHeight(t) + 50
         } else if (U.isStruct(t)) {
-          HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-2}`, imgID);
+          HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = structHeight(t) + 50
           console.log("STRUCTTTTT")
           console.log(HTMLVal)
