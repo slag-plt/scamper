@@ -18,7 +18,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       } else if(U.isArray(e)) {
         height = height + vectorHeight(e, 0)
       } else if (U.isStruct(e)) {
-        height = height + structHeight(e)
+        height = height + structHeight(e) + 2
       }
     }
     return height + 3
@@ -138,6 +138,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           height = height + vectorHeight(head)
         } else if (U.isStruct(head)) {
           height = height + structHeight(head)
+          height = height + 3
         }
       } else {
         if(typeof head === 'string' || typeof head === 'number' || typeof head === 'boolean') {
@@ -586,7 +587,7 @@ by GokturkSM
   
   
   function structHeight(struct: L.Struct) : number {
-    let height = 0
+    let height = 1
     let count = 0
     for (let thing in struct) {
       thing = struct[thing]
@@ -595,7 +596,7 @@ by GokturkSM
         if(typeof thing === 'string' || typeof thing === 'number' || typeof thing === 'boolean' ) {
           height = height + 4
         } else if (U.isList(thing)) {
-          height = height + listHeight(thing) + 1
+          height = height + listHeight(thing)
         } else if (U.isPair(thing)) {
           height = height + pairHeight(thing)
         } else if (U.isArray(thing)) {
