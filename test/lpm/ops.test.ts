@@ -4,15 +4,13 @@ import * as U from "../../src/lpm/util"
 import { LoggingChannel, OutputChannel, Value } from "../../src/lpm"
 import { makeTestFiber } from "../test-utils"
 
-async function testExecute(fiber: Fiber, out: OutputChannel) {
+function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
   while (!fiber.isDone()) {
-    // skip minor steps
-    if (!(await fiber.step())) continue
-    if (fiber.isProcessingBlk) continue
-    if (fiber.lastStatement.tag !== "disp") continue
-    // we only display output when we're done with a statement AND the statement we just finished was a disp.
-    out.send(fiber.lastResult)
+    const res = fiber.step()
+    if (res === "Display") {
+      out.send(fiber.lastResult)
+    }
   }
 }
 
@@ -22,17 +20,21 @@ describe("basic ops", () => {
     out = new LoggingChannel(false, false)
   })
 
-  async function expectSuccessfulExec(fiber: Fiber) {
-    await expect(testExecute(fiber, out)).resolves.not.toThrow()
+  function expectSuccessfulExec(fiber: Fiber) {
+    expect(() => {
+      testExecute(fiber, out)
+    }).not.toThrow()
   }
-  async function expectFailedExec(fiber: Fiber) {
-    await expect(testExecute(fiber, out)).rejects.toThrow()
+  function expectFailedExec(fiber: Fiber) {
+    expect(() => {
+      testExecute(fiber, out)
+    }).toThrow()
   }
 
   const litCases: Value[] = [42, "hi", false, null]
-  test.for(litCases)("lit %o", async (lit) => {
+  test.for(litCases)("lit %o", (lit) => {
     const fiber = makeTestFiber([U.mkDisp([U.mkLit(lit)])])
-    await expectSuccessfulExec(fiber)
+    expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([lit])
   })
 
@@ -43,20 +45,20 @@ describe("basic ops", () => {
       ["var2", null],
       ["woah", "wee"],
     ]
-    test.for(varCases)("exists: %s -> %o", async ([name, value]) => {
+    test.for(varCases)("exists: %s -> %o", ([name, value]) => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar(name)])])
       fiber.topLevelEnv.set(name, value)
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([value])
     })
 
-    test("doesn't exist", async () => {
+    test("doesn't exist", () => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar("test-bad-var")])])
-      await expectFailedExec(fiber)
+      expectFailedExec(fiber)
     })
   })
 
-  test("ctor", async () => {
+  test("ctor", () => {
     const fiber = makeTestFiber([
       U.mkDisp([
         U.mkLit("test"),
@@ -64,31 +66,31 @@ describe("basic ops", () => {
         U.mkCtor("test-ctor", ["a", "b"]),
       ]),
     ])
-    await expectSuccessfulExec(fiber)
+    expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(
       U.mkStruct("test-ctor", ["a", "b"], ["test", 2]),
     )
   })
 
-  test("cls", async () => {
+  test("cls", () => {
     const clsBody = [U.mkVar("+"), U.mkVar("x"), U.mkLit(1), U.mkAp(2)]
     const fiber = makeTestFiber([
       U.mkDisp([U.mkCls(["x"], clsBody, "add-one"), U.mkLit(1), U.mkAp(1)]),
     ])
-    await expectSuccessfulExec(fiber)
+    expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(2)
   })
 
-  test("ap", async () => {
+  test("ap", () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkVar("+"), U.mkLit(3), U.mkLit(4), U.mkAp(2)]),
     ])
-    await expectSuccessfulExec(fiber)
+    expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([7])
   })
 
   describe("match", () => {
-    test("w/ plit", async () => {
+    test("w/ plit", () => {
       const ifBranch = [U.mkLit("matched")]
       const elseBranch = [U.mkLit("not matched")]
       const fiber = makeTestFiber([
@@ -100,11 +102,11 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toEqual(["matched"])
     })
 
-    test("w/ second pattern", async () => {
+    test("w/ second pattern", () => {
       const ifBranch = [U.mkLit("wrong match")]
       const elseBranch = [U.mkLit("other one")]
       const fiber = makeTestFiber([
@@ -116,11 +118,11 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toEqual(["other one"])
     })
 
-    test("failed", async () => {
+    test("failed", () => {
       const ifBranch = [U.mkLit("wrong match")]
       const elseBranch = [U.mkLit("other one")]
       const fiber = makeTestFiber([
@@ -132,10 +134,10 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectFailedExec(fiber)
+      expectFailedExec(fiber)
     })
 
-    test("w/ pvar", async () => {
+    test("w/ pvar", () => {
       const ifBranch = [U.mkVar("+"), U.mkVar("x"), U.mkLit(10), U.mkAp(2)]
       const elseBranch = [U.mkLit(0)]
       const fiber = makeTestFiber([
@@ -147,11 +149,11 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([15])
     })
 
-    test("w/ pwild", async () => {
+    test("w/ pwild", () => {
       const ifBranch = [U.mkLit("always matches")]
       const elseBranch = [U.mkLit("never reached")]
       const fiber = makeTestFiber([
@@ -163,22 +165,17 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual(["always matches"])
     })
 
-    test("w/ pctor", async () => {
+    test("w/ pctor", () => {
       const testStruct = [
         U.mkLit(1),
         U.mkLit(2),
         U.mkCtor("test-struct", ["field1", "field2"]),
       ]
-      const ifBranch = [
-        U.mkVar("+"),
-        U.mkVar("a"),
-        U.mkVar("b"),
-        U.mkAp(2),
-      ]
+      const ifBranch = [U.mkVar("+"), U.mkVar("a"), U.mkVar("b"), U.mkAp(2)]
       const elseBranch = [U.mkRaise("no match"), U.mkPops()]
       const pattern = U.mkPCtor("test-struct", [U.mkPVar("a"), U.mkPVar("b")])
       const fiber = makeTestFiber([
@@ -190,12 +187,12 @@ describe("basic ops", () => {
           ]),
         ]),
       ])
-      await expectSuccessfulExec(fiber)
+      expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([3])
     })
   })
 
-  test("factorial", async () => {
+  test("factorial", () => {
     const factorialCls = U.mkCls(
       ["n"],
       [
@@ -224,7 +221,7 @@ describe("basic ops", () => {
       U.mkDefine("fact", [factorialCls]),
       U.mkDisp([U.mkVar("fact"), U.mkLit(5), U.mkAp(1)]),
     ])
-    await expectSuccessfulExec(fiber)
+    expectSuccessfulExec(fiber)
     // TODO: the test executor outputs define statements
     expect(out.log).toStrictEqual([120])
   })
