@@ -647,11 +647,9 @@ by GokturkSM
       let s = thing.toString() + "      "
   
       const box = document.createElement('div');
-        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3} val`
+        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3}`
         box.className = 'struct-box';
         box.tabIndex = 0;
-        box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
-        box.ariaLabel = `struct element ${thing.toString()} contains ${t.toString()}`
         if(U.isList(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains list`;
           box.ariaLabel = `struct element ${countThings-3} contains list`;
@@ -693,7 +691,14 @@ by GokturkSM
   
         let HTMLVal = document.createElement('div'); // div to hold element to be drawn
         let tHeight = 0
-        if(typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean') {
+        if(U.isNull(t)) {
+          const val2 = document.createElement('div');
+            val2.className = 'val-box';
+            val2.style.paddingTop = '5px'
+            val2.innerHTML = "null";
+          HTMLVal = val2
+          tHeight = 50
+        } else if(typeof t === 'string' || typeof t === 'number' || typeof t === 'boolean') {
           const val2 = document.createElement('div');
             val2.className = 'val-box';
             val2.innerHTML = t.toString();
@@ -716,11 +721,6 @@ by GokturkSM
         } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = structHeight(t) + 50
-        } else if(U.isNull(t)) {
-          const val2 = document.createElement('div');
-            val2.className = 'val-box';
-            val2.innerHTML = "null";
-          HTMLVal = val2
         } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) { //leaf node
           const box = document.createElement('div');
           box.id = "empty struct"
