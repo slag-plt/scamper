@@ -189,8 +189,6 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       }
       //handles checks in a list when in the first element of a list pair
     } else if (mode === 'struct') {
-      // console.log("LOCCCC")
-      // console.log(loc)
       if(key === 'ArrowDown') {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))}:${Number(loc.substring(loc.lastIndexOf(":")+1, loc.lastIndexOf(" "))) + 1} val`
         if(document.getElementById(loc)) {
@@ -202,7 +200,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         } else {
           loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-          if(document.getElementById(loc)) {
+          if(document.getElementById(loc) && !document.getElementById(loc)?.className.includes("struct")) {
           document.getElementById(loc)?.focus()
           }
         }
@@ -213,7 +211,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
       } else if(key === 'ArrowLeft') {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
+        if(document.getElementById(loc) && document.getElementById(loc)?.className.includes("struct")) {
           document.getElementById(loc)?.focus()
         }
       }
@@ -226,7 +224,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
       } else if(key === 'ArrowUp') {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
+        if(document.getElementById(loc) && !document.getElementById(loc)?.className.includes("struct")) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight'){
@@ -240,7 +238,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         } else {
           loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-          if(document.getElementById(loc)) {
+          if(document.getElementById(loc) && document.getElementById(loc)?.className.includes("struct")) {
             document.getElementById(loc)?.focus()
           }
         }
@@ -254,7 +252,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
       } else if(key === 'ArrowUp') {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
+        if(document.getElementById(loc) && !document.getElementById(loc)?.className.includes("struct")) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
@@ -268,7 +266,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         } else {
           loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-          if(document.getElementById(loc)) {
+          if(document.getElementById(loc) && document.getElementById(loc)?.className.includes("struct")) {
             document.getElementById(loc)?.focus()
           }
         }
