@@ -1,4 +1,5 @@
 import { Range } from "./range.js"
+import { Value } from "./lang"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
 type Phase = "Parser" | "Runtime"
@@ -55,7 +56,11 @@ export class SubthreadErrors extends Error {
   }
 }
 
-const ReportErrorTag = Symbol("##scamper-report##")
 export class ReportError extends Error {
-  [ReportErrorTag] = true
+  constructor(
+    public value: Value,
+    public range: Range,
+  ) {
+    super("Fiber hit a report operation!")
+  }
 }

@@ -15,6 +15,7 @@ import {
   LitHandler,
   MatchHandler,
   PopVHandler,
+  ReptHandler,
   VarHandler,
 } from "./handlers/op-handlers"
 
@@ -191,8 +192,7 @@ export class Fiber {
         isMajorStep = PopVHandler(currOp, this.currentFrame, this)
         break
       case "rept":
-        // TODO: implement
-        isMajorStep = "Minor"
+        isMajorStep = ReptHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

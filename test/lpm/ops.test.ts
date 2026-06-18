@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, test } from "vitest"
 import { Fiber } from "../../src/lpm/fiber"
 import * as U from "../../src/lpm/util"
-import { LoggingChannel, OutputChannel, Value } from "../../src/lpm"
+import {
+  LoggingChannel,
+  OutputChannel,
+  ReportError,
+  Value,
+} from "../../src/lpm"
 import { makeTestFiber } from "../test-utils"
+import { anyRange } from "../scheme/util"
 
 function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
@@ -222,7 +228,25 @@ describe("basic ops", () => {
       U.mkDisp([U.mkVar("fact"), U.mkLit(5), U.mkAp(1)]),
     ])
     expectSuccessfulExec(fiber)
-    // TODO: the test executor outputs define statements
     expect(out.log).toStrictEqual([120])
+  })
+
+  test("report", () => {
+    const fiber = makeTestFiber([
+      U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRept()]),
+    ])
+
+    const expectedError = new ReportError(3, anyRange)
+
+    const testRunner = () => {
+      try {
+        testExecute(fiber, out)
+        expect.fail("oops... should not have gotten here")
+      } catch (e) {
+        return e
+      }
+    }
+
+    expect(testRunner()).toStrictEqual(expectedError)
   })
 })
