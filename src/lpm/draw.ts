@@ -168,7 +168,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         }
       } else if(key === 'ArrowUp') {
         loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-        if(document.getElementById(loc)) {
+        if(document.getElementById(loc) && !document.getElementById(loc)?.className.includes("struct")) {
           document.getElementById(loc)?.focus()
         }
       } else if(key === 'ArrowRight') {
@@ -182,7 +182,7 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           document.getElementById(loc)?.focus()
         } else {
           loc = `${loc.substring(0,loc.lastIndexOf(":"))} val`
-          if(document.getElementById(loc)) {
+          if(document.getElementById(loc) && document.getElementById(loc)?.className.includes("struct")) {
             document.getElementById(loc)?.focus()
           }
         }
@@ -504,6 +504,9 @@ by GokturkSM
         }else if(U.isArray(pair!.fst)) {
           box.ariaDescription = `non-list pair element 1 contains vector`;
           box.ariaLabel = `non-list pair element 1 contains vector`;
+        } else if(U.isStruct(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains struct`;
+          box.ariaLabel = `non-list pair element 1 contains struct`;
         } else {
           box.ariaDescription = `non-list pair element 1 contains ${pair!.fst}`;
           box.ariaLabel = `non-list pair element 1 contains ${pair!.fst}`;
@@ -636,10 +639,29 @@ by GokturkSM
         box.tabIndex = 0;
         box.ariaDescription = `struct element ${thing.toString()} contains ${t.toString()}`
         box.ariaLabel = `struct element ${thing.toString()} contains ${t.toString()}`
+        if(U.isList(t)) {
+          box.ariaDescription = `struct element ${countThings-3} contains list`;
+          box.ariaLabel = `struct element ${countThings-3} contains list`;
+        } else if(U.isPair(t)) {
+          box.ariaDescription = `struct element ${countThings-3} contains another pair`;
+          box.ariaLabel = `struct element ${countThings-3} contains another pair`;
+        }else if(U.isArray(t)) {
+          box.ariaDescription = `struct element ${countThings-3} contains vector`;
+          box.ariaLabel = `struct element ${countThings-3} contains vector`;
+        } else if(U.isStruct(t)) {
+          box.ariaDescription = `struct element ${countThings-3} contains struct`;
+          box.ariaLabel = `struct element ${countThings-3} contains struct`;
+        } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
+          box.ariaDescription = `struct element ${countThings-3} contains empty struct`;
+          box.ariaLabel = `struct element ${countThings-3} contains empty struct`;
+        } else {
+          box.ariaDescription = `struct element ${countThings-3} contains ${t}`;
+          box.ariaLabel = `struct element ${countThings-3} contains ${t}`;
+        }
         if(countThings === numberOfElements) {
           box.style.borderLeft = '6px solid black'
         } else {
-          box.style.marginBottom = '50px'
+          //box.style.marginBottom = '50px'
         }
         box.innerHTML = s
         
@@ -681,8 +703,6 @@ by GokturkSM
         } else if (U.isStruct(t)) {
           HTMLVal = drawStructHTML(t, ancestor+ `:${countThings-3}`, imgID);
           tHeight = structHeight(t) + 50
-          console.log("STRUCTTTTT")
-          console.log(HTMLVal)
         } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) { //leaf node
           const box = document.createElement('div');
           box.id = "empty struct"

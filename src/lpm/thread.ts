@@ -794,7 +794,7 @@ export class Thread {
             } else if (U.isStruct(value)) {
               HTMLVal = D.drawStructHTML(value)
               ariaType = 'struct'
-              HTMLVal.style.marginBottom = '-50px'
+              //HTMLVal.style.marginBottom = '-50px'
               //console.log("STRUCT")
               //console.log(value[0])
               structName = value[0];
