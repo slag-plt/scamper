@@ -1,4 +1,4 @@
-import { ICE, ScamperError } from "../error"
+import { ICE, ReportError, ScamperError } from "../error"
 import { Fiber, MinorStep, StepResult, TraceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../thread"
@@ -94,7 +94,7 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
   }
   // we will always step match to abide by a small work quantum
   // TODO: we need to figure out if we want to keep this, hack fix for now
-  op.currBranchIdx ??= 0;
+  op.currBranchIdx ??= 0
   const currBranch = op.branches.at(op.currBranchIdx++)
   if (!currBranch) {
     throw new ScamperError("Runtime", `Inexhaustive pattern match failure`)
@@ -116,4 +116,14 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
 export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   currFrame.values.pop()
   return TraceStep
+}
+
+export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {
+  if (currFrame.values.length < 1) {
+    throw new ICE(
+      "Fiber.ReptHandler",
+      "Expected to report a value, but none remain?",
+    )
+  }
+  throw new ReportError(currFrame.values.at(-1), op.range)
 }

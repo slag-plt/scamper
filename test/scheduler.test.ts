@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { Scheduler } from "../src/scheduler"
-import { ICE, ScamperError } from "../src/lpm"
+import { ICE, Range, ReportError, ScamperError } from "../src/lpm"
 import { mkTraceOutput } from "../src/lpm/trace"
 import * as U from "../src/lpm/util"
 import {
   MockFiber,
   QUANTUM_WAIT_MS,
   makeNeverCompletingFiber,
+  makeQueryTask,
+  makeReportThrowingFiber,
   makeTask,
   makeTestFiber,
   patchSchedulerYieldForTests,
@@ -297,6 +299,152 @@ describe("Scheduler", () => {
         // and execution should not have continued after the throw
         expect(fiber.stepCallCount).toBe(1)
       })
+    })
+  })
+
+  describe("query / report handling", () => {
+    describe("query scheduling contract", () => {
+      test("query throws when given an already-completed fiber", () => {
+        const sched = new Scheduler()
+        const done = makeTestFiber([U.mkDisp([U.mkLit(1)])])
+        runFiberToCompletion(done)
+        expect(() => {
+          sched.query(makeQueryTask(done))
+        }).toThrow()
+      })
+
+      test("query accepts a fresh (non-done) fiber", () => {
+        const sched = new Scheduler()
+        const live = makeTestFiber([U.mkDisp([U.mkLit(1)])])
+        expect(() => {
+          sched.query(makeQueryTask(live))
+        }).not.toThrow()
+      })
+    })
+
+    test("delivers ReportError to rep with the reported value and removes the fiber", async () => {
+      const sched = new Scheduler()
+      const reportedValue = 42
+      const reportFiber = makeReportThrowingFiber(reportedValue)
+      const sibling = trackFiberSteps(makeNeverCompletingFiber())
+      const queryTask = makeQueryTask(reportFiber)
+
+      sched.query(queryTask)
+      sched.schedule(makeTask(sibling))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(queryTask.rep.errors).toHaveLength(1)
+      const reported = queryTask.rep.errors[0]
+      expect(reported).toBeInstanceOf(ReportError)
+      expect((reported as ReportError).value).toBe(reportedValue)
+      expect(reportFiber.stepCallCount).toBe(1)
+      expect(sibling.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("delivers ScamperError to rep and removes the fiber", async () => {
+      const sched = new Scheduler()
+      const errorFiber = new MockFiber()
+      errorFiber.stepImpl = () => {
+        throw new ScamperError("Runtime", "query boom")
+      }
+      const sibling = trackFiberSteps(makeNeverCompletingFiber())
+      const queryTask = makeQueryTask(errorFiber)
+
+      sched.query(queryTask)
+      sched.schedule(makeTask(sibling))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(queryTask.rep.errors).toHaveLength(1)
+      expect(queryTask.rep.errors[0].message).toContain("query boom")
+      expect(errorFiber.stepCallCount).toBe(1)
+      expect(sibling.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("a QueryTask produces no display output and is removed on completion", async () => {
+      const sched = new Scheduler()
+      const doneFiber = new MockFiber()
+      doneFiber.stepImpl = () => {
+        doneFiber.isDone = () => true
+        return TraceStep
+      }
+      const sibling = trackFiberSteps(makeNeverCompletingFiber())
+      const queryTask = makeQueryTask(doneFiber)
+
+      sched.query(queryTask)
+      sched.schedule(makeTask(sibling))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(queryTask.rep.errors).toEqual([])
+      expect(doneFiber.stepCallCount).toBe(1)
+      expect(sibling.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("ReportError on a DisplayTask surfaces the friendly reported value and advances the statement", async () => {
+      // A `report` reaching a DisplayTask (rather than a QueryTask) is the
+      // non-query path. The user-facing string comes from ReportError's own
+      // message, which is "Reported value: <value>" (see src/lpm/error.ts), so
+      // a literal report shows the value rather than an internal diagnostic.
+      const sched = new Scheduler()
+      const reportedValue = "displayed report"
+      const fiber = makeReportThrowingFiber(reportedValue)
+      const advanceStmt = vi.spyOn(fiber, "advanceStmt")
+      const task = makeTask(fiber)
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toContain(`Reported value: "${reportedValue}"`)
+      expect(advanceStmt).toHaveBeenCalledOnce()
+      expect(task.ch.log).toEqual([])
+    })
+
+    test("the reported value carries the originating source range", async () => {
+      const sched = new Scheduler()
+      const range = Range.of(1, 2, 3, 4, 5, 6)
+      const reportFiber = makeReportThrowingFiber("ranged", range)
+      const queryTask = makeQueryTask(reportFiber)
+
+      sched.query(queryTask)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(queryTask.rep.errors).toHaveLength(1)
+      expect((queryTask.rep.errors[0] as ReportError).range).toBe(range)
+    })
+
+    test("a reporting QueryTask is removed without dropping or duplicating sibling tasks", async () => {
+      // #removeCurrFiber swaps the *last* task into the removed slot then pops.
+      // With the query task at index 0 and two siblings after it, removing the
+      // query relocates the last sibling into slot 0 mid-iteration; both
+      // siblings must keep running (none dropped, none double-counted).
+      const sched = new Scheduler()
+      const reportFiber = makeReportThrowingFiber("sibling check", Range.none)
+      const siblingA = trackFiberSteps(makeNeverCompletingFiber())
+      const siblingB = trackFiberSteps(makeNeverCompletingFiber())
+      const queryTask = makeQueryTask(reportFiber)
+
+      sched.query(queryTask)
+      sched.schedule(makeTask(siblingA))
+      sched.schedule(makeTask(siblingB))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(queryTask.rep.errors).toHaveLength(1)
+      expect((queryTask.rep.errors[0] as ReportError).value).toBe(
+        "sibling check",
+      )
+      expect(reportFiber.stepCallCount).toBe(1)
+      expect(siblingA.stepCallCount).toBeGreaterThan(1)
+      expect(siblingB.stepCallCount).toBeGreaterThan(1)
     })
   })
 

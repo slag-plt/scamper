@@ -24,7 +24,7 @@ describe("runtime errors unwind instead of rethrowing every step", () => {
 
     while (!fiber.isDone()) {
       try {
-        await fiber.step()
+        fiber.step()
       } catch (e) {
         if (e instanceof ScamperError) {
           scamperErrors.push(e)
