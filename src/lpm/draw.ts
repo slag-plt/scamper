@@ -61,8 +61,8 @@ function vectorHeight(vec: L.Vector, index = 0): number {
         box.ariaDescription = `vector index ${indexVal} contains a pair`
         box.ariaLabel = `vector index ${indexVal} contains a pair`
       } else if(U.isArray(e)) {
-        box.ariaDescription = `vector index ${indexVal} contains a vector`
-        box.ariaLabel = `vector index ${indexVal} contains a vector`
+        box.ariaDescription = `vector index ${indexVal} contains another vector`
+        box.ariaLabel = `vector index ${indexVal} contains another vector`
       } else {
         box.ariaDescription = `vector index ${indexVal} contains object`//${e.toString()}`
         box.ariaLabel = `vector index ${indexVal} contains object`//${e.toString()}`
@@ -645,15 +645,15 @@ by GokturkSM
       let s = thing.toString() + "      "
   
       const box = document.createElement('div');
-        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3}`
+        box.id = `${imgID}:` + ancestor + `:` + `${countThings-3} val`
         box.className = 'struct-box';
         box.tabIndex = 0;
         if(U.isList(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains list`;
           box.ariaLabel = `struct element ${countThings-3} contains list`;
         } else if(U.isPair(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains another pair`;
-          box.ariaLabel = `struct element ${countThings-3} contains another pair`;
+          box.ariaDescription = `struct element ${countThings-3} contains pair`;
+          box.ariaLabel = `struct element ${countThings-3} contains pair`;
         }else if(U.isArray(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains vector`;
           box.ariaLabel = `struct element ${countThings-3} contains vector`;
