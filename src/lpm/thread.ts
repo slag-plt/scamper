@@ -54,13 +54,7 @@ export class Frame {
   }
 
   popInstr(): L.Ops {
-    const op = this.ops.pop()
-    if (!op)
-      throw new ICE(
-        "Frame.popInstr",
-        `Attempted to pop operation off frame ${this.name} when none remain`,
-      )
-    return op
+    return this.ops.pop()!
   }
 }
 

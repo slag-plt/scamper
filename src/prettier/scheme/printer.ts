@@ -1,10 +1,8 @@
-import { AstPath, doc, Doc, Printer } from "prettier"
+import { doc, Printer, AstPath, Doc } from "prettier"
 import * as A from "../../scheme/ast"
 import TextRenderer from "../../lpm/renderers/text"
 
-const {
-  builders: { group, indent, join, line, hardline },
-} = doc
+const { builders: { group, indent, join, line, hardline } } = doc
 
 // ---- Type predicates -------------------------------------------------------
 
@@ -34,6 +32,7 @@ export const SchemePrinter: Printer = {
     if (!isSchemeNode(node)) return ""
 
     switch (node.tag) {
+
       ///// Program ///////////////////////////////////////////////////////////////
 
       case "prog":
@@ -46,17 +45,16 @@ export const SchemePrinter: Printer = {
 
       case "define":
         return group([
-          "(define ",
-          node.name,
+          "(define ", node.name,
           indent([line, path.call(print, "value")]),
-          ")",
+          ")"
         ])
 
       case "display":
         return group([
           "(display",
           indent([line, path.call(print, "value")]),
-          ")",
+          ")"
         ])
 
       case "stmtexp":
@@ -81,7 +79,7 @@ export const SchemePrinter: Printer = {
           "(",
           path.call(print, "head"),
           indent([line, join(line, path.map(print, "args"))]),
-          ")",
+          ")"
         ])
 
       case "lam":
@@ -90,26 +88,20 @@ export const SchemePrinter: Printer = {
           join(" ", node.params),
           ")",
           indent([line, path.call(print, "body")]),
-          ")",
+          ")"
         ])
 
       case "let": {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node
           if (!isLetBinding(raw)) return ""
-          return group([
-            "[",
-            raw.name,
-            " ",
-            bindingPath.call(print, "value"),
-            "]",
-          ])
+          return group(["[", raw.name, " ", bindingPath.call(print, "value"), "]"])
         }, "bindings")
         return group([
           "(let",
           indent([line, group(["(", join(line, bindingDocs), ")"])]),
           indent([line, path.call(print, "body")]),
-          ")",
+          ")"
         ])
       }
 
@@ -117,24 +109,19 @@ export const SchemePrinter: Printer = {
         return group([
           "(begin",
           indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          ")"
         ])
 
       case "if":
         return group([
           "(if ",
           path.call(print, "guard"),
-          indent([
-            line,
-            path.call(print, "ifB"),
-            line,
-            path.call(print, "elseB"),
-          ]),
-          ")",
+          indent([line, path.call(print, "ifB"), line, path.call(print, "elseB")]),
+          ")"
         ])
 
       case "match": {
-        const branchDocs: Doc[] = path.map((branchPath: AstPath) => {
+        const branchDocs: Doc[] = path.map((branchPath: AstPath<any>) => {
           const raw: unknown = branchPath.node
           if (!isMatchBranch(raw)) return ""
           return group([
@@ -142,14 +129,14 @@ export const SchemePrinter: Printer = {
             branchPath.call(print, "pat"),
             " ",
             branchPath.call(print, "body"),
-            "]",
+            "]"
           ])
         }, "branches")
         return group([
           "(match ",
           path.call(print, "scrutinee"),
           indent([line, join(line, branchDocs)]),
-          ")",
+          ")"
         ])
       }
 
@@ -157,22 +144,16 @@ export const SchemePrinter: Printer = {
         return `'${TextRenderer.render(node.value)}`
 
       case "let*": {
-        const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
+        const bindingDocs: Doc[] = path.map((bindingPath: AstPath<any>) => {
           const raw: unknown = bindingPath.node
           if (!isLetBinding(raw)) return ""
-          return group([
-            "[",
-            raw.name,
-            " ",
-            bindingPath.call(print, "value"),
-            "]",
-          ])
+          return group(["[", raw.name, " ", bindingPath.call(print, "value"), "]"])
         }, "bindings")
         return group([
           "(let*",
           indent([line, group(["(", join(line, bindingDocs), ")"])]),
           indent([line, path.call(print, "body")]),
-          ")",
+          ")"
         ])
       }
 
@@ -180,14 +161,14 @@ export const SchemePrinter: Printer = {
         return group([
           "(and",
           indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          ")"
         ])
 
       case "or":
         return group([
           "(or",
           indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          ")"
         ])
 
       case "cond": {
@@ -199,21 +180,22 @@ export const SchemePrinter: Printer = {
             branchPath.call(print, "test"),
             " ",
             branchPath.call(print, "body"),
-            "]",
+            "]"
           ])
         }, "branches")
-        return group(["(cond", indent([line, join(line, branchDocs)]), ")"])
+        return group([
+          "(cond",
+          indent([line, join(line, branchDocs)]),
+          ")"
+        ])
       }
 
       case "section":
         return group([
           "(section",
           indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          ")"
         ])
-
-      case "report":
-        return group(["(report", indent([line, path.call(print, "exp")]), ")"])
 
       ///// Patterns //////////////////////////////////////////////////////////////
 
@@ -234,7 +216,7 @@ export const SchemePrinter: Printer = {
           "(",
           node.name,
           indent([line, join(line, path.map(print, "args"))]),
-          ")",
+          ")"
         ])
     }
   },

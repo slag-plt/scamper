@@ -1,6 +1,4 @@
 import { Range } from "./range.js"
-import { Value } from "./lang"
-import { toString } from "./util"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
 type Phase = "Parser" | "Runtime"
@@ -27,7 +25,7 @@ export class ScamperError extends Error {
   }
 
   toString(): string {
-    const detail = `${this.modName ?? ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
+    const detail = `${this.modName ? this.modName : ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
     const src = this.source ? `(${this.source}) ` : ""
     return `${this.phase} error${detail.length > 0 ? " [" + detail + "]" : ""}: ${src}${this.message}`
   }
@@ -43,25 +41,15 @@ export class ICE extends Error {
   }
 
   toString(): string {
-    return `ICE (${this.funcName}): ${this.message}\n${this.stack ?? ""}`
+    return `ICE (${this.funcName}): ${this.message}\n${this.stack}`
   }
 }
 
-// TODO: likely deprecated after fiber change
 export class SubthreadErrors extends Error {
   errors: ScamperError[]
   constructor(errors: ScamperError[]) {
     const msg = errors.map((e) => e.toString()).join(" ")
     super(msg)
     this.errors = [...errors]
-  }
-}
-
-export class ReportError extends ScamperError {
-  constructor(
-    public value: Value,
-    public range: Range,
-  ) {
-    super("Runtime", `Reported value: ${toString(value)}`)
   }
 }

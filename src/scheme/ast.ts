@@ -1,5 +1,4 @@
 import * as L from "../lpm"
-import { ICE } from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
 import HtmlRenderer from "../lpm/renderers/html.js"
 import VueRenderer from "../lpm/renderers/vue"
@@ -149,10 +148,6 @@ export interface Section extends Tagged, Node {
   tag: "section"
   exps: Exp[]
 }
-export interface Report extends Tagged, Node {
-  tag: "report"
-  exp: Exp
-}
 
 export type Exp =
   | Lit
@@ -169,7 +164,6 @@ export type Exp =
   | Or
   | Cond
   | Section
-  | Report
 
 ///// Statements /////
 
@@ -314,11 +308,6 @@ export const mkSection = (
   exps: Exp[],
   range: L.Range = L.Range.none,
 ): Section => ({ tag: "section", exps, range })
-export const mkReport = (exp: Exp, range: L.Range = L.Range.none): Report => ({
-  tag: "report",
-  exp,
-  range,
-})
 
 // Statements (stmt)
 export const mkImport = (
@@ -453,8 +442,6 @@ export function expToString(e: Exp): string {
       return `(cond ${e.branches.map(({ test, body }) => `[${expToString(test)} ${expToString(body)}]`).join(" ")})`
     case "section":
       return `(section ${e.exps.map(expToString).join(" ")})`
-    case "report":
-      return `(report ${expToString(e.exp)})`
   }
 }
 
@@ -584,7 +571,6 @@ export function patToHTML(pat: Pat): HTMLElement {
   }
 }
 
-// TODO: deprecated
 export function expToHTML(e: Exp): HTMLElement {
   switch (e.tag) {
     case "lit":
@@ -632,8 +618,6 @@ export function expToHTML(e: Exp): HTMLElement {
       )
     case "section":
       return mkCodeParens("section", ...e.exps)
-    default:
-      throw new ICE("expToHTML", "expToHTML is deprecated!")
   }
 }
 
