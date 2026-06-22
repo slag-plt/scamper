@@ -1,12 +1,7 @@
 import { vi } from "vitest"
-import {
-  DisplayStep,
-  Fiber,
-  StepResult,
-  TraceStep,
-} from "../src/lpm/fiber"
+import { DisplayStep, Fiber, StepResult, TraceStep } from "../src/lpm/fiber"
 import { LoggingChannel, Prog, Stmt } from "../src/lpm"
-import { SchedulerTask } from "../src/scheduler"
+import { DisplayTask, SchedulerTask } from "../src/scheduler"
 import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
 
@@ -141,7 +136,7 @@ export class MockFiber extends Fiber {
   }
 }
 
-export interface TestTask extends SchedulerTask {
+export interface TestTask extends DisplayTask {
   ch: LoggingChannel
 }
 

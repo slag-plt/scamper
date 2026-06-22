@@ -26,7 +26,7 @@ export class ScamperError extends Error {
   }
 
   toString(): string {
-    const detail = `${this.modName ? this.modName : ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
+    const detail = `${this.modName ?? ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
     const src = this.source ? `(${this.source}) ` : ""
     return `${this.phase} error${detail.length > 0 ? " [" + detail + "]" : ""}: ${src}${this.message}`
   }
@@ -42,7 +42,7 @@ export class ICE extends Error {
   }
 
   toString(): string {
-    return `ICE (${this.funcName}): ${this.message}\n${this.stack}`
+    return `ICE (${this.funcName}): ${this.message}\n${this.stack ?? ""}`
   }
 }
 
@@ -56,11 +56,11 @@ export class SubthreadErrors extends Error {
   }
 }
 
-export class ReportError extends Error {
+export class ReportError extends ScamperError {
   constructor(
     public value: Value,
     public range: Range,
   ) {
-    super("Fiber hit a report operation!")
+    super("Runtime", "Fiber hit a report operation!")
   }
 }
