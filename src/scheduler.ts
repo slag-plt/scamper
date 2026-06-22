@@ -24,7 +24,7 @@ export interface DisplayTask extends BaseSchedulerTask {
   err: ErrorChannel
   isTracing: boolean
 }
-interface QueryTask extends BaseSchedulerTask {
+export interface QueryTask extends BaseSchedulerTask {
   rep: ErrorChannel
 }
 export type SchedulerTask = DisplayTask | QueryTask

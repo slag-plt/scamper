@@ -1,5 +1,6 @@
 import { Range } from "./range.js"
 import { Value } from "./lang"
+import { toString } from "./util"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
 type Phase = "Parser" | "Runtime"
@@ -61,6 +62,6 @@ export class ReportError extends ScamperError {
     public value: Value,
     public range: Range,
   ) {
-    super("Runtime", "Fiber hit a report operation!")
+    super("Runtime", `Reported value: ${toString(value)}`)
   }
 }

@@ -1,11 +1,12 @@
 import { vi } from "vitest"
 import { DisplayStep, Fiber, StepResult, TraceStep } from "../src/lpm/fiber"
-import { LoggingChannel, Prog, Stmt } from "../src/lpm"
-import { DisplayTask, SchedulerTask } from "../src/scheduler"
+import { LoggingChannel, Prog, Range, ReportError, Stmt, Value } from "../src/lpm"
+import { DisplayTask, QueryTask, SchedulerTask } from "../src/scheduler"
+import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
 import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
 
-export type { SchedulerTask }
+export type { QueryTask, SchedulerTask }
 
 const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 
@@ -152,6 +153,27 @@ export function makeTask(
     isTracing,
     ch,
   }
+}
+
+export interface TestQueryTask extends QueryTask {
+  rep: SimpleErrorChannel
+}
+
+export function makeQueryTask(fiber: MockFiber | Fiber): TestQueryTask {
+  const rep = new SimpleErrorChannel()
+  return { fiber, rep }
+}
+
+/** MockFiber that throws ReportError on its first step. */
+export function makeReportThrowingFiber(
+  value: Value,
+  range: Range = Range.none,
+): MockFiber {
+  const fiber = new MockFiber()
+  fiber.stepImpl = () => {
+    throw new ReportError(value, range)
+  }
+  return fiber
 }
 
 /**
