@@ -1,3 +1,4 @@
+import { Fiber } from './fiber.js'
 import { Thread } from './thread.js'
 
 /**
@@ -9,6 +10,13 @@ import { Thread } from './thread.js'
 export type Raiser<Exp> = {
   /** Raises the given thread back to an expression */
   raise: (thread: Thread) => Exp
+  /** Compares two expressions for equality */
+  equals: (a: Exp, b: Exp) => boolean
+}
+
+export interface FiberRaiser<Exp> {
+  /** Raises the given thread back to an expression */
+  raise: (fiber: Fiber) => Exp
   /** Compares two expressions for equality */
   equals: (a: Exp, b: Exp) => boolean
 }

@@ -1,0 +1,52 @@
+import { DisplayStep, Fiber, StepResult, TraceStep } from "../fiber"
+import { Stmt } from "../lang"
+
+type StatementHandler<T extends Stmt["tag"]> = (
+  stmt: Extract<Stmt, { tag: T }>,
+  fiber: Fiber,
+) => StepResult
+
+export const ImportHandler: StatementHandler<"import"> = (stmt, fiber) => {
+  const result = fiber.loadLib(stmt.name)
+  if (result === TraceStep) {
+    fiber.advanceStmt()
+  }
+  return result
+}
+export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
+  if (!fiber.isProcessingBlk) {
+    fiber.beginProcessingBlk(stmt.expr)
+    return TraceStep
+  }
+  if (fiber.hasFramesRemaining()) {
+    return fiber.stepFrame()
+  }
+  fiber.topLevelEnv.set(stmt.name, fiber.lastResult)
+  fiber.advanceStmt()
+  return TraceStep
+}
+export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
+  if (!fiber.isProcessingBlk) {
+    fiber.beginProcessingBlk(stmt.expr)
+    return TraceStep
+  }
+  if (fiber.hasFramesRemaining()) {
+    return fiber.stepFrame()
+  }
+  // execute should know that lastResult is the value to be printed, and print it to the output channel
+  // so, do nothing
+  fiber.advanceStmt()
+  return DisplayStep
+}
+export const StmtExpHandler: StatementHandler<"stmtexp"> = (stmt, fiber) => {
+  if (!fiber.isProcessingBlk) {
+    fiber.beginProcessingBlk(stmt.expr)
+    return TraceStep
+  }
+  if (fiber.hasFramesRemaining()) {
+    return fiber.stepFrame()
+  }
+  // do nothing with the result, just advance to the next statement
+  fiber.advanceStmt()
+  return TraceStep
+}

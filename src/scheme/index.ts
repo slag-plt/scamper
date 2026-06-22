@@ -1,24 +1,30 @@
 import * as L from "../lpm"
-import { Prelude, Runtime, builtinLibs } from "../lib"
+import { Loc, ScamperError } from "../lpm"
+import { builtinLibs, Prelude, Runtime } from "../lib"
 import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
 import { scopeCheckProgram } from "./scope.js"
 import { sugarExpr } from "./sugarer.js"
-import { raiseThread } from "./raise.js"
-import { Raiser } from "../lpm/raiser.js"
+import { raiseFiber, raiseThread } from "./raise.js"
+import { FiberRaiser, Raiser } from "../lpm/raiser.js"
 import { read } from "./reader.js"
 import { parseProgram } from "./parser.js"
 import { Exp, Prog } from "./ast.js"
-import { ScamperError } from "../lpm"
+import { getQueriedAST } from "./query"
 
 export const raiser: Raiser<Exp> = {
   raise: (t) => sugarExpr(raiseThread(t)),
+  equals: L.equals,
+}
+export const fiberRaiser: FiberRaiser<Exp> = {
+  raise: (fiber) => sugarExpr(raiseFiber(fiber)),
   equals: L.equals,
 }
 
 export function tokenizeAndParse(
   err: L.ErrorChannel,
   src: string,
+  queryLoc?: Loc,
 ): Prog | undefined {
   let sexps
   try {
@@ -30,6 +36,21 @@ export function tokenizeAndParse(
     }
     throw e
   }
+
+  if (queryLoc) {
+    // given cursor position, find the sexp to wrap
+    // and wrap sexp in new report expression
+    try {
+      sexps = getQueriedAST(sexps, queryLoc)
+    } catch (e) {
+      if (e instanceof ScamperError) {
+        err.report(e)
+        return undefined
+      }
+      throw e
+    }
+  }
+
   const errors: L.ScamperError[] = []
   const program = parseProgram(errors, sexps)
   if (errors.length > 0) {
@@ -41,8 +62,12 @@ export function tokenizeAndParse(
   return program
 }
 
-export function compile(err: L.ErrorChannel, src: string): L.Prog | undefined {
-  let program = tokenizeAndParse(err, src)
+export function compile(
+  err: L.ErrorChannel,
+  src: string,
+  queryLoc?: Loc,
+): L.Prog | undefined {
+  let program = tokenizeAndParse(err, src, queryLoc)
   if (program === undefined) {
     return undefined
   }

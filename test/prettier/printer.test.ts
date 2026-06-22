@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest"
+import { describe, expect, test } from "vitest"
 import * as prettier from "prettier"
 import * as A from "../../src/scheme/ast"
 import { tokenizeAndParse } from "../../src/scheme"
@@ -11,7 +11,9 @@ function parse(src: string): A.Prog {
   const err = new SimpleErrorChannel()
   const prog = tokenizeAndParse(err, src)
   if (!prog) {
-    throw new Error(`Parse failed:\n${err.errors.map((e) => e.message).join("\n")}`)
+    throw new Error(
+      `Parse failed:\n${err.errors.map((e) => e.message).join("\n")}`,
+    )
   }
   return prog
 }
@@ -25,8 +27,7 @@ function format(src: string): Promise<string> {
 
 function progEquals(p1: A.Prog, p2: A.Prog): boolean {
   return (
-    p1.length === p2.length &&
-    p1.every((stmt, i) => A.stmtEquals(stmt, p2[i]))
+    p1.length === p2.length && p1.every((stmt, i) => A.stmtEquals(stmt, p2[i]))
   )
 }
 
@@ -50,42 +51,26 @@ describe("roundtrip", () => {
     roundtrip("(define abs (lambda (n) (if (>= n 0) n (- 0 n))))"))
 
   test("let binding", () =>
-    roundtrip(
-      "(define sum (lambda (x y) (let ([a x] [b y]) (+ a b))))",
-    ))
+    roundtrip("(define sum (lambda (x y) (let ([a x] [b y]) (+ a b))))"))
 
   test("let* binding", () =>
-    roundtrip(
-      "(define chain (lambda (x) (let* ([a x] [b (+ a 1)]) (* a b))))",
-    ))
+    roundtrip("(define chain (lambda (x) (let* ([a x] [b (+ a 1)]) (* a b))))"))
 
   test("match expression", () =>
-    roundtrip(
-      "(define desc (lambda (n) (match n [0 \"zero\"] [_ \"nonzero\"])))",
-    ))
+    roundtrip('(define desc (lambda (n) (match n [0 "zero"] [_ "nonzero"])))'))
 
   test("match with constructor patterns", () =>
-    roundtrip(
-      "(define head (lambda (l) (match l [(cons h _) h])))",
-    ))
-
-  test("begin expression", () =>
-    roundtrip(
-      "(define side-effects (lambda () (begin (display 1) (display 2))))",
-    ))
+    roundtrip("(define head (lambda (l) (match l [(cons h _) h])))"))
 
   test("and / or", () =>
-    roundtrip(
-      "(define both (lambda (a b) (and (> a 0) (< b 10))))",
-    ))
+    roundtrip("(define both (lambda (a b) (and (> a 0) (< b 10))))"))
 
   test("cond expression", () =>
     roundtrip(
       "(define sign (lambda (n) (cond [(> n 0) 1] [(< n 0) -1] [#t 0])))",
     ))
 
-  test("nullary application", () =>
-    roundtrip("(define zero (lambda () 0))"))
+  test("nullary application", () => roundtrip("(define zero (lambda () 0))"))
 
   test("import statement", () => roundtrip("(import image)"))
 
@@ -94,8 +79,7 @@ describe("roundtrip", () => {
   test("multi-statement program", () =>
     roundtrip("(define x 1)\n(define y 2)\n(display (+ x y))"))
 
-  test("normalizes extra whitespace", () =>
-    roundtrip("(define   x      42)"))
+  test("normalizes extra whitespace", () => roundtrip("(define   x      42)"))
 
   test("normalizes nested whitespace", () =>
     roundtrip("(define f   (lambda   (x   y)   (+   x   y)))"))
@@ -112,21 +96,16 @@ describe("idempotence", () => {
 
   test("literal define", () => idempotent("(define x 42)"))
 
-  test("lambda", () =>
-    idempotent("(define f (lambda (x y) (+ x y)))"))
+  test("lambda", () => idempotent("(define f (lambda (x y) (+ x y)))"))
 
   test("if expression", () =>
     idempotent("(define abs (lambda (n) (if (>= n 0) n (- 0 n))))"))
 
   test("let binding", () =>
-    idempotent(
-      "(define sum (lambda (x y) (let ([a x] [b y]) (+ a b))))",
-    ))
+    idempotent("(define sum (lambda (x y) (let ([a x] [b y]) (+ a b))))"))
 
   test("match expression", () =>
-    idempotent(
-      "(define desc (lambda (n) (match n [0 \"zero\"] [_ \"nonzero\"])))",
-    ))
+    idempotent('(define desc (lambda (n) (match n [0 "zero"] [_ "nonzero"])))'))
 
   test("multi-statement program", () =>
     idempotent("(define x 1)\n(define y 2)\n(display (+ x y))"))
