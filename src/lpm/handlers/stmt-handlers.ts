@@ -7,7 +7,7 @@ type StatementHandler<T extends Stmt["tag"]> = (
 ) => StepResult
 
 export const ImportHandler: StatementHandler<"import"> = (stmt, fiber) => {
-  const result = fiber.loadLib(stmt.name)
+  const result = fiber.loadModule(stmt.name)
   if (result === TraceStep) {
     fiber.advanceStmt()
   }

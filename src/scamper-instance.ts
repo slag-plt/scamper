@@ -4,6 +4,7 @@ import { ErrorChannel, Module, OutputChannel, ScamperError } from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler } from "./scheduler"
 import { compile } from "./scheme"
+import OPFSFileSystem from "./web/fs"
 
 interface ExecutionConfig {
   src: string
@@ -16,37 +17,43 @@ export class ScamperInstance {
   // singleton structure
   static #instance?: ScamperInstance
   // we will lazy load all libraries
-  #libs: Map<string, Module>
+  #moduleCache: Map<string, Module>
   #scheduler: Scheduler
+  fs: OPFSFileSystem | undefined
 
   static getInstance(): ScamperInstance {
     ScamperInstance.#instance ??= new ScamperInstance()
     return ScamperInstance.#instance
   }
   private constructor() {
-    this.#libs = new Map()
+    this.#moduleCache = new Map()
     this.#scheduler = new Scheduler()
+    this.fs = undefined
+    OPFSFileSystem.create().then(
+      (result) => this.fs = result,
+      (_: unknown) => undefined
+    )
   }
 
   public tryGetLib(name: string): Module | undefined {
-    const cached = this.#libs.get(name)
+    const cached = this.#moduleCache.get(name)
     if (cached) {
       return cached
     }
 
     // TODO: should support user-defined libraries in the future, but for now we will only support built-in libraries
     const lib = builtinLibs.get(name)
-    if (!lib) {
+    if (lib) {
+      // start loading the library in the background
+      void (async () => {
+        await lib.initializer?.()
+        // memoize the library so that we don't have to initialize it again
+        this.#moduleCache.set(name, lib)
+      })()
+      return undefined
+    } else {
       throw new ScamperError("Runtime", `Library ${name} not found`)
     }
-
-    // start loading the library in the background
-    void (async () => {
-      await lib.initializer?.()
-      // memoize the library so that we don't have to initialize it again
-      this.#libs.set(name, lib)
-    })()
-    return undefined
   }
 
   public execute({ src, out, err, isTracing }: ExecutionConfig): void {

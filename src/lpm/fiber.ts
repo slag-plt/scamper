@@ -18,6 +18,7 @@ import {
   VarHandler,
 } from "./handlers/op-handlers"
 import { ErrorChannel, OutputChannel } from "./output"
+import builtinLibs from "../lib"
 
 export const TraceStep = "Trace"
 export const MinorStep = "Minor"
@@ -205,16 +206,23 @@ export class Fiber {
     return isMajorStep
   }
 
-  /* Library importing helper functions */
-  loadLib(libName: string): StepResult {
-    const lib = this.#scamperInstance.tryGetLib(libName)
-    if (!lib) {
-      // we didn't throw in tryGetLib, so we know that the library is just loading and not that it doesn't exist
-      return YieldStep
+  /* Moduleimporting helper functions */
+  loadModule(libName: string): StepResult {
+    if (builtinLibs.has(libName)) {
+      // For now, load builtin libs like before (but we should refactor this pathway)
+      const lib = this.#scamperInstance.tryGetLib(libName)
+      if (!lib) {
+        // we didn't throw in tryGetLib, so we know that the library is just loading and not that it doesn't exist
+        return YieldStep
+      }
+      for (const [name, value] of lib.lib) {
+        this.topLevelEnv.set(name, value)
+      }
+      return TraceStep
+    } else {
+      // Otherwise, assume libname is a file to open
+      // TODO: complete me!
+      return TraceStep
     }
-    for (const [name, value] of lib.lib) {
-      this.topLevelEnv.set(name, value)
-    }
-    return TraceStep
   }
 }
