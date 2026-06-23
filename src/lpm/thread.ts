@@ -788,14 +788,13 @@ export class Thread {
             let miniDiv = document.createElement('div')
             miniDiv.textContent = id + ' → '
             miniDiv.style.whiteSpace = 'nowrap'
-            //make more space in between entries
-            miniDiv.style.marginBottom = '16px'
             
             // make div to be drawn later
             let div = document.createElement('div')
               div.style.display = 'flex'
               div.ariaLabel = id + " points to " + ariaType
               div.ariaDescription = id + " points to " + ariaType
+              div.style.marginBottom = '16px' //make more space in between entries
             div.appendChild(miniDiv)
             div.append(HTMLVal)
             this.jumpToList.push(HTMLVal)
