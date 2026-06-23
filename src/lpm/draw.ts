@@ -318,15 +318,30 @@ function vectorHeight(vec: L.Vector, index = 0): number {
           })
           if(j === 0) {
             box.id = `${imgID}:${ancestor}:${i} val`
-            if(U.isList(list!.head)) {
+            if(U.isNull(list!.head)){
+              box.ariaDescription = `list pair ${i}, first element contains null`;
+              box.ariaLabel = `list pair ${i}, first element contains null`;
+            } else if(U.isList(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains another list`;
               box.ariaLabel = `list pair ${i}, first element contains another list`;
             } else if(U.isPair(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains a pair`;
               box.ariaLabel = `list pair ${i}, first element contains a pair`;
-            }else if(U.isArray(list!.head)) {
+            } else if(U.isArray(list!.head)) {
               box.ariaDescription = `list pair ${i}, first element contains a vector`;
               box.ariaLabel = `list pair ${i}, first element contains a vector`;
+            } else if(U.isString(list!.head)){
+              box.ariaDescription = `list pair ${i}, first element contains a string ${list!.head.toString()}`
+              box.ariaLabel = `list pair ${i}, first element contains a string ${list!.head.toString()}`
+            } else if(U.isStruct(list!.head)){
+              box.ariaDescription = `list pair ${i}, first element contains a struct` //
+              box.ariaLabel = `list pair ${i}, first element contains a struct` //
+            } else if(U.isVoid(list!.head)){
+              box.ariaDescription = `list pair ${i}, first element contains a void` //
+              box.ariaLabel = `list pair ${i}, first element contains a void` //
+            } else if (list!.head.toString().includes("L.mkStruct(t, fieldNames, args);")){
+              box.ariaDescription = `list pair ${i}, first element contains an empty struct` //
+              box.ariaLabel = `list pair ${i}, first element contains an empty struct` //
             } else {
               box.ariaDescription = `list pair ${i}, first element contains ${list!.head}`;
               box.ariaLabel = `list pair ${i}, first element contains ${list!.head}`;
