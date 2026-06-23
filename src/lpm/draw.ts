@@ -54,18 +54,33 @@ function vectorHeight(vec: L.Vector, index = 0): number {
       box.addEventListener('keydown', (e) => {
         keyHandler(e.key, box, 'vector');
       })
-      if(U.isList(e)) {
+      if(U.isNull(e)) {
+          box.ariaDescription = `vector index ${indexVal} contains null`;
+          box.ariaLabel = `vector index ${indexVal} contains null`;
+      } else if(U.isList(e)) {
         box.ariaDescription = `vector index ${indexVal} contains a list`
         box.ariaLabel = `vector index ${indexVal} contains a list`
-      }if(U.isPair(e)) {
+      } else if(U.isPair(e)) {
         box.ariaDescription = `vector index ${indexVal} contains a pair`
         box.ariaLabel = `vector index ${indexVal} contains a pair`
       } else if(U.isArray(e)) {
         box.ariaDescription = `vector index ${indexVal} contains another vector`
         box.ariaLabel = `vector index ${indexVal} contains another vector`
+      } else if(U.isString(e)){
+        box.ariaDescription = `vector index ${indexVal} contains string ${e.toString()}`
+        box.ariaLabel = `vector index ${indexVal} contains string ${e.toString()}`
+      } else if(U.isStruct(e)){
+        box.ariaDescription = `vector index ${indexVal} contains struct` //
+        box.ariaLabel = `vector index ${indexVal} contains struct` //
+      } else if(U.isVoid(e)){
+        box.ariaDescription = `vector index ${indexVal} contains void` //
+        box.ariaLabel = `vector index ${indexVal} contains void` //
+      } else if (e.toString().includes("L.mkStruct(t, fieldNames, args);")){
+        box.ariaDescription = `vector index ${indexVal} contains empty struct` //
+        box.ariaLabel = `vector index ${indexVal} contains empty struct` //
       } else {
-        box.ariaDescription = `vector index ${indexVal} contains object`//${e.toString()}`
-        box.ariaLabel = `vector index ${indexVal} contains object`//${e.toString()}`
+        box.ariaDescription = `vector index ${indexVal} contains ${e}`;
+        box.ariaLabel = `vector index ${indexVal} contains ${e}`;
       }
       col.appendChild(box);
   
@@ -477,7 +492,10 @@ by GokturkSM
         keyHandler(e.key, box, 'vector');
       })
       if(k > 0) {
-        if(U.isList(pair!.snd)) {
+        if(U.isNull(pair!.snd)) {
+          box.ariaDescription = `non-list pair element 2 contains null`;
+          box.ariaLabel = `non-list pair element 2 contains null`;
+        } else if(U.isList(pair!.snd)) {
           box.ariaDescription = `non-list pair element 2 contains list`;
           box.ariaLabel = `non-list pair element 2 contains list`;
         } else if(U.isPair(pair!.snd)) {
@@ -486,9 +504,18 @@ by GokturkSM
         } else if(U.isArray(pair!.snd)) {
           box.ariaDescription = `non-list pair element 2 contains vector`;
           box.ariaLabel = `non-list pair element 2 contains vector`;
-        } else if(U.isNull(pair!.snd)) {
-          box.ariaDescription = `non-list pair element 2 contains null`;
-          box.ariaLabel = `non-list pair element 2 contains null`;
+        } else if(U.isString(pair!.snd)){
+          box.ariaDescription = `non-list pair element 2 contains string ${pair!.snd.toString()}`;
+          box.ariaLabel = `non-list pair element 2 contains string ${pair!.snd.toString()}`;
+        } else if(U.isStruct(pair!.snd)){
+          box.ariaDescription = `non-list pair element 2 contains struct`;
+          box.ariaLabel = `non-list pair element 2 contains struct`;
+        } else if(U.isVoid(pair!.snd)){
+          box.ariaDescription = `non-list pair element 2 contains void`;
+          box.ariaLabel = `non-list pair element 2 contains void`;
+        } else if(pair!.snd.toString().includes("L.mkStruct(t, fieldNames, args);")){
+          box.ariaDescription = `non-list pair element 2 contains empty struct`;
+          box.ariaLabel = `non-list pair element 2 contains empty struct`;
         } else {
           box.ariaDescription = `non-list pair element 2 contains ${pair!.snd}`;
           box.ariaLabel = `non-list pair element 2 contains ${pair!.snd}`;
@@ -497,21 +524,30 @@ by GokturkSM
         // box.ariaDescription = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
         // box.ariaLabel = `non-list pair element 2, second element contains ${k === 0? pair.fst : pair.snd}`
       } else {
-        if(U.isList(pair!.fst)) {
+        if(U.isNull(pair!.fst)) {
+          box.ariaDescription = `non-list pair element 1 contains null`;
+          box.ariaLabel = `non-list pair element 1 contains null`;
+        } else if(U.isList(pair!.fst)) {
           box.ariaDescription = `non-list pair element 1 contains list`;
           box.ariaLabel = `non-list pair element 1 contains list`;
         } else if(U.isPair(pair!.fst)) {
           box.ariaDescription = `non-list pair element 1 contains another pair`;
           box.ariaLabel = `non-list pair element 1 contains another pair`;
-        }else if(U.isArray(pair!.fst)) {
+        } else if(U.isArray(pair!.fst)) {
           box.ariaDescription = `non-list pair element 1 contains vector`;
           box.ariaLabel = `non-list pair element 1 contains vector`;
-        } else if(U.isStruct(pair!.fst)) {
+        } else if(U.isString(pair!.fst)){
+          box.ariaDescription = `non-list pair element 1 contains string ${pair!.fst.toString()}`;
+          box.ariaLabel = `non-list pair element 1 contains string ${pair!.fst.toString()}`;
+        } else if(U.isStruct(pair!.fst)){
           box.ariaDescription = `non-list pair element 1 contains struct`;
           box.ariaLabel = `non-list pair element 1 contains struct`;
-        } else if(U.isNull(pair!.fst)) {
-          box.ariaDescription = `non-list pair element 1 contains null`;
-          box.ariaLabel = `non-list pair element 1 contains null`;
+        } else if(U.isVoid(pair!.fst)){
+          box.ariaDescription = `non-list pair element 1 contains void`;
+          box.ariaLabel = `non-list pair element 1 contains void`;
+        } else if(pair!.fst.toString().includes("L.mkStruct(t, fieldNames, args);")){
+          box.ariaDescription = `non-list pair element 1 contains empty struct`;
+          box.ariaLabel = `non-list pair element 1 contains empty struct`;
         } else {
           box.ariaDescription = `non-list pair element 1 contains ${pair!.fst}`;
           box.ariaLabel = `non-list pair element 1 contains ${pair!.fst}`;
@@ -648,7 +684,10 @@ by GokturkSM
         box.id = `${imgID}:` + ancestor + `:` + `${countThings-3} val`
         box.className = 'struct-box';
         box.tabIndex = 0;
-        if(U.isList(t)) {
+        if(U.isNull(t)) {
+          box.ariaDescription = `struct element ${countThings-3} contains null`;
+          box.ariaLabel = `struct element ${countThings-3} contains null`;
+        } else if(U.isList(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains list`;
           box.ariaLabel = `struct element ${countThings-3} contains list`;
         } else if(U.isPair(t)) {
@@ -657,10 +696,16 @@ by GokturkSM
         }else if(U.isArray(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains vector`;
           box.ariaLabel = `struct element ${countThings-3} contains vector`;
+        } else if(U.isString(t)){
+          box.ariaDescription = `struct element ${countThings-3} contains string ${t.toString()}`
+          box.ariaLabel = `struct element ${countThings-3} contains string ${t.toString()}`
         } else if(U.isStruct(t)) {
           box.ariaDescription = `struct element ${countThings-3} contains struct`;
           box.ariaLabel = `struct element ${countThings-3} contains struct`;
-        } else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
+        } else if(U.isVoid(t)){
+          box.ariaDescription = `struct element ${countThings-3} contains void` //
+          box.ariaLabel = `struct element ${countThings-3} contains void` //
+        }else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
           box.ariaDescription = `struct element ${countThings-3} contains empty struct`;
           box.ariaLabel = `struct element ${countThings-3} contains empty struct`;
         } else {
