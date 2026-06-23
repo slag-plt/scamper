@@ -783,6 +783,9 @@ export class Thread {
             } else {
               console.log("Found none for type " + U.typeOf(value))
             }
+            //make more space in between entries
+            HTMLVal.style.marginBottom = '16px'
+
             //make mini div for name and arrow
             let miniDiv = document.createElement('div')
             miniDiv.textContent = id + ' → '
