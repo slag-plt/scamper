@@ -13,6 +13,7 @@ import CodeMirrorEditor from "./CodeMirrorEditor.vue"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { CodeMirrorEditorType } from "./use-codemirror-editor"
 import { ScamperInstance } from "../../scamper-instance"
+import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
 
 // ---------- config ----------
 
@@ -112,17 +113,32 @@ function makeClean() {
 
 // ---------- scamper execution ----------
 
-function executeScamper(tracing: boolean) {
-  const display = resultsRef.value?.display
-  if (!display) return
+interface ScamperExecutionProps {
+  tracing: boolean
+  err?: ErrorChannel
+  out?: OutputChannel
+  queryLoc?: Loc | null
+}
+function executeScamper({
+  tracing,
+  err = resultsRef.value?.display,
+  out = resultsRef.value?.display,
+  queryLoc = null,
+}: ScamperExecutionProps) {
+  if (!err || !out) return
   resultsRef.value?.reset()
   isTracing.value = true
-  scamperInstance.execute({
-    src: getDoc(),
-    err: display,
-    out: display,
-    isTracing: tracing,
-  })
+  const src = getDoc()
+  if (queryLoc) {
+    scamperInstance.query({ src, rep: err, queryLoc })
+  } else {
+    scamperInstance.execute({
+      src,
+      err,
+      out,
+      isTracing: tracing,
+    })
+  }
   makeClean()
 }
 
@@ -166,11 +182,11 @@ function displayError(error: string) {
 // ---------- header event handlers ----------
 
 function handleRun() {
-  executeScamper(false)
+  executeScamper({ tracing: false })
 }
 
 function handleTrace() {
-  executeScamper(true)
+  executeScamper({ tracing: true })
 }
 
 function handleCancel() {
@@ -189,6 +205,15 @@ async function handleRunWindow() {
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
+}
+
+function handleQuery() {
+  console.log("clicked query")
+  executeScamper({
+    tracing: false,
+    queryLoc: editorRef.value?.getCursorLoc() ?? null,
+  })
+  // TODO: don't output to results pane
 }
 
 // ---------- step handlers ----------
@@ -407,6 +432,7 @@ onUnmounted(() => {
         :run="handleRun"
         :trace="handleTrace"
         :cancel="handleCancel"
+        :query="handleQuery"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
       />
