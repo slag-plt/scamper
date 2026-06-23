@@ -12,9 +12,11 @@ const tags = ref([])
 <template>
   <div class="index">
     <p>{{ tags }}</p>
+      <Dropdown v-model="tags">
       <p><input type="checkbox" v-model="tags" label="One" value="One"> One </p>
       <p><input type="checkbox" v-model="tags" label="Two" value="Two"> Two</p>
-  <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
+      <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
+      </Dropdown>
   </div>
 </template>
 
