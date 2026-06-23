@@ -6,6 +6,7 @@ const props = defineProps<{
   run?: () => void
   trace?: () => void
   cancel?: () => void
+  query: () => void
 }>()
 
 const emit = defineEmits<{
@@ -60,6 +61,11 @@ async function handleRun() {
         aria-label="Maximize Output Window"
         :disabled="!currentFile"
         @click="emit('runWindow')"
+      ></button>
+      <button
+        class="fa-solid fa-clipboard-question"
+        aria-label="Query value"
+        @click="query"
       ></button>
       <!-- TODO: re-enable once AST is migrated to new backend -->
       <button

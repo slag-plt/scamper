@@ -2,6 +2,8 @@
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
 import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
+import { CodeMirrorEditorType } from "./use-codemirror-editor"
+import { Loc } from "../../lpm"
 
 const emit = defineEmits<{ dirty: [] }>()
 
@@ -27,6 +29,15 @@ function initializeDummyDoc(): void {
   editorView?.setState(mkNoFileEditorState())
 }
 
+function getCursorLoc(): Loc | null {
+  if (!editorView) {
+    return null
+  }
+  const idx = editorView.state.selection.main.head
+  const line = editorView.state.doc.lineAt(idx)
+  return new Loc(line.number, idx - line.from, idx)
+}
+
 onMounted(() => {
   if (!containerRef.value) return
   editorView = new EditorView({
@@ -40,7 +51,12 @@ onUnmounted(() => {
   editorView = null
 })
 
-defineExpose({ getDoc, initializeDoc, initializeDummyDoc })
+defineExpose<CodeMirrorEditorType>({
+  getDoc,
+  initializeDoc,
+  initializeDummyDoc,
+  getCursorLoc,
+})
 </script>
 
 <template>

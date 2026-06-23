@@ -1,16 +1,5 @@
-import {
-  ErrorChannel,
-  ICE,
-  OutputChannel,
-  ScamperError,
-} from "./lpm"
-import {
-  DisplayStep,
-  Fiber,
-  MinorStep,
-  StepResult,
-  YieldStep,
-} from "./lpm/fiber"
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "./lpm"
+import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -119,6 +108,9 @@ export class Scheduler {
         } catch (e) {
           if (e instanceof ScamperError) {
             if (isReportTask(task)) {
+              if (e instanceof ReportError) {
+                console.debug(e.value)
+              }
               task.rep.report(e)
               this.#removeCurrFiber()
               continue
