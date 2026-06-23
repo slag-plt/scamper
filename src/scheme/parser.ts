@@ -1,7 +1,11 @@
 import * as A from "./ast.js"
 import * as L from "../lpm"
 import * as S from "./syntax.js"
-import { FunctionDoc, parseDocString } from "./docstring/docstring"
+import {
+  commentsToDocComments,
+  FunctionDoc,
+  parseDocString,
+} from "./docstring/docstring"
 import { mkScamperErrorWithRange } from "./util"
 
 // TODO: need to check whether _ is used correctly here, i.e., only under a section
@@ -524,7 +528,11 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
       let doc: FunctionDoc | undefined = undefined
       if (comments !== undefined) {
         try {
-          doc = parseDocString(comments)
+          // split by newline and throw away non-doc lines
+          const docComments = commentsToDocComments(comments)
+          if (docComments.length > 0) {
+            doc = parseDocString(docComments)
+          }
         } catch (e) {
           if (!(e instanceof L.ScamperError)) {
             throw e

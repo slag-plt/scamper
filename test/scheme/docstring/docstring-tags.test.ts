@@ -1,21 +1,21 @@
-import "./docstring/test-tags"
+import "./test-tags"
 
 import { describe, expect, test } from "vitest"
-import { Comment } from "../../src/scheme/reader"
+import { Comment } from "../../../src/scheme/reader"
 import {
   DocTag,
   matchesDocTagFormat,
   parseAllTags,
-} from "../../src/scheme/docstring/tags"
-import { anyRange } from "./util"
+} from "../../../src/scheme/docstring/tags"
+import { anyRange } from "../util"
 import {
   testTag1,
   testTag1Contents,
-  testTagLine1,
   testTag2,
   testTag2Contents,
+  testTagLine1,
   testTagLine2,
-} from "./docstring/test-tags"
+} from "./test-tags"
 
 describe("docstring tags", () => {
   describe("parseAllTags", () => {
