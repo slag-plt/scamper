@@ -4,14 +4,14 @@ import { ICE, Range, ReportError, ScamperError } from "../src/lpm"
 import { mkTraceOutput } from "../src/lpm/trace"
 import * as U from "../src/lpm/util"
 import {
-  MockFiber,
-  QUANTUM_WAIT_MS,
   makeNeverCompletingFiber,
   makeQueryTask,
   makeReportThrowingFiber,
   makeTask,
   makeTestFiber,
+  MockFiber,
   patchSchedulerYieldForTests,
+  QUANTUM_WAIT_MS,
   runFiberToCompletion,
   sleep,
   trackFiberSteps,
@@ -184,14 +184,27 @@ describe("Scheduler", () => {
       sched.schedule(makeTask(f1))
       sched.schedule(makeTask(f2))
       sched.schedule(makeTask(f3))
+      // The first schedule() runs #execute synchronously through an entire
+      // time quantum before later schedule() calls add siblings, so total
+      // step counts are skewed. Snapshot after warmup, then assert on deltas.
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
-      expect(f1.stepCallCount).toBeGreaterThan(0)
-      expect(f2.stepCallCount).toBeGreaterThan(0)
-      expect(f3.stepCallCount).toBeGreaterThan(0)
-      // round-robin: at any point step counts should differ by at most 1
-      const counts = [f1.stepCallCount, f2.stepCallCount, f3.stepCallCount]
-      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
+      await sleep(QUANTUM_WAIT_MS)
+
+      const baseline = [f1.stepCallCount, f2.stepCallCount, f3.stepCallCount]
+      sched.resumeExecution()
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(f1.stepCallCount).toBeGreaterThan(baseline[0])
+      expect(f2.stepCallCount).toBeGreaterThan(baseline[1])
+      expect(f3.stepCallCount).toBeGreaterThan(baseline[2])
+      const delta = [
+        f1.stepCallCount - baseline[0],
+        f2.stepCallCount - baseline[1],
+        f3.stepCallCount - baseline[2],
+      ]
+      expect(Math.max(...delta) - Math.min(...delta)).toBeLessThanOrEqual(1)
     })
 
     test("a fiber scheduled while running is picked up on wrap-around", async () => {
@@ -230,8 +243,11 @@ describe("Scheduler", () => {
         return TraceStep
       }
 
-      sched.schedule(makeTask(yieldingFiber))
+      // Schedule the non-yielding fiber first: the first schedule() runs a
+      // full synchronous quantum before the second is queued, so the other
+      // fiber must be first to step while yieldsRemaining > 0.
       sched.schedule(makeTask(otherFiber))
+      sched.schedule(makeTask(yieldingFiber))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
 
@@ -476,7 +492,6 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       expect(fiber.stepCallCount).toBeGreaterThan(pausedCount)
     })
-
   })
 
   describe("construction", () => {

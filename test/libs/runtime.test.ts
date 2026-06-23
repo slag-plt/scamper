@@ -1,10 +1,11 @@
-import { expect, test } from 'vitest'
-import { runProgram } from './harness.js'
+import { expect, test } from "vitest"
+import { runProgram } from "../harness"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-test('and-or-short-circuit', () => {
-  expect(runProgram(`
+test("and-or-short-circuit", () => {
+  expect(
+    runProgram(`
 (and (error "hello")
      #f)
 
@@ -16,16 +17,18 @@ test('and-or-short-circuit', () => {
 
 (or #t
     (error "hello"))
-`)).toEqual([
-  'Runtime error [1:6-1:20]: (error) hello',
-  '#f',
-  'Runtime error [7:5-7:19]: (error) hello',
-  '#t'
-])
+`),
+  ).toEqual([
+    "Runtime error [1:6-1:20]: (error) hello",
+    "#f",
+    "Runtime error [7:5-7:19]: (error) hello",
+    "#t",
+  ])
 })
 
-test('chained-defs', () => {
-  expect(runProgram(`
+test("chained-defs", () => {
+  expect(
+    runProgram(`
 (define x 10)
 (define y x)
 (define z y)
@@ -38,14 +41,13 @@ test('chained-defs', () => {
 (define i h)
 
 (i x y z)
-`)).toEqual([
-  '60',
-  '30'
-])
+`),
+  ).toEqual(["60", "30"])
 })
 
-test('closures', () => {
-  expect(runProgram(`
+test("closures", () => {
+  expect(
+    runProgram(`
 (define x 10)
 
 (define f1
@@ -74,16 +76,13 @@ test('closures', () => {
     g))
 
 (f4 100)
-`)).toEqual([
-  '30',
-  '120',
-  '21',
-  '152'
-])
+`),
+  ).toEqual(["30", "120", "21", "152"])
 })
 
-test('cond-else-test', () => {
-  expect(runProgram(`
+test("cond-else-test", () => {
+  expect(
+    runProgram(`
 (import image)
 
 (define factorial
@@ -105,53 +104,56 @@ test('cond-else-test', () => {
 
 (type-of red-square)
 
-`)).toEqual([
-  '120',
-  '"some-other-type"'
-])
+`),
+  ).toEqual(["120", '"some-other-type"'])
 })
 
-test('contract-check', () => {
-  expect(runProgram(`
+test("contract-check", () => {
+  expect(
+    runProgram(`
 (string-length (list 1 2 3))
 
 (+ 1 2 3 "bye")
 
 (map char-upcase (list "h" "e" "l" "l" "o"))
-`)).toEqual([
-  'Runtime error [1:1-1:28]: (string-length) expected a string, received list',
-  'Runtime error [3:1-3:15]: (+) expected a number, received string',
-  'Runtime error [5:1-5:44]: (map) expected a character, received string'
-])
+`),
+  ).toEqual([
+    "Runtime error [1:1-1:28]: (string-length) expected a string, received list",
+    "Runtime error [3:1-3:15]: (+) expected a number, received string",
+    "Runtime error [5:1-5:44]: (map) expected a character, received string",
+  ])
 })
 
-test('define-test1', () => {
-  expect(runProgram(`
+test("define-test1", () => {
+  expect(
+    runProgram(`
 (define x 10)
 
 (define f
   (lambda (y) (+ x y)))
 
 (f x)
-`)).toEqual([
-  '20'
-])
+`),
+  ).toEqual(["20"])
 })
 
-test.fails('duplicate-binders', () => {
-  expect(runProgram(`
+test.fails("duplicate-binders", () => {
+  expect(
+    runProgram(`
 (lambda (x x y) (+ x x))
 
 (struct foo (z y z))
-`)).toEqual([
-  ':8:0: Parser error:',
-  'Duplicate name x given in definition.',
-  'In program: (x x y)'
-])
+`),
+  ).toEqual([
+    ":8:0: Parser error:",
+    "Duplicate name x given in definition.",
+    "In program: (x x y)",
+  ])
 })
 
-test('fact', () => {
-  expect(runProgram(`
+test("fact", () => {
+  expect(
+    runProgram(`
 (define fact
   (lambda (n)
     (if (zero? n)
@@ -161,14 +163,13 @@ test('fact', () => {
 (fact 0)
 
 (fact 5)
-`)).toEqual([
-  '1',
-  '120'
-])
+`),
+  ).toEqual(["1", "120"])
 })
 
-test('fizzbuzz', () => {
-  expect(runProgram(`
+test("fizzbuzz", () => {
+  expect(
+    runProgram(`
 (define fizzbuzz
   (lambda (n)
     (cond
@@ -192,27 +193,29 @@ test('fizzbuzz', () => {
 (fizzbuzz 13)
 (fizzbuzz 14)
 (fizzbuzz 15)
-`)).toEqual([
-  '"1"',
-  '"2"',
-  '"fizz"',
-  '"4"',
-  '"buzz"',
-  '"fizz"',
-  '"7"',
-  '"8"',
-  '"fizz"',
-  '"buzz"',
-  '"11"',
-  '"fizz"',
-  '"13"',
-  '"14"',
-  '"fizzbuzz"'
-])
+`),
+  ).toEqual([
+    '"1"',
+    '"2"',
+    '"fizz"',
+    '"4"',
+    '"buzz"',
+    '"fizz"',
+    '"7"',
+    '"8"',
+    '"fizz"',
+    '"buzz"',
+    '"11"',
+    '"fizz"',
+    '"13"',
+    '"14"',
+    '"fizzbuzz"',
+  ])
 })
 
-test('let-binding-errors', () => {
-  expect(runProgram(`
+test("let-binding-errors", () => {
+  expect(
+    runProgram(`
 ; let bindings telescope
 (let
   ([x1 1]
@@ -230,15 +233,17 @@ test('let-binding-errors', () => {
   ([x3 y3]
    [y3 5])
   (+ x3 y3))
-`)).toEqual([
-  "Parser error [4:11-4:12]: Undefined variable 'x1'",
-  "Parser error [10:8-10:9]: Undefined variable 'y2'",
-  "Parser error [15:8-15:9]: Undefined variable 'y3'"
-])
+`),
+  ).toEqual([
+    "Parser error [4:11-4:12]: Undefined variable 'x1'",
+    "Parser error [10:8-10:9]: Undefined variable 'y2'",
+    "Parser error [15:8-15:9]: Undefined variable 'y3'",
+  ])
 })
 
-test('let-binding', () => {
-  expect(runProgram(`
+test("let-binding", () => {
+  expect(
+    runProgram(`
 ; bindings are not dependent on each other
 (let
   ([x 1]
@@ -258,15 +263,13 @@ test('let-binding', () => {
    [y (+ x 6)]
    [z (+ y 4)])
   (+ x y z))
-`)).toEqual([
-  '19',
-  '19',
-  '19'
-])
+`),
+  ).toEqual(["19", "19", "19"])
 })
 
-test('list-length', () => {
-  expect(runProgram(`
+test("list-length", () => {
+  expect(
+    runProgram(`
 (define list-length
   (lambda (l)
     (if (null? l)
@@ -280,16 +283,13 @@ test('list-length', () => {
 (list-length (cons 9 (cons 9 (cons 9 (cons 9 (cons 9 null))))))
 
 (list-length (cons "a" (cons "b" (cons "c" (cons "d" (cons "e" null))))))
-`)).toEqual([
-  '0',
-  '1',
-  '5',
-  '5'
-])
+`),
+  ).toEqual(["0", "1", "5", "5"])
 })
 
-test('match-lists', () => {
-  expect(runProgram(`
+test("match-lists", () => {
+  expect(
+    runProgram(`
 (define list-length
   (lambda (l)
     (match l
@@ -318,17 +318,19 @@ test('match-lists', () => {
       [(cons x1 (cons x2 tail)) (cons x1 (cons x (intersperse x (cons x2 tail))))])))
 
 (intersperse "," (list "a" "b" "c"))
-`)).toEqual([
-  '5',
-  '0',
-  '10',
-  '(list 1 2 3 4 5 6)',
-  '(list "a" "," "b" "," "c")'
-])
+`),
+  ).toEqual([
+    "5",
+    "0",
+    "10",
+    "(list 1 2 3 4 5 6)",
+    '(list "a" "," "b" "," "c")',
+  ])
 })
 
-test('match-lit', () => {
-  expect(runProgram(`
+test("match-lit", () => {
+  expect(
+    runProgram(`
 (match 5
   [1 "fail"]
   [5 "numbers"])
@@ -354,32 +356,36 @@ test('match-lit', () => {
 (match (list "lists" "a" "b")
   [null "fail"]
   [(cons head _) head])
-`)).toEqual([
-  '"numbers"',
-  '"strings"',
-  '"chars"',
-  '"bools"',
-  '"null"',
-  '"lists"'
-])
+`),
+  ).toEqual([
+    '"numbers"',
+    '"strings"',
+    '"chars"',
+    '"bools"',
+    '"null"',
+    '"lists"',
+  ])
 })
 
-test.fails('match-repeated-bindings', () => {
-  expect(runProgram(`
+test.fails("match-repeated-bindings", () => {
+  expect(
+    runProgram(`
 (match (list 1 2 3)
   [null "fail"]
   [(cons x x) "fail"])
-`)).toEqual([
-  ':3:2: Scope error:',
-  'Variable x is repeated in the pattern',
-  'In program: (match (list 1 2 3)',
-  '[null "fail"]',
-  '[(cons x x) "fail"])'
-])
+`),
+  ).toEqual([
+    ":3:2: Scope error:",
+    "Variable x is repeated in the pattern",
+    "In program: (match (list 1 2 3)",
+    '[null "fail"]',
+    '[(cons x x) "fail"])',
+  ])
 })
 
-test('match-struct', () => {
-  expect(runProgram(`
+test("match-struct", () => {
+  expect(
+    runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -397,26 +403,25 @@ test('match-struct', () => {
         (node (leaf "b")
               (node (leaf "c")
                     (leaf "d")))))
-`)).toEqual([
-  '1',
-  '4'
-])
+`),
+  ).toEqual(["1", "4"])
 })
 
-test('mixed-brackets', () => {
-  expect(runProgram(`
+test("mixed-brackets", () => {
+  expect(
+    runProgram(`
 {- {* 3
      (+ {* 1
            { / 5 8}}
          12)}
    (- 5 1)}
-`)).toEqual([
-  '33.875'
-])
+`),
+  ).toEqual(["33.875"])
 })
 
-test('numbers', () => {
-  expect(runProgram(`
+test("numbers", () => {
+  expect(
+    runProgram(`
 4129
 0
 -48902
@@ -451,41 +456,43 @@ test('numbers', () => {
 -.3e2
 -3e-2
 -.3e-2
-`)).toEqual([
-  '4129',
-  '0',
-  '-48902',
-  '48902',
-  '142',
-  '-89',
-  '98',
-  '3.14',
-  '0.14',
-  '0.14',
-  '314',
-  '-3.14',
-  '-0.14',
-  '-0.14',
-  '-314',
-  '3.14',
-  '0.14',
-  '0.14',
-  '314',
-  '300',
-  '300',
-  '30',
-  '300',
-  '300',
-  '30',
-  '-300',
-  '-30',
-  '-0.03',
-  '-0.003'
-])
+`),
+  ).toEqual([
+    "4129",
+    "0",
+    "-48902",
+    "48902",
+    "142",
+    "-89",
+    "98",
+    "3.14",
+    "0.14",
+    "0.14",
+    "314",
+    "-3.14",
+    "-0.14",
+    "-0.14",
+    "-314",
+    "3.14",
+    "0.14",
+    "0.14",
+    "314",
+    "300",
+    "300",
+    "30",
+    "300",
+    "300",
+    "30",
+    "-300",
+    "-30",
+    "-0.03",
+    "-0.003",
+  ])
 })
 
-test.fails('shadowing', () => {
-  expect(runProgram(`
+test.fails("shadowing", () => {
+  expect(
+    runProgram(`
 (define x 3)
 
 (define y (+ x 2))
@@ -507,27 +514,23 @@ test.fails('shadowing', () => {
   (+ x z))
 
 x
-`)).toEqual([
-  '0',
-  '6',
-  '105',
-  '-5'
-])
+`),
+  ).toEqual(["0", "6", "105", "-5"])
 })
 
-test('simple-exp', () => {
-  expect(runProgram(`
+test("simple-exp", () => {
+  expect(
+    runProgram(`
 (let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
 
 (+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
-`)).toEqual([
-  '43',
-  '103'
-])
+`),
+  ).toEqual(["43", "103"])
 })
 
-test('tree-test', () => {
-  expect(runProgram(`
+test("tree-test", () => {
+  expect(
+    runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -558,31 +561,31 @@ t1
 (tree-size t1)
 
 (tree-to-list t1)
-`)).toEqual([
-  '(node (leaf "a") (node (leaf "b") (leaf "c")))',
-  '"b"',
-  '3',
-  '(list "a" "b" "c")'
-])
+`),
+  ).toEqual([
+    '(node (leaf "a") (node (leaf "b") (leaf "c")))',
+    '"b"',
+    "3",
+    '(list "a" "b" "c")',
+  ])
 })
 
-test('undefined-variable', () => {
-  expect(runProgram(`
+test("undefined-variable", () => {
+  expect(
+    runProgram(`
 (+ x 1)
-`)).toEqual([
-  "Parser error [1:4-1:4]: Undefined variable 'x'"
-])
+`),
+  ).toEqual(["Parser error [1:4-1:4]: Undefined variable 'x'"])
 })
 
-test('section', () => {
-  expect(runProgram(`
+test("section", () => {
+  expect(
+    runProgram(`
 ((section + _ 1) 1)
 
 (|> (list "a" "b" "c" "d" "e")
     (section map (section string-upcase _) _))
 
-`)).toEqual([
-  '2',
-  '(list "A" "B" "C" "D" "E")'
-])
+`),
+  ).toEqual(["2", '(list "A" "B" "C" "D" "E")'])
 })

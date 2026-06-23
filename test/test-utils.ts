@@ -1,10 +1,18 @@
 import { vi } from "vitest"
 import { DisplayStep, Fiber, StepResult, TraceStep } from "../src/lpm/fiber"
-import { LoggingChannel, Prog, Range, ReportError, Stmt, Value } from "../src/lpm"
+import {
+  LoggingChannel,
+  Prog,
+  Range,
+  ReportError,
+  Stmt,
+  Value,
+} from "../src/lpm"
 import { DisplayTask, QueryTask, SchedulerTask } from "../src/scheduler"
 import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
 import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
+import * as process from "node:process"
 
 export type { QueryTask, SchedulerTask }
 

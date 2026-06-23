@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { runProgram } from "../harness.js"
-import { cloneOptions, defaultOptions } from "../../src/lpm/index.js"
+import { cloneOptions, defaultOptions } from "../../src/lpm/thread.js"
 
 const opts = cloneOptions(defaultOptions)
 opts.isTracing = true
@@ -64,7 +64,7 @@ test("tracing music structs", () => {
       opts,
     ),
   ).toEqual([
-    'Imported library: music',
+    "Imported library: music",
     "Displaying (list (dur 1 2) (dur 2 (+ 1 1)))",
     "--> (list (dur 1 2) (dur 2 (+ 1 1)))",
     "--> (list (dur 1 2) (dur 2 2))",

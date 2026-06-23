@@ -2,10 +2,11 @@ import { expect, test } from "vitest"
 import { expToString } from "../../src/scheme/ast.js"
 import { raiseFrames } from "../../src/scheme/raise.js"
 import * as LPM from "../../src/lpm/"
+import { Frame } from "../../src/lpm/thread.js"
 
 test("basic complete binary raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkVar("+"),
       LPM.mkLit(1),
       LPM.mkLit(1),
@@ -19,41 +20,39 @@ test("basic complete binary raising", () => {
 test("basic mid-evaluation raising", () => {
   const fn = (x: number, y: number) => x + y
   LPM.nameFn("+", fn)
-  const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit(1), LPM.mkAp(2)]),
-  ]
+  const frames = [new Frame("f1", new LPM.Env(), [LPM.mkLit(1), LPM.mkAp(2)])]
   frames[0].values.push(fn, 1)
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe("(+ 1 1)")
 })
 
 test("mkVar operation raising", () => {
-  const frames = [new LPM.Frame("f1", new LPM.Env(), [LPM.mkVar("x")])]
+  const frames = [new Frame("f1", new LPM.Env(), [LPM.mkVar("x")])]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe("x")
 })
 
 test("mkLit operation raising with number", () => {
-  const frames = [new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit(42)])]
+  const frames = [new Frame("f1", new LPM.Env(), [LPM.mkLit(42)])]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe("42")
 })
 
 test("mkLit operation raising with string", () => {
-  const frames = [new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit("hello")])]
+  const frames = [new Frame("f1", new LPM.Env(), [LPM.mkLit("hello")])]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe('"hello"')
 })
 
 test("mkLit operation raising with boolean", () => {
-  const frames = [new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit(true)])]
+  const frames = [new Frame("f1", new LPM.Env(), [LPM.mkLit(true)])]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe("#t")
 })
 
 test("mkCtor operation raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkLit(1),
       LPM.mkLit(2),
       LPM.mkCtor("pair", ["fst", "snd"]),
@@ -65,7 +64,7 @@ test("mkCtor operation raising", () => {
 
 test("mkCls operation raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkCls(["x"], [LPM.mkVar("x")], "identity"),
     ]),
   ]
@@ -75,7 +74,7 @@ test("mkCls operation raising", () => {
 
 test("mkAp operation raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkVar("f"),
       LPM.mkLit(10),
       LPM.mkLit(20),
@@ -92,7 +91,7 @@ test("mkMatch operation raising", () => {
     [LPM.mkPWild(), [LPM.mkLit("other")]],
   ]
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit(1), LPM.mkMatch(branches)]),
+    new Frame("f1", new LPM.Env(), [LPM.mkLit(1), LPM.mkMatch(branches)]),
   ]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe('(match 1 [1 "one"] [_ "other"])')
@@ -100,7 +99,7 @@ test("mkMatch operation raising", () => {
 
 test("mkRaise operation raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [LPM.mkRaise("Test error message")]),
+    new Frame("f1", new LPM.Env(), [LPM.mkRaise("Test error message")]),
   ]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe('(raise "Test error message")')
@@ -108,7 +107,7 @@ test("mkRaise operation raising", () => {
 
 test("nested operations raising", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkVar("+"),
       LPM.mkVar("*"),
       LPM.mkLit(2),
@@ -124,7 +123,7 @@ test("nested operations raising", () => {
 
 test("complex constructor with multiple fields", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkLit("John"),
       LPM.mkLit(30),
       LPM.mkLit("Engineer"),
@@ -137,7 +136,7 @@ test("complex constructor with multiple fields", () => {
 
 test("lambda with multiple parameters", () => {
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
+    new Frame("f1", new LPM.Env(), [
       LPM.mkCls(["x", "y"], [LPM.mkVar("x")], "add"),
     ]),
   ]
@@ -152,7 +151,7 @@ test("pattern matching with multiple branches", () => {
     [LPM.mkPVar("n"), [LPM.mkVar("n")]],
   ]
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [LPM.mkLit(5), LPM.mkMatch(branches)]),
+    new Frame("f1", new LPM.Env(), [LPM.mkLit(5), LPM.mkMatch(branches)]),
   ]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe('(match 5 [0 "zero"] [1 "one"] [n n])')
@@ -163,10 +162,7 @@ test("pattern matching with constructor pattern", () => {
     [LPM.mkPCtor("pair", [LPM.mkPVar("x"), LPM.mkPVar("y")]), [LPM.mkVar("x")]],
   ]
   const frames = [
-    new LPM.Frame("f1", new LPM.Env(), [
-      LPM.mkLit("test"),
-      LPM.mkMatch(branches),
-    ]),
+    new Frame("f1", new LPM.Env(), [LPM.mkLit("test"), LPM.mkMatch(branches)]),
   ]
   const result = raiseFrames(frames)
   expect(expToString(result)).toBe('(match "test" [(pair x y) x])')
