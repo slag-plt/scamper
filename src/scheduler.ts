@@ -44,7 +44,6 @@ export class Scheduler {
   constructor() {
     // we throw away the promise here because we don't want to block the event loop
     void this.#setTimeQuantumFromFPS()
-    this.resumeExecution()
   }
 
   schedule(task: SchedulerTask): void {
@@ -55,6 +54,7 @@ export class Scheduler {
       )
     }
     this.#tasks.push(task)
+    this.resumeExecution()
   }
   query(task: QueryTask): void {
     if (task.fiber.isDone()) {
@@ -64,6 +64,7 @@ export class Scheduler {
       )
     }
     this.#tasks.push(task)
+    this.resumeExecution()
   }
   pauseExecution() {
     this.#isRunning = false
@@ -78,6 +79,10 @@ export class Scheduler {
 
   async #execute(): Promise<void> {
     while (this.#isRunning) {
+      if (this.#tasks.length === 0) {
+        this.#isRunning = false
+        return
+      }
       const startTime = performance.now()
       while (performance.now() - startTime < this.#timeQuantum) {
         if (this.#wasPaused()) {

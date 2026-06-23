@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef } from "vue"
-import { Splitpanes, Pane } from "splitpanes"
+import { Pane, Splitpanes } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
 import * as Lock from "../lockfile"
-import OPFSFileSystem from "../fs"
 import type { FileEntry } from "../fs"
+import OPFSFileSystem from "../fs"
 import { initializeLibs } from "../../lib"
-import ScamperVue from "../../scamper-vue"
-import { ScamperError } from "../../lpm/error"
 import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { CodeMirrorEditorType } from "./use-codemirror-editor"
+import { ScamperInstance } from "../../scamper-instance"
 
 // ---------- config ----------
 
@@ -34,7 +33,7 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: OPFSFileSystem | null = null
-let scamper: ScamperVue | undefined
+const scamperInstance: ScamperInstance = ScamperInstance.getInstance()
 let autosaveId = -1
 let config: Config = DEFAULT_CONFIG
 let isLoadingFile = false
@@ -104,9 +103,7 @@ function getDoc(): string {
 // ---------- dirty tracking ----------
 
 function makeDirty() {
-  if (scamper !== undefined && !isDirty.value) {
-    isDirty.value = true
-  }
+  isDirty.value = true
 }
 
 function makeClean() {
@@ -115,22 +112,16 @@ function makeClean() {
 
 // ---------- scamper execution ----------
 
-function startScamper(tracing: boolean): void {
-  resultsRef.value?.reset()
+function executeScamper(tracing: boolean) {
   const display = resultsRef.value?.display
   if (!display) return
-  isTracing.value = tracing
-  try {
-    scamper = new ScamperVue(display, getDoc(), tracing)
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      display.report(e)
-    } else if (e instanceof Error) {
-      display.report(new ScamperError("Runtime", e.message))
-    } else {
-      display.report(new ScamperError("Runtime", String(e)))
-    }
-  }
+  isTracing.value = true
+  scamperInstance.execute({
+    src: getDoc(),
+    err: display,
+    out: display,
+    isTracing: tracing,
+  })
   makeClean()
 }
 
@@ -173,17 +164,16 @@ function displayError(error: string) {
 
 // ---------- header event handlers ----------
 
-async function handleRun() {
-  startScamper(false)
-  await scamper?.runProgram()
+function handleRun() {
+  executeScamper(false)
 }
 
 function handleTrace() {
-  startScamper(true)
+  executeScamper(true)
 }
 
 function handleCancel() {
-  scamper?.cancel()
+  // TODO: implement
 }
 
 async function handleRunWindow() {
@@ -203,18 +193,15 @@ function toggleSidebar() {
 // ---------- step handlers ----------
 
 function handleStepOnce() {
-  scamper?.stepProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 async function handleStepStmt() {
-  await scamper?.stepStmtProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 async function handleStepAll() {
-  await scamper?.runProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 // ---------- sidebar event handlers ----------
@@ -360,14 +347,14 @@ const beforeUnloadWrapper = (e: Event) => {
 
 onMounted(async () => {
   fs = await OPFSFileSystem.create()
-  
+
   const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
     loadingContent.value =
       "Another instance of Scamper is open. Please close that instance and try again."
     return
   }
-  
+
   document.addEventListener("visibilitychange", visibilityChangeWrapper)
   document.addEventListener("pagehide", pageHideWrapper)
   window.addEventListener("beforeunload", beforeUnloadWrapper)

@@ -26,12 +26,21 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": true
     /*"allowSyntheticDefaultImports": true,*/
 
     /*"rootDir": "./src",*/
     /*"outDir": "./_build/js",*/
   },
-  "exclude": ["node_modules", "site", "_build", "test", "esbuild.config.js", "tsconfig.json", "jest.config.ts"],
+  "exclude": [
+    "node_modules",
+    "site",
+    "_build",
+    "test",
+    "esbuild.config.js",
+    "tsconfig.json",
+    "jest.config.ts",
+    "src/lib"
+  ],
   "include": ["src"]
 }

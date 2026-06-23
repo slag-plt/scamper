@@ -1,7 +1,7 @@
+import { tokenizeAndParse } from "../.."
 import { Range, Value } from "../../../lpm"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
 import { App, isApp, isLit, isStmtExp, Stmt } from "../../ast"
-import { tokenizeAndParse } from "../../index"
 import { mkScamperErrorWithRange } from "../../util"
 import { DocTag, registerDocTagParser } from "./tag"
 

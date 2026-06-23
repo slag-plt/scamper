@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { shallowRef, onMounted } from "vue"
+import { onMounted, shallowRef } from "vue"
 import { OPFSFileSystem } from "../fs"
-import { ScamperVue } from "../../scamper-vue"
 import { ScamperError } from "../../lpm/error"
 import { initializeLibs } from "../../lib"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
+import { ScamperInstance } from "../../scamper-instance"
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 const version = shallowRef("")
@@ -37,15 +37,7 @@ onMounted(async () => {
   }
 
   const src = await fs.loadFile(filename)
-  try {
-    await new ScamperVue(display, src).runProgram()
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      display.report(e)
-    } else if (e instanceof Error) {
-      display.report(new ScamperError("Runtime", e.message))
-    }
-  }
+  ScamperInstance.getInstance().execute({ src, out: display, err: display })
 
   version.value = `(${APP_VERSION})`
 })

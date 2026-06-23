@@ -1,4 +1,3 @@
-import { Prelude, Runtime } from "../lib"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
@@ -369,12 +368,12 @@ export function scopeCheckProgram(
   prog: A.Prog,
 ) {
   const globals: string[] = []
-  for (const [name, _] of Runtime.lib) {
-    globals.push(name)
-  }
-  for (const [name, _] of Prelude.lib) {
-    globals.push(name)
-  }
+  // for (const [name, _] of Runtime.lib) {
+  //   globals.push(name)
+  // }
+  // for (const [name, _] of Prelude.lib) {
+  //   globals.push(name)
+  // }
   for (const s of prog) {
     scopeCheckStmt(errors, builtinLibs, globals, s)
   }

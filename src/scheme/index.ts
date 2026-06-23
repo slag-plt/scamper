@@ -1,6 +1,6 @@
 import * as L from "../lpm"
 import { Loc, ScamperError } from "../lpm"
-import { builtinLibs, Prelude, Runtime } from "../lib"
+import { builtinLibs } from "../lib"
 import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
 import { scopeCheckProgram } from "./scope.js"
@@ -91,11 +91,11 @@ export function compile(
 
 export function mkInitialEnv(): L.Env {
   const env = new L.Env()
-  for (const [name, fn] of Runtime.lib) {
-    env.set(name, fn)
-  }
-  for (const [name, fn] of Prelude.lib) {
-    env.set(name, fn)
-  }
+  // for (const [name, fn] of Runtime.lib) {
+  //   env.set(name, fn)
+  // }
+  // for (const [name, fn] of Prelude.lib) {
+  //   env.set(name, fn)
+  // }
   return env
 }

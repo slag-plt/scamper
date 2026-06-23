@@ -3,7 +3,7 @@ import { ref } from "vue"
 
 const props = defineProps<{
   currentFile?: string | null
-  run?: () => Promise<void>
+  run?: () => void
   trace?: () => void
   cancel?: () => void
 }>()

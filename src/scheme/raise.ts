@@ -1,5 +1,6 @@
 import * as LPM from "../lpm"
 import { Fiber } from "../lpm/fiber"
+import { Frame, Thread } from "../lpm/thread"
 import * as A from "./ast.js"
 
 /** @return a stack of expressions created from the given value stack. */
@@ -98,7 +99,7 @@ export function raiseFrame(
   return values.pop()!
 }
 
-export function raiseFrames(frames: LPM.Frame[]): A.Exp {
+export function raiseFrames(frames: Frame[]): A.Exp {
   if (frames.length === 0) {
     throw new LPM.ICE("raiseFrames", "no frames to raise")
   }
@@ -116,7 +117,8 @@ export function raiseFrames(frames: LPM.Frame[]): A.Exp {
   return ret
 }
 
-export function raiseThread(thread: LPM.Thread): A.Exp {
+/** @deprecated use [raiseFiber] instead */
+export function raiseThread(thread: Thread): A.Exp {
   return raiseFrames(thread.frames)
 }
 
