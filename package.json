@@ -26,6 +26,7 @@
     "@types/papaparse": "^5.3.16",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vitest/coverage-v8": "^4.1.2",
+    "@vue/test-utils": "^2.4.11",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-only-warn": "^1.2.1",

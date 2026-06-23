@@ -115,6 +115,7 @@ function makeClean() {
 function executeScamper(tracing: boolean) {
   const display = resultsRef.value?.display
   if (!display) return
+  resultsRef.value?.reset()
   isTracing.value = true
   scamperInstance.execute({
     src: getDoc(),
