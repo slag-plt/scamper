@@ -5,6 +5,7 @@
   "main": "./_build/js/index.js",
   "scripts": {
     "cli": "tsx src/cli/index.ts",
+    "typecheck": "vue-tsc -noEmit",
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",

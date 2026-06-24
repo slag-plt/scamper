@@ -3,17 +3,16 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import HTMLRenderer from '../../lpm/renderers/html'
 import VueRenderer from '../../lpm/renderers/vue'
-import OPFSFileSystem from '../../web/fs.js'
+import * as FS from '../../fs'
 import { SubthreadErrors } from "../../lpm";
 import ReactiveFileRenderer from './ReactiveFileRenderer.vue'
 import ReactiveFileChooserRenderer from './ReactiveFileChooserRenderer.vue'
 
-export let fs: OPFSFileSystem | null = null
+export let fs: FS.t | null = null
 
 export const lib: L.Library = new L.Library(async () => {
-  if (navigator.storage !== undefined) {
-    fs = await OPFSFileSystem.create()
-  }
+  await FS.initialize()
+  fs = FS.getFS()
 })
 export default lib
 

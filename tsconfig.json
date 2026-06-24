@@ -39,8 +39,7 @@
     "test",
     "esbuild.config.js",
     "tsconfig.json",
-    "jest.config.ts",
-    "src/lib"
+    "jest.config.ts"
   ],
   "include": ["src"]
 }

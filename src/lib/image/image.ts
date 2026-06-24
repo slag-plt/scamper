@@ -4,7 +4,7 @@ import HtmlRenderer from '../../lpm/renderers/html.js'
 import VueRenderer from '../../lpm/renderers/vue.js'
 import ReactiveImageFileRenderer from './ReactiveImageFileRenderer.vue'
 import * as L from '../../lpm'
-import { rgb } from './color.js'
+import { Rgb, rgb } from './color.js'
 
 const imageS: C.Spec = {
   predicate: (v: any) => v instanceof HTMLCanvasElement,
@@ -69,7 +69,7 @@ function pixelMap (fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElemen
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const dst = outImg.data
   for (let i = 0; i < src.length; i += 4) {
-    const c = L.callScamperFn(fn, rgb(src[i], src[i + 1], src[i+2], src[i+3]))
+    const c = L.callScamperFn(fn, rgb(src[i], src[i + 1], src[i+2], src[i+3])) as Rgb
     dst[i] = c.red
     dst[i + 1] = c.green
     dst[i + 2] = c.blue
@@ -115,7 +115,7 @@ function pixelsToImage (pixels: L.Struct[], width: number, height: number): HTML
   const outImg = ctx.createImageData(width, height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
-    const c = pixels[i]
+    const c = pixels[i] as Rgb
     data[i*4] = c.red
     data[i*4 + 1] = c.green
     data[i*4 + 2] = c.blue
@@ -131,7 +131,7 @@ function canvasSetPixels (canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
-    const c = pixels[i]
+    const c = pixels[i] as Rgb
     data[i*4] = c.red
     data[i*4 + 1] = c.green
     data[i*4 + 2] = c.blue

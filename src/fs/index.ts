@@ -1,7 +1,10 @@
-import * as F from './fs'
+
+import type { FS } from './fs'
 import OPFSFileSystem from './opfs'
 
-let instance: F.FS | undefined = undefined
+export type { FS as t } from './fs'
+
+let instance: FS | undefined = undefined
 
 /** Initializes the global file system */
 export async function initialize(): Promise<void> {
@@ -12,7 +15,7 @@ export async function initialize(): Promise<void> {
  * @returns a handle to the global file system, assumes that it has already
  *          been successfully initialized
  */
-export function FS(): F.FS {
+export function getFS(): FS {
   if (!instance) {
     throw new Error('File system not initialized')
   }

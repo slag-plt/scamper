@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import * as FS from "../../fs"
 import { onMounted, shallowRef } from "vue"
-import { OPFSFileSystem } from "../fs"
 import { ScamperError } from "../../lpm/error"
 import { initializeLibs } from "../../lib"
 import OutputPane from "./OutputPane.vue"
@@ -15,7 +15,8 @@ onMounted(async () => {
   const display = outputPaneRef.value?.display
   if (!display) return
 
-  const fs = await OPFSFileSystem.create()
+  await FS.initialize()
+  const fs = FS.getFS()
   await initializeLibs()
   const params = new URLSearchParams(window.location.search)
 

@@ -3,8 +3,6 @@ import { onMounted, onUnmounted, ref, shallowRef } from "vue"
 import { Pane, Splitpanes } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
 import * as Lock from "../lockfile"
-import type { FileEntry } from "../fs"
-import OPFSFileSystem from "../fs"
 import { initializeLibs } from "../../lib"
 import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
@@ -14,6 +12,8 @@ import type { ResultsPaneType } from "./use-results-pane"
 import type { CodeMirrorEditorType } from "./use-codemirror-editor"
 import { ScamperInstance } from "../../scamper-instance"
 import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
+import * as FS from '../../fs'
+import { FileEntry } from "../../fs/fs"
 
 // ---------- config ----------
 
@@ -33,7 +33,7 @@ const appVersion = `(${APP_VERSION})`
 
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
-let fs: OPFSFileSystem | null = null
+let fs: FS.t | null = null
 const scamperInstance: ScamperInstance = ScamperInstance.getInstance()
 let autosaveId = -1
 let config: Config = DEFAULT_CONFIG
@@ -372,9 +372,9 @@ const beforeUnloadWrapper = (e: Event) => {
 // ---------- lifecycle ----------
 
 onMounted(async () => {
-  fs = await OPFSFileSystem.create()
+  await FS.initialize()
 
-  const obtainedLock = await Lock.acquireLockFile(fs)
+  const obtainedLock = await Lock.acquireLockFile(FS.getFS())
   if (!obtainedLock) {
     loadingContent.value =
       "Another instance of Scamper is open. Please close that instance and try again."
@@ -391,7 +391,7 @@ onMounted(async () => {
   await populateFileDrawer()
 
   if (config.lastOpenedFilename !== null) {
-    if (await fs.fileExists(config.lastOpenedFilename)) {
+    if (await fs!.fileExists(config.lastOpenedFilename)) {
       // TODO: re-enable once we have a better handle on large-file loading
       // await switchToFile(config.lastOpenedFilename)
     } else {
