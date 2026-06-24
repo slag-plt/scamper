@@ -9,8 +9,9 @@ import { FiberRaiser } from "../lpm/raiser.js"
 import { raiseFiber } from "./raise.js"
 import { read } from "./reader.js"
 import { parseProgram } from "./parser.js"
-import { Exp, Prog } from "./ast.js"
+import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedAST } from "./query"
+import { isExampleTag } from "./docstring/tags/example-tag"
 
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
@@ -55,6 +56,24 @@ export function tokenizeAndParse(
     })
     return undefined
   }
+
+  if (!queryLoc) {
+    return program
+  }
+
+  // determine if query loc inside define statement
+  const queriedStmt = program.find((s) => s.range.contains(queryLoc))
+  if (queriedStmt?.tag !== "define" || queriedStmt.doc === undefined) {
+    return program
+  }
+  // find example tag if exists
+  const exampleTags = queriedStmt.doc.tags.filter((t) => isExampleTag(t))
+  // TODO: only choosing first example tag for input prototype
+  const firstExample = exampleTags.at(0)
+  if (!firstExample) {
+    return program
+  }
+  program.push(mkDisp(firstExample.contents.functionCall))
   return program
 }
 

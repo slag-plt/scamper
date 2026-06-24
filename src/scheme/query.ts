@@ -122,5 +122,5 @@ function makeWrappedSyntax(
   value: Syntax["value"],
   range: Syntax["range"],
 ): Syntax {
-  return mkSyntax(mkList(mkSym("report"), value), range)
+  return mkSyntax(mkList(mkSyntax(mkSym("report")), value), range)
 }

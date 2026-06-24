@@ -11,6 +11,15 @@ interface Example {
 }
 export type ExampleTag = DocTag<Example>
 
+export function isExampleTag(t: DocTag): t is ExampleTag {
+  return (
+    typeof t.contents === "object" &&
+    t.contents !== null &&
+    "functionCall" in t.contents &&
+    "result" in t.contents
+  )
+}
+
 const separator = " -> "
 
 function exampleTagError(
@@ -45,7 +54,9 @@ function parseExampleExpression(
   if (parsed.length > 1) {
     exampleTagError(`more than one expression found in ${field}`, range)
   }
-  return parsed[0]
+  const toReturn = parsed[0]
+  toReturn.range = range
+  return toReturn
 }
 
 registerDocTagParser("@example", (contents, range): ExampleTag => {
