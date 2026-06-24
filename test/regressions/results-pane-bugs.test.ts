@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils"
-import { fireEvent, findByRole, getByRole, waitFor } from "@testing-library/dom"
+import { findByRole, fireEvent, getByRole, waitFor } from "@testing-library/dom"
 import { nextTick } from "vue"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import IdeApp from "../../src/web/components/IdeApp.vue"
@@ -11,7 +11,7 @@ import {
 
 patchSchedulerYieldForTests()
 
-vi.mock("../../src/web/fs", async () => {
+vi.mock("../../src/fs/opfs", async () => {
   const { MockFileSystem } = await import("./stubs/mock-file-system")
   return { default: MockFileSystem }
 })
@@ -21,12 +21,14 @@ vi.mock("../../src/web/lockfile", () => ({
   releaseLockFile: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock("../../src/web/components/CodeMirrorEditor.vue", () =>
-  import("./stubs/MockCodeMirrorEditor.vue"),
+vi.mock(
+  "../../src/web/components/CodeMirrorEditor.vue",
+  () => import("./stubs/MockCodeMirrorEditor.vue"),
 )
 
-vi.mock("../../src/web/components/ResultsPane.vue", () =>
-  import("./stubs/MockResultsPane.vue"),
+vi.mock(
+  "../../src/web/components/ResultsPane.vue",
+  () => import("./stubs/MockResultsPane.vue"),
 )
 
 // Regressions for unintended bugs in the IDE results pane. Each `describe`
