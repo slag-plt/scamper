@@ -12,7 +12,7 @@ import type { ResultsPaneType } from "./use-results-pane"
 import type { CodeMirrorEditorType } from "./use-codemirror-editor"
 import { ScamperInstance } from "../../scamper-instance"
 import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
-import * as FS from '../../fs'
+import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 
 // ---------- config ----------
@@ -373,8 +373,9 @@ const beforeUnloadWrapper = (e: Event) => {
 
 onMounted(async () => {
   await FS.initialize()
+  fs = FS.getFS()
 
-  const obtainedLock = await Lock.acquireLockFile(FS.getFS())
+  const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
     loadingContent.value =
       "Another instance of Scamper is open. Please close that instance and try again."
@@ -391,7 +392,7 @@ onMounted(async () => {
   await populateFileDrawer()
 
   if (config.lastOpenedFilename !== null) {
-    if (await fs!.fileExists(config.lastOpenedFilename)) {
+    if (await fs.fileExists(config.lastOpenedFilename)) {
       // TODO: re-enable once we have a better handle on large-file loading
       // await switchToFile(config.lastOpenedFilename)
     } else {
