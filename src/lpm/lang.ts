@@ -1,4 +1,5 @@
 import { Range } from "./range.js"
+import { FunctionDoc } from "../scheme/docstring/docstring"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -343,6 +344,7 @@ export interface Define {
   name: string
   expr: Blk
   range: Range
+  doc?: FunctionDoc
 }
 export interface StmtExp {
   tag: "stmtexp"

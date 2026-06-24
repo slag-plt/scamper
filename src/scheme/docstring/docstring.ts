@@ -68,8 +68,8 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
       "Attempted to parse docstring from comment block with no doc lines!",
     )
   }
-  const firstRange = docComments[0].range
-  const lastRange = docComments[docComments.length - 1].range
+  const firstRange = firstDocComment.range
+  const lastRange = (docComments.at(-1) ?? firstDocComment).range
 
   const signature = parseSignature(firstDocComment)
   const params: Params = []

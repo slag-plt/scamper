@@ -90,7 +90,7 @@ function lowerStmt(s: A.Stmt, displayStmtExpr = true): L.Stmt {
     case "import":
       return L.mkImport(s.module, s.range)
     case "define":
-      return L.mkDefine(s.name, lowerExpr(s.value), s.range)
+      return L.mkDefine(s.name, lowerExpr(s.value), s.range, s.doc)
     case "display":
       return L.mkDisp(lowerExpr(s.value), s.range)
     case "stmtexp":
