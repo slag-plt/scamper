@@ -1,4 +1,6 @@
-export class MockFileSystem {
+import { FS } from "../../../src/fs/fs"
+
+export class MockFileSystem implements FS {
   private files = new Map<string, string>()
 
   static create(): Promise<MockFileSystem> {
