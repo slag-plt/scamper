@@ -1,7 +1,7 @@
 import { ICE, ReportError, ScamperError } from "../error"
 import { Fiber, MinorStep, StepResult, TraceStep } from "../fiber"
 import { Ops, Value } from "../lang"
-import { Frame } from "../thread"
+import { Frame } from "../frame"
 import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch } from "../util"
 
 /* Definition */

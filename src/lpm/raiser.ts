@@ -1,5 +1,4 @@
 import { Fiber } from './fiber.js'
-import { Thread } from './thread.js'
 
 /**
  * Language services bundle together related functions that allow LPM to work
@@ -7,13 +6,6 @@ import { Thread } from './thread.js'
  * the type representing expressions over that language. Furthermore it is
  * assumed that the expression type is registered with appropriate renderers.
  */
-export type Raiser<Exp> = {
-  /** Raises the given thread back to an expression */
-  raise: (thread: Thread) => Exp
-  /** Compares two expressions for equality */
-  equals: (a: Exp, b: Exp) => boolean
-}
-
 export interface FiberRaiser<Exp> {
   /** Raises the given thread back to an expression */
   raise: (fiber: Fiber) => Exp

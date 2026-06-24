@@ -1,9 +1,8 @@
 import fs from "fs"
 import { parseArgs } from "node:util"
 
-import { builtinLibs, initializeLibs } from "../lib"
+// import { builtinLibs, initializeLibs } from "../lib"
 import { ConsoleOutput } from "../lpm/output"
-import { defaultOptions, Thread } from "../lpm/thread.js"
 import * as Scheme from "../scheme"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -40,17 +39,19 @@ if (program === undefined) {
   process.exit(1)
 }
 
-const options = defaultOptions
-options.isTracing = values.trace ?? false
+// TODO: need to reimplement the CLI driver using our fiber framework
 
-await initializeLibs()
-new Thread(
-  "##main##",
-  Scheme.mkInitialEnv(),
-  program,
-  options,
-  builtinLibs,
-  out,
-  out,
-  new Map([["scheme", Scheme.raiser]]),
-).evaluate()
+// const options = defaultOptions
+// options.isTracing = values.trace ?? false
+
+// await initializeLibs()
+// new Thread(
+//   "##main##",
+//   Scheme.mkInitialEnv(),
+//   program,
+//   options,
+//   builtinLibs,
+//   out,
+//   out,
+//   new Map([["scheme", Scheme.raiser]]),
+// ).evaluate()

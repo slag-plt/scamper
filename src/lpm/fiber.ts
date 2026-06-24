@@ -6,7 +6,7 @@ import {
   ImportHandler,
   StmtExpHandler,
 } from "./handlers/stmt-handlers"
-import { Frame } from "./thread"
+import { Frame } from "./frame"
 import { ICE, ScamperError } from "./error"
 import {
   ApHandler,
