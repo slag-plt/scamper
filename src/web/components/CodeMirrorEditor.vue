@@ -1,42 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
-import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
-import { CodeMirrorEditorType } from "./use-codemirror-editor"
-import { Loc } from "../../lpm"
+import { mkNoFileEditorState } from "../codemirror"
+import {
+  createCodeMirrorEditorAdapter,
+  type CodeMirrorEditorAdapter,
+} from "./codemirror-editor-adapter"
+import { useEditorRegistration } from "./editor-context"
 
 const emit = defineEmits<{ dirty: [] }>()
 
+const editorRegistration = useEditorRegistration()
 const containerRef = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
-
-function getDoc(): string {
-  return editorView?.state.doc.toString() ?? ""
-}
-
-function initializeDoc(src: string): void {
-  editorView?.setState(
-    mkFreshEditorState(src, {
-      dirtyAction: () => {
-        emit("dirty")
-      },
-      isReadOnly: false,
-    }),
-  )
-}
-
-function initializeDummyDoc(): void {
-  editorView?.setState(mkNoFileEditorState())
-}
-
-function getCursorLoc(): Loc | null {
-  if (!editorView) {
-    return null
-  }
-  const idx = editorView.state.selection.main.head
-  const line = editorView.state.doc.lineAt(idx)
-  return new Loc(line.number, idx - line.from, idx)
-}
+let adapter: CodeMirrorEditorAdapter | null = null
 
 onMounted(() => {
   if (!containerRef.value) return
@@ -44,18 +21,19 @@ onMounted(() => {
     state: mkNoFileEditorState(),
     parent: containerRef.value,
   })
+  adapter = createCodeMirrorEditorAdapter(editorView, () => {
+    emit("dirty")
+  })
+  editorRegistration.register(adapter)
 })
 
 onUnmounted(() => {
+  if (adapter) {
+    editorRegistration.unregister(adapter)
+    adapter = null
+  }
   editorView?.destroy()
   editorView = null
-})
-
-defineExpose<CodeMirrorEditorType>({
-  getDoc,
-  initializeDoc,
-  initializeDummyDoc,
-  getCursorLoc,
 })
 </script>
 

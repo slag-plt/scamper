@@ -8,8 +8,8 @@ import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
+import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
-import type { CodeMirrorEditorType } from "./use-codemirror-editor"
 import { ScamperInstance } from "../../scamper-instance"
 import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
 import * as FS from "../../fs"
@@ -49,9 +49,9 @@ const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref("Loading Scamper...")
 
-// ---------- child component refs ----------
+// ---------- editor context + child component refs ----------
 
-const editorRef = shallowRef<CodeMirrorEditorType | null>(null)
+const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
 
 // ---------- file drawer ----------
@@ -95,12 +95,6 @@ function stopAutosaving() {
   autosaveId = -1
 }
 
-// ---------- editor helpers ----------
-
-function getDoc(): string {
-  return editorRef.value?.getDoc() ?? ""
-}
-
 // ---------- dirty tracking ----------
 
 function makeDirty() {
@@ -128,7 +122,7 @@ function executeScamper({
   if (!err || !out) return
   resultsRef.value?.reset()
   isTracing.value = true
-  const src = getDoc()
+  const src = editor().getDoc()
   if (queryLoc) {
     scamperInstance.query({ src, rep: err, queryLoc })
   } else {
@@ -147,7 +141,7 @@ function executeScamper({
 async function saveCurrentFile() {
   if (!currentFile.value || !fs) return
   try {
-    await fs.saveFile(currentFile.value, getDoc())
+    await fs.saveFile(currentFile.value, editor().getDoc())
   } catch (e) {
     if (e instanceof Error) displayError(e.message)
   }
@@ -162,7 +156,7 @@ async function switchToFile(filename: string): Promise<void> {
   currentFile.value = filename
   try {
     const src = await fs.loadFile(currentFile.value)
-    editorRef.value?.initializeDoc(src)
+    editor().initializeDoc(src)
   } catch (e) {
     if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ""}`)
   }
@@ -211,7 +205,7 @@ function handleQuery() {
   console.log("clicked query")
   executeScamper({
     tracing: false,
-    queryLoc: editorRef.value?.getCursorLoc() ?? null,
+    queryLoc: editor().getCursorLoc(),
   })
   // TODO: don't output to results pane
 }
@@ -310,7 +304,7 @@ async function handleDelete() {
   stopAutosaving()
   await fs?.deleteFile(currentFile.value)
   currentFile.value = null
-  editorRef.value?.initializeDummyDoc()
+  editor().initializeDummyDoc()
   config.lastOpenedFilename = null
   resultsRef.value?.reset()
   await populateFileDrawer()
@@ -440,7 +434,7 @@ onUnmounted(() => {
       <div class="content-area">
         <Splitpanes>
           <Pane :size="65" class="editor-pane">
-            <CodeMirrorEditor ref="editorRef" @dirty="makeDirty" />
+            <CodeMirrorEditor @dirty="makeDirty" />
           </Pane>
           <Pane :size="35" class="results-pane">
             <ResultsPane
