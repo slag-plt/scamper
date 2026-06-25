@@ -1,5 +1,5 @@
 import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "./lpm"
-import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
+import { Fiber, StepResult } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -128,12 +128,12 @@ export class Scheduler {
           const { out, isTracing } = task
           // we don't output minor steps (for now)
           // TODO: maybe consider fine-grained tracing?
-          if (stepResult === MinorStep || stepResult === YieldStep) {
+          if (stepResult.tag === "minor" || stepResult.tag === "yield") {
             this.#currTaskIdx++
             continue
           }
           // we always output if we just completed a display statement
-          if (stepResult === DisplayStep) {
+          if (stepResult.tag === "display") {
             out.send(fiber.lastResult)
           }
           // implied that stepResult === TraceStep

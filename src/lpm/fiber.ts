@@ -19,15 +19,28 @@ import {
   VarHandler,
 } from "./handlers/op-handlers"
 
-export const DisplayStep = "Display"
-export const TraceStep = "Trace"
-export const MinorStep = "Minor"
-export const YieldStep = "Yield"
+export type DisplayStep = { tag: "display" }
+export type TraceStep = { tag: "trace" }
+export type MinorStep = { tag: "minor" }
+export type YieldStep = { tag: "yield" }
+export type ImportFileStep = {
+  tag: "import-file"
+  filename: string
+}
+
 export type StepResult =
-  | typeof DisplayStep
-  | typeof TraceStep
-  | typeof MinorStep
-  | typeof YieldStep
+  DisplayStep |
+  TraceStep |
+  MinorStep |
+  YieldStep
+
+export const displayStep: DisplayStep = { tag: "display" }
+export const traceStep: TraceStep = { tag: "trace" }
+export const minorStep: MinorStep = { tag: "minor" }
+export const yieldStep: YieldStep = { tag: "yield" }
+export function importFileStep(filename: string): ImportFileStep {
+  return { tag: "import-file", filename }
+}
 
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
@@ -212,11 +225,11 @@ export class Fiber {
     const lib = this.#scamperInstance.tryGetLib(libName)
     if (!lib) {
       // we didn't throw in tryGetLib, so we know that the library is just loading and not that it doesn't exist
-      return YieldStep
+      return yieldStep
     }
     for (const [name, value] of lib.lib) {
       this.topLevelEnv.set(name, value)
     }
-    return TraceStep
+    return traceStep
   }
 }
