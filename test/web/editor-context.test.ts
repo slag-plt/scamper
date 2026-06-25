@@ -40,6 +40,10 @@ describe("editor context", () => {
         adapter.getDoc = () => ""
       },
       getCursorLoc: () => new Loc(1, 2, 3),
+      coordsAtPos: () => null,
+      onViewChange: () => () => {
+        /* noop */
+      },
     } satisfies CodeMirrorEditorAdapter
     ctx.register(adapter)
 
@@ -65,6 +69,10 @@ describe("editor context", () => {
         /* noop */
       },
       getCursorLoc: () => new Loc(0, 0, 0),
+      coordsAtPos: () => null,
+      onViewChange: () => () => {
+        /* noop */
+      },
     } satisfies CodeMirrorEditorAdapter
     const second = {
       getDoc: () => "second",
@@ -75,6 +83,10 @@ describe("editor context", () => {
         /* noop */
       },
       getCursorLoc: () => new Loc(1, 1, 1),
+      coordsAtPos: () => null,
+      onViewChange: () => () => {
+        /* noop */
+      },
     } satisfies CodeMirrorEditorAdapter
 
     ctx.register(first)

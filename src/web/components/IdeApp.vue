@@ -8,12 +8,14 @@ import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
+import QueryModal from "./QueryModal.vue"
 import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
 import { ScamperInstance } from "../../scamper-instance"
 import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
+import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 
 // ---------- config ----------
 
@@ -53,6 +55,14 @@ const loadingContent = ref("Loading Scamper...")
 
 const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
+
+interface QueryEntry {
+  id: number
+  targetPos: number
+  // RefErrorChannel will be added here later
+}
+const queries = ref<QueryEntry[]>([])
+let nextQueryId = 0
 
 // ---------- file drawer ----------
 
@@ -202,12 +212,19 @@ function toggleSidebar() {
 }
 
 function handleQuery() {
-  console.log("clicked query")
+  const rep = new SimpleErrorChannel()
+  const loc = editor().getCursorLoc()
   executeScamper({
     tracing: false,
-    queryLoc: editor().getCursorLoc(),
+    err: rep,
+    queryLoc: loc,
   })
-  // TODO: don't output to results pane
+  queries.value.push({ id: nextQueryId++, targetPos: loc.idx })
+  // TODO: store `rep` (RefErrorChannel) on the entry and render its errors in the modal slot
+}
+
+function closeQuery(id: number) {
+  queries.value = queries.value.filter((q) => q.id !== id)
 }
 
 // ---------- step handlers ----------
@@ -454,6 +471,14 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
+  <QueryModal
+    v-for="q in queries"
+    :key="q.id"
+    :target-pos="q.targetPos"
+    @close="closeQuery(q.id)"
+  >
+    Querying...
+  </QueryModal>
 </template>
 
 <style scoped>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
-import { Loc } from "../../../src/lpm"
-import type { CodeMirrorEditorAdapter } from "../../../src/web/components/codemirror-editor-adapter"
-import { useEditorRegistration } from "../../../src/web/components/editor-context"
+import { Loc } from "../../src/lpm"
+import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
+import { useEditorRegistration } from "../../src/web/components/editor-context"
 
 const emit = defineEmits<{ dirty: [] }>()
 const editorRegistration = useEditorRegistration()
@@ -20,6 +20,10 @@ const adapter = {
   },
   getCursorLoc() {
     return new Loc(0, 0, 0)
+  },
+  coordsAtPos: () => null,
+  onViewChange: () => () => {
+    /* noop */
   },
 } satisfies CodeMirrorEditorAdapter
 
