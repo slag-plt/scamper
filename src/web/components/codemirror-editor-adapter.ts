@@ -2,7 +2,7 @@ import type { EditorView } from "@codemirror/view"
 import type { Extension } from "@codemirror/state"
 import { Loc } from "../../lpm"
 import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
-import { toPopupCoords, type PopupCoords } from "./query-modal-extension"
+import { type PopupCoords, toPopupCoords } from "./query/query-modal-extension"
 
 export function createCodeMirrorEditorAdapter(
   view: EditorView,

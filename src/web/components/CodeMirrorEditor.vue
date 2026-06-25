@@ -3,11 +3,11 @@ import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
 import { mkNoFileEditorState } from "../codemirror"
 import {
-  createCodeMirrorEditorAdapter,
   type CodeMirrorEditorAdapter,
+  createCodeMirrorEditorAdapter,
 } from "./codemirror-editor-adapter"
 import { useEditorRegistration } from "./editor-context"
-import { createViewChangeNotifier } from "./query-modal-extension"
+import { createViewChangeNotifier } from "./query/query-modal-extension"
 
 const emit = defineEmits<{ dirty: [] }>()
 
