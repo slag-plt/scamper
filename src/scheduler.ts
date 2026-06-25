@@ -2,6 +2,7 @@ import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "./l
 import { Fiber, StepResult } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
+import { getFS } from './fs'
 
 const DEFAULT_REFRESH_RATE = 60
 
@@ -102,44 +103,67 @@ export class Scheduler {
           )
         }
 
-        let stepResult: StepResult
-        try {
-          stepResult = fiber.step()
-        } catch (e) {
-          if (e instanceof ScamperError) {
-            if (isReportTask(task)) {
-              if (e instanceof ReportError) {
-                console.debug(e.value)
+        if (fiber.isRunning) {
+          let stepResult: StepResult
+          try {
+            stepResult = fiber.step()
+          } catch (e) {
+            if (e instanceof ScamperError) {
+              if (isReportTask(task)) {
+                if (e instanceof ReportError) {
+                  console.debug(e.value)
+                }
+                task.rep.report(e)
+                this.#removeCurrFiber()
+                continue
               }
-              task.rep.report(e)
-              this.#removeCurrFiber()
+              this.#reportAndUnwind(e, task)
               continue
             }
-            this.#reportAndUnwind(e, task)
-            continue
+            // either the runtime broke and threw an ICE (which is bad)
+            // or we have an unexpected error somewhere (which is really bad)
+            // either way, we should probably just rethrow this...
+            throw e
           }
-          // either the runtime broke and threw an ICE (which is bad)
-          // or we have an unexpected error somewhere (which is really bad)
-          // either way, we should probably just rethrow this...
-          throw e
-        }
+          if (stepResult.tag === 'import-file') {
+            if (!await getFS().fileExists(stepResult.filename)) {
+              throw new ScamperError(
+                "Runtime",
+                `Attempted to import file "${stepResult.filename}" but it does not exist!`,
+              )
+            } else {
+              fiber.pause()
+              getFS().loadFile(stepResult.filename).then((src) => {
+                // TODO: we need to run `src` and then inject its globals into
+                // the current fiber's top-level scope
+                fiber.resume()
+              },
+              (err) => {
+                throw new ScamperError(
+                  "Runtime",
+                  `Attempted to import file "${stepResult.filename}" but it failed to load!`,
+                )
+              })
+            }
+          }
 
-        if (isDisplayTask(task)) {
-          const { out, isTracing } = task
-          // we don't output minor steps (for now)
-          // TODO: maybe consider fine-grained tracing?
-          if (stepResult.tag === "minor" || stepResult.tag === "yield") {
-            this.#currTaskIdx++
-            continue
-          }
-          // we always output if we just completed a display statement
-          if (stepResult.tag === "display") {
-            out.send(fiber.lastResult)
-          }
-          // implied that stepResult === TraceStep
-          else if (isTracing) {
-            // package it up in a nice little trace output and send it
-            out.send(mkTraceOutput(fiber.lastResult))
+          if (isDisplayTask(task)) {
+            const { out, isTracing } = task
+            // we don't output minor steps (for now)
+            // TODO: maybe consider fine-grained tracing?
+            if (stepResult.tag === "minor" || stepResult.tag === "yield") {
+              this.#currTaskIdx++
+              continue
+            }
+            // we always output if we just completed a display statement
+            if (stepResult.tag === "display") {
+              out.send(fiber.lastResult)
+            }
+            // implied that stepResult === TraceStep
+            else if (isTracing) {
+              // package it up in a nice little trace output and send it
+              out.send(mkTraceOutput(fiber.lastResult))
+            }
           }
         }
 

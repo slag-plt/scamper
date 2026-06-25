@@ -1,4 +1,3 @@
-import { ScamperInstance } from "../scamper-instance"
 import { Blk, Env, Prog, Stmt, Value } from "./lang"
 import {
   DefineHandler,
@@ -18,12 +17,14 @@ import {
   ReptHandler,
   VarHandler,
 } from "./handlers/op-handlers"
+import builtinLibs from "../lib"
 
-export type DisplayStep = { tag: "display" }
-export type TraceStep = { tag: "trace" }
-export type MinorStep = { tag: "minor" }
-export type YieldStep = { tag: "yield" }
-export type ImportFileStep = {
+
+export interface DisplayStep { tag: "display" }
+export interface TraceStep { tag: "trace" }
+export interface MinorStep { tag: "minor" }
+export interface YieldStep { tag: "yield" }
+export interface ImportFileStep {
   tag: "import-file"
   filename: string
 }
@@ -32,7 +33,8 @@ export type StepResult =
   DisplayStep |
   TraceStep |
   MinorStep |
-  YieldStep
+  YieldStep |
+  ImportFileStep
 
 export const displayStep: DisplayStep = { tag: "display" }
 export const traceStep: TraceStep = { tag: "trace" }
@@ -53,10 +55,25 @@ export class Fiber {
   #currStmtIdx = 0
   #isProcessingBlk = false
   #maxCallStackDepth = 10_000
-  #scamperInstance = ScamperInstance.getInstance()
+  #isRunning = true
 
   constructor(prog: Prog) {
     this.#prog = prog
+  }
+
+  /** Pauses this fiber's execution */
+  pause(): void {
+    this.#isRunning = false
+  }
+
+  /** Resumes this fiber's execution */
+  resume(): void {
+    this.#isRunning = true
+  }
+
+  /** @returns true iff this fiber is marked as running */
+  get isRunning(): boolean {
+    return this.#isRunning
   }
 
   /**
@@ -65,6 +82,12 @@ export class Fiber {
    * @returns true if the step is a major step of execution, false if it's a minor step (e.g. variable loading)
    */
   step(): StepResult {
+    if (!this.#isRunning) {
+      throw new ICE(
+        "Fiber.step",
+        "Attempted to step fiber when it is paused!",
+      )
+    }
     const currStmt = this.#prog.at(this.#currStmtIdx)
     if (!currStmt) {
       throw new ICE("Fiber.step", "Attempted to step but no statements remain!")
@@ -222,14 +245,23 @@ export class Fiber {
 
   /* Library importing helper functions */
   loadLib(libName: string): StepResult {
-    const lib = this.#scamperInstance.tryGetLib(libName)
-    if (!lib) {
-      // we didn't throw in tryGetLib, so we know that the library is just loading and not that it doesn't exist
-      return yieldStep
+    const builtin = builtinLibs.get(libName)
+    if (builtin) {
+      // TODO: for simplicity's sake, we assume that all built-in libs
+      // initializers have been invoked already. The only built-in lib
+      // with an initializer at this point is the music lib, so we might
+      // want to remove initializers altogether and do something for
+      // the music lib instead.
+      for (const [name, value] of builtin.lib) {
+        this.topLevelEnv.set(name, value)
+      }
+      return traceStep
+    } else {
+      // ...otherwise, we're loading a user file as a lib. The libname
+      // should correspond to the exact name of the source file. This will
+      // be handled by the scheduler who will, ultimately, pause the current
+      // fiber and execute an asynchronous load of that file.
+      return importFileStep(libName)
     }
-    for (const [name, value] of lib.lib) {
-      this.topLevelEnv.set(name, value)
-    }
-    return traceStep
   }
 }
