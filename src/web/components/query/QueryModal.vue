@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
-import { useEditor } from "./editor-context"
+import { useEditor } from "../editor-context"
 import type { PopupCoords } from "./query-modal-extension"
 
 const props = defineProps<{ targetPos: number }>()
