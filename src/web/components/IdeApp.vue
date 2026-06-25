@@ -12,10 +12,11 @@ import QueryModal from "./query/QueryModal.vue"
 import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
 import { ScamperInstance } from "../../scamper-instance"
-import { ErrorChannel, Loc, OutputChannel } from "../../lpm"
+import { ErrorChannel, Loc, OutputChannel, ReportError } from "../../lpm"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
+import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 
 // ---------- config ----------
 
@@ -59,7 +60,7 @@ const resultsRef = shallowRef<ResultsPaneType | null>(null)
 interface QueryEntry {
   id: number
   targetPos: number
-  // RefErrorChannel will be added here later
+  rep: SimpleErrorChannel
 }
 const queries = ref<QueryEntry[]>([])
 let nextQueryId = 0
@@ -109,6 +110,7 @@ function stopAutosaving() {
 
 function makeDirty() {
   isDirty.value = true
+  queries.value = []
 }
 
 function makeClean() {
@@ -214,13 +216,12 @@ function toggleSidebar() {
 function handleQuery() {
   const rep = new SimpleErrorChannel()
   const loc = editor().getCursorLoc()
+  queries.value.push({ id: nextQueryId++, targetPos: loc.idx, rep })
   executeScamper({
     tracing: false,
     err: rep,
     queryLoc: loc,
   })
-  queries.value.push({ id: nextQueryId++, targetPos: loc.idx })
-  // TODO: store `rep` (RefErrorChannel) on the entry and render its errors in the modal slot
 }
 
 function closeQuery(id: number) {
@@ -477,7 +478,13 @@ onUnmounted(() => {
     :target-pos="q.targetPos"
     @close="closeQuery(q.id)"
   >
-    Querying...
+    <ValueRenderer
+      v-for="[repI, repErr] in q.rep.errors
+        .filter((e) => e instanceof ReportError)
+        .entries()"
+      :key="repI"
+      :value="repErr.value"
+    />
   </QueryModal>
 </template>
 
