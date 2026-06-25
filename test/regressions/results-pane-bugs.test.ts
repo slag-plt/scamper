@@ -12,7 +12,7 @@ import {
 patchSchedulerYieldForTests()
 
 vi.mock("../../src/fs/opfs", async () => {
-  const { MockFileSystem } = await import("./stubs/mock-file-system")
+  const { MockFileSystem } = await import("../stubs/mock-file-system")
   return { default: MockFileSystem }
 })
 
@@ -23,12 +23,12 @@ vi.mock("../../src/web/lockfile", () => ({
 
 vi.mock(
   "../../src/web/components/CodeMirrorEditor.vue",
-  () => import("./stubs/MockCodeMirrorEditor.vue"),
+  () => import("../stubs/MockCodeMirrorEditor.vue"),
 )
 
 vi.mock(
   "../../src/web/components/ResultsPane.vue",
-  () => import("./stubs/MockResultsPane.vue"),
+  () => import("../stubs/MockResultsPane.vue"),
 )
 
 // Regressions for unintended bugs in the IDE results pane. Each `describe`

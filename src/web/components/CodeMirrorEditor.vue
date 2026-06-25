@@ -7,6 +7,7 @@ import {
   type CodeMirrorEditorAdapter,
 } from "./codemirror-editor-adapter"
 import { useEditorRegistration } from "./editor-context"
+import { createViewChangeNotifier } from "./query-modal-extension"
 
 const emit = defineEmits<{ dirty: [] }>()
 
@@ -15,15 +16,24 @@ const containerRef = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
 let adapter: CodeMirrorEditorAdapter | null = null
 
+const notifier = createViewChangeNotifier()
+
 onMounted(() => {
   if (!containerRef.value) return
   editorView = new EditorView({
-    state: mkNoFileEditorState(),
+    state: mkNoFileEditorState([notifier.extension]),
     parent: containerRef.value,
   })
-  adapter = createCodeMirrorEditorAdapter(editorView, () => {
-    emit("dirty")
-  })
+  adapter = createCodeMirrorEditorAdapter(
+    editorView,
+    () => {
+      emit("dirty")
+    },
+    {
+      extraExtensions: [notifier.extension],
+      subscribe: notifier.subscribe,
+    },
+  )
   editorRegistration.register(adapter)
 })
 
@@ -32,6 +42,7 @@ onUnmounted(() => {
     editorRegistration.unregister(adapter)
     adapter = null
   }
+  notifier.dispose()
   editorView?.destroy()
   editorView = null
 })

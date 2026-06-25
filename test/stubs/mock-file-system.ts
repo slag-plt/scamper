@@ -1,4 +1,4 @@
-import { FS } from "../../../src/fs/fs"
+import { FS } from "../../src/fs/fs"
 
 export class MockFileSystem implements FS {
   private files = new Map<string, string>()
