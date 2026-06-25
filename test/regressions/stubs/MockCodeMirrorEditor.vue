@@ -1,27 +1,40 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { onMounted, onUnmounted, ref } from "vue"
+import { Loc } from "../../../src/lpm"
+import type { CodeMirrorEditorAdapter } from "../../../src/web/components/codemirror-editor-adapter"
+import { useEditorRegistration } from "../../../src/web/components/editor-context"
 
 const emit = defineEmits<{ dirty: [] }>()
+const editorRegistration = useEditorRegistration()
 const src = ref("")
 
-function getDoc(): string {
-  return src.value
-}
+const adapter = {
+  getDoc() {
+    return src.value
+  },
+  initializeDoc(nextSrc: string) {
+    src.value = nextSrc
+  },
+  initializeDummyDoc() {
+    src.value = ""
+  },
+  getCursorLoc() {
+    return new Loc(0, 0, 0)
+  },
+} satisfies CodeMirrorEditorAdapter
 
-function initializeDoc(nextSrc: string): void {
-  src.value = nextSrc
-}
+onMounted(() => {
+  editorRegistration.register(adapter)
+})
 
-function initializeDummyDoc(): void {
-  src.value = ""
-}
+onUnmounted(() => {
+  editorRegistration.unregister(adapter)
+})
 
 function onInput(event: Event): void {
   src.value = (event.target as HTMLTextAreaElement).value
   emit("dirty")
 }
-
-defineExpose({ getDoc, initializeDoc, initializeDummyDoc })
 </script>
 
 <template>
