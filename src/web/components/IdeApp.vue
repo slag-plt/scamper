@@ -150,8 +150,17 @@ function executeScamper({
 
 // ---------- file operations ----------
 
+function isEditorLoaded(): boolean {
+  try {
+    return editor().isLoaded()
+  } catch {
+    return false
+  }
+}
+
 async function saveCurrentFile() {
-  if (!currentFile.value || !fs) return
+  if (!currentFile.value || !fs || isLoadingFile) return
+  if (!isEditorLoaded()) return
   try {
     await fs.saveFile(currentFile.value, editor().getDoc())
   } catch (e) {
