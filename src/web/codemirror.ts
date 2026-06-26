@@ -22,7 +22,7 @@ import { format } from "prettier"
 import ScamperPlugin from "../prettier/prettier-plugin-scamper"
 import { diff } from "@codemirror/merge"
 
-const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
+export const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 
 export type EditorStateConfig = {
   output?: HTMLElement

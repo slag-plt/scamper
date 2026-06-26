@@ -12,12 +12,19 @@ export function createCodeMirrorEditorAdapter(
     subscribe: (listener: () => void) => () => void
   },
 ) {
+  let loaded = false
+
   return {
     getDoc() {
       return view.state.doc.toString()
     },
 
+    isLoaded() {
+      return loaded
+    },
+
     initializeDoc(src: string) {
+      loaded = true
       view.setState(
         mkFreshEditorState(
           src,
@@ -31,6 +38,7 @@ export function createCodeMirrorEditorAdapter(
     },
 
     initializeDummyDoc() {
+      loaded = false
       view.setState(mkNoFileEditorState(query.extraExtensions))
     },
 

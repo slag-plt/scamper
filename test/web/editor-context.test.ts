@@ -33,11 +33,13 @@ describe("editor context", () => {
     const ctx = createTestEditorContext()
     const adapter = {
       getDoc: () => "hello",
+      isLoaded: () => true,
       initializeDoc: (src: string) => {
         adapter.getDoc = () => src
       },
       initializeDummyDoc: () => {
         adapter.getDoc = () => ""
+        adapter.isLoaded = () => false
       },
       getCursorLoc: () => new Loc(1, 2, 3),
       coordsAtPos: () => null,
@@ -62,6 +64,7 @@ describe("editor context", () => {
     const ctx = createTestEditorContext()
     const first = {
       getDoc: () => "first",
+      isLoaded: () => true,
       initializeDoc: (_src: string) => {
         void _src
       },
@@ -76,6 +79,7 @@ describe("editor context", () => {
     } satisfies CodeMirrorEditorAdapter
     const second = {
       getDoc: () => "second",
+      isLoaded: () => true,
       initializeDoc: (_src: string) => {
         void _src
       },
