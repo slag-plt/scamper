@@ -325,7 +325,7 @@ describe("Scheduler", () => {
         const done = makeTestFiber([U.mkDisp([U.mkLit(1)])])
         runFiberToCompletion(done)
         expect(() => {
-          sched.query(makeQueryTask(done))
+          sched.schedule(makeQueryTask(done))
         }).toThrow()
       })
 
@@ -333,7 +333,7 @@ describe("Scheduler", () => {
         const sched = new Scheduler()
         const live = makeTestFiber([U.mkDisp([U.mkLit(1)])])
         expect(() => {
-          sched.query(makeQueryTask(live))
+          sched.schedule(makeQueryTask(live))
         }).not.toThrow()
       })
     })
@@ -345,7 +345,7 @@ describe("Scheduler", () => {
       const sibling = trackFiberSteps(makeNeverCompletingFiber())
       const queryTask = makeQueryTask(reportFiber)
 
-      sched.query(queryTask)
+      sched.schedule(queryTask)
       sched.schedule(makeTask(sibling))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -368,7 +368,7 @@ describe("Scheduler", () => {
       const sibling = trackFiberSteps(makeNeverCompletingFiber())
       const queryTask = makeQueryTask(errorFiber)
 
-      sched.query(queryTask)
+      sched.schedule(queryTask)
       sched.schedule(makeTask(sibling))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -390,7 +390,7 @@ describe("Scheduler", () => {
       const sibling = trackFiberSteps(makeNeverCompletingFiber())
       const queryTask = makeQueryTask(doneFiber)
 
-      sched.query(queryTask)
+      sched.schedule(queryTask)
       sched.schedule(makeTask(sibling))
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
@@ -428,7 +428,7 @@ describe("Scheduler", () => {
       const reportFiber = makeReportThrowingFiber("ranged", range)
       const queryTask = makeQueryTask(reportFiber)
 
-      sched.query(queryTask)
+      sched.schedule(queryTask)
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
 
@@ -447,7 +447,7 @@ describe("Scheduler", () => {
       const siblingB = trackFiberSteps(makeNeverCompletingFiber())
       const queryTask = makeQueryTask(reportFiber)
 
-      sched.query(queryTask)
+      sched.schedule(queryTask)
       sched.schedule(makeTask(siblingA))
       sched.schedule(makeTask(siblingB))
       await sleep(QUANTUM_WAIT_MS)

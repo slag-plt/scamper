@@ -155,6 +155,7 @@ export function makeTask(
 ): TestTask {
   const ch = new LoggingChannel(false, false)
   return {
+    id: "test-id",
     fiber,
     out: ch,
     err: ch,
@@ -169,7 +170,7 @@ export interface TestQueryTask extends QueryTask {
 
 export function makeQueryTask(fiber: MockFiber | Fiber): TestQueryTask {
   const rep = new SimpleErrorChannel()
-  return { fiber, rep }
+  return { id: "test-query-id", fiber, rep }
 }
 
 /** MockFiber that throws ReportError on its first step. */
