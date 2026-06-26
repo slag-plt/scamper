@@ -155,7 +155,7 @@ export function makeTask(
 ): TestTask {
   const ch = new LoggingChannel(false, false)
   return {
-    id: "test-id",
+    id: crypto.randomUUID(),
     fiber,
     out: ch,
     err: ch,
@@ -165,12 +165,12 @@ export function makeTask(
 }
 
 export interface TestQueryTask extends QueryTask {
-  rep: SimpleErrorChannel
+  err: SimpleErrorChannel
 }
 
 export function makeQueryTask(fiber: MockFiber | Fiber): TestQueryTask {
   const rep = new SimpleErrorChannel()
-  return { id: "test-query-id", fiber, rep }
+  return { id: crypto.randomUUID(), fiber, err: rep }
 }
 
 /** MockFiber that throws ReportError on its first step. */

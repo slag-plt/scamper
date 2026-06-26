@@ -5,8 +5,8 @@ import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 
 defineProps<{
-  isTracing?: boolean
-  isDirty?: boolean
+  isTracing: boolean
+  isDirty: boolean
   stepOnce?: () => void
   stepStmt?: () => Promise<void>
   stepAll?: () => Promise<void>

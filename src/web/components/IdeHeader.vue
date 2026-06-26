@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import type { SchedulerId } from "../../scheduler"
 
+// TODO: props are not necessary since ideapp doesn't need to mess with scamperinstance
+// TODO: currentRun is a coarse proxy for run-in-progress; clear it on task completion
+// and move execution/session state out of IdeApp.
 const props = defineProps<{
   currentFile?: string | null
-  run?: () => void
-  trace?: () => void
-  cancel?: () => void
+  currentRun: SchedulerId | null
+  run: () => void
+  trace: () => void
+  cancel: () => void
   query: () => void
 }>()
 
@@ -13,17 +17,6 @@ const emit = defineEmits<{
   runWindow: []
   toggleSidebar: []
 }>()
-
-const isRunInProgress = ref(false)
-
-async function handleRun() {
-  isRunInProgress.value = true
-  try {
-    await props.run?.()
-  } finally {
-    isRunInProgress.value = false
-  }
-}
 </script>
 
 <template>
@@ -35,11 +28,11 @@ async function handleRun() {
         @click="emit('toggleSidebar')"
       ></button>
       ⋅
-      <template v-if="isRunInProgress">
+      <template v-if="currentRun">
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel?.()"
+          @click="cancel()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -49,12 +42,12 @@ async function handleRun() {
         aria-label="Run"
         accesskey="w"
         aria-keyshortcuts="w"
-        @click="handleRun"
+        @click="run()"
       ></button>
       <button
         class="fa-solid fa-route"
         aria-label="Trace"
-        @click="trace?.()"
+        @click="trace()"
       ></button>
       <button
         class="fa-solid fa-window-maximize"
