@@ -31,7 +31,7 @@ onMounted(() => {
     },
     {
       extraExtensions: [notifier.extension],
-      subscribe: notifier.subscribe,
+      subscribe: (listener) => notifier.subscribe(listener),
     },
   )
   editorRegistration.register(adapter)

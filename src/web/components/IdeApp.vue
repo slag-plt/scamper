@@ -487,10 +487,14 @@ onUnmounted(() => {
     :target-pos="q.targetPos"
     @close="closeQuery(q.id)"
   >
+    <template v-if="q.rep.errors.length === 0">
+      Queried code could not be reached!
+    </template>
     <ValueRenderer
       v-for="[repI, repErr] in q.rep.errors
         .filter((e) => e instanceof ReportError)
         .entries()"
+      v-else
       :key="repI"
       :value="repErr.value"
     />
