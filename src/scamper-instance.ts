@@ -57,12 +57,20 @@ export class ScamperInstance {
     return undefined
   }
 
-  public execute({ src, out, err, isTracing }: DisplayExecutionConfig): void {
+  /**
+   * @returns ID of task
+   */
+  public execute({
+    src,
+    out,
+    err,
+    isTracing,
+  }: DisplayExecutionConfig): string | null {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
       // err channel should have caught the error
-      return
+      return null
     }
 
     // make new fiber with prelude as initial environment
@@ -71,14 +79,24 @@ export class ScamperInstance {
     // await fiber.loadLib("prelude")
 
     // schedule task
-    this.#scheduler.schedule({ fiber, out, err, isTracing: isTracing ?? false })
+    // note: crypto is only available on HTTPS/localhost.
+    // should never be a problem but just noting for future
+    const id = crypto.randomUUID()
+    this.#scheduler.schedule({
+      id,
+      fiber,
+      out,
+      err,
+      isTracing: isTracing ?? false,
+    })
+    return id
   }
-  public query({ src, rep, queryLoc }: QueryExecutionConfig): void {
+  public query({ src, rep, queryLoc }: QueryExecutionConfig): string | null {
     // compile src to lpm bytecode
     const compiled = compile(rep, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
-      return
+      return null
     }
 
     // make new fiber with prelude as initial environment
@@ -87,7 +105,9 @@ export class ScamperInstance {
     // await fiber.loadLib("prelude")
 
     // schedule query task
-    this.#scheduler.query({ fiber, rep })
+    const id = crypto.randomUUID()
+    this.#scheduler.schedule({ id, fiber, rep })
+    return id
   }
 
   public calibrateScheduler(): void {

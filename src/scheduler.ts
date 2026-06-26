@@ -6,6 +6,7 @@ import { mkTraceOutput } from "./lpm/trace"
 const DEFAULT_REFRESH_RATE = 60
 
 interface BaseSchedulerTask {
+  id: string
   fiber: Fiber
 }
 export interface DisplayTask extends BaseSchedulerTask {
@@ -34,16 +35,6 @@ export class Scheduler {
     if (task.fiber.isDone()) {
       throw new ICE(
         "Scheduler.schedule",
-        "Scheduling invariant violated: scheduling completed fibers is disallowed!",
-      )
-    }
-    this.#tasks.push(task)
-    this.resumeExecution()
-  }
-  query(task: QueryTask): void {
-    if (task.fiber.isDone()) {
-      throw new ICE(
-        "Scheduler.query",
         "Scheduling invariant violated: scheduling completed fibers is disallowed!",
       )
     }
