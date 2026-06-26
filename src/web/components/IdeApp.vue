@@ -422,6 +422,7 @@ onMounted(async () => {
   }
 
   isLoading.value = false
+  scamperInstance.calibrateScheduler()
 })
 
 onUnmounted(() => {

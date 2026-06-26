@@ -64,4 +64,8 @@ export class ScamperInstance {
     // schedule query task
     this.#scheduler.query({ fiber, rep })
   }
+
+  public calibrateScheduler(): void {
+    void this.#scheduler.setTimeQuantumFromFPS()
+  }
 }
