@@ -68,14 +68,21 @@ export function tokenizeAndParse(
   // determine if query loc inside define statement
   const queriedStmt = program.find((s) => s.range.contains(queryLoc))
   if (queriedStmt?.tag !== "define" || queriedStmt.doc === undefined) {
-    return program
+    err.report(
+      new ScamperError(
+        "Parser",
+        "Querying is only allowed within function definitions with docstrings",
+      ),
+    )
+    return undefined
   }
   // find example tag if exists
   const exampleTags = queriedStmt.doc.tags.filter((t) => isExampleTag(t))
   // TODO: only choosing first example tag for input prototype
   const firstExample = exampleTags.at(0)
   if (!firstExample) {
-    return program
+    err.report(new ScamperError("Parser", "Querying requires an example tag"))
+    return undefined
   }
   program.push(mkDisp(firstExample.contents.functionCall))
   return program

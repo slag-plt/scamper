@@ -490,6 +490,13 @@ onUnmounted(() => {
     <template v-if="q.rep.errors.length === 0">
       Queried code could not be reached!
     </template>
+    <template
+      v-else-if="
+        q.rep.errors.filter((e) => e instanceof ReportError).length === 0
+      "
+    >
+      {{ q.rep.errors[0].toString() }}
+    </template>
     <ValueRenderer
       v-for="[repI, repErr] in q.rep.errors
         .filter((e) => e instanceof ReportError)
