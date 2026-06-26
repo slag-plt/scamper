@@ -351,8 +351,8 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
 
-      expect(queryTask.rep.errors).toHaveLength(1)
-      const reported = queryTask.rep.errors[0]
+      expect(queryTask.err.errors).toHaveLength(1)
+      const reported = queryTask.err.errors[0]
       expect(reported).toBeInstanceOf(ReportError)
       expect((reported as ReportError).value).toBe(reportedValue)
       expect(reportFiber.stepCallCount).toBe(1)
@@ -374,8 +374,8 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
 
-      expect(queryTask.rep.errors).toHaveLength(1)
-      expect(queryTask.rep.errors[0].message).toContain("query boom")
+      expect(queryTask.err.errors).toHaveLength(1)
+      expect(queryTask.err.errors[0].message).toContain("query boom")
       expect(errorFiber.stepCallCount).toBe(1)
       expect(sibling.stepCallCount).toBeGreaterThan(0)
     })
@@ -396,7 +396,7 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
 
-      expect(queryTask.rep.errors).toEqual([])
+      expect(queryTask.err.errors).toEqual([])
       expect(doneFiber.stepCallCount).toBe(1)
       expect(sibling.stepCallCount).toBeGreaterThan(0)
     })
@@ -432,8 +432,8 @@ describe("Scheduler", () => {
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
 
-      expect(queryTask.rep.errors).toHaveLength(1)
-      expect((queryTask.rep.errors[0] as ReportError).range).toBe(range)
+      expect(queryTask.err.errors).toHaveLength(1)
+      expect((queryTask.err.errors[0] as ReportError).range).toBe(range)
     })
 
     test("a reporting QueryTask is removed without dropping or duplicating sibling tasks", async () => {
@@ -454,13 +454,112 @@ describe("Scheduler", () => {
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
 
-      expect(queryTask.rep.errors).toHaveLength(1)
-      expect((queryTask.rep.errors[0] as ReportError).value).toBe(
+      expect(queryTask.err.errors).toHaveLength(1)
+      expect((queryTask.err.errors[0] as ReportError).value).toBe(
         "sibling check",
       )
       expect(reportFiber.stepCallCount).toBe(1)
       expect(siblingA.stepCallCount).toBeGreaterThan(1)
       expect(siblingB.stepCallCount).toBeGreaterThan(1)
+    })
+  })
+
+  describe("cancelTask", () => {
+    test("reports Evaluation cancelled and removes the task from the queue", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      const task = makeTask(fiber)
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      const stepsBeforeCancel = fiber.stepCallCount
+      expect(stepsBeforeCancel).toBeGreaterThan(0)
+
+      sched.resumeExecution()
+      sched.cancelTask(task.id)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toContain("Evaluation cancelled")
+
+      const stepsAfterCancel = fiber.stepCallCount
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      expect(fiber.stepCallCount).toBe(stepsAfterCancel)
+    })
+
+    test("does not halt sibling tasks", async () => {
+      const sched = new Scheduler()
+      const cancelled = trackFiberSteps(makeNeverCompletingFiber())
+      const sibling = trackFiberSteps(makeNeverCompletingFiber())
+      const cancelledTask = makeTask(cancelled)
+      sched.schedule(cancelledTask)
+      sched.schedule(makeTask(sibling))
+      await sleep(QUANTUM_WAIT_MS)
+
+      sched.cancelTask(cancelledTask.id)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(cancelledTask.ch.errLog).toHaveLength(1)
+      expect(cancelledTask.ch.errLog[0]).toContain("Evaluation cancelled")
+
+      const cancelledSteps = cancelled.stepCallCount
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      expect(cancelled.stepCallCount).toBe(cancelledSteps)
+      expect(sibling.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("cancels a query task via its error channel", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      const queryTask = makeQueryTask(fiber)
+      sched.schedule(queryTask)
+      await sleep(QUANTUM_WAIT_MS)
+
+      sched.cancelTask(queryTask.id)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(queryTask.err.errors).toHaveLength(1)
+      expect(queryTask.err.errors[0].message).toContain("Evaluation cancelled")
+    })
+
+    test("does not pause execution when the task id is unknown", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      sched.schedule(makeTask(fiber))
+      await sleep(QUANTUM_WAIT_MS)
+
+      sched.cancelTask(crypto.randomUUID())
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(fiber.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("does not resume execution when the scheduler was already paused", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      const task = makeTask(fiber)
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      const pausedCount = fiber.stepCallCount
+      sched.cancelTask(task.id)
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(fiber.stepCallCount).toBe(pausedCount)
     })
   })
 

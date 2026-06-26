@@ -1,7 +1,7 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import { ErrorChannel, Loc, OutputChannel } from "./lpm"
 import { Fiber } from "./lpm/fiber"
-import { Scheduler } from "./scheduler"
+import { Scheduler, SchedulerId } from "./scheduler"
 import { compile } from "./scheme"
 
 interface ExecutionConfig {
@@ -15,7 +15,7 @@ interface DisplayExecutionConfig extends ExecutionConfig {
 }
 
 interface QueryExecutionConfig extends ExecutionConfig {
-  rep: ErrorChannel
+  err: ErrorChannel
   queryLoc: Loc
 }
 
@@ -40,7 +40,7 @@ export class ScamperInstance {
     out,
     err,
     isTracing,
-  }: DisplayExecutionConfig): string | null {
+  }: DisplayExecutionConfig): SchedulerId | null {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
@@ -66,9 +66,13 @@ export class ScamperInstance {
     })
     return id
   }
-  public query({ src, rep, queryLoc }: QueryExecutionConfig): string | null {
+  public query({
+    src,
+    err,
+    queryLoc,
+  }: QueryExecutionConfig): SchedulerId | null {
     // compile src to lpm bytecode
-    const compiled = compile(rep, src, queryLoc)
+    const compiled = compile(err, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
       return null
@@ -81,8 +85,11 @@ export class ScamperInstance {
 
     // schedule query task
     const id = crypto.randomUUID()
-    this.#scheduler.schedule({ id, fiber, rep })
+    this.#scheduler.schedule({ id, fiber, err })
     return id
+  }
+  public cancel(id: SchedulerId) {
+    this.#scheduler.cancelTask(id)
   }
 
   public calibrateScheduler(): void {

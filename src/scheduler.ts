@@ -1,13 +1,23 @@
-import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "./lpm"
-import { Fiber, StepResult } from "./lpm/fiber"
+import {
+  ErrorChannel,
+  ICE,
+  OutputChannel,
+  ReportError,
+  ScamperError,
+} from "./lpm"
+import {
+  Fiber,
+  StepResult,
+} from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 import { getFS } from './fs'
 
 const DEFAULT_REFRESH_RATE = 60
 
+export type SchedulerId = string
 interface BaseSchedulerTask {
-  id: string
+  id: SchedulerId
   fiber: Fiber
 }
 export interface DisplayTask extends BaseSchedulerTask {
@@ -16,7 +26,7 @@ export interface DisplayTask extends BaseSchedulerTask {
   isTracing: boolean
 }
 export interface QueryTask extends BaseSchedulerTask {
-  rep: ErrorChannel
+  err: ErrorChannel
 }
 export type SchedulerTask = DisplayTask | QueryTask
 
@@ -31,6 +41,7 @@ export class Scheduler {
   // allows for resuming execution
   #currTaskIdx = 0
   #timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
+  #controller = new AbortController()
 
   schedule(task: SchedulerTask): void {
     if (task.fiber.isDone()) {
@@ -42,19 +53,39 @@ export class Scheduler {
     this.#tasks.push(task)
     this.resumeExecution()
   }
+  cancelTask(id: SchedulerId): void {
+    const wasPaused = this.#wasPaused()
+    this.pauseExecution()
+    const taskI = this.#tasks.findIndex((t) => t.id === id)
+    if (taskI === -1) {
+      if (!wasPaused) {
+        this.resumeExecution()
+      }
+      return
+    }
+    this.#tasks[taskI].err.report(
+      new ScamperError("Runtime", "Evaluation cancelled"),
+    )
+    this.#tasks.splice(taskI, 1)
+    if (!wasPaused) {
+      this.resumeExecution()
+    }
+  }
   pauseExecution() {
+    this.#controller.abort()
     this.#isRunning = false
   }
   resumeExecution() {
     if (this.#isRunning) {
       return
     }
+    this.#controller = new AbortController()
     this.#isRunning = true
     void this.#execute()
   }
 
   async #execute(): Promise<void> {
-    while (this.#isRunning) {
+    while (!this.#wasPaused()) {
       if (this.#tasks.length === 0) {
         this.#isRunning = false
         return
@@ -99,7 +130,7 @@ export class Scheduler {
                 if (e instanceof ReportError) {
                   console.debug(e.value)
                 }
-                task.rep.report(e)
+                task.err.report(e)
                 this.#removeCurrFiber()
                 continue
               }
@@ -188,7 +219,7 @@ export class Scheduler {
   }
 
   #wasPaused(): boolean {
-    return !this.#isRunning
+    return !this.#isRunning || this.#controller.signal.aborted
   }
   async setTimeQuantumFromFPS(): Promise<void> {
     const timeQuantum = await new Promise<number>((resolve) => {
@@ -218,5 +249,5 @@ function isDisplayTask(t: SchedulerTask): t is DisplayTask {
   return typeof t === "object" && "out" in t && "err" in t && "isTracing" in t
 }
 function isReportTask(t: SchedulerTask): t is QueryTask {
-  return typeof t === "object" && "rep" in t
+  return !isDisplayTask(t)
 }

@@ -17,6 +17,7 @@ import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
+import { SchedulerId } from "../../scheduler"
 
 // ---------- config ----------
 
@@ -47,6 +48,7 @@ let isLoadingFile = false
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
 const isTracing = ref(false)
+const currentRun = ref<SchedulerId | null>(null)
 const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
@@ -58,12 +60,26 @@ const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
 
 interface QueryEntry {
-  id: number
+  id: SchedulerId
   targetPos: number
-  rep: SimpleErrorChannel
+  err: SimpleErrorChannel
 }
 const queries = ref<QueryEntry[]>([])
-let nextQueryId = 0
+function closeAllQueries() {
+  for (const q of queries.value) {
+    scamperInstance.cancel(q.id)
+  }
+  queries.value = []
+}
+
+// TODO: ideapp should not own this
+/** At most one display task may be scheduled at a time. */
+function handleCancel() {
+  if (currentRun.value) {
+    scamperInstance.cancel(currentRun.value)
+    currentRun.value = null
+  }
+}
 
 // ---------- file drawer ----------
 
@@ -110,7 +126,7 @@ function stopAutosaving() {
 
 function makeDirty() {
   isDirty.value = true
-  queries.value = []
+  closeAllQueries()
 }
 
 function makeClean() {
@@ -136,15 +152,23 @@ function executeScamper({
   isTracing.value = true
   const src = editor().getDoc()
   if (queryLoc) {
-    scamperInstance.query({ src, rep: err, queryLoc })
+    if (!(err instanceof SimpleErrorChannel)) {
+      return
+    }
+    const id = scamperInstance.query({ src, err, queryLoc })
+    if (id) {
+      queries.value.push({ id, targetPos: queryLoc.idx, err })
+    }
   } else {
-    scamperInstance.execute({
+    handleCancel()
+    currentRun.value = scamperInstance.execute({
       src,
       err,
       out,
       isTracing: tracing,
     })
   }
+
   makeClean()
 }
 
@@ -172,6 +196,8 @@ async function switchToFile(filename: string): Promise<void> {
   if (!fs) return
   isLoadingFile = true
   stopAutosaving()
+  closeAllQueries()
+  handleCancel()
   if (currentFile.value !== null) await saveCurrentFile()
 
   currentFile.value = filename
@@ -196,16 +222,14 @@ function displayError(error: string) {
 
 // ---------- header event handlers ----------
 
+// TODO: ideapp should not own this
 function handleRun() {
   executeScamper({ tracing: false })
 }
 
+// TODO: ideapp should not own this
 function handleTrace() {
   executeScamper({ tracing: true })
-}
-
-function handleCancel() {
-  // TODO: implement
 }
 
 async function handleRunWindow() {
@@ -225,7 +249,6 @@ function toggleSidebar() {
 function handleQuery() {
   const rep = new SimpleErrorChannel()
   const loc = editor().getCursorLoc()
-  queries.value.push({ id: nextQueryId++, targetPos: loc.idx, rep })
   executeScamper({
     tracing: false,
     err: rep,
@@ -233,7 +256,8 @@ function handleQuery() {
   })
 }
 
-function closeQuery(id: number) {
+function closeQuery(id: SchedulerId) {
+  scamperInstance.cancel(id)
   queries.value = queries.value.filter((q) => q.id !== id)
 }
 
@@ -452,6 +476,7 @@ onUnmounted(() => {
     <div class="ide-main">
       <IdeHeader
         :current-file="currentFile"
+        :current-run="currentRun"
         :run="handleRun"
         :trace="handleTrace"
         :cancel="handleCancel"
@@ -488,18 +513,18 @@ onUnmounted(() => {
     :target-pos="q.targetPos"
     @close="closeQuery(q.id)"
   >
-    <template v-if="q.rep.errors.length === 0">
+    <template v-if="q.err.errors.length === 0">
       Queried code could not be reached!
     </template>
     <template
       v-else-if="
-        q.rep.errors.filter((e) => e instanceof ReportError).length === 0
+        q.err.errors.filter((e) => e instanceof ReportError).length === 0
       "
     >
-      {{ q.rep.errors[0].toString() }}
+      {{ q.err.errors[0].toString() }}
     </template>
     <ValueRenderer
-      v-for="[repI, repErr] in q.rep.errors
+      v-for="[repI, repErr] in q.err.errors
         .filter((e) => e instanceof ReportError)
         .entries()"
       v-else
