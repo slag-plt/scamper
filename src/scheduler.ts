@@ -30,11 +30,6 @@ export class Scheduler {
   #currTaskIdx = 0
   #timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
 
-  constructor() {
-    // we throw away the promise here because we don't want to block the event loop
-    void this.#setTimeQuantumFromFPS()
-  }
-
   schedule(task: SchedulerTask): void {
     if (task.fiber.isDone()) {
       throw new ICE(
@@ -180,7 +175,7 @@ export class Scheduler {
   #wasPaused(): boolean {
     return !this.#isRunning
   }
-  async #setTimeQuantumFromFPS(): Promise<void> {
+  async setTimeQuantumFromFPS(): Promise<void> {
     const timeQuantum = await new Promise<number>((resolve) => {
       let numFrames = 0
       const startTime = performance.now()
