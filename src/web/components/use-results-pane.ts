@@ -1,4 +1,4 @@
-import type { VueDisplay } from "../../lpm/output/vue"
+import { ErrorChannel, OutputChannel } from "../../lpm"
 
 /**
  * Public interface of ResultsPane.vue exposed via defineExpose.
@@ -14,5 +14,5 @@ import type { VueDisplay } from "../../lpm/output/vue"
 export interface ResultsPaneType {
   reset(): void
   scrollToBottom(): void
-  readonly display: VueDisplay | undefined
+  readonly display: (OutputChannel & ErrorChannel) | undefined
 }

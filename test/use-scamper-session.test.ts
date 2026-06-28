@@ -1,9 +1,9 @@
 /* eslint-disable vue/one-component-per-file -- inline host wrappers for provide/inject tests */
-import { defineComponent, ref, shallowRef } from "vue"
+import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel } from "../src/lpm"
-import { ScamperInstance, type DisplayRun } from "../src/scamper-instance"
+import { type DisplayRun, ScamperInstance } from "../src/scamper-instance"
 import type { CodeMirrorEditorAdapter } from "../src/web/components/codemirror-editor-adapter"
 import type { EditorAccessor } from "../src/web/components/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
@@ -170,8 +170,9 @@ describe("useScamperSession", () => {
     const session = mountSession()
     session.execute()
     expect(session.currentRun.value).not.toBeNull()
-    expect(lastRun).toBeDefined()
-
+    if (!lastRun) {
+      expect.fail()
+    }
     lastRun.resolve()
     await flushPromises()
     expect(session.currentRun.value).toBeNull()
@@ -285,7 +286,9 @@ describe("useScamperSession", () => {
     expect(session.isTracing.value).toBe(true)
     expect(lastRun).toBeDefined()
 
-    lastRun.resolve()
+    if (!lastRun) {
+      expect.fail()
+    }
     await flushPromises()
     expect(session.isTracing.value).toBe(false)
 
@@ -340,7 +343,9 @@ describe("useScamperSession", () => {
     expect(wrapper.find('[aria-label="Stop"]').exists()).toBe(true)
     expect(lastRun).toBeDefined()
 
-    lastRun.resolve()
+    if (!lastRun) {
+      expect.fail()
+    }
     await flushPromises()
     await wrapper.vm.$nextTick()
 
