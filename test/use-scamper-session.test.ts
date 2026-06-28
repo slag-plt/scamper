@@ -3,7 +3,7 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel } from "../src/lpm"
-import { type DisplayRun, ScamperInstance } from "../src/scamper-instance"
+import { type DisplayRequest, ScamperInstance } from "../src/scamper-instance"
 import type { CodeMirrorEditorAdapter } from "../src/web/components/codemirror-editor-adapter"
 import type { EditorAccessor } from "../src/web/components/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
@@ -14,7 +14,7 @@ import {
 } from "../src/web/components/use-scamper-session"
 import type { ResultsPaneType } from "../src/web/components/use-results-pane"
 
-interface MockRun extends DisplayRun {
+interface MockRun extends DisplayRequest {
   resolve(): void
 }
 
@@ -120,7 +120,10 @@ describe("useScamperSession", () => {
   test("stopRun does not cancel queries", () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
-    vi.spyOn(scamper, "query").mockReturnValue("query-1")
+    vi.spyOn(scamper, "query").mockReturnValue({
+      id: "query-1",
+      done: expect.anything() as Promise<void>,
+    })
     mockExecute(scamper)
 
     const session = mountSession()
@@ -140,8 +143,14 @@ describe("useScamperSession", () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     vi.spyOn(scamper, "query")
-      .mockReturnValueOnce("query-1")
-      .mockReturnValueOnce("query-2")
+      .mockReturnValueOnce({
+        id: "query-1",
+        done: expect.anything() as Promise<void>,
+      })
+      .mockReturnValueOnce({
+        id: "query-2",
+        done: expect.anything() as Promise<void>,
+      })
     mockExecute(scamper)
 
     const session = mountSession()
@@ -224,7 +233,10 @@ describe("useScamperSession", () => {
   test("execute is a no-op when the results pane is unavailable", () => {
     const scamper = ScamperInstance.getInstance()
     const execute = vi.spyOn(scamper, "execute")
-    vi.spyOn(scamper, "query").mockReturnValue("query-1")
+    vi.spyOn(scamper, "query").mockReturnValue({
+      id: "query-1",
+      done: expect.anything() as Promise<void>,
+    })
     const onRunScheduled = vi.fn()
 
     const session = mountSession({ onRunScheduled }, null)
@@ -289,6 +301,7 @@ describe("useScamperSession", () => {
     if (!lastRun) {
       expect.fail()
     }
+    lastRun.resolve()
     await flushPromises()
     expect(session.isTracing.value).toBe(false)
 
@@ -308,7 +321,7 @@ describe("useScamperSession", () => {
         const editor: EditorAccessor = () => makeAdapter()
         provideScamperSession(paneRef, { editor })
       },
-      template: "<IdeHeader />",
+      template: "<IdeHeader currentFile='null' />",
     })
 
     const wrapper = mount(Host)
@@ -335,7 +348,7 @@ describe("useScamperSession", () => {
         const editor: EditorAccessor = () => makeAdapter()
         provideScamperSession(paneRef, { editor })
       },
-      template: "<IdeHeader />",
+      template: "<IdeHeader currentFile='null' />",
     })
 
     const wrapper = mount(Host)
@@ -346,6 +359,7 @@ describe("useScamperSession", () => {
     if (!lastRun) {
       expect.fail()
     }
+    lastRun.resolve()
     await flushPromises()
     await wrapper.vm.$nextTick()
 

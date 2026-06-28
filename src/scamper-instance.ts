@@ -9,13 +9,6 @@ interface ExecutionConfig {
   src: string
 }
 
-export interface DisplayRun {
-  id: SchedulerId
-  tracing: boolean
-  /** Resolves on normal fiber completion; does not resolve on cancel. */
-  done: Promise<void>
-}
-
 interface DisplayExecutionConfig extends ExecutionConfig {
   out: OutputChannel
   err: ErrorChannel
@@ -27,13 +20,14 @@ interface QueryExecutionConfig extends ExecutionConfig {
   queryLoc: Loc
 }
 
-function deferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolve!: () => void
-  const promise = new Promise<void>((r) => {
-    resolve = r
-  })
-  return { promise, resolve }
+interface RunRequest {
+  id: SchedulerId
+  done: Promise<void>
 }
+export interface DisplayRequest extends RunRequest {
+  tracing: boolean
+}
+export type QueryRequest = RunRequest
 
 export class ScamperInstance {
   // singleton structure
@@ -77,7 +71,7 @@ export class ScamperInstance {
     out,
     err,
     isTracing,
-  }: DisplayExecutionConfig): DisplayRun | null {
+  }: DisplayExecutionConfig): DisplayRequest | null {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
@@ -112,7 +106,7 @@ export class ScamperInstance {
     src,
     err,
     queryLoc,
-  }: QueryExecutionConfig): SchedulerId | null {
+  }: QueryExecutionConfig): QueryRequest | null {
     // compile src to lpm bytecode
     const compiled = compile(err, src, queryLoc)
     if (!compiled) {
@@ -127,8 +121,16 @@ export class ScamperInstance {
 
     // schedule query task
     const id = crypto.randomUUID()
-    this.#scheduler.schedule({ id, fiber, err })
-    return id
+    const { promise, resolve } = deferred()
+    this.#scheduler.schedule({
+      id,
+      fiber,
+      err,
+      onComplete: () => {
+        resolve()
+      },
+    })
+    return { id, done: promise }
   }
   public cancel(id: SchedulerId) {
     this.#scheduler.cancelTask(id)
@@ -137,4 +139,12 @@ export class ScamperInstance {
   public calibrateScheduler(): void {
     void this.#scheduler.setTimeQuantumFromFPS()
   }
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void
+  const promise = new Promise<void>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
 }

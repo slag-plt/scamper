@@ -1,17 +1,5 @@
-import {
-  ErrorChannel,
-  ICE,
-  OutputChannel,
-  ReportError,
-  ScamperError,
-} from "./lpm"
-import {
-  DisplayStep,
-  Fiber,
-  MinorStep,
-  StepResult,
-  YieldStep,
-} from "./lpm/fiber"
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "./lpm"
+import { DisplayStep, Fiber, MinorStep, StepResult, YieldStep } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 
@@ -21,16 +9,14 @@ export type SchedulerId = string
 interface BaseSchedulerTask {
   id: SchedulerId
   fiber: Fiber
+  err: ErrorChannel
+  onComplete?: () => void
 }
 export interface DisplayTask extends BaseSchedulerTask {
   out: OutputChannel
-  err: ErrorChannel
   isTracing: boolean
-  onComplete?: () => void
 }
-export interface QueryTask extends BaseSchedulerTask {
-  err: ErrorChannel
-}
+export type QueryTask = BaseSchedulerTask
 export type SchedulerTask = DisplayTask | QueryTask
 
 export class Scheduler {
@@ -185,7 +171,7 @@ export class Scheduler {
     }
     this.#tasks[this.#currTaskIdx] = lastFiber
     this.#tasks.pop()
-    if (task && isDisplayTask(task)) {
+    if (task) {
       task.onComplete?.()
     }
   }
@@ -230,7 +216,7 @@ export class Scheduler {
 }
 
 function isDisplayTask(t: SchedulerTask): t is DisplayTask {
-  return typeof t === "object" && "out" in t && "err" in t && "isTracing" in t
+  return typeof t === "object" && "out" in t && "isTracing" in t
 }
 function isReportTask(t: SchedulerTask): t is QueryTask {
   return !isDisplayTask(t)
