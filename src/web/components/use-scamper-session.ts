@@ -1,15 +1,13 @@
 import {
   computed,
   inject,
+  type InjectionKey,
   provide,
   reactive,
   ref,
-  type ComputedRef,
-  type InjectionKey,
-  type Ref,
   type ShallowRef,
 } from "vue"
-import { ScamperInstance, type DisplayRun } from "../../scamper-instance"
+import { type DisplayRun, ScamperInstance } from "../../scamper-instance"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
@@ -26,26 +24,11 @@ export interface ScamperSessionOptions {
   onRunScheduled?: () => void
 }
 
-export interface ScamperSession {
-  queries: Ref<QueryEntry[]>
-  currentRun: ComputedRef<SchedulerId | null>
-  isTracing: ComputedRef<boolean>
-  resetOutput(): void
-  stopRun(): void
-  closeAllQueries(): void
-  closeQuery(id: SchedulerId): void
-  stopAll(): void
-  execute(options?: { tracing?: boolean }): void
-  query(): void
-}
-
-const ScamperSessionKey: InjectionKey<ScamperSession> = Symbol("ScamperSession")
-
 function createScamperSession(
   pane: ShallowRef<ResultsPaneType | null>,
   editor: EditorAccessor,
   onRunScheduled?: () => void,
-): ScamperSession {
+) {
   const queries = ref<QueryEntry[]>([])
   const activeRun = ref<DisplayRun | null>(null)
   const scamper = ScamperInstance.getInstance()
@@ -139,6 +122,10 @@ function createScamperSession(
     query,
   }
 }
+
+export type ScamperSession = ReturnType<typeof createScamperSession>
+
+const ScamperSessionKey: InjectionKey<ScamperSession> = Symbol("ScamperSession")
 
 export function provideScamperSession(
   pane: ShallowRef<ResultsPaneType | null>,

@@ -33,7 +33,7 @@ describe("editor context", () => {
     const ctx = createTestEditorContext()
     const adapter = {
       getDoc: () => "hello",
-      isLoaded: () => true,
+      isLoaded: (): boolean => true,
       initializeDoc: (src: string) => {
         adapter.getDoc = () => src
       },
