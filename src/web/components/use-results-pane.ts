@@ -3,7 +3,7 @@ import type { VueDisplay } from "../../lpm/output/vue"
 /**
  * Public interface of ResultsPane.vue exposed via defineExpose.
  * Only the genuinely imperative operations are included; isDirty and
- * isTracing are plain props flowing down from IdeApp.
+ * isTracing are props threaded from IdeApp (isTracing from session state).
  * Template refs to a child component receive Vue's public instance from
  * getComponentPublicInstance(), which (when defineExpose was used) is an
  * exposeProxy whose target is proxyRefs(exposed). Property reads on that

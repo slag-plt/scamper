@@ -4,11 +4,11 @@ import { ref } from "vue"
 const props = defineProps<{
   isTracing: boolean
   isDirty: boolean
-  stepOnce?: () => void
-  stepStmt?: () => Promise<void>
-  stepAll?: () => Promise<void>
+  stepOnce: () => void
+  stepStmt: () => Promise<void>
+  stepAll: () => Promise<void>
+  abortStep: () => void
   astText?: () => void
-  cancel?: () => void
 }>()
 
 const isSteppingStmt = ref(false)
@@ -17,7 +17,7 @@ const isSteppingAll = ref(false)
 async function handleStepStmt() {
   isSteppingStmt.value = true
   try {
-    await props.stepStmt?.()
+    await props.stepStmt()
   } finally {
     isSteppingStmt.value = false
   }
@@ -26,7 +26,7 @@ async function handleStepStmt() {
 async function handleStepAll() {
   isSteppingAll.value = true
   try {
-    await props.stepAll?.()
+    await props.stepAll()
   } finally {
     isSteppingAll.value = false
   }
@@ -40,14 +40,14 @@ async function handleStepAll() {
         class="fa-solid fa-shoe-prints"
         aria-label="Step once"
         :disabled="!isTracing || isSteppingStmt || isSteppingAll"
-        @click="stepOnce?.()"
+        @click="stepOnce()"
       ></button>
 
       <template v-if="isSteppingStmt">
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel?.()"
+          @click="abortStep()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -63,7 +63,7 @@ async function handleStepAll() {
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel?.()"
+          @click="abortStep()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>

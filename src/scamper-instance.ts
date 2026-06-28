@@ -9,6 +9,13 @@ interface ExecutionConfig {
   src: string
 }
 
+export interface DisplayRun {
+  id: SchedulerId
+  tracing: boolean
+  /** Resolves on normal fiber completion; does not resolve on cancel. */
+  done: Promise<void>
+}
+
 interface DisplayExecutionConfig extends ExecutionConfig {
   out: OutputChannel
   err: ErrorChannel
@@ -18,6 +25,14 @@ interface DisplayExecutionConfig extends ExecutionConfig {
 interface QueryExecutionConfig extends ExecutionConfig {
   err: ErrorChannel
   queryLoc: Loc
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void
+  const promise = new Promise<void>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
 }
 
 export class ScamperInstance {
@@ -57,15 +72,12 @@ export class ScamperInstance {
     return undefined
   }
 
-  /**
-   * @returns ID of task
-   */
   public execute({
     src,
     out,
     err,
     isTracing,
-  }: DisplayExecutionConfig): SchedulerId | null {
+  }: DisplayExecutionConfig): DisplayRun | null {
     // compile src to lpm bytecode
     const compiled = compile(err, src)
     if (!compiled) {
@@ -82,14 +94,19 @@ export class ScamperInstance {
     // note: crypto is only available on HTTPS/localhost.
     // should never be a problem but just noting for future
     const id = crypto.randomUUID()
+    const tracing = isTracing ?? false
+    const { promise, resolve } = deferred()
     this.#scheduler.schedule({
       id,
       fiber,
       out,
       err,
-      isTracing: isTracing ?? false,
+      isTracing: tracing,
+      onComplete: () => {
+        resolve()
+      },
     })
-    return id
+    return { id, tracing, done: promise }
   }
   public query({
     src,

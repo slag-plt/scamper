@@ -11,13 +11,12 @@ import CodeMirrorEditor from "./CodeMirrorEditor.vue"
 import QueryModal from "./query/QueryModal.vue"
 import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
+import { provideScamperSession } from "./use-scamper-session"
 import { ScamperInstance } from "../../scamper-instance"
-import { ErrorChannel, Loc, OutputChannel, ReportError } from "../../lpm"
+import { ReportError } from "../../lpm"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
-import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
-import { SchedulerId } from "../../scheduler"
 
 // ---------- config ----------
 
@@ -38,7 +37,6 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: FS.t | null = null
-const scamperInstance: ScamperInstance = ScamperInstance.getInstance()
 let autosaveId = -1
 let config: Config = DEFAULT_CONFIG
 let isLoadingFile = false
@@ -47,8 +45,6 @@ let isLoadingFile = false
 
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
-const isTracing = ref(false)
-const currentRun = ref<SchedulerId | null>(null)
 const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
@@ -58,27 +54,16 @@ const loadingContent = ref("Loading Scamper...")
 
 const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
+const session = provideScamperSession(resultsRef, {
+  editor,
+  onRunScheduled: () => {
+    isDirty.value = false
+  },
+})
+const { queries, isTracing, closeQuery } = session
 
-interface QueryEntry {
-  id: SchedulerId
-  targetPos: number
-  err: SimpleErrorChannel
-}
-const queries = ref<QueryEntry[]>([])
-function closeAllQueries() {
-  for (const q of queries.value) {
-    scamperInstance.cancel(q.id)
-  }
-  queries.value = []
-}
-
-// TODO: ideapp should not own this
-/** At most one display task may be scheduled at a time. */
-function handleCancel() {
-  if (currentRun.value) {
-    scamperInstance.cancel(currentRun.value)
-    currentRun.value = null
-  }
+function abortTraceStep() {
+  // TODO: cancel in-flight trace step burst when step handlers are implemented
 }
 
 // ---------- file drawer ----------
@@ -126,50 +111,7 @@ function stopAutosaving() {
 
 function makeDirty() {
   isDirty.value = true
-  closeAllQueries()
-}
-
-function makeClean() {
-  isDirty.value = false
-}
-
-// ---------- scamper execution ----------
-
-interface ScamperExecutionProps {
-  tracing: boolean
-  err?: ErrorChannel
-  out?: OutputChannel
-  queryLoc?: Loc | null
-}
-function executeScamper({
-  tracing,
-  err = resultsRef.value?.display,
-  out = resultsRef.value?.display,
-  queryLoc = null,
-}: ScamperExecutionProps) {
-  if (!err || !out) return
-  resultsRef.value?.reset()
-  isTracing.value = true
-  const src = editor().getDoc()
-  if (queryLoc) {
-    if (!(err instanceof SimpleErrorChannel)) {
-      return
-    }
-    const id = scamperInstance.query({ src, err, queryLoc })
-    if (id) {
-      queries.value.push({ id, targetPos: queryLoc.idx, err })
-    }
-  } else {
-    handleCancel()
-    currentRun.value = scamperInstance.execute({
-      src,
-      err,
-      out,
-      isTracing: tracing,
-    })
-  }
-
-  makeClean()
+  session.closeAllQueries()
 }
 
 // ---------- file operations ----------
@@ -196,8 +138,7 @@ async function switchToFile(filename: string): Promise<void> {
   if (!fs) return
   isLoadingFile = true
   stopAutosaving()
-  closeAllQueries()
-  handleCancel()
+  session.stopAll()
   if (currentFile.value !== null) await saveCurrentFile()
 
   currentFile.value = filename
@@ -208,7 +149,7 @@ async function switchToFile(filename: string): Promise<void> {
     if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ""}`)
   }
 
-  resultsRef.value?.reset()
+  session.resetOutput()
   await populateFileDrawer()
   config.lastOpenedFilename = currentFile.value
   startAutosaving()
@@ -222,16 +163,6 @@ function displayError(error: string) {
 
 // ---------- header event handlers ----------
 
-// TODO: ideapp should not own this
-function handleRun() {
-  executeScamper({ tracing: false })
-}
-
-// TODO: ideapp should not own this
-function handleTrace() {
-  executeScamper({ tracing: true })
-}
-
 async function handleRunWindow() {
   if (!currentFile.value) return
   await saveCurrentFile()
@@ -244,21 +175,6 @@ async function handleRunWindow() {
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
-}
-
-function handleQuery() {
-  const rep = new SimpleErrorChannel()
-  const loc = editor().getCursorLoc()
-  executeScamper({
-    tracing: false,
-    err: rep,
-    queryLoc: loc,
-  })
-}
-
-function closeQuery(id: SchedulerId) {
-  scamperInstance.cancel(id)
-  queries.value = queries.value.filter((q) => q.id !== id)
 }
 
 // ---------- step handlers ----------
@@ -357,7 +273,8 @@ async function handleDelete() {
   currentFile.value = null
   editor().initializeDummyDoc()
   config.lastOpenedFilename = null
-  resultsRef.value?.reset()
+  session.stopAll()
+  session.resetOutput()
   await populateFileDrawer()
   startAutosaving()
 }
@@ -446,11 +363,12 @@ onMounted(async () => {
   }
 
   isLoading.value = false
-  scamperInstance.calibrateScheduler()
+  ScamperInstance.getInstance().calibrateScheduler()
 })
 
 onUnmounted(() => {
   stopAutosaving()
+  session.stopAll()
   document.removeEventListener("visibilitychange", visibilityChangeWrapper)
   document.removeEventListener("pagehide", pageHideWrapper)
   window.removeEventListener("beforeunload", beforeUnloadWrapper)
@@ -476,11 +394,6 @@ onUnmounted(() => {
     <div class="ide-main">
       <IdeHeader
         :current-file="currentFile"
-        :current-run="currentRun"
-        :run="handleRun"
-        :trace="handleTrace"
-        :cancel="handleCancel"
-        :query="handleQuery"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
       />
@@ -497,7 +410,7 @@ onUnmounted(() => {
               :step-once="handleStepOnce"
               :step-stmt="handleStepStmt"
               :step-all="handleStepAll"
-              :cancel="handleCancel"
+              :abort-step="abortTraceStep"
             />
           </Pane>
         </Splitpanes>

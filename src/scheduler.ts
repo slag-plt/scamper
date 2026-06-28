@@ -26,6 +26,7 @@ export interface DisplayTask extends BaseSchedulerTask {
   out: OutputChannel
   err: ErrorChannel
   isTracing: boolean
+  onComplete?: () => void
 }
 export interface QueryTask extends BaseSchedulerTask {
   err: ErrorChannel
@@ -92,6 +93,9 @@ export class Scheduler {
         this.#isRunning = false
         return
       }
+      // Yield before stepping so callers can observe scheduled tasks (e.g. UI
+      // run-in-progress) before fibers run in this frame.
+      await scheduler.yield()
       const startTime = performance.now()
       while (performance.now() - startTime < this.#timeQuantum) {
         if (this.#wasPaused()) {
@@ -165,13 +169,11 @@ export class Scheduler {
 
         this.#moveNextTask(fiber)
       }
-
-      // let the event loop breathe before we do another batch of tasks
-      await scheduler.yield()
     }
   }
 
   #removeCurrFiber() {
+    const task = this.#tasks.at(this.#currTaskIdx)
     // clean up fiber if completed
     // we swap the last one here then pop the duplicate off to achieve O(1)
     const lastFiber = this.#tasks.at(this.#tasks.length - 1)
@@ -183,6 +185,9 @@ export class Scheduler {
     }
     this.#tasks[this.#currTaskIdx] = lastFiber
     this.#tasks.pop()
+    if (task && isDisplayTask(task)) {
+      task.onComplete?.()
+    }
   }
   #moveNextTask(currFiber: Fiber) {
     if (!currFiber.isDone()) {

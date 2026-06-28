@@ -200,6 +200,7 @@ describe("AST querying", () => {
 
   describe("compilation with query loc", () => {
     test("report operation is contained in bytecode", () => {
+      // TODO: function definitions must be example-tagged now, but too annoying to do rn
       const funcName = "+"
       const lit1 = 1
       const lit2 = 2
