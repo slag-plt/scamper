@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
+import { ReportError } from "../../../lpm"
+import ValueRenderer from "../../../lpm/renderers/vue/ValueRenderer.vue"
 import { useEditor } from "../editor-context"
 import type { PopupCoords } from "./query-modal-extension"
+import { QueryEntry } from "../use-scamper-session"
 
-const props = defineProps<{ targetPos: number }>()
+const props = defineProps<{ query: QueryEntry }>()
 defineEmits<{ close: [] }>()
 
 const editor = useEditor()
@@ -11,10 +14,13 @@ const coords = ref<PopupCoords | null>(null)
 let unsubscribe: (() => void) | null = null
 
 function recompute() {
-  coords.value = editor().coordsAtPos(props.targetPos)
+  coords.value = editor().coordsAtPos(props.query.targetPos)
 }
 
+const isDone = ref(false)
+
 onMounted(() => {
+  void props.query.done.finally(() => (isDone.value = true))
   unsubscribe = editor().onViewChange(recompute)
   recompute()
 })
@@ -38,7 +44,26 @@ onUnmounted(() => {
     >
       <button class="query-modal__close" @click="$emit('close')">x</button>
       <div class="query-modal__content">
-        <slot />
+        <template v-if="!isDone"> Query pending... </template>
+        <template v-else-if="query.err.errors.length === 0">
+          Queried code could not be reached!
+        </template>
+        <template
+          v-else-if="
+            query.err.errors.filter((e) => e instanceof ReportError).length ===
+            0
+          "
+        >
+          {{ query.err.errors[0].toString() }}
+        </template>
+        <ValueRenderer
+          v-for="[repI, repErr] in query.err.errors
+            .filter((e) => e instanceof ReportError)
+            .entries()"
+          v-else
+          :key="repI"
+          :value="repErr.value"
+        />
       </div>
     </div>
   </Teleport>

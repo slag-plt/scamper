@@ -1,13 +1,5 @@
-import {
-  computed,
-  inject,
-  type InjectionKey,
-  provide,
-  reactive,
-  ref,
-  type ShallowRef,
-} from "vue"
-import { type DisplayRun, ScamperInstance } from "../../scamper-instance"
+import { computed, inject, type InjectionKey, provide, reactive, ref, type ShallowRef } from "vue"
+import { type DisplayRequest, ScamperInstance } from "../../scamper-instance"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
@@ -17,6 +9,7 @@ interface QueryEntry {
   id: SchedulerId
   targetPos: number
   err: SimpleErrorChannel
+  done: Promise<void>
 }
 
 export interface ScamperSessionOptions {
@@ -30,7 +23,7 @@ function createScamperSession(
   onRunScheduled?: () => void,
 ) {
   const queries = ref<QueryEntry[]>([])
-  const activeRun = ref<DisplayRun | null>(null)
+  const activeRun = ref<DisplayRequest | null>(null)
   const scamper = ScamperInstance.getInstance()
 
   const currentRun = computed(() => activeRun.value?.id ?? null)
@@ -102,9 +95,14 @@ function createScamperSession(
     const err = reactive(new SimpleErrorChannel())
     const queryLoc = editor().getCursorLoc()
     const src = editor().getDoc()
-    const id = scamper.query({ src, err, queryLoc })
-    if (id) {
-      queries.value.push({ id, targetPos: queryLoc.idx, err })
+    const run = scamper.query({ src, err, queryLoc })
+    if (run) {
+      queries.value.push({
+        id: run.id,
+        targetPos: queryLoc.idx,
+        err,
+        done: run.done,
+      })
     }
     onRunScheduled?.()
   }

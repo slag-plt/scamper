@@ -13,10 +13,8 @@ import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
 import { provideScamperSession } from "./use-scamper-session"
 import { ScamperInstance } from "../../scamper-instance"
-import { ReportError } from "../../lpm"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
 
 // ---------- config ----------
 
@@ -423,28 +421,9 @@ onUnmounted(() => {
   <QueryModal
     v-for="q in queries"
     :key="q.id"
-    :target-pos="q.targetPos"
+    :query="q"
     @close="closeQuery(q.id)"
-  >
-    <template v-if="q.err.errors.length === 0">
-      Queried code could not be reached!
-    </template>
-    <template
-      v-else-if="
-        q.err.errors.filter((e) => e instanceof ReportError).length === 0
-      "
-    >
-      {{ q.err.errors[0].toString() }}
-    </template>
-    <ValueRenderer
-      v-for="[repI, repErr] in q.err.errors
-        .filter((e) => e instanceof ReportError)
-        .entries()"
-      v-else
-      :key="repI"
-      :value="repErr.value"
-    />
-  </QueryModal>
+  />
 </template>
 
 <style scoped>
