@@ -561,6 +561,43 @@ describe("Scheduler", () => {
       expect(task.ch.errLog).toHaveLength(1)
       expect(fiber.stepCallCount).toBe(pausedCount)
     })
+
+    test("yields before stepping fibers in a frame", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      sched.schedule(makeTask(fiber))
+      expect(fiber.stepCallCount).toBe(0)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      expect(fiber.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test("calls onComplete when a display task finishes normally", async () => {
+      const sched = new Scheduler()
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(1)])])
+      const onComplete = vi.fn()
+      const task = { ...makeTask(fiber, false), onComplete }
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(onComplete).toHaveBeenCalledOnce()
+    })
+
+    test("does not call onComplete when a display task is cancelled", async () => {
+      const sched = new Scheduler()
+      const fiber = trackFiberSteps(makeNeverCompletingFiber())
+      const onComplete = vi.fn()
+      const task = { ...makeTask(fiber, false), onComplete }
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+
+      sched.cancelTask(task.id)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(onComplete).not.toHaveBeenCalled()
+    })
   })
 
   describe("pause/resume", () => {

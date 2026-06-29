@@ -1,22 +1,16 @@
 <script setup lang="ts">
-import type { SchedulerId } from "../../scheduler"
+import { useScamperSession } from "./use-scamper-session"
 
-// TODO: props are not necessary since ideapp doesn't need to mess with scamperinstance
-// TODO: currentRun is a coarse proxy for run-in-progress; clear it on task completion
-// and move execution/session state out of IdeApp.
-const props = defineProps<{
-  currentFile?: string | null
-  currentRun: SchedulerId | null
-  run: () => void
-  trace: () => void
-  cancel: () => void
-  query: () => void
+defineProps<{
+  currentFile: string | null
 }>()
 
 const emit = defineEmits<{
   runWindow: []
   toggleSidebar: []
 }>()
+
+const { currentRun, execute, stopRun, query } = useScamperSession()
 </script>
 
 <template>
@@ -32,7 +26,7 @@ const emit = defineEmits<{
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel()"
+          @click="stopRun()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -42,12 +36,12 @@ const emit = defineEmits<{
         aria-label="Run"
         accesskey="w"
         aria-keyshortcuts="w"
-        @click="run()"
+        @click="execute()"
       ></button>
       <button
         class="fa-solid fa-route"
         aria-label="Trace"
-        @click="trace()"
+        @click="execute({ tracing: true })"
       ></button>
       <button
         class="fa-solid fa-window-maximize"
@@ -58,7 +52,7 @@ const emit = defineEmits<{
       <button
         class="fa-solid fa-clipboard-question"
         aria-label="Query value"
-        @click="query"
+        @click="query()"
       ></button>
       <!-- TODO: re-enable once AST is migrated to new backend -->
       <button

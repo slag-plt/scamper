@@ -11,7 +11,7 @@ const EditorHolderKey: InjectionKey<
   ShallowRef<CodeMirrorEditorAdapter | null>
 > = Symbol("EditorHolder")
 
-export function provideEditor(): () => CodeMirrorEditorAdapter {
+export function provideEditor(): EditorAccessor {
   const holder = shallowRef<CodeMirrorEditorAdapter | null>(null)
   provide(EditorHolderKey, holder)
   return makeAccessor(holder)
@@ -31,11 +31,13 @@ export function useEditorRegistration() {
   }
 }
 
-export function useEditor(): () => CodeMirrorEditorAdapter {
+export function useEditor(): EditorAccessor {
   return makeAccessor(injectHolder())
 }
 
-function makeAccessor(holder: ShallowRef<CodeMirrorEditorAdapter | null>) {
+export type EditorAccessor = () => CodeMirrorEditorAdapter
+
+function makeAccessor(holder: ShallowRef<CodeMirrorEditorAdapter | null>): EditorAccessor {
   return () => {
     if (!holder.value) {
       throw new Error("Editor is not ready")

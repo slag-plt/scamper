@@ -1,25 +1,21 @@
-import {ErrorChannel} from "./channel";
-import {ScamperError, SubthreadErrors} from "../error";
+import { ErrorChannel } from "./channel"
+import { ScamperError, SubthreadErrors } from "../error"
 
 export class SimpleErrorChannel implements ErrorChannel {
-    private readonly _errors: ScamperError[]
+  readonly errors: ScamperError[]
 
-    constructor(errors?: ScamperError[]) {
-        this._errors = [];
-        if (errors) {
-            this._errors.push(...errors);
-        }
+  constructor(errors?: ScamperError[]) {
+    this.errors = []
+    if (errors) {
+      this.errors.push(...errors)
     }
+  }
 
-    report(e: ScamperError) {
-        this._errors.push(e)
-    }
+  report(e: ScamperError) {
+    this.errors.push(e)
+  }
 
-    get errors() {
-        return [...this._errors]
-    }
-
-    getSubthreadErrors() {
-        return new SubthreadErrors(this._errors)
-    }
+  getSubthreadErrors() {
+    return new SubthreadErrors(this.errors)
+  }
 }
