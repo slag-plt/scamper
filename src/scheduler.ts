@@ -133,12 +133,12 @@ export class Scheduler {
               )
             } else {
               fiber.pause()
-              getFS().loadFile(stepResult.filename).then((src) => {
-                // TODO: we need to run `src` and then inject its globals into
+              getFS().loadFile(stepResult.filename).then((_src) => {
+                // TODO: run src in a new fiber and then inject the fiber's globals into
                 // the current fiber's top-level scope
                 fiber.resume()
               },
-              (err) => {
+              (_err) => {
                 throw new ScamperError(
                   "Runtime",
                   `Attempted to import file "${stepResult.filename}" but it failed to load!`,

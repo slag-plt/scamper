@@ -14,7 +14,7 @@ function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
   while (!fiber.isDone()) {
     const res = fiber.step()
-    if (res === "Display") {
+    if (res.tag === "display") {
       out.send(fiber.lastResult)
     }
   }
@@ -53,7 +53,7 @@ describe("basic ops", () => {
     ]
     test.for(varCases)("exists: %s -> %o", ([name, value]) => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar(name)])])
-      fiber.topLevelEnv.set(name, value)
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(name, value)
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([value])
     })

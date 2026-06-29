@@ -70,7 +70,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     }
     const newFrame = new Frame(
       fn.name ?? "##anonymous##",
-      fn.env.extend(...fn.params.map((p, i): [string, Value] => [p, args[i]])),
+      fn.env.extendWithLocals(...fn.params.map((p, i): [string, Value] => [p, args[i]])),
       fn.code,
     )
     if (currFrame.isFinished()) {
@@ -106,7 +106,7 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
     // make sure to push the scrutinee back for the next branch!
     currFrame.values.push(scrutinee)
   } else {
-    currFrame.env = currFrame.env.extend(...bindings)
+    currFrame.env = currFrame.env.extendWithLocals(...bindings)
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }

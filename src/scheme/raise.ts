@@ -51,7 +51,7 @@ export function raiseFrame(
       case "cls": {
         const body = raiseFrame(
           [],
-          env.without(...op.params),
+          env.withoutLocals(...op.params),
           op.body.toReversed(),
         )
         if (op.name) {

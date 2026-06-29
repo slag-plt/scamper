@@ -321,7 +321,7 @@ function scopeCheckStmt(
           ),
         )
       }
-      for (const [name, _] of builtinLibs.get(s.module)!.lib) {
+      for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
         globals.push(name)
       }
       return

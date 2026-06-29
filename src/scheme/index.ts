@@ -86,7 +86,7 @@ export function compile(
 }
 
 export function mkInitialEnv(): L.Env {
-  const env = new L.Env()
+  const env = L.Env.empty
   // for (const [name, fn] of Runtime.lib) {
   //   env.set(name, fn)
   // }

@@ -21,7 +21,7 @@ export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
   }
-  fiber.topLevelEnv.set(stmt.name, fiber.lastResult)
+  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(stmt.name, fiber.lastResult)
   fiber.advanceStmt()
   return traceStep
 }

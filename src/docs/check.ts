@@ -11,7 +11,7 @@ import * as Html from "./api/html.js"
 import builtinLibs from "../lib/index.js"
 
 const docLibs = new Map<string, object>([
-  ["prelude", Prelude as object],
+  ["prelude", Prelude],
   ["image", Image],
   ["lab", Lab],
   ["music", Music],
@@ -22,18 +22,20 @@ const docLibs = new Map<string, object>([
 ])
 
 const scamperLibs = new Map<string, string[]>()
-// scamperLibs.set('prelude', scamper.Prelude.lib.map(([id, _]) => id))
 for (const libName of builtinLibs.keys()) {
   scamperLibs.set(
     libName,
-    builtinLibs.get(libName)!.lib.map(([id, _]) => id),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    [...builtinLibs.get(libName)!.bindings.keys()]
   )
 }
 
 for (const name of scamperLibs.keys()) {
   console.log(`Checking ${name}...`)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const docs = Object.values(docLibs.get(name)!) as Doc[]
   const documentedFns = docs.map((d) => d.name)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const fns = scamperLibs.get(name)!
   fns.forEach((fn) => {
     if (!documentedFns.includes(fn)) {

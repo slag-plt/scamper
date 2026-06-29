@@ -47,7 +47,7 @@ export function importFileStep(filename: string): ImportFileStep {
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
 export class Fiber {
-  topLevelEnv: Env = new Env()
+  topLevelEnv: Env = Env.empty
   frames: Frame[] = []
   lastResult: Value | null = null
 
@@ -252,9 +252,7 @@ export class Fiber {
       // with an initializer at this point is the music lib, so we might
       // want to remove initializers altogether and do something for
       // the music lib instead.
-      for (const [name, value] of builtin.lib) {
-        this.topLevelEnv.set(name, value)
-      }
+      this.topLevelEnv = this.topLevelEnv.extendWithImport(libName, builtin)
       return traceStep
     } else {
       // ...otherwise, we're loading a user file as a lib. The libname
