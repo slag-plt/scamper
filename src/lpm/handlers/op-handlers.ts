@@ -37,7 +37,7 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
     mkClosure(
       op.params,
       op.body,
-      currFrame.env,
+      currFrame.env.getLocals(),
       // TODO: this dummy function should exist until we remove all calls to L.callScamperFn
       () => {
         throw new ICE("Fiber.ClsHandler", "Closure.call was deprecated!")
@@ -70,7 +70,10 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     }
     const newFrame = new Frame(
       fn.name ?? "##anonymous##",
-      fn.env.extendWithLocals(...fn.params.map((p, i): [string, Value] => [p, args[i]])),
+      fiber.topLevelEnv.extendReplacingLocals(
+        ...fn.locals,
+        ...fn.params.map((p, i): [string, Value] => [p, args[i]])
+      ),
       fn.code,
     )
     if (currFrame.isFinished()) {
