@@ -24,7 +24,8 @@ interface Re {
 
 class RexEmpty implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-empty';
   toRegexString(): string {
     return ''
@@ -33,7 +34,8 @@ class RexEmpty implements L.Struct, Re {
 
 class RexString implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-string';
   value: string
   constructor (value: string) {
@@ -46,7 +48,8 @@ class RexString implements L.Struct, Re {
 
 class RexRepeat implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-repeat';
   value: Re
   constructor (value: Re) {
@@ -59,7 +62,8 @@ class RexRepeat implements L.Struct, Re {
 
 class RexRepeat0 implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-repeat-0';
   value: Re
   constructor (value: Re) {
@@ -72,7 +76,8 @@ class RexRepeat0 implements L.Struct, Re {
 
 class RegExConcat implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-concat'
   values: Re[]
   constructor (values: Re[]) {
@@ -85,7 +90,8 @@ class RegExConcat implements L.Struct, Re {
 
 class RexAnyChar implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-char';
   toRegexString(): string {
     return `.`
@@ -94,7 +100,8 @@ class RexAnyChar implements L.Struct, Re {
 
 class RegCharSet implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-set'
   chars: string
   constructor (chars: string) {
@@ -107,7 +114,8 @@ class RegCharSet implements L.Struct, Re {
 
 class RegCharAntiset implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-antiset'
   chars: string
   constructor (chars: string) {
@@ -120,7 +128,8 @@ class RegCharAntiset implements L.Struct, Re {
 
 class RegCharRange implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-char-range'
   start: L.Char
   end: L.Char
@@ -136,7 +145,8 @@ class RegCharRange implements L.Struct, Re {
 
 class RexAnyOf implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-of'
   values: Re[]
   constructor (values: Re[]) {
@@ -149,7 +159,8 @@ class RexAnyOf implements L.Struct, Re {
 
 class RexOptional implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-optional'
   value: Re
   constructor (value: Re) {
@@ -162,7 +173,8 @@ class RexOptional implements L.Struct, Re {
 
 class RexRegex implements L.Struct, Re {
   [key: number]: never;
-  [L.scamperTag]: 'struct' = 'struct';
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'regex'
   pattern: string
   constructor (pattern: string) {
@@ -173,7 +185,7 @@ class RexRegex implements L.Struct, Re {
   }
 }
 
-export function isRegex (value: any): value is Re {
+export function isRegex (value: L.Value): value is Re {
   return L.isStructKind(value, 'rex-empty') ||
     L.isStructKind(value, 'rex-string') ||
     L.isStructKind(value, 'rex-repeat') ||

@@ -96,8 +96,8 @@ function eqEps(eps: number): L.ScamperFn {
   const eq = function (x: number, y: number): boolean {
     checkContract(arguments, contract(`=-eps`, [C.number, C.number]))
     return Math.abs(x - y) <= eps
-  }
-  L.nameFn(`(=-eps ${eps})`, eq)
+  } as L.JsFunction
+  L.nameFn(`(=-eps ${eps.toString()})`, eq)
   return eq
 }
 Prelude.registerValue("=-eps", eqEps)
@@ -447,7 +447,7 @@ function listOf(pred: L.ScamperFn): L.ScamperFn {
       l = l.tail
     }
     return true
-  }
+  } as L.JsFunction
 }
 Prelude.registerValue("list-of", listOf)
 
@@ -1200,20 +1200,20 @@ function procedureQ(x: any): boolean {
 }
 Prelude.registerValue("procedure?", procedureQ)
 
-function apply(f: L.Closure | Function, args: L.List): L.Value {
+function apply(f: L.ScamperFn, args: L.List): L.Value {
   checkContract(arguments, contract("apply", [C.func, C.list]))
 
   return L.callScamperFn(f, ...L.listToVector(args))
 }
 Prelude.registerValue("apply", apply)
 
-function stringMap(f: L.Closure | Function, s: string): string {
+function stringMap(f: L.ScamperFn, s: string): string {
   checkContract(arguments, contract("string-map", [C.func, C.string]))
   const chs = []
   for (let i = 0; i < s.length; i++) {
     chs.push(L.mkChar(s[i]))
   }
-  return chs.map((c) => L.callScamperFn(f, c).value).join("")
+  return chs.map((c) => (L.callScamperFn(f, c) as L.Char).value).join("")
 }
 Prelude.registerValue("string-map", stringMap)
 
@@ -1242,7 +1242,7 @@ function transpose<T>(arr: T[][]): T[][] {
   return result
 }
 
-function mapOne(f: L.Closure | Function, l: L.List): L.List {
+function mapOne(f: L.ScamperFn, l: L.List): L.List {
   const values = []
   while (l !== null) {
     values.push(L.callScamperFn(f, l.head))
@@ -1251,7 +1251,7 @@ function mapOne(f: L.Closure | Function, l: L.List): L.List {
   return L.vectorToList(values)
 }
 
-function map(f: L.Closure | Function, ...lsts: L.List[]): L.List {
+function map(f: L.ScamperFn, ...lsts: L.List[]): L.List {
   checkContract(arguments, contract("map", [C.func], C.list))
   if (lsts.length === 0) {
     return null
@@ -1273,7 +1273,7 @@ Prelude.registerValue("map", map)
 
 // Additional list pipeline functions from racket/base
 
-function filter(f: L.Closure | Function, lst: L.List): L.List {
+function filter(f: L.ScamperFn, lst: L.List): L.List {
   checkContract(arguments, contract("filter", [C.func, C.list]))
   const values = []
   while (lst !== null) {
@@ -1286,7 +1286,7 @@ function filter(f: L.Closure | Function, lst: L.List): L.List {
 }
 Prelude.registerValue("filter", filter)
 
-function fold(f: L.Closure | Function, init: L.Value, lst: L.List): L.Value {
+function fold(f: L.ScamperFn, init: L.Value, lst: L.List): L.Value {
   checkContract(arguments, contract("fold", [C.func, C.any, C.list]))
   let acc = init
   while (lst !== null) {
@@ -1297,7 +1297,7 @@ function fold(f: L.Closure | Function, init: L.Value, lst: L.List): L.Value {
 }
 Prelude.registerValue("fold", fold)
 
-function reduce(f: L.Closure | Function, lst: L.List): L.Value {
+function reduce(f: L.ScamperFn, lst: L.List): L.Value {
   checkContract(arguments, contract("reduce", [C.func, C.nonemptyList]))
   let acc = lst!.head
   lst = lst!.tail
@@ -1310,7 +1310,7 @@ function reduce(f: L.Closure | Function, lst: L.List): L.Value {
 Prelude.registerValue("reduce", reduce)
 
 function foldLeft(
-  f: L.Closure | Function,
+  f: L.ScamperFn,
   init: L.Value,
   lst: L.List,
 ): L.Value {
@@ -1325,7 +1325,7 @@ function foldLeft(
 Prelude.registerValue("fold-left", foldLeft)
 
 function foldRight(
-  f: L.Closure | Function,
+  f: L.ScamperFn,
   init: L.Value,
   lst: L.List,
 ): L.Value {
@@ -1340,7 +1340,7 @@ function foldRight(
 }
 Prelude.registerValue("fold-right", foldRight)
 
-function reduceRight(f: L.Closure | Function, lst: L.List): L.Value {
+function reduceRight(f: L.ScamperFn, lst: L.List): L.Value {
   checkContract(arguments, contract("reduce-right", [C.func, C.nonemptyList]))
   const values = L.listToVector(lst)
   let acc = values.pop()
@@ -1352,7 +1352,7 @@ function reduceRight(f: L.Closure | Function, lst: L.List): L.Value {
 }
 Prelude.registerValue("reduce-right", reduceRight)
 
-function vectorMap(f: L.Closure | Function, ...vecs: L.Value[][]): L.Value[] {
+function vectorMap(f: L.ScamperFn, ...vecs: L.Value[][]): L.Value[] {
   checkContract(arguments, contract("vector-map", [C.func], C.vector))
   if (vecs.length === 0) {
     return []
@@ -1371,7 +1371,7 @@ function vectorMap(f: L.Closure | Function, ...vecs: L.Value[][]): L.Value[] {
 }
 Prelude.registerValue("vector-map", vectorMap)
 
-function vectorMapBang(f: L.Closure | Function, vec: L.Value[]): void {
+function vectorMapBang(f: L.ScamperFn, vec: L.Value[]): void {
   checkContract(arguments, contract("vector-map!", [C.func, C.vector]))
   for (let i = 0; i < vec.length; i++) {
     vec[i] = L.callScamperFn(f, vec[i])
@@ -1379,7 +1379,7 @@ function vectorMapBang(f: L.Closure | Function, vec: L.Value[]): void {
 }
 Prelude.registerValue("vector-map!", vectorMapBang)
 
-function vectorForEach(f: L.Closure | Function, vec: L.Value[]): void {
+function vectorForEach(f: L.ScamperFn, vec: L.Value[]): void {
   checkContract(arguments, contract("vector-for-each", [C.func, C.vector]))
   for (let i = 0; i < vec.length; i++) {
     L.callScamperFn(f, vec[i])
@@ -1387,7 +1387,7 @@ function vectorForEach(f: L.Closure | Function, vec: L.Value[]): void {
 }
 Prelude.registerValue("vector-for-each", vectorForEach)
 
-function forRange(start: number, end: number, f: L.Closure | Function): void {
+function forRange(start: number, end: number, f: L.ScamperFn): void {
   checkContract(
     arguments,
     contract("for-range", [C.integer, C.integer, C.func]),
@@ -1419,7 +1419,7 @@ Prelude.registerValue("for-range", forRange)
 
 // Additional control features
 
-function vectorFilter(f: L.Closure | Function, lst: L.Value[]): L.Value[] {
+function vectorFilter(f: L.ScamperFn, lst: L.Value[]): L.Value[] {
   checkContract(arguments, contract("vector-filter", [C.func, C.vector]))
   const ret = []
   for (let i = 0; i < lst.length; i++) {
@@ -1451,7 +1451,7 @@ function qq(): never {
 }
 Prelude.registerValue("??", qq)
 
-function compose(...fss: (L.Closure | Function)[]): L.Closure | Function {
+function compose(...fss: (L.ScamperFn)[]): L.ScamperFn {
   checkContract(arguments, contract("compose", [C.func], C.func))
   const first = fss[fss.length - 1]
   return (x: L.Value) => {
@@ -1465,7 +1465,7 @@ function compose(...fss: (L.Closure | Function)[]): L.Closure | Function {
 Prelude.registerValue("compose", compose)
 Prelude.registerValue("o", compose)
 
-function pipe(init: L.Value, ...fs: (L.Closure | Function)[]): L.Value {
+function pipe(init: L.Value, ...fs: (L.ScamperFn)[]): L.Value {
   checkContract(arguments, contract("|>", [C.any, C.func], C.func))
   let acc = init
   for (let i = 0; i < fs.length; i++) {
@@ -1507,8 +1507,8 @@ function random(n: number): number {
 Prelude.registerValue("random", random)
 
 function withHandler(
-  handler: L.Closure | Function,
-  fn: L.Closure | Function,
+  handler: L.ScamperFn,
+  fn: L.ScamperFn,
   ...args: L.Value[]
 ): L.Value {
   checkContract(arguments, contract("with-handler", [C.func, C.func], C.any))

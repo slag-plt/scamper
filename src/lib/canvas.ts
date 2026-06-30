@@ -131,7 +131,7 @@ function animateWith (fn: L.ScamperFn): void {
   function callback (time: number) {
     let result = false
     try {
-      result = L.callScamperFn(fn, time)
+      result = L.callScamperFn(fn, time) as boolean
     } catch (e) {
       alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
       return

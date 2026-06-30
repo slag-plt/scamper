@@ -222,13 +222,17 @@ export type Vector = Value[]
 export type JsFunction = (...args: Value[]) => Value
 export type ScamperFn = Closure | JsFunction
 
-/** Calls a ScamperFn function with the provided arguments */
-export function callScamperFn(fn: ScamperFn, ...args: Value[]): any {
-  if (typeof fn === "function") {
-    return fn(...args)
-  } else {
-    return fn.call(...args)
-  }
+/**
+ * Calls a ScamperFn function with the provided arguments
+ * @deprecated We will disallow Javascript code from calling Scamper code
+ *             in the near future. Code that uses callScamperFn will need
+ *             to be rewritten in Scamper.
+ */
+export function callScamperFn(_fn: ScamperFn, ..._args: Value[]): Value {
+  throw new ScamperError(
+    'Runtime',
+    'Javascript library functions can no longer call Scamper functions'
+  )
 }
 
 /** Raw Javascript values are any Javascript object. */

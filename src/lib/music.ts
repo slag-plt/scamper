@@ -156,7 +156,7 @@ const modC: C.Spec = {
   errorMsg: (actual: any) => `expected a mod, received ${L.typeOf(actual)}`,
 }
 
-interface Percussion extends L.Struct { kind: 'percussion' }
+interface Percussion extends L.Struct { [L.structKind]: 'percussion' }
 const percussion = ({ [L.scamperTag]: 'struct', [L.structKind]: 'percussion' })
 Music.registerValue('percussion', percussion)
 
@@ -418,26 +418,26 @@ function compositionToMsgs (
     }
 
     case 'mod': {
-      if (composition.mod[L.structKind] === 'percussion') {
+      const kind = composition.mod
+      if (kind[L.structKind] === 'percussion') {
         return compositionToMsgs(beat, bpm, velocity, startTime, 128, handlers, composition.note)
-      } else if (composition.mod[L.structKind] === 'pitchBend') {
-        const msgs: Msg[] = []
-        const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.note)
-        // TODO: handle pitch bends
-        // msgs.push(midiMsg(startTime, pitchBendF(0, composition.mod.fields[0])))
-        // msgs.push(...data.msgs)
-        // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
-        return { msgs, endTime: data.endTime }
-      } else if (composition.mod[L.structKind] === 'tempo') {
-        return compositionToMsgs(composition.mod.beat, composition.mod.bpm, velocity, startTime, instrument, handlers, composition.note)
-      } else if (composition.mod[L.structKind] === 'dynamics') {
-        return compositionToMsgs(beat, bpm, composition.mod.amount, startTime, instrument, handlers, composition.note)
-      } else if (composition.mod[L.structKind] === 'instrument') {
-        return compositionToMsgs(beat, bpm, velocity, startTime, composition.mod.program, handlers, composition.note)
-      } else if (composition.mod[L.structKind] === 'noteHandlers') {
-        return compositionToMsgs(beat, bpm, velocity, startTime, instrument, composition.mod.handlers, composition.note)
+      // } else if (mod[L.structKind] === 'pitchBend') {
+      //   const msgs: Msg[] = []
+      //   const data = compositionToMsgs(beat, bpm, velocity, startTime, instrument, handlers, composition.note)
+      //   // TODO: handle pitch bends
+      //   // msgs.push(midiMsg(startTime, pitchBendF(0, composition.mod.fields[0])))
+      //   // msgs.push(...data.msgs)
+      //   // msgs.push(midiMsg(data.endTime, pitchBendF(0, 0)))
+      //   return { msgs, endTime: data.endTime }
+      } else if (kind[L.structKind] === 'tempo') {
+        return compositionToMsgs(kind.beat, kind.bpm, velocity, startTime, instrument, handlers, composition.note)
+      } else if (kind[L.structKind] === 'dynamics') {
+        return compositionToMsgs(beat, bpm, kind.amount, startTime, instrument, handlers, composition.note)
+      } else if (kind[L.structKind] === 'instrument') {
+        return compositionToMsgs(beat, bpm, velocity, startTime, kind.program, handlers, composition.note)
       } else {
-        throw new L.ICE('compositionToMsgs', `unknown mod tag: ${composition.mod}`)
+        // kind[L.structKind] === 'noteHandlers'
+        return compositionToMsgs(beat, bpm, velocity, startTime, instrument, kind.handlers, composition.note)
       }
     }
 
