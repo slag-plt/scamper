@@ -6,7 +6,7 @@ import VueRenderer from '../lpm/renderers/vue.js'
 import MusicRenderer from './MusicRenderer.vue'
 import { waf } from './webaudiofont/webaudiofont.js'
 
-const Music: L.Library = new L.Library()
+const Music: L.Module = new L.Module()
 
 export type PitchClass = string
 export type Octave = number

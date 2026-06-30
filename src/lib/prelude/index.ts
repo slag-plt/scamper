@@ -4,7 +4,7 @@ import * as C from "../contract.js"
 import { lib as filesLib } from "./files.js"
 import { SubthreadErrors } from "../../lpm"
 
-export const Prelude: L.Library = new L.Library()
+export const Prelude: L.Module = new L.Module()
 
 const query1C = (name: string) => contract(name, [C.any])
 const query2C = (name: string) => contract(name, [C.any, C.any])

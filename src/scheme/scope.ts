@@ -305,7 +305,7 @@ function scopeCheckFunctionDoc(
 
 function scopeCheckStmt(
   errors: ScamperError[],
-  builtinLibs: Map<string, L.Library>,
+  builtinLibs: Map<string, L.Module>,
   globals: string[],
   s: A.Stmt,
 ) {
@@ -363,7 +363,7 @@ function scopeCheckStmt(
 }
 
 export function scopeCheckProgram(
-  builtinLibs: Map<string, L.Library>,
+  builtinLibs: Map<string, L.Module>,
   errors: ScamperError[],
   prog: A.Prog,
 ) {

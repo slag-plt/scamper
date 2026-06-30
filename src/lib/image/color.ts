@@ -657,7 +657,7 @@ VueRenderer.registerCustomRenderer(isHsv, () => HsvRenderer)
 
 /***** Exports ****************************************************************/
 
-export const lib: L.Library = new L.Library()
+export const lib: L.Module = new L.Module()
 
 // Generic colors
 lib.registerValue('color', color)

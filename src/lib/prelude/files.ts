@@ -8,7 +8,7 @@ import { SubthreadErrors } from "../../lpm";
 import ReactiveFileRenderer from './ReactiveFileRenderer.vue'
 import ReactiveFileChooserRenderer from './ReactiveFileChooserRenderer.vue'
 
-export const lib: L.Library = new L.Library()
+export const lib: L.Module = new L.Module()
 export default lib
 
 ///// Reactive file ////////////////////////////////////////////////////////////

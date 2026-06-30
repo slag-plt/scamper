@@ -243,23 +243,23 @@ export class Fiber {
     return isMajorStep
   }
 
-  /* Library importing helper functions */
-  loadLib(libName: string): StepResult {
-    const builtin = builtinLibs.get(libName)
+  /* Module importing helper functions */
+  loadModule(name: string): StepResult {
+    const builtin = builtinLibs.get(name)
     if (builtin) {
       // TODO: for simplicity's sake, we assume that all built-in libs
       // initializers have been invoked already. The only built-in lib
       // with an initializer at this point is the music lib, so we might
       // want to remove initializers altogether and do something for
       // the music lib instead.
-      this.topLevelEnv = this.topLevelEnv.extendWithImport(libName, builtin)
+      this.topLevelEnv = this.topLevelEnv.extendWithImport(name, builtin)
       return traceStep
     } else {
       // ...otherwise, we're loading a user file as a lib. The libname
       // should correspond to the exact name of the source file. This will
       // be handled by the scheduler who will, ultimately, pause the current
       // fiber and execute an asynchronous load of that file.
-      return importFileStep(libName)
+      return importFileStep(name)
     }
   }
 }

@@ -4,7 +4,7 @@ import * as C from '../contract.js'
 
 import Papa from 'papaparse'
 
-const Utils: L.Library = new L.Library()
+const Utils: L.Module = new L.Module()
 
 function parseCsv (data: string): L.List {
   checkContract(arguments, contract('parse-csv', [C.string]))

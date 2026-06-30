@@ -32,14 +32,14 @@ export type Idx = number
  */
 export class Env {
   /** A mapping of imported modules to their bound libraries */
-  private imports: Map<string, Library>
+  private imports: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
   /** A mapping of local bindings */
   private locals: Map<string, Value>
 
   /** Constructs a new environemnt from the given maps */
-  constructor(imports: Map<string, Library>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
+  constructor(imports: Map<string, Module>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
     this.imports = imports
     this.topLevel = topLevel
     this.locals = locals
@@ -72,8 +72,8 @@ export class Env {
   }
 
   /** @return the top-level bindings of this environment as a Module */
-  getTopLevelAsModule(): Library {
-    const ret = new Library()
+  getTopLevelAsModule(): Module {
+    const ret = new Module()
     for (const [name, value] of this.topLevel) {
       ret.registerValue(name, value)
     }
@@ -91,7 +91,7 @@ export class Env {
         lib.bindings.has(name))
   }
 
-  extendWithImport(name: string, lib: Library): Env {
+  extendWithImport(name: string, lib: Module): Env {
     return new Env(
       new Map([...this.imports, [name, lib]]),
       this.topLevel,
@@ -132,8 +132,8 @@ export class Env {
   }
 }
 
-/** A library is a collection of importable top-level definitions. */
-export class Library {
+/** A module is a collection of importable top-level definitions. */
+export class Module {
   bindings: Map<string, Value>
 
   constructor() {
@@ -147,9 +147,9 @@ export class Library {
     this.bindings.set(name, v)
   }
 
-  static fromLibs(...libs: Library[]): Library {
-    const ret = new Library()
-    for (const lib of libs) {
+  static fromLibs(...mods: Module[]): Module {
+    const ret = new Module()
+    for (const lib of mods) {
       for (const [name, value] of lib.bindings) {
         ret.registerValue(name, value)
       }

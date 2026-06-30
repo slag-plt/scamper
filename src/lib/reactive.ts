@@ -4,7 +4,7 @@ import * as L from '../lpm'
 
 import { NoteHandlers, NoteMsg } from './music.js'
 
-const lib: L.Library = new L.Library()
+const lib: L.Module = new L.Module()
 
 /***** Reactive Components ****************************************************/
 

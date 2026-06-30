@@ -5,7 +5,7 @@ import { Drawing, render } from './image/drawing.js'
 import { colorToRgb, colorS, rgbToString } from './image/color.js'
 import { Font, font, fontS, fontToFontString } from './image/font.js'
 
-const Canvas: L.Library = new L.Library()
+const Canvas: L.Module = new L.Module()
 
 function makeCanvas (width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
