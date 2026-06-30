@@ -1,5 +1,6 @@
 import { Range } from "./range.js"
 import { FunctionDoc } from "../scheme/docstring/docstring"
+import { ScamperError } from "./error.js"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -52,21 +53,22 @@ export class Env {
    * @return the value bound to this variable name or undefined if it does not
    *         exist
    */
-  get(name: string): Value | undefined {
-    const localValue = this.locals.get(name)
-    if (localValue !== undefined) {
-      return localValue
-    }
-    const topLevelValue = this.topLevel.get(name)
-    if (topLevelValue !== undefined) {
-      return topLevelValue
-    }
-    for (const library of this.imports.values()) {
-      if (library.bindings.has(name)) {
-        return library.bindings.get(name)
+  get(name: string): Value {
+    if (this.locals.has(name)) {
+      return this.locals.get(name)
+    } else if (this.topLevel.has(name)) {
+      return this.topLevel.get(name)
+    } else {
+      for (const library of this.imports.values()) {
+        if (library.bindings.has(name)) {
+          return library.bindings.get(name)
+        }
       }
+      throw new ScamperError(
+        'Runtime',
+        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+      )
     }
-    return undefined
   }
 
   /** @return the top-level bindings of this environment as a Module */
@@ -125,7 +127,7 @@ export class Env {
     return new Env(
       this.imports,
       this.topLevel,
-      new Map([...this.locals].filter(([x, _v]) => !(x in names)))
+      new Map([...this.locals].filter(([x, _v]) => !names.includes(x)))
     )
   }
 }

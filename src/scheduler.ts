@@ -155,10 +155,11 @@ export class Scheduler {
           }
           if (stepResult.tag === 'import-file') {
             if (!await getFS().fileExists(stepResult.filename)) {
-              throw new ScamperError(
+              task.err.report(new ScamperError(
                 "Runtime",
                 `Attempted to import file "${stepResult.filename}" but it does not exist!`,
-              )
+              ))
+              this.#removeCurrFiber()
             } else {
               fiber.pause()
               getFS().loadFile(stepResult.filename).then((_src) => {
@@ -178,15 +179,17 @@ export class Scheduler {
                   onComplete: () => {
                     const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
                     fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(stepResult.filename, mod)
+                    fiber.advanceStmt()
                     fiber.resume()
                   }
                 })
               },
               (_err: unknown) => {
-                throw new ScamperError(
+                task.err.report(new ScamperError(
                   "Runtime",
                   `Attempted to import file "${stepResult.filename}" but it failed to load!`,
-                )
+                ))
+                fiber.advanceStmt()
               })
             }
           }
