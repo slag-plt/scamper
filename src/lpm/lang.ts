@@ -69,6 +69,15 @@ export class Env {
     return undefined
   }
 
+  /** @return the top-level bindings of this environment as a Module */
+  getTopLevelAsModule(): Library {
+    const ret = new Library()
+    for (const [name, value] of this.topLevel) {
+      ret.registerValue(name, value)
+    }
+    return ret
+  }
+
   /**
    * @param name the (simple) name of the variable to look up
    * @return true iff the variable is bound in this environment

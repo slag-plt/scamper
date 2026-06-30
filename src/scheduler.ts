@@ -12,22 +12,31 @@ import {
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
 import { getFS } from './fs'
+import * as S from './scheme'
 
 const DEFAULT_REFRESH_RATE = 60
 
+///// Scheduler Tasks //////////////////////////////////////////////////////////
+
 export type SchedulerId = string
+
 interface BaseSchedulerTask {
   id: SchedulerId
   fiber: Fiber
   err: ErrorChannel
   onComplete?: () => void
 }
+
 export interface DisplayTask extends BaseSchedulerTask {
   out: OutputChannel
   isTracing: boolean
 }
+
 export type QueryTask = BaseSchedulerTask
+
 export type SchedulerTask = DisplayTask | QueryTask
+
+////////////////////////////////////////////////////////////////////////////////
 
 export class Scheduler {
   // invariant: tasks should ONLY contain non-completed fibers.
@@ -153,11 +162,27 @@ export class Scheduler {
             } else {
               fiber.pause()
               getFS().loadFile(stepResult.filename).then((_src) => {
-                // TODO: run src in a new fiber and then inject the fiber's globals into
-                // the current fiber's top-level scope
-                fiber.resume()
+                const prog = S.compile(task.err, _src)
+                if (!prog) {
+                  // TODO: error channel receives the compilation errors as a side-effect,
+                  // but it would be good to signal to the continuation that importing has
+                  // failed at this step...
+                  return
+                }
+                const moduleFiber = new Fiber(prog)
+                const id = crypto.randomUUID()
+                this.schedule({
+                  id,
+                  fiber: moduleFiber,
+                  err: task.err,
+                  onComplete: () => {
+                    const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
+                    fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(stepResult.filename, mod)
+                    fiber.resume()
+                  }
+                })
               },
-              (_err) => {
+              (_err: unknown) => {
                 throw new ScamperError(
                   "Runtime",
                   `Attempted to import file "${stepResult.filename}" but it failed to load!`,
