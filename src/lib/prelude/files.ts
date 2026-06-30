@@ -1,19 +1,14 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
+import { getFS } from '../../fs'
 import HTMLRenderer from '../../lpm/renderers/html'
 import VueRenderer from '../../lpm/renderers/vue'
-import * as FS from '../../fs'
 import { SubthreadErrors } from "../../lpm";
 import ReactiveFileRenderer from './ReactiveFileRenderer.vue'
 import ReactiveFileChooserRenderer from './ReactiveFileChooserRenderer.vue'
 
-export let fs: FS.t | null = null
-
-export const lib: L.Library = new L.Library(async () => {
-  await FS.initialize()
-  fs = FS.getFS()
-})
+export const lib: L.Module = new L.Module()
 export default lib
 
 ///// Reactive file ////////////////////////////////////////////////////////////
@@ -38,16 +33,13 @@ lib.registerValue('with-file', withFile)
 function renderReactiveFile (v: any): HTMLElement {
   const rf = v as ReactiveFile
   const ret = document.createElement('div')
-  if (!fs) {
-    ret.innerText = 'OPFS not supported'
-    return ret
-  }
+  const fs = getFS()
   fs.fileExists(rf.filename).then((exists: boolean) => {
     if (!exists) {
       const err = new L.ScamperError('Runtime', `File not found: ${rf.filename}`)
       ret.appendChild(HTMLRenderer.render(err))
     } else {
-      fs!.loadFile(rf.filename).then((data: string) => {
+      fs.loadFile(rf.filename).then((data: string) => {
         ret.innerHTML = ''
         try {
           const v = L.callScamperFn(rf.callback, data)
@@ -61,8 +53,14 @@ function renderReactiveFile (v: any): HTMLElement {
             ret.appendChild(HTMLRenderer.render(e as L.ScamperError))
           }
         }
+      },
+      (_err: unknown) => {
+        ret.innerText = `Unknown error while loading file ${rf.filename}`
       })
     }
+  },
+  (_err: unknown) => {
+    ret.innerText = `Unknown error while loading file ${rf.filename}`
   })
   return ret
 }

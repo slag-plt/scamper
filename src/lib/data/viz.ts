@@ -7,7 +7,7 @@ import PlotRenderer from './PlotRenderer.vue'
 
 import Chart from 'chart.js/auto'
 
-const viz: L.Library = new L.Library()
+const viz: L.Module = new L.Module()
 
 ///// Basic Types //////////////////////////////////////////////////////////////
 

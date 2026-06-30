@@ -6,7 +6,7 @@ import HtmlRenderer from '../lpm/renderers/html.js'
 import VueRenderer from '../lpm/renderers/vue.js'
 import TestResultRenderer from './TestResultRenderer.vue'
 
-const Test: L.Library = new L.Library()
+const Test: L.Module = new L.Module()
 
 export type Result = Ok | ErrExp | ErrExn | ErrGen
 export interface Ok extends L.Struct { [L.structKind]: 'ok', desc: string }

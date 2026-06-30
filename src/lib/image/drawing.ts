@@ -7,7 +7,7 @@ import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
 
-export const lib: L.Library = new L.Library()
+export const lib: L.Module = new L.Module()
 
 /***** Core Functions *********************************************************/
 

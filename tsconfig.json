@@ -6,9 +6,8 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"],
     "skipLibCheck": true,
 
-    "declaration": true,
-    "declarationDir": "./types",
-    "declarationMap": true,
+    // "declaration": true,
+    // "declarationMap": true,
     "sourceMap": true,
 
     /* Bundler mode */
@@ -16,7 +15,7 @@
     //"allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    //"noEmit": true,
+    "noEmit": true,
 
     "esModuleInterop": true,
 

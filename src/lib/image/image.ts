@@ -191,7 +191,7 @@ VueRenderer.registerCustomRenderer(isReactiveImageFile, () => ReactiveImageFileR
 
 /***** Exports ****************************************************************/
 
-export const lib: L.Library = new L.Library()
+export const lib: L.Module = new L.Module()
 
 // Image loading
 lib.registerValue('with-image-file', withImageFile)

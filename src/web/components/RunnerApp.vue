@@ -2,7 +2,6 @@
 import * as FS from "../../fs"
 import { onMounted, shallowRef } from "vue"
 import { ScamperError } from "../../lpm/error"
-import { initializeLibs } from "../../lib"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 import { ScamperInstance } from "../../scamper-instance"
@@ -17,7 +16,6 @@ onMounted(async () => {
 
   await FS.initialize()
   const fs = FS.getFS()
-  await initializeLibs()
   const params = new URLSearchParams(window.location.search)
 
   if (!params.has("filename")) {

@@ -4,7 +4,7 @@ import * as L from '../lpm'
 
 import { NoteHandlers, NoteMsg } from './music.js'
 
-const lib: L.Library = new L.Library()
+const lib: L.Module = new L.Module()
 
 /***** Reactive Components ****************************************************/
 
@@ -82,7 +82,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
 
   update (msg: Msg) {
     try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value)
+      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
     } catch (e) {
       alert(`reactive-canvas: update function generated an error:\n\n${(e as Error).toString()}`)
       this.finished = true
@@ -143,7 +143,7 @@ class ReactiveContainer<T> implements ReactiveElement {
 
   update (msg: Msg) {
     try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value)
+      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
     } catch (e) {
       alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
     }

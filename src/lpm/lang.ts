@@ -32,14 +32,14 @@ export type Idx = number
  */
 export class Env {
   /** A mapping of imported modules to their bound libraries */
-  private imports: Map<string, Library>
+  private imports: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
   /** A mapping of local bindings */
   private locals: Map<string, Value>
 
   /** Constructs a new environemnt from the given maps */
-  constructor(imports: Map<string, Library>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
+  constructor(imports: Map<string, Module>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
     this.imports = imports
     this.topLevel = topLevel
     this.locals = locals
@@ -72,8 +72,8 @@ export class Env {
   }
 
   /** @return the top-level bindings of this environment as a Module */
-  getTopLevelAsModule(): Library {
-    const ret = new Library()
+  getTopLevelAsModule(): Module {
+    const ret = new Module()
     for (const [name, value] of this.topLevel) {
       ret.registerValue(name, value)
     }
@@ -91,7 +91,7 @@ export class Env {
         lib.bindings.has(name))
   }
 
-  extendWithImport(name: string, lib: Library): Env {
+  extendWithImport(name: string, lib: Module): Env {
     return new Env(
       new Map([...this.imports, [name, lib]]),
       this.topLevel,
@@ -132,15 +132,12 @@ export class Env {
   }
 }
 
-type InitializerFunction = () => Promise<void>
-/** A library is a collection of importable top-level definitions. */
-export class Library {
+/** A module is a collection of importable top-level definitions. */
+export class Module {
   bindings: Map<string, Value>
-  initializer?: InitializerFunction
 
-  constructor(initializer?: InitializerFunction) {
+  constructor() {
     this.bindings = new Map()
-    this.initializer = initializer
   }
 
   registerValue(name: string, v: Value) {
@@ -150,16 +147,9 @@ export class Library {
     this.bindings.set(name, v)
   }
 
-  static fromLibs(...libs: Library[]): Library {
-    const initializer = async () => {
-      for (const lib of libs) {
-        if (lib.initializer !== undefined) {
-          await lib.initializer()
-        }
-      }
-    }
-    const ret = new Library(initializer)
-    for (const lib of libs) {
+  static fromLibs(...mods: Module[]): Module {
+    const ret = new Module()
+    for (const lib of mods) {
       for (const [name, value] of lib.bindings) {
         ret.registerValue(name, value)
       }
@@ -222,13 +212,17 @@ export type Vector = Value[]
 export type JsFunction = (...args: Value[]) => Value
 export type ScamperFn = Closure | JsFunction
 
-/** Calls a ScamperFn function with the provided arguments */
-export function callScamperFn(fn: ScamperFn, ...args: Value[]): any {
-  if (typeof fn === "function") {
-    return fn(...args)
-  } else {
-    return fn.call(...args)
-  }
+/**
+ * Calls a ScamperFn function with the provided arguments
+ * @deprecated We will disallow Javascript code from calling Scamper code
+ *             in the near future. Code that uses callScamperFn will need
+ *             to be rewritten in Scamper.
+ */
+export function callScamperFn(_fn: ScamperFn, ..._args: Value[]): Value {
+  throw new ScamperError(
+    'Runtime',
+    'Javascript library functions can no longer call Scamper functions'
+  )
 }
 
 /** Raw Javascript values are any Javascript object. */
