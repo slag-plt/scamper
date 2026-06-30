@@ -20,9 +20,11 @@ const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
-  fiber.topLevelEnv.set("+", (a: number, b: number) => a + b)
-  fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
-  fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
+  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
+    ['+', (a: number, b: number) => a + b],
+    ['-', (a: number, b: number) => a - b],
+    ['*', (a: number, b: number) => a * b]
+  )
   return fiber
 }
 

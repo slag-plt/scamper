@@ -99,10 +99,10 @@ export class Env {
     )
   }
 
-  extendWithTopLevel(name: string, value: Value): Env {
+  extendWithTopLevel(...bindings: [string, Value][]): Env {
     return new Env(
       this.imports,
-      new Map([...this.topLevel, [name, value]]),
+      new Map([...this.topLevel, ...bindings]),
       this.locals
     )
   }

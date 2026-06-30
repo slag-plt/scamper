@@ -542,13 +542,16 @@ VueRenderer.registerCustomRenderer(compositionQ, () => MusicRenderer)
 
 function initialize() {
   // Initialize webaudiofont
-  const player = waf()
-  if (player !== undefined) {
-    player.loadInstrument(0)         // 0: Acoustic Grand Piano
-    player.loadInstrument(35, true)  // 35: Acoustic Bass
-    player.loadInstrument(38, true)  // 38: Acoustic Snare
-    player.loadInstrument(42, true)  // 42: Closed Hi-Hat
-    player.loadInstrument(49, true)  // 49: Crash Cymbal 1
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+  if (window && (window.AudioContext || (window as any).webkitAudioContext)) {
+    const player = waf()
+    if (player !== undefined) {
+      player.loadInstrument(0)         // 0: Acoustic Grand Piano
+      player.loadInstrument(35, true)  // 35: Acoustic Bass
+      player.loadInstrument(38, true)  // 38: Acoustic Snare
+      player.loadInstrument(42, true)  // 42: Closed Hi-Hat
+      player.loadInstrument(49, true)  // 49: Crash Cymbal 1
+    }
   }
 }
 
