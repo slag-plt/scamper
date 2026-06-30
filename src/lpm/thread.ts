@@ -121,6 +121,8 @@ export class Thread {
 
   /** Advances this thread to the next statement. */
   advanceStmt(): void {
+    console.log("about to advance statement")
+    console.log(this.frames)
     this.frames = []
     this.isProcessingExpr = false
     this.curStmt++
@@ -496,16 +498,22 @@ export class Thread {
 
   private stepFrame(): void {
     const current = this.getCurrentFrame()
+    console.log("CURRREEEEEnt")
+    console.log(current)
     // N.B., continue stepping until a "major" step occurs where the program
     // state changes significantly. Probably should make this an option (where
     // skipping is the default.)
     let cont = true
     while (cont && !this.getCurrentFrame().isFinished() && !this.cancelled) {
       const instr = current.popInstr()
+      // console.log("instr")
+      // console.log(instr)
       switch (instr.tag) {
         // lit case (minor step)
         case "lit": {
           current.values.push(instr.value)
+          //console.log("just pushed")
+          //console.log(current.values)
           break
         }
 
@@ -559,6 +567,8 @@ export class Thread {
 
         // ap case (major step)
         case "ap": {
+          console.log("APPPPPPPPPPPPPPPPP")
+          console.log(current.values)
           cont = false
           if (this.frames.length >= this.options.maxCallStackDepth) {
             this.reportAndUnwind(
@@ -698,6 +708,8 @@ export class Thread {
       }
       cont = !this.checkFrameReturn() && cont
     }
+      // console.log("CURRREEEEEnt avalssss")
+      // console.log(current.values)
   }
     
   draw (): HTMLDivElement {
@@ -710,8 +722,9 @@ export class Thread {
 
     //if(envState != undefined){
       //grabs the stack
-      //const stack = this.frames       stacks come out empty...
-      //console.log(stack)
+      const stack = this.frames
+      console.log("LOOKKK")       //stacks come out empty...
+      console.log(stack)
       //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
       //if(!stack[0]) {
 
@@ -824,6 +837,7 @@ export class Thread {
               }
             }
 
+            //add to array of things to be printed
             list_names.push(id);
             list_div.push(div)
           })
@@ -840,7 +854,7 @@ export class Thread {
         }
       //}
 
-      /*
+      
       let stackString;
       let stackHTML;
 
@@ -849,7 +863,7 @@ export class Thread {
         //console.log(stack[0])
         //convert to string (probs not used)
         stackString = stack[stack.length - 1]?.toString()
-
+/*
         //type check and convert to string or HTML element
         if(typeof stack[0] != 'string' && typeof stack[0] != 'number' && typeof stack[0] != 'boolean' || stack[0] === 0) {
           if(stack[0] != undefined && Value.typeOf(stack[0]) === 'vector') {
@@ -894,7 +908,7 @@ export class Thread {
           this.appendToCurrentTrace(stackHTML)
         }
       } */
-    //}
+      }
     return mainDiv
   }
 
