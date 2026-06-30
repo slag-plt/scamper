@@ -6,9 +6,7 @@ import * as L from '../lpm'
 
 export const imageLib: L.Library = new L.Library()
 
-imageLib.lib = [
-  ...Drawing.lib.lib,
-  ...Font.lib.lib,
-  ...Img.lib.lib,
-  ...Rgb.lib.lib
-]
+Drawing.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Font.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Img.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Rgb.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })

@@ -5,18 +5,14 @@ import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
 import { scopeCheckProgram } from "./scope.js"
 import { sugarExpr } from "./sugarer.js"
-import { raiseFiber, raiseThread } from "./raise.js"
-import { FiberRaiser, Raiser } from "../lpm/raiser.js"
+import { FiberRaiser } from "../lpm/raiser.js"
+import { raiseFiber } from "./raise.js"
 import { read } from "./reader.js"
 import { parseProgram } from "./parser.js"
 import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedAST } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
 
-export const raiser: Raiser<Exp> = {
-  raise: (t) => sugarExpr(raiseThread(t)),
-  equals: L.equals,
-}
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
   equals: L.equals,
@@ -116,7 +112,7 @@ export function compile(
 }
 
 export function mkInitialEnv(): L.Env {
-  const env = new L.Env()
+  const env = L.Env.empty
   // for (const [name, fn] of Runtime.lib) {
   //   env.set(name, fn)
   // }

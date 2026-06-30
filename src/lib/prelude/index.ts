@@ -1618,9 +1618,11 @@ Prelude.registerValue("pi", piConst)
 Prelude.registerValue("π", piConst)
 Prelude.registerValue("void", voidConst)
 
-// TODO: library initialization is a problem, this really needs to be a
+// TODO: library initialization is a problem, this really needs to be an
 // upfront thing, not performed lazily unless we want to async the runtime.
-Prelude.lib.push(...filesLib.lib)
+for (const [name, value] of filesLib.bindings) {
+  Prelude.registerValue(name, value)
+}
 Prelude.initializer = async () => {
   await filesLib.initializer?.()
 }

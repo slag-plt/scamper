@@ -1,5 +1,6 @@
 import { Range } from "./range.js"
 import { FunctionDoc } from "../scheme/docstring/docstring"
+import { ScamperError } from "./error.js"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -15,64 +16,130 @@ export type Id = string
 /** Indices provide "fast names" of objects, in particular locals, at runtime. */
 export type Idx = number
 
-/** Environments are scoped collections of variable bindings. */
+/**
+ * Environments are collections of variable bindings. The overall runtime
+ * environment captures three different scopes:
+ * 
+ * + `imports`: the collection of imported module names
+ * + `topLevel`: the collection of top-level (module-level) bindings
+ * + `locals`: the collection of local bindings
+ * 
+ * When resolving a (simple) variable name, we search in order of increasing
+ * scope: local, top-level, and then imports.
+ * 
+ * Environments are also _immutable_: operations return new environments rather
+ * mutating the current environment.
+ */
 export class Env {
-  bindings: Map<string, Value>
-  parent?: Env
+  /** A mapping of imported modules to their bound libraries */
+  private imports: Map<string, Library>
+  /** A mapping of top-level (module-level) bindings */
+  private topLevel: Map<string, Value>
+  /** A mapping of local bindings */
+  private locals: Map<string, Value>
 
-  constructor(parent?: Env) {
-    this.bindings = new Map()
-    this.parent = parent
+  /** Constructs a new environemnt from the given maps */
+  constructor(imports: Map<string, Library>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
+    this.imports = imports
+    this.topLevel = topLevel
+    this.locals = locals
   }
 
-  get(name: string): Value | undefined {
-    return this.bindings.has(name)
-      ? this.bindings.get(name)
-      : this.parent?.get(name)
+  /** The empty environment */
+  static empty: Env = new Env(new Map(), new Map(), new Map())
+
+  /**
+   * @param name the (simple) name of the variable to look up
+   * @return the value bound to this variable name or undefined if it does not
+   *         exist
+   */
+  get(name: string): Value {
+    if (this.locals.has(name)) {
+      return this.locals.get(name)
+    } else if (this.topLevel.has(name)) {
+      return this.topLevel.get(name)
+    } else {
+      for (const library of this.imports.values()) {
+        if (library.bindings.has(name)) {
+          return library.bindings.get(name)
+        }
+      }
+      throw new ScamperError(
+        'Runtime',
+        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+      )
+    }
   }
 
-  set(name: string, value: Value): void {
-    this.bindings.set(name, value)
+  /** @return the top-level bindings of this environment as a Module */
+  getTopLevelAsModule(): Library {
+    const ret = new Library()
+    for (const [name, value] of this.topLevel) {
+      ret.registerValue(name, value)
+    }
+    return ret
   }
 
+  /**
+   * @param name the (simple) name of the variable to look up
+   * @return true iff the variable is bound in this environment
+   */
   has(name: string): boolean {
-    return (
-      this.bindings.has(name) ||
-      (this.parent === undefined ? false : this.parent.has(name))
+    return this.locals.has(name) ||
+      this.topLevel.has(name) ||
+      [...this.imports.values()].some(lib =>
+        lib.bindings.has(name))
+  }
+
+  extendWithImport(name: string, lib: Library): Env {
+    return new Env(
+      new Map([...this.imports, [name, lib]]),
+      this.topLevel,
+      this.locals
     )
   }
 
-  extend(...bindings: [string, Value][]): Env {
-    const ret = new Env(this)
-    for (const [name, value] of bindings) {
-      ret.set(name, value)
-    }
-    return ret
+  extendWithTopLevel(name: string, value: Value): Env {
+    return new Env(
+      this.imports,
+      new Map([...this.topLevel, [name, value]]),
+      this.locals
+    )
   }
 
-  without(...names: string[]): Env {
-    const ret = new Env(this.parent?.without(...names))
-    for (const [name, value] of this.bindings) {
-      if (!names.includes(name)) {
-        ret.set(name, value)
-      }
-    }
-    return ret
+  extendWithLocals(...locals: [string, Value][]): Env {
+    return new Env(
+      this.imports,
+      this.topLevel,
+      new Map([...this.locals, ...locals])
+    )
   }
 
-  pop(): Env {
-    return this.parent === undefined ? new Env() : this.parent
+  extendReplacingLocals(...locals: [string, Value][]): Env {
+    return new Env(
+      this.imports,
+      this.topLevel,
+      new Map(locals)
+    )
+  }
+
+  withoutLocals(...names: string[]): Env {
+    return new Env(
+      this.imports,
+      this.topLevel,
+      new Map([...this.locals].filter(([x, _v]) => !names.includes(x)))
+    )
   }
 }
 
 type InitializerFunction = () => Promise<void>
 /** A library is a collection of importable top-level definitions. */
 export class Library {
-  lib: [string, Value][]
+  bindings: Map<string, Value>
   initializer?: InitializerFunction
 
   constructor(initializer?: InitializerFunction) {
-    this.lib = []
+    this.bindings = new Map()
     this.initializer = initializer
   }
 
@@ -80,7 +147,7 @@ export class Library {
     if (typeof v === "function") {
       Object.defineProperty(v, "name", { value: name })
     }
-    this.lib.push([name, v])
+    this.bindings.set(name, v)
   }
 
   static fromLibs(...libs: Library[]): Library {
@@ -93,7 +160,7 @@ export class Library {
     }
     const ret = new Library(initializer)
     for (const lib of libs) {
-      for (const [name, value] of lib.lib) {
+      for (const [name, value] of lib.bindings) {
         ret.registerValue(name, value)
       }
     }

@@ -1,6 +1,6 @@
 import * as LPM from "../lpm"
 import { Fiber } from "../lpm/fiber"
-import { Frame, Thread } from "../lpm/thread"
+import { Frame } from "../lpm/frame"
 import * as A from "./ast.js"
 
 /** @return a stack of expressions created from the given value stack. */
@@ -51,7 +51,7 @@ export function raiseFrame(
       case "cls": {
         const body = raiseFrame(
           [],
-          env.without(...op.params),
+          env.withoutLocals(...op.params),
           op.body.toReversed(),
         )
         if (op.name) {
@@ -115,11 +115,6 @@ export function raiseFrames(frames: Frame[]): A.Exp {
     ret = raiseFrame(values, frames[i].env, frames[i].ops)
   }
   return ret
-}
-
-/** @deprecated use [raiseFiber] instead */
-export function raiseThread(thread: Thread): A.Exp {
-  return raiseFrames(thread.frames)
 }
 
 export function raiseFiber(fiber: Fiber): A.Exp {

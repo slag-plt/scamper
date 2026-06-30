@@ -1,4 +1,4 @@
-import { DisplayStep, Fiber, StepResult, TraceStep } from "../fiber"
+import { displayStep, Fiber, StepResult, traceStep } from "../fiber"
 import { Stmt } from "../lang"
 
 type StatementHandler<T extends Stmt["tag"]> = (
@@ -8,7 +8,7 @@ type StatementHandler<T extends Stmt["tag"]> = (
 
 export const ImportHandler: StatementHandler<"import"> = (stmt, fiber) => {
   const result = fiber.loadLib(stmt.name)
-  if (result === TraceStep) {
+  if (result.tag === "trace") {
     fiber.advanceStmt()
   }
   return result
@@ -16,19 +16,19 @@ export const ImportHandler: StatementHandler<"import"> = (stmt, fiber) => {
 export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
-    return TraceStep
+    return traceStep
   }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
   }
-  fiber.topLevelEnv.set(stmt.name, fiber.lastResult)
+  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(stmt.name, fiber.lastResult)
   fiber.advanceStmt()
-  return TraceStep
+  return traceStep
 }
 export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
-    return TraceStep
+    return traceStep
   }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
@@ -36,17 +36,17 @@ export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
   // execute should know that lastResult is the value to be printed, and print it to the output channel
   // so, do nothing
   fiber.advanceStmt()
-  return DisplayStep
+  return displayStep
 }
 export const StmtExpHandler: StatementHandler<"stmtexp"> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
-    return TraceStep
+    return traceStep
   }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
   }
   // do nothing with the result, just advance to the next statement
   fiber.advanceStmt()
-  return TraceStep
+  return traceStep
 }

@@ -1,7 +1,7 @@
 import { ICE, ReportError, ScamperError } from "../error"
-import { Fiber, MinorStep, StepResult, TraceStep } from "../fiber"
+import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
 import { Ops, Value } from "../lang"
-import { Frame } from "../thread"
+import { Frame } from "../frame"
 import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch } from "../util"
 
 /* Definition */
@@ -14,7 +14,7 @@ type OpHandler<T extends Ops["tag"]> = (
 /* Handlers */
 export const LitHandler: OpHandler<"lit"> = (op, currFrame) => {
   currFrame.values.push(op.value)
-  return MinorStep
+  return minorStep
 }
 
 export const VarHandler: OpHandler<"var"> = (op, currFrame) => {
@@ -22,14 +22,14 @@ export const VarHandler: OpHandler<"var"> = (op, currFrame) => {
     throw new ScamperError("Runtime", `Variable not found: ${op.name}`)
   }
   currFrame.values.push(currFrame.env.get(op.name))
-  return MinorStep
+  return minorStep
 }
 
 export const CtorHandler: OpHandler<"ctor"> = (op, currFrame) => {
   currFrame.values.push(
     mkStruct(op.name, op.fields, currFrame.values.splice(-op.fields.length)),
   )
-  return MinorStep
+  return minorStep
 }
 
 export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
@@ -44,7 +44,7 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
       },
     ),
   )
-  return MinorStep
+  return minorStep
 }
 
 export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
@@ -59,7 +59,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
   if (isJsFunction(fn)) {
     currFrame.values.push(fn(...args))
-    return TraceStep
+    return traceStep
   }
   if (isClosure(fn)) {
     if (fn.params.length !== args.length) {
@@ -70,7 +70,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     }
     const newFrame = new Frame(
       fn.name ?? "##anonymous##",
-      fn.env.extend(...fn.params.map((p, i): [string, Value] => [p, args[i]])),
+      fn.env.extendWithLocals(...fn.params.map((p, i): [string, Value] => [p, args[i]])),
       fn.code,
     )
     if (currFrame.isFinished()) {
@@ -79,7 +79,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     } else {
       fiber.pushFrame(newFrame)
     }
-    return TraceStep
+    return traceStep
   }
   throw new ScamperError(
     "Runtime",
@@ -106,16 +106,16 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
     // make sure to push the scrutinee back for the next branch!
     currFrame.values.push(scrutinee)
   } else {
-    currFrame.env = currFrame.env.extend(...bindings)
+    currFrame.env = currFrame.env.extendWithLocals(...bindings)
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
-  return TraceStep
+  return traceStep
 }
 
 export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   currFrame.values.pop()
-  return TraceStep
+  return traceStep
 }
 
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {
