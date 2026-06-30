@@ -44,6 +44,27 @@ export class ScamperInstance {
   /**
    * @returns ID of task
    */
+  public tryGetLib(name: string): Library | undefined {
+    const cached = this.#libs.get(name)
+    if (cached) {
+      return cached
+    }
+
+    // TODO: should support user-defined libraries in the future, but for now we will only support built-in libraries
+    const lib = builtinLibs.get(name)
+    if (!lib) {
+      throw new ScamperError("Runtime", `Library ${name} not found`)
+    }
+
+    // start loading the library in the background
+    void (async () => {
+      await lib.initializer?.()
+      // memoize the library so that we don't have to initialize it again
+      this.#libs.set(name, lib)
+    })()
+    return undefined
+  }
+
   public execute({
     src,
     out,
