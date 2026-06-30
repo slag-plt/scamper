@@ -3,7 +3,6 @@ import { onMounted, onUnmounted, ref, shallowRef } from "vue"
 import { Pane, Splitpanes } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
 import * as Lock from "../lockfile"
-import { initializeLibs } from "../../lib"
 import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
@@ -345,8 +344,6 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", visibilityChangeWrapper)
   document.addEventListener("pagehide", pageHideWrapper)
   window.addEventListener("beforeunload", beforeUnloadWrapper)
-
-  await initializeLibs()
 
   await loadConfig()
   await populateFileDrawer()

@@ -538,7 +538,9 @@ HtmlRenderer.registerCustomRenderer(compositionQ, render)
 
 VueRenderer.registerCustomRenderer(compositionQ, () => MusicRenderer)
 
-Music.initializer = async function initializer(): Promise<void> {
+///// Music module initialization code /////////////////////////////////////////
+
+function initialize() {
   // Initialize webaudiofont
   const player = waf()
   if (player !== undefined) {
@@ -549,5 +551,7 @@ Music.initializer = async function initializer(): Promise<void> {
     player.loadInstrument(49, true)  // 49: Crash Cymbal 1
   }
 }
+
+initialize()
 
 export default Music

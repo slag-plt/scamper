@@ -1623,8 +1623,5 @@ Prelude.registerValue("void", voidConst)
 for (const [name, value] of filesLib.bindings) {
   Prelude.registerValue(name, value)
 }
-Prelude.initializer = async () => {
-  await filesLib.initializer?.()
-}
 
 export default Prelude

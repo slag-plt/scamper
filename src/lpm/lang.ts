@@ -132,15 +132,12 @@ export class Env {
   }
 }
 
-type InitializerFunction = () => Promise<void>
 /** A library is a collection of importable top-level definitions. */
 export class Library {
   bindings: Map<string, Value>
-  initializer?: InitializerFunction
 
-  constructor(initializer?: InitializerFunction) {
+  constructor() {
     this.bindings = new Map()
-    this.initializer = initializer
   }
 
   registerValue(name: string, v: Value) {
@@ -151,14 +148,7 @@ export class Library {
   }
 
   static fromLibs(...libs: Library[]): Library {
-    const initializer = async () => {
-      for (const lib of libs) {
-        if (lib.initializer !== undefined) {
-          await lib.initializer()
-        }
-      }
-    }
-    const ret = new Library(initializer)
+    const ret = new Library()
     for (const lib of libs) {
       for (const [name, value] of lib.bindings) {
         ret.registerValue(name, value)
