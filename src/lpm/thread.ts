@@ -875,13 +875,13 @@ export class Thread {
           
         // }
         let div;
-        let rev = stackVals.toReversed()
-        console.log("stackVals")
-        console.log(stackVals)
-        console.log("rev[0] vvv")
-        console.log(rev[0])
-        console.log("isList")
-        console.log(U.isList(rev[0]))
+        const rev = stackVals.toReversed()
+        // console.log("stackVals")
+        // console.log(stackVals)
+        // console.log("rev[0] vvv")
+        // console.log(rev[0])
+        // console.log("isList")
+        // console.log(U.isList(rev[0]))
         if(stackVals[0] && U.isList(rev[0])) {
           stackHTML = D.drawListHTML(rev[0])
           div = document.createElement('div')
