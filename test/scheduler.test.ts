@@ -17,7 +17,7 @@ import {
   trackFiberSteps,
   withSuppressedRejections,
 } from "./test-utils"
-import { MinorStep, TraceStep, YieldStep } from "../src/lpm/fiber"
+import { minorStep, traceStep, yieldStep } from "../src/lpm/fiber"
 
 patchSchedulerYieldForTests()
 
@@ -93,7 +93,7 @@ describe("Scheduler", () => {
       // the output branch entirely.
       fiber.lastStatement = { tag: "disp" }
       fiber.lastResult = "ignored"
-      fiber.stepImpl = () => MinorStep
+      fiber.stepImpl = () => minorStep
       const task = makeTask(fiber, true)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
@@ -129,7 +129,7 @@ describe("Scheduler", () => {
         const doneFiber = new MockFiber()
         doneFiber.stepImpl = () => {
           doneFiber.isDone = () => true
-          return TraceStep
+          return traceStep
         }
         const liveFiber = trackFiberSteps(makeNeverCompletingFiber())
 
@@ -221,9 +221,9 @@ describe("Scheduler", () => {
       yieldingFiber.stepImpl = () => {
         if (yieldsRemaining > 0) {
           yieldsRemaining--
-          return YieldStep
+          return yieldStep
         }
-        return TraceStep
+        return traceStep
       }
 
       const otherFiber = new MockFiber()
@@ -231,7 +231,7 @@ describe("Scheduler", () => {
         if (yieldsRemaining > 0) {
           otherStepsWhileYielding++
         }
-        return TraceStep
+        return traceStep
       }
 
       // Schedule the non-yielding fiber first: the first schedule() runs a
@@ -376,7 +376,7 @@ describe("Scheduler", () => {
       const doneFiber = new MockFiber()
       doneFiber.stepImpl = () => {
         doneFiber.isDone = () => true
-        return TraceStep
+        return traceStep
       }
       const sibling = trackFiberSteps(makeNeverCompletingFiber())
       const queryTask = makeQueryTask(doneFiber)
