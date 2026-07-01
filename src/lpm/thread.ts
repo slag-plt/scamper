@@ -172,6 +172,7 @@ export class Thread {
         this.draw()
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
+        //this.out.send(this)
       }
       
     }
