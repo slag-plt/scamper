@@ -1,33 +1,31 @@
 import { expect, test, describe } from 'vitest'
 
-import builtinLibs from '../../src/lib'
-import * as Scheme from '../../src/scheme'
-import * as LPM from '../../src/lpm'
+import * as S from '../../src/scheme'
+import * as L from '../../src/lpm'
+import { Fiber } from '../../src/lpm/fiber'
 
-function checkMachineOutput (src: string, expected: LPM.Value[]) {
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
-    expect(out.log).toEqual([])
-    const machine = new LPM.Thread(
-      'test',
-      env,
-      prog!,
-      LPM.defaultOptions,
-      builtinLibs,
-      out,
-      out,
-      new Map()
-    )
-    machine.evaluate()
-    expect(out.log).toEqual(expected)
+function checkMachineOutput (src: string, expected: L.Value[]) {
+  const out = new L.LoggingChannel(false, false)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const prog = S.compile(out, src)!
+  expect(out.errLog).toEqual([])
+  const fiber = new Fiber(prog, S.mkInitialEnv())
+  // TODO: this should be refactored once we've re-established a common
+  // entry point for running Scamper programs
+  while (!fiber.isDone()) {
+    const res = fiber.step()
+    if (res.tag === "display") {
+      out.send(fiber.lastResult)
+    }
+  }
+  expect(out.log).toEqual(expected)
 }
 
 describe('Basic codegen', () => {
   test('simple arithmetic', () => {
     checkMachineOutput(`
       (display (+ 1 1))  
-    `, ['2'])
+    `, [2])
   })
 })
 
@@ -41,7 +39,7 @@ describe('End-to-end cases', () => {
               (* n (fact (- n 1))))))
 
       (display (fact 5))
-    `, ['120'])
+    `, [120])
   })
 
   test('basic list operations', () => {
@@ -52,7 +50,7 @@ describe('End-to-end cases', () => {
               0
               (+ 1 (list-length (cdr l))))))
       (display (list-length '()))
-    `, ['0'])
+    `, [0])
   })
 
   test('basic struct operations', () => {
@@ -60,13 +58,13 @@ describe('End-to-end cases', () => {
       (struct point (x y))
       (define p (point 1 2))
       (display (point-x p))
-    `, ['1'])
+    `, [1])
   })
 
   test('nullary functions', () => {
     checkMachineOutput(`
       (define f (lambda () 1))
       (f)
-    `, ['1'])
+    `, [1])
   })
 })

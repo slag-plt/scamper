@@ -47,7 +47,7 @@ export function importFileStep(filename: string): ImportFileStep {
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
 export class Fiber {
-  topLevelEnv: Env = Env.empty
+  topLevelEnv: Env
   frames: Frame[] = []
   lastResult: Value | null = null
 
@@ -57,8 +57,9 @@ export class Fiber {
   #maxCallStackDepth = 10_000
   #isRunning = true
 
-  constructor(prog: Prog) {
+  constructor(prog: Prog, topLevelEnv: Env = Env.empty) {
     this.#prog = prog
+    this.topLevelEnv = topLevelEnv
   }
 
   /** Pauses this fiber's execution */
