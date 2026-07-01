@@ -4,7 +4,7 @@ import { onMounted, shallowRef } from "vue"
 import { ScamperError } from "../../lpm/error"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
-import { ScamperInstance } from "../../scamper-instance"
+import { ScamperInstance } from "../../scamper"
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 const version = shallowRef("")
