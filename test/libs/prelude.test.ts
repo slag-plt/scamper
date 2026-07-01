@@ -3,9 +3,9 @@ import { runProgram } from "../harness"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-test("abs-quotient", () => {
+test("abs-quotient", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (abs 13)
 (abs 0.71)
 (abs 111)
@@ -37,9 +37,9 @@ test("abs-quotient", () => {
   ])
 })
 
-test("append-reverse", () => {
+test("append-reverse", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (append (list "ab" "ba") (list 1 2 3) (list))
 (append (list) (list))
 (append (list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")
@@ -66,9 +66,9 @@ test("append-reverse", () => {
   ])
 })
 
-test.skip("apply-map", () => {
+test.skip("apply-map", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (apply string-length (list "HelloWorld"))
 (apply list (list "HelloWorld" "HelloWorld" "HelloWorld"))
 (apply string-split (list "HelloWorld" "l"))
@@ -92,9 +92,9 @@ test.skip("apply-map", () => {
   ])
 })
 
-test.skip("apply", () => {
+test.skip("apply", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (apply (lambda (x) (+ x 1)) (list 1))
 
 (apply + (list 3 4))
@@ -104,9 +104,9 @@ test.skip("apply", () => {
   ).toEqual(["2", "7", "-5"])
 })
 
-test("arithmetic", () => {
+test("arithmetic", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (+ 1 2 3 4 5)
 (- 22 7 2 1 8)
 (* 1 2 3 4 5)
@@ -119,9 +119,9 @@ test("arithmetic", () => {
   ).toEqual(["15", "4", "120", "0.55", "5", "-5", "5", "0.2"])
 })
 
-test("asin-acos-atan", () => {
+test("asin-acos-atan", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (asin 0.4201670368266409)
 (asin 0.6518337710215366)
 (asin -0.8645514486106083)
@@ -181,9 +181,9 @@ test("asin-acos-atan", () => {
   ])
 })
 
-test("assoc", () => {
+test("assoc", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define inventory (list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8)))
 
 inventory
@@ -223,9 +223,9 @@ updated-inventory
   ])
 })
 
-test("car-cdr", () => {
+test("car-cdr", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (car (pair #t #f))
 (car (pair 1 2))
 (car (pair "hi" "bye"))
@@ -252,9 +252,9 @@ test("car-cdr", () => {
   ])
 })
 
-test("char-comp", () => {
+test("char-comp", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define c1 #\\c)
 (define c2 #\\f)
 
@@ -355,9 +355,9 @@ test("char-comp", () => {
   ])
 })
 
-test("char-ops", () => {
+test("char-ops", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (digit-value #\\5)
 (digit-value #\\0)
 
@@ -385,9 +385,9 @@ test("char-ops", () => {
   ])
 })
 
-test("char-pred", () => {
+test("char-pred", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (char-alphabetic? #\\c)
 (char-alphabetic? #\\5)
 (char-alphabetic? #\\space)
@@ -427,9 +427,9 @@ test("char-pred", () => {
   ])
 })
 
-test.skip("compose", () => {
+test.skip("compose", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define inc
   (lambda (x) (+ x 1)))
 
@@ -459,9 +459,9 @@ test.skip("compose", () => {
   ).toEqual(["2", "2", "6", "2", "6", '"heo"', "5", '"olleh"'])
 })
 
-test("cons-pair", () => {
+test("cons-pair", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (cons #t #f)
 (cons 1 2)
 (cons "hi" "bye")
@@ -487,9 +487,9 @@ test("cons-pair", () => {
   ])
 })
 
-test("equal", () => {
+test("equal", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (equal? 4 4)
 (equal? 10 20)
 (equal? "Hello" "Hello")
@@ -500,9 +500,9 @@ test("equal", () => {
   ).toEqual(["#t", "#f", "#t", "#f", "#f", "#t"])
 })
 
-test("error-qq", () => {
+test("error-qq", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (error "existing")
 (+ 5 (??))
 `),
@@ -512,9 +512,9 @@ test("error-qq", () => {
   ])
 })
 
-test("exp-log", () => {
+test("exp-log", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (exp 13)
 (exp 0.71)
 (exp 111)
@@ -550,9 +550,9 @@ test("exp-log", () => {
   ])
 })
 
-test("expt", () => {
+test("expt", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (expt 7 2)
 (expt 0.2 0.5)
 (expt 100 1)
@@ -565,9 +565,9 @@ test("expt", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("filter-fold-reduce", () => {
+test.skip("filter-fold-reduce", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (filter string? (list 4 "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" #t "HelloWorld" "HelloWorld" "HelloWorld" list))
 (filter procedure? (list string-length list? + - "true" #f = string?))
 (filter null? (list (pair 2 4) (pair "a" "b") (pair "first" "second") (list) (list 4 5 6)))
@@ -593,9 +593,9 @@ test.skip("filter-fold-reduce", () => {
   ])
 })
 
-test("floor-ceiling", () => {
+test("floor-ceiling", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (floor 0.71)
 (floor 111)
 (floor 6.1)
@@ -612,9 +612,9 @@ test("floor-ceiling", () => {
   ).toEqual(["0", "111", "6", "0", "0", "0", "1", "111", "7", "1", "1", "0"])
 })
 
-test("gt-geq", () => {
+test("gt-geq", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (> 4 5)
 (> 5.0 4.99)
 (> 0 0.1)
@@ -628,9 +628,9 @@ test("gt-geq", () => {
   ).toEqual(["#f", "#t", "#f", "#f", "#t", "#t", "#t", "#f", "#f"])
 })
 
-test("implies-xor", () => {
+test("implies-xor", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (implies #t #f)
 (implies #f #f)
 (implies #t #t)
@@ -643,9 +643,9 @@ test("implies-xor", () => {
   ).toEqual(["#f", "#t", "#t", "#t", "#t", "#f", "#f", "#t"])
 })
 
-test("index-of", () => {
+test("index-of", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define l (list "a" "b" "c" "d" "e"))
 
 (index-of l "a")
@@ -658,9 +658,9 @@ test("index-of", () => {
   ).toEqual(["0", "1", "2", "3", "4", "-1"])
 })
 
-test("integer", () => {
+test("integer", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (integer? 5)
 (integer? 78.0)
 (integer? "5")
@@ -670,17 +670,17 @@ test("integer", () => {
   ).toEqual(["#t", "#t", "#f", "#t", "#f"])
 })
 
-test("length", () => {
+test("length", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (length (list 28 0 "know"))
 `),
   ).toEqual(["3"])
 })
 
-test("list-makeList", () => {
+test("list-makeList", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (list "ab" "ba")
 (list 1 2 3)
 (list)
@@ -708,9 +708,9 @@ test("list-makeList", () => {
   ])
 })
 
-test("list-ref", () => {
+test("list-ref", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-ref l 0)
@@ -722,9 +722,9 @@ test("list-ref", () => {
   ).toEqual(["1", "2", "3", "4", "5"])
 })
 
-test("list-tail", () => {
+test("list-tail", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-tail l 0)
@@ -749,9 +749,9 @@ test("list-tail", () => {
   ])
 })
 
-test("list-take", () => {
+test("list-take", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define l (list 1 2 3 4 5))
 
 (list-take l 0)
@@ -763,9 +763,9 @@ test("list-take", () => {
   ).toEqual(["null", "(list 1 2 3)", "(list 1 2 3 4 5)"])
 })
 
-test("lt-leq", () => {
+test("lt-leq", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (< 4 5)
 (< 5.0 5)
 (< 0 0.1)
@@ -779,9 +779,9 @@ test("lt-leq", () => {
   ).toEqual(["#t", "#f", "#t", "#t", "#t", "#f", "#f", "#t", "#t"])
 })
 
-test("min-max", () => {
+test("min-max", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (min 4 7 2)
 (min 0.01 0.2 0.5)
 (min 100 10 1)
@@ -796,9 +796,9 @@ test("min-max", () => {
   ).toEqual(["2", "0.01", "1", "2", "3", "7", "0.5", "100", "2", "3.1"])
 })
 
-test("nanQ", () => {
+test("nanQ", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (nan? "nan")
 (nan? 34)
 (nan? 0.1)
@@ -808,9 +808,9 @@ test("nanQ", () => {
   ).toEqual(["#f", "#f", "#f", "#f", "#f"])
 })
 
-test("nand-nor", () => {
+test("nand-nor", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (nand #t #f #t #f #t #f)
 (nand #f #f #f)
 (nand #t #t #t)
@@ -825,9 +825,9 @@ test("nand-nor", () => {
   ).toEqual(["#t", "#t", "#f", "#t", "#t", "#f", "#t", "#f", "#f", "#f"])
 })
 
-test("not-boolean", () => {
+test("not-boolean", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (not #t)
 (not #f)
 (not 1)
@@ -849,9 +849,9 @@ test("not-boolean", () => {
   ])
 })
 
-test("nullQ-listQ", () => {
+test("nullQ-listQ", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (null? (list))
 (null? (list "ab" "ba"))
 (null? (list 1 2 3))
@@ -866,9 +866,9 @@ test("nullQ-listQ", () => {
   ).toEqual(["#t", "#f", "#f", "#f", "#t", "#t", "#t", "#t", "#t", "#f"])
 })
 
-test("number", () => {
+test("number", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (number? 56)
 (number? "56")
 (number? 56.2)
@@ -878,9 +878,9 @@ test("number", () => {
   ).toEqual(["#t", "#f", "#t", "#t", "#t"])
 })
 
-test("numeq", () => {
+test("numeq", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (= 4 5)
 (= 5.0 5)
 (= 0 0.1)
@@ -894,9 +894,9 @@ test("numeq", () => {
   ).toEqual(["#f", "#t", "#f", "#f", "#t", "#f", "#f", "#f", "#t"])
 })
 
-test("odd-even", () => {
+test("odd-even", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (odd? 2)
 (odd? (- 10 9))
 (odd? 0.0)
@@ -911,9 +911,9 @@ test("odd-even", () => {
   ).toEqual(["#f", "#t", "#f", "#t", "#f", "#t", "#f", "#t", "#t", "#t"])
 })
 
-test("pairQ", () => {
+test("pairQ", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (pair? (pair #t #f))
 (pair? (+ 1 2))
 (pair? "bye")
@@ -923,9 +923,9 @@ test("pairQ", () => {
   ).toEqual(["#t", "#f", "#f", "#t", "#f"])
 })
 
-test("plus-minus", () => {
+test("plus-minus", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (+ 4 7 2)
 (+ 0.01 0.2 0.5)
 (+ 100 10 1)
@@ -951,9 +951,9 @@ test("plus-minus", () => {
   ])
 })
 
-test("positive-negative", () => {
+test("positive-negative", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (positive? -0.002)
 (positive? (- 7 10))
 (positive? 0.0)
@@ -971,9 +971,9 @@ test("positive-negative", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("random", () => {
+test.skip("random", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define max-value 5)
 (define num-tests 100)
 
@@ -1002,9 +1002,9 @@ test.skip("random", () => {
   ).toEqual(["#t", "#t"])
 })
 
-test("range", () => {
+test("range", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (range 10)
 
 (range 50)
@@ -1042,9 +1042,9 @@ test("range", () => {
   ])
 })
 
-test("real", () => {
+test("real", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (real? 56)
 (real? 56.2)
 (real? "56.2")
@@ -1054,9 +1054,9 @@ test("real", () => {
   ).toEqual(["#f", "#t", "#f", "#f", "#t"])
 })
 
-test("remainder-modulo", () => {
+test("remainder-modulo", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (remainder 7 2)
 (remainder 35 9)
 (remainder 2 2)
@@ -1067,9 +1067,9 @@ test("remainder-modulo", () => {
   ).toEqual(["1", "8", "0", "1", "8", "0"])
 })
 
-test("sin-cos-tan", () => {
+test("sin-cos-tan", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (sin 13)
 (sin 0.71)
 (sin 111)
@@ -1129,9 +1129,9 @@ test("sin-cos-tan", () => {
   ])
 })
 
-test("square-sqrt", () => {
+test("square-sqrt", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (square 0.71)
 (square 111)
 (square 6.1)
@@ -1161,9 +1161,9 @@ test("square-sqrt", () => {
   ])
 })
 
-test("string-comp", () => {
+test("string-comp", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define s1 "hello world!")
 (define s2 "hello zoo!")
 
@@ -1264,9 +1264,9 @@ test("string-comp", () => {
   ])
 })
 
-test("string-length-ref", () => {
+test("string-length-ref", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (string-length "HelloWorld")
 (string-length "Hello woww World")
 (string-length "")
@@ -1295,9 +1295,9 @@ test("string-length-ref", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("string-map", () => {
+test.skip("string-map", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (string-map char-upcase "hello world")
 
 (string-map char-downcase "")
@@ -1305,9 +1305,9 @@ test.skip("string-map", () => {
   ).toEqual(['"HELLO WORLD"', '""'])
 })
 
-test("string-number-conversions", () => {
+test("string-number-conversions", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (number->string 9)
 (number->string 0.4472135954999579)
 (number->string 100)
@@ -1333,9 +1333,9 @@ test("string-number-conversions", () => {
   ])
 })
 
-test("string-ops", () => {
+test("string-ops", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (make-string 5 #\\a)
 (make-string 0 #\\c)
 (string-upcase "aCcD01-E")
@@ -1357,9 +1357,9 @@ test("string-ops", () => {
   ])
 })
 
-test("string-split-append", () => {
+test("string-split-append", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (string-split "HelloWorld" "w")
 (string-split "Hello woww World" "w")
 (string-split "" "")
@@ -1381,9 +1381,9 @@ test("string-split-append", () => {
   ])
 })
 
-test("stringQ-procedure", () => {
+test("stringQ-procedure", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (string? (pair #t #f))
 (string? 1)
 (string? "bye")
@@ -1398,9 +1398,9 @@ test("stringQ-procedure", () => {
   ).toEqual(["#f", "#f", "#t", "#t", "#f", "#f", "#t", "#f", "#t", "#t"])
 })
 
-test("times-div", () => {
+test("times-div", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (* 4 7 2)
 (* 0.01 0.2 0.5)
 (* 100 10 1)
@@ -1426,9 +1426,9 @@ test("times-div", () => {
   ])
 })
 
-test("truncate-round", () => {
+test("truncate-round", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (truncate 0.71)
 (truncate 111)
 (truncate 6.1)
@@ -1448,9 +1448,9 @@ test("truncate-round", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("vector-immutable", () => {
+test.skip("vector-immutable", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define empty (vector))
 
 empty
@@ -1511,9 +1511,9 @@ append-result
   ])
 })
 
-test("vector-mutable", () => {
+test("vector-mutable", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define sample-vector (vector "alpha" "beta" "gamma" "delta" "epsilon"))
 sample-vector
 (vector-set! sample-vector 2 "zeta")
@@ -1541,9 +1541,9 @@ sample-vector
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("with-handler", () => {
+test.skip("with-handler", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (with-handler
   (lambda (err) (string-append "This is the error that was generated: " err))
   (lambda (x y z) (+ x y z))
@@ -1558,9 +1558,9 @@ test.skip("with-handler", () => {
   ).toEqual(["6", '"This is the error that was generated: oh no, an error!"'])
 })
 
-test("zero", () => {
+test("zero", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (zero? 0.002)
 (zero? 0.1)
 (zero? 0.0)

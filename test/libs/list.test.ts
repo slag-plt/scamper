@@ -10,51 +10,51 @@ function mkAccessorTestSource(list: string, fn: string): string {
   `
 }
 
-test("car", () => {
-  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', "car"))).toEqual(
+test("car", async () => {
+  expect(await runProgram(mkAccessorTestSource('(list "a" "b" "c")', "car"))).toEqual(
     ['"a"'],
   )
 })
 
-test("cdr", () => {
-  expect(runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cdr"))).toEqual(
+test("cdr", async () => {
+  expect(await runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cdr"))).toEqual(
     ['(list "b" "c")'],
   )
 })
 
 // 4-character accessor tests
-test("caar", () => {
+test("caar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', "caar"),
     ),
   ).toEqual(['"a"'])
 })
 
-test("cadr", () => {
+test("cadr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cadr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cadr")),
   ).toEqual(['"b"'])
 })
 
-test("cdar", () => {
+test("cdar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', "cdar"),
     ),
   ).toEqual(['(list "b")'])
 })
 
-test("cddr", () => {
+test("cddr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cddr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c")', "cddr")),
   ).toEqual(['(list "c")'])
 })
 
 // 5-character accessor tests
-test("caaar", () => {
+test("caaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))',
         "caaar",
@@ -63,9 +63,9 @@ test("caaar", () => {
   ).toEqual(['"a"'])
 })
 
-test("cadar", () => {
+test("cadar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" (list "b" "c")) (list "d" (list "e" "f")))',
         "cadar",
@@ -74,9 +74,9 @@ test("cadar", () => {
   ).toEqual(['(list "b" "c")'])
 })
 
-test("cdaar", () => {
+test("cdaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))',
         "cdaar",
@@ -85,9 +85,9 @@ test("cdaar", () => {
   ).toEqual(['(list "b")'])
 })
 
-test("cddar", () => {
+test("cddar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" "b" "c") (list "d" "e" "f"))',
         "cddar",
@@ -96,36 +96,36 @@ test("cddar", () => {
   ).toEqual(['(list "c")'])
 })
 
-test("caadr", () => {
+test("caadr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" (list "b" "c") "d")', "caadr")),
+    await runProgram(mkAccessorTestSource('(list "a" (list "b" "c") "d")', "caadr")),
   ).toEqual(['"b"'])
 })
 
-test("caddr", () => {
+test("caddr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', "caddr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', "caddr")),
   ).toEqual(['"c"'])
 })
 
-test("cdadr", () => {
+test("cdadr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', "cdadr"),
     ),
   ).toEqual(['(list "c" "d")'])
 })
 
-test("cdddr", () => {
+test("cdddr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', "cdddr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', "cdddr")),
   ).toEqual(['(list "d")'])
 })
 
 // 6-character accessor tests
-test("caaaar", () => {
+test("caaaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))',
         "caaaar",
@@ -134,9 +134,9 @@ test("caaaar", () => {
   ).toEqual(['"a"'])
 })
 
-test("cadaar", () => {
+test("cadaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list "a" (list "b" "c")) (list "d" (list "e" "f"))) (list (list "g" (list "h" "i")) (list "j" (list "k" "l"))))',
         "cadaar",
@@ -145,9 +145,9 @@ test("cadaar", () => {
   ).toEqual(['(list "b" "c")'])
 })
 
-test("cdaaar", () => {
+test("cdaaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))',
         "cdaaar",
@@ -156,9 +156,9 @@ test("cdaaar", () => {
   ).toEqual(['(list "b")'])
 })
 
-test("cddaar", () => {
+test("cddaar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list (list "a" "b" "c") (list "d" "e" "f")) (list (list "g" "h" "i") (list "j" "k" "l")))',
         "cddaar",
@@ -167,9 +167,9 @@ test("cddaar", () => {
   ).toEqual(['(list "c")'])
 })
 
-test("caadar", () => {
+test("caadar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))',
         "caadar",
@@ -178,9 +178,9 @@ test("caadar", () => {
   ).toEqual(['(list "b" "c")'])
 })
 
-test("caddar", () => {
+test("caddar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" "b" (list "c" "d")) (list "e" "f" (list "g" "h")))',
         "caddar",
@@ -189,9 +189,9 @@ test("caddar", () => {
   ).toEqual(['(list "c" "d")'])
 })
 
-test("cdadar", () => {
+test("cdadar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))',
         "cdadar",
@@ -200,9 +200,9 @@ test("cdadar", () => {
   ).toEqual(['(list (list "d" "e"))'])
 })
 
-test("cdddar", () => {
+test("cdddar", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list (list "a" "b" "c" "d") (list "e" "f" "g" "h"))',
         "cdddar",
@@ -211,9 +211,9 @@ test("cdddar", () => {
   ).toEqual(['(list "d")'])
 })
 
-test("caaadr", () => {
+test("caaadr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list "a" (list (list "b" "c") (list "d" "e")) "f")',
         "caaadr",
@@ -222,9 +222,9 @@ test("caaadr", () => {
   ).toEqual(['"b"'])
 })
 
-test("cadadr", () => {
+test("cadadr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list "a" (list "b" (list "c" "d")) "e")',
         "cadadr",
@@ -233,9 +233,9 @@ test("cadadr", () => {
   ).toEqual(['(list "c" "d")'])
 })
 
-test("cdaadr", () => {
+test("cdaadr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource(
         '(list "a" (list (list "b" "c") (list "d" "e")) "f")',
         "cdaadr",
@@ -244,38 +244,38 @@ test("cdaadr", () => {
   ).toEqual(['(list "c")'])
 })
 
-test("cddadr", () => {
+test("cddadr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', "cddadr"),
     ),
   ).toEqual(['(list "d")'])
 })
 
-test("caaddr", () => {
+test("caaddr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list "a" "b" (list "c" "d") "e")', "caaddr"),
     ),
   ).toEqual(['"c"'])
 })
 
-test("cadddr", () => {
+test("cadddr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', "cadddr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', "cadddr")),
   ).toEqual(['"d"'])
 })
 
-test("cdaddr", () => {
+test("cdaddr", async () => {
   expect(
-    runProgram(
+    await runProgram(
       mkAccessorTestSource('(list "a" "b" (list "c" "d" "e") "f")', "cdaddr"),
     ),
   ).toEqual(['(list "d" "e")'])
 })
 
-test("cddddr", () => {
+test("cddddr", async () => {
   expect(
-    runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', "cddddr")),
+    await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', "cddddr")),
   ).toEqual(['(list "e")'])
 })

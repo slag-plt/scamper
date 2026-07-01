@@ -1,3 +1,4 @@
+import { getFS } from "../fs"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
@@ -303,7 +304,7 @@ function scopeCheckFunctionDoc(
   return
 }
 
-function scopeCheckStmt(
+async function scopeCheckStmt(
   errors: ScamperError[],
   builtinLibs: Map<string, L.Module>,
   globals: string[],
@@ -311,7 +312,16 @@ function scopeCheckStmt(
 ) {
   switch (s.tag) {
     case "import": {
-      if (!builtinLibs.has(s.module)) {
+      if (builtinLibs.has(s.module)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
+          globals.push(name)
+        }
+      } else if (await getFS().fileExists(s.module)) {
+        // TODO: should gather top-level bindings from the imported module, but
+        // for now, let's just assume everything is good to check the rest of the
+        // pipeline...
+      } else {
         errors.push(
           new ScamperError(
             "Parser",
@@ -320,9 +330,6 @@ function scopeCheckStmt(
             s.range,
           ),
         )
-      }
-      for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
-        globals.push(name)
       }
       return
     }
@@ -362,7 +369,7 @@ function scopeCheckStmt(
   }
 }
 
-export function scopeCheckProgram(
+export async function scopeCheckProgram(
   builtinLibs: Map<string, L.Module>,
   errors: ScamperError[],
   prog: A.Prog,
@@ -377,6 +384,6 @@ export function scopeCheckProgram(
      globals.push(name)
    }
   for (const s of prog) {
-    scopeCheckStmt(errors, builtinLibs, globals, s)
+    await scopeCheckStmt(errors, builtinLibs, globals, s)
   }
 }

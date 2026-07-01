@@ -25,21 +25,21 @@ function runFiber (fiber: Fiber, out: LPM.OutputChannel & LPM.ErrorChannel) {
   }
 }
 
-export function runProgram (src: string): string[] {
+export async function runProgram (src: string): Promise<string[]> {
     src = src.trim()
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
+    const prog = await Scheme.compile(out, src)
     if (out.log.length !== 0) { return out.log as string[] }
     const fiber = new Fiber(prog!, env)
     runFiber(fiber, out)
     return out.log as string[]
 }
 
-export function runProgramWithHTML (src: string, out: HTMLDisplay): HTMLElement[] {
+export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {
     src = src.trim()
     const env = Scheme.mkInitialEnv()
-    const prog = Scheme.compile(out, src)
+    const prog = await Scheme.compile(out, src)
 
     if (out.levels.length > 1) { return out.levels }
     const fiber = new Fiber(prog!, env)
@@ -48,9 +48,9 @@ export function runProgramWithHTML (src: string, out: HTMLDisplay): HTMLElement[
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, () => { expect(runProgram(src.trim())).toEqual(expected); })
+  test(label, async () => { expect(await runProgram(src.trim())).toEqual(expected); })
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.fails(label, () => { expect(runProgram(src.trim())).toEqual(expected); })
+  test.fails(label, async () => { expect(await runProgram(src.trim())).toEqual(expected); })
 }

@@ -7,9 +7,9 @@ import { runProgram } from "../harness.js"
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("fold-arguments", () => {
+test.skip("fold-arguments", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
   (fold-left string-append "" (list "!" "%" "#" "@"))
   (fold-right string-append "" (list "!" "%" "#" "@"))
 

@@ -168,8 +168,8 @@ export class Scheduler {
               this.#removeCurrFiber()
             } else {
               fiber.pause()
-              getFS().loadFile(stepResult.filename).then((_src) => {
-                const prog = S.compile(task.err, _src)
+              getFS().loadFile(stepResult.filename).then(async (_src) => {
+                const prog = await S.compile(task.err, _src)
                 if (!prog) {
                   // TODO: error channel receives the compilation errors as a side-effect,
                   // but it would be good to signal to the continuation that importing has

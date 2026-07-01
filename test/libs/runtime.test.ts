@@ -3,9 +3,9 @@ import { runProgram } from "../harness"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-test("and-or-short-circuit", () => {
+test("and-or-short-circuit", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (and (error "hello")
      #f)
 
@@ -26,9 +26,9 @@ test("and-or-short-circuit", () => {
   ])
 })
 
-test("chained-defs", () => {
+test("chained-defs", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define x 10)
 (define y x)
 (define z y)
@@ -45,9 +45,9 @@ test("chained-defs", () => {
   ).toEqual(["60", "30"])
 })
 
-test("closures", () => {
+test("closures", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define x 10)
 
 (define f1
@@ -80,9 +80,9 @@ test("closures", () => {
   ).toEqual(["30", "120", "21", "152"])
 })
 
-test("cond-else-test", () => {
+test("cond-else-test", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (import image)
 
 (define factorial
@@ -111,9 +111,9 @@ test("cond-else-test", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("contract-check", () => {
+test.skip("contract-check", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (string-length (list 1 2 3))
 
 (+ 1 2 3 "bye")
@@ -127,9 +127,9 @@ test.skip("contract-check", () => {
   ])
 })
 
-test("define-test1", () => {
+test("define-test1", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define x 10)
 
 (define f
@@ -140,9 +140,9 @@ test("define-test1", () => {
   ).toEqual(["20"])
 })
 
-test.fails("duplicate-binders", () => {
+test.fails("duplicate-binders", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (lambda (x x y) (+ x x))
 
 (struct foo (z y z))
@@ -154,9 +154,9 @@ test.fails("duplicate-binders", () => {
   ])
 })
 
-test("fact", () => {
+test("fact", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define fact
   (lambda (n)
     (if (zero? n)
@@ -170,9 +170,9 @@ test("fact", () => {
   ).toEqual(["1", "120"])
 })
 
-test("fizzbuzz", () => {
+test("fizzbuzz", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define fizzbuzz
   (lambda (n)
     (cond
@@ -216,9 +216,9 @@ test("fizzbuzz", () => {
   ])
 })
 
-test("let-binding-errors", () => {
+test("let-binding-errors", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 ; let bindings telescope
 (let
   ([x1 1]
@@ -244,9 +244,9 @@ test("let-binding-errors", () => {
   ])
 })
 
-test("let-binding", () => {
+test("let-binding", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 ; bindings are not dependent on each other
 (let
   ([x 1]
@@ -270,9 +270,9 @@ test("let-binding", () => {
   ).toEqual(["19", "19", "19"])
 })
 
-test("list-length", () => {
+test("list-length", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define list-length
   (lambda (l)
     (if (null? l)
@@ -290,9 +290,9 @@ test("list-length", () => {
   ).toEqual(["0", "1", "5", "5"])
 })
 
-test("match-lists", () => {
+test("match-lists", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define list-length
   (lambda (l)
     (match l
@@ -331,9 +331,9 @@ test("match-lists", () => {
   ])
 })
 
-test("match-lit", () => {
+test("match-lit", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (match 5
   [1 "fail"]
   [5 "numbers"])
@@ -370,9 +370,9 @@ test("match-lit", () => {
   ])
 })
 
-test.fails("match-repeated-bindings", () => {
+test.fails("match-repeated-bindings", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (match (list 1 2 3)
   [null "fail"]
   [(cons x x) "fail"])
@@ -386,9 +386,9 @@ test.fails("match-repeated-bindings", () => {
   ])
 })
 
-test("match-struct", () => {
+test("match-struct", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -410,9 +410,9 @@ test("match-struct", () => {
   ).toEqual(["1", "4"])
 })
 
-test("mixed-brackets", () => {
+test("mixed-brackets", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 {- {* 3
      (+ {* 1
            { / 5 8}}
@@ -422,9 +422,9 @@ test("mixed-brackets", () => {
   ).toEqual(["33.875"])
 })
 
-test("numbers", () => {
+test("numbers", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 4129
 0
 -48902
@@ -493,9 +493,9 @@ test("numbers", () => {
   ])
 })
 
-test.fails("shadowing", () => {
+test.fails("shadowing", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (define x 3)
 
 (define y (+ x 2))
@@ -521,9 +521,9 @@ x
   ).toEqual(["0", "6", "105", "-5"])
 })
 
-test("simple-exp", () => {
+test("simple-exp", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
 
 (+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
@@ -531,9 +531,9 @@ test("simple-exp", () => {
   ).toEqual(["43", "103"])
 })
 
-test("tree-test", () => {
+test("tree-test", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (struct leaf (value))
 
 (struct node (left right))
@@ -573,9 +573,9 @@ t1
   ])
 })
 
-test("undefined-variable", () => {
+test("undefined-variable", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 (+ x 1)
 `),
   ).toEqual(["Parser error [1:4-1:4]: Undefined variable 'x'"])
@@ -584,9 +584,9 @@ test("undefined-variable", () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("section", () => {
+test.skip("section", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
 ((section + _ 1) 1)
 
 (|> (list "a" "b" "c" "d" "e")

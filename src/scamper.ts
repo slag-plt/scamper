@@ -52,14 +52,14 @@ export class ScamperInstance {
   /**
    * @returns ID of task
    */
-  public execute({
+  public async execute({
     src,
     out,
     err,
     isTracing,
-  }: DisplayExecutionConfig): DisplayRequest | null {
+  }: DisplayExecutionConfig): Promise<DisplayRequest | null> {
     // compile src to lpm bytecode
-    const compiled = compile(err, src)
+    const compiled = await compile(err, src)
     if (!compiled) {
       // err channel should have caught the error
       return null
@@ -86,13 +86,13 @@ export class ScamperInstance {
     })
     return { id, tracing, done: promise }
   }
-  public query({
+  public async query({
     src,
     err,
     queryLoc,
-  }: QueryExecutionConfig): QueryRequest | null {
+  }: QueryExecutionConfig): Promise<QueryRequest | null> {
     // compile src to lpm bytecode
-    const compiled = compile(err, src, queryLoc)
+    const compiled = await compile(err, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
       return null

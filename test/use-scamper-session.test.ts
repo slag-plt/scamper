@@ -38,7 +38,7 @@ function makeMockRun(id: string, tracing = false): MockRun {
 
 /** Mimics ScamperInstance.execute returning a DisplayRun handle. */
 function mockExecute(scamper: ScamperInstance) {
-  return vi.spyOn(scamper, "execute").mockImplementation(() => {
+  return vi.spyOn(scamper, "execute").mockImplementation(async () => {
     return makeMockRun(crypto.randomUUID())
   })
 }
@@ -95,11 +95,11 @@ describe("useScamperSession", () => {
     vi.restoreAllMocks()
   })
 
-  test("execute stops the previous display task before scheduling", () => {
+  test("execute stops the previous display task before scheduling", async () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     const runs: MockRun[] = []
-    vi.spyOn(scamper, "execute").mockImplementation(() => {
+    vi.spyOn(scamper, "execute").mockImplementation(async () => {
       const run = makeMockRun(crypto.randomUUID())
       runs.push(run)
       return run
@@ -107,9 +107,9 @@ describe("useScamperSession", () => {
 
     const session = mountSession()
 
-    session.execute()
+    await session.execute()
     const firstId = session.currentRun.value
-    session.execute()
+    await session.execute()
 
     expect(firstId).not.toBeNull()
     expect(cancel).toHaveBeenCalledWith(firstId)
@@ -117,18 +117,18 @@ describe("useScamperSession", () => {
     expect(session.currentRun.value).not.toBe(firstId)
   })
 
-  test("stopRun does not cancel queries", () => {
+  test("stopRun does not cancel queries", async () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
-    vi.spyOn(scamper, "query").mockReturnValue({
+    vi.spyOn(scamper, "query").mockResolvedValue({
       id: "query-1",
       done: expect.anything() as Promise<void>,
     })
     mockExecute(scamper)
 
     const session = mountSession()
-    session.query()
-    session.execute()
+    await session.query()
+    await session.execute()
     const runId = session.currentRun.value
     session.stopRun()
 
@@ -139,24 +139,24 @@ describe("useScamperSession", () => {
     expect(session.currentRun.value).toBeNull()
   })
 
-  test("stopAll cancels display task and all queries", () => {
+  test("stopAll cancels display task and all queries", async () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     vi.spyOn(scamper, "query")
-      .mockReturnValueOnce({
+      .mockResolvedValueOnce({
         id: "query-1",
         done: expect.anything() as Promise<void>,
       })
-      .mockReturnValueOnce({
+      .mockResolvedValueOnce({
         id: "query-2",
         done: expect.anything() as Promise<void>,
       })
     mockExecute(scamper)
 
     const session = mountSession()
-    session.query()
-    session.query()
-    session.execute()
+    await session.query()
+    await session.query()
+    await session.execute()
     const runId = session.currentRun.value
     session.stopAll()
 
@@ -171,13 +171,13 @@ describe("useScamperSession", () => {
   test("done clears currentRun when display task completes", async () => {
     const scamper = ScamperInstance.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(() => {
+    vi.spyOn(scamper, "execute").mockImplementation(async () => {
       lastRun = makeMockRun(crypto.randomUUID())
       return lastRun
     })
 
     const session = mountSession()
-    session.execute()
+    await session.execute()
     expect(session.currentRun.value).not.toBeNull()
     if (!lastRun) {
       expect.fail()
@@ -187,12 +187,12 @@ describe("useScamperSession", () => {
     expect(session.currentRun.value).toBeNull()
   })
 
-  test("execute clears currentRun when compile fails", () => {
+  test("execute clears currentRun when compile fails", async () => {
     const scamper = ScamperInstance.getInstance()
-    vi.spyOn(scamper, "execute").mockReturnValue(null)
+    vi.spyOn(scamper, "execute").mockResolvedValue(null)
 
     const session = mountSession()
-    session.execute()
+    await session.execute()
 
     expect(session.currentRun.value).toBeNull()
   })
@@ -200,16 +200,16 @@ describe("useScamperSession", () => {
   test("stale done does not clear a newer run", async () => {
     const scamper = ScamperInstance.getInstance()
     const runs: MockRun[] = []
-    vi.spyOn(scamper, "execute").mockImplementation(() => {
+    vi.spyOn(scamper, "execute").mockImplementation(async () => {
       const run = makeMockRun(crypto.randomUUID())
       runs.push(run)
       return run
     })
 
     const session = mountSession()
-    session.execute()
+    await session.execute()
     const firstId = session.currentRun.value
-    session.execute()
+    await session.execute()
     const secondId = session.currentRun.value
 
     expect(firstId).not.toBeNull()
@@ -230,71 +230,71 @@ describe("useScamperSession", () => {
     expect(session.currentRun.value).toBeNull()
   })
 
-  test("execute is a no-op when the results pane is unavailable", () => {
+  test("execute is a no-op when the results pane is unavailable", async () => {
     const scamper = ScamperInstance.getInstance()
     const execute = vi.spyOn(scamper, "execute")
-    vi.spyOn(scamper, "query").mockReturnValue({
+    vi.spyOn(scamper, "query").mockResolvedValue({
       id: "query-1",
       done: expect.anything() as Promise<void>,
     })
     const onRunScheduled = vi.fn()
 
     const session = mountSession({ onRunScheduled }, null)
-    session.query()
-    session.execute()
+    await session.query()
+    await session.execute()
 
     expect(execute).not.toHaveBeenCalled()
     expect(session.queries.value).toHaveLength(1)
     expect(onRunScheduled).toHaveBeenCalledTimes(1)
   })
 
-  test("onRunScheduled is called when execute is scheduled", () => {
+  test("onRunScheduled is called when execute is scheduled", async () => {
     const scamper = ScamperInstance.getInstance()
     mockExecute(scamper)
     const onRunScheduled = vi.fn()
 
     const session = mountSession({ onRunScheduled })
-    session.execute()
+    await session.execute()
 
     expect(onRunScheduled).toHaveBeenCalledOnce()
   })
 
-  test("execute sets currentRun from returned handle", () => {
+  test("execute sets currentRun from returned handle", async () => {
     const scamper = ScamperInstance.getInstance()
     const session = mountSession()
-    vi.spyOn(scamper, "execute").mockReturnValue(makeMockRun("task-1"))
+    vi.spyOn(scamper, "execute").mockResolvedValue(makeMockRun("task-1"))
 
-    session.execute()
+    await session.execute()
     expect(session.currentRun.value).toBe("task-1")
   })
 
-  test("isTracing reflects trace mode only, not normal run", () => {
+  test("isTracing reflects trace mode only, not normal run", async () => {
     const scamper = ScamperInstance.getInstance()
-    vi.spyOn(scamper, "execute").mockImplementation(({ isTracing }) => {
+    vi.spyOn(scamper, "execute").mockImplementation(async ({ isTracing }) => {
       return makeMockRun(crypto.randomUUID(), isTracing ?? false)
     })
 
     const session = mountSession()
-    session.execute()
+    await session.execute()
     expect(session.isTracing.value).toBe(false)
 
-    session.execute({ tracing: true })
+    await session.execute({ tracing: true })
     expect(session.isTracing.value).toBe(true)
 
-    session.execute()
+    await session.execute()
     expect(session.isTracing.value).toBe(false)
   })
 
   test("isTracing clears when display task completes or is stopped", async () => {
     const scamper = ScamperInstance.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(({ isTracing }) => {
+    vi.spyOn(scamper, "execute").mockImplementation(async ({ isTracing }) => {
       lastRun = makeMockRun(crypto.randomUUID(), isTracing ?? false)
       return lastRun
     })
 
     const session = mountSession()
-    session.execute({ tracing: true })
+    await session.execute({ tracing: true })
     expect(session.isTracing.value).toBe(true)
     expect(lastRun).toBeDefined()
 
@@ -305,7 +305,7 @@ describe("useScamperSession", () => {
     await flushPromises()
     expect(session.isTracing.value).toBe(false)
 
-    session.execute({ tracing: true })
+    await session.execute({ tracing: true })
     session.stopRun()
     expect(session.isTracing.value).toBe(false)
   })
@@ -336,7 +336,7 @@ describe("useScamperSession", () => {
   test("IdeHeader shows Run after display task completes", async () => {
     const scamper = ScamperInstance.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(() => {
+    vi.spyOn(scamper, "execute").mockImplementation(async () => {
       lastRun = makeMockRun(crypto.randomUUID())
       return lastRun
     })

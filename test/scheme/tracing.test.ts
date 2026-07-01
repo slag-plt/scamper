@@ -18,9 +18,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test.skip("basic tracing", () => {
+test.skip("basic tracing", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
     (define x 5)
 
     (+ 1 (+ x (+ 3 (+ x 5))))
@@ -55,9 +55,9 @@ test.skip("basic tracing", () => {
 })
 
 // TODO: odd output: do we want to show structs differently?
-test.skip("tracing music structs", () => {
+test.skip("tracing music structs", async () => {
   expect(
-    runProgram(`
+    await runProgram(`
       (import music)
       (list (dur 1 2) (dur 2 (+ 1 1)))
       `),

@@ -3,8 +3,8 @@ import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/141
 
-test('arity-check', () => {
-  expect(runProgram(`
+test('arity-check', async () => {
+  expect(await runProgram(`
   (define f
     (lambda (x y z)
       (+ x y z)))

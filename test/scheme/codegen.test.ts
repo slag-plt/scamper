@@ -4,10 +4,10 @@ import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
 import { Fiber } from '../../src/lpm/fiber'
 
-function checkMachineOutput (src: string, expected: L.Value[]) {
+async function checkMachineOutput (src: string, expected: L.Value[]) {
   const out = new L.LoggingChannel(false, false)
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const prog = S.compile(out, src)!
+  const prog = (await S.compile(out, src))!
   expect(out.errLog).toEqual([])
   const fiber = new Fiber(prog, S.mkInitialEnv())
   // TODO: this should be refactored once we've re-established a common
@@ -22,16 +22,16 @@ function checkMachineOutput (src: string, expected: L.Value[]) {
 }
 
 describe('Basic codegen', () => {
-  test('simple arithmetic', () => {
-    checkMachineOutput(`
-      (display (+ 1 1))  
+  test('simple arithmetic', async () => {
+    await checkMachineOutput(`
+      (display (+ 1 1))
     `, [2])
   })
 })
 
 describe('End-to-end cases', () => {
-  test('factorial', () => {
-    checkMachineOutput(`
+  test('factorial', async () => {
+    await checkMachineOutput(`
       (define fact
         (lambda (n)
           (if (zero? n)
@@ -42,8 +42,8 @@ describe('End-to-end cases', () => {
     `, [120])
   })
 
-  test('basic list operations', () => {
-    checkMachineOutput(`
+  test('basic list operations', async () => {
+    await checkMachineOutput(`
       (define list-length
         (lambda (l)
           (if (null? l)
@@ -53,16 +53,16 @@ describe('End-to-end cases', () => {
     `, [0])
   })
 
-  test('basic struct operations', () => {
-    checkMachineOutput(`
+  test('basic struct operations', async () => {
+    await checkMachineOutput(`
       (struct point (x y))
       (define p (point 1 2))
       (display (point-x p))
     `, [1])
   })
 
-  test('nullary functions', () => {
-    checkMachineOutput(`
+  test('nullary functions', async () => {
+    await checkMachineOutput(`
       (define f (lambda () 1))
       (f)
     `, [1])

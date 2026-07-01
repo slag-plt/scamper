@@ -61,7 +61,7 @@ function createScamperSession(
     stopRun()
   }
 
-  const execute = ({ tracing = false }: { tracing?: boolean } = {}) => {
+  const execute = async ({ tracing = false }: { tracing?: boolean } = {}) => {
     const ch = display()
     if (!ch) return
 
@@ -69,7 +69,7 @@ function createScamperSession(
     resetOutput()
 
     const src = editor().getDoc()
-    const run = scamper.execute({
+    const run = await scamper.execute({
       src,
       out: ch,
       err: ch,
@@ -91,11 +91,11 @@ function createScamperSession(
     onRunScheduled?.()
   }
 
-  const query = () => {
+  const query = async () => {
     const err = reactive(new SimpleErrorChannel())
     const queryLoc = editor().getCursorLoc()
     const src = editor().getDoc()
-    const run = scamper.query({ src, err, queryLoc })
+    const run = await scamper.query({ src, err, queryLoc })
     if (run) {
       queries.value.push({
         id: run.id,

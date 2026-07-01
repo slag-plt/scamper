@@ -34,7 +34,7 @@ const filename = positionals[0]
 
 const src = fs.readFileSync(filename, "utf-8")
 const out = new ConsoleOutput()
-const program = Scheme.compile(out, src)
+const program = await Scheme.compile(out, src)
 if (program === undefined) {
   process.exit(1)
 }

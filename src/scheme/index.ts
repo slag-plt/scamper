@@ -84,11 +84,11 @@ export function tokenizeAndParse(
   return program
 }
 
-export function compile(
+export async function compile(
   err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
-): S.Prog | undefined {
+): Promise<S.Prog | undefined> {
   let program = tokenizeAndParse(err, src, queryLoc)
   if (program === undefined) {
     return undefined
@@ -99,7 +99,7 @@ export function compile(
 
   // Scope checking
   const errors: S.ScamperError[] = []
-  scopeCheckProgram(builtinLibs, errors, program)
+  await scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
     errors.forEach((e) => {
       err.report(e)

@@ -3,8 +3,8 @@ import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/151
 
-test('literal-escape', () => {
-  expect(runProgram(`
+test('literal-escape', async () => {
+  expect(await runProgram(`
     "\["
     "\]"
     "\\\\"
