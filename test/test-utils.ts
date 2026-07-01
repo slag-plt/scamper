@@ -1,5 +1,5 @@
 import { vi } from "vitest"
-import { DisplayStep, Fiber, StepResult, TraceStep } from "../src/lpm/fiber"
+import { Fiber, StepResult, displayStep, traceStep } from "../src/lpm/fiber"
 import {
   LoggingChannel,
   Prog,
@@ -20,9 +20,11 @@ const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
-  fiber.topLevelEnv.set("+", (a: number, b: number) => a + b)
-  fiber.topLevelEnv.set("-", (a: number, b: number) => a - b)
-  fiber.topLevelEnv.set("*", (a: number, b: number) => a * b)
+  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
+    ['+', (a: number, b: number) => a + b],
+    ['-', (a: number, b: number) => a - b],
+    ['*', (a: number, b: number) => a * b]
+  )
   return fiber
 }
 
@@ -34,14 +36,23 @@ export function runFiberToCompletion(fiber: Fiber): void {
 }
 
 /**
- * A fiber whose first statement is an import that never resolves, so the
- * scheduler can keep stepping it without the fiber completing.
+ * A fiber that always reports a trace step and never advances past its first
+ * statement, so the scheduler can keep stepping it without it ever
+ * completing. Deliberately avoids real import statements: those route
+ * through the scheduler's `import-file` handling, which calls the global
+ * file system singleton that isn't initialized in tests.
  */
+class NeverCompletingFiber extends Fiber {
+  constructor() {
+    super(MOCK_FIBER_PROG)
+  }
+  override step(): StepResult {
+    return traceStep
+  }
+}
+
 export function makeNeverCompletingFiber(): Fiber {
-  vi.spyOn(ScamperInstance.getInstance(), "tryGetLib").mockReturnValue(
-    undefined,
-  )
-  return makeTestFiber([U.mkImport("canvas")])
+  return new NeverCompletingFiber()
 }
 
 export interface StepTrackedFiber extends Fiber {
@@ -106,7 +117,7 @@ export function sleep(ms: number): Promise<void> {
  */
 export class MockFiber extends Fiber {
   stepCallCount = 0
-  stepImpl: () => StepResult = () => TraceStep
+  stepImpl: () => StepResult = () => traceStep
 
   #mockIsProcessingBlk?: boolean
   #mockLastStatement?: { tag: string }
@@ -135,11 +146,11 @@ export class MockFiber extends Fiber {
     this.stepCallCount++
     const result = this.stepImpl()
     if (
-      result === TraceStep &&
+      result === traceStep &&
       this.lastStatement.tag === "disp" &&
       !this.isProcessingBlk
     ) {
-      return DisplayStep
+      return displayStep
     }
     return result
   }

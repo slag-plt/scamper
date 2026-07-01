@@ -53,7 +53,7 @@ describe("basic ops", () => {
     ]
     test.for(varCases)("exists: %s -> %o", ([name, value]) => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar(name)])])
-      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(name, value)
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([name, value])
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([value])
     })
@@ -196,6 +196,15 @@ describe("basic ops", () => {
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([3])
     })
+  })
+
+  test("define", () => {
+    const fiber = makeTestFiber([
+      U.mkDefine("x", [U.mkLit(1)]),
+      U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkVar("x"), U.mkAp(2)]),
+    ])
+    expectSuccessfulExec(fiber)
+    expect(out.log).toStrictEqual([2])
   })
 
   test("factorial", () => {

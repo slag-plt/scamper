@@ -154,6 +154,12 @@ export class Scheduler {
             throw e
           }
           if (stepResult.tag === 'import-file') {
+            // TODO: this branch (and the getFS()/fileExists() call in particular)
+            // isn't wrapped in a try/catch. If it throws or rejects for any reason
+            // (e.g. the FS singleton isn't initialized, or a real I/O error), the
+            // exception escapes #execute() uncaught, which kills the scheduler loop
+            // entirely and silently stops stepping every other running task, not
+            // just this one. Should report the failure to task.err instead.
             if (!await getFS().fileExists(stepResult.filename)) {
               task.err.report(new ScamperError(
                 "Runtime",

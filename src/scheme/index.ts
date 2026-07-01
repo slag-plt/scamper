@@ -1,4 +1,4 @@
-import * as L from "../lpm"
+import * as S from "../lpm"
 import { Loc, ScamperError } from "../lpm"
 import { builtinLibs } from "../lib"
 import { lowerProgram } from "./codegen.js"
@@ -15,11 +15,11 @@ import { isExampleTag } from "./docstring/tags/example-tag"
 
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
-  equals: L.equals,
+  equals: S.equals,
 }
 
 export function tokenizeAndParse(
-  err: L.ErrorChannel,
+  err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
 ): Prog | undefined {
@@ -48,7 +48,7 @@ export function tokenizeAndParse(
     }
   }
 
-  const errors: L.ScamperError[] = []
+  const errors: S.ScamperError[] = []
   const program = parseProgram(errors, sexps)
   if (errors.length > 0) {
     errors.forEach((e) => {
@@ -85,10 +85,10 @@ export function tokenizeAndParse(
 }
 
 export function compile(
-  err: L.ErrorChannel,
+  err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
-): L.Prog | undefined {
+): S.Prog | undefined {
   let program = tokenizeAndParse(err, src, queryLoc)
   if (program === undefined) {
     return undefined
@@ -98,7 +98,7 @@ export function compile(
   program = expandProgram(program)
 
   // Scope checking
-  const errors: L.ScamperError[] = []
+  const errors: S.ScamperError[] = []
   scopeCheckProgram(builtinLibs, errors, program)
   if (errors.length > 0) {
     errors.forEach((e) => {
@@ -111,13 +111,10 @@ export function compile(
   return lowerProgram(program)
 }
 
-export function mkInitialEnv(): L.Env {
-  const env = L.Env.empty
-  // for (const [name, fn] of Runtime.lib) {
-  //   env.set(name, fn)
-  // }
-  // for (const [name, fn] of Prelude.lib) {
-  //   env.set(name, fn)
-  // }
-  return env
+export function mkInitialEnv(): S.Env {
+  return S.Env.empty.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('runtime', builtinLibs.get('runtime')!).
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('prelude', builtinLibs.get('prelude')!)
 }

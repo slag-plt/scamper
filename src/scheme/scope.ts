@@ -368,12 +368,14 @@ export function scopeCheckProgram(
   prog: A.Prog,
 ) {
   const globals: string[] = []
-  // for (const [name, _] of Runtime.lib) {
-  //   globals.push(name)
-  // }
-  // for (const [name, _] of Prelude.lib) {
-  //   globals.push(name)
-  // }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  for (const name of builtinLibs.get('runtime')!.bindings.keys()) {
+     globals.push(name)
+   }
+   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+   for (const name of builtinLibs.get('prelude')!.bindings.keys()) {
+     globals.push(name)
+   }
   for (const s of prog) {
     scopeCheckStmt(errors, builtinLibs, globals, s)
   }

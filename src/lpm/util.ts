@@ -43,10 +43,10 @@ export const isList = (v: L.Value): v is L.List =>
 export const mkClosure = (
   params: L.Id[],
   code: L.Blk,
-  env: L.Env,
+  env: Map<string, L.Value>,
   call: (...args: any) => any,
   name?: L.Id,
-): L.Closure => ({ [L.scamperTag]: "closure", params, code, env, call, name })
+): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: "char",
   value: v,

@@ -80,6 +80,11 @@ export class Env {
     return ret
   }
 
+  /** @return the locals bound in this environment */
+  getLocals(): Map<string, Value> {
+    return this.locals
+  }
+
   /**
    * @param name the (simple) name of the variable to look up
    * @return true iff the variable is bound in this environment
@@ -99,10 +104,10 @@ export class Env {
     )
   }
 
-  extendWithTopLevel(name: string, value: Value): Env {
+  extendWithTopLevel(...bindings: [string, Value][]): Env {
     return new Env(
       this.imports,
-      new Map([...this.topLevel, [name, value]]),
+      new Map([...this.topLevel, ...bindings]),
       this.locals
     )
   }
@@ -168,7 +173,7 @@ export interface Closure extends TaggedObject {
   [scamperTag]: "closure"
   params: Id[]
   code: Blk
-  env: Env
+  locals: Map<string, Value>
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
   // Machine can be referenced by call to perform evaluation.
