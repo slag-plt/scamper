@@ -1,6 +1,6 @@
 import * as S from "../lpm"
 import { Loc, ScamperError } from "../lpm"
-import { builtinLibs, Prelude } from "../lib"
+import { builtinLibs } from "../lib"
 import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
 import { scopeCheckProgram } from "./scope.js"
