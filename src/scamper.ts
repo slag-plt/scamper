@@ -1,5 +1,6 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
-import { ErrorChannel, Loc, OutputChannel } from "./lpm"
+import builtinLibs from "./lib"
+import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler, SchedulerId } from "./scheduler"
 import { compile } from "./scheme"
@@ -27,6 +28,13 @@ export interface DisplayRequest extends RunRequest {
   tracing: boolean
 }
 export type QueryRequest = RunRequest
+
+const defaultEnv =
+  Env.empty.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('runtime', builtinLibs.get('runtime')!).
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('prelude', builtinLibs.get('prelude')!)
 
 export class ScamperInstance {
   // singleton structure
@@ -58,9 +66,7 @@ export class ScamperInstance {
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled)
-    // TODO: we can't load prelude yet until the rewrite of the library as a module
-    // await fiber.loadLib("prelude")
+    const fiber = new Fiber(compiled, defaultEnv)
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
@@ -93,9 +99,7 @@ export class ScamperInstance {
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled)
-    // TODO: we can't load prelude yet until the rewrite of the library as a module
-    // await fiber.loadLib("prelude")
+    const fiber = new Fiber(compiled, defaultEnv)
 
     // schedule query task
     const id = crypto.randomUUID()
