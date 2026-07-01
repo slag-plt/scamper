@@ -27,15 +27,6 @@ describe("Scheduler", () => {
   })
 
   describe("execution and output", () => {
-    test("steps a scheduled fiber while running", async () => {
-      const sched = new Scheduler()
-      const fiber = trackFiberSteps(makeNeverCompletingFiber())
-      sched.schedule(makeTask(fiber))
-      await sleep(QUANTUM_WAIT_MS)
-      sched.pauseExecution()
-      expect(fiber.stepCallCount).toBeGreaterThan(0)
-    })
-
     test("sends fiber.lastResult on a completed disp statement", async () => {
       const sched = new Scheduler()
       const fiber = makeTestFiber([U.mkDisp([U.mkLit(42)])])

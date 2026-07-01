@@ -40,10 +40,7 @@ export function runFiberToCompletion(fiber: Fiber): void {
  * scheduler can keep stepping it without the fiber completing.
  */
 export function makeNeverCompletingFiber(): Fiber {
-  vi.spyOn(ScamperInstance.getInstance(), "tryGetLib").mockReturnValue(
-    undefined,
-  )
-  return makeTestFiber([U.mkImport("canvas")])
+  return makeTestFiber([U.mkImport("doesnotexist")])
 }
 
 export interface StepTrackedFiber extends Fiber {

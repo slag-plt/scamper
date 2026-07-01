@@ -58,14 +58,33 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   const fn = values[0]
   const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
   if (isJsFunction(fn)) {
-    currFrame.values.push(fn(...args))
-    return traceStep
+    try {
+      currFrame.values.push(fn(...args))
+      return traceStep
+    } catch (e) {
+      if (e instanceof ScamperError) {
+        e.range = op.range
+        e.source = fn.name
+        throw e
+      } else {
+        throw new ScamperError(
+          "Runtime",
+          `Unexpected error in Javascript function call: ${(e as any).toString()}`,
+          undefined,
+          op.range,
+          undefined
+        )
+      }
+    }
   }
   if (isClosure(fn)) {
     if (fn.params.length !== args.length) {
       throw new ScamperError(
         "Runtime",
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
+        undefined,
+        op.range,
+        undefined
       )
     }
     const newFrame = new Frame(
@@ -87,6 +106,9 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   throw new ScamperError(
     "Runtime",
     `Not a function or closure: ${JSON.stringify(fn)}`,
+    undefined,
+    op.range,
+    undefined
   )
 }
 
