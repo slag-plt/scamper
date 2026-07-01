@@ -121,8 +121,6 @@ export class Thread {
 
   /** Advances this thread to the next statement. */
   advanceStmt(): void {
-    console.log("about to advance statement")
-    console.log(this.frames)
     this.frames = []
     this.isProcessingExpr = false
     this.curStmt++
@@ -169,6 +167,9 @@ export class Thread {
       const provider = this.raisingProviders.get(this.options.raisingTarget)!
       if (this.frames.length > 0) {
         this.out.send(mkTraceOutput(provider.raise(this)))
+        console.log("step")
+        console.log(this)
+        this.draw()
       } else {
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
       }
@@ -498,22 +499,16 @@ export class Thread {
 
   private stepFrame(): void {
     const current = this.getCurrentFrame()
-    console.log("CURRREEEEEnt")
-    console.log(current)
     // N.B., continue stepping until a "major" step occurs where the program
     // state changes significantly. Probably should make this an option (where
     // skipping is the default.)
     let cont = true
     while (cont && !this.getCurrentFrame().isFinished() && !this.cancelled) {
       const instr = current.popInstr()
-      // console.log("instr")
-      // console.log(instr)
       switch (instr.tag) {
         // lit case (minor step)
         case "lit": {
           current.values.push(instr.value)
-          //console.log("just pushed")
-          //console.log(current.values)
           break
         }
 
@@ -567,8 +562,6 @@ export class Thread {
 
         // ap case (major step)
         case "ap": {
-          console.log("APPPPPPPPPPPPPPPPP")
-          console.log(current.values)
           cont = false
           if (this.frames.length >= this.options.maxCallStackDepth) {
             this.reportAndUnwind(
@@ -708,8 +701,6 @@ export class Thread {
       }
       cont = !this.checkFrameReturn() && cont
     }
-      // console.log("CURRREEEEEnt avalssss")
-      // console.log(current.values)
   }
     
   draw (): HTMLDivElement {
@@ -721,10 +712,7 @@ export class Thread {
     const mainDiv = document.createElement('div')
 
     //if(envState != undefined){
-      //grabs the stack
-      const stack = this.frames
-      console.log("LOOKKK")       //stacks come out empty...
-      console.log(stack)
+      
       //if the stack is empty (if we are not inside the gray tracing box) we visualize the entire bounded variables "list"
       //if(!stack[0]) {
 
@@ -855,14 +843,52 @@ export class Thread {
       //}
 
       
-      let stackString;
+      let stackString = "";
       let stackHTML;
+      let current = this.getCurrentFrame()
 
       //if there is anything in the stack ( we are inside the gray tracing box)
-      if(stack[0]) {
+      if(current) {
+        let stackVals = current.values
         //console.log(stack[0])
         //convert to string (probs not used)
-        stackString = stack[stack.length - 1]?.toString()
+        
+        //check if cons {}
+        // let stop = 0
+        // let rev = stackVals.toReversed()
+        // let count = 0
+        // let arrList = []
+        // while (!stop) {
+        //   let e = rev[count]
+        //   let estring = e?.toString()
+        //   this.out.send(estring)
+        //   if(estring && estring.includes("function")) {
+        //     stop = 1
+        //   }
+        //   arrList[count] = rev[count]
+        //   count = count + 1
+        // }
+        // if(arrList.length > 0) {
+        //   const listtt = U.mkList(arrList)
+        //   console.log("HUMAN MADE LIST")
+        //   console.log(listtt)
+          
+        // }
+        let div;
+        let rev = stackVals.toReversed()
+        console.log("stackVals")
+        console.log(stackVals)
+        console.log("rev[0] vvv")
+        console.log(rev[0])
+        console.log("isList")
+        console.log(U.isList(rev[0]))
+        if(stackVals[0] && U.isList(rev[0])) {
+          stackHTML = D.drawListHTML(rev[0])
+          div = document.createElement('div')
+          div.appendChild(stackHTML)
+        }
+        this.out.send(div)
+
 /*
         //type check and convert to string or HTML element
         if(typeof stack[0] != 'string' && typeof stack[0] != 'number' && typeof stack[0] != 'boolean' || stack[0] === 0) {
@@ -903,11 +929,11 @@ export class Thread {
               console.log(stackString)
             }
           }
+        }*/
+        if(stackString){//if there is an element, then append it
+          this.out.send(stackString)
         }
-        if(stackHTML){//if there is an element, then append it
-          this.appendToCurrentTrace(stackHTML)
-        }
-      } */
+      // } 
       }
     return mainDiv
   }
