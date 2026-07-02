@@ -700,32 +700,32 @@ by GokturkSM
         box.className = 'struct-box';
         box.tabIndex = 0;
         if(U.isNull(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains null`;
-          box.ariaLabel = `struct element ${countThings-3} contains null`;
+          box.ariaDescription = `struct ${thing} contains null`;
+          box.ariaLabel = `struct ${thing} contains null`;
         } else if(U.isList(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains list`;
-          box.ariaLabel = `struct element ${countThings-3} contains list`;
+          box.ariaDescription = `struct ${thing} contains list`;
+          box.ariaLabel = `struct ${thing} contains list`;
         } else if(U.isPair(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains pair`;
-          box.ariaLabel = `struct element ${countThings-3} contains pair`;
+          box.ariaDescription = `struct ${thing} contains pair`;
+          box.ariaLabel = `struct ${thing} contains pair`;
         }else if(U.isArray(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains vector`;
-          box.ariaLabel = `struct element ${countThings-3} contains vector`;
+          box.ariaDescription = `struct ${thing} contains vector`;
+          box.ariaLabel = `struct ${thing} contains vector`;
         } else if(U.isString(t)){
-          box.ariaDescription = `struct element ${countThings-3} contains string ${t.toString()}`
-          box.ariaLabel = `struct element ${countThings-3} contains string ${t.toString()}`
+          box.ariaDescription = `struct ${thing} contains string ${t.toString()}`
+          box.ariaLabel = `struct ${thing} contains string ${t.toString()}`
         } else if(U.isStruct(t)) {
-          box.ariaDescription = `struct element ${countThings-3} contains struct`;
-          box.ariaLabel = `struct element ${countThings-3} contains struct`;
+          box.ariaDescription = `struct ${thing} contains struct`;
+          box.ariaLabel = `struct ${thing} contains struct`;
         } else if(U.isVoid(t)){
-          box.ariaDescription = `struct element ${countThings-3} contains void` //
-          box.ariaLabel = `struct element ${countThings-3} contains void` //
+          box.ariaDescription = `struct ${thing} contains void` //
+          box.ariaLabel = `struct ${thing} contains void` //
         }else if (t.toString().includes("L.mkStruct(t, fieldNames, args);")) {
-          box.ariaDescription = `struct element ${countThings-3} contains empty struct`;
-          box.ariaLabel = `struct element ${countThings-3} contains empty struct`;
+          box.ariaDescription = `struct ${thing} contains empty struct`;
+          box.ariaLabel = `struct ${thing} contains empty struct`;
         } else {
-          box.ariaDescription = `struct element ${countThings-3} contains ${t}`;
-          box.ariaLabel = `struct element ${countThings-3} contains ${t}`;
+          box.ariaDescription = `struct ${thing} contains ${t}`;
+          box.ariaLabel = `struct ${thing} contains ${t}`;
         }
         if(countThings === numberOfElements) {
           box.style.borderLeft = '6px solid black'
