@@ -94,7 +94,6 @@ export class Scheduler {
 
   stepTask(task: SchedulerTask): StepResult | undefined {
     const { fiber } = task
-    console.log(`Number of active fibers: ${this.#tasks.length.toString()}`)
     if (fiber.isDone()) {
       throw new ICE(
         "Scheduler.#execute",
@@ -141,12 +140,9 @@ export class Scheduler {
         ))
         this.#endCurrFiber()
       } else {
-        console.log('Pausing fiber')
         this.#removeTaskFromQueue(this.#currTaskIdx)
         getFS().loadFile(stepResult.filename).then(async (_src) => {
-          console.log('read file')
           const prog = await S.compile(task.err, _src)
-          console.log('compiled program')
           if (!prog) {
             // TODO: error channel receives the compilation errors as a side-effect,
             // but it would be good to signal to the continuation that importing has
@@ -160,17 +156,14 @@ export class Scheduler {
             fiber: moduleFiber,
             err: task.err,
             onComplete: () => {
-              console.log('new fiber completed')
               const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
               fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(stepResult.filename, mod)
               fiber.advanceStmt()
               this.schedule(task)
-              console.log('original fiber resumed')
             }
           })
         },
           (_err: unknown) => {
-            console.log('loadFile failed for ', stepResult.filename)
             task.err.report(new ScamperError(
               "Runtime",
               `Attempted to import file "${stepResult.filename}" but it failed to load!`,
@@ -178,7 +171,6 @@ export class Scheduler {
             fiber.advanceStmt()
             this.schedule(task)
           })
-        console.log('scheduled new fiber')
       }
     }
 
@@ -210,7 +202,6 @@ export class Scheduler {
       }
       // Yield before stepping so callers can observe scheduled tasks (e.g. UI
       // run-in-progress) before fibers run in this frame.
-      console.log('yielding!')
       await scheduler.yield()
       const startTime = performance.now()
       while (performance.now() - startTime < this.#timeQuantum) {

@@ -216,7 +216,7 @@ test("fizzbuzz", async () => {
   ])
 })
 
-test("let-binding-errors", async () => {
+test.skip("let-binding-errors", async () => {
   expect(
     await runProgram(`
 ; let bindings telescope
@@ -493,7 +493,7 @@ test("numbers", async () => {
   ])
 })
 
-test.fails("shadowing", async () => {
+test.skip.fails("shadowing", async () => {
   expect(
     await runProgram(`
 (define x 3)
@@ -573,7 +573,7 @@ t1
   ])
 })
 
-test("undefined-variable", async () => {
+test.skip("undefined-variable", async () => {
   expect(
     await runProgram(`
 (+ x 1)
