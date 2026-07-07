@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
+import { processDocs } from "./readDocs.js"
 
 //import { Doc } from "./api/docs.js"
 //import DocEntry from "./DocEntry.vue"
@@ -28,7 +29,7 @@ function searchComplex() {
 <!-- Tag selection goes here -->
 <template>
   <div class="index">
-    <h3> <strong>Advanced Search</strong> </h3>
+    <h3> <strong>Search Characteristics</strong> </h3>
     <p></p>
 
     <p>Keywords</p>
@@ -64,7 +65,7 @@ function searchComplex() {
       <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
       <!-- </Dropdown> -->
 
-      <button @keyup.enter="searchComplex">Enter</button>
+      <button @click="processDocs">Enter</button>
   </div>
 
 
