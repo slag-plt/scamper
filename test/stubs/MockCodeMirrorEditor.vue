@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from "vue"
 import { Loc } from "../../src/lpm"
 import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
 import { useEditorRegistration } from "../../src/web/components/editor-context"
-import { noLoadedFileText } from "../../src/web/codemirror"
+import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
 import { mockEditorHandle } from "./mock-editor-handle"
 
 const emit = defineEmits<{ dirty: [] }>()

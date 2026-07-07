@@ -3,7 +3,7 @@ import { findByRole, fireEvent, getByRole, waitFor } from "@testing-library/dom"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import IdeApp from "../../src/web/components/IdeApp.vue"
 import * as FS from "../../src/fs"
-import { noLoadedFileText } from "../../src/web/codemirror"
+import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
 import { mockEditorHandle } from "../stubs/mock-editor-handle"
 
 vi.mock("../../src/fs/opfs", async () => {

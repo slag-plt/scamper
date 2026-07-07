@@ -1,6 +1,9 @@
 import type { EditorView } from "@codemirror/view"
 import { Loc } from "../../lpm"
-import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
+import {
+  mkFreshEditorState,
+  mkNoFileEditorState,
+} from "../codemirror/codemirror"
 
 export function createCodeMirrorEditorAdapter(
   view: EditorView,

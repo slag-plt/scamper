@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
-import { mkNoFileEditorState } from "../codemirror"
+import { mkNoFileEditorState } from "../codemirror/codemirror"
 import { type CodeMirrorEditorAdapter, createCodeMirrorEditorAdapter } from "./codemirror-editor-adapter"
 import { useEditorRegistration } from "./editor-context"
 
