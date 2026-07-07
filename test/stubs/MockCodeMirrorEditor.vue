@@ -29,12 +29,6 @@ const adapter = {
   getCursorLoc() {
     return new Loc(0, 0, 0)
   },
-  requestCoordsAtPos: (_pos, callback) => {
-    callback(null)
-  },
-  onViewChange: () => () => {
-    /* noop */
-  },
 } satisfies CodeMirrorEditorAdapter
 
 onMounted(() => {

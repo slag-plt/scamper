@@ -7,7 +7,6 @@ import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
-import QueryModal from "./query/QueryModal.vue"
 import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
 import { provideScamperSession } from "./use-scamper-session"
@@ -57,7 +56,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { queries, isTracing, closeQuery } = session
+const { isTracing } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -415,12 +414,6 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
-  <QueryModal
-    v-for="q in queries"
-    :key="q.id"
-    :query="q"
-    @close="closeQuery(q.id)"
-  />
 </template>
 
 <style scoped>

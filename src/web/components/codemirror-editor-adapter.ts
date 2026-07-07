@@ -1,16 +1,10 @@
 import type { EditorView } from "@codemirror/view"
-import type { Extension } from "@codemirror/state"
 import { Loc } from "../../lpm"
 import { mkFreshEditorState, mkNoFileEditorState } from "../codemirror"
-import { type PopupCoords, toPopupCoords } from "./query/query-modal-extension"
 
 export function createCodeMirrorEditorAdapter(
   view: EditorView,
   dirtyAction: () => void,
-  query: {
-    extraExtensions: Extension[]
-    subscribe: (listener: () => void) => () => void
-  },
 ) {
   let loaded = false
 
@@ -26,46 +20,22 @@ export function createCodeMirrorEditorAdapter(
     initializeDoc(src: string) {
       loaded = true
       view.setState(
-        mkFreshEditorState(
-          src,
-          {
-            dirtyAction,
-            isReadOnly: false,
-          },
-          query.extraExtensions,
-        ),
+        mkFreshEditorState(src, {
+          dirtyAction,
+          isReadOnly: false,
+        }),
       )
     },
 
     initializeDummyDoc() {
       loaded = false
-      view.setState(mkNoFileEditorState(query.extraExtensions))
+      view.setState(mkNoFileEditorState())
     },
 
     getCursorLoc() {
       const idx = view.state.selection.main.head
       const line = view.state.doc.lineAt(idx)
       return new Loc(line.number, idx - line.from, idx)
-    },
-
-    requestCoordsAtPos(
-      pos: number,
-      callback: (coords: PopupCoords | null) => void,
-      key?: unknown,
-    ): void {
-      view.requestMeasure({
-        key,
-        read() {
-          return toPopupCoords(view.coordsAtPos(pos))
-        },
-        write(measured) {
-          callback(measured)
-        },
-      })
-    },
-
-    onViewChange(listener: () => void): () => void {
-      return query.subscribe(listener)
     },
   }
 }
