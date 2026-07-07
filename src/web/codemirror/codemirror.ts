@@ -36,8 +36,8 @@ import {
   completionKeymap,
 } from "@codemirror/autocomplete"
 import { lintKeymap } from "@codemirror/lint"
-import { ScamperSupport } from "../../codemirror/language"
-import makeScamperLinter from "../../codemirror/linter"
+import { ScamperSupport } from "./extensions/language"
+import makeScamperLinter from "./extensions/linter"
 import { PrettierExtension } from "./extensions/prettier"
 import { QueryExtension } from "./extensions/query"
 

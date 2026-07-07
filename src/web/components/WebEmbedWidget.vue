@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, shallowRef } from "vue"
 import OutputPane from "./OutputPane.vue"
-import type { OutputPaneType } from "./use-output-pane"
+import type { OutputPaneType } from "../composables/use-output-pane"
 import hljs from "highlight.js"
 import { ScamperInstance } from "../../scamper.js"
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useScamperSession } from "./use-scamper-session"
+import { useScamperSession } from "../composables/use-scamper-session"
 
 defineProps<{
   currentFile: string | null

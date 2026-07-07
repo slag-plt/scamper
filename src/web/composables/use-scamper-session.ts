@@ -1,4 +1,12 @@
-import { computed, inject, type InjectionKey, provide, reactive, ref, type ShallowRef } from "vue"
+import {
+  computed,
+  inject,
+  type InjectionKey,
+  provide,
+  reactive,
+  ref,
+  type ShallowRef,
+} from "vue"
 import { type DisplayRequest, ScamperInstance } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"

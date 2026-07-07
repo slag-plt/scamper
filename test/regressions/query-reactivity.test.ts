@@ -3,13 +3,13 @@ import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel, Range, ReportError } from "../../src/lpm"
 import { QueryRequest, ScamperInstance } from "../../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
-import type { EditorAccessor } from "../../src/web/components/editor-context"
+import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
+import type { EditorAccessor } from "../../src/web/composables/editor-context"
 import {
   provideScamperSession,
   type ScamperSession,
-} from "../../src/web/components/use-scamper-session"
-import type { ResultsPaneType } from "../../src/web/components/use-results-pane"
+} from "../../src/web/composables/use-scamper-session"
+import type { ResultsPaneType } from "../../src/web/composables/use-results-pane"
 
 function makeAdapter(): CodeMirrorEditorAdapter {
   return {

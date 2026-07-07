@@ -2,8 +2,11 @@
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
 import { mkNoFileEditorState } from "../codemirror/codemirror"
-import { type CodeMirrorEditorAdapter, createCodeMirrorEditorAdapter } from "./codemirror-editor-adapter"
-import { useEditorRegistration } from "./editor-context"
+import {
+  type CodeMirrorEditorAdapter,
+  createCodeMirrorEditorAdapter,
+} from "../composables/codemirror-editor-adapter"
+import { useEditorRegistration } from "../composables/editor-context"
 
 const emit = defineEmits<{ dirty: [] }>()
 

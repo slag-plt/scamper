@@ -1,8 +1,8 @@
 import {
   inject,
+  type InjectionKey,
   provide,
   shallowRef,
-  type InjectionKey,
   type ShallowRef,
 } from "vue"
 import type { CodeMirrorEditorAdapter } from "./codemirror-editor-adapter"
@@ -37,7 +37,9 @@ export function useEditor(): EditorAccessor {
 
 export type EditorAccessor = () => CodeMirrorEditorAdapter
 
-function makeAccessor(holder: ShallowRef<CodeMirrorEditorAdapter | null>): EditorAccessor {
+function makeAccessor(
+  holder: ShallowRef<CodeMirrorEditorAdapter | null>,
+): EditorAccessor {
   return () => {
     if (!holder.value) {
       throw new Error("Editor is not ready")

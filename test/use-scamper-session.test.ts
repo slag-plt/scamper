@@ -4,15 +4,15 @@ import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel } from "../src/lpm"
 import { type DisplayRequest, ScamperInstance } from "../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../src/web/components/codemirror-editor-adapter"
-import type { EditorAccessor } from "../src/web/components/editor-context"
+import type { CodeMirrorEditorAdapter } from "../src/web/composables/codemirror-editor-adapter"
+import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
 import {
   provideScamperSession,
   type ScamperSession,
   type ScamperSessionOptions,
-} from "../src/web/components/use-scamper-session"
-import type { ResultsPaneType } from "../src/web/components/use-results-pane"
+} from "../src/web/composables/use-scamper-session"
+import type { ResultsPaneType } from "../src/web/composables/use-results-pane"
 
 interface MockRun extends DisplayRequest {
   resolve(): void

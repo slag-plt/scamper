@@ -1,12 +1,12 @@
-import { linter, Diagnostic } from '@codemirror/lint'
-import * as LPM from '../lpm'
-import { expandProgram } from '../scheme/expansion.js'
-import { read } from '../scheme/reader.js'
-import { scopeCheckProgram } from '../scheme/scope.js'
-import { parseProgram } from '../scheme/parser.js'
-import builtinLibs from '../lib'
+import { Diagnostic, linter } from "@codemirror/lint"
+import * as LPM from "../../../lpm"
+import { expandProgram } from "../../../scheme/expansion"
+import { read } from "../../../scheme/reader"
+import { scopeCheckProgram } from "../../../scheme/scope"
+import { parseProgram } from "../../../scheme/parser"
+import builtinLibs from "../../../lib"
 
-function addError (err: LPM.ScamperError, diagnostics: Diagnostic[]) {
+function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   console.log(err.toString())
   let to, from
   if (err.range === undefined) {
@@ -19,13 +19,14 @@ function addError (err: LPM.ScamperError, diagnostics: Diagnostic[]) {
     from = err.range.begin.idx
   }
   diagnostics.push({
-    from, to,
-    severity: 'error',
-    message: err.message
+    from,
+    to,
+    severity: "error",
+    message: err.message,
   })
 }
 
-function makeScamperLinter (_outputId?: HTMLElement) {
+function makeScamperLinter(_outputId?: HTMLElement) {
   return linter(async (view) => {
     const errors: LPM.ScamperError[] = []
     const diagnostics: Diagnostic[] = []
@@ -39,7 +40,9 @@ function makeScamperLinter (_outputId?: HTMLElement) {
         addError(e, diagnostics)
       }
     }
-    errors.forEach((e) => { addError(e, diagnostics); })
+    errors.forEach((e) => {
+      addError(e, diagnostics)
+    })
     // TODO: should also fix diagnostics going to some window in the UI
     return diagnostics
   })
