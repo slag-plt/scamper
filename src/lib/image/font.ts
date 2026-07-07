@@ -2,7 +2,7 @@ import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 import * as L from '../../lpm'
 
-export const lib: L.Library = new L.Library()
+export const lib: L.Module = new L.Module()
 
 export interface Font extends L.Struct {
   [L.structKind]: 'font',

@@ -1,8 +1,5 @@
 import { createApp } from "vue"
-import { initializeLibs } from "../lib/index.js"
 import WebEmbedWidget from "./components/WebEmbedWidget.vue"
-
-await initializeLibs()
 
 const widgets = Array.from(document.getElementsByClassName("scamper"))
 for (const widget of widgets) {

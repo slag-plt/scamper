@@ -1,13 +1,5 @@
-import {
-  Char,
-  charToName,
-  Closure,
-  isChar,
-  isClosure,
-  isJsFunction,
-  isSym,
-  Sym,
-} from "../../index"
+import { Char, Closure, Sym } from "../../lang"
+import { charToName, isChar, isClosure, isJsFunction, isSym } from "../../util"
 import { createTextRenderer, Strategy, VueStrategyProps } from "../vue"
 
 export function createSimpleVueRenderer<T>(
@@ -49,9 +41,11 @@ const closureStrategy: Strategy = {
   predicate: (v) => isClosure(v),
   ...createSimpleVueRenderer<Closure>(
     (v) =>
-      `(lambda (${v.params.length > 0 ? v.params.reduce(
-        (acc, curr) => `${acc} ${curr}`
-      ) : ""}) ...)`,
+      `(lambda (${
+        v.params.length > 0
+          ? v.params.reduce((acc, curr) => `${acc} ${curr}`)
+          : ""
+      }) ...)`,
   ),
 }
 const jsFunctionStrategy: Strategy = {

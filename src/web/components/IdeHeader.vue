@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { useScamperSession } from "./use-scamper-session"
 
-const props = defineProps<{
-  currentFile?: string | null
-  run?: () => Promise<void>
-  trace?: () => void
-  cancel?: () => void
+defineProps<{
+  currentFile: string | null
 }>()
 
 const emit = defineEmits<{
@@ -13,16 +10,7 @@ const emit = defineEmits<{
   toggleSidebar: []
 }>()
 
-const isRunInProgress = ref(false)
-
-async function handleRun() {
-  isRunInProgress.value = true
-  try {
-    await props.run?.()
-  } finally {
-    isRunInProgress.value = false
-  }
-}
+const { currentRun, execute, stopRun, query } = useScamperSession()
 </script>
 
 <template>
@@ -34,11 +22,11 @@ async function handleRun() {
         @click="emit('toggleSidebar')"
       ></button>
       ⋅
-      <template v-if="isRunInProgress">
+      <template v-if="currentRun">
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel?.()"
+          @click="stopRun()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -48,18 +36,23 @@ async function handleRun() {
         aria-label="Run"
         accesskey="w"
         aria-keyshortcuts="w"
-        @click="handleRun"
+        @click="execute()"
       ></button>
       <button
         class="fa-solid fa-route"
         aria-label="Trace"
-        @click="trace?.()"
+        @click="execute({ tracing: true })"
       ></button>
       <button
         class="fa-solid fa-window-maximize"
         aria-label="Maximize Output Window"
         :disabled="!currentFile"
         @click="emit('runWindow')"
+      ></button>
+      <button
+        class="fa-solid fa-clipboard-question"
+        aria-label="Query value"
+        @click="query()"
       ></button>
       <!-- TODO: re-enable once AST is migrated to new backend -->
       <button

@@ -6,9 +6,8 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable", "WebWorker"],
     "skipLibCheck": true,
 
-    "declaration": true,
-    "declarationDir": "./types",
-    "declarationMap": true,
+    // "declaration": true,
+    // "declarationMap": true,
     "sourceMap": true,
 
     /* Bundler mode */
@@ -16,7 +15,7 @@
     //"allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    //"noEmit": true,
+    "noEmit": true,
 
     "esModuleInterop": true,
 
@@ -32,6 +31,14 @@
     /*"rootDir": "./src",*/
     /*"outDir": "./_build/js",*/
   },
-  "exclude": ["node_modules", "site", "_build", "test", "esbuild.config.js", "tsconfig.json", "jest.config.ts"],
+  "exclude": [
+    "node_modules",
+    "site",
+    "_build",
+    "test",
+    "esbuild.config.js",
+    "tsconfig.json",
+    "jest.config.ts"
+  ],
   "include": ["src"]
 }

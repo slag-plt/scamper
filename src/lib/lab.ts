@@ -2,7 +2,7 @@ import * as L from '../lpm'
 import { checkContract, contract } from './contract.js'
 import * as C from './contract.js'
 
-const Lab: L.Library = new L.Library()
+const Lab: L.Module = new L.Module()
 
 function title (text: string) {
   checkContract(arguments, contract('title', [C.string]))

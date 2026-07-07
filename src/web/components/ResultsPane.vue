@@ -5,13 +5,13 @@ import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 
 defineProps<{
-  isTracing?: boolean
-  isDirty?: boolean
-  stepOnce?: () => void
-  stepStmt?: () => Promise<void>
-  stepAll?: () => Promise<void>
+  isTracing: boolean
+  isDirty: boolean
+  stepOnce: () => void
+  stepStmt: () => Promise<void>
+  stepAll: () => Promise<void>
+  abortStep: () => void
   astText?: () => void
-  cancel?: () => void
 }>()
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
@@ -33,7 +33,7 @@ defineExpose({
     :step-stmt="stepStmt"
     :step-all="stepAll"
     :ast-text="astText"
-    :cancel="cancel"
+    :abort-step="abortStep"
   />
   <div class="output-container">
     <OutputPane ref="outputPaneRef" />

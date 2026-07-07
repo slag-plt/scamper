@@ -10,14 +10,14 @@ const testSrc =
 
 
 //
-test('tracing-images', () => {
+test('tracing-images', async () => {
     // make mock root div
     const mockRootName = 'test-root';
     const mockRoot = document.createElement(mockRootName)
     document.body.appendChild(mockRoot)
     // mock HTMLDisplay
     const mockOut = new HTMLDisplay(mockRoot)
-    runProgramWithHTML(testSrc, mockOut)
+    await runProgramWithHTML(testSrc, mockOut)
 
     expect(getByLabelText(mockRoot, canvasAriaLabel)).toBeVisible()
 })

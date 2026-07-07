@@ -1,7 +1,7 @@
+import { tokenizeAndParse } from "../.."
 import { Range, Value } from "../../../lpm"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
 import { App, isApp, isLit, isStmtExp, Stmt } from "../../ast"
-import { tokenizeAndParse } from "../../index"
 import { mkScamperErrorWithRange } from "../../util"
 import { DocTag, registerDocTagParser } from "./tag"
 
@@ -10,6 +10,15 @@ interface Example {
   result: Value
 }
 export type ExampleTag = DocTag<Example>
+
+export function isExampleTag(t: DocTag): t is ExampleTag {
+  return (
+    typeof t.contents === "object" &&
+    t.contents !== null &&
+    "functionCall" in t.contents &&
+    "result" in t.contents
+  )
+}
 
 const separator = " -> "
 
@@ -45,7 +54,9 @@ function parseExampleExpression(
   if (parsed.length > 1) {
     exampleTagError(`more than one expression found in ${field}`, range)
   }
-  return parsed[0]
+  const toReturn = parsed[0]
+  toReturn.range = range
+  return toReturn
 }
 
 registerDocTagParser("@example", (contents, range): ExampleTag => {

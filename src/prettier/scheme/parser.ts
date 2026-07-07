@@ -2,11 +2,14 @@ import { Parser } from "prettier"
 import { SchemeNode, progToNode } from "../../scheme/ast"
 import { tokenizeAndParse } from "../../scheme"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import { throwNull } from "../../util"
 
 export const SchemeParserName = "scamper-scheme"
 
 const errChannel = new SimpleErrorChannel()
+
+function throwNull(message: string): never {
+  throw new Error(message)
+}
 
 export const SchemeParserASTFormat = `${SchemeParserName}-ast`
 

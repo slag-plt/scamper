@@ -1,9 +1,9 @@
-import type { VueDisplay } from "../../lpm/output/vue"
+import { ErrorChannel, OutputChannel } from "../../lpm"
 
 /**
  * Public interface of ResultsPane.vue exposed via defineExpose.
  * Only the genuinely imperative operations are included; isDirty and
- * isTracing are plain props flowing down from IdeApp.
+ * isTracing are props threaded from IdeApp (isTracing from session state).
  * Template refs to a child component receive Vue's public instance from
  * getComponentPublicInstance(), which (when defineExpose was used) is an
  * exposeProxy whose target is proxyRefs(exposed). Property reads on that
@@ -14,5 +14,5 @@ import type { VueDisplay } from "../../lpm/output/vue"
 export interface ResultsPaneType {
   reset(): void
   scrollToBottom(): void
-  readonly display: VueDisplay | undefined
+  readonly display: (OutputChannel & ErrorChannel) | undefined
 }

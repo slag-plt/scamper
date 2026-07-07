@@ -59,11 +59,7 @@ export type DocComment = Comment
 /**
  * @param docString looks like ";;; \n;;; \n..."
  */
-export function parseDocString(comments: Comment[]): FunctionDoc {
-  // split by newline and throw away non-doc lines
-  const docComments: DocComment[] = comments
-    .map(parseDocLineContents)
-    .filter((line) => line !== undefined)
+export function parseDocString(docComments: DocComment[]): FunctionDoc {
   // get the signature
   const firstDocComment = docComments.shift()
   if (firstDocComment === undefined) {
@@ -72,8 +68,8 @@ export function parseDocString(comments: Comment[]): FunctionDoc {
       "Attempted to parse docstring from comment block with no doc lines!",
     )
   }
-  const firstRange = docComments[0].range
-  const lastRange = docComments[docComments.length - 1].range
+  const firstRange = firstDocComment.range
+  const lastRange = (docComments.at(-1) ?? firstDocComment).range
 
   const signature = parseSignature(firstDocComment)
   const params: Params = []
@@ -148,4 +144,8 @@ export function parseDocLineContents({
   }
 
   return { line: rest.join(docLinePrefix), range }
+}
+
+export function commentsToDocComments(comments: Comment[]): DocComment[] {
+  return comments.map(parseDocLineContents).filter((line) => line !== undefined)
 }

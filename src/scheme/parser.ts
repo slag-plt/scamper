@@ -1,7 +1,12 @@
 import * as A from "./ast.js"
 import * as L from "../lpm"
 import * as S from "./syntax.js"
-import { FunctionDoc, parseDocString } from "./docstring/docstring"
+import {
+  commentsToDocComments,
+  FunctionDoc,
+  parseDocString,
+} from "./docstring/docstring"
+import { mkScamperErrorWithRange } from "./util"
 
 // TODO: need to check whether _ is used correctly here, i.e., only under a section
 
@@ -9,13 +14,14 @@ import { FunctionDoc, parseDocString } from "./docstring/docstring"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-const reservedWords = [
+export const reservedWords = [
   "and",
   "begin",
   "cond",
   "define",
   "if",
   "import",
+  "display",
   "lambda",
   "let",
   "let*",
@@ -25,6 +31,7 @@ const reservedWords = [
   "quote",
   "section",
   "struct",
+  "report",
 ]
 
 // Placeholders for incomplete programs to allow parsing to continue in the presence of errors
@@ -255,195 +262,206 @@ export function parseExp(errors: L.ScamperError[], v: L.Value): A.Exp {
 
   if (!L.isList(v)) {
     return parseSingle(errors, v, range)
-  } else {
-    const arr = L.listToVector(v)
-    if (arr.length == 0) {
-      return A.mkLit(null, range)
-    } else {
-      const { value: hv, range: hr } = S.unpackSyntax(arr[0])
-      if (L.isSym(hv)) {
-        const head = hv.value
-        switch (head) {
-          case "lambda": {
-            if (arr.length !== 3) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Lambda expressions must have 2 sub-components, a list of identifiers and a body",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            const params = parseIdentifierList(
-              errors,
-              arr[1],
-              "The first component of a lambda expression must be a list of identifiers",
-              "The parameters of a lambda expression must be identifiers",
-            )
-            const body = parseExp(errors, arr[2])
-            return A.mkLam(params, body, range)
-          }
-
-          case "let": {
-            if (arr.length !== 3) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Let expressions must have 2 sub-components, a list of binding pairs and a body",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            const binders = parseLetBinders(errors, arr[1])
-            const body = parseExp(errors, arr[2])
-            return A.mkLet(binders, body, range)
-          }
-
-          case "let*": {
-            if (arr.length !== 3) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Let* expressions must have 2 sub-components, a list of binding pairs and a body",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            const binders = parseLetBinders(errors, arr[1])
-            const body = parseExp(errors, arr[2])
-            return A.mkLetS(binders, body, range)
-          }
-
-          case "and": {
-            return A.mkAnd(
-              arr.slice(1).map((v) => parseExp(errors, v)),
-              range,
-            )
-          }
-
-          case "or": {
-            return A.mkOr(
-              arr.slice(1).map((v) => parseExp(errors, v)),
-              range,
-            )
-          }
-
-          case "if": {
-            if (arr.length !== 4) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            const guard = parseExp(errors, arr[1])
-            const ifBranch = parseExp(errors, arr[2])
-            const elseBranch = parseExp(errors, arr[3])
-            return A.mkIf(guard, ifBranch, elseBranch, range)
-          }
-
-          case "begin": {
-            if (arr.length === 1) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Begin expressions must have at least one sub-component",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            return A.mkBegin(
-              arr.slice(1).map((v) => parseExp(errors, v)),
-              range,
-            )
-          }
-
-          case "match": {
-            if (arr.length < 2) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Match expressions must have at least 1 sub-component: a scrutine",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            const scrutinee = parseExp(errors, arr[1])
-            const branches = arr.slice(2).map((v) => parseBranch(errors, v))
-            return A.mkMatch(scrutinee, branches, range)
-          }
-
-          case "cond": {
-            return A.mkCond(
-              arr.slice(1).map((v) => parseCondBranch(errors, v)),
-              range,
-            )
-          }
-
-          case "quote": {
-            if (arr.length === 1) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Quote expressions must have at least one sub-component",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            } else {
-              // N.B., We _don't_ check the syntax of the quoted expression!
-              // We treat the syntax as-is, even if it is malformed. It is only
-              // when we evaluate the syntax would we then check its validity.
-              return A.mkQuote(S.stripSyntax(arr[1]), range)
-            }
-          }
-
-          case "section": {
-            if (arr.length === 1) {
-              errors.push(
-                new L.ScamperError(
-                  "Parser",
-                  "Section expressions must have at least one sub-component",
-                  undefined,
-                  hr,
-                ),
-              )
-              return phExp
-            }
-            return A.mkSection(
-              arr.slice(1).map((v) => parseExp(errors, v)),
-              range,
-            )
-          }
-
-          default: {
-            // N.B., otherwise, we have a function application
-            const fn = parseExp(errors, arr[0])
-            const args = arr.slice(1).map((v) => parseExp(errors, v))
-            return A.mkApp(fn, args, range)
-          }
-        }
-      } else {
-        // N.B., otherwise, we have a function application
-        const fn = parseExp(errors, arr[0])
-        const args = arr.slice(1).map((v) => parseExp(errors, v))
-        return A.mkApp(fn, args, range)
+  }
+  const arr = L.listToVector(v)
+  if (arr.length == 0) {
+    return A.mkLit(null, range)
+  }
+  const { value: hv, range: hr } = S.unpackSyntax(arr[0])
+  if (!L.isSym(hv)) {
+    // anonymous function application
+    const fn = parseExp(errors, arr[0])
+    const args = arr.slice(1).map((v) => parseExp(errors, v))
+    return A.mkApp(fn, args, range)
+  }
+  const head = hv.value
+  switch (head) {
+    case "lambda": {
+      if (arr.length !== 3) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Lambda expressions must have 2 sub-components, a list of identifiers and a body",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
       }
+      const params = parseIdentifierList(
+        errors,
+        arr[1],
+        "The first component of a lambda expression must be a list of identifiers",
+        "The parameters of a lambda expression must be identifiers",
+      )
+      const body = parseExp(errors, arr[2])
+      return A.mkLam(params, body, range)
+    }
+
+    case "let": {
+      if (arr.length !== 3) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Let expressions must have 2 sub-components, a list of binding pairs and a body",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      const binders = parseLetBinders(errors, arr[1])
+      const body = parseExp(errors, arr[2])
+      return A.mkLet(binders, body, range)
+    }
+
+    case "let*": {
+      if (arr.length !== 3) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Let* expressions must have 2 sub-components, a list of binding pairs and a body",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      const binders = parseLetBinders(errors, arr[1])
+      const body = parseExp(errors, arr[2])
+      return A.mkLetS(binders, body, range)
+    }
+
+    case "and": {
+      return A.mkAnd(
+        arr.slice(1).map((v) => parseExp(errors, v)),
+        range,
+      )
+    }
+
+    case "or": {
+      return A.mkOr(
+        arr.slice(1).map((v) => parseExp(errors, v)),
+        range,
+      )
+    }
+
+    case "if": {
+      if (arr.length !== 4) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "If expressions must have 3 sub-components: a guard, an if-branch, and an else-branch",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      const guard = parseExp(errors, arr[1])
+      const ifBranch = parseExp(errors, arr[2])
+      const elseBranch = parseExp(errors, arr[3])
+      return A.mkIf(guard, ifBranch, elseBranch, range)
+    }
+
+    case "begin": {
+      if (arr.length === 1) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Begin expressions must have at least one sub-component",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      return A.mkBegin(
+        arr.slice(1).map((v) => parseExp(errors, v)),
+        range,
+      )
+    }
+
+    case "match": {
+      if (arr.length < 2) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Match expressions must have at least 1 sub-component: a scrutine",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      const scrutinee = parseExp(errors, arr[1])
+      const branches = arr.slice(2).map((v) => parseBranch(errors, v))
+      return A.mkMatch(scrutinee, branches, range)
+    }
+
+    case "cond": {
+      return A.mkCond(
+        arr.slice(1).map((v) => parseCondBranch(errors, v)),
+        range,
+      )
+    }
+
+    case "quote": {
+      if (arr.length === 1) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Quote expressions must have at least one sub-component",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      } else {
+        // N.B., We _don't_ check the syntax of the quoted expression!
+        // We treat the syntax as-is, even if it is malformed. It is only
+        // when we evaluate the syntax would we then check its validity.
+        return A.mkQuote(S.stripSyntax(arr[1]), range)
+      }
+    }
+
+    case "section": {
+      if (arr.length === 1) {
+        errors.push(
+          new L.ScamperError(
+            "Parser",
+            "Section expressions must have at least one sub-component",
+            undefined,
+            hr,
+          ),
+        )
+        return phExp
+      }
+      return A.mkSection(
+        arr.slice(1).map((v) => parseExp(errors, v)),
+        range,
+      )
+    }
+
+    case "report": {
+      if (arr.length !== 2) {
+        errors.push(
+          mkScamperErrorWithRange(
+            "Parser",
+            "Report expressions must have exactly one sub-component",
+            hr,
+          ),
+        )
+        return phExp
+      }
+      return A.mkReport(parseExp(errors, arr[1]), range)
+    }
+
+    default: {
+      // N.B., otherwise, we have a function application
+      const fn = parseExp(errors, arr[0])
+      const args = arr.slice(1).map((v) => parseExp(errors, v))
+      return A.mkApp(fn, args, range)
     }
   }
 }
@@ -510,7 +528,11 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
       let doc: FunctionDoc | undefined = undefined
       if (comments !== undefined) {
         try {
-          doc = parseDocString(comments)
+          // split by newline and throw away non-doc lines
+          const docComments = commentsToDocComments(comments)
+          if (docComments.length > 0) {
+            doc = parseDocString(docComments)
+          }
         } catch (e) {
           if (!(e instanceof L.ScamperError)) {
             throw e

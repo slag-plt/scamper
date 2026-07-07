@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { shallowRef, onMounted } from "vue"
-import { ScamperVue } from "../../scamper-vue"
-import { ScamperError } from "../../lpm/error"
+import { onMounted, shallowRef } from "vue"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 import hljs from "highlight.js"
+import { ScamperInstance } from "../../scamper.js"
 
 const props = defineProps<{
   src: string
@@ -24,15 +23,11 @@ onMounted(async () => {
   const display = outputPaneRef.value?.display
   if (!display) return
 
-  try {
-    await new ScamperVue(display, props.src).runProgram()
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      display.report(e)
-    } else if (e instanceof Error) {
-      display.report(new ScamperError("Runtime", e.message))
-    }
-  }
+  ScamperInstance.getInstance().execute({
+    src: props.src,
+    out: display,
+    err: display,
+  })
 })
 </script>
 

@@ -1,8 +1,10 @@
-import * as LPM from '../lpm'
-import * as A from './ast.js'
+import * as LPM from "../lpm"
+import { Fiber } from "../lpm/fiber"
+import { Frame } from "../lpm/frame"
+import * as A from "./ast.js"
 
 /** @return a stack of expressions created from the given value stack. */
-export function valuesToExps (values: LPM.Value[]): A.Exp[] {
+export function valuesToExps(values: LPM.Value[]): A.Exp[] {
   return values.map((v) => {
     if ((LPM.isFunction(v) || LPM.isClosure(v)) && v.name) {
       return A.mkVar(v.name)
@@ -12,16 +14,20 @@ export function valuesToExps (values: LPM.Value[]): A.Exp[] {
   })
 }
 
-export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Exp { 
+export function raiseFrame(
+  values: A.Exp[],
+  env: LPM.Env,
+  ops: LPM.Ops[],
+): A.Exp {
   for (let i = ops.length - 1; i >= 0; i--) {
     const op = ops[i]
     switch (op.tag) {
-      case 'lit': {
+      case "lit": {
         values.push(A.mkLit(op.value))
         break
       }
 
-      case 'var': {
+      case "var": {
         if (env.has(op.name)) {
           const v = env.get(op.name)!
           if (LPM.isFunction(v)) {
@@ -35,15 +41,19 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
         break
       }
 
-      case 'ctor': {
+      case "ctor": {
         const arity = op.fields.length
         const args = arity === 0 ? [] : values.splice(-arity)
         values.push(A.mkApp(A.mkVar(op.name), args))
         break
       }
 
-      case 'cls': {
-        const body = raiseFrame([], env.without(...op.params), op.body.toReversed())
+      case "cls": {
+        const body = raiseFrame(
+          [],
+          env.withoutLocals(...op.params),
+          op.body.toReversed(),
+        )
         if (op.name) {
           values.push(A.mkVar(op.name))
         } else {
@@ -52,7 +62,7 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
         break
       }
 
-      case 'ap': {
+      case "ap": {
         const vs = values.splice(-(op.numArgs + 1))
         const head = vs[0]
         const args = op.numArgs === 0 ? [] : vs.slice(1)
@@ -60,7 +70,7 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
         break
       }
 
-      case 'match': {
+      case "match": {
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame([], env, body.toReversed())
@@ -70,17 +80,17 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
         break
       }
 
-      case 'raise': {
-        values.push(A.mkApp(A.mkVar('raise'), [A.mkLit(op.msg)]))
+      case "raise": {
+        values.push(A.mkApp(A.mkVar("raise"), [A.mkLit(op.msg)]))
         break
       }
 
-      case 'pops': {
+      case "pops": {
         // N.B., pops the local environment, but we don't track that here!
         break
       }
 
-      case 'popv': {
+      case "popv": {
         values.pop()!
         break
       }
@@ -89,12 +99,16 @@ export function raiseFrame (values: A.Exp[], env: LPM.Env, ops: LPM.Ops[]): A.Ex
   return values.pop()!
 }
 
-export function raiseFrames (frames: LPM.Frame[]): A.Exp {
+export function raiseFrames(frames: Frame[]): A.Exp {
   if (frames.length === 0) {
-    throw new LPM.ICE('raiseFrames', 'no frames to raise')
+    throw new LPM.ICE("raiseFrames", "no frames to raise")
   }
   const lastFrame = frames[frames.length - 1]
-  let ret = raiseFrame(valuesToExps(lastFrame.values), lastFrame.env, lastFrame.ops)
+  let ret = raiseFrame(
+    valuesToExps(lastFrame.values),
+    lastFrame.env,
+    lastFrame.ops,
+  )
   for (let i = frames.length - 2; i >= 0; i--) {
     const values = valuesToExps(frames[i].values)
     values.push(ret)
@@ -103,6 +117,6 @@ export function raiseFrames (frames: LPM.Frame[]): A.Exp {
   return ret
 }
 
-export function raiseThread (thread: LPM.Thread): A.Exp {
-  return raiseFrames(thread.frames)
+export function raiseFiber(fiber: Fiber): A.Exp {
+  return raiseFrames(fiber.frames)
 }
