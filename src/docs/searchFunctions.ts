@@ -26,6 +26,7 @@ for (let i = 1; i < userTags.tags.length; i++) {
 
     if (userTags.andOr.equals("and")) {
         var otherFuncs = new Array
+        // eslint-disable-next-line @typescript-eslint/prefer-for-of
         for (let j = 0; j < nextFuncs.length; j++) {
             if (userTags.functions.include(nextFuncs[j])) {
                 otherFuncs.push(nextFuncs[j])
@@ -33,6 +34,7 @@ for (let i = 1; i < userTags.tags.length; i++) {
             }
         }
     } else {
+        // eslint-disable-next-line @typescript-eslint/prefer-for-of
         for (let j = 0; j < nextFuncs.length; j++) {
             if (!userTags.functions.include(nextFuncs[j])) {
                 userTags.functions.push(nextFuncs[j])

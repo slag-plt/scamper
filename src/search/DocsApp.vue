@@ -43,12 +43,7 @@ function searchForFunction(searchTerm: string) {
 const urlParams = new URLSearchParams(window.location.search);
 const searched = urlParams.get('search');
 </script>
-<!-- <input
-v-model="search"  
-size = "30"
-placeholder="Search function or ''just search''..."
-@keyup.enter="searchForFunction(search)"
-  > -->
+
 <template>
   <div class="docs-root">
     <div class="header">
@@ -72,9 +67,14 @@ placeholder="Search function or ''just search''..."
       </div>
     </div>
     <div class="docs">
-      
     <div v-if="searched">
       <h2>Search results for "{{ searched }}"</h2>
+      <input
+        v-model="search"  
+        size = "30"
+        placeholder="Search function or ''just search''..."
+        @keyup.enter="searchForFunction(search)"
+          >
       <p>TODO: implement search results page</p>
     </div>
     <div>

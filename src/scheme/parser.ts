@@ -2,6 +2,7 @@ import * as A from "./ast.js"
 import * as L from "../lpm"
 import * as S from "./syntax.js"
 import { FunctionDoc, parseDocString } from "./docstring/docstring"
+import lib from "../lib/reactive.js"
 
 // TODO: need to check whether _ is used correctly here, i.e., only under a section
 

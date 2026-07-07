@@ -4,20 +4,74 @@ import { ref } from "vue"
 //import { Doc } from "./api/docs.js"
 //import DocEntry from "./DocEntry.vue"
 
-
+const options = ref([
+  { id: 1, val: 'notes' },
+  { id: 2, val: 'half' },
+  { id: 3, val: 'whole' }
+]);
+const isOpen = ref(false)
 const tags = ref([])
+const types = ref([
+  { id: 1, val: 'number'},
+  { id: 2, val: 'string' },
+  { id: 3, val: 'boolean' }
+])
+
+const search = ref("")
+
+function searchForFunction(searchTerm: string) {
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+}
+
 </script>
 
 <!-- Tag selection goes here -->
 <template>
   <div class="index">
-    <p>{{ tags }}</p>
-      <Dropdown v-model="tags">
+    <p>Keywords</p>
+    <input
+      v-model="search"  
+      size="24"
+      class="search-input"
+      placeholder="Function name/keywords"
+      @keyup.enter="searchForFunction(search)"
+    >
+
+    <p>Types</p>
+    <label v-for="o in types" :key="o.id">
+        <p><input type="checkbox" class="indent" :value= "o.val" v-model="types">
+        {{ o.val }}</p>
+    </label>
+
+    <p>Tags:{{ tags }}</p>
+
+    <p> </p>
+      <text>Music </text>
+      <button  @click="isOpen = !isOpen">{{ isOpen ? "▼" : "▶" }}</button>
+
+      <div v-if="isOpen" class="dropdown-menu">
+      <label v-for="o in options" :key="o.id">
+        <p><input type="checkbox" class="indent" :value= "o.val" v-model="tags">
+        {{ o.val }}</p>
+      </label>
+    </div>
+
+      <!-- <Dropdown v-model="tags"> -->
       <p><input type="checkbox" v-model="tags" label="One" value="One"> One </p>
       <p><input type="checkbox" v-model="tags" label="Two" value="Two"> Two</p>
       <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
-      </Dropdown>
+      <!-- </Dropdown> -->
+
   </div>
+
+
+
+    <!-- <select v-model="tags" multiple>
+        <option value="volvo">Volvo</option>
+        <option value="saab">Saab</option>
+        <option value="mercedes">Mercedes</option>
+        <option value="audi">Audi</option>
+    </select> -->
 </template>
 
 <style scoped>
@@ -53,4 +107,13 @@ const tags = ref([])
   min-height: 0;
   overflow: scroll;
 }
+
+.indent {
+  margin-left: 24px;
+}
+
+.search-input {
+  font: Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
 </style>

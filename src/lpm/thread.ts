@@ -152,6 +152,7 @@ export class Thread {
       if (this.frames.length > 0) {
         this.out.send(mkTraceOutput(provider.raise(this)))
       } else {
+        console.log(this.builtinLibs)
         this.out.send(mkTraceOutput(this.results[this.curStmt]))
       }
     }
