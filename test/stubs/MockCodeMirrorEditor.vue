@@ -29,7 +29,9 @@ const adapter = {
   getCursorLoc() {
     return new Loc(0, 0, 0)
   },
-  coordsAtPos: () => null,
+  requestCoordsAtPos: (_pos, callback) => {
+    callback(null)
+  },
   onViewChange: () => () => {
     /* noop */
   },

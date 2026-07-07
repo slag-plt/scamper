@@ -42,7 +42,9 @@ describe("editor context", () => {
         adapter.isLoaded = () => false
       },
       getCursorLoc: () => new Loc(1, 2, 3),
-      coordsAtPos: () => null,
+      requestCoordsAtPos: (_pos, callback) => {
+        callback(null)
+      },
       onViewChange: () => () => {
         /* noop */
       },
@@ -72,7 +74,9 @@ describe("editor context", () => {
         /* noop */
       },
       getCursorLoc: () => new Loc(0, 0, 0),
-      coordsAtPos: () => null,
+      requestCoordsAtPos: (_pos, callback) => {
+        callback(null)
+      },
       onViewChange: () => () => {
         /* noop */
       },
@@ -87,7 +91,9 @@ describe("editor context", () => {
         /* noop */
       },
       getCursorLoc: () => new Loc(1, 1, 1),
-      coordsAtPos: () => null,
+      requestCoordsAtPos: (_pos, callback) => {
+        callback(null)
+      },
       onViewChange: () => () => {
         /* noop */
       },

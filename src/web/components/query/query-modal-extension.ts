@@ -1,4 +1,4 @@
-import { ViewPlugin, type EditorView } from "@codemirror/view"
+import { type EditorView, ViewPlugin } from "@codemirror/view"
 import type { Extension } from "@codemirror/state"
 
 export interface PopupCoords {
@@ -8,12 +8,8 @@ export interface PopupCoords {
   right: number
 }
 
-export function toPopupCoords(
-  rect: { top: number; bottom: number; left: number; right: number } | null,
-): PopupCoords | null {
-  return rect
-    ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }
-    : null
+export function toPopupCoords(rect: PopupCoords | null): PopupCoords | null {
+  return rect ?? null
 }
 
 export function createViewChangeNotifier() {

@@ -12,9 +12,16 @@ defineEmits<{ close: [] }>()
 const editor = useEditor()
 const coords = ref<PopupCoords | null>(null)
 let unsubscribe: (() => void) | null = null
+const measureKey = {}
 
 function recompute() {
-  coords.value = editor().coordsAtPos(props.query.targetPos)
+  editor().requestCoordsAtPos(
+    props.query.targetPos,
+    (next) => {
+      coords.value = next
+    },
+    measureKey,
+  )
 }
 
 const isDone = ref(false)

@@ -1,9 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { Loc, Range, ReportError } from "../../src/lpm"
-import { ScamperInstance } from "../../src/scamper"
+import { Loc, LoggingChannel, Range, ReportError } from "../../src/lpm"
+import { QueryRequest, ScamperInstance } from "../../src/scamper"
 import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
 import type { EditorAccessor } from "../../src/web/components/editor-context"
 import {
@@ -11,7 +10,6 @@ import {
   type ScamperSession,
 } from "../../src/web/components/use-scamper-session"
 import type { ResultsPaneType } from "../../src/web/components/use-results-pane"
-import { LoggingChannel } from "../../src/lpm"
 
 function makeAdapter(): CodeMirrorEditorAdapter {
   return {
@@ -24,7 +22,9 @@ function makeAdapter(): CodeMirrorEditorAdapter {
       /* noop */
     },
     getCursorLoc: () => new Loc(0, 0, 0),
-    coordsAtPos: () => null,
+    requestCoordsAtPos: (_pos, callback) => {
+      callback(null)
+    },
     onViewChange: () => () => {
       /* noop */
     },
@@ -63,7 +63,14 @@ describe("query modal reactivity regression", () => {
             reportQueryResult = (value: number) => {
               err.report(new ReportError(value, Range.none))
             }
-            return "query-1"
+            return new Promise<QueryRequest | null>((resolve) => {
+              resolve({
+                id: "query-test",
+                done: new Promise((resolve) => {
+                  resolve()
+                }),
+              })
+            })
           },
         )
         return { queries: session.queries }
@@ -85,12 +92,12 @@ describe("query modal reactivity regression", () => {
   test("async query report updates the modal without a scroll/repaint", async () => {
     const wrapper = mountQueryStatusHost()
 
-    session.query()
+    await session.query()
     await flushPromises()
     expect(wrapper.get('[data-testid="query-status"]').text()).toBe("pending")
 
     expect(reportQueryResult).not.toBeNull()
-    reportQueryResult!(42)
+    reportQueryResult?.(42)
     await flushPromises()
 
     expect(wrapper.get('[data-testid="query-status"]').text()).toBe("done:1")

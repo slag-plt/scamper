@@ -48,8 +48,20 @@ export function createCodeMirrorEditorAdapter(
       return new Loc(line.number, idx - line.from, idx)
     },
 
-    coordsAtPos(pos: number): PopupCoords | null {
-      return toPopupCoords(view.coordsAtPos(pos))
+    requestCoordsAtPos(
+      pos: number,
+      callback: (coords: PopupCoords | null) => void,
+      key?: unknown,
+    ): void {
+      view.requestMeasure({
+        key,
+        read() {
+          return toPopupCoords(view.coordsAtPos(pos))
+        },
+        write(measured) {
+          callback(measured)
+        },
+      })
     },
 
     onViewChange(listener: () => void): () => void {

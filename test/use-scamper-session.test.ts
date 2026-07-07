@@ -54,7 +54,9 @@ function makeAdapter(): CodeMirrorEditorAdapter {
       /* noop */
     },
     getCursorLoc: () => new Loc(0, 0, 0),
-    coordsAtPos: () => null,
+    requestCoordsAtPos: (_pos, callback) => {
+      callback(null)
+    },
     onViewChange: () => () => {
       /* noop */
     },
