@@ -55,26 +55,10 @@ export class Fiber {
   #currStmtIdx = 0
   #isProcessingBlk = false
   #maxCallStackDepth = 10_000
-  #isRunning = true
 
   constructor(prog: Prog, topLevelEnv: Env = Env.empty) {
     this.#prog = prog
     this.topLevelEnv = topLevelEnv
-  }
-
-  /** Pauses this fiber's execution */
-  pause(): void {
-    this.#isRunning = false
-  }
-
-  /** Resumes this fiber's execution */
-  resume(): void {
-    this.#isRunning = true
-  }
-
-  /** @returns true iff this fiber is marked as running */
-  get isRunning(): boolean {
-    return this.#isRunning
   }
 
   /**
@@ -83,12 +67,6 @@ export class Fiber {
    * @returns true if the step is a major step of execution, false if it's a minor step (e.g. variable loading)
    */
   step(): StepResult {
-    if (!this.#isRunning) {
-      throw new ICE(
-        "Fiber.step",
-        "Attempted to step fiber when it is paused!",
-      )
-    }
     const currStmt = this.#prog.at(this.#currStmtIdx)
     if (!currStmt) {
       throw new ICE("Fiber.step", "Attempted to step but no statements remain!")

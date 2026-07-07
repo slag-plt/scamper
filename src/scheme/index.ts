@@ -98,14 +98,15 @@ export async function compile(
   program = expandProgram(program)
 
   // Scope checking
-  const errors: S.ScamperError[] = []
-  await scopeCheckProgram(builtinLibs, errors, program)
-  if (errors.length > 0) {
-    errors.forEach((e) => {
-      err.report(e)
-    })
-    return undefined
-  }
+  // TODO: disabled while we fix up modules
+  // const errors: S.ScamperError[] = []
+  // await scopeCheckProgram(builtinLibs, errors, program)
+  // if (errors.length > 0) {
+  //   errors.forEach((e) => {
+  //     err.report(e)
+  //   })
+  //   return undefined
+  // }
 
   // Lowering/codegen
   return lowerProgram(program)
