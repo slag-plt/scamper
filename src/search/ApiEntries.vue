@@ -19,8 +19,8 @@ const types = ref([
 
 const search = ref("")
 
-function searchForFunction(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+function searchComplex() {
+  //grab all info and do search
 }
 
 </script>
@@ -28,13 +28,15 @@ function searchForFunction(searchTerm: string) {
 <!-- Tag selection goes here -->
 <template>
   <div class="index">
+    <h3> <strong>Advanced Search</strong> </h3>
+    <p></p>
+
     <p>Keywords</p>
     <input
       v-model="search"  
       size="24"
       class="search-input"
       placeholder="Function name/keywords"
-      @keyup.enter="searchForFunction(search)"
     >
 
     <p>Types</p>
@@ -62,6 +64,7 @@ function searchForFunction(searchTerm: string) {
       <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
       <!-- </Dropdown> -->
 
+      <button @keyup.enter="searchComplex">Enter</button>
   </div>
 
 

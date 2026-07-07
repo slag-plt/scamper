@@ -74,7 +74,7 @@ const searched = urlParams.get('search');
         size = "30"
         placeholder="Search function or ''just search''..."
         @keyup.enter="searchForFunction(search)"
-          >
+      >
       <p>TODO: implement search results page</p>
     </div>
     <div>
