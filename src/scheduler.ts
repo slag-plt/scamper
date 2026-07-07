@@ -1,18 +1,9 @@
-import {
-  ErrorChannel,
-  ICE,
-  OutputChannel,
-  ReportError,
-  ScamperError,
-} from "./lpm"
-import {
-  Fiber,
-  StepResult,
-} from "./lpm/fiber"
+import { ErrorChannel, ICE, OutputChannel, ScamperError } from "./lpm"
+import { Fiber, StepResult } from "./lpm/fiber"
 import "scheduler-polyfill"
 import { mkTraceOutput } from "./lpm/trace"
-import { getFS } from './fs'
-import * as S from './scheme'
+import { getFS } from "./fs"
+import * as S from "./scheme"
 
 const DEFAULT_REFRESH_RATE = 60
 
@@ -104,93 +95,108 @@ export class Scheduler {
     try {
       return fiber.step()
     } catch (e) {
-      if (e instanceof ScamperError) {
-        if (isReportTask(task)) {
-          if (e instanceof ReportError) {
-            console.debug(e.value)
-          }
-          task.err.report(e)
-          this.#endCurrFiber()
-          return undefined
-        }
-        this.#reportAndUnwind(e, task)
+      if (!(e instanceof ScamperError)) {
+        // either the runtime broke and threw an ICE (which is bad)
+        // or we have an unexpected error somewhere (which is really bad)
+        // either way, we should probably just rethrow this...
+        throw e
+      }
+      if (isReportTask(task)) {
+        task.err.report(e)
+        this.#endCurrFiber()
         return undefined
       }
-      // either the runtime broke and threw an ICE (which is bad)
-      // or we have an unexpected error somewhere (which is really bad)
-      // either way, we should probably just rethrow this...
-      throw e
+      this.#reportAndUnwind(e, task)
+      return undefined
     }
   }
 
-  async processStepResult(stepResult: StepResult | undefined, task: SchedulerTask) {
+  async processStepResult(
+    stepResult: StepResult | undefined,
+    task: SchedulerTask,
+  ) {
     const fiber = task.fiber
-    if (!stepResult) { return }
-    if (stepResult.tag === 'import-file') {
+    if (!stepResult) {
+      return
+    }
+    if (stepResult.tag === "import-file") {
       // TODO: this branch (and the getFS()/fileExists() call in particular)
-      // isn't wrapped in a try/catch. If it throws or rejects for any reason
-      // (e.g. the FS singleton isn't initialized, or a real I/O error), the
-      // exception escapes #execute() uncaught, which kills the scheduler loop
-      // entirely and silently stops stepping every other running task, not
-      // just this one. Should report the failure to task.err instead.
-      if (!await getFS().fileExists(stepResult.filename)) {
-        task.err.report(new ScamperError(
-          "Runtime",
-          `Attempted to import file "${stepResult.filename}" but it does not exist!`,
-        ))
+      //  isn't wrapped in a try/catch. If it throws or rejects for any reason
+      //  (e.g. the FS singleton isn't initialized, or a real I/O error), the
+      //  exception escapes #execute() uncaught, which kills the scheduler loop
+      //  entirely and silently stops stepping every other running task, not
+      //  just this one. Should report the failure to task.err instead.
+      if (!(await getFS().fileExists(stepResult.filename))) {
+        task.err.report(
+          new ScamperError(
+            "Runtime",
+            `Attempted to import file "${stepResult.filename}" but it does not exist!`,
+          ),
+        )
         this.#endCurrFiber()
       } else {
         this.#removeTaskFromQueue(this.#currTaskIdx)
-        getFS().loadFile(stepResult.filename).then(async (_src) => {
-          const prog = await S.compile(task.err, _src)
-          if (!prog) {
-            // TODO: error channel receives the compilation errors as a side-effect,
-            // but it would be good to signal to the continuation that importing has
-            // failed at this step...
-            return
-          }
-          const moduleFiber = new Fiber(prog)
-          const id = crypto.randomUUID()
-          this.schedule({
-            id,
-            fiber: moduleFiber,
-            err: task.err,
-            onComplete: () => {
-              const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
-              fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(stepResult.filename, mod)
+        getFS()
+          .loadFile(stepResult.filename)
+          .then(
+            async (_src) => {
+              const prog = await S.compile(task.err, _src)
+              if (!prog) {
+                // TODO: error channel receives the compilation errors as a side-effect,
+                // but it would be good to signal to the continuation that importing has
+                // failed at this step...
+                return
+              }
+              const moduleFiber = new Fiber(prog)
+              const id = crypto.randomUUID()
+              this.schedule({
+                id,
+                fiber: moduleFiber,
+                err: task.err,
+                onComplete: () => {
+                  const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
+                  fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(
+                    stepResult.filename,
+                    mod,
+                  )
+                  fiber.advanceStmt()
+                  this.schedule(task)
+                },
+              })
+            },
+            (_err: unknown) => {
+              task.err.report(
+                new ScamperError(
+                  "Runtime",
+                  `Attempted to import file "${stepResult.filename}" but it failed to load!`,
+                ),
+              )
               fiber.advanceStmt()
               this.schedule(task)
-            }
-          })
-        },
-          (_err: unknown) => {
-            task.err.report(new ScamperError(
-              "Runtime",
-              `Attempted to import file "${stepResult.filename}" but it failed to load!`,
-            ))
-            fiber.advanceStmt()
-            this.schedule(task)
-          })
+            },
+          )
       }
     }
 
-    if (isDisplayTask(task)) {
-      const { out, isTracing } = task
-      // we don't output minor steps (for now)
-      // TODO: maybe consider fine-grained tracing?
-      if (stepResult.tag === "minor" || stepResult.tag === "yield") {
-        this.#currTaskIdx++
-        return
-      }
-      // we always output if we just completed a display statement
-      if (stepResult.tag === "display") {
-        out.send(fiber.lastResult)
-      }
-      // implied that stepResult === TraceStep
-      else if (isTracing) {
-        // package it up in a nice little trace output and send it
-        out.send(mkTraceOutput(fiber.lastResult))
-      }
+    if (!isDisplayTask(task)) {
+      return
+    }
+
+    const { out, isTracing } = task
+    // we don't output minor steps (for now)
+    // TODO: maybe consider fine-grained tracing?
+    if (stepResult.tag === "minor" || stepResult.tag === "yield") {
+      this.#currTaskIdx++
+      return
+    }
+    // we always output if we just completed a display statement
+    if (stepResult.tag === "display") {
+      out.send(fiber.lastResult)
+    }
+    // implied that stepResult === TraceStep
+    else if (isTracing) {
+      // package it up in a nice little trace output and send it
+      out.send(mkTraceOutput(fiber.lastResult))
     }
   }
 
@@ -205,10 +211,14 @@ export class Scheduler {
       await scheduler.yield()
       const startTime = performance.now()
       while (performance.now() - startTime < this.#timeQuantum) {
-        if (this.#wasPaused()) { break }
+        if (this.#wasPaused()) {
+          break
+        }
         if (this.#currTaskIdx >= this.#tasks.length) {
           // check if there are any left; if there are none, wait for more
-          if (this.#tasks.length === 0) { break }
+          if (this.#tasks.length === 0) {
+            break
+          }
           // otherwise go back to the beginning
           this.#currTaskIdx = 0
         }
@@ -240,7 +250,9 @@ export class Scheduler {
 
   #endCurrFiber() {
     const task = this.#removeTaskFromQueue(this.#currTaskIdx)
-    if (task) { task.onComplete?.() }
+    if (task) {
+      task.onComplete?.()
+    }
   }
 
   #moveNextTask(currFiber: Fiber) {
@@ -254,7 +266,6 @@ export class Scheduler {
   #reportAndUnwind(e: ScamperError, { err, fiber }: DisplayTask) {
     err.report(e)
     fiber.advanceStmt()
-    this.#moveNextTask(fiber)
   }
 
   #wasPaused(): boolean {

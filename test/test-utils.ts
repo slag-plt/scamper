@@ -1,5 +1,5 @@
 import { vi } from "vitest"
-import { Fiber, StepResult, displayStep, traceStep } from "../src/lpm/fiber"
+import { displayStep, Fiber, StepResult, traceStep } from "../src/lpm/fiber"
 import {
   LoggingChannel,
   Prog,
@@ -10,7 +10,6 @@ import {
 } from "../src/lpm"
 import { DisplayTask, QueryTask, SchedulerTask } from "../src/scheduler"
 import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
-import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
 import * as process from "node:process"
 
@@ -21,9 +20,9 @@ const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
   fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
-    ['+', (a: number, b: number) => a + b],
-    ['-', (a: number, b: number) => a - b],
-    ['*', (a: number, b: number) => a * b]
+    ["+", (a: number, b: number) => a + b],
+    ["-", (a: number, b: number) => a - b],
+    ["*", (a: number, b: number) => a * b],
   )
   return fiber
 }
