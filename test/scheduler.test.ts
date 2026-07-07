@@ -268,7 +268,7 @@ describe("Scheduler", () => {
       }
     })
 
-    test.skip("ScamperError on one task does not halt other tasks", async () => {
+    test("ScamperError on one task does not halt other tasks", async () => {
       const sched = new Scheduler()
       const bad = new MockFiber()
       bad.stepImpl = () => {
