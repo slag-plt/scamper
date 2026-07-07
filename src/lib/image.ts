@@ -4,11 +4,9 @@ import * as Img from './image/image.js'
 import * as Rgb from './image/color.js'
 import * as L from '../lpm'
 
-export const imageLib: L.Library = new L.Library()
+export const imageLib: L.Module = new L.Module()
 
-imageLib.lib = [
-  ...Drawing.lib.lib,
-  ...Font.lib.lib,
-  ...Img.lib.lib,
-  ...Rgb.lib.lib
-]
+Drawing.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Font.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Img.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })
+Rgb.lib.bindings.forEach((v, x) => { imageLib.registerValue(x, v) })

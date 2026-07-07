@@ -1,6 +1,5 @@
 import { Renderer } from "./index"
 import { Component, defineComponent, h, PropType } from "vue"
-import { isArray, isList, isPair, isStruct, Value } from "../index"
 import CodeElement from "./vue/components/CodeElement.vue"
 import VectorRenderer from "./vue/components/VectorRenderer.vue"
 import ListRenderer from "./vue/components/ListRenderer.vue"
@@ -8,6 +7,8 @@ import PairRenderer from "./vue/components/PairRenderer.vue"
 import { simpleRenderers } from "./vue/simple-renderers"
 import StructRenderer from "./vue/components/StructRenderer.vue"
 import DOMElementRenderer from "./vue/components/DOMElementRenderer.vue"
+import { Value } from "../lang"
+import { isArray, isList, isPair, isStruct } from "../util"
 
 export interface VueStrategyProps {
   type: "vue"

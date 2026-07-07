@@ -1,6 +1,6 @@
 import * as L from '../lpm'
 
-export const Runtime: L.Library = new L.Library()
+export const Runtime: L.Module = new L.Module()
 
 /**
  * @returns a predicate function for struct types t.

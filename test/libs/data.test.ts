@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest'
 import { runProgram } from '../harness.js'
 
-test('tally-all', () => {
-  expect(runProgram(`
+test('tally-all', async () => {
+  expect(await runProgram(`
   (import data)
   (tally-all (list "a" "b" "a" "c" "c" "d" "b" "a" "q" "r" "r" "a" "d"))
   `)).toEqual([

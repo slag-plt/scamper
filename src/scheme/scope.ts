@@ -1,4 +1,4 @@
-import { Prelude, Runtime } from "../lib"
+import { getFS } from "../fs"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
@@ -129,6 +129,10 @@ function scopeCheckExp(
     }
     case "quote": {
       // N.B., no need to scope check a "frozen" AST
+      return
+    }
+    case "report": {
+      scopeCheckExp(errors, globals, locals, e.exp)
       return
     }
     default:
@@ -300,15 +304,24 @@ function scopeCheckFunctionDoc(
   return
 }
 
-function scopeCheckStmt(
+async function scopeCheckStmt(
   errors: ScamperError[],
-  builtinLibs: Map<string, L.Library>,
+  builtinLibs: Map<string, L.Module>,
   globals: string[],
   s: A.Stmt,
 ) {
   switch (s.tag) {
     case "import": {
-      if (!builtinLibs.has(s.module)) {
+      if (builtinLibs.has(s.module)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
+          globals.push(name)
+        }
+      } else if (await getFS().fileExists(s.module)) {
+        // TODO: should gather top-level bindings from the imported module, but
+        // for now, let's just assume everything is good to check the rest of the
+        // pipeline...
+      } else {
         errors.push(
           new ScamperError(
             "Parser",
@@ -317,9 +330,6 @@ function scopeCheckStmt(
             s.range,
           ),
         )
-      }
-      for (const [name, _] of builtinLibs.get(s.module)!.lib) {
-        globals.push(name)
       }
       return
     }
@@ -359,19 +369,21 @@ function scopeCheckStmt(
   }
 }
 
-export function scopeCheckProgram(
-  builtinLibs: Map<string, L.Library>,
+export async function scopeCheckProgram(
+  builtinLibs: Map<string, L.Module>,
   errors: ScamperError[],
   prog: A.Prog,
 ) {
   const globals: string[] = []
-  for (const [name, _] of Runtime.lib) {
-    globals.push(name)
-  }
-  for (const [name, _] of Prelude.lib) {
-    globals.push(name)
-  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  for (const name of builtinLibs.get('runtime')!.bindings.keys()) {
+     globals.push(name)
+   }
+   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+   for (const name of builtinLibs.get('prelude')!.bindings.keys()) {
+     globals.push(name)
+   }
   for (const s of prog) {
-    scopeCheckStmt(errors, builtinLibs, globals, s)
+    await scopeCheckStmt(errors, builtinLibs, globals, s)
   }
 }

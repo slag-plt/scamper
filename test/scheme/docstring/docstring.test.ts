@@ -1,16 +1,18 @@
-import "./docstring/test-tags"
+import "./test-tags"
 
 import { describe, expect, test } from "vitest"
-import { mkApp, mkDefine, mkVar } from "../../src/scheme/ast"
-import { mkLit } from "../../src/lpm"
+import { mkApp, mkDefine, mkVar } from "../../../src/scheme/ast"
+import { mkLit } from "../../../src/lpm"
 import {
   Param,
   parseParamDescriptionLine,
   parseParamSignature,
   parseSingleParam,
-} from "../../src/scheme/docstring/param"
+} from "../../../src/scheme/docstring/param"
 import {
+  commentsToDocComments,
   ComplexPred,
+  DocComment,
   FunctionDoc,
   isComplexPred,
   parseDocLineContents,
@@ -18,28 +20,23 @@ import {
   ParseStage,
   Pred,
   VarApp,
-} from "../../src/scheme/docstring/docstring"
-import { parseFunctionDescription } from "../../src/scheme/docstring/description"
-import {
-  testTag1,
-  testTag2,
-  testTagLine1,
-  testTagLine2,
-} from "./docstring/test-tags"
-import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
-import { tokenizeAndParse } from "../../src/scheme"
-import { anyRange } from "./util"
-import { Comment } from "../../src/scheme/reader"
+} from "../../../src/scheme/docstring/docstring"
+import { parseFunctionDescription } from "../../../src/scheme/docstring/description"
+import { testTag1, testTag2, testTagLine1, testTagLine2 } from "./test-tags"
+import { SimpleErrorChannel } from "../../../src/lpm/output/simple-error"
+import { tokenizeAndParse } from "../../../src/scheme"
+import { anyRange } from "../util"
+import { Comment } from "../../../src/scheme/reader"
 
 describe("Docstring parsing", () => {
   test("are attached to define statements", () => {
-    const { testComments, expectedFunctionDoc } = makeTestDocstring()
+    const { rawTestComments, expectedFunctionDoc } = makeTestDocstring()
 
     const identifier = "x"
     const value = 1
     const lit = mkLit(value, anyRange)
 
-    const testSrc = `${testComments.map((c) => c.line).join("\n")}
+    const testSrc = `${rawTestComments.map((c) => c.line).join("\n")}
 (define ${identifier} ${value.toString()})`
 
     const err = new SimpleErrorChannel()
@@ -299,8 +296,9 @@ describe("Docstring parsing", () => {
 })
 
 function makeTestDocstring(): {
-  testComments: Comment[]
+  testComments: DocComment[]
   expectedFunctionDoc: FunctionDoc
+  rawTestComments: Comment[]
 } {
   const funcName = "func"
   const paramName1 = "p1"
@@ -345,7 +343,7 @@ function makeTestDocstring(): {
   const tag2 = testTag2
   const tagContents2 = "stuff3"
 
-  const testComments =
+  const rawTestComments =
     `;;; (${funcName} ${paramName1} ${paramName2}) -> (${complexPredName1} ${predName1})
 ;;;  ${paramName1} : ${predName2}
 ;;;   ${paramDescLine1}
@@ -386,7 +384,11 @@ function makeTestDocstring(): {
     range: anyRange,
   }
 
-  return { testComments: testComments, expectedFunctionDoc }
+  return {
+    testComments: commentsToDocComments(rawTestComments),
+    expectedFunctionDoc,
+    rawTestComments,
+  }
 }
 
 function makeTestComment(line: string): Comment {

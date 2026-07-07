@@ -1,71 +1,132 @@
-import * as Scheme from "./scheme"
-import * as LPM from "./lpm"
-import HtmlDisplay from "./lpm/output/html"
+// TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
+import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
+import { Fiber } from "./lpm/fiber"
+import { Scheduler, SchedulerId } from "./scheduler"
+import { compile } from "./scheme"
 
-/** @deprecated Use ScamperVue from scamper-vue.ts instead. */
-export class Scamper {
-  display: HtmlDisplay
-  prog: LPM.Prog | undefined
-  machine: LPM.Thread | undefined
+interface ExecutionConfig {
+  src: string
+}
 
-  constructor(target: HTMLElement, src: string, isTracing = false) {
-    this.display = new HtmlDisplay(target)
-    this.prog = Scheme.compile(this.display, src)
-    if (this.prog) {
-      const opts = LPM.cloneOptions(LPM.defaultOptions)
-      opts.isTracing = isTracing
-      this.machine = new LPM.Thread(
-        "##main##",
-        Scheme.mkInitialEnv(),
-        this.prog,
-        opts,
-        builtinLibs,
-        this.display,
-        this.display,
-        new Map([["scheme", Scheme.raiser]]),
-      )
+interface DisplayExecutionConfig extends ExecutionConfig {
+  out: OutputChannel
+  err: ErrorChannel
+  isTracing?: boolean // whether to enable tracing of execution steps
+}
+
+interface QueryExecutionConfig extends ExecutionConfig {
+  err: ErrorChannel
+  queryLoc: Loc
+}
+
+interface RunRequest {
+  id: SchedulerId
+  done: Promise<void>
+}
+export interface DisplayRequest extends RunRequest {
+  tracing: boolean
+}
+export type QueryRequest = RunRequest
+
+const defaultEnv =
+  Env.empty.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('runtime', builtinLibs.get('runtime')!).
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    extendWithImport('prelude', builtinLibs.get('prelude')!)
+
+export class ScamperInstance {
+  // singleton structure
+  static #instance?: ScamperInstance
+  #scheduler: Scheduler
+
+  static getInstance(): ScamperInstance {
+    ScamperInstance.#instance ??= new ScamperInstance()
+    return ScamperInstance.#instance
+  }
+  private constructor() {
+    this.#scheduler = new Scheduler()
+  }
+
+  /**
+   * @returns ID of task
+   */
+  public async execute({
+    src,
+    out,
+    err,
+    isTracing,
+  }: DisplayExecutionConfig): Promise<DisplayRequest | null> {
+    // compile src to lpm bytecode
+    const compiled = await compile(err, src)
+    if (!compiled) {
+      // err channel should have caught the error
+      return null
     }
-  }
 
-  send(v: LPM.Value) {
-    this.display.send(v)
-  }
+    // make new fiber with prelude as initial environment
+    const fiber = new Fiber(compiled, defaultEnv)
 
-  report(err: LPM.ScamperError) {
-    this.display.report(err)
+    // schedule task
+    // note: crypto is only available on HTTPS/localhost.
+    // should never be a problem but just noting for future
+    const id = crypto.randomUUID()
+    const tracing = isTracing ?? false
+    const { promise, resolve } = deferred()
+    this.#scheduler.schedule({
+      id,
+      fiber,
+      out,
+      err,
+      isTracing: tracing,
+      onComplete: () => {
+        resolve()
+      },
+    })
+    return { id, tracing, done: promise }
   }
-
-  async runProgram() {
-    if (this.machine) {
-      this.machine.cancelled = false
-      await this.machine.evaluateAsync()
+  public async query({
+    src,
+    err,
+    queryLoc,
+  }: QueryExecutionConfig): Promise<QueryRequest | null> {
+    // compile src to lpm bytecode
+    const compiled = await compile(err, src, queryLoc)
+    if (!compiled) {
+      // report channel should have caught the error
+      return null
     }
+
+    // make new fiber with prelude as initial environment
+    const fiber = new Fiber(compiled, defaultEnv)
+
+    // schedule query task
+    const id = crypto.randomUUID()
+    const { promise, resolve } = deferred()
+    this.#scheduler.schedule({
+      id,
+      fiber,
+      err,
+      onComplete: () => {
+        resolve()
+      },
+    })
+    return { id, done: promise }
+  }
+  public cancel(id: SchedulerId) {
+    this.#scheduler.cancelTask(id)
   }
 
-  cancel() {
-    // console.debug("attempted to cancel")
-    if (this.machine) {
-      this.machine.cancel()
-    }
-  }
-
-  runnerTree() {
-    // TODO: need to update!
-    // this.parseroutput.ast.renderTree(this.display, this.parseroutput.ast.nodes);
-  }
-
-  stepProgram() {
-    if (this.machine) {
-      this.machine.step()
-    }
-  }
-
-  async stepStmtProgram() {
-    if (this.machine) {
-      await this.machine.stepExpr()
-    }
+  public calibrateScheduler(): void {
+    void this.#scheduler.setTimeQuantumFromFPS()
   }
 }
 
-export default Scamper
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void
+  const promise = new Promise<void>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}

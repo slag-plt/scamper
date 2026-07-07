@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import type { FileEntry } from "../fs"
+import type { FileEntry } from "../../fs/fs"
 
 const props = defineProps<{
   version?: string

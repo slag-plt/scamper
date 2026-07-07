@@ -3,8 +3,8 @@ import { runProgram } from '../harness.js'
 
 // Adapted froM: https://eikmeier.sites.grinnell.edu/csc-151-fall-2025/readings/regexp.html
 
-test('string', () => {
-  expect(runProgram(`
+test('string', async () => {
+  expect(await runProgram(`
     (import rex)
     (define hello (rex-string "hello"))
     (rex-matches? hello "hello")
@@ -17,8 +17,8 @@ test('string', () => {
   ])
 })
 
-test('repeat', () => {
-  expect(runProgram(`
+test('repeat', async () => {
+  expect(await runProgram(`
     (import rex)
     (define hellos (rex-repeat (rex-string "hello")))
     (rex-matches? hellos "hello")
@@ -35,8 +35,8 @@ test('repeat', () => {
   ])
 })
 
-test('repeat0', () => {
-  expect(runProgram(`
+test('repeat0', async () => {
+  expect(await runProgram(`
     (import rex)
     (define hellos0 (rex-repeat-0 (rex-string "hello")))
     (rex-matches? hellos0 "hello")
@@ -51,8 +51,8 @@ test('repeat0', () => {
   ])
 })
 
-test('concat', () => {
-  expect(runProgram(`
+test('concat', async () => {
+  expect(await runProgram(`
     (import rex)
     (define hello-echo (rex-concat (rex-string "hello") (rex-repeat-0 (rex-string "o"))))
     (rex-matches? hello-echo "hello")
@@ -67,8 +67,8 @@ test('concat', () => {
   ])
 })
 
-test('repeat combination', () => {
-  expect(runProgram(`
+test('repeat combination', async () => {
+  expect(await runProgram(`
     (import rex)
     (define hello-echo (rex-concat (rex-string "hello") (rex-repeat-0 (rex-string "o"))))
     (define remaining-hellos (rex-repeat-0 (rex-concat (rex-string " ") hello-echo)))
@@ -89,8 +89,8 @@ test('repeat combination', () => {
   ])
 })
 
-test('any-char', () => {
-  expect(runProgram(`
+test('any-char', async () => {
+  expect(await runProgram(`
     (import rex)
     (rex-matches? (rex-any-char) "a")
     (rex-matches? (rex-any-char) "+")
@@ -102,8 +102,8 @@ test('any-char', () => {
   ])
 })
 
-test('any-char and repeat', () => {
-  expect(runProgram(`
+test('any-char and repeat', async () => {
+  expect(await runProgram(`
     (import rex)
     (define sr (rex-concat (rex-string "s")
                           (rex-repeat-0 (rex-any-char))
@@ -126,8 +126,8 @@ test('any-char and repeat', () => {
   ])
 })
 
-test('char types', () => {
-  expect(runProgram(`
+test('char types', async () => {
+  expect(await runProgram(`
     (import rex)
     (define lowercase (rex-char-range #\\a #\\z))
     (define vowel (rex-char-set "aeiou"))
@@ -150,8 +150,8 @@ test('char types', () => {
   ])
 })
 
-test('double vowel', () => {
-  expect(runProgram(`
+test('double vowel', async () => {
+  expect(await runProgram(`
     (import rex)
     (define lowercase (rex-char-range #\\a #\\z))
     (define vowel (rex-char-set "aeiou"))
@@ -168,8 +168,8 @@ test('double vowel', () => {
   ])
 })
 
-test('empty', () => {
-  expect(runProgram(`
+test('empty', async () => {
+  expect(await runProgram(`
     (import rex)
     (rex-matches? (rex-empty) "")
     (rex-matches? (rex-empty) "hello")
@@ -179,8 +179,8 @@ test('empty', () => {
   ])
 })
 
-test('find-matches', () => {
-  expect(runProgram(`
+test('find-matches', async () => {
+  expect(await runProgram(`
     (import rex)
     (define lowercase (rex-char-range #\\a #\\z))
     (define vowel (rex-char-set "aeiou"))
@@ -192,8 +192,8 @@ test('find-matches', () => {
   ])
 })
 
-test('splitter', () => {
-  expect(runProgram(`
+test('splitter', async () => {
+  expect(await runProgram(`
     (import rex)
     (define splitter
       (rex-concat (rex-char-set ",;")
@@ -207,8 +207,8 @@ test('splitter', () => {
   ])
 })
 
-test('display', () => {
-  expect(runProgram(`
+test('display', async () => {
+  expect(await runProgram(`
     (import rex)
     (define lowercase (rex-char-range #\\a #\\z))
     (define vowel (rex-char-set "aeiou"))
@@ -228,8 +228,8 @@ test('display', () => {
   ])
 })
 
-test('rex->string', () => {
-  expect(runProgram(`
+test('rex->string', async () => {
+  expect(await runProgram(`
     (import rex)
     (define lowercase (rex-char-range #\\a #\\z))
     (define vowel (rex-char-set "aeiou"))

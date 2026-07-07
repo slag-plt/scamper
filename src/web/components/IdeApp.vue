@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, shallowRef } from "vue"
-import { Splitpanes, Pane } from "splitpanes"
+import { Pane, Splitpanes } from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
 import * as Lock from "../lockfile"
-import OPFSFileSystem from "../fs"
-import type { FileEntry } from "../fs"
-import { initializeLibs } from "../../lib"
-import ScamperVue from "../../scamper-vue"
-import { ScamperError } from "../../lpm/error"
 import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
+import QueryModal from "./query/QueryModal.vue"
+import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
-import type { CodeMirrorEditorType } from "./use-codemirror-editor"
+import { provideScamperSession } from "./use-scamper-session"
+import { ScamperInstance } from "../../scamper"
+import * as FS from "../../fs"
+import { FileEntry } from "../../fs/fs"
 
 // ---------- config ----------
 
@@ -33,8 +33,7 @@ const appVersion = `(${APP_VERSION})`
 
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
-let fs: OPFSFileSystem | null = null
-let scamper: ScamperVue | undefined
+let fs: FS.t | null = null
 let autosaveId = -1
 let config: Config = DEFAULT_CONFIG
 let isLoadingFile = false
@@ -43,16 +42,26 @@ let isLoadingFile = false
 
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
-const isTracing = ref(false)
 const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref("Loading Scamper...")
 
-// ---------- child component refs ----------
+// ---------- editor context + child component refs ----------
 
-const editorRef = shallowRef<CodeMirrorEditorType | null>(null)
+const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
+const session = provideScamperSession(resultsRef, {
+  editor,
+  onRunScheduled: () => {
+    isDirty.value = false
+  },
+})
+const { queries, isTracing, closeQuery } = session
+
+function abortTraceStep() {
+  // TODO: cancel in-flight trace step burst when step handlers are implemented
+}
 
 // ---------- file drawer ----------
 
@@ -95,51 +104,28 @@ function stopAutosaving() {
   autosaveId = -1
 }
 
-// ---------- editor helpers ----------
-
-function getDoc(): string {
-  return editorRef.value?.getDoc() ?? ""
-}
-
 // ---------- dirty tracking ----------
 
 function makeDirty() {
-  if (scamper !== undefined && !isDirty.value) {
-    isDirty.value = true
-  }
-}
-
-function makeClean() {
-  isDirty.value = false
-}
-
-// ---------- scamper execution ----------
-
-function startScamper(tracing: boolean): void {
-  resultsRef.value?.reset()
-  const display = resultsRef.value?.display
-  if (!display) return
-  isTracing.value = tracing
-  try {
-    scamper = new ScamperVue(display, getDoc(), tracing)
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      display.report(e)
-    } else if (e instanceof Error) {
-      display.report(new ScamperError("Runtime", e.message))
-    } else {
-      display.report(new ScamperError("Runtime", String(e)))
-    }
-  }
-  makeClean()
+  isDirty.value = true
+  session.closeAllQueries()
 }
 
 // ---------- file operations ----------
 
-async function saveCurrentFile() {
-  if (!currentFile.value || !fs) return
+function isEditorLoaded(): boolean {
   try {
-    await fs.saveFile(currentFile.value, getDoc())
+    return editor().isLoaded()
+  } catch {
+    return false
+  }
+}
+
+async function saveCurrentFile() {
+  if (!currentFile.value || !fs || isLoadingFile) return
+  if (!isEditorLoaded()) return
+  try {
+    await fs.saveFile(currentFile.value, editor().getDoc())
   } catch (e) {
     if (e instanceof Error) displayError(e.message)
   }
@@ -149,17 +135,18 @@ async function switchToFile(filename: string): Promise<void> {
   if (!fs) return
   isLoadingFile = true
   stopAutosaving()
+  session.stopAll()
   if (currentFile.value !== null) await saveCurrentFile()
 
   currentFile.value = filename
   try {
     const src = await fs.loadFile(currentFile.value)
-    editorRef.value?.initializeDoc(src)
+    editor().initializeDoc(src)
   } catch (e) {
     if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ""}`)
   }
 
-  resultsRef.value?.reset()
+  session.resetOutput()
   await populateFileDrawer()
   config.lastOpenedFilename = currentFile.value
   startAutosaving()
@@ -172,19 +159,6 @@ function displayError(error: string) {
 }
 
 // ---------- header event handlers ----------
-
-async function handleRun() {
-  startScamper(false)
-  await scamper?.runProgram()
-}
-
-function handleTrace() {
-  startScamper(true)
-}
-
-function handleCancel() {
-  scamper?.cancel()
-}
 
 async function handleRunWindow() {
   if (!currentFile.value) return
@@ -203,18 +177,15 @@ function toggleSidebar() {
 // ---------- step handlers ----------
 
 function handleStepOnce() {
-  scamper?.stepProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 async function handleStepStmt() {
-  await scamper?.stepStmtProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 async function handleStepAll() {
-  await scamper?.runProgram()
-  resultsRef.value?.scrollToBottom()
+  // TODO: implement
 }
 
 // ---------- sidebar event handlers ----------
@@ -297,9 +268,10 @@ async function handleDelete() {
   stopAutosaving()
   await fs?.deleteFile(currentFile.value)
   currentFile.value = null
-  editorRef.value?.initializeDummyDoc()
+  editor().initializeDummyDoc()
   config.lastOpenedFilename = null
-  resultsRef.value?.reset()
+  session.stopAll()
+  session.resetOutput()
   await populateFileDrawer()
   startAutosaving()
 }
@@ -359,20 +331,19 @@ const beforeUnloadWrapper = (e: Event) => {
 // ---------- lifecycle ----------
 
 onMounted(async () => {
-  fs = await OPFSFileSystem.create()
-  
+  await FS.initialize()
+  fs = FS.getFS()
+
   const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
     loadingContent.value =
       "Another instance of Scamper is open. Please close that instance and try again."
     return
   }
-  
+
   document.addEventListener("visibilitychange", visibilityChangeWrapper)
   document.addEventListener("pagehide", pageHideWrapper)
   window.addEventListener("beforeunload", beforeUnloadWrapper)
-
-  await initializeLibs()
 
   await loadConfig()
   await populateFileDrawer()
@@ -387,10 +358,12 @@ onMounted(async () => {
   }
 
   isLoading.value = false
+  ScamperInstance.getInstance().calibrateScheduler()
 })
 
 onUnmounted(() => {
   stopAutosaving()
+  session.stopAll()
   document.removeEventListener("visibilitychange", visibilityChangeWrapper)
   document.removeEventListener("pagehide", pageHideWrapper)
   window.removeEventListener("beforeunload", beforeUnloadWrapper)
@@ -416,16 +389,13 @@ onUnmounted(() => {
     <div class="ide-main">
       <IdeHeader
         :current-file="currentFile"
-        :run="handleRun"
-        :trace="handleTrace"
-        :cancel="handleCancel"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
       />
       <div class="content-area">
         <Splitpanes>
           <Pane :size="65" class="editor-pane">
-            <CodeMirrorEditor ref="editorRef" @dirty="makeDirty" />
+            <CodeMirrorEditor @dirty="makeDirty" />
           </Pane>
           <Pane :size="35" class="results-pane">
             <ResultsPane
@@ -435,7 +405,7 @@ onUnmounted(() => {
               :step-once="handleStepOnce"
               :step-stmt="handleStepStmt"
               :step-all="handleStepAll"
-              :cancel="handleCancel"
+              :abort-step="abortTraceStep"
             />
           </Pane>
         </Splitpanes>
@@ -445,6 +415,12 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
+  <QueryModal
+    v-for="q in queries"
+    :key="q.id"
+    :query="q"
+    @close="closeQuery(q.id)"
+  />
 </template>
 
 <style scoped>

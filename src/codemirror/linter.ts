@@ -26,14 +26,14 @@ function addError (err: LPM.ScamperError, diagnostics: Diagnostic[]) {
 }
 
 function makeScamperLinter (_outputId?: HTMLElement) {
-  return linter((view) => {
+  return linter(async (view) => {
     const errors: LPM.ScamperError[] = []
     const diagnostics: Diagnostic[] = []
     const doc = view.state.doc.toString()
     try {
       const sexps = read(doc)
       const program = expandProgram(parseProgram(errors, sexps))
-      scopeCheckProgram(builtinLibs, errors, program)
+      await scopeCheckProgram(builtinLibs, errors, program)
     } catch (e) {
       if (e instanceof LPM.ScamperError) {
         addError(e, diagnostics)

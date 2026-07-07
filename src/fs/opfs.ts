@@ -1,17 +1,13 @@
-/** An entry from the file system */
-export interface FileEntry {
-  name: string
-  preview: string | null
-  isDirectory: boolean
-}
+import type { FS, FileEntry } from './fs'
 
 /**
  * A wrapper around the OPFS API that simplifies access to files with a
  * higher-level API.
  */
-export class OPFSFileSystem {
+export class OPFSFileSystem implements FS {
   private root?: FileSystemDirectoryHandle
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() { }
 
   /** @returns a new file system instance for accessing the OPFS */
@@ -55,7 +51,7 @@ export class OPFSFileSystem {
   }
 
   /** @return a preview (prefix) of the file denoted by the given handle */
-  async getFilePreview(fileHandle: FileSystemFileHandle): Promise<string> {
+  private async getFilePreview(fileHandle: FileSystemFileHandle): Promise<string> {
     try {
       const file = await fileHandle.getFile()
       const text = await file.text()

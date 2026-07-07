@@ -22,7 +22,7 @@ import { format } from "prettier"
 import ScamperPlugin from "../prettier/prettier-plugin-scamper"
 import { diff } from "@codemirror/merge"
 
-const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
+export const noLoadedFileText = '; Create and/or load a file from the left-hand sidebar!'
 
 export type EditorStateConfig = {
   output?: HTMLElement
@@ -74,7 +74,10 @@ const prettierExtension: Extension = keymap.of([
   },
 ])
 
-function mkExtensions(config: EditorStateConfig): Extension {
+function mkExtensions(
+  config: EditorStateConfig,
+  extraExtensions: Extension[] = [],
+): Extension {
   return [
     // basicSetup
     lineNumbers(),
@@ -124,22 +127,27 @@ function mkExtensions(config: EditorStateConfig): Extension {
     makeScamperLinter(config.output),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) { config.dirtyAction() }
-    })
+    }),
+    ...extraExtensions,
   ]
 }
 
-export function mkFreshEditorState (doc: string, config: EditorStateConfig): EditorState {
+export function mkFreshEditorState (
+  doc: string,
+  config: EditorStateConfig,
+  extraExtensions: Extension[] = [],
+): EditorState {
   return EditorState.create({
-    doc, extensions: mkExtensions(config)
+    doc, extensions: mkExtensions(config, extraExtensions)
   })
 }
 
-export function mkNoFileEditorState (): EditorState {
+export function mkNoFileEditorState (extraExtensions: Extension[] = []): EditorState {
   return EditorState.create({
     doc: noLoadedFileText,
     extensions: mkExtensions({
       dirtyAction: () => { },
       isReadOnly: true
-    })
+    }, extraExtensions)
   })
 }
