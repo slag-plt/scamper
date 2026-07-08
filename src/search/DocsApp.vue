@@ -1,38 +1,35 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import ApiEntries from './ApiEntries.vue';
-
-
-
+//import SearchResults from "./SearchResults.vue";
 const appVersion = APP_VERSION
-// import ModuleList from "./ModuleList.vue"
-// import ApiEntries from "./ApiEntries.vue"
+import ModuleList from "./ModuleList.vue"
 
-// import * as Audio from "./api/audio.js"
-// import * as Prelude from "./api/prelude.js"
-// import * as Image from "./api/image.js"
-// import * as Lab from "./api/lab.js"
-// import * as Music from "./api/music.js"
-// import * as Test from "./api/test.js"
-// import * as Canvas from "./api/canvas.js"
-// import * as Html from "./api/html.js"
-// import * as Reactive from "./api/reactive.js"
-// import * as Data from "./api/data.js"
-// import * as Rex from "./api/rex.js"
+import * as Audio from "./api/audio.js"
+import * as Prelude from "./api/prelude.js"
+import * as Image from "./api/image.js"
+import * as Lab from "./api/lab.js"
+import * as Music from "./api/music.js"
+import * as Test from "./api/test.js"
+import * as Canvas from "./api/canvas.js"
+import * as Html from "./api/html.js"
+import * as Reactive from "./api/reactive.js"
+import * as Data from "./api/data.js"
+import * as Rex from "./api/rex.js"
 
-// const libs: [string, object][] = [
-//   ["prelude", Prelude],
-//   ["image", Image],
-//   ["lab", Lab],
-//   ["music", Music],
-//   ["test", Test],
-//   ["audio", Audio],
-//   ["canvas", Canvas],
-//   ["html", Html],
-//   ["reactive", Reactive],
-//   ["data", Data],
-//   ["rex", Rex],
-// ]
+const libs: [string, object][] = [
+  ["prelude", Prelude],
+  ["image", Image],
+  ["lab", Lab],
+  ["music", Music],
+  ["test", Test],
+  ["audio", Audio],
+  ["canvas", Canvas],
+  ["html", Html],
+  ["reactive", Reactive],
+  ["data", Data],
+  ["rex", Rex],
+]
 
 
 const search = ref("")
@@ -67,15 +64,15 @@ const searched = urlParams.get('search');
       </div>
     </div>
     <div class="docs">
-    <div v-if="searched">
-      <h2 :style="{ textAlign: 'center' }">Search results for "{{ searched }}"</h2>
+    <div v-if="searched" class="flex-box">
+      <h2 :style="{  }">Search results for "{{ searched }}"</h2>
       <input
         v-model="search"  
         size = "30"
+        class="search-input"
         placeholder="Search function or ''just search''..."
         @keyup.enter="searchForFunction(search)"
       >
-      <p>TODO: implement search results page</p>
     </div>
     <div :style="{ margin: '15px' }">
       <ApiEntries/>
@@ -137,5 +134,24 @@ body,
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.flex-box {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-top: -10px;
+  margin-bottom: -10px;
+}
+
+.flex-box2 {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+}
+
+.search-input{
+  height: 24px;
+  margin-top: 20px;
 }
 </style>
