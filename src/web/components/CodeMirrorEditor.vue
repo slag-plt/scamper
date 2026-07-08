@@ -64,4 +64,8 @@ onUnmounted(() => {
     Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
   font-size: 1em;
 }
+
+:deep(.cm-query-placeholder) {
+  border-left: 2px solid #7cacf8;
+}
 </style>

@@ -1,24 +1,23 @@
 import {
   computed,
   inject,
+  onScopeDispose,
   type InjectionKey,
   provide,
   reactive,
   ref,
+  shallowRef,
   type ShallowRef,
 } from "vue"
-import { type DisplayRequest, ScamperInstance } from "../../scamper"
+import {
+  type DisplayRequest,
+  type QueryEntry,
+  QUERIES_CHANGED,
+  ScamperInstance,
+} from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
-
-interface QueryEntry {
-  id: SchedulerId
-  targetPos: number
-  err: SimpleErrorChannel
-  done: Promise<void>
-}
 
 export interface ScamperSessionOptions {
   editor: EditorAccessor
@@ -30,9 +29,19 @@ function createScamperSession(
   editor: EditorAccessor,
   onRunScheduled?: () => void,
 ) {
-  const queries = ref<QueryEntry[]>([])
   const activeRun = ref<DisplayRequest | null>(null)
   const scamper = ScamperInstance.getInstance()
+
+  const queries = shallowRef<readonly QueryEntry[]>([...scamper.queries])
+
+  const syncQueries = () => {
+    queries.value = [...scamper.queries]
+  }
+
+  scamper.queryEvents.addEventListener(QUERIES_CHANGED, syncQueries)
+  onScopeDispose(() => {
+    scamper.queryEvents.removeEventListener(QUERIES_CHANGED, syncQueries)
+  })
 
   const currentRun = computed(() => activeRun.value?.id ?? null)
   const isTracing = computed(() => activeRun.value?.tracing ?? false)
@@ -52,20 +61,12 @@ function createScamperSession(
     activeRun.value = null
   }
 
-  function closeAllQueries() {
-    for (const q of queries.value) {
-      scamper.cancel(q.id)
-    }
-    queries.value = []
-  }
-
-  function closeQuery(id: SchedulerId) {
-    scamper.cancel(id)
-    queries.value = queries.value.filter((q) => q.id !== id)
+  function invalidateAllQueries() {
+    scamper.invalidateAllQueries()
   }
 
   function stopAll() {
-    closeAllQueries()
+    scamper.invalidateAllQueries()
     stopRun()
   }
 
@@ -103,15 +104,7 @@ function createScamperSession(
     const err = reactive(new SimpleErrorChannel())
     const queryLoc = editor().getCursorLoc()
     const src = editor().getDoc()
-    const run = await scamper.query({ src, err, queryLoc })
-    if (run) {
-      queries.value.push({
-        id: run.id,
-        targetPos: queryLoc.idx,
-        err,
-        done: run.done,
-      })
-    }
+    await scamper.query({ src, err, queryLoc })
     onRunScheduled?.()
   }
 
@@ -121,8 +114,7 @@ function createScamperSession(
     isTracing,
     resetOutput,
     stopRun,
-    closeAllQueries,
-    closeQuery,
+    invalidateAllQueries,
     stopAll,
     execute,
     query,
@@ -155,5 +147,3 @@ export function useScamperSession(): ScamperSession {
   }
   return session
 }
-
-export type { QueryEntry }

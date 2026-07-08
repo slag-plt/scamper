@@ -2,7 +2,7 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel, Range, ReportError } from "../../src/lpm"
-import { QueryRequest, ScamperInstance } from "../../src/scamper"
+import { ScamperInstance } from "../../src/scamper"
 import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
 import type { EditorAccessor } from "../../src/web/composables/editor-context"
 import {
@@ -41,6 +41,7 @@ describe("query modal reactivity regression", () => {
   let reportQueryResult: ((value: number) => void) | null = null
 
   afterEach(() => {
+    ScamperInstance.getInstance().invalidateAllQueries()
     vi.restoreAllMocks()
     reportQueryResult = null
   })
@@ -52,21 +53,18 @@ describe("query modal reactivity regression", () => {
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
         session = provideScamperSession(paneRef, { editor })
-        vi.spyOn(ScamperInstance.getInstance(), "query").mockImplementation(
-          ({ err }) => {
-            reportQueryResult = (value: number) => {
-              err.report(new ReportError(value, Range.none))
-            }
-            return new Promise<QueryRequest | null>((resolve) => {
-              resolve({
-                id: "query-test",
-                done: new Promise((resolve) => {
-                  resolve()
-                }),
-              })
-            })
-          },
-        )
+        const scamper = ScamperInstance.getInstance()
+        vi.spyOn(scamper, "query").mockImplementation(async ({ err, queryLoc }) => {
+          reportQueryResult = (value: number) => {
+            err.report(new ReportError(value, Range.none))
+          }
+          scamper.registerQueryEntry({
+            id: "query-test",
+            err,
+            queryPos: queryLoc.idx,
+            done: Promise.resolve(),
+          })
+        })
         return { queries: session.queries }
       },
       template: `

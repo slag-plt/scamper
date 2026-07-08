@@ -29,24 +29,37 @@ export interface DisplayRequest extends RunRequest {
 }
 export type QueryRequest = RunRequest
 
-const defaultEnv =
-  Env.empty.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('runtime', builtinLibs.get('runtime')!).
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('prelude', builtinLibs.get('prelude')!)
+export interface QueryEntry {
+  id: SchedulerId
+  queryPos: number
+  err: ErrorChannel
+  done: Promise<void>
+}
+
+export const QUERIES_CHANGED = "scamper:querieschanged"
+
+const defaultEnv = Env.empty
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  .extendWithImport("runtime", builtinLibs.get("runtime")!)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  .extendWithImport("prelude", builtinLibs.get("prelude")!)
 
 export class ScamperInstance {
-  // singleton structure
+  /*  =====  singleton-related fields  =====  */
   static #instance?: ScamperInstance
-  #scheduler: Scheduler
-
   static getInstance(): ScamperInstance {
     ScamperInstance.#instance ??= new ScamperInstance()
     return ScamperInstance.#instance
   }
+
+  /*  =====  instance-related fields  =====  */
+  #scheduler: Scheduler
+  #queries: QueryEntry[]
+  #queryBus = new EventTarget()
+
   private constructor() {
     this.#scheduler = new Scheduler()
+    this.#queries = []
   }
 
   /**
@@ -86,16 +99,36 @@ export class ScamperInstance {
     })
     return { id, tracing, done: promise }
   }
+
+  /*  =====  scheduler  =====  */
+  public cancel(id: SchedulerId) {
+    this.#scheduler.cancelTask(id)
+  }
+  public calibrateScheduler(): void {
+    void this.#scheduler.setTimeQuantumFromFPS()
+  }
+
+  /*  =====  querying  =====  */
+  get queryEvents(): EventTarget {
+    return this.#queryBus
+  }
+  get queries(): readonly QueryEntry[] {
+    return this.#queries
+  }
+  #updateQueries(next: QueryEntry[]): void {
+    this.#queries = next
+    this.#queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
+  }
   public async query({
     src,
     err,
     queryLoc,
-  }: QueryExecutionConfig): Promise<QueryRequest | null> {
+  }: QueryExecutionConfig): Promise<void> {
     // compile src to lpm bytecode
     const compiled = await compile(err, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
-      return null
+      return
     }
 
     // make new fiber with prelude as initial environment
@@ -112,14 +145,25 @@ export class ScamperInstance {
         resolve()
       },
     })
-    return { id, done: promise }
+    this.#updateQueries([
+      ...this.#queries,
+      { id, err, done: promise, queryPos: queryLoc.idx },
+    ])
   }
-  public cancel(id: SchedulerId) {
-    this.#scheduler.cancelTask(id)
+  public invalidateAllQueries() {
+    for (const q of this.#queries) {
+      this.cancel(q.id)
+    }
+    this.#updateQueries([])
+  }
+  public invalidateQuery(id: SchedulerId) {
+    this.cancel(id)
+    this.#updateQueries(this.#queries.filter((q) => q.id !== id))
   }
 
-  public calibrateScheduler(): void {
-    void this.#scheduler.setTimeQuantumFromFPS()
+  /** Registers a query entry without scheduling. Used by tests mocking `query()`. */
+  registerQueryEntry(entry: QueryEntry): void {
+    this.#updateQueries([...this.#queries, entry])
   }
 }
 

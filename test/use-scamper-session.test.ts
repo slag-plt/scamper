@@ -43,6 +43,21 @@ function mockExecute(scamper: ScamperInstance) {
   })
 }
 
+function mockScheduledQuery(
+  scamper: ScamperInstance,
+  id: string,
+  done: Promise<void> = new Promise(() => {}),
+) {
+  return vi.spyOn(scamper, "query").mockImplementation(async ({ err, queryLoc }) => {
+    scamper.registerQueryEntry({
+      id,
+      err,
+      queryPos: queryLoc.idx,
+      done,
+    })
+  })
+}
+
 function makeAdapter(): CodeMirrorEditorAdapter {
   return {
     getDoc: () => "1",
@@ -88,6 +103,7 @@ function mountSession(
 
 describe("useScamperSession", () => {
   afterEach(() => {
+    ScamperInstance.getInstance().invalidateAllQueries()
     vi.restoreAllMocks()
   })
 
@@ -116,10 +132,7 @@ describe("useScamperSession", () => {
   test("stopRun does not cancel queries", async () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
-    vi.spyOn(scamper, "query").mockResolvedValue({
-      id: "query-1",
-      done: expect.anything() as Promise<void>,
-    })
+    mockScheduledQuery(scamper, "query-1")
     mockExecute(scamper)
 
     const session = mountSession()
@@ -139,13 +152,21 @@ describe("useScamperSession", () => {
     const scamper = ScamperInstance.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     vi.spyOn(scamper, "query")
-      .mockResolvedValueOnce({
-        id: "query-1",
-        done: expect.anything() as Promise<void>,
+      .mockImplementationOnce(async ({ err, queryLoc }) => {
+        scamper.registerQueryEntry({
+          id: "query-1",
+          err,
+          queryPos: queryLoc.idx,
+          done: new Promise(() => {}),
+        })
       })
-      .mockResolvedValueOnce({
-        id: "query-2",
-        done: expect.anything() as Promise<void>,
+      .mockImplementationOnce(async ({ err, queryLoc }) => {
+        scamper.registerQueryEntry({
+          id: "query-2",
+          err,
+          queryPos: queryLoc.idx,
+          done: new Promise(() => {}),
+        })
       })
     mockExecute(scamper)
 
@@ -229,10 +250,7 @@ describe("useScamperSession", () => {
   test("execute is a no-op when the results pane is unavailable", async () => {
     const scamper = ScamperInstance.getInstance()
     const execute = vi.spyOn(scamper, "execute")
-    vi.spyOn(scamper, "query").mockResolvedValue({
-      id: "query-1",
-      done: expect.anything() as Promise<void>,
-    })
+    mockScheduledQuery(scamper, "query-1")
     const onRunScheduled = vi.fn()
 
     const session = mountSession({ onRunScheduled }, null)

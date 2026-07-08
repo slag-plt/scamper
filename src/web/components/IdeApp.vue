@@ -107,7 +107,7 @@ function stopAutosaving() {
 
 function makeDirty() {
   isDirty.value = true
-  session.closeAllQueries()
+  session.invalidateAllQueries()
 }
 
 // ---------- file operations ----------
