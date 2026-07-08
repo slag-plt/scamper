@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { QueryMap } from "../../../scamper"
-import QueryModal from "./QueryModal.vue"
+import QueryModal from "./modal/QueryModal.vue"
 import { ModalHeight } from "./query-sizing"
 
 defineProps<{ queries: NonNullable<ReturnType<QueryMap["get"]>> }>()

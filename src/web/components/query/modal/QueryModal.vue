@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ModalCols, ModalPadding } from "./query-sizing"
-import { QueryEntry } from "../../../scamper"
+import { ModalCols, ModalPadding } from "../query-sizing"
+import { QueryEntry } from "../../../../scamper"
 import { computed } from "vue"
-import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
-import { ReportError } from "../../../lpm"
-import ValueRenderer from "../../../lpm/renderers/vue/ValueRenderer.vue"
+import { SimpleErrorChannel } from "../../../../lpm/output/simple-error"
+import { ReportError } from "../../../../lpm"
+import ModalContents from "./ModalContents.vue"
+import ModalControls from "./ModalControls.vue"
 
 const { query } = defineProps<{ query: QueryEntry }>()
 
@@ -31,26 +32,22 @@ const padding = `${paddingVertical} ${paddingHorizontal}`
 
 <template>
   <div id="query-modal" :data-query-id="query.id">
-    <ValueRenderer :value="toRender" />
+    <ModalContents :value="toRender" />
+    <ModalControls :id="query.id" />
   </div>
 </template>
 
 <style scoped>
 #query-modal {
+  display: flex;
+  justify-content: space-between;
   box-sizing: border-box;
   box-shadow: 0 0 v-bind("paddingVertical") rgba(0, 0, 0, 0.3);
   background-color: white;
   width: v-bind("width");
+  min-width: 0;
   padding: v-bind("padding");
-  white-space: normal;
-  line-clamp: 2;
-  overflow-wrap: break-word;
   overflow: clip;
   overflow-clip-margin: content-box;
-  /* TODO: such a dumb hack for line clamping... wait for line-clamp to be real */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  min-width: 0;
 }
 </style>

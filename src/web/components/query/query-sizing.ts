@@ -1,4 +1,4 @@
-export const ModalCols = 8
+export const ModalCols = 10
 export const ModalRows = 2
 export const ModalPadding = 0.5
 
