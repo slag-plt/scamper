@@ -48,9 +48,9 @@ const AisOpen = ref(false)
 const RisOpen = ref(false)
 const TisOpen = ref(false)
 
-const tags = ref([])
-const argumentTypes = ref([])
-const returnTypes = ref([])
+const tags = ref<string[]>([])
+const argumentTypes = ref<string[]>([])
+const returnTypes = ref<string[]>([])
 const pBool = ref([
 { id: 7, val: 'or' },
 { id: 8, val: 'and' }
@@ -67,21 +67,58 @@ const rawLibs = toRaw(libs);
 function makeString(foo: object) {
   let str = "\n"
   for (const [key, value] of Object.entries(foo)) {
-    str += `${key}: ${value}\n`     
+    str += `${key}: ${value}\n`
   }
   return str
 }
 
-function checkReturn(foo: object) {
+function checkArg(foo: object) {
+  // Object.entries(foo).forEach(([key, value]) => {
+  //   if (key === "args") {
+  //     console.log("args: ", value);
+  //     Object.entries(value).forEach(([argKey, argValue]) => {
+  //       argValue = isProxy(argValue) ? toRaw(argValue) : argValue;
+  //       if (toRaw(argumentTypes).value.includes(argValue)) {
+  //         return true;
+  //       }
+  //     }
+  //     // Check if the argument types match the selected argument types
+  //     if (Array.isArray(value)) {
+  //       for (const arg of value) {
+  //         if (!argumentTypes.value.includes(arg)) {
+  //           return false;
+  //         }
+  //       }
+  //     } else {
+  //       if (!argumentTypes.value.includes(value)) {
+  //         return false;
+  //       }
+  //     }
+  //   }
+  // });
   return true;
 }
 
-function checkArg(foo: object) {
+function checkReturn(foo: object) {
+  Object.entries(foo).forEach(([key, type]) => {
+    if (key === "returnType") {
+      type = isProxy(type) ? toRaw(type) : type;
+      type = type.replace("?", "");
+      console.log("returnType: ", type);
+      console.log("CALAL", returnTypes.value)
+      console.log("TRUTH", returnTypes.value.includes(type))
+      if (!returnTypes.value.includes(type)) {
+        return false;
+      }
+    }
+  });
   return true;
 }
 
 function searchFilter(foo: object) {
-  if(checkReturn(foo) && checkArg(foo)) return true;
+  if(checkReturn(foo) && checkArg(foo)){
+    return true;
+  }
   return false;
 }
 
@@ -189,7 +226,7 @@ function searchFilter(foo: object) {
                       <div v-for="library in rawLibs" :key="library[0]">
                         <text><strong>{{library[0]}}</strong></text>
                         <div v-for="foo in library[1]" :key="foo[0]">
-                          <text v-if="1" >{{makeString(foo)}}</text>
+                          <text v-if="searchFilter(foo)" >{{makeString(foo)}}</text>
                         </div>
                       </div>
 
@@ -228,6 +265,8 @@ function searchFilter(foo: object) {
   flex-shrink: 0;
   min-height: 0;
   width: 90%;
+  height: 600px;
+  overflow: scroll;
 }
 
 .index ul,
@@ -282,7 +321,7 @@ function searchFilter(foo: object) {
 .entries {
   flex: 1;
   min-height: 0;
-  white-space: pre-line
+  white-space: pre-line;
 }
 
 </style>
