@@ -1,6 +1,6 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
-import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
+import { compareLoc, Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler, SchedulerId } from "./scheduler"
 import { compile } from "./scheme"
@@ -31,7 +31,7 @@ export type QueryRequest = RunRequest
 
 export interface QueryEntry {
   id: SchedulerId
-  queryPos: number
+  queryLoc: Loc
   err: ErrorChannel
   done: Promise<void>
 }
@@ -124,6 +124,12 @@ export class ScamperInstance {
     err,
     queryLoc,
   }: QueryExecutionConfig): Promise<void> {
+    if (this.#queries.some((q) => compareLoc(q.queryLoc, queryLoc) === 0)) {
+      // TODO: properly dedupe queries
+      //  requires lifting back up the exact range we put the report...
+      console.warn("attempted duplicate query")
+      return
+    }
     // compile src to lpm bytecode
     const compiled = await compile(err, src, queryLoc)
     if (!compiled) {
@@ -147,7 +153,7 @@ export class ScamperInstance {
     })
     this.#updateQueries([
       ...this.#queries,
-      { id, err, done: promise, queryPos: queryLoc.idx },
+      { id, err, done: promise, queryLoc },
     ])
   }
   public invalidateAllQueries() {

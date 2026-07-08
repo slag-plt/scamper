@@ -46,16 +46,18 @@ function mockExecute(scamper: ScamperInstance) {
 function mockScheduledQuery(
   scamper: ScamperInstance,
   id: string,
-  done: Promise<void> = new Promise(() => {}),
+  done = new Promise<void>(() => {}),
 ) {
-  return vi.spyOn(scamper, "query").mockImplementation(async ({ err, queryLoc }) => {
-    scamper.registerQueryEntry({
-      id,
-      err,
-      queryPos: queryLoc.idx,
-      done,
+  return vi
+    .spyOn(scamper, "query")
+    .mockImplementation(async ({ err, queryLoc }) => {
+      scamper.registerQueryEntry({
+        id,
+        err,
+        queryLoc,
+        done,
+      })
     })
-  })
 }
 
 function makeAdapter(): CodeMirrorEditorAdapter {
@@ -156,7 +158,7 @@ describe("useScamperSession", () => {
         scamper.registerQueryEntry({
           id: "query-1",
           err,
-          queryPos: queryLoc.idx,
+          queryLoc,
           done: new Promise(() => {}),
         })
       })
@@ -164,7 +166,7 @@ describe("useScamperSession", () => {
         scamper.registerQueryEntry({
           id: "query-2",
           err,
-          queryPos: queryLoc.idx,
+          queryLoc,
           done: new Promise(() => {}),
         })
       })

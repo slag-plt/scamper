@@ -1,6 +1,7 @@
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { afterEach, describe, expect, test } from "vitest"
+import { Loc } from "../../src/lpm"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
 import { ScamperInstance } from "../../src/scamper"
 import {
@@ -26,7 +27,7 @@ describe("query decorations", () => {
     const scamper = ScamperInstance.getInstance()
     scamper.registerQueryEntry({
       id: "test-query",
-      queryPos: 8,
+      queryLoc: new Loc(1, 8, 8),
       err: new SimpleErrorChannel(),
       done: Promise.resolve(),
     })

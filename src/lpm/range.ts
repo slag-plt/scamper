@@ -17,7 +17,7 @@ export class Loc {
   static none: Loc = new Loc(-1, -1, -1)
 }
 
-function compareLoc(loc1: Loc, loc2: Loc): number {
+export function compareLoc(loc1: Loc, loc2: Loc): number {
   return loc1.idx - loc2.idx
 }
 
