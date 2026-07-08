@@ -50,6 +50,10 @@ export function createCodeMirrorEditorAdapter(
       return new Loc(line.number, idx - line.from, idx)
     },
 
+    coordsAtIdx(idx: number) {
+      return view.coordsAtPos(idx)
+    },
+
     destroy() {
       scamper.queryEvents.removeEventListener(QUERIES_CHANGED, onQueriesChanged)
     },

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { QueryMap } from "../../../scamper"
 import { getIdForGhostLine } from "../../codemirror/extensions/query"
-import { computed } from "vue"
+import { type ComponentPublicInstance, computed, ref } from "vue"
 import QueryContainer from "./QueryContainer.vue"
 import { ModalCols } from "./query-sizing"
 import QueryConnectors from "./QueryConnectors.vue"
@@ -39,13 +39,18 @@ const leftOffset = computed(() => {
 
   return offset < 0 ? 0 : offset
 })
+
+const containerRef = ref<ComponentPublicInstance | null>(null)
+const containerEl = computed(
+  () => (containerRef.value?.$el ?? null) as HTMLElement | null,
+)
 </script>
 
 <template>
   <Teleport :to="`#${getIdForGhostLine(line)}`" defer>
     <div id="ghost-line">
-      <QueryContainer :queries="queries" />
-      <QueryConnectors />
+      <QueryContainer ref="containerRef" :queries="queries" />
+      <QueryConnectors :queries="queries" :container="containerEl" />
     </div>
   </Teleport>
 </template>
@@ -56,8 +61,8 @@ const leftOffset = computed(() => {
   height: 100%;
   left: v-bind("`${leftOffset}ch`");
   position: relative;
-  background-color: red;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 </style>

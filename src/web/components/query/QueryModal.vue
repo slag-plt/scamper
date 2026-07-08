@@ -13,6 +13,7 @@ const toRender = computed(() => {
     return "Fatal query error"
   }
   const firstErr = query.err.errors.at(0)
+  // TODO: don't forget done wiring
   if (!firstErr) {
     return "No query found."
   }
@@ -29,7 +30,7 @@ const padding = `${paddingVertical} ${paddingHorizontal}`
 </script>
 
 <template>
-  <div id="query-modal">
+  <div id="query-modal" :data-query-id="query.id">
     <ValueRenderer :value="toRender" />
   </div>
 </template>
@@ -37,7 +38,8 @@ const padding = `${paddingVertical} ${paddingHorizontal}`
 <style scoped>
 #query-modal {
   box-sizing: border-box;
-  background-color: lightblue;
+  box-shadow: 0 0 v-bind("paddingVertical") rgba(0, 0, 0, 0.3);
+  background-color: lightgray;
   width: v-bind("width");
   padding: v-bind("padding");
   white-space: normal;
