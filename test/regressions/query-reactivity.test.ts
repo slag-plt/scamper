@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef } from "vue"
+import { computed, defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel, Range, ReportError } from "../../src/lpm"
@@ -67,12 +67,16 @@ describe("query modal reactivity regression", () => {
             })
           },
         )
-        return { queries: session.queries }
+        return { queries: computed(() => session.queries.value) }
       },
       template: `
         <div>
-          <template v-for="q in queries" :key="q.id">
-            <span data-testid="query-status">
+          <template v-for="[line, bucket] in queries" :key="line">
+            <span
+              v-for="q in bucket"
+              :key="q.id"
+              data-testid="query-status"
+            >
               {{ q.err.errors.length === 0 ? "pending" : "done:" + q.err.errors.length }}
             </span>
           </template>

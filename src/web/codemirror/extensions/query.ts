@@ -1,7 +1,7 @@
 import type { Text } from "@codemirror/state"
 import { StateEffect, StateField, Transaction } from "@codemirror/state"
 import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view"
-import { type QueryEntry, ScamperInstance } from "../../../scamper"
+import { type QueryMap, ScamperInstance } from "../../../scamper"
 
 export function getIdForGhostLine(line: number) {
   return `query-ghost-line-${line.toString()}`
@@ -24,18 +24,11 @@ class GhostLineWidget extends WidgetType {
   }
 }
 
-function buildGhostLines(
-  queries: readonly QueryEntry[],
-  doc: Text,
-): DecorationSet {
+function buildGhostLines(queries: QueryMap, doc: Text): DecorationSet {
   if (doc.length === 0) {
     return Decoration.none
   }
-  const lines = queries.reduce((lines, q) => {
-    lines.add(q.queryLoc.line)
-    return lines
-  }, new Set<number>())
-  const widgets = [...lines].map((line) =>
+  const widgets = [...queries.keys()].map((line) =>
     Decoration.widget({
       widget: new GhostLineWidget(line),
       block: true,

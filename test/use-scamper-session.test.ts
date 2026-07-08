@@ -3,7 +3,7 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, LoggingChannel } from "../src/lpm"
-import { type DisplayRequest, ScamperInstance } from "../src/scamper"
+import { type DisplayRequest, type QueryMap, ScamperInstance } from "../src/scamper"
 import type { CodeMirrorEditorAdapter } from "../src/web/composables/codemirror-editor-adapter"
 import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
@@ -13,6 +13,14 @@ import {
   type ScamperSessionOptions,
 } from "../src/web/composables/use-scamper-session"
 import type { ResultsPaneType } from "../src/web/composables/use-results-pane"
+
+function queryCount(map: QueryMap): number {
+  let count = 0
+  for (const bucket of map.values()) {
+    count += bucket.length
+  }
+  return count
+}
 
 interface MockRun extends DisplayRequest {
   resolve(): void
@@ -146,7 +154,7 @@ describe("useScamperSession", () => {
     expect(runId).not.toBeNull()
     expect(cancel).toHaveBeenCalledWith(runId)
     expect(cancel).not.toHaveBeenCalledWith("query-1")
-    expect(session.queries.value).toHaveLength(1)
+    expect(queryCount(session.queries.value)).toBe(1)
     expect(session.currentRun.value).toBeNull()
   })
 
@@ -183,7 +191,7 @@ describe("useScamperSession", () => {
     expect(cancel).toHaveBeenCalledWith("query-2")
     expect(runId).not.toBeNull()
     expect(cancel).toHaveBeenCalledWith(runId)
-    expect(session.queries.value).toHaveLength(0)
+    expect(queryCount(session.queries.value)).toBe(0)
     expect(session.currentRun.value).toBeNull()
   })
 
@@ -260,7 +268,7 @@ describe("useScamperSession", () => {
     await session.execute()
 
     expect(execute).not.toHaveBeenCalled()
-    expect(session.queries.value).toHaveLength(1)
+    expect(queryCount(session.queries.value)).toBe(1)
     expect(onRunScheduled).toHaveBeenCalledTimes(1)
   })
 

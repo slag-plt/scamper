@@ -11,11 +11,12 @@ import {
 } from "vue"
 import {
   type DisplayRequest,
-  type QueryEntry,
+  type QueryMap,
   QUERIES_CHANGED,
   ScamperInstance,
 } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
+import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
 
@@ -32,10 +33,10 @@ function createScamperSession(
   const activeRun = ref<DisplayRequest | null>(null)
   const scamper = ScamperInstance.getInstance()
 
-  const queries = shallowRef<readonly QueryEntry[]>([...scamper.queries])
+  const queries = shallowRef<QueryMap>(new Map(scamper.queries))
 
   const syncQueries = () => {
-    queries.value = [...scamper.queries]
+    queries.value = new Map(scamper.queries)
   }
 
   scamper.queryEvents.addEventListener(QUERIES_CHANGED, syncQueries)
@@ -63,6 +64,10 @@ function createScamperSession(
 
   function invalidateAllQueries() {
     scamper.invalidateAllQueries()
+  }
+
+  function invalidateQuery(id: SchedulerId) {
+    scamper.invalidateQuery(id)
   }
 
   function stopAll() {
@@ -115,6 +120,7 @@ function createScamperSession(
     resetOutput,
     stopRun,
     invalidateAllQueries,
+    invalidateQuery,
     stopAll,
     execute,
     query,

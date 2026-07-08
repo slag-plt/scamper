@@ -36,6 +36,8 @@ export interface QueryEntry {
   done: Promise<void>
 }
 
+export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
+
 export const QUERIES_CHANGED = "scamper:querieschanged"
 
 const defaultEnv = Env.empty
@@ -54,12 +56,11 @@ export class ScamperInstance {
 
   /*  =====  instance-related fields  =====  */
   #scheduler: Scheduler
-  #queries: QueryEntry[]
+  #queries = new Map<number, QueryEntry[]>()
   #queryBus = new EventTarget()
 
   private constructor() {
     this.#scheduler = new Scheduler()
-    this.#queries = []
   }
 
   /**
@@ -112,11 +113,11 @@ export class ScamperInstance {
   get queryEvents(): EventTarget {
     return this.#queryBus
   }
-  get queries(): readonly QueryEntry[] {
+  get queries(): QueryMap {
     return this.#queries
   }
-  #updateQueries(next: QueryEntry[]): void {
-    this.#queries = next
+  #updateQueries(mutate: (queries: Map<number, QueryEntry[]>) => void): void {
+    mutate(this.#queries)
     this.#queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
   }
   public async query({
@@ -124,7 +125,11 @@ export class ScamperInstance {
     err,
     queryLoc,
   }: QueryExecutionConfig): Promise<void> {
-    if (this.#queries.some((q) => compareLoc(q.queryLoc, queryLoc) === 0)) {
+    if (
+      this.#queries
+        .get(queryLoc.line)
+        ?.some((q) => compareLoc(q.queryLoc, queryLoc) === 0)
+    ) {
       // TODO: properly dedupe queries
       //  requires lifting back up the exact range we put the report...
       console.warn("attempted duplicate query")
@@ -151,25 +156,43 @@ export class ScamperInstance {
         resolve()
       },
     })
-    this.#updateQueries([
-      ...this.#queries,
-      { id, err, done: promise, queryLoc },
-    ])
+    const entry: QueryEntry = { id, err, done: promise, queryLoc }
+    this.registerQueryEntry(entry)
   }
   public invalidateAllQueries() {
-    for (const q of this.#queries) {
-      this.cancel(q.id)
+    for (const bucket of this.#queries.values()) {
+      for (const q of bucket) {
+        this.cancel(q.id)
+      }
     }
-    this.#updateQueries([])
+    this.#updateQueries((queries) => queries.clear())
   }
   public invalidateQuery(id: SchedulerId) {
     this.cancel(id)
-    this.#updateQueries(this.#queries.filter((q) => q.id !== id))
+    this.#updateQueries((queries) => {
+      for (const [line, bucket] of queries) {
+        const i = bucket.findIndex((q) => q.id === id)
+        if (i === -1) continue
+        bucket.splice(i, 1)
+        if (bucket.length === 0) {
+          queries.delete(line)
+        }
+        return
+      }
+    })
   }
 
-  /** Registers a query entry without scheduling. Used by tests mocking `query()`. */
+  /** Adds a query entry to the line bucket and notifies listeners. */
   registerQueryEntry(entry: QueryEntry): void {
-    this.#updateQueries([...this.#queries, entry])
+    this.#updateQueries((queries) => {
+      const line = entry.queryLoc.line
+      const bucket = queries.get(line)
+      if (bucket) {
+        bucket.push(entry)
+      } else {
+        queries.set(line, [entry])
+      }
+    })
   }
 }
 
