@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, useTemplateRef } from "vue"
+import { computed, onBeforeUnmount, onMounted, useTemplateRef } from "vue"
 import { useScamperSession } from "../../composables/use-scamper-session"
 import ModalContents from "./modal/ModalContents.vue"
 import {
+  getQueryAnchorName,
   ModalOverallPadding,
   ModalVerticalPadding,
   ModalWidth,
-  useReportedValue,
+  useReportedValue
 } from "./query-utils"
 import ModalControls from "./modal/ModalControls.vue"
 import { SchedulerId } from "../../../scheduler"
@@ -16,6 +17,8 @@ const { queryId } = defineProps<{ queryId: SchedulerId }>()
 const popover = useTemplateRef<HTMLDivElement>("modal-ref")
 
 const { collapseQuery, getQueryOrThrow } = useScamperSession()
+
+const queryAnchorName = computed(() => getQueryAnchorName(queryId))
 
 const handleClick = (e: MouseEvent) => {
   const el = popover.value
@@ -71,5 +74,17 @@ onBeforeUnmount(() => {
   background-color: white;
   min-width: 0;
   padding: v-bind("ModalOverallPadding");
+}
+
+@supports (anchor-name: --test) {
+  #expanded-query-modal {
+    position-anchor: v-bind("queryAnchorName");
+    position-area: top center;
+    position-visibility: anchors-visible;
+    top: auto;
+    left: anchor(center);
+    bottom: anchor(bottom);
+    transform: translate(-50%, -0.5rem);
+  }
 }
 </style>

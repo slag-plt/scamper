@@ -1,6 +1,7 @@
 import { QueryEntry } from "../../../scamper"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
 import { ReportError } from "../../../lpm"
+import type { SchedulerId } from "../../../scheduler"
 import { computed, MaybeRefOrGetter, toValue } from "vue"
 
 export const ModalCols = 10
@@ -15,6 +16,10 @@ const paddingHorizontal = `${ModalPadding.toString()}ch`
 export const ModalOverallPadding = `${ModalVerticalPadding} ${paddingHorizontal}`
 
 export const ConnectorHeight = 1
+
+export function getQueryAnchorName(id: SchedulerId) {
+  return `--query-${id}`
+}
 
 export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
   return computed(() => {

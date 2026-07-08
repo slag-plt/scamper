@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  getQueryAnchorName,
   ModalOverallPadding,
   ModalVerticalPadding,
   ModalWidth,
@@ -16,6 +17,7 @@ const { query } = defineProps<{ query: QueryEntry }>()
 const { expandedQueryId } = useScamperSession()
 
 const toRender = useReportedValue(() => query)
+const queryAnchorName = computed(() => getQueryAnchorName(query.id))
 
 void ModalWidth
 void ModalVerticalPadding
@@ -57,6 +59,13 @@ const contentsRef = useTemplateRef("contents-ref")
 }
 
 .invisible {
-  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@supports (anchor-name: --test) {
+  #query-modal {
+    anchor-name: v-bind("queryAnchorName");
+  }
 }
 </style>
