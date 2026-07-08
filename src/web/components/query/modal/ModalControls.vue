@@ -4,13 +4,13 @@ import { SchedulerId } from "../../../../scheduler"
 
 defineProps<{ id: SchedulerId; overflowing: boolean }>()
 
-const { invalidateQuery } = useScamperSession()
+const { invalidateQuery, expandQuery } = useScamperSession()
 </script>
 
 <template>
   <div id="query-controls">
     <button class="query-close-button" @click="invalidateQuery(id)">X</button>
-    <button v-if="overflowing">…</button>
+    <button v-if="overflowing" @click.stop="expandQuery(id)">…</button>
   </div>
 </template>
 

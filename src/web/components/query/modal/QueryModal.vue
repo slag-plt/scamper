@@ -6,8 +6,11 @@ import { SimpleErrorChannel } from "../../../../lpm/output/simple-error"
 import { ReportError } from "../../../../lpm"
 import ModalContents from "./ModalContents.vue"
 import ModalControls from "./ModalControls.vue"
+import { useScamperSession } from "../../../composables/use-scamper-session"
 
 const { query } = defineProps<{ query: QueryEntry }>()
+
+const { expandedQueryId } = useScamperSession()
 
 const toRender = computed(() => {
   if (!(query.err instanceof SimpleErrorChannel)) {
@@ -28,12 +31,19 @@ const width = `${ModalCols.toString()}ch`
 const paddingVertical = `${ModalPadding.toString()}lh`
 const paddingHorizontal = `${ModalPadding.toString()}ch`
 const padding = `${paddingVertical} ${paddingHorizontal}`
+const invisible = computed(() => {
+  const expanded = expandedQueryId.value
+  if (expanded === null) {
+    return false
+  }
+  return query.id === expanded
+})
 
 const contentsRef = useTemplateRef("contents-ref")
 </script>
 
 <template>
-  <div id="query-modal" :data-query-id="query.id">
+  <div id="query-modal" :data-query-id="query.id" :class="{ invisible }">
     <ModalContents ref="contents-ref" :value="toRender" />
     <ModalControls
       :id="query.id"
@@ -54,5 +64,9 @@ const contentsRef = useTemplateRef("contents-ref")
   padding: v-bind("padding");
   overflow: clip;
   overflow-clip-margin: content-box;
+}
+
+.invisible {
+  visibility: hidden;
 }
 </style>
