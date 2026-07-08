@@ -9,7 +9,12 @@ import {
   shallowRef,
   type ShallowRef,
 } from "vue"
-import { type DisplayRequest, QUERIES_CHANGED, type QueryMap, ScamperInstance } from "../../scamper"
+import {
+  type DisplayRequest,
+  QUERIES_CHANGED,
+  type QueryMap,
+  ScamperInstance,
+} from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"

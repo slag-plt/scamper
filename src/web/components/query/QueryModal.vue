@@ -39,7 +39,7 @@ const padding = `${paddingVertical} ${paddingHorizontal}`
 #query-modal {
   box-sizing: border-box;
   box-shadow: 0 0 v-bind("paddingVertical") rgba(0, 0, 0, 0.3);
-  background-color: lightgray;
+  background-color: white;
   width: v-bind("width");
   padding: v-bind("padding");
   white-space: normal;

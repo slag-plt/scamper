@@ -45,7 +45,7 @@ export function createCodeMirrorEditorAdapter(
     },
 
     getCursorLoc() {
-      const idx = view.state.selection.main.head
+      const idx = view.state.selection.main.from
       const line = view.state.doc.lineAt(idx)
       return new Loc(line.number, idx - line.from, idx)
     },
