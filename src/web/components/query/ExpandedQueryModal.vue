@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, useTemplateRef } from "vue"
 import { useScamperSession } from "../../composables/use-scamper-session"
+import ModalContents from "./modal/ModalContents.vue"
+import {
+  ModalOverallPadding,
+  ModalVerticalPadding,
+  ModalWidth,
+  useReportedValue,
+} from "./query-utils"
+import ModalControls from "./modal/ModalControls.vue"
+import { SchedulerId } from "../../../scheduler"
+
+const { queryId } = defineProps<{ queryId: SchedulerId }>()
 
 const popover = useTemplateRef<HTMLDivElement>("modal-ref")
 
-const { collapseQuery } = useScamperSession()
+const { collapseQuery, getQueryOrThrow } = useScamperSession()
 
 const handleClick = (e: MouseEvent) => {
   const el = popover.value
@@ -19,6 +30,12 @@ const handleClick = (e: MouseEvent) => {
   collapseQuery()
 }
 
+const toRender = useReportedValue(() => getQueryOrThrow(queryId))
+
+void ModalWidth
+void ModalVerticalPadding
+void ModalOverallPadding
+
 onMounted(() => {
   document.addEventListener("click", handleClick)
 })
@@ -28,8 +45,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div id="expanded-query-modal" ref="modal-ref">hi</div>
+  <Teleport to=".cm-editor">
+    <div id="expanded-query-modal" ref="modal-ref">
+      <ModalContents :value="toRender" :clip="false" />
+      <ModalControls :query-id="queryId" />
+    </div>
   </Teleport>
 </template>
 
@@ -37,9 +57,19 @@ onBeforeUnmount(() => {
 #expanded-query-modal {
   position: fixed;
   z-index: 1;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   height: fit-content;
   width: fit-content;
+  background: gray;
+
+  display: flex;
+  justify-content: space-between;
+  box-sizing: border-box;
+  box-shadow: 0 0 v-bind("ModalVerticalPadding") rgba(0, 0, 0, 0.3);
+  background-color: white;
+  min-width: 0;
+  padding: v-bind("ModalOverallPadding");
 }
 </style>

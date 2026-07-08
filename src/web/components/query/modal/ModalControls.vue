@@ -2,15 +2,23 @@
 import { useScamperSession } from "../../../composables/use-scamper-session"
 import { SchedulerId } from "../../../../scheduler"
 
-defineProps<{ id: SchedulerId; overflowing: boolean }>()
+withDefaults(defineProps<{ queryId: SchedulerId; overflowing?: boolean }>(), {
+  overflowing: true,
+})
 
-const { invalidateQuery, expandQuery } = useScamperSession()
+const { invalidateQuery, toggleQueryExpanded } = useScamperSession()
 </script>
 
 <template>
   <div id="query-controls">
-    <button class="query-close-button" @click="invalidateQuery(id)">X</button>
-    <button v-if="overflowing" @click.stop="expandQuery(id)">…</button>
+    <button class="query-button" @click="invalidateQuery(queryId)">X</button>
+    <button
+      v-if="overflowing"
+      class="query-button"
+      @click.stop="toggleQueryExpanded(queryId)"
+    >
+      {{ "…" }}
+    </button>
   </div>
 </template>
 
@@ -22,7 +30,8 @@ const { invalidateQuery, expandQuery } = useScamperSession()
   flex-direction: column;
 }
 
-.query-close-button {
+.query-button {
+  width: fit-content;
   font-size: 0.5lh;
 }
 </style>

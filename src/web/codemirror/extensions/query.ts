@@ -11,7 +11,7 @@ import {
   ConnectorHeight,
   ModalPadding,
   ModalRows,
-} from "../../components/query/query-sizing"
+} from "../../components/query/query-utils"
 
 export function getIdForGhostLine(line: number) {
   return `query-ghost-line-${line.toString()}`

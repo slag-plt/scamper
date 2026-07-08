@@ -223,6 +223,14 @@ export class ScamperInstance {
       this.expandQuery(id)
     }
   }
+  public getQuery(id: SchedulerId) {
+    for (const bucket of this.#queries.values()) {
+      const query = bucket.find((q) => q.id === id)
+      if (query) {
+        return query
+      }
+    }
+  }
 
   /** Adds a query entry to the line bucket and notifies listeners. */
   registerQueryEntry(entry: QueryEntry): void {

@@ -3,7 +3,9 @@ import ValueRenderer from "../../../../lpm/renderers/vue/ValueRenderer.vue"
 import { Value } from "../../../../lpm"
 import { nextTick, onMounted, ref, useTemplateRef, watch } from "vue"
 
-const { value } = defineProps<{ value: Value }>()
+const props = withDefaults(defineProps<{ value: Value; clip?: boolean }>(), {
+  clip: true,
+})
 
 const divRef = useTemplateRef("div-ref")
 const isOverflowing = ref(false)
@@ -22,7 +24,7 @@ onMounted(() => {
 })
 
 watch(
-  () => value,
+  () => props.value,
   async () => {
     await nextTick()
     checkOverflow()
@@ -36,7 +38,10 @@ defineExpose({ isOverflowing })
   <div
     id="query-contents"
     ref="div-ref"
-    :class="{ 'overflow-gradient': isOverflowing }"
+    :class="{
+      'overflow-gradient': clip && isOverflowing,
+      clip,
+    }"
   >
     <!--  TODO: do smarter rendering of non-Scamper values  -->
     <ValueRenderer :value="value" />
@@ -45,14 +50,17 @@ defineExpose({ isOverflowing })
 
 <style scoped>
 #query-contents {
+  flex: 1;
+  min-width: 0;
+}
+
+.clip {
   white-space: normal;
   overflow-wrap: break-word;
   /* TODO: such a dumb hack for line clamping... wait for line-clamp to be real */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
 }
 

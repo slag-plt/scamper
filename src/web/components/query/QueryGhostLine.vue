@@ -3,7 +3,7 @@ import { QueryMap } from "../../../scamper"
 import { getIdForGhostLine } from "../../codemirror/extensions/query"
 import { type ComponentPublicInstance, computed, ref } from "vue"
 import QueryContainer from "./QueryContainer.vue"
-import { ModalCols } from "./query-sizing"
+import { ModalCols } from "./query-utils"
 import QueryConnectors from "./QueryConnectors.vue"
 
 const { line, queries } = defineProps<{

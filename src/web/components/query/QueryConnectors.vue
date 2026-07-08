@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ConnectorHeight } from "./query-sizing"
+import { ConnectorHeight } from "./query-utils"
 import { QueryMap } from "../../../scamper"
 import { Range } from "../../../lpm"
 import { useEditor } from "../../composables/editor-context"

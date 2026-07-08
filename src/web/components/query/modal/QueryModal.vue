@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ModalCols, ModalPadding } from "../query-sizing"
+import {
+  ModalOverallPadding,
+  ModalVerticalPadding,
+  ModalWidth,
+  useReportedValue,
+} from "../query-utils"
 import { QueryEntry } from "../../../../scamper"
 import { computed, useTemplateRef } from "vue"
-import { SimpleErrorChannel } from "../../../../lpm/output/simple-error"
-import { ReportError } from "../../../../lpm"
 import ModalContents from "./ModalContents.vue"
 import ModalControls from "./ModalControls.vue"
 import { useScamperSession } from "../../../composables/use-scamper-session"
@@ -12,25 +15,12 @@ const { query } = defineProps<{ query: QueryEntry }>()
 
 const { expandedQueryId } = useScamperSession()
 
-const toRender = computed(() => {
-  if (!(query.err instanceof SimpleErrorChannel)) {
-    return "Fatal query error"
-  }
-  const firstErr = query.err.errors.at(0)
-  // TODO: don't forget done wiring
-  if (!firstErr) {
-    return "No query found."
-  }
-  if (!(firstErr instanceof ReportError)) {
-    return firstErr
-  }
-  return firstErr.value
-})
+const toRender = useReportedValue(() => query)
 
-const width = `${ModalCols.toString()}ch`
-const paddingVertical = `${ModalPadding.toString()}lh`
-const paddingHorizontal = `${ModalPadding.toString()}ch`
-const padding = `${paddingVertical} ${paddingHorizontal}`
+void ModalWidth
+void ModalVerticalPadding
+void ModalOverallPadding
+
 const invisible = computed(() => {
   const expanded = expandedQueryId.value
   if (expanded === null) {
@@ -46,7 +36,7 @@ const contentsRef = useTemplateRef("contents-ref")
   <div id="query-modal" :data-query-id="query.id" :class="{ invisible }">
     <ModalContents ref="contents-ref" :value="toRender" />
     <ModalControls
-      :id="query.id"
+      :query-id="query.id"
       :overflowing="contentsRef?.isOverflowing ?? false"
     />
   </div>
@@ -57,11 +47,11 @@ const contentsRef = useTemplateRef("contents-ref")
   display: flex;
   justify-content: space-between;
   box-sizing: border-box;
-  box-shadow: 0 0 v-bind("paddingVertical") rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 v-bind("ModalVerticalPadding") rgba(0, 0, 0, 0.3);
   background-color: white;
-  width: v-bind("width");
+  width: v-bind("ModalWidth");
   min-width: 0;
-  padding: v-bind("padding");
+  padding: v-bind("ModalOverallPadding");
   overflow: clip;
   overflow-clip-margin: content-box;
 }

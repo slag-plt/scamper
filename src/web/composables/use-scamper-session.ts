@@ -20,6 +20,7 @@ import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
+import { throwNull } from "../../utils"
 
 export interface ScamperSessionOptions {
   editor: EditorAccessor
@@ -100,6 +101,10 @@ function createScamperSession(
     scamper.toggleQueryExpanded(id)
   }
 
+  function getQueryOrThrow(id: SchedulerId) {
+    return scamper.getQuery(id) ?? throwNull(`query ${id} doesn't exist`)
+  }
+
   function stopAll() {
     scamper.invalidateAllQueries()
     stopRun()
@@ -158,6 +163,7 @@ function createScamperSession(
     stopAll,
     execute,
     query,
+    getQueryOrThrow,
   }
 }
 

@@ -58,7 +58,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing, queries, expandedQueryId } = session
+const { isTracing, queries, expandedQueryId, getQueryOrThrow } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -422,7 +422,10 @@ onUnmounted(() => {
     :line="line"
     :queries="qs"
   />
-  <ExpandedQueryModal v-if="expandedQueryId !== null" />
+  <ExpandedQueryModal
+    v-if="expandedQueryId !== null"
+    :query-id="expandedQueryId"
+  />
 </template>
 
 <style scoped>
