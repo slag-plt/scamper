@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ModalCols, ModalPadding } from "../query-sizing"
 import { QueryEntry } from "../../../../scamper"
-import { computed } from "vue"
+import { computed, useTemplateRef } from "vue"
 import { SimpleErrorChannel } from "../../../../lpm/output/simple-error"
 import { ReportError } from "../../../../lpm"
 import ModalContents from "./ModalContents.vue"
@@ -28,12 +28,17 @@ const width = `${ModalCols.toString()}ch`
 const paddingVertical = `${ModalPadding.toString()}lh`
 const paddingHorizontal = `${ModalPadding.toString()}ch`
 const padding = `${paddingVertical} ${paddingHorizontal}`
+
+const contentsRef = useTemplateRef("contents-ref")
 </script>
 
 <template>
   <div id="query-modal" :data-query-id="query.id">
-    <ModalContents :value="toRender" />
-    <ModalControls :id="query.id" />
+    <ModalContents ref="contents-ref" :value="toRender" />
+    <ModalControls
+      :id="query.id"
+      :overflowing="contentsRef?.isOverflowing ?? false"
+    />
   </div>
 </template>
 

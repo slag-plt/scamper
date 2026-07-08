@@ -1,12 +1,43 @@
 <script setup lang="ts">
 import ValueRenderer from "../../../../lpm/renderers/vue/ValueRenderer.vue"
 import { Value } from "../../../../lpm"
+import { nextTick, onMounted, ref, useTemplateRef, watch } from "vue"
 
-defineProps<{ value: Value }>()
+const { value } = defineProps<{ value: Value }>()
+
+const divRef = useTemplateRef("div-ref")
+const isOverflowing = ref(false)
+
+const checkOverflow = () => {
+  const el = divRef.value
+  if (!el) {
+    return
+  }
+  isOverflowing.value =
+    el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth
+}
+
+onMounted(() => {
+  checkOverflow()
+})
+
+watch(
+  () => value,
+  async () => {
+    await nextTick()
+    checkOverflow()
+  },
+)
+
+defineExpose({ isOverflowing })
 </script>
 
 <template>
-  <div id="query-contents">
+  <div
+    id="query-contents"
+    ref="div-ref"
+    :class="{ 'overflow-gradient': isOverflowing }"
+  >
     <!--  TODO: do smarter rendering of non-Scamper values  -->
     <ValueRenderer :value="value" />
   </div>
@@ -22,5 +53,13 @@ defineProps<{ value: Value }>()
   -webkit-line-clamp: 2;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+}
+
+.overflow-gradient {
+  mask-image:
+    linear-gradient(to bottom, black 75%, transparent 100%),
+    linear-gradient(to right, black 75%, transparent 100%);
+  mask-composite: intersect;
 }
 </style>

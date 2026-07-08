@@ -2,7 +2,7 @@
 import { useScamperSession } from "../../../composables/use-scamper-session"
 import { SchedulerId } from "../../../../scheduler"
 
-defineProps<{ id: SchedulerId }>()
+defineProps<{ id: SchedulerId; overflowing: boolean }>()
 
 const { invalidateQuery } = useScamperSession()
 </script>
@@ -10,7 +10,7 @@ const { invalidateQuery } = useScamperSession()
 <template>
   <div id="query-controls">
     <button class="query-close-button" @click="invalidateQuery(id)">X</button>
-    <!--  TODO: add expand button  -->
+    <button v-if="overflowing">…</button>
   </div>
 </template>
 
