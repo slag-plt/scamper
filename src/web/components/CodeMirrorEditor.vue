@@ -29,6 +29,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (adapter) {
+    adapter.destroy()
     editorRegistration.unregister(adapter)
     adapter = null
   }

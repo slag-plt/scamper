@@ -1,63 +1,64 @@
 import type { Text } from "@codemirror/state"
-import { Transaction } from "@codemirror/state"
-import { Decoration, DecorationSet, EditorView, ViewPlugin } from "@codemirror/view"
-import { QUERIES_CHANGED, type QueryEntry, ScamperInstance } from "../../../scamper"
+import { StateEffect, StateField, Transaction } from "@codemirror/state"
+import {
+  Decoration,
+  DecorationSet,
+  EditorView,
+  WidgetType,
+} from "@codemirror/view"
+import { type QueryEntry, ScamperInstance } from "../../../scamper"
 
-function buildQueryDecorations(
+class GhostLineWidget extends WidgetType {
+  toDOM(): HTMLElement {
+    const containerEl = document.createElement("div")
+    containerEl.style.height = "1lh"
+    return containerEl
+  }
+}
+
+function buildGhostLines(
   queries: readonly QueryEntry[],
   doc: Text,
 ): DecorationSet {
-  const marks = queries.flatMap((q) => {
+  const widgets = queries.flatMap((q) => {
     if (doc.length === 0) return []
     const pos = Math.min(q.queryPos, doc.length)
-    const from = pos < doc.length ? pos : pos - 1
-    const to = from + 1
-    return [Decoration.mark({ class: "cm-query-placeholder" }).range(from, to)]
+    return [
+      Decoration.widget({
+        widget: new GhostLineWidget(),
+        block: true,
+      }).range(doc.lineAt(pos).from),
+    ]
   })
-  return Decoration.set(marks, true)
+  return Decoration.set(widgets, true)
 }
 
-export const QueryExtension = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet
-    #off: () => void
-    #alive = true
+export const queryDecorationsSet = StateEffect.define<DecorationSet>()
 
-    constructor(private view: EditorView) {
-      this.decorations = Decoration.none
-      const sync = (scheduleDispatch: boolean) => {
-        this.decorations = buildQueryDecorations(
-          ScamperInstance.getInstance().queries,
-          this.view.state.doc,
-        )
-        if (!scheduleDispatch) return
-        queueMicrotask(() => {
-          if (!this.#alive) return
-          this.view.dispatch({
-            annotations: Transaction.addToHistory.of(false),
-          })
-        })
-      }
-      const scamper = ScamperInstance.getInstance()
-      const onQueriesChanged = () => {
-        sync(true)
-      }
-      scamper.queryEvents.addEventListener(QUERIES_CHANGED, onQueriesChanged)
-      this.#off = () => {
-        scamper.queryEvents.removeEventListener(
-          QUERIES_CHANGED,
-          onQueriesChanged,
-        )
-      }
-      sync(false)
-    }
+export function syncQueryDecorations(view: EditorView) {
+  view.dispatch({
+    effects: queryDecorationsSet.of(
+      buildGhostLines(ScamperInstance.getInstance().queries, view.state.doc),
+    ),
+    annotations: Transaction.addToHistory.of(false),
+  })
+}
 
-    destroy() {
-      this.#alive = false
-      this.#off()
+export const QueryExtension = StateField.define<DecorationSet>({
+  create(state) {
+    return buildGhostLines(ScamperInstance.getInstance().queries, state.doc)
+  },
+  update(deco, tr) {
+    for (const e of tr.effects) {
+      if (e.is(queryDecorationsSet)) return e.value
     }
+    if (tr.docChanged) {
+      return buildGhostLines(
+        ScamperInstance.getInstance().queries,
+        tr.state.doc,
+      )
+    }
+    return deco.map(tr.changes)
   },
-  {
-    decorations: (v) => v.decorations,
-  },
-)
+  provide: (f) => EditorView.decorations.from(f),
+})
