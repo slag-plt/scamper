@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { QueryMap } from "../../../scamper"
 import { getIdForGhostLine } from "../../codemirror/extensions/query"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 
 const { line, queries } = defineProps<{
   line: number
   queries: NonNullable<ReturnType<QueryMap["get"]>>
 }>()
 
-const root = ref<HTMLElement | null>(null)
-
 const leftOffset = computed(() => {
   const leftIdx = queries.reduce((left, q) => {
-    return q.queryLoc.col < left ? q.queryLoc.col : left
+    return q.queriedRange.begin.col < left ? q.queriedRange.begin.col : left
   }, Infinity)
 
   if (!Number.isFinite(leftIdx)) {
@@ -32,7 +30,7 @@ const width = computed(() => {
 
 <template>
   <Teleport :to="`#${getIdForGhostLine(line)}`" defer>
-    <div id="query-container" ref="root"></div>
+    <div id="query-container"></div>
   </Teleport>
 </template>
 

@@ -3,16 +3,18 @@ import { read } from "../../src/scheme/reader"
 import { getQueriedAST, getReportedSyntax } from "../../src/scheme/query"
 import {
   Loc,
+  listToVector,
   mkAp,
   mkDisp,
-  mkList,
   mkLit,
+  mkList,
   mkRept,
   mkSym,
   mkVar,
   Prog,
   Stmt,
 } from "../../src/lpm"
+import { isSyntax } from "../../src/scheme/syntax"
 import { mkSyntax, Syntax } from "../../src/scheme/syntax"
 import { anyRange } from "./util"
 import { compile } from "../../src/scheme"
@@ -38,14 +40,24 @@ describe("AST querying", () => {
       const ast = read(testProgram)
       const queryLoc = new Loc(5, 4, 41)
       const originalSexp = ast[3]
-      const reportedAst = getQueriedAST(ast, queryLoc)
+      const { ast: reportedAst } = getQueriedAST(ast, queryLoc)
 
       expect(reportedAst).not.toBe(ast)
       expect(reportedAst[3]).not.toBe(ast[3])
       expect(ast[3]).toBe(originalSexp)
       expect(reportedAst[3]).toStrictEqual(
-        getReportedSyntax(originalSexp, queryLoc),
+        getReportedSyntax(originalSexp, queryLoc).syntax,
       )
+    })
+
+    test("returns the semantic range of the queried expression", () => {
+      const ast = read(testProgram)
+      const queryLoc = new Loc(5, 4, 41)
+      const { range } = getQueriedAST(ast, queryLoc)
+      const yo = listToVector(testSexps[3].value)[1]
+      expect(isSyntax(yo)).toBe(true)
+      if (!isSyntax(yo)) return
+      expect(range).toEqual(yo.range)
     })
   })
 
@@ -128,7 +140,7 @@ describe("AST querying", () => {
         const twoLevelLoc = new Loc(6, 18, 62)
 
         getReportedSyntax(testSyntax, oneLevelLoc)
-        expect(getReportedSyntax(testSyntax, twoLevelLoc)).toStrictEqual(
+        expect(getReportedSyntax(testSyntax, twoLevelLoc).syntax).toStrictEqual(
           mkSyntax(
             mkList(
               mkSyntax(mkSym("test-func1"), anyRange),
@@ -199,10 +211,52 @@ describe("AST querying", () => {
   })
 
   describe("compilation with query loc", () => {
+    test("returns first-line queriedRange for multi-line expressions", () => {
+      const src = `(define foo
+  (bar
+    x))`
+      const closeIdx = src.indexOf("x)") + 1
+      const line = src.slice(0, closeIdx).split("\n").length
+      const lineStart = src.lastIndexOf("\n", closeIdx - 1) + 1
+      const queryLoc = new Loc(line, closeIdx - lineStart + 1, closeIdx)
+
+      const { range } = getQueriedAST(read(src), queryLoc)
+      const firstLine = range.firstLineSpan(src)
+
+      expect(range.begin.line).toBeLessThan(range.end.line)
+      expect(firstLine.begin).toEqual(range.begin)
+      expect(firstLine.end.line).toBe(range.begin.line)
+      expect(firstLine.end.idx).toBeLessThan(range.end.idx)
+    })
+
+    test("compile returns queriedRange for valid queries", async () => {
+      const src = `;;;
+;;; (foo) -> number?
+;;; constant one
+;;; @example (foo) -> 1
+(define foo 1)`
+      const oneIdx = src.indexOf("(define foo 1)") + "(define foo ".length
+      const line = src.slice(0, oneIdx).split("\n").length
+      const lineStart = src.lastIndexOf("\n", oneIdx - 1) + 1
+      const queryLoc = new Loc(line, oneIdx - lineStart + 1, oneIdx)
+      const err = new SimpleErrorChannel()
+
+      const result = await compile(err, src, queryLoc)
+
+      expect(err.errors).toStrictEqual([])
+      if (result === undefined) {
+        expect.fail("expected compile to return a result")
+        return
+      }
+      const { queriedRange } = result
+      const { range } = getQueriedAST(read(src), queryLoc)
+      expect(queriedRange).toEqual(range.firstLineSpan(src))
+    })
+
     // BUG: code produces "Querying is only allowed within function definitions
     // not docstrings" which implies the execution pathway isn't correct, but
     // not sure...
-    test.skip("report operation is contained in bytecode", () => {
+    test.skip("report operation is contained in bytecode", async () => {
       // TODO: function definitions must be example-tagged now, but too annoying to do rn
       const funcName = "+"
       const lit1 = 1
@@ -225,8 +279,13 @@ describe("AST querying", () => {
         ),
       ]
 
-      const actualProg = compile(err, src, queryLoc)
+      const result = await compile(err, src, queryLoc)
       expect(err.errors).toStrictEqual([])
+      if (result === undefined) {
+        expect.fail("expected compile to return a result")
+        return
+      }
+      const { prog: actualProg } = result
       expect(actualProg).toStrictEqual(expectedProg)
     })
   })
@@ -237,7 +296,7 @@ function expectSexp(
   testQueryLoc: Loc,
   expectedSyntax: Syntax,
 ) {
-  expect(getReportedSyntax(testSyntax, testQueryLoc)).toStrictEqual(
+  expect(getReportedSyntax(testSyntax, testQueryLoc).syntax).toStrictEqual(
     expectedSyntax,
   )
 }

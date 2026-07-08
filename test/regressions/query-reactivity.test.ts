@@ -54,19 +54,17 @@ describe("query modal reactivity regression", () => {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
         session = provideScamperSession(paneRef, { editor })
         const scamper = ScamperInstance.getInstance()
-        vi.spyOn(scamper, "query").mockImplementation(
-          async ({ err, queryLoc }) => {
+        vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
             reportQueryResult = (value: number) => {
               err.report(new ReportError(value, Range.none))
             }
             scamper.registerQueryEntry({
               id: "query-test",
               err,
-              queryLoc,
+              queriedRange: Range.of(0, 0, 0, 0, 0, 0),
               done: Promise.resolve(),
             })
-          },
-        )
+          })
         return { queries: computed(() => session.queries.value) }
       },
       template: `

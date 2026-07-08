@@ -1,5 +1,5 @@
 import * as S from "../lpm"
-import { Loc, ScamperError } from "../lpm"
+import { Loc, Range, ScamperError } from "../lpm"
 import { builtinLibs } from "../lib"
 import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
@@ -21,7 +21,17 @@ export function tokenizeAndParse(
   err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
-): Prog | undefined {
+): Prog | undefined
+export function tokenizeAndParse(
+  err: S.ErrorChannel,
+  src: string,
+  queryLoc: Loc,
+): { program: Prog; queriedRange: Range } | undefined
+export function tokenizeAndParse(
+  err: S.ErrorChannel,
+  src: string,
+  queryLoc?: Loc,
+): Prog | { program: Prog; queriedRange: Range } | undefined {
   let sexps
   try {
     sexps = read(src)
@@ -33,11 +43,14 @@ export function tokenizeAndParse(
     throw e
   }
 
+  let queriedRange: Range | undefined
   if (queryLoc) {
     // given cursor position, find the sexp to wrap
     // and wrap sexp in new report expression
     try {
-      sexps = getQueriedAST(sexps, queryLoc)
+      const queried = getQueriedAST(sexps, queryLoc)
+      sexps = queried.ast
+      queriedRange = queried.range.firstLineSpan(src)
     } catch (e) {
       if (e instanceof ScamperError) {
         err.report(e)
@@ -80,21 +93,43 @@ export function tokenizeAndParse(
     return undefined
   }
   program.push(mkDisp(firstExample.contents.functionCall))
-  return program
+  if (queriedRange === undefined) {
+    return undefined
+  }
+  return { program, queriedRange }
 }
 
 export async function compile(
   err: S.ErrorChannel,
   src: string,
+): Promise<S.Prog | undefined>
+export async function compile(
+  err: S.ErrorChannel,
+  src: string,
+  queryLoc: Loc,
+): Promise<{ prog: S.Prog; queriedRange: Range } | undefined>
+// Scope checking will add await here eventually.
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function compile(
+  err: S.ErrorChannel,
+  src: string,
   queryLoc?: Loc,
-): Promise<S.Prog | undefined> {
-  let program = tokenizeAndParse(err, src, queryLoc)
+): Promise<S.Prog | { prog: S.Prog; queriedRange: Range } | undefined> {
+  if (queryLoc) {
+    const parsed = tokenizeAndParse(err, src, queryLoc) as
+      | { program: Prog; queriedRange: Range }
+      | undefined
+    if (parsed === undefined) {
+      return undefined
+    }
+    const prog = lowerProgram(expandProgram(parsed.program))
+    return { prog, queriedRange: parsed.queriedRange }
+  }
+
+  const program = tokenizeAndParse(err, src)
   if (program === undefined) {
     return undefined
   }
-
-  // Macro expansion
-  program = expandProgram(program)
 
   // Scope checking
   // TODO: disabled while we fix up modules
@@ -108,7 +143,7 @@ export async function compile(
   // }
 
   // Lowering/codegen
-  return lowerProgram(program)
+  return lowerProgram(expandProgram(program))
 }
 
 export function mkInitialEnv(): S.Env {

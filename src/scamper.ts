@@ -1,6 +1,6 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
-import { compareLoc, Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
+import { Env, ErrorChannel, Loc, OutputChannel, Range, rangesEqual } from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler, SchedulerId } from "./scheduler"
 import { compile } from "./scheme"
@@ -31,7 +31,7 @@ export type QueryRequest = RunRequest
 
 export interface QueryEntry {
   id: SchedulerId
-  queryLoc: Loc
+  queriedRange: Range
   err: ErrorChannel
   done: Promise<void>
 }
@@ -125,25 +125,24 @@ export class ScamperInstance {
     err,
     queryLoc,
   }: QueryExecutionConfig): Promise<void> {
-    if (
-      this.#queries
-        .get(queryLoc.line)
-        ?.some((q) => compareLoc(q.queryLoc, queryLoc) === 0)
-    ) {
-      // TODO: properly dedupe queries
-      //  requires lifting back up the exact range we put the report...
-      console.warn("attempted duplicate query")
-      return
-    }
-    // compile src to lpm bytecode
     const compiled = await compile(err, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
       return
     }
 
+    const { prog, queriedRange } = compiled
+    if (
+      this.#queries
+        .get(queriedRange.begin.line)
+        ?.some((q) => rangesEqual(q.queriedRange, queriedRange))
+    ) {
+      console.warn("attempted duplicate query")
+      return
+    }
+
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled, defaultEnv)
+    const fiber = new Fiber(prog, defaultEnv)
 
     // schedule query task
     const id = crypto.randomUUID()
@@ -156,7 +155,7 @@ export class ScamperInstance {
         resolve()
       },
     })
-    const entry: QueryEntry = { id, err, done: promise, queryLoc }
+    const entry: QueryEntry = { id, err, done: promise, queriedRange }
     this.registerQueryEntry(entry)
   }
   public invalidateAllQueries() {
@@ -165,7 +164,7 @@ export class ScamperInstance {
         this.cancel(q.id)
       }
     }
-    this.#updateQueries((queries) => queries.clear())
+    this.#updateQueries((queries) => { queries.clear(); })
   }
   public invalidateQuery(id: SchedulerId) {
     this.cancel(id)
@@ -185,10 +184,13 @@ export class ScamperInstance {
   /** Adds a query entry to the line bucket and notifies listeners. */
   registerQueryEntry(entry: QueryEntry): void {
     this.#updateQueries((queries) => {
-      const line = entry.queryLoc.line
+      const line = entry.queriedRange.begin.line
       const bucket = queries.get(line)
       if (bucket) {
         bucket.push(entry)
+        bucket.sort(
+          (a, b) => a.queriedRange.begin.col - b.queriedRange.begin.col,
+        )
       } else {
         queries.set(line, [entry])
       }
