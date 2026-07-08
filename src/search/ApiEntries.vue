@@ -72,8 +72,16 @@ function makeString(foo: object) {
   return str
 }
 
+function checkReturn(foo: object) {
+  return true;
+}
+
+function checkArg(foo: object) {
+  return true;
+}
+
 function searchFilter(foo: object) {
-  if(checkReturn(foo) && checkArg()) return true;
+  if(checkReturn(foo) && checkArg(foo)) return true;
   return false;
 }
 
@@ -162,7 +170,7 @@ function searchFilter(foo: object) {
       <!-- </Dropdown> -->
   </div>
 
-  <button class="enter-button" @click="searchComplex"><strong>Enter</strong></button>
+  <button class="enter-button" @click="searchFilter"><strong>Enter</strong></button>
 
     <!-- <select v-model="tags" multiple>
         <option value="volvo">Volvo</option>
