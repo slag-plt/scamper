@@ -49,7 +49,6 @@ describe("query modal reactivity regression", () => {
             err,
             queriedRange: Range.of(0, 0, 0, 0, 0, 0),
             done: Promise.resolve(),
-            expanded: false,
           })
           return Promise.resolve()
         })

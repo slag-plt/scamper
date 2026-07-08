@@ -43,12 +43,12 @@ export interface QueryEntry {
   queriedRange: Range
   err: ErrorChannel
   done: Promise<void>
-  expanded: boolean
 }
 
 export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
 
 export const QUERIES_CHANGED = "scamper:querieschanged"
+export const QUERY_EXPANDED_CHANGED = "scamper:queryexpandedchanged"
 
 const defaultEnv = Env.empty
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -67,6 +67,7 @@ export class ScamperInstance {
   /*  =====  instance-related fields  =====  */
   #scheduler: Scheduler
   #queries = new Map<number, QueryEntry[]>()
+  #expandedQueryId: SchedulerId | null = null
   #queryBus = new EventTarget()
 
   private constructor() {
@@ -126,9 +127,17 @@ export class ScamperInstance {
   get queries(): QueryMap {
     return this.#queries
   }
+  get expandedQueryId(): SchedulerId | null {
+    return this.#expandedQueryId
+  }
   #updateQueries(mutate: (queries: Map<number, QueryEntry[]>) => void): void {
     mutate(this.#queries)
     this.#queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
+  }
+  #setExpandedQueryId(id: SchedulerId | null): void {
+    if (this.#expandedQueryId === id) return
+    this.#expandedQueryId = id
+    this.#queryBus.dispatchEvent(new Event(QUERY_EXPANDED_CHANGED))
   }
   public async query({
     src,
@@ -170,7 +179,6 @@ export class ScamperInstance {
       err,
       done: promise,
       queriedRange,
-      expanded: false,
     }
     this.registerQueryEntry(entry)
   }
@@ -180,12 +188,16 @@ export class ScamperInstance {
         this.cancel(q.id)
       }
     }
+    this.#setExpandedQueryId(null)
     this.#updateQueries((queries) => {
       queries.clear()
     })
   }
   public invalidateQuery(id: SchedulerId) {
     this.cancel(id)
+    if (this.#expandedQueryId === id) {
+      this.#setExpandedQueryId(null)
+    }
     this.#updateQueries((queries) => {
       for (const [line, bucket] of queries) {
         const i = bucket.findIndex((q) => q.id === id)
@@ -197,6 +209,19 @@ export class ScamperInstance {
         return
       }
     })
+  }
+  public expandQuery(id: SchedulerId) {
+    this.#setExpandedQueryId(id)
+  }
+  public collapseQuery() {
+    this.#setExpandedQueryId(null)
+  }
+  public toggleQueryExpanded(id: SchedulerId) {
+    if (this.#expandedQueryId === id) {
+      this.collapseQuery()
+    } else {
+      this.expandQuery(id)
+    }
   }
 
   /** Adds a query entry to the line bucket and notifies listeners. */

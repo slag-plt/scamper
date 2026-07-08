@@ -12,6 +12,7 @@ import {
 import {
   type DisplayRequest,
   QUERIES_CHANGED,
+  QUERY_EXPANDED_CHANGED,
   type QueryMap,
   ScamperInstance,
 } from "../../scamper"
@@ -34,16 +35,30 @@ function createScamperSession(
   const scamper = ScamperInstance.getInstance()
 
   const queries = shallowRef<QueryMap>(new Map(scamper.queries))
+  const expandedQueryId = shallowRef<SchedulerId | null>(
+    scamper.expandedQueryId,
+  )
 
   const syncQueries = () => {
     queries.value = new Map(
       [...scamper.queries].map(([line, bucket]) => [line, [...bucket]]),
     )
   }
+  const syncExpandedQueryId = () => {
+    expandedQueryId.value = scamper.expandedQueryId
+  }
 
   scamper.queryEvents.addEventListener(QUERIES_CHANGED, syncQueries)
+  scamper.queryEvents.addEventListener(
+    QUERY_EXPANDED_CHANGED,
+    syncExpandedQueryId,
+  )
   onScopeDispose(() => {
     scamper.queryEvents.removeEventListener(QUERIES_CHANGED, syncQueries)
+    scamper.queryEvents.removeEventListener(
+      QUERY_EXPANDED_CHANGED,
+      syncExpandedQueryId,
+    )
   })
 
   const currentRun = computed(() => activeRun.value?.id ?? null)
@@ -70,6 +85,18 @@ function createScamperSession(
 
   function invalidateQuery(id: SchedulerId) {
     scamper.invalidateQuery(id)
+  }
+
+  function expandQuery(id: SchedulerId) {
+    scamper.expandQuery(id)
+  }
+
+  function collapseQuery() {
+    scamper.collapseQuery()
+  }
+
+  function toggleQueryExpanded(id: SchedulerId) {
+    scamper.toggleQueryExpanded(id)
   }
 
   function stopAll() {
@@ -117,12 +144,16 @@ function createScamperSession(
 
   return {
     queries,
+    expandedQueryId,
     currentRun,
     isTracing,
     resetOutput,
     stopRun,
     invalidateAllQueries,
     invalidateQuery,
+    expandQuery,
+    collapseQuery,
+    toggleQueryExpanded,
     stopAll,
     execute,
     query,

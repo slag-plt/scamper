@@ -70,7 +70,6 @@ function mockScheduledQuery(
         err,
         queriedRange: mockQueriedRange,
         done,
-        expanded: false,
       })
       return Promise.resolve()
     })
@@ -162,7 +161,6 @@ describe("useScamperSession", () => {
           err,
           queriedRange: Range.of(0, 0, 0, 0, 1, 0),
           done: pendingPromise(),
-          expanded: false,
         })
         return Promise.resolve()
       })
@@ -172,7 +170,6 @@ describe("useScamperSession", () => {
           err,
           queriedRange: Range.of(0, 1, 1, 0, 2, 1),
           done: pendingPromise(),
-          expanded: false,
         })
         return Promise.resolve()
       })
@@ -191,6 +188,36 @@ describe("useScamperSession", () => {
     expect(cancel).toHaveBeenCalledWith(runId)
     expect(queryCount(session.queries.value)).toBe(0)
     expect(session.currentRun.value).toBeNull()
+  })
+
+  test("expanded query state mirrors ScamperInstance actions", () => {
+    const session = mountSession()
+
+    expect(session.expandedQueryId.value).toBeNull()
+
+    session.expandQuery("query-1")
+    expect(session.expandedQueryId.value).toBe("query-1")
+
+    session.toggleQueryExpanded("query-1")
+    expect(session.expandedQueryId.value).toBeNull()
+
+    session.toggleQueryExpanded("query-2")
+    expect(session.expandedQueryId.value).toBe("query-2")
+
+    session.collapseQuery()
+    expect(session.expandedQueryId.value).toBeNull()
+  })
+
+  test("invalidating an expanded query clears expanded state", async () => {
+    const scamper = ScamperInstance.getInstance()
+    mockScheduledQuery(scamper, "query-1")
+    const session = mountSession()
+
+    await session.query()
+    session.expandQuery("query-1")
+    session.invalidateQuery("query-1")
+
+    expect(session.expandedQueryId.value).toBeNull()
   })
 
   test("done clears currentRun when display task completes", async () => {
