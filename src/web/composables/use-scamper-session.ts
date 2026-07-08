@@ -1,20 +1,15 @@
 import {
   computed,
   inject,
-  onScopeDispose,
   type InjectionKey,
+  onScopeDispose,
   provide,
   reactive,
   ref,
   shallowRef,
   type ShallowRef,
 } from "vue"
-import {
-  type DisplayRequest,
-  type QueryMap,
-  QUERIES_CHANGED,
-  ScamperInstance,
-} from "../../scamper"
+import { type DisplayRequest, QUERIES_CHANGED, type QueryMap, ScamperInstance } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
@@ -36,7 +31,9 @@ function createScamperSession(
   const queries = shallowRef<QueryMap>(new Map(scamper.queries))
 
   const syncQueries = () => {
-    queries.value = new Map(scamper.queries)
+    queries.value = new Map(
+      [...scamper.queries].map(([line, bucket]) => [line, [...bucket]]),
+    )
   }
 
   scamper.queryEvents.addEventListener(QUERIES_CHANGED, syncQueries)

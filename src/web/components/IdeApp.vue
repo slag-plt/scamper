@@ -13,6 +13,7 @@ import { provideScamperSession } from "../composables/use-scamper-session"
 import { ScamperInstance } from "../../scamper"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
+import QueryContainer from "./query/QueryContainer.vue"
 
 // ---------- config ----------
 
@@ -56,7 +57,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing } = session
+const { isTracing, queries } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -414,6 +415,12 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
+  <QueryContainer
+    v-for="[line, qs] in queries"
+    :key="line"
+    :line="line"
+    :queries="qs"
+  ></QueryContainer>
 </template>
 
 <style scoped>
