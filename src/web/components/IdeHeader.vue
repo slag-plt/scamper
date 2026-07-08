@@ -27,7 +27,7 @@ async function handleRun() {
 const search = ref("")
 
 function searchOpenWindow(searchTerm: string) {
-  window.open("../../../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
 }
 </script>
 

@@ -38,7 +38,7 @@ const appVersion = APP_VERSION
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm))
 }
 const urlParams = new URLSearchParams(window.location.search);
 const searched = urlParams.get('search');
@@ -68,7 +68,7 @@ const searched = urlParams.get('search');
     </div>
     <div class="docs">
     <div v-if="searched">
-      <h2>Search results for "{{ searched }}"</h2>
+      <h2 :style="{ textAlign: 'center' }">Search results for "{{ searched }}"</h2>
       <input
         v-model="search"  
         size = "30"
@@ -77,7 +77,7 @@ const searched = urlParams.get('search');
       >
       <p>TODO: implement search results page</p>
     </div>
-    <div>
+    <div :style="{ margin: '15px' }">
       <ApiEntries/>
     </div>
   </div>

@@ -532,6 +532,7 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
           const docComments = commentsToDocComments(comments)
           if (docComments.length > 0) {
             doc = parseDocString(docComments)
+            console.log(doc)
           }
         } catch (e) {
           if (!(e instanceof L.ScamperError)) {
