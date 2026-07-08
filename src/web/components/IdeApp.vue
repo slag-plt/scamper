@@ -13,7 +13,7 @@ import { provideScamperSession } from "../composables/use-scamper-session"
 import { ScamperInstance } from "../../scamper"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
-import QueryContainer from "./query/QueryContainer.vue"
+import QueryGhostLine from "./query/QueryGhostLine.vue"
 
 // ---------- config ----------
 
@@ -415,12 +415,12 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
-  <QueryContainer
+  <QueryGhostLine
     v-for="[line, qs] in queries"
     :key="line"
     :line="line"
     :queries="qs"
-  ></QueryContainer>
+  ></QueryGhostLine>
 </template>
 
 <style scoped>
