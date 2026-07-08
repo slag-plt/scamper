@@ -36,7 +36,7 @@ class Player {
     const name = isPercussion
       ? mkPercId(instr, this.fontName)
       : mkToneId(instr, this.fontName)
-    console.log(`loading ${name} (${path})...`)
+    // console.log(`loading ${name} (${path})...`)
     // N.B., webaudiofont injects the instrument object into the global scope
     //       so we test for the presence of the injected name to determine
     //       if loading is necessary.
@@ -48,7 +48,7 @@ class Player {
       this.player.loader.waitLoad(() => {
         // TODO: is there any way to make the load synchronous so that
         //       preloading is not necessary?
-        console.log(`loaded ${name} (${path})!`)
+        // console.log(`loaded ${name} (${path})!`)
       })
     }
   }
