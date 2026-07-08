@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
-import { Loc } from "../../src/lpm"
-import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
 import { useEditorRegistration } from "../../src/web/composables/editor-context"
 import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
+import { makeMockCodeMirrorEditorAdapter } from "./mock-code-mirror-editor-adapter"
 import { mockEditorHandle } from "./mock-editor-handle"
 
 const emit = defineEmits<{ dirty: [] }>()
@@ -11,7 +10,7 @@ const editorRegistration = useEditorRegistration()
 const src = ref("")
 const loaded = ref(false)
 
-const adapter = {
+const adapter = makeMockCodeMirrorEditorAdapter({
   getDoc() {
     return src.value
   },
@@ -26,10 +25,7 @@ const adapter = {
     loaded.value = false
     src.value = noLoadedFileText
   },
-  getCursorLoc() {
-    return new Loc(0, 0, 0)
-  },
-} satisfies CodeMirrorEditorAdapter
+})
 
 onMounted(() => {
   editorRegistration.register(adapter)

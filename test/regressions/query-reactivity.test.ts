@@ -1,29 +1,15 @@
 import { computed, defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { Loc, LoggingChannel, Range, ReportError } from "../../src/lpm"
+import { LoggingChannel, Range, ReportError } from "../../src/lpm"
 import { ScamperInstance } from "../../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
 import type { EditorAccessor } from "../../src/web/composables/editor-context"
 import {
   provideScamperSession,
   type ScamperSession,
 } from "../../src/web/composables/use-scamper-session"
 import type { ResultsPaneType } from "../../src/web/composables/use-results-pane"
-
-function makeAdapter(): CodeMirrorEditorAdapter {
-  return {
-    getDoc: () => "1",
-    isLoaded: () => true,
-    initializeDoc: () => {
-      /* noop */
-    },
-    initializeDummyDoc: () => {
-      /* noop */
-    },
-    getCursorLoc: () => new Loc(0, 0, 0),
-  }
-}
+import { makeMockCodeMirrorEditorAdapter } from "../stubs/mock-code-mirror-editor-adapter"
 
 function makePane(): ResultsPaneType {
   const ch = new LoggingChannel(false, false)
@@ -47,7 +33,7 @@ describe("query modal reactivity regression", () => {
   })
 
   function mountQueryStatusHost() {
-    const editor: EditorAccessor = () => makeAdapter()
+    const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
 
     const Host = defineComponent({
       setup() {
@@ -55,16 +41,18 @@ describe("query modal reactivity regression", () => {
         session = provideScamperSession(paneRef, { editor })
         const scamper = ScamperInstance.getInstance()
         vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
-            reportQueryResult = (value: number) => {
-              err.report(new ReportError(value, Range.none))
-            }
-            scamper.registerQueryEntry({
-              id: "query-test",
-              err,
-              queriedRange: Range.of(0, 0, 0, 0, 0, 0),
-              done: Promise.resolve(),
-            })
+          reportQueryResult = (value: number) => {
+            err.report(new ReportError(value, Range.none))
+          }
+          scamper.registerQueryEntry({
+            id: "query-test",
+            err,
+            queriedRange: Range.of(0, 0, 0, 0, 0, 0),
+            done: Promise.resolve(),
+            expanded: false,
           })
+          return Promise.resolve()
+        })
         return { queries: computed(() => session.queries.value) }
       },
       template: `

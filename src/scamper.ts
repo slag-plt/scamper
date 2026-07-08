@@ -1,6 +1,13 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
-import { Env, ErrorChannel, Loc, OutputChannel, Range, rangesEqual } from "./lpm"
+import {
+  Env,
+  ErrorChannel,
+  Loc,
+  OutputChannel,
+  Range,
+  rangesEqual,
+} from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler, SchedulerId } from "./scheduler"
 import { compile } from "./scheme"
@@ -29,11 +36,14 @@ export interface DisplayRequest extends RunRequest {
 }
 export type QueryRequest = RunRequest
 
+// TODO: this and all query-related code should
+//  honestly be moved out into a separate singleton
 export interface QueryEntry {
   id: SchedulerId
   queriedRange: Range
   err: ErrorChannel
   done: Promise<void>
+  expanded: boolean
 }
 
 export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
@@ -155,7 +165,13 @@ export class ScamperInstance {
         resolve()
       },
     })
-    const entry: QueryEntry = { id, err, done: promise, queriedRange }
+    const entry: QueryEntry = {
+      id,
+      err,
+      done: promise,
+      queriedRange,
+      expanded: false,
+    }
     this.registerQueryEntry(entry)
   }
   public invalidateAllQueries() {
@@ -164,7 +180,9 @@ export class ScamperInstance {
         this.cancel(q.id)
       }
     }
-    this.#updateQueries((queries) => { queries.clear(); })
+    this.#updateQueries((queries) => {
+      queries.clear()
+    })
   }
   public invalidateQuery(id: SchedulerId) {
     this.cancel(id)

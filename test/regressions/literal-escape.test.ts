@@ -5,8 +5,8 @@ import { runProgram } from '../harness.js'
 
 test('literal-escape', async () => {
   expect(await runProgram(`
-    "\["
-    "\]"
+    "["
+    "]"
     "\\\\"
   `)).toEqual([
     '"["',

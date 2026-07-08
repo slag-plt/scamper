@@ -79,11 +79,11 @@ export class Env {
     }
     if (matches.length > 1) {
       console.warn(
-        "Name conflicts has caused shadowing, returning last found",
+        "Name conflicts have caused shadowing, returning first found",
         ...matches,
       )
     }
-    return matches.at(-1)
+    return matches[0]
   }
 
   /** @return the top-level bindings of this environment as a Module */

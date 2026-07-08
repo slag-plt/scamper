@@ -30,6 +30,7 @@ describe("query decorations", () => {
       queriedRange: Range.of(1, 8, 8, 1, 8, 8),
       err: new SimpleErrorChannel(),
       done: Promise.resolve(),
+      expanded: false,
     })
 
     syncQueryDecorations(view)

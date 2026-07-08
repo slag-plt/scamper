@@ -3,6 +3,7 @@ import { read } from "../../src/scheme/reader"
 import { getQueriedAST, getReportedSyntax } from "../../src/scheme/query"
 import {
   Loc,
+  isList,
   listToVector,
   mkAp,
   mkDisp,
@@ -54,7 +55,10 @@ describe("AST querying", () => {
       const ast = read(testProgram)
       const queryLoc = new Loc(5, 4, 41)
       const { range } = getQueriedAST(ast, queryLoc)
-      const yo = listToVector(testSexps[3].value)[1]
+      const queriedSexp = testSexps[3]
+      expect(isList(queriedSexp.value)).toBe(true)
+      if (!isList(queriedSexp.value)) return
+      const yo = listToVector(queriedSexp.value)[1]
       expect(isSyntax(yo)).toBe(true)
       if (!isSyntax(yo)) return
       expect(range).toEqual(yo.range)

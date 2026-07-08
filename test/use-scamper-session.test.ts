@@ -2,9 +2,8 @@
 import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { Loc, LoggingChannel, Range } from "../src/lpm"
+import { LoggingChannel, Range } from "../src/lpm"
 import { type DisplayRequest, type QueryMap, ScamperInstance } from "../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../src/web/composables/codemirror-editor-adapter"
 import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
 import {
@@ -13,6 +12,7 @@ import {
   type ScamperSessionOptions,
 } from "../src/web/composables/use-scamper-session"
 import type { ResultsPaneType } from "../src/web/composables/use-results-pane"
+import { makeMockCodeMirrorEditorAdapter } from "./stubs/mock-code-mirror-editor-adapter"
 
 function queryCount(map: QueryMap): number {
   let count = 0
@@ -70,22 +70,10 @@ function mockScheduledQuery(
         err,
         queriedRange: mockQueriedRange,
         done,
+        expanded: false,
       })
+      return Promise.resolve()
     })
-}
-
-function makeAdapter(): CodeMirrorEditorAdapter {
-  return {
-    getDoc: () => "1",
-    isLoaded: () => true,
-    initializeDoc: () => {
-      /* noop */
-    },
-    initializeDummyDoc: () => {
-      /* noop */
-    },
-    getCursorLoc: () => new Loc(0, 0, 0),
-  }
 }
 
 function makePane(): ResultsPaneType {
@@ -102,7 +90,7 @@ function mountSession(
   pane: ResultsPaneType | null = makePane(),
 ): ScamperSession {
   let session!: ScamperSession
-  const editor: EditorAccessor = () => makeAdapter()
+  const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
 
   const Host = defineComponent({
     setup() {
@@ -174,7 +162,9 @@ describe("useScamperSession", () => {
           err,
           queriedRange: Range.of(0, 0, 0, 0, 1, 0),
           done: pendingPromise(),
+          expanded: false,
         })
+        return Promise.resolve()
       })
       .mockImplementationOnce(({ err }) => {
         scamper.registerQueryEntry({
@@ -182,7 +172,9 @@ describe("useScamperSession", () => {
           err,
           queriedRange: Range.of(0, 1, 1, 0, 2, 1),
           done: pendingPromise(),
+          expanded: false,
         })
+        return Promise.resolve()
       })
     mockExecute(scamper)
 
@@ -350,7 +342,7 @@ describe("useScamperSession", () => {
       components: { IdeHeader },
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
-        const editor: EditorAccessor = () => makeAdapter()
+        const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
         provideScamperSession(paneRef, { editor })
       },
       template: "<IdeHeader currentFile='null' />",
@@ -377,7 +369,7 @@ describe("useScamperSession", () => {
       components: { IdeHeader },
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
-        const editor: EditorAccessor = () => makeAdapter()
+        const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
         provideScamperSession(paneRef, { editor })
       },
       template: "<IdeHeader currentFile='null' />",
