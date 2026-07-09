@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { reactive, ref } from "vue"
 import { toRaw, isProxy } from 'vue';
 
 
@@ -37,6 +37,8 @@ const libs: [string, object][] = [
   ["data", Data],
   ["rex", Rex],
 ]
+
+const resetKey = ref(0)
 
 const options = ref([
   { id: 1, val: 'notes' },
@@ -101,11 +103,11 @@ function checkArg(foo: object) {
 
 function checkReturn(foo: object) {
   Object.entries(foo).forEach(([key, type]) => {
-    if (key === "returnType") {
+    if (key === "returnType" && returnTypes.value) {
       type = isProxy(type) ? toRaw(type) : type;
       type = type.replace("?", "");
       console.log("returnType: ", type);
-      console.log("CALAL", returnTypes.value)
+      console.log("CALAL", toRaw(returnTypes.value))
       console.log("TRUTH", returnTypes.value.includes(type))
       if (!returnTypes.value.includes(type)) {
         return false;
@@ -120,6 +122,26 @@ function searchFilter(foo: object) {
     return true;
   }
   return false;
+}
+
+const keys = computed(() => {
+  const arr = []
+  let count = 0;
+  for(const [libName, lib] of libs) {
+    for(const [fooName, foo] of Object.entries(lib)) {
+      arr.push(ref(count))
+      count++
+    }
+  }
+  return arr
+});
+
+function updatePage() {
+  keys.value.map((key) => {
+    key.value++
+  });
+  console.log("updatePage called, keys updated: ", keys.value);
+  get
 }
 
 
@@ -207,7 +229,7 @@ function searchFilter(foo: object) {
       <!-- </Dropdown> -->
   </div>
 
-  <button class="enter-button" @click="searchFilter"><strong>Enter</strong></button>
+  <button class="enter-button" @click="updatePage" ><strong>Enter</strong></button>
 
     <!-- <select v-model="tags" multiple>
         <option value="volvo">Volvo</option>
@@ -219,14 +241,14 @@ function searchFilter(foo: object) {
 
     <div>
       <h3> <strong>Search Results</strong> </h3>
-                     <div class="api">
+                     <div :key="resetKey" class="api">
                   <div class="index2"> 
                     <!-- <ul> -->
                     <div class="entries">
                       <div v-for="library in rawLibs" :key="library[0]">
                         <text><strong>{{library[0]}}</strong></text>
-                        <div v-for="foo in library[1]" :key="foo[0]">
-                          <text v-if="searchFilter(foo)" >{{makeString(foo)}}</text>
+                        <div v-for="(foo, index) in library[1]" :key="keys.values[index]">
+                          <text v-show="searchFilter(foo)">{{makeString(foo)}}</text>
                         </div>
                       </div>
 
