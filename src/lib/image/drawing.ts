@@ -1,8 +1,5 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import HtmlRenderer from '../../lpm/renderers/html.js'
-import VueRenderer from '../../lpm/renderers/vue.js'
-import DrawingRenderer from './DrawingRenderer.vue'
 import * as L from '../../lpm'
 import { Rgb, rgb, colorToRgb, colorS, rgbAverage, rgbToString } from './color.js'
 import { Font, font, fontS, fontToFontString } from './font.js'
@@ -29,7 +26,7 @@ const alignHS: C.Spec = {
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
-function drawingQ (v: any): boolean {
+export function drawingQ (v: any): boolean {
   checkContract(arguments, contract('image?', [C.any]))
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
@@ -854,7 +851,7 @@ export function clearDrawing (canvas: HTMLCanvasElement) {
 
 // TODO: aria labels should be in a central location
 export const canvasAriaLabel = 'scamper-canvas';
-function renderer (drawing: Drawing): HTMLElement {
+export function renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
   canvas.setAttribute('aria-label', canvasAriaLabel);
   canvas.width = Math.ceil(drawing.width)
@@ -863,7 +860,3 @@ function renderer (drawing: Drawing): HTMLElement {
   render(0, 0, drawing, canvas)
   return canvas
 }
-
-HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))
-
-VueRenderer.registerCustomRenderer(drawingQ, () => DrawingRenderer)
