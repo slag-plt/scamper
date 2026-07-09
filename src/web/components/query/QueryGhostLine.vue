@@ -48,7 +48,7 @@ const containerEl = computed(
 
 <template>
   <Teleport :to="`#${getIdForGhostLine(line)}`" defer>
-    <div id="ghost-line">
+    <div class="ghost-line">
       <QueryContainer ref="containerRef" :queries="queries" />
       <QueryConnectors :queries="queries" :container="containerEl" />
     </div>
@@ -56,7 +56,7 @@ const containerEl = computed(
 </template>
 
 <style scoped>
-#ghost-line {
+.ghost-line {
   width: v-bind("`${width}ch`");
   height: 100%;
   left: v-bind("`${leftOffset}ch`");

@@ -35,7 +35,7 @@ const contentsRef = useTemplateRef("contents-ref")
 </script>
 
 <template>
-  <div id="query-modal" :data-query-id="query.id" :class="{ invisible }">
+  <div class="query-modal" :data-query-id="query.id" :class="{ invisible }">
     <ModalContents ref="contents-ref" :value="toRender" />
     <ModalControls
       :query-id="query.id"
@@ -45,7 +45,7 @@ const contentsRef = useTemplateRef("contents-ref")
 </template>
 
 <style scoped>
-#query-modal {
+.query-modal {
   display: flex;
   justify-content: space-between;
   box-sizing: border-box;
@@ -64,7 +64,7 @@ const contentsRef = useTemplateRef("contents-ref")
 }
 
 @supports (anchor-name: --test) {
-  #query-modal {
+  .query-modal {
     anchor-name: v-bind("queryAnchorName");
   }
 }

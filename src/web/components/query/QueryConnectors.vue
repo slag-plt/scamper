@@ -48,7 +48,7 @@ watchPostEffect(() => {
 </script>
 
 <template>
-  <svg id="connectors" ref="svgRef">
+  <svg class="connectors" ref="svgRef">
     <line
       v-for="line in lines"
       :key="line.id"
@@ -63,7 +63,7 @@ watchPostEffect(() => {
 </template>
 
 <style scoped>
-#connectors {
+.connectors {
   width: 100%;
   height: v-bind("connectorHeight");
 }

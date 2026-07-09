@@ -27,9 +27,7 @@ class GhostLineWidget extends WidgetType {
   toDOM(): HTMLElement {
     const containerEl = document.createElement("div")
     containerEl.id = getIdForGhostLine(this.line)
-    console.debug("container height", CMContainerHeight)
     containerEl.style.height = `${CMContainerHeight.toString()}lh`
-    console.debug("container height", containerEl.style.height)
     return containerEl
   }
 

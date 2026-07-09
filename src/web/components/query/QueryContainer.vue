@@ -9,13 +9,13 @@ const height = `${ModalHeight.toString()}lh`
 </script>
 
 <template>
-  <div id="query-container">
+  <div class="query-container">
     <QueryModal v-for="q in queries" :key="q.id" :query="q" />
   </div>
 </template>
 
 <style scoped>
-#query-container {
+.query-container {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
