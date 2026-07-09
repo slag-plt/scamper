@@ -511,7 +511,7 @@ Music.registerValue('play-composition', playComposition)
 function initialize() {
   // Initialize webaudiofont
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  if (window && (window.AudioContext || (window as any).webkitAudioContext)) {
+  if (typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext)) {
     const player = waf()
     if (player !== undefined) {
       player.loadInstrument(0)         // 0: Acoustic Grand Piano

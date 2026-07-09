@@ -1,7 +1,7 @@
 import { ErrorChannel, ICE, OutputChannel, ScamperError } from "."
 import { Fiber, StepResult } from "./fiber"
 import "scheduler-polyfill"
-import { mkTraceOutput } from "./trace"
+import { mkTraceOutput } from "./trace/index.js"
 import { getFS } from "../fs"
 import * as S from "../scheme"
 
