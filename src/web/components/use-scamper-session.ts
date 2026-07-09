@@ -1,5 +1,5 @@
 import { computed, inject, type InjectionKey, provide, reactive, ref, type ShallowRef } from "vue"
-import { type DisplayRequest, Scamper } from "../../scamper"
+import Scamper, { type DisplayRequest } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../lpm/scheduler"
 import type { ResultsPaneType } from "./use-results-pane"

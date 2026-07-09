@@ -11,7 +11,7 @@ import QueryModal from "./query/QueryModal.vue"
 import { provideEditor } from "./editor-context"
 import type { ResultsPaneType } from "./use-results-pane"
 import { provideScamperSession } from "./use-scamper-session"
-import { Scamper } from "../../scamper"
+import Scamper from "../../scamper"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 

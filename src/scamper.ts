@@ -36,6 +36,28 @@ const defaultEnv =
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     extendWithImport('prelude', builtinLibs.get('prelude')!)
 
+// N.B., web/renderers.ts registers the Vue/HTML custom renderers for the
+// builtin libraries' value types. It transitively imports Vue single-file
+// components, which the CLI's plain Node runtime can't load -- so this must
+// stay a *dynamic* import, guarded to only ever run in a browser.
+//
+// Deliberately fire-and-forget: Scamper.execute()/query() must NOT await
+// this before scheduling. Doing so once gated task-id generation on it,
+// which stopRun()'s cancel-by-id logic (see use-scamper-session.ts) depends
+// on happening promptly -- a cold dynamic import of ~20 modules, including
+// several Vue SFCs, can take longer than the window between two "Run"
+// clicks, so a run that hadn't finished awaiting it yet was neither
+// registered nor cancellable, and a second run scheduled independently
+// instead of replacing it, duplicating output. The tradeoff: a value
+// displayed before this resolves can render via the generic fallback
+// instead of its custom renderer, since VueRenderer's registry mutation
+// isn't reactive -- that specific display won't upgrade itself in place. In
+// practice this only risks the very first values of a freshly loaded page,
+// since the import starts as soon as this module does.
+if (typeof window !== "undefined") {
+  void import("./web/renderers.js")
+}
+
 export default class Scamper {
   // singleton structure
   static #instance?: Scamper

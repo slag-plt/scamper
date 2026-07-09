@@ -1,6 +1,6 @@
 import { ErrorChannel, ICE, OutputChannel, ScamperError } from "."
 import { Fiber, StepResult } from "./fiber"
-import "scheduler-polyfill"
+import { schedulerYield } from "./scheduler-yield.js"
 import { mkTraceOutput } from "./trace/index.js"
 import { getFS } from "../fs"
 import * as S from "../scheme"
@@ -208,7 +208,7 @@ export class Scheduler {
       }
       // Yield before stepping so callers can observe scheduled tasks (e.g. UI
       // run-in-progress) before fibers run in this frame.
-      await scheduler.yield()
+      await schedulerYield()
       const startTime = performance.now()
       while (performance.now() - startTime < this.#timeQuantum) {
         if (this.#wasPaused()) {

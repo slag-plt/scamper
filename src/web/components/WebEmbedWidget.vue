@@ -3,7 +3,7 @@ import { onMounted, shallowRef } from "vue"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 import hljs from "highlight.js"
-import { Scamper } from "../../scamper.js"
+import Scamper from "../../scamper.js"
 
 const props = defineProps<{
   src: string

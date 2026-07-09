@@ -38,6 +38,7 @@ const out = new ConsoleOutput()
 const request = await Scamper.getInstance().execute({
   src, out, err: out, isTracing: false
 })
+
 if (request !== null) {
   await request.done
 }
