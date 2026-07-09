@@ -36,14 +36,14 @@ const defaultEnv =
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     extendWithImport('prelude', builtinLibs.get('prelude')!)
 
-export class ScamperInstance {
+export default class Scamper {
   // singleton structure
-  static #instance?: ScamperInstance
+  static #instance?: Scamper
   #scheduler: Scheduler
 
-  static getInstance(): ScamperInstance {
-    ScamperInstance.#instance ??= new ScamperInstance()
-    return ScamperInstance.#instance
+  static getInstance(): Scamper {
+    Scamper.#instance ??= new Scamper()
+    return Scamper.#instance
   }
   private constructor() {
     this.#scheduler = new Scheduler()

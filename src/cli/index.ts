@@ -3,7 +3,7 @@ import { parseArgs } from "node:util"
 
 // import { builtinLibs, initializeLibs } from "../lib"
 import { ConsoleOutput } from "../lpm/output"
-import * as Scheme from "../scheme"
+import Scamper from "../scamper"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -34,24 +34,10 @@ const filename = positionals[0]
 
 const src = fs.readFileSync(filename, "utf-8")
 const out = new ConsoleOutput()
-const program = await Scheme.compile(out, src)
-if (program === undefined) {
-  process.exit(1)
+
+const request = await Scamper.getInstance().execute({
+  src, out, err: out, isTracing: false
+})
+if (request !== null) {
+  await request.done
 }
-
-// TODO: need to reimplement the CLI driver using our fiber framework
-
-// const options = defaultOptions
-// options.isTracing = values.trace ?? false
-
-// await initializeLibs()
-// new Thread(
-//   "##main##",
-//   Scheme.mkInitialEnv(),
-//   program,
-//   options,
-//   builtinLibs,
-//   out,
-//   out,
-//   new Map([["scheme", Scheme.raiser]]),
-// ).evaluate()
