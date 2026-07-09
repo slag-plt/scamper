@@ -6,16 +6,23 @@ import {
   Loc,
   mkList,
   mkSym,
+  Range,
   ScamperError,
 } from "../lpm"
 import { isSyntax, mkSyntax, Syntax } from "./syntax"
 import { reservedWords } from "./parser"
 
+export interface QueriedSyntax { syntax: Syntax; range: Range }
+
 /**
- * @returns [ast] with the node at [queryLoc] wrapped in a Report expression
+ * @returns ast with the node at [queryLoc] wrapped in a Report expression,
+ *          plus the range of the inner reported expression
  * @throws ScamperError if there is no valid node to report at [queryLoc]
  */
-export function getQueriedAST(ast: Syntax[], queryLoc: Loc): Syntax[] {
+export function getQueriedAST(
+  ast: Syntax[],
+  queryLoc: Loc,
+): { ast: Syntax[]; range: Range } {
   const queriedI = ast.findIndex((sexp) => sexp.range.contains(queryLoc))
   if (queriedI < 0) {
     throw new ScamperError(
@@ -23,18 +30,20 @@ export function getQueriedAST(ast: Syntax[], queryLoc: Loc): Syntax[] {
       `Received invalid query location: ${queryLoc.toString()}`,
     )
   }
-  return ast.map((sexp, i) =>
-    i === queriedI ? getReportedSyntax(sexp, queryLoc) : sexp,
-  )
+  const { syntax, range } = getReportedSyntax(ast[queriedI], queryLoc)
+  return {
+    ast: ast.map((sexp, i) => (i === queriedI ? syntax : sexp)),
+    range,
+  }
 }
 
 /**
  * Precondition: sexp.range contains queryLoc
  */
-export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
+export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): QueriedSyntax {
   const { value, range, comments } = sexp
   if (!isList(value)) {
-    return makeWrappedSyntax(value, range)
+    return { syntax: makeWrappedSyntax(value, range), range }
   }
 
   // otherwise, we queried something inside a function application
@@ -43,7 +52,7 @@ export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
 
   // we broke because we either queried the head or we encountered a null
   if (elems.length === 0) {
-    return makeWrappedSyntax(value, range)
+    return { syntax: makeWrappedSyntax(value, range), range }
   }
 
   let queriedI = -1
@@ -72,7 +81,7 @@ export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
     //  for some odd reason decided to query the final null in the cons. then, our
     //  assumption that they queried the ending bracket doesn't hold.
     //  let's consider that later.
-    return makeWrappedSyntax(value, range)
+    return { syntax: makeWrappedSyntax(value, range), range }
   }
 
   // note: if queriedI >= 0, we know it must be a syntax node
@@ -81,15 +90,19 @@ export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
   if (queriedI !== 0) {
     // this was not the first thing in the application,
     // so we're free to just go deeper
-    return mkSyntax(
-      mkList(
-        ...elems.map((elem, i) =>
-          i === queriedI ? getReportedSyntax(head, queryLoc) : elem,
+    const inner = getReportedSyntax(head, queryLoc)
+    return {
+      syntax: mkSyntax(
+        mkList(
+          ...elems.map((elem, i) =>
+            i === queriedI ? inner.syntax : elem,
+          ),
         ),
+        range,
+        comments,
       ),
-      range,
-      comments,
-    )
+      range: inner.range,
+    }
   }
 
   // we queried the head of the function application.
@@ -98,24 +111,31 @@ export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
     // we can't report deeper into this reserved function application
     // so we'll just attempt to report the resulting value from this instead
     // so wrap the overall expression and return
-    return makeWrappedSyntax(value, range)
+    return { syntax: makeWrappedSyntax(value, range), range }
   }
 
   let replacement: Syntax
+  let queriedRange: Range
   if (isSym(hValue) || !isList(hValue) || hValue === null) {
     // application of a defined function OR attempted application of a non-function value
     // just wrap the head in a report
     replacement = makeWrappedSyntax(hValue, hRange)
+    queriedRange = hRange
   } else {
     // this is an anonymous function, we can go deeper
-    replacement = getReportedSyntax(head, queryLoc)
+    const inner = getReportedSyntax(head, queryLoc)
+    replacement = inner.syntax
+    queriedRange = inner.range
   }
   // return our initial sexp which owned this list
-  return mkSyntax(
-    mkList(...elems.map((elem, i) => (i === 0 ? replacement : elem))),
-    range,
-    comments,
-  )
+  return {
+    syntax: mkSyntax(
+      mkList(...elems.map((elem, i) => (i === 0 ? replacement : elem))),
+      range,
+      comments,
+    ),
+    range: queriedRange,
+  }
 }
 
 function makeWrappedSyntax(

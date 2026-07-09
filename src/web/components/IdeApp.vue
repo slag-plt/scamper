@@ -7,13 +7,14 @@ import IdeSidebar from "./IdeSidebar.vue"
 import IdeHeader from "./IdeHeader.vue"
 import ResultsPane from "./ResultsPane.vue"
 import CodeMirrorEditor from "./CodeMirrorEditor.vue"
-import QueryModal from "./query/QueryModal.vue"
-import { provideEditor } from "./editor-context"
-import type { ResultsPaneType } from "./use-results-pane"
-import { provideScamperSession } from "./use-scamper-session"
+import { provideEditor } from "../composables/editor-context"
+import type { ResultsPaneType } from "../composables/use-results-pane"
+import { provideScamperSession } from "../composables/use-scamper-session"
 import Scamper from "../../scamper"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
+import QueryGhostLine from "./query/QueryGhostLine.vue"
+import ExpandedQueryModal from "./query/ExpandedQueryModal.vue"
 
 // ---------- config ----------
 
@@ -57,7 +58,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { queries, isTracing, closeQuery } = session
+const { isTracing, queries, expandedQueryId } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -108,7 +109,7 @@ function stopAutosaving() {
 
 function makeDirty() {
   isDirty.value = true
-  session.closeAllQueries()
+  session.invalidateAllQueries()
 }
 
 // ---------- file operations ----------
@@ -415,11 +416,15 @@ onUnmounted(() => {
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
   </div>
-  <QueryModal
-    v-for="q in queries"
-    :key="q.id"
-    :query="q"
-    @close="closeQuery(q.id)"
+  <QueryGhostLine
+    v-for="[line, qs] in queries"
+    :key="line"
+    :line="line"
+    :queries="qs"
+  />
+  <ExpandedQueryModal
+    v-if="expandedQueryId !== null"
+    :query-id="expandedQueryId"
   />
 </template>
 

@@ -102,6 +102,7 @@ export class Scheduler {
         throw e
       }
       if (isReportTask(task)) {
+        console.debug(e)
         task.err.report(e)
         this.#endCurrFiber()
         return undefined

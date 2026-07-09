@@ -1,6 +1,13 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
 import builtinLibs from "./lib"
-import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
+import {
+  Env,
+  ErrorChannel,
+  Loc,
+  OutputChannel,
+  Range,
+  rangesEqual,
+} from "./lpm"
 import { Fiber } from "./lpm/fiber"
 import { Scheduler, SchedulerId } from "./lpm/scheduler"
 import { compile } from "./scheme"
@@ -29,12 +36,25 @@ export interface DisplayRequest extends RunRequest {
 }
 export type QueryRequest = RunRequest
 
-const defaultEnv =
-  Env.empty.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('runtime', builtinLibs.get('runtime')!).
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('prelude', builtinLibs.get('prelude')!)
+// TODO: this and all query-related code should
+//  honestly be moved out into a separate singleton
+export interface QueryEntry {
+  id: SchedulerId
+  queriedRange: Range
+  err: ErrorChannel
+  done: Promise<void>
+}
+
+export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
+
+export const QUERIES_CHANGED = "scamper:querieschanged"
+export const QUERY_EXPANDED_CHANGED = "scamper:queryexpandedchanged"
+
+const defaultEnv = Env.empty
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  .extendWithImport("runtime", builtinLibs.get("runtime")!)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  .extendWithImport("prelude", builtinLibs.get("prelude")!)
 
 // Kicks off web/renderers.ts's custom Vue/HTML renderer registration as
 // early as possible (browser-only; see its header comment for why this must
@@ -53,12 +73,17 @@ if (typeof window !== "undefined") {
 export default class Scamper {
   // singleton structure
   static #instance?: Scamper
-  #scheduler: Scheduler
-
   static getInstance(): Scamper {
     Scamper.#instance ??= new Scamper()
     return Scamper.#instance
   }
+
+  /*  =====  instance-related fields  =====  */
+  #scheduler: Scheduler
+  #queries = new Map<number, QueryEntry[]>()
+  #expandedQueryId: SchedulerId | null = null
+  #queryBus = new EventTarget()
+
   private constructor() {
     this.#scheduler = new Scheduler()
   }
@@ -100,20 +125,61 @@ export default class Scamper {
     })
     return { id, tracing, done: promise }
   }
+
+  /*  =====  scheduler  =====  */
+  public cancel(id: SchedulerId) {
+    this.#scheduler.cancelTask(id)
+  }
+  public calibrateScheduler(): void {
+    void this.#scheduler.setTimeQuantumFromFPS()
+  }
+
+  /*  =====  querying  =====  */
+  get queryEvents(): EventTarget {
+    return this.#queryBus
+  }
+  get queries(): QueryMap {
+    return new Map(
+      [...this.#queries].map(
+        ([line, bucket]) => [line, bucket.slice()] as const,
+      ),
+    )
+  }
+  get expandedQueryId(): SchedulerId | null {
+    return this.#expandedQueryId
+  }
+  #updateQueries(mutate: (queries: Map<number, QueryEntry[]>) => void): void {
+    mutate(this.#queries)
+    this.#queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
+  }
+  #setExpandedQueryId(id: SchedulerId | null): void {
+    if (this.#expandedQueryId === id) return
+    this.#expandedQueryId = id
+    this.#queryBus.dispatchEvent(new Event(QUERY_EXPANDED_CHANGED))
+  }
   public async query({
     src,
     err,
     queryLoc,
-  }: QueryExecutionConfig): Promise<QueryRequest | null> {
-    // compile src to lpm bytecode
+  }: QueryExecutionConfig): Promise<void> {
     const compiled = await compile(err, src, queryLoc)
     if (!compiled) {
       // report channel should have caught the error
-      return null
+      return
+    }
+
+    const { prog, queriedRange } = compiled
+    if (
+      this.#queries
+        .get(queriedRange.begin.line)
+        ?.some((q) => rangesEqual(q.queriedRange, queriedRange))
+    ) {
+      console.warn("attempted duplicate query")
+      return
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled, defaultEnv)
+    const fiber = new Fiber(prog, defaultEnv)
 
     // schedule query task
     const id = crypto.randomUUID()
@@ -126,14 +192,78 @@ export default class Scamper {
         resolve()
       },
     })
-    return { id, done: promise }
+    const entry: QueryEntry = {
+      id,
+      err,
+      done: promise,
+      queriedRange,
+    }
+    this.registerQueryEntry(entry)
   }
-  public cancel(id: SchedulerId) {
-    this.#scheduler.cancelTask(id)
+  public invalidateAllQueries() {
+    for (const bucket of this.#queries.values()) {
+      for (const q of bucket) {
+        this.cancel(q.id)
+      }
+    }
+    this.#setExpandedQueryId(null)
+    this.#updateQueries((queries) => {
+      queries.clear()
+    })
+  }
+  public invalidateQuery(id: SchedulerId) {
+    this.cancel(id)
+    if (this.#expandedQueryId === id) {
+      this.#setExpandedQueryId(null)
+    }
+    this.#updateQueries((queries) => {
+      for (const [line, bucket] of queries) {
+        const i = bucket.findIndex((q) => q.id === id)
+        if (i === -1) continue
+        bucket.splice(i, 1)
+        if (bucket.length === 0) {
+          queries.delete(line)
+        }
+        return
+      }
+    })
+  }
+  public expandQuery(id: SchedulerId) {
+    this.#setExpandedQueryId(id)
+  }
+  public collapseQuery() {
+    this.#setExpandedQueryId(null)
+  }
+  public toggleQueryExpanded(id: SchedulerId) {
+    if (this.#expandedQueryId === id) {
+      this.collapseQuery()
+    } else {
+      this.expandQuery(id)
+    }
+  }
+  public getQuery(id: SchedulerId) {
+    for (const bucket of this.#queries.values()) {
+      const query = bucket.find((q) => q.id === id)
+      if (query) {
+        return query
+      }
+    }
   }
 
-  public calibrateScheduler(): void {
-    void this.#scheduler.setTimeQuantumFromFPS()
+  /** Adds a query entry to the line bucket and notifies listeners. */
+  registerQueryEntry(entry: QueryEntry): void {
+    this.#updateQueries((queries) => {
+      const line = entry.queriedRange.begin.line
+      const bucket = queries.get(line)
+      if (bucket) {
+        bucket.push(entry)
+        bucket.sort(
+          (a, b) => a.queriedRange.begin.col - b.queriedRange.begin.col,
+        )
+      } else {
+        queries.set(line, [entry])
+      }
+    })
   }
 }
 

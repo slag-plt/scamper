@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useScamperSession } from "./use-scamper-session"
+import { useScamperSession } from "../composables/use-scamper-session"
 
 defineProps<{
   currentFile: string | null
@@ -92,6 +92,7 @@ const { currentRun, execute, stopRun, query } = useScamperSession()
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  z-index: 2;
 }
 
 .header-left,

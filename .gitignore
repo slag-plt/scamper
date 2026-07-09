@@ -126,3 +126,5 @@ src/**/*.js.map
 
 .claude
 .zed
+.cursor
+.junie

@@ -31,7 +31,10 @@ export async function runProgram (src: string): Promise<string[]> {
     const env = Scheme.mkInitialEnv()
     const prog = await Scheme.compile(out, src)
     if (out.log.length !== 0) { return out.log as string[] }
-    const fiber = new Fiber(prog!, env)
+    if (prog === undefined) {
+      throw new Error("compile produced no program and no logged errors")
+    }
+    const fiber = new Fiber(prog, env)
     runFiber(fiber, out)
     return out.log as string[]
 }
@@ -42,7 +45,10 @@ export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promis
     const prog = await Scheme.compile(out, src)
 
     if (out.levels.length > 1) { return out.levels }
-    const fiber = new Fiber(prog!, env)
+    if (prog === undefined) {
+      throw new Error("compile produced no program and no logged errors")
+    }
+    const fiber = new Fiber(prog, env)
     runFiber(fiber, out)
     return out.levels
 }
