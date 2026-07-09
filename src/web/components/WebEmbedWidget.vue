@@ -23,7 +23,7 @@ onMounted(async () => {
   const display = outputPaneRef.value?.display
   if (!display) return
 
-  Scamper.getInstance().execute({
+  await Scamper.getInstance().execute({
     src: props.src,
     out: display,
     err: display,

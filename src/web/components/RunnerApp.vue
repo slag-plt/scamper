@@ -36,7 +36,7 @@ onMounted(async () => {
   }
 
   const src = await fs.loadFile(filename)
-  Scamper.getInstance().execute({ src, out: display, err: display })
+  await Scamper.getInstance().execute({ src, out: display, err: display })
 
   version.value = `(${APP_VERSION})`
 })

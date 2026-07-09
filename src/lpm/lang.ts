@@ -59,10 +59,8 @@ export class Env {
    */
   get(name: string): Value {
     // TODO: should make smarter solution, probably with overloading
+    //  priority: local > library > top-level
     const matches = []
-    if (this.locals.has(name)) {
-      matches.push(this.locals.get(name))
-    }
     if (this.topLevel.has(name)) {
       matches.push(this.topLevel.get(name))
     }
@@ -70,6 +68,9 @@ export class Env {
       if (library.bindings.has(name)) {
         matches.push(library.bindings.get(name))
       }
+    }
+    if (this.locals.has(name)) {
+      matches.push(this.locals.get(name))
     }
     if (matches.length === 0) {
       throw new ScamperError(

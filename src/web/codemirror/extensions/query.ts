@@ -71,10 +71,7 @@ export const QueryExtension = StateField.define<DecorationSet>({
       if (e.is(queryDecorationsSet)) return e.value
     }
     if (tr.docChanged) {
-      return buildGhostLines(
-        Scamper.getInstance().queries,
-        tr.state.doc,
-      )
+      return buildGhostLines(Scamper.getInstance().queries, tr.state.doc)
     }
     return deco.map(tr.changes)
   },
