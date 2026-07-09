@@ -2,7 +2,7 @@
 import builtinLibs from "./lib"
 import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
 import { Fiber } from "./lpm/fiber"
-import { Scheduler, SchedulerId } from "./scheduler"
+import { Scheduler, SchedulerId } from "./lpm/scheduler"
 import { compile } from "./scheme"
 
 interface ExecutionConfig {

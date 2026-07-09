@@ -1,9 +1,9 @@
-import { ErrorChannel, ICE, OutputChannel, ScamperError } from "./lpm"
-import { Fiber, StepResult } from "./lpm/fiber"
+import { ErrorChannel, ICE, OutputChannel, ScamperError } from "."
+import { Fiber, StepResult } from "./fiber"
 import "scheduler-polyfill"
-import { mkTraceOutput } from "./lpm/trace"
-import { getFS } from "./fs"
-import * as S from "./scheme"
+import { mkTraceOutput } from "./trace"
+import { getFS } from "../fs"
+import * as S from "../scheme"
 
 const DEFAULT_REFRESH_RATE = 60
 

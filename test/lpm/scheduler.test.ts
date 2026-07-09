@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
-import { Scheduler } from "../src/scheduler"
-import { ICE, Range, ReportError, ScamperError } from "../src/lpm"
-import { mkTraceOutput } from "../src/lpm/trace"
-import * as U from "../src/lpm/util"
+import { Scheduler } from "../../src/lpm/scheduler"
+import { ICE, Range, ReportError, ScamperError } from "../../src/lpm"
+import { mkTraceOutput } from "../../src/lpm/trace"
+import * as U from "../../src/lpm/util"
 import {
   makeNeverCompletingFiber,
   makeQueryTask,
@@ -16,8 +16,8 @@ import {
   sleep,
   trackFiberSteps,
   withSuppressedRejections,
-} from "./test-utils"
-import { minorStep, traceStep, yieldStep } from "../src/lpm/fiber"
+} from "../test-utils"
+import { minorStep, traceStep, yieldStep } from "../../src/lpm/fiber"
 
 patchSchedulerYieldForTests()
 
