@@ -9,15 +9,14 @@ import {
   shallowRef,
   type ShallowRef,
 } from "vue"
-import {
+import Scamper, {
   type DisplayRequest,
   QUERIES_CHANGED,
   QUERY_EXPANDED_CHANGED,
   type QueryMap,
-  ScamperInstance,
 } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import type { SchedulerId } from "../../scheduler"
+import type { SchedulerId } from "../../lpm/scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
 import { throwNull } from "../../utils"
@@ -33,7 +32,7 @@ function createScamperSession(
   onRunScheduled?: () => void,
 ) {
   const activeRun = ref<DisplayRequest | null>(null)
-  const scamper = ScamperInstance.getInstance()
+  const scamper = Scamper.getInstance()
 
   const queries = shallowRef<QueryMap>(new Map(scamper.queries))
   const expandedQueryId = shallowRef<SchedulerId | null>(

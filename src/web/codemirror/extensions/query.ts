@@ -6,7 +6,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view"
-import { type QueryMap, ScamperInstance } from "../../../scamper"
+import Scamper, { type QueryMap } from "../../../scamper"
 import {
   ConnectorHeight,
   ModalPadding,
@@ -56,7 +56,7 @@ export const queryDecorationsSet = StateEffect.define<DecorationSet>()
 export function syncQueryDecorations(view: EditorView) {
   view.dispatch({
     effects: queryDecorationsSet.of(
-      buildGhostLines(ScamperInstance.getInstance().queries, view.state.doc),
+      buildGhostLines(Scamper.getInstance().queries, view.state.doc),
     ),
     annotations: Transaction.addToHistory.of(false),
   })
@@ -64,7 +64,7 @@ export function syncQueryDecorations(view: EditorView) {
 
 export const QueryExtension = StateField.define<DecorationSet>({
   create(state) {
-    return buildGhostLines(ScamperInstance.getInstance().queries, state.doc)
+    return buildGhostLines(Scamper.getInstance().queries, state.doc)
   },
   update(deco, tr) {
     for (const e of tr.effects) {
@@ -72,7 +72,7 @@ export const QueryExtension = StateField.define<DecorationSet>({
     }
     if (tr.docChanged) {
       return buildGhostLines(
-        ScamperInstance.getInstance().queries,
+        Scamper.getInstance().queries,
         tr.state.doc,
       )
     }

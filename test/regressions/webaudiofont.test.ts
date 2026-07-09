@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { waf } from "../../src/lib/webaudiofont/webaudiofont"
+import { waf } from "../../src/lib/music/webaudiofont/webaudiofont"
 
 const mockWafInstance = {
   test: 123,

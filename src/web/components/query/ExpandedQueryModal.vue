@@ -7,10 +7,10 @@ import {
   ModalOverallPadding,
   ModalVerticalPadding,
   ModalWidth,
-  useReportedValue
+  useReportedValue,
 } from "./query-utils"
 import ModalControls from "./modal/ModalControls.vue"
-import { SchedulerId } from "../../../scheduler"
+import { SchedulerId } from "../../../lpm/scheduler"
 
 const { queryId } = defineProps<{ queryId: SchedulerId }>()
 

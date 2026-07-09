@@ -10,7 +10,7 @@ import CodeMirrorEditor from "./CodeMirrorEditor.vue"
 import { provideEditor } from "../composables/editor-context"
 import type { ResultsPaneType } from "../composables/use-results-pane"
 import { provideScamperSession } from "../composables/use-scamper-session"
-import { ScamperInstance } from "../../scamper"
+import Scamper from "../../scamper"
 import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 import QueryGhostLine from "./query/QueryGhostLine.vue"
@@ -58,7 +58,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing, queries, expandedQueryId, getQueryOrThrow } = session
+const { isTracing, queries, expandedQueryId } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -359,7 +359,7 @@ onMounted(async () => {
   }
 
   isLoading.value = false
-  ScamperInstance.getInstance().calibrateScheduler()
+  Scamper.getInstance().calibrateScheduler()
 })
 
 onUnmounted(() => {

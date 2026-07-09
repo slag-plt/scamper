@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view"
 import { Loc } from "../../lpm"
-import { QUERIES_CHANGED, ScamperInstance } from "../../scamper"
+import Scamper, { QUERIES_CHANGED } from "../../scamper"
 import {
   mkFreshEditorState,
   mkNoFileEditorState,
@@ -12,7 +12,7 @@ export function createCodeMirrorEditorAdapter(
   dirtyAction: () => void,
 ) {
   let loaded = false
-  const scamper = ScamperInstance.getInstance()
+  const scamper = Scamper.getInstance()
   const onQueriesChanged = () => {
     syncQueryDecorations(view)
   }

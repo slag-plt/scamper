@@ -1,8 +1,8 @@
 import { QueryEntry } from "../../../scamper"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
 import { ReportError } from "../../../lpm"
-import type { SchedulerId } from "../../../scheduler"
 import { computed, MaybeRefOrGetter, toValue } from "vue"
+import { SchedulerId } from "../../../lpm/scheduler"
 
 export const ModalCols = 10
 export const ModalRows = 2

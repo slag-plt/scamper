@@ -3,7 +3,7 @@ import { EditorView } from "@codemirror/view"
 import { afterEach, describe, expect, test } from "vitest"
 import { Range } from "../../src/lpm"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
-import { ScamperInstance } from "../../src/scamper"
+import Scamper from "../../src/scamper"
 import {
   QueryExtension,
   syncQueryDecorations,
@@ -11,7 +11,7 @@ import {
 
 describe("query decorations", () => {
   afterEach(() => {
-    ScamperInstance.getInstance().invalidateAllQueries()
+    Scamper.getInstance().invalidateAllQueries()
   })
 
   test("syncQueryDecorations updates the field from scamper queries", () => {
@@ -24,7 +24,7 @@ describe("query decorations", () => {
       parent,
     })
 
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     scamper.registerQueryEntry({
       id: "test-query",
       queriedRange: Range.of(1, 8, 8, 1, 8, 8),

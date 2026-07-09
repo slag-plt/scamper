@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { SchedulerId } from "../../../../lpm/scheduler"
 import { useScamperSession } from "../../../composables/use-scamper-session"
-import { SchedulerId } from "../../../../scheduler"
 
 withDefaults(defineProps<{ queryId: SchedulerId; overflowing?: boolean }>(), {
   overflowing: true,
