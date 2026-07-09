@@ -8,6 +8,7 @@ import {
   LRLanguage,
 } from "@codemirror/language"
 import { styleTags, tags as t } from "@lezer/highlight"
+import { reservedWords } from "../../../scheme/parser"
 
 export const ScamperLanguage = LRLanguage.define({
   parser: parser.configure({
@@ -29,8 +30,7 @@ export const ScamperLanguage = LRLanguage.define({
         Application: foldInside,
       }),
       styleTags({
-        "and begin cond define display if import lambda let let* letrec match or struct":
-          t.keyword,
+        [reservedWords.join(" ")]: t.keyword,
         Identifier: t.variableName,
         Boolean: t.bool,
         Number: t.number,
