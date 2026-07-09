@@ -139,7 +139,11 @@ export default class Scamper {
     return this.#queryBus
   }
   get queries(): QueryMap {
-    return this.#queries
+    return new Map(
+      [...this.#queries].map(
+        ([line, bucket]) => [line, bucket.slice()] as const,
+      ),
+    )
   }
   get expandedQueryId(): SchedulerId | null {
     return this.#expandedQueryId

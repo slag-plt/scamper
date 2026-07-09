@@ -34,15 +34,13 @@ function createScamperSession(
   const activeRun = ref<DisplayRequest | null>(null)
   const scamper = Scamper.getInstance()
 
-  const queries = shallowRef<QueryMap>(new Map(scamper.queries))
+  const queries = shallowRef<QueryMap>(scamper.queries)
   const expandedQueryId = shallowRef<SchedulerId | null>(
     scamper.expandedQueryId,
   )
 
   const syncQueries = () => {
-    queries.value = new Map(
-      [...scamper.queries].map(([line, bucket]) => [line, [...bucket]]),
-    )
+    queries.value = scamper.queries
   }
   const syncExpandedQueryId = () => {
     expandedQueryId.value = scamper.expandedQueryId
