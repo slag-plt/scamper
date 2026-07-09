@@ -12,6 +12,10 @@ import Rex from "./rex/index.js"
 import Prelude from "./prelude/index.js"
 import Runtime from "./runtime/index.js"
 
+// N.B., a library with a renderers/ folder also needs an entry in
+// src/web/renderers.ts, or its custom Vue/HTML renderers never register in
+// the browser -- this map and that file are two independent enumerations of
+// the same library set.
 export const builtinLibs = new Map<string, Module>([
   ["image", imageLib],
   ["lab", Lab],

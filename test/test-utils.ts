@@ -8,7 +8,7 @@ import {
   Stmt,
   Value,
 } from "../src/lpm"
-import { DisplayTask, QueryTask, SchedulerTask } from "../src/scheduler"
+import { DisplayTask, QueryTask, SchedulerTask } from "../src/lpm/scheduler"
 import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
 import * as U from "../src/lpm/util"
 import * as process from "node:process"

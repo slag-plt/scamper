@@ -36,9 +36,12 @@ const src = fs.readFileSync(filename, "utf-8")
 const out = new ConsoleOutput()
 
 const request = await Scamper.getInstance().execute({
-  src, out, err: out, isTracing: false
+  src, out, err: out, isTracing: values.trace ?? false
 })
 
-if (request !== null) {
-  await request.done
+if (request === null) {
+  process.exit(1)
 }
+
+await request.done
+process.exit(out.seenError ? 1 : 0)

@@ -1,10 +1,13 @@
-declare global {
-  interface Scheduler {
-    yield(): Promise<void>
-  }
-  // eslint-disable-next-line no-var
-  var scheduler: Scheduler | undefined
+interface YieldingScheduler {
+  yield(): Promise<void>
 }
+
+// Feature support doesn't change at runtime, so detect once at module load
+// instead of on every call. Absent in Node, so this is `undefined` for the
+// CLI, which always takes the MessageChannel fallback below.
+const nativeScheduler = (
+  globalThis as { scheduler?: YieldingScheduler }
+).scheduler
 
 /**
  * Yields control back to the event loop between scheduler execution rounds.
@@ -15,8 +18,8 @@ declare global {
  * schedulers like React's use the same fallback.
  */
 export function schedulerYield(): Promise<void> {
-  if (typeof scheduler !== "undefined" && typeof scheduler.yield === "function") {
-    return scheduler.yield()
+  if (nativeScheduler && typeof nativeScheduler.yield === "function") {
+    return nativeScheduler.yield()
   }
   return new Promise((resolve) => {
     const channel = new MessageChannel()

@@ -36,7 +36,7 @@ function makeMockRun(id: string, tracing = false): MockRun {
   }
 }
 
-/** Mimics ScamperInstance.execute returning a DisplayRun handle. */
+/** Mimics Scamper.execute returning a DisplayRun handle. */
 function mockExecute(scamper: Scamper) {
   return vi.spyOn(scamper, "execute").mockImplementation(async () => {
     return makeMockRun(crypto.randomUUID())
