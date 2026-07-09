@@ -2,7 +2,7 @@
 import builtinLibs from "./lib"
 import { Env, ErrorChannel, Loc, OutputChannel } from "./lpm"
 import { Fiber } from "./lpm/fiber"
-import { Scheduler, SchedulerId } from "./scheduler"
+import { Scheduler, SchedulerId } from "./lpm/scheduler"
 import { compile } from "./scheme"
 
 interface ExecutionConfig {
@@ -36,14 +36,28 @@ const defaultEnv =
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     extendWithImport('prelude', builtinLibs.get('prelude')!)
 
-export class ScamperInstance {
+// Kicks off web/renderers.ts's custom Vue/HTML renderer registration as
+// early as possible (browser-only; see its header comment for why this must
+// be a guarded dynamic import). Deliberately fire-and-forget: execute()/
+// query() must NOT await this before scheduling. Doing so once delayed
+// task-id generation past the window stopRun()'s cancel-by-id logic (see
+// use-scamper-session.ts) needs, so a pending run could dodge cancellation
+// and a second run would duplicate its output instead of replacing it.
+// Tradeoff: a value displayed before this resolves can render via the
+// generic fallback instead of its custom renderer -- in practice only a
+// risk for the very first values shown after a fresh page load.
+if (typeof window !== "undefined") {
+  void import("./web/renderers.js")
+}
+
+export default class Scamper {
   // singleton structure
-  static #instance?: ScamperInstance
+  static #instance?: Scamper
   #scheduler: Scheduler
 
-  static getInstance(): ScamperInstance {
-    ScamperInstance.#instance ??= new ScamperInstance()
-    return ScamperInstance.#instance
+  static getInstance(): Scamper {
+    Scamper.#instance ??= new Scamper()
+    return Scamper.#instance
   }
   private constructor() {
     this.#scheduler = new Scheduler()

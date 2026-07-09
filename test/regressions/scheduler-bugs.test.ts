@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { Scheduler } from "../../src/scheduler"
+import { Scheduler } from "../../src/lpm/scheduler"
 import {
   makeTask,
   MockFiber,

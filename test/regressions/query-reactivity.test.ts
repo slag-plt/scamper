@@ -3,7 +3,7 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { Loc, Range, ReportError } from "../../src/lpm"
-import { ScamperInstance } from "../../src/scamper"
+import Scamper from "../../src/scamper"
 import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
 import type { EditorAccessor } from "../../src/web/components/editor-context"
 import {
@@ -58,7 +58,7 @@ describe("query modal reactivity regression", () => {
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
         session = provideScamperSession(paneRef, { editor })
-        vi.spyOn(ScamperInstance.getInstance(), "query").mockImplementation(
+        vi.spyOn(Scamper.getInstance(), "query").mockImplementation(
           ({ err }) => {
             reportQueryResult = (value: number) => {
               err.report(new ReportError(value, Range.none))

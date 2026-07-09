@@ -3,7 +3,7 @@ import { onMounted, shallowRef } from "vue"
 import OutputPane from "./OutputPane.vue"
 import type { OutputPaneType } from "./use-output-pane"
 import hljs from "highlight.js"
-import { ScamperInstance } from "../../scamper.js"
+import Scamper from "../../scamper.js"
 
 const props = defineProps<{
   src: string
@@ -23,7 +23,7 @@ onMounted(async () => {
   const display = outputPaneRef.value?.display
   if (!display) return
 
-  ScamperInstance.getInstance().execute({
+  Scamper.getInstance().execute({
     src: props.src,
     out: display,
     err: display,

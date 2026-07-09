@@ -1,11 +1,6 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import HTMLRenderer from '../../lpm/renderers/html.js'
-import VueRenderer from '../../lpm/renderers/vue.js'
-import PlotRenderer from './PlotRenderer.vue'
-
-import Chart from 'chart.js/auto'
 
 const viz: L.Module = new L.Module()
 
@@ -289,19 +284,6 @@ export function datasetRadar (title: string, data: L.List): Dataset {
 }
 
 ///// Registration and Setup ///////////////////////////////////////////////////
-
-HTMLRenderer.registerCustomRenderer(plotQ, (v: L.Value): HTMLElement => {
-  const canvas = document.createElement('canvas')
-  canvas.width = 800
-  const plot = v as Plot
-  canvas.ariaLabel = "Plot"
-  canvas.role = 'img'
-  canvas.innerText = "Plot"
-  new Chart(canvas, plot.opts as any)
-  return canvas
-})
-
-VueRenderer.registerCustomRenderer(plotQ, () => PlotRenderer)
 
 viz.registerValue('dataset?', datasetQ)
 viz.registerValue('plot?', plotQ)

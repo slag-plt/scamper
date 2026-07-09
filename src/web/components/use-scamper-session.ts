@@ -1,7 +1,7 @@
 import { computed, inject, type InjectionKey, provide, reactive, ref, type ShallowRef } from "vue"
-import { type DisplayRequest, ScamperInstance } from "../../scamper"
+import Scamper, { type DisplayRequest } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import type { SchedulerId } from "../../scheduler"
+import type { SchedulerId } from "../../lpm/scheduler"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
 
@@ -24,7 +24,7 @@ function createScamperSession(
 ) {
   const queries = ref<QueryEntry[]>([])
   const activeRun = ref<DisplayRequest | null>(null)
-  const scamper = ScamperInstance.getInstance()
+  const scamper = Scamper.getInstance()
 
   const currentRun = computed(() => activeRun.value?.id ?? null)
   const isTracing = computed(() => activeRun.value?.tracing ?? false)

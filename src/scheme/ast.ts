@@ -1,10 +1,5 @@
 import * as L from "../lpm"
-import { ICE } from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
-import HtmlRenderer from "../lpm/renderers/html.js"
-import VueRenderer from "../lpm/renderers/vue"
-import PatRenderer from "./ast-components/PatRenderer.vue"
-import ExpRenderer from "./ast-components/ExpRenderer.vue"
 import { FunctionDoc } from "./docstring/docstring"
 
 export interface Tagged {
@@ -481,53 +476,9 @@ TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
 TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
 TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
 
-///// Web Rendering ////////////////////////////////////////////////////////////
-
-function mkCode(text: string): HTMLElement {
-  const ret = document.createElement("code")
-  ret.innerText = text
-  ret.tabIndex = 0
-  return ret
-}
+///// AST argument shapes (consumed by the Vue-based renderers) /////////////////
 
 export type ASTArg = string | Pat | Exp | Stmt
-function mkCodeParens(...args: ASTArg[]): HTMLElement {
-  const ret = document.createElement("code")
-  ret.appendChild(document.createTextNode("("))
-  if (args.length > 0) {
-    ret.appendChild(
-      typeof args[0] === "string"
-        ? mkCode(args[0])
-        : HtmlRenderer.render(args[0]),
-    )
-    for (const arg of args.slice(1)) {
-      ret.appendChild(document.createTextNode(" "))
-      if (typeof arg === "string") {
-        ret.appendChild(document.createTextNode(arg))
-      } else {
-        ret.appendChild(HtmlRenderer.render(arg))
-      }
-    }
-  }
-  ret.appendChild(document.createTextNode(")"))
-  ret.tabIndex = 0
-  return ret
-}
-
-function addBinder(
-  container: HTMLElement,
-  pair: { lhs: string | Pat | Exp; rhs: Exp },
-): void {
-  container.appendChild(document.createTextNode("["))
-  if (typeof pair.lhs === "string") {
-    container.appendChild(document.createTextNode(pair.lhs))
-  } else {
-    container.appendChild(HtmlRenderer.render(pair.lhs))
-  }
-  container.appendChild(document.createTextNode(" "))
-  container.appendChild(HtmlRenderer.render(pair.rhs))
-  container.appendChild(document.createTextNode("]"))
-}
 
 export interface HljsBindings {
   head: string
@@ -535,138 +486,6 @@ export interface HljsBindings {
   body?: Exp
   scrutinee?: Exp
 }
-function mkHljsBindingForm(
-  head: string,
-  pairs: { lhs: string | Pat | Exp; rhs: Exp }[],
-  body?: Exp,
-  scrutinee?: Exp,
-): HTMLElement {
-  const ret = document.createElement("code")
-  ret.classList.add("hljs")
-  ret.appendChild(document.createTextNode(`(${head}`))
-  if (scrutinee) {
-    ret.appendChild(document.createTextNode(" "))
-    ret.appendChild(HtmlRenderer.render(scrutinee))
-  }
-  if (pairs.length > 0) {
-    ret.appendChild(document.createTextNode(" "))
-    addBinder(ret, pairs[0])
-    for (const pair of pairs.slice(1)) {
-      ret.appendChild(document.createTextNode(" "))
-      addBinder(ret, pair)
-    }
-  }
-  if (body) {
-    ret.appendChild(document.createTextNode(" "))
-    ret.appendChild(HtmlRenderer.render(body))
-  }
-  ret.appendChild(document.createTextNode(")"))
-  ret.classList.add("hljs")
-  ret.tabIndex = 0
-  return ret
-}
-
-export function patToHTML(pat: Pat): HTMLElement {
-  switch (pat.tag) {
-    case "pwild":
-      return mkCode("_")
-    case "pvar":
-      return mkCode(pat.name)
-    case "plit":
-      return HtmlRenderer.render(pat.value)
-    case "pctor": {
-      if (pat.args.length === 0) {
-        return mkCode(`(${pat.name})`)
-      } else {
-        return mkCodeParens(pat.name, ...pat.args)
-      }
-    }
-  }
-}
-
-// TODO: deprecated
-export function expToHTML(e: Exp): HTMLElement {
-  switch (e.tag) {
-    case "lit":
-      return HtmlRenderer.render(e.value)
-    case "var":
-      return mkCode(e.name)
-    case "app": {
-      return mkCodeParens(e.head, ...e.args)
-    }
-    case "lam":
-      return mkCodeParens("lambda", ...e.params, e.body)
-    case "let":
-      return mkHljsBindingForm(
-        "let",
-        e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
-        e.body,
-      )
-    case "begin":
-      return mkCodeParens("begin", ...e.exps)
-    case "if":
-      return mkCodeParens("if", e.guard, e.ifB, e.elseB)
-    case "match":
-      return mkHljsBindingForm(
-        "match",
-        e.branches.map(({ pat, body }) => ({ lhs: pat, rhs: body })),
-        undefined,
-        e.scrutinee,
-      )
-    case "quote":
-      return mkCodeParens("quote", mkLit(e.value))
-    case "let*":
-      return mkHljsBindingForm(
-        "let*",
-        e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
-        e.body,
-      )
-    case "and":
-      return mkCodeParens("and", ...e.exps)
-    case "or":
-      return mkCodeParens("or", ...e.exps)
-    case "cond":
-      return mkHljsBindingForm(
-        "cond",
-        e.branches.map(({ test, body }) => ({ lhs: test, rhs: body })),
-      )
-    case "section":
-      return mkCodeParens("section", ...e.exps)
-    default:
-      throw new ICE("expToHTML", "expToHTML is deprecated!")
-  }
-}
-
-export function stmtToHTML(s: Stmt): HTMLElement {
-  switch (s.tag) {
-    case "import":
-      return mkCodeParens("import", s.module)
-    case "define":
-      return mkCodeParens("define", s.name, s.value)
-    case "display":
-      return mkCodeParens("display", s.value)
-    case "stmtexp":
-      return expToHTML(s.expr)
-    case "struct":
-      return mkCodeParens("struct", s.name, ...s.fields)
-  }
-}
-
-export function progToHTML(p: Prog): HTMLElement {
-  const ret = document.createElement("div")
-  ret.append(...p.map(stmtToHTML))
-  return ret
-}
-
-HtmlRenderer.registerCustomRenderer(isPat, (v) => patToHTML(v as Pat))
-HtmlRenderer.registerCustomRenderer(isExp, (v) => expToHTML(v as Exp))
-HtmlRenderer.registerCustomRenderer(isStmt, (v) => stmtToHTML(v as Stmt))
-
-VueRenderer.registerCustomRenderer(isPat, () => PatRenderer)
-VueRenderer.registerCustomRenderer(isExp, () => ExpRenderer)
-// StmtRenderer is never rendered since Raiser only raises expressions
-// TODO: change if this ever changes!
-// VueRenderer.registerCustomRenderer(isStmt, () => StmtRenderer)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 
