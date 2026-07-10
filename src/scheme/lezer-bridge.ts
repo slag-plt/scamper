@@ -13,7 +13,6 @@ import {
   parseStringLiteral,
 } from "./literals.js"
 import { reservedWords } from "./reserved-words.js"
-import { Comment } from "./syntax.js"
 
 ///// Source position bookkeeping ////////////////////////////////////////////////
 
@@ -224,8 +223,11 @@ function identifierName(
 // docstring) is deferred to whoever needs it (see ast.ts's Define.docComments
 // and docstring.ts's parseFunctionDocFromComments), so a malformed docstring
 // never blocks parsing/compiling otherwise-valid code.
-function precedingComments(ctx: Ctx, node: SyntaxNode): Comment[] | undefined {
-  const comments: Comment[] = []
+function precedingComments(
+  ctx: Ctx,
+  node: SyntaxNode,
+): A.Comment[] | undefined {
+  const comments: A.Comment[] = []
   let sib = node.prevSibling
   while (sib?.type.name === "LineComment") {
     comments.unshift({ line: ctx.text(sib), range: ctx.range(sib) })

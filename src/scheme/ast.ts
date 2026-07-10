@@ -1,11 +1,16 @@
 import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
-import { Comment } from "./syntax.js"
 
 export interface Tagged {
   tag: string
 }
 export interface Node {
+  range: L.Range
+}
+
+/** A single line comment, tracked so docstrings can be reassembled from it. */
+export interface Comment {
+  line: string
   range: L.Range
 }
 

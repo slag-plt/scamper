@@ -1,7 +1,6 @@
 import { ICE, Range, ScamperError } from "../../lpm"
-import { Comment } from "../syntax.js"
 import { Param, parseSingleParam } from "./param"
-import { App, Exp, isApp, isVar, Var } from "../ast"
+import { App, Comment, Exp, isApp, isVar, Var } from "../ast"
 
 import { parseFunctionDescription } from "./description"
 import { hasTag, makeTagged, mkScamperErrorWithRange } from "../util"

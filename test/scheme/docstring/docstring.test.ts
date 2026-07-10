@@ -27,7 +27,7 @@ import { testTag1, testTag2, testTagLine1, testTagLine2 } from "./test-tags"
 import { SimpleErrorChannel } from "../../../src/lpm/output/simple-error"
 import { tokenizeAndParse } from "../../../src/scheme"
 import { anyRange } from "../util"
-import { Comment } from "../../../src/scheme/syntax"
+import { Comment } from "../../../src/scheme/ast"
 
 describe("Docstring parsing", () => {
   test("are attached to define statements", () => {
