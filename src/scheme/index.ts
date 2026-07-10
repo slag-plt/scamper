@@ -6,8 +6,7 @@ import { expandProgram } from "./expansion.js"
 import { sugarExpr } from "./sugarer.js"
 import { FiberRaiser } from "../lpm/raiser.js"
 import { raiseFiber } from "./raise.js"
-import { read } from "./reader.js"
-import { parseProgram } from "./parser.js"
+import { parseProgramFromSource } from "./lezer-bridge.js"
 import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedProgram } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
@@ -32,19 +31,8 @@ export function tokenizeAndParse(
   src: string,
   queryLoc?: Loc,
 ): Prog | { program: Prog; queriedRange: Range } | undefined {
-  let sexps
-  try {
-    sexps = read(src)
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      err.report(e)
-      return undefined
-    }
-    throw e
-  }
-
   const errors: S.ScamperError[] = []
-  const program = parseProgram(errors, sexps)
+  const program = parseProgramFromSource(errors, src)
   if (errors.length > 0) {
     errors.forEach((e) => {
       err.report(e)

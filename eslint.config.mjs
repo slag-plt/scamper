@@ -24,7 +24,14 @@ export default defineConfig(
     },
   },
   eslintConfigPrettier,
-  [globalIgnores(["dist/*", "types/*", "src/lib/webaudiofont/*"])],
+  [
+    globalIgnores([
+      "dist/*",
+      "types/*",
+      "src/lib/webaudiofont/*",
+      "src/scheme/generated/*",
+    ]),
+  ],
   {
     languageOptions: {
       parserOptions: {

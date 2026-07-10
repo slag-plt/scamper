@@ -2,8 +2,14 @@
 
 @skip { space | LineComment }
 
+// N.B., reader.ts's readValue treats any bracket other than "[" as producing
+// a plain list -- "(" and "{" are fully interchangeable (as long as each is
+// closed with its own matching kind: "(...)" or "{...}", never mixed), and
+// can appear anywhere a list is expected, including special forms.
+paren<content> { "(" content ")" | "{" content "}" }
+
 arglist {
-  "(" Identifier* ")"
+  paren<Identifier*>
 }
 
 binding {
@@ -24,7 +30,7 @@ pattern {
   String |
   Boolean |
   Char |
-  PApp { "(" pattern* ")" } |
+  PApp { paren<pattern*> } |
   PVector { "[" pattern* "]" }
 }
 
@@ -34,27 +40,27 @@ expression {
   String |
   Boolean |
   Char |
-  Quote { "'" expression | "(" kw<"quote"> expression ")" } |
+  Quote { "'" expression | paren<kw<"quote"> expression> } |
   Vector { "[" expression* "]" } |
-  Lambda { "(" kw<"lambda"> arglist expression ")" } |
-  If { "(" kw<"if"> expression expression expression ")" } |
-  And { "(" kw<"and"> expression* ")" } |
-  Or { "(" kw<"or"> expression* ")" } |
-  Begin { "(" kw<"begin"> expression* ")" } |
-  Cond { "(" kw<"cond"> condBranch* ")" } |
-  Section { "(" kw<"section"> expression* ")" } |
-  Report { "(" kw<"report"> expression ")" } |
-  Application { "(" expression* ")" } |
-  Let { "(" kw<"let"> "(" binding* ")" expression ")" } |
-  LetStar { "(" kw<"let*"> "(" binding* ")" expression ")" } |
-  Match { "(" kw<"match"> expression branch* ")" }
+  Lambda { paren<kw<"lambda"> arglist expression> } |
+  If { paren<kw<"if"> expression expression expression> } |
+  And { paren<kw<"and"> expression*> } |
+  Or { paren<kw<"or"> expression*> } |
+  Begin { paren<kw<"begin"> expression*> } |
+  Cond { paren<kw<"cond"> condBranch*> } |
+  Section { paren<kw<"section"> expression*> } |
+  Report { paren<kw<"report"> expression> } |
+  Application { paren<expression*> } |
+  Let { paren<kw<"let"> paren<binding*> expression> } |
+  LetStar { paren<kw<"let*"> paren<binding*> expression> } |
+  Match { paren<kw<"match"> expression branch*> }
 }
 
 statement {
-  Import { "(" kw<"import"> Identifier ")" } |
-  Define { "(" kw<"define"> Identifier expression ")" } |
-  Display { "(" kw<"display"> expression ")" } |
-  Struct { "(" kw<"struct"> Identifier arglist ")" } |
+  Import { paren<kw<"import"> Identifier> } |
+  Define { paren<kw<"define"> Identifier expression> } |
+  Display { paren<kw<"display"> expression> } |
+  Struct { paren<kw<"struct"> Identifier arglist> } |
   SExpr { expression }
 }
 

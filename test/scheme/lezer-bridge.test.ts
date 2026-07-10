@@ -15,6 +15,14 @@ describe("lezer-bridge parity with reader.ts/parser.ts", () => {
     expectEquivalent("(or 1 2 3)")
   })
 
+  test("curly braces as an alternate to parens, mixed freely (each closed with its own kind)", () => {
+    expectEquivalent("{+ 1 2}")
+    expectEquivalent("(+ {* 3 4} (- 5 1))")
+    expectEquivalent("{define f (lambda (x) {+ x 1})}")
+    expectEquivalent("{if #t {+ 1 2} 3}")
+    expectEquivalent("{let ([x 1]) {+ x 1}}")
+  })
+
   test("quote, in both shorthand and explicit forms, including nested", () => {
     expectEquivalent("'(1 2 3)")
     expectEquivalent("(quote (1 2 3))")
