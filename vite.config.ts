@@ -2,7 +2,6 @@
 import { resolve } from "path"
 import { defineConfig } from "vitest/config"
 
-import { lezer } from "@lezer/generator/rollup"
 import vue from "@vitejs/plugin-vue"
 
 const AppVersion = process.env.npm_package_version ?? "unknown"
@@ -24,7 +23,7 @@ export default defineConfig({
     },
   },
 
-  plugins: [lezer(), vue()],
+  plugins: [vue()],
 
   define: {
     APP_VERSION: JSON.stringify(AppVersion),

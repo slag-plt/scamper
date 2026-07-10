@@ -6,7 +6,7 @@ import { reservedWords } from "../../src/scheme/parser"
 describe("syntax.grammar keyword parity", () => {
   test("every reserved word has a matching kw<...> production, and vice versa", () => {
     const grammarSrc = readFileSync(
-      resolve(__dirname, "../../src/web/codemirror/syntax.grammar"),
+      resolve(__dirname, "../../src/scheme/syntax.grammar"),
       "utf-8",
     )
     const grammarKeywords = new Set(

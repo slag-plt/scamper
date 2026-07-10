@@ -87,7 +87,7 @@ function parsePat(errors: L.ScamperError[], v: L.Value): A.Pat {
     )
     return name === "_" ? A.mkPWild(range) : A.mkPVar(name, range)
   } else {
-    return L.mkPLit(v)
+    return A.mkPLit(v, range)
   }
 }
 
@@ -475,7 +475,7 @@ export function parseStmt(errors: L.ScamperError[], v: L.Value): A.Stmt {
   // v is a list
   const arr = L.listToVector(v)
   if (arr.length == 0) {
-    return A.mkStmtExp(A.mkLit(null), range)
+    return A.mkStmtExp(A.mkLit(null, range), range)
   }
   // v is not equivalent to null
   const { value: hVal, range: hRange } = S.unpackSyntax(arr[0])

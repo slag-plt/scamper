@@ -29,7 +29,11 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["eslint.config.mjs", "vite.config.ts"],
+          allowDefaultProject: [
+            "eslint.config.mjs",
+            "vite.config.ts",
+            "scripts/generate-parser.mjs",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: [".vue"],
@@ -37,7 +41,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["vite.config.ts"],
+    files: ["vite.config.ts", "scripts/generate-parser.mjs"],
     languageOptions: {
       globals: {
         ...globals.node,

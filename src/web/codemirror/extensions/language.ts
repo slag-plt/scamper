@@ -1,4 +1,4 @@
-import { parser } from "../syntax.grammar"
+import { parser } from "../../../scheme/generated/parser.js"
 import {
   continuedIndent,
   foldInside,

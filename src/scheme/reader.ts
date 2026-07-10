@@ -476,9 +476,14 @@ export function readValue(tokens: Token[]): Syntax {
   }
 
   if (!isOpeningBracket(beg.text)) {
-    return beg.text === "'"
-      ? mkSyntax(L.mkList(L.mkSym("quote"), readValue(tokens)), beg.range)
-      : readSingle(beg, true)
+    if (beg.text === "'") {
+      const inner = readValue(tokens)
+      return mkSyntax(
+        L.mkList(L.mkSym("quote"), inner),
+        new L.Range(beg.range.begin, inner.range.end),
+      )
+    }
+    return readSingle(beg, true)
   }
 
   const values = []

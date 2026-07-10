@@ -593,6 +593,8 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.exps.length === e2.exps.length &&
       e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
+  } else if (e1.tag === "report" && e2.tag === "report") {
+    return expEquals(e1.exp, e2.exp)
   } else {
     return false
   }
