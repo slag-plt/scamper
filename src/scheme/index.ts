@@ -9,7 +9,7 @@ import { raiseFiber } from "./raise.js"
 import { read } from "./reader.js"
 import { parseProgram } from "./parser.js"
 import { Exp, mkDisp, Prog } from "./ast.js"
-import { getQueriedAST } from "./query"
+import { getQueriedProgram } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
 
 export const fiberRaiser: FiberRaiser<Exp> = {
@@ -43,23 +43,6 @@ export function tokenizeAndParse(
     throw e
   }
 
-  let queriedRange: Range | undefined
-  if (queryLoc) {
-    // given cursor position, find the sexp to wrap
-    // and wrap sexp in new report expression
-    try {
-      const queried = getQueriedAST(sexps, queryLoc)
-      sexps = queried.ast
-      queriedRange = queried.range.firstLineSpan(src)
-    } catch (e) {
-      if (e instanceof ScamperError) {
-        err.report(e)
-        return undefined
-      }
-      throw e
-    }
-  }
-
   const errors: S.ScamperError[] = []
   const program = parseProgram(errors, sexps)
   if (errors.length > 0) {
@@ -73,8 +56,24 @@ export function tokenizeAndParse(
     return program
   }
 
+  // given cursor position, find the deepest queried sub-expression and wrap
+  // it in a report expression
+  let queriedProgram: Prog
+  let queriedRange: Range
+  try {
+    const queried = getQueriedProgram(program, queryLoc)
+    queriedProgram = queried.prog
+    queriedRange = queried.range.firstLineSpan(src)
+  } catch (e) {
+    if (e instanceof ScamperError) {
+      err.report(e)
+      return undefined
+    }
+    throw e
+  }
+
   // determine if query loc inside define statement
-  const queriedStmt = program.find((s) => s.range.contains(queryLoc))
+  const queriedStmt = queriedProgram.find((s) => s.range.contains(queryLoc))
   if (queriedStmt?.tag !== "define" || queriedStmt.doc === undefined) {
     err.report(
       new ScamperError(
@@ -92,11 +91,8 @@ export function tokenizeAndParse(
     err.report(new ScamperError("Parser", "Querying requires an example tag"))
     return undefined
   }
-  program.push(mkDisp(firstExample.contents.functionCall))
-  if (queriedRange === undefined) {
-    return undefined
-  }
-  return { program, queriedRange }
+  queriedProgram.push(mkDisp(firstExample.contents.functionCall))
+  return { program: queriedProgram, queriedRange }
 }
 
 export async function compile(
