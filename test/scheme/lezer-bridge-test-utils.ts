@@ -12,8 +12,8 @@ export function parse(src: string): { prog: Prog; errors: L.ScamperError[] } {
 // A lighter-weight check for the many samples that exist to exercise every
 // form/token combination the grammar supports: just confirm the source
 // parses without error. Exact AST-shape assertions for the trickiest cases
-// (quote's nested Syntax-wrapping, vector literals, docstrings, wildcard
-// patterns) live directly in the tests that care instead.
+// (quote's raw payload, vector literals, docstrings, wildcard patterns)
+// live directly in the tests that care instead.
 export function expectParses(src: string) {
   const { prog, errors } = parse(src)
   expect(errors, `errors for ${JSON.stringify(src)}`).toEqual([])

@@ -13,7 +13,7 @@ import {
   parseStringLiteral,
 } from "./literals.js"
 import { reservedWords } from "./reserved-words.js"
-import { Comment, mkSyntax } from "./syntax.js"
+import { Comment } from "./syntax.js"
 
 ///// Source position bookkeeping ////////////////////////////////////////////////
 
@@ -143,15 +143,16 @@ function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
 // evaluate (e.g., (quote (lambda (x) x)) is a 3-element list, not a real
 // lambda) -- so this walks the tree directly into a raw L.Value rather than
 // through expFromNode, which would (incorrectly) treat e.g. a nested Lambda
-// node as a real closure to construct.
-//
-// N.B., nested elements are individually Syntax-wrapped (mkSyntax'd) here,
-// matching the old reader.ts/parser.ts pipeline's real (if a little
-// surprising) behavior: reader.ts's readValue wraps every value it reads,
-// recursively, and parser.ts's quote handling only ever strips the
-// outermost wrapper (S.stripSyntax, not stripAllSyntax) -- so a quoted list's
-// own elements stayed Syntax-wrapped. Preserved here for continued fidelity,
-// not because it's independently desirable.
+// node as a real closure to construct. The result is fully raw, recursively:
+// no element of quoted/vector data is ever wrapped in metadata (no source
+// range, no Syntax struct) -- this dialect has no true quotation (no
+// quasiquote/unquote, no macros), so nothing downstream has any legitimate
+// reason to inspect a quoted element's provenance. (An earlier version of
+// this function wrapped nested elements in a Syntax struct to match the old
+// reader.ts/parser.ts pipeline's actual behavior, but that turned out to be
+// a real bug, not a deliberate design: nothing in the runtime knows how to
+// unwrap a Syntax struct, so e.g. (car '(1 2 3)), (+ (car '(1 2 3)) 1), and
+// (equal? '(1 2 3) '(1 2 3)) were all broken.)
 function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
   switch (node.type.name) {
     case "Number":
@@ -167,28 +168,12 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
 
     case "Vector":
     case "PVector":
-      return children(node).map((c) =>
-        mkSyntax(nodeToRawValue(ctx, c), ctx.range(c)),
-      )
+      return children(node).map((c) => nodeToRawValue(ctx, c))
 
     case "Quote": {
       const cs = children(node)
-      if (cs.length === 2) {
-        // explicit (quote x) -- reader.ts's readValue reads every
-        // bracketed element uniformly, so both "quote" and the payload
-        // end up individually Syntax-wrapped.
-        return L.mkList(
-          mkSyntax(L.mkSym("quote"), ctx.range(cs[0])),
-          mkSyntax(nodeToRawValue(ctx, cs[1]), ctx.range(cs[1])),
-        )
-      }
-      // shorthand 'x -- reader.ts constructs the "quote" symbol directly
-      // (see the shorthand-quote range fix earlier in this migration),
-      // without wrapping it; only the payload is wrapped.
-      return L.mkList(
-        L.mkSym("quote"),
-        mkSyntax(nodeToRawValue(ctx, cs[0]), ctx.range(cs[0])),
-      )
+      const inner = cs.length === 2 ? cs[1] : cs[0]
+      return L.mkList(L.mkSym("quote"), nodeToRawValue(ctx, inner))
     }
 
     default:
@@ -204,11 +189,7 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
       // is just a plain list of its children when treated as raw,
       // unevaluated data -- there's no such thing as a "special form" at
       // this level; (lambda (x) x), quoted, is just a 3-element list.
-      return L.mkList(
-        ...children(node).map((c) =>
-          mkSyntax(nodeToRawValue(ctx, c), ctx.range(c)),
-        ),
-      )
+      return L.mkList(...children(node).map((c) => nodeToRawValue(ctx, c)))
   }
 }
 

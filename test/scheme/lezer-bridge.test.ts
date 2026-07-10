@@ -24,7 +24,7 @@ describe("lezer-bridge parsing", () => {
     expectParses("{let ([x 1]) {+ x 1}}")
   })
 
-  test("quote shorthand desugars to (quote <unwrapped payload>), matching reader.ts's own shorthand desugaring", () => {
+  test("quote shorthand desugars to (quote <payload>), fully raw with no nested wrapping", () => {
     const { prog, errors } = parse("'(1 2 3)")
     expect(errors).toEqual([])
     expect(prog.length).toBe(1)
@@ -33,13 +33,17 @@ describe("lezer-bridge parsing", () => {
     if (stmt.tag !== "stmtexp") return
     expect(stmt.expr.tag).toBe("quote")
     if (stmt.expr.tag !== "quote") return
-    // N.B., nested elements of quoted data stay Syntax-wrapped (mkSyntax),
-    // matching parser.ts's real S.stripSyntax(arr[1]) behavior -- only the
-    // outermost wrapper is stripped. See lezer-bridge.ts's nodeToRawValue.
+    // N.B., quoted data is fully raw, recursively -- no element carries a
+    // Syntax wrapper or source range. This dialect has no true quotation
+    // (no quasiquote/unquote, no macros), so nothing has a legitimate reason
+    // to inspect a quoted element's provenance; an earlier version of
+    // nodeToRawValue did wrap nested elements (matching the old parser's
+    // real behavior), but that made every one of car/+/equal?/display on a
+    // quoted list's elements broken at runtime, since nothing knew how to
+    // unwrap a Syntax struct.
     const value = stmt.expr.value as { head: unknown; tail: unknown }
     expect(value).toHaveProperty("head")
-    const head = value.head as { value: unknown }
-    expect(head.value).toBe(1)
+    expect(value.head).toBe(1)
   })
 
   test("explicit quote form and nested quote", () => {
@@ -56,8 +60,8 @@ describe("lezer-bridge parsing", () => {
     if (stmt.tag !== "display") return
     expect(stmt.value.tag).toBe("lit")
     if (stmt.value.tag !== "lit") return
-    const arr = stmt.value.value as { value: unknown }[]
-    expect(arr.map((x) => x.value)).toEqual([1, 2, 3])
+    // fully raw elements, no Syntax wrapping -- see the quote test above.
+    expect(stmt.value.value).toEqual([1, 2, 3])
 
     expectParses("[]")
     expectParses('(display [(+ 1 2) "x" #t])')
