@@ -14,25 +14,36 @@ branch {
   "[" pattern expression "]"
 }
 
+condBranch {
+  "[" expression expression "]"
+}
+
 pattern {
+  Number |
   Identifier |
   String |
   Boolean |
   Char |
-  PApp { "(" pattern* ")" }
+  PApp { "(" pattern* ")" } |
+  PVector { "[" pattern* "]" }
 }
 
 expression {
+  Number |
   Identifier |
   String |
   Boolean |
   Char |
+  Quote { "'" expression | "(" kw<"quote"> expression ")" } |
+  Vector { "[" expression* "]" } |
   Lambda { "(" kw<"lambda"> arglist expression ")" } |
   If { "(" kw<"if"> expression expression expression ")" } |
   And { "(" kw<"and"> expression* ")" } |
   Or { "(" kw<"or"> expression* ")" } |
   Begin { "(" kw<"begin"> expression* ")" } |
-  Cond { "(" kw<"cond"> binding* expression ")"} |
+  Cond { "(" kw<"cond"> condBranch* ")" } |
+  Section { "(" kw<"section"> expression* ")" } |
+  Report { "(" kw<"report"> expression ")" } |
   Application { "(" expression* ")" } |
   Let { "(" kw<"let"> "(" binding* ")" expression ")" } |
   LetStar { "(" kw<"let*"> "(" binding* ")" expression ")" } |
@@ -43,13 +54,28 @@ statement {
   Import { "(" kw<"import"> Identifier ")" } |
   Define { "(" kw<"define"> Identifier expression ")" } |
   Display { "(" kw<"display"> expression ")" } |
+  Struct { "(" kw<"struct"> Identifier arglist ")" } |
   SExpr { expression }
 }
 
 kw<term> { @specialize[@name={term}]<Identifier, term> }
 
 @tokens {
-  Identifier { $[a-zA-Z_\-0-9\+\*\=]+ }
+  @precedence { Number, Boolean, Char, Identifier }
+
+  Number {
+    $[+\-]? (
+      $[0-9]+ ("." $[0-9]*)? |
+      "." $[0-9]+
+    ) (("e" | "E") $[+\-]? $[0-9]+)?
+  }
+
+  // N.B., mirrors reader.ts's tokenizer, which treats any run of characters
+  // not delimited by whitespace, brackets, a string quote, or an unescaped
+  // "'"/";" as an atom (disambiguated into number/boolean/char/identifier
+  // afterward). This is deliberately permissive so that identifiers like
+  // ">", "<=", "null?", and "set!" tokenize correctly.
+  Identifier { ![ \t\n\r()\[\]{}'";]+ }
 
   String { '"' (!["\\] | "\\" _)* '"' }
 
