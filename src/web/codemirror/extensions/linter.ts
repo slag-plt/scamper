@@ -1,9 +1,8 @@
 import { Diagnostic, linter } from "@codemirror/lint"
 import * as LPM from "../../../lpm"
 import { expandProgram } from "../../../scheme/expansion"
-import { read } from "../../../scheme/reader"
 import { scopeCheckProgram } from "../../../scheme/scope"
-import { parseProgram } from "../../../scheme/parser"
+import { tokenizeAndParse } from "../../../scheme"
 import builtinLibs from "../../../lib"
 
 function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
@@ -32,9 +31,11 @@ function makeScamperLinter(_outputId?: HTMLElement) {
     const diagnostics: Diagnostic[] = []
     const doc = view.state.doc.toString()
     try {
-      const sexps = read(doc)
-      const program = expandProgram(parseProgram(errors, sexps))
-      await scopeCheckProgram(builtinLibs, errors, program)
+      const errChannel: LPM.ErrorChannel = { report: (e) => errors.push(e) }
+      const program = tokenizeAndParse(errChannel, doc)
+      if (program !== undefined) {
+        await scopeCheckProgram(builtinLibs, errors, expandProgram(program))
+      }
     } catch (e) {
       if (e instanceof LPM.ScamperError) {
         addError(e, diagnostics)
