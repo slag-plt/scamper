@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { read } from "../../src/scheme/reader"
-import { parseProgram } from "../../src/scheme/parser"
+import { parseProgramFromSource } from "../../src/scheme/lezer-bridge"
 import { getQueriedProgram, getReportedExp, getReportedStmt } from "../../src/scheme/query"
 import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from "../../src/lpm"
 import { anyRange } from "./util"
@@ -22,7 +21,7 @@ const testProgram = `"${testLit}"
 
 function parseTestProgram(): Prog {
   const errors: ScamperError[] = []
-  const prog = parseProgram(errors, read(testProgram))
+  const prog = parseProgramFromSource(errors, testProgram)
   expect(errors).toEqual([])
   return prog
 }
@@ -222,7 +221,7 @@ describe("AST querying", () => {
       const queryLoc = new Loc(line, closeIdx - lineStart + 1, closeIdx)
 
       const errors: ScamperError[] = []
-      const prog = parseProgram(errors, read(src))
+      const prog = parseProgramFromSource(errors, src)
       const { range } = getQueriedProgram(prog, queryLoc)
       const firstLine = range.firstLineSpan(src)
 
@@ -253,7 +252,7 @@ describe("AST querying", () => {
       }
       const { queriedRange } = result
       const errors: ScamperError[] = []
-      const prog = parseProgram(errors, read(src))
+      const prog = parseProgramFromSource(errors, src)
       const { range } = getQueriedProgram(prog, queryLoc)
       expect(queriedRange).toEqual(range.firstLineSpan(src))
     })

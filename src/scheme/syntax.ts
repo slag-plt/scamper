@@ -1,5 +1,10 @@
 import * as L from "../lpm"
-import { Comment } from "./reader"
+
+/** A single line comment, tracked so docstrings can be reassembled from it. */
+export interface Comment {
+  line: string
+  range: L.Range
+}
 
 /**
  * A syntax value wraps a value that serves as a Scheme AST. It provides

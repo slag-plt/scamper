@@ -1,5 +1,5 @@
 import { ICE, Range } from "../../lpm"
-import { Comment } from "../reader"
+import { Comment } from "../syntax.js"
 import { Param, parseSingleParam } from "./param"
 import { App, Exp, isApp, isVar, Var } from "../ast"
 

@@ -1,11 +1,13 @@
 import { isStmtExp } from "../ast"
 import { ICE, Range, ScamperError } from "../../lpm"
-import { isWhitespace, readSingle, Token } from "../reader"
-import { parseIdentifier } from "../parser"
+import { looksLikeIdentifier } from "../literals.js"
+import { reservedWords } from "../reserved-words.js"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
 import { catchIf, mkScamperErrorWithRange } from "../util"
 import { DocComment, isPred, ParseStage, Pred } from "./docstring"
+
+const isWhitespace = (c: string): boolean => /\s/.test(c)
 
 export interface Param {
   name: string
@@ -144,13 +146,23 @@ export function parseParamSignature(
   }
   const [untrimmedName, ...rest] = splitDocLine
   const postNameDocLine = rest.join(":")
+  const trimmedName = untrimmedName.trimEnd()
   const errs: ScamperError[] = []
-  // TODO: range should actually be populated
-  const nameSyn = readSingle(
-    new Token(untrimmedName.trimEnd(), Range.none),
-    false,
-  )
-  const name = parseIdentifier(errs, nameSyn)
+  if (!looksLikeIdentifier(trimmedName)) {
+    errs.push(
+      new ScamperError("Parser", "Expected an identifier", undefined, Range.none),
+    )
+  } else if (reservedWords.includes(trimmedName)) {
+    errs.push(
+      new ScamperError(
+        "Parser",
+        `The identifier "${trimmedName}" is a reserved word and cannot be used as a variable name`,
+        undefined,
+        Range.none,
+      ),
+    )
+  }
+  const name = errs.length > 0 ? "<error>" : trimmedName
   if (errs.length > 0) {
     throw new ParamMalformedFieldError(
       `Name field is malformed, ${errs[0].message}`,

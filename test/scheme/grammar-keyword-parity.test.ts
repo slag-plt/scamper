@@ -1,7 +1,7 @@
 import { readFileSync } from "fs"
 import { resolve } from "path"
 import { describe, expect, test } from "vitest"
-import { reservedWords } from "../../src/scheme/parser"
+import { reservedWords } from "../../src/scheme/reserved-words"
 
 describe("syntax.grammar keyword parity", () => {
   test("every reserved word has a matching kw<...> production, and vice versa", () => {

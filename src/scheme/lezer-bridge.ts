@@ -1,8 +1,8 @@
 // Converts a Lezer parse tree (from generated/parser.ts, built off syntax.grammar)
-// directly into the same A.Prog/A.Stmt/A.Exp/A.Pat shapes that parser.ts builds
-// from reader.ts's raw s-expressions. This lets expansion.ts/scope.ts/codegen.ts
-// stay untouched: they only ever see the ast.ts contract, never the parser that
-// produced it.
+// directly into the same A.Prog/A.Stmt/A.Exp/A.Pat shapes that the old
+// reader.ts/parser.ts pipeline used to build. This lets
+// expansion.ts/scope.ts/codegen.ts stay untouched: they only ever see the
+// ast.ts contract, never the parser that produced it.
 import type { SyntaxNode } from "@lezer/common"
 import * as A from "./ast.js"
 import {
@@ -12,9 +12,13 @@ import {
 } from "./docstring/docstring.js"
 import { parser } from "./generated/parser.js"
 import * as L from "../lpm/index.js"
-import { Comment, read as readRaw, readSingle, Token } from "./reader.js"
-import { reservedWords } from "./parser.js"
-import { isSyntax, mkSyntax, stripSyntax } from "./syntax.js"
+import {
+  parseCharLiteral,
+  parseNumberLiteral,
+  parseStringLiteral,
+} from "./literals.js"
+import { reservedWords } from "./reserved-words.js"
+import { Comment, mkSyntax } from "./syntax.js"
 
 ///// Source position bookkeeping ////////////////////////////////////////////////
 
@@ -114,62 +118,103 @@ function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
 
 ///// Leaf conversion //////////////////////////////////////////////////////////
 
-// N.B., delegates to reader.ts's readSingle so number/string/char/boolean/null
-// literal parsing (escape decoding, named chars, etc.) has exactly one
-// implementation. This is the one remaining dependency on reader.ts; retiring
-// it requires a tree-based literal reconstruction (see migration Phase 8).
+// N.B., unlike reader.ts's readSingle (which has to disambiguate a leaf's
+// kind by testing its text against a cascade of regexes, since its tokenizer
+// lumps every non-bracket, non-string atom into one category), the grammar
+// has already done that disambiguation -- Number/String/Boolean/Char are
+// distinct node types here, so this just dispatches directly on node.type.name.
 function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
-  const tok = new Token(ctx.text(node), ctx.range(node))
-  return stripSyntax(readSingle(tok, true))
-}
-
-// Re-reading a source slice in isolation gives ranges relative to that slice
-// (starting at line 1, col 1), not the real document. This walks the value
-// reader.ts produced and rebases every nested range onto `origin`, the slice's
-// real starting position.
-function rebaseLoc(loc: L.Loc, origin: L.Loc): L.Loc {
-  return loc.line === 1
-    ? new L.Loc(origin.line, origin.col + loc.col - 1, origin.idx + loc.idx)
-    : new L.Loc(origin.line + loc.line - 1, loc.col, origin.idx + loc.idx)
-}
-
-function rebaseRange(range: L.Range, origin: L.Loc): L.Range {
-  return new L.Range(
-    rebaseLoc(range.begin, origin),
-    rebaseLoc(range.end, origin),
-  )
-}
-
-function rebaseValue(v: L.Value, origin: L.Loc): L.Value {
-  if (isSyntax(v)) {
-    return mkSyntax(
-      rebaseValue(v.value, origin),
-      rebaseRange(v.range, origin),
-      v.comments,
-    )
-  } else if (L.isList(v)) {
-    return L.mkList(...L.listToVector(v).map((x) => rebaseValue(x, origin)))
-  } else if (L.isPair(v)) {
-    return L.mkPair(rebaseValue(v.fst, origin), rebaseValue(v.snd, origin))
-  } else if (L.isArray(v)) {
-    return v.map((x) => rebaseValue(x, origin))
-  } else {
-    return v
+  const text = ctx.text(node)
+  switch (node.type.name) {
+    case "Number":
+      return parseNumberLiteral(text)
+    case "String":
+      return parseStringLiteral(text, ctx.range(node))
+    case "Boolean":
+      return text === "#t"
+    case "Char":
+      return parseCharLiteral(text, ctx.range(node))
+    case "Identifier":
+      return text === "null" ? null : L.mkSym(text)
+    default:
+      throw new L.ICE(
+        "lezer-bridge.leafValue",
+        `Unexpected leaf node: ${node.type.name}`,
+      )
   }
 }
 
-// N.B., quote payloads and vector literals are inert data, not sub-expressions
-// to evaluate (e.g., (quote (lambda (x) x)) is a 3-element list, not a real
-// lambda). Re-reading the underlying source text with reader.ts's raw reader
-// is the simplest way to reconstruct that data with the exact same semantics
-// as the rest of the pipeline. Same caveat as leafValue above.
+// Quote payloads and vector literals are inert data, not sub-expressions to
+// evaluate (e.g., (quote (lambda (x) x)) is a 3-element list, not a real
+// lambda) -- so this walks the tree directly into a raw L.Value rather than
+// through expFromNode, which would (incorrectly) treat e.g. a nested Lambda
+// node as a real closure to construct.
 //
-// N.B., matches parser.ts's S.stripSyntax(arr[1]) exactly: only the outermost
-// Syntax wrapper is removed. Nested elements stay Syntax-wrapped, which is the
-// real (if a little surprising) existing behavior for quoted/vector data.
-function rawValueFromNode(ctx: Ctx, node: SyntaxNode): L.Value {
-  const [syn] = readRaw(ctx.text(node))
-  return stripSyntax(rebaseValue(syn, ctx.range(node).begin))
+// N.B., nested elements are individually Syntax-wrapped (mkSyntax'd) here,
+// matching the old reader.ts/parser.ts pipeline's real (if a little
+// surprising) behavior: reader.ts's readValue wraps every value it reads,
+// recursively, and parser.ts's quote handling only ever strips the
+// outermost wrapper (S.stripSyntax, not stripAllSyntax) -- so a quoted list's
+// own elements stayed Syntax-wrapped. Preserved here for continued fidelity,
+// not because it's independently desirable.
+function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
+  switch (node.type.name) {
+    case "Number":
+    case "String":
+    case "Boolean":
+    case "Char":
+      return leafValue(ctx, node)
+
+    case "Identifier": {
+      const text = ctx.text(node)
+      return text === "null" ? null : L.mkSym(text)
+    }
+
+    case "Vector":
+    case "PVector":
+      return children(node).map((c) =>
+        mkSyntax(nodeToRawValue(ctx, c), ctx.range(c)),
+      )
+
+    case "Quote": {
+      const cs = children(node)
+      if (cs.length === 2) {
+        // explicit (quote x) -- reader.ts's readValue reads every
+        // bracketed element uniformly, so both "quote" and the payload
+        // end up individually Syntax-wrapped.
+        return L.mkList(
+          mkSyntax(L.mkSym("quote"), ctx.range(cs[0])),
+          mkSyntax(nodeToRawValue(ctx, cs[1]), ctx.range(cs[1])),
+        )
+      }
+      // shorthand 'x -- reader.ts constructs the "quote" symbol directly
+      // (see the shorthand-quote range fix earlier in this migration),
+      // without wrapping it; only the payload is wrapped.
+      return L.mkList(
+        L.mkSym("quote"),
+        mkSyntax(nodeToRawValue(ctx, cs[0]), ctx.range(cs[0])),
+      )
+    }
+
+    default:
+      // A keyword token (e.g. the "lambda" in a Lambda node) is a leaf
+      // whose node type name is exactly the keyword text, thanks to the
+      // grammar's kw<> specialization -- reduce it to the equivalent
+      // symbol, matching what reader.ts's reading would have produced
+      // before any special-form recognition ever happened.
+      if (reservedWords.includes(node.type.name)) {
+        return L.mkSym(node.type.name)
+      }
+      // Any other compound node (Lambda, If, Let, Application, PApp, ...)
+      // is just a plain list of its children when treated as raw,
+      // unevaluated data -- there's no such thing as a "special form" at
+      // this level; (lambda (x) x), quoted, is just a 3-element list.
+      return L.mkList(
+        ...children(node).map((c) =>
+          mkSyntax(nodeToRawValue(ctx, c), ctx.range(c)),
+        ),
+      )
+  }
 }
 
 function identifierName(
@@ -271,7 +316,7 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
     }
 
     case "PVector":
-      return A.mkPLit(rawValueFromNode(ctx, node), range)
+      return A.mkPLit(nodeToRawValue(ctx, node), range)
 
     default:
       throw new L.ICE(
@@ -307,11 +352,11 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     case "Quote": {
       const cs = children(node)
       const inner = cs.length === 2 ? cs[1] : cs[0]
-      return A.mkQuote(rawValueFromNode(ctx, inner), range)
+      return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
 
     case "Vector":
-      return A.mkLit(rawValueFromNode(ctx, node), range)
+      return A.mkLit(nodeToRawValue(ctx, node), range)
 
     case "Lambda": {
       const cs = children(node).slice(1)

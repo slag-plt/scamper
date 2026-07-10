@@ -1,7 +1,7 @@
 import "./test-tags"
 
 import { describe, expect, test } from "vitest"
-import { Comment } from "../../../src/scheme/reader"
+import { Comment } from "../../../src/scheme/syntax"
 import {
   DocTag,
   matchesDocTagFormat,

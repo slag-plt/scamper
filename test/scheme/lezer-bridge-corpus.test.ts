@@ -1,16 +1,16 @@
 import { readFileSync } from "fs"
 import { resolve } from "path"
 import { describe, test } from "vitest"
-import { expectEquivalent } from "./lezer-bridge-test-utils"
+import { expectParses } from "./lezer-bridge-test-utils"
 
-describe("lezer-bridge parity on realistic multi-statement programs", () => {
+describe("lezer-bridge parsing of realistic multi-statement programs", () => {
   test("the repo's own test.scm fixture", () => {
     const src = readFileSync(resolve(__dirname, "../../test.scm"), "utf-8")
-    expectEquivalent(src)
+    expectParses(src)
   })
 
   test("recursive factorial with a docstring, comments, and a helper", () => {
-    expectEquivalent(
+    expectParses(
       [
         "; a simple recursive program",
         ";;; (fact n) -> integer?",
@@ -30,7 +30,7 @@ describe("lezer-bridge parity on realistic multi-statement programs", () => {
   })
 
   test("structs with pattern matching over a small list-processing program", () => {
-    expectEquivalent(
+    expectParses(
       [
         "(struct point (x y))",
         "(define origin (point 0 0))",
@@ -51,7 +51,7 @@ describe("lezer-bridge parity on realistic multi-statement programs", () => {
   })
 
   test("nested let/let*/cond/and/or/section combined", () => {
-    expectEquivalent(
+    expectParses(
       [
         "(define classify",
         "  (lambda (n)",
@@ -67,7 +67,7 @@ describe("lezer-bridge parity on realistic multi-statement programs", () => {
   })
 
   test("quoted data and vector literals mixed into a larger program", () => {
-    expectEquivalent(
+    expectParses(
       [
         "(define shopping-list '(eggs milk bread))",
         "(define matrix [[1 2] [3 4]])",
@@ -80,7 +80,7 @@ describe("lezer-bridge parity on realistic multi-statement programs", () => {
   })
 
   test("import followed by multiple defines and a struct with pattern matching", () => {
-    expectEquivalent(
+    expectParses(
       [
         "(import lists)",
         "(import lists)",
