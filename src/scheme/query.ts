@@ -36,7 +36,7 @@ export function getReportedStmt(
     case "define": {
       const inner = getReportedExp(stmt.value, queryLoc)
       return {
-        stmt: A.mkDefine(stmt.name, inner.exp, stmt.range, stmt.doc),
+        stmt: A.mkDefine(stmt.name, inner.exp, stmt.range, stmt.docComments),
         range: inner.range,
       }
     }

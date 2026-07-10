@@ -17,6 +17,7 @@ import {
   isComplexPred,
   parseDocLineContents,
   parseDocString,
+  parseFunctionDocFromComments,
   ParseStage,
   Pred,
   VarApp,
@@ -41,13 +42,17 @@ describe("Docstring parsing", () => {
 
     const err = new SimpleErrorChannel()
     const prog = tokenizeAndParse(err, testSrc)
-    const expectedDefine = mkDefine(
-      identifier,
-      lit,
-      anyRange,
+    // N.B., parsing is deferred: the Define carries raw docComments, not an
+    // already-parsed FunctionDoc (see ast.ts's Define.docComments).
+    const expectedDefine = mkDefine(identifier, lit, anyRange, rawTestComments)
+    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
+
+    const stmt = prog?.find((s) => s.tag === "define")
+    expect(stmt?.tag).toBe("define")
+    if (stmt?.tag !== "define") return
+    expect(parseFunctionDocFromComments(stmt.docComments ?? [])).toEqual(
       expectedFunctionDoc,
     )
-    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
   })
 
   describe("parseDocString", () => {

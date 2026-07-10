@@ -1,6 +1,6 @@
 import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
-import { FunctionDoc } from "./docstring/docstring"
+import { Comment } from "./syntax.js"
 
 export interface Tagged {
   tag: string
@@ -184,7 +184,14 @@ export interface Define extends Tagged, Node {
   tag: "define"
   name: string
   value: Exp
-  doc?: FunctionDoc
+  // N.B., raw, unparsed comments -- parsing them into a FunctionDoc is
+  // deferred until something actually needs the documentation (the IDE's
+  // live linter, or the query/example-tag feature), via
+  // docstring.ts's parseFunctionDocFromComments. A malformed docstring is a
+  // documentation-quality issue, not a reason to fail compiling otherwise-
+  // valid code, so it shouldn't be parsed (and thus can't error) as part of
+  // the main parse pass.
+  docComments?: Comment[]
 }
 export interface Disp extends Tagged, Node {
   tag: "display"
@@ -331,8 +338,8 @@ export const mkDefine = (
   name: string,
   value: Exp,
   range: L.Range = L.Range.none,
-  doc?: FunctionDoc,
-): Define => ({ tag: "define", name, value, range, doc })
+  docComments?: Comment[],
+): Define => ({ tag: "define", name, value, range, docComments })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: "display",
   value,

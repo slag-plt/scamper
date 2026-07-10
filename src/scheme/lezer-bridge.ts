@@ -5,11 +5,6 @@
 // ast.ts contract, never the parser that produced it.
 import type { SyntaxNode } from "@lezer/common"
 import * as A from "./ast.js"
-import {
-  commentsToDocComments,
-  FunctionDoc,
-  parseDocString,
-} from "./docstring/docstring.js"
 import { parser } from "./generated/parser.js"
 import * as L from "../lpm/index.js"
 import {
@@ -243,6 +238,11 @@ function identifierName(
 
 ///// Comments / docstrings ////////////////////////////////////////////////////
 
+// N.B., this only captures the raw comment text/ranges -- it can't fail.
+// Actually parsing this into a FunctionDoc (which can fail on a malformed
+// docstring) is deferred to whoever needs it (see ast.ts's Define.docComments
+// and docstring.ts's parseFunctionDocFromComments), so a malformed docstring
+// never blocks parsing/compiling otherwise-valid code.
 function precedingComments(ctx: Ctx, node: SyntaxNode): Comment[] | undefined {
   const comments: Comment[] = []
   let sib = node.prevSibling
@@ -251,26 +251,6 @@ function precedingComments(ctx: Ctx, node: SyntaxNode): Comment[] | undefined {
     sib = sib.prevSibling
   }
   return comments.length > 0 ? comments : undefined
-}
-
-function docFromPrecedingComments(
-  ctx: Ctx,
-  node: SyntaxNode,
-): FunctionDoc | undefined {
-  const comments = precedingComments(ctx, node)
-  if (!comments) {
-    return undefined
-  }
-  try {
-    const docComments = commentsToDocComments(comments)
-    return docComments.length > 0 ? parseDocString(docComments) : undefined
-  } catch (e) {
-    if (!(e instanceof L.ScamperError)) {
-      throw e
-    }
-    ctx.errors.push(e)
-    return undefined
-  }
 }
 
 ///// Patterns //////////////////////////////////////////////////////////////////
@@ -491,8 +471,8 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
       const cs = children(node).slice(1)
       const name = identifierName(ctx, cs[0])
       const value = expFromNode(ctx, cs[1])
-      const doc = docFromPrecedingComments(ctx, node)
-      return A.mkDefine(name, value, range, doc)
+      const docComments = precedingComments(ctx, node)
+      return A.mkDefine(name, value, range, docComments)
     }
 
     case "Display": {

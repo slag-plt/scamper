@@ -3,7 +3,7 @@ import { Value } from "./lang"
 import { toString } from "./util"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
-type Phase = "Parser" | "Runtime"
+type Phase = "Parser" | "Runtime" | "Docstring"
 
 /** Errors that arise during Scamper compilation and execution. */
 export class ScamperError extends Error {

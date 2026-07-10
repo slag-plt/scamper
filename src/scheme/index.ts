@@ -10,6 +10,7 @@ import { parseProgramFromSource } from "./lezer-bridge.js"
 import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedProgram } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
+import { parseFunctionDocFromComments } from "./docstring/docstring.js"
 
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
@@ -62,7 +63,29 @@ export function tokenizeAndParse(
 
   // determine if query loc inside define statement
   const queriedStmt = queriedProgram.find((s) => s.range.contains(queryLoc))
-  if (queriedStmt?.tag !== "define" || queriedStmt.doc === undefined) {
+  if (queriedStmt?.tag !== "define" || queriedStmt.docComments === undefined) {
+    err.report(
+      new ScamperError(
+        "Parser",
+        "Querying is only allowed within function definitions with docstrings",
+      ),
+    )
+    return undefined
+  }
+  // docstring parsing is deferred until here, since it's only ever needed
+  // for this on-demand query/example-tag feature -- a malformed docstring
+  // fails the query itself rather than blocking compilation altogether.
+  let doc
+  try {
+    doc = parseFunctionDocFromComments(queriedStmt.docComments)
+  } catch (e) {
+    if (e instanceof ScamperError) {
+      err.report(e)
+      return undefined
+    }
+    throw e
+  }
+  if (doc === undefined) {
     err.report(
       new ScamperError(
         "Parser",
@@ -72,7 +95,7 @@ export function tokenizeAndParse(
     return undefined
   }
   // find example tag if exists
-  const exampleTags = queriedStmt.doc.tags.filter((t) => isExampleTag(t))
+  const exampleTags = doc.tags.filter((t) => isExampleTag(t))
   // TODO: only choosing first example tag for input prototype
   const firstExample = exampleTags.at(0)
   if (!firstExample) {

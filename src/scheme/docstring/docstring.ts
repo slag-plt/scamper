@@ -1,4 +1,4 @@
-import { ICE, Range } from "../../lpm"
+import { ICE, Range, ScamperError } from "../../lpm"
 import { Comment } from "../syntax.js"
 import { Param, parseSingleParam } from "./param"
 import { App, Exp, isApp, isVar, Var } from "../ast"
@@ -148,4 +148,34 @@ export function parseDocLineContents({
 
 export function commentsToDocComments(comments: Comment[]): DocComment[] {
   return comments.map(parseDocLineContents).filter((line) => line !== undefined)
+}
+
+/**
+ * Parses a define's preceding comments into a FunctionDoc, on demand --
+ * callers decide when parsing a docstring is actually necessary (e.g. the
+ * IDE's live linter, or the query/example-tag feature), rather than it
+ * happening unconditionally as part of the main parse pass. A malformed
+ * docstring is a documentation-quality issue, not a reason to fail
+ * compiling otherwise-valid code, so any ScamperError raised while parsing
+ * is re-tagged with phase "Docstring" here (regardless of which internal
+ * helper actually threw it) so callers -- notably linter.ts -- can report
+ * it as a warning instead of a blocking error.
+ * @returns undefined if there are no doc-comment lines among `comments`
+ * @throws ScamperError (phase "Docstring") if the doc comments are malformed
+ */
+export function parseFunctionDocFromComments(
+  comments: Comment[],
+): FunctionDoc | undefined {
+  const docComments = commentsToDocComments(comments)
+  if (docComments.length === 0) {
+    return undefined
+  }
+  try {
+    return parseDocString(docComments)
+  } catch (e) {
+    if (e instanceof ScamperError) {
+      throw new ScamperError("Docstring", e.message, e.modName, e.range, e.source)
+    }
+    throw e
+  }
 }

@@ -1,7 +1,6 @@
 import { ICE, ScamperError } from "./error.js"
 import { Range } from "./range.js"
 import * as L from "./lang.js"
-import { FunctionDoc } from "../scheme/docstring/docstring"
 
 ///// Predicates /////////////////////////////////////////////////////////////////
 
@@ -129,8 +128,7 @@ export const mkDefine = (
   name: string,
   expr: L.Blk,
   range: Range = Range.none,
-  doc?: FunctionDoc,
-): L.Define => ({ tag: "define", name, expr, range, doc })
+): L.Define => ({ tag: "define", name, expr, range })
 export const mkImport = (
   name: string,
   range: Range = Range.none,

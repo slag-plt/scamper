@@ -133,7 +133,11 @@ describe("lezer-bridge parsing", () => {
   // are @specialize'd and can never be re-read as plain identifiers -- this
   // is exercised in lezer-bridge-errors.test.ts instead.
 
-  test("define docstring is parsed and attached", () => {
+  test("define's preceding doc comments are captured, unparsed", () => {
+    // N.B., the bridge only captures the raw comments -- parsing them into a
+    // FunctionDoc is deferred (see docstring.ts's parseFunctionDocFromComments),
+    // so malformed docstrings can never fail this parse. Parsing on demand is
+    // exercised directly in docstring.test.ts.
     const src = [
       ";;; (add1 x) -> number?",
       ";;;  x : number?",
@@ -145,9 +149,11 @@ describe("lezer-bridge parsing", () => {
     const stmt = prog[0]
     expect(stmt.tag).toBe("define")
     if (stmt.tag !== "define") return
-    expect(stmt.doc).toBeDefined()
-    expect(stmt.doc?.description).toBe("Adds one to a number.")
-    expect(stmt.doc?.params[0].name).toBe("x")
+    expect(stmt.docComments?.map((c) => c.line)).toEqual([
+      ";;; (add1 x) -> number?",
+      ";;;  x : number?",
+      ";;; Adds one to a number.",
+    ])
   })
 
   test("every reserved word is exercised by at least one sample above", () => {
