@@ -106,7 +106,10 @@ function checkReturn(foo: object) {
     if (key === "returnType" && returnTypes.value) {
       type = isProxy(type) ? toRaw(type) : type;
       type = type.replace("?", "");
-      console.log("returnType: ", type);
+      type = type.replaceAll(" ", "");
+      // type = type.replace(" ", "");
+      // type = type.replace(" ", "");
+      console.log("returnType:",">", type, "<");
       console.log("CALAL", toRaw(returnTypes.value))
       console.log("TRUTH", returnTypes.value.includes(type))
       if (!returnTypes.value.includes(type)) {
@@ -124,9 +127,11 @@ function searchFilter(foo: object) {
   return false;
 }
 
+const abs = ref(null)
+
 const keys = computed(() => {
   const arr = []
-  let count = 0;
+  let count = 100;
   for(const [libName, lib] of libs) {
     for(const [fooName, foo] of Object.entries(lib)) {
       arr.push(ref(count))
@@ -137,12 +142,51 @@ const keys = computed(() => {
 });
 
 function updatePage() {
-  keys.value.map((key) => {
-    key.value++
-  });
-  console.log("updatePage called, keys updated: ", keys.value);
-  get
+  resetKey.value++
+  // console.log("abs", abs.value)
+  // console.log("keys", keys.value)
+  // keys.value.map((key) => {
+  //   key.value++
+  // });
+  // console.log("updatePage called, keys updated: ", keys.value);
 }
+
+function getName(foo: object): string {
+  let retName: string = "name not found";
+  Object.entries(foo).forEach(([key, name]) => {
+    if (key === "name") {
+      name = isProxy(name) ? toRaw(name) : name;
+      retName = name;
+    }
+  });
+  return retName;
+}
+
+const itemRefs = () => {
+  const arr: String[] = []
+  let count = 0
+  Object.entries(libs).forEach(([libName, lib]) => {
+    Object.entries(lib).forEach(([fooName, foo]) => {
+      if (foo && typeof foo === 'object' && 'renderKey' in foo && typeof foo.renderKey === 'number') {
+        arr[count] = getName(foo)
+      }
+    });
+  });
+  return arr
+}
+
+const forceRerenderChild = () => {
+  let count = 0
+  Object.entries(libs).forEach(([libName, lib]) => {
+    Object.entries(lib).forEach(([fooName, foo]) => {
+      if (foo && typeof foo === 'object' && 'renderKey' in foo && typeof foo.renderKey === 'number') {
+        itemRefs()[count]
+        count++
+      }
+    });
+  });
+};
+
 
 
 </script>
@@ -229,7 +273,7 @@ function updatePage() {
       <!-- </Dropdown> -->
   </div>
 
-  <button class="enter-button" @click="updatePage" ><strong>Enter</strong></button>
+  <button class="enter-button" @click="forceRerenderChild" ><strong>Enter</strong></button>
 
     <!-- <select v-model="tags" multiple>
         <option value="volvo">Volvo</option>
@@ -241,14 +285,14 @@ function updatePage() {
 
     <div>
       <h3> <strong>Search Results</strong> </h3>
-                     <div :key="resetKey" class="api">
+                     <div class="api">
                   <div class="index2"> 
                     <!-- <ul> -->
                     <div class="entries">
                       <div v-for="library in rawLibs" :key="library[0]">
                         <text><strong>{{library[0]}}</strong></text>
-                        <div v-for="(foo, index) in library[1]" :key="keys.values[index]">
-                          <text v-show="searchFilter(foo)">{{makeString(foo)}}</text>
+                        <div v-for="(foo, index) in library[1]" :key="100 + index" ref="(el) => { if (foo.) itemRefs[index] = foo[0] }"> 
+                          <text v-show="searchFilter(foo)">{{makeString(foo)}} {{ console.log("reeee",foo.name) }}</text>
                         </div>
                       </div>
 
@@ -344,6 +388,7 @@ function updatePage() {
   flex: 1;
   min-height: 0;
   white-space: pre-line;
+  display: none;
 }
 
 </style>
