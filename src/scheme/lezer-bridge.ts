@@ -76,6 +76,42 @@ function children(node: SyntaxNode): SyntaxNode[] {
   return result
 }
 
+///// Error recovery ///////////////////////////////////////////////////////////
+
+// Lezer always produces a tree, marking unparseable spans with an anonymous
+// "⚠" error node rather than throwing. Error recovery can shift the number
+// and shape of a form's remaining children in ways that make positional
+// slicing (as used below for e.g. Lambda/Let/Cond) unreliable -- so rather
+// than trying to partially salvage a malformed form's structure, any node
+// with an erroring child (or that is itself an error node) is treated as
+// wholly malformed: report one error covering its span and fall back to a
+// placeholder, mirroring parser.ts's own phExp/phStmt recovery strategy.
+function containsError(node: SyntaxNode): boolean {
+  if (node.type.isError) {
+    return true
+  }
+  let child = node.firstChild
+  while (child) {
+    if (child.type.isError) {
+      return true
+    }
+    child = child.nextSibling
+  }
+  return false
+}
+
+function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
+  const desc = node.type.isError ? "syntax" : node.type.name.toLowerCase()
+  ctx.errors.push(
+    new L.ScamperError(
+      "Parser",
+      `Malformed ${desc} expression`,
+      undefined,
+      ctx.range(node),
+    ),
+  )
+}
+
 ///// Leaf conversion //////////////////////////////////////////////////////////
 
 // N.B., delegates to reader.ts's readSingle so number/string/char/boolean/null
@@ -196,6 +232,10 @@ function docFromPrecedingComments(
 
 function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
   const range = ctx.range(node)
+  if (containsError(node)) {
+    reportSyntaxError(ctx, node)
+    return A.mkPLit("<error>", range)
+  }
   switch (node.type.name) {
     case "Number":
     case "String":
@@ -245,6 +285,10 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
 
 function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
   const range = ctx.range(node)
+  if (containsError(node)) {
+    reportSyntaxError(ctx, node)
+    return A.mkLit(undefined, range)
+  }
   switch (node.type.name) {
     case "Number":
     case "String":
@@ -388,6 +432,10 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
 
 function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
   const range = ctx.range(node)
+  if (containsError(node)) {
+    reportSyntaxError(ctx, node)
+    return A.mkStmtExp(A.mkLit(undefined, range), range)
+  }
   switch (node.type.name) {
     case "Import": {
       const name = identifierName(ctx, children(node)[1])
@@ -435,9 +483,17 @@ export function parseProgramFromSource(
   const ctx = new Ctx(src, computeLineStarts(src), errors)
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
-    if (node.type.name !== "LineComment") {
-      prog.push(stmtFromNode(ctx, node))
+    if (node.type.name === "LineComment") {
+      continue
     }
+    // N.B., a stray error node here (e.g. an extra unmatched closing paren)
+    // isn't part of any statement at all -- there's nothing to attach a
+    // placeholder statement to, so just record the error and move on.
+    if (node.type.isError) {
+      reportSyntaxError(ctx, node)
+      continue
+    }
+    prog.push(stmtFromNode(ctx, node))
   }
   return prog
 }
