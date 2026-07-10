@@ -46,7 +46,14 @@ export const mkClosure = (
   env: Map<string, L.Value>,
   call: (...args: any) => any,
   name?: L.Id,
-): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name })
+): L.Closure => ({
+  [L.scamperTag]: "closure",
+  params,
+  code,
+  locals: env,
+  call,
+  name,
+})
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: "char",
   value: v,
@@ -146,8 +153,9 @@ export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({
 })
 export const mkPops = (): L.PopS => ({ tag: "pops" })
 export const mkPopv = (): L.PopV => ({ tag: "popv" })
-export const mkRept = (range: Range = Range.none): L.Rept => ({
-  tag: "rept",
+export const mkRptBegin = (): L.RptBegin => ({ tag: "rpt-begin" })
+export const mkRptEnd = (range: Range = Range.none): L.RptEnd => ({
+  tag: "rpt-end",
   range,
 })
 

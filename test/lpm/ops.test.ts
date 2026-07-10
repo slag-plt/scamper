@@ -242,7 +242,7 @@ describe("basic ops", () => {
 
   test("report", () => {
     const fiber = makeTestFiber([
-      U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRept()]),
+      U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRptEnd()]),
     ])
 
     const expectedError = new ReportError(3, anyRange)

@@ -14,27 +14,35 @@ import {
   LitHandler,
   MatchHandler,
   PopVHandler,
-  ReptHandler,
+  RptBeginHandler,
+  RptEndHandler,
   VarHandler,
 } from "./handlers/op-handlers"
 import builtinLibs from "../lib"
 
-
-export interface DisplayStep { tag: "display" }
-export interface TraceStep { tag: "trace" }
-export interface MinorStep { tag: "minor" }
-export interface YieldStep { tag: "yield" }
+export interface DisplayStep {
+  tag: "display"
+}
+export interface TraceStep {
+  tag: "trace"
+}
+export interface MinorStep {
+  tag: "minor"
+}
+export interface YieldStep {
+  tag: "yield"
+}
 export interface ImportFileStep {
   tag: "import-file"
   filename: string
 }
 
 export type StepResult =
-  DisplayStep |
-  TraceStep |
-  MinorStep |
-  YieldStep |
-  ImportFileStep
+  | DisplayStep
+  | TraceStep
+  | MinorStep
+  | YieldStep
+  | ImportFileStep
 
 export const displayStep: DisplayStep = { tag: "display" }
 export const traceStep: TraceStep = { tag: "trace" }
@@ -206,8 +214,11 @@ export class Fiber {
       case "popv":
         isMajorStep = PopVHandler(currOp, this.currentFrame, this)
         break
-      case "rept":
-        isMajorStep = ReptHandler(currOp, this.currentFrame, this)
+      case "rpt-begin":
+        isMajorStep = RptBeginHandler(currOp, this.currentFrame, this)
+        break
+      case "rpt-end":
+        isMajorStep = RptEndHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

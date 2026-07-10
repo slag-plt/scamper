@@ -139,10 +139,10 @@ describe("basic ops", () => {
     expect(out.log).toEqual(["hello world"])
   })
 
-  test("rept", () => {
+  test("reporting", () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([
-      U.mkDisp([U.mkLit("test error"), U.mkRept()]),
+      U.mkDisp([U.mkRptBegin(), U.mkLit("test error"), U.mkRptEnd()]),
     ])
     expect(() => {
       testExecute(fiber, out)
@@ -218,7 +218,7 @@ describe("pattern matching", () => {
       U.mkCtor("test-struct", ["field1", "field2"]),
     ]
     const ifBranch = [U.mkVar("+"), U.mkVar("a"), U.mkVar("b"), U.mkAp(2)]
-    const elseBranch = [U.mkLit("no match"), U.mkRept()]
+    const elseBranch = [U.mkLit("no match"), U.mkRptEnd()]
     const pattern = U.mkPCtor("test-struct", [U.mkPVar("a"), U.mkPVar("b")])
 
     const fiber = makeTestFiber([

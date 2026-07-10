@@ -339,8 +339,11 @@ export interface PopS {
 export interface PopV {
   tag: "popv"
 }
-export interface Rept {
-  tag: "rept"
+export interface RptBegin {
+  tag: "rpt-begin"
+}
+export interface RptEnd {
+  tag: "rpt-end"
   range: Range
 }
 export type Ops =
@@ -353,7 +356,8 @@ export type Ops =
   | Raise
   | PopS
   | PopV
-  | Rept
+  | RptBegin
+  | RptEnd
 export type Blk = Ops[]
 
 export interface Disp {

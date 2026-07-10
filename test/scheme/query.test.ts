@@ -2,21 +2,21 @@ import { describe, expect, test } from "vitest"
 import { read } from "../../src/scheme/reader"
 import { getQueriedAST, getReportedSyntax } from "../../src/scheme/query"
 import {
-  Loc,
   isList,
   listToVector,
+  Loc,
   mkAp,
   mkDisp,
-  mkLit,
   mkList,
-  mkRept,
+  mkLit,
+  mkRptBegin,
+  mkRptEnd,
   mkSym,
   mkVar,
   Prog,
-  Stmt,
+  Stmt
 } from "../../src/lpm"
-import { isSyntax } from "../../src/scheme/syntax"
-import { mkSyntax, Syntax } from "../../src/scheme/syntax"
+import { isSyntax, mkSyntax, Syntax } from "../../src/scheme/syntax"
 import { anyRange } from "./util"
 import { compile } from "../../src/scheme"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
@@ -273,8 +273,9 @@ describe("AST querying", () => {
         expect.anything() as Stmt,
         mkDisp(
           [
+            mkRptBegin(),
             mkVar(funcName, anyRange),
-            mkRept(anyRange),
+            mkRptEnd(anyRange),
             mkLit(lit1, anyRange),
             mkLit(lit2, anyRange),
             mkAp(2, anyRange),

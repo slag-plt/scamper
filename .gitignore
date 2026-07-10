@@ -128,3 +128,4 @@ src/**/*.js.map
 .zed
 .cursor
 .junie
+.codex

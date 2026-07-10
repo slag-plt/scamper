@@ -1,8 +1,8 @@
-import { ICE, ReportError, ScamperError } from "../error"
-import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
-import { Ops, Value } from "../lang"
-import { Frame } from "../frame"
-import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch } from "../util"
+import {ICE, ReportError, ScamperError} from "../error"
+import {Fiber, minorStep, StepResult, traceStep} from "../fiber"
+import {Ops, Value} from "../lang"
+import {Frame} from "../frame"
+import {isClosure, isJsFunction, mkClosure, mkStruct, pMatch} from "../util"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -72,7 +72,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
           `Unexpected error in Javascript function call: ${(e as any).toString()}`,
           undefined,
           op.range,
-          undefined
+          undefined,
         )
       }
     }
@@ -84,14 +84,14 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
         undefined,
         op.range,
-        undefined
+        undefined,
       )
     }
     const newFrame = new Frame(
       fn.name ?? "##anonymous##",
       fiber.topLevelEnv.extendReplacingLocals(
         ...fn.locals,
-        ...fn.params.map((p, i): [string, Value] => [p, args[i]])
+        ...fn.params.map((p, i): [string, Value] => [p, args[i]]),
       ),
       fn.code,
     )
@@ -108,7 +108,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     `Not a function or closure: ${JSON.stringify(fn)}`,
     undefined,
     op.range,
-    undefined
+    undefined,
   )
 }
 
@@ -143,10 +143,15 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   return traceStep
 }
 
-export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {
+export const RptBeginHandler: OpHandler<"rpt-begin"> = () => {
+  // TODO: implement
+  return traceStep
+}
+
+export const RptEndHandler: OpHandler<"rpt-end"> = (op, currFrame) => {
   if (currFrame.values.length < 1) {
     throw new ICE(
-      "Fiber.ReptHandler",
+      "Fiber.RptEndHandler",
       "Expected to report a value, but none remain?",
     )
   }
