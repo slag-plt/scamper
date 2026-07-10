@@ -25,7 +25,6 @@ export const reservedWords = [
   "lambda",
   "let",
   "let*",
-  "letrec",
   "match",
   "or",
   "quote",
@@ -86,7 +85,7 @@ function parsePat(errors: L.ScamperError[], v: L.Value): A.Pat {
       orig,
       "Expected a valid constructor name",
     )
-    return A.mkPVar(name, range)
+    return name === "_" ? A.mkPWild(range) : A.mkPVar(name, range)
   } else {
     return L.mkPLit(v)
   }

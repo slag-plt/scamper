@@ -47,9 +47,16 @@ export interface Node {
 //     | (cond [e11 e12] ... [e1k e2k])
 //     | (section e1 ... ek)
 //
+//     -- Internal form, produced only by the query system (query.ts) to
+//        wrap the expression under a cursor for tooltip evaluation; not
+//        user-facing surface syntax
+//     | (report e)
+//
 // s ::= e
 //     | (import m)
 //     | (define x e)
+//     | ;;; <docstring>
+//       (define x e)
 //     | (display e)
 //     | e
 //
@@ -369,6 +376,7 @@ export function isExp(v: unknown): v is Exp {
       "or",
       "cond",
       "section",
+      "report",
     ].includes(v.tag)
   )
 }
