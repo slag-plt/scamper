@@ -170,8 +170,7 @@ export class Fiber {
       )
     }
     const ret = currFrame.values.pop()
-    // fix capture stack
-    this.fixCapture(currFrame, ret)
+    this.settleReportTrace(currFrame, ret)
 
     this.popFrame()
     if (this.hasFramesRemaining()) {
@@ -181,8 +180,8 @@ export class Fiber {
     }
   }
 
-  public fixCapture(currFrame: Frame, ret: Value) {
-    if (!currFrame.rptCapture) {
+  public settleReportTrace(currFrame: Frame, ret: Value) {
+    if (!currFrame.rptTrace) {
       return
     }
     for (let i = 0; i <= currFrame.tailCallDepth; i++) {

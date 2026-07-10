@@ -68,7 +68,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     )
   }
 
-  const node: InvocationNode | undefined = currFrame.rptCapture && {
+  const node: InvocationNode | undefined = currFrame.rptTrace && {
     fn,
     env: Env.snapshot(currFrame.env),
     args: [...args],
@@ -76,7 +76,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     apIdx: op.apIdx ?? -1,
   }
   if (node) {
-    currFrame.rptCapture?.stack.push(node)
+    currFrame.rptTrace?.stack.push(node)
   }
 
   if (isJsFunction(fn)) {
@@ -119,7 +119,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
       ...fn.params.map((p, i): [string, Value] => [p, args[i]]),
     ),
     fn.code,
-    currFrame.rptCapture,
+    currFrame.rptTrace,
   )
   // update invocation node env
   if (node) {
@@ -168,7 +168,7 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
 
 export const RptBeginHandler: OpHandler<"rpt-begin"> = (_, currFrame) => {
   // initialize stack
-  currFrame.rptCapture = { root: { children: [] }, stack: [] }
+  currFrame.rptTrace = { root: { children: [] }, stack: [] }
   return traceStep
 }
 

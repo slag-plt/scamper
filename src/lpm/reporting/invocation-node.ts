@@ -15,12 +15,12 @@ export interface InvocationNode {
 }
 
 /** The stable root of one report evaluation; it is not an invocation itself. */
-export interface ReportCaptureRoot {
+export interface ReportTraceRoot {
   children: InvocationNode[]
 }
 
-/** Runtime state shared by frames evaluating one reported expression. */
-export interface ReportCapture {
-  root: ReportCaptureRoot
+/** Temporary runtime state shared by frames evaluating one reported expression. */
+export interface ReportTrace {
+  root: ReportTraceRoot
   stack: InvocationNode[]
 }

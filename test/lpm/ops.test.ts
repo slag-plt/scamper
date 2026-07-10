@@ -272,11 +272,11 @@ describe("basic ops", () => {
       testExecute(fiber, out)
     }).toThrow(ReportError)
 
-    const capture = fiber.currentFrame?.rptCapture
-    expect(capture?.stack).toEqual([])
-    expect(capture?.root.children).toHaveLength(1)
+    const trace = fiber.currentFrame?.rptTrace
+    expect(trace?.stack).toEqual([])
+    expect(trace?.root.children).toHaveLength(1)
 
-    const fNode = capture?.root.children[0]
+    const fNode = trace?.root.children[0]
     expect(fNode?.fn).toBe(f)
     expect(fNode?.result).toBe(42)
     expect(fNode?.children).toHaveLength(1)
