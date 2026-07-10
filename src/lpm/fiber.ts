@@ -170,6 +170,9 @@ export class Fiber {
       )
     }
     const ret = currFrame.values.pop()
+    // fix capture stack
+    this.fixCapture(currFrame, ret)
+
     this.popFrame()
     if (this.hasFramesRemaining()) {
       this.currentFrame.values.push(ret)
@@ -177,6 +180,16 @@ export class Fiber {
       this.lastResult = ret
     }
   }
+
+  public fixCapture(currFrame: Frame, ret: Value) {
+    if (!currFrame.rptCapture) {
+      return
+    }
+    for (let i = 0; i <= currFrame.tailCallDepth; i++) {
+      currFrame.settleTop(ret)
+    }
+  }
+
   /**
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step

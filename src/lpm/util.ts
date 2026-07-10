@@ -1,6 +1,7 @@
 import { ICE, ScamperError } from "./error.js"
 import { Range } from "./range.js"
 import * as L from "./lang.js"
+import { ScamperFn } from "./lang.js"
 import { FunctionDoc } from "../scheme/docstring/docstring"
 
 ///// Predicates /////////////////////////////////////////////////////////////////
@@ -19,6 +20,8 @@ export const isJsFunction = (v: L.Value): v is L.JsFunction =>
   typeof v === "function"
 export const isClosure = (v: L.Value): v is L.Closure =>
   isTaggedObject(v) && v[L.scamperTag] === "closure"
+export const isScamperFn = (v: L.Value): v is ScamperFn =>
+  isJsFunction(v) || isClosure(v)
 export const isFunction = (v: L.Value): v is L.ScamperFn =>
   isJsFunction(v) || isClosure(v)
 export const isChar = (v: L.Value): v is L.Char =>

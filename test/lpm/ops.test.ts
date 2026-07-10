@@ -240,6 +240,56 @@ describe("basic ops", () => {
     expect(out.log).toStrictEqual([120])
   })
 
+  test("report capture settles JS calls within a tail-call chain", () => {
+    const h = U.mkClosure([], [U.mkLit(42)], new Map(), () => undefined, "h")
+    const g = U.mkClosure(
+      [],
+      [
+        U.mkVar("+"),
+        U.mkLit(1),
+        U.mkLit(2),
+        U.mkAp(2),
+        U.mkPopv(),
+        U.mkLit(h),
+        U.mkAp(0),
+      ],
+      new Map(),
+      () => undefined,
+      "g",
+    )
+    const f = U.mkClosure(
+      [],
+      [U.mkLit(g), U.mkAp(0)],
+      new Map(),
+      () => undefined,
+      "f",
+    )
+    const fiber = makeTestFiber([
+      U.mkStmtExp([U.mkRptBegin(), U.mkLit(f), U.mkAp(0), U.mkRptEnd()]),
+    ])
+
+    expect(() => {
+      testExecute(fiber, out)
+    }).toThrow(ReportError)
+
+    const capture = fiber.currentFrame?.rptCapture
+    expect(capture?.stack).toEqual([])
+    expect(capture?.root.children).toHaveLength(1)
+
+    const fNode = capture?.root.children[0]
+    expect(fNode?.fn).toBe(f)
+    expect(fNode?.result).toBe(42)
+    expect(fNode?.children).toHaveLength(1)
+
+    const gNode = fNode?.children[0]
+    expect(gNode?.fn).toBe(g)
+    expect(gNode?.result).toBe(42)
+    expect(gNode?.children).toHaveLength(2)
+    expect(gNode?.children[0].result).toBe(3)
+    expect(gNode?.children[1].fn).toBe(h)
+    expect(gNode?.children[1].result).toBe(42)
+  })
+
   test("report", () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRptEnd()]),

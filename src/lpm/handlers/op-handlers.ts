@@ -1,8 +1,9 @@
-import {ICE, ReportError, ScamperError} from "../error"
-import {Fiber, minorStep, StepResult, traceStep} from "../fiber"
-import {Ops, Value} from "../lang"
-import {Frame} from "../frame"
-import {isClosure, isJsFunction, mkClosure, mkStruct, pMatch} from "../util"
+import { ICE, ReportError, ScamperError } from "../error"
+import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
+import { Env, Ops, Value } from "../lang"
+import { Frame } from "../frame"
+import { isJsFunction, isScamperFn, mkClosure, mkStruct, pMatch } from "../util"
+import { InvocationNode } from "../reporting/invocation-node"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -57,9 +58,32 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   const values = currFrame.values.splice(-(op.numArgs + 1))
   const fn = values[0]
   const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
+  if (!isScamperFn(fn)) {
+    throw new ScamperError(
+      "Runtime",
+      `Not a function or closure: ${JSON.stringify(fn)}`,
+      undefined,
+      op.range,
+      undefined,
+    )
+  }
+
+  const node: InvocationNode | undefined = currFrame.rptCapture && {
+    fn,
+    env: Env.snapshot(currFrame.env),
+    args: [...args],
+    children: [],
+    apIdx: op.apIdx ?? -1,
+  }
+  if (node) {
+    currFrame.rptCapture?.stack.push(node)
+  }
+
   if (isJsFunction(fn)) {
     try {
-      currFrame.values.push(fn(...args))
+      const result = fn(...args)
+      currFrame.values.push(result)
+      currFrame.settleTop(result)
       return traceStep
     } catch (e) {
       if (e instanceof ScamperError) {
@@ -69,7 +93,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
       } else {
         throw new ScamperError(
           "Runtime",
-          `Unexpected error in Javascript function call: ${(e as any).toString()}`,
+          `Unexpected error in Javascript function call: ${JSON.stringify(e)}`,
           undefined,
           op.range,
           undefined,
@@ -77,39 +101,38 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
       }
     }
   }
-  if (isClosure(fn)) {
-    if (fn.params.length !== args.length) {
-      throw new ScamperError(
-        "Runtime",
-        `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
-        undefined,
-        op.range,
-        undefined,
-      )
-    }
-    const newFrame = new Frame(
-      fn.name ?? "##anonymous##",
-      fiber.topLevelEnv.extendReplacingLocals(
-        ...fn.locals,
-        ...fn.params.map((p, i): [string, Value] => [p, args[i]]),
-      ),
-      fn.code,
+
+  // implied fn is closure
+  if (fn.params.length !== args.length) {
+    throw new ScamperError(
+      "Runtime",
+      `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
+      undefined,
+      op.range,
+      undefined,
     )
-    if (currFrame.isFinished()) {
-      // tail-call optimize by replacing current empty frame
-      fiber.replaceFrame(newFrame)
-    } else {
-      fiber.pushFrame(newFrame)
-    }
-    return traceStep
   }
-  throw new ScamperError(
-    "Runtime",
-    `Not a function or closure: ${JSON.stringify(fn)}`,
-    undefined,
-    op.range,
-    undefined,
+  const newFrame = new Frame(
+    fn.name ?? "##anonymous##",
+    fiber.topLevelEnv.extendReplacingLocals(
+      ...fn.locals,
+      ...fn.params.map((p, i): [string, Value] => [p, args[i]]),
+    ),
+    fn.code,
+    currFrame.rptCapture,
   )
+  // update invocation node env
+  if (node) {
+    node.env = Env.snapshot(newFrame.env)
+  }
+  if (currFrame.isFinished()) {
+    // tail-call optimize by replacing current empty frame
+    newFrame.tailCallDepth = currFrame.tailCallDepth + 1
+    fiber.replaceFrame(newFrame)
+  } else {
+    fiber.pushFrame(newFrame)
+  }
+  return traceStep
 }
 
 export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
@@ -143,8 +166,9 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   return traceStep
 }
 
-export const RptBeginHandler: OpHandler<"rpt-begin"> = () => {
-  // TODO: implement
+export const RptBeginHandler: OpHandler<"rpt-begin"> = (_, currFrame) => {
+  // initialize stack
+  currFrame.rptCapture = { root: { children: [] }, stack: [] }
   return traceStep
 }
 

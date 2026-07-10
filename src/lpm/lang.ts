@@ -152,6 +152,14 @@ export class Env {
       new Map([...this.locals].filter(([x, _v]) => !names.includes(x))),
     )
   }
+
+  static snapshot(env: Env): Env {
+    return new Env(
+      new Map(env.imports),
+      new Map(env.topLevel),
+      new Map(env.locals),
+    )
+  }
 }
 
 /** A module is a collection of importable top-level definitions. */
@@ -319,6 +327,7 @@ export interface Ap {
   tag: "ap"
   numArgs: number
   range: Range
+  apIdx?: number
 }
 export interface Match {
   tag: "match"
