@@ -32,7 +32,7 @@ export class Frame {
     this.env = env
     this.values = []
     this.ops = [...blk]
-    ensureApIndices(this.ops)
+    ensureStaticIndices(this.ops)
     this.ops.reverse()
     this.rptTrace = rptTrace
     this.queryRun = queryRun
@@ -83,22 +83,22 @@ interface ReportBoundary {
   targetIsApplication: boolean
 }
 
-function ensureApIndices(blk: L.Blk, startIdx = 0): number {
-  let currIdx = startIdx
+function ensureStaticIndices(blk: L.Blk, nextIdx = { ap: 0, match: 0 }): void {
   for (const op of blk) {
     switch (op.tag) {
       case "ap": {
-        op.apIdx ??= currIdx
-        currIdx = Math.max(currIdx, op.apIdx + 1)
+        op.apIdx ??= nextIdx.ap
+        nextIdx.ap = Math.max(nextIdx.ap, op.apIdx + 1)
         break
       }
       case "match": {
+        op.matchIdx ??= nextIdx.match
+        nextIdx.match = Math.max(nextIdx.match, op.matchIdx + 1)
         for (const [_, blk] of op.branches) {
-          currIdx = ensureApIndices(blk, currIdx)
+          ensureStaticIndices(blk, nextIdx)
         }
         break
       }
     }
   }
-  return currIdx
 }

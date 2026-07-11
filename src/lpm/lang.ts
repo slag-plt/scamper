@@ -337,6 +337,8 @@ export interface Match {
   tag: "match"
   branches: [Pat, Blk][]
   range: Range
+  /** Static label used to identify an executed match while raising a page. */
+  matchIdx?: number
   // hack fix to not modify original branch
   // TODO: making this better requires better bytecode
   currBranchIdx?: number

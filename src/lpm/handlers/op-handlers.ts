@@ -76,6 +76,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     args: [...args],
     children: [],
     apIdx: op.apIdx ?? -1,
+    matches: [],
   }
   const trace = currFrame.rptTrace
   if (node && trace) {
@@ -167,6 +168,20 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
     currFrame.values.push(scrutinee)
   } else {
     currFrame.env = currFrame.env.extendWithLocals(...bindings)
+    const node = currFrame.rptTrace?.stack.at(-1)
+    if (node) {
+      if (op.matchIdx === undefined) {
+        throw new ICE(
+          "MatchHandler",
+          "Encountered a report-traced match without a static label",
+        )
+      }
+      node.matches.push({
+        matchIdx: op.matchIdx,
+        scrutinee,
+        branchIdx: op.currBranchIdx - 1,
+      })
+    }
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }

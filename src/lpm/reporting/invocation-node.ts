@@ -12,6 +12,18 @@ export interface InvocationNode {
   result?: Value
   // denotes which ap this is within its parent
   apIdx: number
+  // selected branches for matches evaluated within this invocation
+  matches: MatchOutcome[]
+}
+
+/** One control-flow decision needed to reconstruct a completed page. */
+export interface MatchOutcome {
+  /** Static label for the match operation in the invocation's code block. */
+  matchIdx: number
+  /** The value against which the match selected its branch. */
+  scrutinee: Value
+  /** The index of the selected branch in the static match operation. */
+  branchIdx: number
 }
 
 /** The stable root of one report evaluation; it is not an invocation itself. */
