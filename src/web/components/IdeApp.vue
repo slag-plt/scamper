@@ -15,6 +15,7 @@ import * as FS from "../../fs"
 import { FileEntry } from "../../fs/fs"
 import QueryGhostLine from "./query/QueryGhostLine.vue"
 import ExpandedQueryModal from "./query/ExpandedQueryModal.vue"
+import RecursivePageModalGroup from "./query/RecursivePageModalGroup.vue"
 
 // ---------- config ----------
 
@@ -58,7 +59,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing, queries, expandedQueryId } = session
+const { isTracing, pageModalStack, queries, expandedQueryId } = session
 
 function abortTraceStep() {
   // TODO: cancel in-flight trace step burst when step handlers are implemented
@@ -426,6 +427,7 @@ onUnmounted(() => {
     v-if="expandedQueryId !== null"
     :query-id="expandedQueryId"
   />
+  <RecursivePageModalGroup v-if="pageModalStack.length > 0" />
 </template>
 
 <style scoped>

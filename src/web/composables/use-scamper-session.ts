@@ -17,6 +17,7 @@ import Scamper, {
 } from "../../scamper"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import type { SchedulerId } from "../../lpm/scheduler"
+import type { RecursivePage } from "../../lpm/reporting/pruning"
 import type { ResultsPaneType } from "./use-results-pane"
 import type { EditorAccessor } from "./editor-context"
 import { throwNull } from "../../utils"
@@ -24,6 +25,11 @@ import { throwNull } from "../../utils"
 export interface ScamperSessionOptions {
   editor: EditorAccessor
   onRunScheduled?: () => void
+}
+
+export interface PageModalEntry {
+  id: number
+  page: RecursivePage
 }
 
 function createScamperSession(
@@ -38,6 +44,9 @@ function createScamperSession(
   const expandedQueryId = shallowRef<SchedulerId | null>(
     scamper.expandedQueryId,
   )
+  const pageModalQueryId = ref<SchedulerId | null>(null)
+  const pageModalStack = shallowRef<PageModalEntry[]>([])
+  let nextPageModalId = 0
 
   const syncQueries = () => {
     queries.value = scamper.queries
@@ -79,10 +88,14 @@ function createScamperSession(
 
   function invalidateAllQueries() {
     scamper.invalidateAllQueries()
+    collapsePageModals()
   }
 
   function invalidateQuery(id: SchedulerId) {
     scamper.invalidateQuery(id)
+    if (pageModalQueryId.value === id) {
+      collapsePageModals()
+    }
   }
 
   function expandQuery(id: SchedulerId) {
@@ -98,12 +111,37 @@ function createScamperSession(
     scamper.toggleQueryExpanded(id)
   }
 
+  function openRootPageModal(queryId: SchedulerId, page: RecursivePage) {
+    pageModalQueryId.value = queryId
+    pageModalStack.value = [{ id: nextPageModalId++, page }]
+  }
+
+  function openLinkedPageModal(page: RecursivePage) {
+    pageModalStack.value = [
+      ...pageModalStack.value,
+      { id: nextPageModalId++, page },
+    ]
+  }
+
+  function closePageModal(id: number) {
+    pageModalStack.value = pageModalStack.value.filter((page) => page.id !== id)
+    if (pageModalStack.value.length === 0) {
+      pageModalQueryId.value = null
+    }
+  }
+
+  function collapsePageModals() {
+    pageModalQueryId.value = null
+    pageModalStack.value = []
+  }
+
   function getQueryOrThrow(id: SchedulerId) {
     return scamper.getQuery(id) ?? throwNull(`query ${id} doesn't exist`)
   }
 
   function stopAll() {
     scamper.invalidateAllQueries()
+    collapsePageModals()
     stopRun()
   }
 
@@ -148,6 +186,7 @@ function createScamperSession(
   return {
     queries,
     expandedQueryId,
+    pageModalStack,
     currentRun,
     isTracing,
     resetOutput,
@@ -157,6 +196,10 @@ function createScamperSession(
     expandQuery,
     collapseQuery,
     toggleQueryExpanded,
+    openRootPageModal,
+    openLinkedPageModal,
+    closePageModal,
+    collapsePageModals,
     stopAll,
     execute,
     query,

@@ -3,6 +3,7 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { LoggingChannel, Range } from "../src/lpm"
+import type { RecursivePage } from "../src/lpm/reporting/pruning"
 import Scamper, { type DisplayRequest, type QueryMap } from "../src/scamper"
 import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
@@ -216,6 +217,29 @@ describe("useScamperSession", () => {
     session.invalidateQuery("query-1")
 
     expect(session.expandedQueryId.value).toBeNull()
+  })
+
+  test("page modals form one stack and clear with their query", async () => {
+    const scamper = Scamper.getInstance()
+    mockScheduledQuery(scamper, "query-1")
+    const session = mountSession()
+    const root = {} as RecursivePage
+    const child = {} as RecursivePage
+
+    await session.query()
+    session.openRootPageModal("query-1", root)
+    session.openLinkedPageModal(child)
+
+    expect(session.pageModalStack.value.map((entry) => entry.page)).toEqual([
+      root,
+      child,
+    ])
+
+    session.closePageModal(session.pageModalStack.value[0].id)
+    expect(session.pageModalStack.value).toHaveLength(1)
+
+    session.invalidateQuery("query-1")
+    expect(session.pageModalStack.value).toEqual([])
   })
 
   test("done clears currentRun when display task completes", async () => {

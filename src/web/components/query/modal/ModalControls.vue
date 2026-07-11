@@ -1,21 +1,39 @@
 <script setup lang="ts">
 import { SchedulerId } from "../../../../lpm/scheduler"
 import { useScamperSession } from "../../../composables/use-scamper-session"
+import { useReportedPageGraph } from "../query-utils"
 
-withDefaults(defineProps<{ queryId: SchedulerId; overflowing?: boolean }>(), {
-  overflowing: true,
-})
+const props = withDefaults(
+  defineProps<{ queryId: SchedulerId; overflowing?: boolean }>(),
+  { overflowing: true },
+)
 
-const { invalidateQuery, toggleQueryExpanded } = useScamperSession()
+const {
+  getQueryOrThrow,
+  invalidateQuery,
+  openRootPageModal,
+  toggleQueryExpanded,
+} = useScamperSession()
+
+const pageGraph = useReportedPageGraph(() => getQueryOrThrow(props.queryId))
 </script>
 
 <template>
   <div id="query-controls">
-    <button class="query-button" @click="invalidateQuery(queryId)">X</button>
+    <button class="query-button" @click="invalidateQuery(props.queryId)">
+      X
+    </button>
     <button
-      v-if="overflowing"
+      v-if="pageGraph"
       class="query-button"
-      @click.stop="toggleQueryExpanded(queryId)"
+      @click.stop="openRootPageModal(props.queryId, pageGraph.rootPage)"
+    >
+      {{ ">" }}
+    </button>
+    <button
+      v-else-if="props.overflowing"
+      class="query-button"
+      @click.stop="toggleQueryExpanded(props.queryId)"
     >
       {{ "…" }}
     </button>

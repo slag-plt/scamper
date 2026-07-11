@@ -1,6 +1,10 @@
 import { QueryEntry } from "../../../scamper"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
-import { getReportCaptureValue, ReportError } from "../../../lpm"
+import {
+  getReportCaptureValue,
+  type PageGraph,
+  ReportError,
+} from "../../../lpm"
 import { computed, MaybeRefOrGetter, ref, toValue } from "vue"
 import { SchedulerId } from "../../../lpm/scheduler"
 
@@ -43,5 +47,27 @@ export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
       return firstErr
     }
     return getReportCaptureValue(firstErr.capture)
+  })
+}
+
+/** Returns a recursive page graph only after its query has settled. */
+export function useReportedPageGraph(query: MaybeRefOrGetter<QueryEntry>) {
+  const q = toValue(query)
+  const isDone = ref(false)
+  void q.done.finally(() => {
+    isDone.value = true
+  })
+
+  return computed<PageGraph | null>(() => {
+    if (!isDone.value || !(q.err instanceof SimpleErrorChannel)) {
+      return null
+    }
+    const firstErr = q.err.errors.at(0)
+    if (!(firstErr instanceof ReportError)) {
+      return null
+    }
+    return firstErr.capture.tag === "page-graph"
+      ? firstErr.capture.pageGraph
+      : null
   })
 }
