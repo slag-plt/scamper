@@ -112,45 +112,27 @@ function slotsOf(exp: A.Exp): Slot[] {
         },
       ]
 
+    // "and"/"or"/"begin"/"section" all share the same shape (a flat list of
+    // sub-expressions), differing only in which constructor rebuilds them.
     case "and":
-      return exp.exps.map((e, i) => ({
-        exp: e,
-        rebuild: (r: A.Exp) =>
-          A.mkAnd(
-            exp.exps.map((x, j) => (j === i ? r : x)),
-            exp.range,
-          ),
-      }))
-
     case "or":
-      return exp.exps.map((e, i) => ({
-        exp: e,
-        rebuild: (r: A.Exp) =>
-          A.mkOr(
-            exp.exps.map((x, j) => (j === i ? r : x)),
-            exp.range,
-          ),
-      }))
-
     case "begin":
+    case "section": {
+      const mk = {
+        and: A.mkAnd,
+        or: A.mkOr,
+        begin: A.mkBegin,
+        section: A.mkSection,
+      }[exp.tag]
       return exp.exps.map((e, i) => ({
         exp: e,
         rebuild: (r: A.Exp) =>
-          A.mkBegin(
+          mk(
             exp.exps.map((x, j) => (j === i ? r : x)),
             exp.range,
           ),
       }))
-
-    case "section":
-      return exp.exps.map((e, i) => ({
-        exp: e,
-        rebuild: (r: A.Exp) =>
-          A.mkSection(
-            exp.exps.map((x, j) => (j === i ? r : x)),
-            exp.range,
-          ),
-      }))
+    }
 
     case "let":
     case "let*": {

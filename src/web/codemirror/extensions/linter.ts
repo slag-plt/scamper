@@ -20,11 +20,7 @@ function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   diagnostics.push({
     from,
     to,
-    // N.B., a malformed docstring (or one that doesn't match its function's
-    // actual signature) is a documentation-quality issue, not a reason to
-    // flag the code itself as broken -- see docstring.ts's
-    // parseFunctionDocFromComments and scope.ts's scopeCheckFunctionDoc.
-    severity: err.phase === "Docstring" ? "warning" : "error",
+    severity: err.isFatal ? "error" : "warning",
     message: err.message,
   })
 }

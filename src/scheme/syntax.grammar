@@ -46,9 +46,9 @@ expression {
   If { paren<kw<"if"> expression expression expression> } |
   And { paren<kw<"and"> expression*> } |
   Or { paren<kw<"or"> expression*> } |
-  Begin { paren<kw<"begin"> expression*> } |
+  Begin { paren<kw<"begin"> expression expression*> } |
   Cond { paren<kw<"cond"> condBranch*> } |
-  Section { paren<kw<"section"> expression*> } |
+  Section { paren<kw<"section"> expression expression*> } |
   Report { paren<kw<"report"> expression> } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> paren<binding*> expression> } |
@@ -91,8 +91,10 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
     "#\\" (
       // Named char (validated by runtime)
       $[a-zA-Z_\-0-9\+\*\=]+ |
-      // Or any single non-whitespace character
-      ![ \t\n\r]
+      // Or any single non-whitespace, non-bracket character -- matches
+      // reader.ts's tokenizer, which always stops a bare token at a
+      // bracket, so e.g. "#\(" never reads as a valid char literal.
+      ![ \t\n\r()\[\]{}]
     )
   }
 

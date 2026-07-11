@@ -152,6 +152,15 @@ export function parseParamSignature(
     errs.push(
       new ScamperError("Parser", "Expected an identifier", undefined, Range.none),
     )
+  } else if (trimmedName.startsWith("_")) {
+    errs.push(
+      new ScamperError(
+        "Parser",
+        'Identifiers cannot begin with "_" unless inside of "section" or patterns',
+        undefined,
+        Range.none,
+      ),
+    )
   } else if (reservedWords.includes(trimmedName)) {
     errs.push(
       new ScamperError(

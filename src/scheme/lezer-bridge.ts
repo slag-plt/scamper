@@ -74,6 +74,18 @@ function children(node: SyntaxNode): SyntaxNode[] {
   return result
 }
 
+// Splits a flat, even-length list into adjacent pairs: [a, b, c, d] ->
+// [[a, b], [c, d]]. Used for the several grammar productions that flatten a
+// list of pairs into their parent's children (let/let* bindings, cond
+// branches, match branches) rather than wrapping each pair in its own node.
+function pairs<T>(items: T[]): [T, T][] {
+  const result: [T, T][] = []
+  for (let i = 0; i < items.length; i += 2) {
+    result.push([items[i], items[i + 1]])
+  }
+  return result
+}
+
 ///// Error recovery ///////////////////////////////////////////////////////////
 
 // Lezer always produces a tree, marking unparseable spans with an anonymous
@@ -84,30 +96,70 @@ function children(node: SyntaxNode): SyntaxNode[] {
 // with an erroring child (or that is itself an error node) is treated as
 // wholly malformed: report one error covering its span and fall back to a
 // placeholder, mirroring parser.ts's own phExp/phStmt recovery strategy.
-function containsError(node: SyntaxNode): boolean {
-  if (node.type.isError) {
-    return true
-  }
-  let child = node.firstChild
-  while (child) {
-    if (child.type.isError) {
-      return true
-    }
-    child = child.nextSibling
-  }
-  return false
+//
+// Each node type gets a short, human-readable description of what it's
+// supposed to look like -- not as precise as the old hand-written parser's
+// per-arity messages (Lezer's tree doesn't expose *why* a span failed to
+// parse the way explicit arity checks did), but a meaningful step up from a
+// single generic message for every malformed form.
+const formDescriptions: Record<string, string> = {
+  Lambda: "lambda expression (a list of parameters and a body)",
+  If: "if expression (a guard, an if-branch, and an else-branch)",
+  Let: "let expression (a list of bindings and a body)",
+  LetStar: "let* expression (a list of bindings and a body)",
+  Cond: "cond expression (a list of [test body] branches)",
+  Match: "match expression (a scrutinee and a list of [pattern body] branches)",
+  And: "and expression",
+  Or: "or expression",
+  Begin: "begin expression (at least one sub-expression)",
+  Section: "section expression (at least one sub-expression)",
+  Report: "report expression",
+  Application: "function application",
+  Quote: "quoted expression",
+  Vector: "vector literal",
+  PApp: "constructor pattern",
+  PVector: "vector pattern",
+  Import: "import statement (a module name)",
+  Define: "define statement (a name and a value)",
+  Display: "display statement (a value to display)",
+  Struct: "struct statement (a name and a list of fields)",
 }
 
 function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
-  const desc = node.type.isError ? "syntax" : node.type.name.toLowerCase()
+  if (node.type.isError) {
+    ctx.errors.push(
+      new L.ScamperError("Parser", "Malformed syntax.", undefined, ctx.range(node)),
+    )
+    return
+  }
+  const desc =
+    formDescriptions[node.type.name] ?? `${node.type.name.toLowerCase()} expression`
   ctx.errors.push(
     new L.ScamperError(
       "Parser",
-      `Malformed ${desc} expression`,
+      `Malformed ${desc}.`,
       undefined,
       ctx.range(node),
     ),
   )
+}
+
+// Returns `placeholder` (after recording a diagnostic) if `node` itself or
+// any of its already-computed `cs` children is a Lezer error node;
+// otherwise undefined, meaning the caller should proceed with its own
+// node.type.name switch. `cs` is passed in (rather than recomputed here) so
+// callers only walk a node's children once.
+function errorOr<T>(
+  ctx: Ctx,
+  node: SyntaxNode,
+  cs: SyntaxNode[],
+  placeholder: T,
+): T | undefined {
+  if (node.type.isError || cs.some((c) => c.type.isError)) {
+    reportSyntaxError(ctx, node)
+    return placeholder
+  }
+  return undefined
 }
 
 ///// Leaf conversion //////////////////////////////////////////////////////////
@@ -152,7 +204,18 @@ function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
 // a real bug, not a deliberate design: nothing in the runtime knows how to
 // unwrap a Syntax struct, so e.g. (car '(1 2 3)), (+ (car '(1 2 3)) 1), and
 // (equal? '(1 2 3) '(1 2 3)) were all broken.)
+//
+// N.B., checks for errors at every level of its own recursion (unlike
+// expFromNode/patFromNode's check, which only re-runs because they recurse
+// into each other -- nodeToRawValue recurses into itself directly, so it
+// needs its own check or a syntax error nested inside quoted/vector data
+// would silently produce a corrupted value instead of a reported error).
 function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
+  const cs = children(node)
+  if (node.type.isError || cs.some((c) => c.type.isError)) {
+    reportSyntaxError(ctx, node)
+    return undefined
+  }
   switch (node.type.name) {
     case "Number":
     case "String":
@@ -167,10 +230,9 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
 
     case "Vector":
     case "PVector":
-      return children(node).map((c) => nodeToRawValue(ctx, c))
+      return cs.map((c) => nodeToRawValue(ctx, c))
 
     case "Quote": {
-      const cs = children(node)
       const inner = cs.length === 2 ? cs[1] : cs[0]
       return L.mkList(L.mkSym("quote"), nodeToRawValue(ctx, inner))
     }
@@ -188,7 +250,7 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
       // is just a plain list of its children when treated as raw,
       // unevaluated data -- there's no such thing as a "special form" at
       // this level; (lambda (x) x), quoted, is just a 3-element list.
-      return L.mkList(...children(node).map((c) => nodeToRawValue(ctx, c)))
+      return L.mkList(...cs.map((c) => nodeToRawValue(ctx, c)))
   }
 }
 
@@ -240,9 +302,10 @@ function precedingComments(
 
 function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
   const range = ctx.range(node)
-  if (containsError(node)) {
-    reportSyntaxError(ctx, node)
-    return A.mkPLit("<error>", range)
+  const cs = children(node)
+  const err = errorOr(ctx, node, cs, A.mkPLit("<error>", range))
+  if (err) {
+    return err
   }
   switch (node.type.name) {
     case "Number":
@@ -265,7 +328,6 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
     }
 
     case "PApp": {
-      const cs = children(node)
       if (cs.length === 0) {
         return A.mkPLit(null, range)
       }
@@ -293,9 +355,10 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
 
 function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
   const range = ctx.range(node)
-  if (containsError(node)) {
-    reportSyntaxError(ctx, node)
-    return A.mkLit(undefined, range)
+  const cs = children(node)
+  const err = errorOr(ctx, node, cs, A.mkLit(undefined, range))
+  if (err) {
+    return err
   }
   switch (node.type.name) {
     case "Number":
@@ -313,7 +376,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     }
 
     case "Quote": {
-      const cs = children(node)
       const inner = cs.length === 2 ? cs[1] : cs[0]
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
@@ -322,59 +384,50 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkLit(nodeToRawValue(ctx, node), range)
 
     case "Lambda": {
-      const cs = children(node).slice(1)
-      const body = expFromNode(ctx, cs[cs.length - 1])
-      const params = cs.slice(0, -1).map((c) => identifierName(ctx, c))
+      const rest = cs.slice(1)
+      const body = expFromNode(ctx, rest[rest.length - 1])
+      const params = rest.slice(0, -1).map((c) => identifierName(ctx, c))
       return A.mkLam(params, body, range)
     }
 
     case "If": {
-      const cs = children(node).slice(1)
+      const rest = cs.slice(1)
       return A.mkIf(
-        expFromNode(ctx, cs[0]),
-        expFromNode(ctx, cs[1]),
-        expFromNode(ctx, cs[2]),
+        expFromNode(ctx, rest[0]),
+        expFromNode(ctx, rest[1]),
+        expFromNode(ctx, rest[2]),
         range,
       )
     }
 
     case "And":
       return A.mkAnd(
-        children(node)
-          .slice(1)
-          .map((c) => expFromNode(ctx, c)),
+        cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
     case "Or":
       return A.mkOr(
-        children(node)
-          .slice(1)
-          .map((c) => expFromNode(ctx, c)),
+        cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
     case "Begin":
       return A.mkBegin(
-        children(node)
-          .slice(1)
-          .map((c) => expFromNode(ctx, c)),
+        cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
     case "Section":
       return A.mkSection(
-        children(node)
-          .slice(1)
-          .map((c) => expFromNode(ctx, c)),
+        cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
     case "Report":
-      return A.mkReport(expFromNode(ctx, children(node)[1]), range)
+      return A.mkReport(expFromNode(ctx, cs[1]), range)
 
     case "Application": {
-      const cs = children(node)
       if (cs.length === 0) {
         return A.mkLit(null, range)
       }
@@ -387,44 +440,32 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
 
     case "Let":
     case "LetStar": {
-      const cs = children(node).slice(1)
-      const body = expFromNode(ctx, cs[cs.length - 1])
-      const bindingsFlat = cs.slice(0, -1)
-      const bindings = []
-      for (let i = 0; i < bindingsFlat.length; i += 2) {
-        bindings.push({
-          name: identifierName(ctx, bindingsFlat[i]),
-          value: expFromNode(ctx, bindingsFlat[i + 1]),
-        })
-      }
+      const rest = cs.slice(1)
+      const body = expFromNode(ctx, rest[rest.length - 1])
+      const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
+        name: identifierName(ctx, n),
+        value: expFromNode(ctx, v),
+      }))
       return node.type.name === "Let"
         ? A.mkLet(bindings, body, range)
         : A.mkLetS(bindings, body, range)
     }
 
     case "Cond": {
-      const cs = children(node).slice(1)
-      const branches = []
-      for (let i = 0; i < cs.length; i += 2) {
-        branches.push({
-          test: expFromNode(ctx, cs[i]),
-          body: expFromNode(ctx, cs[i + 1]),
-        })
-      }
+      const branches = pairs(cs.slice(1)).map(([test, body]) => ({
+        test: expFromNode(ctx, test),
+        body: expFromNode(ctx, body),
+      }))
       return A.mkCond(branches, range)
     }
 
     case "Match": {
-      const cs = children(node).slice(1)
-      const scrutinee = expFromNode(ctx, cs[0])
-      const branchesFlat = cs.slice(1)
-      const branches = []
-      for (let i = 0; i < branchesFlat.length; i += 2) {
-        branches.push({
-          pat: patFromNode(ctx, branchesFlat[i]),
-          body: expFromNode(ctx, branchesFlat[i + 1]),
-        })
-      }
+      const rest = cs.slice(1)
+      const scrutinee = expFromNode(ctx, rest[0])
+      const branches = pairs(rest.slice(1)).map(([pat, body]) => ({
+        pat: patFromNode(ctx, pat),
+        body: expFromNode(ctx, body),
+      }))
       return A.mkMatch(scrutinee, branches, range)
     }
 
@@ -440,38 +481,44 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
 
 function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
   const range = ctx.range(node)
-  if (containsError(node)) {
-    reportSyntaxError(ctx, node)
-    return A.mkStmtExp(A.mkLit(undefined, range), range)
+  const cs = children(node)
+  const err = errorOr(
+    ctx,
+    node,
+    cs,
+    A.mkStmtExp(A.mkLit(undefined, range), range),
+  )
+  if (err) {
+    return err
   }
   switch (node.type.name) {
     case "Import": {
-      const name = identifierName(ctx, children(node)[1])
+      const name = identifierName(ctx, cs[1])
       return A.mkImport(name, range)
     }
 
     case "Define": {
-      const cs = children(node).slice(1)
-      const name = identifierName(ctx, cs[0])
-      const value = expFromNode(ctx, cs[1])
+      const rest = cs.slice(1)
+      const name = identifierName(ctx, rest[0])
+      const value = expFromNode(ctx, rest[1])
       const docComments = precedingComments(ctx, node)
       return A.mkDefine(name, value, range, docComments)
     }
 
     case "Display": {
-      const value = expFromNode(ctx, children(node)[1])
+      const value = expFromNode(ctx, cs[1])
       return A.mkDisp(value, range)
     }
 
     case "Struct": {
-      const cs = children(node).slice(1)
-      const name = identifierName(ctx, cs[0])
-      const fields = cs.slice(1).map((c) => identifierName(ctx, c))
+      const rest = cs.slice(1)
+      const name = identifierName(ctx, rest[0])
+      const fields = rest.slice(1).map((c) => identifierName(ctx, c))
       return A.mkStruct(name, fields, range)
     }
 
     case "SExpr":
-      return A.mkStmtExp(expFromNode(ctx, children(node)[0]), range)
+      return A.mkStmtExp(expFromNode(ctx, cs[0]), range)
 
     default:
       throw new L.ICE(

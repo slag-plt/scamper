@@ -26,6 +26,18 @@ export class ScamperError extends Error {
     this.source = source
   }
 
+  // Whether this error should block compilation/execution outright, as
+  // opposed to being surfaced as a non-blocking diagnostic (e.g. a malformed
+  // docstring is a documentation-quality issue, not a reason to fail
+  // otherwise-valid code -- see docstring.ts's parseFunctionDocFromComments
+  // and scope.ts's scopeCheckFunctionDoc). Centralized here, rather than
+  // each call site independently checking `phase === "Docstring"`, so
+  // adding a future non-fatal phase doesn't require re-auditing every place
+  // that decides whether an accumulated errors array should block anything.
+  get isFatal(): boolean {
+    return this.phase !== "Docstring"
+  }
+
   toString(): string {
     const detail = `${this.modName ?? ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
     const src = this.source ? `(${this.source}) ` : ""
