@@ -12,9 +12,22 @@ export class Frame {
   ops: L.Ops[]
   // for reporting
   rptTrace?: ReportTrace
+  /** Active report boundaries in this frame, paired from begin to end. */
+  rptBoundaries: ReportBoundary[] = []
+  /** True for frames descended from the documented example call. */
+  queryRun: boolean
+  /** True only for the documented example call's closure frame. */
+  queryRoot: boolean
   tailCallDepth = 0
 
-  constructor(name: string, env: L.Env, blk: L.Blk, rptTrace?: ReportTrace) {
+  constructor(
+    name: string,
+    env: L.Env,
+    blk: L.Blk,
+    rptTrace?: ReportTrace,
+    queryRun = false,
+    queryRoot = false,
+  ) {
     this.name = name
     this.env = env
     this.values = []
@@ -22,6 +35,8 @@ export class Frame {
     ensureApIndices(this.ops)
     this.ops.reverse()
     this.rptTrace = rptTrace
+    this.queryRun = queryRun
+    this.queryRoot = queryRoot
   }
 
   isFinished(): boolean {
@@ -61,6 +76,11 @@ export class Frame {
     parent.children.push(node)
     return node
   }
+}
+
+interface ReportBoundary {
+  ownsTerminalResult: boolean
+  targetIsApplication: boolean
 }
 
 function ensureApIndices(blk: L.Blk, startIdx = 0): number {

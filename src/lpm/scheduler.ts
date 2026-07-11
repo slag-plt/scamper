@@ -1,4 +1,4 @@
-import { ErrorChannel, ICE, OutputChannel, ScamperError } from "."
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from "."
 import { Fiber, StepResult } from "./fiber"
 import { schedulerYield } from "./scheduler-yield.js"
 import { mkTraceOutput } from "./trace/index.js"
@@ -103,6 +103,7 @@ export class Scheduler {
       }
       if (isReportTask(task)) {
         console.debug(e)
+        console.debug((e as ReportError).capture)
         task.err.report(e)
         this.#endCurrFiber()
         return undefined

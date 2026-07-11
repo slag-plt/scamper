@@ -62,17 +62,15 @@ function mockScheduledQuery(
   id: string,
   done = pendingPromise(),
 ) {
-  return vi
-    .spyOn(scamper, "query")
-    .mockImplementation(({ err }) => {
-      scamper.registerQueryEntry({
-        id,
-        err,
-        queriedRange: mockQueriedRange,
-        done,
-      })
-      return Promise.resolve()
+  return vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
+    scamper.registerQueryEntry({
+      id,
+      err,
+      queriedRange: mockQueriedRange,
+      done,
     })
+    return Promise.resolve()
+  })
 }
 
 function makePane(): ResultsPaneType {

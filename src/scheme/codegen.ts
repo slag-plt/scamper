@@ -78,8 +78,25 @@ function lowerExpr(e: A.Exp): L.Blk {
       ]
     case "quote":
       return [L.mkLit(e.value, e.range)]
-    case "report":
-      return [L.mkRptBegin(), ...lowerExpr(e.exp), L.mkRptEnd(e.range)]
+    case "report": {
+      const reported = lowerExpr(e.exp)
+      const targetIsApplication = e.exp.tag === "app"
+      if (targetIsApplication) {
+        const target = reported.at(-1)
+        if (target?.tag !== "ap") {
+          throw new L.ICE(
+            "lowerExpr",
+            "Application reports must lower to a terminal application",
+          )
+        }
+        target.reportTarget = true
+      }
+      return [
+        L.mkRptBegin(targetIsApplication),
+        ...reported,
+        L.mkRptEnd(e.range),
+      ]
+    }
     default:
       throw new L.ICE("lowerExpr", `Non-core expression encountered: ${e.tag}`)
   }

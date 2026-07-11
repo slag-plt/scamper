@@ -77,8 +77,16 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     children: [],
     apIdx: op.apIdx ?? -1,
   }
-  if (node) {
-    currFrame.rptTrace?.stack.push(node)
+  const trace = currFrame.rptTrace
+  if (node && trace) {
+    trace.stack.push(node)
+    if (
+      op.reportTarget &&
+      currFrame.queryRoot &&
+      trace.targetNode === undefined
+    ) {
+      trace.targetNode = node
+    }
   }
 
   if (isJsFunction(fn)) {
@@ -122,6 +130,8 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     ),
     fn.code,
     currFrame.rptTrace,
+    currFrame.queryRun || op.queryRoot === true,
+    op.queryRoot === true,
   )
   // update invocation node env
   if (node) {
@@ -168,9 +178,20 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   return traceStep
 }
 
-export const RptBeginHandler: OpHandler<"rpt-begin"> = (_, currFrame) => {
-  // initialize stack
-  currFrame.rptTrace = { root: { children: [] }, stack: [] }
+export const RptBeginHandler: OpHandler<"rpt-begin"> = (op, currFrame) => {
+  const ownsReport =
+    currFrame.rptTrace === undefined &&
+    (!currFrame.queryRun || currFrame.queryRoot)
+  if (ownsReport) {
+    currFrame.rptTrace = {
+      root: { children: [] },
+      stack: [],
+    }
+  }
+  currFrame.rptBoundaries.push({
+    ownsTerminalResult: ownsReport,
+    targetIsApplication: op.targetIsApplication,
+  })
   return traceStep
 }
 
@@ -181,8 +202,16 @@ export const RptEndHandler: OpHandler<"rpt-end"> = (op, currFrame) => {
       "Expected to report a value, but none remain?",
     )
   }
+  const boundary = currFrame.rptBoundaries.pop()
+  if (boundary?.ownsTerminalResult === false) {
+    return traceStep
+  }
+
   const value = currFrame.values.at(-1)
-  const pageGraph = currFrame.rptTrace && buildPageGraph(currFrame.rptTrace)
+  const pageGraph =
+    boundary?.targetIsApplication !== false &&
+    currFrame.rptTrace &&
+    buildPageGraph(currFrame.rptTrace)
   const capture: ReportCapture = pageGraph
     ? { tag: "page-graph", pageGraph }
     : { tag: "value", value }

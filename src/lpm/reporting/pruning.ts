@@ -62,9 +62,10 @@ export function pruneNonRecursiveBranches(
     return null
   }
 
-  // The query contract gives the reported closure a direct report-root child.
-  // Do not scan descendants or infer a function from its source name.
-  const root = trace.root.children.at(0)
+  // A source query may evaluate arguments before its selected application. The
+  // trace therefore marks that first selected invocation explicitly; legacy
+  // reports retain the original first-root-child fallback.
+  const root = trace.targetNode ?? trace.root.children.at(0)
   if (!root) {
     return null
   }

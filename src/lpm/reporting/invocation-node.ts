@@ -23,4 +23,6 @@ export interface ReportTraceRoot {
 export interface ReportTrace {
   root: ReportTraceRoot
   stack: InvocationNode[]
+  /** First invocation of the selected application in the owning report. */
+  targetNode?: InvocationNode
 }

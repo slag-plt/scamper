@@ -328,6 +328,10 @@ export interface Ap {
   numArgs: number
   range: Range
   apIdx?: number
+  /** Static marker for the application wrapped by a source query report. */
+  reportTarget?: boolean
+  /** Static marker for the documented example call that starts a query run. */
+  queryRoot?: boolean
 }
 export interface Match {
   tag: "match"
@@ -350,6 +354,8 @@ export interface PopV {
 }
 export interface RptBegin {
   tag: "rpt-begin"
+  /** Whether this report intentionally targets an application for paging. */
+  targetIsApplication: boolean
 }
 export interface RptEnd {
   tag: "rpt-end"

@@ -156,7 +156,10 @@ export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({
 })
 export const mkPops = (): L.PopS => ({ tag: "pops" })
 export const mkPopv = (): L.PopV => ({ tag: "popv" })
-export const mkRptBegin = (): L.RptBegin => ({ tag: "rpt-begin" })
+export const mkRptBegin = (targetIsApplication = true): L.RptBegin => ({
+  tag: "rpt-begin",
+  targetIsApplication,
+})
 export const mkRptEnd = (range: Range = Range.none): L.RptEnd => ({
   tag: "rpt-end",
   range,

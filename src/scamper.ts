@@ -184,6 +184,12 @@ export default class Scamper {
     // schedule query task
     const id = crypto.randomUUID()
     const { promise, resolve } = deferred()
+    const entry: QueryEntry = {
+      id,
+      err,
+      done: promise,
+      queriedRange,
+    }
     this.#scheduler.schedule({
       id,
       fiber,
@@ -192,12 +198,6 @@ export default class Scamper {
         resolve()
       },
     })
-    const entry: QueryEntry = {
-      id,
-      err,
-      done: promise,
-      queriedRange,
-    }
     this.registerQueryEntry(entry)
   }
   public invalidateAllQueries() {

@@ -123,6 +123,11 @@ export async function compile(
       return undefined
     }
     const prog = lowerProgram(expandProgram(parsed.program))
+    const example = prog.at(-1)
+    const rootCall = example?.tag === "disp" ? example.expr.at(-1) : undefined
+    if (rootCall?.tag === "ap") {
+      rootCall.queryRoot = true
+    }
     return { prog, queriedRange: parsed.queriedRange }
   }
 
@@ -147,9 +152,11 @@ export async function compile(
 }
 
 export function mkInitialEnv(): S.Env {
-  return S.Env.empty.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('runtime', builtinLibs.get('runtime')!).
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    extendWithImport('prelude', builtinLibs.get('prelude')!)
+  return (
+    S.Env.empty
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      .extendWithImport("runtime", builtinLibs.get("runtime")!)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      .extendWithImport("prelude", builtinLibs.get("prelude")!)
+  )
 }

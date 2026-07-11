@@ -1,7 +1,7 @@
 import { QueryEntry } from "../../../scamper"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
 import { getReportCaptureValue, ReportError } from "../../../lpm"
-import { computed, MaybeRefOrGetter, toValue } from "vue"
+import { computed, MaybeRefOrGetter, ref, toValue } from "vue"
 import { SchedulerId } from "../../../lpm/scheduler"
 
 export const ModalCols = 10
@@ -22,15 +22,22 @@ export function getQueryAnchorName(id: SchedulerId) {
 }
 
 export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
+  const q = toValue(query)
+  const isDone = ref(false)
+  void q.done.finally(() => {
+    isDone.value = true
+  })
+
   return computed(() => {
-    const q = toValue(query)
+    if (!isDone.value) {
+      return "Querying…"
+    }
     if (!(q.err instanceof SimpleErrorChannel)) {
       return "Fatal query error"
     }
     const firstErr = q.err.errors.at(0)
-    // TODO: don't forget done wiring
     if (!firstErr) {
-      return "No query found."
+      return "Queried code could not be reached!"
     }
     if (!(firstErr instanceof ReportError)) {
       return firstErr
