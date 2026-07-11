@@ -192,7 +192,7 @@ export function makeReportThrowingFiber(
 ): MockFiber {
   const fiber = new MockFiber()
   fiber.stepImpl = () => {
-    throw new ReportError(value, range)
+    throw new ReportError({ tag: "value", value }, range)
   }
   return fiber
 }

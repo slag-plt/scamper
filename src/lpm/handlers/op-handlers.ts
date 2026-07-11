@@ -4,6 +4,8 @@ import { Env, Ops, Value } from "../lang"
 import { Frame } from "../frame"
 import { isJsFunction, isScamperFn, mkClosure, mkStruct, pMatch } from "../util"
 import { InvocationNode } from "../reporting/invocation-node"
+import { buildPageGraph } from "../reporting/pruning"
+import { ReportCapture } from "../reporting/report-capture"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -179,5 +181,10 @@ export const RptEndHandler: OpHandler<"rpt-end"> = (op, currFrame) => {
       "Expected to report a value, but none remain?",
     )
   }
-  throw new ReportError(currFrame.values.at(-1), op.range)
+  const value = currFrame.values.at(-1)
+  const pageGraph = currFrame.rptTrace && buildPageGraph(currFrame.rptTrace)
+  const capture: ReportCapture = pageGraph
+    ? { tag: "page-graph", pageGraph }
+    : { tag: "value", value }
+  throw new ReportError(capture, op.range)
 }

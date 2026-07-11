@@ -1,6 +1,6 @@
 import { QueryEntry } from "../../../scamper"
 import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
-import { ReportError } from "../../../lpm"
+import { getReportCaptureValue, ReportError } from "../../../lpm"
 import { computed, MaybeRefOrGetter, toValue } from "vue"
 import { SchedulerId } from "../../../lpm/scheduler"
 
@@ -35,6 +35,6 @@ export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
     if (!(firstErr instanceof ReportError)) {
       return firstErr
     }
-    return firstErr.value
+    return getReportCaptureValue(firstErr.capture)
   })
 }

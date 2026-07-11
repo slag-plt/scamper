@@ -1,5 +1,8 @@
 import { Range } from "./range.js"
-import { Value } from "./lang"
+import {
+  getReportCaptureValue,
+  ReportCapture,
+} from "./reporting/report-capture"
 import { toString } from "./util"
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
@@ -59,9 +62,12 @@ export class SubthreadErrors extends Error {
 
 export class ReportError extends ScamperError {
   constructor(
-    public value: Value,
+    public capture: ReportCapture,
     public range: Range,
   ) {
-    super("Runtime", `Reported value: ${toString(value)}`)
+    super(
+      "Runtime",
+      `Reported value: ${toString(getReportCaptureValue(capture))}`,
+    )
   }
 }

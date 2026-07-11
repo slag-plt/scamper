@@ -146,7 +146,7 @@ describe("basic ops", () => {
     ])
     expect(() => {
       testExecute(fiber, out)
-    }).toThrow(new ReportError("test error", anyRange))
+    }).toThrow(new ReportError({ tag: "value", value: "test error" }, anyRange))
   })
 
   // TODO: need a pop test?

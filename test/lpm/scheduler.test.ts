@@ -345,7 +345,10 @@ describe("Scheduler", () => {
       expect(queryTask.err.errors).toHaveLength(1)
       const reported = queryTask.err.errors[0]
       expect(reported).toBeInstanceOf(ReportError)
-      expect((reported as ReportError).value).toBe(reportedValue)
+      expect((reported as ReportError).capture).toEqual({
+        tag: "value",
+        value: reportedValue,
+      })
       expect(reportFiber.stepCallCount).toBe(1)
       expect(sibling.stepCallCount).toBeGreaterThan(0)
     })
@@ -446,9 +449,10 @@ describe("Scheduler", () => {
       await sleep(QUANTUM_WAIT_MS)
 
       expect(queryTask.err.errors).toHaveLength(1)
-      expect((queryTask.err.errors[0] as ReportError).value).toBe(
-        "sibling check",
-      )
+      expect((queryTask.err.errors[0] as ReportError).capture).toEqual({
+        tag: "value",
+        value: "sibling check",
+      })
       expect(reportFiber.stepCallCount).toBe(1)
       expect(siblingA.stepCallCount).toBeGreaterThan(1)
       expect(siblingB.stepCallCount).toBeGreaterThan(1)

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "vitest"
 import { Fiber } from "../../src/lpm/fiber"
 import * as U from "../../src/lpm/util"
 import {
+  getReportCaptureValue,
   LoggingChannel,
   OutputChannel,
   ReportError,
@@ -295,7 +296,7 @@ describe("basic ops", () => {
       U.mkDisp([U.mkVar("+"), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRptEnd()]),
     ])
 
-    const expectedError = new ReportError(3, anyRange)
+    const expectedError = new ReportError({ tag: "value", value: 3 }, anyRange)
 
     const testRunner = () => {
       try {
@@ -307,5 +308,56 @@ describe("basic ops", () => {
     }
 
     expect(testRunner()).toStrictEqual(expectedError)
+  })
+
+  test("report retains a recursive page graph while displaying its root result", () => {
+    const factorialCls = U.mkCls(
+      ["n"],
+      [
+        U.mkVar("n"),
+        U.mkMatch([
+          [U.mkPLit(0), [U.mkLit(1)]],
+          [
+            U.mkPWild(),
+            [
+              U.mkVar("*"),
+              U.mkVar("n"),
+              U.mkVar("fact"),
+              U.mkVar("-"),
+              U.mkVar("n"),
+              U.mkLit(1),
+              U.mkAp(2),
+              U.mkAp(1),
+              U.mkAp(2),
+            ],
+          ],
+        ]),
+      ],
+      "fact",
+    )
+    const fiber = makeTestFiber([
+      U.mkDefine("fact", [factorialCls]),
+      U.mkStmtExp([
+        U.mkRptBegin(),
+        U.mkVar("fact"),
+        U.mkLit(2),
+        U.mkAp(1),
+        U.mkRptEnd(),
+      ]),
+    ])
+
+    let reported: unknown
+    try {
+      testExecute(fiber, out)
+      expect.fail("report should terminate evaluation")
+    } catch (error) {
+      reported = error
+    }
+
+    expect(reported).toBeInstanceOf(ReportError)
+    const capture = (reported as ReportError).capture
+    expect(capture.tag).toBe("page-graph")
+    expect(getReportCaptureValue(capture)).toBe(2)
+    expect((reported as ReportError).message).toBe("Reported value: 2")
   })
 })

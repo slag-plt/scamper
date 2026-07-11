@@ -42,7 +42,7 @@ describe("query modal reactivity regression", () => {
         const scamper = Scamper.getInstance()
         vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
           reportQueryResult = (value: number) => {
-            err.report(new ReportError(value, Range.none))
+            err.report(new ReportError({ tag: "value", value }, Range.none))
           }
           scamper.registerQueryEntry({
             id: "query-test",
