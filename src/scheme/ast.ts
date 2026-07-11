@@ -1,11 +1,16 @@
 import * as L from "../lpm"
 import TextRenderer from "../lpm/renderers/text.js"
-import { FunctionDoc } from "./docstring/docstring"
 
 export interface Tagged {
   tag: string
 }
 export interface Node {
+  range: L.Range
+}
+
+/** A single line comment, tracked so docstrings can be reassembled from it. */
+export interface Comment {
+  line: string
   range: L.Range
 }
 
@@ -47,9 +52,16 @@ export interface Node {
 //     | (cond [e11 e12] ... [e1k e2k])
 //     | (section e1 ... ek)
 //
+//     -- Internal form, produced only by the query system (query.ts) to
+//        wrap the expression under a cursor for tooltip evaluation; not
+//        user-facing surface syntax
+//     | (report e)
+//
 // s ::= e
 //     | (import m)
 //     | (define x e)
+//     | ;;; <docstring>
+//       (define x e)
 //     | (display e)
 //     | e
 //
@@ -177,7 +189,14 @@ export interface Define extends Tagged, Node {
   tag: "define"
   name: string
   value: Exp
-  doc?: FunctionDoc
+  // N.B., raw, unparsed comments -- parsing them into a FunctionDoc is
+  // deferred until something actually needs the documentation (the IDE's
+  // live linter, or the query/example-tag feature), via
+  // docstring.ts's parseFunctionDocFromComments. A malformed docstring is a
+  // documentation-quality issue, not a reason to fail compiling otherwise-
+  // valid code, so it shouldn't be parsed (and thus can't error) as part of
+  // the main parse pass.
+  docComments?: Comment[]
 }
 export interface Disp extends Tagged, Node {
   tag: "display"
@@ -324,8 +343,8 @@ export const mkDefine = (
   name: string,
   value: Exp,
   range: L.Range = L.Range.none,
-  doc?: FunctionDoc,
-): Define => ({ tag: "define", name, value, range, doc })
+  docComments?: Comment[],
+): Define => ({ tag: "define", name, value, range, docComments })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: "display",
   value,
@@ -369,6 +388,7 @@ export function isExp(v: unknown): v is Exp {
       "or",
       "cond",
       "section",
+      "report",
     ].includes(v.tag)
   )
 }
@@ -585,6 +605,8 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.exps.length === e2.exps.length &&
       e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
+  } else if (e1.tag === "report" && e2.tag === "report") {
+    return expEquals(e1.exp, e2.exp)
   } else {
     return false
   }

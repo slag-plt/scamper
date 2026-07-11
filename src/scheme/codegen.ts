@@ -90,7 +90,9 @@ function lowerStmt(s: A.Stmt, displayStmtExpr = true): L.Stmt {
     case "import":
       return L.mkImport(s.module, s.range)
     case "define":
-      return L.mkDefine(s.name, lowerExpr(s.value), s.range, s.doc)
+      // N.B., docComments is documentation metadata, not executable code --
+      // it deliberately doesn't carry forward into the lowered bytecode.
+      return L.mkDefine(s.name, lowerExpr(s.value), s.range)
     case "display":
       return L.mkDisp(lowerExpr(s.value), s.range)
     case "stmtexp":

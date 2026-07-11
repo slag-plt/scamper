@@ -1,4 +1,4 @@
-import { parser } from "../syntax.grammar"
+import { parser } from "../../../scheme/generated/parser.js"
 import {
   continuedIndent,
   foldInside,
@@ -8,7 +8,7 @@ import {
   LRLanguage,
 } from "@codemirror/language"
 import { styleTags, tags as t } from "@lezer/highlight"
-import { reservedWords } from "../../../scheme/parser"
+import { reservedWords } from "../../../scheme/reserved-words"
 
 export const ScamperLanguage = LRLanguage.define({
   parser: parser.configure({

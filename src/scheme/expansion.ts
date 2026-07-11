@@ -224,7 +224,7 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
     case "import":
       return [s]
     case "define":
-      return [A.mkDefine(s.name, expandExpr(s.value), s.range, s.doc)]
+      return [A.mkDefine(s.name, expandExpr(s.value), s.range, s.docComments)]
     case "display":
       return [A.mkDisp(expandExpr(s.value), s.range)]
     case "struct": {

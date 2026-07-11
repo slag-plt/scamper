@@ -2,7 +2,12 @@ import { getFS } from "../fs"
 import * as L from "../lpm"
 import { ICE, ScamperError } from "../lpm"
 import * as A from "./ast.js"
-import { ComplexPred, Pred } from "./docstring/docstring"
+import {
+  ComplexPred,
+  FunctionDoc,
+  Pred,
+  parseFunctionDocFromComments,
+} from "./docstring/docstring"
 import { mkScamperErrorWithRange } from "./util"
 
 function checkDuplicateVars(
@@ -188,15 +193,42 @@ function scopeCheckComplexPred(
 // (define append
 //   (lambda (lst val) ...))
 // TODO: test this
+//
+// N.B., takes the already-parsed `doc` (rather than reading it off the
+// Define directly) since parsing a docstring can fail, and that failure is
+// handled by the caller -- everything this function itself reports is a
+// *semantic* mismatch between an already-valid docstring and the function
+// it's attached to (wrong param names, missing description, ...), which is
+// just as much a documentation-quality issue as a malformed docstring, not
+// a real scope error. So errors are collected into a local array and
+// re-tagged with phase "Docstring" before being merged into the caller's
+// `outerErrors`, regardless of which branch below (or which nested
+// scopeCheckPred call) produced them.
 function scopeCheckFunctionDoc(
-  errors: ScamperError[],
-  { name, value, doc }: A.Define,
+  outerErrors: ScamperError[],
+  doc: FunctionDoc,
+  { name, value }: A.Define,
   globals: string[],
 ): void {
-  if (!doc) {
-    // can't scope check a doc that doesn't exist
-    return
+  const errors: ScamperError[] = []
+  try {
+    scopeCheckFunctionDocInner(errors, doc, name, value, globals)
+  } finally {
+    outerErrors.push(
+      ...errors.map(
+        (e) => new ScamperError("Docstring", e.message, e.modName, e.range, e.source),
+      ),
+    )
   }
+}
+
+function scopeCheckFunctionDocInner(
+  errors: ScamperError[],
+  doc: FunctionDoc,
+  name: string,
+  value: A.Exp,
+  globals: string[],
+): void {
   if (!A.isLam(value)) {
     // can't attach function docs onto non-function definitions
     errors.push(
@@ -348,8 +380,21 @@ async function scopeCheckStmt(
         globals.push(s.name)
       }
       scopeCheckExp(errors, globals, [], s.value)
-      if (s.doc) {
-        scopeCheckFunctionDoc(errors, s, globals)
+      if (s.docComments) {
+        // parsing (not just scope-checking) can fail here -- a malformed
+        // docstring is reported the same way as a semantic mismatch (phase
+        // "Docstring"), not as a real scope error.
+        try {
+          const doc = parseFunctionDocFromComments(s.docComments)
+          if (doc) {
+            scopeCheckFunctionDoc(errors, doc, s, globals)
+          }
+        } catch (e) {
+          if (!(e instanceof ScamperError)) {
+            throw e
+          }
+          errors.push(e)
+        }
       }
       return
     }

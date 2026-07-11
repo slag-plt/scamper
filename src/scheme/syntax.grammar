@@ -1,0 +1,106 @@
+@top Program { statement* }
+
+@skip { space | LineComment }
+
+// N.B., reader.ts's readValue treats any bracket other than "[" as producing
+// a plain list -- "(" and "{" are fully interchangeable (as long as each is
+// closed with its own matching kind: "(...)" or "{...}", never mixed), and
+// can appear anywhere a list is expected, including special forms.
+paren<content> { "(" content ")" | "{" content "}" }
+
+arglist {
+  paren<Identifier*>
+}
+
+binding {
+  "[" Identifier expression "]"
+}
+
+branch {
+  "[" pattern expression "]"
+}
+
+condBranch {
+  "[" expression expression "]"
+}
+
+pattern {
+  Number |
+  Identifier |
+  String |
+  Boolean |
+  Char |
+  PApp { paren<pattern*> } |
+  PVector { "[" pattern* "]" }
+}
+
+expression {
+  Number |
+  Identifier |
+  String |
+  Boolean |
+  Char |
+  Quote { "'" expression | paren<kw<"quote"> expression> } |
+  Vector { "[" expression* "]" } |
+  Lambda { paren<kw<"lambda"> arglist expression> } |
+  If { paren<kw<"if"> expression expression expression> } |
+  And { paren<kw<"and"> expression*> } |
+  Or { paren<kw<"or"> expression*> } |
+  Begin { paren<kw<"begin"> expression expression*> } |
+  Cond { paren<kw<"cond"> condBranch*> } |
+  Section { paren<kw<"section"> expression expression*> } |
+  Report { paren<kw<"report"> expression> } |
+  Application { paren<expression*> } |
+  Let { paren<kw<"let"> paren<binding*> expression> } |
+  LetStar { paren<kw<"let*"> paren<binding*> expression> } |
+  Match { paren<kw<"match"> expression branch*> }
+}
+
+statement {
+  Import { paren<kw<"import"> Identifier> } |
+  Define { paren<kw<"define"> Identifier expression> } |
+  Display { paren<kw<"display"> expression> } |
+  Struct { paren<kw<"struct"> Identifier arglist> } |
+  SExpr { expression }
+}
+
+kw<term> { @specialize[@name={term}]<Identifier, term> }
+
+@tokens {
+  @precedence { Number, Boolean, Char, Identifier }
+
+  Number {
+    $[+\-]? (
+      $[0-9]+ ("." $[0-9]*)? |
+      "." $[0-9]+
+    ) (("e" | "E") $[+\-]? $[0-9]+)?
+  }
+
+  // N.B., mirrors reader.ts's tokenizer, which treats any run of characters
+  // not delimited by whitespace, brackets, a string quote, or an unescaped
+  // "'"/";" as an atom (disambiguated into number/boolean/char/identifier
+  // afterward). This is deliberately permissive so that identifiers like
+  // ">", "<=", "null?", and "set!" tokenize correctly.
+  Identifier { ![ \t\n\r()\[\]{}'";]+ }
+
+  String { '"' (!["\\] | "\\" _)* '"' }
+
+  Boolean { "#t" | "#f" }
+
+  Char {
+    "#\\" (
+      // Named char (validated by runtime)
+      $[a-zA-Z_\-0-9\+\*\=]+ |
+      // Or any single non-whitespace, non-bracket character -- matches
+      // reader.ts's tokenizer, which always stops a bare token at a
+      // bracket, so e.g. "#\(" never reads as a valid char literal.
+      ![ \t\n\r()\[\]{}]
+    )
+  }
+
+  LineComment { ";" ![\n]* }
+
+  space { $[ \t\n\r]+ }
+}
+
+@detectDelim

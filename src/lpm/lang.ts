@@ -1,5 +1,4 @@
 import { Range } from "./range.js"
-import { FunctionDoc } from "../scheme/docstring/docstring"
 import { ScamperError } from "./error.js"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
@@ -371,7 +370,6 @@ export interface Define {
   name: string
   expr: Blk
   range: Range
-  doc?: FunctionDoc
 }
 export interface StmtExp {
   tag: "stmtexp"
