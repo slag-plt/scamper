@@ -8,8 +8,13 @@
 // can appear anywhere a list is expected, including special forms.
 paren<content> { "(" content ")" | "{" content "}" }
 
-arglist {
+simplearglist {
   paren<Identifier*>
+}
+
+arglist {
+  simplearglist |
+  paren<Identifier+ "." Identifier>
 }
 
 binding {
@@ -60,7 +65,7 @@ statement {
   Import { paren<kw<"import"> Identifier> } |
   Define { paren<kw<"define"> Identifier expression> } |
   Display { paren<kw<"display"> expression> } |
-  Struct { paren<kw<"struct"> Identifier arglist> } |
+  Struct { paren<kw<"struct"> Identifier simplearglist> } |
   SExpr { expression }
 }
 
@@ -81,7 +86,7 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
   // "'"/";" as an atom (disambiguated into number/boolean/char/identifier
   // afterward). This is deliberately permissive so that identifiers like
   // ">", "<=", "null?", and "set!" tokenize correctly.
-  Identifier { ![ \t\n\r()\[\]{}'";]+ }
+  Identifier { ![ \t\n\r()\[\]{}'";.]+ }
 
   String { '"' (!["\\] | "\\" _)* '"' }
 

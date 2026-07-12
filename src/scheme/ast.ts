@@ -23,6 +23,8 @@ export interface Comment {
 //     -- Special forms
 //     | (lambda (x1 ... xk)
 //         e)
+//     | (lambda (x1 ... xk-1 . xk)
+//         e)
 //     | (let
 //         ([x1 e1]
 //          ...
@@ -107,6 +109,7 @@ export interface App extends Tagged, Node {
 export interface Lam extends Tagged, Node {
   tag: "lam"
   params: string[]
+  restParam?: string
   body: Exp
 }
 export interface Let extends Tagged, Node {
@@ -279,7 +282,8 @@ export const mkLam = (
   params: string[],
   body: Exp,
   range: L.Range = L.Range.none,
-): Lam => ({ tag: "lam", params, body, range })
+  restParam?: string,
+): Lam => ({ tag: "lam", params, body, range, restParam})
 export const mkLet = (
   bindings: { name: string; value: Exp }[],
   body: Exp,
@@ -447,7 +451,7 @@ export function expToString(e: Exp): string {
       }
     }
     case "lam":
-      return `(lambda (${e.params.join(" ")}) ${expToString(e.body)})`
+      return `(lambda (${e.params.join(" ")}${e.restParam ? ` . ${e.restParam}` : ""}) ${expToString(e.body)})`
     case "let":
       return `(let (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(" ")}) ${expToString(e.body)})`
     case "begin":
@@ -542,6 +546,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     return (
       e1.params.length === e2.params.length &&
       e1.params.every((param, i) => param === e2.params[i]) &&
+      e1.restParam === e2.restParam &&
       expEquals(e1.body, e2.body)
     )
   } else if (e1.tag === "let" && e2.tag === "let") {
