@@ -4,7 +4,7 @@ export const equal: Doc = new Doc(
   "equal?",
   "boolean?",
   [new ArgDoc("v1", "any"), new ArgDoc("v2", "any")],
-  "Returns `#t` if and only `v1` and `v2` are (structurally) equal values.",
+  "Returns `#t` if and only `v1` and `v2` are (structurally) equal values."
 )
 
 export const number: Doc = new Doc(
@@ -159,6 +159,7 @@ export const abs: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the absolute value of `v`.",
+  ["math", "algebra"]
 )
 
 export const quotient: Doc = new Doc(

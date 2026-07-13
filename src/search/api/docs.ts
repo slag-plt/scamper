@@ -9,12 +9,15 @@ export class Doc {
    * @param returnType the return type of the function.
    * @param args An array of ArgDoc descriptors for each argument of the function.
    * @param desc A prose description of the behavior of the function.
+   * @param tags An array of tags for the function.
    */
    
   constructor (public name: string,
                public returnType: string, 
                public args: ArgDoc[],
-               public desc: string) { }
+               public desc: string,
+               public tags: string[] = []) { }
+               
 
   /**
    * @returns A string containing the docstring formatted in Markdown.
