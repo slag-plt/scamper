@@ -57,15 +57,11 @@ function setSimple() {
 
 function checkReturn(foo: string | object) {
   let boo = false;
-  console.log("fooooo", foo)
-  console.log("you're red", Object.entries(foo))
+
   Object.entries(foo).forEach(([ret, type]) => {
     if (ret === "returnType") {
-      console.log("return type is", type)
       type = type.replace("?", "")
-      console.log(returnTypes.value, "return types", returnTypes.value.includes(type), "includes", type)
       if(returnTypes.value.includes(type)) {
-        console.log("about to return true")
         boo = true;
       }
     }
@@ -93,18 +89,15 @@ function checkTags(foo: [string, string | object]) {
 
 function addToLib() {
   const newArr: any[] = []
-  console.log("one", libs)
+
   Object.entries(libs).forEach(([, [, lib]]) => {
-    console.log("two", lib)
     Object.entries(lib).forEach(([name, foo]) => {
-      console.log("three", foo)
       if (checkReturn(foo)) {
-        console.log("INSIDE")
         newArr.push(foo)
       }
     })
   });
-  console.log("naa", newArr)
+
   filteredLibs.value = newArr
 }
 
@@ -225,7 +218,7 @@ function makeString(foo: string): string {
       <!-- </Dropdown> -->
   </div>
 
-  <button class="enter-button" @click="() => { addToLib(); console.log('assis'); }"><strong>Enter</strong></button>
+  <button class="enter-button" @click="() => { addToLib(); }"><strong>Enter</strong></button>
 
     <!-- <select v-model="tags" multiple>
         <option value="volvo">Volvo</option>
@@ -240,7 +233,7 @@ function makeString(foo: string): string {
                      <div class="api">
                   <div class="index2"> 
                     <!-- <ul> -->
-                    <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}} {{ console.log("HERE1", filteredLibs) }}
+                    <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
                       <!-- <div v-for="library in filteredLibs" :key="library[0]">
                         <text><strong>{{library[0]}} {{ console.log("HERE2", filteredLibs) }}</strong></text> -->
                         <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
