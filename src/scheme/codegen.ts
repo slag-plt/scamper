@@ -27,7 +27,7 @@ function lowerExpr(e: A.Exp): L.Blk {
         L.mkAp(e.args.length, e.range),
       ]
     case "lam":
-      return [L.mkCls(e.params, lowerExpr(e.body), "##anonymous##", e.range)]
+      return [L.mkCls(e.params, lowerExpr(e.body), "##anonymous##", e.range, e.restParam)]
     case "let": {
       // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
       // we must proceed by first evaluating all binding expressions (without binding), then
@@ -42,9 +42,9 @@ function lowerExpr(e: A.Exp): L.Blk {
       // We must ensure that the inner-most match corresponds to the _first_ binding since
       // we're building the matches inside-out.
       // for (let i = e.bindings.length - 1; i >= 0; i--) {
-      for (let i = 0; i < e.bindings.length; i++) {
-        ret = [L.mkMatch([[L.mkPVar(e.bindings[i].name, e.range), ret]])]
-      }
+      e.bindings.forEach((b) => {
+        ret = [L.mkMatch([[L.mkPVar(b.name, e.range), ret]])]
+      })
       return [...bindings, ...ret]
     }
     case "begin": {

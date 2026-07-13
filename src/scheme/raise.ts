@@ -49,15 +49,16 @@ export function raiseFrame(
       }
 
       case "cls": {
+        const excluded = op.restParam ? [...op.params, op.restParam] : op.params
         const body = raiseFrame(
           [],
-          env.withoutLocals(...op.params),
+          env.withoutLocals(...excluded),
           op.body.toReversed(),
         )
         if (op.name) {
           values.push(A.mkVar(op.name))
         } else {
-          values.push(A.mkLam(op.params, body))
+          values.push(A.mkLam(op.params, body, undefined, op.restParam))
         }
         break
       }

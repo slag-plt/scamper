@@ -190,6 +190,7 @@ export interface Closure extends TaggedObject {
   params: Id[]
   code: Blk
   locals: Map<string, Value>
+  restParam?: string
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
   // Machine can be referenced by call to perform evaluation.
@@ -313,6 +314,7 @@ export interface Cls {
   body: Blk
   name?: string
   range: Range
+  restParam?: string
 }
 export interface Ap {
   tag: "ap"

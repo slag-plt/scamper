@@ -97,8 +97,9 @@ function scopeCheckExp(
 
     case "lam": {
       // N.B., do we want to warn in the case of shadowed variables?
-      checkDuplicateVars(errors, e.params, e.range)
-      scopeCheckExp(errors, globals, [...locals, ...e.params], e.body)
+      const allParams = e.restParam ? [...e.params, e.restParam] : e.params
+      checkDuplicateVars(errors, allParams, e.range)
+      scopeCheckExp(errors, globals, [...locals, ...allParams], e.body)
       return
     }
     case "let": {

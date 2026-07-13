@@ -45,6 +45,8 @@ const closureStrategy: Strategy = {
         v.params.length > 0
           ? v.params.reduce((acc, curr) => `${acc} ${curr}`)
           : ""
+      }${
+        v.restParam ? ` . ${v.restParam}` : ""
       }) ...)`,
   ),
 }

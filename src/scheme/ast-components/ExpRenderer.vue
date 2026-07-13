@@ -14,7 +14,11 @@ switch (e.tag) {
     args = [e.head, ...e.args]
     break
   case "lam":
-    args = ["lambda", ...e.params, e.body]
+    if (e.restParam) {
+      args = ["lambda", ...e.params, ".", e.restParam, e.body]
+    } else {
+      args = ["lambda", ...e.params, e.body]
+    }
     break
   case "begin":
     args = ["begin", ...e.exps]

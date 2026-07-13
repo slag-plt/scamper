@@ -12,7 +12,7 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
       return AST.mkApp(sugarExpr(e.head), e.args.map(sugarExpr))
     }
     case "lam": {
-      return AST.mkLam(e.params, sugarExpr(e.body))
+      return AST.mkLam(e.params, sugarExpr(e.body), undefined, e.restParam)
     }
     case "let": {
       return AST.mkLet(

@@ -93,7 +93,10 @@ function slotsOf(exp: A.Exp): Slot[] {
 
     case "lam":
       return [
-        { exp: exp.body, rebuild: (r) => A.mkLam(exp.params, r, exp.range) },
+        {
+          exp: exp.body,
+          rebuild: (r) => A.mkLam(exp.params, r, exp.range, exp.restParam),
+        },
       ]
 
     case "if":
