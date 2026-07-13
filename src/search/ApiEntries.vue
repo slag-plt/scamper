@@ -91,7 +91,7 @@ function addToLib() {
   const newArr: any[] = []
 
   Object.entries(libs).forEach(([, [, lib]]) => {
-    Object.entries(lib).forEach(([name, foo]) => {
+    Object.entries(lib).forEach(([, foo]) => {
       if (checkReturn(foo)) {
         newArr.push(foo)
       }
@@ -154,13 +154,6 @@ function makeString(foo: string): string {
       </option>
     </select>
 
-    <!-- <p>Keywords</p>
-    <input
-      v-model="search"  
-      size="24"
-      class="search-input"
-      placeholder="Function name/keywords"
-    > -->
     <p></p>
    
       <text>Arguments </text>
@@ -216,33 +209,20 @@ function makeString(foo: string): string {
       <p><input v-model="tags" type="checkbox" label="Two" value="Two"> Two</p>
       <p><input v-model="tags" type="checkbox" label="Three" value="Three"> Three </p>
       <!-- </Dropdown> -->
-  </div>
-
-  <button class="enter-button" @click="() => { addToLib(); }"><strong>Enter</strong></button>
-
-    <!-- <select v-model="tags" multiple>
-        <option value="volvo">Volvo</option>
-        <option value="saab">Saab</option>
-        <option value="mercedes">Mercedes</option>
-        <option value="audi">Audi</option>
-    </select> -->
+  
+    </div>
+      <button class="enter-button" @click="() => { addToLib() }"><strong>Enter</strong></button>
     </div>
 
     <div>
       <h3> <strong>Search Results</strong> </h3>
-                     <div class="api">
+                <div class="api">
                   <div class="index2"> 
-                    <!-- <ul> -->
                     <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
-                      <!-- <div v-for="library in filteredLibs" :key="library[0]">
-                        <text><strong>{{library[0]}} {{ console.log("HERE2", filteredLibs) }}</strong></text> -->
                         <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
                           <text>{{ makeString(foo) }}</text>
                         </div>
-                      <!-- </div> -->
-
                     </div>
-                    <!-- </ul> -->
                   </div>
                 </div> 
     </div>
