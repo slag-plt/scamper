@@ -2,7 +2,7 @@ import { ICE, ReportError, ScamperError } from "../error"
 import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../frame"
-import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch } from "../util"
+import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch, vectorToList } from "../util"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -42,6 +42,8 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
       () => {
         throw new ICE("Fiber.ClsHandler", "Closure.call was deprecated!")
       },
+      op.name,
+      op.restParam,
     ),
   )
   return minorStep
@@ -78,20 +80,26 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     }
   }
   if (isClosure(fn)) {
-    if (fn.params.length !== args.length) {
+    // With rest parameters, we have an arity mismatch if we have fewer arguments than the
+    // required number or not the exact number if there is no rest parameter.
+    if (args.length < fn.params.length ||
+        (!fn.restParam && args.length !== fn.params.length)) {
       throw new ScamperError(
         "Runtime",
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
         undefined,
         op.range,
-        undefined
-      )
+        undefined)
     }
+    const namedArgs = args.slice(0, fn.params.length)
+    const bindings = fn.params.map((p: string, i: number): [string, Value] =>
+      [p, namedArgs[i]]).concat(
+        fn.restParam ? [[fn.restParam, vectorToList(args.slice(fn.params.length))]] : [])
     const newFrame = new Frame(
       fn.name ?? "##anonymous##",
       fiber.topLevelEnv.extendReplacingLocals(
         ...fn.locals,
-        ...fn.params.map((p, i): [string, Value] => [p, args[i]])
+        ...bindings
       ),
       fn.code,
     )

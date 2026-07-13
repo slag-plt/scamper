@@ -14,7 +14,7 @@ simplearglist {
 
 arglist {
   simplearglist |
-  paren<Identifier+ "." Identifier>
+  paren<Identifier+ RestDot Identifier>
 }
 
 binding {
@@ -87,6 +87,12 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
   // afterward). This is deliberately permissive so that identifiers like
   // ">", "<=", "null?", and "set!" tokenize correctly.
   Identifier { ![ \t\n\r()\[\]{}'";.]+ }
+
+  // The "." separating a lambda's fixed parameters from its rest parameter,
+  // e.g. (lambda (x y . z) ...). Named (rather than an inline anonymous
+  // literal) so it shows up in the parse tree and arglist can tell a rest
+  // parameter apart from an ordinary trailing identifier.
+  RestDot { "." }
 
   String { '"' (!["\\] | "\\" _)* '"' }
 

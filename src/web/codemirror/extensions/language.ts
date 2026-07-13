@@ -40,6 +40,7 @@ export const ScamperLanguage = LRLanguage.define({
         "( )": t.paren,
         "[ ]": t.squareBracket,
         "{ }": t.brace,
+        RestDot: t.punctuation,
       }),
     ],
   }),

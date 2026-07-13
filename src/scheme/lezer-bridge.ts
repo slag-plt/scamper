@@ -386,8 +386,15 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     case "Lambda": {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
-      const params = rest.slice(0, -1).map((c) => identifierName(ctx, c))
-      return A.mkLam(params, body, range)
+      const argNodes = rest.slice(0, -1)
+      const dotIndex = argNodes.findIndex((c) => c.type.name === "RestDot")
+      if (dotIndex === -1) {
+        const params = argNodes.map((c) => identifierName(ctx, c))
+        return A.mkLam(params, body, range)
+      }
+      const params = argNodes.slice(0, dotIndex).map((c) => identifierName(ctx, c))
+      const restParam = identifierName(ctx, argNodes[dotIndex + 1])
+      return A.mkLam(params, body, range, restParam)
     }
 
     case "If": {

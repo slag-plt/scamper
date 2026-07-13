@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 import { Fiber } from "../../src/lpm/fiber"
 import * as U from "../../src/lpm/util"
-import { LoggingChannel, OutputChannel, ReportError } from "../../src/lpm"
+import { LoggingChannel, OutputChannel, ReportError, Value } from "../../src/lpm"
 import { makeTestFiber } from "../test-utils"
 import { anyRange } from "../scheme/util"
 
@@ -266,5 +266,70 @@ describe("pattern matching", () => {
     ])
     testExecute(fiber, out)
     expect(out.log).toEqual([120])
+  })
+})
+
+describe("rest parameters", () => {
+  test("ap - rest param captures zero extra args as an empty list", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+    const fiber = makeTestFiber([
+      U.mkDisp([cls, U.mkLit(1), U.mkAp(1)]),
+    ])
+    testExecute(fiber, out)
+    expect(out.log).toEqual([null])
+  })
+
+  test("ap - rest param captures extra args as a list", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+    const fiber = makeTestFiber([
+      U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkLit(3), U.mkAp(3)]),
+    ])
+    testExecute(fiber, out)
+    expect(out.log).toEqual([U.mkList(2, 3)])
+  })
+
+  test("ap - fixed params and rest param bind independently", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(
+      ["x", "y"],
+      [U.mkVar("cons"), U.mkVar("x"), U.mkVar("z"), U.mkAp(2)],
+      "f",
+      undefined,
+      "z",
+    )
+    const fiber = makeTestFiber([
+      U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkLit(3), U.mkLit(4), U.mkAp(4)]),
+    ])
+    fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+      "cons",
+      (hd: Value, tl: any) => U.mkCons(hd, tl),
+    ])
+    testExecute(fiber, out)
+    expect(out.log).toEqual([U.mkCons(1, U.mkList(3, 4))])
+  })
+
+  test("ap - arity mismatch when fewer than required args, rest param present", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(["x", "y"], [U.mkVar("z")], "f", undefined, "z")
+    const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
+    expect(() => testExecute(fiber, out)).toThrow(/Arity mismatch/)
+  })
+
+  test("ap - arity mismatch when fewer than required args, no rest param", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(["x", "y"], [U.mkVar("x")], "f")
+    const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
+    expect(() => testExecute(fiber, out)).toThrow(/Arity mismatch/)
+  })
+
+  test("ap - arity mismatch when more args than fixed params, no rest param", () => {
+    const out = new LoggingChannel(false, false)
+    const cls = U.mkCls(["x"], [U.mkVar("x")], "f")
+    const fiber = makeTestFiber([
+      U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
+    ])
+    expect(() => testExecute(fiber, out)).toThrow(/Arity mismatch/)
   })
 })

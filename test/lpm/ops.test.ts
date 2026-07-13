@@ -259,3 +259,110 @@ describe("basic ops", () => {
     expect(testRunner()).toStrictEqual(expectedError)
   })
 })
+
+describe("rest parameters", () => {
+  let out: LoggingChannel
+  beforeEach(() => {
+    out = new LoggingChannel(false, false)
+  })
+
+  function expectSuccessfulExec(fiber: Fiber) {
+    expect(() => {
+      testExecute(fiber, out)
+    }).not.toThrow()
+  }
+  function expectFailedExec(fiber: Fiber) {
+    expect(() => {
+      testExecute(fiber, out)
+    }).toThrow(/Arity mismatch/)
+  }
+
+  describe("ap w/ rest param", () => {
+    test("zero extra args binds an empty list", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+      const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([null])
+    })
+
+    test("one extra arg binds a single-element list", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([U.mkList(2)])
+    })
+
+    test("multiple extra args bind a multi-element list, in call order", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkLit(3), U.mkAp(3)]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([U.mkList(2, 3)])
+    })
+
+    test("fixed params still resolve to their own arguments", () => {
+      const cls = U.mkCls(
+        ["x", "y"],
+        [U.mkVar("+"), U.mkVar("x"), U.mkVar("y"), U.mkAp(2)],
+        "f",
+        undefined,
+        "z",
+      )
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkLit(3), U.mkAp(3)]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([3])
+    })
+
+    test("rest param is a proper list, not a JS array/vector", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("y")], "f", undefined, "y")
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
+      ])
+      expectSuccessfulExec(fiber)
+      const result = out.log.at(0) as Value
+      expect(Array.isArray(result)).toBe(false)
+    })
+
+    test("does not throw when call has exactly the fixed arity", () => {
+      const cls = U.mkCls(["x", "y"], [U.mkVar("x")], "f", undefined, "z")
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([1])
+    })
+  })
+
+  describe("ap arity mismatch", () => {
+    test("fewer than required args, rest param present", () => {
+      const cls = U.mkCls(["x", "y"], [U.mkVar("x")], "f", undefined, "z")
+      const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
+      expectFailedExec(fiber)
+    })
+
+    test("zero args against a rest-only lambda with one required param", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("x")], "f", undefined, "y")
+      const fiber = makeTestFiber([U.mkDisp([cls, U.mkAp(0)])])
+      expectFailedExec(fiber)
+    })
+
+    test("fewer than required args, no rest param", () => {
+      const cls = U.mkCls(["x", "y"], [U.mkVar("x")], "f")
+      const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
+      expectFailedExec(fiber)
+    })
+
+    test("more args than fixed params, no rest param", () => {
+      const cls = U.mkCls(["x"], [U.mkVar("x")], "f")
+      const fiber = makeTestFiber([
+        U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
+      ])
+      expectFailedExec(fiber)
+    })
+  })
+})

@@ -2,13 +2,22 @@ import { resolve } from "path"
 import { generateParser, grammarPath } from "./generate-parser.mjs"
 
 // Regenerates src/scheme/generated/parser.ts from src/scheme/syntax.grammar
-// before every build/dev-server/test run, and live-reloads the dev server
-// whenever the grammar file changes. syntax.grammar isn't imported by any
-// module, so Vite's module graph never sees it -- we watch it explicitly.
+// before every dev-server/test run, and live-reloads the dev server whenever
+// the grammar file changes. syntax.grammar isn't imported by any module, so
+// Vite's module graph never sees it -- we watch it explicitly.
+//
+// Skipped for `vite build`: `npm run build`'s `prebuild` hook (see
+// package.json) already regenerates the parser before `vue-tsc`/`vite build`
+// run, so regenerating again here would just redo the same work.
 export function schemeParserPlugin() {
+  let command
   return {
     name: "scheme-parser-generator",
+    configResolved(config) {
+      command = config.command
+    },
     buildStart() {
+      if (command === "build") return
       generateParser()
     },
     configureServer(server) {
