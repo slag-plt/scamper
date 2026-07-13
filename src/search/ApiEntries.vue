@@ -38,16 +38,21 @@ const libs: [string, object][] = [
   ["rex", Rex],
 ]
 
-let filteredLibs: Ref<any[]> = ref([])
+//let filteredLibs: Ref<any[]> = ref(libs.splice(0, libs.length - 1))
+
+let filteredLibs = ref<any[]>([])
 
 function setSimple() {
+  filteredLibs.value = []
   const simpleLibs: any[] = []
-  Object.entries(libs).forEach(([,foo]) => {
-    simpleLibs.push(foo)
+  Object.entries(libs).forEach(([,[, lib]]) => {
+    Object.entries(lib).forEach(([n, foo]) => {
+      simpleLibs.push(foo)
+    })
   });
-  simpleLibs.forEach((foo => {
-    filteredLibs.value.push(foo)
-  }))
+  
+  filteredLibs.value = simpleLibs
+  console.log("this is where joy comes to die", filteredLibs)
 }
 
 function checkReturn(foo: string | object) {
@@ -235,13 +240,13 @@ function makeString(foo: string): string {
                      <div class="api">
                   <div class="index2"> 
                     <!-- <ul> -->
-                    <div class="entries"> {{ setSimple() }} {{ console.log("WOWOWOWOWO", filteredLibs.values) }}
-                      <div v-for="library in filteredLibs.values" :key="library[0]">
-                        <text><strong>{{library[0]}} {{ console.log("HERE", filteredLibs.values) }}</strong></text>
-                        <div v-for="(foo) in library[1]" :key="foo['name']" ref="foo['name']"> 
-                          <text>{{ makeString(foo) }} {{ console.log("weeee", foo, "name!!", foo['name']) }}</text>
+                    <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}} {{ console.log("HERE1", filteredLibs) }}
+                      <!-- <div v-for="library in filteredLibs" :key="library[0]">
+                        <text><strong>{{library[0]}} {{ console.log("HERE2", filteredLibs) }}</strong></text> -->
+                        <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
+                          <text>{{ makeString(foo) }}</text>
                         </div>
-                      </div>
+                      <!-- </div> -->
 
                     </div>
                     <!-- </ul> -->
