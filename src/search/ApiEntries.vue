@@ -58,8 +58,8 @@ function setSimple() {
 function checkReturn(foo: string | object) {
   let boo = false;
 
-  Object.entries(foo).forEach(([ret, type]) => {
-    if (ret === "returnType") {
+  Object.entries(foo).forEach(([name, type]) => {
+    if (name === "returnType") {
       type = type.replace("?", "")
       if(returnTypes.value.includes(type)) {
         boo = true;
@@ -69,22 +69,60 @@ function checkReturn(foo: string | object) {
   return boo
 }
 
-function checkArgs(foo: [string, string | object]) {
-   
-  const argType = typeof foo[1] === 'object' ? (foo[1] as { argTypes?: string }).argTypes : undefined;
-  Object.entries(argumentTypes.value).forEach(([arg]) => {
-    
+function checkArgs(foo: string | object) {
+  let boo = false;
+
+  console.log("foo", foo)
+
+  Object.entries(foo).forEach(([name, argArr]) => {
+    if (name === "args") {
+      console.log("argArr", argArr)
+
+      Object.entries(argArr).forEach(([,arg]) => {
+        console.log("arg", arg)
+
+        Object.entries(arg).forEach(([key, value]) => {
+          console.log("key", key, "value", value)
+
+          if (key === "desc") {
+            if (typeof value === "string") {
+              console.log("this is a string", value)
+              value = value.replace("?", "")
+            }
+            if(argumentTypes.value.includes(value as string)) {
+              console.log("it is included", value,argumentTypes.value.includes(value as string) )
+              boo = true;
+            }
+          }
+        })
+        
+        // Object.entries(arg).forEach((key, value) => {
+        //   if (key === "desc") {
+        //     value = value.replace("?", "")
+        //     if(argumentTypes.value.includes(value)) {
+        //       boo = true;
+        //     }
+        //   }
+        // })
+        
+        // arg = arg.replace("?", "")
+        // if(argumentTypes.value.includes(arg)) {
+        //   boo = true;
+        // }
+      })
+    }
   })
-  return false;
+  return boo
 }
 
 function checkTags(foo: [string, string | object]) {
-   
-  const tagType = typeof foo[1] === 'object' ? (foo[1] as { tags?: string }).tags : undefined;
-  Object.entries(tags.value).forEach(([tag]) => {
+  let boo = true;
+
+  // const tagType = typeof foo[1] === 'object' ? (foo[1] as { tags?: string }).tags : undefined;
+  // Object.entries(tags.value).forEach(([tag]) => {
     
-  })
-  return false;
+  // })
+  return boo;
 }
 
 function addToLib() {
@@ -92,7 +130,10 @@ function addToLib() {
 
   Object.entries(libs).forEach(([, [, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
-      if (checkReturn(foo)) {
+      console.log("checkReturn(foo) || checkArgs(foo)", checkReturn(foo) || checkArgs(foo))
+      console.log("checkReturn(foo)", checkReturn(foo))
+      console.log("checkArgs(foo)", checkArgs(foo))
+      if (checkReturn(foo) || checkArgs(foo)) {
         newArr.push(foo)
       }
     })
@@ -127,11 +168,11 @@ const types = ref([
 
 
 function makeString(foo: string): string {
-  let str = "\n"
+  let str = ""
   for (const [key, value] of Object.entries(foo)) {
     str += `${key}: ${value}\n`     
   }
-  return str
+  return str + "\n"
 }
 
 </script>
