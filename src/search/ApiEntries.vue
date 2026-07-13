@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue"
+import { reactive, Ref, ref, h } from "vue"
 import { toRaw, isProxy } from 'vue';
 
 
@@ -38,7 +38,70 @@ const libs: [string, object][] = [
   ["rex", Rex],
 ]
 
-const resetKey = ref(0)
+let filteredLibs: Ref<any[]> = ref([])
+
+function setSimple() {
+  const simpleLibs: any[] = []
+  Object.entries(libs).forEach(([,foo]) => {
+    simpleLibs.push(foo)
+  });
+  simpleLibs.forEach((foo => {
+    filteredLibs.value.push(foo)
+  }))
+}
+
+function checkReturn(foo: string | object) {
+  let boo = false;
+  console.log("fooooo", foo)
+  console.log("you're red", Object.entries(foo))
+  Object.entries(foo).forEach(([ret, type]) => {
+    if (ret === "returnType") {
+      console.log("return type is", type)
+      type = type.replace("?", "")
+      console.log(returnTypes.value, "return types", returnTypes.value.includes(type), "includes", type)
+      if(returnTypes.value.includes(type)) {
+        console.log("about to return true")
+        boo = true;
+      }
+    }
+  })
+  return boo
+}
+
+function checkArgs(foo: [string, string | object]) {
+   
+  const argType = typeof foo[1] === 'object' ? (foo[1] as { argTypes?: string }).argTypes : undefined;
+  Object.entries(argumentTypes.value).forEach(([arg]) => {
+    
+  })
+  return false;
+}
+
+function checkTags(foo: [string, string | object]) {
+   
+  const tagType = typeof foo[1] === 'object' ? (foo[1] as { tags?: string }).tags : undefined;
+  Object.entries(tags.value).forEach(([tag]) => {
+    
+  })
+  return false;
+}
+
+function addToLib() {
+  const newArr: any[] = []
+  console.log("one", libs)
+  Object.entries(libs).forEach(([, [, lib]]) => {
+    console.log("two", lib)
+    Object.entries(lib).forEach(([name, foo]) => {
+      console.log("three", foo)
+      if (checkReturn(foo)) {
+        console.log("INSIDE")
+        newArr.push(foo)
+      }
+    })
+  });
+  console.log("naa", newArr)
+  filteredLibs.value = newArr
+}
 
 const options = ref([
   { id: 1, val: 'notes' },
@@ -64,130 +127,14 @@ const types = ref([
   { id: 6, val: 'boolean' }
 ])
 
-const rawLibs = toRaw(libs);
 
-function makeString(foo: object) {
+function makeString(foo: string): string {
   let str = "\n"
   for (const [key, value] of Object.entries(foo)) {
-    str += `${key}: ${value}\n`
+    str += `${key}: ${value}\n`     
   }
   return str
 }
-
-function checkArg(foo: object) {
-  // Object.entries(foo).forEach(([key, value]) => {
-  //   if (key === "args") {
-  //     console.log("args: ", value);
-  //     Object.entries(value).forEach(([argKey, argValue]) => {
-  //       argValue = isProxy(argValue) ? toRaw(argValue) : argValue;
-  //       if (toRaw(argumentTypes).value.includes(argValue)) {
-  //         return true;
-  //       }
-  //     }
-  //     // Check if the argument types match the selected argument types
-  //     if (Array.isArray(value)) {
-  //       for (const arg of value) {
-  //         if (!argumentTypes.value.includes(arg)) {
-  //           return false;
-  //         }
-  //       }
-  //     } else {
-  //       if (!argumentTypes.value.includes(value)) {
-  //         return false;
-  //       }
-  //     }
-  //   }
-  // });
-  return true;
-}
-
-function checkReturn(foo: object) {
-  Object.entries(foo).forEach(([key, type]) => {
-    if (key === "returnType" && returnTypes.value) {
-      type = isProxy(type) ? toRaw(type) : type;
-      type = type.replace("?", "");
-      type = type.replaceAll(" ", "");
-      // type = type.replace(" ", "");
-      // type = type.replace(" ", "");
-      console.log("returnType:",">", type, "<");
-      console.log("CALAL", toRaw(returnTypes.value))
-      console.log("TRUTH", returnTypes.value.includes(type))
-      if (!returnTypes.value.includes(type)) {
-        return false;
-      }
-    }
-  });
-  return true;
-}
-
-function searchFilter(foo: object) {
-  if(checkReturn(foo) && checkArg(foo)){
-    return true;
-  }
-  return false;
-}
-
-const abs = ref(null)
-
-const keys = computed(() => {
-  const arr = []
-  let count = 100;
-  for(const [libName, lib] of libs) {
-    for(const [fooName, foo] of Object.entries(lib)) {
-      arr.push(ref(count))
-      count++
-    }
-  }
-  return arr
-});
-
-function updatePage() {
-  resetKey.value++
-  // console.log("abs", abs.value)
-  // console.log("keys", keys.value)
-  // keys.value.map((key) => {
-  //   key.value++
-  // });
-  // console.log("updatePage called, keys updated: ", keys.value);
-}
-
-function getName(foo: object): string {
-  let retName: string = "name not found";
-  Object.entries(foo).forEach(([key, name]) => {
-    if (key === "name") {
-      name = isProxy(name) ? toRaw(name) : name;
-      retName = name;
-    }
-  });
-  return retName;
-}
-
-const itemRefs = () => {
-  const arr: String[] = []
-  let count = 0
-  Object.entries(libs).forEach(([libName, lib]) => {
-    Object.entries(lib).forEach(([fooName, foo]) => {
-      if (foo && typeof foo === 'object' && 'renderKey' in foo && typeof foo.renderKey === 'number') {
-        arr[count] = getName(foo)
-      }
-    });
-  });
-  return arr
-}
-
-const forceRerenderChild = () => {
-  let count = 0
-  Object.entries(libs).forEach(([libName, lib]) => {
-    Object.entries(lib).forEach(([fooName, foo]) => {
-      if (foo && typeof foo === 'object' && 'renderKey' in foo && typeof foo.renderKey === 'number') {
-        itemRefs()[count]
-        count++
-      }
-    });
-  });
-};
-
-
 
 </script>
 
@@ -256,7 +203,7 @@ const forceRerenderChild = () => {
 
     <p> </p>
     <div class="container">
-      <p><input type="checkbox" v-model="tags" value="Music"> Music </p>
+      <p><input v-model="tags" type="checkbox" value="Music"> Music </p>
       <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
     </div>
         <div v-if="TisOpen" class="dropdown-menu">
@@ -267,13 +214,13 @@ const forceRerenderChild = () => {
         </div>
 
       <!-- <Dropdown v-model="tags"> -->
-      <p><input type="checkbox" v-model="tags" label="One" value="One"> One </p>
-      <p><input type="checkbox" v-model="tags" label="Two" value="Two"> Two</p>
-      <p><input type="checkbox" v-model="tags" label="Three" value="Three"> Three </p>
+      <p><input v-model="tags" type="checkbox"  label="One" value="One"> One </p>
+      <p><input v-model="tags" type="checkbox" label="Two" value="Two"> Two</p>
+      <p><input v-model="tags" type="checkbox" label="Three" value="Three"> Three </p>
       <!-- </Dropdown> -->
   </div>
 
-  <button class="enter-button" @click="forceRerenderChild" ><strong>Enter</strong></button>
+  <button class="enter-button" @click="() => { addToLib(); console.log('assis'); }"><strong>Enter</strong></button>
 
     <!-- <select v-model="tags" multiple>
         <option value="volvo">Volvo</option>
@@ -288,11 +235,11 @@ const forceRerenderChild = () => {
                      <div class="api">
                   <div class="index2"> 
                     <!-- <ul> -->
-                    <div class="entries">
-                      <div v-for="library in rawLibs" :key="library[0]">
-                        <text><strong>{{library[0]}}</strong></text>
-                        <div v-for="(foo, index) in library[1]" :key="100 + index" ref="(el) => { if (foo.) itemRefs[index] = foo[0] }"> 
-                          <text v-show="searchFilter(foo)">{{makeString(foo)}} {{ console.log("reeee",foo.name) }}</text>
+                    <div class="entries"> {{ setSimple() }} {{ console.log("WOWOWOWOWO", filteredLibs.values) }}
+                      <div v-for="library in filteredLibs.values" :key="library[0]">
+                        <text><strong>{{library[0]}} {{ console.log("HERE", filteredLibs.values) }}</strong></text>
+                        <div v-for="(foo) in library[1]" :key="foo['name']" ref="foo['name']"> 
+                          <text>{{ makeString(foo) }} {{ console.log("weeee", foo, "name!!", foo['name']) }}</text>
                         </div>
                       </div>
 
@@ -388,7 +335,6 @@ const forceRerenderChild = () => {
   flex: 1;
   min-height: 0;
   white-space: pre-line;
-  display: none;
 }
 
 </style>
