@@ -7,7 +7,8 @@ export const makeCanvasDoc: Doc = new Doc(
     new ArgDoc('width', 'integer?, positive'),
     new ArgDoc('height', 'integer?, positive')
   ],
-  'Creates a canvas with the given width and height.'
+  'Creates a canvas with the given width and height.',
+  ["canvas"]
 )
 
 export const canvasRectangleDoc: Doc = new Doc(
@@ -22,7 +23,8 @@ export const canvasRectangleDoc: Doc = new Doc(
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
     new ArgDoc('color', 'color?')
   ],
-  'Renders a rectangle whose upper-left corner is at `(x, y)`.'
+  'Renders a rectangle whose upper-left corner is at `(x, y)`.',
+  ["canvas", "mutation", "predicates", "shapes"]
 )
 
 export const canvasEllipseDoc: Doc = new Doc(
@@ -40,7 +42,8 @@ export const canvasEllipseDoc: Doc = new Doc(
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
     new ArgDoc('color', 'color?')
   ],
-  'Renders an ellipse whose center is at `(x, y)`, radii `radiusX` and `radiusY`, `rotation`, `startAngle`, and `endAngle`.'
+  'Renders an ellipse whose center is at `(x, y)`, radii `radiusX` and `radiusY`, `rotation`, `startAngle`, and `endAngle`.',
+  ["canvas", "mutation", "predicates", "shapes"]
 )
 
 export const canvasCircleDoc: Doc = new Doc(
@@ -54,7 +57,8 @@ export const canvasCircleDoc: Doc = new Doc(
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
     new ArgDoc('color', 'color?')
   ],
-  'Renders a circle whose center is at `(x, y)` and radius `radius`.'
+  'Renders a circle whose center is at `(x, y)` and radius `radius`.',
+  ["canvas", "mutation", "predicates", "shapes"]
 )
 
 export const canvasTextDoc: Doc = new Doc(
@@ -70,7 +74,8 @@ export const canvasTextDoc: Doc = new Doc(
     new ArgDoc('color', 'color?'),
     new ArgDoc('font', 'string?, a css font string, e.g., `"24px sans-serif"`')
   ],
-  'Renders the given text at the given coordinates.'
+  'Renders the given text at the given coordinates.',
+  ["canvas", "mutation", "predicates"]
 )
 
 export const canvasDrawingDoc: Doc = new Doc(
@@ -82,7 +87,8 @@ export const canvasDrawingDoc: Doc = new Doc(
     new ArgDoc('y', 'integer?'),
     new ArgDoc('drawing', 'drawing?'),
   ],
-  'Draws the given drawing (created via the `image` library) at the given coordinates.'
+  'Draws the given drawing (created via the `image` library) at the given coordinates.',
+  ["canvas", "mutation", "predicates"]
 )
 
 export const canvasPathDoc: Doc = new Doc(
@@ -94,7 +100,8 @@ export const canvasPathDoc: Doc = new Doc(
     new ArgDoc('mode', 'string?, either `"solid"` or `"outline"`'),
     new ArgDoc('color', 'color?')
   ],
-  'Renders a path from the given list of pairs of numbers.'
+  'Renders a path from the given list of pairs of numbers.',
+  ["canvas", "mutation", "path", "predicates"]
 )
 
 export const animateWithDoc: Doc = new Doc(
@@ -103,7 +110,8 @@ export const animateWithDoc: Doc = new Doc(
   [
     new ArgDoc('proc', 'procedure?, a procedure that takes the current time in milliseconds as input.')
   ],
-  'Repeatedly calls `proc` approximately once every 60 seconds, creating the effect of animation. `proc` should return a boolean. If `proc` returns `#t` the loop of calls continues, otherwise, it stops.'
+  'Repeatedly calls `proc` approximately once every 60 seconds, creating the effect of animation. `proc` should return a boolean. If `proc` returns `#t` the loop of calls continues, otherwise, it stops.',
+  ["canvas"]
 )
 
 export const canvasOnclickDoc: Doc = new Doc(
@@ -113,5 +121,6 @@ export const canvasOnclickDoc: Doc = new Doc(
     new ArgDoc('canvas', 'canvas?'),
     new ArgDoc('proc', 'procedure?, a procedure that takes two arguments: numbers representing the x and y coordinate of the mouse click on the canvas.')
   ],
-  'Sets the given procedure to be called when the canvas is clicked by the user.'
+  'Sets the given procedure to be called when the canvas is clicked by the user.',
+  ["canvas", "mutation", "predicates"]
 )
