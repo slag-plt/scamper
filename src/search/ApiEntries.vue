@@ -42,6 +42,7 @@ const libs: [string, object][] = [
 
 let filteredLibs = ref<any[]>([])
 
+
 function setSimple() {
   filteredLibs.value = []
   const simpleLibs: any[] = []
@@ -54,6 +55,7 @@ function setSimple() {
   filteredLibs.value = simpleLibs
   console.log("this is where joy comes to die", filteredLibs)
 }
+
 
 function checkReturn(foo: string | object) {
   let boo = false;
@@ -69,8 +71,10 @@ function checkReturn(foo: string | object) {
   return boo
 }
 
+
 function checkReturnAnd(foo: string | object) {
-  const tempArr: string[] = []
+  const tempArr: any[] = []
+
   Object.entries(foo).forEach(([name, type]) => {
     if (name === "returnType") {
       type = type.replace("?", "")
@@ -91,10 +95,9 @@ function checkReturnAnd(foo: string | object) {
   return boo
 }
 
+
 function checkArgs(foo: string | object) {
   let boo = false;
-
-  //console.log("foo", foo)
 
   Object.entries(foo).forEach(([name, argArr]) => {
     if (name === "args") {
@@ -125,10 +128,8 @@ function checkArgs(foo: string | object) {
 
 
 function checkArgsAnd(foo: string | object) {
-  let boo = true;
-
   //console.log("foo", foo)
-  let tempArr: string[] = []
+  let tempArr: any[] = []
 
   Object.entries(foo).forEach(([name, argArr]) => {
     if (name === "args") {
@@ -146,15 +147,13 @@ function checkArgsAnd(foo: string | object) {
               value = value.replace("?", "")
             }
             tempArr.push(value)
-            // if(argumentTypes.value.includes(value as string)) {
-            //   //console.log("it is included", value,argumentTypes.value.includes(value as string) )
-            //   boo = true;
-            // }
           }
         })
       })
     }
   })
+
+  let boo = true;
 
   argumentTypes.value.forEach((arrType) => {
     if(!tempArr.includes(arrType)) {
@@ -168,17 +167,11 @@ function checkArgsAnd(foo: string | object) {
 function checkTags(foo: [string, string | object]) {
   let boo = false;
 
-  //console.log("foo", foo)
-
   Object.entries(foo).forEach(([name, tagArr]) => {
     if (name === "tags") {
-      //console.log("tagArr", tagArr)
 
       Object.entries(tagArr).forEach(([, tag]) => {
-        //console.log("tag", tag)
-
         if(tags.value.includes(tag as string)) {
-          //console.log("it is included", tag,tags.value.includes(tag as string) )
           boo = true;
         }
       })
@@ -187,25 +180,16 @@ function checkTags(foo: [string, string | object]) {
   return boo
 }
 
+
 function checkTagsAnd(foo: [string, string | object]) {
   let boo = true;
 
-  //console.log("foo", foo)
-
-  const tempArr: string[] = []
+  const tempArr: any[] = []
 
   Object.entries(foo).forEach(([name, tagArr]) => {
     if (name === "tags") {
-      //console.log("tagArr", tagArr)
 
       Object.entries(tagArr).forEach(([, tag]) => {
-        //console.log("tag", tag)
-
-        // if(tags.value.includes(tag as string)) {
-        //   //onsole.log("it is included", tag,tags.value.includes(tag as string) )
-        //   boo = true;
-        // }
-
         tempArr.push(tag)
 
       })
@@ -221,15 +205,12 @@ function checkTagsAnd(foo: [string, string | object]) {
   return boo
 }
 
+
 function addToLib() {
   const newArr: any[] = []
 
   Object.entries(libs).forEach(([, [, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
-      console.log("checkReturn(foo) || checkArgs(foo) || checkTags(foo)", checkReturn(foo) || checkArgs(foo) || checkTags(foo))
-      //console.log("checkReturn(foo)", checkReturn(foo))
-      //console.log("checkArgs(foo)", checkArgs(foo))
-      console.log("checkTags(foo)", checkTags(foo))
       if (checkReturn(foo) || checkArgs(foo) || checkTags(foo)) {
         newArr.push(foo)
       }
@@ -239,11 +220,6 @@ function addToLib() {
   filteredLibs.value = newArr
 }
 
-// const options = ref([
-//   { id: 1, val: 'math' },
-//   { id: 2, val: 'algebra' },
-//   { id: 3, val: 'list' }
-// ]);
 
 const tagList = ref([
   { id: 1, val: 'list' },
@@ -294,12 +270,21 @@ const tagList = ref([
 
 const AisOpen = ref(false)
 const RisOpen = ref(false)
-//const TisOpen = ref(false)
+const TisOpen = ref(false)
 
 const tags = ref<string[]>([])
 const argumentTypes = ref<string[]>([])
 const returnTypes = ref<string[]>([])
-const pBool = ref([
+
+const tBool = ref([
+{ id: 7, val: 'or' },
+{ id: 8, val: 'and' }
+])
+const aBool = ref([
+{ id: 7, val: 'or' },
+{ id: 8, val: 'and' }
+])
+const rBool = ref([
 { id: 7, val: 'or' },
 { id: 8, val: 'and' }
 ])
@@ -331,68 +316,72 @@ function makeString(foo: string): string {
   <h3> <strong>Search by Type</strong> </h3>
   <div class="index">
 
-    <text>Search Boolean </text>
+    <!-- <text>Search Boolean </text>
     <select>
-      <option v-for="o in pBool" :key="o.id">
+      <option v-for="o in aBool" :key="o.id">
         <p><input v-model="argumentTypes" type="checkbox" class="indent" :value= "o.val" >
         {{ o.val }}</p>
       </option>
     </select>
 
-    <p></p>
+    <p></p> -->
    
-      <text>Arguments </text>
+      <text>Arguments </text> 
       <button class="arrow-button" @click="AisOpen = !AisOpen">{{ AisOpen ? "▼" : "▶" }}</button>
-        <div v-if="AisOpen" class="dropdown-menu">
-          <label v-for="o in types" :key="o.id">
-            <p><input v-model="argumentTypes" type="checkbox" class="indent" :value= "o.val" >
-            {{ o.val }}</p>
-          </label>
-        </div>
-         <p>Types:{{ argumentTypes }}</p>
+      <text>-</text> 
+      <select>
+        <option v-for="o in aBool" :key="o.id">
+          <p><input v-model="argumentTypes" type="checkbox" class="indent" :value= "o.val" >
+          {{ o.val }}</p>
+        </option>
+      </select>
+      <div v-if="AisOpen" class="dropdown-menu">
+        <label v-for="o in types" :key="o.id">
+          <p><input v-model="argumentTypes" type="checkbox" class="indent" :value= "o.val" >
+          {{ o.val }}</p>
+        </label>
+      </div>
+        <p>Types:{{ argumentTypes }}</p>
     
       <text>Return </text>
       <button class="arrow-button" @click="RisOpen = !RisOpen">{{ RisOpen ? "▼" : "▶" }}</button>
-        <div v-if="RisOpen" class="dropdown-menu">
-          <label v-for="o in types" :key="o.id">
-            <p><input v-model="returnTypes" type="checkbox" class="indent" :value= "o.val" >
-            {{ o.val }}</p>
-          </label>
-        </div>
-        <p>Types:{{ returnTypes }}</p>
+      <text>-</text> 
+      <select>
+        <option v-for="o in rBool" :key="o.id">
+          <p><input v-model="returnTypes" type="checkbox" class="indent" :value= "o.val" >
+          {{ o.val }}</p>
+        </option>
+      </select>
+      <div v-if="RisOpen" class="dropdown-menu">
+        <label v-for="o in types" :key="o.id">
+          <p><input v-model="returnTypes" type="checkbox" class="indent" :value= "o.val" >
+          {{ o.val }}</p>
+        </label>
+      </div>
+      <p>Types:{{ returnTypes }}</p>
 
   </div>
 
   <h3> <strong>Search by Tag</strong> </h3>
   <div class="index">
 
-    <text>Search Boolean </text>
+    <text>Tags </text>
+    <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
+      <text>-</text> 
     <select>
-      <option v-for="o in pBool" :key="o.id">
-        <div><p><input v-model="argumentTypes" type="checkbox" class="indent" :value= "o.val" >
-        {{ o.val }}</p></div>
+      <option v-for="o in tBool" :key="o.id">
+        <div>
+          <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >{{ o.val }}</p>
+        </div>
       </option>
     </select>
-
-
-    <p>Tags:{{ tags }}</p>
-
-    <p> </p>
-    <!-- <div class="container">
-      <p><input v-model="tags" type="checkbox" value="math"> Math </p>
-      <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
+    <div v-if="TisOpen" class="dropdown-menu">
+      <label v-for="o in tagList" :key="o.id">
+        <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
+        {{ o.val }}</p>
+      </label>
     </div>
-        <div v-if="TisOpen" class="dropdown-menu">
-          <label v-for="e in options" :key="e.id">
-            <div><p><input v-model="tags" type="checkbox" class="indent" :value= "e.val" >
-            {{ e.val }}</p></div>
-          </label>
-        </div> -->
-
-        <label v-for="e in tagList" :key="e.id">
-            <div><p><input v-model="tags" type="checkbox" class="indent" :value= "e.val" >
-            {{ e.val }}</p></div>
-          </label>
+    <p>Tags:{{ tags }}</p>
   
     </div>
       <button class="enter-button" @click="() => { addToLib() }"><strong>Enter</strong></button>
