@@ -42,4 +42,12 @@ export function mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
 }
 Runtime.registerValue('##mkGetFn##', mkGetFn)
 
+/**
+ * @return the type of the given value as a string
+ */
+export function typeOf (v: L.Value): string {
+  return L.typeOf(v)
+}
+Runtime.registerValue('##typeOf##', typeOf)
+
 export default Runtime

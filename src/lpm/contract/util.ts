@@ -33,7 +33,7 @@ function createErrorMsgBlk(descPred: string, argVar: string): L.Blk {
     U.mkLit("expected "),
     U.mkLit(descPred),
     U.mkLit(", received "),
-    U.mkVar("typeOf"),
+    U.mkVar("type-of"),
     U.mkVar(argVar),
     U.mkAp(1),
     U.mkAp(4),
