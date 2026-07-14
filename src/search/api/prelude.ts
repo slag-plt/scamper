@@ -82,6 +82,7 @@ export const zero: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is zero.",
+  ["comparator", "math", "predicates", "type check"]
 )
 
 export const positive: Doc = new Doc(
@@ -349,6 +350,7 @@ export const xor: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "boolean?"), new ArgDoc("v2", "boolean?")],
   "Equivalent to `(or (and v1 (not v2)) (and (not v1) v2))`.",
+  ["boolean/logic"]
 )
 
 export const anyOf: Doc = new Doc(
@@ -868,6 +870,7 @@ export const withFile: Doc = new Doc(
   "void",
   [new ArgDoc("filename", "string?"), new ArgDoc("fn", "procedure?")],
   "Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen.",
+  ["other"]
 )
 
 export const withFileChooser: Doc = new Doc(
@@ -875,6 +878,7 @@ export const withFileChooser: Doc = new Doc(
   "void",
   [new ArgDoc("fn", "procedure?")],
   "Renders a file chooser widget. When the user selects a file, its contents are passed to `fn` as input. The output of `fn` is then rendered to the screen.",
+  ["interactive"]
 )
 
 export const vectorQ: Doc = new Doc(
@@ -924,6 +928,7 @@ export const vectorSet: Doc = new Doc(
     new ArgDoc("x", "any"),
   ],
   "Sets the value at index `n` of vector `v` to `x`.",
+  ["vectors", "mutation", "predicates"]
 )
 
 export const vectorFill: Doc = new Doc(
@@ -956,6 +961,7 @@ export const vectorRange: Doc = new Doc(
     new ArgDoc("step", "integer?, step > 0, this argument can be omitted"),
   ],
   "Returns a vector containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.",
+  ["vectirs"]
 )
 
 export const stringList: Doc = new Doc(
@@ -984,6 +990,7 @@ export const vectorString: Doc = new Doc(
   "string?",
   [new ArgDoc("v", "vector?")],
   "Returns a string made by joining the characters in `v` together.",
+  ["vectors"]
 )
 
 export const stringContains: Doc = new Doc(
@@ -1126,6 +1133,7 @@ export const voidQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only if `v` is the void value.",
+  ["predicates", "type checks"]
 )
 
 export const vectorFilter: Doc = new Doc(
@@ -1204,6 +1212,7 @@ export const withHandler: Doc = new Doc(
     new ArgDoc("v", "any"),
   ],
   "Calls `(f v1 .. vk)` and if an error is occurred, calls `(h err)` where `err` is the string associated with the raised error.",
+  ["other"]
 )
 
 export const ignore: Doc = new Doc(
