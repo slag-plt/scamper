@@ -57,33 +57,26 @@ export class Env {
    *         exist
    */
   get(name: string): Value {
-    // TODO: should make smarter solution, probably with overloading
-    //  priority: local > library > top-level
-    const matches = []
-    if (this.topLevel.has(name)) {
-      matches.push(this.topLevel.get(name))
+    // 1. Local scope
+    if (this.locals.has(name)) {
+      return this.locals.get(name)
     }
-    for (const library of this.imports.values()) {
+
+    // 2. Top-level scope
+    if (this.topLevel.has(name)) {
+      return this.topLevel.get(name)
+    }
+
+    // 3. Imported modules, most recent imports first
+    for (const library of [...this.imports.values()].toReversed()) {
       if (library.bindings.has(name)) {
-        matches.push(library.bindings.get(name))
+        return library.bindings.get(name)
       }
     }
-    if (this.locals.has(name)) {
-      matches.push(this.locals.get(name))
-    }
-    if (matches.length === 0) {
-      throw new ScamperError(
-        "Runtime",
-        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
-      )
-    }
-    if (matches.length > 1) {
-      console.warn(
-        "Name conflicts have caused shadowing, returning last found",
-        ...matches,
-      )
-    }
-    return matches.at(-1)
+    throw new ScamperError(
+      'Runtime',
+      `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+    )
   }
 
   /** @return the top-level bindings of this environment as a Module */
