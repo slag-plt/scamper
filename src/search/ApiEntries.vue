@@ -69,6 +69,28 @@ function checkReturn(foo: string | object) {
   return boo
 }
 
+function checkReturnAnd(foo: string | object) {
+  const tempArr: string[] = []
+  Object.entries(foo).forEach(([name, type]) => {
+    if (name === "returnType") {
+      type = type.replace("?", "")
+      tempArr.push(type)
+      // if(!returnTypes.value.includes(type)) {
+      //   boo = false;
+      // }
+    }
+  })
+
+  let boo = true;
+
+  returnTypes.value.forEach((arrType) => {
+    if(!tempArr.includes(arrType)) {
+      boo = false
+    }
+  })
+  return boo
+}
+
 function checkArgs(foo: string | object) {
   let boo = false;
 
@@ -101,26 +123,102 @@ function checkArgs(foo: string | object) {
   return boo
 }
 
+
+function checkArgsAnd(foo: string | object) {
+  let boo = true;
+
+  //console.log("foo", foo)
+  let tempArr: string[] = []
+
+  Object.entries(foo).forEach(([name, argArr]) => {
+    if (name === "args") {
+      //console.log("argArr", argArr)
+
+      Object.entries(argArr).forEach(([,arg]) => {
+        //console.log("arg", arg)
+      
+        Object.entries(arg).forEach(([key, value]) => {
+          //console.log("key", key, "value", value)
+
+          if (key === "desc") {
+            if (typeof value === "string") {
+              //console.log("this is a string", value)
+              value = value.replace("?", "")
+            }
+            tempArr.push(value)
+            // if(argumentTypes.value.includes(value as string)) {
+            //   //console.log("it is included", value,argumentTypes.value.includes(value as string) )
+            //   boo = true;
+            // }
+          }
+        })
+      })
+    }
+  })
+
+  argumentTypes.value.forEach((arrType) => {
+    if(!tempArr.includes(arrType)) {
+      boo = false
+    }
+  })
+
+  return boo
+}
+
 function checkTags(foo: [string, string | object]) {
   let boo = false;
 
-console.log("foo", foo)
+  //console.log("foo", foo)
 
-Object.entries(foo).forEach(([name, tagArr]) => {
-  if (name === "tags") {
-    console.log("tagArr", tagArr)
+  Object.entries(foo).forEach(([name, tagArr]) => {
+    if (name === "tags") {
+      //console.log("tagArr", tagArr)
 
-    Object.entries(tagArr).forEach(([, tag]) => {
-      console.log("tag", tag)
+      Object.entries(tagArr).forEach(([, tag]) => {
+        //console.log("tag", tag)
 
-      if(tags.value.includes(tag as string)) {
-            console.log("it is included", tag,tags.value.includes(tag as string) )
-            boo = true;
-      }
-    })
-  }
-})
-return boo
+        if(tags.value.includes(tag as string)) {
+          //console.log("it is included", tag,tags.value.includes(tag as string) )
+          boo = true;
+        }
+      })
+    }
+  })
+  return boo
+}
+
+function checkTagsAnd(foo: [string, string | object]) {
+  let boo = true;
+
+  //console.log("foo", foo)
+
+  const tempArr: string[] = []
+
+  Object.entries(foo).forEach(([name, tagArr]) => {
+    if (name === "tags") {
+      //console.log("tagArr", tagArr)
+
+      Object.entries(tagArr).forEach(([, tag]) => {
+        //console.log("tag", tag)
+
+        // if(tags.value.includes(tag as string)) {
+        //   //onsole.log("it is included", tag,tags.value.includes(tag as string) )
+        //   boo = true;
+        // }
+
+        tempArr.push(tag)
+
+      })
+    }
+  })
+
+  tags.value.forEach((arrTag) => {
+    if(!tempArr.includes(arrTag)) {
+      boo = false
+    }
+  })
+
+  return boo
 }
 
 function addToLib() {
