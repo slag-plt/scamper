@@ -4,7 +4,8 @@ export const equal: Doc = new Doc(
   "equal?",
   "boolean?",
   [new ArgDoc("v1", "any"), new ArgDoc("v2", "any")],
-  "Returns `#t` if and only `v1` and `v2` are (structurally) equal values."
+  "Returns `#t` if and only `v1` and `v2` are (structurally) equal values.",
+  ["predicates"]
 )
 
 export const number: Doc = new Doc(
@@ -12,6 +13,7 @@ export const number: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a number.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const real: Doc = new Doc(
@@ -19,6 +21,7 @@ export const real: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a real number.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const integer: Doc = new Doc(
@@ -26,6 +29,7 @@ export const integer: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is an integer.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const nanQ: Doc = new Doc(
@@ -33,6 +37,7 @@ export const nanQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is the number `NaN`.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const lt: Doc = new Doc(
@@ -40,6 +45,7 @@ export const lt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `#t` if and only `v1` is strictly less than `v2`.",
+  ["math", "comparator"]
 )
 
 export const leq: Doc = new Doc(
@@ -47,6 +53,7 @@ export const leq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `#t` if and only `v1` is less than or equal to `v2`.",
+  ["math", "comparator"]
 )
 
 export const gt: Doc = new Doc(
@@ -54,6 +61,7 @@ export const gt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `#t` if and only `v1` is strictly greater than `v2`.",
+  ["math", "comparator"]
 )
 
 export const geq: Doc = new Doc(
@@ -61,6 +69,7 @@ export const geq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `#t` if and only `v1` is greater than or equal to `v2`.",
+  ["math", "comparator"]
 )
 
 export const numeq: Doc = new Doc(
@@ -68,6 +77,7 @@ export const numeq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `#t` if and only `v1` is equal to `v2`.",
+  ["math", "comparator"]
 )
 
 export const numeqEps: Doc = new Doc(
@@ -75,6 +85,7 @@ export const numeqEps: Doc = new Doc(
   "function?",
   [new ArgDoc("epsilon", "number?")],
   "Returns an equality function that tests two numbers to see if the absolute value of their difference is no greater than `epsilon`, _i.e._, `(< (- x y) epsilon)`.",
+  ["function composition"]
 )
 
 export const zero: Doc = new Doc(
@@ -89,6 +100,7 @@ export const positive: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is positive.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const negative: Doc = new Doc(
@@ -96,6 +108,7 @@ export const negative: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is negative.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const odd: Doc = new Doc(
@@ -103,6 +116,7 @@ export const odd: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is odd.",
+  ["math", "comparator", "type check", "predicates"]
 )
 
 export const even: Doc = new Doc(
@@ -110,6 +124,7 @@ export const even: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is even.",
+  ["math", "comparator", "predicates"]
 )
 
 export const max: Doc = new Doc(
@@ -117,6 +132,7 @@ export const max: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the maximum of the given numbers.",
+  ["math", "comparator"]
 )
 
 export const min: Doc = new Doc(
@@ -124,6 +140,7 @@ export const min: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the minimum of the given numbers.",
+  ["math", "comparator"]
 )
 
 export const plus: Doc = new Doc(
@@ -131,6 +148,7 @@ export const plus: Doc = new Doc(
   "number?",
   [new ArgDoc("v1, v2, ...", "number?")],
   "Returns the sum of `v1`, `v2`, ... .",
+  ["math", "algebra"]
 )
 
 export const minus: Doc = new Doc(
@@ -138,6 +156,7 @@ export const minus: Doc = new Doc(
   "number?",
   [new ArgDoc("v1, v2, ...", "number?")],
   "Returns the difference of `v1`, `v2`, ... .",
+  ["math", "algebra"]
 )
 
 export const times: Doc = new Doc(
@@ -152,6 +171,7 @@ export const div: Doc = new Doc(
   "number?",
   [new ArgDoc("v1, v2, ...", "number?")],
   "Returns the quotient of `v1`, `v2`, ... .",
+  ["math", "algebra"]
 )
 
 export const abs: Doc = new Doc(
@@ -167,6 +187,7 @@ export const quotient: Doc = new Doc(
   "number?",
   [new ArgDoc("v1", "integer?"), new ArgDoc("v2", "integer?")],
   "Returns the quotient of `v1` and `v2`, _i.e._, the whole number part of `v1 / v2`.",
+  ["math", "algebra"]
 )
 
 export const remainder: Doc = new Doc(
@@ -174,6 +195,7 @@ export const remainder: Doc = new Doc(
   "number?",
   [new ArgDoc("v1", "integer?"), new ArgDoc("v2", "integer?")],
   "Returns the remainder of `v1` and `v2`, _i.e._, the remainder of `v1 / v2`.",
+  ["math", "algebra"]
 )
 
 export const modulo: Doc = new Doc(
@@ -181,6 +203,7 @@ export const modulo: Doc = new Doc(
   "number?",
   [new ArgDoc("v1", "number?"), new ArgDoc("v2", "number?")],
   "Returns `k = n - d * q` where `q` is the integer such that `k` has the same sign as the divisor `d` while being as close to 0 as possible. (Source: [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder).)",
+  ["math", "algebra"]
 )
 
 export const floor: Doc = new Doc(
@@ -188,6 +211,7 @@ export const floor: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "number?")],
   "Returns the largest integer less than or equal to `v`.",
+  ["math", "algebra"]
 )
 
 export const ceiling: Doc = new Doc(
@@ -195,6 +219,7 @@ export const ceiling: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "number?")],
   "Returns the smallest integer greater than or equal to `v`.",
+  ["math", "algebra"]
 )
 
 export const truncate: Doc = new Doc(
@@ -209,6 +234,7 @@ export const round: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "number?")],
   "Returns the integer closest to `v`.",
+  ["math", "algebra"]
 )
 
 export const square: Doc = new Doc(
@@ -216,6 +242,7 @@ export const square: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the square of `v`.",
+  ["math", "algebra"]
 )
 
 export const sqrt: Doc = new Doc(
@@ -223,6 +250,7 @@ export const sqrt: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the square root of `v`.",
+  ["math", "algebra"]
 )
 
 export const expt: Doc = new Doc(
@@ -230,6 +258,7 @@ export const expt: Doc = new Doc(
   "number?",
   [new ArgDoc("x", "number?"), new ArgDoc("y", "number?")],
   "Returns `x` raised to the power of `y`.",
+  ["math", "algebra"]
 )
 
 export const numberString: Doc = new Doc(
@@ -237,6 +266,7 @@ export const numberString: Doc = new Doc(
   "string?",
   [new ArgDoc("v", "number?")],
   "Returns the string representation of `v`.",
+  ["string"]
 )
 
 export const stringNumber: Doc = new Doc(
@@ -244,6 +274,7 @@ export const stringNumber: Doc = new Doc(
   "number?",
   [new ArgDoc("s", "string?, presumed to be a number")],
   "Returns the number denoted by `s` as a `number`.",
+  ["string"]
 )
 
 export const exp: Doc = new Doc(
@@ -251,6 +282,7 @@ export const exp: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the exponential of `v`.",
+  ["math", "algebra"]
 )
 
 export const log: Doc = new Doc(
@@ -258,6 +290,7 @@ export const log: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the natural logarithm of `v`.",
+  ["math", "algebra"]
 )
 
 export const sin: Doc = new Doc(
@@ -265,6 +298,7 @@ export const sin: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the sine of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const cos: Doc = new Doc(
@@ -272,6 +306,7 @@ export const cos: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the cosine of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const tan: Doc = new Doc(
@@ -286,6 +321,7 @@ export const asin: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the arc sine of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const acos: Doc = new Doc(
@@ -293,6 +329,7 @@ export const acos: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the arc cosine of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const atan: Doc = new Doc(
@@ -300,6 +337,7 @@ export const atan: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the arc tangent of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const equalsEps: Doc = new Doc(
@@ -307,6 +345,7 @@ export const equalsEps: Doc = new Doc(
   "procedure?",
   [new ArgDoc("n", "number?")],
   "Returns a function that takes two numbers `x` and `y` as input returns `#t` if `|x - y| < n`.",
+  ["type check", "predicates"]
 )
 
 export const not: Doc = new Doc(
@@ -314,6 +353,7 @@ export const not: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is `#f`.",
+  ["boolean/logic"]
 )
 
 export const boolean: Doc = new Doc(
@@ -321,6 +361,7 @@ export const boolean: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a boolean.",
+  ["type check", "boolean/logic", "predicates"]
 )
 
 export const nand: Doc = new Doc(
@@ -328,6 +369,7 @@ export const nand: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1, v2, ...", "boolean?")],
   "Equivalent to `(not (and v1 v2 ...))`.",
+  ["boolean/logic"]
 )
 
 export const nor: Doc = new Doc(
@@ -335,6 +377,7 @@ export const nor: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1, v2, ...", "boolean?")],
   "Equivalent to `(not (or v1 v2 ...))`.",
+  ["boolean/logic"]
 )
 
 export const implies: Doc = new Doc(
@@ -342,6 +385,7 @@ export const implies: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v1", "boolean?"), new ArgDoc("v2", "boolean?")],
   "Equivalent to `(if v1 v2 #t)`.",
+  ["boolean/logic", "predicates"]
 )
 
 export const xor: Doc = new Doc(
@@ -361,6 +405,7 @@ export const anyOf: Doc = new Doc(
     ),
   ],
   "Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.",
+  ["function composition", "boolean/logic"]
 )
 
 export const allOf: Doc = new Doc(
@@ -373,6 +418,7 @@ export const allOf: Doc = new Doc(
     ),
   ],
   "Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.",
+  ["function composition", "boolean/logic"]
 )
 
 export const pairQ: Doc = new Doc(
@@ -380,6 +426,7 @@ export const pairQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a pair.",
+  ["type check", "predicates"]
 )
 
 export const cons: Doc = new Doc(
@@ -387,6 +434,7 @@ export const cons: Doc = new Doc(
   "pair?",
   [new ArgDoc("v1", "any"), new ArgDoc("v2", "any")],
   "Returns a new cons cell containing `v1` and `v2`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const pair: Doc = new Doc(
@@ -394,6 +442,7 @@ export const pair: Doc = new Doc(
   "pair?",
   [new ArgDoc("v1", "any"), new ArgDoc("v2", "any")],
   "Returns a new pair containing `v1` and `v2`.",
+  ["list", "list creation"]
 )
 
 export const car: Doc = new Doc(
@@ -401,6 +450,7 @@ export const car: Doc = new Doc(
   "any",
   [new ArgDoc("v", "pair? or list?")],
   "Returns the first element of `v`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const cdr: Doc = new Doc(
@@ -408,6 +458,7 @@ export const cdr: Doc = new Doc(
   "any",
   [new ArgDoc("v", "pair? or list?")],
   "Returns the second element of `v`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const cxxr: Doc = new Doc(
@@ -415,6 +466,7 @@ export const cxxr: Doc = new Doc(
   "any",
   [new ArgDoc("v", "pair? or list?")],
   "Chains together `car` and `cdr` operations according to the sequence of `a` and `d` characters in the function name, up to four levels deep. For example, `(caddr v)` is equivalent to `(car (cdr (cdr v)))`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const nullQ: Doc = new Doc(
@@ -422,6 +474,7 @@ export const nullQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is the empty list.",
+  ["list", "association list", "type check", "predicates"]
 )
 
 export const listQ: Doc = new Doc(
@@ -429,6 +482,7 @@ export const listQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a list.",
+  ["list", "association list", "type check", "predicates"]
 )
 
 export const listOf: Doc = new Doc(
@@ -441,6 +495,7 @@ export const listOf: Doc = new Doc(
     ),
   ],
   "Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.",
+  ["list", "function composition", "association list"]
 )
 
 export const list: Doc = new Doc(
@@ -448,6 +503,7 @@ export const list: Doc = new Doc(
   "list?",
   [new ArgDoc("v1, v2, ...", "any")],
   "Returns a new list containing `v1`, `v2`, ... .",
+  ["list", "list creation", "association list"]
 )
 
 export const makeList: Doc = new Doc(
@@ -455,6 +511,7 @@ export const makeList: Doc = new Doc(
   "list?",
   [new ArgDoc("n", "integer?"), new ArgDoc("v", "any")],
   "Returns a new list containing `n` copies of `v`.",
+  ["list", "list creation", "association list"]
 )
 
 export const length: Doc = new Doc(
@@ -462,6 +519,7 @@ export const length: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "list?")],
   "Returns the length of `v`.",
+  ["list", "list manipulation"]
 )
 
 export const append: Doc = new Doc(
@@ -469,6 +527,7 @@ export const append: Doc = new Doc(
   "list?",
   [new ArgDoc("l1, l2, ...", "list?")],
   "Returns a new list containing the elements of lists `l1`, `l2`, ... in sequence.",
+  ["list", "list manipulation"]
 )
 
 export const reverse: Doc = new Doc(
@@ -476,6 +535,7 @@ export const reverse: Doc = new Doc(
   "list?",
   [new ArgDoc("l", "list?")],
   "Returns a new list containing the elements of `l` in reverse order.",
+  ["list", "list manipulation"]
 )
 
 export const listTail: Doc = new Doc(
@@ -483,6 +543,7 @@ export const listTail: Doc = new Doc(
   "list?",
   [new ArgDoc("l", "list?"), new ArgDoc("k", "integer?, 0 <= k <= (length l)")],
   "Returns `l` but with the first `k` elements of `l` omitted.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const listDrop: Doc = new Doc(
@@ -490,6 +551,7 @@ export const listDrop: Doc = new Doc(
   "list?",
   [new ArgDoc("l", "list?"), new ArgDoc("k", "integer?, 0 <= k <= (length l)")],
   "An alias for `(list-tail l k)`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const listTake: Doc = new Doc(
@@ -497,6 +559,7 @@ export const listTake: Doc = new Doc(
   "list?",
   [new ArgDoc("l", "list?"), new ArgDoc("k", "integer?, 0 <= k <= (length l)")],
   "Returns a new list containing the first `k` elements of `l`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const listRef: Doc = new Doc(
@@ -504,6 +567,7 @@ export const listRef: Doc = new Doc(
   "any",
   [new ArgDoc("l", "list?"), new ArgDoc("n", "integer?, 0 <= n < (length l)")],
   "Returns the `n`th element of `l`.",
+  ["list", "association list"]
 )
 
 export const indexOf: Doc = new Doc(
@@ -511,6 +575,7 @@ export const indexOf: Doc = new Doc(
   "integer?",
   [new ArgDoc("l", "list?"), new ArgDoc("v", "any")],
   "Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const assocKey: Doc = new Doc(
@@ -518,6 +583,7 @@ export const assocKey: Doc = new Doc(
   "any",
   [new ArgDoc("k", "any"), new ArgDoc("l", "list?, an association list")],
   "Returns `#t` if `k` is a key in association list `l`.",
+  ["list", "list manipulation", "association list", "predicates"]
 )
 
 export const assocRef: Doc = new Doc(
@@ -525,6 +591,7 @@ export const assocRef: Doc = new Doc(
   "any",
   [new ArgDoc("k", "any"), new ArgDoc("l", "list?, an association list")],
   "Returns the value associated with key `k` in association list `l`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const assocSet: Doc = new Doc(
@@ -536,6 +603,7 @@ export const assocSet: Doc = new Doc(
     new ArgDoc("l", "list?, an association list"),
   ],
   "Returns a new association list containing the same key-value pairs as `l` except that `k` is associated with `v`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const sort: Doc = new Doc(
@@ -549,6 +617,7 @@ export const sort: Doc = new Doc(
     ),
   ],
   "Returns a new list containing the elements of `l` sorted in ascending order according to the comparison function `lt?`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const charQ: Doc = new Doc(
@@ -556,6 +625,7 @@ export const charQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a character.",
+  ["type check", "char", "predicates"]
 )
 
 export const charEq: Doc = new Doc(
@@ -563,6 +633,7 @@ export const charEq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters.",
+  ["char", "predicates"]
 )
 
 export const charLt: Doc = new Doc(
@@ -570,6 +641,7 @@ export const charLt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values.",
+  ["char", "predicates"]
 )
 
 export const charGt: Doc = new Doc(
@@ -577,6 +649,7 @@ export const charGt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values.",
+  ["char", "predicates"]
 )
 
 export const charLeq: Doc = new Doc(
@@ -584,6 +657,7 @@ export const charLeq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values.",
+  ["char", "predicates"]
 )
 
 export const charGeq: Doc = new Doc(
@@ -591,6 +665,7 @@ export const charGeq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values.",
+  ["char", "predicates"]
 )
 
 export const charEqCi: Doc = new Doc(
@@ -598,6 +673,7 @@ export const charEqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters, ignoring case.",
+  ["char", "predicates"]
 )
 
 export const charLtCi: Doc = new Doc(
@@ -605,6 +681,7 @@ export const charLtCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values, ignoring case.",
+  ["char", "predicates"]
 )
 
 export const charGtCi: Doc = new Doc(
@@ -612,6 +689,7 @@ export const charGtCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values, ignoring case.",
+  ["char", "predicates"]
 )
 
 export const charLeqCi: Doc = new Doc(
@@ -619,6 +697,7 @@ export const charLeqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values, ignoring case.",
+  ["char", "predicates"]
 )
 
 export const charGeqCi: Doc = new Doc(
@@ -626,6 +705,7 @@ export const charGeqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values, ignoring case.",
+  ["char", "predicates"]
 )
 
 export const charAlphabetic: Doc = new Doc(
@@ -633,6 +713,7 @@ export const charAlphabetic: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c", "char?")],
   "Returns `#t` if and only `c` is an alphabetic character.",
+  ["type check", "char", "predicates"]
 )
 
 export const charNumeric: Doc = new Doc(
@@ -640,6 +721,7 @@ export const charNumeric: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c", "char?")],
   "Returns `#t` if and only `c` is a numeric character.",
+  ["type check", "char", "predicates"]
 )
 
 export const charWhitespace: Doc = new Doc(
@@ -647,6 +729,7 @@ export const charWhitespace: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c", "char?")],
   "Returns `#t` if and only `c` is a whitespace character.",
+  ["type check", "char", "predicates"]
 )
 
 export const charUpperCase: Doc = new Doc(
@@ -654,6 +737,7 @@ export const charUpperCase: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c", "char?")],
   "Returns `#t` if and only `c` is an upper-case character.",
+  ["type check", "char", "predicates"]
 )
 
 export const charLowerCase: Doc = new Doc(
@@ -661,6 +745,7 @@ export const charLowerCase: Doc = new Doc(
   "boolean?",
   [new ArgDoc("c", "char?")],
   "Returns `#t` if and only `c` is a lower-case character.",
+  ["char", "predicates"]
 )
 
 export const digitValue: Doc = new Doc(
@@ -668,6 +753,7 @@ export const digitValue: Doc = new Doc(
   "integer?",
   [new ArgDoc("c", "char?")],
   "Returns the numeric value of `c` if `c` is a decimal digit (0-10), otherwise raises an error.",
+  ["type check", "char"]
 )
 
 export const charToInteger: Doc = new Doc(
@@ -675,6 +761,7 @@ export const charToInteger: Doc = new Doc(
   "integer?",
   [new ArgDoc("c", "char?")],
   "Returns the codepoint value of character `c`.",
+  ["char"]
 )
 
 export const integerToChar: Doc = new Doc(
@@ -682,6 +769,7 @@ export const integerToChar: Doc = new Doc(
   "char?",
   [new ArgDoc("n", "integer?")],
   "Returns the character with codepoint value `n`.",
+  ["char"]
 )
 
 export const charUpcase: Doc = new Doc(
@@ -689,6 +777,7 @@ export const charUpcase: Doc = new Doc(
   "char?",
   [new ArgDoc("c", "char?")],
   "Returns the upper-case equivalent of `c`.",
+  ["char"]
 )
 
 export const charDowncase: Doc = new Doc(
@@ -696,6 +785,7 @@ export const charDowncase: Doc = new Doc(
   "char?",
   [new ArgDoc("c", "char?")],
   "Returns the lower-case equivalent of `c`.",
+  ["char"]
 )
 
 export const charFoldcase: Doc = new Doc(
@@ -703,6 +793,7 @@ export const charFoldcase: Doc = new Doc(
   "char?",
   [new ArgDoc("c", "char?")],
   "Returns the case-folded equivalent of `c`. This is a version of `c` that is appropriate for case-insensitive comparison.",
+  ["char"]
 )
 
 export const stringQ: Doc = new Doc(
@@ -710,6 +801,7 @@ export const stringQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a string.",
+  ["type check", "string", "predicates"]
 )
 
 export const makeString: Doc = new Doc(
@@ -717,6 +809,7 @@ export const makeString: Doc = new Doc(
   "string?",
   [new ArgDoc("k", "integer?"), new ArgDoc("c", "char?")],
   "Returns a string of length `k` with each character set to `c`.",
+  ["string"]
 )
 
 export const string: Doc = new Doc(
@@ -724,6 +817,7 @@ export const string: Doc = new Doc(
   "string?",
   [new ArgDoc("c1, c2, ...", "char?")],
   "Returns a string consisting of the characters `c1`, `c2`, ...",
+  ["string"]
 )
 
 export const stringLength: Doc = new Doc(
@@ -731,6 +825,7 @@ export const stringLength: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "string?")],
   "Returns the length of `v`.",
+  ["string"]
 )
 
 export const stringRef: Doc = new Doc(
@@ -738,6 +833,7 @@ export const stringRef: Doc = new Doc(
   "char?",
   [new ArgDoc("s", "string?"), new ArgDoc("n", "integer?")],
   "Returns the character at index `n` of string `s`.",
+  ["string"]
 )
 
 export const stringEq: Doc = new Doc(
@@ -745,6 +841,7 @@ export const stringEq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are equivalent strings.",
+  ["string", "predicates"]
 )
 
 export const stringLt: Doc = new Doc(
@@ -752,6 +849,7 @@ export const stringLt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order.",
+  ["string", "predicates"]
 )
 
 export const stringGt: Doc = new Doc(
@@ -759,6 +857,7 @@ export const stringGt: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order.",
+  ["string", "predicates"]
 )
 
 export const stringLeq: Doc = new Doc(
@@ -766,6 +865,7 @@ export const stringLeq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order.",
+  ["string", "predicates"]
 )
 
 export const stringGeq: Doc = new Doc(
@@ -773,6 +873,7 @@ export const stringGeq: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order.",
+  ["string", "predicates"]
 )
 
 export const stringEqCi: Doc = new Doc(
@@ -780,6 +881,7 @@ export const stringEqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are equivalent strings, ignoring case.",
+  ["string", "predicates"]
 )
 
 export const stringLtCi: Doc = new Doc(
@@ -787,6 +889,7 @@ export const stringLtCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order, ignoring case.",
+  ["string", "predicates"]
 )
 
 export const stringGtCi: Doc = new Doc(
@@ -794,6 +897,7 @@ export const stringGtCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order, ignoring case.",
+  ["string", "predicates"]
 )
 
 export const stringLeqCi: Doc = new Doc(
@@ -801,6 +905,7 @@ export const stringLeqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order, ignoring case.",
+  ["string", "predicates"]
 )
 
 export const stringGeqCi: Doc = new Doc(
@@ -808,6 +913,7 @@ export const stringGeqCi: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order, ignoring case.",
+  ["string", "predicates"]
 )
 
 export const stringUpcase: Doc = new Doc(
@@ -815,6 +921,7 @@ export const stringUpcase: Doc = new Doc(
   "string?",
   [new ArgDoc("s", "string?")],
   "Returns the upper-case version of `s`.",
+  ["string"]
 )
 
 export const stringDowncase: Doc = new Doc(
@@ -822,6 +929,7 @@ export const stringDowncase: Doc = new Doc(
   "string?",
   [new ArgDoc("s", "string?")],
   "Returns the lower-case version of `s`.",
+  ["string"]
 )
 
 export const stringFoldcase: Doc = new Doc(
@@ -829,6 +937,7 @@ export const stringFoldcase: Doc = new Doc(
   "string?",
   [new ArgDoc("s", "string?")],
   "Returns the case-folded version of `s`. This is a version of `s` that is appropriate for case-insensitive comparison.",
+  ["string"]
 )
 
 export const substring: Doc = new Doc(
@@ -847,6 +956,7 @@ export const stringAppend: Doc = new Doc(
   "string?",
   [new ArgDoc("s1, s2, ...", "string?")],
   "Returns a string made by joining `s1`, `s2`, ... together.",
+  ["string"]
 )
 
 export const fileString: Doc = new Doc(
@@ -854,6 +964,7 @@ export const fileString: Doc = new Doc(
   "string?",
   [new ArgDoc("path", "string?")],
   "Returns the contents of the file at `path` as a string.",
+  ["string"]
 )
 
 export const fileLines: Doc = new Doc(
@@ -861,6 +972,7 @@ export const fileLines: Doc = new Doc(
   "list?",
   [new ArgDoc("path", "string?")],
   "Returns the contents of the file at `path` as a list of strings, one for each line.",
+  ["string"]
 )
 
 export const withFile: Doc = new Doc(
@@ -896,6 +1008,7 @@ export const makeVector: Doc = new Doc(
   "vector?",
   [new ArgDoc("k", "integer?"), new ArgDoc("v", "any")],
   "Returns a vector of length `k` with each element set to `v`.",
+  ["vectors"]
 )
 
 export const vectorLength: Doc = new Doc(
@@ -945,6 +1058,7 @@ export const listVector: Doc = new Doc(
   "vector?",
   [new ArgDoc("l", "list?")],
   "Returns a vector consisting of the values in list `l`.",
+  ["list", "list manipulation", "association list", "vectors"]
 )
 
 export const vectorRange: Doc = new Doc(
@@ -963,6 +1077,7 @@ export const stringList: Doc = new Doc(
   "list?",
   [new ArgDoc("s", "string?")],
   "Returns a list of the characters in `s`.",
+  ["list", "list creation", "string"]
 )
 
 export const listString: Doc = new Doc(
@@ -970,6 +1085,7 @@ export const listString: Doc = new Doc(
   "string?",
   [new ArgDoc("l", "list?")],
   "Returns a string made by joining the characters in `l` together.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const stringVector: Doc = new Doc(
@@ -977,6 +1093,7 @@ export const stringVector: Doc = new Doc(
   "vector?",
   [new ArgDoc("s", "string?")],
   "Returns a vector of the characters in `s`.",
+  ["string", "vectors"]
 )
 
 export const vectorString: Doc = new Doc(
@@ -991,6 +1108,7 @@ export const stringContains: Doc = new Doc(
   "boolean?",
   [new ArgDoc("s1", "string?"), new ArgDoc("s2", "string?")],
   "Returns `#t` if and only if string `s1` contains string `s2`.",
+  ["string"]
 )
 
 export const stringSplit: Doc = new Doc(
@@ -998,6 +1116,7 @@ export const stringSplit: Doc = new Doc(
   "list?",
   [new ArgDoc("s", "string?"), new ArgDoc("sep", "string?")],
   "Returns a list of strings obtained by splitting `s` at occurrences of `sep`.",
+  ["string"]
 )
 
 export const stringSplitVector: Doc = new Doc(
@@ -1005,6 +1124,7 @@ export const stringSplitVector: Doc = new Doc(
   "vector?",
   [new ArgDoc("s", "string?"), new ArgDoc("sep", "string?")],
   "Returns a vector of strings obtained by splitting `s` at occurrences of `sep`.",
+  ["string", "vectors"]
 )
 
 export const procedure: Doc = new Doc(
@@ -1019,6 +1139,7 @@ export const apply: Doc = new Doc(
   "any",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
   "Calls `f` with the values contained in `l`.",
+  ["list", "list manipulation"]
 )
 
 export const stringMap: Doc = new Doc(
@@ -1026,6 +1147,7 @@ export const stringMap: Doc = new Doc(
   "string?",
   [new ArgDoc("f", "procedure?"), new ArgDoc("s", "string?")],
   "Returns a new string containing the results of applying `f` to each character of `s`.",
+  ["string"]
 )
 
 export const map: Doc = new Doc(
@@ -1033,6 +1155,7 @@ export const map: Doc = new Doc(
   "list?",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
   "Returns a new list containing the results of applying `f` to each element of `l`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const filter: Doc = new Doc(
@@ -1040,6 +1163,7 @@ export const filter: Doc = new Doc(
   "list?",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
   "Returns a new list containing the elements of `l` for which `f` returns `#t`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const fold: Doc = new Doc(
@@ -1051,6 +1175,7 @@ export const fold: Doc = new Doc(
     new ArgDoc("l", "list?"),
   ],
   "Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const reduce: Doc = new Doc(
@@ -1058,6 +1183,7 @@ export const reduce: Doc = new Doc(
   "any",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
   "Like `fold` but uses the first element of `l` as the initial value.",
+  ["list", "list manipulation"]
 )
 
 export const foldLeft: Doc = new Doc(
@@ -1069,6 +1195,7 @@ export const foldLeft: Doc = new Doc(
     new ArgDoc("l", "list?"),
   ],
   "An alias for `fold`.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const foldRight: Doc = new Doc(
@@ -1080,6 +1207,7 @@ export const foldRight: Doc = new Doc(
     new ArgDoc("l", "list?"),
   ],
   "Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.",
+  ["list", "list manipulation", "association list"]
 )
 
 export const reduceRight: Doc = new Doc(
@@ -1087,6 +1215,7 @@ export const reduceRight: Doc = new Doc(
   "any",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
   "Like `fold-right` but uses the last element of `l` as the initial value.",
+  ["list", "list manipulation"]
 )
 
 export const vectorMap: Doc = new Doc(
@@ -1119,6 +1248,7 @@ export const forRange: Doc = new Doc(
     new ArgDoc("f", "procedure?"),
   ],
   "Runs `f` on each integer in the range `[beg, end)`. `f` takes one argument, the current value of integer.",
+  ["other"]
 )
 
 export const voidQ: Doc = new Doc(
@@ -1147,6 +1277,7 @@ export const error: Doc = new Doc(
   "any",
   [new ArgDoc("msg", "string?")],
   "Raises a runtime error with message `msg`.",
+  ["string", "testing"]
 )
 
 export const qq: Doc = new Doc(
@@ -1154,6 +1285,7 @@ export const qq: Doc = new Doc(
   "any",
   [],
   "A placeholder for an expression that is not yet implemented.",
+  ["constants", "other"]
 )
 
 export const compose: Doc = new Doc(
@@ -1161,6 +1293,7 @@ export const compose: Doc = new Doc(
   "procedure?",
   [new ArgDoc("f1, ..., fk", "procedure?")],
   "Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.",
+  ["function composition"]
 )
 
 export const o: Doc = new Doc(
@@ -1168,6 +1301,7 @@ export const o: Doc = new Doc(
   "procedure?",
   [new ArgDoc("f", "procedure?")],
   "A synonym for `compose`.",
+  ["function composition"]
 )
 
 export const pipe: Doc = new Doc(
@@ -1175,6 +1309,7 @@ export const pipe: Doc = new Doc(
   "any",
   [new ArgDoc("v", "any"), new ArgDoc("f1, ..., fk", "procedure?")],
   "Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.",
+  ["function composition"]
 )
 
 export const range: Doc = new Doc(
@@ -1186,6 +1321,7 @@ export const range: Doc = new Doc(
     new ArgDoc("step", "integer?, step > 0, this argument can be omitted"),
   ],
   "Returns a list containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.",
+  ["list", "list creation"]
 )
 
 export const random: Doc = new Doc(
@@ -1193,6 +1329,7 @@ export const random: Doc = new Doc(
   "list?",
   [new ArgDoc("n", "integer?, n >= 0")],
   "Returns a random number in the range 0 to n (exclusive).",
+  ["other"]
 )
 
 export const withHandler: Doc = new Doc(
@@ -1211,6 +1348,7 @@ export const ignore: Doc = new Doc(
   "void",
   [new ArgDoc("v", "any")],
   "Suppresses the output of value `v` to the page.",
+  ["other"]
 )
 
 export const setMaximumRecursionDepth: Doc = new Doc(
@@ -1218,6 +1356,7 @@ export const setMaximumRecursionDepth: Doc = new Doc(
   "void",
   [new ArgDoc("n", "number? n >= 0")],
   "Sets the maximum recursion depth of Scamper to n. Note that tail call-optimized functions do _not_ count towards this limit.",
+  ["mutation", "predicates"]
 )
 
 export const stringToWords: Doc = new Doc(
@@ -1225,6 +1364,7 @@ export const stringToWords: Doc = new Doc(
   "list?",
   [new ArgDoc("s", "string?")],
   "Returns a list of the words in `s`, stripping whitespace and punctuation.",
+  ["string"]
 )
 
 export const ref: Doc = new Doc(
@@ -1232,6 +1372,7 @@ export const ref: Doc = new Doc(
   "ref?",
   [new ArgDoc("v", "any")],
   "Returns a reference cell initially containing `v`.",
+  ["other"]
 )
 
 export const isRef: Doc = new Doc(
@@ -1239,6 +1380,7 @@ export const isRef: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a reference cell.",
+  ["type check", "predicates"]
 )
 
 export const deref: Doc = new Doc(
@@ -1246,6 +1388,7 @@ export const deref: Doc = new Doc(
   "any",
   [new ArgDoc("r", "ref?")],
   "Returns the value contained in reference cell `r`.",
+  ["other"]
 )
 
 export const setRef: Doc = new Doc(
@@ -1253,6 +1396,7 @@ export const setRef: Doc = new Doc(
   "void",
   [new ArgDoc("r", "ref?"), new ArgDoc("v", "any")],
   "Sets the value contained in reference cell `r` to `v`.",
+  ["mutation", "predicates"]
 )
 
 export const elseV: Doc = new Doc(
@@ -1260,12 +1404,13 @@ export const elseV: Doc = new Doc(
   "boolean?",
   [],
   "A synonym for `#t` appropriate for use as the final guard of a `cond` expression.",
+  ["boolean/logic", "constants"]
 )
 
-export const nullV: Doc = new Doc("null", "list?", [], "The empty list.")
+export const nullV: Doc = new Doc("null", "list?", [], "The empty list.", ["list", "list creation", "association list", "constants"])
 
-export const pi: Doc = new Doc("pi", "number", [], "The constant π.")
+export const pi: Doc = new Doc("pi", "number", [], "The constant π.", ["math", "algebra", "constants"])
 
-export const piGreek: Doc = new Doc("π", "number", [], "The constant π.")
+export const piGreek: Doc = new Doc("π", "number", [], "The constant π.", ["math", "algebra", "constants"])
 
 export const voidV: Doc = new Doc("void", "void", [], "The void value.")
