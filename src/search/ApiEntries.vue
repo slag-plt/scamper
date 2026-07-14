@@ -72,43 +72,29 @@ function checkReturn(foo: string | object) {
 function checkArgs(foo: string | object) {
   let boo = false;
 
-  console.log("foo", foo)
+  //console.log("foo", foo)
 
   Object.entries(foo).forEach(([name, argArr]) => {
     if (name === "args") {
-      console.log("argArr", argArr)
+      //console.log("argArr", argArr)
 
       Object.entries(argArr).forEach(([,arg]) => {
-        console.log("arg", arg)
-
+        //console.log("arg", arg)
+      
         Object.entries(arg).forEach(([key, value]) => {
-          console.log("key", key, "value", value)
+          //console.log("key", key, "value", value)
 
           if (key === "desc") {
             if (typeof value === "string") {
-              console.log("this is a string", value)
+              //console.log("this is a string", value)
               value = value.replace("?", "")
             }
             if(argumentTypes.value.includes(value as string)) {
-              console.log("it is included", value,argumentTypes.value.includes(value as string) )
+              //console.log("it is included", value,argumentTypes.value.includes(value as string) )
               boo = true;
             }
           }
         })
-        
-        // Object.entries(arg).forEach((key, value) => {
-        //   if (key === "desc") {
-        //     value = value.replace("?", "")
-        //     if(argumentTypes.value.includes(value)) {
-        //       boo = true;
-        //     }
-        //   }
-        // })
-        
-        // arg = arg.replace("?", "")
-        // if(argumentTypes.value.includes(arg)) {
-        //   boo = true;
-        // }
       })
     }
   })
@@ -116,13 +102,25 @@ function checkArgs(foo: string | object) {
 }
 
 function checkTags(foo: [string, string | object]) {
-  let boo = true;
+  let boo = false;
 
-  // const tagType = typeof foo[1] === 'object' ? (foo[1] as { tags?: string }).tags : undefined;
-  // Object.entries(tags.value).forEach(([tag]) => {
-    
-  // })
-  return boo;
+console.log("foo", foo)
+
+Object.entries(foo).forEach(([name, tagArr]) => {
+  if (name === "tags") {
+    console.log("tagArr", tagArr)
+
+    Object.entries(tagArr).forEach(([, tag]) => {
+      console.log("tag", tag)
+
+      if(tags.value.includes(tag as string)) {
+            console.log("it is included", tag,tags.value.includes(tag as string) )
+            boo = true;
+      }
+    })
+  }
+})
+return boo
 }
 
 function addToLib() {
@@ -130,10 +128,11 @@ function addToLib() {
 
   Object.entries(libs).forEach(([, [, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
-      console.log("checkReturn(foo) || checkArgs(foo)", checkReturn(foo) || checkArgs(foo))
-      console.log("checkReturn(foo)", checkReturn(foo))
-      console.log("checkArgs(foo)", checkArgs(foo))
-      if (checkReturn(foo) || checkArgs(foo)) {
+      console.log("checkReturn(foo) || checkArgs(foo) || checkTags(foo)", checkReturn(foo) || checkArgs(foo) || checkTags(foo))
+      //console.log("checkReturn(foo)", checkReturn(foo))
+      //console.log("checkArgs(foo)", checkArgs(foo))
+      console.log("checkTags(foo)", checkTags(foo))
+      if (checkReturn(foo) || checkArgs(foo) || checkTags(foo)) {
         newArr.push(foo)
       }
     })
@@ -142,15 +141,62 @@ function addToLib() {
   filteredLibs.value = newArr
 }
 
-const options = ref([
-  { id: 1, val: 'notes' },
-  { id: 2, val: 'half' },
-  { id: 3, val: 'whole' }
+// const options = ref([
+//   { id: 1, val: 'math' },
+//   { id: 2, val: 'algebra' },
+//   { id: 3, val: 'list' }
+// ]);
+
+const tagList = ref([
+  { id: 1, val: 'list' },
+  { id: 2, val: 'list manipulation' },
+  { id: 3, val: 'list creation' },
+  { id: 4, val: 'math' },
+  { id: 5, val: 'algebra' },
+  { id: 6, val: 'comparator' },
+  { id: 7, val: 'trigonometry' },
+  { id: 8, val: 'function composition' },
+  { id: 9, val: 'association list' },
+  { id: 10, val: 'type check' },
+  { id: 11, val: 'strin' },
+  { id: 12, val: 'boolean/logic' },
+  { id: 13, val: 'char' },
+  { id: 14, val: 'regexes' },
+  { id: 15, val: 'vectors' },
+  { id: 16, val: 'mutation' },
+  { id: 17, val: 'predicates' },
+  { id: 18, val: 'testing' },
+  { id: 19, val: 'formatting' },
+  { id: 20, val: 'constants' },
+  { id: 21, val: 'other' },
+  { id: 22, val: 'interactive' },
+  { id: 23, val: 'html' },
+  { id: 24, val: 'reactive' },
+  { id: 25, val: 'images' },
+  { id: 26, val: 'color' },
+  { id: 27, val: 'rgb' },
+  { id: 28, val: 'hsv' },
+  { id: 29, val: 'shapes' },
+  { id: 30, val: 'composition/placement' },
+  { id: 31, val: 'path' },
+  { id: 32, val: 'canvas' },
+  { id: 33, val: 'pixel' },
+  { id: 34, val: 'music' },
+  { id: 35, val: 'duration' },
+  { id: 36, val: 'instruments' },
+  { id: 37, val: 'note' },
+  { id: 38, val: 'modifications' },
+  { id: 39, val: 'audio' },
+  { id: 40, val: 'sound' },
+  { id: 41, val: 'data' },
+  { id: 42, val: 'create' },
+  { id: 43, val: 'plot' },
+  { id: 44, val: 'parse' }
 ]);
 
 const AisOpen = ref(false)
 const RisOpen = ref(false)
-const TisOpen = ref(false)
+//const TisOpen = ref(false)
 
 const tags = ref<string[]>([])
 const argumentTypes = ref<string[]>([])
@@ -234,8 +280,8 @@ function makeString(foo: string): string {
     <p>Tags:{{ tags }}</p>
 
     <p> </p>
-    <div class="container">
-      <p><input v-model="tags" type="checkbox" value="Music"> Music </p>
+    <!-- <div class="container">
+      <p><input v-model="tags" type="checkbox" value="math"> Math </p>
       <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
     </div>
         <div v-if="TisOpen" class="dropdown-menu">
@@ -243,13 +289,12 @@ function makeString(foo: string): string {
             <div><p><input v-model="tags" type="checkbox" class="indent" :value= "e.val" >
             {{ e.val }}</p></div>
           </label>
-        </div>
+        </div> -->
 
-      <!-- <Dropdown v-model="tags"> -->
-      <p><input v-model="tags" type="checkbox"  label="One" value="One"> One </p>
-      <p><input v-model="tags" type="checkbox" label="Two" value="Two"> Two</p>
-      <p><input v-model="tags" type="checkbox" label="Three" value="Three"> Three </p>
-      <!-- </Dropdown> -->
+        <label v-for="e in tagList" :key="e.id">
+            <div><p><input v-model="tags" type="checkbox" class="indent" :value= "e.val" >
+            {{ e.val }}</p></div>
+          </label>
   
     </div>
       <button class="enter-button" @click="() => { addToLib() }"><strong>Enter</strong></button>
@@ -297,7 +342,6 @@ function makeString(foo: string): string {
   flex-shrink: 0;
   min-height: 0;
   width: 90%;
-  height: 600px;
   overflow: scroll;
 }
 
