@@ -4,21 +4,24 @@ export const rexQ: Doc = new Doc(
   'rex?',
   'boolean',
   [ new ArgDoc('v', 'any') ],
-  'Returns `#t` if `v` is a regex, `#f` otherwise.'
+  'Returns `#t` if `v` is a regex, `#f` otherwise.',
+   ["predicates", "regexes", "type-check"]
 )
 
 export const rexEmpty: Doc = new Doc(
   'rex-empty',
   'rex',
   [],
-  'Returns a regex that matches the empty string.'
+  'Returns a regex that matches the empty string.',
+   ["regexes"]
 )
 
 export const rexString: Doc = new Doc(
   'rex-string',
   'rex',
   [ new ArgDoc('s', 'string?') ],
-  'Returns a regex that matches the exact string `s`.'
+  'Returns a regex that matches the exact string `s`.',
+  ["regexes", ]
 )
 
 export const rexRepeat: Doc = new Doc(
@@ -27,7 +30,8 @@ export const rexRepeat: Doc = new Doc(
   [
     new ArgDoc('r', 'rex'),
   ],
-  'Returns a regex that matches one or more repetitions of the regex `r`.'
+  'Returns a regex that matches one or more repetitions of the regex `r`.',
+   ["regexes"]
 )
 
 export const rexRepeat0: Doc = new Doc(
@@ -36,7 +40,8 @@ export const rexRepeat0: Doc = new Doc(
   [
     new ArgDoc('r', 'rex'),
   ],
-  'Returns a regex that matches zero or more repetitions of the regex `r`.'
+  'Returns a regex that matches zero or more repetitions of the regex `r`.',
+   ["regexes"]
 )
 
 export const rexConcat: Doc = new Doc(
@@ -45,14 +50,16 @@ export const rexConcat: Doc = new Doc(
   [
     new ArgDoc('...rs', 'rex...'),
   ],
-  'Returns a regex that matches the concatenation of the regexes `rs` in order.'
+  'Returns a regex that matches the concatenation of the regexes `rs` in order.',
+  ["regexes"]
 )
 
 export const rexAnyChar: Doc = new Doc(
   'rex-any-char',
   'rex',
   [],
-  'Returns a regex that matches any single character.'
+  'Returns a regex that matches any single character.',
+  ["regexes"]
 )
 
 export const rexCharSet: Doc = new Doc(
@@ -61,7 +68,8 @@ export const rexCharSet: Doc = new Doc(
   [
     new ArgDoc('s', 'string?'),
   ],
-  'Returns a regex that matches any single character in the string `s`.'
+  'Returns a regex that matches any single character in the string `s`.',
+  ["regexes"]
 )
 
 export const rexCharAntiset: Doc = new Doc(
@@ -70,7 +78,8 @@ export const rexCharAntiset: Doc = new Doc(
   [
     new ArgDoc('s', 'string?'),
   ],
-  'Returns a regex that matches any single character not in the string `s`.'
+  'Returns a regex that matches any single character not in the string `s`.',
+  ["regexes"]
 )
 
 export const rexCharRange: Doc = new Doc(
@@ -80,7 +89,8 @@ export const rexCharRange: Doc = new Doc(
     new ArgDoc('start', 'char?'),
     new ArgDoc('end', 'char?'),
   ],
-  'Returns a regex that matches any single character in the inclusive range from `start` to `end`.'
+  'Returns a regex that matches any single character in the inclusive range from `start` to `end`.',
+  ["regexes"]
 )
 
 export const rexAnyOf: Doc = new Doc(
@@ -89,7 +99,8 @@ export const rexAnyOf: Doc = new Doc(
   [
     new ArgDoc('...rs', 'rex...'),
   ],
-  'Returns a regex that matches any one of the regexes `rs`.'
+  'Returns a regex that matches any one of the regexes `rs`.',
+  ["regexes"]
 )
 
 export const rexOptional: Doc = new Doc(
@@ -98,7 +109,8 @@ export const rexOptional: Doc = new Doc(
   [
     new ArgDoc('r', 'rex'),
   ],
-  'Returns a regex that matches either the regex `r` or the empty string.'
+  'Returns a regex that matches either the regex `r` or the empty string.',
+ ["regexes"]
 )
 
 export const rexRegex: Doc = new Doc(
@@ -108,7 +120,8 @@ export const rexRegex: Doc = new Doc(
     new ArgDoc('pattern', 'string?'),
     new ArgDoc('flags', 'string?'),
   ],
-  'Returns a regex that matches a Javascript regex `pattern`. See [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions) for more details.'
+  'Returns a regex that matches a Javascript regex `pattern`. See [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions) for more details.',
+   ["regexes"]
 )
 
 export const rexFindMatches: Doc = new Doc(
@@ -118,7 +131,8 @@ export const rexFindMatches: Doc = new Doc(
     new ArgDoc('r', 'rex'),
     new ArgDoc('s', 'string?'),
   ],
-  'Returns a list of all non-overlapping matches of the regex `r` in the string `s`.'
+  'Returns a list of all non-overlapping matches of the regex `r` in the string `s`.',
+   ["regexes"]
 )
 
 export const rexMatches: Doc = new Doc(
@@ -128,7 +142,8 @@ export const rexMatches: Doc = new Doc(
     new ArgDoc('r', 'rex'),
     new ArgDoc('s', 'string?'),
   ],
-  'Returns `#t` if the regex `r` matches the entire string `s`, `#f` otherwise.'
+  'Returns `#t` if the regex `r` matches the entire string `s`, `#f` otherwise.',
+   ["predicates","regexes", "type check"]
 )
 
 export const rexSplitString: Doc = new Doc(
@@ -138,7 +153,8 @@ export const rexSplitString: Doc = new Doc(
     new ArgDoc('r', 'rex'),
     new ArgDoc('s', 'string?'),
   ],
-  'Splits the string `s` at each match of the regex `r` and returns a list of the resulting substrings.'
+  'Splits the string `s` at each match of the regex `r` and returns a list of the resulting substrings.',
+  ["regexes"]
 )
 
 export const rexToString: Doc = new Doc(
@@ -147,5 +163,6 @@ export const rexToString: Doc = new Doc(
   [
     new ArgDoc('r', 'rex'),
   ],
-  'Returns the Javascript regex string representation of the regex `r`.'
+  'Returns the Javascript regex string representation of the regex `r`.',
+  ["regexes"]
 )
