@@ -4,49 +4,56 @@ export const parseCv: Doc = new Doc(
   'parse-csv',
   'any',
   [ new ArgDoc('data', 'string?') ],
-  'Parses `data` as a CSV-formatted string and returns a list of rows where each row is a list of fields as strings.'
+  'Parses `data` as a CSV-formatted string and returns a list of rows where each row is a list of fields as strings.',
+  ["data", "parse"]
 )
 
 export const stringToChars: Doc = new Doc(
   'string->chars',
   'list?',
   [ new ArgDoc('s', 'string?') ],
-  'Converts the string `s` into a list of char values.'
+  'Converts the string `s` into a list of char values.',
+  ["data"]
 )
 
 export const stringToWords: Doc = new Doc(
   'string->words',
   'list?',
   [ new ArgDoc('s', 'string?') ],
-  'Splits the string `s` into a list of words, using whitespace as the delimiter.'
+  'Splits the string `s` into a list of words, using whitespace as the delimiter.',
+  ["data"]
 )
 
 export const stringToLines: Doc = new Doc(
   'string->lines',
   'list?',
   [ new ArgDoc('chars', 'list?') ],
-  'Splits the string `s` into a list of strings, where each string is a line of text..'
+  'Splits the string `s` into a list of strings, where each string is a line of text..',
+  ["data"]
 )
 
 export const tallyAll: Doc = new Doc (
   'tally-all',
   'list?',
   [ new ArgDoc('lst', 'list?') ],
-  'Takes a list `lst` and returns a list of pairs where each pair consists of an element from `lst` and the number of times that element appears in `lst`.'
+  'Takes a list `lst` and returns a list of pairs where each pair consists of an element from `lst` and the number of times that element appears in `lst`.',
+  ["data"]
 )
 
 export const datasetQ: Doc = new Doc (
   'dataset?',
   'boolean?',
   [ new ArgDoc('v', 'any') ],
-  'Returns `#t` if `v` is a dataset, `#f` otherwise.'
+  'Returns `#t` if `v` is a dataset, `#f` otherwise.',
+  ["data", "create"]
 )
 
 export const plotQ: Doc = new Doc (
   'plot?',
   'boolean?',
   [ new ArgDoc('v', 'any') ],
-  'Returns `#t` if `v` is a plot, `#f` otherwise.'
+  'Returns `#t` if `v` is a plot, `#f` otherwise.',
+  ["data", "create", "plot"]
 )
 
 export const withPlotOptions: Doc = new Doc (
@@ -64,7 +71,8 @@ export const withPlotOptions: Doc = new Doc (
   - 'y-max': sets the maximum y-axis value
   - 'x-label': sets the label for the x-axis
   - 'y-label': sets the label for the y-axis
-  `
+  `,
+  ["data", "create", "plot"]
 )
 
 export const withDatasetOptions: Doc = new Doc (
@@ -78,7 +86,8 @@ export const withDatasetOptions: Doc = new Doc (
   
   - 'background-color': sets the background color of the dataset
   - 'border-color': sets the border color of the dataset
-  `
+  `,
+  ["data", "create"]
 )
 
 export const plotLinear: Doc = new Doc (
@@ -87,7 +96,8 @@ export const plotLinear: Doc = new Doc (
   [
     new ArgDoc('datasets', 'list of datasets'),
   ],
-  'Creates a linear plot from the provided list of datasets. Valid datasets for this plot include line, bar, scatter, and bubble datasets.'
+  'Creates a linear plot from the provided list of datasets. Valid datasets for this plot include line, bar, scatter, and bubble datasets.',
+  ["data", "create", "plot"]
 )
 
 export const plotCategory: Doc = new Doc (
@@ -97,7 +107,8 @@ export const plotCategory: Doc = new Doc (
     new ArgDoc('labels', 'list of strings'),
     new ArgDoc('datasets', 'list of datasets'),
   ],
-  'Creates a categorical plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.'
+  'Creates a categorical plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.',
+  ["data", "create", "plot"]
 )
 
 export const plotRadial: Doc = new Doc (
@@ -107,7 +118,8 @@ export const plotRadial: Doc = new Doc (
     new ArgDoc('labels', 'list of strings'),
     new ArgDoc('datasets', 'list of datasets'),
   ],
-  'Creates a radial plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.'
+  'Creates a radial plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.',
+  ["data", "create", "plot"]
 )
 
 export const datasetLine: Doc = new Doc (
@@ -117,7 +129,8 @@ export const datasetLine: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers or list of pairs of numbers'),
   ],
-  'Creates a line dataset with the given `title` and `data` points. If the dataset is used in a numeric (e.g., linear) plot, the data points must be a list of pairs of numbers. If the dataset is used in a categorical plot, the data points must be a list of numbers.'
+  'Creates a line dataset with the given `title` and `data` points. If the dataset is used in a numeric (e.g., linear) plot, the data points must be a list of pairs of numbers. If the dataset is used in a categorical plot, the data points must be a list of numbers.',
+  ["data", "create"]
 )
 
 export const datasetBar: Doc = new Doc (
@@ -127,7 +140,8 @@ export const datasetBar: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers'),
   ],
-  'Creates a bar dataset with the given `title` and `data` points.'
+  'Creates a bar dataset with the given `title` and `data` points.',
+  ["data", "create"]
 )
 
 export const datasetScatter: Doc = new Doc (
@@ -137,7 +151,8 @@ export const datasetScatter: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers'),
   ],
-  'Creates a scatter dataset with the given `title` and `data` points.'
+  'Creates a scatter dataset with the given `title` and `data` points.',
+  ["data", "create"]
 )
 
 export const datasetBubble: Doc = new Doc (
@@ -147,7 +162,8 @@ export const datasetBubble: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of lists of three numbers'),
   ],
-  'Creates a bubble dataset with the given `title` and `data` points. The three numbers of each data point represent x-coordinate, y-coordinate, and radius of each point.'
+  'Creates a bubble dataset with the given `title` and `data` points. The three numbers of each data point represent x-coordinate, y-coordinate, and radius of each point.',
+  ["data", "create"]
 )
 
 export const datasetPie: Doc = new Doc (
@@ -157,7 +173,8 @@ export const datasetPie: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers'),
   ],
-  'Creates a pie dataset with the given `title` and `data` points.'
+  'Creates a pie dataset with the given `title` and `data` points.',
+  ["data", "create"]
 )
 
 export const datasetPolar: Doc = new Doc (
@@ -167,7 +184,8 @@ export const datasetPolar: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers'),
   ],
-  'Creates a polar dataset with the given `title` and `data` points.'
+  'Creates a polar dataset with the given `title` and `data` points.',
+  ["data", "create"]
 )
 
 export const datasetRadar: Doc = new Doc (
@@ -177,5 +195,6 @@ export const datasetRadar: Doc = new Doc (
     new ArgDoc('title', 'string?'),
     new ArgDoc('data', 'list of numbers'),
   ],
-  'Creates a radar dataset with the given `title` and `data` points.'
+  'Creates a radar dataset with the given `title` and `data` points.',
+  ["data", "create"]
 )

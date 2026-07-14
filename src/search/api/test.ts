@@ -4,14 +4,16 @@ export const testOk: Doc = new Doc(
   'test-ok',
   'test-result?',
   [ new ArgDoc('desc', 'string?') ],
-  'Returns a test result indicating that the test passed.'
+  'Returns a test result indicating that the test passed.',
+  ["testing"]
 )
 
 export const testError: Doc = new Doc(
   'test-error',
   'test-result?',
   [ new ArgDoc('desc', 'string?'), new ArgDoc('reason', 'string?') ],
-  'Returns a test result indicating that the test failed.'
+  'Returns a test result indicating that the test failed.',
+  ["testing"]
 )
 
 export const testCase: Doc = new Doc(
@@ -23,7 +25,8 @@ export const testCase: Doc = new Doc(
     new ArgDoc('expected', 'any?'),
     new ArgDoc('test-fn', 'function?, a function that produces the actual value to be tested')
   ],
-  'Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.'
+  'Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.',
+  ["testing"]
 )
 
 export const testExn: Doc = new Doc(
@@ -33,5 +36,6 @@ export const testExn: Doc = new Doc(
     new ArgDoc('desc', 'string?'),
     new ArgDoc('test-fn', 'function?, a function that should throw an exception')
   ],
-  'Returns a test result indicating whether the given function threw an exception.'
+  'Returns a test result indicating whether the given function threw an exception.',
+  ["testing"]
 )
