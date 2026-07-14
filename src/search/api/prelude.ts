@@ -164,6 +164,7 @@ export const times: Doc = new Doc(
   "number?",
   [new ArgDoc("v1, v2, ...", "number?")],
   "Returns the product of `v1`, `v2`, ... .",
+  ["math", "algebra"]
 )
 
 export const div: Doc = new Doc(
@@ -227,6 +228,7 @@ export const truncate: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "number?")],
   "Returns the integer closest to `v` less than or equal to `v`.",
+  ["math", "algebra"]
 )
 
 export const round: Doc = new Doc(
@@ -314,6 +316,7 @@ export const tan: Doc = new Doc(
   "number?",
   [new ArgDoc("v", "number?")],
   "Returns the tangent of `v`.",
+  ["math", "trigonometry"]
 )
 
 export const asin: Doc = new Doc(
@@ -949,6 +952,7 @@ export const substring: Doc = new Doc(
     new ArgDoc("end", "integer?"),
   ],
   "Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive).",
+  ["string"]
 )
 
 export const stringAppend: Doc = new Doc(
@@ -994,6 +998,7 @@ export const vectorQ: Doc = new Doc(
   "boolean?",
   [new ArgDoc("v", "any")],
   "Returns `#t` if and only `v` is a vector.",
+  ["type check", "vectors", "predicates"]
 )
 
 export const vector: Doc = new Doc(
@@ -1001,6 +1006,7 @@ export const vector: Doc = new Doc(
   "vector?",
   [new ArgDoc("v1, v2, ...", "any")],
   "Returns a vector consisting of the values `v1`, `v2`, ...",
+  ["vectors"]
 )
 
 export const makeVector: Doc = new Doc(
@@ -1016,6 +1022,7 @@ export const vectorLength: Doc = new Doc(
   "integer?",
   [new ArgDoc("v", "vector?")],
   "Returns the length of vector `v`.",
+  ["vectors"]
 )
 
 export const vectorRef: Doc = new Doc(
@@ -1026,6 +1033,7 @@ export const vectorRef: Doc = new Doc(
     new ArgDoc("n", "integer?, a valid index into v"),
   ],
   "Returns the value at index `n` of vector `v`.",
+  ["vectors"]
 )
 
 export const vectorSet: Doc = new Doc(
@@ -1044,6 +1052,7 @@ export const vectorFill: Doc = new Doc(
   "void",
   [new ArgDoc("v", "vector?"), new ArgDoc("x", "any")],
   "Sets each element of vector `v` to `x`.",
+  ["vectors", "mutation", "predicates"]
 )
 
 export const vectorList: Doc = new Doc(
@@ -1051,6 +1060,7 @@ export const vectorList: Doc = new Doc(
   "list?",
   [new ArgDoc("v", "vector?")],
   "Returns a list consisting of the values in vector `v`.",
+  ["list", "list creation", "vectors"]
 )
 
 export const listVector: Doc = new Doc(
@@ -1070,6 +1080,7 @@ export const vectorRange: Doc = new Doc(
     new ArgDoc("step", "integer?, step > 0, this argument can be omitted"),
   ],
   "Returns a vector containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.",
+  ["vectors"]
 )
 
 export const stringList: Doc = new Doc(
@@ -1223,6 +1234,7 @@ export const vectorMap: Doc = new Doc(
   "vector?",
   [new ArgDoc("f", "procedure?"), new ArgDoc("v", "vector?")],
   "Returns a new vector containing the results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.",
+  ["vectors"]
 )
 
 export const vectorMapBang: Doc = new Doc(
@@ -1230,6 +1242,7 @@ export const vectorMapBang: Doc = new Doc(
   "void",
   [new ArgDoc("f", "procedure?"), new ArgDoc("v", "vector?")],
   "Mutates v1 with the results of results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.",
+  ["vectors", "mutation", "predicates"]
 )
 
 export const vectorForEach: Doc = new Doc(
@@ -1237,6 +1250,7 @@ export const vectorForEach: Doc = new Doc(
   "void",
   [new ArgDoc("f", "procedure?"), new ArgDoc("v", "vector?")],
   "Runs `f` on each element of `v1`, ..., `vk` in a element-wise fashion. `f` takes `k+1` arguments where the first argument is the current index and the remaining arguments are the elements of each vector at that index.",
+  ["vectors"]
 )
 
 export const forRange: Doc = new Doc(
@@ -1263,6 +1277,7 @@ export const vectorFilter: Doc = new Doc(
   "list?",
   [new ArgDoc("f", "procedure?"), new ArgDoc("l", "vector?")],
   "Returns a new vector containing the elements of `l` for which `f` returns `#t`.",
+  ["vectors"]
 )
 
 export const vectorAppend: Doc = new Doc(
@@ -1270,6 +1285,7 @@ export const vectorAppend: Doc = new Doc(
   "vector?",
   [new ArgDoc("v1, ..., vk", "vector?")],
   "Returns a new vector containing the elements of `v1`, ..., `vk` in order.",
+  ["vectors"]
 )
 
 export const error: Doc = new Doc(
@@ -1413,4 +1429,4 @@ export const pi: Doc = new Doc("pi", "number", [], "The constant π.", ["math", 
 
 export const piGreek: Doc = new Doc("π", "number", [], "The constant π.", ["math", "algebra", "constants"])
 
-export const voidV: Doc = new Doc("void", "void", [], "The void value.")
+export const voidV: Doc = new Doc("void", "void", [], "The void value.", ["constants"])
