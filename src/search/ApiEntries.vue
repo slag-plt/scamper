@@ -341,7 +341,9 @@ function makeString(foo: string): string {
     <div>
     <h3> <strong>Search by Type</strong> </h3>
     <div class="index">
-  
+
+
+    <p class="fix-margin">Types:{{ argumentTypes }}</p>
     <text>Arguments </text> 
     <button class="arrow-button" @click="AisOpen = !AisOpen">{{ AisOpen ? "▼" : "▶" }}</button>
     <text>-</text> 
@@ -357,8 +359,11 @@ function makeString(foo: string): string {
         {{ o.val }}</p>
       </label>
     </div>
-      <p>Types:{{ argumentTypes }}</p>
-  
+    
+    <p></p>
+    <p></p>
+
+    <p class="fix-margin">Types:{{ returnTypes }}</p>
     <text>Return </text>
     <button class="arrow-button" @click="RisOpen = !RisOpen">{{ RisOpen ? "▼" : "▶" }}</button>
     <!-- <text>-</text> 
@@ -374,13 +379,14 @@ function makeString(foo: string): string {
         {{ o.val }}</p>
       </label>
     </div>
-    <p>Types:{{ returnTypes }}</p>
+    
 
   </div>
 
-  <h3> <strong>Search by Tag</strong> </h3>
+  <h3><strong>Search by Tag</strong> </h3>
   <div class="index">
 
+    <p class="fix-margin" >Tags:{{ tags }}</p>
     <text>Tags </text>
     <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
       <text>-</text> 
@@ -397,7 +403,6 @@ function makeString(foo: string): string {
         {{ o.val }}</p>
       </label>
     </div>
-    <p>Tags:{{ tags }}</p>
   
     </div>
       <button class="enter-button" @click="() => { addToLib() }"><strong>Enter</strong></button>
@@ -439,8 +444,7 @@ function makeString(foo: string): string {
 }
 
 .index2 {
-  margin: 1em;
-  padding: 1em;
+  margin-left: 1em;
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
   flex-shrink: 0;
   min-height: 0;
@@ -501,6 +505,11 @@ function makeString(foo: string): string {
   flex: 1;
   min-height: 0;
   white-space: pre-line;
+}
+
+.fix-margin {
+  margin-top: 5px;
+  margin-bottom: -5px;
 }
 
 </style>
