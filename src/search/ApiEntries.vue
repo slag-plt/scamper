@@ -65,6 +65,9 @@ function checkReturn(foo: string | object) {
       }
     }
   })
+  if (returnTypes.value.length === 0) {
+    boo = true
+  }
   return boo
 }
 
@@ -120,6 +123,11 @@ function checkArgs(foo: string | object) {
       })
     }
   })
+
+if (argumentTypes.value.length === 0) {
+  boo = true
+}
+
   return boo
 }
 
@@ -179,6 +187,11 @@ function checkTags(foo: [string, string | object]) {
       })
     }
   })
+
+  if (tags.value.length === 0) {
+    boo = true
+  }
+
   return boo
 }
 
@@ -231,7 +244,7 @@ function addToLib() {
       console.log("(tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkTag)
       console.log("checkReturn(foo)  ||  (aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo) ||  (tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkRet  ||  checkArg ||  checkTag)
       console.log("tBool", tBool)
-      if (checkRet  ||  checkArg ||  checkTag  ) {
+      if (checkRet  &&  checkArg &&  checkTag  ) {
         console.log("push!!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n\n")
         newArr.push(foo)
       }
