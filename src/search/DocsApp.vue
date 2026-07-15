@@ -115,7 +115,7 @@ body,
 }
 
 .header {
-  background: #ff9898;
+  background: #ffacac;
   color: #333;
   padding: 0.5em;
   flex: 0 0 auto;

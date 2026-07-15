@@ -254,7 +254,7 @@ const tagList = ref([
   { id: 8, val: 'function composition' },
   { id: 9, val: 'association list' },
   { id: 10, val: 'type check' },
-  { id: 11, val: 'strin' },
+  { id: 11, val: 'string' },
   { id: 12, val: 'boolean/logic' },
   { id: 13, val: 'char' },
   { id: 14, val: 'regexes' },
@@ -488,7 +488,7 @@ function makeString(foo: string): string {
   margin: 24px;
   font-size: 40px;
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-  color: #ff8080;
+  color: #ffacac;
 }
 
 .flex-box {
