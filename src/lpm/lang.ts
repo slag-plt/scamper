@@ -337,6 +337,12 @@ export interface Rept {
   tag: "rept"
   range: Range
 }
+export interface JsVar {
+  tag: "jsvar"
+  name: string
+  range: Range
+}
+
 export type Ops =
   | Lit
   | Var
@@ -348,6 +354,7 @@ export type Ops =
   | PopS
   | PopV
   | Rept
+  | JsVar
 export type Blk = Ops[]
 
 export interface Disp {
