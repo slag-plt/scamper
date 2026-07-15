@@ -151,15 +151,18 @@ function checkArgsAnd(foo: string | object) {
   })
 
   let boo = true;
-  console.log("argumentTypes ", argumentTypes)
+  //console.log("argumentTypes ", argumentTypes)
   argumentTypes.value.forEach((arrType) => {
-    console.log("!tempArr.includes(arrType)", !tempArr.includes(arrType))
+    //console.log("!tempArr.includes(arrType)", !tempArr.includes(arrType))
     if(!tempArr.includes(arrType)) {
       boo = false
     }
   })
-  console.log("return", boo)
+  //console.log("return", boo)
 
+  if(argumentTypes.value.length === 0) {
+    boo = false
+  }
   return boo
 }
 
@@ -196,10 +199,17 @@ function checkTagsAnd(foo: [string, string | object]) {
   })
 
   tags.value.forEach((arrTag) => {
+    // console.log("tempArr", tempArr)
+    // console.log("arrTag", arrTag)
+    // console.log("!tempArr.includes(arrTag)", !tempArr.includes(arrTag))
     if(!tempArr.includes(arrTag)) {
       boo = false
     }
   })
+
+  if(tags.value.length === 0) {
+    boo = false
+  }
 
   return boo
 }
@@ -213,13 +223,21 @@ function addToLib() {
   Object.entries(libs).forEach(([, [, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
       console.log("                     foo ", foo)
-      if ( checkReturn(foo)  ||  (aBool.value === "or") ? checkArgs(foo) : checkArgsAnd(foo) //||  (tBool.value === "or")? checkTags(foo) : checkTagsAnd(foo)  
-    ) {
+      const checkRet = checkReturn(foo)
+      const checkArg = (aBool.value === "or") ? checkArgs(foo) : checkArgsAnd(foo)
+      const checkTag = (tBool.value === "or")? checkTags(foo) : checkTagsAnd(foo)
+      console.log("checkReturn(foo)", checkRet)
+      console.log("(aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo)", checkArg)
+      console.log("(tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkTag)
+      console.log("checkReturn(foo)  ||  (aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo) ||  (tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkRet  ||  checkArg ||  checkTag)
+      console.log("tBool", tBool)
+      if (checkRet  ||  checkArg ||  checkTag  ) {
         console.log("push!!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n\n")
         newArr.push(foo)
       }
     })
   });
+  console.log("newArr", newArr)
 
   filteredLibs.value = newArr
 }
@@ -366,10 +384,10 @@ function makeString(foo: string): string {
     <text>Tags </text>
     <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
       <text>-</text> 
-    <select>
+    <select v-model="tBool">
       <option v-for="o in tBoolArr" :key="o.id">
         <div>
-          <p><input v-model="tBool" type="checkbox" class="indent" :value= "o.val" >{{ o.val }}</p>
+          <p><input type="checkbox" class="indent" :value= "o.val" >{{ o.val }}</p>
         </div>
       </option>
     </select>
