@@ -475,7 +475,7 @@ function makeString(foo: string): string {
                   :key="foo['name']"
                   :doc="foo as Doc"
                 />
-                <!-- <text>{{ makeString(foo) }}</text> -->
+                //<!-- <text>{{ makeString(foo) }}</text> -->
               </div>
           </div>
         </div>
@@ -492,6 +492,7 @@ function makeString(foo: string): string {
   flex: 1;
   min-height: 0;
   width: 74vw;
+  margin: -1em
 }
 
 .index {
