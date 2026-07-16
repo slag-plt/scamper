@@ -31,6 +31,10 @@ interface Entry {
   doc: Doc
 }
 
+const props = defineProps<{
+  searchIn: string
+}>()
+
 const entries = computed<Entry[]>(() => {
   return Object.entries(filteredLibs).map(([name, doc]) => ({
     id: name,
@@ -66,6 +70,21 @@ function setSimple() {
   
   filteredLibs.value = simpleLibs
   //console.log("this is where joy comes to die", filteredLibs)
+}
+
+function findSearch() {
+  filteredLibs.value = []
+  const simpleLibs: any[] = []
+  Object.entries(libs).forEach(([,[, lib]]) => {
+    Object.entries(lib).forEach(([n, foo]) => {
+      console.log(n, "===", props.searchIn, n === props.searchIn)
+      if(n === props.searchIn) {
+        simpleLibs.push(foo)
+      }
+    })
+  });
+  
+  filteredLibs.value = simpleLibs
 }
 
 
@@ -502,7 +521,7 @@ function makeString(foo: string): string {
       <h3> <strong>Search Results</strong> </h3>
       <div class="api">
         <div class="index2"> 
-          <div ref="entete" class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
+          <div ref="entete" class="entries"> {{(filteredLibs.length === 0)? findSearch() : null}} {{(filteredLibs.length === 0)? setSimple() : null}}
               <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
                 <DocEntry
                   :id="foo['name']"

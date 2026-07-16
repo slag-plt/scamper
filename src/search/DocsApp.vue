@@ -38,7 +38,7 @@ function searchForFunction(searchTerm: string) {
   window.open("../search.html?search=" + encodeURIComponent(searchTerm))
 }
 const urlParams = new URLSearchParams(window.location.search);
-const searched = urlParams.get('search');
+const searched: string | null = urlParams.get('search');
 </script>
 
 <template>
@@ -64,18 +64,18 @@ const searched = urlParams.get('search');
       </div>
     </div>
     <div class="docs">
-    <div v-if="searched" class="flex-box">
-      <h2 :style="{  }">Search results for "{{ searched }}"</h2>
+    <div class="flex-box">
+      <h2 :style="{  }">Search results {{(searched)? "for " + searched : ''}}</h2>
       <input
         v-model="search"  
         size = "30"
         class="search-input"
-        placeholder="Search function or ''just search''..."
+        placeholder="Search function or press enter..."
         @keyup.enter="searchForFunction(search)"
       >
     </div>
     <div :style="{ margin: '15px' }">
-      <ApiEntries/>
+      <ApiEntries :search-in="searched || ''"/>
     </div>
   </div>
   </div>

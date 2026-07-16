@@ -41,7 +41,7 @@ const selectedLib = computed(
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_self")
 }
 </script>
 
@@ -57,7 +57,7 @@ function searchForFunction(searchTerm: string) {
         <input
       v-model="search"  
       size = "30"
-      placeholder="Search function or ''just search''..."
+      placeholder="Search function or press enter..."
       @keyup.enter="searchForFunction(search)"
         >
 

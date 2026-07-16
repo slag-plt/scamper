@@ -56,7 +56,7 @@ const searched = urlParams.get('search');
         <input
       v-model="search"  
       size = "30"
-      placeholder="Search function or ''just search''..."
+      placeholder="Search function or press enter..."
       @keyup.enter="searchForFunction(search)"
         >
       </div>
