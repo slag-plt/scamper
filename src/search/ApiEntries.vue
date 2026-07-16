@@ -349,12 +349,34 @@ const aBool = ref("or")
 // const rBool = ref("or")
 
 const types = ref([
-  { id: 301, val: 'number'},
-  { id: 302, val: 'string' },
+  { id: 307, val: 'any' },
+  { id: 324, val: 'audio-node' },
+  { id: 325, val: 'audio' },
   { id: 303, val: 'boolean' },
-  { id: 304, val: 'list' },
+  { id: 314, val: 'canvas' },
+  { id: 308, val: 'char' },
+  { id: 319, val: 'color' },
+  { id: 321, val: 'composition' },
+  { id: 323, val: 'context' },
+  { id: 312, val: 'drawing' },
+  { id: 322, val: 'duration' },
+  { id: 326, val: 'element' },
+  { id: 318, val: 'font' },
+  { id: 317, val: 'function' },
+  { id: 313, val: 'hsv' },
   { id: 305, val: 'integer' },
-  { id: 306, val: 'procedure' }
+  { id: 304, val: 'list' },
+  { id: 320, val: 'mod' },
+  // { id: 310, val: 'none' },
+  { id: 301, val: 'number'},
+  { id: 306, val: 'procedure' },
+  { id: 309, val: 'ref' },
+  { id: 328, val: 'rex' },
+  { id: 315, val: 'rgb' },
+  { id: 316, val: 'rgb-component' },
+  { id: 302, val: 'string' },
+  { id: 327, val: 'text-area' },
+  { id: 311, val: 'vector' },
 ])
 
 
@@ -469,6 +491,7 @@ function makeString(foo: string): string {
   width: 100%;
   flex: 1;
   min-height: 0;
+  width: 74vw;
 }
 
 .index {
