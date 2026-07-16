@@ -35,7 +35,7 @@ const libs: [string, object][] = [
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm))
+  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_self")
 }
 const urlParams = new URLSearchParams(window.location.search);
 const searched: string | null = urlParams.get('search');
