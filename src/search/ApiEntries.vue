@@ -23,6 +23,7 @@ import * as Html from "./api/html.js"
 import * as Reactive from "./api/reactive.js"
 import * as Data from "./api/data.js"
 import * as Rex from "./api/rex.js"
+import { RefSymbol } from "@vue/reactivity";
 
 interface Entry {
   id: string
@@ -244,31 +245,33 @@ function checkTagsAnd(foo: [string, string | object]) {
 
 function addToLib() {
   const newArr: any[] = []
-  console.log("a", aBool.value)
-  console.log("t", tBool.value === "or")
+  // console.log("a", aBool.value)
+  // console.log("t", tBool.value === "or")
   
   Object.entries(libs).forEach(([, [, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
-      console.log("                     foo ", foo)
+      // console.log("                     foo ", foo)
       const checkRet = checkReturn(foo)
       const checkArg = (aBool.value === "or") ? checkArgs(foo) : checkArgsAnd(foo)
       const checkTag = (tBool.value === "or")? checkTags(foo) : checkTagsAnd(foo)
-      console.log("checkReturn(foo)", checkRet)
-      console.log("(aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo)", checkArg)
-      console.log("(tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkTag)
-      console.log("checkReturn(foo)  ||  (aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo) ||  (tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkRet  ||  checkArg ||  checkTag)
-      console.log("tBool", tBool)
+      // console.log("checkReturn(foo)", checkRet)
+      // console.log("(aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo)", checkArg)
+      // console.log("(tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkTag)
+      // console.log("checkReturn(foo)  ||  (aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo) ||  (tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkRet  ||  checkArg ||  checkTag)
+      // console.log("tBool", tBool)
       if (checkRet  &&  checkArg &&  checkTag  ) {
-        console.log("push!!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n\n")
+        // console.log("push!!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n\n")
         newArr.push(foo)
       }
     })
   });
-  console.log("newArr", newArr)
+  // console.log("newArr", newArr)
 
+  this
   filteredLibs.value = newArr
 }
 
+const entete = ref()
 
 const tagList = ref([
   
@@ -468,14 +471,14 @@ function makeString(foo: string): string {
       <h3> <strong>Search Results</strong> </h3>
       <div class="api">
         <div class="index2"> 
-          <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
+          <div ref="entete" class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
               <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
                 <DocEntry
                   :id="foo['name']"
                   :key="foo['name']"
                   :doc="foo as Doc"
                 />
-                //<!-- <text>{{ makeString(foo) }}</text> -->
+                <!-- <text>{{ makeString(foo) }}</text> -->
               </div>
           </div>
         </div>
