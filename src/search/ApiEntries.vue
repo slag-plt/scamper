@@ -24,6 +24,20 @@ import * as Reactive from "./api/reactive.js"
 import * as Data from "./api/data.js"
 import * as Rex from "./api/rex.js"
 
+interface Entry {
+  id: string
+  name: string
+  doc: Doc
+}
+
+const entries = computed<Entry[]>(() => {
+  return Object.entries(filteredLibs).map(([name, doc]) => ({
+    id: name,
+    name: (doc as Doc).name,
+    doc: doc as Doc,
+  }))
+})
+
 const libs: [string, object][] = [
   ["prelude", Prelude],
   ["image", Image],
@@ -257,27 +271,32 @@ function addToLib() {
 
 
 const tagList = ref([
-  { id: 1, val: 'list' },
-  { id: 2, val: 'list manipulation' },
-  { id: 3, val: 'list creation' },
-  { id: 4, val: 'math' },
-  { id: 5, val: 'algebra' },
-  { id: 6, val: 'comparator' },
-  { id: 7, val: 'trigonometry' },
-  { id: 8, val: 'function composition' },
-  { id: 9, val: 'association list' },
-  { id: 10, val: 'type check' },
-  { id: 11, val: 'string' },
-  { id: 12, val: 'boolean/logic' },
+  
   { id: 13, val: 'char' },
-  { id: 14, val: 'regexes' },
+  { id: 11, val: 'string' },
+  { id: 1, val: 'list' },
+  { id: 9, val: 'association list' },
+  { id: 3, val: 'list creation' },
+  { id: 2, val: 'list manipulation' },
   { id: 15, val: 'vectors' },
   { id: 16, val: 'mutation' },
+  { id: 20, val: 'constants' },
+  { id: 8, val: 'function composition' },
+  
+  { id: 4, val: 'math' },
+  { id: 5, val: 'algebra' },
+  { id: 7, val: 'trigonometry' },
+  { id: 6, val: 'comparator' },
+  { id: 12, val: 'boolean/logic' },
+  
+  { id: 10, val: 'type check' },
+
+  { id: 14, val: 'regexes' },
+  
   { id: 17, val: 'predicates' },
   { id: 18, val: 'testing' },
   { id: 19, val: 'formatting' },
-  { id: 20, val: 'constants' },
-  { id: 21, val: 'other' },
+  
   { id: 22, val: 'interactive' },
   { id: 23, val: 'html' },
   { id: 24, val: 'reactive' },
@@ -300,7 +319,9 @@ const tagList = ref([
   { id: 41, val: 'data' },
   { id: 42, val: 'create' },
   { id: 43, val: 'plot' },
-  { id: 44, val: 'parse' }
+  { id: 44, val: 'parse' },
+
+  { id: 21, val: 'other' },
 ]);
 
 const AisOpen = ref(false)
@@ -427,7 +448,12 @@ function makeString(foo: string): string {
         <div class="index2"> 
           <div class="entries"> {{(filteredLibs.length === 0)? setSimple() : null}}
               <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
-                <text>{{ makeString(foo) }}</text>
+                <DocEntry
+                  :id="foo['name']"
+                  :key="foo['name']"
+                  :doc="foo as Doc"
+                />
+                <!-- <text>{{ makeString(foo) }}</text> -->
               </div>
           </div>
         </div>
