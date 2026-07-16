@@ -65,7 +65,7 @@ function setSimple() {
   });
   
   filteredLibs.value = simpleLibs
-  console.log("this is where joy comes to die", filteredLibs)
+  //console.log("this is where joy comes to die", filteredLibs)
 }
 
 
@@ -267,7 +267,6 @@ function addToLib() {
   });
   // console.log("newArr", newArr)
 
-  this
   filteredLibs.value = newArr
 }
 
@@ -278,19 +277,19 @@ const tagList = ref([
   { id: 13, val: 'char' },
   { id: 11, val: 'string' },
   { id: 1, val: 'list' },
-  { id: 9, val: 'association list' },
-  { id: 3, val: 'list creation' },
-  { id: 2, val: 'list manipulation' },
+    { id: 9, val: 'association list' },
+    { id: 3, val: 'list creation' },
+    { id: 2, val: 'list manipulation' },
   { id: 15, val: 'vectors' },
   { id: 16, val: 'mutation' },
   { id: 20, val: 'constants' },
   { id: 8, val: 'function composition' },
   
   { id: 4, val: 'math' },
-  { id: 5, val: 'algebra' },
-  { id: 7, val: 'trigonometry' },
-  { id: 6, val: 'comparator' },
-  { id: 12, val: 'boolean/logic' },
+    { id: 5, val: 'algebra' },
+    { id: 7, val: 'trigonometry' },
+    { id: 6, val: 'comparator' },
+    { id: 12, val: 'boolean/logic' },
   
   { id: 10, val: 'type check' },
 
@@ -303,28 +302,57 @@ const tagList = ref([
   { id: 22, val: 'interactive' },
   { id: 23, val: 'html' },
   { id: 24, val: 'reactive' },
+
   { id: 25, val: 'images' },
-  { id: 26, val: 'color' },
-  { id: 27, val: 'rgb' },
-  { id: 28, val: 'hsv' },
-  { id: 29, val: 'shapes' },
-  { id: 30, val: 'composition/placement' },
-  { id: 31, val: 'path' },
-  { id: 32, val: 'canvas' },
-  { id: 33, val: 'pixel' },
+    { id: 26, val: 'color' },
+    { id: 27, val: 'rgb' },
+    { id: 28, val: 'hsv' },
+    { id: 29, val: 'shapes' },
+    { id: 30, val: 'composition/placement' },
+    { id: 31, val: 'path' },
+    { id: 32, val: 'canvas' },
+    { id: 33, val: 'pixel' },
+
   { id: 34, val: 'music' },
-  { id: 35, val: 'duration' },
-  { id: 36, val: 'instruments' },
-  { id: 37, val: 'note' },
-  { id: 38, val: 'modifications' },
-  { id: 39, val: 'audio' },
-  { id: 40, val: 'sound' },
+    { id: 35, val: 'duration' },
+    { id: 36, val: 'instruments' },
+    { id: 37, val: 'note' },
+    { id: 38, val: 'modifications' },
+    { id: 39, val: 'audio' },
+    { id: 40, val: 'sound' },
+
   { id: 41, val: 'data' },
-  { id: 42, val: 'create' },
-  { id: 43, val: 'plot' },
-  { id: 44, val: 'parse' },
+    { id: 42, val: 'create' },
+    { id: 43, val: 'plot' },
+    { id: 44, val: 'parse' },
 
   { id: 21, val: 'other' },
+]);
+
+const indentList = ref([
+'association list', 
+'list creation', 
+'list manipulation', 
+'algebra', 
+'trigonometry', 'comparator' , 
+'boolean/logic',
+'color',
+'rgb' ,
+'hsv' ,
+'shapes' ,
+'composition/placement' ,
+'path' ,
+'canvas' ,
+'pixel' ,
+'duration',
+'instruments' ,
+'note' ,
+'modifications' ,
+'audio' ,
+'sound' ,
+'create' ,
+'plot' ,
+'parse' ,
 ]);
 
 const AisOpen = ref(false)
@@ -457,9 +485,12 @@ function makeString(foo: string): string {
       </option>
     </select>
     <div v-if="TisOpen" class="dropdown-menu">
-      <label v-for="o in tagList" :key="o.id">
-        <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
-        {{ o.val }}</p>
+      <label v-for="o in tagList" :key="o.id"> {{ console.log("indentList.includes(o.val)", indentList.includes(o.val), "o.val", o.val) }}
+        <div class="flex-box-skinny">
+          <div v-if="indentList.includes(o.val)" class="invisible-color"></div>
+          <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
+          {{ o.val }}</p>
+        </div>
       </label>
     </div>
   
@@ -565,6 +596,17 @@ function makeString(foo: string): string {
   display: flex;
   flex-direction: row;
   gap: 70px;
+}
+
+.flex-box-skinny {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: -15px;
+  margin-top: 0px;
+}
+
+.invisible-color{
+  margin-left: 15px
 }
 
 .entries {
