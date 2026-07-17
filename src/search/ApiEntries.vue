@@ -75,26 +75,17 @@ function setSimple() {
 function findSearch() {
   let s = props.searchIn
 
-  if(s.includes('-')) {
-    s = s.slice(0, s.indexOf("-")) + s[s.indexOf("-") + 1].toUpperCase() + s.slice(s.indexOf("-") + 1 + 1);
-  }
-
-  if(s.includes("!")) {
-    s = s.replace("!", "")
-  }
-
-  if(s.includes("?")) {
-    s = s.replace("?", "Q")
-  }
-
   filteredLibs.value = []
   const simpleLibs: any[] = []
   Object.entries(libs).forEach(([,[, lib]]) => {
-    Object.entries(lib).forEach(([name, foo]) => {
-      console.log(name, "===", s, name === s)
-      if(name === s) {
-        simpleLibs.push(foo)
-      }
+    Object.entries(lib).forEach(([, foo]) => {
+      Object.entries(foo).forEach(([key, value]) => {
+          if (key === "name") {
+            if(value === s) {
+            simpleLibs.push(foo)
+          }
+        }
+      })
     })
   });
   
