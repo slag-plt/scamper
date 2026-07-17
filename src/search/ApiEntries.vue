@@ -315,27 +315,18 @@ const tagList = ref([
     { id: 6, val: 'comparator' },
     { id: 12, val: 'boolean/logic' },
   
-  { id: 10, val: 'type check' },
-
-  { id: 14, val: 'regexes' },
   
-  { id: 17, val: 'predicates' },
-  { id: 18, val: 'testing' },
-  { id: 19, val: 'formatting' },
-  
-  { id: 22, val: 'interactive' },
-  { id: 23, val: 'html' },
-  { id: 24, val: 'reactive' },
 
   { id: 25, val: 'images' },
     { id: 26, val: 'color' },
+    { id: 33, val: 'pixel' },
     { id: 27, val: 'rgb' },
     { id: 28, val: 'hsv' },
-    { id: 29, val: 'shapes' },
+    
     { id: 30, val: 'composition/placement' },
     { id: 31, val: 'path' },
-    { id: 32, val: 'canvas' },
-    { id: 33, val: 'pixel' },
+  { id: 32, val: 'canvas' },
+    { id: 29, val: 'shapes' },
 
   { id: 34, val: 'music' },
     { id: 35, val: 'duration' },
@@ -349,6 +340,18 @@ const tagList = ref([
     { id: 42, val: 'create' },
     { id: 43, val: 'plot' },
     { id: 44, val: 'parse' },
+    
+  { id: 10, val: 'type check' },
+
+  { id: 14, val: 'regexes' },
+
+  { id: 17, val: 'predicates' },
+  { id: 18, val: 'testing' },
+  { id: 19, val: 'formatting' },
+
+  { id: 22, val: 'interactive' },
+  { id: 23, val: 'html' },
+  { id: 24, val: 'reactive' },
 
   { id: 21, val: 'other' },
 ]);
@@ -366,13 +369,11 @@ const indentList = ref([
 'shapes' ,
 'composition/placement' ,
 'path' ,
-'canvas' ,
 'pixel' ,
 'duration',
 'instruments' ,
 'note' ,
 'modifications' ,
-'audio' ,
 'sound' ,
 'create' ,
 'plot' ,

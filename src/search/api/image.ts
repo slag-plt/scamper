@@ -825,7 +825,7 @@ export const imageGetPixel: Doc = new Doc(
     new ArgDoc('y', 'integer?')
   ],
   'Returns the rgb value of the pixel at position `(x, y)` in the image.',
-  ["color", "images", "pixels", "rgb"]
+  ["color", "images", "pixel", "rgb"]
 )
 
 export const imageToPixels: Doc = new Doc(
@@ -845,7 +845,7 @@ export const pixelsToImage: Doc = new Doc(
     new ArgDoc('height', 'integer?')
   ],
   'Returns a new canvas with the given `pixels` and dimensions `width × height`.',
-  ["images", "pixels"]
+  ["images", "pixel"]
 )
 
 export const canvasSetPixels: Doc = new Doc(
