@@ -1,35 +1,15 @@
-/* eslint-disable vue/one-component-per-file */
-import { defineComponent, shallowRef } from "vue"
+import { computed, defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { Loc, Range, ReportError } from "../../src/lpm"
-import { ScamperInstance } from "../../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
-import type { EditorAccessor } from "../../src/web/components/editor-context"
+import { LoggingChannel, Range, ReportError } from "../../src/lpm"
+import Scamper from "../../src/scamper"
+import type { EditorAccessor } from "../../src/web/composables/editor-context"
 import {
   provideScamperSession,
   type ScamperSession,
-} from "../../src/web/components/use-scamper-session"
-import type { ResultsPaneType } from "../../src/web/components/use-results-pane"
-import { LoggingChannel } from "../../src/lpm"
-
-function makeAdapter(): CodeMirrorEditorAdapter {
-  return {
-    getDoc: () => "1",
-    isLoaded: () => true,
-    initializeDoc: () => {
-      /* noop */
-    },
-    initializeDummyDoc: () => {
-      /* noop */
-    },
-    getCursorLoc: () => new Loc(0, 0, 0),
-    coordsAtPos: () => null,
-    onViewChange: () => () => {
-      /* noop */
-    },
-  }
-}
+} from "../../src/web/composables/use-scamper-session"
+import type { ResultsPaneType } from "../../src/web/composables/use-results-pane"
+import { makeMockCodeMirrorEditorAdapter } from "../stubs/mock-code-mirror-editor-adapter"
 
 function makePane(): ResultsPaneType {
   const ch = new LoggingChannel(false, false)
@@ -47,31 +27,41 @@ describe("query modal reactivity regression", () => {
   let reportQueryResult: ((value: number) => void) | null = null
 
   afterEach(() => {
+    Scamper.getInstance().invalidateAllQueries()
     vi.restoreAllMocks()
     reportQueryResult = null
   })
 
   function mountQueryStatusHost() {
-    const editor: EditorAccessor = () => makeAdapter()
+    const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
 
     const Host = defineComponent({
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
         session = provideScamperSession(paneRef, { editor })
-        vi.spyOn(ScamperInstance.getInstance(), "query").mockImplementation(
-          ({ err }) => {
-            reportQueryResult = (value: number) => {
-              err.report(new ReportError(value, Range.none))
-            }
-            return "query-1"
-          },
-        )
-        return { queries: session.queries }
+        const scamper = Scamper.getInstance()
+        vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
+          reportQueryResult = (value: number) => {
+            err.report(new ReportError(value, Range.none))
+          }
+          scamper.registerQueryEntry({
+            id: "query-test",
+            err,
+            queriedRange: Range.of(0, 0, 0, 0, 0, 0),
+            done: Promise.resolve(),
+          })
+          return Promise.resolve()
+        })
+        return { queries: computed(() => session.queries.value) }
       },
       template: `
         <div>
-          <template v-for="q in queries" :key="q.id">
-            <span data-testid="query-status">
+          <template v-for="[line, bucket] in queries" :key="line">
+            <span
+              v-for="q in bucket"
+              :key="q.id"
+              data-testid="query-status"
+            >
               {{ q.err.errors.length === 0 ? "pending" : "done:" + q.err.errors.length }}
             </span>
           </template>
@@ -85,12 +75,12 @@ describe("query modal reactivity regression", () => {
   test("async query report updates the modal without a scroll/repaint", async () => {
     const wrapper = mountQueryStatusHost()
 
-    session.query()
+    await session.query()
     await flushPromises()
     expect(wrapper.get('[data-testid="query-status"]').text()).toBe("pending")
 
     expect(reportQueryResult).not.toBeNull()
-    reportQueryResult!(42)
+    reportQueryResult?.(42)
     await flushPromises()
 
     expect(wrapper.get('[data-testid="query-status"]').text()).toBe("done:1")

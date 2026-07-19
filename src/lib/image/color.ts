@@ -1,9 +1,5 @@
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import HtmlRenderer from '../../lpm/renderers/html.js'
-import VueRenderer from '../../lpm/renderers/vue.js'
-import RgbRenderer from './RgbRenderer.vue'
-import HsvRenderer from './HsvRenderer.vue'
 import * as L from '../../lpm'
 
 import * as colorsys from 'colorsys'
@@ -322,7 +318,7 @@ export interface Hsv extends L.Struct {
   alpha: number
 }
 
-function isHsv(v: any): boolean {
+export function isHsv(v: any): boolean {
   return L.isStructKind(v, 'hsv')
 }
 
@@ -619,41 +615,6 @@ export function rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
     (rgba1.alpha + rgba2.alpha) / 2
   )
 }
-
-/***** Rendering **************************************************************/
-
-function renderRgb(rgb: Rgb): HTMLElement {
-  const div = document.createElement('div')
-  const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rgbToString(textColor)
-  div.style.backgroundColor = rgbToString(rgb)
-  div.style.width = 'fit-content'
-  div.style.border = '1px solid black'
-  div.style.padding = '0.25em'
-  div.textContent = rgbToString(rgb)
-  return div
-}
-
-HtmlRenderer.registerCustomRenderer(isRgb, (v: any) => renderRgb(v as Rgb))
-
-function renderHsv(hsv: Hsv): HTMLElement {
-  const div = document.createElement('div')
-  const rgb = hsvToRgb(hsv)
-  const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rgbToString(textColor)
-  div.style.backgroundColor = rgbToString(rgb)
-  div.style.width = 'fit-content'
-  div.style.border = '1px solid black'
-  div.style.padding = '0.25em'
-  div.textContent = hsvToString(hsv)
-  return div
-}
-
-HtmlRenderer.registerCustomRenderer(isHsv, (v: any) => renderHsv(v as Hsv))
-
-VueRenderer.registerCustomRenderer(isRgb, () => RgbRenderer)
-VueRenderer.registerCustomRenderer(isHsv, () => HsvRenderer)
-
 
 /***** Exports ****************************************************************/
 

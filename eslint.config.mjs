@@ -24,12 +24,23 @@ export default defineConfig(
     },
   },
   eslintConfigPrettier,
-  [globalIgnores(["dist/*", "types/*", "src/lib/webaudiofont/*"])],
+  [
+    globalIgnores([
+      "dist/*",
+      "types/*",
+      "src/lib/webaudiofont/*",
+      "src/scheme/generated/*",
+    ]),
+  ],
   {
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["eslint.config.mjs", "vite.config.ts"],
+          allowDefaultProject: [
+            "eslint.config.mjs",
+            "vite.config.ts",
+            "scripts/generate-parser.mjs",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: [".vue"],
@@ -37,7 +48,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["vite.config.ts"],
+    files: ["vite.config.ts", "scripts/generate-parser.mjs"],
     languageOptions: {
       globals: {
         ...globals.node,

@@ -1,7 +1,6 @@
 import { ICE, ScamperError } from "./error.js"
 import { Range } from "./range.js"
 import * as L from "./lang.js"
-import { FunctionDoc } from "../scheme/docstring/docstring"
 
 ///// Predicates /////////////////////////////////////////////////////////////////
 
@@ -46,7 +45,8 @@ export const mkClosure = (
   env: Map<string, L.Value>,
   call: (...args: any) => any,
   name?: L.Id,
-): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name })
+  restParam?: string
+): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name, restParam })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: "char",
   value: v,
@@ -110,7 +110,8 @@ export const mkCls = (
   body: L.Blk,
   name?: string,
   range: Range = Range.none,
-): L.Cls => ({ tag: "cls", params, body, name, range })
+  restParam?: string
+): L.Cls => ({ tag: "cls", params, body, name, range, restParam })
 export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({
   tag: "ap",
   numArgs,
@@ -129,8 +130,7 @@ export const mkDefine = (
   name: string,
   expr: L.Blk,
   range: Range = Range.none,
-  doc?: FunctionDoc,
-): L.Define => ({ tag: "define", name, expr, range, doc })
+): L.Define => ({ tag: "define", name, expr, range })
 export const mkImport = (
   name: string,
   range: Range = Range.none,

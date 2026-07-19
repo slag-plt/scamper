@@ -2,17 +2,25 @@
 import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
-import { Loc, LoggingChannel } from "../src/lpm"
-import { type DisplayRequest, ScamperInstance } from "../src/scamper"
-import type { CodeMirrorEditorAdapter } from "../src/web/components/codemirror-editor-adapter"
-import type { EditorAccessor } from "../src/web/components/editor-context"
+import { LoggingChannel, Range } from "../src/lpm"
+import Scamper, { type DisplayRequest, type QueryMap } from "../src/scamper"
+import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
 import {
   provideScamperSession,
   type ScamperSession,
   type ScamperSessionOptions,
-} from "../src/web/components/use-scamper-session"
-import type { ResultsPaneType } from "../src/web/components/use-results-pane"
+} from "../src/web/composables/use-scamper-session"
+import type { ResultsPaneType } from "../src/web/composables/use-results-pane"
+import { makeMockCodeMirrorEditorAdapter } from "./stubs/mock-code-mirror-editor-adapter"
+
+function queryCount(map: QueryMap): number {
+  let count = 0
+  for (const bucket of map.values()) {
+    count += bucket.length
+  }
+  return count
+}
 
 interface MockRun extends DisplayRequest {
   resolve(): void
@@ -36,29 +44,35 @@ function makeMockRun(id: string, tracing = false): MockRun {
   }
 }
 
-/** Mimics ScamperInstance.execute returning a DisplayRun handle. */
-function mockExecute(scamper: ScamperInstance) {
-  return vi.spyOn(scamper, "execute").mockImplementation(async () => {
-    return makeMockRun(crypto.randomUUID())
+const mockQueriedRange = Range.of(0, 0, 0, 0, 0, 0)
+
+function pendingPromise(): Promise<void> {
+  return new Promise(vi.fn())
+}
+
+/** Mimics Scamper.execute returning a DisplayRun handle. */
+function mockExecute(scamper: Scamper) {
+  return vi.spyOn(scamper, "execute").mockImplementation(() => {
+    return Promise.resolve(makeMockRun(crypto.randomUUID()))
   })
 }
 
-function makeAdapter(): CodeMirrorEditorAdapter {
-  return {
-    getDoc: () => "1",
-    isLoaded: () => true,
-    initializeDoc: () => {
-      /* noop */
-    },
-    initializeDummyDoc: () => {
-      /* noop */
-    },
-    getCursorLoc: () => new Loc(0, 0, 0),
-    coordsAtPos: () => null,
-    onViewChange: () => () => {
-      /* noop */
-    },
-  }
+function mockScheduledQuery(
+  scamper: Scamper,
+  id: string,
+  done = pendingPromise(),
+) {
+  return vi
+    .spyOn(scamper, "query")
+    .mockImplementation(({ err }) => {
+      scamper.registerQueryEntry({
+        id,
+        err,
+        queriedRange: mockQueriedRange,
+        done,
+      })
+      return Promise.resolve()
+    })
 }
 
 function makePane(): ResultsPaneType {
@@ -75,7 +89,7 @@ function mountSession(
   pane: ResultsPaneType | null = makePane(),
 ): ScamperSession {
   let session!: ScamperSession
-  const editor: EditorAccessor = () => makeAdapter()
+  const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
 
   const Host = defineComponent({
     setup() {
@@ -92,17 +106,18 @@ function mountSession(
 
 describe("useScamperSession", () => {
   afterEach(() => {
+    Scamper.getInstance().invalidateAllQueries()
     vi.restoreAllMocks()
   })
 
   test("execute stops the previous display task before scheduling", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     const runs: MockRun[] = []
-    vi.spyOn(scamper, "execute").mockImplementation(async () => {
+    vi.spyOn(scamper, "execute").mockImplementation(() => {
       const run = makeMockRun(crypto.randomUUID())
       runs.push(run)
-      return run
+      return Promise.resolve(run)
     })
 
     const session = mountSession()
@@ -118,12 +133,9 @@ describe("useScamperSession", () => {
   })
 
   test("stopRun does not cancel queries", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
-    vi.spyOn(scamper, "query").mockResolvedValue({
-      id: "query-1",
-      done: expect.anything() as Promise<void>,
-    })
+    mockScheduledQuery(scamper, "query-1")
     mockExecute(scamper)
 
     const session = mountSession()
@@ -135,21 +147,31 @@ describe("useScamperSession", () => {
     expect(runId).not.toBeNull()
     expect(cancel).toHaveBeenCalledWith(runId)
     expect(cancel).not.toHaveBeenCalledWith("query-1")
-    expect(session.queries.value).toHaveLength(1)
+    expect(queryCount(session.queries.value)).toBe(1)
     expect(session.currentRun.value).toBeNull()
   })
 
   test("stopAll cancels display task and all queries", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const cancel = vi.spyOn(scamper, "cancel")
     vi.spyOn(scamper, "query")
-      .mockResolvedValueOnce({
-        id: "query-1",
-        done: expect.anything() as Promise<void>,
+      .mockImplementationOnce(({ err }) => {
+        scamper.registerQueryEntry({
+          id: "query-1",
+          err,
+          queriedRange: Range.of(0, 0, 0, 0, 1, 0),
+          done: pendingPromise(),
+        })
+        return Promise.resolve()
       })
-      .mockResolvedValueOnce({
-        id: "query-2",
-        done: expect.anything() as Promise<void>,
+      .mockImplementationOnce(({ err }) => {
+        scamper.registerQueryEntry({
+          id: "query-2",
+          err,
+          queriedRange: Range.of(0, 1, 1, 0, 2, 1),
+          done: pendingPromise(),
+        })
+        return Promise.resolve()
       })
     mockExecute(scamper)
 
@@ -164,16 +186,46 @@ describe("useScamperSession", () => {
     expect(cancel).toHaveBeenCalledWith("query-2")
     expect(runId).not.toBeNull()
     expect(cancel).toHaveBeenCalledWith(runId)
-    expect(session.queries.value).toHaveLength(0)
+    expect(queryCount(session.queries.value)).toBe(0)
     expect(session.currentRun.value).toBeNull()
   })
 
+  test("expanded query state mirrors Scamper actions", () => {
+    const session = mountSession()
+
+    expect(session.expandedQueryId.value).toBeNull()
+
+    session.expandQuery("query-1")
+    expect(session.expandedQueryId.value).toBe("query-1")
+
+    session.toggleQueryExpanded("query-1")
+    expect(session.expandedQueryId.value).toBeNull()
+
+    session.toggleQueryExpanded("query-2")
+    expect(session.expandedQueryId.value).toBe("query-2")
+
+    session.collapseQuery()
+    expect(session.expandedQueryId.value).toBeNull()
+  })
+
+  test("invalidating an expanded query clears expanded state", async () => {
+    const scamper = Scamper.getInstance()
+    mockScheduledQuery(scamper, "query-1")
+    const session = mountSession()
+
+    await session.query()
+    session.expandQuery("query-1")
+    session.invalidateQuery("query-1")
+
+    expect(session.expandedQueryId.value).toBeNull()
+  })
+
   test("done clears currentRun when display task completes", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(async () => {
+    vi.spyOn(scamper, "execute").mockImplementation(() => {
       lastRun = makeMockRun(crypto.randomUUID())
-      return lastRun
+      return Promise.resolve(lastRun)
     })
 
     const session = mountSession()
@@ -188,7 +240,7 @@ describe("useScamperSession", () => {
   })
 
   test("execute clears currentRun when compile fails", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     vi.spyOn(scamper, "execute").mockResolvedValue(null)
 
     const session = mountSession()
@@ -198,12 +250,12 @@ describe("useScamperSession", () => {
   })
 
   test("stale done does not clear a newer run", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const runs: MockRun[] = []
-    vi.spyOn(scamper, "execute").mockImplementation(async () => {
+    vi.spyOn(scamper, "execute").mockImplementation(() => {
       const run = makeMockRun(crypto.randomUUID())
       runs.push(run)
-      return run
+      return Promise.resolve(run)
     })
 
     const session = mountSession()
@@ -231,12 +283,9 @@ describe("useScamperSession", () => {
   })
 
   test("execute is a no-op when the results pane is unavailable", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const execute = vi.spyOn(scamper, "execute")
-    vi.spyOn(scamper, "query").mockResolvedValue({
-      id: "query-1",
-      done: expect.anything() as Promise<void>,
-    })
+    mockScheduledQuery(scamper, "query-1")
     const onRunScheduled = vi.fn()
 
     const session = mountSession({ onRunScheduled }, null)
@@ -244,12 +293,12 @@ describe("useScamperSession", () => {
     await session.execute()
 
     expect(execute).not.toHaveBeenCalled()
-    expect(session.queries.value).toHaveLength(1)
+    expect(queryCount(session.queries.value)).toBe(1)
     expect(onRunScheduled).toHaveBeenCalledTimes(1)
   })
 
   test("onRunScheduled is called when execute is scheduled", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     mockExecute(scamper)
     const onRunScheduled = vi.fn()
 
@@ -260,7 +309,7 @@ describe("useScamperSession", () => {
   })
 
   test("execute sets currentRun from returned handle", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     const session = mountSession()
     vi.spyOn(scamper, "execute").mockResolvedValue(makeMockRun("task-1"))
 
@@ -269,9 +318,11 @@ describe("useScamperSession", () => {
   })
 
   test("isTracing reflects trace mode only, not normal run", async () => {
-    const scamper = ScamperInstance.getInstance()
-    vi.spyOn(scamper, "execute").mockImplementation(async ({ isTracing }) => {
-      return makeMockRun(crypto.randomUUID(), isTracing ?? false)
+    const scamper = Scamper.getInstance()
+    vi.spyOn(scamper, "execute").mockImplementation(({ isTracing }) => {
+      return Promise.resolve(
+        makeMockRun(crypto.randomUUID(), isTracing ?? false),
+      )
     })
 
     const session = mountSession()
@@ -286,11 +337,11 @@ describe("useScamperSession", () => {
   })
 
   test("isTracing clears when display task completes or is stopped", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(async ({ isTracing }) => {
+    vi.spyOn(scamper, "execute").mockImplementation(({ isTracing }) => {
       lastRun = makeMockRun(crypto.randomUUID(), isTracing ?? false)
-      return lastRun
+      return Promise.resolve(lastRun)
     })
 
     const session = mountSession()
@@ -311,14 +362,14 @@ describe("useScamperSession", () => {
   })
 
   test("IdeHeader unwraps currentRun ref for run/stop UI", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     mockExecute(scamper)
 
     const Host = defineComponent({
       components: { IdeHeader },
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
-        const editor: EditorAccessor = () => makeAdapter()
+        const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
         provideScamperSession(paneRef, { editor })
       },
       template: "<IdeHeader currentFile='null' />",
@@ -334,18 +385,18 @@ describe("useScamperSession", () => {
   })
 
   test("IdeHeader shows Run after display task completes", async () => {
-    const scamper = ScamperInstance.getInstance()
+    const scamper = Scamper.getInstance()
     let lastRun: MockRun | undefined
-    vi.spyOn(scamper, "execute").mockImplementation(async () => {
+    vi.spyOn(scamper, "execute").mockImplementation(() => {
       lastRun = makeMockRun(crypto.randomUUID())
-      return lastRun
+      return Promise.resolve(lastRun)
     })
 
     const Host = defineComponent({
       components: { IdeHeader },
       setup() {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
-        const editor: EditorAccessor = () => makeAdapter()
+        const editor: EditorAccessor = () => makeMockCodeMirrorEditorAdapter()
         provideScamperSession(paneRef, { editor })
       },
       template: "<IdeHeader currentFile='null' />",

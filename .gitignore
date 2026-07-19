@@ -124,5 +124,11 @@ src/version.ts
 src/**/*.js
 src/**/*.js.map
 
+# Generated Lezer parser, rebuilt from src/scheme/syntax.grammar
+# (see scripts/generate-parser.mjs / scripts/vite-plugin-scheme-parser.mjs)
+src/scheme/generated/parser.ts
+
 .claude
 .zed
+.cursor
+.junie

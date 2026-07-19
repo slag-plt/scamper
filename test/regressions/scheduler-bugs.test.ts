@@ -1,13 +1,13 @@
 import { describe, expect, test } from "vitest"
-import { Scheduler } from "../../src/scheduler"
+import { Scheduler } from "../../src/lpm/scheduler"
 import {
-  MockFiber,
-  QUANTUM_WAIT_MS,
   makeTask,
+  MockFiber,
   patchSchedulerYieldForTests,
+  QUANTUM_WAIT_MS,
   sleep,
 } from "../test-utils"
-import { TraceStep } from "../../src/lpm/fiber"
+import { traceStep } from "../../src/lpm/fiber"
 
 patchSchedulerYieldForTests()
 
@@ -40,7 +40,7 @@ describe("no concurrent #execute() loops", () => {
       inFlight++
       maxInFlight = Math.max(maxInFlight, inFlight)
       inFlight--
-      return TraceStep
+      return traceStep
     }
 
     sched.schedule(makeTask(fiber))
@@ -55,6 +55,7 @@ describe("no concurrent #execute() loops", () => {
     expect(maxInFlight).toBe(1)
   })
 
+  // TODO: inherently flaky test.
   test.skip("a second resumeExecution() does not roughly double the stepping rate", async () => {
     const sched = new Scheduler()
     const f1 = new MockFiber()

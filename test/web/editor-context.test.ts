@@ -1,7 +1,8 @@
 import { shallowRef } from "vue"
 import { describe, expect, test } from "vitest"
 import { Loc } from "../../src/lpm"
-import type { CodeMirrorEditorAdapter } from "../../src/web/components/codemirror-editor-adapter"
+import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
+import { makeMockCodeMirrorEditorAdapter } from "../stubs/mock-code-mirror-editor-adapter"
 
 function createTestEditorContext() {
   const holder = shallowRef<CodeMirrorEditorAdapter | null>(null)
@@ -31,7 +32,7 @@ describe("editor context", () => {
 
   test("editor accessor delegates to the registered adapter", () => {
     const ctx = createTestEditorContext()
-    const adapter = {
+    const adapter = makeMockCodeMirrorEditorAdapter({
       getDoc: () => "hello",
       isLoaded: (): boolean => true,
       initializeDoc: (src: string) => {
@@ -42,11 +43,7 @@ describe("editor context", () => {
         adapter.isLoaded = () => false
       },
       getCursorLoc: () => new Loc(1, 2, 3),
-      coordsAtPos: () => null,
-      onViewChange: () => () => {
-        /* noop */
-      },
-    } satisfies CodeMirrorEditorAdapter
+    })
     ctx.register(adapter)
 
     expect(ctx.editor().getDoc()).toBe("hello")
@@ -62,36 +59,14 @@ describe("editor context", () => {
 
   test("unregister only clears matching adapter", () => {
     const ctx = createTestEditorContext()
-    const first = {
+    const first = makeMockCodeMirrorEditorAdapter({
       getDoc: () => "first",
-      isLoaded: () => true,
-      initializeDoc: (_src: string) => {
-        void _src
-      },
-      initializeDummyDoc: () => {
-        /* noop */
-      },
       getCursorLoc: () => new Loc(0, 0, 0),
-      coordsAtPos: () => null,
-      onViewChange: () => () => {
-        /* noop */
-      },
-    } satisfies CodeMirrorEditorAdapter
-    const second = {
+    })
+    const second = makeMockCodeMirrorEditorAdapter({
       getDoc: () => "second",
-      isLoaded: () => true,
-      initializeDoc: (_src: string) => {
-        void _src
-      },
-      initializeDummyDoc: () => {
-        /* noop */
-      },
       getCursorLoc: () => new Loc(1, 1, 1),
-      coordsAtPos: () => null,
-      onViewChange: () => () => {
-        /* noop */
-      },
-    } satisfies CodeMirrorEditorAdapter
+    })
 
     ctx.register(first)
     ctx.register(second)

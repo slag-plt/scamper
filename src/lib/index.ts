@@ -1,17 +1,21 @@
 import { Module } from "../lpm"
-import { imageLib } from "./image.js"
-import Lab from "./lab.js"
-import Music from "./music.js"
-import Test from "./test.js"
-import Audio from "./audio.js"
-import Canvas from "./canvas.js"
-import Html from "./html.js"
-import Reactive from "./reactive.js"
+import { imageLib } from "./image/index.js"
+import Lab from "./lab/index.js"
+import Music from "./music/index.js"
+import Test from "./test/index.js"
+import Audio from "./audio/index.js"
+import Canvas from "./canvas/index.js"
+import Html from "./html/index.js"
+import Reactive from "./reactive/index.js"
 import Data from "./data"
-import Rex from "./rex.js"
+import Rex from "./rex/index.js"
 import Prelude from "./prelude/index.js"
-import Runtime from "./runtime.js"
+import Runtime from "./runtime/index.js"
 
+// N.B., a library with a renderers/ folder also needs an entry in
+// src/web/renderers.ts, or its custom Vue/HTML renderers never register in
+// the browser -- this map and that file are two independent enumerations of
+// the same library set.
 export const builtinLibs = new Map<string, Module>([
   ["image", imageLib],
   ["lab", Lab],

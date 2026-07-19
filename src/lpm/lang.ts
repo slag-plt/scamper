@@ -1,5 +1,4 @@
 import { Range } from "./range.js"
-import { FunctionDoc } from "../scheme/docstring/docstring"
 import { ScamperError } from "./error.js"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
@@ -19,14 +18,14 @@ export type Idx = number
 /**
  * Environments are collections of variable bindings. The overall runtime
  * environment captures three different scopes:
- * 
+ *
  * + `imports`: the collection of imported module names
  * + `topLevel`: the collection of top-level (module-level) bindings
  * + `locals`: the collection of local bindings
- * 
+ *
  * When resolving a (simple) variable name, we search in order of increasing
  * scope: local, top-level, and then imports.
- * 
+ *
  * Environments are also _immutable_: operations return new environments rather
  * mutating the current environment.
  */
@@ -39,7 +38,11 @@ export class Env {
   private locals: Map<string, Value>
 
   /** Constructs a new environemnt from the given maps */
-  constructor(imports: Map<string, Module>, topLevel: Map<string, Value>, locals: Map<string, Value>) {
+  constructor(
+    imports: Map<string, Module>,
+    topLevel: Map<string, Value>,
+    locals: Map<string, Value>,
+  ) {
     this.imports = imports
     this.topLevel = topLevel
     this.locals = locals
@@ -54,21 +57,26 @@ export class Env {
    *         exist
    */
   get(name: string): Value {
+    // 1. Local scope
     if (this.locals.has(name)) {
       return this.locals.get(name)
-    } else if (this.topLevel.has(name)) {
-      return this.topLevel.get(name)
-    } else {
-      for (const library of this.imports.values()) {
-        if (library.bindings.has(name)) {
-          return library.bindings.get(name)
-        }
-      }
-      throw new ScamperError(
-        'Runtime',
-        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
-      )
     }
+
+    // 2. Top-level scope
+    if (this.topLevel.has(name)) {
+      return this.topLevel.get(name)
+    }
+
+    // 3. Imported modules, most recent imports first
+    for (const library of [...this.imports.values()].toReversed()) {
+      if (library.bindings.has(name)) {
+        return library.bindings.get(name)
+      }
+    }
+    throw new ScamperError(
+      'Runtime',
+      `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+    )
   }
 
   /** @return the top-level bindings of this environment as a Module */
@@ -90,25 +98,22 @@ export class Env {
    * @return true iff the variable is bound in this environment
    */
   has(name: string): boolean {
-    return this.locals.has(name) ||
+    return (
+      this.locals.has(name) ||
       this.topLevel.has(name) ||
-      [...this.imports.values()].some(lib =>
-        lib.bindings.has(name))
+      [...this.imports.values()].some((lib) => lib.bindings.has(name))
+    )
   }
 
   extendWithImport(name: string, lib: Module): Env {
-    return new Env(
-      new Map([...this.imports, [name, lib]]),
-      this.topLevel,
-      this.locals
-    )
+    return new Env(this.extendImports(name, lib), this.topLevel, this.locals)
   }
 
   extendWithTopLevel(...bindings: [string, Value][]): Env {
     return new Env(
       this.imports,
-      new Map([...this.topLevel, ...bindings]),
-      this.locals
+      this.extendBindings(this.topLevel, bindings),
+      this.locals,
     )
   }
 
@@ -116,23 +121,27 @@ export class Env {
     return new Env(
       this.imports,
       this.topLevel,
-      new Map([...this.locals, ...locals])
+      this.extendBindings(this.locals, locals),
     )
   }
 
+  extendImports(name: string, lib: Module) {
+    return new Map([...this.imports, [name, lib]])
+  }
+
+  extendBindings(old: Map<string, Value>, newBindings: [string, Value][]) {
+    return new Map([...old, ...newBindings])
+  }
+
   extendReplacingLocals(...locals: [string, Value][]): Env {
-    return new Env(
-      this.imports,
-      this.topLevel,
-      new Map(locals)
-    )
+    return new Env(this.imports, this.topLevel, new Map(locals))
   }
 
   withoutLocals(...names: string[]): Env {
     return new Env(
       this.imports,
       this.topLevel,
-      new Map([...this.locals].filter(([x, _v]) => !names.includes(x)))
+      new Map([...this.locals].filter(([x, _v]) => !names.includes(x))),
     )
   }
 }
@@ -174,6 +183,7 @@ export interface Closure extends TaggedObject {
   params: Id[]
   code: Blk
   locals: Map<string, Value>
+  restParam?: string
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
   // Machine can be referenced by call to perform evaluation.
@@ -225,8 +235,8 @@ export type ScamperFn = Closure | JsFunction
  */
 export function callScamperFn(_fn: ScamperFn, ..._args: Value[]): Value {
   throw new ScamperError(
-    'Runtime',
-    'Javascript library functions can no longer call Scamper functions'
+    "Runtime",
+    "Javascript library functions can no longer call Scamper functions",
   )
 }
 
@@ -297,6 +307,7 @@ export interface Cls {
   body: Blk
   name?: string
   range: Range
+  restParam?: string
 }
 export interface Ap {
   tag: "ap"
@@ -354,7 +365,6 @@ export interface Define {
   name: string
   expr: Blk
   range: Range
-  doc?: FunctionDoc
 }
 export interface StmtExp {
   tag: "stmtexp"

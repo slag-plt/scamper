@@ -2,7 +2,7 @@
 import { computed, shallowRef } from "vue"
 import ResultsToolbar from "./ResultsToolbar.vue"
 import OutputPane from "./OutputPane.vue"
-import type { OutputPaneType } from "./use-output-pane"
+import type { OutputPaneType } from "../composables/use-output-pane"
 
 defineProps<{
   isTracing: boolean

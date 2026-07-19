@@ -112,6 +112,7 @@ function searchOpenWindow(searchTerm: string) {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  z-index: 2;
 }
 
 .header-left,

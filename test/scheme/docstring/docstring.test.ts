@@ -17,6 +17,7 @@ import {
   isComplexPred,
   parseDocLineContents,
   parseDocString,
+  parseFunctionDocFromComments,
   ParseStage,
   Pred,
   VarApp,
@@ -26,7 +27,7 @@ import { testTag1, testTag2, testTagLine1, testTagLine2 } from "./test-tags"
 import { SimpleErrorChannel } from "../../../src/lpm/output/simple-error"
 import { tokenizeAndParse } from "../../../src/scheme"
 import { anyRange } from "../util"
-import { Comment } from "../../../src/scheme/reader"
+import { Comment } from "../../../src/scheme/ast"
 
 describe("Docstring parsing", () => {
   test("are attached to define statements", () => {
@@ -41,13 +42,17 @@ describe("Docstring parsing", () => {
 
     const err = new SimpleErrorChannel()
     const prog = tokenizeAndParse(err, testSrc)
-    const expectedDefine = mkDefine(
-      identifier,
-      lit,
-      anyRange,
+    // N.B., parsing is deferred: the Define carries raw docComments, not an
+    // already-parsed FunctionDoc (see ast.ts's Define.docComments).
+    const expectedDefine = mkDefine(identifier, lit, anyRange, rawTestComments)
+    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
+
+    const stmt = prog?.find((s) => s.tag === "define")
+    expect(stmt?.tag).toBe("define")
+    if (stmt?.tag !== "define") return
+    expect(parseFunctionDocFromComments(stmt.docComments ?? [])).toEqual(
       expectedFunctionDoc,
     )
-    expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
   })
 
   describe("parseDocString", () => {

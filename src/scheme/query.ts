@@ -1,126 +1,232 @@
-import {
-  ICE,
-  isList,
-  isSym,
-  listToVector,
-  Loc,
-  mkList,
-  mkSym,
-  ScamperError,
-} from "../lpm"
-import { isSyntax, mkSyntax, Syntax } from "./syntax"
-import { reservedWords } from "./parser"
+import { Loc, Range, ScamperError } from "../lpm"
+import * as A from "./ast.js"
 
 /**
- * @returns [ast] with the node at [queryLoc] wrapped in a Report expression
- * @throws ScamperError if there is no valid node to report at [queryLoc]
+ * @returns prog with the statement at [queryLoc] having its deepest queried
+ *          sub-expression wrapped in a Report expression, plus the range of
+ *          that inner reported expression
+ * @throws ScamperError if there is no valid statement to report at [queryLoc]
  */
-export function getQueriedAST(ast: Syntax[], queryLoc: Loc): Syntax[] {
-  const queriedI = ast.findIndex((sexp) => sexp.range.contains(queryLoc))
+export function getQueriedProgram(
+  prog: A.Prog,
+  queryLoc: Loc,
+): { prog: A.Prog; range: Range } {
+  const queriedI = prog.findIndex((stmt) => stmt.range.contains(queryLoc))
   if (queriedI < 0) {
     throw new ScamperError(
       "Parser",
       `Received invalid query location: ${queryLoc.toString()}`,
     )
   }
-  return ast.map((sexp, i) =>
-    i === queriedI ? getReportedSyntax(sexp, queryLoc) : sexp,
-  )
+  const { stmt, range } = getReportedStmt(prog[queriedI], queryLoc)
+  return {
+    prog: prog.map((s, i) => (i === queriedI ? stmt : s)),
+    range,
+  }
 }
 
 /**
- * Precondition: sexp.range contains queryLoc
+ * Precondition: stmt.range contains queryLoc
  */
-export function getReportedSyntax(sexp: Syntax, queryLoc: Loc): Syntax {
-  const { value, range, comments } = sexp
-  if (!isList(value)) {
-    return makeWrappedSyntax(value, range)
-  }
-
-  // otherwise, we queried something inside a function application
-  // find the exact value that was queried
-  const elems = listToVector(value)
-
-  // we broke because we either queried the head or we encountered a null
-  if (elems.length === 0) {
-    return makeWrappedSyntax(value, range)
-  }
-
-  let queriedI = -1
-  for (let i = 0; i < elems.length; i++) {
-    const head = elems[i]
-    if (!isSyntax(head)) {
-      throw new ICE(
-        "getReportedSyntax",
-        "Encountered a non-syntax value while traversing the AST",
-      )
+export function getReportedStmt(
+  stmt: A.Stmt,
+  queryLoc: Loc,
+): { stmt: A.Stmt; range: Range } {
+  switch (stmt.tag) {
+    case "define": {
+      const inner = getReportedExp(stmt.value, queryLoc)
+      return {
+        stmt: A.mkDefine(stmt.name, inner.exp, stmt.range, stmt.docComments),
+        range: inner.range,
+      }
     }
-    if (head.range.contains(queryLoc)) {
-      // we found it, break
-      queriedI = i
-      break
+    case "display": {
+      const inner = getReportedExp(stmt.value, queryLoc)
+      return { stmt: A.mkDisp(inner.exp, stmt.range), range: inner.range }
     }
-    // otherwise keep looking
+    case "stmtexp": {
+      const inner = getReportedExp(stmt.expr, queryLoc)
+      return { stmt: A.mkStmtExp(inner.exp, stmt.range), range: inner.range }
+    }
+    case "import":
+    case "struct":
+      // N.B., these have no expression content to report on. In practice
+      // this is unreachable from the UI: the caller (tokenizeAndParse) only
+      // ever acts on the result when the queried statement is a `define`
+      // with a docstring, so querying an import/struct statement is always
+      // rejected downstream regardless of what's returned here.
+      return { stmt, range: stmt.range }
   }
-
-  if (queriedI < 0) {
-    // we hit the end of the list without finding something to query,
-    // but we still know that this list was queried.
-    // thus, we must have queried the ending bracket of the list.
-    // so, query the original syntax
-    // TODO: the edge case is if someone was working with a cons-like list, and
-    //  for some odd reason decided to query the final null in the cons. then, our
-    //  assumption that they queried the ending bracket doesn't hold.
-    //  let's consider that later.
-    return makeWrappedSyntax(value, range)
-  }
-
-  // note: if queriedI >= 0, we know it must be a syntax node
-  // (since our traversal should have caught it otherwise)
-  const head = elems[queriedI] as Syntax
-  if (queriedI !== 0) {
-    // this was not the first thing in the application,
-    // so we're free to just go deeper
-    return mkSyntax(
-      mkList(
-        ...elems.map((elem, i) =>
-          i === queriedI ? getReportedSyntax(head, queryLoc) : elem,
-        ),
-      ),
-      range,
-      comments,
-    )
-  }
-
-  // we queried the head of the function application.
-  const { value: hValue, range: hRange } = head
-  if (isSym(hValue) && reservedWords.includes(hValue.value)) {
-    // we can't report deeper into this reserved function application
-    // so we'll just attempt to report the resulting value from this instead
-    // so wrap the overall expression and return
-    return makeWrappedSyntax(value, range)
-  }
-
-  let replacement: Syntax
-  if (isSym(hValue) || !isList(hValue) || hValue === null) {
-    // application of a defined function OR attempted application of a non-function value
-    // just wrap the head in a report
-    replacement = makeWrappedSyntax(hValue, hRange)
-  } else {
-    // this is an anonymous function, we can go deeper
-    replacement = getReportedSyntax(head, queryLoc)
-  }
-  // return our initial sexp which owned this list
-  return mkSyntax(
-    mkList(...elems.map((elem, i) => (i === 0 ? replacement : elem))),
-    range,
-    comments,
-  )
 }
 
-function makeWrappedSyntax(
-  value: Syntax["value"],
-  range: Syntax["range"],
-): Syntax {
-  return mkSyntax(mkList(mkSyntax(mkSym("report")), value), range)
+/**
+ * The ordered list of an expression's immediate sub-expression "slots" --
+ * each one pairs the child expression with a function that rebuilds the
+ * parent with that one child replaced. Used by getReportedExp to find the
+ * most specific sub-expression containing the query location.
+ */
+interface Slot {
+  exp: A.Exp
+  rebuild: (replacement: A.Exp) => A.Exp
+}
+
+function slotsOf(exp: A.Exp): Slot[] {
+  switch (exp.tag) {
+    case "lit":
+    case "var":
+    case "quote":
+      return []
+
+    case "app":
+      return [
+        { exp: exp.head, rebuild: (r) => A.mkApp(r, exp.args, exp.range) },
+        ...exp.args.map((a, i) => ({
+          exp: a,
+          rebuild: (r: A.Exp) =>
+            A.mkApp(
+              exp.head,
+              exp.args.map((x, j) => (j === i ? r : x)),
+              exp.range,
+            ),
+        })),
+      ]
+
+    case "lam":
+      return [
+        {
+          exp: exp.body,
+          rebuild: (r) => A.mkLam(exp.params, r, exp.range, exp.restParam),
+        },
+      ]
+
+    case "if":
+      return [
+        {
+          exp: exp.guard,
+          rebuild: (r) => A.mkIf(r, exp.ifB, exp.elseB, exp.range),
+        },
+        {
+          exp: exp.ifB,
+          rebuild: (r) => A.mkIf(exp.guard, r, exp.elseB, exp.range),
+        },
+        {
+          exp: exp.elseB,
+          rebuild: (r) => A.mkIf(exp.guard, exp.ifB, r, exp.range),
+        },
+      ]
+
+    // "and"/"or"/"begin"/"section" all share the same shape (a flat list of
+    // sub-expressions), differing only in which constructor rebuilds them.
+    case "and":
+    case "or":
+    case "begin":
+    case "section": {
+      const mk = {
+        and: A.mkAnd,
+        or: A.mkOr,
+        begin: A.mkBegin,
+        section: A.mkSection,
+      }[exp.tag]
+      return exp.exps.map((e, i) => ({
+        exp: e,
+        rebuild: (r: A.Exp) =>
+          mk(
+            exp.exps.map((x, j) => (j === i ? r : x)),
+            exp.range,
+          ),
+      }))
+    }
+
+    case "let":
+    case "let*": {
+      const mk = exp.tag === "let" ? A.mkLet : A.mkLetS
+      return [
+        ...exp.bindings.map((b, i) => ({
+          exp: b.value,
+          rebuild: (r: A.Exp) =>
+            mk(
+              exp.bindings.map((x, j) =>
+                j === i ? { name: x.name, value: r } : x,
+              ),
+              exp.body,
+              exp.range,
+            ),
+        })),
+        {
+          exp: exp.body,
+          rebuild: (r: A.Exp) => mk(exp.bindings, r, exp.range),
+        },
+      ]
+    }
+
+    case "cond":
+      return exp.branches.flatMap((b, i) => [
+        {
+          exp: b.test,
+          rebuild: (r: A.Exp) =>
+            A.mkCond(
+              exp.branches.map((x, j) =>
+                j === i ? { test: r, body: x.body } : x,
+              ),
+              exp.range,
+            ),
+        },
+        {
+          exp: b.body,
+          rebuild: (r: A.Exp) =>
+            A.mkCond(
+              exp.branches.map((x, j) =>
+                j === i ? { test: x.test, body: r } : x,
+              ),
+              exp.range,
+            ),
+        },
+      ])
+
+    case "match":
+      return [
+        {
+          exp: exp.scrutinee,
+          rebuild: (r) => A.mkMatch(r, exp.branches, exp.range),
+        },
+        // N.B., patterns aren't reportable expressions -- only branch bodies
+        // are considered here, matching the fact that a match branch's
+        // pattern is never itself evaluated at runtime.
+        ...exp.branches.map((b, i) => ({
+          exp: b.body,
+          rebuild: (r: A.Exp) =>
+            A.mkMatch(
+              exp.scrutinee,
+              exp.branches.map((x, j) =>
+                j === i ? { pat: x.pat, body: r } : x,
+              ),
+              exp.range,
+            ),
+        })),
+      ]
+
+    case "report":
+      return [{ exp: exp.exp, rebuild: (r) => A.mkReport(r, exp.range) }]
+  }
+}
+
+/**
+ * Precondition: exp.range contains queryLoc
+ */
+export function getReportedExp(
+  exp: A.Exp,
+  queryLoc: Loc,
+): { exp: A.Exp; range: Range } {
+  for (const slot of slotsOf(exp)) {
+    if (slot.exp.range.contains(queryLoc)) {
+      const inner = getReportedExp(slot.exp, queryLoc)
+      return { exp: slot.rebuild(inner.exp), range: inner.range }
+    }
+  }
+  // N.B., none of this expression's sub-expression slots contain the query
+  // location, but the expression itself does (by precondition) -- so the
+  // query must have landed on syntax that belongs to this node itself (a
+  // keyword, a bracket, or a leaf with no children at all). Wrap the whole
+  // thing.
+  return { exp: A.mkReport(exp, exp.range), range: exp.range }
 }

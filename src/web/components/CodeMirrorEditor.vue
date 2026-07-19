@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue"
 import { EditorView } from "@codemirror/view"
-import { mkNoFileEditorState } from "../codemirror"
+import { mkNoFileEditorState } from "../codemirror/codemirror"
 import {
   type CodeMirrorEditorAdapter,
   createCodeMirrorEditorAdapter,
-} from "./codemirror-editor-adapter"
-import { useEditorRegistration } from "./editor-context"
-import { createViewChangeNotifier } from "./query/query-modal-extension"
+} from "../composables/codemirror-editor-adapter"
+import { useEditorRegistration } from "../composables/editor-context"
 
 const emit = defineEmits<{ dirty: [] }>()
 
@@ -16,33 +15,24 @@ const containerRef = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
 let adapter: CodeMirrorEditorAdapter | null = null
 
-const notifier = createViewChangeNotifier()
-
 onMounted(() => {
   if (!containerRef.value) return
   editorView = new EditorView({
-    state: mkNoFileEditorState([notifier.extension]),
+    state: mkNoFileEditorState(),
     parent: containerRef.value,
   })
-  adapter = createCodeMirrorEditorAdapter(
-    editorView,
-    () => {
-      emit("dirty")
-    },
-    {
-      extraExtensions: [notifier.extension],
-      subscribe: (listener) => notifier.subscribe(listener),
-    },
-  )
+  adapter = createCodeMirrorEditorAdapter(editorView, () => {
+    emit("dirty")
+  })
   editorRegistration.register(adapter)
 })
 
 onUnmounted(() => {
   if (adapter) {
+    adapter.destroy()
     editorRegistration.unregister(adapter)
     adapter = null
   }
-  notifier.dispose()
   editorView?.destroy()
   editorView = null
 })

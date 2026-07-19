@@ -1,5 +1,5 @@
 import { vi } from "vitest"
-import { Fiber, StepResult, displayStep, traceStep } from "../src/lpm/fiber"
+import { displayStep, Fiber, StepResult, traceStep } from "../src/lpm/fiber"
 import {
   LoggingChannel,
   Prog,
@@ -8,11 +8,11 @@ import {
   Stmt,
   Value,
 } from "../src/lpm"
-import { DisplayTask, QueryTask, SchedulerTask } from "../src/scheduler"
+import { DisplayTask, QueryTask, SchedulerTask } from "../src/lpm/scheduler"
 import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
-import { ScamperInstance } from "../src/scamper-instance"
 import * as U from "../src/lpm/util"
 import * as process from "node:process"
+import * as SchedulerYield from "../src/lpm/scheduler-yield"
 
 export type { QueryTask, SchedulerTask }
 
@@ -21,9 +21,9 @@ const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
   fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
-    ['+', (a: number, b: number) => a + b],
-    ['-', (a: number, b: number) => a - b],
-    ['*', (a: number, b: number) => a * b]
+    ["+", (a: number, b: number) => a + b],
+    ["-", (a: number, b: number) => a - b],
+    ["*", (a: number, b: number) => a * b],
   )
   return fiber
 }
@@ -86,24 +86,25 @@ export const QUANTUM_WAIT_MS = 100
 let schedulerYieldPatched = false
 
 /**
- * In vitest/jsdom the scheduler-polyfill's `yield()` resolves without handing
- * off to timer macrotasks, so a running `#execute()` loop can starve
- * `setTimeout`-based sleeps. Patch yield once per test file so quanta still
- * use the real API but timers can interleave.
+ * In vitest/jsdom, `schedulerYield()`'s MessageChannel-based fallback can
+ * still resolve ahead of pending `setTimeout`-based sleeps, so a running
+ * `#execute()` loop can starve them. Patch yield once per test file so
+ * quanta still use the real implementation but timers can interleave.
  */
 export function patchSchedulerYieldForTests(): void {
   if (schedulerYieldPatched) {
     return
   }
   schedulerYieldPatched = true
-  const origYield = scheduler.yield.bind(scheduler)
-  scheduler.yield = () =>
+  const origYield = SchedulerYield.schedulerYield
+  vi.spyOn(SchedulerYield, "schedulerYield").mockImplementation(() =>
     origYield().then(
       () =>
         new Promise<void>((resolve) => {
           setTimeout(resolve, 0)
         }),
-    )
+    ),
+  )
 }
 
 export function sleep(ms: number): Promise<void> {

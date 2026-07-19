@@ -3,8 +3,8 @@ import * as FS from "../../fs"
 import { onMounted, shallowRef } from "vue"
 import { ScamperError } from "../../lpm/error"
 import OutputPane from "./OutputPane.vue"
-import type { OutputPaneType } from "./use-output-pane"
-import { ScamperInstance } from "../../scamper"
+import type { OutputPaneType } from "../composables/use-output-pane"
+import Scamper from "../../scamper"
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 const version = shallowRef("")
@@ -36,7 +36,7 @@ onMounted(async () => {
   }
 
   const src = await fs.loadFile(filename)
-  ScamperInstance.getInstance().execute({ src, out: display, err: display })
+  await Scamper.getInstance().execute({ src, out: display, err: display })
 
   version.value = `(${APP_VERSION})`
 })

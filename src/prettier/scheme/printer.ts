@@ -88,6 +88,7 @@ export const SchemePrinter: Printer = {
         return group([
           "(lambda (",
           join(" ", node.params),
+          node.restParam ? [" . ", node.restParam] : "",
           ")",
           indent([line, path.call(print, "body")]),
           ")",
