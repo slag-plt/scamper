@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
+import { useScamperSession } from "../composables/use-scamper-session"
 
-const props = defineProps<{
+defineProps<{
   currentFile?: string | null
-  run?: () => Promise<void>
-  trace?: () => void
-  cancel?: () => void
 }>()
 
 const emit = defineEmits<{
@@ -13,15 +11,16 @@ const emit = defineEmits<{
   toggleSidebar: []
 }>()
 
-const isRunInProgress = ref(false)
+const session = useScamperSession()
+
+const isRunInProgress = computed(() => session.currentRun.value !== null)
 
 async function handleRun() {
-  isRunInProgress.value = true
-  try {
-    await props.run?.()
-  } finally {
-    isRunInProgress.value = false
-  }
+  await session.execute()
+}
+
+function handleTrace() {
+  void session.execute({ tracing: true })
 }
 
 const search = ref("")
@@ -44,7 +43,7 @@ function searchOpenWindow(searchTerm: string) {
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="cancel?.()"
+          @click="session.stopRun()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -59,7 +58,7 @@ function searchOpenWindow(searchTerm: string) {
       <button
         class="fa-solid fa-route"
         aria-label="Trace"
-        @click="trace?.()"
+        @click="handleTrace"
       ></button>
       <button
         class="fa-solid fa-window-maximize"
