@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { reactive, Ref, ref, h } from "vue"
-import { toRaw, isProxy } from 'vue';
-
-
-import { computed } from "vue"
+import { ref } from "vue"
 import { Doc } from "./api/docs.js"
 import DocEntry from "./DocEntry.vue"
 //import libs from "./DocsApp.vue"
@@ -23,25 +19,10 @@ import * as Html from "./api/html.js"
 import * as Reactive from "./api/reactive.js"
 import * as Data from "./api/data.js"
 import * as Rex from "./api/rex.js"
-import { RefSymbol } from "@vue/reactivity";
-
-interface Entry {
-  id: string
-  name: string
-  doc: Doc
-}
 
 const props = defineProps<{
   searchIn: string
 }>()
-
-const entries = computed<Entry[]>(() => {
-  return Object.entries(filteredLibs).map(([name, doc]) => ({
-    id: name,
-    name: (doc as Doc).name,
-    doc: doc as Doc,
-  }))
-})
 
 const libs: [string, object][] = [
   ["prelude", Prelude],
@@ -63,7 +44,7 @@ function setSimple() {
   filteredLibs.value = []
   const simpleLibs: any[] = []
   Object.entries(libs).forEach(([,[, lib]]) => {
-    Object.entries(lib).forEach(([n, foo]) => {
+    Object.entries(lib).forEach(([, foo]) => {
       simpleLibs.push(foo)
     })
   });
@@ -142,10 +123,10 @@ function checkArgs(foo: string | object) {
     if (name === "args") {
       //console.log("argArr", argArr)
 
-      Object.entries(argArr).forEach(([,arg]) => {
+      Object.entries(argArr).forEach(([,arg]: [string, unknown]) => {
         //console.log("arg", arg)
       
-        Object.entries(arg).forEach(([key, value]) => {
+        Object.entries(arg as any).forEach(([key, value]) => {
           //console.log("key", key, "value", value)
 
           if (key === "desc") {
@@ -182,7 +163,7 @@ function checkArgsAnd(foo: string | object) {
       Object.entries(argArr).forEach(([,arg]) => {
         //console.log("arg", arg)
       
-        Object.entries(arg).forEach(([key, value]) => {
+        Object.entries(arg as any).forEach(([key, value]) => {
           //console.log("key", key, "value", value)
 
           if (key === "desc") {
@@ -293,8 +274,6 @@ function addToLib() {
 
   filteredLibs.value = newArr
 }
-
-const entete = ref()
 
 const tagList = ref([
   
@@ -435,15 +414,6 @@ const types = ref([
   { id: 311, val: 'vector' },
 ])
 
-
-function makeString(foo: string): string {
-  let str = ""
-  for (const [key, value] of Object.entries(foo)) {
-    str += `${key}: ${value}\n`     
-  }
-  return str + "\n"
-}
-
 </script>
 
 <!-- Tag selection goes here -->
@@ -527,14 +497,13 @@ function makeString(foo: string): string {
       <h3> <strong>Search Results</strong> </h3>
       <div class="api">
         <div class="index2"> 
-          <div ref="entete" class="entries"> {{(filteredLibs.length === 0)? findSearch() : null}} {{(filteredLibs.length === 0)? setSimple() : null}}
-              <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']"> 
+          <div class="entries"> {{(filteredLibs.length === 0)? findSearch() : null}} {{(filteredLibs.length === 0)? setSimple() : null}}
+              <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']">
                 <DocEntry
                   :id="foo['name']"
                   :key="foo['name']"
                   :doc="foo as Doc"
                 />
-                <!-- <text>{{ makeString(foo) }}</text> -->
               </div>
           </div>
         </div>
