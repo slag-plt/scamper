@@ -1,7 +1,7 @@
 import fs from "fs"
 import { parseArgs } from "node:util"
 
-// import { builtinLibs, initializeLibs } from "../lib"
+// import { builtinLibs, initializeLibs } from "../js"
 import { ConsoleOutput } from "../lpm/output"
 import Scamper from "../scamper"
 

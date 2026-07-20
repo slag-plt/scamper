@@ -4,7 +4,7 @@ import * as U from "../util"
 /**
  * Produces a short, human-readable description of a predicate's name suitable
  * for embedding in an "expected ..." contract violation message, mirroring
- * the phrasing used by the specs in src/lib/contract.ts, e.g., `number?` ~>
+ * the phrasing used by the specs in src/js/contract.ts, e.g., `number?` ~>
  * `a number`, `integer?` ~> `an integer`.
  */
 function describePred(pred: string): string {
