@@ -11,6 +11,7 @@ import {
   ApHandler,
   ClsHandler,
   CtorHandler,
+  JsVarHandler,
   LitHandler,
   MatchHandler,
   PopVHandler,
@@ -208,6 +209,9 @@ export class Fiber {
         break
       case "rept":
         isMajorStep = ReptHandler(currOp, this.currentFrame, this)
+        break
+      case "jsvar":
+        isMajorStep = JsVarHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

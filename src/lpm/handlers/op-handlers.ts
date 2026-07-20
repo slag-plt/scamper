@@ -151,6 +151,10 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   return traceStep
 }
 
+export const JsVarHandler: OpHandler<"jsvar"> = (op) => {
+  throw new ICE("Fiber.JsVarHandler", `jsvar is not yet implemented: ${op.name}`)
+}
+
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {
   if (currFrame.values.length < 1) {
     throw new ICE(

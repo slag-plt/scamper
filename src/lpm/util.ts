@@ -150,6 +150,11 @@ export const mkRept = (range: Range = Range.none): L.Rept => ({
   tag: "rept",
   range,
 })
+export const mkJsVar = (name: string, range: Range = Range.none): L.JsVar => ({
+  tag: "jsvar",
+  name,
+  range,
+})
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({
