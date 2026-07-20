@@ -11,6 +11,7 @@ import Data from "./data"
 import Rex from "./rex/index.js"
 import Prelude from "./prelude/index.js"
 import Runtime from "./runtime/index.js"
+import Grader from "./grader/index.js"
 
 // N.B., a library with a renderers/ folder also needs an entry in
 // src/web/renderers.ts, or its custom Vue/HTML renderers never register in
@@ -29,6 +30,7 @@ export const builtinLibs = new Map<string, Module>([
   ["rex", Rex],
   ["prelude", Prelude],
   ["runtime", Runtime],
+  ["grader", Grader]
 ])
 
 export {

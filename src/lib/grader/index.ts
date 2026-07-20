@@ -98,6 +98,7 @@ function gradeClose() {
 Grader.registerValue('grade-close', gradeClose)
 
 function gradeTest(result: Result, score: number, final: boolean) {
+    checkContract(arguments, contract('grade-test', [C.any, C.number, C.boolean]))
     if(isResult(result)){
         if(L.isStructKind(result, 'ok')){
             process.stdout.write("{\n\"score\":")
