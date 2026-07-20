@@ -97,6 +97,22 @@ function gradeClose() {
 }
 Grader.registerValue('grade-close', gradeClose)
 
+function gradeTest(result: Result, score: number, final: boolean) {
+    if(isResult(result)){
+        if(L.isStructKind(result, 'ok')){
+            process.stdout.write("{\n\"score\":")
+            process.stdout.write(String(score))
+            process.stdout.write("\n}")
+        } else {
+            process.stdout.write("{\n\"score\":0\n}")
+        }
+        if(!final){
+            process.stdout.write(",")
+        }
+    }
+}
+Grader.registerValue('grade-test', gradeTest)
+
 export function isResult (v: any): boolean {
   return L.isStructKind(v, 'ok') || L.isStructKind(v, 'exp')
       || L.isStructKind(v, 'exn') || L.isStructKind(v, 'gen')
