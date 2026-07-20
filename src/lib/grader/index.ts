@@ -13,11 +13,11 @@ export interface ErrGen extends L.Struct { [L.structKind]: 'gen', desc: string, 
 /**
  * Currently just a duplicate of the testing library.
  * Desired features / functions to add:
- * Function to prepare stdout 'preamble'
+ * Function to prepare stdout 'preamble' (?)
  * Function to print out a specific test with field for the following:
- *   Score if correct
+ *   Score if correct (?)
  *   Get feedback on others
- * Function to wrap up stdout
+ * Function to wrap up stdout (?)
 */
 
 function gradeResultOk (desc: string): Ok {
@@ -44,21 +44,36 @@ function gradeResultErrorGeneric(desc: string, reason: string): ErrGen {
 }
 Grader.registerValue('grade-result-error-gen', gradeResultErrorGeneric)
 
-function gradeCase (desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L.ScamperFn): Result {
+function gradeCase (desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L.ScamperFn, score: number, final: boolean): Result {
   checkContract(arguments, contract('grade-case', [C.string, C.func, C.any, C.func]))
   try {
     const actual = L.callScamperFn(testFn)
     const isEqual = L.callScamperFn(eqFn, expected, actual) 
     if (isEqual === true) {
-      return gradeResultOk(desc)
+        process.stdout.write("{\n\"score\":")
+        process.stdout.write(String(score))
+        process.stdout.write("\n}")
+        if(!final){
+            process.stdout.write(",")
+        }
+        return gradeResultOk(desc)
     } else if (isEqual === false) {
-      return gradeResultErrorExpected(desc, expected, actual)
+        process.stdout.write("{\n\"score\":0\n}")
+        if(!final){
+            process.stdout.write(",")
+        }
+        return gradeResultErrorExpected(desc, expected, actual)
     } else {
-      throw new L.ScamperError('Runtime', `Test case function should have produced a boolean, produced ${L.typeOf(actual)} instead`)
+        throw new L.ScamperError('Runtime', `Test case function should have produced a boolean, produced ${L.typeOf(actual)} instead`)
     }
   } catch (e) {
+    process.stdout.write("{\n\"score\":0\n}")
+    if(!final){
+        process.stdout.write(",")
+    }
     return gradeResultErrorExn(desc, e as L.Value)
   }
+  
 }
 Grader.registerValue('grade-case', gradeCase)
 
@@ -71,6 +86,16 @@ function gradeExn (desc: string, testFn: L.ScamperFn): Result {
   }
 }
 Grader.registerValue('grade-exn', gradeExn)
+
+function gradeOpen() {
+    process.stdout.write("{\n\"tests\":\n[")
+}
+Grader.registerValue('grade-open', gradeOpen)
+
+function gradeClose() {
+    process.stdout.write("\n]\n}")
+}
+Grader.registerValue('grade-close', gradeClose)
 
 export function isResult (v: any): boolean {
   return L.isStructKind(v, 'ok') || L.isStructKind(v, 'exp')
