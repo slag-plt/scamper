@@ -40,16 +40,16 @@ const libs: [string, object][] = [
 
 let filteredLibs = ref<any[]>([])
 
-function setSimple() {
+function showEverything() {
   filteredLibs.value = []
-  const simpleLibs: any[] = []
+  const showLibs: any[] = []
   Object.entries(libs).forEach(([,[, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
-      simpleLibs.push(foo)
+      showLibs.push(foo)
     })
   });
   
-  filteredLibs.value = simpleLibs
+  filteredLibs.value = showLibs
   //console.log("this is where joy comes to die", filteredLibs)
 }
 
@@ -57,20 +57,20 @@ function findSearch() {
   let s = props.searchIn
 
   filteredLibs.value = []
-  const simpleLibs: any[] = []
+  const showLibs: any[] = []
   Object.entries(libs).forEach(([,[, lib]]) => {
     Object.entries(lib).forEach(([, foo]) => {
       Object.entries(foo).forEach(([key, value]) => {
           if (key === "name") {
             if(value === s) {
-            simpleLibs.push(foo)
+            showLibs.push(foo)
           }
         }
       })
     })
   });
   
-  filteredLibs.value = simpleLibs
+  filteredLibs.value = showLibs
 }
 
 
@@ -383,6 +383,9 @@ const aBool = ref("or")
 // ])
 // const rBool = ref("or")
 
+const noSearchText = ref(filteredLibs.value.length === 0 && props.searchIn !== "" && !((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+const noTagText = ref(filteredLibs.value.length === 0 && props.searchIn !== "" && ((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+
 const types = ref([
   { id: 307, val: 'any' },
   { id: 324, val: 'audio-node' },
@@ -421,7 +424,7 @@ const types = ref([
 
   <div class="flex-box">
     <div>
-    <h3> <strong>Search by Type</strong> </h3>
+    <h3> <strong>Filter by Type</strong> </h3>
     <div class="index">
 
 
@@ -465,7 +468,7 @@ const types = ref([
 
   </div>
 
-  <h3><strong>Search by Tag</strong> </h3>
+  <h3><strong>Filter by Tag</strong> </h3>
   <div class="index">
 
     <p class="fix-margin" >Tags:{{ tags }}</p>
@@ -480,9 +483,9 @@ const types = ref([
       </option>
     </select>
     <div v-if="TisOpen" class="dropdown-menu">
-      <label v-for="o in tagList" :key="o.id"> {{ console.log("indentList.includes(o.val)", indentList.includes(o.val), "o.val", o.val) }}
+      <label v-for="o in tagList" :key="o.id">
         <div class="flex-box-skinny">
-          <div v-if="indentList.includes(o.val)" class="invisible-color"></div>
+          <div v-if="indentList.includes(o.val)" class="left-margin"></div>
           <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
           {{ o.val }}</p>
         </div>
@@ -490,14 +493,26 @@ const types = ref([
     </div>
   
     </div>
-      <button class="enter-button" @click="() => { addToLib() }"><strong>Enter</strong></button>
+      <button
+        class="enter-button" @click="() => { 
+          addToLib(); 
+          noSearchText = filteredLibs.length === 0 && props.searchIn !== '' && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0));
+          noTagText = filteredLibs.length === 0 && ((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0));
+          //console.log('noSearchText', noSearchText, 'tag', noTagText, 'filteredLibs.length', filteredLibs.length, 'argumentTypes.length', argumentTypes.length, 'returnTypes.length', returnTypes.length, 'tags.length', tags.length, 'boolean', filteredLibs.length === 0 && ((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)));
+        }"><strong>Enter</strong></button>
     </div>
 
     <div>
       <h3> <strong>Search Results</strong> </h3>
       <div class="api">
         <div class="index2"> 
-          <div class="entries"> {{(filteredLibs.length === 0)? findSearch() : null}} {{(filteredLibs.length === 0)? setSimple() : null}}
+          <div class="entries"> 
+            {{(filteredLibs.length === 0)? findSearch() : null }} 
+            <div v-if="noSearchText"> {{"No search results found for " + props.searchIn}} </div>
+            <div v-if="noTagText"> {{"No tag filter results found"}} </div>
+            <!-- {{(filteredLibs.length === 0 && props.searchIn !== "" && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)))? "No search results found for " + props.searchIn : null}}  -->
+            <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
+            {{(filteredLibs.length === 0)? showEverything() : null}}
               <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']">
                 <DocEntry
                   :id="foo['name']"
@@ -599,8 +614,8 @@ const types = ref([
   margin-top: 0px;
 }
 
-.invisible-color{
-  margin-left: 15px
+.left-margin{
+  margin-left: 20px
 }
 
 .entries {
