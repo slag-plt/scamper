@@ -18,7 +18,7 @@ import {
   ReptHandler,
   VarHandler,
 } from "./handlers/op-handlers"
-import builtinLibs from "../lib"
+import { builtinLibs } from "./builtin-registry.js"
 
 
 export interface DisplayStep { tag: "display" }

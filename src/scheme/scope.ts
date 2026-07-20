@@ -137,6 +137,11 @@ function scopeCheckExp(
       // N.B., no need to scope check a "frozen" AST
       return
     }
+    case "jsvar": {
+      // N.B., no variable references to check -- the argument is a literal
+      // string naming a JS binding, resolved at runtime.
+      return
+    }
     case "report": {
       scopeCheckExp(errors, globals, locals, e.exp)
       return

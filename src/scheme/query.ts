@@ -75,6 +75,7 @@ function slotsOf(exp: A.Exp): Slot[] {
     case "lit":
     case "var":
     case "quote":
+    case "jsvar":
       return []
 
     case "app":

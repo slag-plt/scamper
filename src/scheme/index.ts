@@ -1,6 +1,5 @@
 import * as S from "../lpm"
 import { Loc, Range, ScamperError } from "../lpm"
-import { builtinLibs } from "../lib"
 import { lowerProgram } from "./codegen.js"
 import { expandProgram } from "./expansion.js"
 import { sugarExpr } from "./sugarer.js"
@@ -11,6 +10,13 @@ import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedProgram } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
 import { parseFunctionDocFromComments } from "./docstring/docstring.js"
+// N.B., src/lib/index.ts compiles and runs its own Scamper source (the
+// builtin libraries) through this module's `compile()` at load time, which
+// makes this a circular import. Keeping it as the *last* import here matters:
+// by the time this module re-enters (via that circular reference back into
+// `compile()`), every other export `compile()` depends on must already be
+// bound, or the reentrant call sees them mid-TDZ.
+import { builtinLibs } from "../lib"
 
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),

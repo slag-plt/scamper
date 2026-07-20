@@ -10,6 +10,7 @@ export const reservedWords = [
   "if",
   "import",
   "display",
+  "js-var",
   "lambda",
   "let",
   "let*",

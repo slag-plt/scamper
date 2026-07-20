@@ -46,6 +46,7 @@ expression {
   Boolean |
   Char |
   Quote { "'" expression | paren<kw<"quote"> expression> } |
+  JsVar { paren<kw<"js-var"> String> } |
   Vector { "[" expression* "]" } |
   Lambda { paren<kw<"lambda"> arglist expression> } |
   If { paren<kw<"if"> expression expression expression> } |

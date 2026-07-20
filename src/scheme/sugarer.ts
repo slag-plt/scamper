@@ -61,6 +61,9 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case "quote": {
       return e
     }
+    case "jsvar": {
+      return e
+    }
     case "let*": {
       return AST.mkLetS(
         e.bindings.map(({ name, value }) => ({

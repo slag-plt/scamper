@@ -63,6 +63,8 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
       )
     case "quote":
       return e
+    case "jsvar":
+      return e
     case "let*":
       return A.mkLetS(
         e.bindings.map((b) => ({
@@ -133,6 +135,8 @@ export function expandExpr(e: A.Exp): A.Exp {
         e.range,
       )
     case "quote":
+      return e
+    case "jsvar":
       return e
 
     // Derived forms

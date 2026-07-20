@@ -147,6 +147,10 @@ export interface Quote extends Tagged, Node {
   tag: "quote"
   value: L.Value
 }
+export interface JsVar extends Tagged, Node {
+  tag: "jsvar"
+  name: string
+}
 
 // Sugared Forms
 export interface LetS extends Tagged, Node {
@@ -185,6 +189,7 @@ export type Exp =
   | If
   | Match
   | Quote
+  | JsVar
   | LetS
   | And
   | Or
@@ -320,6 +325,10 @@ export const mkQuote = (
   value: L.Value,
   range: L.Range = L.Range.none,
 ): Quote => ({ tag: "quote", value, range })
+export const mkJsVar = (
+  name: string,
+  range: L.Range = L.Range.none,
+): JsVar => ({ tag: "jsvar", name, range })
 export const mkLetS = (
   bindings: { name: string; value: Exp }[],
   body: Exp,
@@ -398,6 +407,7 @@ export function isExp(v: unknown): v is Exp {
       "if",
       "match",
       "quote",
+      "jsvar",
       "let*",
       "and",
       "or",
@@ -473,6 +483,8 @@ export function expToString(e: Exp): string {
       return `(match ${expToString(e.scrutinee)} ${e.branches.map(({ pat, body }) => `[${patToString(pat)} ${expToString(body)}]`).join(" ")})`
     case "quote":
       return `(quote ${JSON.stringify(e.value)})`
+    case "jsvar":
+      return `(js-var ${JSON.stringify(e.name)})`
     case "let*":
       return `(let* (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(" ")}) ${expToString(e.body)})`
     case "and":
@@ -589,6 +601,8 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     )
   } else if (e1.tag === "quote" && e2.tag === "quote") {
     return L.equals(e1.value, e2.value)
+  } else if (e1.tag === "jsvar" && e2.tag === "jsvar") {
+    return e1.name === e2.name
   } else if (e1.tag === "let*" && e2.tag === "let*") {
     return (
       e1.bindings.length === e2.bindings.length &&

@@ -3,6 +3,7 @@ import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../frame"
 import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch, vectorToList } from "../util"
+import { lookup } from "../../js/index.js"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -151,8 +152,9 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   return traceStep
 }
 
-export const JsVarHandler: OpHandler<"jsvar"> = (op) => {
-  throw new ICE("Fiber.JsVarHandler", `jsvar is not yet implemented: ${op.name}`)
+export const JsVarHandler: OpHandler<"jsvar"> = (op, currFrame) => {
+  currFrame.values.push(lookup(op.name))
+  return minorStep
 }
 
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {

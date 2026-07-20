@@ -157,6 +157,9 @@ export const SchemePrinter: Printer = {
       case "quote":
         return `'${TextRenderer.render(node.value)}`
 
+      case "jsvar":
+        return `(js-var ${JSON.stringify(node.name)})`
+
       case "let*": {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node

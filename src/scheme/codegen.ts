@@ -78,6 +78,8 @@ function lowerExpr(e: A.Exp): L.Blk {
       ]
     case "quote":
       return [L.mkLit(e.value, e.range)]
+    case "jsvar":
+      return [L.mkJsVar(e.name, e.range)]
     case "report":
       return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:
