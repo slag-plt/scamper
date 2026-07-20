@@ -91,7 +91,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.canvas }
 }
 
-export function reactiveCanvas<T> (
+export function reactive_reactiveCanvas<T> (
     width: number,
     height: number,
     init: T,
@@ -151,7 +151,7 @@ class ReactiveContainer<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.container }
 }
 
-export function reactiveContainer<T>(
+export function reactive_reactiveContainer<T>(
     init: T,
     view: L.ScamperFn,
     update: L.ScamperFn,
@@ -208,7 +208,7 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
   return { [L.scamperTag]: 'struct', [L.structKind]: 'subscription', register: sub }
 }
 
-export function onButtonClick(button: HTMLButtonElement): Subscription {
+export function reactive_onButtonClick(button: HTMLButtonElement): Subscription {
   checkContract(arguments, contract('on-button-click', [C.html]))
   return subscription((react) => {
     button.addEventListener('click', () => {
@@ -220,7 +220,7 @@ export function onButtonClick(button: HTMLButtonElement): Subscription {
   })
 }
 
-export function onMouseClick(): Subscription {
+export function reactive_onMouseClick(): Subscription {
   checkContract(arguments, contract('on-mouse-click', []))
   return subscription((react) => {
     react.getElement().addEventListener('click', (event) => {
@@ -233,7 +233,7 @@ export function onMouseClick(): Subscription {
   })
 }
 
-export function onMouseHover(): Subscription {
+export function reactive_onMouseHover(): Subscription {
   checkContract(arguments, contract('on-mouse-hover', []))
   return subscription((react) => {
     react.getElement().addEventListener('mousemove', (event) => {
@@ -246,7 +246,7 @@ export function onMouseHover(): Subscription {
   })
 }
 
-export function onKeyDown(): Subscription {
+export function reactive_onKeyDown(): Subscription {
   checkContract(arguments, contract('on-key-down', []))
   return subscription((react) => {
     document.addEventListener('keydown', (event) => {
@@ -258,7 +258,7 @@ export function onKeyDown(): Subscription {
   })
 }
 
-export function onKeyUp(): Subscription {
+export function reactive_onKeyUp(): Subscription {
   checkContract(arguments, contract('on-key-up', []))
   return subscription((react) => {
     document.addEventListener('keyup', (event) => {
@@ -270,7 +270,7 @@ export function onKeyUp(): Subscription {
   })
 }
 
-export function onTimer(interval: number): Subscription {
+export function reactive_onTimer(interval: number): Subscription {
   checkContract(arguments, contract('on-timer', [C.nonneg]))
   return subscription((react) => {
     let time = performance.now()
@@ -285,7 +285,7 @@ export function onTimer(interval: number): Subscription {
   })
 }
 
-export function onNote(handlers: NoteHandlers): Subscription {
+export function reactive_onNote(handlers: NoteHandlers): Subscription {
   checkContract(arguments, contract('on-note', [C.any]))
   return subscription((react) => {
     handlers.push((msg) => { react.update(msg) })

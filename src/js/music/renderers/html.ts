@@ -1,5 +1,5 @@
 import HtmlRenderer from '../../../lpm/renderers/html.js'
-import { Composition, compositionQ, playComposition } from '../index.js'
+import { Composition, music_compositionQ, music_playComposition } from '../index.js'
 import { waf } from '../webaudiofont/webaudiofont.js'
 
 function render (v: any): HTMLElement {
@@ -14,7 +14,7 @@ function render (v: any): HTMLElement {
     if (waf()!.audioContext.state === 'suspended') {
       waf()!.audioContext.resume().catch(console.error)
     }
-    timer = playComposition(composition)
+    timer = music_playComposition(composition)
   }
   stopButton.onclick = function (_e) {
     if (timer !== undefined) {
@@ -27,4 +27,4 @@ function render (v: any): HTMLElement {
   return ret
 }
 
-HtmlRenderer.registerCustomRenderer(compositionQ, render)
+HtmlRenderer.registerCustomRenderer(music_compositionQ, render)

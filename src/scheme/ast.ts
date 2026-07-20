@@ -62,13 +62,24 @@ export interface Comment {
 // s ::= e
 //     | (import m)
 //     | (define x e)
-//     | ;;; <docstring>
+//     | <docstring>
 //       (define x e)
 //     | (display e)
 //     | e
 //
 //     -- Sugared form
 //     | (struct S (f1 ... fk))
+//
+// <docstring> ::= ;;; (fn x1 ... xk) -> typred
+//                 ;;;   x1 : typred - <description>
+//                 ;;;   ...
+//                 ;;;   xk : typred - <description>
+//                 ;;; @tag1 <description>
+//                 ;;; ...
+//                 ;;; @tagk <description>
+//                 ;;; <description>
+//
+// typred ::= f | (f1 ... fk)
 
 ///// Patterns /////
 

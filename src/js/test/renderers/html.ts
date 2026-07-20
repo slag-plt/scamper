@@ -1,8 +1,8 @@
 import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
-import { Result, isResult } from '../index.js'
+import { Result, test_isResult } from '../index.js'
 
-HtmlRenderer.registerCustomRenderer(isResult, (v: any) => {
+HtmlRenderer.registerCustomRenderer(test_isResult, (v: any) => {
   const result = v as Result
   const ret = document.createElement('div')
   ret.classList.add('test-result')

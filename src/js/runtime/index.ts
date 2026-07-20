@@ -3,7 +3,7 @@ import * as L from '../../lpm'
 /**
  * @returns a predicate function for struct types t.
  */
-export function mkPredFn (t: string): (v: L.Value) => boolean {
+export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {
   return (v: L.Value) => {
     return L.isStructKind(v, t)
   }
@@ -12,7 +12,7 @@ export function mkPredFn (t: string): (v: L.Value) => boolean {
 /**
  * @returns a constructor function for struct type t with the given field names.
  */
-export function mkCtorFn (t: string, fieldNames: string[]): (...args: L.Value[]) => L.Struct {
+export function runtime_mkCtorFn (t: string, fieldNames: string[]): (...args: L.Value[]) => L.Struct {
   return (...args: L.Value[]) => {
     if (args.length !== fieldNames.length) {
       throw new L.ScamperError('Runtime', `Constructor ${t} expects ${fieldNames.length} arguments, received ${args.length}`)
@@ -24,7 +24,7 @@ export function mkCtorFn (t: string, fieldNames: string[]): (...args: L.Value[])
 /**
  * @return field accessor function for struct type t and field name f.
  */
-export function mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
+export function runtime_mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
   return (v: L.Value) => {
     if (L.isStructKind(v, t)) {
       if (!(f in v)) {
@@ -40,6 +40,6 @@ export function mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
 /**
  * @return the type of the given value as a string
  */
-export function typeOf (v: L.Value): string {
+export function runtime_typeOf (v: L.Value): string {
   return L.typeOf(v)
 }

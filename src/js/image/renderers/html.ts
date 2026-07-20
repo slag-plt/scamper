@@ -1,43 +1,43 @@
 import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
-import { Rgb, Hsv, isRgb, isHsv, rgbPseudoComplement, rgbToString, hsvToRgb, hsvToString } from '../color.js'
-import { Drawing, drawingQ, renderer } from '../drawing.js'
-import { ReactiveImageFile, isReactiveImageFile } from '../image.js'
+import { Rgb, Hsv, image_isRgb, image_isHsv, image_rgbPseudoComplement, image_rgbToString, image_hsvToRgb, image_hsvToString } from '../color.js'
+import { Drawing, image_drawingQ, image_renderer } from '../drawing.js'
+import { ReactiveImageFile, image_isReactiveImageFile } from '../image.js'
 
 /***** Colors ******************************************************************/
 
 function renderRgb (rgb: Rgb): HTMLElement {
   const div = document.createElement('div')
-  const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rgbToString(textColor)
-  div.style.backgroundColor = rgbToString(rgb)
+  const textColor = image_rgbPseudoComplement(rgb)
+  div.style.color = image_rgbToString(textColor)
+  div.style.backgroundColor = image_rgbToString(rgb)
   div.style.width = 'fit-content'
   div.style.border = '1px solid black'
   div.style.padding = '0.25em'
-  div.textContent = rgbToString(rgb)
+  div.textContent = image_rgbToString(rgb)
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(isRgb, (v: any) => renderRgb(v as Rgb))
+HtmlRenderer.registerCustomRenderer(image_isRgb, (v: any) => renderRgb(v as Rgb))
 
 function renderHsv (hsv: Hsv): HTMLElement {
   const div = document.createElement('div')
-  const rgb = hsvToRgb(hsv)
-  const textColor = rgbPseudoComplement(rgb)
-  div.style.color = rgbToString(textColor)
-  div.style.backgroundColor = rgbToString(rgb)
+  const rgb = image_hsvToRgb(hsv)
+  const textColor = image_rgbPseudoComplement(rgb)
+  div.style.color = image_rgbToString(textColor)
+  div.style.backgroundColor = image_rgbToString(rgb)
   div.style.width = 'fit-content'
   div.style.border = '1px solid black'
   div.style.padding = '0.25em'
-  div.textContent = hsvToString(hsv)
+  div.textContent = image_hsvToString(hsv)
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(isHsv, (v: any) => renderHsv(v as Hsv))
+HtmlRenderer.registerCustomRenderer(image_isHsv, (v: any) => renderHsv(v as Hsv))
 
 /***** Drawings ****************************************************************/
 
-HtmlRenderer.registerCustomRenderer(drawingQ, (v: any) => renderer(v as Drawing))
+HtmlRenderer.registerCustomRenderer(image_drawingQ, (v: any) => image_renderer(v as Drawing))
 
 /***** Reactive image files *****************************************************/
 
@@ -84,4 +84,4 @@ function render (rif: ReactiveImageFile): HTMLElement {
   return ret
 }
 
-HtmlRenderer.registerCustomRenderer(isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
+HtmlRenderer.registerCustomRenderer(image_isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))

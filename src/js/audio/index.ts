@@ -6,7 +6,7 @@ import * as C from "../contract.js";
 // TODO: need to factor appropriately so that we aren't initializing any
 // web things unless we are definitely in the browser.
 let ctx: AudioContext | undefined;
-export const getCtx = (): AudioContext => {
+export const audio_getCtx = (): AudioContext => {
   ctx ??= new AudioContext({ sampleRate: 16000 });
   return ctx;
 };
@@ -16,7 +16,7 @@ export interface SampleNode extends L.Struct {
   data: Float32Array<ArrayBuffer>;
 }
 
-export function sampleNode(data: number[]): SampleNode {
+export function audio_sampleNode(data: number[]): SampleNode {
   checkContract(arguments, contract("sample-node", [C.vector]));
   for (const sample of data) {
     if (typeof sample !== "number" || sample < -1.0 || sample > 1.0) {
@@ -33,7 +33,7 @@ export function sampleNode(data: number[]): SampleNode {
   };
 }
 
-export function audioContext(sampleRate: number): AudioContext {
+export function audio_audioContext(sampleRate: number): AudioContext {
   checkContract(arguments, contract("audio-context", [C.integer]));
   const AudioContext = window.AudioContext;
   return new AudioContext({ sampleRate });
@@ -46,7 +46,7 @@ export interface AudioPipeline extends L.Struct {
   onOffNode: GainNode;
 }
 
-export function audioPipeline(
+export function audio_audioPipeline(
   ctx: AudioContext,
   pipeline: AudioNode,
   ...nodes: AudioNode[]
@@ -75,7 +75,7 @@ export function audioPipeline(
   };
 }
 
-export function oscillatorNode(
+export function audio_oscillatorNode(
   ctx: AudioContext,
   type: OscillatorType,
   freq: number,
@@ -101,7 +101,7 @@ export function oscillatorNode(
 // }
 // registerFn('microphone-node', microphoneNode, Audio)
 
-export function audioFileNode(
+export function audio_audioFileNode(
   ctx: AudioContext,
   filename: string,
 ): MediaElementAudioSourceNode {
@@ -112,12 +112,12 @@ export function audioFileNode(
   return source;
 }
 
-export function delayNode(ctx: AudioContext, delayTime: number): DelayNode {
+export function audio_delayNode(ctx: AudioContext, delayTime: number): DelayNode {
   checkContract(arguments, contract("delay-node", [C.any, C.integer]));
   return new DelayNode(ctx, { delayTime });
 }
 
-export function playSample(pipeline: SampleNode): void {
+export function audio_playSample(pipeline: SampleNode): void {
   checkContract(arguments, contract("play-sample", [C.any]));
   // TODO: this should never happen, when does it happen?
   // if (!L.isStructKind(pipeline, "sample")) {
@@ -126,7 +126,7 @@ export function playSample(pipeline: SampleNode): void {
   //     `expected a sample node, received ${pipeline}`,
   //   );
   // }
-  const ctx = getCtx();
+  const ctx = audio_getCtx();
   // TODO: error message function should be in some util file instead of inlined
   const data = pipeline.data;
   // N.B., for now, make the audio sample stereo (2 channels)

@@ -13,55 +13,58 @@ import * as Runtime from "./runtime/index.js"
 import * as Test from "./test/index.js"
 
 // N.B., prelude/index.ts groups a handful of dynamically-named functions
-// (list accessors, char/string comparators) into plain records rather than
-// individual named exports, since JS modules can't declare a dynamic number
-// of top-level bindings. Flatten those into the prelude namespace here so
-// they're reachable like any other export.
-const preludeNamespace: Record<string, L.Value> = {
-  ...Prelude,
-  ...Prelude.listAccessorFns,
-  ...Prelude.charCompareFns,
-  ...Prelude.charPredicateFns,
-  ...Prelude.stringCompareFns,
-}
+// (list accessors, char/string comparators) into plain records -- keyed by
+// their already-prefixed binding names -- rather than individual named
+// exports, since JS modules can't declare a dynamic number of top-level
+// bindings. The container records themselves (prelude_listAccessorFns, etc.)
+// aren't bindings anyone should look up, so they're excluded below in favor
+// of their flattened contents.
+const {
+  prelude_listAccessorFns,
+  prelude_charCompareFns,
+  prelude_charPredicateFns,
+  prelude_stringCompareFns,
+  ...preludeBindings
+} = Prelude
 
 // N.B., a library with a renderers/ folder also needs an entry in
 // src/web/renderers.ts, or its custom Vue/HTML renderers never register in
 // the browser -- this map and that file are two independent enumerations of
 // the same library set.
-const internals = new Map<string, Map<string, L.Value>>([
-  ["audio", new Map(Object.entries(Audio))],
-  ["canvas", new Map(Object.entries(Canvas))],
-  ["data", new Map(Object.entries(Data))],
-  ["html", new Map(Object.entries(Html))],
-  ["image", new Map(Object.entries(Image))],
-  ["lab", new Map(Object.entries(Lab))],
-  ["music", new Map(Object.entries(Music))],
-  ["prelude", new Map(Object.entries(preludeNamespace))],
-  ["reactive", new Map(Object.entries(Reactive))],
-  ["rex", new Map(Object.entries(Rex))],
-  ["runtime", new Map(Object.entries(Runtime))],
-  ["test", new Map(Object.entries(Test))],
+//
+// Every binding name below is prefixed with its defining module (e.g.
+// `prelude_numberQ`, `canvas_makeCanvas`) so that flattening all modules
+// into a single map can't collide.
+const internals = new Map<string, L.Value>([
+  ...Object.entries(Audio),
+  ...Object.entries(Canvas),
+  ...Object.entries(Data),
+  ...Object.entries(Html),
+  ...Object.entries(Image),
+  ...Object.entries(Lab),
+  ...Object.entries(Music),
+  ...Object.entries(preludeBindings),
+  ...Object.entries(prelude_listAccessorFns),
+  ...Object.entries(prelude_charCompareFns),
+  ...Object.entries(prelude_charPredicateFns),
+  ...Object.entries(prelude_stringCompareFns),
+  ...Object.entries(Reactive),
+  ...Object.entries(Rex),
+  ...Object.entries(Runtime),
+  ...Object.entries(Test),
 ])
 
 /**
- * Looks up a value exported by one of the standard library modules by its
- * (JS) export name, e.g. `lookup("prelude", "numberQ")`. Used by the `jsvar`
+ * Looks up a value exported by the JS native package by its (prefixed)
+ * binding name, e.g. `lookup("prelude_numberQ")`. Used by the `jsvar`
  * runtime op, which resolves Scamper code's references to raw JS values.
  */
-export function lookup(moduleName: string, varName: string): L.Value {
-  const mod = internals.get(moduleName)
-  if (!mod) {
+export function lookup(name: string): L.Value {
+  if (!internals.has(name)) {
     throw new L.ScamperError(
       "Runtime",
-      `Attempted to look up module "${moduleName}" but it does not exist!`,
+      `Attempted to look up "${name}" but it is not bound!`,
     )
   }
-  if (!mod.has(varName)) {
-    throw new L.ScamperError(
-      "Runtime",
-      `Attempted to look up "${varName}" in module "${moduleName}" but it is not bound!`,
-    )
-  }
-  return mod.get(varName)
+  return internals.get(name)
 }

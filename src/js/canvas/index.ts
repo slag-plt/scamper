@@ -1,11 +1,11 @@
 import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
-import { Drawing, render } from '../image/drawing.js'
-import { colorToRgb, colorS, rgbToString } from '../image/color.js'
-import { Font, font, fontS, fontToFontString } from '../image/font.js'
+import { Drawing, image_render } from '../image/drawing.js'
+import { image_colorToRgb, image_colorS, image_rgbToString } from '../image/color.js'
+import { Font, image_font, image_fontS, image_fontToFontString } from '../image/font.js'
 
-export function makeCanvas(width: number, height: number): HTMLCanvasElement {
+export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -13,11 +13,11 @@ export function makeCanvas(width: number, height: number): HTMLCanvasElement {
   return canvas
 }
 
-export function canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
-  checkContract(arguments, contract('canvas-rectangle!', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, colorS]))
+export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
+  checkContract(arguments, contract('canvas-rectangle!', [C.any, C.integer, C.integer, C.integer, C.integer, C.string, image_colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = rgbToString(colorToRgb(color))
-  ctx.strokeStyle = rgbToString(colorToRgb(color))
+  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
   if (mode === 'solid') {
     ctx.fillRect(x, y, width, height)
   } else if (mode === 'outline') {
@@ -27,11 +27,11 @@ export function canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number,
   }
 }
 
-export function canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
-  checkContract(arguments, contract('canvas-ellipse!', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, colorS]))
+export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
+  checkContract(arguments, contract('canvas-ellipse!', [C.any, C.number, C.number, C.number, C.number, C.number, C.number, C.number, C.string, image_colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = rgbToString(colorToRgb(color))
-  ctx.strokeStyle = rgbToString(colorToRgb(color))
+  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
   ctx.beginPath()
   ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
   if (mode === 'solid') {
@@ -43,11 +43,11 @@ export function canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, r
   }
 }
 
-export function canvasCircle(canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
-  checkContract(arguments, contract('canvas-circle!', [C.any, C.number, C.number, C.number, C.string, colorS]))
+export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
+  checkContract(arguments, contract('canvas-circle!', [C.any, C.number, C.number, C.number, C.string, image_colorS]))
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = rgbToString(colorToRgb(color))
-  ctx.strokeStyle = rgbToString(colorToRgb(color))
+  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, 2 * Math.PI)
   if (mode === 'solid') {
@@ -59,23 +59,23 @@ export function canvasCircle(canvas: HTMLCanvasElement, x: number, y: number, ra
   }
 }
 
-export function canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
-  checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, colorS], C.any))
-  let f: Font = font('Arial')
+export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
+  checkContract(arguments, contract('canvas-text!', [C.any, C.integer, C.integer, C.string, C.nonneg, C.string, image_colorS], C.any))
+  let f: Font = image_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
   } else if (rest.length == 1) {
-    if (fontS.predicate(rest[0])) {
+    if (image_fontS.predicate(rest[0])) {
       f = rest[0] as Font
     } else {
-      throw new L.ScamperError('Runtime', fontS.errorMsg(rest[0]))
+      throw new L.ScamperError('Runtime', image_fontS.errorMsg(rest[0]))
     }
   }
 
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = rgbToString(colorToRgb(color))
-  ctx.strokeStyle = rgbToString(colorToRgb(color))
-  ctx.font = fontToFontString(f, size)
+  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.font = image_fontToFontString(f, size)
   if (mode === 'solid') {
     ctx.fillText(text, x, y)
   } else if (mode === 'outline') {
@@ -85,12 +85,12 @@ export function canvasText(canvas: HTMLCanvasElement, x: number, y: number, text
   }
 }
 
-export function canvasDrawing(canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
+export function canvas_canvasDrawing(canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
   checkContract(arguments, contract('canvas-drawing!', [C.any, C.integer, C.integer, C.any]))
-  render(x, y, drawing, canvas)
+  image_render(x, y, drawing, canvas)
 }
 
-export function canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
+export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
   checkContract(arguments, contract('canvas-path!', [C.any, C.list, C.string, C.string]))
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
   const pairs = L.listToVector(lst)
@@ -101,8 +101,8 @@ export function canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string,
     return
   }
 
-  ctx.fillStyle = rgbToString(colorToRgb(color))
-  ctx.strokeStyle = rgbToString(colorToRgb(color))
+  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
   ctx.beginPath()
   let p: L.Pair = pairs[0] as L.Pair
   ctx.moveTo(p.fst as number, p.snd as number)
@@ -117,7 +117,7 @@ export function canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string,
   }
 }
 
-export function animateWith(fn: L.ScamperFn): void {
+export function canvas_animateWith(fn: L.ScamperFn): void {
   checkContract(arguments, contract('animate-with', [C.func]))
   function callback (time: number) {
     let result = false
@@ -137,7 +137,7 @@ export function animateWith(fn: L.ScamperFn): void {
   window.requestAnimationFrame(callback)
 }
 
-export function canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn): void {
+export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn): void {
   checkContract(arguments, contract('canvas-onclick!', [C.any, C.func]))
   canvas.onclick = function (ev: MouseEvent) {
     try {

@@ -10,7 +10,7 @@ export interface ReactiveFile extends L.Struct {
   callback: L.ScamperFn
 }
 
-export function withFile(filename: string, callback: L.ScamperFn): ReactiveFile {
+export function prelude_withFile(filename: string, callback: L.ScamperFn): ReactiveFile {
   checkContract(arguments, contract('with-file', [C.string, C.func]))
   return {
     [L.scamperTag]: 'struct',
@@ -27,7 +27,7 @@ export interface ReactiveFileChooser extends L.Struct {
   callback: L.ScamperFn
 }
 
-export function withFileChooser(callback: L.ScamperFn): ReactiveFileChooser {
+export function prelude_withFileChooser(callback: L.ScamperFn): ReactiveFileChooser {
   checkContract(arguments, contract('with-file-chooser', [C.func]))
   return {
     [L.scamperTag]: 'struct',

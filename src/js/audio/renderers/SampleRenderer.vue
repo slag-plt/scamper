@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { SampleNode, getCtx } from "../index"
+import { SampleNode, audio_getCtx } from "../index"
 import { drawOscilloscope } from "./html"
 
 const props = defineProps<{ value: SampleNode }>()
@@ -9,7 +9,7 @@ const visualizer = ref<HTMLCanvasElement | null>(null)
 let source: AudioBufferSourceNode | undefined
 
 function play() {
-  const ctx = getCtx()
+  const ctx = audio_getCtx()
   const analyser = ctx.createAnalyser()
   analyser.fftSize = 2048
   const bufferLength = analyser.frequencyBinCount

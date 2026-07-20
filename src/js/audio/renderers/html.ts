@@ -1,6 +1,6 @@
 import * as L from "../../../lpm";
 import HtmlRenderer from "../../../lpm/renderers/html.js";
-import { SampleNode, AudioPipeline, getCtx } from "../index.js";
+import { SampleNode, AudioPipeline, audio_getCtx } from "../index.js";
 
 function throwError(msg: string): never {
   throw new L.ScamperError("Runtime", msg);
@@ -45,7 +45,7 @@ export function drawOscilloscope(
 }
 
 export function sampleRenderer(sample: SampleNode): HTMLElement {
-  const ctx = getCtx();
+  const ctx = audio_getCtx();
   const ret = document.createElement("span");
   const playButton = document.createElement("button");
   playButton.textContent = "▶";

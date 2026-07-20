@@ -12,39 +12,39 @@ export interface Duration extends L.Struct {
   denominator : number
 }
 
-export function dur(numerator: number, denominator: number): Duration {
+export function music_dur(numerator: number, denominator: number): Duration {
   checkContract(arguments, contract('dur', [C.number, C.number]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'dur', numerator, denominator }
 }
 
-export function numerator(dur: Duration): number {
+export function music_numerator(dur: Duration): number {
   checkContract(arguments, contract('numerator', [durC]))
   return dur.numerator
 }
 
-export function denominator(dur: Duration): number {
+export function music_denominator(dur: Duration): number {
   checkContract(arguments, contract('denominator', [durC]))
   return dur.denominator
 }
 
-export const wn = dur(1, 1)
-export const hn = dur(1, 2)
-export const qn = dur(1, 4)
-export const en = dur(1, 8)
-export const sn = dur(1, 16)
-export const tn = dur(1, 32)
+export const music_wn = music_dur(1, 1)
+export const music_hn = music_dur(1, 2)
+export const music_qn = music_dur(1, 4)
+export const music_en = music_dur(1, 8)
+export const music_sn = music_dur(1, 16)
+export const music_tn = music_dur(1, 32)
 
-export function isPitchClass(s: string): boolean {
+export function music_isPitchClass(s: string): boolean {
   checkContract(arguments, contract('pitch?', [C.string]))
   return /^[A-Ga-g][#b]{0,2}$/.test(s)
 }
 
-export function isOctave(n: number): boolean {
+export function music_isOctave(n: number): boolean {
   checkContract(arguments, contract('octave?', [C.number]))
   return n >= 0 && n <= 10
 }
 
-export function isValidMidiNote(n: number): boolean {
+export function music_isValidMidiNote(n: number): boolean {
   checkContract(arguments, contract('note?', [C.number]))
   return n >= 0 && n <= 127
 }
@@ -55,12 +55,12 @@ const durC: C.Spec = {
 }
 
 const noteC: C.Spec = {
-  predicate: (v: any) => isValidMidiNote(v),
+  predicate: (v: any) => music_isValidMidiNote(v),
   errorMsg: (actual: any) => `expected a midi note (0--127), received ${L.typeOf(actual)}`,
 }
 
 export interface Note extends L.Struct { [L.structKind]: 'note', note: number, duration: Duration }
-export function note(note: number, duration: Duration): Note {
+export function music_note(note: number, duration: Duration): Note {
   checkContract(arguments, contract('note', [noteC, durC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note', note, duration }
 }
@@ -70,49 +70,49 @@ export interface NoteFreq extends L.Struct {
   freq: number,
   duration: Duration
 }
-export function noteFreq(freq: number, duration: Duration): NoteFreq {
+export function music_noteFreq(freq: number, duration: Duration): NoteFreq {
   checkContract(arguments, contract('note-freq', [C.number, durC]))  
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note-freq', freq, duration }
 }
 
-export function repeat(n: number, composition: Composition): Composition {
+export function music_repeat(n: number, composition: Composition): Composition {
   checkContract(arguments, contract('repeat', [C.nat, compositionC]))
   if (n === 0) {
-    return empty()
+    return music_empty()
   } else {
-    return seq(composition, repeat(n - 1, composition))
+    return music_seq(composition, music_repeat(n - 1, composition))
   }
 }
 
 interface Empty extends L.Struct { [L.structKind]: 'empty' }
-export const empty = (): Empty => ({ [L.scamperTag]: 'struct', [L.structKind]: 'empty' })
+export const music_empty = (): Empty => ({ [L.scamperTag]: 'struct', [L.structKind]: 'empty' })
 
 interface Rest extends L.Struct { [L.structKind]: 'rest', duration: Duration }
-export function rest(duration: Duration): Rest {
+export function music_rest(duration: Duration): Rest {
   checkContract(arguments, contract('rest', [durC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'rest', duration }
 }
 
 interface Trigger extends L.Struct { [L.structKind]: 'trigger', fn: L.ScamperFn }
-export function trigger(fn: L.ScamperFn): Trigger {
+export function music_trigger(fn: L.ScamperFn): Trigger {
   checkContract(arguments, contract('trigger', [C.func]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'trigger', fn }
 }
 
 interface Par extends L.Struct { [L.structKind]: 'par', notes: Composition[] }
-export function par(...notes: Composition[]): Par {
+export function music_par(...notes: Composition[]): Par {
   checkContract(arguments, contract('par', [], compositionC))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'par', notes }
 }
 
 interface Seq extends L.Struct { [L.structKind]: 'seq', notes: Composition[] }
-export function seq(...notes: Composition[]): Seq {
+export function music_seq(...notes: Composition[]): Seq {
   checkContract(arguments, contract('seq', [], compositionC)) 
   return { [L.scamperTag]: 'struct', [L.structKind]: 'seq', notes }
 }
 
 interface Pickup extends L.Struct { [L.structKind]: 'pickup', pickup: Composition, notes: Composition }
-export function pickup(pickup: Composition, notes: Composition): Composition {
+export function music_pickup(pickup: Composition, notes: Composition): Composition {
   checkContract(arguments, contract('pickup', [compositionC, compositionC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'pickup', pickup, notes }
 }
@@ -121,7 +121,7 @@ export function pickup(pickup: Composition, notes: Composition): Composition {
 
 type ModKind = Percussion | Tempo | Dynamics | Instrument | NoteHandlersMod
 
-export function modQ(v: any): boolean {
+export function music_modQ(v: any): boolean {
   return L.isStructKind(v, 'percussion') ||
     //R.isStructKind(v, 'pitchBend') ||
     L.isStructKind(v, 'tempo') ||
@@ -131,12 +131,12 @@ export function modQ(v: any): boolean {
 }
 
 const modC: C.Spec = {
-  predicate: modQ,
+  predicate: music_modQ,
   errorMsg: (actual: any) => `expected a mod, received ${L.typeOf(actual)}`,
 }
 
 interface Percussion extends L.Struct { [L.structKind]: 'percussion' }
-export const percussion = ({ [L.scamperTag]: 'struct', [L.structKind]: 'percussion' })
+export const music_percussion = ({ [L.scamperTag]: 'struct', [L.structKind]: 'percussion' })
 
 // TODO: need to implement bends again!
 
@@ -148,44 +148,44 @@ export const percussion = ({ [L.scamperTag]: 'struct', [L.structKind]: 'percussi
 // Music.registerValue('bend', pitchBend)
 
 interface Tempo extends L.Struct { [L.structKind]: 'tempo', beat: Duration, bpm: number }
-export function tempo(beat: Duration, bpm: number): Tempo {
+export function music_tempo(beat: Duration, bpm: number): Tempo {
   checkContract(arguments, contract('tempo', [durC, C.nonneg]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'tempo', beat, bpm }
 }
 
 interface Dynamics extends L.Struct { [L.structKind]: 'dynamics', amount: number }
-export function dynamics(amount: number): Dynamics {
+export function music_dynamics(amount: number): Dynamics {
   checkContract(arguments, contract('dynamics', [C.numRange(0, 127)])) 
   return { [L.scamperTag]: 'struct', [L.structKind]: 'dynamics', amount }
 }
 
 interface Instrument extends L.Struct { [L.structKind]: 'instrument', program: number }
-export function instrument(program: number): Instrument {
+export function music_instrument(program: number): Instrument {
   checkContract(arguments, contract('instrument', [C.numRange(0, 127)]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'instrument', program }
 }
 
 interface NoteHandlersMod extends L.Struct { [L.structKind]: 'noteHandlers', handlers: NoteHandlers }
-export function noteHandlers(handlers: NoteHandlers): NoteHandlersMod {
+export function music_noteHandlers(handlers: NoteHandlers): NoteHandlersMod {
   checkContract(arguments, contract('note-handlers', [C.vector]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'noteHandlers', handlers }
 }
 
 interface Mod extends L.Struct { [L.structKind]: 'mod', note: Composition, mod: ModKind }
-export function mod(mod: ModKind, note: Composition): Mod {
+export function music_mod(mod: ModKind, note: Composition): Mod {
   checkContract(arguments, contract('mod', [modC, compositionC]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'mod', note, mod }
 }
 
 interface NoteEvent extends L.Struct { [L.structKind]: 'note-event', id: string }
-export function noteEvent(id: string): NoteEvent {
+export function music_noteEvent(id: string): NoteEvent {
   checkContract(arguments, contract('note-event', [C.string]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note-event', id }
 }
 
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod | NoteEvent
 
-export function compositionQ (v: any): boolean {
+export function music_compositionQ (v: any): boolean {
   return L.isStructKind(v, 'empty') ||
     L.isStructKind(v, 'note') ||
     L.isStructKind(v, 'note-freq') ||
@@ -199,21 +199,21 @@ export function compositionQ (v: any): boolean {
 }
 
 const compositionC: C.Spec = {
-  predicate: compositionQ,
+  predicate: music_compositionQ,
   errorMsg: (actual: any) => `expected a composition, received ${L.typeOf(actual)}`,
 }
 
-export function loadInstrument(n: number): void {
+export function music_loadInstrument(n: number): void {
   C.checkContract(arguments, contract('load-instrument', [C.nat]))
   waf()!.loadInstrument(n)
 }
 
-export function loadPercussion(n: number): void {
+export function music_loadPercussion(n: number): void {
   C.checkContract(arguments, contract('load-percussion', [C.nat]))
   waf()!.loadInstrument(n, true)
 }
 
-export function useHighQualityInstruments(enable: boolean): void {
+export function music_useHighQualityInstruments(enable: boolean): void {
   C.checkContract(arguments, contract('use-high-quality-instruments', [C.boolean]))
   if (enable) {
     waf()!.fontName = 'FluidR3_GM'
@@ -231,7 +231,7 @@ export interface NoteMsg extends L.Struct {
 
 export type NoteHandlers = ((note: NoteMsg) => void)[]
 
-export function makeNoteHandlers(): NoteHandlers {
+export function music_makeNoteHandlers(): NoteHandlers {
   checkContract(arguments, contract('make-note-handlers', []))
   return []
 }
@@ -417,9 +417,9 @@ function compositionToMsgs (
   }
 }
 
-export function playComposition (composition: Composition): number {
+export function music_playComposition (composition: Composition): number {
   checkContract(arguments, contract('play-composition', [compositionC]))
-  const msgs = compositionToMsgs(dur(1, 4), 120, 64, 0, 0, [], composition).msgs
+  const msgs = compositionToMsgs(music_dur(1, 4), 120, 64, 0, 0, [], composition).msgs
   const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event')
   const startTime = waf()!.audioContext.currentTime
 

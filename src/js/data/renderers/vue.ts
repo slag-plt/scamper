@@ -1,5 +1,5 @@
 import VueRenderer from '../../../lpm/renderers/vue.js'
-import { plotQ } from '../viz.js'
+import { data_plotQ } from '../viz.js'
 import PlotRenderer from './PlotRenderer.vue'
 
-VueRenderer.registerCustomRenderer(plotQ, () => PlotRenderer)
+VueRenderer.registerCustomRenderer(data_plotQ, () => PlotRenderer)

@@ -2,20 +2,20 @@
 import { computed } from "vue"
 import {
   Hsv,
-  hsvToRgb,
-  hsvToString,
-  rgbToString,
-  rgbPseudoComplement,
+  image_hsvToRgb,
+  image_hsvToString,
+  image_rgbToString,
+  image_rgbPseudoComplement,
 } from "../color"
 
 const props = defineProps<{ value: Hsv }>()
 
-const rgbValue = computed(() => hsvToRgb(props.value))
-const backgroundColor = computed(() => rgbToString(rgbValue.value))
+const rgbValue = computed(() => image_hsvToRgb(props.value))
+const backgroundColor = computed(() => image_rgbToString(rgbValue.value))
 const textColor = computed(() =>
-  rgbToString(rgbPseudoComplement(rgbValue.value)),
+  image_rgbToString(image_rgbPseudoComplement(rgbValue.value)),
 )
-const displayText = computed(() => hsvToString(props.value))
+const displayText = computed(() => image_hsvToString(props.value))
 </script>
 
 <template>

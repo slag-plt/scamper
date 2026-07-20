@@ -9,7 +9,7 @@ interface Dataset extends L.Struct {
   opts: object
 }
 
-export function datasetQ (v: L.Value): boolean {
+export function data_datasetQ (v: L.Value): boolean {
   return L.isStructKind(v, 'dataset')
 }
 
@@ -18,7 +18,7 @@ export interface Plot extends L.Struct {
   opts: object
 }
 
-export function plotQ (v: L.Value): boolean {
+export function data_plotQ (v: L.Value): boolean {
   return L.isStructKind(v, 'plot')
 }
 
@@ -67,7 +67,7 @@ function updatePlotOption (key: string, value: any, opts: object): void {
   }
 }
 
-export function withPlotOptions (options: L.List, plot: Plot): Plot {
+export function data_withPlotOptions (options: L.List, plot: Plot): Plot {
   checkContract(arguments, contract('with-plot-options', [
     C.listof(C.pairof(C.string, C.any)),
     C.struct('plot')
@@ -100,7 +100,7 @@ function updateDatasetOption (key: string, value: any, opts: object): void {
   }
 }
 
-export function withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
+export function data_withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
   checkContract(arguments, contract('with-dataset-options', [
     C.listof(C.pairof(C.string, C.any)),
     C.struct('dataset')
@@ -122,7 +122,7 @@ export function withDatasetOptions (options: L.List, dataset: Dataset): Dataset 
 
 ///// Plot Functions ///////////////////////////////////////////////////////////
 
-export function plotLinear (...datasets: Dataset[]): Plot {
+export function data_plotLinear (...datasets: Dataset[]): Plot {
   checkContract(arguments, contract('plot-linear', [], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
@@ -140,7 +140,7 @@ export function plotLinear (...datasets: Dataset[]): Plot {
   }
 }
 
-export function plotCategory(labels: L.List, ...datasets: Dataset[]): Plot {
+export function data_plotCategory(labels: L.List, ...datasets: Dataset[]): Plot {
   checkContract(arguments, contract('plot-category', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
@@ -159,7 +159,7 @@ export function plotCategory(labels: L.List, ...datasets: Dataset[]): Plot {
   }
 }
 
-export function plotRadial(labels: L.List, ...datasets: Dataset[]): Plot {
+export function data_plotRadial(labels: L.List, ...datasets: Dataset[]): Plot {
   checkContract(arguments, contract('plot-radial', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
@@ -183,7 +183,7 @@ function makeDataset (type: string, label: string, data: any[]): Dataset {
   }
 }
 
-export function datasetLine (title: string, data: L.List): Dataset {
+export function data_datasetLine (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-line', [
     C.string,
     C.listof(C.or(C.number, C.pairof(C.number, C.number)))
@@ -201,7 +201,7 @@ export function datasetLine (title: string, data: L.List): Dataset {
   return makeDataset('line', title, points)
 }
 
-export function datasetBar (title: string, data: L.List): Dataset {
+export function data_datasetBar (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-bar', [
     C.string,
     C.listof(C.number)
@@ -213,7 +213,7 @@ export function datasetBar (title: string, data: L.List): Dataset {
   return makeDataset('bar', title, points)
 }
 
-export function datasetScatter (title: string, data: L.List): Dataset {
+export function data_datasetScatter (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-scatter', [
     C.string, C.listof(C.pairof(C.number, C.number))
   ]))
@@ -227,7 +227,7 @@ export function datasetScatter (title: string, data: L.List): Dataset {
   return makeDataset('scatter', title, points)
 }
 
-export function datasetBubble (title: string, data: L.List): Dataset {
+export function data_datasetBubble (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-bubble', [
     C.string,
     C.listof(C.listof(C.number))
@@ -245,7 +245,7 @@ export function datasetBubble (title: string, data: L.List): Dataset {
   return makeDataset('bubble', title, points)
 }
 
-export function datasetPie (title: string, data: L.List): Dataset {
+export function data_datasetPie (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-pie', [
     C.string,
     C.listof(C.number)
@@ -257,7 +257,7 @@ export function datasetPie (title: string, data: L.List): Dataset {
   return makeDataset('pie', title, values)
 }
 
-export function datasetPolar (title: string, data: L.List): Dataset {
+export function data_datasetPolar (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-polar', [
     C.string,
     C.listof(C.number)
@@ -269,7 +269,7 @@ export function datasetPolar (title: string, data: L.List): Dataset {
   return makeDataset('polarArea', title, values)
 }
 
-export function datasetRadar (title: string, data: L.List): Dataset {
+export function data_datasetRadar (title: string, data: L.List): Dataset {
   checkContract(arguments, contract('dataset-radar', [
     C.string,
     C.listof(C.number)

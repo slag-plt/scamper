@@ -4,7 +4,7 @@ import * as C from '../contract.js'
 
 import Papa from 'papaparse'
 
-export function parseCsv(data: string): L.List {
+export function data_parseCsv(data: string): L.List {
   checkContract(arguments, contract('parse-csv', [C.string]))
   const result = Papa.parse(data, { header: false })
   if (result.errors.length > 0) {
@@ -17,19 +17,19 @@ export function parseCsv(data: string): L.List {
   }
 }
 
-export function stringToChars(s: string): L.List {
+export function data_stringToChars(s: string): L.List {
   checkContract(arguments, contract('string->chars', [C.string]))
   const chars = Array.from(s).map(c => L.mkChar(c))
   return L.vectorToList(chars)
 }
 
-export function stringToWords(s: string): L.List {
+export function data_stringToWords(s: string): L.List {
   checkContract(arguments, contract('string->words', [C.string]))
   const words = s.split(/\s+/g)
   return L.vectorToList(words)
 }
 
-export function stringToLines(s: string): L.List {
+export function data_stringToLines(s: string): L.List {
   checkContract(arguments, contract('string->lines', [C.string]))
   const lines = s.split(/\r?\n/g)
   return L.vectorToList(lines)
@@ -58,7 +58,7 @@ class TallyList {
   }
 }
 
-export function tallyAll(lst: L.List): L.List {
+export function data_tallyAll(lst: L.List): L.List {
   const tally = new TallyList()
   let cur: L.List = lst
   while (cur !== null) {

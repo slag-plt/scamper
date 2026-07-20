@@ -2,19 +2,19 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
-export function textArea(id: string): HTMLTextAreaElement {
+export function html_textArea(id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))
   const ret = new HTMLTextAreaElement()
   ret.id = id
   return ret
 }
 
-export function textAreaGet(textArea: HTMLTextAreaElement): string {
+export function html_textAreaGet(textArea: HTMLTextAreaElement): string {
   checkContract(arguments, contract('text-area-get', [C.any]))
   return textArea.textContent
 }
 
-export function button(label: string, fn: L.ScamperFn): HTMLButtonElement {
+export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
   checkContract(arguments, contract('button', [C.string, C.any]))
   const ret = document.createElement('button')
   ret.textContent = label
@@ -29,7 +29,7 @@ export function button(label: string, fn: L.ScamperFn): HTMLButtonElement {
   return ret
 }
 
-export function tag(name: string, ...children: L.Value[]): HTMLElement {
+export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
   checkContract(arguments, contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
   if (children.length > 0 && L.isList(children[0])) {
@@ -59,7 +59,7 @@ export function tag(name: string, ...children: L.Value[]): HTMLElement {
   return elt
 }
 
-export function tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
+export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
   checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
     throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
@@ -78,7 +78,7 @@ export function tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
   }
 }
 
-export function onKeydown(fn: L.ScamperFn): void {
+export function html_onKeydown(fn: L.ScamperFn): void {
   checkContract(arguments, contract('on-keydown!', [C.func]))
   window.addEventListener('keydown', (e) => {
     try {
