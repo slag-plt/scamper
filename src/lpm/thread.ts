@@ -416,20 +416,29 @@ export class Thread {
           if(!(result?.toString().includes("L.mkStruct(t, fieldNames, args)")
             || result?.toString().includes("L.isStructKind(v, t)"))) {
 
-            console.log("[stmt.name, result]", [stmt.name, result], "stmt.expr", stmt.expr)
-            Object.entries(stmt.expr).forEach((obj) => {
-              Object.entries(obj).forEach(([key, value]) => {
-                if(key==="name" && typeof value === "string" && this.nameDefined(value)){
-                  param = value
-                }
+            //console.log("[stmt.name, result]", [stmt.name, result], "stmt.expr", stmt.expr)
+            Object.entries(stmt.expr).forEach((objL) => {
+              //console.log("objL", objL)
+              Object.entries(objL).forEach((obj) => {
+                //console.log("obj", obj[1])
+                if(typeof obj[1] !== "string")
+                  Object.entries(obj[1]).forEach(([key,value]) => {
+                    //console.log("v",value, "key==='name'", key==="name", "typeof value === 'string'", typeof value === "string", "this.nameDefined(value)", this.nameDefined(value), "this.definedVars", this.definedVars)
+                    if(key==="name" && typeof value === "string" && this.nameDefined(value)){
+                      //console.log("v",value)
+                      param = value
+                    }
+                  })
               })
             })
+            //console.log(param)
             
             if(param !== "") {
+              this.definedVars.push([stmt.name, param+"☀︎"])
+            } else {
               this.definedVars.push([stmt.name, result])
-              save = this.draw(param)
             }
-            
+            save = this.draw()
 
           }
           this.advanceStmt() // pops trace
@@ -460,7 +469,8 @@ export class Thread {
 
   private nameDefined(value: string | L.Ops): boolean {
     let bool = false
-    Object.entries(this.definedVars).forEach(([ent, ]) => {
+    Object.entries(this.definedVars).forEach(([, [ent ,]]) => {
+      //console.log(ent,"jiji", "valye", value)
       if (ent === value) {
         bool = true
       }
@@ -730,7 +740,7 @@ export class Thread {
     }
   }
     
-  draw (param: string): HTMLDivElement {
+  draw (): HTMLDivElement {
     //grabs bounded collected suring runtime
       const bounded = this.definedVars
       //console.log(bounded)
@@ -776,19 +786,21 @@ export class Thread {
             let HTMLVal: any = ''
             let ariaType = ""
             let structName = false;
-            console.log("id ", id, "value ", value, "param ", param)
+            console.log("id ", id, "value ", value)
 
             // //typecheck the variable(s) and convert to string or HTML elements
-            if(param !== "") {
-              HTMLVal = param
-            } else if(U.isNull(value)) {
+            if(U.isNull(value)) {
               const div = document.createElement('div')
                 div.className = 'null-box'
                 div.style.marginBottom = '5px'
               HTMLVal = div
             } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
               if (typeof value === 'string') {
-                HTMLVal = "\"" + value + "\""
+                if(value.includes('☀︎')) {
+                  HTMLVal = value.replace('☀︎','')
+                } else {
+                  HTMLVal = "\"" + value + "\""
+                }
               } else if (typeof value === 'boolean'){
                 HTMLVal = value
               } else {
