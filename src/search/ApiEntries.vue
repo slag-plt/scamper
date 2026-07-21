@@ -513,7 +513,7 @@ const types = ref([
           <div class="entries"> 
             {{(filteredLibs.length === 0)? findSearch() : null }} 
             <div v-if="noSearchText"> {{"No search results found for " + props.searchIn}} </div>
-            <div v-if="noTagText"> {{"No tag filter results found"}} </div>
+            <div v-if="noTagText"> {{"No filter results found"}} </div>
             <!-- {{(filteredLibs.length === 0 && props.searchIn !== "" && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)))? "No search results found for " + props.searchIn : null}}  -->
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
