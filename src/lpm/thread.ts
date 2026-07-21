@@ -412,25 +412,45 @@ export class Thread {
 
           let save;
           let param = "";
+          let newObj;
           // conditional to exclude struct constructors, getters, and type check functions
           if(!(result?.toString().includes("L.mkStruct(t, fieldNames, args)")
             || result?.toString().includes("L.isStructKind(v, t)"))) {
 
-            //console.log("[stmt.name, result]", [stmt.name, result], "stmt.expr", stmt.expr)
+              console.log("")
+            console.log("[stmt.name, result]", [stmt.name, result], "stmt.expr", stmt.expr)
             Object.entries(stmt.expr).forEach((objL) => {
               //console.log("objL", objL)
               Object.entries(objL).forEach((obj) => {
-                //console.log("obj", obj[1])
+                console.log("obj", obj[1])
                 if(typeof obj[1] !== "string")
                   Object.entries(obj[1]).forEach(([key,value]) => {
                     //console.log("v",value, "key==='name'", key==="name", "typeof value === 'string'", typeof value === "string", "this.nameDefined(value)", this.nameDefined(value), "this.definedVars", this.definedVars)
                     if(key==="name" && typeof value === "string" && this.nameDefined(value)){
                       //console.log("v",value)
                       param = value
+                      // newObj = {
+                      //   ...objL,
+                      //   tag: {
+
+                      //   }
+                      // }
                     }
                   })
               })
             })
+            /*
+            const updatedUser = {
+              ...user,
+              profile: {
+                ...user.profile,
+                address: {
+                  ...user.profile.address,
+                  city: "Los Angeles"
+                }
+              }
+            };
+            */
             //console.log(param)
             
             if(param !== "") {
