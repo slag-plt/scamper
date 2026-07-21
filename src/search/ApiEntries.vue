@@ -69,7 +69,7 @@ function findSearch() {
       })
     })
   });
-  if(showLibs.length == 0) {
+  if(showLibs.length == 0 && props.searchIn !== '') {
     noSearchText.value = true
   } else {
     noSearchText.value = false
