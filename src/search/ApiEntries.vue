@@ -69,7 +69,11 @@ function findSearch() {
       })
     })
   });
-  
+  if(showLibs.length == 0) {
+    noSearchText.value = true
+  } else {
+    noSearchText.value = false
+  }
   filteredLibs.value = showLibs
 }
 
