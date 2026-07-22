@@ -598,13 +598,14 @@
 ;;; Returns a vector consisting of the values in list `l`.
 (define list->vector (js-var "prelude_listToVector"))
 
-;;; (vector-range beg end . step) -> vector?
-;;;  beg : integer?
-;;;   this argument can be omitted
-;;;  end : integer?
-;;;  step : integer?
-;;;   step > 0, this argument can be omitted
-;;; Returns a vector containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.
+;;; (vector-range . args) -> vector?
+;;;  args : integer?
+;;; Can be called with one, two, or three arguments, all of which are integers.
+;;; (vector-range end) returns a vector containing the numbers from 0 to `end` (exclusive).
+;;; (vector-range beg end) returns a vector containing the numbers from `beg` to `end`
+;;; (exclusive). (vector-range beg end step) returns a vector containing the numbers from
+;;; `beg` to `end` (exclusive) with a step size of `step`. `step` must be non-zero
+;;; to avoid an infinite loop.
 (define vector-range (js-var "prelude_vectorRange"))
 
 ;;; (vector-append . v1) -> vector?

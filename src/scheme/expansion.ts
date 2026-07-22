@@ -30,6 +30,7 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.body),
         e.range,
         e.restParam,
+        e.isContractWrapper,
       )
     case "let":
       return A.mkLet(
@@ -120,7 +121,7 @@ export function expandExpr(e: A.Exp): A.Exp {
     case "app":
       return A.mkApp(expandExpr(e.head), e.args.map(expandExpr), e.range)
     case "lam":
-      return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam)
+      return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam, e.isContractWrapper)
     case "let":
       return A.mkLet(
         e.bindings.map((b) => ({ name: b.name, value: expandExpr(b.value) })),

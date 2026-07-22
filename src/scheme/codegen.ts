@@ -27,7 +27,7 @@ function lowerExpr(e: A.Exp): L.Blk {
         L.mkAp(e.args.length, e.range),
       ]
     case "lam":
-      return [L.mkCls(e.params, lowerExpr(e.body), "##anonymous##", e.range, e.restParam)]
+      return [L.mkCls(e.params, lowerExpr(e.body), "##anonymous##", e.range, e.restParam, e.isContractWrapper)]
     case "let": {
       // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
       // we must proceed by first evaluating all binding expressions (without binding), then

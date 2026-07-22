@@ -195,6 +195,7 @@ export function contractStmt(s: A.Stmt): A.Stmt {
       mkCheckChain(doc.params, doc.restParam, s.range),
       s.range,
       doc.restParam?.name,
+      true,
     ),
     s.range,
   )

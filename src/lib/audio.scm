@@ -30,8 +30,9 @@
 ;;; Returns `#t` if and only if `v` is an audio pipeline.
 (define pipeline? (js-var "audio_pipelineQ"))
 
-;;; (audio-pipeline ctx . n1) -> pipeline?
+;;; (audio-pipeline ctx pipeline . n1) -> pipeline?
 ;;;  ctx : context?
+;;;  pipeline : audio-node?
 ;;;  n1 : audio-node?
 ;;; Creates an audio pipeline from the given audio nodes, connecting the nodes in sequence.
 (define audio-pipeline (js-var "audio_audioPipeline"))

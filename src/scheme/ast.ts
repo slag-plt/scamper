@@ -122,6 +122,13 @@ export interface Lam extends Tagged, Node {
   params: string[]
   restParam?: string
   body: Exp
+  // N.B., set only by contract.ts, for the wrapper lambda it generates
+  // around a documented define's value. Threaded through codegen/Closure/
+  // Frame so error-reporting can tell "this frame's body IS a contract
+  // check-then-call, so blame the frame's own caller" apart from "this is
+  // an ordinary (possibly named) function, whose own ops already carry
+  // correct ranges" -- see op-handlers.ts's applyFn/ErrorHandler.
+  isContractWrapper?: boolean
 }
 export interface Let extends Tagged, Node {
   tag: "let"
@@ -318,7 +325,8 @@ export const mkLam = (
   body: Exp,
   range: L.Range = L.Range.none,
   restParam?: string,
-): Lam => ({ tag: "lam", params, body, range, restParam})
+  isContractWrapper?: boolean,
+): Lam => ({ tag: "lam", params, body, range, restParam, isContractWrapper })
 export const mkLet = (
   bindings: { name: string; value: Exp }[],
   body: Exp,

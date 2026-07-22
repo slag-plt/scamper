@@ -46,6 +46,7 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
       },
       op.name,
       op.restParam,
+      op.isContractWrapper,
     ),
   )
   return minorStep
@@ -74,20 +75,14 @@ function applyFn(
       return traceStep
     } catch (e) {
       if (e instanceof ScamperError) {
-        // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
-        // fn was called directly, outside any named Scamper function -- in
-        // that case op.range/fn.name (this call's own, real range and the
-        // JS function's own name) are already exactly right. Otherwise fn
-        // is being invoked from inside a named function's frame -- most
-        // often a contract wrapper's own ##contract-target## call, whose Ap
-        // op only ever carries the *wrapped definition's* range, never the
-        // user's actual call site. In that case prefer the frame's own
-        // callRange/name: the range/name of the Ap that invoked *this
-        // frame*, i.e. wherever the user (or an enclosing function) really
-        // wrote the call.
-        const useFrame = !currFrame.name.startsWith("##")
-        e.range = useFrame ? currFrame.callRange : range
-        e.source = useFrame ? currFrame.name : fn.name
+        // N.B., only a contract wrapper's frame licenses preferring
+        // callRange/name over this call's own range/fn.name -- see
+        // Frame.isWrapperFrame. An ordinary (possibly named) function's own
+        // ops already carry correct, distinct ranges no matter how deeply
+        // nested this call is inside it, so op.range/fn.name are already
+        // exactly right there.
+        e.range = currFrame.isWrapperFrame ? currFrame.callRange : range
+        e.source = currFrame.isWrapperFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
@@ -124,6 +119,7 @@ function applyFn(
       ),
       fn.code,
       range,
+      fn.isContractWrapper,
     )
     if (currFrame.isFinished()) {
       // tail-call optimize by replacing current empty frame
@@ -213,16 +209,24 @@ export const JsVarHandler: OpHandler<"jsvar"> = (op, currFrame) => {
 
 export const ErrorHandler: OpHandler<"error"> = (op, currFrame) => {
   const msg = currFrame.values.pop()
+  // N.B., same reasoning as applyFn's ScamperError catch: only a contract
+  // wrapper's frame (e.g. the auto-generated "expected a boolean, ..."
+  // check) licenses preferring the frame's own callRange/name over this
+  // op's own range/the literal special-form name "error" -- a user-written
+  // (error ...) call's own range is already correct, at any nesting depth
+  // inside any (possibly named) function.
+  const range = currFrame.isWrapperFrame ? currFrame.callRange : op.range
+  const source = currFrame.isWrapperFrame ? currFrame.name : "error"
   if (typeof msg !== "string") {
     throw new ScamperError(
       "Runtime",
       `expected a string, received ${typeOf(msg)}`,
       undefined,
-      op.range,
-      "error",
+      range,
+      source,
     )
   }
-  throw new ScamperError("Runtime", msg, undefined, op.range, "error")
+  throw new ScamperError("Runtime", msg, undefined, range, source)
 }
 
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {

@@ -45,8 +45,9 @@ export const mkClosure = (
   env: Map<string, L.Value>,
   call: (...args: any) => any,
   name?: L.Id,
-  restParam?: string
-): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name, restParam })
+  restParam?: string,
+  isContractWrapper?: boolean
+): L.Closure => ({ [L.scamperTag]: "closure", params, code, locals: env, call, name, restParam, isContractWrapper })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: "char",
   value: v,
@@ -110,8 +111,9 @@ export const mkCls = (
   body: L.Blk,
   name?: string,
   range: Range = Range.none,
-  restParam?: string
-): L.Cls => ({ tag: "cls", params, body, name, range, restParam })
+  restParam?: string,
+  isContractWrapper?: boolean
+): L.Cls => ({ tag: "cls", params, body, name, range, restParam, isContractWrapper })
 export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({
   tag: "ap",
   numArgs,
