@@ -1,6 +1,0 @@
-;;; (abs v) -> number?
-;;; v: number?
-;;; Return: the absolute value of v.
-;;; Example: (abs -2) -> 2
-
-

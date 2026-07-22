@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue"
-import { Doc } from "./api/docs.js"
+import type { FunctionDoc } from "../scheme/docstring/docstring"
+import { functionDocSignature } from "../scheme/docstring/render"
 
-const props = defineProps<{ doc: Doc; id: string }>()
-
-function signature(doc: Doc): string {
-  if (doc.args.length === 0) {
-    return `${doc.name} : ${doc.returnType}`
-  }
-  const argNames = doc.args.map((a) => a.name).join(" ")
-  const argLines = doc.args.map((a) => `  ${a.name}: ${a.desc}`).join("\n")
-  return `(${doc.name} ${argNames}) -> ${doc.returnType}\n${argLines}`
-}
+const props = defineProps<{ doc: FunctionDoc; id: string }>()
 
 interface TextSpan {
   text: string
@@ -19,14 +11,14 @@ interface TextSpan {
 }
 
 const descSpans = computed<TextSpan[]>(() => {
-  const parts = props.doc.desc.trim().split("`")
+  const parts = props.doc.description.trim().split("`")
   return parts.map((text, i) => ({ text, code: i % 2 === 1 }))
 })
 </script>
 
 <template>
   <div :id="id" class="entry">
-    <pre class="sig"><code>{{ signature(doc) }}</code></pre>
+    <pre class="sig"><code>{{ functionDocSignature(doc) }}</code></pre>
     <p class="desc">
       <template v-for="(span, i) in descSpans" :key="i">
         <code v-if="span.code">{{ span.text }}</code>

@@ -1,282 +1,96 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { Doc } from "./api/docs.js"
+import type { FunctionDoc } from "../scheme/docstring/docstring"
+import { docRegistry } from "../lib"
+import {
+  functionDocCategories,
+  functionDocName,
+  predTypeName,
+} from "../scheme/docstring/render"
 import DocEntry from "./DocEntry.vue"
-//import libs from "./DocsApp.vue"
-//import { processDocs } from "./readDocs.js"
-
-//import { Doc } from "./api/docs.js"
-//import DocEntry from "./DocEntry.vue"
-
-import * as Audio from "./api/audio.js"
-import * as Prelude from "./api/prelude.js"
-import * as Image from "./api/image.js"
-import * as Lab from "./api/lab.js"
-import * as Music from "./api/music.js"
-import * as Test from "./api/test.js"
-import * as Canvas from "./api/canvas.js"
-import * as Html from "./api/html.js"
-import * as Reactive from "./api/reactive.js"
-import * as Data from "./api/data.js"
-import * as Rex from "./api/rex.js"
 
 const props = defineProps<{
   searchIn: string
 }>()
 
-const libs: [string, object][] = [
-  ["prelude", Prelude],
-  ["image", Image],
-  ["lab", Lab],
-  ["music", Music],
-  ["test", Test],
-  ["audio", Audio],
-  ["canvas", Canvas],
-  ["html", Html],
-  ["reactive", Reactive],
-  ["data", Data],
-  ["rex", Rex],
+// N.B., same module list/order as src/docs/DocsApp.vue; "runtime" is
+// LPM-internal plumbing, not user-facing, so it's deliberately excluded.
+const moduleOrder = [
+  "prelude", "image", "lab", "music", "test",
+  "audio", "canvas", "html", "reactive", "data", "rex",
 ]
 
-let filteredLibs = ref<any[]>([])
+function allDocs(): FunctionDoc[] {
+  return moduleOrder.flatMap((name) => [...(docRegistry.get(name)?.values() ?? [])])
+}
+
+/** Every documented param's predicate, including the rest param if any. */
+function argPredicates(doc: FunctionDoc) {
+  return [...doc.params, ...(doc.restParam ? [doc.restParam] : [])].map(
+    (p) => p.predicate,
+  )
+}
+
+let filteredLibs = ref<FunctionDoc[]>([])
 
 function showEverything() {
-  filteredLibs.value = []
-  const showLibs: any[] = []
-  Object.entries(libs).forEach(([,[, lib]]) => {
-    Object.entries(lib).forEach(([, foo]) => {
-      showLibs.push(foo)
-    })
-  });
-  
-  filteredLibs.value = showLibs
-  //console.log("this is where joy comes to die", filteredLibs)
+  filteredLibs.value = allDocs()
 }
 
 function findSearch() {
-  let s = props.searchIn
-
-  filteredLibs.value = []
-  const showLibs: any[] = []
-  Object.entries(libs).forEach(([,[, lib]]) => {
-    Object.entries(lib).forEach(([, foo]) => {
-      Object.entries(foo).forEach(([key, value]) => {
-          if (key === "name") {
-            if(value === s) {
-            showLibs.push(foo)
-          }
-        }
-      })
-    })
-  });
-  if(showLibs.length == 0 && props.searchIn !== '') {
-    noSearchText.value = true
-  } else {
-    noSearchText.value = false
-  }
+  const s = props.searchIn
+  const showLibs = allDocs().filter((doc) => functionDocName(doc) === s)
+  noSearchText.value = showLibs.length === 0 && props.searchIn !== ''
   filteredLibs.value = showLibs
 }
 
-
-function checkReturn(foo: string | object) {
-  let boo = false;
-
-  Object.entries(foo).forEach(([name, type]) => {
-    if (name === "returnType") {
-      type = type.replace("?", "")
-      if(returnTypes.value.includes(type)) {
-        boo = true;
-      }
-    }
-  })
+function checkReturn(doc: FunctionDoc): boolean {
   if (returnTypes.value.length === 0) {
-    boo = true
+    return true
   }
-  return boo
+  return returnTypes.value.includes(predTypeName(doc.signature.predicate))
 }
 
-
-// function checkReturnAnd(foo: string | object) {
-//   const tempArr: any[] = []
-
-//   Object.entries(foo).forEach(([name, type]) => {
-//     if (name === "returnType") {
-//       type = type.replace("?", "")
-//       tempArr.push(type)
-//       // if(!returnTypes.value.includes(type)) {
-//       //   boo = false;
-//       // }
-//     }
-//   })
-
-//   let boo = true;
-
-//   returnTypes.value.forEach((arrType) => {
-//     if(!tempArr.includes(arrType)) {
-//       boo = false
-//     }
-//   })
-//   return boo
-// }
-
-
-function checkArgs(foo: string | object) {
-  let boo = false;
-
-  Object.entries(foo).forEach(([name, argArr]) => {
-    if (name === "args") {
-      //console.log("argArr", argArr)
-
-      Object.entries(argArr).forEach(([,arg]: [string, unknown]) => {
-        //console.log("arg", arg)
-      
-        Object.entries(arg as any).forEach(([key, value]) => {
-          //console.log("key", key, "value", value)
-
-          if (key === "desc") {
-            if (typeof value === "string") {
-              //console.log("this is a string", value)
-              value = value.replace("?", "")
-            }
-            if(argumentTypes.value.includes(value as string)) {
-              //console.log("it is included", value,argumentTypes.value.includes(value as string) )
-              boo = true;
-            }
-          }
-        })
-      })
-    }
-  })
-
-if (argumentTypes.value.length === 0) {
-  boo = true
-}
-
-  return boo
-}
-
-
-function checkArgsAnd(foo: string | object) {
-  //console.log("foo", foo)
-  let tempArr: any[] = []
-
-  Object.entries(foo).forEach(([name, argArr]) => {
-    if (name === "args") {
-      //console.log("argArr", argArr)
-
-      Object.entries(argArr).forEach(([,arg]) => {
-        //console.log("arg", arg)
-      
-        Object.entries(arg as any).forEach(([key, value]) => {
-          //console.log("key", key, "value", value)
-
-          if (key === "desc") {
-            if (typeof value === "string") {
-              //console.log("this is a string", value)
-              value = value.replace("?", "")
-            }
-            tempArr.push(value)
-          }
-        })
-      })
-    }
-  })
-
-  let boo = true;
-  //console.log("argumentTypes ", argumentTypes)
-  argumentTypes.value.forEach((arrType) => {
-    //console.log("!tempArr.includes(arrType)", !tempArr.includes(arrType))
-    if(!tempArr.includes(arrType)) {
-      boo = false
-    }
-  })
-  //console.log("return", boo)
-
-  if(argumentTypes.value.length === 0) {
-    boo = false
+function checkArgs(doc: FunctionDoc): boolean {
+  if (argumentTypes.value.length === 0) {
+    return true
   }
-  return boo
+  return argPredicates(doc).some((pred) =>
+    argumentTypes.value.includes(predTypeName(pred)),
+  )
 }
 
-function checkTags(foo: [string, string | object]) {
-  let boo = false;
+function checkArgsAnd(doc: FunctionDoc): boolean {
+  if (argumentTypes.value.length === 0) {
+    return false
+  }
+  const docTypes = argPredicates(doc).map(predTypeName)
+  return argumentTypes.value.every((arrType) => docTypes.includes(arrType))
+}
 
-  Object.entries(foo).forEach(([name, tagArr]) => {
-    if (name === "tags") {
-
-      Object.entries(tagArr).forEach(([, tag]) => {
-        if(tags.value.includes(tag as string)) {
-          boo = true;
-        }
-      })
-    }
-  })
-
+function checkTags(doc: FunctionDoc): boolean {
   if (tags.value.length === 0) {
-    boo = true
+    return true
   }
-
-  return boo
+  const docTags = functionDocCategories(doc)
+  return tags.value.some((tag) => docTags.includes(tag))
 }
 
-
-function checkTagsAnd(foo: [string, string | object]) {
-  let boo = true;
-
-  const tempArr: any[] = []
-
-  Object.entries(foo).forEach(([name, tagArr]) => {
-    if (name === "tags") {
-
-      Object.entries(tagArr).forEach(([, tag]) => {
-        tempArr.push(tag)
-
-      })
-    }
-  })
-
-  tags.value.forEach((arrTag) => {
-    // console.log("tempArr", tempArr)
-    // console.log("arrTag", arrTag)
-    // console.log("!tempArr.includes(arrTag)", !tempArr.includes(arrTag))
-    if(!tempArr.includes(arrTag)) {
-      boo = false
-    }
-  })
-
-  if(tags.value.length === 0) {
-    boo = false
+function checkTagsAnd(doc: FunctionDoc): boolean {
+  if (tags.value.length === 0) {
+    return false
   }
-
-  return boo
+  const docTags = functionDocCategories(doc)
+  return tags.value.every((arrTag) => docTags.includes(arrTag))
 }
-
 
 function addToLib() {
-  const newArr: any[] = []
-  // console.log("a", aBool.value)
-  // console.log("t", tBool.value === "or")
-  
-  Object.entries(libs).forEach(([, [, lib]]) => {
-    Object.entries(lib).forEach(([, foo]) => {
-      // console.log("                     foo ", foo)
-      const checkRet = checkReturn(foo)
-      const checkArg = (aBool.value === "or") ? checkArgs(foo) : checkArgsAnd(foo)
-      const checkTag = (tBool.value === "or")? checkTags(foo) : checkTagsAnd(foo)
-      // console.log("checkReturn(foo)", checkRet)
-      // console.log("(aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo)", checkArg)
-      // console.log("(tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkTag)
-      // console.log("checkReturn(foo)  ||  (aBool.value === 'or') ? checkArgs(foo) : checkArgsAnd(foo) ||  (tBool.value === 'or')? checkTags(foo) : checkTagsAnd(foo)", checkRet  ||  checkArg ||  checkTag)
-      // console.log("tBool", tBool)
-      if (checkRet  &&  checkArg &&  checkTag  ) {
-        // console.log("push!!AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n\n")
-        newArr.push(foo)
-      }
-    })
-  });
-  // console.log("newArr", newArr)
-
-  filteredLibs.value = newArr
+  filteredLibs.value = allDocs().filter((doc) => {
+    const checkRet = checkReturn(doc)
+    const checkArg = aBool.value === "or" ? checkArgs(doc) : checkArgsAnd(doc)
+    const checkTag = tBool.value === "or" ? checkTags(doc) : checkTagsAnd(doc)
+    return checkRet && checkArg && checkTag
+  })
 }
 
 const tagList = ref([
@@ -324,7 +138,7 @@ const tagList = ref([
     { id: 43, val: 'plot' },
     { id: 44, val: 'parse' },
     
-  { id: 10, val: 'type check' },
+  { id: 10, val: 'typecheck' },
 
   { id: 14, val: 'regexes' },
 
@@ -437,10 +251,7 @@ const types = ref([
     <button class="arrow-button" @click="AisOpen = !AisOpen">{{ AisOpen ? "▼" : "▶" }}</button>
     <text>-</text> 
     <select v-model="aBool">
-      <option v-for="o in aBoolArr" :key="o.id">
-        <p><input type="checkbox" class="indent" :value= "o.val" >
-        {{ o.val }}</p>
-      </option>
+      <option v-for="o in aBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
     <div v-if="AisOpen" class="dropdown-menu">
       <label v-for="o in types" :key="o.id">
@@ -480,11 +291,7 @@ const types = ref([
     <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
       <text>-</text> 
     <select v-model="tBool">
-      <option v-for="o in tBoolArr" :key="o.id">
-        <div>
-          <p><input type="checkbox" class="indent" :value= "o.val" >{{ o.val }}</p>
-        </div>
-      </option>
+      <option v-for="o in tBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
     <div v-if="TisOpen" class="dropdown-menu">
       <label v-for="o in tagList" :key="o.id">
@@ -517,11 +324,11 @@ const types = ref([
             <!-- {{(filteredLibs.length === 0 && props.searchIn !== "" && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)))? "No search results found for " + props.searchIn : null}}  -->
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
-              <div v-for="(foo) in filteredLibs" :key="foo['name']" ref="foo['name']">
+              <div v-for="(foo) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
                 <DocEntry
-                  :id="foo['name']"
-                  :key="foo['name']"
-                  :doc="foo as Doc"
+                  :id="functionDocName(foo)"
+                  :key="functionDocName(foo)"
+                  :doc="foo"
                 />
               </div>
           </div>

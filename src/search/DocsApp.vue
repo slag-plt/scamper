@@ -1,41 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import ApiEntries from './ApiEntries.vue';
-//import SearchResults from "./SearchResults.vue";
 const appVersion = APP_VERSION
-// import ModuleList from "./ModuleList.vue"
-
-// import * as Audio from "./api/audio.js"
-// import * as Prelude from "./api/prelude.js"
-// import * as Image from "./api/image.js"
-// import * as Lab from "./api/lab.js"
-// import * as Music from "./api/music.js"
-// import * as Test from "./api/test.js"
-// import * as Canvas from "./api/canvas.js"
-// import * as Html from "./api/html.js"
-// import * as Reactive from "./api/reactive.js"
-// import * as Data from "./api/data.js"
-// import * as Rex from "./api/rex.js"
-
-// const libs: [string, object][] = [
-//   ["prelude", Prelude],
-//   ["image", Image],
-//   ["lab", Lab],
-//   ["music", Music],
-//   ["test", Test],
-//   ["audio", Audio],
-//   ["canvas", Canvas],
-//   ["html", Html],
-//   ["reactive", Reactive],
-//   ["data", Data],
-//   ["rex", Rex],
-// ]
-
 
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_self")
+  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_self")
 }
 const urlParams = new URLSearchParams(window.location.search);
 const searched: string | null = urlParams.get('search');
