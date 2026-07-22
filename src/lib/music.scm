@@ -64,12 +64,12 @@
 ;;; Creates a new composition that calls the function `proc` when played.
 (define trigger (js-var "music_trigger"))
 
-;;; (par comp1) -> composition?
+;;; (par . comp1) -> composition?
 ;;;  comp1 : composition?
 ;;; Creates a new composition that plays `comp1`, `comp2`, ..., in parallel.
 (define par (js-var "music_par"))
 
-;;; (seq comp1) -> composition?
+;;; (seq . comp1) -> composition?
 ;;;  comp1 : composition?
 ;;; Creates a new composition that plays `comp1`, `comp2`, ..., in sequence.
 (define seq (js-var "music_seq"))

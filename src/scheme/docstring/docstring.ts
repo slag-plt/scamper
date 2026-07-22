@@ -1,13 +1,34 @@
 import { ICE, Range, ScamperError } from "../../lpm"
-import type { ComplexPred, DocTag, FunctionDoc, Pred, VarApp } from "../../lpm/docstring.js"
 import { Param, parseSingleParam } from "./param"
-import { App, Comment, Exp, isApp, isVar, Prog } from "../ast"
+import { App, Comment, Exp, isApp, isVar, Var } from "../ast"
 
 import { parseFunctionDescription } from "./description"
 import { hasTag, makeTagged, mkScamperErrorWithRange } from "../util"
-import { parseAllTags } from "./tags"
-import { parseSignature } from "./signature"
+import { DocTag, parseAllTags } from "./tags"
+import { parseSignature, Signature } from "./signature"
 
+type Params = Param[]
+type Tags = DocTag[]
+export interface FunctionDoc {
+  signature: Signature
+  params: Params
+  /** The documented rest parameter, e.g. `xs` in `(+ . xs)`, if the
+   * signature declares one -- see VarApp.restParam. */
+  restParam?: Param
+  description: string
+  tags: Tags
+  range: Range
+}
+
+interface SimplePred extends Var {
+  range: Range
+}
+export interface ComplexPred extends App {
+  head: Var
+  args: Pred[]
+  range: Range
+}
+export type Pred = SimplePred | ComplexPred
 export function isComplexPred(a: App): a is ComplexPred {
   return (
     isVar(a.head) &&
@@ -25,6 +46,15 @@ export const ParseStage = {
   Tags: makeTagged(ParseStageTag, "tags"),
 } as const
 export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
+
+export interface VarApp extends App {
+  head: Var
+  args: Var[]
+  /** The signature's rest parameter, e.g. `xs` in `(+ . xs)` or
+   * `(map f . xs)`, mirroring the lambda arglist's dotted-pair rest-param
+   * syntax. undefined for a fixed-arity signature. */
+  restParam?: Var
+}
 
 export function isVarApp(e: Exp): e is VarApp {
   return isApp(e) && isVar(e.head) && e.args.every(isVar)
@@ -48,9 +78,10 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
   const lastRange = (docComments.at(-1) ?? firstDocComment).range
 
   const signature = parseSignature(firstDocComment)
-  const params: Param[] = []
+  const params: Params = []
+  let restParam: Param | undefined
   let description = ""
-  const tags: DocTag[] = []
+  const tags: Tags = []
 
   let stage: ParseStage = ParseStage.Params
   while (docComments.length > 0) {
@@ -58,15 +89,24 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
       case ParseStage.Params: {
         const result = parseSingleParam(docComments)
         if (hasTag(result, ParseStageTag)) {
-          if (params.length !== signature.function.args.length) {
+          const expectedParamLines =
+            signature.function.args.length +
+            (signature.function.restParam ? 1 : 0)
+          if (params.length + (restParam ? 1 : 0) !== expectedParamLines) {
             // TODO: should do more granular range
             throw mkScamperErrorWithRange(
               "Parser",
-              "Encountered function description before all parameters were described",
+              signature.function.restParam && !restParam
+                ? `Rest parameter "${signature.function.restParam.name}" was declared in the signature but not documented`
+                : "Encountered function description before all parameters were described",
               firstRange,
             )
           }
           stage = result
+        } else if (
+          result.name === signature.function.restParam?.name
+        ) {
+          restParam = result
         } else {
           params.push(result)
         }
@@ -98,6 +138,7 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
   return {
     signature,
     params,
+    restParam,
     description,
     tags,
     range: new Range(firstRange.begin, lastRange.end),
@@ -154,30 +195,4 @@ export function parseFunctionDocFromComments(
     }
     throw e
   }
-}
-
-/**
- * Parses every define's docstring in a program, for attaching to a Module's
- * bindings (see Env.getTopLevelAsModule). Mirrors
- * parseFunctionDocFromComments's stance on malformed docstrings: a
- * documentation-quality issue, not a reason to fail -- a define with a
- * malformed or missing docstring is simply omitted from the result.
- * @returns parsed docstrings for top-level defines, keyed by name
- */
-export function extractModuleDocs(prog: Prog): Map<string, FunctionDoc> {
-  const docs = new Map<string, FunctionDoc>()
-  for (const stmt of prog) {
-    if (stmt.tag !== "define" || !stmt.docComments) {
-      continue
-    }
-    try {
-      const doc = parseFunctionDocFromComments(stmt.docComments)
-      if (doc) {
-        docs.set(stmt.name, doc)
-      }
-    } catch {
-      // malformed docstring -- treat as undocumented rather than failing
-    }
-  }
-  return docs
 }

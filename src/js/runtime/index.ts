@@ -43,3 +43,10 @@ export function runtime_mkGetFn (t: string, f: string): (v: L.Value) => L.Value 
 export function runtime_typeOf (v: L.Value): string {
   return L.typeOf(v)
 }
+
+/**
+ * @returns #t unconditionally -- the "any" predicate, matching every value.
+ */
+export function runtime_any (_v: L.Value): boolean {
+  return true
+}

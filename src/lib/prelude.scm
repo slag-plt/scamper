@@ -84,32 +84,32 @@
 ;;; Returns `#t` if and only `v` is even.
 (define even? (js-var "prelude_evenQ"))
 
-;;; (max v) -> number?
+;;; (max . v) -> number?
 ;;;  v : number?
 ;;; Returns the maximum of the given numbers.
 (define max (js-var "prelude_max"))
 
-;;; (min v) -> number?
+;;; (min . v) -> number?
 ;;;  v : number?
 ;;; Returns the minimum of the given numbers.
 (define min (js-var "prelude_min"))
 
-;;; (+ v1) -> number?
+;;; (+ . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the sum of `v1`, `v2`, ... .
 (define + (js-var "prelude_plus"))
 
-;;; (- v1) -> number?
+;;; (- . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the difference of `v1`, `v2`, ... .
 (define - (js-var "prelude_minus"))
 
-;;; (* v1) -> number?
+;;; (* . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the product of `v1`, `v2`, ... .
 (define * (js-var "prelude_times"))
 
-;;; (/ v1) -> number?
+;;; (/ . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the quotient of `v1`, `v2`, ... .
 (define / (js-var "prelude_div"))
@@ -234,12 +234,12 @@
 ;;; Returns `#t` if and only `v` is a boolean.
 (define boolean? (js-var "prelude_booleanQ"))
 
-;;; (nand v1) -> boolean?
+;;; (nand . v1) -> boolean?
 ;;;  v1 : boolean?
 ;;; Equivalent to `(not (and v1 v2 ...))`.
 (define nand (js-var "prelude_nand"))
 
-;;; (nor v1) -> boolean?
+;;; (nor . v1) -> boolean?
 ;;;  v1 : boolean?
 ;;; Equivalent to `(not (or v1 v2 ...))`.
 (define nor (js-var "prelude_nor"))
@@ -256,13 +256,13 @@
 ;;; Equivalent to `(or (and v1 (not v2)) (and (not v1) v2))`.
 (define xor (js-var "prelude_xor"))
 
-;;; (any-of f1) -> procedure?
+;;; (any-of . f1) -> procedure?
 ;;;  f1 : any
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
 (define any-of (js-var "prelude_anyOf"))
 
-;;; (all-of f1) -> procedure?
+;;; (all-of . f1) -> procedure?
 ;;;  f1 : any
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
@@ -278,6 +278,23 @@
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
 (define list-of (js-var "prelude_listOf"))
+
+;; N.B., deliberately plain Scamper (not js-var-backed): the contract-check
+;; codegen (contract.ts) needs to call an arbitrary predicate -- possibly a
+;; user-defined closure -- once per element of a variadic argument's
+;; collected rest-list, and JS code can no longer call back into Scamper
+;; (Closure.call/callScamperFn are both disabled). Written in Scamper, the
+;; call to pred? is ordinary application, so it works uniformly whether
+;; pred? is a closure or a js-var-backed primitive.
+;; N.B., left undocumented like "any", for the same reason: it's
+;; compiler-support infrastructure, not a documented user-facing binding.
+(define all-satisfy?
+  (lambda (pred? lst)
+    (if (null? lst)
+        #t
+        (if (pred? (car lst))
+            (all-satisfy? pred? (cdr lst))
+            #f))))
 
 ;;; (cons v1 v2) -> pair?
 ;;;  v1 : any
@@ -313,7 +330,7 @@
 ;;; Returns `#t` if and only `v` is a list.
 (define list? (js-var "prelude_listQ"))
 
-;;; (list v1) -> list?
+;;; (list . v1) -> list?
 ;;;  v1 : any
 ;;; Returns a new list containing `v1`, `v2`, ... .
 (define list (js-var "prelude_list"))
@@ -329,7 +346,7 @@
 ;;; Returns the length of `v`.
 (define length (js-var "prelude_length"))
 
-;;; (append l1) -> list?
+;;; (append . l1) -> list?
 ;;;  l1 : list?
 ;;; Returns a new list containing the elements of lists `l1`, `l2`, ... in sequence.
 (define append (js-var "prelude_append"))
@@ -448,7 +465,7 @@
 ;;; Returns a string of length `k` with each character set to `c`.
 (define make-string (js-var "prelude_makeString"))
 
-;;; (string c1) -> string?
+;;; (string . c1) -> string?
 ;;;  c1 : char?
 ;;; Returns a string consisting of the characters `c1`, `c2`, ...
 (define string (js-var "prelude_string"))
@@ -486,7 +503,7 @@
 ;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive).
 (define substring (js-var "prelude_substring"))
 
-;;; (string-append s1) -> string?
+;;; (string-append . s1) -> string?
 ;;;  s1 : string?
 ;;; Returns a string made by joining `s1`, `s2`, ... together.
 (define string-append (js-var "prelude_stringAppend"))
@@ -534,7 +551,7 @@
 ;;; Returns `#t` if and only `v` is a vector.
 (define vector? (js-var "prelude_vectorQ"))
 
-;;; (vector v1) -> vector?
+;;; (vector . v1) -> vector?
 ;;;  v1 : any
 ;;; Returns a vector consisting of the values `v1`, `v2`, ...
 (define vector (js-var "prelude_vector"))
@@ -581,7 +598,7 @@
 ;;; Returns a vector consisting of the values in list `l`.
 (define list->vector (js-var "prelude_listToVector"))
 
-;;; (vector-range beg end step) -> vector?
+;;; (vector-range beg end . step) -> vector?
 ;;;  beg : integer?
 ;;;   this argument can be omitted
 ;;;  end : integer?
@@ -590,7 +607,7 @@
 ;;; Returns a vector containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.
 (define vector-range (js-var "prelude_vectorRange"))
 
-;;; (vector-append v1) -> vector?
+;;; (vector-append . v1) -> vector?
 ;;;  v1 : vector?
 ;;; Returns a new vector containing the elements of `v1`, ..., `vk` in order.
 (define vector-append (js-var "prelude_vectorAppend"))
@@ -612,7 +629,7 @@
 ;;; Returns a new string containing the results of applying `f` to each character of `s`.
 (define string-map (js-var "prelude_stringMap"))
 
-;;; (map f l) -> list?
+;;; (map f . l) -> list?
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the results of applying `f` to each element of `l`.
@@ -657,7 +674,7 @@
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
 (define reduce-right (js-var "prelude_reduceRight"))
 
-;;; (vector-map f v) -> vector?
+;;; (vector-map f . v) -> vector?
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Returns a new vector containing the results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
@@ -702,23 +719,23 @@
 ;;; A placeholder for an expression that is not yet implemented.
 (define ?? (js-var "prelude_qq"))
 
-;;; (compose f1) -> procedure?
+;;; (compose . f1) -> procedure?
 ;;;  f1 : procedure?
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.
 (define compose (js-var "prelude_compose"))
 
-;;; (o f) -> procedure?
+;;; (o . f) -> procedure?
 ;;;  f : procedure?
 ;;; A synonym for `compose`.
 (define o (js-var "prelude_compose"))
 
-;;; (|> v f1) -> any
+;;; (|> v . f1) -> any
 ;;;  v : any
 ;;;  f1 : procedure?
 ;;; Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.
 (define |> (js-var "prelude_pipe"))
 
-;;; (range beg end step) -> list?
+;;; (range beg end . step) -> list?
 ;;;  beg : integer?
 ;;;   this argument can be omitted
 ;;;  end : integer?
@@ -733,7 +750,7 @@
 ;;; Returns a random number in the range 0 to n (exclusive).
 (define random (js-var "prelude_random"))
 
-;;; (with-handler h f v) -> any
+;;; (with-handler h f . v) -> any
 ;;;  h : procedure?
 ;;;   a handler
 ;;;  f : procedure?
@@ -860,52 +877,52 @@
 
 (define cddddr (js-var "prelude_cddddr"))
 
-;;; (char=? c1) -> boolean?
+;;; (char=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters.
 (define char=? (js-var "prelude_char=?"))
 
-;;; (char<? c1) -> boolean?
+;;; (char<? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values.
 (define char<? (js-var "prelude_char<?"))
 
-;;; (char>? c1) -> boolean?
+;;; (char>? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values.
 (define char>? (js-var "prelude_char>?"))
 
-;;; (char<=? c1) -> boolean?
+;;; (char<=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values.
 (define char<=? (js-var "prelude_char<=?"))
 
-;;; (char>=? c1) -> boolean?
+;;; (char>=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values.
 (define char>=? (js-var "prelude_char>=?"))
 
-;;; (char-ci=? c1) -> boolean?
+;;; (char-ci=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters, ignoring case.
 (define char-ci=? (js-var "prelude_char-ci=?"))
 
-;;; (char-ci<? c1) -> boolean?
+;;; (char-ci<? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values, ignoring case.
 (define char-ci<? (js-var "prelude_char-ci<?"))
 
-;;; (char-ci>? c1) -> boolean?
+;;; (char-ci>? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values, ignoring case.
 (define char-ci>? (js-var "prelude_char-ci>?"))
 
-;;; (char-ci<=? c1) -> boolean?
+;;; (char-ci<=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values, ignoring case.
 (define char-ci<=? (js-var "prelude_char-ci<=?"))
 
-;;; (char-ci>=? c1) -> boolean?
+;;; (char-ci>=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values, ignoring case.
 (define char-ci>=? (js-var "prelude_char-ci>=?"))
@@ -935,52 +952,52 @@
 ;;; Returns `#t` if and only `c` is a lower-case character.
 (define char-lower-case? (js-var "prelude_char-lower-case?"))
 
-;;; (string=? s1) -> boolean?
+;;; (string=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings.
 (define string=? (js-var "prelude_string=?"))
 
-;;; (string<? s1) -> boolean?
+;;; (string<? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order.
 (define string<? (js-var "prelude_string<?"))
 
-;;; (string>? s1) -> boolean?
+;;; (string>? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order.
 (define string>? (js-var "prelude_string>?"))
 
-;;; (string<=? s1) -> boolean?
+;;; (string<=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order.
 (define string<=? (js-var "prelude_string<=?"))
 
-;;; (string>=? s1) -> boolean?
+;;; (string>=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order.
 (define string>=? (js-var "prelude_string>=?"))
 
-;;; (string-ci=? s1) -> boolean?
+;;; (string-ci=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings, ignoring case.
 (define string-ci=? (js-var "prelude_string-ci=?"))
 
-;;; (string-ci<? s1) -> boolean?
+;;; (string-ci<? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order, ignoring case.
 (define string-ci<? (js-var "prelude_string-ci<?"))
 
-;;; (string-ci>? s1) -> boolean?
+;;; (string-ci>? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order, ignoring case.
 (define string-ci>? (js-var "prelude_string-ci>?"))
 
-;;; (string-ci<=? s1) -> boolean?
+;;; (string-ci<=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order, ignoring case.
 (define string-ci<=? (js-var "prelude_string-ci<=?"))
 
-;;; (string-ci>=? s1) -> boolean?
+;;; (string-ci>=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order, ignoring case.
 (define string-ci>=? (js-var "prelude_string-ci>=?"))

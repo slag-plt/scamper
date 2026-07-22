@@ -11,14 +11,17 @@ import {
 } from "../../../src/scheme/docstring/param"
 import {
   commentsToDocComments,
+  ComplexPred,
   DocComment,
+  FunctionDoc,
   isComplexPred,
   parseDocLineContents,
   parseDocString,
   parseFunctionDocFromComments,
   ParseStage,
+  Pred,
+  VarApp,
 } from "../../../src/scheme/docstring/docstring"
-import { ComplexPred, FunctionDoc, Pred, VarApp } from "../../../src/lpm"
 import { parseFunctionDescription } from "../../../src/scheme/docstring/description"
 import { testTag1, testTag2, testTagLine1, testTagLine2 } from "./test-tags"
 import { SimpleErrorChannel } from "../../../src/lpm/output/simple-error"
@@ -305,11 +308,14 @@ function makeTestDocstring(): {
   const funcName = "func"
   const paramName1 = "p1"
   const paramName2 = "p2"
-  const funcApp = mkApp(
-    mkVar(funcName, anyRange),
-    [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
-    anyRange,
-  ) as VarApp
+  const funcApp = {
+    ...mkApp(
+      mkVar(funcName, anyRange),
+      [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
+      anyRange,
+    ),
+    restParam: undefined,
+  } as VarApp
 
   const complexPredName1 = "complex-pred1?"
   const predName1 = "pred1?"
@@ -378,6 +384,7 @@ function makeTestDocstring(): {
         range: anyRange,
       },
     ],
+    restParam: undefined,
     description,
     tags: [
       { tag: tag1, contents: tagContents1, range: anyRange },

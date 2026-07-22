@@ -10,6 +10,7 @@ import { Exp, mkDisp, Prog } from "./ast.js"
 import { getQueriedProgram } from "./query"
 import { isExampleTag } from "./docstring/tags/example-tag"
 import { parseFunctionDocFromComments } from "./docstring/docstring.js"
+import { contractProgram } from "./contract.js"
 // N.B., src/lib/index.ts compiles and runs its own Scamper source (the
 // builtin libraries) through this module's `compile()` at load time, which
 // makes this a circular import. Keeping it as the *last* import here matters:
@@ -115,11 +116,14 @@ export function tokenizeAndParse(
 export async function compile(
   err: S.ErrorChannel,
   src: string,
+  queryLoc?: undefined,
+  insertContracts?: boolean,
 ): Promise<S.Prog | undefined>
 export async function compile(
   err: S.ErrorChannel,
   src: string,
   queryLoc: Loc,
+  insertContracts?: boolean,
 ): Promise<{ prog: S.Prog; queriedRange: Range } | undefined>
 // Scope checking will add await here eventually.
 // eslint-disable-next-line @typescript-eslint/require-await
@@ -127,6 +131,7 @@ export async function compile(
   err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
+  insertContracts = false,
 ): Promise<S.Prog | { prog: S.Prog; queriedRange: Range } | undefined> {
   if (queryLoc) {
     const parsed = tokenizeAndParse(err, src, queryLoc) as
@@ -135,7 +140,10 @@ export async function compile(
     if (parsed === undefined) {
       return undefined
     }
-    const prog = lowerProgram(expandProgram(parsed.program))
+    const program = insertContracts
+      ? contractProgram(parsed.program)
+      : parsed.program
+    const prog = lowerProgram(expandProgram(program))
     return { prog, queriedRange: parsed.queriedRange }
   }
 
@@ -156,7 +164,8 @@ export async function compile(
   // }
 
   // Lowering/codegen
-  return lowerProgram(expandProgram(program))
+  const contracted = insertContracts ? contractProgram(program) : program
+  return lowerProgram(expandProgram(contracted))
 }
 
 export function mkInitialEnv(): S.Env {

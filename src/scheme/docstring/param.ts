@@ -5,12 +5,16 @@ import { reservedWords } from "../reserved-words.js"
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
 import { catchIf, mkScamperErrorWithRange } from "../util"
-import { DocComment, isPred, ParseStage } from "./docstring"
-import type { Param, Pred } from "../../lpm/docstring.js"
+import { DocComment, isPred, ParseStage, Pred } from "./docstring"
 
 const isWhitespace = (c: string): boolean => /\s/.test(c)
 
-export type { Param }
+export interface Param {
+  name: string
+  predicate: Pred
+  description?: string
+  range: Range
+}
 
 export const WhitespaceLocation = {
   Beginning: "beginning",

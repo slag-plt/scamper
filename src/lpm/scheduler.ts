@@ -4,8 +4,6 @@ import { schedulerYield } from "./scheduler-yield.js"
 import { mkTraceOutput } from "./trace/index.js"
 import { getFS } from "../fs"
 import * as S from "../scheme"
-import { extractModuleDocs } from "../scheme/docstring/docstring.js"
-import { SimpleErrorChannel } from "./output/simple-error.js"
 
 const DEFAULT_REFRESH_RATE = 60
 
@@ -152,19 +150,12 @@ export class Scheduler {
               }
               const moduleFiber = new Fiber(prog)
               const id = crypto.randomUUID()
-              // N.B., re-parses _src (already validated above via compile())
-              // to recover the docComments codegen deliberately drops from
-              // the lowered bytecode -- see codegen.ts's lowerStmt "define"
-              // case. Uses a fresh error channel so re-parsing an
-              // already-valid source doesn't double-report to task.err.
-              const astProg = S.tokenizeAndParse(new SimpleErrorChannel(), _src)
-              const docs = astProg ? extractModuleDocs(astProg) : new Map()
               this.schedule({
                 id,
                 fiber: moduleFiber,
                 err: task.err,
                 onComplete: () => {
-                  const mod = moduleFiber.topLevelEnv.getTopLevelAsModule(docs)
+                  const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
                   fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(
                     stepResult.filename,
                     mod,

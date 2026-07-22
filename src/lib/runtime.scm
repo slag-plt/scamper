@@ -5,3 +5,5 @@
 (define ##mkGetFn## (js-var "runtime_mkGetFn"))
 
 (define ##typeOf## (js-var "runtime_typeOf"))
+
+(define any (js-var "runtime_any"))

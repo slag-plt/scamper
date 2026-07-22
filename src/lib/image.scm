@@ -25,7 +25,7 @@
 ;;; Returns `#t` if and only if `v` is a rgb value.
 (define rgb? (js-var "image_isRgb"))
 
-;;; (rgb r g b a) -> rgb?
+;;; (rgb r g b . a) -> rgb?
 ;;;  r : rgb-component?
 ;;;  g : rgb-component?
 ;;;  b : rgb-component?
@@ -80,12 +80,12 @@
 ;;; Returns a string representation of the rgb value, e.g., approrpiate for use as a shape color.
 (define rgb->string (js-var "image_rgbToString"))
 
-;;; (hsv? v) -> boolean?
+;;; (hsv? . v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a hsv value.
 (define hsv? (js-var "image_hsv"))
 
-;;; (hsv h s v a) -> hsv?
+;;; (hsv h s v . a) -> hsv?
 ;;;  h : number?
 ;;;   0 <= h <= 360
 ;;;  s : number?
@@ -319,36 +319,36 @@
 ;;; Returns a drawing with dimensions `width × height` formed by connecting the points in `points` with straight lines. The points are specified as a `pair` of coordinates.
 (define path (js-var "image_path"))
 
-;;; (beside d1) -> drawing?
+;;; (beside . d1) -> drawing?
 ;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other (horizontally).
 (define beside (js-var "image_beside"))
 
-;;; (beside/align align d1) -> drawing?
+;;; (beside/align align . d1) -> drawing?
 ;;;  align : string?
 ;;;   either "top", "center", or "bottom"
 ;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other on the x-axis, aligning them along the y-axis according to `align`.
 (define beside/align (js-var "image_besideAlign"))
 
-;;; (above d1) -> drawing?
+;;; (above . d1) -> drawing?
 ;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other (vertically in descending order).
 (define above (js-var "image_above"))
 
-;;; (above/align align d1) -> drawing?
+;;; (above/align align . d1) -> drawing?
 ;;;  align : string?
 ;;;   either "left", "middle", or "right"
 ;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other on the y-axis, aligning them along the x-axis according to `align`.
 (define above/align (js-var "image_aboveAlign"))
 
-;;; (overlay d1) -> drawing?
+;;; (overlay . d1) -> drawing?
 ;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other. (`d1` is the topmost drawing).
 (define overlay (js-var "image_overlay"))
 
-;;; (overlay/align xAlign yAlign d1) -> drawing?
+;;; (overlay/align xAlign yAlign . d1) -> drawing?
 ;;;  xAlign : string?
 ;;;   either "left", "middle", or "right"
 ;;;  yAlign : string?
@@ -379,7 +379,7 @@
 ;;; Returns a new drawing formed by drawing `d` but with lines drawn according to `dash-spec`. `dash-spec` is an list of numbers where each successive pair of numbers describe the length of a dash and the length of the subsequent gap.
 (define with-dash (js-var "image_withDash"))
 
-;;; (text str size color font) -> drawing?
+;;; (text str size color . font) -> drawing?
 ;;;  str : string?
 ;;;  size : any
 ;;;   number? A valid font size (in px)

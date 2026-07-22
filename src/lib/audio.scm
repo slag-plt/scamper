@@ -10,7 +10,7 @@
 ;;; Creates an audio context with the given sample rate.
 (define audio-context (js-var "audio_audioContext"))
 
-;;; (audio-pipeline ctx n1) -> pipeline?
+;;; (audio-pipeline ctx . n1) -> pipeline?
 ;;;  ctx : context?
 ;;;  n1 : audio-node?
 ;;; Creates an audio pipeline from the given audio nodes, connecting the nodes in sequence.

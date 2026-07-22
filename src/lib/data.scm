@@ -47,13 +47,13 @@
 ;;; Takes an association list of options and a dataset, and returns a new dataset with the specified options applied. Valid options include: - 'background-color': sets the background color of the dataset - 'border-color': sets the border color of the dataset
 (define with-dataset-options (js-var "data_withDatasetOptions"))
 
-;;; (plot-linear datasets) -> plot?
+;;; (plot-linear . datasets) -> plot?
 ;;;  datasets : any
 ;;;   list of datasets
 ;;; Creates a linear plot from the provided list of datasets. Valid datasets for this plot include line, bar, scatter, and bubble datasets.
 (define plot-linear (js-var "data_plotLinear"))
 
-;;; (plot-category labels datasets) -> plot?
+;;; (plot-category labels . datasets) -> plot?
 ;;;  labels : any
 ;;;   list of strings
 ;;;  datasets : any
@@ -61,7 +61,7 @@
 ;;; Creates a categorical plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.
 (define plot-category (js-var "data_plotCategory"))
 
-;;; (plot-radial labels datasets) -> plot?
+;;; (plot-radial labels . datasets) -> plot?
 ;;;  labels : any
 ;;;   list of strings
 ;;;  datasets : any

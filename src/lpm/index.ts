@@ -1,4 +1,3 @@
-export * from "./docstring.js"
 export * from "./error.js"
 export * from "./lang.js"
 export * from "./output"

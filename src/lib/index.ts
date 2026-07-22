@@ -2,8 +2,7 @@ import * as L from "../lpm"
 import { Fiber } from "../lpm/fiber.js"
 import { builtinLibs } from "../lpm/builtin-registry.js"
 import { SimpleErrorChannel } from "../lpm/output/simple-error.js"
-import { compile, tokenizeAndParse } from "../scheme/index.js"
-import { extractModuleDocs } from "../scheme/docstring/docstring.js"
+import { compile } from "../scheme/index.js"
 
 import audioSrc from "./audio.scm?raw"
 import canvasSrc from "./canvas.scm?raw"
@@ -40,7 +39,10 @@ const librarySources: [string, string][] = [
  */
 async function loadLibrary(name: string, src: string): Promise<L.Module> {
   const errChannel = new SimpleErrorChannel()
-  const prog = await compile(errChannel, src)
+  // N.B., insertContracts=true: only the standard library gets its exports
+  // wrapped with contract checks derived from their docstrings, not
+  // arbitrary user programs.
+  const prog = await compile(errChannel, src, undefined, true)
   if (prog === undefined || errChannel.errors.length > 0) {
     throw new L.ICE(
       "lib.loadLibrary",
@@ -51,12 +53,7 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   while (!fiber.isDone()) {
     fiber.step()
   }
-  // N.B., re-parses src (already validated above via compile()) to recover
-  // the docComments codegen deliberately drops from the lowered bytecode --
-  // see codegen.ts's lowerStmt "define" case.
-  const astProg = tokenizeAndParse(new SimpleErrorChannel(), src)
-  const docs = astProg ? extractModuleDocs(astProg) : new Map()
-  return fiber.topLevelEnv.getTopLevelAsModule(docs)
+  return fiber.topLevelEnv.getTopLevelAsModule()
 }
 
 // N.B., populates the shared registry (see builtin-registry.ts for why) in
