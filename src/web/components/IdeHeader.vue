@@ -26,7 +26,7 @@ function handleTrace() {
 const search = ref("")
 
 function searchOpenWindow(searchTerm: string) {
-  window.open("../search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_blank")
 }
 </script>
 
@@ -66,6 +66,11 @@ function searchOpenWindow(searchTerm: string) {
         :disabled="!currentFile"
         @click="emit('runWindow')"
       ></button>
+      <button
+        class="fa-solid fa-clipboard-question"
+        aria-label="Query value"
+        @click="session.query()"
+      ></button>
       <!-- TODO: re-enable once AST is migrated to new backend -->
       <button
         class="fa-solid fa-tree"
@@ -73,7 +78,7 @@ function searchOpenWindow(searchTerm: string) {
         disabled
       ></button>
       ⋅
-      <a href="../../../docs.html">Docs</a>
+      <a href="docs.html">Docs</a>
       ⋅
       <a href="reference.html">Reference</a>
       ⋅
