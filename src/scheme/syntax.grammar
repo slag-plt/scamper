@@ -48,6 +48,7 @@ expression {
   Quote { "'" expression | paren<kw<"quote"> expression> } |
   JsVar { paren<kw<"js-var"> String> } |
   Error { paren<kw<"error"> expression> } |
+  Apply { paren<kw<"apply"> expression expression> } |
   Vector { "[" expression* "]" } |
   Lambda { paren<kw<"lambda"> arglist expression> } |
   If { paren<kw<"if"> expression expression expression> } |

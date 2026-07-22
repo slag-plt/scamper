@@ -92,7 +92,7 @@ test.skip("apply-map", async () => {
   ])
 })
 
-test.skip("apply", async () => {
+test("apply", async () => {
   expect(
     await runProgram(`
 (apply (lambda (x) (+ x 1)) (list 1))

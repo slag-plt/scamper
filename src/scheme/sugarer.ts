@@ -67,6 +67,9 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case "error": {
       return AST.mkError(sugarExpr(e.exp))
     }
+    case "apply": {
+      return AST.mkApply(sugarExpr(e.fn), sugarExpr(e.args))
+    }
     case "let*": {
       return AST.mkLetS(
         e.bindings.map(({ name, value }) => ({

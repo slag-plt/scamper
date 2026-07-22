@@ -159,6 +159,10 @@ export const mkError = (range: Range = Range.none): L.ErrorOp => ({
   tag: "error",
   range,
 })
+export const mkApplyOp = (range: Range = Range.none): L.ApplyOp => ({
+  tag: "apply",
+  range,
+})
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({

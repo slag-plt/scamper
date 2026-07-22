@@ -115,6 +115,10 @@ describe("lezer-bridge parsing", () => {
     expectParses('(error "something went wrong")')
   })
 
+  test("apply", () => {
+    expectParses("(apply + (list 1 2 3))")
+  })
+
   test("import/define/display, including empty top-level list", () => {
     expectParses("(import lists)\n(define f (lambda (x) x))\n(display (f 1))")
     expectParses("()")
@@ -182,6 +186,7 @@ describe("lezer-bridge parsing", () => {
     expect(reservedWords.slice().sort()).toEqual(
       [
         "and",
+        "apply",
         "begin",
         "cond",
         "define",

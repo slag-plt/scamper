@@ -1093,21 +1093,6 @@ export function prelude_procedureQ(x: any): boolean {
   return L.isClosure(x) || L.isJsFunction(x)
 }
 
-export function prelude_apply(f: L.ScamperFn, args: L.List): L.Value {
-  checkContract(arguments, contract("apply", [C.func, C.list]))
-
-  // N.B., callScamperFn is disabled (JS library code can no longer call back
-  // into a Scamper closure -- see its deprecation note), but a JsFunction
-  // isn't "Scamper code" from JS's perspective, it's just a plain JS
-  // function -- calling it directly is exactly what the interpreter's own
-  // Ap op handler already does for ordinary application, so it's not
-  // subject to that restriction.
-  if (L.isJsFunction(f)) {
-    return f(...L.listToVector(args))
-  }
-  return L.callScamperFn(f, ...L.listToVector(args))
-}
-
 export function prelude_stringMap(f: L.ScamperFn, s: string): string {
   checkContract(arguments, contract("string-map", [C.func, C.string]))
   const chs = []

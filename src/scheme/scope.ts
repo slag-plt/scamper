@@ -146,6 +146,11 @@ function scopeCheckExp(
       scopeCheckExp(errors, globals, locals, e.exp)
       return
     }
+    case "apply": {
+      scopeCheckExp(errors, globals, locals, e.fn)
+      scopeCheckExp(errors, globals, locals, e.args)
+      return
+    }
     case "report": {
       scopeCheckExp(errors, globals, locals, e.exp)
       return

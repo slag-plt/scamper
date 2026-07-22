@@ -346,6 +346,10 @@ export interface ErrorOp {
   tag: "error"
   range: Range
 }
+export interface ApplyOp {
+  tag: "apply"
+  range: Range
+}
 
 export type Ops =
   | Lit
@@ -360,6 +364,7 @@ export type Ops =
   | Rept
   | JsVar
   | ErrorOp
+  | ApplyOp
 export type Blk = Ops[]
 
 export interface Disp {

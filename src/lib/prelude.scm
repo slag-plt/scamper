@@ -617,12 +617,6 @@
 ;;; Returns `#t` if and only `v` is a procedure.
 (define procedure? (js-var "prelude_procedureQ"))
 
-;;; (apply f l) -> any
-;;;  f : procedure?
-;;;  l : list?
-;;; Calls `f` with the values contained in `l`.
-(define apply (js-var "prelude_apply"))
-
 ;;; (string-map f s) -> string?
 ;;;  f : procedure?
 ;;;  s : string?

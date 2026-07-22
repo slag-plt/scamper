@@ -90,11 +90,7 @@ function mkTargetCall(
     (acc, p) => A.mkApp(A.mkVar("cons", range), [A.mkVar(p.name, range), acc], range),
     A.mkVar(restParam.name, range),
   )
-  return A.mkApp(
-    A.mkVar("apply", range),
-    [A.mkVar(contractTargetName, range), combined],
-    range,
-  )
+  return A.mkApply(A.mkVar(contractTargetName, range), combined, range)
 }
 
 /**

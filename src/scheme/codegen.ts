@@ -82,6 +82,8 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [L.mkJsVar(e.name, e.range)]
     case "error":
       return [...lowerExpr(e.exp), L.mkError(e.range)]
+    case "apply":
+      return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
     case "report":
       return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:

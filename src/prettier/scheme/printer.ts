@@ -163,6 +163,14 @@ export const SchemePrinter: Printer = {
       case "error":
         return group(["(error", indent([line, path.call(print, "exp")]), ")"])
 
+      case "apply":
+        return group([
+          "(apply ",
+          path.call(print, "fn"),
+          indent([line, path.call(print, "args")]),
+          ")",
+        ])
+
       case "let*": {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node

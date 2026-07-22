@@ -9,6 +9,7 @@ import { Frame } from "./frame"
 import { ICE, ScamperError } from "./error"
 import {
   ApHandler,
+  ApplyHandler,
   ClsHandler,
   CtorHandler,
   ErrorHandler,
@@ -216,6 +217,9 @@ export class Fiber {
         break
       case "error":
         isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
+        break
+      case "apply":
+        isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

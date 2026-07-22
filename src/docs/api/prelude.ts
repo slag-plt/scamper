@@ -1013,13 +1013,6 @@ export const procedure: Doc = new Doc(
   "Returns `#t` if and only `v` is a procedure.",
 )
 
-export const apply: Doc = new Doc(
-  "apply",
-  "any",
-  [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
-  "Calls `f` with the values contained in `l`.",
-)
-
 export const stringMap: Doc = new Doc(
   "string-map",
   "string?",
