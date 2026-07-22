@@ -189,8 +189,6 @@ export interface Closure extends TaggedObject {
   // Machine can be referenced by call to perform evaluation.
   call: (...args: Value[]) => Value
   name?: Id
-  // N.B., see ast.ts's Lam.isContractWrapper -- threaded through from there.
-  isContractWrapper?: boolean
 }
 
 /** A char is a tagged object that captures a single character (a one-character string). */
@@ -310,7 +308,6 @@ export interface Cls {
   name?: string
   range: Range
   restParam?: string
-  isContractWrapper?: boolean
 }
 export interface Ap {
   tag: "ap"

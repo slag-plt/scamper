@@ -18,30 +18,13 @@ export class Frame {
   // synthetic per-statement frame beginProcessingBlk creates, which has no
   // caller of its own.
   callRange: Range
-  // N.B., true only for a frame executing a contract.ts-generated wrapper
-  // (see ast.ts's Lam.isContractWrapper). This, not the frame's name, is
-  // what actually licenses preferring callRange/name over an op's own
-  // range/a raw JS function's name -- a wrapper's entire body is a
-  // check-then-call whose ops all carry the wrapped definition's range, so
-  // "blame whoever called this frame" is always right. An ordinary named
-  // function (isContractWrapper false) does NOT get this treatment: its own
-  // ops already carry correct, distinct ranges for whatever they call, at
-  // whatever depth, and callRange only ever points at its *own* call site.
-  isWrapperFrame: boolean
 
-  constructor(
-    name: string,
-    env: L.Env,
-    blk: L.Blk,
-    callRange: Range = Range.none,
-    isWrapperFrame = false,
-  ) {
+  constructor(name: string, env: L.Env, blk: L.Blk, callRange: Range = Range.none) {
     this.name = name
     this.env = env
     this.values = []
     this.ops = blk.toReversed()
     this.callRange = callRange
-    this.isWrapperFrame = isWrapperFrame
   }
 
   isFinished(): boolean {
