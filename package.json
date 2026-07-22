@@ -5,21 +5,26 @@
   "main": "./_build/js/index.js",
   "scripts": {
     "postinstall": "npm run generate-parser",
+    "generate-parser": "node scripts/generate-parser.mjs",
+
+    "dev": "vite",
     "cli": "tsx src/cli/index.ts",
     "precli": "npm run generate-parser",
-    "generate-parser": "node scripts/generate-parser.mjs",
-    "typecheck": "vue-tsc -noEmit",
-    "pretypecheck": "npm run generate-parser",
-    "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "prebuild": "npm run generate-parser",
     "preview": "vite preview",
-    "deploy": "./scripts/deploy $npm_package_version",
     "clean": "rm -rf dist",
+
+    "typecheck": "vue-tsc -noEmit",
+    "pretypecheck": "npm run generate-parser",
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "validate-build": "./scripts/validate-build",
+
+    "deploy": "./scripts/deploy $npm_package_version",
+    "deploy:latest": "./scripts/update-latest $npm_package_version"
   },
   "type": "module",
   "author": "",
