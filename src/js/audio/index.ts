@@ -33,10 +33,18 @@ export function audio_sampleNode(data: number[]): SampleNode {
   };
 }
 
+export function audio_sampleQ(v: any): boolean {
+  return L.isStructKind(v, "sample");
+}
+
 export function audio_audioContext(sampleRate: number): AudioContext {
   checkContract(arguments, contract("audio-context", [C.integer]));
   const AudioContext = window.AudioContext;
   return new AudioContext({ sampleRate });
+}
+
+export function audio_contextQ(v: any): boolean {
+  return v instanceof AudioContext;
 }
 
 export interface AudioPipeline extends L.Struct {
@@ -73,6 +81,14 @@ export function audio_audioPipeline(
     pipeline,
     onOffNode,
   };
+}
+
+export function audio_pipelineQ(v: any): boolean {
+  return L.isStructKind(v, "audio-pipeline");
+}
+
+export function audio_audioNodeQ(v: any): boolean {
+  return v instanceof AudioNode;
 }
 
 export function audio_oscillatorNode(

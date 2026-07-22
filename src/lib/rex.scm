@@ -1,4 +1,4 @@
-;;; (rex? v) -> boolean
+;;; (rex? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if `v` is a regex, `#f` otherwise.
 (define rex? (js-var "rex_isRegex"))
@@ -69,7 +69,7 @@
 ;;; Returns a list of all non-overlapping matches of the regex `r` in the string `s`.
 (define rex-find-matches (js-var "rex_rexFindMatches"))
 
-;;; (rex-matches? r s) -> boolean
+;;; (rex-matches? r s) -> boolean?
 ;;;  r : rex?
 ;;;  s : string?
 ;;; Returns `#t` if the regex `r` matches the entire string `s`, `#f` otherwise.

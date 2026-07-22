@@ -1,16 +1,21 @@
-;;; (dur num den) -> duration?
+;;; (dur? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a duration.
+(define dur? (js-var "music_durQ"))
+
+;;; (dur num den) -> dur?
 ;;;  num : integer?
 ;;;  den : integer?
 ;;; Creates a new duration object representing the ratio `num/den`.
 (define dur (js-var "music_dur"))
 
 ;;; (numerator dur) -> integer?
-;;;  dur : duration?
+;;;  dur : dur?
 ;;; Returns the numerator of `dur`.
 (define numerator (js-var "music_numerator"))
 
 ;;; (denominator dur) -> integer?
-;;;  dur : duration?
+;;;  dur : dur?
 ;;; Returns the denominator of `dur`.
 (define denominator (js-var "music_denominator"))
 
@@ -25,7 +30,7 @@
 (define octave? (js-var "music_isOctave"))
 
 ;;; (note-value? n) -> boolean?
-;;;  n : number
+;;;  n : number?
 ;;; Returns `#t` if and only `n` is a valid MIDI note value (0--127).
 (define note-value? (js-var "music_isValidMidiNote"))
 

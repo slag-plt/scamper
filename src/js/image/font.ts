@@ -10,8 +10,12 @@ export interface Font extends L.Struct {
   isItalic: boolean
 }
 
+export function image_fontQ(v: any): boolean {
+  return L.isStructKind(v, 'font')
+}
+
 export const image_fontS: C.Spec = {
-  predicate: (v: any) => L.isStructKind(v, 'font'),
+  predicate: image_fontQ,
   errorMsg: (actual: any) => `expected a font, received ${L.typeOf(actual)}`
 }
 

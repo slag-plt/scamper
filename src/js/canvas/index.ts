@@ -5,6 +5,10 @@ import { Drawing, image_render } from '../image/drawing.js'
 import { image_colorToRgb, image_colorS, image_rgbToString } from '../image/color.js'
 import { Font, image_font, image_fontS, image_fontToFontString } from '../image/font.js'
 
+export function canvas_canvasQ(v: any): boolean {
+  return v instanceof HTMLCanvasElement
+}
+
 export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElement {
   checkContract(arguments, contract('make-canvas', [C.integer, C.integer]))
   const canvas = document.createElement('canvas')

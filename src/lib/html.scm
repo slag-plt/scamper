@@ -1,3 +1,13 @@
+;;; (element? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is an HTML element.
+(define element? (js-var "html_isElement"))
+
+;;; (text-area? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a text area.
+(define text-area? (js-var "html_textAreaQ"))
+
 ;;; (text-area id) -> text-area?
 ;;;  id : string?
 ;;; Creates a text area with the given id.
@@ -7,6 +17,11 @@
 ;;;  text-area : text-area?
 ;;; Returns the text in the given text area.
 (define text-area-get (js-var "html_textAreaGet"))
+
+;;; (button? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a button.
+(define button? (js-var "html_buttonQ"))
 
 ;;; (button label fn) -> button?
 ;;;  label : string?

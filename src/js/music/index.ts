@@ -49,8 +49,12 @@ export function music_isValidMidiNote(n: number): boolean {
   return n >= 0 && n <= 127
 }
 
+export function music_durQ(v: any): boolean {
+  return L.isStructKind(v, 'dur')
+}
+
 const durC: C.Spec = {
-  predicate: (v: any) => L.isStructKind(v, 'dur'),
+  predicate: music_durQ,
   errorMsg: (actual: any) => `expected a duration, received ${L.typeOf(actual)}`,
 }
 

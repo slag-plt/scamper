@@ -25,6 +25,10 @@ interface Subscription extends L.Struct {
   register: (react: ReactiveElement) => void
 }
 
+export function reactive_subscriptionQ(v: any): boolean {
+  return L.isStructKind(v, 'subscription')
+}
+
 /**
  * A ReactiveCanvas is a canvas that acts as a view over a model of type T.
  */

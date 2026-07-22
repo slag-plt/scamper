@@ -1,3 +1,13 @@
+;;; (canvas? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a canvas.
+(define canvas? (js-var "canvas_canvasQ"))
+
+;;; (html? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is an HTML element.
+(define html? (js-var "html_isElement"))
+
 ;;; (color r b g a) -> string?
 ;;;  r : integer?
 ;;;   0 <= r <= 255
@@ -34,22 +44,22 @@
 ;;; Returns an rgb value with the specified components.
 (define rgb (js-var "image_rgb"))
 
-;;; (rgb-red rgb) -> rgbComponent?
+;;; (rgb-red rgb) -> rgb-component?
 ;;;  rgb : rgb?
 ;;; Returns the red component of the rgb value.
 (define rgb-red (js-var "image_rgbRed"))
 
-;;; (rgb-green rgb) -> rgbComponent?
+;;; (rgb-green rgb) -> rgb-component?
 ;;;  rgb : rgb?
 ;;; Returns the green component of the rgb value.
 (define rgb-green (js-var "image_rgbGreen"))
 
-;;; (rgb-blue rgb) -> rgbComponent?
+;;; (rgb-blue rgb) -> rgb-component?
 ;;;  rgb : rgb?
 ;;; Returns the blue component of the rgb value.
 (define rgb-blue (js-var "image_rgbBlue"))
 
-;;; (rgb-alpha rgb) -> rgbComponent?
+;;; (rgb-alpha rgb) -> rgb-component?
 ;;;  rgb : rgb?
 ;;; Returns the alpha component of the rgb value.
 (define rgb-alpha (js-var "image_rgbAlpha"))
@@ -230,6 +240,11 @@
 ;;; Returns the average of the two rgb values.
 (define rgb-average (js-var "image_rgbAverage"))
 
+;;; (font? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a font.
+(define font? (js-var "image_fontQ"))
+
 ;;; (font face system-face bold? italic?) -> font?
 ;;;  face : any
 ;;;   string? A valid font name
@@ -252,7 +267,7 @@
 ;;; Returns `#t` if and only `v` is a shape.
 (define shape? (js-var "image_drawingQ"))
 
-;;; (ellipse width height fill color) -> drawing?
+;;; (ellipse width height fill color) -> image?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  fill : boolean?
@@ -260,7 +275,7 @@
 ;;; Returns a new drawing containing an ellipse with dimensions `width × height`.
 (define ellipse (js-var "image_ellipse"))
 
-;;; (circle radius fill color) -> drawing?
+;;; (circle radius fill color) -> image?
 ;;;  radius : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
@@ -269,7 +284,7 @@
 ;;; Returns a drawing consisting of a circle of radius `radius`.
 (define circle (js-var "image_circle"))
 
-;;; (rectangle width height fill color) -> drawing?
+;;; (rectangle width height fill color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  fill : string?
@@ -279,7 +294,7 @@
 ;;; Returns a drawing consisting of a rectangle with dimensions `width × height`.
 (define rectangle (js-var "image_rectangle"))
 
-;;; (square width fill color) -> drawing?
+;;; (square width fill color) -> image?
 ;;;  width : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
@@ -288,7 +303,7 @@
 ;;; Returns a drawing consisting of a square with length `width`.
 (define square (js-var "image_square"))
 
-;;; (triangle length fill color) -> drawing?
+;;; (triangle length fill color) -> image?
 ;;;  length : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
@@ -297,7 +312,7 @@
 ;;; Returns a drawing consisting of a equilateral triangle with length `length`.
 (define triangle (js-var "image_triangle"))
 
-;;; (isosceles-triangle width height fill color) -> drawing?
+;;; (isosceles-triangle width height fill color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  fill : string?
@@ -307,7 +322,7 @@
 ;;; Returns a drawing consisting of a isosceles triangle with base `base` and height `height`.
 (define isosceles-triangle (js-var "image_isoscelesTriangle"))
 
-;;; (path width height points fill color) -> drawing?
+;;; (path width height points fill color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  points : list?
@@ -319,67 +334,67 @@
 ;;; Returns a drawing with dimensions `width × height` formed by connecting the points in `points` with straight lines. The points are specified as a `pair` of coordinates.
 (define path (js-var "image_path"))
 
-;;; (beside . d1) -> drawing?
-;;;  d1 : drawing?
+;;; (beside . d1) -> image?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other (horizontally).
 (define beside (js-var "image_beside"))
 
-;;; (beside/align align . d1) -> drawing?
+;;; (beside/align align . d1) -> image?
 ;;;  align : string?
 ;;;   either "top", "center", or "bottom"
-;;;  d1 : drawing?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other on the x-axis, aligning them along the y-axis according to `align`.
 (define beside/align (js-var "image_besideAlign"))
 
-;;; (above . d1) -> drawing?
-;;;  d1 : drawing?
+;;; (above . d1) -> image?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other (vertically in descending order).
 (define above (js-var "image_above"))
 
-;;; (above/align align . d1) -> drawing?
+;;; (above/align align . d1) -> image?
 ;;;  align : string?
 ;;;   either "left", "middle", or "right"
-;;;  d1 : drawing?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other on the y-axis, aligning them along the x-axis according to `align`.
 (define above/align (js-var "image_aboveAlign"))
 
-;;; (overlay . d1) -> drawing?
-;;;  d1 : drawing?
+;;; (overlay . d1) -> image?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other. (`d1` is the topmost drawing).
 (define overlay (js-var "image_overlay"))
 
-;;; (overlay/align xAlign yAlign . d1) -> drawing?
+;;; (overlay/align xAlign yAlign . d1) -> image?
 ;;;  xAlign : string?
 ;;;   either "left", "middle", or "right"
 ;;;  yAlign : string?
 ;;;   either "top", "center", or "bottom"
-;;;  d1 : drawing?
+;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other, aligning them according to `xAlign` and `yAlign`.
 (define overlay/align (js-var "image_overlayAlign"))
 
-;;; (overlay/offset dx dy d1 d2) -> drawing?
+;;; (overlay/offset dx dy d1 d2) -> image?
 ;;;  dx : number?
 ;;;  dy : number?
-;;;  d1 : drawing?
-;;;  d2 : drawing?
+;;;  d1 : image?
+;;;  d2 : image?
 ;;; Creates a new drawing formed by places the drawing `d1` on top of `d2`, offset by `(dx, dy)`.
 (define overlay/offset (js-var "image_overlayOffset"))
 
-;;; (rotate angle d) -> drawing?
+;;; (rotate angle d) -> image?
 ;;;  angle : number?
 ;;;   in degrees
-;;;  d : drawing?
+;;;  d : image?
 ;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Note: currently buggy and shifts off-center.
 (define rotate (js-var "image_rotate"))
 
-;;; (with-dash dash-spec d) -> drawing?
+;;; (with-dash dash-spec d) -> image?
 ;;;  dash-spec : list?
 ;;;   a list of numbers
-;;;  d : drawing?
+;;;  d : image?
 ;;; Returns a new drawing formed by drawing `d` but with lines drawn according to `dash-spec`. `dash-spec` is an list of numbers where each successive pair of numbers describe the length of a dash and the length of the subsequent gap.
 (define with-dash (js-var "image_withDash"))
 
-;;; (text str size color . font) -> drawing?
+;;; (text str size color . font) -> image?
 ;;;  str : string?
 ;;;  size : any
 ;;;   number? A valid font size (in px)
@@ -389,21 +404,21 @@
 ;;; Returns a new drawing formed by drawing `str` with the given arguments.
 (define text (js-var "image_text"))
 
-;;; (solid-square width color) -> drawing?
+;;; (solid-square width color) -> image?
 ;;;  width : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid square with length `width`.
 (define solid-square (js-var "image_solidSquare"))
 
-;;; (outlined-square width color) -> drawing?
+;;; (outlined-square width color) -> image?
 ;;;  width : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outline square with length `width`.
 (define outlined-square (js-var "image_outlinedSquare"))
 
-;;; (solid-rectangle width height color) -> drawing?
+;;; (solid-rectangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : string?
@@ -411,7 +426,7 @@
 ;;; Returns a drawing consisting of a solid rectangle with dimensions `width × height`.
 (define solid-rectangle (js-var "image_solidRectangle"))
 
-;;; (outlined-rectangle width height color) -> drawing?
+;;; (outlined-rectangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : string?
@@ -419,49 +434,49 @@
 ;;; Returns a drawing consisting of an outlined rectangle with dimensions `width × height`.
 (define outlined-rectangle (js-var "image_outlinedRectangle"))
 
-;;; (solid-circle radius color) -> drawing?
+;;; (solid-circle radius color) -> image?
 ;;;  radius : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid circle of radius `radius`.
 (define solid-circle (js-var "image_solidCircle"))
 
-;;; (outlined-circle radius color) -> drawing?
+;;; (outlined-circle radius color) -> image?
 ;;;  radius : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined circle of radius `radius`.
 (define outlined-circle (js-var "image_outlinedCircle"))
 
-;;; (solid-ellipse width height color) -> drawing?
+;;; (solid-ellipse width height color) -> image?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  color : string?
 ;;; Returns a new drawing containing a solid ellipse with dimensions `width × height`.
 (define solid-ellipse (js-var "image_solidEllipse"))
 
-;;; (outlined-ellipse width height color) -> drawing?
+;;; (outlined-ellipse width height color) -> image?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  color : string?
 ;;; Returns a new drawing containing an outlined ellipse with dimensions `width × height`.
 (define outlined-ellipse (js-var "image_outlinedEllipse"))
 
-;;; (solid-triangle length color) -> drawing?
+;;; (solid-triangle length color) -> image?
 ;;;  length : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid equilateral triangle with length `length`.
 (define solid-triangle (js-var "image_solidTriangle"))
 
-;;; (outlined-triangle length color) -> drawing?
+;;; (outlined-triangle length color) -> image?
 ;;;  length : number?
 ;;;  color : string?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined equilateral triangle with length `length`.
 (define outlined-triangle (js-var "image_outlinedTriangle"))
 
-;;; (solid-isosceles-triangle width height color) -> drawing?
+;;; (solid-isosceles-triangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : string?
@@ -469,7 +484,7 @@
 ;;; Returns a drawing consisting of a solid isosceles triangle with base `base` and height `height`.
 (define solid-isosceles-triangle (js-var "image_solidIsoscelesTriangle"))
 
-;;; (outlined-isosceles-triangle width height color) -> drawing?
+;;; (outlined-isosceles-triangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : string?
@@ -478,49 +493,49 @@
 (define outlined-isosceles-triangle (js-var "image_outlinedIsoscelesTriangle"))
 
 ;;; (image-width img) -> number?
-;;;  img : drawing?
+;;;  img : image?
 ;;; Returns the width of the image.
 (define image-width (js-var "image_imageWidth"))
 
 ;;; (image-height img) -> number?
-;;;  img : drawing?
+;;;  img : image?
 ;;; Returns the height of the image.
 (define image-height (js-var "image_imageHeight"))
 
 ;;; (image-color img) -> string?
-;;;  img : drawing?
+;;;  img : image?
 ;;; Returns the color of the image.
 (define image-color (js-var "image_imageColor"))
 
-;;; (image-recolor img color) -> drawing?
-;;;  img : drawing?
+;;; (image-recolor img color) -> image?
+;;;  img : image?
 ;;;  color : color?
 ;;; Returns a new image with the same dimensions as `img` but with the color `color`.
 (define image-recolor (js-var "image_imageRecolor"))
 
 ;;; (drawing->pixels d) -> vector?
-;;;  d : drawing?
+;;;  d : image?
 ;;; Returns a vector of rgb values corresponding to the pixels of the given drawing.
 (define drawing->pixels (js-var "image_drawingToPixels"))
 
 ;;; (drawing->image drawing) -> image?
-;;;  drawing : drawing?
+;;;  drawing : image?
 ;;; Returns a new image/canvas created from the provided drawing.
 (define drawing->image (js-var "image_drawingToImage"))
 
 ;;; (with-image-file callback) -> html?
-;;;  callback : function?
+;;;  callback : procedure?
 ;;; Returns a container with a file chooser that, when used, calls `callback` with the selected image and replaces the container's contentsr with the output produced by `callback`.
 (define with-image-file (js-var "image_withImageFile"))
 
 ;;; (with-image-from-url url callback) -> html?
 ;;;  url : string?
-;;;  callback : function?
+;;;  callback : procedure?
 ;;; Returns a container that, when used, calls `callback` with the selected image and replaces the chooser with the output produced by `callback`.
 (define with-image-from-url (js-var "image_withImageFromUrl"))
 
 ;;; (pixel-map fn img) -> image?
-;;;  fn : function?
+;;;  fn : procedure?
 ;;;  img : image?
 ;;; Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
 (define pixel-map (js-var "image_pixelMap"))

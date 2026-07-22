@@ -2,6 +2,18 @@ import * as L from '../../lpm'
 import { checkContract, contract } from '../contract.js'
 import * as C from '../contract.js'
 
+export function html_isElement(v: any): boolean {
+  return v instanceof HTMLElement
+}
+
+export function html_textAreaQ(v: any): boolean {
+  return v instanceof HTMLTextAreaElement
+}
+
+export function html_buttonQ(v: any): boolean {
+  return v instanceof HTMLButtonElement
+}
+
 export function html_textArea(id: string): HTMLTextAreaElement {
   checkContract(arguments, contract('text-area', [C.string]))
   const ret = new HTMLTextAreaElement()

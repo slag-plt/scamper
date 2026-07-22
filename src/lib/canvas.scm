@@ -1,3 +1,8 @@
+;;; (canvas? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a canvas.
+(define canvas? (js-var "canvas_canvasQ"))
+
 ;;; (make-canvas width height) -> canvas?
 ;;;  width : integer?
 ;;;   positive
@@ -68,7 +73,7 @@
 ;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?
-;;;  drawing : drawing?
+;;;  drawing : image?
 ;;; Draws the given drawing (created via the `image` library) at the given coordinates.
 (define canvas-drawing! (js-var "canvas_canvasDrawing"))
 

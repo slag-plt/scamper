@@ -787,11 +787,11 @@
 
 (define null (js-var "prelude_nullConst"))
 
-;;; (pi) -> number
+;;; (pi) -> number?
 ;;; The constant π.
 (define pi (js-var "prelude_piConst"))
 
-;;; (π) -> number
+;;; (π) -> number?
 ;;; The constant π.
 (define π (js-var "prelude_piConst"))
 
