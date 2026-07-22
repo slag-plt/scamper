@@ -74,8 +74,20 @@ function applyFn(
       return traceStep
     } catch (e) {
       if (e instanceof ScamperError) {
-        e.range = range
-        e.source = fn.name
+        // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
+        // fn was called directly, outside any named Scamper function -- in
+        // that case op.range/fn.name (this call's own, real range and the
+        // JS function's own name) are already exactly right. Otherwise fn
+        // is being invoked from inside a named function's frame -- most
+        // often a contract wrapper's own ##contract-target## call, whose Ap
+        // op only ever carries the *wrapped definition's* range, never the
+        // user's actual call site. In that case prefer the frame's own
+        // callRange/name: the range/name of the Ap that invoked *this
+        // frame*, i.e. wherever the user (or an enclosing function) really
+        // wrote the call.
+        const useFrame = !currFrame.name.startsWith("##")
+        e.range = useFrame ? currFrame.callRange : range
+        e.source = useFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
@@ -111,6 +123,7 @@ function applyFn(
         ...bindings
       ),
       fn.code,
+      range,
     )
     if (currFrame.isFinished()) {
       // tail-call optimize by replacing current empty frame

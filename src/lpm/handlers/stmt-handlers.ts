@@ -1,5 +1,6 @@
 import { displayStep, Fiber, StepResult, traceStep } from "../fiber"
 import { Stmt } from "../lang"
+import { isClosure } from "../util"
 
 type StatementHandler<T extends Stmt["tag"]> = (
   stmt: Extract<Stmt, { tag: T }>,
@@ -20,6 +21,19 @@ export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   }
   if (fiber.hasFramesRemaining()) {
     return fiber.stepFrame()
+  }
+  // N.B., every lambda is compiled with the placeholder name "##anonymous##"
+  // (codegen has no notion of "this expression happens to be a define's
+  // value") -- so a defined closure only picks up a real, Scamper-facing
+  // name here, at the point it's actually bound to one. Only the first
+  // binding wins: an alias (`(define g f)`) must not rename the closure out
+  // from under whichever name it already has, since it's the same shared
+  // object.
+  if (
+    isClosure(fiber.lastResult) &&
+    (fiber.lastResult.name === undefined || fiber.lastResult.name === "##anonymous##")
+  ) {
+    fiber.lastResult.name = stmt.name
   }
   fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([stmt.name, fiber.lastResult])
   fiber.advanceStmt()
