@@ -1049,6 +1049,50 @@ test("range", async () => {
   ])
 })
 
+// N.B., regression test for vector-range's docstring having declared 2
+// fixed params (beg, end) when prelude_vectorRange is fully variadic like
+// range -- the 1- and 2-arg calls below used to fail with a spurious arity
+// error before the contract wrapper's arity matched the implementation.
+test("vector-range", async () => {
+  expect(
+    await runProgram(`
+(vector-range 10)
+
+(vector-range 50)
+
+(vector-range 0)
+
+(vector-range -1)
+
+(vector-range 5 10)
+
+(vector-range -3 5)
+
+(vector-range 10 5)
+
+(vector-range 5 -3)
+
+(vector-range 0 10 2)
+
+(vector-range 10 5 -1)
+
+(vector-range 10 0 -3)
+`),
+  ).toEqual([
+    "(vector 0 1 2 3 4 5 6 7 8 9)",
+    "(vector 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)",
+    "(vector)",
+    "(vector)",
+    "(vector 5 6 7 8 9)",
+    "(vector -3 -2 -1 0 1 2 3 4)",
+    "(vector)",
+    "(vector)",
+    "(vector 0 2 4 6 8)",
+    "(vector 10 9 8 7 6)",
+    "(vector 10 7 4 1)",
+  ])
+})
+
 test("real", async () => {
   expect(
     await runProgram(`
