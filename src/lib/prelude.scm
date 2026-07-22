@@ -225,7 +225,7 @@
 (define atan (js-var "prelude_atan"))
 
 ;;; (not v) -> boolean?
-;;;  v : any
+;;;  v : boolean?
 ;;; Returns `#t` if and only `v` is `#f`.
 (define not (js-var "prelude_not"))
 

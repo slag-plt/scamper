@@ -826,9 +826,13 @@ test("nand-nor", async () => {
 })
 
 test("not-boolean", async () => {
-  // N.B., per R7RS, `not` accepts any value -- only #f is falsy, so (not 1)
-  // is #f, not a contract violation. `not`'s own docstring already declares
-  // its param as `any`, not `boolean?`.
+  // N.B., unlike standard Scheme (where any non-#f value is truthy), we are
+  // stricter: `not`'s docstring declares its param `boolean?`, so a
+  // non-boolean argument is a contract violation, enforced by the
+  // docstring-derived wrapper in contract.ts. The reported range points at
+  // `not`'s own definition in prelude.scm rather than the call site -- a
+  // known, unrelated limitation of contract-wrapped errors (see cons-pair,
+  // range above).
   expect(
     await runProgram(`
 (not #t)
@@ -843,7 +847,7 @@ test("not-boolean", async () => {
   ).toEqual([
     "#f",
     "#t",
-    "#f",
+    "Runtime error [230:1-230:35]: (error) expected a boolean, received number",
     "#t",
     "#t",
     "#f",
