@@ -1,7 +1,10 @@
 import { createApp } from "vue"
 import DocsApp from "./DocsApp.vue"
-import { throwNull } from "../utils"
 import { initializeLibs } from "../lib"
+
+function throwNull(message: string): never {
+  throw new Error(message)
+}
 
 await initializeLibs()
 createApp(DocsApp).mount(

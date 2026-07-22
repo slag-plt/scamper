@@ -2,7 +2,7 @@ import { computed, defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { LoggingChannel, Range, ReportError } from "../../src/lpm"
-import Scamper from "../../src/scamper"
+import Scamper, { initialize } from "../../src/scamper"
 import type { EditorAccessor } from "../../src/web/composables/editor-context"
 import {
   provideScamperSession,
@@ -10,6 +10,8 @@ import {
 } from "../../src/web/composables/use-scamper-session"
 import type { ResultsPaneType } from "../../src/web/composables/use-results-pane"
 import { makeMockCodeMirrorEditorAdapter } from "../stubs/mock-code-mirror-editor-adapter"
+
+await initialize()
 
 function makePane(): ResultsPaneType {
   const ch = new LoggingChannel(false, false)

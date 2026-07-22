@@ -1,36 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
-
+import { ref } from "vue"
+import ApiEntries from './ApiEntries.vue';
 const appVersion = APP_VERSION
-import ModuleList from "./ModuleList.vue"
-import ApiEntries from "./ApiEntries.vue"
-import { docRegistry } from "../lib"
-import type { FunctionDoc } from "../scheme/docstring/docstring"
-
-// N.B., order matches the old hand-maintained api/*.ts file list (prelude
-// first as the default/most common module); "runtime" is LPM-internal
-// plumbing, not user-facing, so it's deliberately excluded here.
-const moduleOrder = [
-  "prelude", "image", "lab", "music", "test",
-  "audio", "canvas", "html", "reactive", "data", "rex",
-]
-const libs: [string, Map<string, FunctionDoc>][] = moduleOrder.map(
-  (name) => [name, docRegistry.get(name) ?? new Map<string, FunctionDoc>()],
-)
-
-const selectedModule = ref("prelude")
-
-const selectedLib = computed(
-  () =>
-    libs.find(([name]) => name === selectedModule.value)?.[1] ??
-    new Map<string, FunctionDoc>(),
-)
 
 const search = ref("")
 
 function searchForFunction(searchTerm: string) {
   window.open("search.html?search=" + encodeURIComponent(searchTerm), "_self")
 }
+const urlParams = new URLSearchParams(window.location.search);
+const searched: string | null = urlParams.get('search');
 </script>
 
 <template>
@@ -40,14 +19,7 @@ function searchForFunction(searchTerm: string) {
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
-        <a href="search.html">Search</a> ⋅ 
-
-        <input
-      v-model="search"  
-      size = "30"
-      placeholder="Search function or press enter..."
-      @keyup.enter="searchForFunction(search)"
-        >
+        <a href="search.html">Search</a>
 
       </div>
       <div class="header-right">
@@ -63,13 +35,20 @@ function searchForFunction(searchTerm: string) {
       </div>
     </div>
     <div class="docs">
-      <ModuleList
-        :libs="libs"
-        :selected-module="selectedModule"
-        @select="selectedModule = $event"
-      />
-      <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
+    <div class="flex-box">
+      <h2 :style="{  }">Search results {{(searched)? "for " + searched : ''}}</h2>
+      <input
+        v-model="search"  
+        size = "30"
+        class="search-input"
+        placeholder="Search function or press enter..."
+        @keyup.enter="searchForFunction(search)"
+      >
     </div>
+    <div :style="{ margin: '15px' }">
+      <ApiEntries :search-in="searched || ''"/>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -107,7 +86,7 @@ body,
 }
 
 .header {
-  background: #eee;
+  background: #ffacac;
   color: #333;
   padding: 0.5em;
   flex: 0 0 auto;
@@ -126,5 +105,24 @@ body,
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.flex-box {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-top: -10px;
+  margin-bottom: -10px;
+}
+
+.flex-box2 {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+}
+
+.search-input{
+  height: 24px;
+  margin-top: 20px;
 }
 </style>

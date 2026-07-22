@@ -5,6 +5,7 @@ import IdeApp from "../../src/web/components/IdeApp.vue"
 import * as FS from "../../src/fs"
 import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
 import { mockEditorHandle } from "../stubs/mock-editor-handle"
+import { initialize } from "../../src/scamper"
 
 vi.mock("../../src/fs/opfs", async () => {
   const { MockFileSystem } = await import("../stubs/mock-file-system")
@@ -25,6 +26,8 @@ vi.mock(
   "../../src/web/components/ResultsPane.vue",
   () => import("../stubs/MockResultsPane.vue"),
 )
+
+await initialize()
 
 const REAL_CONTENT = "(define x 42)"
 const FILENAME = "regression.scm"

@@ -3,11 +3,13 @@ import { EditorView } from "@codemirror/view"
 import { afterEach, describe, expect, test } from "vitest"
 import { Range } from "../../src/lpm"
 import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
-import Scamper from "../../src/scamper"
+import Scamper, { initialize } from "../../src/scamper"
 import {
   QueryExtension,
   syncQueryDecorations,
 } from "../../src/web/codemirror/extensions/query"
+
+await initialize()
 
 describe("query decorations", () => {
   afterEach(() => {

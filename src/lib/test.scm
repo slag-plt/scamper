@@ -19,6 +19,7 @@
 ;;;  test-fn : procedure?
 ;;;   a function that produces the actual value to be tested
 ;;; Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.
+;;; @category testing
 (define test-case (js-var "test_testCase"))
 
 ;;; (test-exn desc test-fn) -> test-result?
@@ -26,4 +27,5 @@
 ;;;  test-fn : procedure?
 ;;;   a function that should throw an exception
 ;;; Returns a test result indicating whether the given function threw an exception.
+;;; @category testing
 (define test-exn (js-var "test_testExn"))

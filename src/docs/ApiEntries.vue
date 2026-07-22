@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed } from "vue"
-import { Doc } from "./api/docs.js"
+import type { FunctionDoc } from "../scheme/docstring/docstring"
 import DocEntry from "./DocEntry.vue"
 
 const props = defineProps<{
   moduleName: string
-  lib: object
+  lib: Map<string, FunctionDoc>
 }>()
 
 interface Entry {
   id: string
   name: string
-  doc: Doc
+  doc: FunctionDoc
 }
 
 function entryId(module: string, name: string): string {
@@ -19,10 +19,10 @@ function entryId(module: string, name: string): string {
 }
 
 const entries = computed<Entry[]>(() => {
-  return Object.entries(props.lib).map(([name, doc]) => ({
+  return [...props.lib.entries()].map(([name, doc]) => ({
     id: entryId(props.moduleName, name),
-    name: (doc as Doc).name,
-    doc: doc as Doc,
+    name,
+    doc,
   }))
 })
 </script>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed, ref } from "vue"
 import { useScamperSession } from "../composables/use-scamper-session"
 
 defineProps<{
-  currentFile: string | null
+  currentFile?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -10,7 +11,23 @@ const emit = defineEmits<{
   toggleSidebar: []
 }>()
 
-const { currentRun, execute, stopRun, query } = useScamperSession()
+const session = useScamperSession()
+
+const isRunInProgress = computed(() => session.currentRun.value !== null)
+
+async function handleRun() {
+  await session.execute()
+}
+
+function handleTrace() {
+  void session.execute({ tracing: true })
+}
+
+const search = ref("")
+
+function searchOpenWindow(searchTerm: string) {
+  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+}
 </script>
 
 <template>
@@ -22,11 +39,11 @@ const { currentRun, execute, stopRun, query } = useScamperSession()
         @click="emit('toggleSidebar')"
       ></button>
       ⋅
-      <template v-if="currentRun">
+      <template v-if="isRunInProgress">
         <button
           class="fa-solid fa-stop"
           aria-label="Stop"
-          @click="stopRun()"
+          @click="session.stopRun()"
         ></button>
         <i class="fa-solid fa-spinner fa-spin"></i>
       </template>
@@ -36,12 +53,12 @@ const { currentRun, execute, stopRun, query } = useScamperSession()
         aria-label="Run"
         accesskey="w"
         aria-keyshortcuts="w"
-        @click="execute()"
+        @click="handleRun"
       ></button>
       <button
         class="fa-solid fa-route"
         aria-label="Trace"
-        @click="execute({ tracing: true })"
+        @click="handleTrace"
       ></button>
       <button
         class="fa-solid fa-window-maximize"
@@ -52,7 +69,7 @@ const { currentRun, execute, stopRun, query } = useScamperSession()
       <button
         class="fa-solid fa-clipboard-question"
         aria-label="Query value"
-        @click="query()"
+        @click="session.query()"
       ></button>
       <!-- TODO: re-enable once AST is migrated to new backend -->
       <button
@@ -61,9 +78,16 @@ const { currentRun, execute, stopRun, query } = useScamperSession()
         disabled
       ></button>
       ⋅
-      <a href="../../../docs.html">Docs</a>
+      <a href="docs.html">Docs</a>
       ⋅
       <a href="reference.html">Reference</a>
+      ⋅
+      <input
+        v-model="search"  
+        size = "30"
+        placeholder="Search function or press enter..."
+        @keyup.enter="searchOpenWindow(search)"
+      >
     </div>
     <div class="header-right">
       <a
