@@ -28,7 +28,7 @@ export default defineConfig(
     globalIgnores([
       "dist/*",
       "types/*",
-      "src/lib/webaudiofont/*",
+      "src/js/webaudiofont/*",
       "src/scheme/generated/*",
     ]),
   ],

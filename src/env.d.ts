@@ -12,6 +12,11 @@ declare module "*.css" {
   export default css
 }
 
+declare module "*.scm?raw" {
+  const src: string
+  export default src
+}
+
 declare module "splitpanes" {
   import type { DefineComponent } from "vue"
   export const Splitpanes: DefineComponent<{

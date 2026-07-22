@@ -78,6 +78,12 @@ function lowerExpr(e: A.Exp): L.Blk {
       ]
     case "quote":
       return [L.mkLit(e.value, e.range)]
+    case "jsvar":
+      return [L.mkJsVar(e.name, e.range)]
+    case "error":
+      return [...lowerExpr(e.exp), L.mkError(e.range)]
+    case "apply":
+      return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
     case "report":
       return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:
@@ -88,7 +94,7 @@ function lowerExpr(e: A.Exp): L.Blk {
 function lowerStmt(s: A.Stmt, displayStmtExpr = true): L.Stmt {
   switch (s.tag) {
     case "import":
-      return L.mkImport(s.module, s.range)
+      return L.mkImport(s.module, s.kind, s.range)
     case "define":
       // N.B., docComments is documentation metadata, not executable code --
       // it deliberately doesn't carry forward into the lowered bytecode.

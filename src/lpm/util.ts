@@ -133,8 +133,9 @@ export const mkDefine = (
 ): L.Define => ({ tag: "define", name, expr, range })
 export const mkImport = (
   name: string,
+  kind: "builtin" | "file",
   range: Range = Range.none,
-): L.Import => ({ tag: "import", name, range })
+): L.Import => ({ tag: "import", name, kind, range })
 export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
@@ -148,6 +149,19 @@ export const mkPops = (): L.PopS => ({ tag: "pops" })
 export const mkPopv = (): L.PopV => ({ tag: "popv" })
 export const mkRept = (range: Range = Range.none): L.Rept => ({
   tag: "rept",
+  range,
+})
+export const mkJsVar = (name: string, range: Range = Range.none): L.JsVar => ({
+  tag: "jsvar",
+  name,
+  range,
+})
+export const mkError = (range: Range = Range.none): L.ErrorOp => ({
+  tag: "error",
+  range,
+})
+export const mkApplyOp = (range: Range = Range.none): L.ApplyOp => ({
+  tag: "apply",
   range,
 })
 

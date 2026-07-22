@@ -42,7 +42,7 @@ export const SchemePrinter: Printer = {
       ///// Statements ////////////////////////////////////////////////////////////
 
       case "import":
-        return `(import ${node.module})`
+        return `(import ${node.kind === "file" ? JSON.stringify(node.module) : node.module})`
 
       case "define":
         return group([
@@ -156,6 +156,20 @@ export const SchemePrinter: Printer = {
 
       case "quote":
         return `'${TextRenderer.render(node.value)}`
+
+      case "jsvar":
+        return `(js-var ${JSON.stringify(node.name)})`
+
+      case "error":
+        return group(["(error", indent([line, path.call(print, "exp")]), ")"])
+
+      case "apply":
+        return group([
+          "(apply ",
+          path.call(print, "fn"),
+          indent([line, path.call(print, "args")]),
+          ")",
+        ])
 
       case "let*": {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {

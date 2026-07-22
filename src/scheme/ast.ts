@@ -62,13 +62,24 @@ export interface Comment {
 // s ::= e
 //     | (import m)
 //     | (define x e)
-//     | ;;; <docstring>
+//     | <docstring>
 //       (define x e)
 //     | (display e)
 //     | e
 //
 //     -- Sugared form
 //     | (struct S (f1 ... fk))
+//
+// <docstring> ::= ;;; (fn x1 ... xk) -> typred
+//                 ;;;   x1 : typred - <description>
+//                 ;;;   ...
+//                 ;;;   xk : typred - <description>
+//                 ;;; @tag1 <description>
+//                 ;;; ...
+//                 ;;; @tagk <description>
+//                 ;;; <description>
+//
+// typred ::= f | (f1 ... fk)
 
 ///// Patterns /////
 
@@ -136,6 +147,19 @@ export interface Quote extends Tagged, Node {
   tag: "quote"
   value: L.Value
 }
+export interface JsVar extends Tagged, Node {
+  tag: "jsvar"
+  name: string
+}
+export interface ErrorExp extends Tagged, Node {
+  tag: "error"
+  exp: Exp
+}
+export interface Apply extends Tagged, Node {
+  tag: "apply"
+  fn: Exp
+  args: Exp
+}
 
 // Sugared Forms
 export interface LetS extends Tagged, Node {
@@ -174,6 +198,9 @@ export type Exp =
   | If
   | Match
   | Quote
+  | JsVar
+  | ErrorExp
+  | Apply
   | LetS
   | And
   | Or
@@ -187,6 +214,14 @@ export type Exp =
 export interface Import extends Tagged, Node {
   tag: "import"
   module: string
+  // "builtin" for a bare identifier (e.g. (import prelude)), resolved
+  // against the standard library; "file" for a quoted string (e.g.
+  // (import "my-file.scm")), resolved against the user's file system. A
+  // bare identifier can never contain "." (see syntax.grammar's Identifier
+  // token), so file names -- which routinely do -- must be quoted; this
+  // also means the two import kinds no longer need to be disambiguated by
+  // probing existence at runtime.
+  kind: "builtin" | "file"
 }
 export interface Define extends Tagged, Node {
   tag: "define"
@@ -309,6 +344,19 @@ export const mkQuote = (
   value: L.Value,
   range: L.Range = L.Range.none,
 ): Quote => ({ tag: "quote", value, range })
+export const mkJsVar = (
+  name: string,
+  range: L.Range = L.Range.none,
+): JsVar => ({ tag: "jsvar", name, range })
+export const mkError = (
+  exp: Exp,
+  range: L.Range = L.Range.none,
+): ErrorExp => ({ tag: "error", exp, range })
+export const mkApply = (
+  fn: Exp,
+  args: Exp,
+  range: L.Range = L.Range.none,
+): Apply => ({ tag: "apply", fn, args, range })
 export const mkLetS = (
   bindings: { name: string; value: Exp }[],
   body: Exp,
@@ -341,8 +389,9 @@ export const mkReport = (exp: Exp, range: L.Range = L.Range.none): Report => ({
 // Statements (stmt)
 export const mkImport = (
   module: string,
+  kind: "builtin" | "file",
   range: L.Range = L.Range.none,
-): Import => ({ tag: "import", module, range })
+): Import => ({ tag: "import", module, kind, range })
 export const mkDefine = (
   name: string,
   value: Exp,
@@ -387,6 +436,9 @@ export function isExp(v: unknown): v is Exp {
       "if",
       "match",
       "quote",
+      "jsvar",
+      "error",
+      "apply",
       "let*",
       "and",
       "or",
@@ -462,6 +514,12 @@ export function expToString(e: Exp): string {
       return `(match ${expToString(e.scrutinee)} ${e.branches.map(({ pat, body }) => `[${patToString(pat)} ${expToString(body)}]`).join(" ")})`
     case "quote":
       return `(quote ${JSON.stringify(e.value)})`
+    case "jsvar":
+      return `(js-var ${JSON.stringify(e.name)})`
+    case "error":
+      return `(error ${expToString(e.exp)})`
+    case "apply":
+      return `(apply ${expToString(e.fn)} ${expToString(e.args)})`
     case "let*":
       return `(let* (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(" ")}) ${expToString(e.body)})`
     case "and":
@@ -480,7 +538,7 @@ export function expToString(e: Exp): string {
 export function stmtToString(s: Stmt): string {
   switch (s.tag) {
     case "import":
-      return `(import ${s.module})`
+      return `(import ${s.kind === "file" ? JSON.stringify(s.module) : s.module})`
     case "define":
       return `(define ${s.name} ${expToString(s.value)})`
     case "display":
@@ -578,6 +636,12 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     )
   } else if (e1.tag === "quote" && e2.tag === "quote") {
     return L.equals(e1.value, e2.value)
+  } else if (e1.tag === "jsvar" && e2.tag === "jsvar") {
+    return e1.name === e2.name
+  } else if (e1.tag === "error" && e2.tag === "error") {
+    return expEquals(e1.exp, e2.exp)
+  } else if (e1.tag === "apply" && e2.tag === "apply") {
+    return expEquals(e1.fn, e2.fn) && expEquals(e1.args, e2.args)
   } else if (e1.tag === "let*" && e2.tag === "let*") {
     return (
       e1.bindings.length === e2.bindings.length &&
@@ -619,7 +683,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
 
 export function stmtEquals(s1: Stmt, s2: Stmt): boolean {
   if (s1.tag === "import" && s2.tag === "import") {
-    return s1.module === s2.module
+    return s1.module === s2.module && s1.kind === s2.kind
   } else if (s1.tag === "define" && s2.tag === "define") {
     return s1.name === s2.name && expEquals(s1.value, s2.value)
   } else if (s1.tag === "display" && s2.tag === "display") {

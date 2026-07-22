@@ -1,37 +1,74 @@
-import { Module } from "../lpm"
-import { imageLib } from "./image/index.js"
-import Lab from "./lab/index.js"
-import Music from "./music/index.js"
-import Test from "./test/index.js"
-import Audio from "./audio/index.js"
-import Canvas from "./canvas/index.js"
-import Html from "./html/index.js"
-import Reactive from "./reactive/index.js"
-import Data from "./data"
-import Rex from "./rex/index.js"
-import Prelude from "./prelude/index.js"
-import Runtime from "./runtime/index.js"
+import * as L from "../lpm"
+import { Fiber } from "../lpm/fiber.js"
+import { builtinLibs } from "../lpm/builtin-registry.js"
+import { SimpleErrorChannel } from "../lpm/output/simple-error.js"
+import { compile } from "../scheme/index.js"
 
-// N.B., a library with a renderers/ folder also needs an entry in
-// src/web/renderers.ts, or its custom Vue/HTML renderers never register in
-// the browser -- this map and that file are two independent enumerations of
-// the same library set.
-export const builtinLibs = new Map<string, Module>([
-  ["image", imageLib],
-  ["lab", Lab],
-  ["music", Music],
-  ["test", Test],
-  ["audio", Audio],
-  ["canvas", Canvas],
-  ["html", Html],
-  ["reactive", Reactive],
-  ["data", Data],
-  ["rex", Rex],
-  ["prelude", Prelude],
-  ["runtime", Runtime],
-])
+import audioSrc from "./audio.scm?raw"
+import canvasSrc from "./canvas.scm?raw"
+import dataSrc from "./data.scm?raw"
+import htmlSrc from "./html.scm?raw"
+import imageSrc from "./image.scm?raw"
+import labSrc from "./lab.scm?raw"
+import musicSrc from "./music.scm?raw"
+import preludeSrc from "./prelude.scm?raw"
+import reactiveSrc from "./reactive.scm?raw"
+import rexSrc from "./rex.scm?raw"
+import runtimeSrc from "./runtime.scm?raw"
+import testSrc from "./test.scm?raw"
 
-export {
-  Prelude, Runtime,
+const librarySources: [string, string][] = [
+  ["audio", audioSrc],
+  ["canvas", canvasSrc],
+  ["data", dataSrc],
+  ["html", htmlSrc],
+  ["image", imageSrc],
+  ["lab", labSrc],
+  ["music", musicSrc],
+  ["prelude", preludeSrc],
+  ["reactive", reactiveSrc],
+  ["rex", rexSrc],
+  ["runtime", runtimeSrc],
+  ["test", testSrc],
+]
+
+/**
+ * Compiles and runs a standard library module's Scamper source (a flat
+ * sequence of `(define name (js-var "..."))` forms -- see src/lib/*.scm) and
+ * snapshots the resulting top-level bindings as a Module.
+ */
+async function loadLibrary(name: string, src: string): Promise<L.Module> {
+  const errChannel = new SimpleErrorChannel()
+  // N.B., insertContracts=true: only the standard library gets its exports
+  // wrapped with contract checks derived from their docstrings, not
+  // arbitrary user programs.
+  const prog = await compile(errChannel, src, undefined, true)
+  if (prog === undefined || errChannel.errors.length > 0) {
+    throw new L.ICE(
+      "lib.loadLibrary",
+      `Failed to compile builtin library "${name}": ${errChannel.errors.map((e) => e.toString()).join("; ")}`,
+    )
+  }
+  const fiber = new Fiber(prog)
+  while (!fiber.isDone()) {
+    fiber.step()
+  }
+  return fiber.topLevelEnv.getTopLevelAsModule()
 }
+
+// N.B., populates the shared registry (see builtin-registry.ts for why) in
+// place, rather than building an independent Map, so that fiber.ts's
+// loadModule() sees these too.
+for (const [name, mod] of await Promise.all(
+  librarySources.map(
+    async ([name, src]): Promise<[string, L.Module]> => [
+      name,
+      await loadLibrary(name, src),
+    ],
+  ),
+)) {
+  builtinLibs.set(name, mod)
+}
+
+export { builtinLibs }
 export default builtinLibs

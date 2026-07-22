@@ -1,0 +1,64 @@
+import * as L from '../../lpm'
+
+import Papa from 'papaparse'
+
+export function data_parseCsv(data: string): L.List {
+  const result = Papa.parse(data, { header: false })
+  if (result.errors.length > 0) {
+    const errStr = result.errors.map(e => {
+      return `${e.type} (row ${e.row}): ${e.message}`
+    }).join('\n')
+    throw new L.ScamperError('Runtime', `Error(s) parsing CSV files:\n${errStr}`)
+  } else {
+    return L.vectorToList((result.data as string[][]).map(L.vectorToList))
+  }
+}
+
+export function data_stringToChars(s: string): L.List {
+  const chars = Array.from(s).map(c => L.mkChar(c))
+  return L.vectorToList(chars)
+}
+
+export function data_stringToWords(s: string): L.List {
+  const words = s.split(/\s+/g)
+  return L.vectorToList(words)
+}
+
+export function data_stringToLines(s: string): L.List {
+  const lines = s.split(/\r?\n/g)
+  return L.vectorToList(lines)
+}
+
+/**
+ * A simple association list over LPM values for the purposes of tallying. We
+ * reimplement the basic functionality of a dictionary because the JS Map
+ * datatype does not allow for arbitrary equality over keys.
+ */
+class TallyList {
+  public data: { key: L.Value, value: number }[]
+
+  constructor () {
+    this.data = []
+  }
+
+  update (key: L.Value, updater: (value: number) => number, def: number): void {
+    for (let i = 0; i < this.data.length; i++) {
+      if (L.equals(this.data[i].key, key)) {
+        this.data[i].value = updater(this.data[i].value)
+        return
+      }
+    }
+    this.data.push({ key, value: def })
+  }
+}
+
+export function data_tallyAll(lst: L.List): L.List {
+  const tally = new TallyList()
+  let cur: L.List = lst
+  while (cur !== null) {
+    const value = cur.head
+    tally.update(value, v => v + 1, 1)
+    cur = cur.tail
+  }
+  return L.vectorToList(tally.data.map(p => L.mkPair(p.key, p.value)))
+}

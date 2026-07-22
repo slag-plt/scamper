@@ -337,6 +337,20 @@ export interface Rept {
   tag: "rept"
   range: Range
 }
+export interface JsVar {
+  tag: "jsvar"
+  name: string
+  range: Range
+}
+export interface ErrorOp {
+  tag: "error"
+  range: Range
+}
+export interface ApplyOp {
+  tag: "apply"
+  range: Range
+}
+
 export type Ops =
   | Lit
   | Var
@@ -348,6 +362,9 @@ export type Ops =
   | PopS
   | PopV
   | Rept
+  | JsVar
+  | ErrorOp
+  | ApplyOp
 export type Blk = Ops[]
 
 export interface Disp {
@@ -358,6 +375,7 @@ export interface Disp {
 export interface Import {
   tag: "import"
   name: string
+  kind: "builtin" | "file"
   range: Range
 }
 export interface Define {

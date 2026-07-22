@@ -2,7 +2,7 @@ import { expect, test } from "vitest"
 import HTMLDisplay from "../../src/lpm/output/html"
 import { runProgramWithHTML } from "../harness"
 import { getByLabelText } from "@testing-library/dom"
-import { canvasAriaLabel } from "../../src/lib/image/drawing"
+import { canvasAriaLabel } from "../../src/js/image/drawing"
 
 const testSrc = `(import image)
 (circle 10 "solid" "red")`

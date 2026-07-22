@@ -35,7 +35,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 ### Key Source Directories
 - `src/scheme/` - Scheme language implementation (parser, AST, codegen, etc.)
 - `src/lpm/` - LPM runtime execution engine
-- `src/lib/` - Built-in libraries (multimedia, audio, canvas, image, reactive, etc.)
+- `src/js/` - The JavaScript "native" package (multimedia, audio, canvas, image, reactive, etc.) that Scamper's standard library is built on
 - `src/web/` - Web interface components (IDE, file system, runners)
 - `src/codemirror/` - Code editor integration with Scheme syntax highlighting
 - `src/docs/` - Documentation generation system
@@ -52,7 +52,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ## Library Development
 
-Built-in libraries are in `/src/lib/`. Each library exports a mapping of `[string, any][]` from Scamper identifiers to values/functions.
+The JS native package is in `/src/js/`. Each module is a plain JS module exporting functions/values under their JS names; nothing here is exposed directly to the Scamper module system -- Scamper code reaches these exports exclusively through the `js-var` special form (see `src/js/index.ts`'s `lookup(moduleName, varName)`).
 
 ### Type Mappings
 - JavaScript primitives map directly: `boolean`, `number`, `string`, `null` (null), `undefined` (void), `Array` (vector)
@@ -61,7 +61,6 @@ Built-in libraries are in `/src/lib/`. Each library exports a mapping of `[strin
 ### Key Utilities
 - `ScamperError` in `lang.ts` - Primary exception type for libraries
 - `callScamperFn()` in `lpm` - Invoke higher-order functions
-- Library registration in `builtin.ts` for import statements
 
 ## Build Configuration
 
