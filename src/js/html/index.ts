@@ -1,6 +1,4 @@
 import * as L from '../../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 
 export function html_isElement(v: any): boolean {
   return v instanceof HTMLElement
@@ -15,19 +13,16 @@ export function html_buttonQ(v: any): boolean {
 }
 
 export function html_textArea(id: string): HTMLTextAreaElement {
-  checkContract(arguments, contract('text-area', [C.string]))
   const ret = new HTMLTextAreaElement()
   ret.id = id
   return ret
 }
 
 export function html_textAreaGet(textArea: HTMLTextAreaElement): string {
-  checkContract(arguments, contract('text-area-get', [C.any]))
   return textArea.textContent
 }
 
 export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
-  checkContract(arguments, contract('button', [C.string, C.any]))
   const ret = document.createElement('button')
   ret.textContent = label
   ret.onclick = () => {
@@ -42,7 +37,6 @@ export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
 }
 
 export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
-  checkContract(arguments, contract('tag', [C.string], C.any))
   const elt = document.createElement(name)
   if (children.length > 0 && L.isList(children[0])) {
     const attrs = L.listToVector(children[0])
@@ -72,7 +66,6 @@ export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
 }
 
 export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
-  checkContract(arguments, contract('tag-set-children!', [C.any], C.any))
   if (!(elt instanceof HTMLElement)) {
     throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
   } else {
@@ -91,7 +84,6 @@ export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
 }
 
 export function html_onKeydown(fn: L.ScamperFn): void {
-  checkContract(arguments, contract('on-keydown!', [C.func]))
   window.addEventListener('keydown', (e) => {
     try {
       L.callScamperFn(fn, e.key)

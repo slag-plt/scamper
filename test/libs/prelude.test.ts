@@ -826,6 +826,9 @@ test("nand-nor", async () => {
 })
 
 test("not-boolean", async () => {
+  // N.B., per R7RS, `not` accepts any value -- only #f is falsy, so (not 1)
+  // is #f, not a contract violation. `not`'s own docstring already declares
+  // its param as `any`, not `boolean?`.
   expect(
     await runProgram(`
 (not #t)
@@ -840,7 +843,7 @@ test("not-boolean", async () => {
   ).toEqual([
     "#f",
     "#t",
-    "Runtime error [3:1-3:7]: (not) expected a boolean, received number",
+    "#f",
     "#t",
     "#t",
     "#f",

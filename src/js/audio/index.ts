@@ -1,6 +1,4 @@
 import * as L from "../../lpm";
-import { checkContract, contract } from "../contract.js";
-import * as C from "../contract.js";
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
 // TODO: need to factor appropriately so that we aren't initializing any
@@ -17,7 +15,6 @@ export interface SampleNode extends L.Struct {
 }
 
 export function audio_sampleNode(data: number[]): SampleNode {
-  checkContract(arguments, contract("sample-node", [C.vector]));
   for (const sample of data) {
     if (typeof sample !== "number" || sample < -1.0 || sample > 1.0) {
       throw new L.ScamperError(
@@ -38,7 +35,6 @@ export function audio_sampleQ(v: any): boolean {
 }
 
 export function audio_audioContext(sampleRate: number): AudioContext {
-  checkContract(arguments, contract("audio-context", [C.integer]));
   const AudioContext = window.AudioContext;
   return new AudioContext({ sampleRate });
 }
@@ -60,7 +56,6 @@ export function audio_audioPipeline(
   ...nodes: AudioNode[]
 ) {
   // TODO: need to check types on the anys... but they're JS types!
-  checkContract(arguments, contract("audio-pipeline", [C.any, C.any], C.any));
   for (let i = 0; i < nodes.length - 1; i++) {
     nodes[i].connect(nodes[i + 1]);
   }
@@ -96,10 +91,6 @@ export function audio_oscillatorNode(
   type: OscillatorType,
   freq: number,
 ): OscillatorNode {
-  checkContract(
-    arguments,
-    contract("oscillator-node", [C.any, C.string, C.integer]),
-  );
   const oscillator = ctx.createOscillator();
   oscillator.type = type;
   oscillator.frequency.value = freq;
@@ -110,8 +101,7 @@ export function audio_oscillatorNode(
 // handle that in our synchronous setting?
 
 // async function microphoneNode (ctx: AudioContext): Promise<MediaStreamAudioSourceNode> {
-//   checkContract(arguments, contract('microphone-node', [C.any]))
-//   const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+//   //   const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 //   const source = new MediaStreamAudioSourceNode(ctx, { mediaStream })
 //   return source
 // }
@@ -121,7 +111,6 @@ export function audio_audioFileNode(
   ctx: AudioContext,
   filename: string,
 ): MediaElementAudioSourceNode {
-  checkContract(arguments, contract("audio-file-node", [C.any, C.string]));
   const mediaElement = document.createElement("audio");
   mediaElement.src = filename;
   const source = new MediaElementAudioSourceNode(ctx, { mediaElement });
@@ -129,12 +118,10 @@ export function audio_audioFileNode(
 }
 
 export function audio_delayNode(ctx: AudioContext, delayTime: number): DelayNode {
-  checkContract(arguments, contract("delay-node", [C.any, C.integer]));
   return new DelayNode(ctx, { delayTime });
 }
 
 export function audio_playSample(pipeline: SampleNode): void {
-  checkContract(arguments, contract("play-sample", [C.any]));
   // TODO: this should never happen, when does it happen?
   // if (!L.isStructKind(pipeline, "sample")) {
   //   throw new L.ScamperError(

@@ -1,6 +1,4 @@
 import * as L from '../../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 
 // From: https://simonwillison.net/2006/Jan/20/escape/
 // TODO: replace with RegEx.escape once it is commonly supported
@@ -198,73 +196,55 @@ export function rex_isRegex (value: L.Value): value is Re {
     L.isStructKind(value, 'regex')
 }
 
-const specRex: C.Spec = ({
-  predicate: rex_isRegex,
-  errorMsg: (actual: any) => `expected a regex, received ${L.typeOf(actual)}` 
-})
-
 export function rex_rexEmpty(): Re {
-  checkContract(arguments, contract('rex-empty', []))
   return new RexEmpty()
 }
 
 export function rex_rexString(s: string): Re {
-  checkContract(arguments, contract('rex-string', [C.string]))
   return new RexString(s)
 }
 
 export function rex_rexRepeat(r: Re): Re {
-  checkContract(arguments, contract('rex-repeat', [specRex] ))
   return new RexRepeat(r)
 }
 
 export function rex_rexRepeat0(r: Re): Re {
-  checkContract(arguments, contract('rex-repeat-0', [specRex] ))
   return new RexRepeat0(r)
 }
 
 export function rex_rexConcat(...args: Re[]): Re {
-  checkContract(arguments, contract('rex-concat', [], specRex))
   return new RegExConcat(args)
 }
 
 export function rex_rexAnyChar(): Re {
-  checkContract(arguments, contract('rex-any-char', []))
   return new RexAnyChar()
 }
 
 export function rex_rexCharSet(s: string): Re {
-  checkContract(arguments, contract('rex-char-set', [C.string]))
   return new RegCharSet(s)
 }
 
 export function rex_rexCharAntiset(s: string): Re {
-  checkContract(arguments, contract('rex-char-antiset', [C.string]))
   return new RegCharAntiset(s)
 }
 
 export function rex_rexCharRange(start: L.Char, end: L.Char): Re {
-  checkContract(arguments, contract('rex-char-range', [C.char, C.char]))
   return new RegCharRange(start, end)
 }
 
 export function rex_rexAnyOf(...args: Re[]): Re {
-  checkContract(arguments, contract('rex-any-of', [], specRex))
   return new RexAnyOf(args)
 }
 
 export function rex_rexOptional(r: Re): Re {
-  checkContract(arguments, contract('rex-optional', [specRex] ))
   return new RexOptional(r)
 }
 
 export function rex_rexRegex(pattern: string): Re {
-  checkContract(arguments, contract('regex', [C.string]))
   return new RexRegex(pattern)
 }
 
 export function rex_rexFindMatches (r: Re, s: string): L.List {
-  checkContract(arguments, contract('rex-find-matches', [specRex, C.string]))
   const regex = new RegExp(r.toRegexString(), 'g')
   const matches: string[] = []
   let match: RegExpExecArray | null
@@ -278,20 +258,17 @@ export function rex_rexFindMatches (r: Re, s: string): L.List {
 }
 
 export function rex_rexMatches (r: Re, s: string): boolean {
-  checkContract(arguments, contract('rex-matches?', [specRex, C.string]))
   const regex = new RegExp(`^${r.toRegexString()}$`)
   return regex.test(s)
 }
 
 export function rex_rexSplitString (r: Re, s: string): L.List {
-  checkContract(arguments, contract('rex-split-string', [specRex, C.string]))
   const regex = new RegExp(r.toRegexString(), 'g')
   const parts = s.split(regex)
   return L.vectorToList(parts)
 }
 
 export function rex_rexToString (r: Re): string {
-  checkContract(arguments, contract('rex->string', [specRex]))
   return r.toRegexString()
 }
 

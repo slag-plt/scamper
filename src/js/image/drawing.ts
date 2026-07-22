@@ -1,31 +1,13 @@
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 import * as L from '../../lpm'
-import { Rgb, image_rgb, image_colorToRgb, image_colorS, image_rgbAverage, image_rgbToString } from './color.js'
-import { Font, image_font, image_fontS, image_fontToFontString } from './font.js'
+import { Rgb, image_rgb, image_colorToRgb, image_rgbAverage, image_rgbToString } from './color.js'
+import { Font, image_font, image_fontQ, image_fontToFontString } from './font.js'
 
 /***** Core Functions *********************************************************/
-
-const modeS: C.Spec = {
-  predicate: (v: any) => v === 'solid' || v === 'outline',
-  errorMsg: (actual: any) => `expected a mode ("solid" or "outline"), received ${L.typeOf(actual)}`
-}
-
-const alignVS: C.Spec = {
-  predicate: (v: any) => v === 'top' || v === 'center' || v === 'bottom',
-  errorMsg: (actual: any) => `expected a vertical alignment ("top", "center", or "bottom"), received ${L.typeOf(actual)}`
-}
-
-const alignHS: C.Spec = {
-  predicate: (v: any) => v === 'left' || v === 'middle' || v === 'right',
-  errorMsg: (actual: any) => `expected a horizontal alignment ("left", "middle", or "right"), received ${L.typeOf(actual)}`
-}
 
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
 export function image_drawingQ (v: any): boolean {
-  checkContract(arguments, contract('image?', [C.any]))
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
          L.isStructKind(v, 'beside') || L.isStructKind(v, 'above') ||
@@ -37,11 +19,6 @@ export function image_drawingQ (v: any): boolean {
 // In particular, images include shapes, image files, etc. We don't have
 // such a unified view in Scamper (yet), so for now, shape? is an alias of
 // image?
-
-const drawingS = {
-  predicate: image_drawingQ,
-  errorMsg: (actual: any) => `expected a drawing, received ${L.typeOf(actual)}`
-}
 
 interface Ellipse extends L.Struct {
   [L.structKind]: 'ellipse',
@@ -57,12 +34,10 @@ const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ell
 })
 
 export function image_ellipse(width: number, height: number, mode: Mode, color: any): Ellipse {
-  checkContract(arguments, contract('ellipse', [C.nonneg, C.nonneg, modeS, image_colorS]))
   return ellipsePrim(width, height, mode, color)
 }
 
 export function image_circle(radius: number, mode: Mode, color: any): Ellipse {
-  checkContract(arguments, contract('circle', [C.nonneg, modeS, image_colorS]))
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
 
@@ -80,12 +55,10 @@ const rectanglePrim = (width: number, height: number, mode: Mode, color: any): R
 })
 
 export function image_rectangle(width: number, height: number, mode: Mode, color: any): Rectangle {
-  checkContract(arguments, contract('rectangle', [C.nonneg, C.nonneg, modeS, image_colorS]))
   return rectanglePrim(width, height, mode, color)
 }
 
 export function image_square(length: number, mode: Mode, color: any): Rectangle {
-  checkContract(arguments, contract('square', [C.nonneg, modeS, image_colorS]))
   return rectanglePrim(length, length, mode, color)
 }
 
@@ -103,12 +76,10 @@ const trianglePrim = (width: number, height: number, mode: Mode, color: any): Tr
 })
 
 export function image_triangle(length: number, mode: Mode, color: any): Triangle {
-  checkContract(arguments, contract('triangle', [C.nonneg, modeS, image_colorS]))
   return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
 }
 
 export function image_isoscelesTriangle(width: number, height: number, mode: Mode, color: any): Triangle {
-  checkContract(arguments, contract('isosceles-triangle', [C.nonneg, C.nonneg, modeS, image_colorS]))
   return trianglePrim(width, height, mode, color)
 }
 
@@ -127,7 +98,6 @@ const pathPrim = (width: number, height: number, points: [number, number][], mod
 })
 
 export function image_path(width: number, height: number, points: L.List, mode: Mode, color: any): Path {
-  checkContract(arguments, contract('path', [C.nonneg, C.nonneg, C.list, modeS, image_colorS]))
   return pathPrim(width, height,
     L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
     mode, color)
@@ -150,12 +120,10 @@ const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
 })
 
 export function image_beside(...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside', [], drawingS)) 
   return besideAlignPrim('center', ...drawings)
 }
 
 export function image_besideAlign(align: string, ...drawings: Drawing[]): Beside {
-  checkContract(arguments, contract('beside/align', [alignVS], drawingS))
   return besideAlignPrim(align, ...drawings)
 }
 
@@ -176,12 +144,10 @@ const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
 })
 
 export function image_above(...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above', [], drawingS))
   return aboveAlignPrim('middle', ...drawings)
 }
 
 export function image_aboveAlign(align: string, ...drawings: Drawing[]): Above {
-  checkContract(arguments, contract('above/align', [alignHS], drawingS))
   return aboveAlignPrim(align, ...drawings)
 }
 
@@ -204,12 +170,10 @@ const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]
 })
 
 export function image_overlay(...drawings: Drawing[]) {
-  checkContract(arguments, contract('overlay', [], drawingS))
   return overlayAlignPrim('middle', 'center', ...drawings)
 }
 
 export function image_overlayAlign(xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
-  checkContract(arguments, contract('overlay/align', [alignHS, alignVS], drawingS))
   return overlayAlignPrim(xAlign, yAlign, ...drawings)
 }
 
@@ -236,7 +200,6 @@ function overlayOffsetPrim (dx: number, dy: number, width: number, height: numbe
 }
 
 export function image_overlayOffset(dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
-  checkContract(arguments, contract('overlay/offset', [C.number, C.number, drawingS, drawingS]))
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
   // or larger image and (b) whether we are shifting it positively or
   // negatively.
@@ -413,7 +376,6 @@ function calculateRotatedBox (points: [number, number][], degrees: number): { wi
 }
 
 export function image_rotate(angle: number, drawing: Drawing): Rotate {
-  checkContract(arguments, contract('rotate', [C.number, drawingS]))
   const dims = calculateRotatedBox(getDrawingPoints(drawing), angle)
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'rotate',
@@ -435,7 +397,6 @@ interface WithDash extends L.Struct {
 }
 
 export function image_withDash(dashSpec: number[], drawing: Drawing): WithDash {
-  checkContract(arguments, contract('with-dash', [C.list, drawingS])) 
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
     dashSpec,
@@ -463,15 +424,14 @@ function textPrim (width: number, height: number, text: string,
 }
 
 export function image_text(text: string, size: number, color: Rgb, ...rest: any[]): DText {
-  checkContract(arguments, contract('text', [C.string, C.nonneg, image_colorS], C.any))
   let f: Font = image_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
-  } else if (rest.length == 1 && image_fontS.predicate(rest[0])) {
-    if (image_fontS.predicate(rest[0])) {
+  } else if (rest.length == 1 && image_fontQ(rest[0])) {
+    if (image_fontQ(rest[0])) {
       f = rest[0] as Font
     } else {
-      throw new L.ScamperError('Runtime', image_fontS.errorMsg(rest[0]))
+      throw new L.ScamperError('Runtime', `expected a font, received ${L.typeOf(rest[0])}`)
     }
   }
 
@@ -541,14 +501,8 @@ export function image_outlinedIsoscelesTriangle(width: number, height: number, c
 // TODO: this need to be factored out to a general image lib that handles both
 // drawings and canvases.
 
-const imageS: C.Spec = {
-  predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${L.typeOf(actual)}`
-}
-
 export function image_imageWidth(drawing: Drawing): number {
-  checkContract(arguments, contract('image-width', [C.or(drawingS, imageS)]))
-  if (drawingS.predicate(drawing)) {
+  if (image_drawingQ(drawing)) {
     return drawing.width
   } else {
     return (drawing as unknown as HTMLCanvasElement).width
@@ -556,8 +510,7 @@ export function image_imageWidth(drawing: Drawing): number {
 }
 
 export function image_imageHeight(drawing: Drawing): number {
-  checkContract(arguments, contract('image-height', [C.or(drawingS, imageS)]))
-  if (drawingS.predicate(drawing)) {
+  if (image_drawingQ(drawing)) {
     return drawing.height
   } else {
     return (drawing as unknown as HTMLCanvasElement).height
@@ -565,7 +518,6 @@ export function image_imageHeight(drawing: Drawing): number {
 }
 
 export function image_imageColor(drawing: Drawing): Rgb {
-  checkContract(arguments, contract('image-color', [drawingS]))
   switch(drawing[L.structKind]) {
     case 'ellipse':
     case 'rectangle':
@@ -594,7 +546,6 @@ export function image_imageColor(drawing: Drawing): Rgb {
 }
 
 export function image_imageRecolor(drawing: Drawing, color: any): Drawing {
-  checkContract(arguments, contract('image-recolor', [drawingS, image_colorS]))
   switch(drawing[L.structKind]) {
     case 'ellipse':
       return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
@@ -623,7 +574,6 @@ export function image_imageRecolor(drawing: Drawing, color: any): Drawing {
 }
 
 export function image_drawingToPixels(drawing: Drawing): Rgb[] {
-  checkContract(arguments, contract('drawing->pixels', [drawingS]))
   const canvas = image_renderer(drawing) as HTMLCanvasElement
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -635,7 +585,6 @@ export function image_drawingToPixels(drawing: Drawing): Rgb[] {
 }
 
 export function image_drawingToImage(drawing: Drawing): HTMLCanvasElement {
-  checkContract(arguments, contract('drawing->image', [drawingS]))
   return image_renderer(drawing) as HTMLCanvasElement
 }
 

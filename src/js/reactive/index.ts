@@ -1,5 +1,3 @@
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 import * as L from '../../lpm'
 
 import { NoteHandlers, NoteMsg } from '../music/index.js'
@@ -102,7 +100,6 @@ export function reactive_reactiveCanvas<T> (
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLCanvasElement {
-  checkContract(arguments, contract('reactive-canvas', [C.nonneg, C.nonneg, C.any, C.func, C.func], C.struct('subscription')))
   const react = new ReactiveCanvas(width, height, init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   return react.getElement() as HTMLCanvasElement
@@ -160,7 +157,6 @@ export function reactive_reactiveContainer<T>(
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLDivElement {
-  checkContract(arguments, contract('reactive-container', [C.any, C.func, C.func], C.struct('subscription')))
   const react = new ReactiveContainer(init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   react.draw()
@@ -213,7 +209,6 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
 }
 
 export function reactive_onButtonClick(button: HTMLButtonElement): Subscription {
-  checkContract(arguments, contract('on-button-click', [C.html]))
   return subscription((react) => {
     button.addEventListener('click', () => {
       react.update({ 
@@ -225,7 +220,6 @@ export function reactive_onButtonClick(button: HTMLButtonElement): Subscription 
 }
 
 export function reactive_onMouseClick(): Subscription {
-  checkContract(arguments, contract('on-mouse-click', []))
   return subscription((react) => {
     react.getElement().addEventListener('click', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -238,7 +232,6 @@ export function reactive_onMouseClick(): Subscription {
 }
 
 export function reactive_onMouseHover(): Subscription {
-  checkContract(arguments, contract('on-mouse-hover', []))
   return subscription((react) => {
     react.getElement().addEventListener('mousemove', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -251,7 +244,6 @@ export function reactive_onMouseHover(): Subscription {
 }
 
 export function reactive_onKeyDown(): Subscription {
-  checkContract(arguments, contract('on-key-down', []))
   return subscription((react) => {
     document.addEventListener('keydown', (event) => {
       react.update({
@@ -263,7 +255,6 @@ export function reactive_onKeyDown(): Subscription {
 }
 
 export function reactive_onKeyUp(): Subscription {
-  checkContract(arguments, contract('on-key-up', []))
   return subscription((react) => {
     document.addEventListener('keyup', (event) => {
       react.update({
@@ -275,7 +266,6 @@ export function reactive_onKeyUp(): Subscription {
 }
 
 export function reactive_onTimer(interval: number): Subscription {
-  checkContract(arguments, contract('on-timer', [C.nonneg]))
   return subscription((react) => {
     let time = performance.now()
     setInterval(() => {
@@ -290,7 +280,6 @@ export function reactive_onTimer(interval: number): Subscription {
 }
 
 export function reactive_onNote(handlers: NoteHandlers): Subscription {
-  checkContract(arguments, contract('on-note', [C.any]))
   return subscription((react) => {
     handlers.push((msg) => { react.update(msg) })
   })

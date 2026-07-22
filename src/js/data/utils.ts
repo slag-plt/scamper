@@ -1,11 +1,8 @@
 import * as L from '../../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 
 import Papa from 'papaparse'
 
 export function data_parseCsv(data: string): L.List {
-  checkContract(arguments, contract('parse-csv', [C.string]))
   const result = Papa.parse(data, { header: false })
   if (result.errors.length > 0) {
     const errStr = result.errors.map(e => {
@@ -18,19 +15,16 @@ export function data_parseCsv(data: string): L.List {
 }
 
 export function data_stringToChars(s: string): L.List {
-  checkContract(arguments, contract('string->chars', [C.string]))
   const chars = Array.from(s).map(c => L.mkChar(c))
   return L.vectorToList(chars)
 }
 
 export function data_stringToWords(s: string): L.List {
-  checkContract(arguments, contract('string->words', [C.string]))
   const words = s.split(/\s+/g)
   return L.vectorToList(words)
 }
 
 export function data_stringToLines(s: string): L.List {
-  checkContract(arguments, contract('string->lines', [C.string]))
   const lines = s.split(/\r?\n/g)
   return L.vectorToList(lines)
 }

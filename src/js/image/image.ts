@@ -1,13 +1,6 @@
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 import { Rgb, image_rgb } from './color.js'
-
-const imageS: C.Spec = {
-  predicate: (v: any) => v instanceof HTMLCanvasElement,
-  errorMsg: (actual: any) => `expected an image, received ${L.typeOf(actual)}`
-}
 
 /***** Image loading **********************************************************/
 
@@ -17,7 +10,6 @@ export interface ReactiveImageFile extends L.Struct {
 }
 
 export function image_withImageFile(callback: L.ScamperFn): ReactiveImageFile {
-  checkContract(arguments, contract('with-image-file', [C.func]))  
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-image-file',
@@ -30,7 +22,6 @@ export function image_isReactiveImageFile (v: any): boolean {
 }
 
 export function image_withImageFromUrl(url: string, callback: L.ScamperFn): HTMLElement {
-    checkContract(arguments, contract('with-image-from-url', [C.string, C.func]))
     const container = document.createElement('div')
     container.innerHTML = `Loading ${url}...`
     const img = new Image()
@@ -59,7 +50,6 @@ export function image_withImageFromUrl(url: string, callback: L.ScamperFn): HTML
 /***** Per-pixel manipulation *************************************************/
 
 export function image_pixelMap(fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
-  checkContract(arguments, contract('pixel-map', [C.func, imageS]))
   const ctx = canvas.getContext('2d')!
   const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const src = inpImg.data
@@ -86,7 +76,6 @@ export function image_pixelMap(fn: L.ScamperFn, canvas: HTMLCanvasElement): HTML
 }
 
 export function image_imageGetPixel(canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
-  checkContract(arguments, contract('image-get-pixel', [imageS, C.integer, C.integer]))
   const ctx = canvas.getContext('2d')!
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
@@ -94,7 +83,6 @@ export function image_imageGetPixel(canvas: HTMLCanvasElement, x: number, y: num
 }
 
 export function image_imageToPixels(canvas: HTMLCanvasElement): L.Struct[] {
-  checkContract(arguments, contract('image-to-pixels', [imageS]))
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
@@ -105,7 +93,6 @@ export function image_imageToPixels(canvas: HTMLCanvasElement): L.Struct[] {
 }
 
 export function image_pixelsToImage(pixels: L.Struct[], width: number, height: number): HTMLCanvasElement {
-  checkContract(arguments, contract('pixels-to-image', [C.vector, C.integer, C.integer]))
   const ret = document.createElement('canvas')
   ret.width = width
   ret.height = height
@@ -124,7 +111,6 @@ export function image_pixelsToImage(pixels: L.Struct[], width: number, height: n
 }
 
 export function image_canvasSetPixels(canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
-  checkContract(arguments, contract('canvas-set-pixels!', [imageS, C.vector]))
   const ctx = canvas.getContext('2d')!
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const data = outImg.data

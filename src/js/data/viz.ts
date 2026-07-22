@@ -1,6 +1,4 @@
 import * as L from '../../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 
 ///// Basic Types //////////////////////////////////////////////////////////////
 
@@ -68,10 +66,6 @@ function updatePlotOption (key: string, value: any, opts: object): void {
 }
 
 export function data_withPlotOptions (options: L.List, plot: Plot): Plot {
-  checkContract(arguments, contract('with-plot-options', [
-    C.listof(C.pairof(C.string, C.any)),
-    C.struct('plot')
-  ]))
   const newOpts = { ...plot.opts }
   const optionPairs: [string, any][] = L.listToVector(options).map(v => {
     const p = v as L.Pair
@@ -101,10 +95,6 @@ function updateDatasetOption (key: string, value: any, opts: object): void {
 }
 
 export function data_withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
-  checkContract(arguments, contract('with-dataset-options', [
-    C.listof(C.pairof(C.string, C.any)),
-    C.struct('dataset')
-  ]))
   const newOpts = { ...dataset.opts }
   const optionPairs: [string, any][] = L.listToVector(options).map(v => {
     const p = v as L.Pair
@@ -123,7 +113,6 @@ export function data_withDatasetOptions (options: L.List, dataset: Dataset): Dat
 ///// Plot Functions ///////////////////////////////////////////////////////////
 
 export function data_plotLinear (...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-linear', [], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -141,7 +130,6 @@ export function data_plotLinear (...datasets: Dataset[]): Plot {
 }
 
 export function data_plotCategory(labels: L.List, ...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-category', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -160,7 +148,6 @@ export function data_plotCategory(labels: L.List, ...datasets: Dataset[]): Plot 
 }
 
 export function data_plotRadial(labels: L.List, ...datasets: Dataset[]): Plot {
-  checkContract(arguments, contract('plot-radial', [C.listof(C.string)], C.struct('dataset')))
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'plot',
@@ -184,10 +171,6 @@ function makeDataset (type: string, label: string, data: any[]): Dataset {
 }
 
 export function data_datasetLine (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-line', [
-    C.string,
-    C.listof(C.or(C.number, C.pairof(C.number, C.number)))
-  ]))
   const points: (number | {x: number, y: number})[] = L.listToVector(data).map(v => {
     if (L.isPair(v)) {
       return { x: v.fst as number, y: v.snd as number }
@@ -202,10 +185,6 @@ export function data_datasetLine (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetBar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-bar', [
-    C.string,
-    C.listof(C.number)
-  ]))
   const points: number[] = L.listToVector(data) as number[]
   if (points.length === 0) {
     throw new L.ScamperError('Runtime', 'dataset-bar requires at least one data point')
@@ -214,9 +193,6 @@ export function data_datasetBar (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetScatter (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-scatter', [
-    C.string, C.listof(C.pairof(C.number, C.number))
-  ]))
   const points: {x: number | string, y: number}[] = L.listToVector(data).map(v => {
     const p = v as L.Pair
     return { x: p.fst as number, y: p.snd as number }
@@ -228,10 +204,6 @@ export function data_datasetScatter (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetBubble (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-bubble', [
-    C.string,
-    C.listof(C.listof(C.number))
-  ]))
   const points: {x: number, y: number, r: number}[] = L.listToVector(data).map(v => {
     const l = L.listToVector(v as L.List)
     if (l.length !== 3) {
@@ -246,10 +218,6 @@ export function data_datasetBubble (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetPie (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-pie', [
-    C.string,
-    C.listof(C.number)
-  ]))
   const values = L.listToVector(data) as number[]
   if (values.length === 0) {
     throw new L.ScamperError('Runtime', 'dataset-pie requires at least one data point')
@@ -258,10 +226,6 @@ export function data_datasetPie (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetPolar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-polar', [
-    C.string,
-    C.listof(C.number)
-  ]))
   const values = L.listToVector(data) as number[]
   if (values.length === 0) {
     throw new L.ScamperError('Runtime', 'dataset-polar requires at least one data point')
@@ -270,10 +234,6 @@ export function data_datasetPolar (title: string, data: L.List): Dataset {
 }
 
 export function data_datasetRadar (title: string, data: L.List): Dataset {
-  checkContract(arguments, contract('dataset-radar', [
-    C.string,
-    C.listof(C.number)
-  ]))
   const values = L.listToVector(data) as number[]
   if (values.length === 0) {
     throw new L.ScamperError('Runtime', 'dataset-radar requires at least one data point')

@@ -1,6 +1,4 @@
 import * as L from '../../lpm'
-import { checkContract, contract } from '../contract.js'
-import * as C from '../contract.js'
 import './renderers/text.js'
 
 export type Result = Ok | ErrExp | ErrExn | ErrGen
@@ -10,27 +8,22 @@ export interface ErrExn extends L.Struct { [L.structKind]: 'exn', desc: string, 
 export interface ErrGen extends L.Struct { [L.structKind]: 'gen', desc: string, reason: string }
 
 export function test_testResultOk(desc: string): Ok {
-  checkContract(arguments, contract('test-result-ok', [C.string]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'ok', desc }
 }
 
 export function test_testResultErrorExpected(desc: string, expected: L.Value, actual: L.Value): ErrExp {
-  checkContract(arguments, contract('test-result-error-expected', [C.string, C.any, C.any]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'exp', desc, expected, actual }
 }
 
 export function test_testResultErrorExn(desc: string, exn: L.Value): ErrExn {
-  checkContract(arguments, contract('test-result-error-exn', [C.string, C.any]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'exn', desc, exn }
 }
 
 export function test_testResultErrorGeneric(desc: string, reason: string): ErrGen {
-  checkContract(arguments, contract('test-result-error-generic', [C.string, C.html]))
   return { [L.scamperTag]: 'struct', [L.structKind]: 'gen', desc, reason }
 }
 
 export function test_testCase(desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L.ScamperFn): Result {
-  checkContract(arguments, contract('test-case', [C.string, C.func, C.any, C.func]))
   try {
     const actual = L.callScamperFn(testFn)
     const isEqual = L.callScamperFn(eqFn, expected, actual) 
