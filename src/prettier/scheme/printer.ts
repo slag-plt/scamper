@@ -160,6 +160,9 @@ export const SchemePrinter: Printer = {
       case "jsvar":
         return `(js-var ${JSON.stringify(node.name)})`
 
+      case "error":
+        return group(["(error", indent([line, path.call(print, "exp")]), ")"])
+
       case "let*": {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node

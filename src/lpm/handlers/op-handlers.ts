@@ -2,7 +2,7 @@ import { ICE, ReportError, ScamperError } from "../error"
 import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../frame"
-import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch, vectorToList } from "../util"
+import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from "../util"
 import { lookup } from "../../js/index.js"
 
 /* Definition */
@@ -155,6 +155,20 @@ export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
 export const JsVarHandler: OpHandler<"jsvar"> = (op, currFrame) => {
   currFrame.values.push(lookup(op.name))
   return minorStep
+}
+
+export const ErrorHandler: OpHandler<"error"> = (op, currFrame) => {
+  const msg = currFrame.values.pop()
+  if (typeof msg !== "string") {
+    throw new ScamperError(
+      "Runtime",
+      `expected a string, received ${typeOf(msg)}`,
+      undefined,
+      op.range,
+      "error",
+    )
+  }
+  throw new ScamperError("Runtime", msg, undefined, op.range, "error")
 }
 
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {

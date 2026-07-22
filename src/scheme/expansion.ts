@@ -65,6 +65,8 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
       return e
     case "jsvar":
       return e
+    case "error":
+      return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
     case "let*":
       return A.mkLetS(
         e.bindings.map((b) => ({
@@ -138,6 +140,8 @@ export function expandExpr(e: A.Exp): A.Exp {
       return e
     case "jsvar":
       return e
+    case "error":
+      return A.mkError(expandExpr(e.exp), e.range)
 
     // Derived forms
 
@@ -201,9 +205,8 @@ export function expandExpr(e: A.Exp): A.Exp {
         test: expandExpr(c.test),
         body: expandExpr(c.body),
       }))
-      let ret: A.Exp = A.mkApp(
-        A.mkVar("error"),
-        [A.mkLit("No matching clause in cond")],
+      let ret: A.Exp = A.mkError(
+        A.mkLit("No matching clause in cond", e.range),
         e.range,
       )
       for (let i = branches.length - 1; i >= 0; i--) {

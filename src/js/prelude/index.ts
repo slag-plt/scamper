@@ -1326,11 +1326,6 @@ export function prelude_voidQ(x: any): boolean {
   return x === undefined
 }
 
-export function prelude_error(msg: string): never {
-  checkContract(arguments, contract("error", [C.string]))
-  throw new L.ScamperError("Runtime", msg)
-}
-
 export function prelude_qq(): never {
   checkContract(arguments, contract("??", []))
   throw new L.ScamperError("Runtime", "Hole encountered in program!")

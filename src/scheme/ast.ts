@@ -151,6 +151,10 @@ export interface JsVar extends Tagged, Node {
   tag: "jsvar"
   name: string
 }
+export interface ErrorExp extends Tagged, Node {
+  tag: "error"
+  exp: Exp
+}
 
 // Sugared Forms
 export interface LetS extends Tagged, Node {
@@ -190,6 +194,7 @@ export type Exp =
   | Match
   | Quote
   | JsVar
+  | ErrorExp
   | LetS
   | And
   | Or
@@ -329,6 +334,10 @@ export const mkJsVar = (
   name: string,
   range: L.Range = L.Range.none,
 ): JsVar => ({ tag: "jsvar", name, range })
+export const mkError = (
+  exp: Exp,
+  range: L.Range = L.Range.none,
+): ErrorExp => ({ tag: "error", exp, range })
 export const mkLetS = (
   bindings: { name: string; value: Exp }[],
   body: Exp,
@@ -408,6 +417,7 @@ export function isExp(v: unknown): v is Exp {
       "match",
       "quote",
       "jsvar",
+      "error",
       "let*",
       "and",
       "or",
@@ -485,6 +495,8 @@ export function expToString(e: Exp): string {
       return `(quote ${JSON.stringify(e.value)})`
     case "jsvar":
       return `(js-var ${JSON.stringify(e.name)})`
+    case "error":
+      return `(error ${expToString(e.exp)})`
     case "let*":
       return `(let* (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(" ")}) ${expToString(e.body)})`
     case "and":
@@ -603,6 +615,8 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     return L.equals(e1.value, e2.value)
   } else if (e1.tag === "jsvar" && e2.tag === "jsvar") {
     return e1.name === e2.name
+  } else if (e1.tag === "error" && e2.tag === "error") {
+    return expEquals(e1.exp, e2.exp)
   } else if (e1.tag === "let*" && e2.tag === "let*") {
     return (
       e1.bindings.length === e2.bindings.length &&

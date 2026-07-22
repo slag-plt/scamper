@@ -64,6 +64,9 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case "jsvar": {
       return e
     }
+    case "error": {
+      return AST.mkError(sugarExpr(e.exp))
+    }
     case "let*": {
       return AST.mkLetS(
         e.bindings.map(({ name, value }) => ({

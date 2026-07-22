@@ -86,6 +86,12 @@ export function raiseFrame(
         break
       }
 
+      case "error": {
+        const arg = values.pop()!
+        values.push(A.mkError(arg))
+        break
+      }
+
       case "pops": {
         // N.B., pops the local environment, but we don't track that here!
         break

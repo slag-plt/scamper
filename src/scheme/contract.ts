@@ -131,9 +131,8 @@ function mkCheckChain(
           range,
         ),
         targetCall,
-        A.mkApp(
-          A.mkVar("error", range),
-          [mkRestErrorMsg(describePred(restParam.predicate), restParam.name, range)],
+        A.mkError(
+          mkRestErrorMsg(describePred(restParam.predicate), restParam.name, range),
           range,
         ),
         range,
@@ -148,11 +147,7 @@ function mkCheckChain(
     return A.mkIf(
       A.mkApp(predicate, [A.mkVar(name, range)], range),
       checkAt(i + 1),
-      A.mkApp(
-        A.mkVar("error", range),
-        [mkErrorMsg(describePred(predicate), name, range)],
-        range,
-      ),
+      A.mkError(mkErrorMsg(describePred(predicate), name, range), range),
       range,
     )
   }

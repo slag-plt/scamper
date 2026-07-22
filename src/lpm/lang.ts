@@ -342,6 +342,10 @@ export interface JsVar {
   name: string
   range: Range
 }
+export interface ErrorOp {
+  tag: "error"
+  range: Range
+}
 
 export type Ops =
   | Lit
@@ -355,6 +359,7 @@ export type Ops =
   | PopV
   | Rept
   | JsVar
+  | ErrorOp
 export type Blk = Ops[]
 
 export interface Disp {

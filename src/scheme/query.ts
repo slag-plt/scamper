@@ -78,6 +78,9 @@ function slotsOf(exp: A.Exp): Slot[] {
     case "jsvar":
       return []
 
+    case "error":
+      return [{ exp: exp.exp, rebuild: (r) => A.mkError(r, exp.range) }]
+
     case "app":
       return [
         { exp: exp.head, rebuild: (r) => A.mkApp(r, exp.args, exp.range) },

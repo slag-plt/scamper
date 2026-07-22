@@ -1141,13 +1141,6 @@ export const vectorAppend: Doc = new Doc(
   "Returns a new vector containing the elements of `v1`, ..., `vk` in order.",
 )
 
-export const error: Doc = new Doc(
-  "error",
-  "any",
-  [new ArgDoc("msg", "string?")],
-  "Raises a runtime error with message `msg`.",
-)
-
 export const qq: Doc = new Doc(
   "??",
   "any",

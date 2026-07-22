@@ -710,11 +710,6 @@
 ;;; Returns `#t` if and only if `v` is the void value.
 (define void? (js-var "prelude_voidQ"))
 
-;;; (error msg) -> any
-;;;  msg : string?
-;;; Raises a runtime error with message `msg`.
-(define error (js-var "prelude_error"))
-
 ;;; (??) -> any
 ;;; A placeholder for an expression that is not yet implemented.
 (define ?? (js-var "prelude_qq"))

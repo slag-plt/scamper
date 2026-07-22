@@ -29,6 +29,9 @@ switch (e.tag) {
   case "quote":
     args = ["quote", mkLit(e.value)]
     break
+  case "error":
+    args = ["error", e.exp]
+    break
   case "and":
     args = ["and", ...e.exps]
     break

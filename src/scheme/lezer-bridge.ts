@@ -114,6 +114,7 @@ const formDescriptions: Record<string, string> = {
   Begin: "begin expression (at least one sub-expression)",
   Section: "section expression (at least one sub-expression)",
   Report: "report expression",
+  Error: "error expression (a message to raise)",
   Application: "function application",
   Quote: "quoted expression",
   Vector: "vector literal",
@@ -384,6 +385,9 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const name = leafValue(ctx, cs[1]) as string
       return A.mkJsVar(name, range)
     }
+
+    case "Error":
+      return A.mkError(expFromNode(ctx, cs[1]), range)
 
     case "Vector":
       return A.mkLit(nodeToRawValue(ctx, node), range)

@@ -111,6 +111,10 @@ describe("lezer-bridge parsing", () => {
     expectParses("(report (+ 1 2))")
   })
 
+  test("error", () => {
+    expectParses('(error "something went wrong")')
+  })
+
   test("import/define/display, including empty top-level list", () => {
     expectParses("(import lists)\n(define f (lambda (x) x))\n(display (f 1))")
     expectParses("()")
@@ -182,6 +186,7 @@ describe("lezer-bridge parsing", () => {
         "cond",
         "define",
         "display",
+        "error",
         "if",
         "import",
         "js-var",

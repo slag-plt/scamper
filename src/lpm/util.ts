@@ -155,6 +155,10 @@ export const mkJsVar = (name: string, range: Range = Range.none): L.JsVar => ({
   name,
   range,
 })
+export const mkError = (range: Range = Range.none): L.ErrorOp => ({
+  tag: "error",
+  range,
+})
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({

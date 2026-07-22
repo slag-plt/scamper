@@ -142,6 +142,10 @@ function scopeCheckExp(
       // string naming a JS binding, resolved at runtime.
       return
     }
+    case "error": {
+      scopeCheckExp(errors, globals, locals, e.exp)
+      return
+    }
     case "report": {
       scopeCheckExp(errors, globals, locals, e.exp)
       return
