@@ -1,6 +1,6 @@
-import { expToString } from "../ast"
-import { FunctionDoc, Pred } from "./docstring"
-import { isCategoryTag } from "./tags/category-tag"
+import { expToString } from '../ast'
+import { FunctionDoc, Pred } from './docstring'
+import { isCategoryTag } from './tags/category-tag'
 
 /** The documented name of a function/constant, e.g. `"caddr"`. */
 export function functionDocName(doc: FunctionDoc): string {
@@ -22,8 +22,8 @@ export function predToString(pred: Pred): string {
  * `boolean?` -> `boolean`, `(list-of number?)` -> `list-of`.
  */
 export function predTypeName(pred: Pred): string {
-  const name = pred.tag === "var" ? pred.name : pred.head.name
-  return name.endsWith("?") ? name.slice(0, -1) : name
+  const name = pred.tag === 'var' ? pred.name : pred.head.name
+  return name.endsWith('?') ? name.slice(0, -1) : name
 }
 
 /**
@@ -44,12 +44,12 @@ export function functionDocSignature(doc: FunctionDoc): string {
   const argNames = [
     ...doc.params.map((p) => p.name),
     ...(doc.restParam ? [`. ${doc.restParam.name}`] : []),
-  ].join(" ")
-  const paramLine = (p: FunctionDoc["params"][number]) =>
-    `  ${p.name}: ${predToString(p.predicate)}${p.description ? `\n    ${p.description}` : ""}`
+  ].join(' ')
+  const paramLine = (p: FunctionDoc['params'][number]) =>
+    `  ${p.name}: ${predToString(p.predicate)}${p.description ? `\n    ${p.description}` : ''}`
   const argLines = [
     ...doc.params.map(paramLine),
     ...(doc.restParam ? [paramLine(doc.restParam)] : []),
-  ].join("\n")
+  ].join('\n')
   return `(${name} ${argNames}) -> ${returnStr}\n${argLines}`
 }

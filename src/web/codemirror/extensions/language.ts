@@ -1,4 +1,4 @@
-import { parser } from "../../../scheme/generated/parser.js"
+import { parser } from '../../../scheme/generated/parser.js'
 import {
   continuedIndent,
   foldInside,
@@ -6,9 +6,9 @@ import {
   indentNodeProp,
   LanguageSupport,
   LRLanguage,
-} from "@codemirror/language"
-import { styleTags, tags as t } from "@lezer/highlight"
-import { reservedWords } from "../../../scheme/reserved-words"
+} from '@codemirror/language'
+import { styleTags, tags as t } from '@lezer/highlight'
+import { reservedWords } from '../../../scheme/reserved-words'
 
 export const ScamperLanguage = LRLanguage.define({
   parser: parser.configure({
@@ -30,22 +30,22 @@ export const ScamperLanguage = LRLanguage.define({
         Application: foldInside,
       }),
       styleTags({
-        [reservedWords.join(" ")]: t.keyword,
+        [reservedWords.join(' ')]: t.keyword,
         Identifier: t.variableName,
         Boolean: t.bool,
         Number: t.number,
         String: t.string,
         Char: t.character,
         LineComment: t.lineComment,
-        "( )": t.paren,
-        "[ ]": t.squareBracket,
-        "{ }": t.brace,
+        '( )': t.paren,
+        '[ ]': t.squareBracket,
+        '{ }': t.brace,
         RestDot: t.punctuation,
       }),
     ],
   }),
   languageData: {
-    commentTokens: { line: ";" },
+    commentTokens: { line: ';' },
   },
 })
 

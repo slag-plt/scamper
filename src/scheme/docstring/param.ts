@@ -1,11 +1,11 @@
-import { isStmtExp } from "../ast"
-import { ICE, Range, ScamperError } from "../../lpm"
-import { looksLikeIdentifier } from "../literals.js"
-import { reservedWords } from "../reserved-words.js"
-import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import { tokenizeAndParse } from "../index"
-import { catchIf, mkScamperErrorWithRange } from "../util"
-import { DocComment, isPred, ParseStage, Pred } from "./docstring"
+import { isStmtExp } from '../ast'
+import { ICE, Range, ScamperError } from '../../lpm'
+import { looksLikeIdentifier } from '../literals.js'
+import { reservedWords } from '../reserved-words.js'
+import { SimpleErrorChannel } from '../../lpm/output/simple-error'
+import { tokenizeAndParse } from '../index'
+import { catchIf, mkScamperErrorWithRange } from '../util'
+import { DocComment, isPred, ParseStage, Pred } from './docstring'
 
 const isWhitespace = (c: string): boolean => /\s/.test(c)
 
@@ -17,8 +17,8 @@ export interface Param {
 }
 
 export const WhitespaceLocation = {
-  Beginning: "beginning",
-  PrePredicate: "pre-predicate",
+  Beginning: 'beginning',
+  PrePredicate: 'pre-predicate',
 } as const
 type WhitespaceLocation =
   (typeof WhitespaceLocation)[keyof typeof WhitespaceLocation]
@@ -28,7 +28,7 @@ class ParamParseError extends ScamperError {
     message: string,
     public range: Range,
   ) {
-    super("Parser", `Error while parsing param in doc string: ${message}`)
+    super('Parser', `Error while parsing param in doc string: ${message}`)
   }
 }
 
@@ -52,8 +52,8 @@ export function parseSingleParam(
   const firstComment = docComments.shift()
   if (firstComment === undefined) {
     throw new ICE(
-      "Docstring.parseSingleParam",
-      "Doc lines expected to be not empty when calling parseSingleParam",
+      'Docstring.parseSingleParam',
+      'Doc lines expected to be not empty when calling parseSingleParam',
     )
   }
   // get param signature
@@ -72,8 +72,8 @@ export function parseSingleParam(
   const firstDescComment = docComments.shift()
   if (firstDescComment === undefined) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      "Doc string is missing function description",
+      'Parser',
+      'Doc string is missing function description',
       firstComment.range,
     )
   }
@@ -91,8 +91,8 @@ export function parseSingleParam(
     const nextDescComment = docComments.shift()
     if (nextDescComment === undefined) {
       throw mkScamperErrorWithRange(
-        "Parser",
-        "Doc string is missing function description",
+        'Parser',
+        'Doc string is missing function description',
         firstDescComment.range,
       )
     }
@@ -105,12 +105,12 @@ export function parseSingleParam(
       docComments.unshift(nextDescComment)
       return param
     }
-    param.description += " " + remainingDesc
+    param.description += ' ' + remainingDesc
   }
   // if we broke out of the while loop, we ran out of lines
   throw mkScamperErrorWithRange(
-    "Parser",
-    "Doc string is missing function description",
+    'Parser',
+    'Doc string is missing function description',
     lastRange,
   )
 }
@@ -137,25 +137,25 @@ export function parseParamSignature(
   )
   const { line, range } = docComment
   // get param name
-  const splitDocLine = line.slice(beginningWhitespaces).split(":")
+  const splitDocLine = line.slice(beginningWhitespaces).split(':')
   if (splitDocLine.length < 2) {
     throw new ParamMissingFieldError(
-      "Line is missing separating colon between name and predicate",
+      'Line is missing separating colon between name and predicate',
       range,
     )
   }
   const [untrimmedName, ...rest] = splitDocLine
-  const postNameDocLine = rest.join(":")
+  const postNameDocLine = rest.join(':')
   const trimmedName = untrimmedName.trimEnd()
   const errs: ScamperError[] = []
   if (!looksLikeIdentifier(trimmedName)) {
     errs.push(
-      new ScamperError("Parser", "Expected an identifier", undefined, Range.none),
+      new ScamperError('Parser', 'Expected an identifier', undefined, Range.none),
     )
-  } else if (trimmedName.startsWith("_")) {
+  } else if (trimmedName.startsWith('_')) {
     errs.push(
       new ScamperError(
-        "Parser",
+        'Parser',
         'Identifiers cannot begin with "_" unless inside of "section" or patterns',
         undefined,
         Range.none,
@@ -164,14 +164,14 @@ export function parseParamSignature(
   } else if (reservedWords.includes(trimmedName)) {
     errs.push(
       new ScamperError(
-        "Parser",
+        'Parser',
         `The identifier "${trimmedName}" is a reserved word and cannot be used as a variable name`,
         undefined,
         Range.none,
       ),
     )
   }
-  const name = errs.length > 0 ? "<error>" : trimmedName
+  const name = errs.length > 0 ? '<error>' : trimmedName
   if (errs.length > 0) {
     throw new ParamMalformedFieldError(
       `Name field is malformed, ${errs[0].message}`,
@@ -194,24 +194,24 @@ export function parseParamSignature(
   const parsed = tokenizeAndParse(errChannel, predicateStr)
   if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
     throw new ParamMalformedFieldError(
-      `Predicate field is malformed${errChannel.errors.length > 0 ? ", " + errChannel.errors[0].message : ""}`,
+      `Predicate field is malformed${errChannel.errors.length > 0 ? ', ' + errChannel.errors[0].message : ''}`,
       range,
     )
   }
   if (parsed.length < 1) {
-    throw new ParamMissingFieldError("Predicate field is missing", range)
+    throw new ParamMissingFieldError('Predicate field is missing', range)
   }
   const parsedStmt = parsed[0]
   if (!isStmtExp(parsedStmt)) {
     throw new ParamMalformedFieldError(
-      "Predicate should be an expression",
+      'Predicate should be an expression',
       range,
     )
   }
 
   if (!isPred(parsedStmt.expr)) {
     throw new ParamMalformedFieldError(
-      "Predicate should be either a simple predicate identifier or a complex predicate application",
+      'Predicate should be either a simple predicate identifier or a complex predicate application',
       range,
     )
   }
@@ -270,5 +270,5 @@ function isRecoverableParamParseError(e: unknown) {
 }
 
 export function isParam(v: unknown): v is Param {
-  return typeof v === "object" && v !== null && "name" in v && "predicate" in v
+  return typeof v === 'object' && v !== null && 'name' in v && 'predicate' in v
 }

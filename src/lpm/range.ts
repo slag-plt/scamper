@@ -50,10 +50,10 @@ export class Range {
     }
 
     let idx = this.begin.idx
-    while (idx < this.end.idx && idx < src.length && src[idx] !== "\n") {
+    while (idx < this.end.idx && idx < src.length && src[idx] !== '\n') {
       idx++
     }
-    const endIdx = src[idx] === "\n" ? idx - 1 : idx
+    const endIdx = src[idx] === '\n' ? idx - 1 : idx
     const lineStartIdx = this.begin.idx - this.begin.col + 1
     const col = endIdx - lineStartIdx + 1
     return new Loc(this.begin.line, col, endIdx)

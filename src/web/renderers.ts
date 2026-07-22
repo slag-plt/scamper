@@ -10,18 +10,18 @@
  * reason -- do not add a static import of this file anywhere reachable
  * from the CLI.
  */
-import "../js/image/renderers/html.js"
-import "../js/image/renderers/vue.js"
-import "../js/data/renderers/html.js"
-import "../js/data/renderers/vue.js"
-import "../js/prelude/renderers/html.js"
-import "../js/prelude/renderers/vue.js"
-import "../js/music/renderers/html.js"
-import "../js/music/renderers/vue.js"
-import "../js/audio/renderers/html.js"
-import "../js/audio/renderers/vue.js"
-import "../js/test/renderers/html.js"
-import "../js/test/renderers/vue.js"
-import "../lpm/trace/renderers/html.js"
-import "../lpm/trace/renderers/vue.js"
-import "../scheme/renderers/vue.js"
+import '../js/image/renderers/html.js'
+import '../js/image/renderers/vue.js'
+import '../js/data/renderers/html.js'
+import '../js/data/renderers/vue.js'
+import '../js/prelude/renderers/html.js'
+import '../js/prelude/renderers/vue.js'
+import '../js/music/renderers/html.js'
+import '../js/music/renderers/vue.js'
+import '../js/audio/renderers/html.js'
+import '../js/audio/renderers/vue.js'
+import '../js/test/renderers/html.js'
+import '../js/test/renderers/vue.js'
+import '../lpm/trace/renderers/html.js'
+import '../lpm/trace/renderers/vue.js'
+import '../scheme/renderers/vue.js'

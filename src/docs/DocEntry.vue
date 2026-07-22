@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue"
-import type { FunctionDoc } from "../scheme/docstring/docstring"
-import { functionDocSignature } from "../scheme/docstring/render"
+import { computed } from 'vue'
+import type { FunctionDoc } from '../scheme/docstring/docstring'
+import { functionDocSignature } from '../scheme/docstring/render'
 
 const props = defineProps<{ doc: FunctionDoc; id: string }>()
 
@@ -11,7 +11,7 @@ interface TextSpan {
 }
 
 const descSpans = computed<TextSpan[]>(() => {
-  const parts = props.doc.description.trim().split("`")
+  const parts = props.doc.description.trim().split('`')
   return parts.map((text, i) => ({ text, code: i % 2 === 1 }))
 })
 </script>

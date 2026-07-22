@@ -1,7 +1,7 @@
-import { WebAudioFontPlayer } from "./WebAudioFontPlayer.js"
+import { WebAudioFontPlayer } from './WebAudioFontPlayer.js'
 
 function mkToneIndex(instrument: number): string {
-  return `${instrument}`.padStart(3, "0") + "0"
+  return `${instrument}`.padStart(3, '0') + '0'
 }
 
 // function mkPercIndex (instrument: number): string {
@@ -54,7 +54,7 @@ class Player {
   }
 
   constructor() {
-    this.fontName = "Chaos"
+    this.fontName = 'Chaos'
     this.player = new WebAudioFontPlayer()
     this.audioContext = new window.AudioContext()
   }
@@ -69,7 +69,7 @@ class Player {
 
 export function waf(): Player | undefined {
   // N.B., we want a _per-browser_ singleton, so we'll send this up to window!
-  if (typeof window !== "undefined") {
+  if (typeof window !== 'undefined') {
     if ((window as any).wafInstance === undefined) {
       ;(window as any).wafInstance = new Player()
     }

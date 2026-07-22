@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import * as FS from "../../fs"
-import { onMounted, shallowRef } from "vue"
-import { ScamperError } from "../../lpm/error"
-import OutputPane from "./OutputPane.vue"
-import type { OutputPaneType } from "../composables/use-output-pane"
-import Scamper from "../../scamper"
+import * as FS from '../../fs'
+import { onMounted, shallowRef } from 'vue'
+import { ScamperError } from '../../lpm/error'
+import OutputPane from './OutputPane.vue'
+import type { OutputPaneType } from '../composables/use-output-pane'
+import Scamper from '../../scamper'
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
-const version = shallowRef("")
-const currentFile = shallowRef("")
+const version = shallowRef('')
+const currentFile = shallowRef('')
 
 onMounted(async () => {
   const display = outputPaneRef.value?.display
@@ -18,19 +18,19 @@ onMounted(async () => {
   const fs = FS.getFS()
   const params = new URLSearchParams(window.location.search)
 
-  if (!params.has("filename")) {
-    display.report(new ScamperError("Runtime", "No filename specified"))
+  if (!params.has('filename')) {
+    display.report(new ScamperError('Runtime', 'No filename specified'))
     return
   }
 
-  const filename = params.get("filename")
+  const filename = params.get('filename')
   if (!filename) return
 
   currentFile.value = filename
 
   if (!(await fs.fileExists(filename))) {
     display.report(
-      new ScamperError("Runtime", `File ${filename} does not exist`),
+      new ScamperError('Runtime', `File ${filename} does not exist`),
     )
     return
   }

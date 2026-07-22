@@ -1,13 +1,13 @@
-import { describe, expect, test } from "vitest"
-import { Scheduler } from "../../src/lpm/scheduler"
+import { describe, expect, test } from 'vitest'
+import { Scheduler } from '../../src/lpm/scheduler'
 import {
   makeTask,
   MockFiber,
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
   sleep,
-} from "../test-utils"
-import { traceStep } from "../../src/lpm/fiber"
+} from '../test-utils'
+import { traceStep } from '../../src/lpm/fiber'
 
 patchSchedulerYieldForTests()
 
@@ -26,8 +26,8 @@ patchSchedulerYieldForTests()
  * (a) the same fiber being stepped concurrently and (b) the overall stepping
  * rate roughly doubling.
  */
-describe("no concurrent #execute() loops", () => {
-  test("a second resumeExecution() does not double-step the same fiber", async () => {
+describe('no concurrent #execute() loops', () => {
+  test('a second resumeExecution() does not double-step the same fiber', async () => {
     const sched = new Scheduler()
     const fiber = new MockFiber()
 
@@ -56,7 +56,7 @@ describe("no concurrent #execute() loops", () => {
   })
 
   // TODO: inherently flaky test.
-  test.skip("a second resumeExecution() does not roughly double the stepping rate", async () => {
+  test.skip('a second resumeExecution() does not roughly double the stepping rate', async () => {
     const sched = new Scheduler()
     const f1 = new MockFiber()
     sched.schedule(makeTask(f1))
@@ -89,8 +89,8 @@ describe("no concurrent #execute() loops", () => {
  * Pause should propagate to the inner loop too, so at most one in-flight
  * step completes after the request.
  */
-describe("pauseExecution takes effect promptly", () => {
-  test("after pauseExecution, at most one additional step occurs", async () => {
+describe('pauseExecution takes effect promptly', () => {
+  test('after pauseExecution, at most one additional step occurs', async () => {
     const sched = new Scheduler()
     const fiber = new MockFiber()
     sched.schedule(makeTask(fiber))

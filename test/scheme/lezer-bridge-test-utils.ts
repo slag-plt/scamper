@@ -1,7 +1,7 @@
-import { expect } from "vitest"
-import * as L from "../../src/lpm"
-import { parseProgramFromSource } from "../../src/scheme/lezer-bridge"
-import { Prog } from "../../src/scheme/ast"
+import { expect } from 'vitest'
+import * as L from '../../src/lpm'
+import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
+import { Prog } from '../../src/scheme/ast'
 
 export function parse(src: string): { prog: Prog; errors: L.ScamperError[] } {
   const errors: L.ScamperError[] = []

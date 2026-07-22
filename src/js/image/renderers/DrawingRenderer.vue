@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue"
-import { Drawing, image_render, image_clearDrawing, image_canvasAriaLabel } from "../drawing"
+import { onMounted, ref, watch } from 'vue'
+import { Drawing, image_render, image_clearDrawing, image_canvasAriaLabel } from '../drawing'
 
 const props = defineProps<{ value: Drawing }>()
 const canvas = ref<HTMLCanvasElement | null>(null)

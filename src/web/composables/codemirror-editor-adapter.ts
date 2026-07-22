@@ -1,11 +1,11 @@
-import type { EditorView } from "@codemirror/view"
-import { Loc } from "../../lpm"
-import Scamper, { QUERIES_CHANGED } from "../../scamper"
+import type { EditorView } from '@codemirror/view'
+import { Loc } from '../../lpm'
+import Scamper, { QUERIES_CHANGED } from '../../scamper'
 import {
   mkFreshEditorState,
   mkNoFileEditorState,
-} from "../codemirror/codemirror"
-import { syncQueryDecorations } from "../codemirror/extensions/query"
+} from '../codemirror/codemirror'
+import { syncQueryDecorations } from '../codemirror/extensions/query'
 
 export function createCodeMirrorEditorAdapter(
   view: EditorView,

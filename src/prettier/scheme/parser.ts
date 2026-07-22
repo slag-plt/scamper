@@ -1,9 +1,9 @@
-import { Parser } from "prettier"
-import { SchemeNode, progToNode } from "../../scheme/ast"
-import { tokenizeAndParse } from "../../scheme"
-import { SimpleErrorChannel } from "../../lpm/output/simple-error"
+import { Parser } from 'prettier'
+import { SchemeNode, progToNode } from '../../scheme/ast'
+import { tokenizeAndParse } from '../../scheme'
+import { SimpleErrorChannel } from '../../lpm/output/simple-error'
 
-export const SchemeParserName = "scamper-scheme"
+export const SchemeParserName = 'scamper-scheme'
 
 const errChannel = new SimpleErrorChannel()
 

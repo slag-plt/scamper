@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import type { FunctionDoc } from "../scheme/docstring/docstring"
-import { docRegistry } from "../lib"
+import { ref } from 'vue'
+import type { FunctionDoc } from '../scheme/docstring/docstring'
+import { docRegistry } from '../lib'
 import {
   functionDocCategories,
   functionDocName,
   predTypeName,
-} from "../scheme/docstring/render"
-import DocEntry from "./DocEntry.vue"
+} from '../scheme/docstring/render'
+import DocEntry from './DocEntry.vue'
 
 const props = defineProps<{
   searchIn: string
@@ -16,8 +16,8 @@ const props = defineProps<{
 // N.B., same module list/order as src/docs/DocsApp.vue; "runtime" is
 // LPM-internal plumbing, not user-facing, so it's deliberately excluded.
 const moduleOrder = [
-  "prelude", "image", "lab", "music", "test",
-  "audio", "canvas", "html", "reactive", "data", "rex",
+  'prelude', 'image', 'lab', 'music', 'test',
+  'audio', 'canvas', 'html', 'reactive', 'data', 'rex',
 ]
 
 function allDocs(): FunctionDoc[] {
@@ -87,8 +87,8 @@ function checkTagsAnd(doc: FunctionDoc): boolean {
 function addToLib() {
   filteredLibs.value = allDocs().filter((doc) => {
     const checkRet = checkReturn(doc)
-    const checkArg = aBool.value === "or" ? checkArgs(doc) : checkArgsAnd(doc)
-    const checkTag = tBool.value === "or" ? checkTags(doc) : checkTagsAnd(doc)
+    const checkArg = aBool.value === 'or' ? checkArgs(doc) : checkArgsAnd(doc)
+    const checkTag = tBool.value === 'or' ? checkTags(doc) : checkTagsAnd(doc)
     return checkRet && checkArg && checkTag
   })
 }
@@ -189,20 +189,20 @@ const tBoolArr = ref([
 { id: 7, val: 'or' },
 { id: 8, val: 'and' }
 ])
-const tBool = ref("or")
+const tBool = ref('or')
 const aBoolArr = ref([
 { id: 7, val: 'or' },
 { id: 8, val: 'and' }
 ])
-const aBool = ref("or")
+const aBool = ref('or')
 // const rBoolArr = ref([
 // { id: 7, val: 'or' },
 // { id: 8, val: 'and' }
 // ])
 // const rBool = ref("or")
 
-const noSearchText = ref(filteredLibs.value.length === 0 && props.searchIn !== "" && !((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
-const noTagText = ref(filteredLibs.value.length === 0 && props.searchIn !== "" && ((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+const noSearchText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && !((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+const noTagText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && ((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
 
 const types = ref([
   { id: 307, val: 'any' },

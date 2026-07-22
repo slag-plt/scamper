@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref } from 'vue'
 import ApiEntries from './ApiEntries.vue';
 const appVersion = APP_VERSION
 
-const search = ref("")
+const search = ref('')
 
 function searchForFunction(searchTerm: string) {
-  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_self")
+  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_self')
 }
+
 const urlParams = new URLSearchParams(window.location.search);
 const searched: string | null = urlParams.get('search');
 </script>

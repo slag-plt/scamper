@@ -1,20 +1,20 @@
-import fs from "fs"
-import { parseArgs } from "node:util"
+import fs from 'fs'
+import { parseArgs } from 'node:util'
 
-import { ConsoleOutput } from "../lpm/output"
-import Scamper, { initialize } from "../scamper"
+import { ConsoleOutput } from '../lpm/output'
+import Scamper, { initialize } from '../scamper'
 
 ////////////////////////////////////////////////////////////////////////////////
 
 const { values, positionals } = parseArgs({
   options: {
     help: {
-      type: "boolean",
-      short: "?",
+      type: 'boolean',
+      short: '?',
       default: false,
     },
     trace: {
-      type: "boolean",
+      type: 'boolean',
     },
     // Define other options as needed
   },
@@ -22,16 +22,16 @@ const { values, positionals } = parseArgs({
 })
 
 if (values.help || positionals.length !== 1) {
-  console.log("Usage: scamper [options] filename")
-  console.log("Options:")
-  console.log("  -?, --help       Show this help message")
-  console.log("  --trace          Enabling step-by-step tracing")
+  console.log('Usage: scamper [options] filename')
+  console.log('Options:')
+  console.log('  -?, --help       Show this help message')
+  console.log('  --trace          Enabling step-by-step tracing')
   process.exit(0)
 }
 
 const filename = positionals[0]
 
-const src = fs.readFileSync(filename, "utf-8")
+const src = fs.readFileSync(filename, 'utf-8')
 const out = new ConsoleOutput()
 
 await initialize()

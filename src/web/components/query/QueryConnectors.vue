@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ConnectorHeight } from "./query-utils"
-import { QueryMap } from "../../../scamper"
-import { Range } from "../../../lpm"
-import { useEditor } from "../../composables/editor-context"
-import { ref, shallowRef, watchPostEffect } from "vue"
+import { ConnectorHeight } from './query-utils'
+import { QueryMap } from '../../../scamper'
+import { Range } from '../../../lpm'
+import { useEditor } from '../../composables/editor-context'
+import { ref, shallowRef, watchPostEffect } from 'vue'
 
 const props = defineProps<{
-  queries: NonNullable<ReturnType<QueryMap["get"]>>
+  queries: NonNullable<ReturnType<QueryMap['get']>>
   container: HTMLElement | null
 }>()
 const svgRef = ref<HTMLElement | null>(null)
@@ -48,7 +48,7 @@ watchPostEffect(() => {
 </script>
 
 <template>
-  <svg class="connectors" ref="svgRef">
+  <svg ref="svgRef" class="connectors">
     <line
       v-for="line in lines"
       :key="line.id"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { HljsBindings } from "../ast"
-import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
+import { HljsBindings } from '../ast'
+import CodeElement from '../../lpm/renderers/vue/components/CodeElement.vue'
+import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
 defineProps<{ bindings: HljsBindings }>()
 </script>

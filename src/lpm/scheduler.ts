@@ -1,9 +1,9 @@
-import { ErrorChannel, ICE, OutputChannel, ScamperError } from "."
-import { Fiber, StepResult } from "./fiber"
-import { schedulerYield } from "./scheduler-yield.js"
-import { mkTraceOutput } from "./trace/index.js"
-import { getFS } from "../fs"
-import * as S from "../scheme"
+import { ErrorChannel, ICE, OutputChannel, ScamperError } from '.'
+import { Fiber, StepResult } from './fiber'
+import { schedulerYield } from './scheduler-yield.js'
+import { mkTraceOutput } from './trace/index.js'
+import { getFS } from '../fs'
+import * as S from '../scheme'
 
 const DEFAULT_REFRESH_RATE = 60
 
@@ -34,61 +34,64 @@ export class Scheduler {
   // initialization: tasks is initially empty, so vacuously true.
   // maintenance:
   // - schedule disallows pushing completed fibers
-  // - #execute should remove tasks that complete during the loop.
-  #tasks: SchedulerTask[] = []
-  #isRunning = false
+  // - execute should remove tasks that complete during the loop.
+  private tasks: SchedulerTask[] = []
+  private isRunning = false
   // allows for resuming execution
-  #currTaskIdx = 0
-  #timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
-  #controller = new AbortController()
+  private currTaskIdx = 0
+  private timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
+  private controller = new AbortController()
 
   schedule(task: SchedulerTask): void {
     if (task.fiber.isDone()) {
       throw new ICE(
-        "Scheduler.schedule",
-        "Scheduling invariant violated: scheduling completed fibers is disallowed!",
+        'Scheduler.schedule',
+        'Scheduling invariant violated: scheduling completed fibers is disallowed!',
       )
     }
-    this.#tasks.push(task)
+    this.tasks.push(task)
     this.resumeExecution()
   }
+
   cancelTask(id: SchedulerId): void {
-    const wasPaused = this.#wasPaused()
+    const wasPaused = this.wasPaused()
     this.pauseExecution()
-    const taskI = this.#tasks.findIndex((t) => t.id === id)
+    const taskI = this.tasks.findIndex((t) => t.id === id)
     if (taskI === -1) {
       if (!wasPaused) {
         this.resumeExecution()
       }
       return
     }
-    this.#tasks[taskI].err.report(
-      new ScamperError("Runtime", "Evaluation cancelled"),
+    this.tasks[taskI].err.report(
+      new ScamperError('Runtime', 'Evaluation cancelled'),
     )
-    this.#tasks.splice(taskI, 1)
+    this.tasks.splice(taskI, 1)
     if (!wasPaused) {
       this.resumeExecution()
     }
   }
+
   pauseExecution() {
-    this.#controller.abort()
-    this.#isRunning = false
+    this.controller.abort()
+    this.isRunning = false
   }
+
   resumeExecution() {
-    if (this.#isRunning) {
+    if (this.isRunning) {
       return
     }
-    this.#controller = new AbortController()
-    this.#isRunning = true
-    void this.#execute()
+    this.controller = new AbortController()
+    this.isRunning = true
+    void this.execute()
   }
 
   stepTask(task: SchedulerTask): StepResult | undefined {
     const { fiber } = task
     if (fiber.isDone()) {
       throw new ICE(
-        "Scheduler.#execute",
-        "Scheduling invariant violated: a completed fiber remains in the task queue!",
+        'Scheduler.execute',
+        'Scheduling invariant violated: a completed fiber remains in the task queue!',
       )
     }
 
@@ -104,10 +107,10 @@ export class Scheduler {
       if (isReportTask(task)) {
         console.debug(e)
         task.err.report(e)
-        this.#endCurrFiber()
+        this.endCurrFiber()
         return undefined
       }
-      this.#reportAndUnwind(e, task)
+      this.reportAndUnwind(e, task)
       return undefined
     }
   }
@@ -120,23 +123,23 @@ export class Scheduler {
     if (!stepResult) {
       return
     }
-    if (stepResult.tag === "import-file") {
+    if (stepResult.tag === 'import-file') {
       // TODO: this branch (and the getFS()/fileExists() call in particular)
       //  isn't wrapped in a try/catch. If it throws or rejects for any reason
       //  (e.g. the FS singleton isn't initialized, or a real I/O error), the
-      //  exception escapes #execute() uncaught, which kills the scheduler loop
+      //  exception escapes execute() uncaught, which kills the scheduler loop
       //  entirely and silently stops stepping every other running task, not
       //  just this one. Should report the failure to task.err instead.
       if (!(await getFS().fileExists(stepResult.filename))) {
         task.err.report(
           new ScamperError(
-            "Runtime",
+            'Runtime',
             `Attempted to import file "${stepResult.filename}" but it does not exist!`,
           ),
         )
-        this.#endCurrFiber()
+        this.endCurrFiber()
       } else {
-        this.#removeTaskFromQueue(this.#currTaskIdx)
+        this.removeTaskFromQueue(this.currTaskIdx)
         getFS()
           .loadFile(stepResult.filename)
           .then(
@@ -168,7 +171,7 @@ export class Scheduler {
             (_err: unknown) => {
               task.err.report(
                 new ScamperError(
-                  "Runtime",
+                  'Runtime',
                   `Attempted to import file "${stepResult.filename}" but it failed to load!`,
                 ),
               )
@@ -186,12 +189,12 @@ export class Scheduler {
     const { out, isTracing } = task
     // we don't output minor steps (for now)
     // TODO: maybe consider fine-grained tracing?
-    if (stepResult.tag === "minor" || stepResult.tag === "yield") {
-      this.#currTaskIdx++
+    if (stepResult.tag === 'minor' || stepResult.tag === 'yield') {
+      this.currTaskIdx++
       return
     }
     // we always output if we just completed a display statement
-    if (stepResult.tag === "display") {
+    if (stepResult.tag === 'display') {
       out.send(fiber.lastResult)
     }
     // implied that stepResult === TraceStep
@@ -201,76 +204,76 @@ export class Scheduler {
     }
   }
 
-  async #execute(): Promise<void> {
-    while (!this.#wasPaused()) {
-      if (this.#tasks.length === 0) {
-        this.#isRunning = false
+  private async execute(): Promise<void> {
+    while (!this.wasPaused()) {
+      if (this.tasks.length === 0) {
+        this.isRunning = false
         return
       }
       // Yield before stepping so callers can observe scheduled tasks (e.g. UI
       // run-in-progress) before fibers run in this frame.
       await schedulerYield()
       const startTime = performance.now()
-      while (performance.now() - startTime < this.#timeQuantum) {
-        if (this.#wasPaused()) {
+      while (performance.now() - startTime < this.timeQuantum) {
+        if (this.wasPaused()) {
           break
         }
-        if (this.#currTaskIdx >= this.#tasks.length) {
+        if (this.currTaskIdx >= this.tasks.length) {
           // check if there are any left; if there are none, wait for more
-          if (this.#tasks.length === 0) {
+          if (this.tasks.length === 0) {
             break
           }
           // otherwise go back to the beginning
-          this.#currTaskIdx = 0
+          this.currTaskIdx = 0
         }
-        const task = this.#tasks.at(this.#currTaskIdx)
+        const task = this.tasks.at(this.currTaskIdx)
         if (!task) {
           throw new ICE(
-            "Scheduler.#execute",
-            `Scheduler attempted to execute task #${this.#currTaskIdx.toString()} when there are only ${this.#tasks.length.toString()} tasks!`,
+            'Scheduler.execute',
+            `Scheduler attempted to execute task #${this.currTaskIdx.toString()} when there are only ${this.tasks.length.toString()} tasks!`,
           )
         }
         const stepResult = this.stepTask(task)
         await this.processStepResult(stepResult, task)
-        this.#moveNextTask(task.fiber)
+        this.moveNextTask(task.fiber)
       }
     }
   }
 
-  #removeTaskFromQueue(index: number): SchedulerTask | undefined {
-    const lastFiber = this.#tasks.at(this.#tasks.length - 1)
+  private removeTaskFromQueue(index: number): SchedulerTask | undefined {
+    const lastFiber = this.tasks.at(this.tasks.length - 1)
     if (!lastFiber) {
       throw new ICE(
-        "Scheduler.#removeTaskFromQueue",
+        'Scheduler.removeTaskFromQueue',
         "Loop iteration atomicity error: somehow scheduler's tasks changed mid-iteration!",
       )
     }
-    this.#tasks[index] = lastFiber
-    return this.#tasks.pop()
+    this.tasks[index] = lastFiber
+    return this.tasks.pop()
   }
 
-  #endCurrFiber() {
-    const task = this.#removeTaskFromQueue(this.#currTaskIdx)
+  private endCurrFiber() {
+    const task = this.removeTaskFromQueue(this.currTaskIdx)
     if (task) {
       task.onComplete?.()
     }
   }
 
-  #moveNextTask(currFiber: Fiber) {
+  private moveNextTask(currFiber: Fiber) {
     if (!currFiber.isDone()) {
-      this.#currTaskIdx++
+      this.currTaskIdx++
       return
     }
-    this.#endCurrFiber()
+    this.endCurrFiber()
   }
 
-  #reportAndUnwind(e: ScamperError, { err, fiber }: DisplayTask) {
+  private reportAndUnwind(e: ScamperError, { err, fiber }: DisplayTask) {
     err.report(e)
     fiber.advanceStmt()
   }
 
-  #wasPaused(): boolean {
-    return !this.#isRunning || this.#controller.signal.aborted
+  private wasPaused(): boolean {
+    return !this.isRunning || this.controller.signal.aborted
   }
 
   async setTimeQuantumFromFPS(): Promise<void> {
@@ -293,12 +296,12 @@ export class Scheduler {
 
       requestAnimationFrame(checkRate)
     })
-    this.#timeQuantum = timeQuantum
+    this.timeQuantum = timeQuantum
   }
 }
 
 function isDisplayTask(t: SchedulerTask): t is DisplayTask {
-  return typeof t === "object" && "out" in t && "isTracing" in t
+  return typeof t === 'object' && 'out' in t && 'isTracing' in t
 }
 
 function isReportTask(t: SchedulerTask): t is QueryTask {

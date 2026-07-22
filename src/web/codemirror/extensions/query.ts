@@ -1,17 +1,17 @@
-import type { Text } from "@codemirror/state"
-import { StateEffect, StateField, Transaction } from "@codemirror/state"
+import type { Text } from '@codemirror/state'
+import { StateEffect, StateField, Transaction } from '@codemirror/state'
 import {
   Decoration,
   DecorationSet,
   EditorView,
   WidgetType,
-} from "@codemirror/view"
-import Scamper, { type QueryMap } from "../../../scamper"
+} from '@codemirror/view'
+import Scamper, { type QueryMap } from '../../../scamper'
 import {
   ConnectorHeight,
   ModalPadding,
   ModalRows,
-} from "../../components/query/query-utils"
+} from '../../components/query/query-utils'
 
 export function getIdForGhostLine(line: number) {
   return `query-ghost-line-${line.toString()}`
@@ -25,7 +25,7 @@ class GhostLineWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
-    const containerEl = document.createElement("div")
+    const containerEl = document.createElement('div')
     containerEl.id = getIdForGhostLine(this.line)
     containerEl.style.height = `${CMContainerHeight.toString()}lh`
     return containerEl

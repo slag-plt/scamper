@@ -1,4 +1,4 @@
-import { Module } from "./lang.js"
+import { Module } from './lang.js'
 
 // N.B., a neutral home for the builtin-library registry, deliberately kept
 // dependency-free (besides the Module type). fiber.ts needs this for its own

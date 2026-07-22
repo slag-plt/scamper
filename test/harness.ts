@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 import { Fiber } from '../src/lpm/fiber'
-import HTMLDisplay from "../src/lpm/output/html";
+import HTMLDisplay from '../src/lpm/output/html';
 
 // Runs a fiber to completion, sending displayed values/reported errors to
 // `out` and recovering from runtime errors the way the scheduler does for
@@ -32,7 +32,7 @@ export async function runProgram (src: string): Promise<string[]> {
     const prog = await Scheme.compile(out, src)
     if (out.log.length !== 0) { return out.log as string[] }
     if (prog === undefined) {
-      throw new Error("compile produced no program and no logged errors")
+      throw new Error('compile produced no program and no logged errors')
     }
     const fiber = new Fiber(prog, env)
     runFiber(fiber, out)
@@ -46,7 +46,7 @@ export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promis
 
     if (out.levels.length > 1) { return out.levels }
     if (prog === undefined) {
-      throw new Error("compile produced no program and no logged errors")
+      throw new Error('compile produced no program and no logged errors')
     }
     const fiber = new Fiber(prog, env)
     runFiber(fiber, out)

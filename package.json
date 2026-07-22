@@ -17,7 +17,9 @@
     "deploy": "./scripts/deploy $npm_package_version",
     "clean": "rm -rf dist",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "type": "module",
   "author": "",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from "vue"
-import { Composition, music_playComposition } from "../index"
-import { waf } from "../webaudiofont/webaudiofont"
+import { ref, onUnmounted } from 'vue'
+import { Composition, music_playComposition } from '../index'
+import { waf } from '../webaudiofont/webaudiofont'
 
 const props = defineProps<{ value: Composition }>()
 
@@ -11,7 +11,7 @@ async function play() {
   const player = waf()
   if (!player) return
 
-  if (player.audioContext.state === "suspended") {
+  if (player.audioContext.state === 'suspended') {
     await player.audioContext.resume().catch(console.error)
   }
   timer.value = music_playComposition(props.value)

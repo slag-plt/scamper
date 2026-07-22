@@ -1,12 +1,12 @@
-import { Char, Closure, Sym } from "../../lang"
-import { charToName, isChar, isClosure, isJsFunction, isSym } from "../../util"
-import { createTextRenderer, Strategy, VueStrategyProps } from "../vue"
+import { Char, Closure, Sym } from '../../lang'
+import { charToName, isChar, isClosure, isJsFunction, isSym } from '../../util'
+import { createTextRenderer, Strategy, VueStrategyProps } from '../vue'
 
 export function createSimpleVueRenderer<T>(
   formatFn: (val: T) => string,
 ): VueStrategyProps {
   return {
-    type: "vue",
+    type: 'vue',
     renderer: createTextRenderer<T>(formatFn),
   }
 }
@@ -15,23 +15,23 @@ export function createSimpleVueRenderer<T>(
  */
 const booleanStrategy: Strategy = {
   predicate: (v) => v === true || v === false,
-  ...createSimpleVueRenderer<boolean>((v) => (v ? "#t" : "#f")),
+  ...createSimpleVueRenderer<boolean>((v) => (v ? '#t' : '#f')),
 }
 const numberStrategy: Strategy = {
-  predicate: (v) => typeof v === "number",
+  predicate: (v) => typeof v === 'number',
   ...createSimpleVueRenderer<number>((v) => v.toString()),
 }
 const stringStrategy: Strategy = {
-  predicate: (v) => typeof v === "string",
+  predicate: (v) => typeof v === 'string',
   ...createSimpleVueRenderer<string>((v) => `"${v}"`),
 }
 const undefinedStrategy: Strategy = {
   predicate: (v) => v === undefined,
-  ...createSimpleVueRenderer<null | undefined>(() => "void"),
+  ...createSimpleVueRenderer<null | undefined>(() => 'void'),
 }
 const nullStrategy: Strategy = {
   predicate: (v) => v === null,
-  ...createSimpleVueRenderer<null>(() => "()"),
+  ...createSimpleVueRenderer<null>(() => '()'),
 }
 const symbolStrategy: Strategy = {
   predicate: (v) => isSym(v),
@@ -44,16 +44,16 @@ const closureStrategy: Strategy = {
       `(lambda (${
         v.params.length > 0
           ? v.params.reduce((acc, curr) => `${acc} ${curr}`)
-          : ""
+          : ''
       }${
-        v.restParam ? ` . ${v.restParam}` : ""
+        v.restParam ? ` . ${v.restParam}` : ''
       }) ...)`,
   ),
 }
 const jsFunctionStrategy: Strategy = {
   predicate: (v) => isJsFunction(v),
   ...createSimpleVueRenderer<() => void>(
-    (v) => `js.${v.name || "##anonymous##"}`,
+    (v) => `js.${v.name || '##anonymous##'}`,
   ),
 }
 const charStrategy: Strategy = {

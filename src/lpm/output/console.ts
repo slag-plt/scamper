@@ -1,15 +1,15 @@
-import { Value } from "../lang.js"
-import { OutputChannel, ErrorChannel } from "../../lpm/output"
-import { ScamperError } from "../error.js"
-import TextRenderer from "../renderers/text"
+import { Value } from '../lang.js'
+import { OutputChannel, ErrorChannel } from '../../lpm/output'
+import { ScamperError } from '../error.js'
+import TextRenderer from '../renderers/text'
 
 export class ConsoleOutput implements OutputChannel, ErrorChannel {
   seenError = false
-  #totalSends = 0
+  private _totalSends = 0
 
   send(v: Value): void {
     console.log(TextRenderer.render(v))
-    this.#totalSends++
+    this._totalSends++
   }
 
   report(e: ScamperError): void {
@@ -20,11 +20,12 @@ export class ConsoleOutput implements OutputChannel, ErrorChannel {
   pushLevel(..._attrs: string[]) {
     /* nothing to do! */
   }
+
   popLevel() {
     /* nothing to do! */
   }
 
   get totalSends() {
-    return this.#totalSends
+    return this._totalSends
   }
 }

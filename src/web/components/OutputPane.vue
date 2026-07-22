@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { useOutputPane } from "../composables/use-output-pane"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
+import { ref } from 'vue'
+import { useOutputPane } from '../composables/use-output-pane'
+import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
 const scrollEl = ref<HTMLDivElement | null>(null)
 const { reset, blocks, virtualizer, display, scrollToBottom } =

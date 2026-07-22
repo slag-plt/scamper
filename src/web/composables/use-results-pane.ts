@@ -1,4 +1,4 @@
-import { ErrorChannel, OutputChannel } from "../../lpm"
+import { ErrorChannel, OutputChannel } from '../../lpm'
 
 /**
  * Public interface of ResultsPane.vue exposed via defineExpose.

@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { Pat, PCtor, PVar } from "../ast"
-import { createSimpleVueRenderer } from "../../lpm/renderers/vue/simple-renderers"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
-import CodeParens from "./CodeParens.vue"
-import { FallbackRenderer } from "../../lpm/renderers/vue"
+import { Pat, PCtor, PVar } from '../ast'
+import { createSimpleVueRenderer } from '../../lpm/renderers/vue/simple-renderers'
+import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
+import CodeParens from './CodeParens.vue'
+import { FallbackRenderer } from '../../lpm/renderers/vue'
 
 const { value: pat } = defineProps<{ value: Pat }>()
 
 // `plit` / `pctor`+args use the template branches (non-`value` props).
 let computedComponent: unknown = FallbackRenderer
 switch (pat.tag) {
-  case "pwild":
-    computedComponent = createSimpleVueRenderer(() => "_").renderer
+  case 'pwild':
+    computedComponent = createSimpleVueRenderer(() => '_').renderer
     break
-  case "pvar":
+  case 'pvar':
     computedComponent = createSimpleVueRenderer<PVar>(
       (pat) => pat.name,
     ).renderer
     break
-  case "pctor":
+  case 'pctor':
     if (pat.args.length === 0) {
       computedComponent = createSimpleVueRenderer<PCtor>(
         (pat) => `(${pat.name})`,

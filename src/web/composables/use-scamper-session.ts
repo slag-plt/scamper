@@ -8,18 +8,18 @@ import {
   ref,
   shallowRef,
   type ShallowRef,
-} from "vue"
+} from 'vue'
 import Scamper, {
   type DisplayRequest,
   QUERIES_CHANGED,
   QUERY_EXPANDED_CHANGED,
   type QueryMap,
-} from "../../scamper"
-import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import type { SchedulerId } from "../../lpm/scheduler"
-import type { ResultsPaneType } from "./use-results-pane"
-import type { EditorAccessor } from "./editor-context"
-import { throwNull } from "../../utils"
+} from '../../scamper'
+import { SimpleErrorChannel } from '../../lpm/output/simple-error'
+import type { SchedulerId } from '../../lpm/scheduler'
+import type { ResultsPaneType } from './use-results-pane'
+import type { EditorAccessor } from './editor-context'
+import { throwNull } from '../../utils'
 
 export interface ScamperSessionOptions {
   editor: EditorAccessor
@@ -86,7 +86,7 @@ function createScamperSession(
   }
 
   function expandQuery(id: SchedulerId) {
-    console.log("expanding", id)
+    console.log('expanding', id)
     scamper.expandQuery(id)
   }
 
@@ -166,7 +166,7 @@ function createScamperSession(
 
 export type ScamperSession = ReturnType<typeof createScamperSession>
 
-const ScamperSessionKey: InjectionKey<ScamperSession> = Symbol("ScamperSession")
+const ScamperSessionKey: InjectionKey<ScamperSession> = Symbol('ScamperSession')
 
 export function provideScamperSession(
   pane: ShallowRef<ResultsPaneType | null>,
@@ -185,7 +185,7 @@ export function useScamperSession(): ScamperSession {
   const session = inject(ScamperSessionKey)
   if (!session) {
     throw new Error(
-      "Scamper session missing: call provideScamperSession() in an ancestor",
+      'Scamper session missing: call provideScamperSession() in an ancestor',
     )
   }
   return session

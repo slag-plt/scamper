@@ -12,8 +12,8 @@ import {
   keymap,
   lineNumbers,
   rectangularSelection,
-} from "@codemirror/view"
-import { EditorState, Extension } from "@codemirror/state"
+} from '@codemirror/view'
+import { EditorState, Extension } from '@codemirror/state'
 import {
   bracketMatching,
   defaultHighlightStyle,
@@ -21,28 +21,28 @@ import {
   foldKeymap,
   indentOnInput,
   syntaxHighlighting,
-} from "@codemirror/language"
+} from '@codemirror/language'
 import {
   defaultKeymap,
   history,
   historyKeymap,
   indentWithTab,
-} from "@codemirror/commands"
-import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
+} from '@codemirror/commands'
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
   autocompletion,
   closeBrackets,
   closeBracketsKeymap,
   completionKeymap,
-} from "@codemirror/autocomplete"
-import { lintKeymap } from "@codemirror/lint"
-import { ScamperSupport } from "./extensions/language"
-import makeScamperLinter from "./extensions/linter"
-import { PrettierExtension } from "./extensions/prettier"
-import { QueryExtension } from "./extensions/query"
+} from '@codemirror/autocomplete'
+import { lintKeymap } from '@codemirror/lint'
+import { ScamperSupport } from './extensions/language'
+import makeScamperLinter from './extensions/linter'
+import { PrettierExtension } from './extensions/prettier'
+import { QueryExtension } from './extensions/query'
 
 export const noLoadedFileText =
-  "; Create and/or load a file from the left-hand sidebar!"
+  '; Create and/or load a file from the left-hand sidebar!'
 
 export interface EditorStateConfig {
   output?: HTMLElement

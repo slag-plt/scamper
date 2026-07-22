@@ -56,12 +56,14 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.finished = false
 
     const blob = this
+
     function doFrame(_time: number) {
       blob.draw()
       if (!blob.finished) {
         requestAnimationFrame(doFrame)
       }
     }
+
     requestAnimationFrame(doFrame)
   }
 

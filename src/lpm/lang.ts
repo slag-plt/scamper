@@ -1,13 +1,13 @@
-import { Range } from "./range.js"
-import { ScamperError } from "./error.js"
+import { Range } from './range.js'
+import { ScamperError } from './error.js'
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
 /** The field name of Scamper objects denoting that object's runtime tag. */
-export const scamperTag = "##scamperTag##"
+export const scamperTag = '##scamperTag##'
 
 /** The field name of Scamper objects that are structs denoting that struct's kind. */
-export const structKind = "##structKind##"
+export const structKind = '##structKind##'
 
 /** Identifiers name entities maintained at runtime. */
 export type Id = string
@@ -155,8 +155,8 @@ export class Module {
   }
 
   registerValue(name: string, v: Value) {
-    if (typeof v === "function") {
-      Object.defineProperty(v, "name", { value: name })
+    if (typeof v === 'function') {
+      Object.defineProperty(v, 'name', { value: name })
     }
     this.bindings.set(name, v)
   }
@@ -179,7 +179,7 @@ export interface TaggedObject {
 
 /** A closure is a tagged object that bundles a function with its captured environment. */
 export interface Closure extends TaggedObject {
-  [scamperTag]: "closure"
+  [scamperTag]: 'closure'
   params: Id[]
   code: Blk
   locals: Map<string, Value>
@@ -193,13 +193,13 @@ export interface Closure extends TaggedObject {
 
 /** A char is a tagged object that captures a single character (a one-character string). */
 export interface Char extends TaggedObject {
-  [scamperTag]: "char"
+  [scamperTag]: 'char'
   value: string
 }
 
 /** A symbol is a tagged object representing an identifier. */
 export interface Sym extends TaggedObject {
-  [scamperTag]: "sym"
+  [scamperTag]: 'sym'
   value: string
 }
 
@@ -214,7 +214,7 @@ export interface Sym extends TaggedObject {
 // Additionally, fields denoted with ##...## are considered _internal_ fields that
 // are not part of the struct's arguments.
 export interface Struct extends TaggedObject {
-  [scamperTag]: "struct"
+  [scamperTag]: 'struct'
   [structKind]: string
   [key: string]: Value
   [key: number]: never
@@ -235,8 +235,8 @@ export type ScamperFn = Closure | JsFunction
  */
 export function callScamperFn(_fn: ScamperFn, ..._args: Value[]): Value {
   throw new ScamperError(
-    "Runtime",
-    "Javascript library functions can no longer call Scamper functions",
+    'Runtime',
+    'Javascript library functions can no longer call Scamper functions',
   )
 }
 
@@ -263,8 +263,8 @@ export type Value =
  * A pair is an algebraic datatype with a first and second component.
  */
 export interface Pair extends Struct {
-  [scamperTag]: "struct"
-  [structKind]: "pair"
+  [scamperTag]: 'struct'
+  [structKind]: 'pair'
   fst: Value
   snd: Value
 }
@@ -274,8 +274,8 @@ export interface Pair extends Struct {
  * with a head and tail. The tail, itself, must be a list.
  */
 export interface Cons extends Struct {
-  [scamperTag]: "struct"
-  [structKind]: "cons"
+  [scamperTag]: 'struct'
+  [structKind]: 'cons'
   head: Value
   tail: List
 }
@@ -286,23 +286,23 @@ export type List = null | Cons
 ///// The Little Pattern Machine language //////////////////////////////////////
 
 export interface Lit {
-  tag: "lit"
+  tag: 'lit'
   value: Value
   range: Range
 }
 export interface Var {
-  tag: "var"
+  tag: 'var'
   name: string
   range: Range
 }
 export interface Ctor {
-  tag: "ctor"
+  tag: 'ctor'
   name: string
   fields: string[]
   range: Range
 }
 export interface Cls {
-  tag: "cls"
+  tag: 'cls'
   params: string[]
   body: Blk
   name?: string
@@ -310,12 +310,12 @@ export interface Cls {
   restParam?: string
 }
 export interface Ap {
-  tag: "ap"
+  tag: 'ap'
   numArgs: number
   range: Range
 }
 export interface Match {
-  tag: "match"
+  tag: 'match'
   branches: [Pat, Blk][]
   range: Range
   // hack fix to not modify original branch
@@ -323,31 +323,31 @@ export interface Match {
   currBranchIdx?: number
 }
 export interface Raise {
-  tag: "raise"
+  tag: 'raise'
   msg: string
   range: Range
 }
 export interface PopS {
-  tag: "pops"
+  tag: 'pops'
 }
 export interface PopV {
-  tag: "popv"
+  tag: 'popv'
 }
 export interface Rept {
-  tag: "rept"
+  tag: 'rept'
   range: Range
 }
 export interface JsVar {
-  tag: "jsvar"
+  tag: 'jsvar'
   name: string
   range: Range
 }
 export interface ErrorOp {
-  tag: "error"
+  tag: 'error'
   range: Range
 }
 export interface ApplyOp {
-  tag: "apply"
+  tag: 'apply'
   range: Range
 }
 
@@ -368,24 +368,24 @@ export type Ops =
 export type Blk = Ops[]
 
 export interface Disp {
-  tag: "disp"
+  tag: 'disp'
   expr: Blk
   range: Range
 }
 export interface Import {
-  tag: "import"
+  tag: 'import'
   name: string
-  kind: "builtin" | "file"
+  kind: 'builtin' | 'file'
   range: Range
 }
 export interface Define {
-  tag: "define"
+  tag: 'define'
   name: string
   expr: Blk
   range: Range
 }
 export interface StmtExp {
-  tag: "stmtexp"
+  tag: 'stmtexp'
   expr: Blk
   range: Range
 }
@@ -393,21 +393,21 @@ export type Stmt = Disp | Import | Define | StmtExp
 export type Prog = Stmt[]
 
 export interface PWild {
-  tag: "pwild"
+  tag: 'pwild'
   range: Range
 }
 export interface PLit {
-  tag: "plit"
+  tag: 'plit'
   value: Value
   range: Range
 }
 export interface PVar {
-  tag: "pvar"
+  tag: 'pvar'
   name: string
   range: Range
 }
 export interface PCtor {
-  tag: "pctor"
+  tag: 'pctor'
   name: string
   args: Pat[]
   range: Range

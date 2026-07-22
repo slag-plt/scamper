@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed } from 'vue'
 import {
   Hsv,
   image_hsvToRgb,
   image_hsvToString,
   image_rgbToString,
   image_rgbPseudoComplement,
-} from "../color"
+} from '../color'
 
 const props = defineProps<{ value: Hsv }>()
 

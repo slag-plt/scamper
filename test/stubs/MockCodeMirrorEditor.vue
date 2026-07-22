@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue"
-import { useEditorRegistration } from "../../src/web/composables/editor-context"
-import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
-import { makeMockCodeMirrorEditorAdapter } from "./mock-code-mirror-editor-adapter"
-import { mockEditorHandle } from "./mock-editor-handle"
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useEditorRegistration } from '../../src/web/composables/editor-context'
+import { noLoadedFileText } from '../../src/web/codemirror/codemirror'
+import { makeMockCodeMirrorEditorAdapter } from './mock-code-mirror-editor-adapter'
+import { mockEditorHandle } from './mock-editor-handle'
 
 const emit = defineEmits<{ dirty: [] }>()
 const editorRegistration = useEditorRegistration()
-const src = ref("")
+const src = ref('')
 const loaded = ref(false)
 
 const adapter = makeMockCodeMirrorEditorAdapter({
@@ -41,7 +41,7 @@ onUnmounted(() => {
 
 function onInput(event: Event): void {
   src.value = (event.target as HTMLTextAreaElement).value
-  emit("dirty")
+  emit('dirty')
 }
 </script>
 

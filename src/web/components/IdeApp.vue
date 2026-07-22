@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue"
-import { Pane, Splitpanes } from "splitpanes"
-import "splitpanes/dist/splitpanes.css"
-import * as Lock from "../lockfile"
-import IdeSidebar from "./IdeSidebar.vue"
-import IdeHeader from "./IdeHeader.vue"
-import ResultsPane from "./ResultsPane.vue"
-import CodeMirrorEditor from "./CodeMirrorEditor.vue"
-import { provideEditor } from "../composables/editor-context"
-import type { ResultsPaneType } from "../composables/use-results-pane"
-import { provideScamperSession } from "../composables/use-scamper-session"
-import Scamper from "../../scamper"
-import * as FS from "../../fs"
-import { FileEntry } from "../../fs/fs"
-import QueryGhostLine from "./query/QueryGhostLine.vue"
-import ExpandedQueryModal from "./query/ExpandedQueryModal.vue"
+import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { Pane, Splitpanes } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
+import * as Lock from '../lockfile'
+import IdeSidebar from './IdeSidebar.vue'
+import IdeHeader from './IdeHeader.vue'
+import ResultsPane from './ResultsPane.vue'
+import CodeMirrorEditor from './CodeMirrorEditor.vue'
+import { provideEditor } from '../composables/editor-context'
+import type { ResultsPaneType } from '../composables/use-results-pane'
+import { provideScamperSession } from '../composables/use-scamper-session'
+import Scamper from '../../scamper'
+import * as FS from '../../fs'
+import { FileEntry } from '../../fs/fs'
+import QueryGhostLine from './query/QueryGhostLine.vue'
+import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
 
 // ---------- config ----------
 
-const CONFIG_FILENAME = ".scamper.config"
+const CONFIG_FILENAME = '.scamper.config'
 
 interface Config {
   lastOpenedFilename: string | null
@@ -27,7 +27,7 @@ interface Config {
 
 const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
-  lastVersionAccessed: "0.0.0",
+  lastVersionAccessed: '0.0.0',
 }
 
 const appVersion = `(${APP_VERSION})`
@@ -46,7 +46,7 @@ const isDirty = ref(false)
 const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
-const loadingContent = ref("Loading Scamper...")
+const loadingContent = ref('Loading Scamper...')
 
 // ---------- editor context + child component refs ----------
 
@@ -67,10 +67,10 @@ function abortTraceStep() {
 // ---------- file drawer ----------
 
 async function populateFileDrawer() {
-  if (!fs) throw new Error("FileSystem not initialized")
+  if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
   files.value = allFiles.filter(
-    (f: FileEntry) => !f.isDirectory && !f.name.startsWith("."),
+    (f: FileEntry) => !f.isDirectory && !f.name.startsWith('.'),
   )
 }
 
@@ -144,7 +144,7 @@ async function switchToFile(filename: string): Promise<void> {
     const src = await fs.loadFile(currentFile.value)
     editor().initializeDoc(src)
   } catch (e) {
-    if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ""}`)
+    if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ''}`)
   }
 
   session.resetOutput()
@@ -166,7 +166,7 @@ async function handleRunWindow() {
   await saveCurrentFile()
   const params = new URLSearchParams({
     filename: currentFile.value,
-    isTree: "false",
+    isTree: 'false',
   })
   window.open(`runner.html?${params.toString()}`)
 }
@@ -192,7 +192,7 @@ async function handleStepAll() {
 // ---------- sidebar event handlers ----------
 
 async function handleCreate() {
-  const filename = prompt("Enter a file name for your new program.")
+  const filename = prompt('Enter a file name for your new program.')
   if (filename === null) return
   if (await fs?.fileExists(filename)) {
     alert(`File ${filename} already exists!`)
@@ -280,9 +280,9 @@ async function handleDelete() {
 async function handleDownload() {
   if (!currentFile.value || !fs) return
   const contents = await fs.loadFile(currentFile.value)
-  const a = document.createElement("a")
-  a.href = "data:attachment/text;charset=utf-8," + encodeURIComponent(contents)
-  a.target = "_blank"
+  const a = document.createElement('a')
+  a.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
+  a.target = '_blank'
   a.download = currentFile.value
   a.click()
 }
@@ -294,7 +294,7 @@ async function handleSelectFile(filename: string) {
 // ---------- page lifecycle handlers ----------
 
 async function handleVisibilityChange() {
-  if (document.visibilityState === "hidden") {
+  if (document.visibilityState === 'hidden') {
     await saveCurrentFile()
     await saveConfig()
     if (fs) await Lock.releaseLockFile(fs)
@@ -338,13 +338,13 @@ onMounted(async () => {
   const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
     loadingContent.value =
-      "Another instance of Scamper is open. Please close that instance and try again."
+      'Another instance of Scamper is open. Please close that instance and try again.'
     return
   }
 
-  document.addEventListener("visibilitychange", visibilityChangeWrapper)
-  document.addEventListener("pagehide", pageHideWrapper)
-  window.addEventListener("beforeunload", beforeUnloadWrapper)
+  document.addEventListener('visibilitychange', visibilityChangeWrapper)
+  document.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('beforeunload', beforeUnloadWrapper)
 
   await loadConfig()
   await populateFileDrawer()
@@ -365,9 +365,9 @@ onMounted(async () => {
 onUnmounted(() => {
   stopAutosaving()
   session.stopAll()
-  document.removeEventListener("visibilitychange", visibilityChangeWrapper)
-  document.removeEventListener("pagehide", pageHideWrapper)
-  window.removeEventListener("beforeunload", beforeUnloadWrapper)
+  document.removeEventListener('visibilitychange', visibilityChangeWrapper)
+  document.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('beforeunload', beforeUnloadWrapper)
 })
 </script>
 

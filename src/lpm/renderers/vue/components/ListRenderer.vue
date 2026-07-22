@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { List, Value } from "../../../index"
-import CodeElement from "./CodeElement.vue"
-import ValueRenderer from "../ValueRenderer.vue"
-import { computed } from "vue"
+import { List, Value } from '../../../index'
+import CodeElement from './CodeElement.vue'
+import ValueRenderer from '../ValueRenderer.vue'
+import { computed } from 'vue'
 
 const props = defineProps<{ value: List }>()
 

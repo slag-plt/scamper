@@ -37,6 +37,7 @@ class RexString implements L.Struct, Re {
   constructor (value: string) {
     this.value = value
   }
+
   toRegexString(): string {
     return regexpEscape(this.value)
   }
@@ -51,6 +52,7 @@ class RexRepeat implements L.Struct, Re {
   constructor (value: Re) {
     this.value = value
   }
+
   toRegexString(): string {
     return `(?:${this.value.toRegexString()})+`
   }
@@ -65,6 +67,7 @@ class RexRepeat0 implements L.Struct, Re {
   constructor (value: Re) {
     this.value = value
   }
+
   toRegexString(): string {
     return `(?:${this.value.toRegexString()})*`
   }
@@ -79,6 +82,7 @@ class RegExConcat implements L.Struct, Re {
   constructor (values: Re[]) {
     this.values = values
   }
+
   toRegexString(): string {
     return this.values.map(v => v.toRegexString()).join('')
   }
@@ -90,7 +94,7 @@ class RexAnyChar implements L.Struct, Re {
   [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-char';
   toRegexString(): string {
-    return `.`
+    return '.'
   }
 }
 
@@ -103,6 +107,7 @@ class RegCharSet implements L.Struct, Re {
   constructor (chars: string) {
     this.chars = chars
   }
+
   toRegexString(): string {
     return `[${regexpEscape(this.chars)}]`
   }
@@ -117,6 +122,7 @@ class RegCharAntiset implements L.Struct, Re {
   constructor (chars: string) {
     this.chars = chars
   }
+
   toRegexString(): string {
     return `[^${regexpEscape(this.chars)}]`
   }
@@ -134,6 +140,7 @@ class RegCharRange implements L.Struct, Re {
     this.start = start
     this.end = end
   }
+
   toRegexString(): string {
     return `[${regexpEscape(this.start.value)}-${regexpEscape(this.end.value)}]`
   }
@@ -148,6 +155,7 @@ class RexAnyOf implements L.Struct, Re {
   constructor (values: Re[]) {
     this.values = values
   }
+
   toRegexString(): string {
     return `(?:${this.values.map(v => v.toRegexString()).join('|')})`
   }
@@ -162,6 +170,7 @@ class RexOptional implements L.Struct, Re {
   constructor (value: Re) {
     this.value = value
   }
+
   toRegexString(): string {
     return `(?:${this.value.toRegexString()})?`
   }
@@ -176,6 +185,7 @@ class RexRegex implements L.Struct, Re {
   constructor (pattern: string) {
     this.pattern = pattern
   }
+
   toRegexString(): string {
     return this.pattern
   }

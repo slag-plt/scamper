@@ -1,6 +1,6 @@
-import { ScamperError } from "../error"
-import { Value } from "../lang"
-import { ErrorChannel, OutputChannel } from "./channel"
+import { ScamperError } from '../error'
+import { Value } from '../lang'
+import { ErrorChannel, OutputChannel } from './channel'
 
 export interface DisplayCallbacks {
   StartSectionCallback: (...attrs: string[]) => void
@@ -14,36 +14,39 @@ export interface TraceBlock {
 }
 
 export class VueDisplay implements OutputChannel, ErrorChannel {
-  #startSection: DisplayCallbacks["StartSectionCallback"]
-  #endSection: DisplayCallbacks["EndSectionCallback"]
-  #send: DisplayCallbacks["SendCallback"]
-  #totalSends = 0
+  private startSection: DisplayCallbacks['StartSectionCallback']
+  private endSection: DisplayCallbacks['EndSectionCallback']
+  private _send: DisplayCallbacks['SendCallback']
+  private _totalSends = 0
 
   constructor({
     StartSectionCallback,
     EndSectionCallback,
     SendCallback,
   }: DisplayCallbacks) {
-    this.#startSection = StartSectionCallback
-    this.#endSection = EndSectionCallback
-    this.#send = SendCallback
+    this.startSection = StartSectionCallback
+    this.endSection = EndSectionCallback
+    this._send = SendCallback
   }
 
   send(v: Value) {
-    this.#send(v)
-    this.#totalSends++
+    this._send(v)
+    this._totalSends++
   }
+
   pushLevel(...attrs: string[]) {
-    this.#startSection(...attrs)
+    this.startSection(...attrs)
   }
+
   popLevel() {
-    this.#endSection()
+    this.endSection()
   }
+
   report(e: ScamperError) {
-    this.#send(e)
+    this._send(e)
   }
 
   get totalSends() {
-    return this.#totalSends
+    return this._totalSends
   }
 }

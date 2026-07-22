@@ -5,12 +5,12 @@ import {
   ModalVerticalPadding,
   ModalWidth,
   useReportedValue,
-} from "../query-utils"
-import { QueryEntry } from "../../../../scamper"
-import { computed, useTemplateRef } from "vue"
-import ModalContents from "./ModalContents.vue"
-import ModalControls from "./ModalControls.vue"
-import { useScamperSession } from "../../../composables/use-scamper-session"
+} from '../query-utils'
+import { QueryEntry } from '../../../../scamper'
+import { computed, useTemplateRef } from 'vue'
+import ModalContents from './ModalContents.vue'
+import ModalControls from './ModalControls.vue'
+import { useScamperSession } from '../../../composables/use-scamper-session'
 
 const { query } = defineProps<{ query: QueryEntry }>()
 
@@ -31,7 +31,7 @@ const invisible = computed(() => {
   return query.id === expanded
 })
 
-const contentsRef = useTemplateRef("contents-ref")
+const contentsRef = useTemplateRef('contents-ref')
 </script>
 
 <template>

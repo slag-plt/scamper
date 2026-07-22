@@ -1,9 +1,9 @@
-import * as L from "../../../lpm";
-import HtmlRenderer from "../../../lpm/renderers/html.js";
-import { SampleNode, AudioPipeline, audio_getCtx } from "../index.js";
+import * as L from '../../../lpm';
+import HtmlRenderer from '../../../lpm/renderers/html.js';
+import { SampleNode, AudioPipeline, audio_getCtx } from '../index.js';
 
 function throwError(msg: string): never {
-  throw new L.ScamperError("Runtime", msg);
+  throw new L.ScamperError('Runtime', msg);
 }
 
 export function drawOscilloscope(
@@ -17,12 +17,12 @@ export function drawOscilloscope(
 
   const bufferLength = analyser.frequencyBinCount;
   analyser.getByteTimeDomainData(data);
-  const ctx = canvas.getContext("2d") ?? throwError("no canvas context");
-  ctx.fillStyle = "rgb(200, 200, 200)";
+  const ctx = canvas.getContext('2d') ?? throwError('no canvas context');
+  ctx.fillStyle = 'rgb(200, 200, 200)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "rgb(0, 0, 0)";
+  ctx.strokeStyle = 'rgb(0, 0, 0)';
   ctx.beginPath();
   const sliceWidth = (canvas.width * 1.0) / bufferLength;
   let x = 0;
@@ -46,12 +46,12 @@ export function drawOscilloscope(
 
 export function sampleRenderer(sample: SampleNode): HTMLElement {
   const ctx = audio_getCtx();
-  const ret = document.createElement("span");
-  const playButton = document.createElement("button");
-  playButton.textContent = "▶";
-  const stopButton = document.createElement("button");
-  stopButton.textContent = "■";
-  const visualizer = document.createElement("canvas");
+  const ret = document.createElement('span');
+  const playButton = document.createElement('button');
+  playButton.textContent = '▶';
+  const stopButton = document.createElement('button');
+  stopButton.textContent = '■';
+  const visualizer = document.createElement('canvas');
 
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
@@ -94,11 +94,11 @@ export function isMediaElementSource(
 ): node is MediaElementSource {
   const maybeSource = node as unknown as Record<string, unknown>;
   return (
-    "mediaElement" in node &&
-    typeof maybeSource.mediaElement === "object" &&
+    'mediaElement' in node &&
+    typeof maybeSource.mediaElement === 'object' &&
     maybeSource.mediaElement !== null &&
     typeof (maybeSource.mediaElement as Record<string, unknown>).play ===
-      "function"
+      'function'
   );
 }
 
@@ -106,15 +106,15 @@ export function audioPipelineRenderer(blob: AudioPipeline): HTMLElement {
   const pipeline: AudioNode = blob.pipeline;
   const onOffNode: GainNode = blob.onOffNode;
 
-  const ret = document.createElement("span");
-  const playButton = document.createElement("button");
-  playButton.textContent = "▶";
-  const stopButton = document.createElement("button");
-  stopButton.textContent = "■";
+  const ret = document.createElement('span');
+  const playButton = document.createElement('button');
+  playButton.textContent = '▶';
+  const stopButton = document.createElement('button');
+  stopButton.textContent = '■';
   const startable =
-    "start" in pipeline &&
+    'start' in pipeline &&
     typeof (pipeline as unknown as Record<string, unknown>).start ===
-      "function";
+      'function';
   const isMediaElement = isMediaElementSource(pipeline);
   let started = false;
   onOffNode.gain.value = 0;
@@ -143,10 +143,10 @@ export function audioPipelineRenderer(blob: AudioPipeline): HTMLElement {
 }
 
 HtmlRenderer.registerCustomRenderer(
-  (v) => L.isStructKind(v, "sample"),
+  (v) => L.isStructKind(v, 'sample'),
   (v) => sampleRenderer(v as SampleNode),
 );
 HtmlRenderer.registerCustomRenderer(
-  (v) => L.isStructKind(v, "audio-pipeline"),
+  (v) => L.isStructKind(v, 'audio-pipeline'),
   (v) => audioPipelineRenderer(v as AudioPipeline),
 );

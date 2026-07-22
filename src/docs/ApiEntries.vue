@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue"
-import type { FunctionDoc } from "../scheme/docstring/docstring"
-import DocEntry from "./DocEntry.vue"
+import { computed } from 'vue'
+import type { FunctionDoc } from '../scheme/docstring/docstring'
+import DocEntry from './DocEntry.vue'
 
 const props = defineProps<{
   moduleName: string

@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, useTemplateRef } from "vue"
-import { useScamperSession } from "../../composables/use-scamper-session"
-import ModalContents from "./modal/ModalContents.vue"
+import { computed, onBeforeUnmount, onMounted, useTemplateRef } from 'vue'
+import { useScamperSession } from '../../composables/use-scamper-session'
+import ModalContents from './modal/ModalContents.vue'
 import {
   getQueryAnchorName,
   ModalOverallPadding,
   ModalVerticalPadding,
   ModalWidth,
   useReportedValue,
-} from "./query-utils"
-import ModalControls from "./modal/ModalControls.vue"
-import { SchedulerId } from "../../../lpm/scheduler"
+} from './query-utils'
+import ModalControls from './modal/ModalControls.vue'
+import { SchedulerId } from '../../../lpm/scheduler'
 
 const { queryId } = defineProps<{ queryId: SchedulerId }>()
 
-const popover = useTemplateRef<HTMLDivElement>("modal-ref")
+const popover = useTemplateRef<HTMLDivElement>('modal-ref')
 
 const { collapseQuery, getQueryOrThrow } = useScamperSession()
 
@@ -29,7 +29,7 @@ const handleClick = (e: MouseEvent) => {
     return
   }
   // close popover
-  console.log("closing")
+  console.log('closing')
   collapseQuery()
 }
 
@@ -40,10 +40,10 @@ void ModalVerticalPadding
 void ModalOverallPadding
 
 onMounted(() => {
-  document.addEventListener("click", handleClick)
+  document.addEventListener('click', handleClick)
 })
 onBeforeUnmount(() => {
-  document.removeEventListener("click", handleClick)
+  document.removeEventListener('click', handleClick)
 })
 </script>
 

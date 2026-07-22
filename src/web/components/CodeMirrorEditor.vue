@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue"
-import { EditorView } from "@codemirror/view"
-import { mkNoFileEditorState } from "../codemirror/codemirror"
+import { onMounted, onUnmounted, ref } from 'vue'
+import { EditorView } from '@codemirror/view'
+import { mkNoFileEditorState } from '../codemirror/codemirror'
 import {
   type CodeMirrorEditorAdapter,
   createCodeMirrorEditorAdapter,
-} from "../composables/codemirror-editor-adapter"
-import { useEditorRegistration } from "../composables/editor-context"
+} from '../composables/codemirror-editor-adapter'
+import { useEditorRegistration } from '../composables/editor-context'
 
 const emit = defineEmits<{ dirty: [] }>()
 
@@ -22,7 +22,7 @@ onMounted(() => {
     parent: containerRef.value,
   })
   adapter = createCodeMirrorEditorAdapter(editorView, () => {
-    emit("dirty")
+    emit('dirty')
   })
   editorRegistration.register(adapter)
 })

@@ -1,4 +1,4 @@
-declare module "colorsys" {
+declare module 'colorsys' {
   export interface RGB {
       r: number;
       g: number;
@@ -140,10 +140,10 @@ declare module "colorsys" {
   export function decimal2Hex(decimalColor: number | string): string;
   export function random(): string;
   export function rotateHue<T extends number | HSL | HSV>(hue: T, amount: number): T;
-  export function getColorEncoding(color: any): "unknown" | "hex" | "rgb" | "hsv" | "hsl" | "cmyk";
-  export function any2Hsl(color: any): HSL | "unknown";
-  export function any_to_hsl(color: any): HSL | "unknown";
-  export function anyToHsl(color: any): HSL | "unknown";
+  export function getColorEncoding(color: any): 'unknown' | 'hex' | 'rgb' | 'hsv' | 'hsl' | 'cmyk';
+  export function any2Hsl(color: any): HSL | 'unknown';
+  export function any_to_hsl(color: any): HSL | 'unknown';
+  export function anyToHsl(color: any): HSL | 'unknown';
   export function getTransformEncodingFunction(color: any, desiredEncoding: any): any;
   export function darken(color: any, percentage: any): any;
 }

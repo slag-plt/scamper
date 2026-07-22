@@ -3,23 +3,23 @@
 // reader.ts/parser.ts pipeline used to build. This lets
 // expansion.ts/scope.ts/codegen.ts stay untouched: they only ever see the
 // ast.ts contract, never the parser that produced it.
-import type { SyntaxNode } from "@lezer/common"
-import * as A from "./ast.js"
-import { parser } from "./generated/parser.js"
-import * as L from "../lpm/index.js"
+import type { SyntaxNode } from '@lezer/common'
+import * as A from './ast.js'
+import { parser } from './generated/parser.js'
+import * as L from '../lpm/index.js'
 import {
   parseCharLiteral,
   parseNumberLiteral,
   parseStringLiteral,
-} from "./literals.js"
-import { reservedWords } from "./reserved-words.js"
+} from './literals.js'
+import { reservedWords } from './reserved-words.js'
 
 ///// Source position bookkeeping ////////////////////////////////////////////////
 
 function computeLineStarts(src: string): number[] {
   const starts = [0]
   for (let i = 0; i < src.length; i++) {
-    if (src[i] === "\n") {
+    if (src[i] === '\n') {
       starts.push(i + 1)
     }
   }
@@ -103,34 +103,34 @@ function pairs<T>(items: T[]): [T, T][] {
 // parse the way explicit arity checks did), but a meaningful step up from a
 // single generic message for every malformed form.
 const formDescriptions: Record<string, string> = {
-  Lambda: "lambda expression (a list of parameters and a body)",
-  If: "if expression (a guard, an if-branch, and an else-branch)",
-  Let: "let expression (a list of bindings and a body)",
-  LetStar: "let* expression (a list of bindings and a body)",
-  Cond: "cond expression (a list of [test body] branches)",
-  Match: "match expression (a scrutinee and a list of [pattern body] branches)",
-  And: "and expression",
-  Or: "or expression",
-  Begin: "begin expression (at least one sub-expression)",
-  Section: "section expression (at least one sub-expression)",
-  Report: "report expression",
-  Error: "error expression (a message to raise)",
-  Apply: "apply expression (a function and a list of arguments)",
-  Application: "function application",
-  Quote: "quoted expression",
-  Vector: "vector literal",
-  PApp: "constructor pattern",
-  PVector: "vector pattern",
-  Import: "import statement (a built-in library name, or a quoted file name)",
-  Define: "define statement (a name and a value)",
-  Display: "display statement (a value to display)",
-  Struct: "struct statement (a name and a list of fields)",
+  Lambda: 'lambda expression (a list of parameters and a body)',
+  If: 'if expression (a guard, an if-branch, and an else-branch)',
+  Let: 'let expression (a list of bindings and a body)',
+  LetStar: 'let* expression (a list of bindings and a body)',
+  Cond: 'cond expression (a list of [test body] branches)',
+  Match: 'match expression (a scrutinee and a list of [pattern body] branches)',
+  And: 'and expression',
+  Or: 'or expression',
+  Begin: 'begin expression (at least one sub-expression)',
+  Section: 'section expression (at least one sub-expression)',
+  Report: 'report expression',
+  Error: 'error expression (a message to raise)',
+  Apply: 'apply expression (a function and a list of arguments)',
+  Application: 'function application',
+  Quote: 'quoted expression',
+  Vector: 'vector literal',
+  PApp: 'constructor pattern',
+  PVector: 'vector pattern',
+  Import: 'import statement (a built-in library name, or a quoted file name)',
+  Define: 'define statement (a name and a value)',
+  Display: 'display statement (a value to display)',
+  Struct: 'struct statement (a name and a list of fields)',
 }
 
 function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
   if (node.type.isError) {
     ctx.errors.push(
-      new L.ScamperError("Parser", "Malformed syntax.", undefined, ctx.range(node)),
+      new L.ScamperError('Parser', 'Malformed syntax.', undefined, ctx.range(node)),
     )
     return
   }
@@ -138,7 +138,7 @@ function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
     formDescriptions[node.type.name] ?? `${node.type.name.toLowerCase()} expression`
   ctx.errors.push(
     new L.ScamperError(
-      "Parser",
+      'Parser',
       `Malformed ${desc}.`,
       undefined,
       ctx.range(node),
@@ -174,19 +174,19 @@ function errorOr<T>(
 function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
   const text = ctx.text(node)
   switch (node.type.name) {
-    case "Number":
+    case 'Number':
       return parseNumberLiteral(text)
-    case "String":
+    case 'String':
       return parseStringLiteral(text, ctx.range(node))
-    case "Boolean":
-      return text === "#t"
-    case "Char":
+    case 'Boolean':
+      return text === '#t'
+    case 'Char':
       return parseCharLiteral(text, ctx.range(node))
-    case "Identifier":
-      return text === "null" ? null : L.mkSym(text)
+    case 'Identifier':
+      return text === 'null' ? null : L.mkSym(text)
     default:
       throw new L.ICE(
-        "lezer-bridge.leafValue",
+        'lezer-bridge.leafValue',
         `Unexpected leaf node: ${node.type.name}`,
       )
   }
@@ -219,24 +219,24 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
     return undefined
   }
   switch (node.type.name) {
-    case "Number":
-    case "String":
-    case "Boolean":
-    case "Char":
+    case 'Number':
+    case 'String':
+    case 'Boolean':
+    case 'Char':
       return leafValue(ctx, node)
 
-    case "Identifier": {
+    case 'Identifier': {
       const text = ctx.text(node)
-      return text === "null" ? null : L.mkSym(text)
+      return text === 'null' ? null : L.mkSym(text)
     }
 
-    case "Vector":
-    case "PVector":
+    case 'Vector':
+    case 'PVector':
       return cs.map((c) => nodeToRawValue(ctx, c))
 
-    case "Quote": {
+    case 'Quote': {
       const inner = cs.length === 2 ? cs[1] : cs[0]
-      return L.mkList(L.mkSym("quote"), nodeToRawValue(ctx, inner))
+      return L.mkList(L.mkSym('quote'), nodeToRawValue(ctx, inner))
     }
 
     default:
@@ -259,23 +259,23 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
 function identifierName(
   ctx: Ctx,
   node: SyntaxNode,
-  errorMsg = "Expected an identifier",
+  errorMsg = 'Expected an identifier',
 ): string {
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
     ctx.errors.push(
       new L.ScamperError(
-        "Parser",
+        'Parser',
         `The identifier "${name}" is a reserved word and cannot be used as a variable name`,
         undefined,
         ctx.range(node),
       ),
     )
-    return "<error>"
+    return '<error>'
   }
-  if (node.type.name !== "Identifier") {
-    ctx.errors.push(new L.ScamperError("Parser", errorMsg, undefined, ctx.range(node)))
-    return "<error>"
+  if (node.type.name !== 'Identifier') {
+    ctx.errors.push(new L.ScamperError('Parser', errorMsg, undefined, ctx.range(node)))
+    return '<error>'
   }
   return name
 }
@@ -293,7 +293,7 @@ function precedingComments(
 ): A.Comment[] | undefined {
   const comments: A.Comment[] = []
   let sib = node.prevSibling
-  while (sib?.type.name === "LineComment") {
+  while (sib?.type.name === 'LineComment') {
     comments.unshift({ line: ctx.text(sib), range: ctx.range(sib) })
     sib = sib.prevSibling
   }
@@ -305,18 +305,18 @@ function precedingComments(
 function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
   const range = ctx.range(node)
   const cs = children(node)
-  const err = errorOr(ctx, node, cs, A.mkPLit("<error>", range))
+  const err = errorOr(ctx, node, cs, A.mkPLit('<error>', range))
   if (err) {
     return err
   }
   switch (node.type.name) {
-    case "Number":
-    case "String":
-    case "Boolean":
-    case "Char":
+    case 'Number':
+    case 'String':
+    case 'Boolean':
+    case 'Char':
       return A.mkPLit(leafValue(ctx, node), range)
 
-    case "Identifier": {
+    case 'Identifier': {
       const v = leafValue(ctx, node)
       if (!L.isSym(v)) {
         return A.mkPLit(v, range)
@@ -324,30 +324,30 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
       const name = identifierName(
         ctx,
         node,
-        "Expected a valid constructor name",
+        'Expected a valid constructor name',
       )
-      return name === "_" ? A.mkPWild(range) : A.mkPVar(name, range)
+      return name === '_' ? A.mkPWild(range) : A.mkPVar(name, range)
     }
 
-    case "PApp": {
+    case 'PApp': {
       if (cs.length === 0) {
         return A.mkPLit(null, range)
       }
       const head = identifierName(
         ctx,
         cs[0],
-        "The first element of a pattern list must be a constructor name",
+        'The first element of a pattern list must be a constructor name',
       )
       const args = cs.slice(1).map((c) => patFromNode(ctx, c))
       return A.mkPCtor(head, args, range)
     }
 
-    case "PVector":
+    case 'PVector':
       return A.mkPLit(nodeToRawValue(ctx, node), range)
 
     default:
       throw new L.ICE(
-        "lezer-bridge.patFromNode",
+        'lezer-bridge.patFromNode',
         `Unexpected pattern node: ${node.type.name}`,
       )
   }
@@ -363,13 +363,13 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     return err
   }
   switch (node.type.name) {
-    case "Number":
-    case "String":
-    case "Boolean":
-    case "Char":
+    case 'Number':
+    case 'String':
+    case 'Boolean':
+    case 'Char':
       return A.mkLit(leafValue(ctx, node), range)
 
-    case "Identifier": {
+    case 'Identifier': {
       const v = leafValue(ctx, node)
       if (!L.isSym(v)) {
         return A.mkLit(v, range)
@@ -377,34 +377,34 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkVar(identifierName(ctx, node), range)
     }
 
-    case "Quote": {
+    case 'Quote': {
       const inner = cs.length === 2 ? cs[1] : cs[0]
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
 
-    case "JsVar": {
+    case 'JsVar': {
       const name = leafValue(ctx, cs[1]) as string
       return A.mkJsVar(name, range)
     }
 
-    case "Error":
+    case 'Error':
       return A.mkError(expFromNode(ctx, cs[1]), range)
 
-    case "Apply":
+    case 'Apply':
       return A.mkApply(
         expFromNode(ctx, cs[1]),
         expFromNode(ctx, cs[2]),
         range,
       )
 
-    case "Vector":
+    case 'Vector':
       return A.mkLit(nodeToRawValue(ctx, node), range)
 
-    case "Lambda": {
+    case 'Lambda': {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const argNodes = rest.slice(0, -1)
-      const dotIndex = argNodes.findIndex((c) => c.type.name === "RestDot")
+      const dotIndex = argNodes.findIndex((c) => c.type.name === 'RestDot')
       if (dotIndex === -1) {
         const params = argNodes.map((c) => identifierName(ctx, c))
         return A.mkLam(params, body, range)
@@ -414,7 +414,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkLam(params, body, range, restParam)
     }
 
-    case "If": {
+    case 'If': {
       const rest = cs.slice(1)
       return A.mkIf(
         expFromNode(ctx, rest[0]),
@@ -424,34 +424,34 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       )
     }
 
-    case "And":
+    case 'And':
       return A.mkAnd(
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
-    case "Or":
+    case 'Or':
       return A.mkOr(
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
-    case "Begin":
+    case 'Begin':
       return A.mkBegin(
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
-    case "Section":
+    case 'Section':
       return A.mkSection(
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
 
-    case "Report":
+    case 'Report':
       return A.mkReport(expFromNode(ctx, cs[1]), range)
 
-    case "Application": {
+    case 'Application': {
       if (cs.length === 0) {
         return A.mkLit(null, range)
       }
@@ -462,20 +462,20 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       )
     }
 
-    case "Let":
-    case "LetStar": {
+    case 'Let':
+    case 'LetStar': {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
         name: identifierName(ctx, n),
         value: expFromNode(ctx, v),
       }))
-      return node.type.name === "Let"
+      return node.type.name === 'Let'
         ? A.mkLet(bindings, body, range)
         : A.mkLetS(bindings, body, range)
     }
 
-    case "Cond": {
+    case 'Cond': {
       const branches = pairs(cs.slice(1)).map(([test, body]) => ({
         test: expFromNode(ctx, test),
         body: expFromNode(ctx, body),
@@ -483,7 +483,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkCond(branches, range)
     }
 
-    case "Match": {
+    case 'Match': {
       const rest = cs.slice(1)
       const scrutinee = expFromNode(ctx, rest[0])
       const branches = pairs(rest.slice(1)).map(([pat, body]) => ({
@@ -495,7 +495,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
 
     default:
       throw new L.ICE(
-        "lezer-bridge.expFromNode",
+        'lezer-bridge.expFromNode',
         `Unexpected expression node: ${node.type.name}`,
       )
   }
@@ -516,17 +516,17 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
     return err
   }
   switch (node.type.name) {
-    case "Import": {
+    case 'Import': {
       const target = cs[1]
-      if (target.type.name === "String") {
+      if (target.type.name === 'String') {
         const filename = leafValue(ctx, target) as string
-        return A.mkImport(filename, "file", range)
+        return A.mkImport(filename, 'file', range)
       }
       const name = identifierName(ctx, target)
-      return A.mkImport(name, "builtin", range)
+      return A.mkImport(name, 'builtin', range)
     }
 
-    case "Define": {
+    case 'Define': {
       const rest = cs.slice(1)
       const name = identifierName(ctx, rest[0])
       const value = expFromNode(ctx, rest[1])
@@ -534,24 +534,24 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
       return A.mkDefine(name, value, range, docComments)
     }
 
-    case "Display": {
+    case 'Display': {
       const value = expFromNode(ctx, cs[1])
       return A.mkDisp(value, range)
     }
 
-    case "Struct": {
+    case 'Struct': {
       const rest = cs.slice(1)
       const name = identifierName(ctx, rest[0])
       const fields = rest.slice(1).map((c) => identifierName(ctx, c))
       return A.mkStruct(name, fields, range)
     }
 
-    case "SExpr":
+    case 'SExpr':
       return A.mkStmtExp(expFromNode(ctx, cs[0]), range)
 
     default:
       throw new L.ICE(
-        "lezer-bridge.stmtFromNode",
+        'lezer-bridge.stmtFromNode',
         `Unexpected statement node: ${node.type.name}`,
       )
   }
@@ -567,7 +567,7 @@ export function parseProgramFromSource(
   const ctx = new Ctx(src, computeLineStarts(src), errors)
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
-    if (node.type.name === "LineComment") {
+    if (node.type.name === 'LineComment') {
       continue
     }
     // N.B., a stray error node here (e.g. an extra unmatched closing paren)

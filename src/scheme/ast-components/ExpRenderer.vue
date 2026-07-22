@@ -1,77 +1,77 @@
 <script setup lang="ts">
-import { ASTArg, Exp, HljsBindings, mkLit } from "../ast"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
-import CodeParens from "./CodeParens.vue"
-import HljsBindingForm from "./HljsBindingForm.vue"
-import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
-import { FallbackRenderer } from "../../lpm/renderers/vue"
+import { ASTArg, Exp, HljsBindings, mkLit } from '../ast'
+import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
+import CodeParens from './CodeParens.vue'
+import HljsBindingForm from './HljsBindingForm.vue'
+import CodeElement from '../../lpm/renderers/vue/components/CodeElement.vue'
+import { FallbackRenderer } from '../../lpm/renderers/vue'
 
 const { value: e } = defineProps<{ value: Exp }>()
 
 let args: ASTArg[] | null = null
 switch (e.tag) {
-  case "app":
+  case 'app':
     args = [e.head, ...e.args]
     break
-  case "lam":
+  case 'lam':
     if (e.restParam) {
-      args = ["lambda", ...e.params, ".", e.restParam, e.body]
+      args = ['lambda', ...e.params, '.', e.restParam, e.body]
     } else {
-      args = ["lambda", ...e.params, e.body]
+      args = ['lambda', ...e.params, e.body]
     }
     break
-  case "begin":
-    args = ["begin", ...e.exps]
+  case 'begin':
+    args = ['begin', ...e.exps]
     break
-  case "if":
-    args = ["if", e.guard, e.ifB, e.elseB]
+  case 'if':
+    args = ['if', e.guard, e.ifB, e.elseB]
     break
-  case "quote":
-    args = ["quote", mkLit(e.value)]
+  case 'quote':
+    args = ['quote', mkLit(e.value)]
     break
-  case "error":
-    args = ["error", e.exp]
+  case 'error':
+    args = ['error', e.exp]
     break
-  case "apply":
-    args = ["apply", e.fn, e.args]
+  case 'apply':
+    args = ['apply', e.fn, e.args]
     break
-  case "and":
-    args = ["and", ...e.exps]
+  case 'and':
+    args = ['and', ...e.exps]
     break
-  case "or":
-    args = ["or", ...e.exps]
+  case 'or':
+    args = ['or', ...e.exps]
     break
-  case "section":
-    args = ["section", ...e.exps]
+  case 'section':
+    args = ['section', ...e.exps]
     break
 }
 
 let hljsBindings: HljsBindings | null = null
 switch (e.tag) {
-  case "let":
+  case 'let':
     hljsBindings = {
-      head: "let",
+      head: 'let',
       pairs: e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
       body: e.body,
     }
     break
-  case "match":
+  case 'match':
     hljsBindings = {
-      head: "match",
+      head: 'match',
       pairs: e.branches.map(({ pat, body }) => ({ lhs: pat, rhs: body })),
       scrutinee: e.scrutinee,
     }
     break
-  case "let*":
+  case 'let*':
     hljsBindings = {
-      head: "let*",
+      head: 'let*',
       pairs: e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
       body: e.body,
     }
     break
-  case "cond":
+  case 'cond':
     hljsBindings = {
-      head: "cond",
+      head: 'cond',
       pairs: e.branches.map(({ test, body }) => ({ lhs: test, rhs: body })),
     }
     break

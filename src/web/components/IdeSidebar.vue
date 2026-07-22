@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import type { FileEntry } from "../../fs/fs"
+import { ref } from 'vue'
+import type { FileEntry } from '../../fs/fs'
 
 const props = defineProps<{
   version?: string
@@ -22,7 +22,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 function handleDragOver(event: DragEvent) {
   event.preventDefault()
   if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = "copy"
+    event.dataTransfer.dropEffect = 'copy'
   }
   isDragOver.value = true
 }
@@ -51,7 +51,7 @@ async function handleFileInputChange(event: Event) {
   if (file) {
     await props.uploadFile?.(file)
   }
-  target.value = ""
+  target.value = ''
 }
 </script>
 

@@ -1,5 +1,5 @@
-import { expect, test } from "vitest"
-import { runProgram } from "../harness.js"
+import { expect, test } from 'vitest'
+import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/138
 // https://github.com/slag-plt/scamper/issues/176
@@ -7,7 +7,7 @@ import { runProgram } from "../harness.js"
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("fold-arguments", async () => {
+test.skip('fold-arguments', async () => {
   expect(
     await runProgram(`
   (fold-left string-append "" (list "!" "%" "#" "@"))
@@ -64,13 +64,13 @@ test.skip("fold-arguments", async () => {
   ).toEqual([
     '"@#%!"',
     '"!%#@"',
-    "#t",
-    "#t",
-    "(list 5 4 3 2 1)",
-    "#t",
-    "3",
-    "7",
-    "(list 1 2 3 4 5)",
-    "(list 2 4)",
+    '#t',
+    '#t',
+    '(list 5 4 3 2 1)',
+    '#t',
+    '3',
+    '7',
+    '(list 1 2 3 4 5)',
+    '(list 2 4)',
   ])
 })

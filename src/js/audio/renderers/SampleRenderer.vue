@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { SampleNode, audio_getCtx } from "../index"
-import { drawOscilloscope } from "./html"
+import { ref } from 'vue'
+import { SampleNode, audio_getCtx } from '../index'
+import { drawOscilloscope } from './html'
 
 const props = defineProps<{ value: SampleNode }>()
 

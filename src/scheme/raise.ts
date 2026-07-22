@@ -1,7 +1,7 @@
-import * as LPM from "../lpm"
-import { Fiber } from "../lpm/fiber"
-import { Frame } from "../lpm/frame"
-import * as A from "./ast.js"
+import * as LPM from '../lpm'
+import { Fiber } from '../lpm/fiber'
+import { Frame } from '../lpm/frame'
+import * as A from './ast.js'
 
 /** @return a stack of expressions created from the given value stack. */
 export function valuesToExps(values: LPM.Value[]): A.Exp[] {
@@ -22,12 +22,12 @@ export function raiseFrame(
   for (let i = ops.length - 1; i >= 0; i--) {
     const op = ops[i]
     switch (op.tag) {
-      case "lit": {
+      case 'lit': {
         values.push(A.mkLit(op.value))
         break
       }
 
-      case "var": {
+      case 'var': {
         if (env.has(op.name)) {
           const v = env.get(op.name)!
           if (LPM.isFunction(v)) {
@@ -41,14 +41,14 @@ export function raiseFrame(
         break
       }
 
-      case "ctor": {
+      case 'ctor': {
         const arity = op.fields.length
         const args = arity === 0 ? [] : values.splice(-arity)
         values.push(A.mkApp(A.mkVar(op.name), args))
         break
       }
 
-      case "cls": {
+      case 'cls': {
         const excluded = op.restParam ? [...op.params, op.restParam] : op.params
         const body = raiseFrame(
           [],
@@ -63,7 +63,7 @@ export function raiseFrame(
         break
       }
 
-      case "ap": {
+      case 'ap': {
         const vs = values.splice(-(op.numArgs + 1))
         const head = vs[0]
         const args = op.numArgs === 0 ? [] : vs.slice(1)
@@ -71,7 +71,7 @@ export function raiseFrame(
         break
       }
 
-      case "match": {
+      case 'match': {
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame([], env, body.toReversed())
@@ -81,29 +81,29 @@ export function raiseFrame(
         break
       }
 
-      case "raise": {
-        values.push(A.mkApp(A.mkVar("raise"), [A.mkLit(op.msg)]))
+      case 'raise': {
+        values.push(A.mkApp(A.mkVar('raise'), [A.mkLit(op.msg)]))
         break
       }
 
-      case "error": {
+      case 'error': {
         const arg = values.pop()!
         values.push(A.mkError(arg))
         break
       }
 
-      case "apply": {
+      case 'apply': {
         const [fn, args] = values.splice(-2)
         values.push(A.mkApply(fn, args))
         break
       }
 
-      case "pops": {
+      case 'pops': {
         // N.B., pops the local environment, but we don't track that here!
         break
       }
 
-      case "popv": {
+      case 'popv': {
         values.pop()!
         break
       }
@@ -114,7 +114,7 @@ export function raiseFrame(
 
 export function raiseFrames(frames: Frame[]): A.Exp {
   if (frames.length === 0) {
-    throw new LPM.ICE("raiseFrames", "no frames to raise")
+    throw new LPM.ICE('raiseFrames', 'no frames to raise')
   }
   const lastFrame = frames[frames.length - 1]
   let ret = raiseFrame(

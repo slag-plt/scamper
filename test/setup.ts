@@ -1,7 +1,7 @@
-import * as matchers from "@testing-library/jest-dom/matchers";
-import { expect } from "vitest";
-import "vitest-canvas-mock";
-import { initializeLibs } from "../src/lib";
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { expect } from 'vitest';
+import 'vitest-canvas-mock';
+import { initializeLibs } from '../src/lib';
 
 expect.extend(matchers);
 // N.B., only initializeLibs() here, not scamper.ts's initialize(): importing

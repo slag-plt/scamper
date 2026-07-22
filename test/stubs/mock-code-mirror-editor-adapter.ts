@@ -1,11 +1,11 @@
-import { Loc } from "../../src/lpm"
-import type { CodeMirrorEditorAdapter } from "../../src/web/composables/codemirror-editor-adapter"
+import { Loc } from '../../src/lpm'
+import type { CodeMirrorEditorAdapter } from '../../src/web/composables/codemirror-editor-adapter'
 
 export function makeMockCodeMirrorEditorAdapter(
   overrides: Partial<CodeMirrorEditorAdapter> = {},
 ): CodeMirrorEditorAdapter {
   return {
-    getDoc: () => "1",
+    getDoc: () => '1',
     isLoaded: () => true,
     initializeDoc: () => {
       /* noop */

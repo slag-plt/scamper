@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
-import { useScamperSession } from "../composables/use-scamper-session"
+import { computed, ref } from 'vue'
+import { useScamperSession } from '../composables/use-scamper-session'
 
 defineProps<{
   currentFile?: string | null
@@ -23,10 +23,10 @@ function handleTrace() {
   void session.execute({ tracing: true })
 }
 
-const search = ref("")
+const search = ref('')
 
 function searchOpenWindow(searchTerm: string) {
-  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_blank")
+  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_blank')
 }
 </script>
 

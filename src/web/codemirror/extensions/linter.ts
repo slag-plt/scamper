@@ -1,9 +1,9 @@
-import { Diagnostic, linter } from "@codemirror/lint"
-import * as LPM from "../../../lpm"
-import { expandProgram } from "../../../scheme/expansion"
-import { scopeCheckProgram } from "../../../scheme/scope"
-import { tokenizeAndParse } from "../../../scheme"
-import builtinLibs from "../../../lib"
+import { Diagnostic, linter } from '@codemirror/lint'
+import * as LPM from '../../../lpm'
+import { expandProgram } from '../../../scheme/expansion'
+import { scopeCheckProgram } from '../../../scheme/scope'
+import { tokenizeAndParse } from '../../../scheme'
+import builtinLibs from '../../../lib'
 
 function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   console.log(err.toString())
@@ -20,7 +20,7 @@ function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   diagnostics.push({
     from,
     to,
-    severity: err.isFatal ? "error" : "warning",
+    severity: err.isFatal ? 'error' : 'warning',
     message: err.message,
   })
 }

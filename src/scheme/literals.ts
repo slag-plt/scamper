@@ -3,7 +3,7 @@
 // knows a leaf node's kind (Number/String/Char/Boolean/Identifier) from the
 // grammar, and by docstring/param.ts, which only has a bare snippet of text
 // (no parse tree) and needs to guess whether it looks like an identifier.
-import * as L from "../lpm/index.js"
+import * as L from '../lpm/index.js'
 
 const intRegex = /^[+-]?\d+$/
 const floatRegex = /^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/
@@ -15,28 +15,28 @@ export function parseNumberLiteral(text: string): number {
 export function parseStringLiteral(text: string, range: L.Range): string {
   if (text.length === 0) {
     throw new L.ICE(
-      "parseStringLiteral",
-      "Empty string literal (with no quote!)",
+      'parseStringLiteral',
+      'Empty string literal (with no quote!)',
     )
   } else if (!text.startsWith('"')) {
     throw new L.ScamperError(
-      "Parser",
-      "String literal must begin with a quote",
+      'Parser',
+      'String literal must begin with a quote',
       undefined,
       range,
     )
   }
 
-  let ret = ""
+  let ret = ''
   for (let i = 1; i < text.length; i++) {
     // A quote closes this string literal
     if (text[i] === '"') {
       return ret
       // Escape characters require us to consume the next character
-    } else if (text[i] === "\\") {
+    } else if (text[i] === '\\') {
       if (i + 1 >= text.length) {
         throw new L.ScamperError(
-          "Parser",
+          'Parser',
           'Escape character "\\" cannot occur at the end of a string.',
           undefined,
           range,
@@ -45,35 +45,35 @@ export function parseStringLiteral(text: string, range: L.Range): string {
       const ch = text[i + 1]
       switch (ch) {
         // Alarm: ASCII 7
-        case "a":
+        case 'a':
           ret += String.fromCharCode(7)
           break
         // Backspace: ASCII 8
-        case "b":
+        case 'b':
           ret += String.fromCharCode(8)
           break
         // Tab: ASCII 9
-        case "t":
+        case 't':
           ret += String.fromCharCode(9)
           break
         // Linefeed: ASCII 10
-        case "n":
+        case 'n':
           ret += String.fromCharCode(10)
           break
         // Vertical tab: ASCII 11
-        case "v":
+        case 'v':
           ret += String.fromCharCode(11)
           break
         // Form feed: ASCII 12
-        case "f":
+        case 'f':
           ret += String.fromCharCode(12)
           break
         // Carriage return: ASCII 13
-        case "r":
+        case 'r':
           ret += String.fromCharCode(13)
           break
         // Escape: ASCII 27
-        case "e":
+        case 'e':
           ret += String.fromCharCode(27)
           break
         case '"':
@@ -82,33 +82,33 @@ export function parseStringLiteral(text: string, range: L.Range): string {
         case "'":
           ret += "'"
           break
-        case "\\":
-          ret += "\\"
+        case '\\':
+          ret += '\\'
           break
         default:
           // NOTE: Extended escape codes are currently not supported
-          if (ch >= "0" && ch <= "9") {
+          if (ch >= '0' && ch <= '9') {
             throw new L.ScamperError(
-              "Parser",
-              "Octal escape codes not supported",
+              'Parser',
+              'Octal escape codes not supported',
               undefined,
               range,
             )
-          } else if (ch === "x") {
+          } else if (ch === 'x') {
             throw new L.ScamperError(
-              "Parser",
-              "Hex escape codes not supported",
+              'Parser',
+              'Hex escape codes not supported',
               undefined,
               range,
             )
-          } else if (ch === "u" || ch === "U") {
+          } else if (ch === 'u' || ch === 'U') {
             throw new L.ScamperError(
-              "Parser",
-              "Unicode escape codes not supported",
+              'Parser',
+              'Unicode escape codes not supported',
               undefined,
               range,
             )
-          } else if (ch === "\n") {
+          } else if (ch === '\n') {
             // Skip over newline characters but continue processing the literal
           } else {
             // Any other escape sequence is the identity escape sequence
@@ -135,7 +135,7 @@ export function parseCharLiteral(text: string, range: L.Range): L.Value {
     return L.mkChar(L.namedCharValues.get(escapedChar)!)
   } else {
     throw new L.ScamperError(
-      "Parser",
+      'Parser',
       `Invalid character literal: ${text}`,
       undefined,
       range,
@@ -151,11 +151,11 @@ export function looksLikeIdentifier(text: string): boolean {
   return (
     !intRegex.test(text) &&
     !floatRegex.test(text) &&
-    text !== "#t" &&
-    text !== "#f" &&
-    text !== "null" &&
+    text !== '#t' &&
+    text !== '#f' &&
+    text !== 'null' &&
     !text.startsWith('"') &&
-    !text.startsWith("#\\") &&
+    !text.startsWith('#\\') &&
     text.length > 0
   )
 }

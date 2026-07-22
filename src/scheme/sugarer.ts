@@ -1,20 +1,20 @@
-import * as AST from "./ast"
+import * as AST from './ast'
 
 export function sugarExpr(e: AST.Exp): AST.Exp {
   switch (e.tag) {
-    case "lit": {
+    case 'lit': {
       return e
     }
-    case "var": {
+    case 'var': {
       return e
     }
-    case "app": {
+    case 'app': {
       return AST.mkApp(sugarExpr(e.head), e.args.map(sugarExpr))
     }
-    case "lam": {
+    case 'lam': {
       return AST.mkLam(e.params, sugarExpr(e.body), undefined, e.restParam)
     }
-    case "let": {
+    case 'let': {
       return AST.mkLet(
         e.bindings.map(({ name, value }) => ({
           name,
@@ -23,15 +23,15 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
         sugarExpr(e.body),
       )
     }
-    case "begin": {
+    case 'begin': {
       return AST.mkBegin(e.exps.map(sugarExpr))
     }
-    case "if": {
+    case 'if': {
       return AST.mkIf(sugarExpr(e.guard), sugarExpr(e.ifB), sugarExpr(e.elseB))
     }
-    case "match": {
+    case 'match': {
       // Let binding
-      if (e.branches.length === 1 && e.branches[0].pat.tag === "pvar") {
+      if (e.branches.length === 1 && e.branches[0].pat.tag === 'pvar') {
         return AST.mkLet(
           [{ name: e.branches[0].pat.name, value: sugarExpr(e.scrutinee) }],
           sugarExpr(e.branches[0].body),
@@ -42,9 +42,9 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
       if (e.branches.length === 2) {
         const [first, second] = e.branches
         if (
-          first.pat.tag === "plit" &&
+          first.pat.tag === 'plit' &&
           first.pat.value === true &&
-          second.pat.tag === "plit" &&
+          second.pat.tag === 'plit' &&
           second.pat.value === false
         ) {
           return AST.mkIf(
@@ -58,19 +58,19 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
       // Default case
       return e
     }
-    case "quote": {
+    case 'quote': {
       return e
     }
-    case "jsvar": {
+    case 'jsvar': {
       return e
     }
-    case "error": {
+    case 'error': {
       return AST.mkError(sugarExpr(e.exp))
     }
-    case "apply": {
+    case 'apply': {
       return AST.mkApply(sugarExpr(e.fn), sugarExpr(e.args))
     }
-    case "let*": {
+    case 'let*': {
       return AST.mkLetS(
         e.bindings.map(({ name, value }) => ({
           name,
@@ -79,13 +79,13 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
         sugarExpr(e.body),
       )
     }
-    case "and": {
+    case 'and': {
       return AST.mkAnd(e.exps.map(sugarExpr))
     }
-    case "or": {
+    case 'or': {
       return AST.mkOr(e.exps.map(sugarExpr))
     }
-    case "cond": {
+    case 'cond': {
       return AST.mkCond(
         e.branches.map(({ test, body }) => ({
           test: sugarExpr(test),
@@ -93,10 +93,10 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
         })),
       )
     }
-    case "section": {
+    case 'section': {
       return AST.mkSection(e.exps.map(sugarExpr))
     }
-    case "report": {
+    case 'report': {
       return AST.mkReport(sugarExpr(e.exp))
     }
   }

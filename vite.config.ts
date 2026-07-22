@@ -1,21 +1,21 @@
 // vite.config.ts
-import { resolve } from "path"
-import { defineConfig } from "vitest/config"
+import { resolve } from 'path'
+import { defineConfig } from 'vitest/config'
 
-import vue from "@vitejs/plugin-vue"
-import { schemeParserPlugin } from "./scripts/vite-plugin-scheme-parser.mjs"
+import vue from '@vitejs/plugin-vue'
+import { schemeParserPlugin } from './scripts/vite-plugin-scheme-parser.mjs'
 
-const AppVersion = process.env.npm_package_version ?? "unknown"
+const AppVersion = process.env.npm_package_version ?? 'unknown'
 
 export default defineConfig({
   build: {
     rolldownOptions: {
       input: {
-        "scamper-docs": resolve(__dirname, "docs.html"),
-        "scamper-ide": resolve(__dirname, "index.html"),
-        "scamper-runner": resolve(__dirname, "runner.html"),
-        "scamper-web": resolve(__dirname, "web.html"),
-        "scamper-search": resolve(__dirname, "search.html"),
+        'scamper-docs': resolve(__dirname, 'docs.html'),
+        'scamper-ide': resolve(__dirname, 'index.html'),
+        'scamper-runner': resolve(__dirname, 'runner.html'),
+        'scamper-web': resolve(__dirname, 'web.html'),
+        'scamper-search': resolve(__dirname, 'search.html'),
       },
       output: {
         entryFileNames: `assets/[name]-${AppVersion}.js`,
@@ -32,11 +32,11 @@ export default defineConfig({
   },
 
   test: {
-    environment: "jsdom",
-    setupFiles: "./test/setup.ts",
+    environment: 'jsdom',
+    setupFiles: './test/setup.ts',
     coverage: {
-      provider: "v8",
-      reporter: ["lcov"],
+      provider: 'v8',
+      reporter: ['lcov'],
     },
   },
 })

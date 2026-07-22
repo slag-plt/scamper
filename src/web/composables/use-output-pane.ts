@@ -1,7 +1,7 @@
-import { markRaw, shallowRef, triggerRef } from "vue"
-import type { Ref } from "vue"
-import { useVirtualizer } from "@tanstack/vue-virtual"
-import { DisplayCallbacks, TraceBlock, VueDisplay } from "../../lpm/output/vue"
+import { markRaw, shallowRef, triggerRef } from 'vue'
+import type { Ref } from 'vue'
+import { useVirtualizer } from '@tanstack/vue-virtual'
+import { DisplayCallbacks, TraceBlock, VueDisplay } from '../../lpm/output/vue'
 
 export function useOutputPane(scrollEl: Ref<HTMLDivElement | null>) {
   // prevent Vue from making blocks deeply reactive
@@ -61,12 +61,12 @@ export function useOutputPane(scrollEl: Ref<HTMLDivElement | null>) {
     },
     SendCallback: (value) => {
       const section =
-        sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : "base"
+        sectionStack.length > 0 ? sectionStack[sectionStack.length - 1] : 'base'
       buffer.push({
         attrs: [`${section}-item`],
         // mark the object as raw to prevent deep reactivity proxying of complex ASTs
         value:
-          typeof value === "object" && value !== null ? markRaw(value) : value,
+          typeof value === 'object' && value !== null ? markRaw(value) : value,
       })
       scheduleFlush()
     },
@@ -98,5 +98,5 @@ export function useOutputPane(scrollEl: Ref<HTMLDivElement | null>) {
 
 export type OutputPaneType = Pick<
   ReturnType<typeof useOutputPane>,
-  "display" | "reset" | "scrollToBottom"
+  'display' | 'reset' | 'scrollToBottom'
 >

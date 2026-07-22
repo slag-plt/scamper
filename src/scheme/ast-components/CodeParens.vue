@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ASTArg } from "../ast"
-import CodeElement from "../../lpm/renderers/vue/components/CodeElement.vue"
-import ValueRenderer from "../../lpm/renderers/vue/ValueRenderer.vue"
+import { ASTArg } from '../ast'
+import CodeElement from '../../lpm/renderers/vue/components/CodeElement.vue'
+import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
 const { args } = defineProps<{ args: ASTArg[] }>()
-if (args.length <= 0) console.warn("!! code parens args is null?", args)
+if (args.length <= 0) console.warn('!! code parens args is null?', args)
 </script>
 
 <!-- if we ever pass in an empty args array to CodeParens, nothing would show up.

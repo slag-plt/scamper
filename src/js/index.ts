@@ -1,16 +1,16 @@
-import * as L from "../lpm"
-import * as Audio from "./audio/index.js"
-import * as Canvas from "./canvas/index.js"
-import * as Data from "./data/index.js"
-import * as Html from "./html/index.js"
-import * as Image from "./image/index.js"
-import * as Lab from "./lab/index.js"
-import * as Music from "./music/index.js"
-import * as Prelude from "./prelude/index.js"
-import * as Reactive from "./reactive/index.js"
-import * as Rex from "./rex/index.js"
-import * as Runtime from "./runtime/index.js"
-import * as Test from "./test/index.js"
+import * as L from '../lpm'
+import * as Audio from './audio/index.js'
+import * as Canvas from './canvas/index.js'
+import * as Data from './data/index.js'
+import * as Html from './html/index.js'
+import * as Image from './image/index.js'
+import * as Lab from './lab/index.js'
+import * as Music from './music/index.js'
+import * as Prelude from './prelude/index.js'
+import * as Reactive from './reactive/index.js'
+import * as Rex from './rex/index.js'
+import * as Runtime from './runtime/index.js'
+import * as Test from './test/index.js'
 
 // N.B., prelude/index.ts groups a handful of dynamically-named functions
 // (list accessors, char/string comparators) into plain records -- keyed by
@@ -62,7 +62,7 @@ const internals = new Map<string, L.Value>([
 export function lookup(name: string): L.Value {
   if (!internals.has(name)) {
     throw new L.ScamperError(
-      "Runtime",
+      'Runtime',
       `Attempted to look up "${name}" but it is not bound!`,
     )
   }

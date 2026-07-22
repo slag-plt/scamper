@@ -1,9 +1,9 @@
-import { expect, test } from "vitest"
-import { runProgram } from "../harness"
+import { expect, test } from 'vitest'
+import { runProgram } from '../harness'
 
 ////////////////////////////////////////////////////////////////////////////////
 
-test("and-or-short-circuit", async () => {
+test('and-or-short-circuit', async () => {
   expect(
     await runProgram(`
 (and (error "hello")
@@ -19,14 +19,14 @@ test("and-or-short-circuit", async () => {
     (error "hello"))
 `),
   ).toEqual([
-    "Runtime error [1:6-1:20]: (error) hello",
-    "#f",
-    "Runtime error [7:5-7:19]: (error) hello",
-    "#t",
+    'Runtime error [1:6-1:20]: (error) hello',
+    '#f',
+    'Runtime error [7:5-7:19]: (error) hello',
+    '#t',
   ])
 })
 
-test("chained-defs", async () => {
+test('chained-defs', async () => {
   expect(
     await runProgram(`
 (define x 10)
@@ -42,10 +42,10 @@ test("chained-defs", async () => {
 
 (i x y z)
 `),
-  ).toEqual(["60", "30"])
+  ).toEqual(['60', '30'])
 })
 
-test("closures", async () => {
+test('closures', async () => {
   expect(
     await runProgram(`
 (define x 10)
@@ -77,10 +77,10 @@ test("closures", async () => {
 
 (f4 100)
 `),
-  ).toEqual(["30", "120", "21", "152"])
+  ).toEqual(['30', '120', '21', '152'])
 })
 
-test("cond-else-test", async () => {
+test('cond-else-test', async () => {
   expect(
     await runProgram(`
 (import image)
@@ -105,10 +105,10 @@ test("cond-else-test", async () => {
 (type-of red-square)
 
 `),
-  ).toEqual(["120", '"some-other-type"'])
+  ).toEqual(['120', '"some-other-type"'])
 })
 
-test("contract-check", async () => {
+test('contract-check', async () => {
   // N.B., the reported ranges point at string-length's/+'s own definitions
   // in prelude.scm rather than the call site -- a known, unrelated
   // limitation of contract-wrapped errors (see cons-pair, range, not-boolean
@@ -120,12 +120,12 @@ test("contract-check", async () => {
 (+ 1 2 3 "bye")
 `),
   ).toEqual([
-    "Runtime error [560:1-560:54]: (error) expected a string, received list",
+    'Runtime error [560:1-560:54]: (error) expected a string, received list',
     // N.B., "+" is documented as a rest param (`. v1`), so its contract
     // check is a single all-satisfy? over the whole argument list rather
     // than a per-argument check -- it can report that *some* argument
     // failed, not *which one*.
-    "Runtime error [119:1-119:34]: (error) expected every value of v1 to be a number, but at least one was not",
+    'Runtime error [119:1-119:34]: (error) expected every value of v1 to be a number, but at least one was not',
   ])
 })
 
@@ -135,17 +135,17 @@ test("contract-check", async () => {
 // above, this isn't about contract checking at all: map's own
 // implementation calls the user-supplied function argument via
 // callScamperFn regardless of whether it's a JsFunction or a closure.
-test.skip("contract-check-map", async () => {
+test.skip('contract-check-map', async () => {
   expect(
     await runProgram(`
 (map char-upcase (list "h" "e" "l" "l" "o"))
 `),
   ).toEqual([
-    "Runtime error [1:1-1:44]: (map) expected a character, received string",
+    'Runtime error [1:1-1:44]: (map) expected a character, received string',
   ])
 })
 
-test("define-test1", async () => {
+test('define-test1', async () => {
   expect(
     await runProgram(`
 (define x 10)
@@ -155,10 +155,10 @@ test("define-test1", async () => {
 
 (f x)
 `),
-  ).toEqual(["20"])
+  ).toEqual(['20'])
 })
 
-test.fails("duplicate-binders", async () => {
+test.fails('duplicate-binders', async () => {
   expect(
     await runProgram(`
 (lambda (x x y) (+ x x))
@@ -166,13 +166,13 @@ test.fails("duplicate-binders", async () => {
 (struct foo (z y z))
 `),
   ).toEqual([
-    ":8:0: Parser error:",
-    "Duplicate name x given in definition.",
-    "In program: (x x y)",
+    ':8:0: Parser error:',
+    'Duplicate name x given in definition.',
+    'In program: (x x y)',
   ])
 })
 
-test("fact", async () => {
+test('fact', async () => {
   expect(
     await runProgram(`
 (define fact
@@ -185,10 +185,10 @@ test("fact", async () => {
 
 (fact 5)
 `),
-  ).toEqual(["1", "120"])
+  ).toEqual(['1', '120'])
 })
 
-test("fizzbuzz", async () => {
+test('fizzbuzz', async () => {
   expect(
     await runProgram(`
 (define fizzbuzz
@@ -234,7 +234,7 @@ test("fizzbuzz", async () => {
   ])
 })
 
-test.skip("let-binding-errors", async () => {
+test.skip('let-binding-errors', async () => {
   expect(
     await runProgram(`
 ; let bindings telescope
@@ -262,7 +262,7 @@ test.skip("let-binding-errors", async () => {
   ])
 })
 
-test("let-binding", async () => {
+test('let-binding', async () => {
   expect(
     await runProgram(`
 ; bindings are not dependent on each other
@@ -285,10 +285,10 @@ test("let-binding", async () => {
    [z (+ y 4)])
   (+ x y z))
 `),
-  ).toEqual(["19", "19", "19"])
+  ).toEqual(['19', '19', '19'])
 })
 
-test("list-length", async () => {
+test('list-length', async () => {
   expect(
     await runProgram(`
 (define list-length
@@ -305,10 +305,10 @@ test("list-length", async () => {
 
 (list-length (cons "a" (cons "b" (cons "c" (cons "d" (cons "e" null))))))
 `),
-  ).toEqual(["0", "1", "5", "5"])
+  ).toEqual(['0', '1', '5', '5'])
 })
 
-test("match-lists", async () => {
+test('match-lists', async () => {
   expect(
     await runProgram(`
 (define list-length
@@ -341,15 +341,15 @@ test("match-lists", async () => {
 (intersperse "," (list "a" "b" "c"))
 `),
   ).toEqual([
-    "5",
-    "0",
-    "10",
-    "(list 1 2 3 4 5 6)",
+    '5',
+    '0',
+    '10',
+    '(list 1 2 3 4 5 6)',
     '(list "a" "," "b" "," "c")',
   ])
 })
 
-test("match-lit", async () => {
+test('match-lit', async () => {
   expect(
     await runProgram(`
 (match 5
@@ -388,7 +388,7 @@ test("match-lit", async () => {
   ])
 })
 
-test.fails("match-repeated-bindings", async () => {
+test.fails('match-repeated-bindings', async () => {
   expect(
     await runProgram(`
 (match (list 1 2 3)
@@ -396,15 +396,15 @@ test.fails("match-repeated-bindings", async () => {
   [(cons x x) "fail"])
 `),
   ).toEqual([
-    ":3:2: Scope error:",
-    "Variable x is repeated in the pattern",
-    "In program: (match (list 1 2 3)",
+    ':3:2: Scope error:',
+    'Variable x is repeated in the pattern',
+    'In program: (match (list 1 2 3)',
     '[null "fail"]',
     '[(cons x x) "fail"])',
   ])
 })
 
-test("match-struct", async () => {
+test('match-struct', async () => {
   expect(
     await runProgram(`
 (struct leaf (value))
@@ -425,10 +425,10 @@ test("match-struct", async () => {
               (node (leaf "c")
                     (leaf "d")))))
 `),
-  ).toEqual(["1", "4"])
+  ).toEqual(['1', '4'])
 })
 
-test("mixed-brackets", async () => {
+test('mixed-brackets', async () => {
   expect(
     await runProgram(`
 {- {* 3
@@ -437,10 +437,10 @@ test("mixed-brackets", async () => {
          12)}
    (- 5 1)}
 `),
-  ).toEqual(["33.875"])
+  ).toEqual(['33.875'])
 })
 
-test("numbers", async () => {
+test('numbers', async () => {
   expect(
     await runProgram(`
 4129
@@ -479,39 +479,39 @@ test("numbers", async () => {
 -.3e-2
 `),
   ).toEqual([
-    "4129",
-    "0",
-    "-48902",
-    "48902",
-    "142",
-    "-89",
-    "98",
-    "3.14",
-    "0.14",
-    "0.14",
-    "314",
-    "-3.14",
-    "-0.14",
-    "-0.14",
-    "-314",
-    "3.14",
-    "0.14",
-    "0.14",
-    "314",
-    "300",
-    "300",
-    "30",
-    "300",
-    "300",
-    "30",
-    "-300",
-    "-30",
-    "-0.03",
-    "-0.003",
+    '4129',
+    '0',
+    '-48902',
+    '48902',
+    '142',
+    '-89',
+    '98',
+    '3.14',
+    '0.14',
+    '0.14',
+    '314',
+    '-3.14',
+    '-0.14',
+    '-0.14',
+    '-314',
+    '3.14',
+    '0.14',
+    '0.14',
+    '314',
+    '300',
+    '300',
+    '30',
+    '300',
+    '300',
+    '30',
+    '-300',
+    '-30',
+    '-0.03',
+    '-0.003',
   ])
 })
 
-test.skip.fails("shadowing", async () => {
+test.skip.fails('shadowing', async () => {
   expect(
     await runProgram(`
 (define x 3)
@@ -536,20 +536,20 @@ test.skip.fails("shadowing", async () => {
 
 x
 `),
-  ).toEqual(["0", "6", "105", "-5"])
+  ).toEqual(['0', '6', '105', '-5'])
 })
 
-test("simple-exp", async () => {
+test('simple-exp', async () => {
   expect(
     await runProgram(`
 (let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
 
 (+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
 `),
-  ).toEqual(["43", "103"])
+  ).toEqual(['43', '103'])
 })
 
-test("tree-test", async () => {
+test('tree-test', async () => {
   expect(
     await runProgram(`
 (struct leaf (value))
@@ -586,12 +586,12 @@ t1
   ).toEqual([
     '(node (leaf "a") (node (leaf "b") (leaf "c")))',
     '"b"',
-    "3",
+    '3',
     '(list "a" "b" "c")',
   ])
 })
 
-test.skip("undefined-variable", async () => {
+test.skip('undefined-variable', async () => {
   expect(
     await runProgram(`
 (+ x 1)
@@ -602,7 +602,7 @@ test.skip("undefined-variable", async () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("section", async () => {
+test.skip('section', async () => {
   expect(
     await runProgram(`
 ((section + _ 1) 1)
@@ -611,5 +611,5 @@ test.skip("section", async () => {
     (section map (section string-upcase _) _))
 
 `),
-  ).toEqual(["2", '(list "A" "B" "C" "D" "E")'])
+  ).toEqual(['2', '(list "A" "B" "C" "D" "E")'])
 })

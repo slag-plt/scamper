@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { QueryMap } from "../../../scamper"
-import QueryModal from "./modal/QueryModal.vue"
-import { ModalHeight } from "./query-utils"
+import { QueryMap } from '../../../scamper'
+import QueryModal from './modal/QueryModal.vue'
+import { ModalHeight } from './query-utils'
 
-defineProps<{ queries: NonNullable<ReturnType<QueryMap["get"]>> }>()
+defineProps<{ queries: NonNullable<ReturnType<QueryMap['get']>> }>()
 
 const height = `${ModalHeight.toString()}lh`
 </script>

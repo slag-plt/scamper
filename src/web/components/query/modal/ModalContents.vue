@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import ValueRenderer from "../../../../lpm/renderers/vue/ValueRenderer.vue"
-import { Value } from "../../../../lpm"
-import { nextTick, onMounted, ref, useTemplateRef, watch } from "vue"
+import ValueRenderer from '../../../../lpm/renderers/vue/ValueRenderer.vue'
+import { Value } from '../../../../lpm'
+import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
 
 const props = withDefaults(defineProps<{ value: Value; clip?: boolean }>(), {
   clip: true,
 })
 
-const divRef = useTemplateRef("div-ref")
+const divRef = useTemplateRef('div-ref')
 const isOverflowing = ref(false)
 
 const checkOverflow = () => {

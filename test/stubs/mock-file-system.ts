@@ -1,4 +1,4 @@
-import { FS } from "../../src/fs/fs"
+import { FS } from '../../src/fs/fs'
 
 export class MockFileSystem implements FS {
   private files = new Map<string, string>()
@@ -22,7 +22,7 @@ export class MockFileSystem implements FS {
   }
 
   loadFile(filename: string) {
-    return Promise.resolve(this.files.get(filename) ?? "")
+    return Promise.resolve(this.files.get(filename) ?? '')
   }
 
   saveFile(filename: string, contents: string) {
@@ -36,7 +36,7 @@ export class MockFileSystem implements FS {
   }
 
   renameFile(from: string, to: string) {
-    const contents = this.files.get(from) ?? ""
+    const contents = this.files.get(from) ?? ''
     this.files.set(to, contents)
     this.files.delete(from)
     return Promise.resolve()

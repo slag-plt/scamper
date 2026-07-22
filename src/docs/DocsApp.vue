@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref } from 'vue'
 
 const appVersion = APP_VERSION
-import ModuleList from "./ModuleList.vue"
-import ApiEntries from "./ApiEntries.vue"
-import { docRegistry } from "../lib"
-import type { FunctionDoc } from "../scheme/docstring/docstring"
+import ModuleList from './ModuleList.vue'
+import ApiEntries from './ApiEntries.vue'
+import { docRegistry } from '../lib'
+import type { FunctionDoc } from '../scheme/docstring/docstring'
 
 // N.B., order matches the old hand-maintained api/*.ts file list (prelude
 // first as the default/most common module); "runtime" is LPM-internal
 // plumbing, not user-facing, so it's deliberately excluded here.
 const moduleOrder = [
-  "prelude", "image", "lab", "music", "test",
-  "audio", "canvas", "html", "reactive", "data", "rex",
+  'prelude', 'image', 'lab', 'music', 'test',
+  'audio', 'canvas', 'html', 'reactive', 'data', 'rex',
 ]
 const libs: [string, Map<string, FunctionDoc>][] = moduleOrder.map(
   (name) => [name, docRegistry.get(name) ?? new Map<string, FunctionDoc>()],
 )
 
-const selectedModule = ref("prelude")
+const selectedModule = ref('prelude')
 
 const selectedLib = computed(
   () =>
@@ -26,10 +26,10 @@ const selectedLib = computed(
     new Map<string, FunctionDoc>(),
 )
 
-const search = ref("")
+const search = ref('')
 
 function searchForFunction(searchTerm: string) {
-  window.open("search.html?search=" + encodeURIComponent(searchTerm), "_self")
+  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_self')
 }
 </script>
 

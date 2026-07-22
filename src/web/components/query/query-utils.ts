@@ -1,8 +1,8 @@
-import { QueryEntry } from "../../../scamper"
-import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
-import { ReportError } from "../../../lpm"
-import { computed, MaybeRefOrGetter, toValue } from "vue"
-import { SchedulerId } from "../../../lpm/scheduler"
+import { QueryEntry } from '../../../scamper'
+import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
+import { ReportError } from '../../../lpm'
+import { computed, MaybeRefOrGetter, toValue } from 'vue'
+import { SchedulerId } from '../../../lpm/scheduler'
 
 export const ModalCols = 10
 export const ModalRows = 2
@@ -25,12 +25,12 @@ export function useReportedValue(query: MaybeRefOrGetter<QueryEntry>) {
   return computed(() => {
     const q = toValue(query)
     if (!(q.err instanceof SimpleErrorChannel)) {
-      return "Fatal query error"
+      return 'Fatal query error'
     }
     const firstErr = q.err.errors.at(0)
     // TODO: don't forget done wiring
     if (!firstErr) {
-      return "No query found."
+      return 'No query found.'
     }
     if (!(firstErr instanceof ReportError)) {
       return firstErr

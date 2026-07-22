@@ -1,12 +1,12 @@
-import { Blk, Env, Prog, Stmt, Value } from "./lang"
+import { Blk, Env, Prog, Stmt, Value } from './lang'
 import {
   DefineHandler,
   DispHandler,
   ImportHandler,
   StmtExpHandler,
-} from "./handlers/stmt-handlers"
-import { Frame } from "./frame"
-import { ICE, ScamperError } from "./error"
+} from './handlers/stmt-handlers'
+import { Frame } from './frame'
+import { ICE, ScamperError } from './error'
 import {
   ApHandler,
   ApplyHandler,
@@ -19,16 +19,16 @@ import {
   PopVHandler,
   ReptHandler,
   VarHandler,
-} from "./handlers/op-handlers"
-import { builtinLibs } from "./builtin-registry.js"
+} from './handlers/op-handlers'
+import { builtinLibs } from './builtin-registry.js'
 
 
-export interface DisplayStep { tag: "display" }
-export interface TraceStep { tag: "trace" }
-export interface MinorStep { tag: "minor" }
-export interface YieldStep { tag: "yield" }
+export interface DisplayStep { tag: 'display' }
+export interface TraceStep { tag: 'trace' }
+export interface MinorStep { tag: 'minor' }
+export interface YieldStep { tag: 'yield' }
 export interface ImportFileStep {
-  tag: "import-file"
+  tag: 'import-file'
   filename: string
 }
 
@@ -39,12 +39,12 @@ export type StepResult =
   YieldStep |
   ImportFileStep
 
-export const displayStep: DisplayStep = { tag: "display" }
-export const traceStep: TraceStep = { tag: "trace" }
-export const minorStep: MinorStep = { tag: "minor" }
-export const yieldStep: YieldStep = { tag: "yield" }
+export const displayStep: DisplayStep = { tag: 'display' }
+export const traceStep: TraceStep = { tag: 'trace' }
+export const minorStep: MinorStep = { tag: 'minor' }
+export const yieldStep: YieldStep = { tag: 'yield' }
 export function importFileStep(filename: string): ImportFileStep {
-  return { tag: "import-file", filename }
+  return { tag: 'import-file', filename }
 }
 
 // a fiber is a concurrent thread of execution
@@ -54,13 +54,13 @@ export class Fiber {
   frames: Frame[] = []
   lastResult: Value | null = null
 
-  #prog: Stmt[]
-  #currStmtIdx = 0
-  #isProcessingBlk = false
-  #maxCallStackDepth = 10_000
+  private prog: Stmt[]
+  private currStmtIdx = 0
+  private _isProcessingBlk = false
+  private maxCallStackDepth = 10_000
 
   constructor(prog: Prog, topLevelEnv: Env = Env.empty) {
-    this.#prog = prog
+    this.prog = prog
     this.topLevelEnv = topLevelEnv
   }
 
@@ -70,18 +70,18 @@ export class Fiber {
    * @returns true if the step is a major step of execution, false if it's a minor step (e.g. variable loading)
    */
   step(): StepResult {
-    const currStmt = this.#prog.at(this.#currStmtIdx)
+    const currStmt = this.prog.at(this.currStmtIdx)
     if (!currStmt) {
-      throw new ICE("Fiber.step", "Attempted to step but no statements remain!")
+      throw new ICE('Fiber.step', 'Attempted to step but no statements remain!')
     }
     switch (currStmt.tag) {
-      case "import":
+      case 'import':
         return ImportHandler(currStmt, this)
-      case "define":
+      case 'define':
         return DefineHandler(currStmt, this)
-      case "disp":
+      case 'disp':
         return DispHandler(currStmt, this)
-      case "stmtexp":
+      case 'stmtexp':
         return StmtExpHandler(currStmt, this)
     }
   }
@@ -89,34 +89,38 @@ export class Fiber {
   /* Statement execution helper functions */
   advanceStmt() {
     this.frames = []
-    this.#currStmtIdx++
-    this.#isProcessingBlk = false
+    this.currStmtIdx++
+    this._isProcessingBlk = false
   }
+
   get isProcessingBlk() {
-    return this.#isProcessingBlk
+    return this._isProcessingBlk
   }
+
   isDone(): boolean {
-    return this.#currStmtIdx >= this.#prog.length
+    return this.currStmtIdx >= this.prog.length
   }
+
   // TODO: this may be unnecessary later
   get lastStatement(): Stmt {
-    const stmt = this.#prog.at(this.#currStmtIdx - 1)
+    const stmt = this.prog.at(this.currStmtIdx - 1)
     if (!stmt) {
       throw new ICE(
-        "Fiber.lastStatement",
-        `Attempted to get the last completed statement in fiber when none exist at index ${(this.#currStmtIdx - 1).toString()}`,
+        'Fiber.lastStatement',
+        `Attempted to get the last completed statement in fiber when none exist at index ${(this.currStmtIdx - 1).toString()}`,
       )
     }
     return stmt
   }
+
   // Populate the stack frames for a Blk statement, and set the isProcessingBlk flag to true
   beginProcessingBlk(expr: Blk) {
-    this.#isProcessingBlk = true
+    this._isProcessingBlk = true
 
     // populate stack frames
     this.pushFrame(
       new Frame(
-        `##stmt-${this.#currStmtIdx.toString()}##`,
+        `##stmt-${this.currStmtIdx.toString()}##`,
         this.topLevelEnv,
         expr,
       ),
@@ -127,25 +131,30 @@ export class Fiber {
   get currentFrame() {
     return this.frames.at(-1)
   }
+
   pushFrame(frame: Frame) {
-    if (this.frames.length >= this.#maxCallStackDepth) {
+    if (this.frames.length >= this.maxCallStackDepth) {
       throw new ScamperError(
-        "Runtime",
-        `Max call stack depth ${this.#maxCallStackDepth.toString()} exceeded!`,
+        'Runtime',
+        `Max call stack depth ${this.maxCallStackDepth.toString()} exceeded!`,
       )
     }
     this.frames.push(frame)
   }
+
   popFrame() {
     this.frames.pop()
   }
+
   replaceFrame(frame: Frame) {
     this.popFrame()
     this.pushFrame(frame)
   }
+
   hasFramesRemaining() {
     return this.frames.length > 0
   }
+
   /**
    * @returns the output of the current frame
    * @throws if the frame was completed in a bad state
@@ -154,13 +163,13 @@ export class Fiber {
     const currFrame = this.currentFrame
     if (!currFrame) {
       throw new ICE(
-        "Fiber.completeCurrentFrame",
-        "Attempted to complete a frame when none remain",
+        'Fiber.completeCurrentFrame',
+        'Attempted to complete a frame when none remain',
       )
     }
     if (currFrame.values.length !== 1) {
       throw new ICE(
-        "Fiber.stepFrame",
+        'Fiber.stepFrame',
         `Frame must finish with exactly one value on the stack, finished with ${currFrame.values.length.toString()} instead`,
       )
     }
@@ -172,6 +181,7 @@ export class Fiber {
       this.lastResult = ret
     }
   }
+
   /**
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step
@@ -179,8 +189,8 @@ export class Fiber {
   stepFrame(): StepResult {
     if (!this.currentFrame) {
       throw new ScamperError(
-        "Runtime",
-        "Attempted to step stack frame when none exist!",
+        'Runtime',
+        'Attempted to step stack frame when none exist!',
       )
     }
 
@@ -188,44 +198,44 @@ export class Fiber {
     const currOp = this.currentFrame.popInstr()
     let isMajorStep: StepResult
     switch (currOp.tag) {
-      case "lit":
+      case 'lit':
         isMajorStep = LitHandler(currOp, this.currentFrame, this)
         break
-      case "var":
+      case 'var':
         isMajorStep = VarHandler(currOp, this.currentFrame, this)
         break
-      case "ctor":
+      case 'ctor':
         isMajorStep = CtorHandler(currOp, this.currentFrame, this)
         break
-      case "cls":
+      case 'cls':
         isMajorStep = ClsHandler(currOp, this.currentFrame, this)
         break
-      case "ap":
+      case 'ap':
         isMajorStep = ApHandler(currOp, this.currentFrame, this)
         break
-      case "match":
+      case 'match':
         isMajorStep = MatchHandler(currOp, this.currentFrame, this)
         break
-      case "popv":
+      case 'popv':
         isMajorStep = PopVHandler(currOp, this.currentFrame, this)
         break
-      case "rept":
+      case 'rept':
         isMajorStep = ReptHandler(currOp, this.currentFrame, this)
         break
-      case "jsvar":
+      case 'jsvar':
         isMajorStep = JsVarHandler(currOp, this.currentFrame, this)
         break
-      case "error":
+      case 'error':
         isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
         break
-      case "apply":
+      case 'apply':
         isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later
-      case "raise":
-      case "pops":
-        throw new ICE("Fiber.stepFrame", `${currOp.tag} is deprecated!`)
+      case 'raise':
+      case 'pops':
+        throw new ICE('Fiber.stepFrame', `${currOp.tag} is deprecated!`)
     }
 
     if (this.currentFrame.isFinished()) {
@@ -235,11 +245,11 @@ export class Fiber {
   }
 
   /* Module importing helper functions */
-  loadModule(name: string, kind: "builtin" | "file"): StepResult {
-    if (kind === "builtin") {
+  loadModule(name: string, kind: 'builtin' | 'file'): StepResult {
+    if (kind === 'builtin') {
       const builtin = builtinLibs.get(name)
       if (!builtin) {
-        throw new ScamperError("Runtime", `No such built-in library: ${name}`)
+        throw new ScamperError('Runtime', `No such built-in library: ${name}`)
       }
       // TODO: for simplicity's sake, we assume that all built-in libs
       // initializers have been invoked already. The only built-in lib

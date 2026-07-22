@@ -1,5 +1,5 @@
-import { ErrorChannel } from "./channel"
-import { ScamperError, SubthreadErrors } from "../error"
+import { ErrorChannel } from './channel'
+import { ScamperError, SubthreadErrors } from '../error'
 
 export class SimpleErrorChannel implements ErrorChannel {
   readonly errors: ScamperError[]

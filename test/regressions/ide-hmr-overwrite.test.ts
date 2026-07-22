@@ -1,43 +1,43 @@
-import { flushPromises, mount } from "@vue/test-utils"
-import { findByRole, fireEvent, getByRole, waitFor } from "@testing-library/dom"
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
-import IdeApp from "../../src/web/components/IdeApp.vue"
-import * as FS from "../../src/fs"
-import { noLoadedFileText } from "../../src/web/codemirror/codemirror"
-import { mockEditorHandle } from "../stubs/mock-editor-handle"
-import { initialize } from "../../src/scamper"
+import { flushPromises, mount } from '@vue/test-utils'
+import { findByRole, fireEvent, getByRole, waitFor } from '@testing-library/dom'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import IdeApp from '../../src/web/components/IdeApp.vue'
+import * as FS from '../../src/fs'
+import { noLoadedFileText } from '../../src/web/codemirror/codemirror'
+import { mockEditorHandle } from '../stubs/mock-editor-handle'
+import { initialize } from '../../src/scamper'
 
-vi.mock("../../src/fs/opfs", async () => {
-  const { MockFileSystem } = await import("../stubs/mock-file-system")
+vi.mock('../../src/fs/opfs', async () => {
+  const { MockFileSystem } = await import('../stubs/mock-file-system')
   return { default: MockFileSystem }
 })
 
-vi.mock("../../src/web/lockfile", () => ({
+vi.mock('../../src/web/lockfile', () => ({
   acquireLockFile: vi.fn(() => Promise.resolve(true)),
   releaseLockFile: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock(
-  "../../src/web/components/CodeMirrorEditor.vue",
-  () => import("../stubs/MockCodeMirrorEditor.vue"),
+  '../../src/web/components/CodeMirrorEditor.vue',
+  () => import('../stubs/MockCodeMirrorEditor.vue'),
 )
 
 vi.mock(
-  "../../src/web/components/ResultsPane.vue",
-  () => import("../stubs/MockResultsPane.vue"),
+  '../../src/web/components/ResultsPane.vue',
+  () => import('../stubs/MockResultsPane.vue'),
 )
 
 await initialize()
 
-const REAL_CONTENT = "(define x 42)"
-const FILENAME = "regression.scm"
+const REAL_CONTENT = '(define x 42)'
+const FILENAME = 'regression.scm'
 
 /**
  * Bug: on HMR, CodeMirrorEditor remounts to the unloaded placeholder while
  * IdeApp still has currentFile set and autosave running. saveCurrentFile()
  * then overwrites the real file on disk with the placeholder text.
  */
-describe("IDE does not overwrite open file after editor reset (HMR split-brain)", () => {
+describe('IDE does not overwrite open file after editor reset (HMR split-brain)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
   })
@@ -46,25 +46,25 @@ describe("IDE does not overwrite open file after editor reset (HMR split-brain)"
     vi.useRealTimers()
     vi.restoreAllMocks()
     mockEditorHandle.adapter = null
-    document.body.innerHTML = ""
+    document.body.innerHTML = ''
   })
 
-  test("autosave does not persist the unloaded placeholder over real file content", async () => {
-    vi.spyOn(window, "prompt").mockReturnValue(FILENAME)
+  test('autosave does not persist the unloaded placeholder over real file content', async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue(FILENAME)
 
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await flushPromises()
-      await findByRole(document.body, "button", { name: "Create file" })
+      await findByRole(document.body, 'button', { name: 'Create file' })
       fireEvent.click(
-        getByRole(document.body, "button", { name: "Create file" }),
+        getByRole(document.body, 'button', { name: 'Create file' }),
       )
-      await findByRole(document.body, "button", {
+      await findByRole(document.body, 'button', {
         name: `Open ${FILENAME}`,
       })
 
-      const editor = getByRole(document.body, "textbox", {
-        name: "Source code",
+      const editor = getByRole(document.body, 'textbox', {
+        name: 'Source code',
       })
       fireEvent.input(editor, { target: { value: REAL_CONTENT } })
       await waitFor(() => {
@@ -81,7 +81,7 @@ describe("IDE does not overwrite open file after editor reset (HMR split-brain)"
       // Simulate HMR: editor resets to unloaded doc, currentFile + autosave stay.
       const adapter = mockEditorHandle.adapter
       if (!adapter) {
-        throw new Error("mock editor adapter not registered")
+        throw new Error('mock editor adapter not registered')
       }
       adapter.initializeDummyDoc()
       expect(adapter.getDoc()).toBe(noLoadedFileText)

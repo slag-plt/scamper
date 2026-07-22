@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Pair } from "../../../index"
-import CodeElement from "./CodeElement.vue"
-import ValueRenderer from "../ValueRenderer.vue"
+import { Pair } from '../../../index'
+import CodeElement from './CodeElement.vue'
+import ValueRenderer from '../ValueRenderer.vue'
 
 defineProps<{ value: Pair }>()
 </script>

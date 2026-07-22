@@ -1,4 +1,4 @@
-import * as L from "../../lpm";
+import * as L from '../../lpm';
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
 // TODO: need to factor appropriately so that we aren't initializing any
@@ -10,28 +10,28 @@ export const audio_getCtx = (): AudioContext => {
 };
 
 export interface SampleNode extends L.Struct {
-  [L.structKind]: "sample";
+  [L.structKind]: 'sample';
   data: Float32Array<ArrayBuffer>;
 }
 
 export function audio_sampleNode(data: number[]): SampleNode {
   for (const sample of data) {
-    if (typeof sample !== "number" || sample < -1.0 || sample > 1.0) {
+    if (typeof sample !== 'number' || sample < -1.0 || sample > 1.0) {
       throw new L.ScamperError(
-        "Runtime",
+        'Runtime',
         `expected a list of numbers between -1.0 and 1.0, received ${sample.toString()}`,
       );
     }
   }
   return {
-    [L.scamperTag]: "struct",
-    [L.structKind]: "sample",
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'sample',
     data: new Float32Array(data),
   };
 }
 
 export function audio_sampleQ(v: any): boolean {
-  return L.isStructKind(v, "sample");
+  return L.isStructKind(v, 'sample');
 }
 
 export function audio_audioContext(sampleRate: number): AudioContext {
@@ -44,7 +44,7 @@ export function audio_contextQ(v: any): boolean {
 }
 
 export interface AudioPipeline extends L.Struct {
-  [L.structKind]: "audio-pipeline";
+  [L.structKind]: 'audio-pipeline';
   ctx: AudioContext;
   pipeline: AudioNode;
   onOffNode: GainNode;
@@ -70,8 +70,8 @@ export function audio_audioPipeline(
   }
   onOffNode.connect(ctx.destination);
   return {
-    [L.scamperTag]: "struct",
-    [L.structKind]: "audio-pipeline",
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'audio-pipeline',
     ctx,
     pipeline,
     onOffNode,
@@ -79,7 +79,7 @@ export function audio_audioPipeline(
 }
 
 export function audio_pipelineQ(v: any): boolean {
-  return L.isStructKind(v, "audio-pipeline");
+  return L.isStructKind(v, 'audio-pipeline');
 }
 
 export function audio_audioNodeQ(v: any): boolean {
@@ -111,7 +111,7 @@ export function audio_audioFileNode(
   ctx: AudioContext,
   filename: string,
 ): MediaElementAudioSourceNode {
-  const mediaElement = document.createElement("audio");
+  const mediaElement = document.createElement('audio');
   mediaElement.src = filename;
   const source = new MediaElementAudioSourceNode(ctx, { mediaElement });
   return source;

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import * as L from "../../../lpm"
-import { ReactiveFileChooser } from "../files"
-import ValueRenderer from "../../../lpm/renderers/vue/ValueRenderer.vue"
+import { ref } from 'vue'
+import * as L from '../../../lpm'
+import { ReactiveFileChooser } from '../files'
+import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 
 const props = defineProps<{ value: ReactiveFileChooser }>()
 

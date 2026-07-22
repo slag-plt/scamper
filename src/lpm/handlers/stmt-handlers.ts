@@ -1,20 +1,20 @@
-import { displayStep, Fiber, StepResult, traceStep } from "../fiber"
-import { Stmt } from "../lang"
-import { isClosure } from "../util"
+import { displayStep, Fiber, StepResult, traceStep } from '../fiber'
+import { Stmt } from '../lang'
+import { isClosure } from '../util'
 
-type StatementHandler<T extends Stmt["tag"]> = (
+type StatementHandler<T extends Stmt['tag']> = (
   stmt: Extract<Stmt, { tag: T }>,
   fiber: Fiber,
 ) => StepResult
 
-export const ImportHandler: StatementHandler<"import"> = (stmt, fiber) => {
+export const ImportHandler: StatementHandler<'import'> = (stmt, fiber) => {
   const result = fiber.loadModule(stmt.name, stmt.kind)
-  if (result.tag === "trace") {
+  if (result.tag === 'trace') {
     fiber.advanceStmt()
   }
   return result
 }
-export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
+export const DefineHandler: StatementHandler<'define'> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
     return traceStep
@@ -31,7 +31,7 @@ export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   // object.
   if (
     isClosure(fiber.lastResult) &&
-    (fiber.lastResult.name === undefined || fiber.lastResult.name === "##anonymous##")
+    (fiber.lastResult.name === undefined || fiber.lastResult.name === '##anonymous##')
   ) {
     fiber.lastResult.name = stmt.name
   }
@@ -39,7 +39,7 @@ export const DefineHandler: StatementHandler<"define"> = (stmt, fiber) => {
   fiber.advanceStmt()
   return traceStep
 }
-export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
+export const DispHandler: StatementHandler<'disp'> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
     return traceStep
@@ -52,7 +52,7 @@ export const DispHandler: StatementHandler<"disp"> = (stmt, fiber) => {
   fiber.advanceStmt()
   return displayStep
 }
-export const StmtExpHandler: StatementHandler<"stmtexp"> = (stmt, fiber) => {
+export const StmtExpHandler: StatementHandler<'stmtexp'> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)
     return traceStep
