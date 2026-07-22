@@ -46,8 +46,8 @@ describe('Expanded expressions', () => {
     const expected = 
       A.mkIf(A.mkVar('X'), A.mkVar('A'),
         A.mkIf(A.mkVar('Y'), A.mkVar('B'),
-          A.mkIf(A.mkVar('Z'), A.mkVar('C'), 
-            A.mkApp(A.mkVar('error'), [A.mkLit('No matching clause in cond')]))))
+          A.mkIf(A.mkVar('Z'), A.mkVar('C'),
+            A.mkError(A.mkLit('No matching clause in cond')))))
     expect(actual).toEqual(expected)
   })
 

@@ -137,6 +137,20 @@ function scopeCheckExp(
       // N.B., no need to scope check a "frozen" AST
       return
     }
+    case "jsvar": {
+      // N.B., no variable references to check -- the argument is a literal
+      // string naming a JS binding, resolved at runtime.
+      return
+    }
+    case "error": {
+      scopeCheckExp(errors, globals, locals, e.exp)
+      return
+    }
+    case "apply": {
+      scopeCheckExp(errors, globals, locals, e.fn)
+      scopeCheckExp(errors, globals, locals, e.args)
+      return
+    }
     case "report": {
       scopeCheckExp(errors, globals, locals, e.exp)
       return
@@ -345,10 +359,21 @@ async function scopeCheckStmt(
 ) {
   switch (s.tag) {
     case "import": {
-      if (builtinLibs.has(s.module)) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
-          globals.push(name)
+      if (s.kind === "builtin") {
+        if (builtinLibs.has(s.module)) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
+            globals.push(name)
+          }
+        } else {
+          errors.push(
+            new ScamperError(
+              "Parser",
+              `No such built-in library: '${s.module}'`,
+              undefined,
+              s.range,
+            ),
+          )
         }
       } else if (await getFS().fileExists(s.module)) {
         // TODO: should gather top-level bindings from the imported module, but
@@ -358,7 +383,7 @@ async function scopeCheckStmt(
         errors.push(
           new ScamperError(
             "Parser",
-            `Library '${s.module}' is not defined`,
+            `File '${s.module}' does not exist`,
             undefined,
             s.range,
           ),

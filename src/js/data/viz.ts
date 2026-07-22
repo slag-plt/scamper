@@ -1,0 +1,245 @@
+import * as L from '../../lpm'
+
+///// Basic Types //////////////////////////////////////////////////////////////
+
+interface Dataset extends L.Struct {
+  [L.structKind]: 'dataset'
+  opts: object
+}
+
+export function data_datasetQ (v: L.Value): boolean {
+  return L.isStructKind(v, 'dataset')
+}
+
+export interface Plot extends L.Struct {
+  [L.structKind]: 'plot'
+  opts: object
+}
+
+export function data_plotQ (v: L.Value): boolean {
+  return L.isStructKind(v, 'plot')
+}
+
+///// Options Management ///////////////////////////////////////////////////////
+
+function updateObject (path: string[], value: any, obj: any): void {
+  let cur = obj
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i]
+    if (!(key in cur)) {
+      cur[key] = {}
+    }
+    cur = cur[key]
+  }
+  cur[path[path.length - 1]] = value
+}
+
+function updatePlotOption (key: string, value: any, opts: object): void {
+  switch (key) {
+    case 'x-min':
+      updateObject(['options', 'scales', 'x', 'min'], value, opts)
+      return
+    case 'x-max':
+      updateObject(['options', 'scales', 'x', 'max'], value, opts)
+      return
+    case 'y-min':
+      updateObject(['options', 'scales', 'y', 'min'], value, opts)
+      return
+    case 'y-max':
+      updateObject(['options', 'scales', 'y', 'max'], value, opts)
+      return
+    case 'x-label':
+      updateObject(['options', 'scales', 'x', 'title', 'display'], true, opts)
+      updateObject(['options', 'scales', 'x', 'title', 'text'], value, opts)
+      return
+    case 'y-label':
+      updateObject(['options', 'scales', 'y', 'title', 'display'], true, opts)
+      updateObject(['options', 'scales', 'y', 'title', 'text'], value, opts)
+      return
+    case 'title':
+      updateObject(['options', 'plugins', 'title', 'display'], true, opts)
+      updateObject(['options', 'plugins', 'title', 'text'], value, opts)
+      return
+    default:
+      throw new L.ScamperError('Runtime', `Unknown plot option provided: ${key}`)
+  }
+}
+
+export function data_withPlotOptions (options: L.List, plot: Plot): Plot {
+  const newOpts = { ...plot.opts }
+  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+    const p = v as L.Pair
+    return [p.fst as string, p.snd]
+  })
+  for (const [key, value] of optionPairs) {
+    updatePlotOption(key, value, newOpts)
+  }
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: newOpts
+  }
+}
+
+function updateDatasetOption (key: string, value: any, opts: object): void {
+  switch (key) {
+    case 'background-color':
+      updateObject(['backgroundColor'], value, opts)
+      return
+    case 'border-color':
+      updateObject(['borderColor'], value, opts)
+      return
+    default:
+      throw new L.ScamperError('Runtime', `Unknown dataset option provided: ${key}`)
+  }
+}
+
+export function data_withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
+  const newOpts = { ...dataset.opts }
+  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+    const p = v as L.Pair
+    return [p.fst as string, p.snd]
+  })
+  for (const [key, value] of optionPairs) {
+    updateDatasetOption(key, value, newOpts)
+  }
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'dataset',
+    opts: newOpts
+  }
+}
+
+///// Plot Functions ///////////////////////////////////////////////////////////
+
+export function data_plotLinear (...datasets: Dataset[]): Plot {
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: {
+      data: {
+        datasets: datasets.map(ds => ds.opts)
+      },
+      options: {
+        scales: {
+          x: { type: 'linear' }
+        }
+      }
+    }
+  }
+}
+
+export function data_plotCategory(labels: L.List, ...datasets: Dataset[]): Plot {
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: {
+      data: {
+        labels: L.listToVector(labels) as string[],
+        datasets: datasets.map(ds => ds.opts)
+      },
+      options: {
+        scales: {
+          x: { type: 'category' }
+        }
+      }
+    }
+  }
+}
+
+export function data_plotRadial(labels: L.List, ...datasets: Dataset[]): Plot {
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'plot',
+    opts: {
+      data: {
+        labels: L.listToVector(labels) as string[],
+        datasets: datasets.map(ds => ds.opts)
+      }
+    }
+  }
+}
+
+///// Dataset Functions ////////////////////////////////////////////////////////
+
+function makeDataset (type: string, label: string, data: any[]): Dataset {
+  return {
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'dataset',
+    opts: { type, label, data }
+  }
+}
+
+export function data_datasetLine (title: string, data: L.List): Dataset {
+  const points: (number | {x: number, y: number})[] = L.listToVector(data).map(v => {
+    if (L.isPair(v)) {
+      return { x: v.fst as number, y: v.snd as number }
+    } else {
+      return v as number
+    }
+  })
+  if (points.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-line requires at least one data point')
+  }
+  return makeDataset('line', title, points)
+}
+
+export function data_datasetBar (title: string, data: L.List): Dataset {
+  const points: number[] = L.listToVector(data) as number[]
+  if (points.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-bar requires at least one data point')
+  }
+  return makeDataset('bar', title, points)
+}
+
+export function data_datasetScatter (title: string, data: L.List): Dataset {
+  const points: {x: number | string, y: number}[] = L.listToVector(data).map(v => {
+    const p = v as L.Pair
+    return { x: p.fst as number, y: p.snd as number }
+  })
+  if (points.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-scatter requires at least one data point')
+  }
+  return makeDataset('scatter', title, points)
+}
+
+export function data_datasetBubble (title: string, data: L.List): Dataset {
+  const points: {x: number, y: number, r: number}[] = L.listToVector(data).map(v => {
+    const l = L.listToVector(v as L.List)
+    if (l.length !== 3) {
+      throw new L.ScamperError('Runtime', 'Data for dataset-bubble must be a list of three numbers')
+    }
+    return { x: l[0] as number, y: l[1] as number, r: l[2] as number }
+  })
+  if (points.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-bubble requires at least one data point')
+  }
+  return makeDataset('bubble', title, points)
+}
+
+export function data_datasetPie (title: string, data: L.List): Dataset {
+  const values = L.listToVector(data) as number[]
+  if (values.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-pie requires at least one data point')
+  }
+  return makeDataset('pie', title, values)
+}
+
+export function data_datasetPolar (title: string, data: L.List): Dataset {
+  const values = L.listToVector(data) as number[]
+  if (values.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-polar requires at least one data point')
+  }
+  return makeDataset('polarArea', title, values)
+}
+
+export function data_datasetRadar (title: string, data: L.List): Dataset {
+  const values = L.listToVector(data) as number[]
+  if (values.length === 0) {
+    throw new L.ScamperError('Runtime', 'dataset-radar requires at least one data point')
+  }
+  return makeDataset('radar', title, values)
+}
+
+///// Registration and Setup ///////////////////////////////////////////////////
+

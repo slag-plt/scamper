@@ -9,15 +9,18 @@ import { Frame } from "./frame"
 import { ICE, ScamperError } from "./error"
 import {
   ApHandler,
+  ApplyHandler,
   ClsHandler,
   CtorHandler,
+  ErrorHandler,
+  JsVarHandler,
   LitHandler,
   MatchHandler,
   PopVHandler,
   ReptHandler,
   VarHandler,
 } from "./handlers/op-handlers"
-import builtinLibs from "../lib"
+import { builtinLibs } from "./builtin-registry.js"
 
 
 export interface DisplayStep { tag: "display" }
@@ -209,6 +212,15 @@ export class Fiber {
       case "rept":
         isMajorStep = ReptHandler(currOp, this.currentFrame, this)
         break
+      case "jsvar":
+        isMajorStep = JsVarHandler(currOp, this.currentFrame, this)
+        break
+      case "error":
+        isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
+        break
+      case "apply":
+        isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
+        break
       // TODO: the following instructions are useless
       // should be removed later
       case "raise":
@@ -223,9 +235,12 @@ export class Fiber {
   }
 
   /* Module importing helper functions */
-  loadModule(name: string): StepResult {
-    const builtin = builtinLibs.get(name)
-    if (builtin) {
+  loadModule(name: string, kind: "builtin" | "file"): StepResult {
+    if (kind === "builtin") {
+      const builtin = builtinLibs.get(name)
+      if (!builtin) {
+        throw new ScamperError("Runtime", `No such built-in library: ${name}`)
+      }
       // TODO: for simplicity's sake, we assume that all built-in libs
       // initializers have been invoked already. The only built-in lib
       // with an initializer at this point is the music lib, so we might

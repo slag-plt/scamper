@@ -114,12 +114,14 @@ const formDescriptions: Record<string, string> = {
   Begin: "begin expression (at least one sub-expression)",
   Section: "section expression (at least one sub-expression)",
   Report: "report expression",
+  Error: "error expression (a message to raise)",
+  Apply: "apply expression (a function and a list of arguments)",
   Application: "function application",
   Quote: "quoted expression",
   Vector: "vector literal",
   PApp: "constructor pattern",
   PVector: "vector pattern",
-  Import: "import statement (a module name)",
+  Import: "import statement (a built-in library name, or a quoted file name)",
   Define: "define statement (a name and a value)",
   Display: "display statement (a value to display)",
   Struct: "struct statement (a name and a list of fields)",
@@ -380,6 +382,21 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
 
+    case "JsVar": {
+      const name = leafValue(ctx, cs[1]) as string
+      return A.mkJsVar(name, range)
+    }
+
+    case "Error":
+      return A.mkError(expFromNode(ctx, cs[1]), range)
+
+    case "Apply":
+      return A.mkApply(
+        expFromNode(ctx, cs[1]),
+        expFromNode(ctx, cs[2]),
+        range,
+      )
+
     case "Vector":
       return A.mkLit(nodeToRawValue(ctx, node), range)
 
@@ -500,8 +517,13 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
   }
   switch (node.type.name) {
     case "Import": {
-      const name = identifierName(ctx, cs[1])
-      return A.mkImport(name, range)
+      const target = cs[1]
+      if (target.type.name === "String") {
+        const filename = leafValue(ctx, target) as string
+        return A.mkImport(filename, "file", range)
+      }
+      const name = identifierName(ctx, target)
+      return A.mkImport(name, "builtin", range)
     }
 
     case "Define": {

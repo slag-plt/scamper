@@ -2,7 +2,9 @@ import { ICE, ReportError, ScamperError } from "../error"
 import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
 import { Ops, Value } from "../lang"
 import { Frame } from "../frame"
-import { isClosure, isJsFunction, mkClosure, mkStruct, pMatch, vectorToList } from "../util"
+import { Range } from "../range"
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from "../util"
+import { lookup } from "../../js/index.js"
 
 /* Definition */
 type OpHandler<T extends Ops["tag"]> = (
@@ -49,31 +51,50 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
   return minorStep
 }
 
-export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
-  if (currFrame.values.length < op.numArgs + 1) {
-    throw new ICE(
-      "Fiber.ApHandler",
-      `Not enough values for application: expected ${(op.numArgs + 1).toString()}, currently have ${currFrame.values.length.toString()}`,
-    )
-  }
-  const values = currFrame.values.splice(-(op.numArgs + 1))
-  const fn = values[0]
-  const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
+/**
+ * Shared by ApHandler (a statically-known arg count baked into the "ap" op
+ * at compile time) and ApplyHandler ("apply"'s arg count is only known at
+ * runtime, from the length of the spread list) -- both ultimately need the
+ * same dispatch: call directly if fn is a JsFunction (rewriting a thrown
+ * ScamperError's range to the call site), or push a new Frame if fn is a
+ * Closure (mirroring what a "cls" body does on every other call), since
+ * Closure.call/callScamperFn are permanently disabled for JS code calling
+ * back into Scamper.
+ */
+function applyFn(
+  fn: Value,
+  args: Value[],
+  currFrame: Frame,
+  fiber: Fiber,
+  range: Range,
+): StepResult {
   if (isJsFunction(fn)) {
     try {
       currFrame.values.push(fn(...args))
       return traceStep
     } catch (e) {
       if (e instanceof ScamperError) {
-        e.range = op.range
-        e.source = fn.name
+        // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
+        // fn was called directly, outside any named Scamper function -- in
+        // that case op.range/fn.name (this call's own, real range and the
+        // JS function's own name) are already exactly right. Otherwise fn
+        // is being invoked from inside a named function's frame -- most
+        // often a contract wrapper's own ##contract-target## call, whose Ap
+        // op only ever carries the *wrapped definition's* range, never the
+        // user's actual call site. In that case prefer the frame's own
+        // callRange/name: the range/name of the Ap that invoked *this
+        // frame*, i.e. wherever the user (or an enclosing function) really
+        // wrote the call.
+        const useFrame = !currFrame.name.startsWith("##")
+        e.range = useFrame ? currFrame.callRange : range
+        e.source = useFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
           "Runtime",
           `Unexpected error in Javascript function call: ${(e as any).toString()}`,
           undefined,
-          op.range,
+          range,
           undefined
         )
       }
@@ -88,7 +109,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
         "Runtime",
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
         undefined,
-        op.range,
+        range,
         undefined)
     }
     const namedArgs = args.slice(0, fn.params.length)
@@ -102,6 +123,7 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
         ...bindings
       ),
       fn.code,
+      range,
     )
     if (currFrame.isFinished()) {
       // tail-call optimize by replacing current empty frame
@@ -115,9 +137,42 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
     "Runtime",
     `Not a function or closure: ${JSON.stringify(fn)}`,
     undefined,
-    op.range,
+    range,
     undefined
   )
+}
+
+export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
+  if (currFrame.values.length < op.numArgs + 1) {
+    throw new ICE(
+      "Fiber.ApHandler",
+      `Not enough values for application: expected ${(op.numArgs + 1).toString()}, currently have ${currFrame.values.length.toString()}`,
+    )
+  }
+  const values = currFrame.values.splice(-(op.numArgs + 1))
+  const fn = values[0]
+  const args = op.numArgs === 0 ? [] : values.splice(-op.numArgs)
+  return applyFn(fn, args, currFrame, fiber, op.range)
+}
+
+export const ApplyHandler: OpHandler<"apply"> = (op, currFrame, fiber) => {
+  if (currFrame.values.length < 2) {
+    throw new ICE(
+      "Fiber.ApplyHandler",
+      `Not enough values for apply: expected 2, currently have ${currFrame.values.length.toString()}`,
+    )
+  }
+  const [fn, argList] = currFrame.values.splice(-2)
+  if (!isList(argList)) {
+    throw new ScamperError(
+      "Runtime",
+      `expected a list, received ${typeOf(argList)}`,
+      undefined,
+      op.range,
+      "apply",
+    )
+  }
+  return applyFn(fn, listToVector(argList), currFrame, fiber, op.range)
 }
 
 export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
@@ -149,6 +204,25 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
 export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
   currFrame.values.pop()
   return traceStep
+}
+
+export const JsVarHandler: OpHandler<"jsvar"> = (op, currFrame) => {
+  currFrame.values.push(lookup(op.name))
+  return minorStep
+}
+
+export const ErrorHandler: OpHandler<"error"> = (op, currFrame) => {
+  const msg = currFrame.values.pop()
+  if (typeof msg !== "string") {
+    throw new ScamperError(
+      "Runtime",
+      `expected a string, received ${typeOf(msg)}`,
+      undefined,
+      op.range,
+      "error",
+    )
+  }
+  throw new ScamperError("Runtime", msg, undefined, op.range, "error")
 }
 
 export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {

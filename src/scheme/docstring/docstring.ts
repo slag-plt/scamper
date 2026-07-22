@@ -12,6 +12,9 @@ type Tags = DocTag[]
 export interface FunctionDoc {
   signature: Signature
   params: Params
+  /** The documented rest parameter, e.g. `xs` in `(+ . xs)`, if the
+   * signature declares one -- see VarApp.restParam. */
+  restParam?: Param
   description: string
   tags: Tags
   range: Range
@@ -47,6 +50,10 @@ export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 export interface VarApp extends App {
   head: Var
   args: Var[]
+  /** The signature's rest parameter, e.g. `xs` in `(+ . xs)` or
+   * `(map f . xs)`, mirroring the lambda arglist's dotted-pair rest-param
+   * syntax. undefined for a fixed-arity signature. */
+  restParam?: Var
 }
 
 export function isVarApp(e: Exp): e is VarApp {
@@ -72,6 +79,7 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
 
   const signature = parseSignature(firstDocComment)
   const params: Params = []
+  let restParam: Param | undefined
   let description = ""
   const tags: Tags = []
 
@@ -81,15 +89,24 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
       case ParseStage.Params: {
         const result = parseSingleParam(docComments)
         if (hasTag(result, ParseStageTag)) {
-          if (params.length !== signature.function.args.length) {
+          const expectedParamLines =
+            signature.function.args.length +
+            (signature.function.restParam ? 1 : 0)
+          if (params.length + (restParam ? 1 : 0) !== expectedParamLines) {
             // TODO: should do more granular range
             throw mkScamperErrorWithRange(
               "Parser",
-              "Encountered function description before all parameters were described",
+              signature.function.restParam && !restParam
+                ? `Rest parameter "${signature.function.restParam.name}" was declared in the signature but not documented`
+                : "Encountered function description before all parameters were described",
               firstRange,
             )
           }
           stage = result
+        } else if (
+          result.name === signature.function.restParam?.name
+        ) {
+          restParam = result
         } else {
           params.push(result)
         }
@@ -121,6 +138,7 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
   return {
     signature,
     params,
+    restParam,
     description,
     tags,
     range: new Range(firstRange.begin, lastRange.end),

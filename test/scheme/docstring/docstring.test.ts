@@ -308,11 +308,14 @@ function makeTestDocstring(): {
   const funcName = "func"
   const paramName1 = "p1"
   const paramName2 = "p2"
-  const funcApp = mkApp(
-    mkVar(funcName, anyRange),
-    [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
-    anyRange,
-  ) as VarApp
+  const funcApp = {
+    ...mkApp(
+      mkVar(funcName, anyRange),
+      [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
+      anyRange,
+    ),
+    restParam: undefined,
+  } as VarApp
 
   const complexPredName1 = "complex-pred1?"
   const predName1 = "pred1?"
@@ -381,6 +384,7 @@ function makeTestDocstring(): {
         range: anyRange,
       },
     ],
+    restParam: undefined,
     description,
     tags: [
       { tag: tag1, contents: tagContents1, range: anyRange },

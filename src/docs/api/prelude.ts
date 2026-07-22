@@ -1013,13 +1013,6 @@ export const procedure: Doc = new Doc(
   "Returns `#t` if and only `v` is a procedure.",
 )
 
-export const apply: Doc = new Doc(
-  "apply",
-  "any",
-  [new ArgDoc("f", "procedure?"), new ArgDoc("l", "list?")],
-  "Calls `f` with the values contained in `l`.",
-)
-
 export const stringMap: Doc = new Doc(
   "string-map",
   "string?",
@@ -1139,13 +1132,6 @@ export const vectorAppend: Doc = new Doc(
   "vector?",
   [new ArgDoc("v1, ..., vk", "vector?")],
   "Returns a new vector containing the elements of `v1`, ..., `vk` in order.",
-)
-
-export const error: Doc = new Doc(
-  "error",
-  "any",
-  [new ArgDoc("msg", "string?")],
-  "Raises a runtime error with message `msg`.",
 )
 
 export const qq: Doc = new Doc(
