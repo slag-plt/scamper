@@ -724,13 +724,14 @@
 ;;; Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.
 (define |> (js-var "prelude_pipe"))
 
-;;; (range beg end . step) -> list?
-;;;  beg : integer?
-;;;   this argument can be omitted
-;;;  end : integer?
-;;;  step : integer?
-;;;   step > 0, this argument can be omitted
-;;; Returns a list containing the numbers from `beg` to `end` (exclusive). If `beg` is not given, it defaults to 0. If step is not given, it defaults to 1.
+;;; (range . args) -> list?
+;;;  args : integer?
+;;; Can be called with one, two, or three arguments, all of which are integers.
+;;; (range end) returns a list containing the numbers from 0 to `end` (exclusive).
+;;; (range beg end) returns a list containing the numbers from `beg` to `end`
+;;; (exclusive). (range beg end step) returns a list containing the numbers from
+;;; `beg` to `end` (exclusive) with a step size of `step`. `step` must be non-zero
+;;; to avoid an infinite loop.
 (define range (js-var "prelude_range"))
 
 ;;; (random n) -> list?
