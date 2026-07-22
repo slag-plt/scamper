@@ -214,6 +214,14 @@ export type Exp =
 export interface Import extends Tagged, Node {
   tag: "import"
   module: string
+  // "builtin" for a bare identifier (e.g. (import prelude)), resolved
+  // against the standard library; "file" for a quoted string (e.g.
+  // (import "my-file.scm")), resolved against the user's file system. A
+  // bare identifier can never contain "." (see syntax.grammar's Identifier
+  // token), so file names -- which routinely do -- must be quoted; this
+  // also means the two import kinds no longer need to be disambiguated by
+  // probing existence at runtime.
+  kind: "builtin" | "file"
 }
 export interface Define extends Tagged, Node {
   tag: "define"
@@ -381,8 +389,9 @@ export const mkReport = (exp: Exp, range: L.Range = L.Range.none): Report => ({
 // Statements (stmt)
 export const mkImport = (
   module: string,
+  kind: "builtin" | "file",
   range: L.Range = L.Range.none,
-): Import => ({ tag: "import", module, range })
+): Import => ({ tag: "import", module, kind, range })
 export const mkDefine = (
   name: string,
   value: Exp,
@@ -529,7 +538,7 @@ export function expToString(e: Exp): string {
 export function stmtToString(s: Stmt): string {
   switch (s.tag) {
     case "import":
-      return `(import ${s.module})`
+      return `(import ${s.kind === "file" ? JSON.stringify(s.module) : s.module})`
     case "define":
       return `(define ${s.name} ${expToString(s.value)})`
     case "display":
@@ -674,7 +683,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
 
 export function stmtEquals(s1: Stmt, s2: Stmt): boolean {
   if (s1.tag === "import" && s2.tag === "import") {
-    return s1.module === s2.module
+    return s1.module === s2.module && s1.kind === s2.kind
   } else if (s1.tag === "define" && s2.tag === "define") {
     return s1.name === s2.name && expEquals(s1.value, s2.value)
   } else if (s1.tag === "display" && s2.tag === "display") {

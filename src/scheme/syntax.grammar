@@ -65,7 +65,7 @@ expression {
 }
 
 statement {
-  Import { paren<kw<"import"> Identifier> } |
+  Import { paren<kw<"import"> (Identifier | String)> } |
   Define { paren<kw<"define"> Identifier expression> } |
   Display { paren<kw<"display"> expression> } |
   Struct { paren<kw<"struct"> Identifier simplearglist> } |

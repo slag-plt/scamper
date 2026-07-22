@@ -235,9 +235,12 @@ export class Fiber {
   }
 
   /* Module importing helper functions */
-  loadModule(name: string): StepResult {
-    const builtin = builtinLibs.get(name)
-    if (builtin) {
+  loadModule(name: string, kind: "builtin" | "file"): StepResult {
+    if (kind === "builtin") {
+      const builtin = builtinLibs.get(name)
+      if (!builtin) {
+        throw new ScamperError("Runtime", `No such built-in library: ${name}`)
+      }
       // TODO: for simplicity's sake, we assume that all built-in libs
       // initializers have been invoked already. The only built-in lib
       // with an initializer at this point is the music lib, so we might

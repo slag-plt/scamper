@@ -121,7 +121,7 @@ const formDescriptions: Record<string, string> = {
   Vector: "vector literal",
   PApp: "constructor pattern",
   PVector: "vector pattern",
-  Import: "import statement (a module name)",
+  Import: "import statement (a built-in library name, or a quoted file name)",
   Define: "define statement (a name and a value)",
   Display: "display statement (a value to display)",
   Struct: "struct statement (a name and a list of fields)",
@@ -517,8 +517,13 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
   }
   switch (node.type.name) {
     case "Import": {
-      const name = identifierName(ctx, cs[1])
-      return A.mkImport(name, range)
+      const target = cs[1]
+      if (target.type.name === "String") {
+        const filename = leafValue(ctx, target) as string
+        return A.mkImport(filename, "file", range)
+      }
+      const name = identifierName(ctx, target)
+      return A.mkImport(name, "builtin", range)
     }
 
     case "Define": {

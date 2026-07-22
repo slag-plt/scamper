@@ -42,7 +42,7 @@ export const SchemePrinter: Printer = {
       ///// Statements ////////////////////////////////////////////////////////////
 
       case "import":
-        return `(import ${node.module})`
+        return `(import ${node.kind === "file" ? JSON.stringify(node.module) : node.module})`
 
       case "define":
         return group([

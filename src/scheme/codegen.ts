@@ -94,7 +94,7 @@ function lowerExpr(e: A.Exp): L.Blk {
 function lowerStmt(s: A.Stmt, displayStmtExpr = true): L.Stmt {
   switch (s.tag) {
     case "import":
-      return L.mkImport(s.module, s.range)
+      return L.mkImport(s.module, s.kind, s.range)
     case "define":
       // N.B., docComments is documentation metadata, not executable code --
       // it deliberately doesn't carry forward into the lowered bytecode.

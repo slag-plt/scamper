@@ -375,6 +375,7 @@ export interface Disp {
 export interface Import {
   tag: "import"
   name: string
+  kind: "builtin" | "file"
   range: Range
 }
 export interface Define {

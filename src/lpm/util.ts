@@ -133,8 +133,9 @@ export const mkDefine = (
 ): L.Define => ({ tag: "define", name, expr, range })
 export const mkImport = (
   name: string,
+  kind: "builtin" | "file",
   range: Range = Range.none,
-): L.Import => ({ tag: "import", name, range })
+): L.Import => ({ tag: "import", name, kind, range })
 export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
