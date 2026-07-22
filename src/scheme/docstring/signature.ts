@@ -1,17 +1,13 @@
 import { SimpleErrorChannel } from "../../lpm/output/simple-error"
 import { tokenizeAndParse } from "../index"
 import { isStmtExp } from "../ast"
-import { DocComment, isPred, isVarApp, Pred, VarApp } from "./docstring"
+import { DocComment, isPred, isVarApp } from "./docstring"
 import { mkScamperErrorWithRange } from "../util"
-import { Range } from "../../lpm"
+import type { Pred, Signature, VarApp } from "../../lpm/docstring.js"
 
 // originally authored by @bacracm, refactored to new file
 
-export interface Signature {
-  function: VarApp
-  predicate: Pred
-  range: Range
-}
+export type { Signature }
 
 function parseFunctionSignature({ line, range }: DocComment): VarApp {
   const errChannel = new SimpleErrorChannel()

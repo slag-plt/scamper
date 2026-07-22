@@ -1,13 +1,8 @@
 import { getFS } from "../fs"
 import * as L from "../lpm"
-import { ICE, ScamperError } from "../lpm"
+import { ComplexPred, FunctionDoc, ICE, Pred, ScamperError } from "../lpm"
 import * as A from "./ast.js"
-import {
-  ComplexPred,
-  FunctionDoc,
-  Pred,
-  parseFunctionDocFromComments,
-} from "./docstring/docstring"
+import { parseFunctionDocFromComments } from "./docstring/docstring"
 import { mkScamperErrorWithRange } from "./util"
 
 function checkDuplicateVars(

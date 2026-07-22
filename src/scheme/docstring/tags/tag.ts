@@ -1,6 +1,9 @@
 import { ICE, Range } from "../../../lpm"
+import type { DocTag } from "../../../lpm/docstring.js"
 import { DocComment } from "../docstring"
 import { mkScamperErrorWithRange } from "../../util"
+
+export type { DocTag }
 
 export function matchesDocTagFormat(line: string): boolean {
   const splitLine = line.split("@", 2)
@@ -12,11 +15,6 @@ export function matchesDocTagFormat(line: string): boolean {
   )
 }
 
-export interface DocTag<T = unknown> {
-  tag: string
-  contents: T
-  range: Range
-}
 export type DocTagParser<T> = (contents: string, range: Range) => DocTag<T>
 export const DocTagParsers = new Map<string, DocTagParser<unknown>>()
 

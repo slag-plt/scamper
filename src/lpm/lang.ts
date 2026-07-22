@@ -1,5 +1,6 @@
 import { Range } from "./range.js"
 import { ScamperError } from "./error.js"
+import type { FunctionDoc } from "./docstring.js"
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -70,7 +71,8 @@ export class Env {
     // 3. Imported modules, most recent imports first
     for (const library of [...this.imports.values()].toReversed()) {
       if (library.bindings.has(name)) {
-        return library.bindings.get(name)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return library.bindings.get(name)!.value
       }
     }
     throw new ScamperError(
@@ -79,11 +81,15 @@ export class Env {
     )
   }
 
-  /** @return the top-level bindings of this environment as a Module */
-  getTopLevelAsModule(): Module {
+  /**
+   * @param docs parsed docstrings for top-level bindings, keyed by name
+   *             (e.g. from docstring.ts's extractModuleDocs), if available
+   * @return the top-level bindings of this environment as a Module
+   */
+  getTopLevelAsModule(docs?: Map<string, ModuleDoc>): Module {
     const ret = new Module()
     for (const [name, value] of this.topLevel) {
-      ret.registerValue(name, value)
+      ret.registerValue(name, value, docs?.get(name))
     }
     return ret
   }
@@ -146,26 +152,34 @@ export class Env {
   }
 }
 
+/** A parsed docstring attached to a module binding -- see docstring.ts. */
+export type ModuleDoc = FunctionDoc
+
+export interface ModuleBinding {
+  value: Value
+  doc?: ModuleDoc
+}
+
 /** A module is a collection of importable top-level definitions. */
 export class Module {
-  bindings: Map<string, Value>
+  bindings: Map<string, ModuleBinding>
 
   constructor() {
     this.bindings = new Map()
   }
 
-  registerValue(name: string, v: Value) {
+  registerValue(name: string, v: Value, doc?: ModuleDoc) {
     if (typeof v === "function") {
       Object.defineProperty(v, "name", { value: name })
     }
-    this.bindings.set(name, v)
+    this.bindings.set(name, { value: v, doc })
   }
 
   static fromLibs(...mods: Module[]): Module {
     const ret = new Module()
     for (const lib of mods) {
-      for (const [name, value] of lib.bindings) {
-        ret.registerValue(name, value)
+      for (const [name, { value, doc }] of lib.bindings) {
+        ret.registerValue(name, value, doc)
       }
     }
     return ret

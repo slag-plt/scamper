@@ -11,17 +11,14 @@ import {
 } from "../../../src/scheme/docstring/param"
 import {
   commentsToDocComments,
-  ComplexPred,
   DocComment,
-  FunctionDoc,
   isComplexPred,
   parseDocLineContents,
   parseDocString,
   parseFunctionDocFromComments,
   ParseStage,
-  Pred,
-  VarApp,
 } from "../../../src/scheme/docstring/docstring"
+import { ComplexPred, FunctionDoc, Pred, VarApp } from "../../../src/lpm"
 import { parseFunctionDescription } from "../../../src/scheme/docstring/description"
 import { testTag1, testTag2, testTagLine1, testTagLine2 } from "./test-tags"
 import { SimpleErrorChannel } from "../../../src/lpm/output/simple-error"
