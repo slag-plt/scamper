@@ -1,9 +1,8 @@
 import fs from "fs"
 import { parseArgs } from "node:util"
 
-// import { builtinLibs, initializeLibs } from "../js"
 import { ConsoleOutput } from "../lpm/output"
-import Scamper from "../scamper"
+import Scamper, { initialize } from "../scamper"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -35,6 +34,7 @@ const filename = positionals[0]
 const src = fs.readFileSync(filename, "utf-8")
 const out = new ConsoleOutput()
 
+await initialize()
 const request = await Scamper.getInstance().execute({
   src, out, err: out, isTracing: values.trace ?? false
 })

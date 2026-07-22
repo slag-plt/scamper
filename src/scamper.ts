@@ -1,5 +1,5 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
-import builtinLibs from "./lib"
+import { builtinLibs, initializeLibs } from "./lib"
 import {
   Env,
   ErrorChannel,
@@ -50,30 +50,68 @@ export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
 export const QUERIES_CHANGED = "scamper:querieschanged"
 export const QUERY_EXPANDED_CHANGED = "scamper:queryexpandedchanged"
 
-const defaultEnv = Env.empty
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  .extendWithImport("runtime", builtinLibs.get("runtime")!)
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  .extendWithImport("prelude", builtinLibs.get("prelude")!)
+let defaultEnv: Env | undefined
+let initialized = false
+
+/**
+ * Compiles the builtin libraries and prepares the default top-level
+ * environment they're imported into. Must be awaited once, by application
+ * startup code, before Scamper.getInstance() (or anything else in this
+ * module) is used -- getInstance() throws if called first. Idempotent: a
+ * second call is a no-op.
+ */
+export async function initialize(): Promise<void> {
+  if (initialized) {
+    return
+  }
+  await initializeLibs()
+  defaultEnv = Env.empty
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    .extendWithImport("runtime", builtinLibs.get("runtime")!)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    .extendWithImport("prelude", builtinLibs.get("prelude")!)
+  initialized = true
+}
 
 // Kicks off web/renderers.ts's custom Vue/HTML renderer registration as
 // early as possible (browser-only; see its header comment for why this must
-// be a guarded dynamic import). Deliberately fire-and-forget: execute()/
-// query() must NOT await this before scheduling. Doing so once delayed
-// task-id generation past the window stopRun()'s cancel-by-id logic (see
-// use-scamper-session.ts) needs, so a pending run could dodge cancellation
-// and a second run would duplicate its output instead of replacing it.
-// Tradeoff: a value displayed before this resolves can render via the
-// generic fallback instead of its custom renderer -- in practice only a
-// risk for the very first values shown after a fresh page load.
+// be a guarded dynamic import). Deliberately independent of initialize()
+// above (and fire-and-forget): execute()/query() must NOT await this before
+// scheduling. Doing so once delayed task-id generation past the window
+// stopRun()'s cancel-by-id logic (see use-scamper-session.ts) needs, so a
+// pending run could dodge cancellation and a second run would duplicate its
+// output instead of replacing it. Tradeoff: a value displayed before this
+// resolves can render via the generic fallback instead of its custom
+// renderer -- in practice only a risk for the very first values shown after
+// a fresh page load. Kept as a plain module-load-time side effect (as
+// opposed to living inside initialize()) so it only ever fires as a
+// consequence of *something* importing scamper.ts -- e.g. a test file's own
+// import graph -- rather than from a shared global call site (like a test
+// suite's global setup) that runs before that particular test file's own
+// module mocks (`vi.mock(...)`) have been registered; running it from there
+// grabs real (unmocked) transitive dependencies -- notably src/fs/opfs.ts --
+// out from under tests that mock them.
 if (typeof window !== "undefined") {
   void import("./web/renderers.js")
+}
+
+/** Unreachable once getInstance() has gated on `initialized`. */
+function getDefaultEnv(): Env {
+  if (!defaultEnv) {
+    throw new Error("Scamper's default environment used before initialize()")
+  }
+  return defaultEnv
 }
 
 export default class Scamper {
   // singleton structure
   static #instance?: Scamper
   static getInstance(): Scamper {
+    if (!initialized) {
+      throw new Error(
+        "Scamper.getInstance() called before initialize() completed",
+      )
+    }
     Scamper.#instance ??= new Scamper()
     return Scamper.#instance
   }
@@ -105,7 +143,7 @@ export default class Scamper {
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled, defaultEnv)
+    const fiber = new Fiber(compiled, getDefaultEnv())
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
@@ -179,7 +217,7 @@ export default class Scamper {
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(prog, defaultEnv)
+    const fiber = new Fiber(prog, getDefaultEnv())
 
     // schedule query task
     const id = crypto.randomUUID()

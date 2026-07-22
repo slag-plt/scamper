@@ -120,12 +120,12 @@ test("contract-check", async () => {
 (+ 1 2 3 "bye")
 `),
   ).toEqual([
-    "Runtime error [476:1-476:54]: (error) expected a string, received list",
+    "Runtime error [560:1-560:54]: (error) expected a string, received list",
     // N.B., "+" is documented as a rest param (`. v1`), so its contract
     // check is a single all-satisfy? over the whole argument list rather
     // than a per-argument check -- it can report that *some* argument
     // failed, not *which one*.
-    "Runtime error [100:1-100:34]: (error) expected every value of v1 to be a number, but at least one was not",
+    "Runtime error [119:1-119:34]: (error) expected every value of v1 to be a number, but at least one was not",
   ])
 })
 

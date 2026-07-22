@@ -3,7 +3,11 @@ import { defineComponent, shallowRef } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import { LoggingChannel, Range } from "../src/lpm"
-import Scamper, { type DisplayRequest, type QueryMap } from "../src/scamper"
+import Scamper, {
+  initialize,
+  type DisplayRequest,
+  type QueryMap,
+} from "../src/scamper"
 import type { EditorAccessor } from "../src/web/composables/editor-context"
 import IdeHeader from "../src/web/components/IdeHeader.vue"
 import {
@@ -13,6 +17,8 @@ import {
 } from "../src/web/composables/use-scamper-session"
 import type { ResultsPaneType } from "../src/web/composables/use-results-pane"
 import { makeMockCodeMirrorEditorAdapter } from "./stubs/mock-code-mirror-editor-adapter"
+
+await initialize()
 
 function queryCount(map: QueryMap): number {
   let count = 0

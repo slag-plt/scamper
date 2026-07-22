@@ -847,7 +847,7 @@ test("not-boolean", async () => {
   ).toEqual([
     "#f",
     "#t",
-    "Runtime error [230:1-230:35]: (error) expected a boolean, received number",
+    "Runtime error [274:1-274:35]: (error) expected a boolean, received number",
     "#t",
     "#t",
     "#f",

@@ -8,7 +8,9 @@ import * as Music from "./api/music.js"
 import * as Test from "./api/test.js"
 import * as Canvas from "./api/canvas.js"
 import * as Html from "./api/html.js"
-import builtinLibs from "../lib/index.js"
+import builtinLibs, { initializeLibs } from "../lib/index.js"
+
+await initializeLibs()
 
 const docLibs = new Map<string, object>([
   ["prelude", Prelude],

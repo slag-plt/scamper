@@ -3,6 +3,7 @@ import { findByRole, fireEvent, getByRole, waitFor } from "@testing-library/dom"
 import { nextTick } from "vue"
 import { afterEach, describe, expect, test, vi } from "vitest"
 import IdeApp from "../../src/web/components/IdeApp.vue"
+import { initialize } from "../../src/scamper"
 import {
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
@@ -30,6 +31,8 @@ vi.mock(
   "../../src/web/components/ResultsPane.vue",
   () => import("../stubs/MockResultsPane.vue"),
 )
+
+await initialize()
 
 // Regressions for unintended bugs in the IDE results pane. Each `describe`
 // block documents one bug and asserts the *desired* (post-fix) behavior.
