@@ -10,12 +10,6 @@
 ;;; @category data
 (define string->chars (js-var "data_stringToChars"))
 
-;;; (string->words s) -> list?
-;;;  s : string?
-;;; Splits the string `s` into a list of words, using whitespace as the delimiter.
-;;; @category data
-(define string->words (js-var "data_stringToWords"))
-
 ;;; (string->lines chars) -> list?
 ;;;  chars : list?
 ;;; Splits the string `s` into a list of strings, where each string is a line of text..

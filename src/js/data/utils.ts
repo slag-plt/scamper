@@ -19,11 +19,6 @@ export function data_stringToChars(s: string): L.List {
   return L.vectorToList(chars)
 }
 
-export function data_stringToWords(s: string): L.List {
-  const words = s.split(/\s+/g)
-  return L.vectorToList(words)
-}
-
 export function data_stringToLines(s: string): L.List {
   const lines = s.split(/\r?\n/g)
   return L.vectorToList(lines)

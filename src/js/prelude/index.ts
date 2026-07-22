@@ -65,14 +65,6 @@ export function prelude_eq(x: number, y: number): boolean {
   return x === y
 }
 
-export function prelude_eqEps(eps: number): L.ScamperFn {
-  const eq = function (x: number, y: number): boolean {
-    return Math.abs(x - y) <= eps
-  } as L.JsFunction
-  L.nameFn(`(=-eps ${eps.toString()})`, eq)
-  return eq
-}
-
 export function prelude_zeroQ(x: number): boolean {
   return x === 0
 }
