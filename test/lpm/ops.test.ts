@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
 import {
+  ICE,
   LoggingChannel,
   OutputChannel,
   ReportError,
@@ -32,10 +33,13 @@ describe('basic ops', () => {
     }).not.toThrow()
   }
 
-  function expectFailedExec(fiber: Fiber) {
+  function expectFailedExec(
+    fiber: Fiber,
+    matcher?: RegExp | (new (...args: never[]) => Error),
+  ) {
     expect(() => {
       testExecute(fiber, out)
-    }).toThrow()
+    }).toThrow(matcher)
   }
 
   const litCases: Value[] = [42, 'hi', false, null]
@@ -98,7 +102,7 @@ describe('basic ops', () => {
 
   test('ap without enough values on the stack throws an ICE', () => {
     const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkAp(2)])])
-    expectFailedExec(fiber)
+    expectFailedExec(fiber, ICE)
   })
 
   describe('apply', () => {
@@ -119,7 +123,7 @@ describe('basic ops', () => {
 
     test('without enough values on the stack throws an ICE', () => {
       const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApplyOp()])])
-      expectFailedExec(fiber)
+      expectFailedExec(fiber, ICE)
     })
 
     test('applying a non-function, non-closure value', () => {
@@ -251,7 +255,7 @@ describe('basic ops', () => {
       const fiber = makeTestFiber([
         U.mkDisp([U.mkMatch([[U.mkPWild(), [U.mkLit('unreached')]]])]),
       ])
-      expectFailedExec(fiber)
+      expectFailedExec(fiber, ICE)
     })
   })
 
@@ -273,7 +277,7 @@ describe('basic ops', () => {
 
   test('rept without a pending value throws an ICE', () => {
     const fiber = makeTestFiber([U.mkDisp([U.mkRept()])])
-    expectFailedExec(fiber)
+    expectFailedExec(fiber, ICE)
   })
 
   test('define', () => {

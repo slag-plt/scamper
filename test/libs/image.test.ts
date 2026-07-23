@@ -1636,6 +1636,37 @@ describe('getDrawingPoints (via rotate)', () => {
   })
 })
 
+// The block above only proves each getDrawingPoints branch runs. These verify
+// its point sets are actually correct: rotating an asymmetric shape 90 degrees
+// should swap its width and height, which a wrong point set or swapped-axis
+// regression would break. (rounded to absorb the cos(90) float dust; the
+// exact-value path is covered by the `rotate` constructor test above.)
+describe('rotation dimensions (getDrawingPoints correctness)', () => {
+  async function rounded90Dims(shape: string): Promise<string[]> {
+    return runProgram(`
+(import image)
+(round (image-width (rotate 90 ${shape})))
+(round (image-height (rotate 90 ${shape})))
+`)
+  }
+
+  test('ellipse swaps 10x20 -> 20x10', async () => {
+    expect(await rounded90Dims('(ellipse 10 20 #t "red")')).toEqual(['20', '10'])
+  })
+  test('rectangle swaps 10x20 -> 20x10', async () => {
+    expect(await rounded90Dims('(rectangle 10 20 "solid" "red")')).toEqual(['20', '10'])
+  })
+  test('isosceles-triangle swaps 10x20 -> 20x10', async () => {
+    expect(await rounded90Dims('(isosceles-triangle 10 20 "solid" "red")')).toEqual(['20', '10'])
+  })
+  test('path swaps its 30x10 bounds -> 10x30', async () => {
+    expect(await rounded90Dims('(path 30 10 (list (pair 0 0) (pair 30 0) (pair 15 10)) "solid" "red")')).toEqual(['10', '30'])
+  })
+  test('beside recurses into children (20x4 -> 4x20)', async () => {
+    expect(await rounded90Dims('(beside (rectangle 10 4 "solid" "red") (rectangle 10 4 "solid" "blue"))')).toEqual(['4', '20'])
+  })
+})
+
 describe('image-color of composite drawings', () => {
   test('beside/above/overlay average their children (uniform colour)', async () => {
     expect(await runProgram(`

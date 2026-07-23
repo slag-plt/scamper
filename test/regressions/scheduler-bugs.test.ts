@@ -7,7 +7,6 @@ import {
   QUANTUM_WAIT_MS,
   sleep,
 } from '../util'
-import { traceStep } from '../../src/lpm/fiber'
 
 patchSchedulerYieldForTests()
 
@@ -27,34 +26,11 @@ patchSchedulerYieldForTests()
  * rate roughly doubling.
  */
 describe('no concurrent #execute() loops', () => {
-  test('a second resumeExecution() does not double-step the same fiber', async () => {
-    const sched = new Scheduler()
-    const fiber = new MockFiber()
-
-    // Detect overlapping step() calls via an in-flight counter that lives
-    // inside stepImpl (which is invoked from MockFiber.step *after* the
-    // synchronous stepCallCount bump).
-    let inFlight = 0
-    let maxInFlight = 0
-    fiber.stepImpl = () => {
-      inFlight++
-      maxInFlight = Math.max(maxInFlight, inFlight)
-      inFlight--
-      return traceStep
-    }
-
-    sched.schedule(makeTask(fiber))
-    // Constructor already started execution
-    sched.resumeExecution()
-    await sleep(QUANTUM_WAIT_MS)
-    sched.pauseExecution()
-    // Allow any in-flight work to drain.
-    await sleep(QUANTUM_WAIT_MS)
-
-    // With a single #execute() loop, step calls are strictly sequential.
-    expect(maxInFlight).toBe(1)
-  })
-
+  // N.B., an "overlapping step() calls" counter would be tautological here:
+  // MockFiber.step and the scheduler's inner loop are both synchronous, so in
+  // single-threaded JS two #execute() loops can never step the same fiber at
+  // the same instant regardless of the bug. Instead, count execute()
+  // invocations directly -- a second concurrent loop shows up as a second call.
   test('a second resumeExecution() does not start a second execute() loop', async () => {
     const sched = new Scheduler()
     const fiber = new MockFiber()

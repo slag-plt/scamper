@@ -386,6 +386,10 @@ describe('Scheduler', () => {
       await sleep(QUANTUM_WAIT_MS)
 
       expect(importer.stepCallCount).toBe(1)
+      // The compile failure must surface on the err channel, not be dropped
+      // silently along with the import.
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toMatch(/Parser error/)
     })
 
     test('reports a load failure and still resumes the importing fiber', async () => {

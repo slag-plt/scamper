@@ -37,15 +37,20 @@ test('test-result? is false for an arbitrary non-test-result value', async () =>
   `)).toEqual(['#f', '#f'])
 })
 
-// test-case's exception branch fires regardless of whether test-fn actually
-// throws (see the skipped tests below), so this only pins down the result's
-// shape, not that test-case distinguishes a throw from a normal return.
-test('test-case reports an exception result when the tested function throws', async () => {
+// test-case's exception branch fires on EVERY call right now: test-fn is
+// invoked via callScamperFn, which unconditionally throws (#248), so the
+// lambda's own `(error "boom")` never runs. This pins the exn-result shape
+// AND that the surfaced exception is currently the #248 error, not the
+// tested function's throw. Once #248 lands, this should assert the real
+// "boom" exception instead (see the skipped Ok/mismatch tests below).
+test('test-case surfaces the #248 callScamperFn error as an exception result', async () => {
   const [line] = await runProgram(`
   (import test)
   (test-case "boom" equal? 4 (lambda () (error "boom")))
   `)
-  expect(line).toMatch(/^Test "boom"\n❌ Failed! Exception thrown: /)
+  expect(line).toBe(
+    'Test "boom"\n❌ Failed! Exception thrown: Runtime error: Javascript library functions can no longer call Scamper functions',
+  )
 })
 
 // Regression: test_testCase (src/js/test/index.ts) calls the user-supplied
