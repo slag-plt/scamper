@@ -45,6 +45,8 @@ export default defineConfig(
             'scripts/vite-plugin-scheme-parser.mjs',
             'scripts/generate-lib-sources.mjs',
             'scripts/vite-plugin-lib-sources.mjs',
+            'scripts/vite-plugin-flatten-html.mjs',
+            'scripts/vite-plugin-dev-root-redirect.mjs',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
@@ -59,6 +61,8 @@ export default defineConfig(
       'scripts/vite-plugin-scheme-parser.mjs',
       'scripts/generate-lib-sources.mjs',
       'scripts/vite-plugin-lib-sources.mjs',
+      'scripts/vite-plugin-flatten-html.mjs',
+      'scripts/vite-plugin-dev-root-redirect.mjs',
     ],
     languageOptions: {
       globals: {
