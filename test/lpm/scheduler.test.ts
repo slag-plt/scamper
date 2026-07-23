@@ -16,7 +16,7 @@ import {
   sleep,
   trackFiberSteps,
   withSuppressedRejections,
-} from '../test-utils'
+} from '../util'
 import { minorStep, traceStep, yieldStep } from '../../src/lpm/fiber'
 
 patchSchedulerYieldForTests()

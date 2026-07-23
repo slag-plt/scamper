@@ -3,7 +3,7 @@ import { expToString } from '../../src/scheme/ast.js'
 import { raiseFiber } from '../../src/scheme/raise.js'
 import * as LPM from '../../src/lpm/'
 import { Frame } from '../../src/lpm/frame.js'
-import { makeTestFiber } from '../test-utils.js'
+import { makeTestFiber } from '../util.js'
 
 function raiseBlk(blk: LPM.Blk): string {
   const fiber = makeTestFiber([])

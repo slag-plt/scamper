@@ -6,7 +6,7 @@ import {
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
   sleep,
-} from '../test-utils'
+} from '../util'
 import { traceStep } from '../../src/lpm/fiber'
 
 patchSchedulerYieldForTests()

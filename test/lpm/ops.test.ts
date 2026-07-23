@@ -7,7 +7,7 @@ import {
   ReportError,
   Value,
 } from '../../src/lpm'
-import { makeTestFiber } from '../test-utils'
+import { makeTestFiber } from '../util'
 import { anyRange } from '../scheme/util'
 
 function testExecute(fiber: Fiber, out: OutputChannel) {
