@@ -7,7 +7,7 @@ const rootDir = dirname(dirname(fileURLToPath(import.meta.url)))
 export const libDir = join(rootDir, 'src/lib')
 const outPath = join(rootDir, 'src/lib/generated/sources.ts')
 
-export function generateLibSources() {
+export function buildLibSourcesContent() {
   const files = readdirSync(libDir)
     .filter((f) => f.endsWith('.scm'))
     .sort()
@@ -24,10 +24,14 @@ export function generateLibSources() {
 
 `
 
-  const content =
+  return (
     header +
     `export const librarySources: [string, string][] = [\n${entries.join('\n')}\n]\n`
+  )
+}
 
+export function generateLibSources() {
+  const content = buildLibSourcesContent()
   mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, content)
   return outPath
