@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import * as L from "../../../lpm"
-import { ReactiveImageFile } from "../image"
-import ValueRenderer from "../../../lpm/renderers/vue/ValueRenderer.vue"
+import { ref } from 'vue'
+import * as L from '../../../lpm'
+import { ReactiveImageFile } from '../image'
+import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 
 const props = defineProps<{ value: ReactiveImageFile }>()
 
@@ -18,8 +18,8 @@ function onFileChange(event: Event) {
       if (e !== null && e.target !== null) {
         const img = new Image()
         img.onload = () => {
-          const canvas = document.createElement("canvas")
-          const ctx = canvas.getContext("2d")
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
           if (ctx) {
             canvas.width = img.width
             canvas.height = img.height

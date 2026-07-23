@@ -1,12 +1,12 @@
-import { describe, expect, test } from "vitest"
-import { parseProgramFromSource } from "../../src/scheme/lezer-bridge"
-import { getQueriedProgram, getReportedExp, getReportedStmt } from "../../src/scheme/query"
-import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from "../../src/lpm"
-import { anyRange } from "./util"
-import { compile } from "../../src/scheme"
-import { SimpleErrorChannel } from "../../src/lpm/output/simple-error"
+import { describe, expect, test } from 'vitest'
+import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
+import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
+import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from '../../src/lpm'
+import { anyRange } from './util'
+import { compile } from '../../src/scheme'
+import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 
-const testLit = `test lit`
+const testLit = 'test lit'
 const testDispLit = 2
 
 const testProgram = `"${testLit}"
@@ -35,16 +35,16 @@ function locOf(needle: string, occurrence = 0): Loc {
     idx = testProgram.indexOf(needle, idx + 1)
   }
   const before = testProgram.slice(0, idx)
-  const line = before.split("\n").length
-  const lineStart = before.lastIndexOf("\n") + 1
+  const line = before.split('\n').length
+  const lineStart = before.lastIndexOf('\n') + 1
   return new Loc(line, idx - lineStart + 1, idx)
 }
 
-describe("AST querying", () => {
-  describe("getQueriedProgram", () => {
-    test("returns a new program without mutating the input", () => {
+describe('AST querying', () => {
+  describe('getQueriedProgram', () => {
+    test('returns a new program without mutating the input', () => {
       const prog = parseTestProgram()
-      const queryLoc = locOf("yo")
+      const queryLoc = locOf('yo')
       const originalStmt = prog[3]
       const { prog: reportedProg } = getQueriedProgram(prog, queryLoc)
 
@@ -56,14 +56,14 @@ describe("AST querying", () => {
       )
     })
 
-    test("returns the range of the queried expression", () => {
+    test('returns the range of the queried expression', () => {
       const prog = parseTestProgram()
-      const queryLoc = locOf("yo")
+      const queryLoc = locOf('yo')
       const { range } = getQueriedProgram(prog, queryLoc)
       expect(range.begin.idx).toBe(testProgram.indexOf('"yo"'))
     })
 
-    test("throws for a query location outside every statement", () => {
+    test('throws for a query location outside every statement', () => {
       const prog = parseTestProgram()
       expect(() =>
         getQueriedProgram(prog, new Loc(1000, 1, 100000)),
@@ -71,88 +71,88 @@ describe("AST querying", () => {
     })
   })
 
-  describe("getReportedExp", () => {
+  describe('getReportedExp', () => {
     test("wraps a bare literal statement's expression in report", () => {
       const prog = parseTestProgram()
       const stmt = prog[0]
-      expect(stmt.tag).toBe("stmtexp")
-      if (stmt.tag !== "stmtexp") return
+      expect(stmt.tag).toBe('stmtexp')
+      if (stmt.tag !== 'stmtexp') return
       const { stmt: reported } = getReportedStmt(stmt, locOf(`"${testLit}"`))
       expect(reported).toStrictEqual({
-        tag: "stmtexp",
-        expr: { tag: "report", exp: mkLit(testLit, anyRange), range: anyRange },
+        tag: 'stmtexp',
+        expr: { tag: 'report', exp: mkLit(testLit, anyRange), range: anyRange },
         range: anyRange,
       })
     })
 
-    test("wraps the null literal from an empty list", () => {
+    test('wraps the null literal from an empty list', () => {
       const prog = parseTestProgram()
       const stmt = prog[1]
-      expect(stmt.tag).toBe("stmtexp")
-      if (stmt.tag !== "stmtexp") return
-      const { stmt: reported } = getReportedStmt(stmt, locOf("()"))
+      expect(stmt.tag).toBe('stmtexp')
+      if (stmt.tag !== 'stmtexp') return
+      const { stmt: reported } = getReportedStmt(stmt, locOf('()'))
       expect(reported).toStrictEqual({
-        tag: "stmtexp",
-        expr: { tag: "report", exp: mkLit(null, anyRange), range: anyRange },
+        tag: 'stmtexp',
+        expr: { tag: 'report', exp: mkLit(null, anyRange), range: anyRange },
         range: anyRange,
       })
     })
 
-    test("wraps the entire application when the query lands on its closing bracket, not any argument", () => {
+    test('wraps the entire application when the query lands on its closing bracket, not any argument', () => {
       const prog = parseTestProgram()
       const stmt = prog[2]
-      expect(stmt.tag).toBe("display")
-      if (stmt.tag !== "display") return
+      expect(stmt.tag).toBe('display')
+      if (stmt.tag !== 'display') return
       // N.B., there is no sub-expression slot for a Lit like `2` itself, so
       // querying anywhere within its range (including its own "closing
       // bracket" position, conceptually) always wraps the whole thing --
       // there's nothing deeper to recurse into.
       const { exp } = getReportedExp(stmt.value, locOf(testDispLit.toString()))
-      expect(exp.tag).toBe("report")
+      expect(exp.tag).toBe('report')
     })
 
-    describe("recursive case: queried a non-head argument", () => {
-      test("reports one level deep", () => {
+    describe('recursive case: queried a non-head argument', () => {
+      test('reports one level deep', () => {
         const prog = parseTestProgram()
         const stmt = prog[3]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
         const { exp } = getReportedExp(stmt.expr, locOf('"yo"'))
-        expect(exp.tag).toBe("app")
-        if (exp.tag !== "app") return
+        expect(exp.tag).toBe('app')
+        if (exp.tag !== 'app') return
         expect(exp.args[0]).toStrictEqual({
-          tag: "report",
-          exp: mkLit("yo", anyRange),
+          tag: 'report',
+          exp: mkLit('yo', anyRange),
           range: anyRange,
         })
         // the sibling argument is untouched
-        expect(exp.args[1].tag).toBe("app")
+        expect(exp.args[1].tag).toBe('app')
       })
 
-      test("reports two levels deep", () => {
+      test('reports two levels deep', () => {
         const prog = parseTestProgram()
         const stmt = prog[3]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
         const { exp } = getReportedExp(stmt.expr, locOf("what's up"))
-        expect(exp.tag).toBe("app")
-        if (exp.tag !== "app") return
-        expect(exp.args[0]).toStrictEqual(mkLit("yo", anyRange))
+        expect(exp.tag).toBe('app')
+        if (exp.tag !== 'app') return
+        expect(exp.args[0]).toStrictEqual(mkLit('yo', anyRange))
         const inner = exp.args[1]
-        expect(inner.tag).toBe("app")
-        if (inner.tag !== "app") return
+        expect(inner.tag).toBe('app')
+        if (inner.tag !== 'app') return
         expect(inner.args[0]).toStrictEqual({
-          tag: "report",
+          tag: 'report',
           exp: mkLit("what's up", anyRange),
           range: anyRange,
         })
       })
 
-      test("does not mutate the input expression", () => {
+      test('does not mutate the input expression', () => {
         const prog = parseTestProgram()
         const stmt = prog[3]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
         const before = JSON.stringify(stmt.expr)
         getReportedExp(stmt.expr, locOf('"yo"'))
         getReportedExp(stmt.expr, locOf("what's up"))
@@ -161,63 +161,63 @@ describe("AST querying", () => {
     })
 
     describe("base case: queried a special form's own syntax (not a sub-expression)", () => {
-      test("wraps the entire if-expression when the query lands on `if` itself", () => {
+      test('wraps the entire if-expression when the query lands on `if` itself', () => {
         const prog = parseTestProgram()
         const stmt = prog[6]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
-        const { exp } = getReportedExp(stmt.expr, locOf("if"))
-        expect(exp.tag).toBe("report")
-        if (exp.tag !== "report") return
-        expect(exp.exp.tag).toBe("if")
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
+        const { exp } = getReportedExp(stmt.expr, locOf('if'))
+        expect(exp.tag).toBe('report')
+        if (exp.tag !== 'report') return
+        expect(exp.exp.tag).toBe('if')
       })
     })
 
-    describe("base case: queried the head of an application", () => {
+    describe('base case: queried the head of an application', () => {
       test("wraps just the head when it's a non-function literal", () => {
         const prog = parseTestProgram()
         const stmt = prog[4]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
         const { exp } = getReportedExp(stmt.expr, locOf('"not-a-fn"'))
-        expect(exp.tag).toBe("app")
-        if (exp.tag !== "app") return
+        expect(exp.tag).toBe('app')
+        if (exp.tag !== 'app') return
         expect(exp.head).toStrictEqual({
-          tag: "report",
-          exp: mkLit("not-a-fn", anyRange),
+          tag: 'report',
+          exp: mkLit('not-a-fn', anyRange),
           range: anyRange,
         })
         // the argument is untouched
         expect(exp.args[0]).toStrictEqual(mkLit(1, anyRange))
       })
 
-      test("recurses into an anonymous function used as the head", () => {
+      test('recurses into an anonymous function used as the head', () => {
         const prog = parseTestProgram()
         const stmt = prog[5]
-        expect(stmt.tag).toBe("stmtexp")
-        if (stmt.tag !== "stmtexp") return
-        const { exp } = getReportedExp(stmt.expr, locOf("x)", 1))
-        expect(exp.tag).toBe("app")
-        if (exp.tag !== "app") return
-        expect(exp.head.tag).toBe("lam")
-        if (exp.head.tag !== "lam") return
+        expect(stmt.tag).toBe('stmtexp')
+        if (stmt.tag !== 'stmtexp') return
+        const { exp } = getReportedExp(stmt.expr, locOf('x)', 1))
+        expect(exp.tag).toBe('app')
+        if (exp.tag !== 'app') return
+        expect(exp.head.tag).toBe('lam')
+        if (exp.head.tag !== 'lam') return
         expect(exp.head.body).toStrictEqual({
-          tag: "report",
-          exp: mkVar("x", anyRange),
+          tag: 'report',
+          exp: mkVar('x', anyRange),
           range: anyRange,
         })
       })
     })
   })
 
-  describe("compilation with query loc", () => {
-    test("returns first-line queriedRange for multi-line expressions", () => {
+  describe('compilation with query loc', () => {
+    test('returns first-line queriedRange for multi-line expressions', () => {
       const src = `(define foo
   (bar
     x))`
-      const closeIdx = src.indexOf("x)") + 1
-      const line = src.slice(0, closeIdx).split("\n").length
-      const lineStart = src.lastIndexOf("\n", closeIdx - 1) + 1
+      const closeIdx = src.indexOf('x)') + 1
+      const line = src.slice(0, closeIdx).split('\n').length
+      const lineStart = src.lastIndexOf('\n', closeIdx - 1) + 1
       const queryLoc = new Loc(line, closeIdx - lineStart + 1, closeIdx)
 
       const errors: ScamperError[] = []
@@ -231,15 +231,15 @@ describe("AST querying", () => {
       expect(firstLine.end.idx).toBeLessThan(range.end.idx)
     })
 
-    test("compile returns queriedRange for valid queries", async () => {
+    test('compile returns queriedRange for valid queries', async () => {
       const src = `;;;
 ;;; (foo) -> number?
 ;;; constant one
 ;;; @example (foo) -> 1
 (define foo 1)`
-      const oneIdx = src.indexOf("(define foo 1)") + "(define foo ".length
-      const line = src.slice(0, oneIdx).split("\n").length
-      const lineStart = src.lastIndexOf("\n", oneIdx - 1) + 1
+      const oneIdx = src.indexOf('(define foo 1)') + '(define foo '.length
+      const line = src.slice(0, oneIdx).split('\n').length
+      const lineStart = src.lastIndexOf('\n', oneIdx - 1) + 1
       const queryLoc = new Loc(line, oneIdx - lineStart + 1, oneIdx)
       const err = new SimpleErrorChannel()
 
@@ -247,7 +247,7 @@ describe("AST querying", () => {
 
       expect(err.errors).toStrictEqual([])
       if (result === undefined) {
-        expect.fail("expected compile to return a result")
+        expect.fail('expected compile to return a result')
         return
       }
       const { queriedRange } = result
@@ -264,8 +264,8 @@ describe("AST querying", () => {
     // bytecode-inspection question than query.ts's AST-level redesign needs
     // to answer. getQueriedProgram's placement of the report-wrapped
     // sub-expression is otherwise covered directly by the tests above.
-    test.skip("report operation is contained in bytecode", async () => {
-      const funcName = "myid"
+    test.skip('report operation is contained in bytecode', async () => {
+      const funcName = 'myid'
       const lit1 = 1
       const lit2 = 2
       const src = `;;; (${funcName} a b) -> number?
@@ -274,7 +274,7 @@ describe("AST querying", () => {
 ;;; returns a
 ;;; @example (${funcName} ${lit1.toString()} ${lit2.toString()}) -> ${lit1.toString()}
 (define ${funcName} (lambda (a b) a))`
-      const queryLoc = new Loc(6, 34, src.lastIndexOf("a)"))
+      const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
       const err = new SimpleErrorChannel()
 
       const expectedProg: Prog = [
@@ -294,7 +294,7 @@ describe("AST querying", () => {
       const result = await compile(err, src, queryLoc)
       expect(err.errors).toStrictEqual([])
       if (result === undefined) {
-        expect.fail("expected compile to return a result")
+        expect.fail('expected compile to return a result')
         return
       }
       const { prog: actualProg } = result

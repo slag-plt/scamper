@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { getFieldsOfStruct, Struct, structKind } from "../../../index"
-import { computed } from "vue"
-import CodeElement from "./CodeElement.vue"
-import ValueRenderer from "../ValueRenderer.vue"
+import { getFieldsOfStruct, Struct, structKind } from '../../../index'
+import { computed } from 'vue'
+import CodeElement from './CodeElement.vue'
+import ValueRenderer from '../ValueRenderer.vue'
 
 const props = defineProps<{ value: Struct }>()
 const fields = computed(() => {

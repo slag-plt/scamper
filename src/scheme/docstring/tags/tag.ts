@@ -1,14 +1,14 @@
-import { ICE, Range } from "../../../lpm"
-import { DocComment } from "../docstring"
-import { mkScamperErrorWithRange } from "../../util"
+import { ICE, Range } from '../../../lpm'
+import { DocComment } from '../docstring'
+import { mkScamperErrorWithRange } from '../../util'
 
 export function matchesDocTagFormat(line: string): boolean {
-  const splitLine = line.split("@", 2)
+  const splitLine = line.split('@', 2)
   // has an @
   // && the @ is at the beginning
   // && right after the @ is not a whitespace
   return (
-    splitLine.length === 2 && splitLine[0] === "" && /^\w/.test(splitLine[1])
+    splitLine.length === 2 && splitLine[0] === '' && /^\w/.test(splitLine[1])
   )
 }
 
@@ -25,20 +25,20 @@ export function parseAllTags(docComments: DocComment[], tags: DocTag[]) {
     const comment = docComments.shift()
     if (comment === undefined) {
       throw new ICE(
-        "Docstring.parseAllTags",
-        "Atomicity violation: doc lines changed while parsing?",
+        'Docstring.parseAllTags',
+        'Atomicity violation: doc lines changed while parsing?',
       )
     }
     const { line, range } = comment
     if (!matchesDocTagFormat(line)) {
       throw mkScamperErrorWithRange(
-        "Parser",
+        'Parser',
         `Expected only tags at the end of docstring, but encountered a non-tag: ${line}`,
         range,
       )
     }
-    const [tag, ...rest] = line.split(" ")
-    tags.push(parseTag(tag, rest.join(" "), range))
+    const [tag, ...rest] = line.split(' ')
+    tags.push(parseTag(tag, rest.join(' '), range))
   }
 }
 
@@ -49,7 +49,7 @@ export function registerDocTagParser<T>(tag: string, parser: DocTagParser<T>) {
 function parseTag(tag: string, contents: string, range: Range): DocTag {
   const parser = DocTagParsers.get(tag)
   if (parser === undefined) {
-    throw mkScamperErrorWithRange("Parser", `Unknown doc tag: ${tag}`, range)
+    throw mkScamperErrorWithRange('Parser', `Unknown doc tag: ${tag}`, range)
   }
   return parser(contents, range)
 }

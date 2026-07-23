@@ -1,14 +1,15 @@
-import * as A from "./ast.js"
+import * as A from './ast.js'
 
 let holeSymCounter = 0
+
 function genHoleSym(): string {
   return `_${holeSymCounter++}`
 }
 
 function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
   switch (e.tag) {
-    case "var": {
-      if (e.name === "_") {
+    case 'var': {
+      if (e.name === '_') {
         const newName = genHoleSym()
         bvars.push(newName)
         return A.mkVar(newName, e.range)
@@ -16,22 +17,22 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         return e
       }
     }
-    case "lit":
+    case 'lit':
       return e
-    case "app":
+    case 'app':
       return A.mkApp(
         collectSectionHoles(bvars, e.head),
         e.args.map((a) => collectSectionHoles(bvars, a)),
         e.range,
       )
-    case "lam":
+    case 'lam':
       return A.mkLam(
         e.params,
         collectSectionHoles(bvars, e.body),
         e.range,
         e.restParam,
       )
-    case "let":
+    case 'let':
       return A.mkLet(
         e.bindings.map((b) => ({
           name: b.name,
@@ -40,19 +41,19 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.body),
         e.range,
       )
-    case "begin":
+    case 'begin':
       return A.mkBegin(
         e.exps.map((a) => collectSectionHoles(bvars, a)),
         e.range,
       )
-    case "if":
+    case 'if':
       return A.mkIf(
         collectSectionHoles(bvars, e.guard),
         collectSectionHoles(bvars, e.ifB),
         collectSectionHoles(bvars, e.elseB),
         e.range,
       )
-    case "match":
+    case 'match':
       return A.mkMatch(
         collectSectionHoles(bvars, e.scrutinee),
         e.branches.map((b) => ({
@@ -61,19 +62,19 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         })),
         e.range,
       )
-    case "quote":
+    case 'quote':
       return e
-    case "jsvar":
+    case 'jsvar':
       return e
-    case "error":
+    case 'error':
       return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
-    case "apply":
+    case 'apply':
       return A.mkApply(
         collectSectionHoles(bvars, e.fn),
         collectSectionHoles(bvars, e.args),
         e.range,
       )
-    case "let*":
+    case 'let*':
       return A.mkLetS(
         e.bindings.map((b) => ({
           name: b.name,
@@ -82,17 +83,17 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.body),
         e.range,
       )
-    case "and":
+    case 'and':
       return A.mkAnd(
         e.exps.map((a) => collectSectionHoles(bvars, a)),
         e.range,
       )
-    case "or":
+    case 'or':
       return A.mkOr(
         e.exps.map((a) => collectSectionHoles(bvars, a)),
         e.range,
       )
-    case "cond":
+    case 'cond':
       return A.mkCond(
         e.branches.map((b) => ({
           test: collectSectionHoles(bvars, b.test),
@@ -100,11 +101,11 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
         })),
         e.range,
       )
-    case "section": {
+    case 'section': {
       // N.B., we do not collect holes in embedded sections
       return A.mkSection(e.exps, e.range)
     }
-    case "report": {
+    case 'report': {
       return A.mkReport(collectSectionHoles(bvars, e.exp), e.range)
     }
   }
@@ -113,47 +114,47 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
 export function expandExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
     // Core forms
-    case "var":
+    case 'var':
       return e
-    case "lit":
+    case 'lit':
       return e
-    case "app":
+    case 'app':
       return A.mkApp(expandExpr(e.head), e.args.map(expandExpr), e.range)
-    case "lam":
+    case 'lam':
       return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam)
-    case "let":
+    case 'let':
       return A.mkLet(
         e.bindings.map((b) => ({ name: b.name, value: expandExpr(b.value) })),
         expandExpr(e.body),
         e.range,
       )
-    case "begin":
+    case 'begin':
       return A.mkBegin(e.exps.map(expandExpr), e.range)
-    case "if":
+    case 'if':
       return A.mkIf(
         expandExpr(e.guard),
         expandExpr(e.ifB),
         expandExpr(e.elseB),
         e.range,
       )
-    case "match":
+    case 'match':
       return A.mkMatch(
         expandExpr(e.scrutinee),
         e.branches.map((b) => ({ pat: b.pat, body: expandExpr(b.body) })),
         e.range,
       )
-    case "quote":
+    case 'quote':
       return e
-    case "jsvar":
+    case 'jsvar':
       return e
-    case "error":
+    case 'error':
       return A.mkError(expandExpr(e.exp), e.range)
-    case "apply":
+    case 'apply':
       return A.mkApply(expandExpr(e.fn), expandExpr(e.args), e.range)
 
     // Derived forms
 
-    case "let*": {
+    case 'let*': {
       // (let* [x1 e1] ... [xk ek] e)
       // -->
       // (let [x1 e1]
@@ -170,7 +171,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       }
       return ret
     }
-    case "and": {
+    case 'and': {
       // (and e1 ... ek)
       // -->
       // (if e1
@@ -187,7 +188,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       }
       return ret
     }
-    case "or": {
+    case 'or': {
       // (or e1 ... ek)
       // -->
       // (if e1
@@ -203,7 +204,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       }
       return ret
     }
-    case "cond": {
+    case 'cond': {
       // (cond [e11 e12] ... [ek1 ek2])
       // -->
       // (if e11 e12
@@ -214,7 +215,7 @@ export function expandExpr(e: A.Exp): A.Exp {
         body: expandExpr(c.body),
       }))
       let ret: A.Exp = A.mkError(
-        A.mkLit("No matching clause in cond", e.range),
+        A.mkLit('No matching clause in cond', e.range),
         e.range,
       )
       for (let i = branches.length - 1; i >= 0; i--) {
@@ -222,7 +223,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       }
       return ret
     }
-    case "section": {
+    case 'section': {
       // (section e1 ... ek)
       // -->
       // (lambda (x1 ... xm) (e1' ... ek'))
@@ -233,7 +234,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       )
       return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
     }
-    case "report": {
+    case 'report': {
       return A.mkReport(expandExpr(e.exp), e.range)
     }
   }
@@ -241,13 +242,13 @@ export function expandExpr(e: A.Exp): A.Exp {
 
 export function expandStmt(s: A.Stmt): A.Stmt[] {
   switch (s.tag) {
-    case "import":
+    case 'import':
       return [s]
-    case "define":
+    case 'define':
       return [A.mkDefine(s.name, expandExpr(s.value), s.range, s.docComments)]
-    case "display":
+    case 'display':
       return [A.mkDisp(expandExpr(s.value), s.range)]
-    case "struct": {
+    case 'struct': {
       // (struct S (f1 ... fk))
       // -->
       // (define S (##mkCtorFn## S f1 ... fk))
@@ -257,7 +258,7 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       const ctor = A.mkDefine(
         s.name,
         A.mkApp(
-          A.mkVar("##mkCtorFn##"),
+          A.mkVar('##mkCtorFn##'),
           [A.mkLit(s.name), A.mkLit(s.fields)],
           s.range,
         ),
@@ -265,18 +266,18 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       )
       const pred = A.mkDefine(
         `${s.name}?`,
-        A.mkApp(A.mkVar("##mkPredFn##"), [A.mkLit(s.name)], s.range),
+        A.mkApp(A.mkVar('##mkPredFn##'), [A.mkLit(s.name)], s.range),
       )
       const accessors = s.fields.map((f) =>
         A.mkDefine(
           `${s.name}-${f}`,
-          A.mkApp(A.mkVar("##mkGetFn##"), [A.mkLit(s.name), A.mkLit(f)]),
+          A.mkApp(A.mkVar('##mkGetFn##'), [A.mkLit(s.name), A.mkLit(f)]),
           s.range,
         ),
       )
       return [ctor, pred, ...accessors]
     }
-    case "stmtexp":
+    case 'stmtexp':
       return [A.mkStmtExp(expandExpr(s.expr))]
   }
 }

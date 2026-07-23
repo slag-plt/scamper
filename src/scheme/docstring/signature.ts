@@ -1,11 +1,11 @@
-import { SimpleErrorChannel } from "../../lpm/output/simple-error"
-import { tokenizeAndParse } from "../index"
-import { isStmtExp, mkVar, Var } from "../ast"
-import { DocComment, isPred, Pred, VarApp } from "./docstring"
-import { looksLikeIdentifier } from "../literals.js"
-import { reservedWords } from "../reserved-words.js"
-import { mkScamperErrorWithRange } from "../util"
-import { Range } from "../../lpm"
+import { SimpleErrorChannel } from '../../lpm/output/simple-error'
+import { tokenizeAndParse } from '../index'
+import { isStmtExp, mkVar, Var } from '../ast'
+import { DocComment, isPred, Pred, VarApp } from './docstring'
+import { looksLikeIdentifier } from '../literals.js'
+import { reservedWords } from '../reserved-words.js'
+import { mkScamperErrorWithRange } from '../util'
+import { Range } from '../../lpm'
 
 // originally authored by @bacracm, refactored to new file
 
@@ -25,18 +25,18 @@ export interface Signature {
  */
 function validateIdentifierToken(token: string, range: Range): void {
   if (!looksLikeIdentifier(token)) {
-    throw mkScamperErrorWithRange("Parser", "Expected an identifier", range)
+    throw mkScamperErrorWithRange('Parser', 'Expected an identifier', range)
   }
-  if (token.startsWith("_")) {
+  if (token.startsWith('_')) {
     throw mkScamperErrorWithRange(
-      "Parser",
+      'Parser',
       'Identifiers cannot begin with "_" unless inside of "section" or patterns',
       range,
     )
   }
   if (reservedWords.includes(token)) {
     throw mkScamperErrorWithRange(
-      "Parser",
+      'Parser',
       `The identifier "${token}" is a reserved word and cannot be used as a variable name`,
       range,
     )
@@ -54,25 +54,25 @@ function validateIdentifierToken(token: string, range: Range): void {
 // whitespace and validating each token the same way param.ts already does
 // for parameter names avoids that risk entirely.
 function parseFunctionSignature({ line, range }: DocComment): VarApp {
-  if (line.startsWith(" ")) {
+  if (line.startsWith(' ')) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Function signature cannot start with whitespace`,
+      'Parser',
+      'Function signature cannot start with whitespace',
       range,
     )
   }
-  if (!line.startsWith("(") || !line.endsWith(")")) {
+  if (!line.startsWith('(') || !line.endsWith(')')) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Malformed function signature`,
+      'Parser',
+      'Malformed function signature',
       range,
     )
   }
   const tokens = line.slice(1, -1).trim().split(/\s+/).filter((t) => t.length > 0)
   if (tokens.length === 0) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Function signature is missing`,
+      'Parser',
+      'Function signature is missing',
       range,
     )
   }
@@ -80,7 +80,7 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
   const [nameTok, ...rest] = tokens
   validateIdentifierToken(nameTok, range)
 
-  const dotIdx = rest.indexOf(".")
+  const dotIdx = rest.indexOf('.')
   let argToks: string[]
   let restTok: string | undefined
   if (dotIdx === -1) {
@@ -88,18 +88,18 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
   } else {
     if (dotIdx !== rest.length - 2) {
       throw mkScamperErrorWithRange(
-        "Parser",
-        `Malformed rest parameter: expected a single "." immediately before the final (rest) parameter name`,
+        'Parser',
+        'Malformed rest parameter: expected a single "." immediately before the final (rest) parameter name',
         range,
       )
     }
     argToks = rest.slice(0, dotIdx)
     restTok = rest[dotIdx + 1]
   }
-  if (rest.filter((t) => t === ".").length > 1) {
+  if (rest.filter((t) => t === '.').length > 1) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Malformed function signature: more than one "." found`,
+      'Parser',
+      'Malformed function signature: more than one "." found',
       range,
     )
   }
@@ -116,7 +116,7 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
   }
 
   return {
-    tag: "app",
+    tag: 'app',
     head: mkVar(nameTok, range),
     args,
     restParam,
@@ -128,19 +128,19 @@ function parseContractSignature({ line, range }: DocComment): Pred {
   const errChannel = new SimpleErrorChannel()
   const parsed = tokenizeAndParse(errChannel, line)
   if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
-    throw mkScamperErrorWithRange("Parser", `Malformed predicate field`, range)
+    throw mkScamperErrorWithRange('Parser', 'Malformed predicate field', range)
   }
   if (parsed.length < 1) {
-    throw mkScamperErrorWithRange("Parser", `Predicate field is missing`, range)
+    throw mkScamperErrorWithRange('Parser', 'Predicate field is missing', range)
   }
   const parsedStmt = parsed[0]
   if (!isStmtExp(parsedStmt)) {
-    throw mkScamperErrorWithRange("Parser", `Not a contract signature`, range)
+    throw mkScamperErrorWithRange('Parser', 'Not a contract signature', range)
   }
   if (!isPred(parsedStmt.expr)) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Not a contract signature. Expected a variable or variable application`,
+      'Parser',
+      'Not a contract signature. Expected a variable or variable application',
       range,
     )
   }
@@ -158,13 +158,13 @@ export function parseSignature({
   // Check contract.
 
   // verify no split (?)
-  const separator = " -> "
+  const separator = ' -> '
   const [functStr, ...rest] = docLine.split(separator)
 
   if (docLine.split(separator).length < 2) {
     throw mkScamperErrorWithRange(
-      "Parser",
-      `Missing separator in doc string signature`,
+      'Parser',
+      'Missing separator in doc string signature',
       range,
     )
   }

@@ -1,5 +1,5 @@
-import { vi } from "vitest"
-import { displayStep, Fiber, StepResult, traceStep } from "../src/lpm/fiber"
+import { vi } from 'vitest'
+import { displayStep, Fiber, StepResult, traceStep } from '../src/lpm/fiber'
 import {
   LoggingChannel,
   Prog,
@@ -7,12 +7,12 @@ import {
   ReportError,
   Stmt,
   Value,
-} from "../src/lpm"
-import { DisplayTask, QueryTask, SchedulerTask } from "../src/lpm/scheduler"
-import { SimpleErrorChannel } from "../src/lpm/output/simple-error"
-import * as U from "../src/lpm/util"
-import * as process from "node:process"
-import * as SchedulerYield from "../src/lpm/scheduler-yield"
+} from '../src/lpm'
+import { DisplayTask, QueryTask, SchedulerTask } from '../src/lpm/scheduler'
+import { SimpleErrorChannel } from '../src/lpm/output/simple-error'
+import * as U from '../src/lpm/util'
+import * as process from 'node:process'
+import * as SchedulerYield from '../src/lpm/scheduler-yield'
 
 export type { QueryTask, SchedulerTask }
 
@@ -21,9 +21,9 @@ const MOCK_FIBER_PROG: Prog = [U.mkStmtExp([U.mkLit(null)])]
 export function makeTestFiber(prog: Prog): Fiber {
   const fiber = new Fiber(prog)
   fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
-    ["+", (a: number, b: number) => a + b],
-    ["-", (a: number, b: number) => a - b],
-    ["*", (a: number, b: number) => a * b],
+    ['+', (a: number, b: number) => a + b],
+    ['-', (a: number, b: number) => a - b],
+    ['*', (a: number, b: number) => a * b],
   )
   return fiber
 }
@@ -46,6 +46,7 @@ class NeverCompletingFiber extends Fiber {
   constructor() {
     super(MOCK_FIBER_PROG)
   }
+
   override step(): StepResult {
     return traceStep
   }
@@ -66,11 +67,11 @@ export interface StepTrackedFiber extends Fiber {
 export function trackFiberSteps(fiber: Fiber): StepTrackedFiber {
   let stepCallCount = 0
   const realStep = fiber.step.bind(fiber)
-  vi.spyOn(fiber, "step").mockImplementation(() => {
+  vi.spyOn(fiber, 'step').mockImplementation(() => {
     stepCallCount++
     return realStep()
   })
-  Object.defineProperty(fiber, "stepCallCount", {
+  Object.defineProperty(fiber, 'stepCallCount', {
     get: () => stepCallCount,
     configurable: true,
   })
@@ -88,7 +89,7 @@ let schedulerYieldPatched = false
 /**
  * In vitest/jsdom, `schedulerYield()`'s MessageChannel-based fallback can
  * still resolve ahead of pending `setTimeout`-based sleeps, so a running
- * `#execute()` loop can starve them. Patch yield once per test file so
+ * `execute()` loop can starve them. Patch yield once per test file so
  * quanta still use the real implementation but timers can interleave.
  */
 export function patchSchedulerYieldForTests(): void {
@@ -97,7 +98,7 @@ export function patchSchedulerYieldForTests(): void {
   }
   schedulerYieldPatched = true
   const origYield = SchedulerYield.schedulerYield
-  vi.spyOn(SchedulerYield, "schedulerYield").mockImplementation(() =>
+  vi.spyOn(SchedulerYield, 'schedulerYield').mockImplementation(() =>
     origYield().then(
       () =>
         new Promise<void>((resolve) => {
@@ -120,27 +121,27 @@ export class MockFiber extends Fiber {
   stepCallCount = 0
   stepImpl: () => StepResult = () => traceStep
 
-  #mockIsProcessingBlk?: boolean
-  #mockLastStatement?: { tag: string }
+  private mockIsProcessingBlk?: boolean
+  private mockLastStatement?: { tag: string }
 
   constructor() {
     super(MOCK_FIBER_PROG)
   }
 
   override get isProcessingBlk(): boolean {
-    return this.#mockIsProcessingBlk ?? super.isProcessingBlk
+    return this.mockIsProcessingBlk ?? super.isProcessingBlk
   }
 
   set isProcessingBlk(value: boolean) {
-    this.#mockIsProcessingBlk = value
+    this.mockIsProcessingBlk = value
   }
 
   override get lastStatement(): Stmt {
-    return (this.#mockLastStatement ?? super.lastStatement) as Stmt
+    return (this.mockLastStatement ?? super.lastStatement) as Stmt
   }
 
   set lastStatement(value: { tag: string }) {
-    this.#mockLastStatement = value
+    this.mockLastStatement = value
   }
 
   override step(): StepResult {
@@ -148,7 +149,7 @@ export class MockFiber extends Fiber {
     const result = this.stepImpl()
     if (
       result === traceStep &&
-      this.lastStatement.tag === "disp" &&
+      this.lastStatement.tag === 'disp' &&
       !this.isProcessingBlk
     ) {
       return displayStep
@@ -210,13 +211,13 @@ export async function withSuppressedRejections<T>(
     /* intentionally a no-op: we only need a handler attached so the
        unhandled rejection doesn't fail the test runner. */
   }
-  process.on("unhandledRejection", swallow)
+  process.on('unhandledRejection', swallow)
   try {
     return await fn()
   } finally {
     // give the microtask queue a chance to flush so we observe the rejection
     // before pulling our handler off
     await sleep(QUANTUM_WAIT_MS)
-    process.off("unhandledRejection", swallow)
+    process.off('unhandledRejection', swallow)
   }
 }

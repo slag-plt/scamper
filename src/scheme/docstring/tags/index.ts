@@ -1,5 +1,5 @@
-export * from "./tag"
+export * from './tag'
 
 // import all tag parsers
-import "./example-tag"
-import "./category-tag"
+import './example-tag'
+import './category-tag'

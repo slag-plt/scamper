@@ -1,5 +1,5 @@
-import { Loc, Range, ScamperError } from "../lpm"
-import * as A from "./ast.js"
+import { Loc, Range, ScamperError } from '../lpm'
+import * as A from './ast.js'
 
 /**
  * @returns prog with the statement at [queryLoc] having its deepest queried
@@ -14,7 +14,7 @@ export function getQueriedProgram(
   const queriedI = prog.findIndex((stmt) => stmt.range.contains(queryLoc))
   if (queriedI < 0) {
     throw new ScamperError(
-      "Parser",
+      'Parser',
       `Received invalid query location: ${queryLoc.toString()}`,
     )
   }
@@ -33,23 +33,23 @@ export function getReportedStmt(
   queryLoc: Loc,
 ): { stmt: A.Stmt; range: Range } {
   switch (stmt.tag) {
-    case "define": {
+    case 'define': {
       const inner = getReportedExp(stmt.value, queryLoc)
       return {
         stmt: A.mkDefine(stmt.name, inner.exp, stmt.range, stmt.docComments),
         range: inner.range,
       }
     }
-    case "display": {
+    case 'display': {
       const inner = getReportedExp(stmt.value, queryLoc)
       return { stmt: A.mkDisp(inner.exp, stmt.range), range: inner.range }
     }
-    case "stmtexp": {
+    case 'stmtexp': {
       const inner = getReportedExp(stmt.expr, queryLoc)
       return { stmt: A.mkStmtExp(inner.exp, stmt.range), range: inner.range }
     }
-    case "import":
-    case "struct":
+    case 'import':
+    case 'struct':
       // N.B., these have no expression content to report on. In practice
       // this is unreachable from the UI: the caller (tokenizeAndParse) only
       // ever acts on the result when the queried statement is a `define`
@@ -72,22 +72,22 @@ interface Slot {
 
 function slotsOf(exp: A.Exp): Slot[] {
   switch (exp.tag) {
-    case "lit":
-    case "var":
-    case "quote":
-    case "jsvar":
+    case 'lit':
+    case 'var':
+    case 'quote':
+    case 'jsvar':
       return []
 
-    case "error":
+    case 'error':
       return [{ exp: exp.exp, rebuild: (r) => A.mkError(r, exp.range) }]
 
-    case "apply":
+    case 'apply':
       return [
         { exp: exp.fn, rebuild: (r) => A.mkApply(r, exp.args, exp.range) },
         { exp: exp.args, rebuild: (r) => A.mkApply(exp.fn, r, exp.range) },
       ]
 
-    case "app":
+    case 'app':
       return [
         { exp: exp.head, rebuild: (r) => A.mkApp(r, exp.args, exp.range) },
         ...exp.args.map((a, i) => ({
@@ -101,7 +101,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         })),
       ]
 
-    case "lam":
+    case 'lam':
       return [
         {
           exp: exp.body,
@@ -109,7 +109,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         },
       ]
 
-    case "if":
+    case 'if':
       return [
         {
           exp: exp.guard,
@@ -127,10 +127,10 @@ function slotsOf(exp: A.Exp): Slot[] {
 
     // "and"/"or"/"begin"/"section" all share the same shape (a flat list of
     // sub-expressions), differing only in which constructor rebuilds them.
-    case "and":
-    case "or":
-    case "begin":
-    case "section": {
+    case 'and':
+    case 'or':
+    case 'begin':
+    case 'section': {
       const mk = {
         and: A.mkAnd,
         or: A.mkOr,
@@ -147,9 +147,9 @@ function slotsOf(exp: A.Exp): Slot[] {
       }))
     }
 
-    case "let":
-    case "let*": {
-      const mk = exp.tag === "let" ? A.mkLet : A.mkLetS
+    case 'let':
+    case 'let*': {
+      const mk = exp.tag === 'let' ? A.mkLet : A.mkLetS
       return [
         ...exp.bindings.map((b, i) => ({
           exp: b.value,
@@ -169,7 +169,7 @@ function slotsOf(exp: A.Exp): Slot[] {
       ]
     }
 
-    case "cond":
+    case 'cond':
       return exp.branches.flatMap((b, i) => [
         {
           exp: b.test,
@@ -193,7 +193,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         },
       ])
 
-    case "match":
+    case 'match':
       return [
         {
           exp: exp.scrutinee,
@@ -215,7 +215,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         })),
       ]
 
-    case "report":
+    case 'report':
       return [{ exp: exp.exp, rebuild: (r) => A.mkReport(r, exp.range) }]
   }
 }

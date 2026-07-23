@@ -1,6 +1,6 @@
-import * as L from "./lang.js"
-import { ICE } from "./error.js"
-import { Range } from "./range.js"
+import * as L from './lang.js'
+import { ICE } from './error.js'
+import { Range } from './range.js'
 
 /**
  * A stack frame records all relevant to track the execution of a single function call.
@@ -39,7 +39,7 @@ export class Frame {
     const op = this.ops.pop()
     if (!op)
       throw new ICE(
-        "Frame.popInstr",
+        'Frame.popInstr',
         `Attempted to pop operation off frame ${this.name} when none remain`,
       )
     return op

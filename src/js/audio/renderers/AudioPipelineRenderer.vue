@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from "vue"
-import { AudioPipeline } from "../index"
-import { isMediaElementSource } from "./html"
+import { ref, onUnmounted } from 'vue'
+import { AudioPipeline } from '../index'
+import { isMediaElementSource } from './html'
 
 const props = defineProps<{ value: AudioPipeline }>()
 
@@ -13,8 +13,8 @@ function play() {
   onOffNode.gain.value = 1
 
   if (
-    "start" in pipeline &&
-    typeof (pipeline as any).start === "function" &&
+    'start' in pipeline &&
+    typeof (pipeline as any).start === 'function' &&
     !started.value
   ) {
     ;(pipeline as AudioScheduledSourceNode).start()

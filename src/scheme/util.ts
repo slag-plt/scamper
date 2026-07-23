@@ -1,4 +1,4 @@
-import { ScamperError } from "../lpm"
+import { ScamperError } from '../lpm'
 
 export function catchIf<T>(
   fn: () => T,
@@ -15,7 +15,7 @@ export function catchIf<T>(
 // TODO: we have 3 different version of this, we should consolidate and use this one
 // scamper object tag (runtime values)
 // struct-level tag
-const IS_TAGGED = Symbol("##SCAMPER_TAGGED##")
+const IS_TAGGED = Symbol('##SCAMPER_TAGGED##')
 
 export interface Tagged<Sym extends symbol, T = unknown> {
   readonly [IS_TAGGED]: Sym
@@ -30,7 +30,7 @@ export function makeTagged<Sym extends symbol, T>(
 }
 
 export function isTagged(val: unknown): val is Tagged<symbol> {
-  return typeof val === "object" && val !== null && IS_TAGGED in val
+  return typeof val === 'object' && val !== null && IS_TAGGED in val
 }
 
 export function hasTag<Sym extends symbol>(
@@ -41,9 +41,9 @@ export function hasTag<Sym extends symbol>(
 }
 
 export function mkScamperErrorWithRange(
-  phase: ScamperError["phase"],
-  message: ScamperError["message"],
-  range: ScamperError["range"],
+  phase: ScamperError['phase'],
+  message: ScamperError['message'],
+  range: ScamperError['range'],
 ) {
   const err = new ScamperError(phase, message)
   err.range = range

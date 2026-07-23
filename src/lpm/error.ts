@@ -1,9 +1,9 @@
-import { Range } from "./range.js"
-import { Value } from "./lang"
-import { toString } from "./util"
+import { Range } from './range.js'
+import { Value } from './lang'
+import { toString } from './util'
 
 /** Phases of scamper execution, used for the purposes of error reporting. */
-type Phase = "Parser" | "Runtime" | "Docstring"
+type Phase = 'Parser' | 'Runtime' | 'Docstring'
 
 /** Errors that arise during Scamper compilation and execution. */
 export class ScamperError extends Error {
@@ -35,13 +35,13 @@ export class ScamperError extends Error {
   // adding a future non-fatal phase doesn't require re-auditing every place
   // that decides whether an accumulated errors array should block anything.
   get isFatal(): boolean {
-    return this.phase !== "Docstring"
+    return this.phase !== 'Docstring'
   }
 
   toString(): string {
-    const detail = `${this.modName ?? ""}${this.range && this.range !== Range.none ? this.range.toString() : ""}`
-    const src = this.source ? `(${this.source}) ` : ""
-    return `${this.phase} error${detail.length > 0 ? " [" + detail + "]" : ""}: ${src}${this.message}`
+    const detail = `${this.modName ?? ''}${this.range && this.range !== Range.none ? this.range.toString() : ''}`
+    const src = this.source ? `(${this.source}) ` : ''
+    return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
   }
 }
 
@@ -55,7 +55,7 @@ export class ICE extends Error {
   }
 
   toString(): string {
-    return `ICE (${this.funcName}): ${this.message}\n${this.stack ?? ""}`
+    return `ICE (${this.funcName}): ${this.message}\n${this.stack ?? ''}`
   }
 }
 
@@ -63,7 +63,7 @@ export class ICE extends Error {
 export class SubthreadErrors extends Error {
   errors: ScamperError[]
   constructor(errors: ScamperError[]) {
-    const msg = errors.map((e) => e.toString()).join(" ")
+    const msg = errors.map((e) => e.toString()).join(' ')
     super(msg)
     this.errors = [...errors]
   }
@@ -74,6 +74,6 @@ export class ReportError extends ScamperError {
     public value: Value,
     public range: Range,
   ) {
-    super("Runtime", `Reported value: ${toString(value)}`)
+    super('Runtime', `Reported value: ${toString(value)}`)
   }
 }

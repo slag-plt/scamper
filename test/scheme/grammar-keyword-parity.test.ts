@@ -1,13 +1,13 @@
-import { readFileSync } from "fs"
-import { resolve } from "path"
-import { describe, expect, test } from "vitest"
-import { reservedWords } from "../../src/scheme/reserved-words"
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+import { describe, expect, test } from 'vitest'
+import { reservedWords } from '../../src/scheme/reserved-words'
 
-describe("syntax.grammar keyword parity", () => {
-  test("every reserved word has a matching kw<...> production, and vice versa", () => {
+describe('syntax.grammar keyword parity', () => {
+  test('every reserved word has a matching kw<...> production, and vice versa', () => {
     const grammarSrc = readFileSync(
-      resolve(__dirname, "../../src/scheme/syntax.grammar"),
-      "utf-8",
+      resolve(__dirname, '../../src/scheme/syntax.grammar'),
+      'utf-8',
     )
     const grammarKeywords = new Set(
       [...grammarSrc.matchAll(/kw<"([^"]+)">/g)].map((m) => m[1]),
@@ -23,11 +23,11 @@ describe("syntax.grammar keyword parity", () => {
 
     expect(
       missingFromGrammar,
-      `reservedWords entries with no kw<> production in syntax.grammar: ${missingFromGrammar.join(", ")}`,
+      `reservedWords entries with no kw<> production in syntax.grammar: ${missingFromGrammar.join(', ')}`,
     ).toEqual([])
     expect(
       extraInGrammar,
-      `syntax.grammar kw<> productions not present in reservedWords: ${extraInGrammar.join(", ")}`,
+      `syntax.grammar kw<> productions not present in reservedWords: ${extraInGrammar.join(', ')}`,
     ).toEqual([])
   })
 })

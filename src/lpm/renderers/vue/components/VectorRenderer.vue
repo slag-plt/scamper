@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Value } from "../../../index"
-import CodeElement from "./CodeElement.vue"
-import ValueRenderer from "../ValueRenderer.vue"
+import { Value } from '../../../index'
+import CodeElement from './CodeElement.vue'
+import ValueRenderer from '../ValueRenderer.vue'
 
 defineProps<{ value: Value[] }>()
 </script>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue"
-import { Rgb, image_rgbToString, image_rgbPseudoComplement } from "../color"
+import { computed } from 'vue'
+import { Rgb, image_rgbToString, image_rgbPseudoComplement } from '../color'
 
 const props = defineProps<{ value: Rgb }>()
 

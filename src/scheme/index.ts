@@ -1,23 +1,23 @@
-import * as S from "../lpm"
-import { Loc, Range, ScamperError } from "../lpm"
-import { lowerProgram } from "./codegen.js"
-import { expandProgram } from "./expansion.js"
-import { sugarExpr } from "./sugarer.js"
-import { FiberRaiser } from "../lpm/raiser.js"
-import { raiseFiber } from "./raise.js"
-import { parseProgramFromSource } from "./lezer-bridge.js"
-import { Exp, mkDisp, Prog } from "./ast.js"
-import { getQueriedProgram } from "./query"
-import { isExampleTag } from "./docstring/tags/example-tag"
-import { parseFunctionDocFromComments } from "./docstring/docstring.js"
-import { contractProgram } from "./contract.js"
+import * as S from '../lpm'
+import { Loc, Range, ScamperError } from '../lpm'
+import { lowerProgram } from './codegen.js'
+import { expandProgram } from './expansion.js'
+import { sugarExpr } from './sugarer.js'
+import { FiberRaiser } from '../lpm/raiser.js'
+import { raiseFiber } from './raise.js'
+import { parseProgramFromSource } from './lezer-bridge.js'
+import { Exp, mkDisp, Prog } from './ast.js'
+import { getQueriedProgram } from './query'
+import { isExampleTag } from './docstring/tags/example-tag'
+import { parseFunctionDocFromComments } from './docstring/docstring.js'
+import { contractProgram } from './contract.js'
 // N.B., src/lib/index.ts compiles and runs its own Scamper source (the
 // builtin libraries) through this module's `compile()` at load time, which
 // makes this a circular import. Keeping it as the *last* import here matters:
 // by the time this module re-enters (via that circular reference back into
 // `compile()`), every other export `compile()` depends on must already be
 // bound, or the reentrant call sees them mid-TDZ.
-import { builtinLibs } from "../lib"
+import { builtinLibs } from '../lib'
 
 export const fiberRaiser: FiberRaiser<Exp> = {
   raise: (fiber) => sugarExpr(raiseFiber(fiber)),
@@ -70,11 +70,11 @@ export function tokenizeAndParse(
 
   // determine if query loc inside define statement
   const queriedStmt = queriedProgram.find((s) => s.range.contains(queryLoc))
-  if (queriedStmt?.tag !== "define" || queriedStmt.docComments === undefined) {
+  if (queriedStmt?.tag !== 'define' || queriedStmt.docComments === undefined) {
     err.report(
       new ScamperError(
-        "Parser",
-        "Querying is only allowed within function definitions with docstrings",
+        'Parser',
+        'Querying is only allowed within function definitions with docstrings',
       ),
     )
     return undefined
@@ -95,8 +95,8 @@ export function tokenizeAndParse(
   if (doc === undefined) {
     err.report(
       new ScamperError(
-        "Parser",
-        "Querying is only allowed within function definitions with docstrings",
+        'Parser',
+        'Querying is only allowed within function definitions with docstrings',
       ),
     )
     return undefined
@@ -106,7 +106,7 @@ export function tokenizeAndParse(
   // TODO: only choosing first example tag for input prototype
   const firstExample = exampleTags.at(0)
   if (!firstExample) {
-    err.report(new ScamperError("Parser", "Querying requires an example tag"))
+    err.report(new ScamperError('Parser', 'Querying requires an example tag'))
     return undefined
   }
   queriedProgram.push(mkDisp(firstExample.contents.functionCall))

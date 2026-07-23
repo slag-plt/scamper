@@ -1,14 +1,14 @@
-import { getFS } from "../fs"
-import * as L from "../lpm"
-import { ICE, ScamperError } from "../lpm"
-import * as A from "./ast.js"
+import { getFS } from '../fs'
+import * as L from '../lpm'
+import { ICE, ScamperError } from '../lpm'
+import * as A from './ast.js'
 import {
   ComplexPred,
   FunctionDoc,
   Pred,
   parseFunctionDocFromComments,
-} from "./docstring/docstring"
-import { mkScamperErrorWithRange } from "./util"
+} from './docstring/docstring'
+import { mkScamperErrorWithRange } from './util'
 
 function checkDuplicateVars(
   errors: ScamperError[],
@@ -20,7 +20,7 @@ function checkDuplicateVars(
     if (seen.has(v)) {
       errors.push(
         new ScamperError(
-          "Parser",
+          'Parser',
           `Duplicate variable '${v}' encountered in binding list`,
           undefined,
           range,
@@ -33,11 +33,11 @@ function checkDuplicateVars(
 
 function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
   switch (p.tag) {
-    case "pvar": {
+    case 'pvar': {
       if (locals.has(p.name)) {
         errors.push(
           new ScamperError(
-            "Parser",
+            'Parser',
             `Duplicate binding variable '${p.name}' encountered in pattern`,
             undefined,
             p.range,
@@ -49,12 +49,12 @@ function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
       return
     }
 
-    case "pwild":
+    case 'pwild':
       return
-    case "plit":
+    case 'plit':
       return
 
-    case "pctor": {
+    case 'pctor': {
       p.args.forEach((p) => {
         scopeCheckPat(errors, locals, p)
       })
@@ -70,11 +70,11 @@ function scopeCheckExp(
   e: A.Exp,
 ) {
   switch (e.tag) {
-    case "var": {
+    case 'var': {
       if (!locals.includes(e.name) && !globals.includes(e.name)) {
         errors.push(
           new ScamperError(
-            "Parser",
+            'Parser',
             `Undefined variable '${e.name}'`,
             undefined,
             e.range,
@@ -84,10 +84,10 @@ function scopeCheckExp(
       return
     }
 
-    case "lit":
+    case 'lit':
       return
 
-    case "app": {
+    case 'app': {
       scopeCheckExp(errors, globals, locals, e.head)
       e.args.forEach((e) => {
         scopeCheckExp(errors, globals, locals, e)
@@ -95,14 +95,14 @@ function scopeCheckExp(
       return
     }
 
-    case "lam": {
+    case 'lam': {
       // N.B., do we want to warn in the case of shadowed variables?
       const allParams = e.restParam ? [...e.params, e.restParam] : e.params
       checkDuplicateVars(errors, allParams, e.range)
       scopeCheckExp(errors, globals, [...locals, ...allParams], e.body)
       return
     }
-    case "let": {
+    case 'let': {
       const vars = e.bindings.map((b) => b.name)
       checkDuplicateVars(errors, vars, e.range)
       e.bindings.forEach((b) => {
@@ -111,20 +111,20 @@ function scopeCheckExp(
       scopeCheckExp(errors, globals, [...locals, ...vars], e.body)
       return
     }
-    case "begin": {
+    case 'begin': {
       e.exps.forEach((e) => {
         scopeCheckExp(errors, globals, locals, e)
       })
       return
     }
 
-    case "if": {
+    case 'if': {
       scopeCheckExp(errors, globals, locals, e.guard)
       scopeCheckExp(errors, globals, locals, e.ifB)
       scopeCheckExp(errors, globals, locals, e.elseB)
       return
     }
-    case "match": {
+    case 'match': {
       scopeCheckExp(errors, globals, locals, e.scrutinee)
       e.branches.forEach((b) => {
         const bindingVars = new Set<string>()
@@ -133,30 +133,30 @@ function scopeCheckExp(
       })
       return
     }
-    case "quote": {
+    case 'quote': {
       // N.B., no need to scope check a "frozen" AST
       return
     }
-    case "jsvar": {
+    case 'jsvar': {
       // N.B., no variable references to check -- the argument is a literal
       // string naming a JS binding, resolved at runtime.
       return
     }
-    case "error": {
+    case 'error': {
       scopeCheckExp(errors, globals, locals, e.exp)
       return
     }
-    case "apply": {
+    case 'apply': {
       scopeCheckExp(errors, globals, locals, e.fn)
       scopeCheckExp(errors, globals, locals, e.args)
       return
     }
-    case "report": {
+    case 'report': {
       scopeCheckExp(errors, globals, locals, e.exp)
       return
     }
     default:
-      throw new ICE("scopeCheckExp", `Non-core expression encountered ${e.tag}`)
+      throw new ICE('scopeCheckExp', `Non-core expression encountered ${e.tag}`)
   }
 }
 
@@ -170,7 +170,7 @@ function scopeCheckPred(
     if (!globals.includes(predicate.name)) {
       errors.push(
         mkScamperErrorWithRange(
-          "Parser",
+          'Parser',
           `Undefined predicate "${predicate.name}"`,
           predicate.range,
         ),
@@ -189,7 +189,7 @@ function scopeCheckComplexPred(
 ) {
   if (!globals.includes(name)) {
     errors.push(
-      mkScamperErrorWithRange("Parser", `Undefined predicate "${name}"`, range),
+      mkScamperErrorWithRange('Parser', `Undefined predicate "${name}"`, range),
     )
   }
   for (const arg of args) {
@@ -231,7 +231,7 @@ function scopeCheckFunctionDoc(
   } finally {
     outerErrors.push(
       ...errors.map(
-        (e) => new ScamperError("Docstring", e.message, e.modName, e.range, e.source),
+        (e) => new ScamperError('Docstring', e.message, e.modName, e.range, e.source),
       ),
     )
   }
@@ -248,8 +248,8 @@ function scopeCheckFunctionDocInner(
     // can't attach function docs onto non-function definitions
     errors.push(
       mkScamperErrorWithRange(
-        "Parser",
-        "Function docstring attached to non-function definition",
+        'Parser',
+        'Function docstring attached to non-function definition',
         doc.range,
       ),
     )
@@ -277,7 +277,7 @@ function scopeCheckFunctionDocInner(
   if (name !== docName) {
     errors.push(
       mkScamperErrorWithRange(
-        "Parser",
+        'Parser',
         `Docstring function name "${docName}" does not match defined name "${name}"`,
         sigRange,
       ),
@@ -291,7 +291,7 @@ function scopeCheckFunctionDocInner(
     if (nextDocParam === undefined) {
       errors.push(
         mkScamperErrorWithRange(
-          "Parser",
+          'Parser',
           `Expected function parameter "${param}" to be defined in docstring signature`,
           sigRange,
         ),
@@ -301,7 +301,7 @@ function scopeCheckFunctionDocInner(
     if (param !== nextDocParam) {
       errors.push(
         mkScamperErrorWithRange(
-          "Parser",
+          'Parser',
           `Function signature defines parameter "${param}" in this position but docstring signature instead defines "${nextDocParam}"`,
           sigRange,
         ),
@@ -325,7 +325,7 @@ function scopeCheckFunctionDocInner(
     if (!params.includes(pName)) {
       errors.push(
         mkScamperErrorWithRange(
-          "Parser",
+          'Parser',
           `Docstring describes unknown function parameter "${pName}"`,
           pRange,
         ),
@@ -340,7 +340,7 @@ function scopeCheckFunctionDocInner(
     }
     errors.push(
       mkScamperErrorWithRange(
-        "Parser",
+        'Parser',
         `Description of function parameter "${pName}" missing`,
         docRange,
       ),
@@ -358,8 +358,8 @@ async function scopeCheckStmt(
   s: A.Stmt,
 ) {
   switch (s.tag) {
-    case "import": {
-      if (s.kind === "builtin") {
+    case 'import': {
+      if (s.kind === 'builtin') {
         if (builtinLibs.has(s.module)) {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
@@ -368,7 +368,7 @@ async function scopeCheckStmt(
         } else {
           errors.push(
             new ScamperError(
-              "Parser",
+              'Parser',
               `No such built-in library: '${s.module}'`,
               undefined,
               s.range,
@@ -382,7 +382,7 @@ async function scopeCheckStmt(
       } else {
         errors.push(
           new ScamperError(
-            "Parser",
+            'Parser',
             `File '${s.module}' does not exist`,
             undefined,
             s.range,
@@ -392,11 +392,11 @@ async function scopeCheckStmt(
       return
     }
 
-    case "define": {
+    case 'define': {
       if (globals.includes(s.name)) {
         errors.push(
           new ScamperError(
-            "Parser",
+            'Parser',
             `Global variable '${s.name}' is already defined`,
             undefined,
             s.range,
@@ -425,18 +425,18 @@ async function scopeCheckStmt(
       return
     }
 
-    case "display": {
+    case 'display': {
       scopeCheckExp(errors, globals, [], s.value)
       return
     }
 
-    case "stmtexp": {
+    case 'stmtexp': {
       scopeCheckExp(errors, globals, [], s.expr)
       return
     }
 
     default:
-      throw new ICE("scopeCheckStmt", `Non-core statement encountered ${s.tag}`)
+      throw new ICE('scopeCheckStmt', `Non-core statement encountered ${s.tag}`)
   }
 }
 

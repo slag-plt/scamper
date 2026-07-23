@@ -1,7 +1,7 @@
-import { Value } from "../lang.js"
-import { ScamperError } from "../error.js"
-import { OutputChannel, ErrorChannel } from "./channel.js"
-import TextRenderer from "../renderers/text"
+import { Value } from '../lang.js'
+import { ScamperError } from '../error.js'
+import { OutputChannel, ErrorChannel } from './channel.js'
+import TextRenderer from '../renderers/text'
 
 /** A unified output and error channel that logs by line */
 export class LoggingChannel implements OutputChannel, ErrorChannel {
@@ -9,7 +9,7 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
   errLog: string[]
   renderOutput: boolean
   combineLogs: boolean
-  #totalSends = 0
+  private _totalSends = 0
 
   constructor(renderOutput = true, combineLogs = true) {
     this.log = []
@@ -20,7 +20,7 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
 
   send(v: Value): void {
     this.log.push(this.renderOutput ? TextRenderer.render(v) : v)
-    this.#totalSends++
+    this._totalSends++
   }
 
   report(e: ScamperError): void {
@@ -34,11 +34,12 @@ export class LoggingChannel implements OutputChannel, ErrorChannel {
   pushLevel(..._attrs: string[]) {
     /* nothing to do! */
   }
+
   popLevel() {
     /* nothing to do! */
   }
 
   get totalSends() {
-    return this.#totalSends
+    return this._totalSends
   }
 }

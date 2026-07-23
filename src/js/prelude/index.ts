@@ -1,7 +1,7 @@
-import * as L from "../../lpm"
-import { SubthreadErrors } from "../../lpm"
+import * as L from '../../lpm'
+import { SubthreadErrors } from '../../lpm'
 
-export * from "./files.js"
+export * from './files.js'
 
 // Equivalence predicates (6.1)
 
@@ -18,15 +18,15 @@ export function prelude_equalQ(x: any, y: any): boolean {
 // Numbers (6.2)
 
 export function prelude_numberQ(x: any): boolean {
-  return typeof x === "number"
+  return typeof x === 'number'
 }
 
 export function prelude_realQ(x: any): boolean {
-  return typeof x === "number" && !Number.isInteger(x)
+  return typeof x === 'number' && !Number.isInteger(x)
 }
 
 export function prelude_integerQ(x: any): boolean {
-  return typeof x === "number" && Number.isInteger(x)
+  return typeof x === 'number' && Number.isInteger(x)
 }
 
 // N.B., we don't implement the following functions:
@@ -256,7 +256,7 @@ export function prelude_not(x: boolean): boolean {
 }
 
 export function prelude_booleanQ(x: any): boolean {
-  return typeof x === "boolean"
+  return typeof x === 'boolean'
 }
 
 // From racket/base
@@ -351,44 +351,44 @@ export function prelude_cdr(x: L.Value): L.Value {
 
 const listAccessors = [
   // 4-character accessors
-  "caar",
-  "cadr",
-  "cdar",
-  "cddr",
+  'caar',
+  'cadr',
+  'cdar',
+  'cddr',
   // 5-character accessors
-  "caaar",
-  "cadar",
-  "cdaar",
-  "cddar",
-  "caadr",
-  "caddr",
-  "cdadr",
-  "cdddr",
+  'caaar',
+  'cadar',
+  'cdaar',
+  'cddar',
+  'caadr',
+  'caddr',
+  'cdadr',
+  'cdddr',
   // 6-character accessors
-  "caaaar",
-  "cadaar",
-  "cdaaar",
-  "cddaar",
-  "caadar",
-  "caddar",
-  "cdadar",
-  "cdddar",
-  "caaadr",
-  "cadadr",
-  "cdaadr",
-  "cddadr",
-  "caaddr",
-  "cadddr",
-  "cdaddr",
-  "cddddr",
+  'caaaar',
+  'cadaar',
+  'cdaaar',
+  'cddaar',
+  'caadar',
+  'caddar',
+  'cdadar',
+  'cdddar',
+  'caaadr',
+  'cadadr',
+  'cdaadr',
+  'cddadr',
+  'caaddr',
+  'cadddr',
+  'cdaddr',
+  'cddddr',
 ]
 export const prelude_listAccessorFns: Record<string, (x: L.Value) => L.Value> = {}
 listAccessors.forEach((name) => {
   const path = name.slice(1, name.length - 1)
   const fn = function (x: L.Value): L.Value {
-    let ret = path.endsWith("a") ? prelude_car(x) : prelude_cdr(x)
+    let ret = path.endsWith('a') ? prelude_car(x) : prelude_cdr(x)
     for (let i = path.length - 2; i >= 0; i--) {
-      ret = path[i] === "a" ? prelude_car(ret) : prelude_cdr(ret)
+      ret = path[i] === 'a' ? prelude_car(ret) : prelude_cdr(ret)
     }
     return ret
   }
@@ -512,7 +512,7 @@ export function prelude_listRef(l: L.List, n: number): L.Value {
   }
   if (l === null) {
     throw new L.ScamperError(
-      "Runtime",
+      'Runtime',
       `list-ref: index ${n} out of bounds of list`,
     )
   } else {
@@ -566,7 +566,7 @@ export function prelude_assocRef(v: L.Value, l: L.List): L.Value {
     l = l.tail
   }
   throw new L.ScamperError(
-    "Runtime",
+    'Runtime',
     `assoc-ref: key ${v} not found in association list`,
   )
 }
@@ -597,10 +597,10 @@ export function prelude_sort(l: L.List, lt: L.ScamperFn): L.List {
   const arr = L.listToVector(l)
   arr.sort((a, b) => {
     const result = L.callScamperFn(lt, a, b)
-    if (typeof result !== "boolean") {
+    if (typeof result !== 'boolean') {
       throw new L.ScamperError(
-        "Runtime",
-        `sort: comparator function must return a number`,
+        'Runtime',
+        'sort: comparator function must return a number',
       )
     } else {
       return result ? -1 : 1
@@ -639,6 +639,7 @@ function pairwiseSatisfies<T>(f: (a: T, b: T) => boolean, xs: T[]): boolean {
 }
 
 export const prelude_charCompareFns: Record<string, (...args: L.Value[]) => boolean> = {}
+
 function mkCharCompareFn(
   name: string,
   f: (a: string, b: string) => boolean,
@@ -653,18 +654,19 @@ function mkCharCompareFn(
   prelude_charCompareFns[`prelude_${name}`] = fn
 }
 
-mkCharCompareFn("char=?", (a, b) => a === b)
-mkCharCompareFn("char<?", (a, b) => a < b)
-mkCharCompareFn("char>?", (a, b) => a > b)
-mkCharCompareFn("char<=?", (a, b) => a <= b)
-mkCharCompareFn("char>=?", (a, b) => a >= b)
-mkCharCompareFn("char-ci=?", (a, b) => a.toLowerCase() === b.toLowerCase())
-mkCharCompareFn("char-ci<?", (a, b) => a.toLowerCase() < b.toLowerCase())
-mkCharCompareFn("char-ci>?", (a, b) => a.toLowerCase() > b.toLowerCase())
-mkCharCompareFn("char-ci<=?", (a, b) => a.toLowerCase() <= b.toLowerCase())
-mkCharCompareFn("char-ci>=?", (a, b) => a.toLowerCase() >= b.toLowerCase())
+mkCharCompareFn('char=?', (a, b) => a === b)
+mkCharCompareFn('char<?', (a, b) => a < b)
+mkCharCompareFn('char>?', (a, b) => a > b)
+mkCharCompareFn('char<=?', (a, b) => a <= b)
+mkCharCompareFn('char>=?', (a, b) => a >= b)
+mkCharCompareFn('char-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
+mkCharCompareFn('char-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
+mkCharCompareFn('char-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
+mkCharCompareFn('char-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
+mkCharCompareFn('char-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
 
 export const prelude_charPredicateFns: Record<string, (x: L.Char) => boolean> = {}
+
 function mkCharPredicatePrim(name: string, f: (a: string) => boolean): void {
   const fn = function (x: L.Char) {
     return f(x.value)
@@ -673,17 +675,17 @@ function mkCharPredicatePrim(name: string, f: (a: string) => boolean): void {
   prelude_charPredicateFns[`prelude_${name}`] = fn
 }
 
-mkCharPredicatePrim("char-alphabetic?", (a) => /\p{L}/gu.test(a))
-mkCharPredicatePrim("char-numeric?", (a) => /\p{N}/gu.test(a))
-mkCharPredicatePrim("char-whitespace?", (a) => /\p{Z}/gu.test(a))
-mkCharPredicatePrim("char-upper-case?", (a) => /\p{Lu}/gu.test(a))
-mkCharPredicatePrim("char-lower-case?", (a) => /\p{Ll}/gu.test(a))
+mkCharPredicatePrim('char-alphabetic?', (a) => /\p{L}/gu.test(a))
+mkCharPredicatePrim('char-numeric?', (a) => /\p{N}/gu.test(a))
+mkCharPredicatePrim('char-whitespace?', (a) => /\p{Z}/gu.test(a))
+mkCharPredicatePrim('char-upper-case?', (a) => /\p{Lu}/gu.test(a))
+mkCharPredicatePrim('char-lower-case?', (a) => /\p{Ll}/gu.test(a))
 
 export function prelude_digitalValue(c: L.Char): number {
   const n = parseInt(c.value, 10)
   if (isNaN(n)) {
     throw new L.ScamperError(
-      "Runtime",
+      'Runtime',
       `digit-value: ${c.value} is not a decimal digit`,
     )
   } else {
@@ -719,7 +721,7 @@ export function prelude_charFoldcase(c: L.Char): L.Char {
 // Strings (6.7)
 
 export function prelude_stringQ(x: any): boolean {
-  return typeof x === "string"
+  return typeof x === 'string'
 }
 
 // N.B., we don't implement the (make-string k) variant because our strings are
@@ -729,7 +731,7 @@ export function prelude_makeString(k: number, c: L.Char): string {
 }
 
 export function prelude_string(c: L.Char, ...cs: L.Char[]): string {
-  return [c, ...cs].map((e) => e.value).join("")
+  return [c, ...cs].map((e) => e.value).join('')
 }
 
 export function prelude_stringLength(s: string): number {
@@ -743,6 +745,7 @@ export function prelude_stringRef(s: string, i: number): L.Char {
 // N.B., string-set! is unimplemented since it is effectful.
 
 export const prelude_stringCompareFns: Record<string, (...args: string[]) => boolean> = {}
+
 function mkStringCompareFn(
   name: string,
   f: (a: string, b: string) => boolean,
@@ -754,16 +757,16 @@ function mkStringCompareFn(
   prelude_stringCompareFns[`prelude_${name}`] = fn
 }
 
-mkStringCompareFn("string=?", (a, b) => a === b)
-mkStringCompareFn("string<?", (a, b) => a < b)
-mkStringCompareFn("string>?", (a, b) => a > b)
-mkStringCompareFn("string<=?", (a, b) => a <= b)
-mkStringCompareFn("string>=?", (a, b) => a >= b)
-mkStringCompareFn("string-ci=?", (a, b) => a.toLowerCase() === b.toLowerCase())
-mkStringCompareFn("string-ci<?", (a, b) => a.toLowerCase() < b.toLowerCase())
-mkStringCompareFn("string-ci>?", (a, b) => a.toLowerCase() > b.toLowerCase())
-mkStringCompareFn("string-ci<=?", (a, b) => a.toLowerCase() <= b.toLowerCase())
-mkStringCompareFn("string-ci>=?", (a, b) => a.toLowerCase() >= b.toLowerCase())
+mkStringCompareFn('string=?', (a, b) => a === b)
+mkStringCompareFn('string<?', (a, b) => a < b)
+mkStringCompareFn('string>?', (a, b) => a > b)
+mkStringCompareFn('string<=?', (a, b) => a <= b)
+mkStringCompareFn('string>=?', (a, b) => a >= b)
+mkStringCompareFn('string-ci=?', (a, b) => a.toLowerCase() === b.toLowerCase())
+mkStringCompareFn('string-ci<?', (a, b) => a.toLowerCase() < b.toLowerCase())
+mkStringCompareFn('string-ci>?', (a, b) => a.toLowerCase() > b.toLowerCase())
+mkStringCompareFn('string-ci<=?', (a, b) => a.toLowerCase() <= b.toLowerCase())
+mkStringCompareFn('string-ci>=?', (a, b) => a.toLowerCase() >= b.toLowerCase())
 
 export function prelude_stringUpcase(s: string): string {
   return s.toUpperCase()
@@ -782,7 +785,7 @@ export function prelude_substring(s: string, start: number, end: number): string
 }
 
 export function prelude_stringAppend(...args: string[]): string {
-  return args.join("")
+  return args.join('')
 }
 
 // TODO: stringToList has a 3-argument version, too, that specifies
@@ -796,11 +799,11 @@ export function prelude_stringToList(s: string): L.List {
 }
 
 export function prelude_listToString(l: L.List): string {
-  let ret = ""
+  let ret = ''
   while (l !== null) {
     if (!L.isChar(l.head)) {
       throw new L.ScamperError(
-        "Runtime",
+        'Runtime',
         `list->string: list contains non-character element: ${L.typeOf(l.head)}`,
       )
     }
@@ -819,7 +822,7 @@ export function prelude_stringToVector(s: string): L.Char[] {
 }
 
 export function prelude_vectorToString(v: L.Char[]): string {
-  let ret = ""
+  let ret = ''
   for (let i = 0; i < v.length; i++) {
     ret += v[i].value
   }
@@ -910,8 +913,8 @@ export function prelude_listToVector(l: L.List): L.Value[] {
 export function prelude_vectorRange(...args: number[]): number[] {
   if (args.length === 0 || args.length > 3) {
     throw new L.ScamperError(
-      "Runtime",
-      "1, 2, or 3 numbers must be passed to function",
+      'Runtime',
+      '1, 2, or 3 numbers must be passed to function',
     )
   } else {
     const m = args.length === 1 ? 0 : args[0]
@@ -921,7 +924,7 @@ export function prelude_vectorRange(...args: number[]): number[] {
     // N.B., to prevent the internal infinite loop that would result
     // from having a zero step.
     if (step === 0) {
-      throw new L.ScamperError("Runtime", '"step" argument must be non-zero')
+      throw new L.ScamperError('Runtime', '"step" argument must be non-zero')
     }
     for (let i = m; step > 0 ? i < n : i > n; i += step) {
       arr.push(i)
@@ -955,7 +958,7 @@ export function prelude_stringMap(f: L.ScamperFn, s: string): string {
   for (let i = 0; i < s.length; i++) {
     chs.push(L.mkChar(s[i]))
   }
-  return chs.map((c) => (L.callScamperFn(f, c) as L.Char).value).join("")
+  return chs.map((c) => (L.callScamperFn(f, c) as L.Char).value).join('')
 }
 
 /**
@@ -1001,8 +1004,8 @@ export function prelude_map(f: L.ScamperFn, ...lsts: L.List[]): L.List {
     const lists = lsts.map(L.listToVector)
     if (!lists.map((l) => l.length).every((n) => n === lists[0].length)) {
       throw new L.ScamperError(
-        "Runtime",
-        "the lists passed to the function call do not have the same length",
+        'Runtime',
+        'the lists passed to the function call do not have the same length',
       )
     }
     const xs = transpose(lists)
@@ -1087,8 +1090,8 @@ export function prelude_vectorMap(f: L.ScamperFn, ...vecs: L.Value[][]): L.Value
   } else {
     if (!vecs.map((l) => l.length).every((n) => n === vecs[0].length)) {
       throw new L.ScamperError(
-        "Runtime",
-        "the vectors passed to the function call do not have the same length",
+        'Runtime',
+        'the vectors passed to the function call do not have the same length',
       )
     }
     const xs = transpose(vecs)
@@ -1152,7 +1155,7 @@ export function prelude_voidQ(x: any): boolean {
 }
 
 export function prelude_qq(): never {
-  throw new L.ScamperError("Runtime", "Hole encountered in program!")
+  throw new L.ScamperError('Runtime', 'Hole encountered in program!')
 }
 
 export function prelude_compose(...fss: (L.ScamperFn)[]): L.ScamperFn {
@@ -1177,8 +1180,8 @@ export function prelude_pipe(init: L.Value, ...fs: (L.ScamperFn)[]): L.Value {
 export function prelude_range(...args: number[]): L.List {
   if (args.length === 0 || args.length > 3) {
     throw new L.ScamperError(
-      "Runtime",
-      "1, 2, or 3 numbers must be passed to function",
+      'Runtime',
+      '1, 2, or 3 numbers must be passed to function',
     )
   } else {
     const m = args.length === 1 ? 0 : args[0]
@@ -1188,7 +1191,7 @@ export function prelude_range(...args: number[]): L.List {
     // N.B., to prevent the internal infinite loop that would result
     // from having a zero step.
     if (step === 0) {
-      throw new L.ScamperError("Runtime", '"step" argument must be non-zero')
+      throw new L.ScamperError('Runtime', '"step" argument must be non-zero')
     }
     for (let i = m; step > 0 ? i < n : i > n; i += step) {
       arr.push(i)
@@ -1240,14 +1243,14 @@ export function prelude_withHandler(
 // Additional Scamper-specific functions
 
 export function prelude_ignore(_v: L.Value): HTMLElement {
-  const ret = document.createElement("div")
-  ret.style.display = "non"
+  const ret = document.createElement('div')
+  ret.style.display = 'non'
   return ret
 }
 
 export function prelude_setMaximumRecursionDepth(n: number): any {
   return {
-    [L.scamperTag]: "set-maximum-recursion-depth",
+    [L.scamperTag]: 'set-maximum-recursion-depth',
     value: n,
   }
 }
@@ -1255,26 +1258,26 @@ export function prelude_setMaximumRecursionDepth(n: number): any {
 export function prelude_stringToWords(s: string): L.List {
   const words = s.split(/\s+/)
   for (let i = 0; i < words.length; i++) {
-    words[i] = words[i].replace(/[.,;?:!]$/, "")
+    words[i] = words[i].replace(/[.,;?:!]$/, '')
   }
   return L.vectorToList(words.filter((w) => w.length > 0))
 }
 
 interface Ref extends L.Struct {
-  [L.structKind]: "ref"
+  [L.structKind]: 'ref'
   value: L.Value
 }
 
 export function prelude_ref(v: L.Value): Ref {
   return {
-    [L.scamperTag]: "struct",
-    [L.structKind]: "ref",
+    [L.scamperTag]: 'struct',
+    [L.structKind]: 'ref',
     value: v,
   }
 }
 
 export function prelude_isRef(v: L.Value): boolean {
-  return L.isStructKind(v, "ref")
+  return L.isStructKind(v, 'ref')
 }
 
 export function prelude_deref(r: Ref): L.Value {

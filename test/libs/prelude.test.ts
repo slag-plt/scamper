@@ -1,9 +1,9 @@
-import { expect, test } from "vitest"
-import { runProgram } from "../harness"
+import { expect, test } from 'vitest'
+import { runProgram } from '../harness'
 
 ////////////////////////////////////////////////////////////////////////////////
 
-test("abs-quotient", async () => {
+test('abs-quotient', async () => {
   expect(
     await runProgram(`
 (abs 13)
@@ -21,23 +21,23 @@ test("abs-quotient", async () => {
 (quotient 2 2)
 `),
   ).toEqual([
-    "13",
-    "0.71",
-    "111",
-    "4",
-    "6.1",
-    "5",
-    "0.69",
-    "89",
-    "0",
-    "0.10000000000000009",
-    "3",
-    "100",
-    "1",
+    '13',
+    '0.71',
+    '111',
+    '4',
+    '6.1',
+    '5',
+    '0.69',
+    '89',
+    '0',
+    '0.10000000000000009',
+    '3',
+    '100',
+    '1',
   ])
 })
 
-test("append-reverse", async () => {
+test('append-reverse', async () => {
   expect(
     await runProgram(`
 (append (list "ab" "ba") (list 1 2 3) (list))
@@ -54,19 +54,19 @@ test("append-reverse", async () => {
 `),
   ).toEqual([
     '(list "ab" "ba" 1 2 3)',
-    "null",
+    'null',
     '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "Hello" "World")',
     '(list #t #t #t #t #f #f #f #f "a" "a")',
     '(list 10 10 10 10 10 #t #t "abab" "abab")',
     '(list "ba" "ab")',
-    "null",
+    'null',
     '(list "World" "Hello")',
     '(list "abab" "abab")',
-    "(list 3 2 1)",
+    '(list 3 2 1)',
   ])
 })
 
-test.skip("apply-map", async () => {
+test.skip('apply-map', async () => {
   expect(
     await runProgram(`
 (apply string-length (list "HelloWorld"))
@@ -80,19 +80,19 @@ test.skip("apply-map", async () => {
 (map cdr (list (pair 2 4) (pair "a" "b") (pair "first" "second")))
 `),
   ).toEqual([
-    "10",
+    '10',
     '(list "HelloWorld" "HelloWorld" "HelloWorld")',
     '(list "He" "" "oWor" "d")',
-    "55",
-    "450",
-    "(list 10 10 10 10 10 10 10 10 10 10)",
-    "(list #t #t #t #t)",
+    '55',
+    '450',
+    '(list 10 10 10 10 10 10 10 10 10 10)',
+    '(list #t #t #t #t)',
     '(list 2 "a" "first")',
     '(list 4 "b" "second")',
   ])
 })
 
-test("apply", async () => {
+test('apply', async () => {
   expect(
     await runProgram(`
 (apply (lambda (x) (+ x 1)) (list 1))
@@ -101,10 +101,10 @@ test("apply", async () => {
 
 (apply min (list 3 1 8 9 2 -5 0 3 5 1))
 `),
-  ).toEqual(["2", "7", "-5"])
+  ).toEqual(['2', '7', '-5'])
 })
 
-test("arithmetic", async () => {
+test('arithmetic', async () => {
   expect(
     await runProgram(`
 (+ 1 2 3 4 5)
@@ -116,10 +116,10 @@ test("arithmetic", async () => {
 (* 5)
 (/ 5)
 `),
-  ).toEqual(["15", "4", "120", "0.55", "5", "-5", "5", "0.2"])
+  ).toEqual(['15', '4', '120', '0.55', '5', '-5', '5', '0.2'])
 })
 
-test("asin-acos-atan", async () => {
+test('asin-acos-atan', async () => {
   expect(
     await runProgram(`
 (asin 0.4201670368266409)
@@ -151,37 +151,37 @@ test("asin-acos-atan", async () => {
 (atan 0)
 `),
   ).toEqual([
-    "0.43362938564082704",
-    "0.71",
-    "-1.0442571243572367",
-    "-0.8584073464102067",
-    "-0.1831853071795868",
-    "1.2831853071795865",
-    "-0.69",
-    "1.0354056994857892",
-    "0",
-    "0.4336293856408271",
-    "0.71",
-    "2.0973355292325566",
-    "2.2831853071795867",
-    "0.18318530717958706",
-    "1.2831853071795865",
-    "0.69",
-    "1.0354056994857892",
-    "0",
-    "0.43362938564082704",
-    "0.71",
-    "1.0442571243572367",
-    "0.8584073464102068",
-    "-0.1831853071795868",
-    "1.2831853071795865",
-    "-0.69",
-    "1.0354056994857894",
-    "0",
+    '0.43362938564082704',
+    '0.71',
+    '-1.0442571243572367',
+    '-0.8584073464102067',
+    '-0.1831853071795868',
+    '1.2831853071795865',
+    '-0.69',
+    '1.0354056994857892',
+    '0',
+    '0.4336293856408271',
+    '0.71',
+    '2.0973355292325566',
+    '2.2831853071795867',
+    '0.18318530717958706',
+    '1.2831853071795865',
+    '0.69',
+    '1.0354056994857892',
+    '0',
+    '0.43362938564082704',
+    '0.71',
+    '1.0442571243572367',
+    '0.8584073464102068',
+    '-0.1831853071795868',
+    '1.2831853071795865',
+    '-0.69',
+    '1.0354056994857894',
+    '0',
   ])
 })
 
-test("assoc", async () => {
+test('assoc', async () => {
   expect(
     await runProgram(`
 (define inventory (list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8)))
@@ -211,19 +211,19 @@ updated-inventory
 `),
   ).toEqual([
     '(list (pair "apples" 5) (pair "bananas" 2) (pair "oranges" 8))',
-    "#t",
-    "#f",
-    "5",
-    "2",
-    "8",
+    '#t',
+    '#f',
+    '5',
+    '2',
+    '8',
     '(list (pair "apples" 3) (pair "bananas" 2) (pair "oranges" 8))',
-    "3",
-    "2",
-    "8",
+    '3',
+    '2',
+    '8',
   ])
 })
 
-test("car-cdr", async () => {
+test('car-cdr', async () => {
   expect(
     await runProgram(`
 (car (pair #t #f))
@@ -239,20 +239,20 @@ test("car-cdr", async () => {
 
 `),
   ).toEqual([
-    "#t",
-    "1",
+    '#t',
+    '1',
     '"hi"',
     '"a"',
-    "0.003",
-    "2",
-    "#f",
+    '0.003',
+    '2',
+    '#f',
     '"bye"',
     '"b"',
-    "100",
+    '100',
   ])
 })
 
-test("char-comp", async () => {
+test('char-comp', async () => {
   expect(
     await runProgram(`
 (define c1 #\\c)
@@ -312,50 +312,50 @@ test("char-comp", async () => {
 (char-ci>=? c4 c4)
 `),
   ).toEqual([
-    "#t",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#t",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
   ])
 })
 
-test("char-ops", async () => {
+test('char-ops', async () => {
   expect(
     await runProgram(`
 (digit-value #\\5)
@@ -372,20 +372,20 @@ test("char-ops", async () => {
 (char-foldcase #\\A)
 `),
   ).toEqual([
-    "5",
-    "0",
-    "97",
-    "#\\a",
-    "#\\A",
-    "#\\A",
-    "#\\a",
-    "#\\a",
-    "#\\a",
-    "#\\a",
+    '5',
+    '0',
+    '97',
+    '#\\a',
+    '#\\A',
+    '#\\A',
+    '#\\a',
+    '#\\a',
+    '#\\a',
+    '#\\a',
   ])
 })
 
-test("char-pred", async () => {
+test('char-pred', async () => {
   expect(
     await runProgram(`
 (char-alphabetic? #\\c)
@@ -409,25 +409,25 @@ test("char-pred", async () => {
 (char-lower-case? #\\newline)
 `),
   ).toEqual([
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
   ])
 })
 
-test.skip("compose", async () => {
+test.skip('compose', async () => {
   expect(
     await runProgram(`
 (define inc
@@ -456,10 +456,10 @@ test.skip("compose", async () => {
 
 (string-reverse "hello")
 `),
-  ).toEqual(["2", "2", "6", "2", "6", '"heo"', "5", '"olleh"'])
+  ).toEqual(['2', '2', '6', '2', '6', '"heo"', '5', '"olleh"'])
 })
 
-test("cons-pair", async () => {
+test('cons-pair', async () => {
   expect(
     await runProgram(`
 (cons #t #f)
@@ -474,20 +474,20 @@ test("cons-pair", async () => {
 (pair 0.003 100)
 `),
   ).toEqual([
-    "Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list",
-    "Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list",
-    "Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list",
-    "Runtime error [4:1-4:14]: (cons) The second argument to cons should be a list",
-    "Runtime error [5:1-5:16]: (cons) The second argument to cons should be a list",
-    "(pair 1 2)",
-    "(pair #t #f)",
+    'Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list',
+    'Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list',
+    'Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list',
+    'Runtime error [4:1-4:14]: (cons) The second argument to cons should be a list',
+    'Runtime error [5:1-5:16]: (cons) The second argument to cons should be a list',
+    '(pair 1 2)',
+    '(pair #t #f)',
     '(pair "hi" "bye")',
     '(pair "a" "b")',
-    "(pair 0.003 100)",
+    '(pair 0.003 100)',
   ])
 })
 
-test("equal", async () => {
+test('equal', async () => {
   expect(
     await runProgram(`
 (equal? 4 4)
@@ -497,22 +497,22 @@ test("equal", async () => {
 (equal? 4 "4")
 (equal? 4 4.0)
 `),
-  ).toEqual(["#t", "#f", "#t", "#f", "#f", "#t"])
+  ).toEqual(['#t', '#f', '#t', '#f', '#f', '#t'])
 })
 
-test("error-qq", async () => {
+test('error-qq', async () => {
   expect(
     await runProgram(`
 (error "existing")
 (+ 5 (??))
 `),
   ).toEqual([
-    "Runtime error [1:1-1:18]: (error) existing",
-    "Runtime error [2:6-2:9]: (??) Hole encountered in program!",
+    'Runtime error [1:1-1:18]: (error) existing',
+    'Runtime error [2:6-2:9]: (??) Hole encountered in program!',
   ])
 })
 
-test("exp-log", async () => {
+test('exp-log', async () => {
   expect(
     await runProgram(`
 (exp 13)
@@ -532,25 +532,25 @@ test("exp-log", async () => {
 (log 6.1)
 `),
   ).toEqual([
-    "442413.3920089205",
-    "2.0339912586467506",
-    "1.609487066961518e+48",
-    "54.598150033144236",
-    "445.85777008251677",
-    "0.006737946999085467",
-    "0.5015760690660556",
-    "4.489612819174345e+38",
-    "1",
-    "0.9048374180359595",
-    "2.5649493574615367",
-    "-0.342490308946776",
-    "4.709530201312334",
-    "1.3862943611198906",
-    "1.8082887711792655",
+    '442413.3920089205',
+    '2.0339912586467506',
+    '1.609487066961518e+48',
+    '54.598150033144236',
+    '445.85777008251677',
+    '0.006737946999085467',
+    '0.5015760690660556',
+    '4.489612819174345e+38',
+    '1',
+    '0.9048374180359595',
+    '2.5649493574615367',
+    '-0.342490308946776',
+    '4.709530201312334',
+    '1.3862943611198906',
+    '1.8082887711792655',
   ])
 })
 
-test("expt", async () => {
+test('expt', async () => {
   expect(
     await runProgram(`
 (expt 7 2)
@@ -559,13 +559,13 @@ test("expt", async () => {
 (expt 2.0 2)
 (expt 3.0 3.1)
 `),
-  ).toEqual(["49", "0.4472135954999579", "100", "4", "30.135325698915423"])
+  ).toEqual(['49', '0.4472135954999579', '100', '4', '30.135325698915423'])
 })
 
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("filter-fold-reduce", async () => {
+test.skip('filter-fold-reduce', async () => {
   expect(
     await runProgram(`
 (filter string? (list 4 "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" #t "HelloWorld" "HelloWorld" "HelloWorld" list))
@@ -581,19 +581,19 @@ test.skip("filter-fold-reduce", async () => {
 `),
   ).toEqual([
     '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
-    "(list [Function: string-length] [Function: list?] [Function: +] [Function: -] [Function: =] [Function: string?])",
-    "(list null)",
-    "(list null (list 4 5 6))",
-    "15",
-    "-35",
-    "15",
-    "-35",
-    "3",
-    "3",
+    '(list [Function: string-length] [Function: list?] [Function: +] [Function: -] [Function: =] [Function: string?])',
+    '(list null)',
+    '(list null (list 4 5 6))',
+    '15',
+    '-35',
+    '15',
+    '-35',
+    '3',
+    '3',
   ])
 })
 
-test("floor-ceiling", async () => {
+test('floor-ceiling', async () => {
   expect(
     await runProgram(`
 (floor 0.71)
@@ -609,10 +609,10 @@ test("floor-ceiling", async () => {
 (ceiling 0.10000000000000009)
 (ceiling 0)
 `),
-  ).toEqual(["0", "111", "6", "0", "0", "0", "1", "111", "7", "1", "1", "0"])
+  ).toEqual(['0', '111', '6', '0', '0', '0', '1', '111', '7', '1', '1', '0'])
 })
 
-test("gt-geq", async () => {
+test('gt-geq', async () => {
   expect(
     await runProgram(`
 (> 4 5)
@@ -625,10 +625,10 @@ test("gt-geq", async () => {
 (>= 0.02 0.03)
 (>= 0.01 0.02)
 `),
-  ).toEqual(["#f", "#t", "#f", "#f", "#t", "#t", "#t", "#f", "#f"])
+  ).toEqual(['#f', '#t', '#f', '#f', '#t', '#t', '#t', '#f', '#f'])
 })
 
-test("implies-xor", async () => {
+test('implies-xor', async () => {
   expect(
     await runProgram(`
 (implies #t #f)
@@ -640,10 +640,10 @@ test("implies-xor", async () => {
 (xor #t #t)
 (xor #f #t)
 `),
-  ).toEqual(["#f", "#t", "#t", "#t", "#t", "#f", "#f", "#t"])
+  ).toEqual(['#f', '#t', '#t', '#t', '#t', '#f', '#f', '#t'])
 })
 
-test("index-of", async () => {
+test('index-of', async () => {
   expect(
     await runProgram(`
 (define l (list "a" "b" "c" "d" "e"))
@@ -655,10 +655,10 @@ test("index-of", async () => {
 (index-of l "e")
 (index-of l "f")
 `),
-  ).toEqual(["0", "1", "2", "3", "4", "-1"])
+  ).toEqual(['0', '1', '2', '3', '4', '-1'])
 })
 
-test("integer", async () => {
+test('integer', async () => {
   expect(
     await runProgram(`
 (integer? 5)
@@ -667,18 +667,18 @@ test("integer", async () => {
 (integer? (/ 10 2))
 (integer? 5.5)
 `),
-  ).toEqual(["#t", "#t", "#f", "#t", "#f"])
+  ).toEqual(['#t', '#t', '#f', '#t', '#f'])
 })
 
-test("length", async () => {
+test('length', async () => {
   expect(
     await runProgram(`
 (length (list 28 0 "know"))
 `),
-  ).toEqual(["3"])
+  ).toEqual(['3'])
 })
 
-test("list-makeList", async () => {
+test('list-makeList', async () => {
   expect(
     await runProgram(`
 (list "ab" "ba")
@@ -695,20 +695,20 @@ test("list-makeList", async () => {
 `),
   ).toEqual([
     '(list "ab" "ba")',
-    "(list 1 2 3)",
-    "null",
-    "(list #t #t #t #t)",
-    "(list #f #f #f #f)",
+    '(list 1 2 3)',
+    'null',
+    '(list #t #t #t #t)',
+    '(list #f #f #f #f)',
     '(list "a" "a")',
     '(list "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld")',
-    "(list 10 10 10 10 10)",
-    "(list #t #t)",
+    '(list 10 10 10 10 10)',
+    '(list #t #t)',
     '(list "abab" "abab")',
-    "null",
+    'null',
   ])
 })
 
-test("list-ref", async () => {
+test('list-ref', async () => {
   expect(
     await runProgram(`
 (define l (list 1 2 3 4 5))
@@ -719,10 +719,10 @@ test("list-ref", async () => {
 (list-ref l 3)
 (list-ref l 4)
 `),
-  ).toEqual(["1", "2", "3", "4", "5"])
+  ).toEqual(['1', '2', '3', '4', '5'])
 })
 
-test("list-tail", async () => {
+test('list-tail', async () => {
   expect(
     await runProgram(`
 (define l (list 1 2 3 4 5))
@@ -740,16 +740,16 @@ test("list-tail", async () => {
 (list-drop l 5)
 `),
   ).toEqual([
-    "(list 1 2 3 4 5)",
-    "(list 4 5)",
-    "null",
-    "(list 1 2 3 4 5)",
-    "(list 4 5)",
-    "null",
+    '(list 1 2 3 4 5)',
+    '(list 4 5)',
+    'null',
+    '(list 1 2 3 4 5)',
+    '(list 4 5)',
+    'null',
   ])
 })
 
-test("list-take", async () => {
+test('list-take', async () => {
   expect(
     await runProgram(`
 (define l (list 1 2 3 4 5))
@@ -760,10 +760,10 @@ test("list-take", async () => {
 
 (list-take l 5)
 `),
-  ).toEqual(["null", "(list 1 2 3)", "(list 1 2 3 4 5)"])
+  ).toEqual(['null', '(list 1 2 3)', '(list 1 2 3 4 5)'])
 })
 
-test("lt-leq", async () => {
+test('lt-leq', async () => {
   expect(
     await runProgram(`
 (< 4 5)
@@ -776,10 +776,10 @@ test("lt-leq", async () => {
 (<= 0.02 0.02)
 (<= 0.01 0.02)
 `),
-  ).toEqual(["#t", "#f", "#t", "#t", "#t", "#f", "#f", "#t", "#t"])
+  ).toEqual(['#t', '#f', '#t', '#t', '#t', '#f', '#f', '#t', '#t'])
 })
 
-test("min-max", async () => {
+test('min-max', async () => {
   expect(
     await runProgram(`
 (min 4 7 2)
@@ -793,10 +793,10 @@ test("min-max", async () => {
 (max 2.0 2)
 (max 3.0 3.1)
 `),
-  ).toEqual(["2", "0.01", "1", "2", "3", "7", "0.5", "100", "2", "3.1"])
+  ).toEqual(['2', '0.01', '1', '2', '3', '7', '0.5', '100', '2', '3.1'])
 })
 
-test("nanQ", async () => {
+test('nanQ', async () => {
   expect(
     await runProgram(`
 (nan? "nan")
@@ -805,10 +805,10 @@ test("nanQ", async () => {
 (nan? 0.0)
 (nan? -3)
 `),
-  ).toEqual(["#f", "#f", "#f", "#f", "#f"])
+  ).toEqual(['#f', '#f', '#f', '#f', '#f'])
 })
 
-test("nand-nor", async () => {
+test('nand-nor', async () => {
   expect(
     await runProgram(`
 (nand #t #f #t #f #t #f)
@@ -822,10 +822,10 @@ test("nand-nor", async () => {
 (nor #t #f)
 (nor #t #f #f #f)
 `),
-  ).toEqual(["#t", "#t", "#f", "#t", "#t", "#f", "#t", "#f", "#f", "#f"])
+  ).toEqual(['#t', '#t', '#f', '#t', '#t', '#f', '#t', '#f', '#f', '#f'])
 })
 
-test("not-boolean", async () => {
+test('not-boolean', async () => {
   // N.B., unlike standard Scheme (where any non-#f value is truthy), we are
   // stricter: `not`'s docstring declares its param `boolean?`, so a
   // non-boolean argument is a contract violation, enforced by the
@@ -845,18 +845,18 @@ test("not-boolean", async () => {
 (boolean? 1)
 `),
   ).toEqual([
-    "#f",
-    "#t",
-    "Runtime error [274:1-274:35]: (error) expected a boolean, received number",
-    "#t",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
+    '#f',
+    '#t',
+    'Runtime error [274:1-274:35]: (error) expected a boolean, received number',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
   ])
 })
 
-test("nullQ-listQ", async () => {
+test('nullQ-listQ', async () => {
   expect(
     await runProgram(`
 (null? (list))
@@ -870,10 +870,10 @@ test("nullQ-listQ", async () => {
 (list? (list ""))
 (list? (pair "hello" "world"))
 `),
-  ).toEqual(["#t", "#f", "#f", "#f", "#t", "#t", "#t", "#t", "#t", "#f"])
+  ).toEqual(['#t', '#f', '#f', '#f', '#t', '#t', '#t', '#t', '#t', '#f'])
 })
 
-test("number", async () => {
+test('number', async () => {
   expect(
     await runProgram(`
 (number? 56)
@@ -882,10 +882,10 @@ test("number", async () => {
 (number? (/ 56 2))
 (number? 56.0)
 `),
-  ).toEqual(["#t", "#f", "#t", "#t", "#t"])
+  ).toEqual(['#t', '#f', '#t', '#t', '#t'])
 })
 
-test("numeq", async () => {
+test('numeq', async () => {
   expect(
     await runProgram(`
 (= 4 5)
@@ -898,10 +898,10 @@ test("numeq", async () => {
 (= 0.02 0.03)
 (= 0.01 0.01)
 `),
-  ).toEqual(["#f", "#t", "#f", "#f", "#t", "#f", "#f", "#f", "#t"])
+  ).toEqual(['#f', '#t', '#f', '#f', '#t', '#f', '#f', '#f', '#t'])
 })
 
-test("odd-even", async () => {
+test('odd-even', async () => {
   expect(
     await runProgram(`
 (odd? 2)
@@ -915,10 +915,10 @@ test("odd-even", async () => {
 (even? 8)
 (even? 0.0)
 `),
-  ).toEqual(["#f", "#t", "#f", "#t", "#f", "#t", "#f", "#t", "#t", "#t"])
+  ).toEqual(['#f', '#t', '#f', '#t', '#f', '#t', '#f', '#t', '#t', '#t'])
 })
 
-test("pairQ", async () => {
+test('pairQ', async () => {
   expect(
     await runProgram(`
 (pair? (pair #t #f))
@@ -927,10 +927,10 @@ test("pairQ", async () => {
 (pair? (pair "a" "b"))
 (pair? (/ 100 1))
 `),
-  ).toEqual(["#t", "#f", "#f", "#t", "#f"])
+  ).toEqual(['#t', '#f', '#f', '#t', '#f'])
 })
 
-test("plus-minus", async () => {
+test('plus-minus', async () => {
   expect(
     await runProgram(`
 (+ 4 7 2)
@@ -945,20 +945,20 @@ test("plus-minus", async () => {
 (- 3.0 3.1)
 `),
   ).toEqual([
-    "13",
-    "0.71",
-    "111",
-    "4",
-    "6.1",
-    "-5",
-    "-0.69",
-    "89",
-    "0",
-    "-0.10000000000000009",
+    '13',
+    '0.71',
+    '111',
+    '4',
+    '6.1',
+    '-5',
+    '-0.69',
+    '89',
+    '0',
+    '-0.10000000000000009',
   ])
 })
 
-test("positive-negative", async () => {
+test('positive-negative', async () => {
   expect(
     await runProgram(`
 (positive? -0.002)
@@ -972,13 +972,13 @@ test("positive-negative", async () => {
 (negative? 0)
 (negative? (- 7 4))
 `),
-  ).toEqual(["#f", "#f", "#f", "#t", "#t", "#f", "#t", "#t", "#f", "#f"])
+  ).toEqual(['#f', '#f', '#f', '#t', '#t', '#f', '#t', '#t', '#f', '#f'])
 })
 
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("random", async () => {
+test.skip('random', async () => {
   expect(
     await runProgram(`
 (define max-value 5)
@@ -1006,10 +1006,10 @@ test.skip("random", async () => {
     )
 
 `),
-  ).toEqual(["#t", "#t"])
+  ).toEqual(['#t', '#t'])
 })
 
-test("range", async () => {
+test('range', async () => {
   expect(
     await runProgram(`
 (range 10)
@@ -1035,17 +1035,17 @@ test("range", async () => {
 (range 10 0 -3)
 `),
   ).toEqual([
-    "(list 0 1 2 3 4 5 6 7 8 9)",
-    "(list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)",
-    "null",
-    "null",
-    "(list 5 6 7 8 9)",
-    "(list -3 -2 -1 0 1 2 3 4)",
-    "null",
-    "null",
-    "(list 0 2 4 6 8)",
-    "(list 10 9 8 7 6)",
-    "(list 10 7 4 1)",
+    '(list 0 1 2 3 4 5 6 7 8 9)',
+    '(list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)',
+    'null',
+    'null',
+    '(list 5 6 7 8 9)',
+    '(list -3 -2 -1 0 1 2 3 4)',
+    'null',
+    'null',
+    '(list 0 2 4 6 8)',
+    '(list 10 9 8 7 6)',
+    '(list 10 7 4 1)',
   ])
 })
 
@@ -1053,7 +1053,7 @@ test("range", async () => {
 // fixed params (beg, end) when prelude_vectorRange is fully variadic like
 // range -- the 1- and 2-arg calls below used to fail with a spurious arity
 // error before the contract wrapper's arity matched the implementation.
-test("vector-range", async () => {
+test('vector-range', async () => {
   expect(
     await runProgram(`
 (vector-range 10)
@@ -1079,21 +1079,21 @@ test("vector-range", async () => {
 (vector-range 10 0 -3)
 `),
   ).toEqual([
-    "(vector 0 1 2 3 4 5 6 7 8 9)",
-    "(vector 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)",
-    "(vector)",
-    "(vector)",
-    "(vector 5 6 7 8 9)",
-    "(vector -3 -2 -1 0 1 2 3 4)",
-    "(vector)",
-    "(vector)",
-    "(vector 0 2 4 6 8)",
-    "(vector 10 9 8 7 6)",
-    "(vector 10 7 4 1)",
+    '(vector 0 1 2 3 4 5 6 7 8 9)',
+    '(vector 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49)',
+    '(vector)',
+    '(vector)',
+    '(vector 5 6 7 8 9)',
+    '(vector -3 -2 -1 0 1 2 3 4)',
+    '(vector)',
+    '(vector)',
+    '(vector 0 2 4 6 8)',
+    '(vector 10 9 8 7 6)',
+    '(vector 10 7 4 1)',
   ])
 })
 
-test("real", async () => {
+test('real', async () => {
   expect(
     await runProgram(`
 (real? 56)
@@ -1102,10 +1102,10 @@ test("real", async () => {
 (real? (/ 50 2))
 (real? (/ 51 2))
 `),
-  ).toEqual(["#f", "#t", "#f", "#f", "#t"])
+  ).toEqual(['#f', '#t', '#f', '#f', '#t'])
 })
 
-test("remainder-modulo", async () => {
+test('remainder-modulo', async () => {
   expect(
     await runProgram(`
 (remainder 7 2)
@@ -1115,10 +1115,10 @@ test("remainder-modulo", async () => {
 (modulo 35 9)
 (modulo 2 2)
 `),
-  ).toEqual(["1", "8", "0", "1", "8", "0"])
+  ).toEqual(['1', '8', '0', '1', '8', '0'])
 })
 
-test("sin-cos-tan", async () => {
+test('sin-cos-tan', async () => {
   expect(
     await runProgram(`
 (sin 13)
@@ -1150,37 +1150,37 @@ test("sin-cos-tan", async () => {
 (tan 0)
 `),
   ).toEqual([
-    "0.4201670368266409",
-    "0.6518337710215366",
-    "-0.8645514486106083",
-    "-0.7568024953079282",
-    "-0.18216250427209588",
-    "0.9589242746631385",
-    "-0.6365371822219679",
-    "0.8600694058124532",
-    "0",
-    "0.9074467814501962",
-    "0.7583618759905082",
-    "-0.5025443191453852",
-    "-0.6536436208636119",
-    "0.9832684384425845",
-    "0.28366218546322625",
-    "0.7712460149971067",
-    "0.5101770449416689",
-    "1",
-    "0.4630211329364896",
-    "0.8595286652169407",
-    "1.7203486651303583",
-    "1.1578212823495777",
-    "-0.18526223068913525",
-    "3.380515006246586",
-    "-0.8253361052690248",
-    "1.6858253705060158",
-    "0",
+    '0.4201670368266409',
+    '0.6518337710215366',
+    '-0.8645514486106083',
+    '-0.7568024953079282',
+    '-0.18216250427209588',
+    '0.9589242746631385',
+    '-0.6365371822219679',
+    '0.8600694058124532',
+    '0',
+    '0.9074467814501962',
+    '0.7583618759905082',
+    '-0.5025443191453852',
+    '-0.6536436208636119',
+    '0.9832684384425845',
+    '0.28366218546322625',
+    '0.7712460149971067',
+    '0.5101770449416689',
+    '1',
+    '0.4630211329364896',
+    '0.8595286652169407',
+    '1.7203486651303583',
+    '1.1578212823495777',
+    '-0.18526223068913525',
+    '3.380515006246586',
+    '-0.8253361052690248',
+    '1.6858253705060158',
+    '0',
   ])
 })
 
-test("square-sqrt", async () => {
+test('square-sqrt', async () => {
   expect(
     await runProgram(`
 (square 0.71)
@@ -1197,22 +1197,22 @@ test("square-sqrt", async () => {
 (sqrt 0)
 `),
   ).toEqual([
-    "0.5041",
-    "12321",
-    "37.209999999999994",
-    "0.4760999999999999",
-    "0.010000000000000018",
-    "0",
-    "0.71",
-    "111",
-    "6.1",
-    "0.6900000000000001",
-    "0.1",
-    "0",
+    '0.5041',
+    '12321',
+    '37.209999999999994',
+    '0.4760999999999999',
+    '0.010000000000000018',
+    '0',
+    '0.71',
+    '111',
+    '6.1',
+    '0.6900000000000001',
+    '0.1',
+    '0',
   ])
 })
 
-test("string-comp", async () => {
+test('string-comp', async () => {
   expect(
     await runProgram(`
 (define s1 "hello world!")
@@ -1272,50 +1272,50 @@ test("string-comp", async () => {
 (string-ci>=? s4 s4)
 `),
   ).toEqual([
-    "#t",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#t",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#f",
-    "#f",
-    "#f",
-    "#f",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
-    "#f",
-    "#t",
-    "#t",
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
   ])
 })
 
-test("string-length-ref", async () => {
+test('string-length-ref', async () => {
   expect(
     await runProgram(`
 (string-length "HelloWorld")
@@ -1330,23 +1330,23 @@ test("string-length-ref", async () => {
 (string-ref "1234567" 5)
 `),
   ).toEqual([
-    "10",
-    "16",
-    "0",
-    "8",
-    "7",
-    "#\\r",
-    "#\\space",
-    "#\\space",
-    "#\\1",
-    "#\\6",
+    '10',
+    '16',
+    '0',
+    '8',
+    '7',
+    '#\\r',
+    '#\\space',
+    '#\\space',
+    '#\\1',
+    '#\\6',
   ])
 })
 
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("string-map", async () => {
+test.skip('string-map', async () => {
   expect(
     await runProgram(`
 (string-map char-upcase "hello world")
@@ -1356,7 +1356,7 @@ test.skip("string-map", async () => {
   ).toEqual(['"HELLO WORLD"', '""'])
 })
 
-test("string-number-conversions", async () => {
+test('string-number-conversions', async () => {
   expect(
     await runProgram(`
 (number->string 9)
@@ -1376,15 +1376,15 @@ test("string-number-conversions", async () => {
     '"100"',
     '"4"',
     '"30.135325698915423"',
-    "9",
-    "0.4472135954999579",
-    "100",
-    "4",
-    "30.135325698915423",
+    '9',
+    '0.4472135954999579',
+    '100',
+    '4',
+    '30.135325698915423',
   ])
 })
 
-test("string-ops", async () => {
+test('string-ops', async () => {
   expect(
     await runProgram(`
 (make-string 5 #\\a)
@@ -1403,12 +1403,12 @@ test("string-ops", async () => {
     '"accd01-e"',
     '"accd01-e"',
     '"lo w"',
-    "(list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d)",
+    '(list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d)',
     '"hello world"',
   ])
 })
 
-test("string-split-append", async () => {
+test('string-split-append', async () => {
   expect(
     await runProgram(`
 (string-split "HelloWorld" "w")
@@ -1423,7 +1423,7 @@ test("string-split-append", async () => {
   ).toEqual([
     '(list "HelloWorld")',
     '(list "Hello " "o" "" " World")',
-    "null",
+    'null',
     '(list "00" "" "00" "" "")',
     '(list "1234" "67")',
     '"HelloWorldHello woww World"',
@@ -1432,7 +1432,7 @@ test("string-split-append", async () => {
   ])
 })
 
-test("stringQ-procedure", async () => {
+test('stringQ-procedure', async () => {
   expect(
     await runProgram(`
 (string? (pair #t #f))
@@ -1446,10 +1446,10 @@ test("stringQ-procedure", async () => {
 (procedure? +)
 (procedure? string-length)
 `),
-  ).toEqual(["#f", "#f", "#t", "#t", "#f", "#f", "#t", "#f", "#t", "#t"])
+  ).toEqual(['#f', '#f', '#t', '#t', '#f', '#f', '#t', '#f', '#t', '#t'])
 })
 
-test("times-div", async () => {
+test('times-div', async () => {
   expect(
     await runProgram(`
 (* 4 7 2)
@@ -1464,20 +1464,20 @@ test("times-div", async () => {
 (/ 3.0 3.1)
 `),
   ).toEqual([
-    "56",
-    "0.001",
-    "1000",
-    "4",
-    "9.3",
-    "0.2857142857142857",
-    "0.09999999999999999",
-    "10",
-    "1",
-    "0.9677419354838709",
+    '56',
+    '0.001',
+    '1000',
+    '4',
+    '9.3',
+    '0.2857142857142857',
+    '0.09999999999999999',
+    '10',
+    '1',
+    '0.9677419354838709',
   ])
 })
 
-test("truncate-round", async () => {
+test('truncate-round', async () => {
   expect(
     await runProgram(`
 (truncate 0.71)
@@ -1493,13 +1493,13 @@ test("truncate-round", async () => {
 (round 0.10000000000000009)
 (round 0)
 `),
-  ).toEqual(["0", "111", "6", "0", "0", "0", "1", "111", "6", "1", "0", "0"])
+  ).toEqual(['0', '111', '6', '0', '0', '0', '1', '111', '6', '1', '0', '0'])
 })
 
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("vector-immutable", async () => {
+test.skip('vector-immutable', async () => {
   expect(
     await runProgram(`
 (define empty (vector))
@@ -1543,26 +1543,26 @@ append-result
 (vector-append (vector) (vector 1 2) (vector) (vector 3) (vector) (vector 4 5))
 `),
   ).toEqual([
-    "(vector)",
-    "#t",
-    "0",
-    "(vector 1 2 3 4 5)",
-    "#t",
-    "5",
-    "3",
-    "5",
-    "(vector 2 3 4 5 6)",
-    "(vector 0 5 10 15 20 25 30)",
-    "(vector 0 15 30)",
-    "(vector 4 10 18)",
-    "10",
-    "(vector 1 2 3 4 5 6 7 8 9 10)",
-    "(vector)",
-    "(vector 1 2 3 4 5)",
+    '(vector)',
+    '#t',
+    '0',
+    '(vector 1 2 3 4 5)',
+    '#t',
+    '5',
+    '3',
+    '5',
+    '(vector 2 3 4 5 6)',
+    '(vector 0 5 10 15 20 25 30)',
+    '(vector 0 15 30)',
+    '(vector 4 10 18)',
+    '10',
+    '(vector 1 2 3 4 5 6 7 8 9 10)',
+    '(vector)',
+    '(vector 1 2 3 4 5)',
   ])
 })
 
-test("vector-mutable", async () => {
+test('vector-mutable', async () => {
   expect(
     await runProgram(`
 (define sample-vector (vector "alpha" "beta" "gamma" "delta" "epsilon"))
@@ -1578,13 +1578,13 @@ sample-vector
 `),
   ).toEqual([
     '(vector "alpha" "beta" "gamma" "delta" "epsilon")',
-    "void",
+    'void',
     '(vector "alpha" "beta" "zeta" "delta" "epsilon")',
-    "void",
+    'void',
     '(vector "foo" "beta" "zeta" "delta" "epsilon")',
-    "void",
+    'void',
     '(vector "foo" "beta" -38.72 "delta" "epsilon")',
-    "void",
+    'void',
     '(vector "woot" "woot" "woot" "woot" "woot")',
   ])
 })
@@ -1592,7 +1592,7 @@ sample-vector
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip("with-handler", async () => {
+test.skip('with-handler', async () => {
   expect(
     await runProgram(`
 (with-handler
@@ -1606,10 +1606,10 @@ test.skip("with-handler", async () => {
   1 2 3)
 
 `),
-  ).toEqual(["6", '"This is the error that was generated: oh no, an error!"'])
+  ).toEqual(['6', '"This is the error that was generated: oh no, an error!"'])
 })
 
-test("zero", async () => {
+test('zero', async () => {
   expect(
     await runProgram(`
 (zero? 0.002)
@@ -1618,5 +1618,5 @@ test("zero", async () => {
 (zero? 0)
 (zero? 1)
 `),
-  ).toEqual(["#f", "#f", "#t", "#t", "#f"])
+  ).toEqual(['#f', '#f', '#t', '#t', '#f'])
 })

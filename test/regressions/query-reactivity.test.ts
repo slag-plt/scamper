@@ -1,15 +1,15 @@
-import { computed, defineComponent, shallowRef } from "vue"
-import { flushPromises, mount } from "@vue/test-utils"
-import { afterEach, describe, expect, test, vi } from "vitest"
-import { LoggingChannel, Range, ReportError } from "../../src/lpm"
-import Scamper, { initialize } from "../../src/scamper"
-import type { EditorAccessor } from "../../src/web/composables/editor-context"
+import { computed, defineComponent, shallowRef } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { LoggingChannel, Range, ReportError } from '../../src/lpm'
+import Scamper, { initialize } from '../../src/scamper'
+import type { EditorAccessor } from '../../src/app/web/composables/editor-context'
 import {
   provideScamperSession,
   type ScamperSession,
-} from "../../src/web/composables/use-scamper-session"
-import type { ResultsPaneType } from "../../src/web/composables/use-results-pane"
-import { makeMockCodeMirrorEditorAdapter } from "../stubs/mock-code-mirror-editor-adapter"
+} from '../../src/app/web/composables/use-scamper-session'
+import type { ResultsPaneType } from '../../src/app/web/composables/use-results-pane'
+import { makeMockCodeMirrorEditorAdapter } from '../stubs/mock-code-mirror-editor-adapter'
 
 await initialize()
 
@@ -24,7 +24,7 @@ function makePane(): ResultsPaneType {
  * Root cause: async SimpleErrorChannel.report() did not trigger Vue updates.
  * Fix: wrap the channel in reactive() so err.errors is tracked.
  */
-describe("query modal reactivity regression", () => {
+describe('query modal reactivity regression', () => {
   let session!: ScamperSession
   let reportQueryResult: ((value: number) => void) | null = null
 
@@ -42,12 +42,12 @@ describe("query modal reactivity regression", () => {
         const paneRef = shallowRef<ResultsPaneType | null>(makePane())
         session = provideScamperSession(paneRef, { editor })
         const scamper = Scamper.getInstance()
-        vi.spyOn(scamper, "query").mockImplementation(({ err }) => {
+        vi.spyOn(scamper, 'query').mockImplementation(({ err }) => {
           reportQueryResult = (value: number) => {
             err.report(new ReportError(value, Range.none))
           }
           scamper.registerQueryEntry({
-            id: "query-test",
+            id: 'query-test',
             err,
             queriedRange: Range.of(0, 0, 0, 0, 0, 0),
             done: Promise.resolve(),
@@ -74,17 +74,17 @@ describe("query modal reactivity regression", () => {
     return mount(Host)
   }
 
-  test("async query report updates the modal without a scroll/repaint", async () => {
+  test('async query report updates the modal without a scroll/repaint', async () => {
     const wrapper = mountQueryStatusHost()
 
     await session.query()
     await flushPromises()
-    expect(wrapper.get('[data-testid="query-status"]').text()).toBe("pending")
+    expect(wrapper.get('[data-testid="query-status"]').text()).toBe('pending')
 
     expect(reportQueryResult).not.toBeNull()
     reportQueryResult?.(42)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="query-status"]').text()).toBe("done:1")
+    expect(wrapper.get('[data-testid="query-status"]').text()).toBe('done:1')
   })
 })

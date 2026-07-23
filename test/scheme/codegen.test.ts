@@ -14,7 +14,7 @@ async function checkMachineOutput (src: string, expected: L.Value[]) {
   // entry point for running Scamper programs
   while (!fiber.isDone()) {
     const res = fiber.step()
-    if (res.tag === "display") {
+    if (res.tag === 'display') {
       out.send(fiber.lastResult)
     }
   }

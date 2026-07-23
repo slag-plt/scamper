@@ -1,5 +1,5 @@
 // TODO: will eventually replace scamper.ts and scamper-vue.ts
-import { builtinLibs, initializeLibs } from "./lib"
+import { builtinLibs, initializeLibs } from './lib'
 import {
   Env,
   ErrorChannel,
@@ -7,10 +7,10 @@ import {
   OutputChannel,
   Range,
   rangesEqual,
-} from "./lpm"
-import { Fiber } from "./lpm/fiber"
-import { Scheduler, SchedulerId } from "./lpm/scheduler"
-import { compile } from "./scheme"
+} from './lpm'
+import { Fiber } from './lpm/fiber'
+import { Scheduler, SchedulerId } from './lpm/scheduler'
+import { compile } from './scheme'
 
 interface ExecutionConfig {
   src: string
@@ -47,8 +47,8 @@ export interface QueryEntry {
 
 export type QueryMap = ReadonlyMap<number, readonly QueryEntry[]>
 
-export const QUERIES_CHANGED = "scamper:querieschanged"
-export const QUERY_EXPANDED_CHANGED = "scamper:queryexpandedchanged"
+export const QUERIES_CHANGED = 'scamper:querieschanged'
+export const QUERY_EXPANDED_CHANGED = 'scamper:queryexpandedchanged'
 
 let defaultEnv: Env | undefined
 let initialized = false
@@ -67,9 +67,9 @@ export async function initialize(): Promise<void> {
   await initializeLibs()
   defaultEnv = Env.empty
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    .extendWithImport("runtime", builtinLibs.get("runtime")!)
+    .extendWithImport('runtime', builtinLibs.get('runtime')!)
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    .extendWithImport("prelude", builtinLibs.get("prelude")!)
+    .extendWithImport('prelude', builtinLibs.get('prelude')!)
   initialized = true
 }
 
@@ -91,8 +91,8 @@ export async function initialize(): Promise<void> {
 // module mocks (`vi.mock(...)`) have been registered; running it from there
 // grabs real (unmocked) transitive dependencies -- notably src/fs/opfs.ts --
 // out from under tests that mock them.
-if (typeof window !== "undefined") {
-  void import("./web/renderers.js")
+if (typeof window !== 'undefined') {
+  void import('./app/web/renderers.js')
 }
 
 /** Unreachable once getInstance() has gated on `initialized`. */
@@ -105,25 +105,25 @@ function getDefaultEnv(): Env {
 
 export default class Scamper {
   // singleton structure
-  static #instance?: Scamper
+  private static instance?: Scamper
   static getInstance(): Scamper {
     if (!initialized) {
       throw new Error(
-        "Scamper.getInstance() called before initialize() completed",
+        'Scamper.getInstance() called before initialize() completed',
       )
     }
-    Scamper.#instance ??= new Scamper()
-    return Scamper.#instance
+    Scamper.instance ??= new Scamper()
+    return Scamper.instance
   }
 
   /*  =====  instance-related fields  =====  */
-  #scheduler: Scheduler
-  #queries = new Map<number, QueryEntry[]>()
-  #expandedQueryId: SchedulerId | null = null
-  #queryBus = new EventTarget()
+  private scheduler: Scheduler
+  private _queries = new Map<number, QueryEntry[]>()
+  private _expandedQueryId: SchedulerId | null = null
+  private queryBus = new EventTarget()
 
   private constructor() {
-    this.#scheduler = new Scheduler()
+    this.scheduler = new Scheduler()
   }
 
   /**
@@ -151,7 +151,7 @@ export default class Scamper {
     const id = crypto.randomUUID()
     const tracing = isTracing ?? false
     const { promise, resolve } = deferred()
-    this.#scheduler.schedule({
+    this.scheduler.schedule({
       id,
       fiber,
       out,
@@ -166,35 +166,41 @@ export default class Scamper {
 
   /*  =====  scheduler  =====  */
   public cancel(id: SchedulerId) {
-    this.#scheduler.cancelTask(id)
+    this.scheduler.cancelTask(id)
   }
+
   public calibrateScheduler(): void {
-    void this.#scheduler.setTimeQuantumFromFPS()
+    void this.scheduler.setTimeQuantumFromFPS()
   }
 
   /*  =====  querying  =====  */
   get queryEvents(): EventTarget {
-    return this.#queryBus
+    return this.queryBus
   }
+
   get queries(): QueryMap {
     return new Map(
-      [...this.#queries].map(
+      [...this._queries].map(
         ([line, bucket]) => [line, bucket.slice()] as const,
       ),
     )
   }
+
   get expandedQueryId(): SchedulerId | null {
-    return this.#expandedQueryId
+    return this._expandedQueryId
   }
-  #updateQueries(mutate: (queries: Map<number, QueryEntry[]>) => void): void {
-    mutate(this.#queries)
-    this.#queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
+
+  private updateQueries(mutate: (queries: Map<number, QueryEntry[]>) => void): void {
+    mutate(this._queries)
+    this.queryBus.dispatchEvent(new Event(QUERIES_CHANGED))
   }
-  #setExpandedQueryId(id: SchedulerId | null): void {
-    if (this.#expandedQueryId === id) return
-    this.#expandedQueryId = id
-    this.#queryBus.dispatchEvent(new Event(QUERY_EXPANDED_CHANGED))
+
+  private setExpandedQueryId(id: SchedulerId | null): void {
+    if (this._expandedQueryId === id) return
+    this._expandedQueryId = id
+    this.queryBus.dispatchEvent(new Event(QUERY_EXPANDED_CHANGED))
   }
+
   public async query({
     src,
     err,
@@ -208,11 +214,11 @@ export default class Scamper {
 
     const { prog, queriedRange } = compiled
     if (
-      this.#queries
+      this._queries
         .get(queriedRange.begin.line)
         ?.some((q) => rangesEqual(q.queriedRange, queriedRange))
     ) {
-      console.warn("attempted duplicate query")
+      console.warn('attempted duplicate query')
       return
     }
 
@@ -222,7 +228,7 @@ export default class Scamper {
     // schedule query task
     const id = crypto.randomUUID()
     const { promise, resolve } = deferred()
-    this.#scheduler.schedule({
+    this.scheduler.schedule({
       id,
       fiber,
       err,
@@ -238,23 +244,25 @@ export default class Scamper {
     }
     this.registerQueryEntry(entry)
   }
+
   public invalidateAllQueries() {
-    for (const bucket of this.#queries.values()) {
+    for (const bucket of this._queries.values()) {
       for (const q of bucket) {
         this.cancel(q.id)
       }
     }
-    this.#setExpandedQueryId(null)
-    this.#updateQueries((queries) => {
+    this.setExpandedQueryId(null)
+    this.updateQueries((queries) => {
       queries.clear()
     })
   }
+
   public invalidateQuery(id: SchedulerId) {
     this.cancel(id)
-    if (this.#expandedQueryId === id) {
-      this.#setExpandedQueryId(null)
+    if (this._expandedQueryId === id) {
+      this.setExpandedQueryId(null)
     }
-    this.#updateQueries((queries) => {
+    this.updateQueries((queries) => {
       for (const [line, bucket] of queries) {
         const i = bucket.findIndex((q) => q.id === id)
         if (i === -1) continue
@@ -266,21 +274,25 @@ export default class Scamper {
       }
     })
   }
+
   public expandQuery(id: SchedulerId) {
-    this.#setExpandedQueryId(id)
+    this.setExpandedQueryId(id)
   }
+
   public collapseQuery() {
-    this.#setExpandedQueryId(null)
+    this.setExpandedQueryId(null)
   }
+
   public toggleQueryExpanded(id: SchedulerId) {
-    if (this.#expandedQueryId === id) {
+    if (this._expandedQueryId === id) {
       this.collapseQuery()
     } else {
       this.expandQuery(id)
     }
   }
+
   public getQuery(id: SchedulerId) {
-    for (const bucket of this.#queries.values()) {
+    for (const bucket of this._queries.values()) {
       const query = bucket.find((q) => q.id === id)
       if (query) {
         return query
@@ -290,7 +302,7 @@ export default class Scamper {
 
   /** Adds a query entry to the line bucket and notifies listeners. */
   registerQueryEntry(entry: QueryEntry): void {
-    this.#updateQueries((queries) => {
+    this.updateQueries((queries) => {
       const line = entry.queriedRange.begin.line
       const bucket = queries.get(line)
       if (bucket) {

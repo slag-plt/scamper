@@ -1,6 +1,6 @@
-import { AstPath, doc, Doc, Printer } from "prettier"
-import * as A from "../../scheme/ast"
-import TextRenderer from "../../lpm/renderers/text"
+import { AstPath, doc, Doc, Printer } from 'prettier'
+import * as A from '../../scheme/ast'
+import TextRenderer from '../../lpm/renderers/text'
 
 const {
   builders: { group, indent, join, line, hardline },
@@ -9,21 +9,21 @@ const {
 // ---- Type predicates -------------------------------------------------------
 
 export function isSchemeNode(v: unknown): v is A.SchemeNode {
-  if (typeof v !== "object" || v === null) return false
-  if (!("tag" in v)) return false
-  return typeof v.tag === "string"
+  if (typeof v !== 'object' || v === null) return false
+  if (!('tag' in v)) return false
+  return typeof v.tag === 'string'
 }
 
 function isLetBinding(v: unknown): v is { name: string; value: A.Exp } {
-  return typeof v === "object" && v !== null && "name" in v && "value" in v
+  return typeof v === 'object' && v !== null && 'name' in v && 'value' in v
 }
 
 function isMatchBranch(v: unknown): v is { pat: A.Pat; body: A.Exp } {
-  return typeof v === "object" && v !== null && "pat" in v && "body" in v
+  return typeof v === 'object' && v !== null && 'pat' in v && 'body' in v
 }
 
 function isCondBranch(v: unknown): v is { test: A.Exp; body: A.Exp } {
-  return typeof v === "object" && v !== null && "test" in v && "body" in v
+  return typeof v === 'object' && v !== null && 'test' in v && 'body' in v
 }
 
 // ---- Printer ----------------------------------------------------------------
@@ -31,225 +31,225 @@ function isCondBranch(v: unknown): v is { test: A.Exp; body: A.Exp } {
 export const SchemePrinter: Printer = {
   print: (path, _options, print) => {
     const node: unknown = path.node
-    if (!isSchemeNode(node)) return ""
+    if (!isSchemeNode(node)) return ''
 
     switch (node.tag) {
       ///// Program ///////////////////////////////////////////////////////////////
 
-      case "prog":
-        return join(hardline, path.map(print, "body"))
+      case 'prog':
+        return join(hardline, path.map(print, 'body'))
 
       ///// Statements ////////////////////////////////////////////////////////////
 
-      case "import":
-        return `(import ${node.kind === "file" ? JSON.stringify(node.module) : node.module})`
+      case 'import':
+        return `(import ${node.kind === 'file' ? JSON.stringify(node.module) : node.module})`
 
-      case "define":
+      case 'define':
         return group([
-          "(define ",
+          '(define ',
           node.name,
-          indent([line, path.call(print, "value")]),
-          ")",
+          indent([line, path.call(print, 'value')]),
+          ')',
         ])
 
-      case "display":
+      case 'display':
         return group([
-          "(display",
-          indent([line, path.call(print, "value")]),
-          ")",
+          '(display',
+          indent([line, path.call(print, 'value')]),
+          ')',
         ])
 
-      case "stmtexp":
-        return path.call(print, "expr")
+      case 'stmtexp':
+        return path.call(print, 'expr')
 
-      case "struct":
-        return `(struct ${node.name} (${node.fields.join(" ")}))`
+      case 'struct':
+        return `(struct ${node.name} (${node.fields.join(' ')}))`
 
       ///// Expressions ///////////////////////////////////////////////////////////
 
-      case "lit":
+      case 'lit':
         return TextRenderer.render(node.value)
 
-      case "var":
+      case 'var':
         return node.name
 
-      case "app":
+      case 'app':
         if (node.args.length === 0) {
-          return group(["(", path.call(print, "head"), ")"])
+          return group(['(', path.call(print, 'head'), ')'])
         }
         return group([
-          "(",
-          path.call(print, "head"),
-          indent([line, join(line, path.map(print, "args"))]),
-          ")",
+          '(',
+          path.call(print, 'head'),
+          indent([line, join(line, path.map(print, 'args'))]),
+          ')',
         ])
 
-      case "lam":
+      case 'lam':
         return group([
-          "(lambda (",
-          join(" ", node.params),
-          node.restParam ? [" . ", node.restParam] : "",
-          ")",
-          indent([line, path.call(print, "body")]),
-          ")",
+          '(lambda (',
+          join(' ', node.params),
+          node.restParam ? [' . ', node.restParam] : '',
+          ')',
+          indent([line, path.call(print, 'body')]),
+          ')',
         ])
 
-      case "let": {
+      case 'let': {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node
-          if (!isLetBinding(raw)) return ""
+          if (!isLetBinding(raw)) return ''
           return group([
-            "[",
+            '[',
             raw.name,
-            " ",
-            bindingPath.call(print, "value"),
-            "]",
+            ' ',
+            bindingPath.call(print, 'value'),
+            ']',
           ])
-        }, "bindings")
+        }, 'bindings')
         return group([
-          "(let",
-          indent([line, group(["(", join(line, bindingDocs), ")"])]),
-          indent([line, path.call(print, "body")]),
-          ")",
+          '(let',
+          indent([line, group(['(', join(line, bindingDocs), ')'])]),
+          indent([line, path.call(print, 'body')]),
+          ')',
         ])
       }
 
-      case "begin":
+      case 'begin':
         return group([
-          "(begin",
-          indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          '(begin',
+          indent([line, join(line, path.map(print, 'exps'))]),
+          ')',
         ])
 
-      case "if":
+      case 'if':
         return group([
-          "(if ",
-          path.call(print, "guard"),
+          '(if ',
+          path.call(print, 'guard'),
           indent([
             line,
-            path.call(print, "ifB"),
+            path.call(print, 'ifB'),
             line,
-            path.call(print, "elseB"),
+            path.call(print, 'elseB'),
           ]),
-          ")",
+          ')',
         ])
 
-      case "match": {
+      case 'match': {
         const branchDocs: Doc[] = path.map((branchPath: AstPath) => {
           const raw: unknown = branchPath.node
-          if (!isMatchBranch(raw)) return ""
+          if (!isMatchBranch(raw)) return ''
           return group([
-            "[",
-            branchPath.call(print, "pat"),
-            " ",
-            branchPath.call(print, "body"),
-            "]",
+            '[',
+            branchPath.call(print, 'pat'),
+            ' ',
+            branchPath.call(print, 'body'),
+            ']',
           ])
-        }, "branches")
+        }, 'branches')
         return group([
-          "(match ",
-          path.call(print, "scrutinee"),
+          '(match ',
+          path.call(print, 'scrutinee'),
           indent([line, join(line, branchDocs)]),
-          ")",
+          ')',
         ])
       }
 
-      case "quote":
+      case 'quote':
         return `'${TextRenderer.render(node.value)}`
 
-      case "jsvar":
+      case 'jsvar':
         return `(js-var ${JSON.stringify(node.name)})`
 
-      case "error":
-        return group(["(error", indent([line, path.call(print, "exp")]), ")"])
+      case 'error':
+        return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
 
-      case "apply":
+      case 'apply':
         return group([
-          "(apply ",
-          path.call(print, "fn"),
-          indent([line, path.call(print, "args")]),
-          ")",
+          '(apply ',
+          path.call(print, 'fn'),
+          indent([line, path.call(print, 'args')]),
+          ')',
         ])
 
-      case "let*": {
+      case 'let*': {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node
-          if (!isLetBinding(raw)) return ""
+          if (!isLetBinding(raw)) return ''
           return group([
-            "[",
+            '[',
             raw.name,
-            " ",
-            bindingPath.call(print, "value"),
-            "]",
+            ' ',
+            bindingPath.call(print, 'value'),
+            ']',
           ])
-        }, "bindings")
+        }, 'bindings')
         return group([
-          "(let*",
-          indent([line, group(["(", join(line, bindingDocs), ")"])]),
-          indent([line, path.call(print, "body")]),
-          ")",
+          '(let*',
+          indent([line, group(['(', join(line, bindingDocs), ')'])]),
+          indent([line, path.call(print, 'body')]),
+          ')',
         ])
       }
 
-      case "and":
+      case 'and':
         return group([
-          "(and",
-          indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          '(and',
+          indent([line, join(line, path.map(print, 'exps'))]),
+          ')',
         ])
 
-      case "or":
+      case 'or':
         return group([
-          "(or",
-          indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          '(or',
+          indent([line, join(line, path.map(print, 'exps'))]),
+          ')',
         ])
 
-      case "cond": {
+      case 'cond': {
         const branchDocs: Doc[] = path.map((branchPath: AstPath) => {
           const raw: unknown = branchPath.node
-          if (!isCondBranch(raw)) return ""
+          if (!isCondBranch(raw)) return ''
           return group([
-            "[",
-            branchPath.call(print, "test"),
-            " ",
-            branchPath.call(print, "body"),
-            "]",
+            '[',
+            branchPath.call(print, 'test'),
+            ' ',
+            branchPath.call(print, 'body'),
+            ']',
           ])
-        }, "branches")
-        return group(["(cond", indent([line, join(line, branchDocs)]), ")"])
+        }, 'branches')
+        return group(['(cond', indent([line, join(line, branchDocs)]), ')'])
       }
 
-      case "section":
+      case 'section':
         return group([
-          "(section",
-          indent([line, join(line, path.map(print, "exps"))]),
-          ")",
+          '(section',
+          indent([line, join(line, path.map(print, 'exps'))]),
+          ')',
         ])
 
-      case "report":
-        return group(["(report", indent([line, path.call(print, "exp")]), ")"])
+      case 'report':
+        return group(['(report', indent([line, path.call(print, 'exp')]), ')'])
 
       ///// Patterns //////////////////////////////////////////////////////////////
 
-      case "pwild":
-        return "_"
+      case 'pwild':
+        return '_'
 
-      case "pvar":
+      case 'pvar':
         return node.name
 
-      case "plit":
+      case 'plit':
         return TextRenderer.render(node.value)
 
-      case "pctor":
+      case 'pctor':
         if (node.args.length === 0) {
           return `(${node.name})`
         }
         return group([
-          "(",
+          '(',
           node.name,
-          indent([line, join(line, path.map(print, "args"))]),
-          ")",
+          indent([line, join(line, path.map(print, 'args'))]),
+          ')',
         ])
     }
   },

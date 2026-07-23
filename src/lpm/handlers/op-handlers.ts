@@ -1,40 +1,40 @@
-import { ICE, ReportError, ScamperError } from "../error"
-import { Fiber, minorStep, StepResult, traceStep } from "../fiber"
-import { Ops, Value } from "../lang"
-import { Frame } from "../frame"
-import { Range } from "../range"
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from "../util"
-import { lookup } from "../../js/index.js"
+import { ICE, ReportError, ScamperError } from '../error'
+import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
+import { Ops, Value } from '../lang'
+import { Frame } from '../frame'
+import { Range } from '../range'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from '../util'
+import { lookup } from '../../js/index.js'
 
 /* Definition */
-type OpHandler<T extends Ops["tag"]> = (
+type OpHandler<T extends Ops['tag']> = (
   op: Extract<Ops, { tag: T }>,
   currFrame: Frame,
   fiber: Fiber,
 ) => StepResult
 
 /* Handlers */
-export const LitHandler: OpHandler<"lit"> = (op, currFrame) => {
+export const LitHandler: OpHandler<'lit'> = (op, currFrame) => {
   currFrame.values.push(op.value)
   return minorStep
 }
 
-export const VarHandler: OpHandler<"var"> = (op, currFrame) => {
+export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   if (!currFrame.env.has(op.name)) {
-    throw new ScamperError("Runtime", `Variable not found: ${op.name}`)
+    throw new ScamperError('Runtime', `Variable not found: ${op.name}`)
   }
   currFrame.values.push(currFrame.env.get(op.name))
   return minorStep
 }
 
-export const CtorHandler: OpHandler<"ctor"> = (op, currFrame) => {
+export const CtorHandler: OpHandler<'ctor'> = (op, currFrame) => {
   currFrame.values.push(
     mkStruct(op.name, op.fields, currFrame.values.splice(-op.fields.length)),
   )
   return minorStep
 }
 
-export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
+export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
   currFrame.values.push(
     mkClosure(
       op.params,
@@ -42,7 +42,7 @@ export const ClsHandler: OpHandler<"cls"> = (op, currFrame) => {
       currFrame.env.getLocals(),
       // TODO: this dummy function should exist until we remove all calls to L.callScamperFn
       () => {
-        throw new ICE("Fiber.ClsHandler", "Closure.call was deprecated!")
+        throw new ICE('Fiber.ClsHandler', 'Closure.call was deprecated!')
       },
       op.name,
       op.restParam,
@@ -85,13 +85,13 @@ function applyFn(
         // callRange/name: the range/name of the Ap that invoked *this
         // frame*, i.e. wherever the user (or an enclosing function) really
         // wrote the call.
-        const useFrame = !currFrame.name.startsWith("##")
+        const useFrame = !currFrame.name.startsWith('##')
         e.range = useFrame ? currFrame.callRange : range
         e.source = useFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
-          "Runtime",
+          'Runtime',
           `Unexpected error in Javascript function call: ${(e as any).toString()}`,
           undefined,
           range,
@@ -106,7 +106,7 @@ function applyFn(
     if (args.length < fn.params.length ||
         (!fn.restParam && args.length !== fn.params.length)) {
       throw new ScamperError(
-        "Runtime",
+        'Runtime',
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
         undefined,
         range,
@@ -117,7 +117,7 @@ function applyFn(
       [p, namedArgs[i]]).concat(
         fn.restParam ? [[fn.restParam, vectorToList(args.slice(fn.params.length))]] : [])
     const newFrame = new Frame(
-      fn.name ?? "##anonymous##",
+      fn.name ?? '##anonymous##',
       fiber.topLevelEnv.extendReplacingLocals(
         ...fn.locals,
         ...bindings
@@ -134,7 +134,7 @@ function applyFn(
     return traceStep
   }
   throw new ScamperError(
-    "Runtime",
+    'Runtime',
     `Not a function or closure: ${JSON.stringify(fn)}`,
     undefined,
     range,
@@ -142,10 +142,10 @@ function applyFn(
   )
 }
 
-export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
+export const ApHandler: OpHandler<'ap'> = (op, currFrame, fiber) => {
   if (currFrame.values.length < op.numArgs + 1) {
     throw new ICE(
-      "Fiber.ApHandler",
+      'Fiber.ApHandler',
       `Not enough values for application: expected ${(op.numArgs + 1).toString()}, currently have ${currFrame.values.length.toString()}`,
     )
   }
@@ -155,37 +155,37 @@ export const ApHandler: OpHandler<"ap"> = (op, currFrame, fiber) => {
   return applyFn(fn, args, currFrame, fiber, op.range)
 }
 
-export const ApplyHandler: OpHandler<"apply"> = (op, currFrame, fiber) => {
+export const ApplyHandler: OpHandler<'apply'> = (op, currFrame, fiber) => {
   if (currFrame.values.length < 2) {
     throw new ICE(
-      "Fiber.ApplyHandler",
+      'Fiber.ApplyHandler',
       `Not enough values for apply: expected 2, currently have ${currFrame.values.length.toString()}`,
     )
   }
   const [fn, argList] = currFrame.values.splice(-2)
   if (!isList(argList)) {
     throw new ScamperError(
-      "Runtime",
+      'Runtime',
       `expected a list, received ${typeOf(argList)}`,
       undefined,
       op.range,
-      "apply",
+      'apply',
     )
   }
   return applyFn(fn, listToVector(argList), currFrame, fiber, op.range)
 }
 
-export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
+export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
   const scrutinee = currFrame.values.pop()
   if (scrutinee === undefined) {
-    throw new ICE("Fiber.MatchHandler", "Match requires at least one value")
+    throw new ICE('Fiber.MatchHandler', 'Match requires at least one value')
   }
   // we will always step match to abide by a small work quantum
   // TODO: we need to figure out if we want to keep this, hack fix for now
   op.currBranchIdx ??= 0
   const currBranch = op.branches.at(op.currBranchIdx++)
   if (!currBranch) {
-    throw new ScamperError("Runtime", `Inexhaustive pattern match failure`)
+    throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
   }
   const [pat, blk] = currBranch
   const bindings = pMatch(scrutinee, pat)
@@ -201,35 +201,35 @@ export const MatchHandler: OpHandler<"match"> = (op, currFrame) => {
   return traceStep
 }
 
-export const PopVHandler: OpHandler<"popv"> = (_, currFrame) => {
+export const PopVHandler: OpHandler<'popv'> = (_, currFrame) => {
   currFrame.values.pop()
   return traceStep
 }
 
-export const JsVarHandler: OpHandler<"jsvar"> = (op, currFrame) => {
+export const JsVarHandler: OpHandler<'jsvar'> = (op, currFrame) => {
   currFrame.values.push(lookup(op.name))
   return minorStep
 }
 
-export const ErrorHandler: OpHandler<"error"> = (op, currFrame) => {
+export const ErrorHandler: OpHandler<'error'> = (op, currFrame) => {
   const msg = currFrame.values.pop()
-  if (typeof msg !== "string") {
+  if (typeof msg !== 'string') {
     throw new ScamperError(
-      "Runtime",
+      'Runtime',
       `expected a string, received ${typeOf(msg)}`,
       undefined,
       op.range,
-      "error",
+      'error',
     )
   }
-  throw new ScamperError("Runtime", msg, undefined, op.range, "error")
+  throw new ScamperError('Runtime', msg, undefined, op.range, 'error')
 }
 
-export const ReptHandler: OpHandler<"rept"> = (op, currFrame) => {
+export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
   if (currFrame.values.length < 1) {
     throw new ICE(
-      "Fiber.ReptHandler",
-      "Expected to report a value, but none remain?",
+      'Fiber.ReptHandler',
+      'Expected to report a value, but none remain?',
     )
   }
   throw new ReportError(currFrame.values.at(-1), op.range)

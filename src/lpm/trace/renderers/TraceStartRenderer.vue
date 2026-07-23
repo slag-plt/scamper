@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { TraceStart } from "../index"
-import ValueRenderer from "../../renderers/vue/ValueRenderer.vue"
+import { TraceStart } from '../index'
+import ValueRenderer from '../../renderers/vue/ValueRenderer.vue'
 
 defineProps<{ value: TraceStart }>()
 </script>

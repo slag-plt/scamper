@@ -4,20 +4,29 @@
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
   "scripts": {
-    "postinstall": "npm run generate-parser",
-    "cli": "tsx src/cli/index.ts",
-    "precli": "npm run generate-parser",
+    "postinstall": "npm run generate",
+    "generate": "npm run generate-parser && npm run generate-lib-sources",
     "generate-parser": "node scripts/generate-parser.mjs",
-    "typecheck": "vue-tsc -noEmit",
-    "pretypecheck": "npm run generate-parser",
+    "generate-lib-sources": "node scripts/generate-lib-sources.mjs",
+
     "dev": "vite",
+    "cli": "tsx src/app/cli/index.ts",
+    "precli": "npm run generate",
     "build": "vue-tsc --noEmit && vite build",
-    "prebuild": "npm run generate-parser",
+    "prebuild": "npm run generate",
     "preview": "vite preview",
-    "deploy": "./scripts/deploy $npm_package_version",
     "clean": "rm -rf dist",
+
+    "typecheck": "vue-tsc -noEmit",
+    "pretypecheck": "npm run generate",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "validate-build": "./scripts/validate-build",
+
+    "deploy": "./scripts/deploy $npm_package_version",
+    "deploy:latest": "./scripts/update-latest $npm_package_version"
   },
   "type": "module",
   "author": "",

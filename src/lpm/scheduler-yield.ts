@@ -18,7 +18,7 @@ const nativeScheduler = (
  * schedulers like React's use the same fallback.
  */
 export function schedulerYield(): Promise<void> {
-  if (nativeScheduler && typeof nativeScheduler.yield === "function") {
+  if (nativeScheduler && typeof nativeScheduler.yield === 'function') {
     return nativeScheduler.yield()
   }
   return new Promise((resolve) => {

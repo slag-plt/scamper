@@ -128,6 +128,7 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
     }
     // Otherwise, let the animation die!
   }
+
   window.requestAnimationFrame(callback)
 }
 

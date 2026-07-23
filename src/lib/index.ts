@@ -1,41 +1,15 @@
-import * as L from "../lpm"
-import { Fiber } from "../lpm/fiber.js"
-import { builtinLibs } from "../lpm/builtin-registry.js"
-import { SimpleErrorChannel } from "../lpm/output/simple-error.js"
-import * as A from "../scheme/ast.js"
-import { compile, tokenizeAndParse } from "../scheme/index.js"
+import * as L from '../lpm'
+import { Fiber } from '../lpm/fiber.js'
+import { builtinLibs } from '../lpm/builtin-registry.js'
+import { SimpleErrorChannel } from '../lpm/output/simple-error.js'
+import * as A from '../scheme/ast.js'
+import { compile, tokenizeAndParse } from '../scheme/index.js'
 import {
   FunctionDoc,
   parseFunctionDocFromComments,
-} from "../scheme/docstring/docstring.js"
+} from '../scheme/docstring/docstring.js'
 
-import audioSrc from "./audio.scm?raw"
-import canvasSrc from "./canvas.scm?raw"
-import dataSrc from "./data.scm?raw"
-import htmlSrc from "./html.scm?raw"
-import imageSrc from "./image.scm?raw"
-import labSrc from "./lab.scm?raw"
-import musicSrc from "./music.scm?raw"
-import preludeSrc from "./prelude.scm?raw"
-import reactiveSrc from "./reactive.scm?raw"
-import rexSrc from "./rex.scm?raw"
-import runtimeSrc from "./runtime.scm?raw"
-import testSrc from "./test.scm?raw"
-
-const librarySources: [string, string][] = [
-  ["audio", audioSrc],
-  ["canvas", canvasSrc],
-  ["data", dataSrc],
-  ["html", htmlSrc],
-  ["image", imageSrc],
-  ["lab", labSrc],
-  ["music", musicSrc],
-  ["prelude", preludeSrc],
-  ["reactive", reactiveSrc],
-  ["rex", rexSrc],
-  ["runtime", runtimeSrc],
-  ["test", testSrc],
-]
+import { librarySources } from './generated/sources.js'
 
 /**
  * Compiles and runs a standard library module's Scamper source (a flat
@@ -50,8 +24,8 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   const prog = await compile(errChannel, src, undefined, true)
   if (prog === undefined || errChannel.errors.length > 0) {
     throw new L.ICE(
-      "lib.loadLibrary",
-      `Failed to compile builtin library "${name}": ${errChannel.errors.map((e) => e.toString()).join("; ")}`,
+      'lib.loadLibrary',
+      `Failed to compile builtin library "${name}": ${errChannel.errors.map((e) => e.toString()).join('; ')}`,
     )
   }
   const fiber = new Fiber(prog)
@@ -73,7 +47,7 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
 function extractDocs(prog: A.Prog): Map<string, FunctionDoc> {
   const docs = new Map<string, FunctionDoc>()
   for (const stmt of prog) {
-    if (stmt.tag !== "define" || !stmt.docComments) {
+    if (stmt.tag !== 'define' || !stmt.docComments) {
       continue
     }
     try {

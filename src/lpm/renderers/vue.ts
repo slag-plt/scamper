@@ -1,17 +1,17 @@
-import { Renderer } from "./index"
-import { Component, defineComponent, h, PropType } from "vue"
-import CodeElement from "./vue/components/CodeElement.vue"
-import VectorRenderer from "./vue/components/VectorRenderer.vue"
-import ListRenderer from "./vue/components/ListRenderer.vue"
-import PairRenderer from "./vue/components/PairRenderer.vue"
-import { simpleRenderers } from "./vue/simple-renderers"
-import StructRenderer from "./vue/components/StructRenderer.vue"
-import DOMElementRenderer from "./vue/components/DOMElementRenderer.vue"
-import { Value } from "../lang"
-import { isArray, isList, isPair, isStruct } from "../util"
+import { Renderer } from './index'
+import { Component, defineComponent, h, PropType } from 'vue'
+import CodeElement from './vue/components/CodeElement.vue'
+import VectorRenderer from './vue/components/VectorRenderer.vue'
+import ListRenderer from './vue/components/ListRenderer.vue'
+import PairRenderer from './vue/components/PairRenderer.vue'
+import { simpleRenderers } from './vue/simple-renderers'
+import StructRenderer from './vue/components/StructRenderer.vue'
+import DOMElementRenderer from './vue/components/DOMElementRenderer.vue'
+import { Value } from '../lang'
+import { isArray, isList, isPair, isStruct } from '../util'
 
 export interface VueStrategyProps {
-  type: "vue"
+  type: 'vue'
   renderer: Component
 }
 interface BaseStrategy {
@@ -19,7 +19,7 @@ interface BaseStrategy {
 }
 interface VueStrategy extends BaseStrategy, VueStrategyProps {}
 interface DOMStrategy extends BaseStrategy {
-  type: "dom"
+  type: 'dom'
 }
 export type Strategy = VueStrategy | DOMStrategy
 
@@ -44,23 +44,23 @@ export const FallbackRenderer = createTextRenderer(
  */
 const vectorStrategy: VueStrategy = {
   predicate: (v) => isArray(v),
-  type: "vue",
+  type: 'vue',
   renderer: VectorRenderer,
 }
 const listStrategy: VueStrategy = {
   predicate: (v) => isList(v),
-  type: "vue",
+  type: 'vue',
   renderer: ListRenderer,
 }
 const pairStrategy: VueStrategy = {
   predicate: (v) => isPair(v),
-  type: "vue",
+  type: 'vue',
   renderer: PairRenderer,
 }
 
 const htmlElementStrategy: DOMStrategy = {
   predicate: (v) => v instanceof HTMLElement,
-  type: "dom",
+  type: 'dom',
 }
 
 const standardStrategies: Strategy[] = [
@@ -73,12 +73,12 @@ const standardStrategies: Strategy[] = [
 
 const genericStructStrategy: VueStrategy = {
   predicate: (v) => isStruct(v),
-  type: "vue",
+  type: 'vue',
   renderer: StructRenderer,
 }
 const errorStrategy: VueStrategy = {
   predicate: (v) => v instanceof Error,
-  type: "vue",
+  type: 'vue',
   renderer: createTextRenderer<Error>((v) => v.toString()),
 }
 
@@ -90,7 +90,7 @@ class _VueRenderer extends Renderer<Component> {
   render(value: Value): Component {
     const strategy = this.getStrategy(value)
     if (strategy) {
-      return strategy.type === "vue" ? strategy.renderer : DOMElementRenderer
+      return strategy.type === 'vue' ? strategy.renderer : DOMElementRenderer
     }
 
     // there may be a custom renderer for this value
@@ -106,7 +106,7 @@ class _VueRenderer extends Renderer<Component> {
     if (errorStrategy.predicate(value)) {
       return errorStrategy.renderer
     }
-    console.warn("no renderer for", value)
+    console.warn('no renderer for', value)
     return FallbackRenderer
   }
 }

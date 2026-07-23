@@ -1,7 +1,7 @@
-import { Range } from "../lpm"
-import * as A from "./ast.js"
-import { parseFunctionDocFromComments, Pred } from "./docstring/docstring.js"
-import { Param } from "./docstring/param.js"
+import { Range } from '../lpm'
+import * as A from './ast.js'
+import { parseFunctionDocFromComments, Pred } from './docstring/docstring.js'
+import { Param } from './docstring/param.js'
 
 // Adapted from the (now-removed) LPM-bytecode version of this idea in
 // src/lpm/contract/util.ts: that version generated the check directly as
@@ -11,7 +11,7 @@ import { Param } from "./docstring/param.js"
 // as a source-to-source AST pass instead lets the wrapper close over the
 // original value via an ordinary `let` before the `define` shadows it.
 
-const contractTargetName = "##contract-target##"
+const contractTargetName = '##contract-target##'
 
 /**
  * A short, human-readable description of a predicate, suitable for embedding
@@ -20,11 +20,11 @@ const contractTargetName = "##contract-target##"
  * number?)`) don't reduce to a single word, so they're rendered as-is.
  */
 function describePred(pred: Pred): string {
-  if (pred.tag !== "var") {
+  if (pred.tag !== 'var') {
     return `a value matching \`${A.expToString(pred)}\``
   }
-  const name = pred.name.endsWith("?") ? pred.name.slice(0, -1) : pred.name
-  const article = /^[aeiou]/i.test(name) ? "an" : "a"
+  const name = pred.name.endsWith('?') ? pred.name.slice(0, -1) : pred.name
+  const article = /^[aeiou]/i.test(name) ? 'an' : 'a'
   return `${article} ${name}`
 }
 
@@ -35,12 +35,12 @@ function describePred(pred: Pred): string {
  */
 function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar("string-append", range),
+    A.mkVar('string-append', range),
     [
-      A.mkLit("expected ", range),
+      A.mkLit('expected ', range),
       A.mkLit(descPred, range),
-      A.mkLit(", received ", range),
-      A.mkApp(A.mkVar("##typeOf##", range), [A.mkVar(argVar, range)], range),
+      A.mkLit(', received ', range),
+      A.mkApp(A.mkVar('##typeOf##', range), [A.mkVar(argVar, range)], range),
     ],
     range,
   )
@@ -54,11 +54,11 @@ function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
  */
 function mkRestErrorMsg(descPred: string, restVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar("string-append", range),
+    A.mkVar('string-append', range),
     [
       A.mkLit(`expected every value of ${restVar} to be `, range),
       A.mkLit(descPred, range),
-      A.mkLit(", but at least one was not", range),
+      A.mkLit(', but at least one was not', range),
     ],
     range,
   )
@@ -87,7 +87,7 @@ function mkTargetCall(
     )
   }
   const combined = params.reduceRight<A.Exp>(
-    (acc, p) => A.mkApp(A.mkVar("cons", range), [A.mkVar(p.name, range), acc], range),
+    (acc, p) => A.mkApp(A.mkVar('cons', range), [A.mkVar(p.name, range), acc], range),
     A.mkVar(restParam.name, range),
   )
   return A.mkApply(A.mkVar(contractTargetName, range), combined, range)
@@ -122,7 +122,7 @@ function mkCheckChain(
   const restCheck: A.Exp = restParam
     ? A.mkIf(
         A.mkApp(
-          A.mkVar("all-satisfy?", range),
+          A.mkVar('all-satisfy?', range),
           [restParam.predicate, A.mkVar(restParam.name, range)],
           range,
         ),
@@ -176,7 +176,7 @@ function mkCheckChain(
  *          is still wrapped even with zero fixed params.
  */
 export function contractStmt(s: A.Stmt): A.Stmt {
-  if (s.tag !== "define" || !s.docComments) {
+  if (s.tag !== 'define' || !s.docComments) {
     return s
   }
   let doc

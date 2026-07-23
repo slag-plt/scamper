@@ -1,9 +1,9 @@
-import { tokenizeAndParse } from "../.."
-import { Range, Value } from "../../../lpm"
-import { SimpleErrorChannel } from "../../../lpm/output/simple-error"
-import { App, isApp, isLit, isStmtExp, Stmt } from "../../ast"
-import { mkScamperErrorWithRange } from "../../util"
-import { DocTag, registerDocTagParser } from "./tag"
+import { tokenizeAndParse } from '../..'
+import { Range, Value } from '../../../lpm'
+import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
+import { App, isApp, isLit, isStmtExp, Stmt } from '../../ast'
+import { mkScamperErrorWithRange } from '../../util'
+import { DocTag, registerDocTagParser } from './tag'
 
 interface Example {
   functionCall: App
@@ -13,14 +13,14 @@ export type ExampleTag = DocTag<Example>
 
 export function isExampleTag(t: DocTag): t is ExampleTag {
   return (
-    typeof t.contents === "object" &&
+    typeof t.contents === 'object' &&
     t.contents !== null &&
-    "functionCall" in t.contents &&
-    "result" in t.contents
+    'functionCall' in t.contents &&
+    'result' in t.contents
   )
 }
 
-const separator = " -> "
+const separator = ' -> '
 
 function exampleTagError(
   message: string,
@@ -30,9 +30,9 @@ function exampleTagError(
   const cause =
     errChannel !== undefined && errChannel.errors.length > 0
       ? `, ${errChannel.errors[0].message}`
-      : ""
+      : ''
   throw mkScamperErrorWithRange(
-    "Parser",
+    'Parser',
     `Error in @example tag: ${message}${cause}`,
     range,
   )
@@ -41,7 +41,7 @@ function exampleTagError(
 function parseExampleExpression(
   source: string,
   range: Range,
-  field: "function call" | "result",
+  field: 'function call' | 'result',
 ): Stmt {
   const errChannel = new SimpleErrorChannel()
   const parsed = tokenizeAndParse(errChannel, source.trim())
@@ -59,7 +59,7 @@ function parseExampleExpression(
   return toReturn
 }
 
-registerDocTagParser("@example", (contents, range): ExampleTag => {
+registerDocTagParser('@example', (contents, range): ExampleTag => {
   const splitContents = contents.split(separator)
   if (splitContents.length < 2) {
     exampleTagError('missing separator, expected "expression -> result"', range)
@@ -70,29 +70,29 @@ registerDocTagParser("@example", (contents, range): ExampleTag => {
   const parsedFunctionCall = parseExampleExpression(
     functionCallStr,
     range,
-    "function call",
+    'function call',
   )
   if (!isStmtExp(parsedFunctionCall)) {
-    exampleTagError("function call should be an expression", range)
+    exampleTagError('function call should be an expression', range)
   }
   const functionCall = parsedFunctionCall.expr
   if (!isApp(functionCall)) {
-    exampleTagError("function call should be an application expression", range)
+    exampleTagError('function call should be an application expression', range)
   }
 
-  const parsedResult = parseExampleExpression(resultStr, range, "result")
+  const parsedResult = parseExampleExpression(resultStr, range, 'result')
   if (!isStmtExp(parsedResult)) {
-    exampleTagError("result should be an expression", range)
+    exampleTagError('result should be an expression', range)
   }
   if (!isLit(parsedResult.expr)) {
-    exampleTagError("result should be a literal value", range)
+    exampleTagError('result should be a literal value', range)
   }
   const result = parsedResult.expr.value
 
   // TODO: semantic validation against the documented function happens in scopeCheckFunctionDoc
 
   return {
-    tag: "@example",
+    tag: '@example',
     contents: {
       functionCall,
       result,
