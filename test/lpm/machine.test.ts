@@ -314,14 +314,14 @@ describe('rest parameters', () => {
     const out = new LoggingChannel(false, false)
     const cls = U.mkCls(['x', 'y'], [U.mkVar('z')], 'f', undefined, 'z')
     const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
-    expect(() => { testExecute(fiber, out); }).toThrow(/Arity mismatch/)
+    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
   })
 
   test('ap - arity mismatch when fewer than required args, no rest param', () => {
     const out = new LoggingChannel(false, false)
     const cls = U.mkCls(['x', 'y'], [U.mkVar('x')], 'f')
     const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
-    expect(() => { testExecute(fiber, out); }).toThrow(/Arity mismatch/)
+    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
   })
 
   test('ap - arity mismatch when more args than fixed params, no rest param', () => {
@@ -330,6 +330,6 @@ describe('rest parameters', () => {
     const fiber = makeTestFiber([
       U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
     ])
-    expect(() => { testExecute(fiber, out); }).toThrow(/Arity mismatch/)
+    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
   })
 })

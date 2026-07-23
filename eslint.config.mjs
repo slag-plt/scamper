@@ -81,6 +81,7 @@ export default defineConfig(
         },
       ],
       quotes: ['warn', 'single', { avoidEscape: true }],
+      semi: ['warn', 'never'],
       'lines-between-class-members': [
         'warn',
         'always',

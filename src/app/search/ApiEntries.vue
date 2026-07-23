@@ -151,7 +151,7 @@ const tagList = ref([
   { id: 24, val: 'reactive' },
 
   { id: 21, val: 'other' },
-]);
+])
 
 const indentList = ref([
 'association list', 
@@ -175,7 +175,7 @@ const indentList = ref([
 'create' ,
 'plot' ,
 'parse' ,
-]);
+])
 
 const AisOpen = ref(false)
 const RisOpen = ref(false)

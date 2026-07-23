@@ -69,7 +69,7 @@ function render (rif: ReactiveImageFile): HTMLElement {
             outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
           }
         }
-        img.src = e.target.result as string;
+        img.src = e.target.result as string
       }
     }
     if (inp.files !== null && inp.files.length > 0) {

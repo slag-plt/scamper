@@ -235,7 +235,7 @@ const namedCssColors = new Map<string, Rgb>([
   ['whitesmoke', image_rgb(245, 245, 245)],
   ['yellow', image_rgb(255, 255, 0)],
   ['yellowgreen', image_rgb(154, 205, 50)]
-]);
+])
 
 export function image_isColorName(name: string): boolean {
   return namedCssColors.has(name.toLowerCase())
