@@ -128,6 +128,10 @@ src/**/*.js.map
 # (see scripts/generate-parser.mjs / scripts/vite-plugin-scheme-parser.mjs)
 src/scheme/generated/parser.ts
 
+# Generated standard library sources, rebuilt from src/lib/*.scm
+# (see scripts/generate-lib-sources.mjs / scripts/vite-plugin-lib-sources.mjs)
+src/lib/generated/sources.ts
+
 .claude
 .zed
 .cursor

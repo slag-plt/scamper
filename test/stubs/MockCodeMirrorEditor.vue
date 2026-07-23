@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { useEditorRegistration } from '../../src/web/composables/editor-context'
-import { noLoadedFileText } from '../../src/web/codemirror/codemirror'
+import { useEditorRegistration } from '../../src/app/web/composables/editor-context'
+import { noLoadedFileText } from '../../src/app/web/codemirror/codemirror'
 import { makeMockCodeMirrorEditorAdapter } from './mock-code-mirror-editor-adapter'
 import { mockEditorHandle } from './mock-editor-handle'
 

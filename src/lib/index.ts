@@ -9,33 +9,7 @@ import {
   parseFunctionDocFromComments,
 } from '../scheme/docstring/docstring.js'
 
-import audioSrc from './audio.scm?raw'
-import canvasSrc from './canvas.scm?raw'
-import dataSrc from './data.scm?raw'
-import htmlSrc from './html.scm?raw'
-import imageSrc from './image.scm?raw'
-import labSrc from './lab.scm?raw'
-import musicSrc from './music.scm?raw'
-import preludeSrc from './prelude.scm?raw'
-import reactiveSrc from './reactive.scm?raw'
-import rexSrc from './rex.scm?raw'
-import runtimeSrc from './runtime.scm?raw'
-import testSrc from './test.scm?raw'
-
-const librarySources: [string, string][] = [
-  ['audio', audioSrc],
-  ['canvas', canvasSrc],
-  ['data', dataSrc],
-  ['html', htmlSrc],
-  ['image', imageSrc],
-  ['lab', labSrc],
-  ['music', musicSrc],
-  ['prelude', preludeSrc],
-  ['reactive', reactiveSrc],
-  ['rex', rexSrc],
-  ['runtime', runtimeSrc],
-  ['test', testSrc],
-]
+import { librarySources } from './generated/sources.js'
 
 /**
  * Compiles and runs a standard library module's Scamper source (a flat

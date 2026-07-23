@@ -8,7 +8,7 @@ This guide gets you from only having experience through Grinnell coursework to b
 
 - [ ] Clone Scamper, install it, run `npm run dev`, and see your local instance in the browser.
 - [ ] Trace at a high level what happens when you press the IDE's "Run" button --> input string in, output rendered out. You don't need to understand the runtime internals, just the broad shape of the pipeline.
-- [ ] Add a trivial button to the Scamper IDE (i.e. one that pops an alert) through a Vue component in `src/web/components/`, and watch the hot-reload pick it up.
+- [ ] Add a trivial button to the Scamper IDE (i.e. one that pops an alert) through a Vue component in `src/app/web/components/`, and watch the hot-reload pick it up.
 - [ ] Add a new function to a library in `src/lib/` and call it from a `.scm` file in the IDE.
 - [ ] Run `npm run build`, `npm test`, and ensure `npx eslint <files-you-touched>` is clean before opening a PR.
 - [ ] Know which file to open when Sam says "go look at how the prelude does X."
@@ -74,9 +74,9 @@ Treat each "day" as ~4–5 focused hours. If something clicks faster, skip ahead
 
 ## Day 5 — Vue 3, the linter, and your editor
 
-- [ ] Do the [official Vue 3 interactive tutorial](https://vuejs.org/tutorial/) (Composition API track, what Scamper uses; see `src/web/components/IdeApp.vue`).
+- [ ] Do the [official Vue 3 interactive tutorial](https://vuejs.org/tutorial/) (Composition API track, what Scamper uses; see `src/app/web/components/IdeApp.vue`).
   > This is hands-on and takes ~2 hours. It's much more useful than reading the guide cover-to-cover.
-- [ ] Skim [Vue's "Single-File Components"](https://vuejs.org/guide/scaling-up/sfc.html) and look at `src/web/components/IdeHeader.vue`.
+- [ ] Skim [Vue's "Single-File Components"](https://vuejs.org/guide/scaling-up/sfc.html) and look at `src/app/web/components/IdeHeader.vue`.
   > You should be able to point to the `<template>`, `<script>`, and `<style>` blocks and explain each.
 - [ ] Install some editor extensions (assuming you're using VS Code): **Vue (Volar)**, **ESLint**, **Prettier**, and **Vitest Explorer**. Turn on "format on save."
   > **Why we have a strict linter and formatter:** remember the "safety net" bucket from the Day 3 Overview reading? ESLint and Prettier are Scamper's safety net. Consistent formatting with Prettier removes style issues from code, and a strict ESLint catches whole categories of bugs (unhandled promises, unsafe `any`, unused variables) at edit time instead of at runtime in a student's browser during class (or worse: months later when spaghetti code starts piling up!).
@@ -103,7 +103,7 @@ Once that's working, take the codebase tour:
 1. `README.md`: how to run.
 2. `library-development.md`: how libraries plug into the runtime. This is the doc you'll re-read most often.
 3. `src/scamper-vue.ts`: re-read this and trace one call from input string to output.
-4. `src/web/components/WebEmbedWidget.vue`: what we (will) use in future CSC-151 readings!
+4. `src/app/web/components/WebEmbedWidget.vue`: what we (will) use in future CSC-151 readings!
 5. `src/lib/index.ts` and one library file (e.g. `src/lib/test.ts`): see what a library actually looks like.
 6. One test file in `test/`: see how Vitest is used.
 

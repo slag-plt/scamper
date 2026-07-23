@@ -8,14 +8,14 @@ import Scamper, {
   type DisplayRequest,
   type QueryMap,
 } from '../src/scamper'
-import type { EditorAccessor } from '../src/web/composables/editor-context'
-import IdeHeader from '../src/web/components/IdeHeader.vue'
+import type { EditorAccessor } from '../src/app/web/composables/editor-context'
+import IdeHeader from '../src/app/web/components/IdeHeader.vue'
 import {
   provideScamperSession,
   type ScamperSession,
   type ScamperSessionOptions,
-} from '../src/web/composables/use-scamper-session'
-import type { ResultsPaneType } from '../src/web/composables/use-results-pane'
+} from '../src/app/web/composables/use-scamper-session'
+import type { ResultsPaneType } from '../src/app/web/composables/use-results-pane'
 import { makeMockCodeMirrorEditorAdapter } from './stubs/mock-code-mirror-editor-adapter'
 
 await initialize()

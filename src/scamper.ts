@@ -92,7 +92,7 @@ export async function initialize(): Promise<void> {
 // grabs real (unmocked) transitive dependencies -- notably src/fs/opfs.ts --
 // out from under tests that mock them.
 if (typeof window !== 'undefined') {
-  void import('./web/renderers.js')
+  void import('./app/web/renderers.js')
 }
 
 /** Unreachable once getInstance() has gated on `initialized`. */

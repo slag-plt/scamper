@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config'
 
 import vue from '@vitejs/plugin-vue'
 import { schemeParserPlugin } from './scripts/vite-plugin-scheme-parser.mjs'
+import { libSourcesPlugin } from './scripts/vite-plugin-lib-sources.mjs'
 
 const AppVersion = process.env.npm_package_version ?? 'unknown'
 
@@ -25,7 +26,7 @@ export default defineConfig({
     },
   },
 
-  plugins: [schemeParserPlugin(), vue()],
+  plugins: [schemeParserPlugin(), libSourcesPlugin(), vue()],
 
   define: {
     APP_VERSION: JSON.stringify(AppVersion),

@@ -7,7 +7,7 @@ import Scamper, { initialize } from '../../src/scamper'
 import {
   QueryExtension,
   syncQueryDecorations,
-} from '../../src/web/codemirror/extensions/query'
+} from '../../src/app/web/codemirror/extensions/query'
 
 await initialize()
 

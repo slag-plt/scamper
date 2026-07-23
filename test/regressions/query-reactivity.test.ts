@@ -3,12 +3,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { LoggingChannel, Range, ReportError } from '../../src/lpm'
 import Scamper, { initialize } from '../../src/scamper'
-import type { EditorAccessor } from '../../src/web/composables/editor-context'
+import type { EditorAccessor } from '../../src/app/web/composables/editor-context'
 import {
   provideScamperSession,
   type ScamperSession,
-} from '../../src/web/composables/use-scamper-session'
-import type { ResultsPaneType } from '../../src/web/composables/use-results-pane'
+} from '../../src/app/web/composables/use-scamper-session'
+import type { ResultsPaneType } from '../../src/app/web/composables/use-results-pane'
 import { makeMockCodeMirrorEditorAdapter } from '../stubs/mock-code-mirror-editor-adapter'
 
 await initialize()

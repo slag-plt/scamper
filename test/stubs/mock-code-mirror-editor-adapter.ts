@@ -1,5 +1,5 @@
 import { Loc } from '../../src/lpm'
-import type { CodeMirrorEditorAdapter } from '../../src/web/composables/codemirror-editor-adapter'
+import type { CodeMirrorEditorAdapter } from '../../src/app/web/composables/codemirror-editor-adapter'
 
 export function makeMockCodeMirrorEditorAdapter(
   overrides: Partial<CodeMirrorEditorAdapter> = {},

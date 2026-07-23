@@ -1,9 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { findByRole, fireEvent, getByRole, waitFor } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import IdeApp from '../../src/web/components/IdeApp.vue'
+import IdeApp from '../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../src/fs'
-import { noLoadedFileText } from '../../src/web/codemirror/codemirror'
+import { noLoadedFileText } from '../../src/app/web/codemirror/codemirror'
 import { mockEditorHandle } from '../stubs/mock-editor-handle'
 import { initialize } from '../../src/scamper'
 
@@ -12,18 +12,18 @@ vi.mock('../../src/fs/opfs', async () => {
   return { default: MockFileSystem }
 })
 
-vi.mock('../../src/web/lockfile', () => ({
+vi.mock('../../src/app/web/lockfile', () => ({
   acquireLockFile: vi.fn(() => Promise.resolve(true)),
   releaseLockFile: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock(
-  '../../src/web/components/CodeMirrorEditor.vue',
+  '../../src/app/web/components/CodeMirrorEditor.vue',
   () => import('../stubs/MockCodeMirrorEditor.vue'),
 )
 
 vi.mock(
-  '../../src/web/components/ResultsPane.vue',
+  '../../src/app/web/components/ResultsPane.vue',
   () => import('../stubs/MockResultsPane.vue'),
 )
 

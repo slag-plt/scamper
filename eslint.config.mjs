@@ -31,6 +31,7 @@ export default defineConfig(
       'coverage/*',
       'src/js/webaudiofont/*',
       'src/scheme/generated/*',
+      'src/lib/generated/*',
     ]),
   ],
   {
@@ -42,6 +43,8 @@ export default defineConfig(
             'vite.config.ts',
             'scripts/generate-parser.mjs',
             'scripts/vite-plugin-scheme-parser.mjs',
+            'scripts/generate-lib-sources.mjs',
+            'scripts/vite-plugin-lib-sources.mjs',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
@@ -54,6 +57,8 @@ export default defineConfig(
       'vite.config.ts',
       'scripts/generate-parser.mjs',
       'scripts/vite-plugin-scheme-parser.mjs',
+      'scripts/generate-lib-sources.mjs',
+      'scripts/vite-plugin-lib-sources.mjs',
     ],
     languageOptions: {
       globals: {

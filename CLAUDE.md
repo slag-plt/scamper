@@ -46,16 +46,17 @@ This file provides guidance to LLM agents when working with code in this reposit
 + `scripts/` — Standalone Node/bash scripts for parser generation, deployment, and build validation that live outside the Vite pipeline.
 + `public/` — Static assets (CSS, fonts, images) copied as-is into every build output.
 + `src/` — All application and language-implementation source code.
-  - `src/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
-  - `src/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
+  - `src/app/` — The four end-user apps, one folder each:
+    - `src/app/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
+    - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
+    - `src/app/search/` — Vue app powering the standalone documentation search page (`search.html`).
+    - `src/app/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
   - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI) used to load and save Scamper source files.
   - `src/js/` — The JavaScript "native" package: one folder per library that Scamper's standard library binds to via `js-var`.
   - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
-  - `src/search/` — Vue app powering the standalone documentation search page (`search.html`).
-  - `src/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline
@@ -82,10 +83,10 @@ Scamper programs as a collection of fibers of execution.
 
 ### Apps
 
-+ `src/web`: the main web IDE
-+ `src/cli`: the command-line driver for console-based execution of Scamper programs
-+ `src/docs`: the standard library documentation pages 
-+ `src/search`: the standard library search page
++ `src/app/web`: the main web IDE
++ `src/app/cli`: the command-line driver for console-based execution of Scamper programs
++ `src/app/docs`: the standard library documentation pages 
++ `src/app/search`: the standard library search page
 
 ## Design Notes
 
