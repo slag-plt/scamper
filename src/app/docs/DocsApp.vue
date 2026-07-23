@@ -29,7 +29,7 @@ const selectedLib = computed(
 const search = ref('')
 
 function searchForFunction(searchTerm: string) {
-  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_self')
+  window.open('/src/app/search/search.html?search=' + encodeURIComponent(searchTerm), '_self')
 }
 </script>
 

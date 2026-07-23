@@ -26,7 +26,7 @@ function handleTrace() {
 const search = ref('')
 
 function searchOpenWindow(searchTerm: string) {
-  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_blank')
+  window.open('/src/app/search/search.html?search=' + encodeURIComponent(searchTerm), '_blank')
 }
 </script>
 
