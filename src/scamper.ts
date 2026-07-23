@@ -33,6 +33,7 @@ interface RunRequest {
 }
 export interface DisplayRequest extends RunRequest {
   tracing: boolean
+  fiber : Fiber
 }
 export type QueryRequest = RunRequest
 
@@ -96,7 +97,7 @@ if (typeof window !== 'undefined') {
 }
 
 /** Unreachable once getInstance() has gated on `initialized`. */
-function getDefaultEnv(): Env {
+export function getDefaultEnv(): Env {
   if (!defaultEnv) {
     throw new Error("Scamper's default environment used before initialize()")
   }
@@ -129,12 +130,8 @@ export default class Scamper {
   /**
    * @returns ID of task
    */
-  public async execute({
-    src,
-    out,
-    err,
-    isTracing,
-  }: DisplayExecutionConfig): Promise<DisplayRequest | null> {
+  public async execute({ src, out, err, isTracing }: DisplayExecutionConfig,
+    env : Env = getDefaultEnv()): Promise<DisplayRequest | null> {
     // compile src to lpm bytecode
     const compiled = await compile(err, src)
     if (!compiled) {
@@ -142,8 +139,9 @@ export default class Scamper {
       return null
     }
 
-    // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled, getDefaultEnv())
+    // make new fiber with prelude or specified environment as initial 
+    // environment
+    const fiber = new Fiber(compiled, env)
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
@@ -161,7 +159,7 @@ export default class Scamper {
         resolve()
       },
     })
-    return { id, tracing, done: promise }
+    return { id, tracing, fiber, done: promise }
   }
 
   /*  =====  scheduler  =====  */
