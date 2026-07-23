@@ -241,9 +241,9 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
   const points: [number, number][] = []
   switch(drawing[L.structKind]) {
     case 'ellipse':
-      const n = 100;
+      const n = 100
       for (let i = 1; i < n; i++) {
-        const t = 2 * Math.PI * i / n;
+        const t = 2 * Math.PI * i / n
         points.push([
           0.5 * drawing.width * Math.cos(t),
           0.5 * drawing.height * Math.sin(t)
@@ -756,10 +756,10 @@ export function image_clearDrawing (canvas: HTMLCanvasElement) {
 }
 
 // TODO: aria labels should be in a central location
-export const image_canvasAriaLabel = 'scamper-canvas';
+export const image_canvasAriaLabel = 'scamper-canvas'
 export function image_renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
-  canvas.setAttribute('aria-label', image_canvasAriaLabel);
+  canvas.setAttribute('aria-label', image_canvasAriaLabel)
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
   image_clearDrawing(canvas)

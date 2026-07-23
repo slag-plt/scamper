@@ -22,7 +22,7 @@ class RexEmpty implements L.Struct, Re {
   [key: number]: never;
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
-  [L.structKind] = 'rex-empty';
+  [L.structKind] = 'rex-empty'
   toRegexString(): string {
     return ''
   }
@@ -32,7 +32,7 @@ class RexString implements L.Struct, Re {
   [key: number]: never;
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
-  [L.structKind] = 'rex-string';
+  [L.structKind] = 'rex-string'
   value: string
   constructor (value: string) {
     this.value = value
@@ -47,7 +47,7 @@ class RexRepeat implements L.Struct, Re {
   [key: number]: never;
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
-  [L.structKind] = 'rex-repeat';
+  [L.structKind] = 'rex-repeat'
   value: Re
   constructor (value: Re) {
     this.value = value
@@ -62,7 +62,7 @@ class RexRepeat0 implements L.Struct, Re {
   [key: number]: never;
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
-  [L.structKind] = 'rex-repeat-0';
+  [L.structKind] = 'rex-repeat-0'
   value: Re
   constructor (value: Re) {
     this.value = value
@@ -92,7 +92,7 @@ class RexAnyChar implements L.Struct, Re {
   [key: number]: never;
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
-  [L.structKind] = 'rex-any-char';
+  [L.structKind] = 'rex-any-char'
   toRegexString(): string {
     return '.'
   }

@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 import { Fiber } from '../src/lpm/fiber'
-import HTMLDisplay from '../src/lpm/output/html';
+import HTMLDisplay from '../src/lpm/output/html'
 
 // Runs a fiber to completion, sending displayed values/reported errors to
 // `out` and recovering from runtime errors the way the scheduler does for
@@ -54,9 +54,9 @@ export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promis
 }
 
 export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, async () => { expect(await runProgram(src.trim())).toEqual(expected); })
+  test(label, async () => { expect(await runProgram(src.trim())).toEqual(expected) })
 }
 
 export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.fails(label, async () => { expect(await runProgram(src.trim())).toEqual(expected); })
+  test.fails(label, async () => { expect(await runProgram(src.trim())).toEqual(expected) })
 }
