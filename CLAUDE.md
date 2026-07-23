@@ -93,3 +93,4 @@ Scamper programs as a collection of fibers of execution.
 + Scamper is maintained by undergraduate research students, so favor simpler designs as long as they do not cause significant headaches.
 + Additionally, readable design is paramount; when writing code, if there are design choices to be made, favor consulting the user when possible.
 + As much as possible, the codebase is meant to be written in a pure, functional style. The exception is when performance is necessary, and then effects are intentionally scoped as local as possible.
++ Text enshrined in code whether it is code comments, docstrings, or git commits should be concise and to the point.
