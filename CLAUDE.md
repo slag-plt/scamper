@@ -6,72 +6,89 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 **Scamper** is a mini-Scheme implementation designed for teaching multimedia programming on the web. It provides a complete web-based programming environment with IDE, documentation viewer, and various runner interfaces.
 
+## Tech Stack
++ Host language: Typescript
++ Scripting languages: Python (large scripts) and Bash (simple scripts)
++ Package manager: Node
++ Build system: Vite
++ Build system and package manager: Node
++ Source language: R7RS Small Scheme with extensions drawn from Racket and Clojure
++ UI frameworks: Vue and Codemirror (text editor)
++ Scamper support libraries
+    - Lezer (parsing)
+    - Chart.js (data charts)
+    - Papaparse (CSV parsing)
+    - Webaudiofont (web audio management)
++ Linting: ESLint
+
 ## Development Commands
 
-### Essential Commands
-- `npm install` - Install dependencies  
-- `npm run dev` - Start Vite development server for local development
-- `npm run build` - Full production build (TypeScript compilation + Vite build)
-- `npm test` - Run all Jest tests
-- `npm run deploy` - Deploy to production server (requires Mac/Linux and compsci host)
-- `npm run clean` - Remove dist directory
+### Building
 
-### Testing
-- Tests are located in `/test/` directory with `.test.ts` extension
-- Jest runs in jsdom environment with TypeScript support
-- Key test files: `libs.test.ts`, `prelude.test.ts`, `runtime.test.ts`, `lpm/machine.test.ts`
-- Individual test files can be run with: `npm test -- <filename>`
++ `npm install`: installs dependencies
++ `npm run dev`: starts development server
++ `npm run build`: full production build (compilation + bundling)
++ `npm run clean`: cleans the build
++ `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
+
+### Validation
+
++ `npm run validate-build`: runs the full validation process (test, typecheck, lint)
++ `npm run test`: runs the full test suite
++ `npm run typecheck`: runs the typechecker 
++ `npm run lint`: runs the linter
++ `npm run lint:fix`: automatically fixes simple linter errors
 
 ## Architecture Overview
 
-### Core Language Pipeline
-1. **Lexing/Reading** (`src/scheme/reader.ts`) - S-expression parsing
-2. **AST Parsing** (`src/scheme/ast.ts`) - Convert to abstract syntax tree
-3. **Macro Expansion** (`src/scheme/expansion.ts`) - Expand Scheme macros
-4. **Scope Checking** (`src/scheme/scope.ts`) - Variable resolution
-5. **Code Generation** (`src/scheme/codegen.ts`) - Lower to LPM bytecode
-6. **Execution** (`src/lpm/`) - Language Processing Machine runtime
+### Source Tree Layout
 
-### Key Source Directories
-- `src/scheme/` - Scheme language implementation (parser, AST, codegen, etc.)
-- `src/lpm/` - LPM runtime execution engine
-- `src/js/` - The JavaScript "native" package (multimedia, audio, canvas, image, reactive, etc.) that Scamper's standard library is built on
-- `src/web/` - Web interface components (IDE, file system, runners)
-- `src/codemirror/` - Code editor integration with Scheme syntax highlighting
-- `src/docs/` - Documentation generation system
++ `scripts/` — Standalone Node/bash scripts for parser generation, deployment, and build validation that live outside the Vite pipeline.
++ `public/` — Static assets (CSS, fonts, images) copied as-is into every build output.
++ `src/` — All application and language-implementation source code.
+  - `src/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
+  - `src/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
+  - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI) used to load and save Scamper source files.
+  - `src/js/` — The JavaScript "native" package: one folder per library that Scamper's standard library binds to via `js-var`.
+  - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
+  - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
+  - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
+  - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
+  - `src/search/` — Vue app powering the standalone documentation search page (`search.html`).
+  - `src/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
++ `test/` — Vitest test suites
 
-### Main Classes
-- `Scamper` class in `scamper.ts` - Main orchestrator for compilation and execution
+## Compilation Pipeline
 
-### Web Interfaces (Multiple Entry Points)
-- `ide.html` - Full IDE with split-pane editor and output
-- `runner.html` - Simple program runner  
-- `docs.html` - Documentation viewer
-- `web.html` - Alternative web interface
-- `index.html` - File chooser/main entry point
+`src/scamper.ts` and its singleton `Scamper` object is the entry point for all Scamper language services.
 
-## Library Development
+### Front-end
 
-The JS native package is in `/src/js/`. Each module is a plain JS module exporting functions/values under their JS names; nothing here is exposed directly to the Scamper module system -- Scamper code reaches these exports exclusively through the `js-var` special form (see `src/js/index.ts`'s `lookup(moduleName, varName)`).
+1. **Parsing** (`src/scheme/syntax.grammar` and `lezer-bridge.ts`): handled by Lezer
+2. **AST definitions** (`src/scheme/ast.ts`)
+3. **AST expansion** (`src/expansion.ts`)
+4. **Scope checking** (`src/scope.ts`)
 
-### Type Mappings
-- JavaScript primitives map directly: `boolean`, `number`, `string`, `null` (null), `undefined` (void), `Array` (vector)
-- Scamper objects use `##scamperTag##` fields: pairs, lists, structs, closures, wrapped JS functions
+### Back-end
 
-### Key Utilities
-- `ScamperError` in `lang.ts` - Primary exception type for libraries
-- `callScamperFn()` in `lpm` - Invoke higher-order functions
+The back-end of Scamper is the Little Pattern Machine (LPM), a stack-based virtual machine. The machine manages
+Scamper programs as a collection of fibers of execution.
 
-## Build Configuration
+1. **Bytecode definitions** (`src/lpm/lang.ts`): LPM values, runtime structures, and the bytecode language
+2. **Fibers** (`src/lpm/fiber.ts`)
+3. **Opcode execution** (`src/lpm/handlers`)
+4. **Output system** (`src/lpm/output`): definitions of output and error channels with implementations for text and web-based rendering
+5. **Rendering system** (`src/lpm/renderers`): definitions of specific renderers of LPM values
 
-- **Vite** (main build tool) with TypeScript compilation
-- **Multi-entry build** creates versioned assets for each interface
-- **ES2023 target** with strict TypeScript configuration
-- **Source maps** generated for both JS and TS
-- Output: `dist/` for web assets, `types/` for TypeScript declarations
+### Apps
 
-## Current Development
++ `src/web`: the main web IDE
++ `src/cli`: the command-line driver for console-based execution of Scamper programs
++ `src/docs`: the standard library documentation pages 
++ `src/search`: the standard library search page
 
-- Active branch: `lpm` (Little Pattern Machine development)
-- Version: 3.0.0
-- Key changes appear to be in the LPM runtime system
+## Design Notes
+
++ Scamper is maintained by undergraduate research students, so favor simpler designs as long as they do not cause significant headaches.
++ Additionally, readable design is paramount; when writing code, if there are design choices to be made, favor consulting the user when possible.
++ As much as possible, the codebase is meant to be written in a pure, functional style. The exception is when performance is necessary, and then effects are intentionally scoped as local as possible.
