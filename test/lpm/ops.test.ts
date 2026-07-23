@@ -96,6 +96,55 @@ describe('basic ops', () => {
     expect(out.log).toStrictEqual([7])
   })
 
+  test('ap without enough values on the stack throws an ICE', () => {
+    const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkAp(2)])])
+    expectFailedExec(fiber)
+  })
+
+  describe('apply', () => {
+    test('spreads a list as call arguments', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkVar('+'), U.mkLit(U.mkList(3, 4)), U.mkApplyOp()]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([7])
+    })
+
+    test('malformed args: arg value is not a list', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkVar('+'), U.mkLit(42), U.mkApplyOp()]),
+      ])
+      expectFailedExec(fiber)
+    })
+
+    test('without enough values on the stack throws an ICE', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApplyOp()])])
+      expectFailedExec(fiber)
+    })
+
+    test('applying a non-function, non-closure value', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit(42), U.mkLit(U.mkList()), U.mkApplyOp()]),
+      ])
+      expectFailedExec(fiber)
+    })
+
+    test('a JS function throwing a non-Scamper error gets wrapped', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkVar('boom'), U.mkLit(U.mkList()), U.mkApplyOp()]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        'boom',
+        () => {
+          throw new TypeError('kaboom')
+        },
+      ])
+      expect(() => {
+        testExecute(fiber, out)
+      }).toThrow(/Unexpected error in Javascript function call/)
+    })
+  })
+
   describe('match', () => {
     test('w/ plit', () => {
       const ifBranch = [U.mkLit('matched')]
@@ -197,6 +246,34 @@ describe('basic ops', () => {
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([3])
     })
+
+    test('missing scrutinee throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkMatch([[U.mkPWild(), [U.mkLit('unreached')]]])]),
+      ])
+      expectFailedExec(fiber)
+    })
+  })
+
+  describe('error', () => {
+    test('raises a runtime error with the given message', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit('boom'), U.mkError()])])
+      expect(() => {
+        testExecute(fiber, out)
+      }).toThrow('boom')
+    })
+
+    test('non-string value throws', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(42), U.mkError()])])
+      expect(() => {
+        testExecute(fiber, out)
+      }).toThrow(/expected a string/)
+    })
+  })
+
+  test('rept without a pending value throws an ICE', () => {
+    const fiber = makeTestFiber([U.mkDisp([U.mkRept()])])
+    expectFailedExec(fiber)
   })
 
   test('define', () => {

@@ -48,6 +48,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './test/setup.ts',
+    // *.browser.test.ts files need a real browser's Canvas2D/font-metrics
+    // implementation and run separately via `npm run test:browser` (see
+    // test/vitest.browser.config.ts) -- excluded here since they'd fail under
+    // jsdom's stubbed-out canvas support.
+    exclude: ['**/node_modules/**', '**/.git/**', '**/*.browser.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['lcov'],

@@ -135,3 +135,68 @@ test('pattern matching with constructor pattern', () => {
   const result = raiseBlk([LPM.mkLit('test'), LPM.mkMatch(branches)])
   expect(result).toBe('(match "test" [(pair x y) x])')
 })
+
+test('var operation raising resolves a bound function to its name', () => {
+  const fn = () => 42
+  const env = LPM.Env.empty.extendWithLocals(['f', fn])
+  const fiber = makeTestFiber([])
+  fiber.pushFrame(new Frame('f1', env, [LPM.mkVar('f')]))
+  const result = expToString(raiseFiber(fiber))
+  expect(result).toBe('f')
+})
+
+test('var operation raising resolves a bound non-function value as a literal', () => {
+  const env = LPM.Env.empty.extendWithLocals(['n', 99])
+  const fiber = makeTestFiber([])
+  fiber.pushFrame(new Frame('f1', env, [LPM.mkVar('n')]))
+  const result = expToString(raiseFiber(fiber))
+  expect(result).toBe('99')
+})
+
+test('mkCls operation raising without a name produces a lambda expression', () => {
+  const result = raiseBlk([LPM.mkCls(['x'], [LPM.mkVar('x')])])
+  expect(result).toBe('(lambda (x) x)')
+})
+
+test('error operation raising', () => {
+  const result = raiseBlk([LPM.mkLit('boom'), LPM.mkError()])
+  expect(result).toBe('(error "boom")')
+})
+
+test('apply operation raising', () => {
+  const result = raiseBlk([LPM.mkVar('f'), LPM.mkVar('args'), LPM.mkApplyOp()])
+  expect(result).toBe('(apply f args)')
+})
+
+test('pops and popv operations raising', () => {
+  const result = raiseBlk([
+    LPM.mkLit(1),
+    LPM.mkLit(2),
+    LPM.mkPops(),
+    LPM.mkPopv(),
+  ])
+  expect(result).toBe('1')
+})
+
+test('raiseFrames throws when there are no frames to raise', () => {
+  const fiber = makeTestFiber([])
+  expect(() => raiseFiber(fiber)).toThrow(LPM.ICE)
+})
+
+test('raiseFrames folds partial frames across the call stack', () => {
+  const fn = (x: number, y: number) => x + y
+  LPM.nameFn('+', fn)
+  const fiber = makeTestFiber([])
+  const outer = new Frame('outer', LPM.Env.empty, [LPM.mkAp(2)])
+  outer.values.push(fn, 1)
+  const inner = new Frame('inner', LPM.Env.empty, [
+    LPM.mkVar('*'),
+    LPM.mkLit(2),
+    LPM.mkLit(3),
+    LPM.mkAp(2),
+  ])
+  fiber.pushFrame(outer)
+  fiber.pushFrame(inner)
+  const result = expToString(raiseFiber(fiber))
+  expect(result).toBe('(+ 1 (* 2 3))')
+})

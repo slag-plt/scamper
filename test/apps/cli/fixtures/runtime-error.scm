@@ -1,0 +1,2 @@
+(display "before")
+(error "boom")

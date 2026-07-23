@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import * as L from '../../src/lpm'
-import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
+import * as L from '../../../src/lpm'
+import { parseProgramFromSource } from '../../../src/scheme/lezer-bridge'
 
-// N.B., unlike lezer-bridge.test.ts/lezer-bridge-corpus.test.ts, these don't
+// N.B., unlike core.test.ts/corpus.test.ts, these don't
 // assert parity with reader.ts/parser.ts's specific error messages -- Lezer's
 // error-recovery tree doesn't tell us *why* a span failed to parse the way
 // the hand-written parser's per-form arity checks do, so the messages here
