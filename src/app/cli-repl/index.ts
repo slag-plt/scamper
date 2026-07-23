@@ -41,9 +41,9 @@ async function exec(scamper : Scamper, out: ConsoleOutput, code : string): Promi
   )
   if (request) {
     await request.done
+    env = request.fiber.topLevelEnv
+    // console.log(request)
   }
-  // console.log(request)
-  env = request.fiber.topLevelEnv
   stdout.write(">>> ")
 } // exec
 
