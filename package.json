@@ -11,6 +11,7 @@
 
     "dev": "vite",
     "cli": "tsx src/app/cli/index.ts",
+    "cli-repl": "tsx src/app/cli-repl/index.ts",
     "precli": "npm run generate",
     "build": "vue-tsc --noEmit && vite build",
     "prebuild": "npm run generate",
