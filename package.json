@@ -23,7 +23,7 @@
     "coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "validate-build": "./scripts/validate-build",
+    "validate": "./scripts/validate-build",
 
     "deploy": "./scripts/deploy $npm_package_version",
     "deploy:latest": "./scripts/update-latest $npm_package_version"

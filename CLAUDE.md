@@ -33,7 +33,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ### Validation
 
-+ `npm run validate-build`: runs the full validation process (test, typecheck, lint)
++ `npm run validate`: runs the full validation process (test, typecheck, lint)
 + `npm run test`: runs the full test suite
 + `npm run typecheck`: runs the typechecker 
 + `npm run lint`: runs the linter
