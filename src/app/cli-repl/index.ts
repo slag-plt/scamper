@@ -27,11 +27,10 @@ const { values, positionals } = parseArgs({
 var env;
 
 // Needs updating for REPL
-if (values.help || positionals.length !== 1) {
-  console.log('Usage: screpl [options]')
+if (values.help) {
+  console.log('Usage: npm cli-repl [options]')
   console.log('Options:')
   console.log('  -?, --help       Show this help message')
-  console.log('  --trace          Enabling step-by-step tracing')
   process.exit(0)
 }
 
