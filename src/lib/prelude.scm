@@ -353,7 +353,7 @@
 ;;;  v1 : any
 ;;;  v2 : any
 ;;; Returns a new cons cell containing `v1` and `v2`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, car, cdr
 (define cons (js-var "prelude_cons"))
 
 ;;; (pair v1 v2) -> pair?

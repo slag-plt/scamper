@@ -40,6 +40,9 @@ function showEverything() {
 function findSearch() {
   const s = props.searchIn
   const showLibs = allDocs().filter((doc) => functionDocName(doc) === s)
+  //console.log('oneee', showLibs)
+  showLibs.forEach((func) => {pushRelatives(func, showLibs)})
+  //console.log('twooo', showLibs)
   noSearchText.value = showLibs.length === 0 && props.searchIn !== ''
   filteredLibs.value = showLibs
 }
@@ -92,6 +95,86 @@ function addToLib() {
     return checkRet && checkArg && checkTag
   })
 }
+
+function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
+const relatives: string[] = []
+
+  const docTags = functionDocCategories(doc)
+  docTags.forEach((arrTag) => {
+  //console.log('arrTag', arrTag)
+    if(!tagListStr.value.includes(arrTag)) {
+      relatives.push(arrTag)
+    }
+  })
+//console.log('relatives', relatives)
+  allDocs().forEach((func) => {
+    if(relatives.includes(functionDocName(func))) {
+      // console.log('functionDocName(func)')
+      // console.log(functionDocName(func))
+      // console.log('relatives.includes(functionDocName(func))')
+      // console.log(relatives.includes(functionDocName(func)))
+      showLibs.push(func)
+    }
+  })
+  //console.log('showLibs', showLibs)
+}
+
+const tagListStr = ref([
+  'char',
+  'string',
+  'list',
+    'association list',
+    'list creation',
+    'list manipulation',
+  'vectors',
+  'mutation',
+  'constants',
+  'function composition',
+  
+  'math',
+    'algebra',
+    'trigonometry',
+    'comparator',
+    'boolean/logic',
+
+  'images',
+    'color',
+    'pixel',
+    'rgb',
+    'hsv',
+    
+    'composition/placement',
+    'path',
+  'canvas',
+    'shapes',
+
+  'music',
+    'duration',
+    'instruments',
+    'note',
+    'modifications',
+    'audio',
+    'sound',
+
+  'data',
+    'create',
+    'plot',
+    'parse',
+    
+  'typecheck',
+
+  'regexes',
+
+  'predicates',
+  'testing',
+  'formatting',
+
+  'interactive',
+  'html',
+  'reactive',
+
+  'other',
+])
 
 const tagList = ref([
   
@@ -294,11 +377,11 @@ const types = ref([
       <option v-for="o in tBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
     <div v-if="TisOpen" class="dropdown-menu">
-      <label v-for="o in tagList" :key="o.id">
+      <label v-for="o in tagListStr" :key="o">
         <div class="flex-box-skinny">
-          <div v-if="indentList.includes(o.val)" class="left-margin"></div>
-          <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
-          {{ o.val }}</p>
+          <div v-if="indentList.includes(o)" class="left-margin"></div>
+          <p><input v-model="tags" type="checkbox" class="indent" :value= "o" >
+          {{ o }}</p>
         </div>
       </label>
     </div>
