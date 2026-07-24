@@ -8,287 +8,287 @@
 ;;; (number? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a number.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, odd?, positive?, real?, zero?
 (define number? (js-var "prelude_numberQ"))
 
 ;;; (real? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a real number.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, odd?, positive?, zero?
 (define real? (js-var "prelude_realQ"))
 
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, number?, odd?, positive?, real?, zero?
 (define integer? (js-var "prelude_integerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is the number `NaN`.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, min, max, >=, >, <=, <, = 
 (define nan? (js-var "prelude_nanQ"))
 
 ;;; (< v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is strictly less than `v2`.
-;;; @category math, comparator
+;;; @category math, comparator, , min, max, nan?, >=, >, <=, =
 (define < (js-var "prelude_lt"))
 
 ;;; (<= v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is less than or equal to `v2`.
-;;; @category math, comparator
+;;; @category math, comparator, min, max, nan?, >=, >, <, =
 (define <= (js-var "prelude_leq"))
 
 ;;; (> v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is strictly greater than `v2`.
-;;; @category math, comparator
+;;; @category math, comparator, min, max, nan?, >=, <=, <, =
 (define > (js-var "prelude_gt"))
 
 ;;; (>= v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is greater than or equal to `v2`.
-;;; @category math, comparator
+;;; @category math, comparator, , min, max, nan? >, <=, <, =
 (define >= (js-var "prelude_geq"))
 
 ;;; (= v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is equal to `v2`.
-;;; @category math, comparator
+;;; @category math, comparator, , min, max, nan?, >=, >, <=, <
 (define = (js-var "prelude_eq"))
 
 ;;; (=-eps n) -> procedure?
 ;;;  n : number?
 ;;; Returns a function that takes two numbers `x` and `y` as input returns `#t` if `|x - y| < n`.
-;;; @category function composition
+;;; @category function composition, all-of, any-of, compose, o, |>
 (define =-eps (js-var "prelude_equalsEps"))
 
 ;;; (zero? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is zero.
-;;; @category comparator, math, predicates, typecheck
+;;; @category comparator, math, predicates, typecheck, even?, integer?, negative?, number?, odd?, positive?, real?
 (define zero? (js-var "prelude_zeroQ"))
 
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, odd?, real?, zero?
 (define positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, even?, integer?, number?, odd?, positive?, real?, zero?
 (define negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is odd.
-;;; @category math, comparator, typecheck, predicates
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, positive?, real?, zero?
 (define odd? (js-var "prelude_oddQ"))
 
 ;;; (even? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is even.
-;;; @category math, comparator, predicates
+;;; @category math, comparator, predicates, integer?, negative?, number?, odd?, positive?, real?, zero?
 (define even? (js-var "prelude_evenQ"))
 
 ;;; (max . v) -> number?
 ;;;  v : number?
 ;;; Returns the maximum of the given numbers.
-;;; @category math, comparator
+;;; @category math, comparator, min, nan?, >=, >, <=, <, =
 (define max (js-var "prelude_max"))
 
 ;;; (min . v) -> number?
 ;;;  v : number?
 ;;; Returns the minimum of the given numbers.
-;;; @category math, comparator
+;;; @category math, comparator, max, nan?, >=, >, <=, <, =
 (define min (js-var "prelude_min"))
 
 ;;; (+ . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the sum of `v1`, `v2`, ... .
-;;; @category math, algebra
+;;; @category math, algebra, -, *, /, modulo, quotient, remainder 
 (define + (js-var "prelude_plus"))
 
 ;;; (- . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the difference of `v1`, `v2`, ... .
-;;; @category math, algebra
+;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define - (js-var "prelude_minus"))
 
 ;;; (* . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the product of `v1`, `v2`, ... .
-;;; @category math, algebra
+;;; @category math, algebra, +, -, /, modulo, quotient, remainder
 (define * (js-var "prelude_times"))
 
 ;;; (/ . v1) -> number?
 ;;;  v1 : number?
 ;;; Returns the quotient of `v1`, `v2`, ... .
-;;; @category math, algebra
+;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define / (js-var "prelude_div"))
 
 ;;; (abs v) -> number?
 ;;;  v : number?
 ;;; Returns the absolute value of `v`.
-;;; @category math, algebra
+;;; @category math, algebra, ceiling, floor, round, truncate
 (define abs (js-var "prelude_abs"))
 
 ;;; (quotient v1 v2) -> number?
 ;;;  v1 : integer?
 ;;;  v2 : integer?
 ;;; Returns the quotient of `v1` and `v2`, _i.e._, the whole number part of `v1 / v2`.
-;;; @category math, algebra
+;;; @category math, algebra, +, -, *, /, modulo, remainder
 (define quotient (js-var "prelude_quotient"))
 
 ;;; (remainder v1 v2) -> number?
 ;;;  v1 : integer?
 ;;;  v2 : integer?
 ;;; Returns the remainder of `v1` and `v2`, _i.e._, the remainder of `v1 / v2`.
-;;; @category math, algebra
+;;; @category math, algebra, +, -, *, /, modulo, quotient
 (define remainder (js-var "prelude_remainder"))
 
 ;;; (modulo v1 v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `k = n - d * q` where `q` is the integer such that `k` has the same sign as the divisor `d` while being as close to 0 as possible. (Source: [MDN docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder).)
-;;; @category math, algebra
+;;; @category math, algebra, +, -, *, /, quotient, remainder
 (define modulo (js-var "prelude_modulo"))
 
 ;;; (floor v) -> integer?
 ;;;  v : number?
 ;;; Returns the largest integer less than or equal to `v`.
-;;; @category math, algebra
+;;; @category math, algebra, abs, ceiling, round, truncate
 (define floor (js-var "prelude_floor"))
 
 ;;; (ceiling v) -> integer?
 ;;;  v : number?
 ;;; Returns the smallest integer greater than or equal to `v`.
-;;; @category math, algebra
+;;; @category math, algebra, abs, floor, round, truncate
 (define ceiling (js-var "prelude_ceiling"))
 
 ;;; (truncate v) -> integer?
 ;;;  v : number?
 ;;; Returns the integer closest to `v` less than or equal to `v`.
-;;; @category math, algebra
+;;; @category math, algebra, abs, ceiling, floor, round
 (define truncate (js-var "prelude_truncate"))
 
 ;;; (round v) -> integer?
 ;;;  v : number?
 ;;; Returns the integer closest to `v`.
-;;; @category math, algebra
+;;; @category math, algebra, abs, ceiling, floor, truncate
 (define round (js-var "prelude_round"))
 
 ;;; (square v) -> number?
 ;;;  v : number?
 ;;; Returns the square of `v`.
-;;; @category math, algebra
+;;; @category math, algebra, exp, expt, sqrt, log
 (define square (js-var "prelude_square"))
 
 ;;; (sqrt v) -> number?
 ;;;  v : number?
 ;;; Returns the square root of `v`.
-;;; @category math, algebra
+;;; @category math, algebra, exp, expt, square, log
 (define sqrt (js-var "prelude_sqrt"))
 
 ;;; (expt x y) -> number?
 ;;;  x : number?
 ;;;  y : number?
 ;;; Returns `x` raised to the power of `y`.
-;;; @category math, algebra
+;;; @category math, algebra, exp, square, sqrt, log  
 (define expt (js-var "prelude_expt"))
 
 ;;; (number->string v) -> string?
 ;;;  v : number?
 ;;; Returns the string representation of `v`.
-;;; @category string
+;;; @category string, char->integer, digit-value, integer->char, string->number
 (define number->string (js-var "prelude_numberToString"))
 
 ;;; (string->number s) -> number?
 ;;;  s : string?
 ;;;   presumed to be a number
 ;;; Returns the number denoted by `s` as a `number`.
-;;; @category string
+;;; @category string,  number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char 
 (define string->number (js-var "prelude_stringToNumber"))
 
 ;;; (exp v) -> number?
 ;;;  v : number?
 ;;; Returns the exponential of `v`.
-;;; @category math, algebra
+;;; @category math, algebra, expt, square, sqrt, log
 (define exp (js-var "prelude_exp"))
 
 ;;; (log v) -> number?
 ;;;  v : number?
 ;;; Returns the natural logarithm of `v`.
-;;; @category math, algebra
+;;; @category math, algebra, exp, expt, square, sqrt
 (define log (js-var "prelude_log"))
 
 ;;; (sin v) -> number?
 ;;;  v : number?
 ;;; Returns the sine of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, acos, asin, atan, cos, tan, pi, π  
 (define sin (js-var "prelude_sin"))
 
 ;;; (cos v) -> number?
 ;;;  v : number?
 ;;; Returns the cosine of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, acos, asin, atan, sin, tan, pi, π  
 (define cos (js-var "prelude_cos"))
 
 ;;; (tan v) -> number?
 ;;;  v : number?
 ;;; Returns the tangent of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, acos, asin, atan, cos, sin, pi, π  
 (define tan (js-var "prelude_tan"))
 
 ;;; (asin v) -> number?
 ;;;  v : number?
 ;;; Returns the arc sine of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, acos, atan, cos, sin, tan, pi, π  
 (define asin (js-var "prelude_asin"))
 
 ;;; (acos v) -> number?
 ;;;  v : number?
 ;;; Returns the arc cosine of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, asin, atan, cos, sin, tan, pi, π  
 (define acos (js-var "prelude_acos"))
 
 ;;; (atan v) -> number?
 ;;;  v : number?
 ;;; Returns the arc tangent of `v`.
-;;; @category math, trigonometry
+;;; @category math, trigonometry, acos, asin, cos, sin, tan, pi, π  
 (define atan (js-var "prelude_atan"))
 
 ;;; (not v) -> boolean?
 ;;;  v : boolean?
 ;;; Returns `#t` if and only `v` is `#f`.
-;;; @category boolean/logic
+;;; @category boolean/logic, and, nand, nor, xor, or
 (define not (js-var "prelude_not"))
 
 ;;; (boolean? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a boolean.
-;;; @category typecheck, boolean/logic, predicates
+;;; @category typecheck, boolean/logic, predicates, char?, string?, integer?
 (define boolean? (js-var "prelude_booleanQ"))
 
 ;;; (nand . v1) -> boolean?
 ;;;  v1 : boolean?
 ;;; Equivalent to `(not (and v1 v2 ...))`.
-;;; @category boolean/logic
+;;; @category boolean/logic, and, nor, not, xor, or
 (define nand (js-var "prelude_nand"))
 
 ;;; (nor . v1) -> boolean?
 ;;;  v1 : boolean?
 ;;; Equivalent to `(not (or v1 v2 ...))`.
-;;; @category boolean/logic
+;;; @category boolean/logic, and, nand, not, xor, or
 (define nor (js-var "prelude_nor"))
 
 ;;; (implies v1 v2) -> boolean?
@@ -302,34 +302,34 @@
 ;;;  v1 : boolean?
 ;;;  v2 : boolean?
 ;;; Equivalent to `(or (and v1 (not v2)) (and (not v1) v2))`.
-;;; @category boolean/logic
+;;; @category boolean/logic, and, nand, nor, not, or
 (define xor (js-var "prelude_xor"))
 
 ;;; (any-of . f1) -> procedure?
 ;;;  f1 : any
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
-;;; @category function composition, boolean/logic
+;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
 (define any-of (js-var "prelude_anyOf"))
 
 ;;; (all-of . f1) -> procedure?
 ;;;  f1 : any
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
-;;; @category function composition, boolean/logic
+;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
 (define all-of (js-var "prelude_allOf"))
 
 ;;; (pair? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a pair.
-;;; @category typecheck, predicates
+;;; @category typecheck, predicates, list?, null?, procedure?, string?, vector?, void?
 (define pair? (js-var "prelude_pairQ"))
 
 ;;; (list-of p) -> procedure?
 ;;;  p : procedure?
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
-;;; @category list, function composition, association list
+;;; @category list, function composition, association list, apply, filter, fold, fold-left, fold-right, for-range, map, reduce, reduce-right 
 (define list-of (js-var "prelude_listOf"))
 
 ;; N.B., deliberately plain Scamper (not js-var-backed): the contract-check
@@ -353,59 +353,59 @@
 ;;;  v1 : any
 ;;;  v2 : any
 ;;; Returns a new cons cell containing `v1` and `v2`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, car, cdr
 (define cons (js-var "prelude_cons"))
 
 ;;; (pair v1 v2) -> pair?
 ;;;  v1 : any
 ;;;  v2 : any
 ;;; Returns a new pair containing `v1` and `v2`.
-;;; @category list, list creation
+;;; @category list, list creation, list, string, vector, void
 (define pair (js-var "prelude_pair"))
 
 ;;; (car v) -> any
 ;;;  v : any
 ;;;   pair? or list?
 ;;; Returns the first element of `v`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, cdr, cons
 (define car (js-var "prelude_car"))
 
 ;;; (cdr v) -> any
 ;;;  v : any
 ;;;   pair? or list?
 ;;; Returns the second element of `v`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, car, cons
 (define cdr (js-var "prelude_cdr"))
 
 ;;; (null? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is the empty list.
-;;; @category list, association list, typecheck, predicates
+;;; @category list, association list, typecheck, predicates, pair?, list?, procedure?, string?, vector?, void?
 (define null? (js-var "prelude_nullQ"))
 
 ;;; (list? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a list.
-;;; @category list, association list, typecheck, predicates
+;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, string?, vector?, void?
 (define list? (js-var "prelude_listQ"))
 
 ;;; (list . v1) -> list?
 ;;;  v1 : any
 ;;; Returns a new list containing `v1`, `v2`, ... .
-;;; @category list, list creation, association list
+;;; @category list, list creation, association list, pair, string, vector, void
 (define list (js-var "prelude_list"))
 
 ;;; (make-list n v) -> list?
 ;;;  n : integer?
 ;;;  v : any
 ;;; Returns a new list containing `n` copies of `v`.
-;;; @category list, list creation, association list
+;;; @category list, list creation, association list, append, list-drop, list-tail, list-take, range, reverse, sort
 (define make-list (js-var "prelude_makeList"))
 
 ;;; (length v) -> integer?
 ;;;  v : list?
 ;;; Returns the length of `v`.
-;;; @category list, list manipulation
+;;; @category list, list manipulation, index-of, length, range, string-length, vector-length, vector-range, vector-ref 
 (define length (js-var "prelude_length"))
 
 ;;; (append . l1) -> list?
@@ -417,7 +417,7 @@
 ;;; (reverse l) -> list?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` in reverse order.
-;;; @category list, list manipulation
+;;; @category list, list manipulation, append, list-drop, list-tail, list-take, make-list, range, sort
 (define reverse (js-var "prelude_reverse"))
 
 ;;; (list-tail l k) -> list?
@@ -425,7 +425,7 @@
 ;;;  k : integer?
 ;;;   0 <= k <= (length l)
 ;;; Returns `l` but with the first `k` elements of `l` omitted.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, append, list-drop, list-take, make-list, range, reverse, sort
 (define list-tail (js-var "prelude_listTail"))
 
 ;;; (list-take l k) -> list?
@@ -433,7 +433,7 @@
 ;;;  k : integer?
 ;;;   0 <= k <= (length l)
 ;;; Returns a new list containing the first `k` elements of `l`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, append, list-drop, list-tail, make-list, range, reverse, sort
 (define list-take (js-var "prelude_listTake"))
 
 ;;; (list-drop l k) -> list?
@@ -441,7 +441,7 @@
 ;;;  k : integer?
 ;;;   0 <= k <= (length l)
 ;;; An alias for `(list-tail l k)`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, append, list-tail, list-take, make-list, range, reverse, sort
 (define list-drop (js-var "prelude_listDrop"))
 
 ;;; (list-ref l n) -> any
@@ -449,14 +449,14 @@
 ;;;  n : integer?
 ;;;   0 <= n < (length l)
 ;;; Returns the `n`th element of `l`.
-;;; @category list, association list
+;;; @category list, association list, assoc-ref, deref, ref, set-ref!, string-ref
 (define list-ref (js-var "prelude_listRef"))
 
 ;;; (index-of l v) -> integer?
 ;;;  l : list?
 ;;;  v : any
 ;;; Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, range, string-length, vector-length, vector-range, vector-ref 
 (define index-of (js-var "prelude_indexOf"))
 
 ;;; (assoc-key? k l) -> any
@@ -472,7 +472,7 @@
 ;;;  l : list?
 ;;;   an association list
 ;;; Returns the value associated with key `k` in association list `l`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, deref, list-ref, ref, set-ref!, string-ref
 (define assoc-ref (js-var "prelude_assocRef"))
 
 ;;; (assoc-set k v l) -> list?
@@ -489,31 +489,31 @@
 ;;;  lt? : procedure?
 ;;;   returns `#t` if the first arg is less than the second
 ;;; Returns a new list containing the elements of `l` sorted in ascending order according to the comparison function `lt?`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, append, list-drop, list-tail, list-take, make-list, range, reverse
 (define sort (js-var "prelude_sort"))
 
 ;;; (char? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a character.
-;;; @category typecheck, char, predicates
+;;; @category typecheck, char, predicates, boolean?, string?, integer?
 (define char? (js-var "prelude_charQ"))
 
 ;;; (digit-value c) -> integer?
 ;;;  c : char?
 ;;; Returns the numeric value of `c` if `c` is a decimal digit (0-10), otherwise raises an error.
-;;; @category typecheck, char
+;;; @category typecheck, char, char->integer, integer->char, number->string, string->number
 (define digit-value (js-var "prelude_digitalValue"))
 
 ;;; (char->integer c) -> integer?
 ;;;  c : char?
 ;;; Returns the codepoint value of character `c`.
-;;; @category char
+;;; @category char, digit-value, integer->char, number->string, string->number
 (define char->integer (js-var "prelude_charToInteger"))
 
 ;;; (integer->char n) -> char?
 ;;;  n : integer?
 ;;; Returns the character with codepoint value `n`.
-;;; @category char
+;;; @category char, char->integer, digit-value, number->string, string->number
 (define integer->char (js-var "prelude_integerToChar"))
 
 ;;; (char-upcase c) -> char?
@@ -537,7 +537,7 @@
 ;;; (string? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a string.
-;;; @category typecheck, string, predicates
+;;; @category typecheck, string, predicates, boolean?, char?, integer?
 (define string? (js-var "prelude_stringQ"))
 
 ;;; (make-string k c) -> string?
@@ -550,20 +550,20 @@
 ;;; (string . c1) -> string?
 ;;;  c1 : char?
 ;;; Returns a string consisting of the characters `c1`, `c2`, ...
-;;; @category string
+;;; @category string, list, pair, vector, void
 (define string (js-var "prelude_string"))
 
 ;;; (string-length v) -> integer?
 ;;;  v : string?
 ;;; Returns the length of `v`.
-;;; @category string
+;;; @category string, index-of, length, range, string-length, vector-range, vector-ref 
 (define string-length (js-var "prelude_stringLength"))
 
 ;;; (string-ref s n) -> char?
 ;;;  s : string?
 ;;;  n : integer?
 ;;; Returns the character at index `n` of string `s`.
-;;; @category string
+;;; @category string, assoc-ref, deref, list-ref, ref, set-ref!
 (define string-ref (js-var "prelude_stringRef"))
 
 ;;; (string-upcase s) -> string?
@@ -595,31 +595,31 @@
 ;;; (string-append . s1) -> string?
 ;;;  s1 : string?
 ;;; Returns a string made by joining `s1`, `s2`, ... together.
-;;; @category string
+;;; @category string, append, list-drop, list-tail, list-take, make-list, range, reverse, sort
 (define string-append (js-var "prelude_stringAppend"))
 
 ;;; (string->list s) -> list?
 ;;;  s : string?
 ;;; Returns a list of the characters in `s`.
-;;; @category list, list creation, string
+;;; @category list, list creation, string, list->string, string->number, string->words, string->vector
 (define string->list (js-var "prelude_stringToList"))
 
 ;;; (list->string l) -> string?
 ;;;  l : list?
 ;;; Returns a string made by joining the characters in `l` together.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, string->list, list->vector
 (define list->string (js-var "prelude_listToString"))
 
 ;;; (string->vector s) -> vector?
 ;;;  s : string?
 ;;; Returns a vector of the characters in `s`.
-;;; @category string, vectors
+;;; @category string, vectors, vector->string, string->list, string->number, string->words
 (define string->vector (js-var "prelude_stringToVector"))
 
 ;;; (vector->string v) -> string?
 ;;;  v : vector?
 ;;; Returns a string made by joining the characters in `v` together.
-;;; @category vectors
+;;; @category vectors, string->vector, vector->list
 (define vector->string (js-var "prelude_vectorToString"))
 
 ;;; (string-contains s1 s2) -> boolean?
@@ -646,13 +646,13 @@
 ;;; (vector? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a vector.
-;;; @category typecheck, vectors, predicates
+;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, string?, void?
 (define vector? (js-var "prelude_vectorQ"))
 
 ;;; (vector . v1) -> vector?
 ;;;  v1 : any
 ;;; Returns a vector consisting of the values `v1`, `v2`, ...
-;;; @category vectors
+;;; @category vectors, list, pair, string, void
 (define vector (js-var "prelude_vector"))
 
 ;;; (make-vector k v) -> vector?
@@ -673,7 +673,7 @@
 ;;;  n : integer?
 ;;;   a valid index into v
 ;;; Returns the value at index `n` of vector `v`.
-;;; @category vectors
+;;; @category vectors, index-of, length, range, string-length, vector-length, vector-range
 (define vector-ref (js-var "prelude_vectorRef"))
 
 ;;; (vector-set! v n x) -> void
@@ -695,13 +695,13 @@
 ;;; (vector->list v) -> list?
 ;;;  v : vector?
 ;;; Returns a list consisting of the values in vector `v`.
-;;; @category list, list creation, vectors
+;;; @category list, list creation, vectors, list->vector, vector->string
 (define vector->list (js-var "prelude_vectorToList"))
 
 ;;; (list->vector l) -> vector?
 ;;;  l : list?
 ;;; Returns a vector consisting of the values in list `l`.
-;;; @category list, list manipulation, association list, vectors
+;;; @category list, list manipulation, association list, vectors, list->vector, vector->list
 (define list->vector (js-var "prelude_listToVector"))
 
 ;;; (vector-range . args) -> vector?
@@ -712,7 +712,7 @@
 ;;; (exclusive). (vector-range beg end step) returns a vector containing the numbers from
 ;;; `beg` to `end` (exclusive) with a step size of `step`. `step` must be non-zero
 ;;; to avoid an infinite loop.
-;;; @category vectors
+;;; @category vectors,  index-of, length, range, string-length, vector-length, vector-ref 
 (define vector-range (js-var "prelude_vectorRange"))
 
 ;;; (vector-append . v1) -> vector?
@@ -724,6 +724,7 @@
 ;;; (procedure? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a procedure.
+;;; @category typecheck, predicates, pair?, list?, null?, string?, vector?, void?
 (define procedure? (js-var "prelude_procedureQ"))
 
 ;;; (string-map f s) -> string?
@@ -744,7 +745,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` for which `f` returns `#t`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right
 (define filter (js-var "prelude_filter"))
 
 ;;; (fold f v l) -> any
@@ -752,14 +753,14 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
 (define fold (js-var "prelude_fold"))
 
 ;;; (reduce f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold` but uses the first element of `l` as the initial value.
-;;; @category list, list manipulation
+;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map
 (define reduce (js-var "prelude_reduce"))
 
 ;;; (fold-left f v l) -> any
@@ -767,7 +768,7 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; An alias for `fold`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
 (define fold-left (js-var "prelude_foldLeft"))
 
 ;;; (fold-right f v l) -> any
@@ -775,14 +776,14 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-right, apply, filter
 (define fold-right (js-var "prelude_foldRight"))
 
 ;;; (reduce-right f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
-;;; @category list, list manipulation
+;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map
 (define reduce-right (js-var "prelude_reduceRight"))
 
 ;;; (vector-map f . v) -> vector?
@@ -811,7 +812,7 @@
 ;;;  end : number?
 ;;;  f : procedure?
 ;;; Runs `f` on each integer in the range `[beg, end)`. `f` takes one argument, the current value of integer.
-;;; @category other
+;;; @category other, fold-left, fold-right, list-of, map, reduce, reduce-right, apply, filter
 (define for-range (js-var "prelude_forRange"))
 
 ;;; (vector-filter f l) -> list?
@@ -824,7 +825,7 @@
 ;;; (void? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is the void value.
-;;; @category predicates, typecheck
+;;; @category predicates, typecheck, pair?, list?, null?, procedure?, string?, vector?
 (define void? (js-var "prelude_voidQ"))
 
 ;;; (??) -> any
@@ -835,20 +836,20 @@
 ;;; (compose . f1) -> procedure?
 ;;;  f1 : procedure?
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.
-;;; @category function composition
+;;; @category function composition, all-of, any-of, =-eps, o, |>
 (define compose (js-var "prelude_compose"))
 
 ;;; (o . f) -> procedure?
 ;;;  f : procedure?
 ;;; A synonym for `compose`.
-;;; @category function composition
+;;; @category function composition, all-of, any-of, compose, =-eps, |>
 (define o (js-var "prelude_compose"))
 
 ;;; (|> v . f1) -> any
 ;;;  v : any
 ;;;  f1 : procedure?
 ;;; Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.
-;;; @category function composition
+;;; @category function composition, all-of, any-of, compose, =-eps, o
 (define |> (js-var "prelude_pipe"))
 
 ;;; (range . args) -> list?
@@ -859,7 +860,7 @@
 ;;; (exclusive). (range beg end step) returns a list containing the numbers from
 ;;; `beg` to `end` (exclusive) with a step size of `step`. `step` must be non-zero
 ;;; to avoid an infinite loop.
-;;; @category list, list creation
+;;; @category list, list creation, append, list-drop, list-tail, list-take, make-list, reverse, sort, index-of, length, string-length, vector-length, vector-range, vector-ref 
 (define range (js-var "prelude_range"))
 
 ;;; (random n) -> list?
@@ -895,7 +896,7 @@
 ;;; (string->words s) -> list?
 ;;;  s : string?
 ;;; Returns a list of the words in `s`, stripping whitespace and punctuation.
-;;; @category string
+;;; @category string, string->list, string->number, string->vector
 (define string->words (js-var "prelude_stringToWords"))
 
 ;;; (ref v) -> ref?
@@ -913,7 +914,7 @@
 ;;; (deref r) -> any
 ;;;  r : ref?
 ;;; Returns the value contained in reference cell `r`.
-;;; @category other
+;;; @category other, assoc-ref, deref, list-ref, set-ref!, string-ref
 (define deref (js-var "prelude_deref"))
 
 ;;; (ref-set! r v) -> void
@@ -935,12 +936,12 @@
 
 ;;; (pi) -> number?
 ;;; The constant π.
-;;; @category math, algebra, constants
+;;; @category math, algebra, constants, acos, asin, atan, cos, sin, tan, π  
 (define pi (js-var "prelude_piConst"))
 
 ;;; (π) -> number?
 ;;; The constant π.
-;;; @category math, algebra, constants
+;;; @category math, algebra, constants, acos, asin, atan, cos, sin, tan, pi  
 (define π (js-var "prelude_piConst"))
 
 ;;; (void) -> void
@@ -1160,7 +1161,7 @@
 ;;; (char=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters.
-;;; @category char, predicates
+;;; @category char, predicates, char=?, char-ci=?
 (define char=? (js-var "prelude_char=?"))
 
 ;;; (char<? . c1) -> boolean?
