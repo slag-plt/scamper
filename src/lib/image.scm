@@ -81,7 +81,7 @@
 (define rgb-distance (js-var "image_rgbDistance"))
 
 ;;; (color-name? v) -> boolean?
-;;;  v : string
+;;;  v : string?
 ;;; Returns `#t` if and only if `v` is a valid color name.
 ;;; @category color, image, predicates, typecheck
 (define color-name? (js-var "image_isColorName"))
@@ -93,7 +93,7 @@
 (define all-color-names (js-var "image_allColorNames"))
 
 ;;; (find-colors color-name) -> list?
-;;;  color-name : string
+;;;  color-name : string?
 ;;; Returns a list of all color names that contain `color`, case-insensitive.
 ;;; @category image
 (define find-colors (js-var "image_findColors"))
@@ -184,7 +184,7 @@
 (define hsv->string (js-var "image_hsvToString"))
 
 ;;; (color-name->rgb color-name) -> rgb?
-;;;  color-name : string
+;;;  color-name : string?
 ;;; Returns the rgb value of the color name.
 ;;; @category color, image, rgb
 (define color-name->rgb (js-var "image_colorNameToRgb"))
