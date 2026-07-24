@@ -350,56 +350,13 @@ export function prelude_cdr(x: L.Value): L.Value {
   }
 }
 
-const listAccessors = [
-  // 4-character accessors
-  'caar',
-  'cadr',
-  'cdar',
-  'cddr',
-  // 5-character accessors
-  'caaar',
-  'cadar',
-  'cdaar',
-  'cddar',
-  'caadr',
-  'caddr',
-  'cdadr',
-  'cdddr',
-  // 6-character accessors
-  'caaaar',
-  'cadaar',
-  'cdaaar',
-  'cddaar',
-  'caadar',
-  'caddar',
-  'cdadar',
-  'cdddar',
-  'caaadr',
-  'cadadr',
-  'cdaadr',
-  'cddadr',
-  'caaddr',
-  'cadddr',
-  'cdaddr',
-  'cddddr',
-]
-export const prelude_listAccessorFns: Record<string, (x: L.Value) => L.Value> = {}
-listAccessors.forEach((name) => {
-  const path = name.slice(1, name.length - 1)
-  const fn = function (x: L.Value): L.Value {
-    let ret = path.endsWith('a') ? prelude_car(x) : prelude_cdr(x)
-    for (let i = path.length - 2; i >= 0; i--) {
-      ret = path[i] === 'a' ? prelude_car(ret) : prelude_cdr(ret)
-    }
-    return ret
-  }
-  prelude_listAccessorFns[`prelude_${name}`] = fn
-})
+// N.B., the c[ad]+r accessor family (caar, cadr, ..., cddddr) is defined in
+// prelude.scm as ordinary Scheme compositions over car/cdr, so it inherits
+// their (or/p pair? nonempty-list?) contract checks rather than leaking a raw
+// JS TypeError on a bad argument.
 
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
-
-// TODO: implement caar, cadr, cdar, cddr, caaar, ..., cdddr in some elegant way
 
 export function prelude_nullQ(x: any): boolean {
   return x === null
@@ -407,6 +364,10 @@ export function prelude_nullQ(x: any): boolean {
 
 export function prelude_listQ(x: any): boolean {
   return L.isList(x)
+}
+
+export function prelude_nonemptyListQ(x: L.Value): boolean {
+  return prelude_listQ(x) && x !== null
 }
 
 export function prelude_list(...xs: L.Value[]): L.List {

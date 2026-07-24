@@ -186,7 +186,7 @@ describe('End-to-end cases', () => {
 
 (+ 1 2 3 "bye")
 `, [
-      'Runtime error [560:1-560:54]: (error) expected a string, received list',
+      'Runtime error [590:1-590:54]: (error) expected a string, received list',
       // N.B., "+" is documented as a rest param (`. v1`), so its contract
       // check is a single all-satisfy? over the whole argument list rather
       // than a per-argument check -- it can report that *some* argument
