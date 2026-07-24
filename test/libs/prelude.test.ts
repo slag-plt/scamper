@@ -2153,191 +2153,42 @@ test('=-eps', async () => {
 ////////////////////////////////////////////////////////////////////////////////
 // Pairs & List Accessors (car/cdr family)
 
-describe('list accessors (c[ad]+r family) - shallow-list failures', () => {
-  // N.B., these accessors' docstrings declare `v : any`, so there is no real
-  // contract check -- a non-pair like a number silently returns void instead
-  // of erroring, and the empty list leaks a raw JS TypeError (#256). Only
-  // running past the end of the list actually throws, and the reported range
-  // points at the accessor's own definition in prelude.scm rather than the
-  // call site (#254), same as not-boolean/cons-pair above.
+describe('list accessors (c[ad]+r family) - non-pair contract failures', () => {
+  // car/cdr (and so the whole composed c[ad]+r family) now reject anything
+  // that is neither a pair nor a non-empty list with a proper contract error
+  // (#256), instead of leaking a raw JS TypeError on the empty list or
+  // silently returning void on other non-pairs. Each accessor is composed from
+  // car/cdr, so it inherits the check and reports its own name at the actual
+  // call site.
 
-  test('car', async () => {
-    expect(await runProgram('(car (list))')).toEqual([
-      "Runtime error [371:1-371:35]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
+  const accessors = [
+    'car', 'cdr',
+    'caar', 'cadr', 'cdar', 'cddr',
+    'caaar', 'cadar', 'cdaar', 'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr',
+    'caaaar', 'cadaar', 'cdaaar', 'cddaar', 'caadar', 'caddar', 'cdadar',
+    'cdddar', 'caaadr', 'cadadr', 'cdaadr', 'cddadr', 'caaddr', 'cadddr',
+    'cdaddr', 'cddddr',
+  ]
 
-  test('cdr', async () => {
-    expect(await runProgram('(cdr (list))')).toEqual([
-      "Runtime error [378:1-378:35]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
+  // `(<name> (list))` spans from column 1 to column name.length + 9
+  // ("(" + name + " " + "(list)" + ")").
+  const endCol = (name: string): string => (name.length + 9).toString()
 
-  test('caar', async () => {
-    expect(await runProgram('(caar (list))')).toEqual([
-      "Runtime error [969:1-969:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
+  for (const name of accessors) {
+    test(`${name} on the empty list`, async () => {
+      expect(await runProgram(`(${name} (list))`)).toEqual([
+        `Runtime error [1:1-1:${endCol(name)}]: (${name}) expected a pair or nonempty list, received null`,
+      ])
+    })
+  }
 
-  test('cadr', async () => {
-    expect(await runProgram('(cadr (list))')).toEqual([
-      "Runtime error [976:1-976:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdar', async () => {
-    expect(await runProgram('(cdar (list))')).toEqual([
-      "Runtime error [983:1-983:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddr', async () => {
-    expect(await runProgram('(cddr (list))')).toEqual([
-      "Runtime error [990:1-990:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaar', async () => {
-    expect(await runProgram('(caaar (list))')).toEqual([
-      "Runtime error [997:1-997:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cadar', async () => {
-    expect(await runProgram('(cadar (list))')).toEqual([
-      "Runtime error [1004:1-1004:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdaar', async () => {
-    expect(await runProgram('(cdaar (list))')).toEqual([
-      "Runtime error [1011:1-1011:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddar', async () => {
-    expect(await runProgram('(cddar (list))')).toEqual([
-      "Runtime error [1018:1-1018:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caadr', async () => {
-    expect(await runProgram('(caadr (list))')).toEqual([
-      "Runtime error [1025:1-1025:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caddr', async () => {
-    expect(await runProgram('(caddr (list))')).toEqual([
-      "Runtime error [1032:1-1032:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdadr', async () => {
-    expect(await runProgram('(cdadr (list))')).toEqual([
-      "Runtime error [1039:1-1039:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdddr', async () => {
-    expect(await runProgram('(cdddr (list))')).toEqual([
-      "Runtime error [1046:1-1046:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaaar', async () => {
-    expect(await runProgram('(caaaar (list))')).toEqual([
-      "Runtime error [1053:1-1053:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cadaar', async () => {
-    expect(await runProgram('(cadaar (list))')).toEqual([
-      "Runtime error [1060:1-1060:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdaaar', async () => {
-    expect(await runProgram('(cdaaar (list))')).toEqual([
-      "Runtime error [1067:1-1067:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddaar', async () => {
-    expect(await runProgram('(cddaar (list))')).toEqual([
-      "Runtime error [1074:1-1074:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caadar', async () => {
-    expect(await runProgram('(caadar (list))')).toEqual([
-      "Runtime error [1081:1-1081:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caddar', async () => {
-    expect(await runProgram('(caddar (list))')).toEqual([
-      "Runtime error [1088:1-1088:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdadar', async () => {
-    expect(await runProgram('(cdadar (list))')).toEqual([
-      "Runtime error [1095:1-1095:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdddar', async () => {
-    expect(await runProgram('(cdddar (list))')).toEqual([
-      "Runtime error [1102:1-1102:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caaadr', async () => {
-    expect(await runProgram('(caaadr (list))')).toEqual([
-      "Runtime error [1109:1-1109:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cadadr', async () => {
-    expect(await runProgram('(cadadr (list))')).toEqual([
-      "Runtime error [1116:1-1116:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdaadr', async () => {
-    expect(await runProgram('(cdaadr (list))')).toEqual([
-      "Runtime error [1123:1-1123:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cddadr', async () => {
-    expect(await runProgram('(cddadr (list))')).toEqual([
-      "Runtime error [1130:1-1130:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaddr', async () => {
-    expect(await runProgram('(caaddr (list))')).toEqual([
-      "Runtime error [1137:1-1137:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cadddr', async () => {
-    expect(await runProgram('(cadddr (list))')).toEqual([
-      "Runtime error [1144:1-1144:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdaddr', async () => {
-    expect(await runProgram('(cdaddr (list))')).toEqual([
-      "Runtime error [1151:1-1151:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cddddr', async () => {
-    expect(await runProgram('(cddddr (list))')).toEqual([
-      "Runtime error [1158:1-1158:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
+  test('car/cdr on a non-pair report the value type, not void', async () => {
+    expect(await runProgram(`
+(car 5)
+(cdr "x")
+`)).toEqual([
+      'Runtime error [1:1-1:7]: (car) expected a pair or nonempty list, received number',
+      'Runtime error [2:1-2:9]: (cdr) expected a pair or nonempty list, received string',
     ])
   })
 })

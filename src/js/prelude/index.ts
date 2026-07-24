@@ -334,20 +334,32 @@ export function prelude_pair(x: any, y: any): L.Value {
   return L.mkPair(x, y)
 }
 
+// N.B., car/cdr accept a pair or a non-empty list (cons). The empty list
+// (null) and every other non-pair are rejected with a contract error rather
+// than leaking a raw JS TypeError or silently returning void (#256). The
+// c[ad]+r family below composes from these, so it inherits the check.
+function isConsOrPair(x: L.Value): boolean {
+  return L.isPair(x) || (L.isList(x) && x !== null)
+}
+
 export function prelude_car(x: L.Value): L.Value {
-  if (L.isPair(x)) {
-    return (x as any).fst
-  } else {
-    return (x as any).head
+  if (!isConsOrPair(x)) {
+    throw new L.ScamperError(
+      'Runtime',
+      `expected a pair or nonempty list, received ${L.typeOf(x)}`,
+    )
   }
+  return L.isPair(x) ? (x as any).fst : (x as any).head
 }
 
 export function prelude_cdr(x: L.Value): L.Value {
-  if (L.isPair(x)) {
-    return (x as any).snd
-  } else {
-    return (x as any).tail
+  if (!isConsOrPair(x)) {
+    throw new L.ScamperError(
+      'Runtime',
+      `expected a pair or nonempty list, received ${L.typeOf(x)}`,
+    )
   }
+  return L.isPair(x) ? (x as any).snd : (x as any).tail
 }
 
 const listAccessors = [
