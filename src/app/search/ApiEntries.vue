@@ -95,7 +95,8 @@ function addToLib() {
 }
 
 function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
-const relatives: string[] = []
+  const relatives: string[] = []
+  relativeText.value = false
 
   const docTags = functionDocCategories(doc)
   docTags.forEach((arrTag) => {
@@ -107,6 +108,7 @@ const relatives: string[] = []
   allDocs().forEach((func) => {
     if(relatives.includes(functionDocName(func))) {
       showLibs.push(func)
+      relativeText.value = true
     }
   })
 }
@@ -218,6 +220,7 @@ const aBool = ref('or')
 
 const noSearchText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && !((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
 const noTagText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && ((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+const relativeText = ref(false)
 
 const types = ref([
   { id: 307, val: 'any' },
@@ -339,7 +342,8 @@ const types = ref([
             <!-- {{(filteredLibs.length === 0 && props.searchIn !== "" && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)))? "No search results found for " + props.searchIn : null}}  -->
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
-              <div v-for="(foo) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
+              <div v-for="(foo, index) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
+                <div v-if="relativeText"> {{ (index === 1)? "Related functions:" : null }} </div>
                 <DocEntry
                   :id="functionDocName(foo)"
                   :key="functionDocName(foo)"
