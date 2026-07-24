@@ -104,11 +104,11 @@
 ;;; @category color, image, rgb
 (define rgb->string (js-var "image_rgbToString"))
 
-;;; (hsv? . v) -> boolean?
+;;; (hsv? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a hsv value.
 ;;; @category color, image, hsv, predicates, typecheck
-(define hsv? (js-var "image_hsv"))
+(define hsv? (js-var "image_isHsv"))
 
 ;;; (hsv h s v . a) -> hsv?
 ;;;  h : number?
