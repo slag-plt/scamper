@@ -176,17 +176,55 @@ describe('color', () => {
     ])
   })
 
-  // color-name?, find-colors, and color-name->rgb all write their string
-  // parameter's contract as `string` instead of `string?` in image.scm's
-  // docstring. The generated contract check calls the real `string`
-  // (char ... -> string) constructor as a predicate; since a genuine string
-  // argument is never a char, that check's own rest-parameter contract
-  // fails for every call, regardless of input, so none of these three can
-  // succeed right now.
-  describe('blocked by a docstring contract typo (string instead of string?)', () => {
-    test.skip('color-name?')
-    test.skip('find-colors')
-    test.skip('color-name->rgb')
+  // https://github.com/slag-plt/scamper/issues/251
+  // color-name?, find-colors, and color-name->rgb declared their string
+  // parameter's contract as `string` instead of `string?`. Fixed in image.scm
+  // so the contract layer treats it as the `string?` predicate.
+  test('color-name?', async () => {
+    expect(
+      await runProgram(`
+(import image)
+(color-name? "red")
+(color-name? "RED")
+(color-name? "not-a-real-color")
+(color-name? 5)
+`),
+    ).toEqual([
+      '#t',
+      '#t',
+      '#f',
+      'Runtime error [87:1-87:49]: (error) expected a string, received number',
+    ])
+  })
+
+  test('find-colors', async () => {
+    expect(
+      await runProgram(`
+(import image)
+(find-colors "red")
+(find-colors "zzz-no-match")
+(find-colors 5)
+`),
+    ).toEqual([
+      '(list "darkred" "indianred" "mediumvioletred" "orangered" "palevioletred" "red")',
+      'null',
+      'Runtime error [99:1-99:48]: (error) expected a string, received number',
+    ])
+  })
+
+  test('color-name->rgb', async () => {
+    expect(
+      await runProgram(`
+(import image)
+(color-name->rgb "red")
+(color-name->rgb "not-a-color")
+(color-name->rgb 5)
+`),
+    ).toEqual([
+      '(rgba 255 0 0 255)',
+      'Runtime error [3:1-3:31]: (color-name->rgb) color-name->rgb: unknown color name not-a-color',
+      'Runtime error [190:1-190:56]: (error) expected a string, received number',
+    ])
   })
 
   test('all-color-names', async () => {
