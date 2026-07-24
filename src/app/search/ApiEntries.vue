@@ -343,7 +343,7 @@ const types = ref([
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
               <div v-for="(foo, index) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
-                <div v-if="relativeText"> {{ (index === 1)? "Related functions:" : null }} </div>
+                <div v-if="relativeText" :style="{ marginLeft: '1em'}"> {{ (index === 1)? "Related functions:" : null }} </div>
                 <DocEntry
                   :id="functionDocName(foo)"
                   :key="functionDocName(foo)"
