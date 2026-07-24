@@ -260,7 +260,7 @@ const types = ref([
 
   <div class="flex-box">
     <div>
-    <h3> <strong>Filter by Type</strong> </h3>
+    <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Filter by Type</strong> </h3>
     <div class="index">
 
 
@@ -301,7 +301,7 @@ const types = ref([
 
   </div>
 
-  <h3><strong>Filter by Tag</strong> </h3>
+  <h3 :style="{ fontFamily: 'helvetica'}"><strong>Filter by Tag</strong> </h3>
   <div class="index">
 
     <p class="fix-margin" >Tags:{{ tags }}</p>
@@ -332,7 +332,7 @@ const types = ref([
     </div>
 
     <div>
-      <h3> <strong>Search Results</strong> </h3>
+      <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Search Results</strong> </h3>
       <div class="api">
         <div class="index2"> 
           <div class="entries"> 
@@ -343,7 +343,7 @@ const types = ref([
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
               <div v-for="(foo, index) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
-                <div v-if="relativeText" :style="{ marginLeft: '1em'}"> {{ (index === 1)? "Related functions:" : null }} </div>
+                <h3 v-if="relativeText" :style="{ fontFamily: 'helvetica'}"> {{ (index === 1)? "Related functions:" : null }} </h3>
                 <DocEntry
                   :id="functionDocName(foo)"
                   :key="functionDocName(foo)"
