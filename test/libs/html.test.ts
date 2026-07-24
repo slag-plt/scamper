@@ -40,10 +40,8 @@ describe('element?', () => {
 })
 
 describe('text-area?', () => {
-  // N.B., positive case can't go through the Scamper-level `text-area`
-  // here -- see the `text-area` describe block below.
-  test('is true for an HTMLTextAreaElement', () => {
-    expect(html_textAreaQ(document.createElement('textarea'))).toBe(true)
+  test('is true for a value made by text-area', () => {
+    expect(html_textAreaQ(html_textArea('my-id'))).toBe(true)
   })
 
   test('is false for non-text-area values', () => {
@@ -55,13 +53,12 @@ describe('text-area?', () => {
 })
 
 describe('text-area', () => {
-  // html_textArea builds its result via `new HTMLTextAreaElement()`, unlike
-  // html_tag/html_button which correctly use document.createElement. The
-  // HTMLConstructor behavior throws "Illegal constructor" in every environment
-  // (real browsers and jsdom alike), so text-area is broken everywhere, not
-  // just here -- github.com/slag-plt/scamper#260.
-  test('always throws -- new HTMLTextAreaElement() is illegal (see #260)', () => {
-    expect(() => html_textArea('my-id')).toThrow()
+  test('creates a text-area element with the given id', () => {
+    const ta = html_textArea('my-id')
+    expect(html_isElement(ta)).toBe(true)
+    expect(html_textAreaQ(ta)).toBe(true)
+    expect(ta.tagName).toBe('TEXTAREA')
+    expect(ta.id).toBe('my-id')
   })
 })
 
