@@ -12,7 +12,7 @@ class Renderer extends R.Renderer<string> {
       switch (typeof v) {
         case 'boolean': return v ? '#t' : '#f'
         case 'number': return v.toString()
-        case 'string': return `"${v}"`
+        case 'string': return `"${U.escapeStringLiteral(v)}"`
         case 'undefined': return 'void'
         default:
           if (v === null) {

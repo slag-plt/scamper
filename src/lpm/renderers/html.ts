@@ -18,7 +18,7 @@ export class Renderer extends R.Renderer<HTMLElement> {
       case 'number':
         return mkCodeElement(v.toString())
       case 'string':
-        return mkCodeElement(`"${v}"`)
+        return mkCodeElement(`"${U.escapeStringLiteral(v)}"`)
       case 'undefined':
         return mkCodeElement('void')
       default:
