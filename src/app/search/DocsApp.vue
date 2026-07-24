@@ -37,7 +37,7 @@ const searched: string | null = urlParams.get('search')
     </div>
     <div class="docs">
     <div class="flex-box">
-      <h2 :style="{  }">Search results {{(searched)? "for " + searched : ''}}</h2>
+      <h2 :style="{ 'margin-left': '1em' }">Search results {{(searched)? "for " + searched : ''}}</h2>
       <input
         v-model="search"  
         size = "30"
@@ -87,7 +87,7 @@ body,
 }
 
 .header {
-  background: #ffacac;
+  background: rgb(143, 208, 207);
   color: #333;
   padding: 0.5em;
   flex: 0 0 auto;

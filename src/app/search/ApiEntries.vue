@@ -332,7 +332,7 @@ const types = ref([
     </div>
 
     <div>
-      <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Search Results</strong> </h3>
+      <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Search results</strong> </h3>
       <div class="api">
         <div class="index2"> 
           <div class="entries"> 
@@ -428,7 +428,7 @@ const types = ref([
   margin: 24px;
   font-size: 40px;
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-  color: #ffacac;
+  color: #4BADAC;
 }
 
 .flex-box {
