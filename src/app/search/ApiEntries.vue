@@ -40,9 +40,7 @@ function showEverything() {
 function findSearch() {
   const s = props.searchIn
   const showLibs = allDocs().filter((doc) => functionDocName(doc) === s)
-  //console.log('oneee', showLibs)
   showLibs.forEach((func) => {pushRelatives(func, showLibs)})
-  //console.log('twooo', showLibs)
   noSearchText.value = showLibs.length === 0 && props.searchIn !== ''
   filteredLibs.value = showLibs
 }
@@ -101,22 +99,16 @@ const relatives: string[] = []
 
   const docTags = functionDocCategories(doc)
   docTags.forEach((arrTag) => {
-  //console.log('arrTag', arrTag)
     if(!tagListStr.value.includes(arrTag)) {
       relatives.push(arrTag)
     }
   })
-//console.log('relatives', relatives)
+
   allDocs().forEach((func) => {
     if(relatives.includes(functionDocName(func))) {
-      // console.log('functionDocName(func)')
-      // console.log(functionDocName(func))
-      // console.log('relatives.includes(functionDocName(func))')
-      // console.log(relatives.includes(functionDocName(func)))
       showLibs.push(func)
     }
   })
-  //console.log('showLibs', showLibs)
 }
 
 const tagListStr = ref([
@@ -174,66 +166,6 @@ const tagListStr = ref([
   'reactive',
 
   'other',
-])
-
-const tagList = ref([
-  
-  { id: 13, val: 'char' },
-  { id: 11, val: 'string' },
-  { id: 1, val: 'list' },
-    { id: 9, val: 'association list' },
-    { id: 3, val: 'list creation' },
-    { id: 2, val: 'list manipulation' },
-  { id: 15, val: 'vectors' },
-  { id: 16, val: 'mutation' },
-  { id: 20, val: 'constants' },
-  { id: 8, val: 'function composition' },
-  
-  { id: 4, val: 'math' },
-    { id: 5, val: 'algebra' },
-    { id: 7, val: 'trigonometry' },
-    { id: 6, val: 'comparator' },
-    { id: 12, val: 'boolean/logic' },
-  
-  
-
-  { id: 25, val: 'images' },
-    { id: 26, val: 'color' },
-    { id: 33, val: 'pixel' },
-    { id: 27, val: 'rgb' },
-    { id: 28, val: 'hsv' },
-    
-    { id: 30, val: 'composition/placement' },
-    { id: 31, val: 'path' },
-  { id: 32, val: 'canvas' },
-    { id: 29, val: 'shapes' },
-
-  { id: 34, val: 'music' },
-    { id: 35, val: 'duration' },
-    { id: 36, val: 'instruments' },
-    { id: 37, val: 'note' },
-    { id: 38, val: 'modifications' },
-    { id: 39, val: 'audio' },
-    { id: 40, val: 'sound' },
-
-  { id: 41, val: 'data' },
-    { id: 42, val: 'create' },
-    { id: 43, val: 'plot' },
-    { id: 44, val: 'parse' },
-    
-  { id: 10, val: 'typecheck' },
-
-  { id: 14, val: 'regexes' },
-
-  { id: 17, val: 'predicates' },
-  { id: 18, val: 'testing' },
-  { id: 19, val: 'formatting' },
-
-  { id: 22, val: 'interactive' },
-  { id: 23, val: 'html' },
-  { id: 24, val: 'reactive' },
-
-  { id: 21, val: 'other' },
 ])
 
 const indentList = ref([
