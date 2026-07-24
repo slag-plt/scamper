@@ -2936,13 +2936,9 @@ test('random-wrong-type', async () => {
 // Non-callback logic & error branches
 
 test('string->number-invalid', async () => {
-  // BUG (#255): a non-numeral string makes string->number throw a bare JS
-  // Error, so the op-handler double-wraps it into this confusing internal
-  // message (R7RS says it should just return #f). Range points at the
-  // definition site (#254). Both pinned as current behavior.
-  expect(await runProgram('(string->number "abc")')).toEqual([
-    'Runtime error [220:1-220:57]: Unexpected error in Javascript function call: Error: Runtime error: string->number: invalid string: abc',
-  ])
+  // Fixed (#255): a non-numeral string returns #f (per R7RS) rather than
+  // leaking a double-wrapped internal JS exception.
+  expect(await runProgram('(string->number "abc")')).toEqual(['#f'])
 })
 
 test('char-compare-single-arg', async () => {
