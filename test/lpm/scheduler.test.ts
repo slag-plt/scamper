@@ -3,6 +3,8 @@ import { Scheduler } from '../../src/lpm/scheduler'
 import { ICE, Range, ReportError, ScamperError } from '../../src/lpm'
 import { mkTraceOutput } from '../../src/lpm/trace'
 import * as U from '../../src/lpm/util'
+import * as FS from '../../src/fs'
+import { MockFileSystem } from '../stubs/mock-file-system'
 import {
   makeNeverCompletingFiber,
   makeQueryTask,
@@ -16,8 +18,8 @@ import {
   sleep,
   trackFiberSteps,
   withSuppressedRejections,
-} from '../test-utils'
-import { minorStep, traceStep, yieldStep } from '../../src/lpm/fiber'
+} from '../util'
+import { importFileStep, minorStep, traceStep, yieldStep } from '../../src/lpm/fiber'
 
 patchSchedulerYieldForTests()
 
@@ -305,6 +307,177 @@ describe('Scheduler', () => {
         expect(task.ch.errLog).toEqual([])
         // and execution should not have continued after the throw
         expect(fiber.stepCallCount).toBe(1)
+      })
+    })
+  })
+
+  describe('import-file handling', () => {
+    test('reports an error and removes the fiber when the imported file does not exist', async () => {
+      const sched = new Scheduler()
+      const fs = new MockFileSystem()
+      vi.spyOn(FS, 'getFS').mockReturnValue(fs)
+
+      const importer = new MockFiber()
+      importer.stepImpl = () => importFileStep('missing.scm')
+      const onComplete = vi.fn()
+      const task = { ...makeTask(importer), onComplete }
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toContain('does not exist')
+      expect(importer.stepCallCount).toBe(1)
+      expect(onComplete).toHaveBeenCalledOnce()
+    })
+
+    test('loads, compiles, and resumes the importing fiber on a successful import', async () => {
+      const sched = new Scheduler()
+      const fs = new MockFileSystem()
+      await fs.saveFile('helper.scm', '42')
+      vi.spyOn(FS, 'getFS').mockReturnValue(fs)
+
+      // Two statements so that advanceStmt (invoked once the import resolves)
+      // doesn't itself mark the fiber done, which would make the reschedule
+      // below throw.
+      const importer = makeTestFiber([
+        U.mkStmtExp([U.mkLit(1)]),
+        U.mkStmtExp([U.mkLit(2)]),
+      ])
+      let stepCount = 0
+      let emitted = false
+      vi.spyOn(importer, 'step').mockImplementation(() => {
+        stepCount++
+        if (!emitted) {
+          emitted = true
+          return importFileStep('helper.scm')
+        }
+        return traceStep
+      })
+      const advanceStmt = vi.spyOn(importer, 'advanceStmt')
+      const task = makeTask(importer)
+      const sibling = trackFiberSteps(makeNeverCompletingFiber())
+
+      sched.schedule(task)
+      sched.schedule(makeTask(sibling))
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(advanceStmt).toHaveBeenCalledOnce()
+      expect(stepCount).toBeGreaterThan(1)
+      expect(sibling.stepCallCount).toBeGreaterThan(0)
+    })
+
+    test('drops the import without resuming the fiber when the file fails to compile', async () => {
+      const sched = new Scheduler()
+      const fs = new MockFileSystem()
+      await fs.saveFile('broken.scm', '(+ 1')
+      vi.spyOn(FS, 'getFS').mockReturnValue(fs)
+
+      const importer = new MockFiber()
+      importer.stepImpl = () => importFileStep('broken.scm')
+      const task = makeTask(importer)
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(importer.stepCallCount).toBe(1)
+      // The compile failure must surface on the err channel, not be dropped
+      // silently along with the import.
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toMatch(/Parser error/)
+    })
+
+    test('reports a load failure and still resumes the importing fiber', async () => {
+      const sched = new Scheduler()
+      const fs = new MockFileSystem()
+      vi.spyOn(fs, 'fileExists').mockResolvedValue(true)
+      vi.spyOn(fs, 'loadFile').mockRejectedValue(new Error('disk error'))
+      vi.spyOn(FS, 'getFS').mockReturnValue(fs)
+
+      const importer = makeTestFiber([
+        U.mkStmtExp([U.mkLit(1)]),
+        U.mkStmtExp([U.mkLit(2)]),
+      ])
+      let stepCount = 0
+      let emitted = false
+      vi.spyOn(importer, 'step').mockImplementation(() => {
+        stepCount++
+        if (!emitted) {
+          emitted = true
+          return importFileStep('flaky.scm')
+        }
+        return traceStep
+      })
+      const advanceStmt = vi.spyOn(importer, 'advanceStmt')
+      const task = makeTask(importer)
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toContain('failed to load')
+      expect(advanceStmt).toHaveBeenCalledOnce()
+      expect(stepCount).toBeGreaterThan(1)
+    })
+
+    test('a QueryTask can also import files and resumes correctly', async () => {
+      const sched = new Scheduler()
+      const fs = new MockFileSystem()
+      await fs.saveFile('mod.scm', '42')
+      vi.spyOn(FS, 'getFS').mockReturnValue(fs)
+
+      const importer = makeTestFiber([
+        U.mkStmtExp([U.mkLit(1)]),
+        U.mkStmtExp([U.mkLit(2)]),
+      ])
+      let stepCount = 0
+      let emitted = false
+      vi.spyOn(importer, 'step').mockImplementation(() => {
+        stepCount++
+        if (!emitted) {
+          emitted = true
+          return importFileStep('mod.scm')
+        }
+        return traceStep
+      })
+      const queryTask = makeQueryTask(importer)
+
+      sched.schedule(queryTask)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(stepCount).toBeGreaterThan(1)
+      expect(queryTask.err.errors).toEqual([])
+    })
+  })
+
+  describe('duplicate scheduling', () => {
+    test('a completed fiber left in the queue via a duplicate task throws (queue invariant)', async () => {
+      await withSuppressedRejections(async () => {
+        const sched = new Scheduler()
+        const sharedFiber = new MockFiber()
+        sharedFiber.stepImpl = () => {
+          sharedFiber.isDone = () => true
+          return traceStep
+        }
+        sched.schedule(makeTask(sharedFiber))
+        sched.schedule(makeTask(sharedFiber))
+        await sleep(QUANTUM_WAIT_MS)
+        sched.pauseExecution()
+        await sleep(QUANTUM_WAIT_MS)
+
+        // The fiber completes and is removed on its first step; the
+        // duplicate task sharing it then trips the "completed fiber in
+        // queue" invariant, halting before a second step occurs.
+        expect(sharedFiber.stepCallCount).toBe(1)
       })
     })
   })

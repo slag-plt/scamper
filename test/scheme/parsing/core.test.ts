@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import * as A from '../../src/scheme/ast'
-import { reservedWords } from '../../src/scheme/reserved-words'
-import { expectParses, parse } from './lezer-bridge-test-utils'
+import * as A from '../../../src/scheme/ast'
+import { reservedWords } from '../../../src/scheme/reserved-words'
+import { expectParses, parse } from './test-utils'
 
 describe('lezer-bridge parsing', () => {
   test('core forms', () => {
@@ -155,7 +155,7 @@ describe('lezer-bridge parsing', () => {
   // N.B., reserved-word misuse (e.g. "(define and 5)") makes the Lezer parser
   // emit an error-recovery node rather than a clean tree, since kw<> keywords
   // are @specialize'd and can never be re-read as plain identifiers -- this
-  // is exercised in lezer-bridge-errors.test.ts instead.
+  // is exercised in errors.test.ts instead.
 
   test("define's preceding doc comments are captured, unparsed", () => {
     // N.B., the bridge only captures the raw comments -- parsing them into a

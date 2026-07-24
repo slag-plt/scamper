@@ -6,11 +6,11 @@ import { describe, expect, test } from 'vitest'
 describe('generated Lezer parser freshness', () => {
   test('src/scheme/generated/parser.ts matches what syntax.grammar currently generates', () => {
     const grammarSrc = readFileSync(
-      resolve(__dirname, '../../src/scheme/syntax.grammar'),
+      resolve(__dirname, '../../../src/scheme/syntax.grammar'),
       'utf-8',
     )
     const checkedIn = readFileSync(
-      resolve(__dirname, '../../src/scheme/generated/parser.ts'),
+      resolve(__dirname, '../../../src/scheme/generated/parser.ts'),
       'utf-8',
     )
 

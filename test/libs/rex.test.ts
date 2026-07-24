@@ -248,3 +248,112 @@ test('rex->string', async () => {
     '"[,;] (?:and )?"'
   ])
 })
+
+test('rex?', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (rex? (rex-string "a"))
+    (rex? (rex-any-char))
+    (rex? (rex-empty))
+    (rex? "a")
+    (rex? 5)
+    (rex? (list 1 2 3))
+  `)).toEqual([
+    '#t',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '#f'
+  ])
+})
+
+test('any-of', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (define pet (rex-any-of (rex-string "cat") (rex-string "dog") (rex-string "bird")))
+    (rex-matches? pet "cat")
+    (rex-matches? pet "dog")
+    (rex-matches? pet "bird")
+    (rex-matches? pet "cow")
+    (rex-matches? pet "catdog")
+    (rex->string pet)
+  `)).toEqual([
+    '#t',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '"(?:cat|dog|bird)"'
+  ])
+})
+
+test('regex', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (define color (regex "colou?r" ""))
+    (rex-matches? color "color")
+    (rex-matches? color "colour")
+    (rex-matches? color "colouur")
+    (rex->string color)
+  `)).toEqual([
+    '#t',
+    '#t',
+    '#f',
+    '"colou?r"'
+  ])
+})
+
+// regex/rex-char-range don't validate their contents up front, so a bad
+// pattern only surfaces once something forces it through JS's RegExp --
+// hence the error pointing at rex-matches?'s own definition, not this call.
+test('regex bad pattern', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (define bad (regex "[" ""))
+    (rex->string bad)
+    (rex-matches? bad "a")
+  `)).toEqual([
+    '"["',
+    'Runtime error [91:1-91:47]: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[$/: Unterminated character class'
+  ])
+})
+
+test('char-range reversed', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (define bad (rex-char-range #\\z #\\a))
+    (rex->string bad)
+    (rex-matches? bad "m")
+  `)).toEqual([
+    '"[z-a]"',
+    'Runtime error [91:1-91:47]: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[z-a]$/: Range out of order in character class'
+  ])
+})
+
+test('bad combinator arguments', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (rex-repeat "hello")
+    (rex-concat (rex-string "a") "b")
+    (rex-optional 5)
+    (rex-any-of (rex-string "a") "b")
+  `)).toEqual([
+    'Runtime error [22:1-22:44]: (error) expected a rex, received string',
+    'Runtime error [34:1-34:44]: (error) expected every value of xs to be a rex, but at least one was not',
+    'Runtime error [70:1-70:48]: (error) expected a rex, received number',
+    'Runtime error [64:1-64:43]: (error) expected every value of xs to be a rex, but at least one was not'
+  ])
+})
+
+test('no matches', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (define digits (rex-repeat (rex-char-range #\\0 #\\9)))
+    (rex-find-matches digits "hello world")
+    (rex-split-string digits "hello world")
+  `)).toEqual([
+    'null',
+    '(list "hello world")'
+  ])
+})

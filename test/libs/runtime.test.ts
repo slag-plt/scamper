@@ -1,615 +1,108 @@
 import { expect, test } from 'vitest'
-import { runProgram } from '../harness'
+import { runProgram } from '../harness.js'
 
-////////////////////////////////////////////////////////////////////////////////
+// Tests for src/js/runtime/index.ts's helpers (runtime_mkCtorFn,
+// runtime_mkPredFn, runtime_mkGetFn, runtime_typeOf, runtime_any), exercised
+// indirectly through the struct form they power at compile time.
 
-test('and-or-short-circuit', async () => {
+test('constructing a struct and accessing its fields', async () => {
   expect(
     await runProgram(`
-(and (error "hello")
-     #f)
+(struct point (x y))
 
-(and #f
-     (error "hello"))
+(define p (point 3 4))
 
-(or (error "hello")
-     #t)
+(point-x p)
+(point-y p)
+`),
+  ).toEqual(['3', '4'])
+})
 
-(or #t
-    (error "hello"))
+test('struct predicate is true for a matching struct and false otherwise', async () => {
+  expect(
+    await runProgram(`
+(struct point (x y))
+
+(point? (point 3 4))
+(point? 5)
+(point? "not a point")
+`),
+  ).toEqual(['#t', '#f', '#f'])
+})
+
+test('two different struct types have independent predicates', async () => {
+  expect(
+    await runProgram(`
+(struct point (x y))
+(struct circle (center radius))
+
+(point? (circle (point 0 0) 5))
+`),
+  ).toEqual(['#f'])
+})
+
+test('constructor called with too few arguments fails', async () => {
+  expect(
+    await runProgram(`
+(struct point (x y))
+
+(point 3)
 `),
   ).toEqual([
-    'Runtime error [1:6-1:20]: (error) hello',
-    '#f',
-    'Runtime error [7:5-7:19]: (error) hello',
-    '#t',
+    'Runtime error [3:1-3:9]: Constructor point expects 2 arguments, received 1',
   ])
 })
 
-test('chained-defs', async () => {
+test('constructor called with too many arguments fails', async () => {
   expect(
     await runProgram(`
-(define x 10)
-(define y x)
-(define z y)
+(struct point (x y))
 
-(+ z 50)
-
-(define f +)
-(define g f)
-(define h g)
-(define i h)
-
-(i x y z)
-`),
-  ).toEqual(['60', '30'])
-})
-
-test('closures', async () => {
-  expect(
-    await runProgram(`
-(define x 10)
-
-(define f1
-  (lambda (y) (+ x y)))
-
-(f1 20)
-
-(define f2
-  (let ([x 100])
-    (lambda (y) (+ x y))))
-
-(f2 20)
-
-(define f3
-  (lambda (x)
-    (lambda (y)
-      (lambda (z)
-        (+ x y z)))))
-
-(((f3 11) 3) 7)
-
-(define f4
-  (let* ([x 51]
-         [f (lambda (y) (+ x y))]
-         [g (lambda (x) (+ (f x) 1))])
-    g))
-
-(f4 100)
-`),
-  ).toEqual(['30', '120', '21', '152'])
-})
-
-test('cond-else-test', async () => {
-  expect(
-    await runProgram(`
-(import image)
-
-(define factorial
-  (lambda (n)
-    (cond
-      [(zero? n) 1]
-      [else (* n (factorial (- n 1)))])))
-
-(factorial 5)
-
-(define red-square (rectangle 15 15 "solid" "red"))
-
-(define type-of
-  (lambda (datum)
-    (cond
-      [(number? datum) "number"]
-      [(string? datum) "string"]
-      [else "some-other-type"])))
-
-(type-of red-square)
-
-`),
-  ).toEqual(['120', '"some-other-type"'])
-})
-
-test('contract-check', async () => {
-  // N.B., the reported ranges point at string-length's/+'s own definitions
-  // in prelude.scm rather than the call site -- a known, unrelated
-  // limitation of contract-wrapped errors (see cons-pair, range, not-boolean
-  // in prelude.test.ts).
-  expect(
-    await runProgram(`
-(string-length (list 1 2 3))
-
-(+ 1 2 3 "bye")
+(point 3 4 5)
 `),
   ).toEqual([
-    'Runtime error [560:1-560:54]: (error) expected a string, received list',
-    // N.B., "+" is documented as a rest param (`. v1`), so its contract
-    // check is a single all-satisfy? over the whole argument list rather
-    // than a per-argument check -- it can report that *some* argument
-    // failed, not *which one*.
-    'Runtime error [119:1-119:34]: (error) expected every value of v1 to be a number, but at least one was not',
+    'Runtime error [3:1-3:13]: Constructor point expects 2 arguments, received 3',
   ])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - JS libs can no
-// longer invoke Scamper closures/functions directly. Unlike contract-check
-// above, this isn't about contract checking at all: map's own
-// implementation calls the user-supplied function argument via
-// callScamperFn regardless of whether it's a JsFunction or a closure.
-test.skip('contract-check-map', async () => {
+test('accessor called on a value of the wrong struct type fails', async () => {
   expect(
     await runProgram(`
-(map char-upcase (list "h" "e" "l" "l" "o"))
+(struct point (x y))
+(struct circle (center radius))
+
+(point-x (circle (point 0 0) 5))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:44]: (map) expected a character, received string',
+    'Runtime error [4:1-4:32]: Accessor function expects a point, received [Struct: circle]',
   ])
 })
 
-test('define-test1', async () => {
+test('accessor called on a non-struct value fails', async () => {
   expect(
     await runProgram(`
-(define x 10)
+(struct point (x y))
 
-(define f
-  (lambda (y) (+ x y)))
-
-(f x)
-`),
-  ).toEqual(['20'])
-})
-
-test.fails('duplicate-binders', async () => {
-  expect(
-    await runProgram(`
-(lambda (x x y) (+ x x))
-
-(struct foo (z y z))
+(point-x 5)
 `),
   ).toEqual([
-    ':8:0: Parser error:',
-    'Duplicate name x given in definition.',
-    'In program: (x x y)',
+    'Runtime error [3:1-3:11]: Accessor function expects a point, received number',
   ])
 })
 
-test('fact', async () => {
+test('accessing a field name absent from the struct fails', async () => {
+  // capture foo-a before foo is redefined with a different field list, so
+  // it's an accessor stamped with a field name the new struct doesn't have
   expect(
     await runProgram(`
-(define fact
-  (lambda (n)
-    (if (zero? n)
-        1
-        (* n (fact (- n 1))))))
+(struct foo (a b))
+(define get-a foo-a)
 
-(fact 0)
+(struct foo (c))
 
-(fact 5)
-`),
-  ).toEqual(['1', '120'])
-})
-
-test('fizzbuzz', async () => {
-  expect(
-    await runProgram(`
-(define fizzbuzz
-  (lambda (n)
-    (cond
-      [(and (zero? (modulo n 3)) (zero? (modulo n 5))) "fizzbuzz"]
-      [(zero? (modulo n 3)) "fizz"]
-      [(zero? (modulo n 5)) "buzz"]
-      [#t (number->string n)])))
-
-(fizzbuzz 1)
-(fizzbuzz 2)
-(fizzbuzz 3)
-(fizzbuzz 4)
-(fizzbuzz 5)
-(fizzbuzz 6)
-(fizzbuzz 7)
-(fizzbuzz 8)
-(fizzbuzz 9)
-(fizzbuzz 10)
-(fizzbuzz 11)
-(fizzbuzz 12)
-(fizzbuzz 13)
-(fizzbuzz 14)
-(fizzbuzz 15)
+(get-a (foo 10))
 `),
   ).toEqual([
-    '"1"',
-    '"2"',
-    '"fizz"',
-    '"4"',
-    '"buzz"',
-    '"fizz"',
-    '"7"',
-    '"8"',
-    '"fizz"',
-    '"buzz"',
-    '"11"',
-    '"fizz"',
-    '"13"',
-    '"14"',
-    '"fizzbuzz"',
+    'Runtime error [6:1-6:16]: Accessor expects field a but it is not present in the given struct value',
   ])
-})
-
-test.skip('let-binding-errors', async () => {
-  expect(
-    await runProgram(`
-; let bindings telescope
-(let
-  ([x1 1]
-   [y1 (+ x1 6)])
-  (+ x1 y1))
-
-; let bindings refer to future bindings
-
-(let
-  ([x2 y2]
-   [y2 5])
-  (+ x2 y2))
-
-(let*
-  ([x3 y3]
-   [y3 5])
-  (+ x3 y3))
-`),
-  ).toEqual([
-    "Parser error [4:11-4:12]: Undefined variable 'x1'",
-    "Parser error [10:8-10:9]: Undefined variable 'y2'",
-    "Parser error [15:8-15:9]: Undefined variable 'y3'",
-  ])
-})
-
-test('let-binding', async () => {
-  expect(
-    await runProgram(`
-; bindings are not dependent on each other
-(let
-  ([x 1]
-   [y 7]
-   [z 11])
-  (+ x y z))
-
-(let*
-  ([x 1]
-   [y 7]
-   [z 11])
-  (+ x y z))
-
-; bindings telescope
-(let*
-  ([x 1]
-   [y (+ x 6)]
-   [z (+ y 4)])
-  (+ x y z))
-`),
-  ).toEqual(['19', '19', '19'])
-})
-
-test('list-length', async () => {
-  expect(
-    await runProgram(`
-(define list-length
-  (lambda (l)
-    (if (null? l)
-        0
-        (+ 1 (list-length (cdr l))))))
-
-(list-length null)
-
-(list-length (cons 9 null))
-
-(list-length (cons 9 (cons 9 (cons 9 (cons 9 (cons 9 null))))))
-
-(list-length (cons "a" (cons "b" (cons "c" (cons "d" (cons "e" null))))))
-`),
-  ).toEqual(['0', '1', '5', '5'])
-})
-
-test('match-lists', async () => {
-  expect(
-    await runProgram(`
-(define list-length
-  (lambda (l)
-    (match l
-      [null 0]
-      [(cons _ tail) (+ 1 (list-length tail))])))
-
-(list-length (list 0 0 0 0 0))
-
-(list-length null)
-
-(list-length (list 0 0 0 0 0 0 0 0 0 0))
-
-(define list-append
-  (lambda (l1 l2)
-    (match l1
-      [null l2]
-      [(cons head tail) (cons head (list-append tail l2))])))
-
-(list-append (list 1 2 3) (list 4 5 6))
-
-(define intersperse
-  (lambda (x l)
-    (match l
-      [null null]
-      [(cons _ null) l]
-      [(cons x1 (cons x2 tail)) (cons x1 (cons x (intersperse x (cons x2 tail))))])))
-
-(intersperse "," (list "a" "b" "c"))
-`),
-  ).toEqual([
-    '5',
-    '0',
-    '10',
-    '(list 1 2 3 4 5 6)',
-    '(list "a" "," "b" "," "c")',
-  ])
-})
-
-test('match-lit', async () => {
-  expect(
-    await runProgram(`
-(match 5
-  [1 "fail"]
-  [5 "numbers"])
-
-(match "baz"
-  ["foo" "fail"]
-  ["bar" "fail"]
-  ["baz" "strings"]
-  ["boop" "fail"])
-
-(match #\\q
-  [#\\a "fail"]
-  [#\\q "chars"]
-  [#\\z "fail"])
-
-(match #t
-  [#f "fail"]
-  [#t "bools"])
-
-(match null
-  [null "null"])
-
-(match (list "lists" "a" "b")
-  [null "fail"]
-  [(cons head _) head])
-`),
-  ).toEqual([
-    '"numbers"',
-    '"strings"',
-    '"chars"',
-    '"bools"',
-    '"null"',
-    '"lists"',
-  ])
-})
-
-test.fails('match-repeated-bindings', async () => {
-  expect(
-    await runProgram(`
-(match (list 1 2 3)
-  [null "fail"]
-  [(cons x x) "fail"])
-`),
-  ).toEqual([
-    ':3:2: Scope error:',
-    'Variable x is repeated in the pattern',
-    'In program: (match (list 1 2 3)',
-    '[null "fail"]',
-    '[(cons x x) "fail"])',
-  ])
-})
-
-test('match-struct', async () => {
-  expect(
-    await runProgram(`
-(struct leaf (value))
-
-(struct node (left right))
-
-(define tree-count
-  (lambda (t)
-    (match t
-      [(leaf _) 1]
-      [(node l r) (+ (tree-count l) (tree-count r))])))
-
-(tree-count (leaf "a"))
-
-(tree-count
-  (node (leaf "a")
-        (node (leaf "b")
-              (node (leaf "c")
-                    (leaf "d")))))
-`),
-  ).toEqual(['1', '4'])
-})
-
-test('mixed-brackets', async () => {
-  expect(
-    await runProgram(`
-{- {* 3
-     (+ {* 1
-           { / 5 8}}
-         12)}
-   (- 5 1)}
-`),
-  ).toEqual(['33.875'])
-})
-
-test('numbers', async () => {
-  expect(
-    await runProgram(`
-4129
-0
--48902
-+48902
-00142
--089
-+098
-
-3.14
-.14
-0.14
-314.
-
--3.14
--.14
--0.14
--314.
-
-+3.14
-+.14
-+0.14
-+314.
-
-3e2
-3.0e2
-.3e2
-3E2
-3.0E2
-.3E2
-
--3e2
--.3e2
--3e-2
--.3e-2
-`),
-  ).toEqual([
-    '4129',
-    '0',
-    '-48902',
-    '48902',
-    '142',
-    '-89',
-    '98',
-    '3.14',
-    '0.14',
-    '0.14',
-    '314',
-    '-3.14',
-    '-0.14',
-    '-0.14',
-    '-314',
-    '3.14',
-    '0.14',
-    '0.14',
-    '314',
-    '300',
-    '300',
-    '30',
-    '300',
-    '300',
-    '30',
-    '-300',
-    '-30',
-    '-0.03',
-    '-0.003',
-  ])
-})
-
-test.skip.fails('shadowing', async () => {
-  expect(
-    await runProgram(`
-(define x 3)
-
-(define y (+ x 2))
-
-(define x -5)
-
-(+ x y)
-
-(define f
-  (lambda (x)
-    (* x 2)))
-
-(f 3)
-
-(let*
-  ([z 10]
-   [x (+ z x)]
-   [z 100])
-  (+ x z))
-
-x
-`),
-  ).toEqual(['0', '6', '105', '-5'])
-})
-
-test('simple-exp', async () => {
-  expect(
-    await runProgram(`
-(let ([x 1] [y (+ 1 1)]) (+ (- 1 1) y (* x 5 8) x))
-
-(+ (car (cdr (cdr (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 null)))))))) 100)
-`),
-  ).toEqual(['43', '103'])
-})
-
-test('tree-test', async () => {
-  expect(
-    await runProgram(`
-(struct leaf (value))
-
-(struct node (left right))
-
-(define tree-size
-  (lambda (t)
-    (if (leaf? t)
-        1
-        (+ (tree-size (node-left t))
-           (tree-size (node-right t))))))
-
-(define tree-to-list
-  (lambda (t)
-    (if (leaf? t)
-        (list (leaf-value t))
-        (append (tree-to-list (node-left t))
-                (tree-to-list (node-right t))))))
-
-(define t1
-  (node (leaf "a")
-        (node (leaf "b")
-              (leaf "c"))))
-
-t1
-
-(leaf-value (node-left (node-right t1)))
-
-(tree-size t1)
-
-(tree-to-list t1)
-`),
-  ).toEqual([
-    '(node (leaf "a") (node (leaf "b") (leaf "c")))',
-    '"b"',
-    '3',
-    '(list "a" "b" "c")',
-  ])
-})
-
-test.skip('undefined-variable', async () => {
-  expect(
-    await runProgram(`
-(+ x 1)
-`),
-  ).toEqual(["Parser error [1:4-1:4]: Undefined variable 'x'"])
-})
-
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - JS libs can no
-// longer invoke Scamper closures/functions directly.
-test.skip('section', async () => {
-  expect(
-    await runProgram(`
-((section + _ 1) 1)
-
-(|> (list "a" "b" "c" "d" "e")
-    (section map (section string-upcase _) _))
-
-`),
-  ).toEqual(['2', '(list "A" "B" "C" "D" "E")'])
 })

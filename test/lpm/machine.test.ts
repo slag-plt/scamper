@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
 import { LoggingChannel, OutputChannel, ReportError, Value } from '../../src/lpm'
-import { makeTestFiber } from '../test-utils'
+import { makeTestFiber } from '../util'
 import { anyRange } from '../scheme/util'
 
 function testExecute(fiber: Fiber, out: OutputChannel) {

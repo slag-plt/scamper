@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
-import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from '../../src/lpm'
+import { isStmtExp, mkLit, mkVar, Prog } from '../../src/scheme/ast'
+import { Loc, ScamperError } from '../../src/lpm'
+import * as L from '../../src/lpm'
 import { anyRange } from './util'
 import { compile } from '../../src/scheme'
 import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
@@ -27,17 +29,34 @@ function parseTestProgram(): Prog {
 }
 
 // Finds the Loc of `needle` (first occurrence, or `occurrence`-th if given)
-// within testProgram, so tests can point at a specific token by content
-// instead of hand-computing line/col/idx by hand.
-function locOf(needle: string, occurrence = 0): Loc {
+// within src, so tests can point at a specific token by content instead of
+// hand-computing line/col/idx by hand.
+function locIn(src: string, needle: string, occurrence = 0): Loc {
   let idx = -1
   for (let i = 0; i <= occurrence; i++) {
-    idx = testProgram.indexOf(needle, idx + 1)
+    idx = src.indexOf(needle, idx + 1)
   }
-  const before = testProgram.slice(0, idx)
+  const before = src.slice(0, idx)
   const line = before.split('\n').length
   const lineStart = before.lastIndexOf('\n') + 1
   return new Loc(line, idx - lineStart + 1, idx)
+}
+
+function locOf(needle: string, occurrence = 0): Loc {
+  return locIn(testProgram, needle, occurrence)
+}
+
+// Parses src as a single bare-expression statement and returns its
+// expression, for tests that only need a small standalone Exp to query.
+function parseExp(src: string) {
+  const errors: ScamperError[] = []
+  const prog = parseProgramFromSource(errors, src)
+  expect(errors).toEqual([])
+  const stmt = prog[0]
+  if (!isStmtExp(stmt)) {
+    throw new Error(`expected a bare expression statement, got tag "${stmt.tag}"`)
+  }
+  return stmt.expr
 }
 
 describe('AST querying', () => {
@@ -208,6 +227,281 @@ describe('AST querying', () => {
         })
       })
     })
+
+    describe('error', () => {
+      test('reports the wrapped expression', () => {
+        const src = '(error "boom")'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, '"boom"'))
+        expect(reported.tag).toBe('error')
+        if (reported.tag !== 'error') return
+        expect(reported.exp).toStrictEqual({
+          tag: 'report',
+          exp: mkLit('boom', anyRange),
+          range: anyRange,
+        })
+      })
+    })
+
+    describe('apply', () => {
+      const src = '(apply + (list 1 2))'
+
+      test('reports the fn slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, '+'))
+        expect(reported.tag).toBe('apply')
+        if (reported.tag !== 'apply') return
+        expect(reported.fn).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('+', anyRange),
+          range: anyRange,
+        })
+        // the args slot is untouched
+        expect(reported.args.tag).toBe('app')
+      })
+
+      test('reports the args slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, '(list 1 2)'))
+        expect(reported.tag).toBe('apply')
+        if (reported.tag !== 'apply') return
+        // the fn slot is untouched
+        expect(reported.fn).toStrictEqual(mkVar('+', anyRange))
+        expect(reported.args.tag).toBe('report')
+        if (reported.args.tag !== 'report') return
+        expect(reported.args.exp.tag).toBe('app')
+      })
+    })
+
+    describe('lam', () => {
+      test('reports the body slot', () => {
+        const src = '(lambda (x) x)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'x', 1))
+        expect(reported.tag).toBe('lam')
+        if (reported.tag !== 'lam') return
+        expect(reported.body).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('x', anyRange),
+          range: anyRange,
+        })
+      })
+    })
+
+    describe('if', () => {
+      const src = '(if a b c)'
+
+      test('reports the guard slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'a'))
+        expect(reported.tag).toBe('if')
+        if (reported.tag !== 'if') return
+        expect(reported.guard).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('a', anyRange),
+          range: anyRange,
+        })
+        expect(reported.ifB).toStrictEqual(mkVar('b', anyRange))
+        expect(reported.elseB).toStrictEqual(mkVar('c', anyRange))
+      })
+
+      test('reports the ifB slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'b'))
+        expect(reported.tag).toBe('if')
+        if (reported.tag !== 'if') return
+        expect(reported.guard).toStrictEqual(mkVar('a', anyRange))
+        expect(reported.ifB).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('b', anyRange),
+          range: anyRange,
+        })
+        expect(reported.elseB).toStrictEqual(mkVar('c', anyRange))
+      })
+
+      test('reports the elseB slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'c'))
+        expect(reported.tag).toBe('if')
+        if (reported.tag !== 'if') return
+        expect(reported.guard).toStrictEqual(mkVar('a', anyRange))
+        expect(reported.ifB).toStrictEqual(mkVar('b', anyRange))
+        expect(reported.elseB).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('c', anyRange),
+          range: anyRange,
+        })
+      })
+    })
+
+    describe('and/or/begin/section (shared flat-list-of-expressions slot logic)', () => {
+      test('and reports an element and rebuilds via mkAnd', () => {
+        const src = '(and p q)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'q'))
+        expect(reported.tag).toBe('and')
+        if (reported.tag !== 'and') return
+        expect(reported.exps[0]).toStrictEqual(mkVar('p', anyRange))
+        expect(reported.exps[1]).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('q', anyRange),
+          range: anyRange,
+        })
+      })
+
+      test('begin reports an element and rebuilds via mkBegin', () => {
+        const src = '(begin p q)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'p'))
+        expect(reported.tag).toBe('begin')
+        if (reported.tag !== 'begin') return
+        expect(reported.exps[0]).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('p', anyRange),
+          range: anyRange,
+        })
+        expect(reported.exps[1]).toStrictEqual(mkVar('q', anyRange))
+      })
+    })
+
+    describe('let/let*', () => {
+      test('let reports a binding value slot', () => {
+        const src = '(let ([x 1] [y 2]) z)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, '1'))
+        expect(reported.tag).toBe('let')
+        if (reported.tag !== 'let') return
+        expect(reported.bindings[0]).toStrictEqual({
+          name: 'x',
+          value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
+        })
+        expect(reported.bindings[1]).toStrictEqual({
+          name: 'y',
+          value: mkLit(2, anyRange),
+        })
+        expect(reported.body).toStrictEqual(mkVar('z', anyRange))
+      })
+
+      test('let reports the body slot', () => {
+        const src = '(let ([x 1] [y 2]) z)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'z'))
+        expect(reported.tag).toBe('let')
+        if (reported.tag !== 'let') return
+        expect(reported.bindings[0]).toStrictEqual({
+          name: 'x',
+          value: mkLit(1, anyRange),
+        })
+        expect(reported.bindings[1]).toStrictEqual({
+          name: 'y',
+          value: mkLit(2, anyRange),
+        })
+        expect(reported.body).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('z', anyRange),
+          range: anyRange,
+        })
+      })
+
+      test('let* reports a binding value slot', () => {
+        const src = '(let* ([x 1]) x)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, '1'))
+        expect(reported.tag).toBe('let*')
+        if (reported.tag !== 'let*') return
+        expect(reported.bindings[0]).toStrictEqual({
+          name: 'x',
+          value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
+        })
+        expect(reported.body).toStrictEqual(mkVar('x', anyRange))
+      })
+    })
+
+    describe('cond', () => {
+      const src = '(cond [p q] [r s])'
+
+      test('reports a branch test slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'p'))
+        expect(reported.tag).toBe('cond')
+        if (reported.tag !== 'cond') return
+        expect(reported.branches[0]).toStrictEqual({
+          test: { tag: 'report', exp: mkVar('p', anyRange), range: anyRange },
+          body: mkVar('q', anyRange),
+        })
+        expect(reported.branches[1]).toStrictEqual({
+          test: mkVar('r', anyRange),
+          body: mkVar('s', anyRange),
+        })
+      })
+
+      test('reports a branch body slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 's'))
+        expect(reported.tag).toBe('cond')
+        if (reported.tag !== 'cond') return
+        expect(reported.branches[0]).toStrictEqual({
+          test: mkVar('p', anyRange),
+          body: mkVar('q', anyRange),
+        })
+        expect(reported.branches[1]).toStrictEqual({
+          test: mkVar('r', anyRange),
+          body: { tag: 'report', exp: mkVar('s', anyRange), range: anyRange },
+        })
+      })
+    })
+
+    describe('match', () => {
+      const src = '(match v [x y] [_ z])'
+
+      test('reports the scrutinee slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'v'))
+        expect(reported.tag).toBe('match')
+        if (reported.tag !== 'match') return
+        expect(reported.scrutinee).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('v', anyRange),
+          range: anyRange,
+        })
+        // patterns and branch bodies are untouched
+        expect(reported.branches[0].body).toStrictEqual(mkVar('y', anyRange))
+        expect(reported.branches[1].body).toStrictEqual(mkVar('z', anyRange))
+      })
+
+      // N.B., patterns aren't queryable slots (see slotsOf's comment in
+      // query.ts), so only scrutinee and branch bodies are tested here.
+      test('reports a branch body slot', () => {
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'z'))
+        expect(reported.tag).toBe('match')
+        if (reported.tag !== 'match') return
+        expect(reported.scrutinee).toStrictEqual(mkVar('v', anyRange))
+        expect(reported.branches[0].body).toStrictEqual(mkVar('y', anyRange))
+        expect(reported.branches[1].body).toStrictEqual({
+          tag: 'report',
+          exp: mkVar('z', anyRange),
+          range: anyRange,
+        })
+      })
+    })
+
+    describe('report', () => {
+      test('is transparent when nested inside another slot', () => {
+        const src = '(f (report x) y)'
+        const exp = parseExp(src)
+        const { exp: reported } = getReportedExp(exp, locIn(src, 'x'))
+        expect(reported.tag).toBe('app')
+        if (reported.tag !== 'app') return
+        expect(reported.args[0]).toStrictEqual({
+          tag: 'report',
+          exp: { tag: 'report', exp: mkVar('x', anyRange), range: anyRange },
+          range: anyRange,
+        })
+        // the sibling argument is untouched
+        expect(reported.args[1]).toStrictEqual(mkVar('y', anyRange))
+      })
+    })
   })
 
   describe('compilation with query loc', () => {
@@ -257,13 +551,16 @@ describe('AST querying', () => {
       expect(queriedRange).toEqual(range.firstLineSpan(src))
     })
 
-    // N.B., already skipped before this migration (see git history) --
-    // pinning the exact compiled bytecode shape of the rept opcode (which
-    // lands inside the queried define's own closure body, not the
-    // synthesized example call site pushed onto the program) is a deeper
-    // bytecode-inspection question than query.ts's AST-level redesign needs
-    // to answer. getQueriedProgram's placement of the report-wrapped
-    // sub-expression is otherwise covered directly by the tests above.
+    // N.B., verified still stale, not just historically skipped: running this
+    // against the current codegen shows the rept opcode inside the *first*
+    // prog statement (the define's closure body: `[var a, rept]`), not the
+    // second (the synthesized example-call disp) that expectedProg checks --
+    // that disp's expr is plainly `[var myid, lit 1, lit 2, ap(2)]`, no rept
+    // at all. So expectedProg's shape doesn't match how report compiles post-
+    // redesign. Pinning the correct shape would make this a codegen.ts-level
+    // test (lowering of `report`), which is out of scope for query.ts;
+    // getQueriedProgram's placement of the report-wrapped sub-expression is
+    // otherwise covered directly by the tests above.
     test.skip('report operation is contained in bytecode', async () => {
       const funcName = 'myid'
       const lit1 = 1
@@ -277,15 +574,15 @@ describe('AST querying', () => {
       const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
       const err = new SimpleErrorChannel()
 
-      const expectedProg: Prog = [
-        expect.anything() as Stmt,
-        mkDisp(
+      const expectedProg: L.Prog = [
+        expect.anything() as L.Stmt,
+        L.mkDisp(
           [
-            mkVar(funcName, anyRange),
-            mkRept(anyRange),
-            mkLit(lit1, anyRange),
-            mkLit(lit2, anyRange),
-            mkAp(2, anyRange),
+            L.mkVar(funcName, anyRange),
+            L.mkRept(anyRange),
+            L.mkLit(lit1, anyRange),
+            L.mkLit(lit2, anyRange),
+            L.mkAp(2, anyRange),
           ],
           anyRange,
         ),

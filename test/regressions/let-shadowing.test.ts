@@ -1,8 +1,10 @@
-import { scamperTest } from '../harness.js'
+import { expect, test } from 'vitest'
+import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/127
 
-scamperTest('normal-let', `
+test('normal-let', async () => {
+  expect(await runProgram(`
   (define f
     (lambda ()
       (let ([x (+ 1 1)]
@@ -10,11 +12,13 @@ scamperTest('normal-let', `
             [z (+ 100 1)])
            (+ x (* y z)))))
   (f)
-`, [
-  '1113'
-])
+  `)).toEqual([
+    '1113'
+  ])
+})
 
-scamperTest('let-shadowing', `
+test('let-shadowing', async () => {
+  expect(await runProgram(`
   (define sample3
     (lambda (x)
       (list x
@@ -23,11 +27,13 @@ scamperTest('let-shadowing', `
             (list x y)))))
 
   (sample3 10)
-`, [
-  '(list 10 (list 11 11))'
-])
+  `)).toEqual([
+    '(list 10 (list 11 11))'
+  ])
+})
 
-scamperTest('let-telescoping', `
+test('let-telescoping', async () => {
+  expect(await runProgram(`
   (define sample3
     (lambda (x)
       (list x
@@ -36,6 +42,7 @@ scamperTest('let-telescoping', `
             (list x y)))))
 
   (sample3 10)
-`, [
-  '(list 10 (list 11 12))'
-])
+  `)).toEqual([
+    '(list 10 (list 11 12))'
+  ])
+})

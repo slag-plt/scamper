@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { Scheduler } from '../../src/lpm/scheduler'
 import {
   makeTask,
@@ -6,8 +6,7 @@ import {
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
   sleep,
-} from '../test-utils'
-import { traceStep } from '../../src/lpm/fiber'
+} from '../util'
 
 patchSchedulerYieldForTests()
 
@@ -27,57 +26,32 @@ patchSchedulerYieldForTests()
  * rate roughly doubling.
  */
 describe('no concurrent #execute() loops', () => {
-  test('a second resumeExecution() does not double-step the same fiber', async () => {
+  // N.B., an "overlapping step() calls" counter would be tautological here:
+  // MockFiber.step and the scheduler's inner loop are both synchronous, so in
+  // single-threaded JS two #execute() loops can never step the same fiber at
+  // the same instant regardless of the bug. Instead, count execute()
+  // invocations directly -- a second concurrent loop shows up as a second call.
+  test('a second resumeExecution() does not start a second execute() loop', async () => {
     const sched = new Scheduler()
     const fiber = new MockFiber()
-
-    // Detect overlapping step() calls via an in-flight counter that lives
-    // inside stepImpl (which is invoked from MockFiber.step *after* the
-    // synchronous stepCallCount bump).
-    let inFlight = 0
-    let maxInFlight = 0
-    fiber.stepImpl = () => {
-      inFlight++
-      maxInFlight = Math.max(maxInFlight, inFlight)
-      inFlight--
-      return traceStep
-    }
-
+    // schedule() starts the one and only execute() loop. The doubled stepping
+    // rate this guards against is the visible symptom of a second concurrent
+    // loop, so count execute() invocations directly rather than timing steps:
+    // a running scheduler must treat further resumeExecution() calls as
+    // no-ops, adding zero new loops.
     sched.schedule(makeTask(fiber))
-    // Constructor already started execution
+    const executeSpy = vi.spyOn(
+      sched as unknown as { execute: () => Promise<void> },
+      'execute',
+    )
+
+    sched.resumeExecution()
     sched.resumeExecution()
     await sleep(QUANTUM_WAIT_MS)
     sched.pauseExecution()
-    // Allow any in-flight work to drain.
     await sleep(QUANTUM_WAIT_MS)
 
-    // With a single #execute() loop, step calls are strictly sequential.
-    expect(maxInFlight).toBe(1)
-  })
-
-  // TODO: inherently flaky test.
-  test.skip('a second resumeExecution() does not roughly double the stepping rate', async () => {
-    const sched = new Scheduler()
-    const f1 = new MockFiber()
-    sched.schedule(makeTask(f1))
-    await sleep(QUANTUM_WAIT_MS)
-    const baseline = f1.stepCallCount
-    sched.pauseExecution()
-    await sleep(QUANTUM_WAIT_MS)
-
-    // Now start fresh with a brand-new scheduler, but call resume twice.
-    const sched2 = new Scheduler()
-    const f2 = new MockFiber()
-    sched2.schedule(makeTask(f2))
-    sched2.resumeExecution()
-    sched2.resumeExecution()
-    await sleep(QUANTUM_WAIT_MS)
-    sched2.pauseExecution()
-    await sleep(QUANTUM_WAIT_MS)
-
-    // The double-resume should not produce ~2x stepping. Allow generous
-    // slack for timing noise.
-    expect(f2.stepCallCount).toBeLessThan(baseline * 1.8)
+    expect(executeSpy).not.toHaveBeenCalled()
   })
 })
 
