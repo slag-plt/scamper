@@ -71,24 +71,25 @@ describe('string->chars', () => {
 })
 
 describe('string->lines', () => {
-  // The docstring declares this parameter as `list?`, but data_stringToLines
-  // (src/js/data/utils.ts) implements it as a plain string split -- so no
-  // call currently succeeds. These tests document that mismatch.
-  test('a string argument violates the documented list? contract', async () => {
+  // Regression for #249: the docstring declared the parameter as `list?`, but
+  // data_stringToLines (src/js/data/utils.ts) splits a plain string -- so no
+  // call could satisfy both the contract and the implementation. The docstring
+  // now correctly declares `s : string?`.
+  test('splits a string into a list of lines', async () => {
     expect(await runProgram(`
     (import data)
     (string->lines "a\nb\nc")
     `)).toEqual([
-      'Runtime error [17:1-17:52]: (error) expected a list, received string'
+      '(list "a" "b" "c")'
     ])
   })
 
-  test('a list argument satisfies the contract but not the implementation', async () => {
+  test('a list argument violates the string? contract', async () => {
     expect(await runProgram(`
     (import data)
     (string->lines (list "a" "b"))
     `)).toEqual([
-      'Runtime error [17:1-17:52]: Unexpected error in Javascript function call: TypeError: s.split is not a function'
+      'Runtime error [17:1-17:52]: (error) expected a string, received list'
     ])
   })
 })
