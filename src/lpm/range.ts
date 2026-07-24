@@ -43,6 +43,10 @@ export class Range {
     return compareLoc(this.begin, loc) <= 0 && compareLoc(this.end, loc) >= 0
   }
 
+  public containsRange(other: Range): boolean {
+    return this.contains(other.begin) && this.contains(other.end)
+  }
+
   /** Last location of this range on its first source line. */
   public firstLineEnd(src: string): Loc {
     if (this.begin.line === this.end.line) {
@@ -77,5 +81,26 @@ export class Range {
       new Loc(startLine, startCol, startIdx),
       new Loc(endLine, endCol, endIdx),
     )
+  }
+
+  /**
+   * @param ranges the ranges to combine
+   * @return the smallest range covering all of `ranges`, or Range.none if empty
+   */
+  static union(...ranges: Range[]): Range {
+    if (ranges.length === 0) {
+      return Range.none
+    }
+    let begin = ranges[0].begin
+    let end = ranges[0].end
+    for (const r of ranges) {
+      if (compareLoc(r.begin, begin) < 0) {
+        begin = r.begin
+      }
+      if (compareLoc(r.end, end) > 0) {
+        end = r.end
+      }
+    }
+    return new Range(begin, end)
   }
 }
