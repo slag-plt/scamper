@@ -267,7 +267,7 @@ const types = ref([
     <p class="fix-margin">Types:{{ argumentTypes }}</p>
     <text>Arguments </text> 
     <button class="arrow-button" @click="AisOpen = !AisOpen">{{ AisOpen ? "▼" : "▶" }}</button>
-    <text>-</text> 
+    <text>・</text> 
     <select v-model="aBool">
       <option v-for="o in aBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
@@ -307,7 +307,7 @@ const types = ref([
     <p class="fix-margin" >Tags:{{ tags }}</p>
     <text>Tags </text>
     <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
-      <text>-</text> 
+      <text>・</text> 
     <select v-model="tBool">
       <option v-for="o in tBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
