@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
 import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from '../../src/lpm'
+import { mkId } from '../../src/scheme/ast'
 import { anyRange } from './util'
 import { compile } from '../../src/scheme'
 import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
@@ -203,7 +204,7 @@ describe('AST querying', () => {
         if (exp.head.tag !== 'lam') return
         expect(exp.head.body).toStrictEqual({
           tag: 'report',
-          exp: mkVar('x', anyRange),
+          exp: mkId('x', anyRange),
           range: anyRange,
         })
       })

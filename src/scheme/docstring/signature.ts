@@ -1,6 +1,6 @@
 import { SimpleErrorChannel } from '../../lpm/output/simple-error'
 import { tokenizeAndParse } from '../index'
-import { isStmtExp, mkVar, Var } from '../ast'
+import { Identifier, isStmtExp, mkId } from '../ast'
 import { DocComment, isPred, Pred, VarApp } from './docstring'
 import { looksLikeIdentifier } from '../literals.js'
 import { reservedWords } from '../reserved-words.js'
@@ -107,17 +107,17 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
   argToks.forEach((t) => {
     validateIdentifierToken(t, range)
   })
-  const args: Var[] = argToks.map((t) => mkVar(t, range))
+  const args: Identifier[] = argToks.map((t) => mkId(t, range))
 
-  let restParam: Var | undefined
+  let restParam: Identifier | undefined
   if (restTok !== undefined) {
     validateIdentifierToken(restTok, range)
-    restParam = mkVar(restTok, range)
+    restParam = mkId(restTok, range)
   }
 
   return {
     tag: 'app',
-    head: mkVar(nameTok, range),
+    head: mkId(nameTok, range),
     args,
     restParam,
     range,

@@ -14,8 +14,8 @@ export function isSchemeNode(v: unknown): v is A.SchemeNode {
   return typeof v.tag === 'string'
 }
 
-function isLetBinding(v: unknown): v is { name: string; value: A.Exp } {
-  return typeof v === 'object' && v !== null && 'name' in v && 'value' in v
+function isLetBinding(v: unknown): v is { id: A.Identifier; value: A.Exp } {
+  return typeof v === 'object' && v !== null && 'id' in v && 'value' in v
 }
 
 function isMatchBranch(v: unknown): v is { pat: A.Pat; body: A.Exp } {
@@ -47,7 +47,7 @@ export const SchemePrinter: Printer = {
       case 'define':
         return group([
           '(define ',
-          node.name,
+          node.name.name,
           indent([line, path.call(print, 'value')]),
           ')',
         ])
@@ -63,14 +63,16 @@ export const SchemePrinter: Printer = {
         return path.call(print, 'expr')
 
       case 'struct':
-        return `(struct ${node.name} (${node.fields.join(' ')}))`
+        return `(struct ${node.name.name} (${node.fields.map((f) => f.name).join(' ')}))`
 
       ///// Expressions ///////////////////////////////////////////////////////////
 
       case 'lit':
         return TextRenderer.render(node.value)
 
-      case 'var':
+      // Identifiers double as variable references (Exp) and pattern
+      // variables (Pat) -- one case handles both.
+      case 'id':
         return node.name
 
       case 'app':
@@ -87,8 +89,8 @@ export const SchemePrinter: Printer = {
       case 'lam':
         return group([
           '(lambda (',
-          join(' ', node.params),
-          node.restParam ? [' . ', node.restParam] : '',
+          join(' ', node.params.map((p) => p.name)),
+          node.restParam ? [' . ', node.restParam.name] : '',
           ')',
           indent([line, path.call(print, 'body')]),
           ')',
@@ -100,7 +102,7 @@ export const SchemePrinter: Printer = {
           if (!isLetBinding(raw)) return ''
           return group([
             '[',
-            raw.name,
+            raw.id.name,
             ' ',
             bindingPath.call(print, 'value'),
             ']',
@@ -177,7 +179,7 @@ export const SchemePrinter: Printer = {
           if (!isLetBinding(raw)) return ''
           return group([
             '[',
-            raw.name,
+            raw.id.name,
             ' ',
             bindingPath.call(print, 'value'),
             ']',
@@ -235,19 +237,16 @@ export const SchemePrinter: Printer = {
       case 'pwild':
         return '_'
 
-      case 'pvar':
-        return node.name
-
       case 'plit':
         return TextRenderer.render(node.value)
 
       case 'pctor':
         if (node.args.length === 0) {
-          return `(${node.name})`
+          return `(${node.name.name})`
         }
         return group([
           '(',
-          node.name,
+          node.name.name,
           indent([line, join(line, path.map(print, 'args'))]),
           ')',
         ])

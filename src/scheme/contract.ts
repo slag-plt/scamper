@@ -20,10 +20,11 @@ const contractTargetName = '##contract-target##'
  * number?)`) don't reduce to a single word, so they're rendered as-is.
  */
 function describePred(pred: Pred): string {
-  if (pred.tag !== 'var') {
+  if (pred.tag !== 'id') {
     return `a value matching \`${A.expToString(pred)}\``
   }
-  const name = pred.name.endsWith('?') ? pred.name.slice(0, -1) : pred.name
+  const predName = pred.name
+  const name = predName.endsWith('?') ? predName.slice(0, -1) : predName
   const article = /^[aeiou]/i.test(name) ? 'an' : 'a'
   return `${article} ${name}`
 }
@@ -35,12 +36,12 @@ function describePred(pred: Pred): string {
  */
 function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar('string-append', range),
+    A.mkId('string-append', range),
     [
       A.mkLit('expected ', range),
       A.mkLit(descPred, range),
       A.mkLit(', received ', range),
-      A.mkApp(A.mkVar('##typeOf##', range), [A.mkVar(argVar, range)], range),
+      A.mkApp(A.mkId('##typeOf##', range), [A.mkId(argVar, range)], range),
     ],
     range,
   )
@@ -54,7 +55,7 @@ function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
  */
 function mkRestErrorMsg(descPred: string, restVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar('string-append', range),
+    A.mkId('string-append', range),
     [
       A.mkLit(`expected every value of ${restVar} to be `, range),
       A.mkLit(descPred, range),
@@ -81,16 +82,17 @@ function mkTargetCall(
 ): A.Exp {
   if (!restParam) {
     return A.mkApp(
-      A.mkVar(contractTargetName, range),
-      params.map((p) => A.mkVar(p.name, range)),
+      A.mkId(contractTargetName, range),
+      params.map((p) => A.mkId(p.name, range)),
       range,
     )
   }
   const combined = params.reduceRight<A.Exp>(
-    (acc, p) => A.mkApp(A.mkVar('cons', range), [A.mkVar(p.name, range), acc], range),
-    A.mkVar(restParam.name, range),
+    (acc, p) =>
+      A.mkApp(A.mkId('cons', range), [A.mkId(p.name, range), acc], range),
+    A.mkId(restParam.name, range),
   )
-  return A.mkApply(A.mkVar(contractTargetName, range), combined, range)
+  return A.mkApply(A.mkId(contractTargetName, range), combined, range)
 }
 
 /**
@@ -122,8 +124,8 @@ function mkCheckChain(
   const restCheck: A.Exp = restParam
     ? A.mkIf(
         A.mkApp(
-          A.mkVar('all-satisfy?', range),
-          [restParam.predicate, A.mkVar(restParam.name, range)],
+          A.mkId('all-satisfy?', range),
+          [restParam.predicate, A.mkId(restParam.name, range)],
           range,
         ),
         targetCall,
@@ -141,7 +143,7 @@ function mkCheckChain(
     }
     const { name, predicate } = params[i]
     return A.mkIf(
-      A.mkApp(predicate, [A.mkVar(name, range)], range),
+      A.mkApp(predicate, [A.mkId(name, range)], range),
       checkAt(i + 1),
       A.mkError(mkErrorMsg(describePred(predicate), name, range), range),
       range,
@@ -189,12 +191,12 @@ export function contractStmt(s: A.Stmt): A.Stmt {
     return s
   }
   const wrapped = A.mkLet(
-    [{ name: contractTargetName, value: s.value }],
+    [{ id: A.mkId(contractTargetName, s.range), value: s.value }],
     A.mkLam(
-      doc.params.map((p) => p.name),
+      doc.params.map((p) => A.mkId(p.name, s.range)),
       mkCheckChain(doc.params, doc.restParam, s.range),
       s.range,
-      doc.restParam?.name,
+      doc.restParam ? A.mkId(doc.restParam.name, s.range) : undefined,
     ),
     s.range,
   )

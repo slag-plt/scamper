@@ -3,11 +3,29 @@ import { Fiber } from '../lpm/fiber'
 import { Frame } from '../lpm/frame'
 import * as A from './ast.js'
 
+/**
+ * Lifts an LPM pattern back into a scheme-AST pattern (the inverse of
+ * codegen's lowerPat). LPM patterns keep bare-string names, so each binder is
+ * wrapped back into an A.Identifier carrying the pattern's range.
+ */
+function raisePat(pat: LPM.Pat): A.Pat {
+  switch (pat.tag) {
+    case 'pwild':
+      return A.mkPWild(pat.range)
+    case 'plit':
+      return A.mkPLit(pat.value, pat.range)
+    case 'pvar':
+      return A.mkId(pat.name, pat.range)
+    case 'pctor':
+      return A.mkPCtor(A.mkId(pat.name, pat.range), pat.args.map(raisePat), pat.range)
+  }
+}
+
 /** @return a stack of expressions created from the given value stack. */
 export function valuesToExps(values: LPM.Value[]): A.Exp[] {
   return values.map((v) => {
     if ((LPM.isFunction(v) || LPM.isClosure(v)) && v.name) {
-      return A.mkVar(v.name)
+      return A.mkId(v.name)
     } else {
       return A.mkLit(v)
     }
@@ -31,12 +49,12 @@ export function raiseFrame(
         if (env.has(op.name)) {
           const v = env.get(op.name)!
           if (LPM.isFunction(v)) {
-            values.push(A.mkVar(op.name))
+            values.push(A.mkId(op.name))
           } else {
             values.push(A.mkLit(env.get(op.name)))
           }
         } else {
-          values.push(A.mkVar(op.name))
+          values.push(A.mkId(op.name))
         }
         break
       }
@@ -44,7 +62,7 @@ export function raiseFrame(
       case 'ctor': {
         const arity = op.fields.length
         const args = arity === 0 ? [] : values.splice(-arity)
-        values.push(A.mkApp(A.mkVar(op.name), args))
+        values.push(A.mkApp(A.mkId(op.name), args))
         break
       }
 
@@ -56,9 +74,16 @@ export function raiseFrame(
           op.body.toReversed(),
         )
         if (op.name) {
-          values.push(A.mkVar(op.name))
+          values.push(A.mkId(op.name))
         } else {
-          values.push(A.mkLam(op.params, body, undefined, op.restParam))
+          values.push(
+            A.mkLam(
+              op.params.map((p) => A.mkId(p)),
+              body,
+              undefined,
+              op.restParam ? A.mkId(op.restParam) : undefined,
+            ),
+          )
         }
         break
       }
@@ -75,14 +100,14 @@ export function raiseFrame(
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame([], env, body.toReversed())
-          return { pat, body: bodyExp }
+          return { pat: raisePat(pat), body: bodyExp }
         })
         values.push(A.mkMatch(scrutinee, matches))
         break
       }
 
       case 'raise': {
-        values.push(A.mkApp(A.mkVar('raise'), [A.mkLit(op.msg)]))
+        values.push(A.mkApp(A.mkId('raise'), [A.mkLit(op.msg)]))
         break
       }
 

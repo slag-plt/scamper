@@ -33,7 +33,7 @@ function checkDuplicateVars(
 
 function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
   switch (p.tag) {
-    case 'pvar': {
+    case 'id': {
       if (locals.has(p.name)) {
         errors.push(
           new ScamperError(
@@ -70,7 +70,7 @@ function scopeCheckExp(
   e: A.Exp,
 ) {
   switch (e.tag) {
-    case 'var': {
+    case 'id': {
       if (!locals.includes(e.name) && !globals.includes(e.name)) {
         errors.push(
           new ScamperError(
@@ -97,13 +97,15 @@ function scopeCheckExp(
 
     case 'lam': {
       // N.B., do we want to warn in the case of shadowed variables?
-      const allParams = e.restParam ? [...e.params, e.restParam] : e.params
+      const allParams = (
+        e.restParam ? [...e.params, e.restParam] : e.params
+      ).map((p) => p.name)
       checkDuplicateVars(errors, allParams, e.range)
       scopeCheckExp(errors, globals, [...locals, ...allParams], e.body)
       return
     }
     case 'let': {
-      const vars = e.bindings.map((b) => b.name)
+      const vars = e.bindings.map((b) => b.id.name)
       checkDuplicateVars(errors, vars, e.range)
       e.bindings.forEach((b) => {
         scopeCheckExp(errors, globals, locals, b.value)
@@ -227,7 +229,7 @@ function scopeCheckFunctionDoc(
 ): void {
   const errors: ScamperError[] = []
   try {
-    scopeCheckFunctionDocInner(errors, doc, name, value, globals)
+    scopeCheckFunctionDocInner(errors, doc, name.name, value, globals)
   } finally {
     outerErrors.push(
       ...errors.map(
@@ -256,7 +258,7 @@ function scopeCheckFunctionDocInner(
     return
   }
 
-  const { params } = value
+  const paramNames = value.params.map((p) => p.name)
   const {
     signature: {
       function: {
@@ -286,7 +288,7 @@ function scopeCheckFunctionDocInner(
   }
 
   // ... lst val)...
-  for (const param of params) {
+  for (const param of paramNames) {
     const nextDocParam = docParams.shift()
     if (nextDocParam === undefined) {
       errors.push(
@@ -315,14 +317,14 @@ function scopeCheckFunctionDocInner(
 
   // ...lst : list?... (param descriptions)
   const paramWasChecked = new Map<string, boolean>(
-    [...params].map((p) => [p, false]),
+    [...paramNames].map((p) => [p, false]),
   )
   for (const {
     name: pName,
     predicate: pPred,
     range: pRange,
   } of docParamDescriptions) {
-    if (!params.includes(pName)) {
+    if (!paramNames.includes(pName)) {
       errors.push(
         mkScamperErrorWithRange(
           'Parser',
@@ -393,17 +395,17 @@ async function scopeCheckStmt(
     }
 
     case 'define': {
-      if (globals.includes(s.name)) {
+      if (globals.includes(s.name.name)) {
         errors.push(
           new ScamperError(
             'Parser',
-            `Global variable '${s.name}' is already defined`,
+            `Global variable '${s.name.name}' is already defined`,
             undefined,
             s.range,
           ),
         )
       } else {
-        globals.push(s.name)
+        globals.push(s.name.name)
       }
       scopeCheckExp(errors, globals, [], s.value)
       if (s.docComments) {

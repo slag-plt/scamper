@@ -5,7 +5,7 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case 'lit': {
       return e
     }
-    case 'var': {
+    case 'id': {
       return e
     }
     case 'app': {
@@ -16,8 +16,8 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     }
     case 'let': {
       return AST.mkLet(
-        e.bindings.map(({ name, value }) => ({
-          name,
+        e.bindings.map(({ id, value }) => ({
+          id,
           value: sugarExpr(value),
         })),
         sugarExpr(e.body),
@@ -31,9 +31,9 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     }
     case 'match': {
       // Let binding
-      if (e.branches.length === 1 && e.branches[0].pat.tag === 'pvar') {
+      if (e.branches.length === 1 && e.branches[0].pat.tag === 'id') {
         return AST.mkLet(
-          [{ name: e.branches[0].pat.name, value: sugarExpr(e.scrutinee) }],
+          [{ id: e.branches[0].pat, value: sugarExpr(e.scrutinee) }],
           sugarExpr(e.branches[0].body),
         )
       }
@@ -72,8 +72,8 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     }
     case 'let*': {
       return AST.mkLetS(
-        e.bindings.map(({ name, value }) => ({
-          name,
+        e.bindings.map(({ id, value }) => ({
+          id,
           value: sugarExpr(value),
         })),
         sugarExpr(e.body),

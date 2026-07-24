@@ -1,6 +1,6 @@
 import { ICE, Range, ScamperError } from '../../lpm'
 import { Param, parseSingleParam } from './param'
-import { App, Comment, Exp, isApp, isVar, Var } from '../ast'
+import { App, Comment, Exp, Identifier, isApp, isVar } from '../ast'
 
 import { parseFunctionDescription } from './description'
 import { hasTag, makeTagged, mkScamperErrorWithRange } from '../util'
@@ -20,11 +20,9 @@ export interface FunctionDoc {
   range: Range
 }
 
-interface SimplePred extends Var {
-  range: Range
-}
+type SimplePred = Identifier
 export interface ComplexPred extends App {
-  head: Var
+  head: Identifier
   args: Pred[]
   range: Range
 }
@@ -48,12 +46,12 @@ export const ParseStage = {
 export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 
 export interface VarApp extends App {
-  head: Var
-  args: Var[]
+  head: Identifier
+  args: Identifier[]
   /** The signature's rest parameter, e.g. `xs` in `(+ . xs)` or
    * `(map f . xs)`, mirroring the lambda arglist's dotted-pair rest-param
    * syntax. undefined for a fixed-arity signature. */
-  restParam?: Var
+  restParam?: Identifier
 }
 
 export function isVarApp(e: Exp): e is VarApp {

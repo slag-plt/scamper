@@ -22,7 +22,7 @@ export function predToString(pred: Pred): string {
  * `boolean?` -> `boolean`, `(list-of number?)` -> `list-of`.
  */
 export function predTypeName(pred: Pred): string {
-  const name = pred.tag === 'var' ? pred.name : pred.head.name
+  const name = pred.tag === 'id' ? pred.name : pred.head.name
   return name.endsWith('?') ? name.slice(0, -1) : name
 }
 

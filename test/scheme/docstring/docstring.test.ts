@@ -1,7 +1,7 @@
 import './test-tags'
 
 import { describe, expect, test } from 'vitest'
-import { mkApp, mkDefine, mkVar } from '../../../src/scheme/ast'
+import { mkApp, mkDefine, mkId } from '../../../src/scheme/ast'
 import { mkLit } from '../../../src/lpm'
 import {
   Param,
@@ -44,7 +44,7 @@ describe('Docstring parsing', () => {
     const prog = tokenizeAndParse(err, testSrc)
     // N.B., parsing is deferred: the Define carries raw docComments, not an
     // already-parsed FunctionDoc (see ast.ts's Define.docComments).
-    const expectedDefine = mkDefine(identifier, lit, anyRange, rawTestComments)
+    const expectedDefine = mkDefine(mkId(identifier, anyRange), lit, anyRange, rawTestComments)
     expect(prog).toStrictEqual(expect.arrayContaining([expectedDefine]))
 
     const stmt = prog?.find((s) => s.tag === 'define')
@@ -97,8 +97,8 @@ describe('Docstring parsing', () => {
   const subPredId1 = 'pred1?'
   const subPredId2 = 'pred2?'
   const predicate = mkApp(
-    mkVar(predHeadId, anyRange),
-    [mkVar(subPredId1, anyRange), mkVar(subPredId2, anyRange)],
+    mkId(predHeadId, anyRange),
+    [mkId(subPredId1, anyRange), mkId(subPredId2, anyRange)],
     anyRange,
   ) as Pred
   describe('parseParamSignature', () => {
@@ -106,7 +106,7 @@ describe('Docstring parsing', () => {
       const name = 'param'
       test('w/ simple predicate', () => {
         const predId = 'pred?'
-        const predicate = mkVar(predId, anyRange)
+        const predicate = mkId(predId, anyRange)
         const testDocLine = ` ${name} : ${predId}`
         const expectedParam: Param = {
           name,
@@ -275,9 +275,9 @@ describe('Docstring parsing', () => {
     test('works on simple complex pred', () => {
       const subPred1 = 'pred1?'
       const subPred2 = 'pred2?'
-      const testComplexPred: ComplexPred = mkApp(mkVar(name), [
-        mkVar(subPred1),
-        mkVar(subPred2),
+      const testComplexPred: ComplexPred = mkApp(mkId(name), [
+        mkId(subPred1),
+        mkId(subPred2),
       ]) as ComplexPred
 
       expect(isComplexPred(testComplexPred)).toBe(true)
@@ -288,10 +288,10 @@ describe('Docstring parsing', () => {
       const subNestedName = 'another-nested?'
       const subPred2 = 'pred2?'
       const subPred3 = 'pred3?'
-      const testComplexPred: ComplexPred = mkApp(mkVar(name), [
-        mkVar(subPred1),
-        mkApp(mkVar(nestedName), [
-          mkApp(mkVar(subNestedName), [mkVar(subPred2), mkVar(subPred3)]),
+      const testComplexPred: ComplexPred = mkApp(mkId(name), [
+        mkId(subPred1),
+        mkApp(mkId(nestedName), [
+          mkApp(mkId(subNestedName), [mkId(subPred2), mkId(subPred3)]),
         ]),
       ]) as ComplexPred
 
@@ -310,8 +310,8 @@ function makeTestDocstring(): {
   const paramName2 = 'p2'
   const funcApp = {
     ...mkApp(
-      mkVar(funcName, anyRange),
-      [mkVar(paramName1, anyRange), mkVar(paramName2, anyRange)],
+      mkId(funcName, anyRange),
+      [mkId(paramName1, anyRange), mkId(paramName2, anyRange)],
       anyRange,
     ),
     restParam: undefined,
@@ -320,13 +320,13 @@ function makeTestDocstring(): {
   const complexPredName1 = 'complex-pred1?'
   const predName1 = 'pred1?'
   const predicate1 = mkApp(
-    mkVar(complexPredName1, anyRange),
-    [mkVar(predName1, anyRange)],
+    mkId(complexPredName1, anyRange),
+    [mkId(predName1, anyRange)],
     anyRange,
   ) as VarApp
 
   const predName2 = 'pred2?'
-  const predicate2 = mkVar(predName2, anyRange)
+  const predicate2 = mkId(predName2, anyRange)
 
   const paramDescLine1 = 'this parameter is amazing'
   const paramDescLine2 = 'i really like it'
@@ -336,8 +336,8 @@ function makeTestDocstring(): {
   const predName3 = 'pred3?'
   const predName4 = 'pred4?'
   const predicate3 = mkApp(
-    mkVar(complexPredName2, anyRange),
-    [mkVar(predName3, anyRange), mkVar(predName4, anyRange)],
+    mkId(complexPredName2, anyRange),
+    [mkId(predName3, anyRange), mkId(predName4, anyRange)],
     anyRange,
   ) as VarApp
 

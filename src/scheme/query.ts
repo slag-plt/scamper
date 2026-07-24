@@ -73,7 +73,7 @@ interface Slot {
 function slotsOf(exp: A.Exp): Slot[] {
   switch (exp.tag) {
     case 'lit':
-    case 'var':
+    case 'id':
     case 'quote':
     case 'jsvar':
       return []
@@ -156,7 +156,7 @@ function slotsOf(exp: A.Exp): Slot[] {
           rebuild: (r: A.Exp) =>
             mk(
               exp.bindings.map((x, j) =>
-                j === i ? { name: x.name, value: r } : x,
+                j === i ? { id: x.id, value: r } : x,
               ),
               exp.body,
               exp.range,

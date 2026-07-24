@@ -53,7 +53,7 @@ function extractDocs(prog: A.Prog): Map<string, FunctionDoc> {
     try {
       const doc = parseFunctionDocFromComments(stmt.docComments)
       if (doc) {
-        docs.set(stmt.name, doc)
+        docs.set(stmt.name.name, doc)
       }
     } catch (e) {
       if (!(e instanceof L.ScamperError)) {
