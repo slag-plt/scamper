@@ -196,13 +196,14 @@ export function prelude_numberToString(x: number): string {
 //   (string->number s)
 //   (string->number s radix)
 
-export function prelude_stringToNumber(s: string): number {
+export function prelude_stringToNumber(s: string): number | boolean {
+  // N.B., per R7RS, return #f when the string does not denote a number.
   if (/^[+-]?\d+$/.test(s)) {
     return parseInt(s)
   } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
     return parseFloat(s)
   } else {
-    throw new Error(`Runtime error: string->number: invalid string: ${s}`)
+    return false
   }
 }
 

@@ -214,8 +214,8 @@
 
 ;;; (string->number s) -> number?
 ;;;  s : string?
-;;;   presumed to be a number
-;;; Returns the number denoted by `s` as a `number`.
+;;; Returns the number denoted by `s`, or `#f` if `s`
+;;; does not denote a number.
 ;;; @category string
 (define string->number (js-var "prelude_stringToNumber"))
 
