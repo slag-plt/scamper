@@ -131,15 +131,17 @@ function setCurrentFile(filename: string | null) {
 }
 
 async function switchToFile(filename: string): Promise<void> {
-  if (!fs) return
+  if (!fs || !fileSession) return
   isLoadingFile = true
   stopAutosaving()
   session.stopAll()
-  if (currentFile.value !== null) await saveCurrentFile()
 
-  setCurrentFile(filename)
   try {
-    const src = await fs.loadFile(filename)
+    // Forces a save of the outgoing file before loading the new one so a quick
+    // edit is never lost on switch (issue #238). The guarded saveCurrentFile()
+    // would no-op here because isLoadingFile is already set.
+    const src = await fileSession.switchTo(filename)
+    currentFile.value = filename
     editor().initializeDoc(src)
   } catch (e) {
     if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ''}`)

@@ -220,6 +220,77 @@ describe('FileSession autosave lifecycle', () => {
   })
 })
 
+describe('FileSession switchTo (issue #238)', () => {
+  test('forces a save of the outgoing file before loading the new one', async () => {
+    const fs = new FakeFS(false)
+    fs.files.set('a.scm', 'a on disk')
+    fs.files.set('b.scm', 'b on disk')
+
+    // The editor holds an unsaved edit to the OUTGOING file (a.scm).
+    const mutableEditor = {
+      getDoc: () => 'a edited',
+      isEditorLoaded: () => true,
+    }
+    const s = new FileSession(fs, mutableEditor)
+    s.setCurrentFile('a.scm')
+
+    // switchTo awaits the forced outgoing save, whose writable stays open until
+    // we close it; do so once the save is in flight so the switch can proceed.
+    const switchPromise = s.switchTo('b.scm')
+    await Promise.resolve()
+    fs.closeOpenSave()
+    const src = await switchPromise
+
+    // The outgoing file's edit was persisted before the switch (the bug lost it).
+    expect(fs.files.get('a.scm')).toBe('a edited')
+    // The new file's contents are returned for the caller to load.
+    expect(src).toBe('b on disk')
+    // The session now tracks the new file.
+    expect(s.getCurrentFile()).toBe('b.scm')
+  })
+
+  test('saves the outgoing file BEFORE reading the new one', async () => {
+    const events: string[] = []
+    const fs = new FakeFS(false)
+    fs.files.set('a.scm', 'a on disk')
+    fs.files.set('b.scm', 'b on disk')
+    const saveSpy = vi.spyOn(fs, 'saveFile')
+    saveSpy.mockImplementation(async (filename: string, contents: string) => {
+      events.push(`save:${filename}`)
+      fs.files.set(filename, contents)
+    })
+    const loadSpy = vi.spyOn(fs, 'loadFile')
+    loadSpy.mockImplementation((filename: string) => {
+      events.push(`load:${filename}`)
+      return Promise.resolve(fs.files.get(filename) ?? '')
+    })
+
+    const s = new FileSession(fs, {
+      getDoc: () => 'a edited',
+      isEditorLoaded: () => true,
+    })
+    s.setCurrentFile('a.scm')
+
+    await s.switchTo('b.scm')
+
+    // The outgoing save must strictly precede the incoming load.
+    expect(events).toEqual(['save:a.scm', 'load:b.scm'])
+  })
+
+  test('does not save when no file is currently open', async () => {
+    const fs = new FakeFS(false)
+    fs.files.set('b.scm', 'b on disk')
+    const s = new FileSession(fs, editor)
+    // No current file (e.g. after a delete): nothing to save on switch.
+
+    const src = await s.switchTo('b.scm')
+
+    expect(fs.saveCalls).toEqual([])
+    expect(src).toBe('b on disk')
+    expect(s.getCurrentFile()).toBe('b.scm')
+  })
+})
+
 describe('FileSession rename', () => {
   test('rename during an in-flight save waits then renames and updates current file', async () => {
     const fs = new FakeFS(true)

@@ -126,6 +126,24 @@ export class FileSession {
     if (this.inFlightSave) await this.inFlightSave
   }
 
+  // ---------- switching ----------
+
+  /**
+   * Switches the open file to `filename`, forcing a save of the outgoing file
+   * BEFORE the new one is loaded so a quick edit is never lost on switch (issue
+   * #238). The save is forced (not skipped like an incidental lifecycle save)
+   * and coalesces with any in-flight save. The editor still holds the outgoing
+   * file's doc at this point, so `save()` writes the correct contents; the
+   * caller loads the returned source into the editor afterwards.
+   * @returns the contents of the newly-opened file.
+   */
+  async switchTo(filename: string): Promise<string> {
+    if (this.currentFile !== null) await this.save()
+    const src = await this.fs.loadFile(filename)
+    this.currentFile = filename
+    return src
+  }
+
   // ---------- deleting ----------
 
   /**
