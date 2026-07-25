@@ -106,7 +106,15 @@ export function prelude_times(...xs: number[]): number {
 }
 
 export function prelude_div(...xs: number[]): number {
-  return xs.length === 1 ? 1 / xs[0] : xs.reduce((a, b) => a / b)
+  // `/` folds left-to-right; unary `(/ x)` means `1/x`. Any zero divisor
+  // anywhere in the chain errors rather than producing Infinity/NaN.
+  const divide = (a: number, b: number): number => {
+    if (b === 0) {
+      throw new L.ScamperError('Runtime', '/: division by zero')
+    }
+    return a / b
+  }
+  return xs.length === 1 ? divide(1, xs[0]) : xs.reduce(divide)
 }
 
 export function prelude_abs(x: number): number {
@@ -123,14 +131,23 @@ export function prelude_abs(x: number): number {
 // To avoid clutter in the documentation.
 
 export function prelude_quotient(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'quotient: division by zero')
+  }
   return Math.trunc(x / y)
 }
 
 export function prelude_remainder(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'remainder: division by zero')
+  }
   return x % y
 }
 
 export function prelude_modulo(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'modulo: division by zero')
+  }
   return ((x % y) + y) % y
 }
 
