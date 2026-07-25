@@ -283,7 +283,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
       })
       return points
     case 'above':
-      const yOffset = 0
+      let yOffset = 0
       drawing.drawings.forEach((subimage) => {
         const subPoints: [number, number][] = getDrawingPoints(subimage)
           .map(([x, y]) => [
@@ -296,7 +296,7 @@ function getDrawingPoints (drawing: Drawing): [number, number][] {
             y + yOffset
         ])
         points.push(...subPoints)
-        xOffset += subimage.width
+        yOffset += subimage.height
       })
       return points
     case 'overlay': {
