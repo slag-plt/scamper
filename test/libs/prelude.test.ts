@@ -2153,191 +2153,25 @@ test('=-eps', async () => {
 ////////////////////////////////////////////////////////////////////////////////
 // Pairs & List Accessors (car/cdr family)
 
-describe('list accessors (c[ad]+r family) - shallow-list failures', () => {
-  // N.B., these accessors' docstrings declare `v : any`, so there is no real
-  // contract check -- a non-pair like a number silently returns void instead
-  // of erroring, and the empty list leaks a raw JS TypeError (#256). Only
-  // running past the end of the list actually throws, and the reported range
-  // points at the accessor's own definition in prelude.scm rather than the
-  // call site (#254), same as not-boolean/cons-pair above.
+describe('list accessors (c[ad]+r family) - empty-list failures', () => {
+  // N.B., car/cdr now carry an `(or/p pair? nonempty-list?)` contract, and the
+  // whole c[ad]+r family is defined as Scheme compositions over them, so every
+  // member rejects the empty list with the same clean contract error (#256)
+  // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
+  // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
+  // The reported range points at that primitive's definition in prelude.scm.
+  const stripRange = (msgs: string[]): string[] =>
+    msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
+  const members = [
+    'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
+    'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',
+    'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar', 'caaadr', 'cadadr',
+    'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
+  ]
 
-  test('car', async () => {
-    expect(await runProgram('(car (list))')).toEqual([
-      "Runtime error [371:1-371:35]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdr', async () => {
-    expect(await runProgram('(cdr (list))')).toEqual([
-      "Runtime error [378:1-378:35]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caar', async () => {
-    expect(await runProgram('(caar (list))')).toEqual([
-      "Runtime error [969:1-969:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cadr', async () => {
-    expect(await runProgram('(cadr (list))')).toEqual([
-      "Runtime error [976:1-976:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdar', async () => {
-    expect(await runProgram('(cdar (list))')).toEqual([
-      "Runtime error [983:1-983:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddr', async () => {
-    expect(await runProgram('(cddr (list))')).toEqual([
-      "Runtime error [990:1-990:37]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaar', async () => {
-    expect(await runProgram('(caaar (list))')).toEqual([
-      "Runtime error [997:1-997:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cadar', async () => {
-    expect(await runProgram('(cadar (list))')).toEqual([
-      "Runtime error [1004:1-1004:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdaar', async () => {
-    expect(await runProgram('(cdaar (list))')).toEqual([
-      "Runtime error [1011:1-1011:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddar', async () => {
-    expect(await runProgram('(cddar (list))')).toEqual([
-      "Runtime error [1018:1-1018:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caadr', async () => {
-    expect(await runProgram('(caadr (list))')).toEqual([
-      "Runtime error [1025:1-1025:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caddr', async () => {
-    expect(await runProgram('(caddr (list))')).toEqual([
-      "Runtime error [1032:1-1032:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdadr', async () => {
-    expect(await runProgram('(cdadr (list))')).toEqual([
-      "Runtime error [1039:1-1039:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdddr', async () => {
-    expect(await runProgram('(cdddr (list))')).toEqual([
-      "Runtime error [1046:1-1046:39]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaaar', async () => {
-    expect(await runProgram('(caaaar (list))')).toEqual([
-      "Runtime error [1053:1-1053:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cadaar', async () => {
-    expect(await runProgram('(cadaar (list))')).toEqual([
-      "Runtime error [1060:1-1060:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdaaar', async () => {
-    expect(await runProgram('(cdaaar (list))')).toEqual([
-      "Runtime error [1067:1-1067:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cddaar', async () => {
-    expect(await runProgram('(cddaar (list))')).toEqual([
-      "Runtime error [1074:1-1074:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caadar', async () => {
-    expect(await runProgram('(caadar (list))')).toEqual([
-      "Runtime error [1081:1-1081:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caddar', async () => {
-    expect(await runProgram('(caddar (list))')).toEqual([
-      "Runtime error [1088:1-1088:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdadar', async () => {
-    expect(await runProgram('(cdadar (list))')).toEqual([
-      "Runtime error [1095:1-1095:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('cdddar', async () => {
-    expect(await runProgram('(cdddar (list))')).toEqual([
-      "Runtime error [1102:1-1102:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'head')",
-    ])
-  })
-
-  test('caaadr', async () => {
-    expect(await runProgram('(caaadr (list))')).toEqual([
-      "Runtime error [1109:1-1109:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cadadr', async () => {
-    expect(await runProgram('(cadadr (list))')).toEqual([
-      "Runtime error [1116:1-1116:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdaadr', async () => {
-    expect(await runProgram('(cdaadr (list))')).toEqual([
-      "Runtime error [1123:1-1123:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cddadr', async () => {
-    expect(await runProgram('(cddadr (list))')).toEqual([
-      "Runtime error [1130:1-1130:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('caaddr', async () => {
-    expect(await runProgram('(caaddr (list))')).toEqual([
-      "Runtime error [1137:1-1137:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cadddr', async () => {
-    expect(await runProgram('(cadddr (list))')).toEqual([
-      "Runtime error [1144:1-1144:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cdaddr', async () => {
-    expect(await runProgram('(cdaddr (list))')).toEqual([
-      "Runtime error [1151:1-1151:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
-    ])
-  })
-
-  test('cddddr', async () => {
-    expect(await runProgram('(cddddr (list))')).toEqual([
-      "Runtime error [1158:1-1158:41]: Unexpected error in Javascript function call: TypeError: Cannot read properties of null (reading 'tail')",
+  test.each(members)('%s rejects the empty list', async (name) => {
+    expect(stripRange(await runProgram(`(${name} (list))`))).toEqual([
+      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
     ])
   })
 })
@@ -2436,8 +2270,8 @@ test('sort-contract', async () => {
 (sort (list 1 2) 5)
 `),
   ).toEqual([
-    'Runtime error [493:1-493:37]: (error) expected a list, received number',
-    'Runtime error [493:1-493:37]: (error) expected a procedure, received number',
+    'Runtime error [523:1-523:37]: (error) expected a list, received number',
+    'Runtime error [523:1-523:37]: (error) expected a procedure, received number',
   ])
 })
 
@@ -2564,7 +2398,7 @@ test('string-constructor', async () => {
 `),
   ).toEqual([
     '"abc"',
-    'Runtime error [554:1-554:41]: (error) expected every value of c1 to be a char, but at least one was not',
+    'Runtime error [584:1-584:41]: (error) expected every value of c1 to be a char, but at least one was not',
   ])
 })
 
@@ -2579,8 +2413,8 @@ test('string-vector-conversions', async () => {
   ).toEqual([
     '(vector #\\a #\\b #\\c)',
     '"abc"',
-    'Runtime error [617:1-617:57]: (error) expected a string, received number',
-    'Runtime error [623:1-623:57]: (error) expected a vector, received string',
+    'Runtime error [647:1-647:57]: (error) expected a string, received number',
+    'Runtime error [653:1-653:57]: (error) expected a vector, received string',
   ])
 })
 
@@ -2596,7 +2430,7 @@ test('string-contains', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error [630:1-630:58]: (error) expected a string, received number',
+    'Runtime error [660:1-660:58]: (error) expected a string, received number',
   ])
 })
 
@@ -2608,7 +2442,7 @@ test('string-split-vector', async () => {
 `),
   ).toEqual([
     '(vector "a" "b" "c")',
-    'Runtime error [644:1-644:65]: (error) expected a string, received number',
+    'Runtime error [674:1-674:65]: (error) expected a string, received number',
   ])
 })
 
@@ -2668,7 +2502,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error [663:1-663:50]: (error) expected an integer, received string',
+    'Runtime error [693:1-693:50]: (error) expected an integer, received string',
   ])
 })
 
@@ -2683,7 +2517,7 @@ test('vector-length', async () => {
   ).toEqual([
     '3',
     '0',
-    'Runtime error [669:1-669:54]: (error) expected a vector, received number',
+    'Runtime error [699:1-699:54]: (error) expected a vector, received number',
   ])
 })
 
@@ -2701,7 +2535,7 @@ test('vector-ref', async () => {
   ).toEqual([
     '1',
     '3',
-    'Runtime error [677:1-677:48]: (error) expected a vector, received number',
+    'Runtime error [707:1-707:48]: (error) expected a vector, received number',
     'void',
     'void',
   ])
@@ -2717,7 +2551,7 @@ test('vector-append', async () => {
 `),
   ).toEqual([
     '(vector 1 2 3 4 5)',
-    'Runtime error [722:1-722:54]: (error) expected every value of v1 to be a vector, but at least one was not',
+    'Runtime error [752:1-752:54]: (error) expected every value of v1 to be a vector, but at least one was not',
     '(vector)',
   ])
 })
@@ -2733,7 +2567,7 @@ test('vector-to-list', async () => {
   ).toEqual([
     '(list 1 2 3)',
     'null',
-    'Runtime error [699:1-699:53]: (error) expected a vector, received list',
+    'Runtime error [729:1-729:53]: (error) expected a vector, received list',
   ])
 })
 
@@ -2748,7 +2582,7 @@ test('list-to-vector', async () => {
   ).toEqual([
     '(vector 1 2 3)',
     '(vector)',
-    'Runtime error [705:1-705:53]: (error) expected a list, received vector',
+    'Runtime error [735:1-735:53]: (error) expected a list, received vector',
   ])
 })
 
@@ -2837,7 +2671,7 @@ test('string-to-words', async () => {
     '(list "Hello" "world" "How" "are" "you")',
     'null',
     '(list "...")',
-    'Runtime error [899:1-899:55]: (error) expected a string, received number',
+    'Runtime error [929:1-929:55]: (error) expected a string, received number',
   ])
 })
 
@@ -2865,8 +2699,8 @@ r
     '10',
     'Runtime error [8:1-8:5]: Arity mismatch in function call: expected 1 arguments, got 0',
     'Runtime error [9:1-9:6]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [917:1-917:39]: (error) expected a ref, received number',
-    'Runtime error [924:1-924:43]: (error) expected a ref, received number',
+    'Runtime error [947:1-947:39]: (error) expected a ref, received number',
+    'Runtime error [954:1-954:43]: (error) expected a ref, received number',
   ])
 })
 
@@ -2906,7 +2740,7 @@ test('with-file', async () => {
 `),
   ).toEqual([
     '(reactive-file "foo.txt" [Function: ##anonymous##])',
-    'Runtime error [956:1-956:46]: (error) expected a string, received number',
+    'Runtime error [986:1-986:46]: (error) expected a string, received number',
   ])
 })
 
@@ -2918,7 +2752,7 @@ test('with-file-chooser', async () => {
 `),
   ).toEqual([
     '(reactive-file-chooser [Function: ##anonymous##])',
-    'Runtime error [962:1-962:61]: (error) expected a procedure, received number',
+    'Runtime error [992:1-992:61]: (error) expected a procedure, received number',
   ])
 })
 
@@ -2928,7 +2762,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error [870:1-870:41]: (error) expected an integer, received string',
+    'Runtime error [900:1-900:41]: (error) expected an integer, received string',
   ])
 })
 
