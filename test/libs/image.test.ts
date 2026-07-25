@@ -384,7 +384,28 @@ describe('color', () => {
     test.skip('hsv-alpha')
     test.skip('hsv-complement')
     test.skip('hsv->string')
-    test.skip('hsv->rgb')
+  })
+
+  // Regression for #265: hsv->rgb routes through the CommonJS colorsys module.
+  // With #250's hsv? binding fixed the contract layer is reachable, and with
+  // color.ts's default import colorsys resolves -- so the full Scamper-level
+  // path converts a fully-saturated red hue back to rgb red. (This runs in the
+  // Vite/jsdom tier, which resolves colorsys regardless; the CLI tier in
+  // test/apps/cli exercises the Node/tsx path that the import fix actually
+  // repaired.)
+  test('hsv->rgb', async () => {
+    expect(
+      await runProgram(`
+(import image)
+(hsv->rgb (hsv 0 100 100))
+(hsv->rgb (hsv 0 100 100 128))
+(hsv->rgb 5)
+`),
+    ).toEqual([
+      '(rgba 255 0 0 255)',
+      '(rgba 255 0 0 128)',
+      'Runtime error [196:1-196:43]: (error) expected a hsv, received number',
+    ])
   })
 
   test('rgb-darker', async () => {
