@@ -77,6 +77,19 @@ function hasColoredPixel(canvas: HTMLCanvasElement): boolean {
   return false
 }
 
+// Count of fully-red, fully-opaque pixels -- a size-independent measure of how
+// much of a red shape actually landed on the canvas.
+function redPixelCount(canvas: HTMLCanvasElement): number {
+  const data = context2d(canvas).getImageData(0, 0, canvas.width, canvas.height).data
+  let count = 0
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] === 255 && data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] === 255) {
+      count++
+    }
+  }
+  return count
+}
+
 // A no-op stand-in for a Scamper closure; L.callScamperFn throws before ever
 // looking at it (see #248), so its actual behavior doesn't matter here.
 const dummyScamperFn = ((..._args: L.Value[]) => undefined) as L.ScamperFn
@@ -235,6 +248,44 @@ describe('render per-shape branches', () => {
     expect(canvas.width).toBeGreaterThan(0)
     expect(canvas.height).toBeGreaterThan(0)
     expect(hasColoredPixel(canvas)).toBe(true)
+  })
+})
+
+// https://github.com/slag-plt/scamper/issues/102
+//
+// A rotate-0 turn is a no-op and must render identically to the un-rotated
+// drawing. The old bounding box came from a per-shape point set that disagreed
+// with the declared width/height, so `rotate` shifted, clipped, and reordered
+// even at angle 0. These pixel checks are the real proof the fix landed; the
+// jsdom suite (test/regressions/rotate-bounding-box.test.ts) covers dimensions.
+describe('rotate 0 is a no-op (#102)', () => {
+  // Bug A: an ellipse's points were center-origin while every other shape was
+  // top-left origin, so rotate-0 translated the circle down-right by its radius
+  // -- its center read as background and ~3/4 of its ink fell off the canvas.
+  test('does not shift or clip a circle', () => {
+    const circle = image_ellipse(20, 20, 'solid', 'red')
+    const plain = image_drawingToImage(circle)
+    const rotated = image_drawingToImage(image_rotate(0, circle))
+    // center pixel is red, not the white background it clipped to before
+    expect(pixel(rotated, 10, 10)).toEqual([255, 0, 0, 255])
+    // and about as much red survives as the un-rotated circle, not ~1/4
+    const plainRed = redPixelCount(plain)
+    expect(redPixelCount(rotated)).toBeGreaterThan(plainRed * 0.9)
+  })
+
+  // Bug B: the overlay case reversed the shared child array in place, so
+  // rotating an overlay flipped its z-order -- and mutated the caller's input.
+  test('does not reverse an overlay it wraps', () => {
+    const ov = image_overlay(
+      image_rectangle(20, 20, 'solid', 'red'),
+      image_rectangle(20, 20, 'solid', 'blue'),
+    )
+    // red is listed first, so it draws on top: the center is red
+    expect(pixel(image_drawingToImage(ov), 10, 10)).toEqual([255, 0, 0, 255])
+    // rotating the overlay must not touch `ov`...
+    image_rotate(0, ov)
+    // ...so re-rendering the SAME overlay still shows red on top
+    expect(pixel(image_drawingToImage(ov), 10, 10)).toEqual([255, 0, 0, 255])
   })
 })
 

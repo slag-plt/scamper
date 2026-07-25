@@ -3,14 +3,13 @@ import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/253
 //
-// getDrawingPoints' `above` case in src/js/image/drawing.ts incremented
-// `xOffset` -- a copy-paste slip from the sibling `beside` case, which is the
-// only place that name is declared. In the shared switch block that reference
-// hits the temporal dead zone, so `(rotate <angle> (above ...))` threw
-// `ReferenceError: Cannot access 'xOffset' before initialization` for any
-// `above` drawing (rotate calls getDrawingPoints). It also declared
-// `const yOffset = 0`, so vertical offsets never accumulated. The fix uses
-// `let yOffset` and increments `yOffset += subimage.height`.
+// `rotate` used to build its bounding box from a per-shape point set whose
+// `above` case referenced `xOffset` (a copy-paste slip from `beside`, the only
+// place that name was declared), hitting the temporal dead zone so
+// `(rotate <angle> (above ...))` threw `ReferenceError`. #102 later replaced
+// that point set with the drawing's declared bounding-box corners, which never
+// touches the `above` internals; these tests keep the guarantee that rotating
+// an `above` succeeds and preserves its stacked dimensions.
 
 describe('rotate of an above drawing (#253)', () => {
   // The crash: rotating an `above` produces a real drawing, not a runtime error.
@@ -35,10 +34,8 @@ describe('rotate of an above drawing (#253)', () => {
   })
 
   // Geometry, not just "doesn't throw": stacking a 20-tall and a 30-tall box
-  // (both 20 wide) is 20x50 unrotated, so `yOffset` must accumulate both
-  // heights. A 90-degree turn then swaps that to 50x20 -- the old
-  // `const yOffset = 0` would have collapsed the stack.
-  test('yOffset accumulates every child height', async () => {
+  // (both 20 wide) is 20x50 unrotated, so a 90-degree turn swaps that to 50x20.
+  test('a stacked above keeps its full height when rotated', async () => {
     expect(await runProgram(`
 (import image)
 (round (image-width (rotate 90 (above (rectangle 20 20 "solid" "red") (rectangle 20 30 "solid" "blue")))))
