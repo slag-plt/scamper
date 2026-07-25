@@ -1,5 +1,6 @@
 import * as A from './ast.js'
 import { Range } from '../lpm/range.js'
+import SymbolTable from './symbol-db.js'
 
 /** A collection of symbol tables, organized by nested scopes. */
 export class ScopeTree {
@@ -65,8 +66,7 @@ export class ScopeTree {
 /***** Scope tree creation from ASTs ******************************************/
 
 /**
- * @param pat the pattern to inspect
- * @return the pattern variables (binders) `pat` introduces
+ * @returns the pattern variables (binders) introduced by the pattern
  */
 function patternIdentifiers(pat: A.Pat): A.Identifier[] {
   switch (pat.tag) {
@@ -83,8 +83,8 @@ function patternIdentifiers(pat: A.Pat): A.Identifier[] {
 }
 
 /**
- * @param exp the let* expression, whose bindings telescope like nested lets
- * @return the scopes introduced by `exp`
+ * A let* telescopes like nested lets -- each binding scopes the later values and body.
+ * @returns the scopes it introduces
  */
 function letStarScopes(exp: A.LetS): ScopeTree[] {
   const { bindings, body } = exp
@@ -106,8 +106,7 @@ function letStarScopes(exp: A.LetS): ScopeTree[] {
 }
 
 /**
- * @param exp the expression to traverse
- * @return the child scopes introduced within `exp`, in source order, for the enclosing scope
+ * @returns the child scopes introduced within the expression, in source order, for the enclosing scope
  */
 function scopesInExp(exp: A.Exp): ScopeTree[] {
   // N.B., binding forms build a ScopeTree; every other form is transparent and
@@ -185,17 +184,12 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
 }
 
 /**
- * @param prog the program to analyze
- * @return the scope tree for `prog`, rooted at the global scope
+ * @returns the scope tree for the program, rooted at the global scope
  */
-export function makeScopeTreeFromProgram(prog: A.Prog): ScopeTree {
-  const identifiers: A.Identifier[] = []
+export function makeScopeTreeFromProgram(db: SymbolTable, prog: A.Prog): ScopeTree {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const identifiers: A.Identifier[] = [...db.get('runtime')!, ...db.get('prelude')!]
   const children: ScopeTree[] = []
-
-  // TODO: the standard library (prelude, runtime, ...) and any (import ...)ed
-  // modules also contribute globally-visible identifiers, but those bindings
-  // aren't present in this AST and we don't yet have a way to mine them. Once
-  // that exists, seed `identifiers` with them here.
 
   for (const stmt of prog) {
     switch (stmt.tag) {
@@ -212,8 +206,8 @@ export function makeScopeTreeFromProgram(prog: A.Prog): ScopeTree {
         identifiers.push(stmt.name)
         break
       case 'import':
-        // TODO: pull the imported module's exported identifiers into scope
-        // once module resolution / library identifier mining exists.
+        // TODO: do we need to scope imports? Are later imports visible in earlier code?
+        db.get(stmt.module)?.forEach((id) => identifiers.push(id))
         break
       case 'display':
         children.push(...scopesInExp(stmt.value))
@@ -223,6 +217,5 @@ export function makeScopeTreeFromProgram(prog: A.Prog): ScopeTree {
         break
     }
   }
-
   return new ScopeTree(Range.union(...prog.map((s) => s.range)), identifiers, children)
 }

@@ -5,8 +5,7 @@ import * as A from './ast.js'
 
 /**
  * Lifts an LPM pattern back into a scheme-AST pattern (inverse of codegen's lowerPat).
- * @param pat the LPM pattern to lift
- * @return the equivalent scheme-AST pattern
+ * @returns the equivalent scheme-AST pattern
  */
 function raisePat(pat: LPM.Pat): A.Pat {
   switch (pat.tag) {

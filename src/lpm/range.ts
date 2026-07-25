@@ -84,8 +84,7 @@ export class Range {
   }
 
   /**
-   * @param ranges the ranges to combine
-   * @return the smallest range covering all of `ranges`, or Range.none if empty
+   * @returns the smallest range covering all given ranges, or Range.none if empty
    */
   static union(...ranges: Range[]): Range {
     if (ranges.length === 0) {
