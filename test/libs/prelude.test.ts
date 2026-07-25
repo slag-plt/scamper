@@ -2522,8 +2522,10 @@ test('vector-length', async () => {
 })
 
 test('vector-ref', async () => {
-  // N.B., contract error location points at the definition site, not the call site (#254)
-  // BUG (#257): vector-ref performs no bounds checking, so an out-of-range index silently returns void
+  // N.B., the contract (type) error points at the definition site, not the
+  // call site (#254); the #257 bounds errors, thrown from the function body,
+  // point at the call site.
+  // #257: an out-of-range index (>= length or negative) now raises a clean bounds error
   expect(
     await runProgram(`
 (vector-ref (vector 1 2 3) 0)
@@ -2536,8 +2538,8 @@ test('vector-ref', async () => {
     '1',
     '3',
     'Runtime error [707:1-707:48]: (error) expected a vector, received number',
-    'void',
-    'void',
+    'Runtime error [4:1-4:29]: (vector-ref) vector-ref: index 5 out of bounds of vector',
+    'Runtime error [5:1-5:30]: (vector-ref) vector-ref: index -1 out of bounds of vector',
   ])
 })
 
@@ -2587,8 +2589,9 @@ test('list-to-vector', async () => {
 })
 
 test('vector-set-out-of-range', async () => {
-  // BUG (#257): vector-set! performs no bounds checking: a too-large index
-  // grows the vector with holes, a negative index is silently a no-op
+  // #257: an out-of-range index (>= length or negative) now raises a clean
+  // bounds error and leaves the vector unchanged, rather than growing it with
+  // holes (too-large index) or silently no-op'ing (negative index).
   expect(
     await runProgram(`
 (define v (vector 1 2 3))
@@ -2600,10 +2603,10 @@ v
 v2
 `),
   ).toEqual([
-    'void',
-    '(vector 1 2 3   10)',
-    '6',
-    'void',
+    'Runtime error [2:1-2:20]: (vector-set!) vector-set!: index 5 out of bounds of vector',
+    '(vector 1 2 3)',
+    '3',
+    'Runtime error [6:1-6:22]: (vector-set!) vector-set!: index -1 out of bounds of vector',
     '(vector 1 2 3)',
   ])
 })

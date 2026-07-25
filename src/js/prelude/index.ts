@@ -842,10 +842,22 @@ export function prelude_vectorLength(v: L.Value[]): number {
 }
 
 export function prelude_vectorRef(v: L.Value[], i: number): L.Value {
+  if (i < 0 || i >= v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-ref: index ${i} out of bounds of vector`,
+    )
+  }
   return v[i]
 }
 
 export function prelude_vectorSet(v: L.Value[], i: number, x: L.Value): void {
+  if (i < 0 || i >= v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-set!: index ${i} out of bounds of vector`,
+    )
+  }
   v[i] = x
 }
 
