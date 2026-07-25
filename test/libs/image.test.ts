@@ -1642,17 +1642,11 @@ describe('getDrawingPoints (via rotate)', () => {
   test('beside', async () => {
     expect(await rotatedIsPositive('(beside (square 5 "solid" "red") (square 8 "solid" "blue"))')).toEqual(['#t', '#t'])
   })
-  // Rotating an `above` drawing currently crashes: getDrawingPoints' `above`
-  // case increments `xOffset` (a copy-paste slip from the `beside` case) which
-  // isn't in scope there, so it throws a ReferenceError
-  // (github.com/slag-plt/scamper#253). Asserting the throw documents the bug
-  // and covers the reachable portion of the branch.
-  test('above (broken -- see #253)', async () => {
-    const [err] = await runProgram(`
-(import image)
-(image-width (rotate 45 (above (square 5 "solid" "red") (square 8 "solid" "blue"))))
-`)
-    expect(err).toContain("Cannot access 'xOffset' before initialization")
+  // Regression for #253: getDrawingPoints' `above` case used to increment
+  // `xOffset` (a copy-paste slip from the `beside` case) which isn't in scope
+  // there, throwing a ReferenceError. Now fixed to accumulate `yOffset`.
+  test('above', async () => {
+    expect(await rotatedIsPositive('(above (square 5 "solid" "red") (square 8 "solid" "blue"))')).toEqual(['#t', '#t'])
   })
   test('overlay', async () => {
     expect(await rotatedIsPositive('(overlay (square 5 "solid" "red") (square 8 "solid" "blue"))')).toEqual(['#t', '#t'])
@@ -1699,6 +1693,11 @@ describe('rotation dimensions (getDrawingPoints correctness)', () => {
   })
   test('beside recurses into children (20x4 -> 4x20)', async () => {
     expect(await rounded90Dims('(beside (rectangle 10 4 "solid" "red") (rectangle 10 4 "solid" "blue"))')).toEqual(['4', '20'])
+  })
+  // #253: the `above` case must stack heights via `yOffset` -- two 4x10 boxes
+  // are 4x20 unrotated, so a 90-degree turn yields 20x4.
+  test('above stacks children heights (4x20 -> 20x4)', async () => {
+    expect(await rounded90Dims('(above (rectangle 4 10 "solid" "red") (rectangle 4 10 "solid" "blue"))')).toEqual(['20', '4'])
   })
 })
 
