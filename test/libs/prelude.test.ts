@@ -1993,9 +1993,11 @@ test('zero', async () => {
 // Numeric & Comparison Operations
 
 test('nanQ-actual-nan', async () => {
+  // `(/ 0.0 0.0)` used to produce NaN, but division by zero now errors (#258).
+  // `(sqrt -1)` is a NaN source that does not go through a zero divisor.
   expect(
     await runProgram(`
-(nan? (/ 0.0 0.0))
+(nan? (sqrt -1))
 `),
   ).toEqual(['#t'])
 })
@@ -2010,25 +2012,31 @@ test('gt-equal', async () => {
 })
 
 test('div-zero', async () => {
-  // BUG (#258): division by zero silently yields Infinity/NaN instead of a
-  // domain error, and is inconsistent (/ and quotient give Infinity, modulo
-  // gives NaN). Pinned as current behavior.
+  // Fixed (#258): division by zero now raises a clean runtime error instead of
+  // silently yielding Infinity/NaN. See test/regressions/division-by-zero for
+  // the full matrix (variadic mid-chain, unary, 0/0, quotient/modulo/remainder).
   expect(
     await runProgram(`
 (/ 5 0)
 `),
-  ).toEqual(['Infinity'])
+  ).toEqual([
+    expect.stringContaining('/: division by zero'),
+  ])
 })
 
 test('quotient-negative-zero', async () => {
+  // The zero-divisor case used to yield Infinity; it now errors (#258). Valid
+  // negative-argument quotients are unaffected.
   expect(
     await runProgram(`
 (quotient -7 2)
 (quotient 7 -2)
 (quotient -7 -2)
-(quotient 5 0)
 `),
-  ).toEqual(['-3', '-3', '3', 'Infinity'])
+  ).toEqual(['-3', '-3', '3'])
+  expect(await runProgram('(quotient 5 0)')).toEqual([
+    expect.stringContaining('quotient: division by zero'),
+  ])
 })
 
 test('remainder-negative', async () => {
