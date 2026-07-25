@@ -9,6 +9,7 @@ import {
   parseFunctionDocFromComments,
 } from './docstring/docstring'
 import { mkScamperErrorWithRange } from './util'
+import * as SymbolDB from './symbol-db.js'
 
 function checkDuplicateVars(
   errors: ScamperError[],
@@ -355,17 +356,16 @@ function scopeCheckFunctionDocInner(
 
 async function scopeCheckStmt(
   errors: ScamperError[],
-  builtinLibs: Map<string, L.Module>,
   globals: string[],
   s: A.Stmt,
 ) {
   switch (s.tag) {
     case 'import': {
       if (s.kind === 'builtin') {
-        if (builtinLibs.has(s.module)) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          for (const [name, _] of builtinLibs.get(s.module)!.bindings) {
-            globals.push(name)
+        const mod = SymbolDB.get(s.module)
+        if (mod !== undefined) {
+          for (const id of mod) {
+            globals.push(id.name)
           }
         } else {
           errors.push(
@@ -443,20 +443,19 @@ async function scopeCheckStmt(
 }
 
 export async function scopeCheckProgram(
-  builtinLibs: Map<string, L.Module>,
   errors: ScamperError[],
   prog: A.Prog,
 ) {
   const globals: string[] = []
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  for (const name of builtinLibs.get('runtime')!.bindings.keys()) {
-     globals.push(name)
-   }
-   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-   for (const name of builtinLibs.get('prelude')!.bindings.keys()) {
-     globals.push(name)
-   }
+  for (const id of SymbolDB.get('runtime')!) {
+    globals.push(id.name)
+  }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  for (const id of SymbolDB.get('prelude')!) {
+    globals.push(id.name)
+  }
   for (const s of prog) {
-    await scopeCheckStmt(errors, builtinLibs, globals, s)
+    await scopeCheckStmt(errors, globals, s)
   }
 }

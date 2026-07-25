@@ -3,7 +3,6 @@ import * as LPM from '../../../../lpm'
 import { expandProgram } from '../../../../scheme/expansion'
 import { scopeCheckProgram } from '../../../../scheme/scope'
 import { tokenizeAndParse } from '../../../../scheme'
-import builtinLibs from '../../../../lib'
 
 function addError(err: LPM.ScamperError, diagnostics: Diagnostic[]) {
   console.log(err.toString())
@@ -34,7 +33,7 @@ function makeScamperLinter(_outputId?: HTMLElement) {
       const errChannel: LPM.ErrorChannel = { report: (e) => errors.push(e) }
       const program = tokenizeAndParse(errChannel, doc)
       if (program !== undefined) {
-        await scopeCheckProgram(builtinLibs, errors, expandProgram(program))
+        await scopeCheckProgram(errors, expandProgram(program))
       }
     } catch (e) {
       if (e instanceof LPM.ScamperError) {

@@ -11,6 +11,7 @@ import {
 import { Fiber } from './lpm/fiber'
 import { Scheduler, SchedulerId } from './lpm/scheduler'
 import { compile } from './scheme'
+import * as SymbolDB from './scheme/symbol-db'
 
 interface ExecutionConfig {
   src: string
@@ -65,6 +66,7 @@ export async function initialize(): Promise<void> {
     return
   }
   await initializeLibs()
+  SymbolDB.initialize()
   defaultEnv = Env.empty
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     .extendWithImport('runtime', builtinLibs.get('runtime')!)

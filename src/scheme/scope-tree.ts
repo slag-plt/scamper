@@ -1,6 +1,6 @@
 import * as A from './ast.js'
 import { Range } from '../lpm/range.js'
-import SymbolTable from './symbol-db.js'
+import * as SymbolDB from './symbol-db.js'
 
 /** A collection of symbol tables, organized by nested scopes. */
 export class ScopeTree {
@@ -186,9 +186,13 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
 /**
  * @returns the scope tree for the program, rooted at the global scope
  */
-export function makeScopeTreeFromProgram(db: SymbolTable, prog: A.Prog): ScopeTree {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const identifiers: A.Identifier[] = [...db.get('runtime')!, ...db.get('prelude')!]
+export function makeScopeTreeFromProgram(prog: A.Prog): ScopeTree {
+  const identifiers: A.Identifier[] = [
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    ...SymbolDB.get('runtime')!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    ...SymbolDB.get('prelude')!,
+  ]
   const children: ScopeTree[] = []
 
   for (const stmt of prog) {
@@ -207,7 +211,7 @@ export function makeScopeTreeFromProgram(db: SymbolTable, prog: A.Prog): ScopeTr
         break
       case 'import':
         // TODO: do we need to scope imports? Are later imports visible in earlier code?
-        db.get(stmt.module)?.forEach((id) => identifiers.push(id))
+        SymbolDB.get(stmt.module)?.forEach((id) => identifiers.push(id))
         break
       case 'display':
         children.push(...scopesInExp(stmt.value))

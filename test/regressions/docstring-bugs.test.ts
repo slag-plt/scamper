@@ -5,7 +5,6 @@ import { compile, tokenizeAndParse } from '../../src/scheme'
 import { parseFunctionDocFromComments } from '../../src/scheme/docstring/docstring'
 import { scopeCheckProgram } from '../../src/scheme/scope'
 import { expandProgram } from '../../src/scheme/expansion'
-import builtinLibs from '../../src/lib'
 import { anyRange } from '../scheme/util'
 
 describe('docstring bugs', () => {
@@ -63,7 +62,7 @@ describe('docstring bugs', () => {
     expect(parsed).toBeDefined()
     if (!parsed) return
     const errors: ScamperError[] = []
-    await scopeCheckProgram(builtinLibs, errors, expandProgram(parsed))
+    await scopeCheckProgram(errors, expandProgram(parsed))
     expect(errors.length).toBeGreaterThan(0)
     expect(errors.every((e) => e.phase === 'Docstring')).toBe(true)
   })

@@ -2,40 +2,42 @@ import builtinLibs from '../lib'
 import * as A from './ast'
 import * as L from '../lpm/lang'
 
+// A global collection of external symbols from importable modules.
+//
+// TODO: I'm pretty sure we need to store more information for each identifier
+// but I'll defer those design decisions till later. This is enough to support
+// scope checking and the scope tree for now.
+let modules: Map<string, A.Identifier[]> | undefined
 
-/** A collection of external symbols from importable modules. */
-export default class SymbolDB {
-  // TODO: I'm pretty sure we need to store more information for each identifier
-  // but I'll defer those design decisions till later. This is enough to support
-  // scope checking and the scope tree for now.
-  private modules: Map<string, A.Identifier[]>
-
-  /** Initializes this symbol table with entries from the standard library. */
-  constructor () {
-    this.modules = new Map<string, A.Identifier[]>()
-    builtinLibs.forEach((lib, name) => {
-      this.addModule(name, lib)
-    })
+/** @returns the module map, throwing if the DB has not been initialized */
+function table(): Map<string, A.Identifier[]> {
+  if (!modules) {
+    throw new Error('SymbolDB used before initialize()')
   }
+  return modules
+}
 
-  /**
-   * Adds the identifiers from the given module to this symbol table.
-   * @param name the name of the module
-   * @param mod the module object containing the identifiers to add
-   */
-  addModule (name: string, mod: L.Module): void {
-    const identifiers: A.Identifier[] = []
-    mod.bindings.forEach((_v, name) => {
-      identifiers.push(A.mkId(name))
-    })
-    this.modules.set(name, identifiers)
+/** Initializes the symbol DB from the loaded builtin libraries (idempotent). */
+export function initialize(): void {
+  if (modules) {
+    return
   }
+  modules = new Map<string, A.Identifier[]>()
+  builtinLibs.forEach((lib, name) => {
+    addModule(name, lib)
+  })
+}
 
-  /**
-   * @returns retrieves the identifiers for the given module name, or
-   *          undefined if no such module exists in this symbol table.
-   */
-  get (name: string): A.Identifier[] | undefined {
-    return this.modules.get(name)
-  }
+/** Adds `mod`'s binding names to the DB under the given module name. */
+export function addModule(name: string, mod: L.Module): void {
+  const ids: A.Identifier[] = []
+  mod.bindings.forEach((_v, bindingName) => {
+    ids.push(A.mkId(bindingName))
+  })
+  table().set(name, ids)
+}
+
+/** @returns the identifiers for the given module, or undefined if absent */
+export function get(name: string): A.Identifier[] | undefined {
+  return table().get(name)
 }

@@ -155,7 +155,7 @@ export async function compile(
   // Scope checking
   // TODO: disabled while we fix up modules
   // const errors: S.ScamperError[] = []
-  // await scopeCheckProgram(builtinLibs, errors, program)
+  // await scopeCheckProgram(errors, program)
   // errors.forEach((e) => {
   //   err.report(e)
   // })
