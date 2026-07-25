@@ -22,7 +22,7 @@ export function prelude_numberQ(x: any): boolean {
 }
 
 export function prelude_realQ(x: any): boolean {
-  return typeof x === 'number' && !Number.isInteger(x)
+  return typeof x === 'number' && Number.isFinite(x)
 }
 
 export function prelude_integerQ(x: any): boolean {

@@ -1443,7 +1443,7 @@ test('real', async () => {
 (real? (/ 50 2))
 (real? (/ 51 2))
 `),
-  ).toEqual(['#f', '#t', '#f', '#f', '#t'])
+  ).toEqual(['#t', '#t', '#f', '#t', '#t'])
 })
 
 test('remainder-modulo', async () => {
