@@ -43,4 +43,17 @@ describe('scamper CLI', () => {
     expect(result.stdout).toContain('Usage: scamper')
     expect(result.status).toBe(0)
   })
+
+  // Regression for #265: colorsys is CommonJS, so under the CLI's Node/tsx ESM
+  // interop a namespace import left rgb->hsv/hsv->rgb calling
+  // colorsys.rgbToHsv/hsvToRgb, which were undefined ("... is not a function").
+  // This tier runs the real tsx path where that surfaced; the fix is a default
+  // import in color.ts.
+  test('rgb->hsv and hsv->rgb resolve colorsys under Node/tsx (#265)', () => {
+    const result = runCli([fixture('colorsys.scm')])
+
+    expect(result.stdout).toBe('(hsv 0 100 100 255)\n(rgba 255 0 0 255)\n')
+    expect(result.stderr).toBe('')
+    expect(result.status).toBe(0)
+  })
 })

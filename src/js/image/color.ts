@@ -1,6 +1,6 @@
 import * as L from '../../lpm'
 
-import * as colorsys from 'colorsys'
+import colorsys from 'colorsys'
 
 // NOTE: throughout the image library, we standardize on the `Rgb` struct as
 //       the representation for colors. It is the responsibility of the various
