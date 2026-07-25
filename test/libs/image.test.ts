@@ -19,13 +19,13 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 0 0 255)',
       '(rgba 0 0 0 0)',
-      // r is only ever clamped from above (Math.min(r, 255)) -- out-of-range
-      // integers above 255 get silently clamped rather than rejected, since
-      // color's own docstring contract only checks integer?, not the
-      // 0-255 range its description mentions.
+      // Components are clamped from above (Math.min(r, 255)): an integer above
+      // 255 is silently clamped rather than rejected, since color's own
+      // docstring contract only checks integer?, not the 0-255 range.
       '(rgba 255 0 0 255)',
-      // ...and never clamped from below, so a negative integer passes through as-is.
-      '(rgba -10 0 0 255)',
+      // ...and now clamped from below too (Math.max(0, ...)), so a negative
+      // integer is clamped to 0 rather than passing through (#259).
+      '(rgba 0 0 0 255)',
       'Runtime error [6:1-6:15]: Arity mismatch in function call: expected 4 arguments, got 3',
       'Runtime error [22:1-22:37]: (error) expected an integer, received number',
     ])
@@ -331,11 +331,9 @@ describe('color', () => {
   })
 
   test('rgb-saturation', async () => {
-    // image_rgbSaturation passes (max, min) positionally into a helper
-    // whose parameters are named (min, max), so the helper's own "max === 0"
-    // early-out actually fires whenever the color's minimum channel is 0 --
-    // i.e. for most fully-saturated colors. This is real, current (buggy)
-    // behavior, not a formula error in this test -- see #259.
+    // #259: helper is 100*((max-min)/max) and now receives (min, max) in the
+    // correct order. Fully-saturated red -> 100, an achromatic grey -> 0, and
+    // (200,100,50) -> 100*((200-50)/200) = 75.
     expect(
       await runProgram(`
 (import image)
@@ -343,7 +341,7 @@ describe('color', () => {
 (rgb-saturation (rgb 100 100 100))
 (rgb-saturation (rgb 200 100 50))
 `),
-    ).toEqual(['0', '0', '-300'])
+    ).toEqual(['100', '0', '75'])
   })
 
   test('rgb-value', async () => {
@@ -460,9 +458,9 @@ describe('color', () => {
   })
 
   test('rgb-greyscale', async () => {
-    // BUG (#259): image_rgbGreyscale divides the luma sum by 3, but the Rec.601
-    // weights already sum to 1.0, so results come out ~3x too dark (white ->
-    // 85 instead of 255). These assertions pin the current buggy output.
+    // #259: the Rec.601 luma weights already sum to 1.0, so the greyscale
+    // value is 0.30r + 0.59g + 0.11b (no spurious /3). White -> 255, black ->
+    // 0, pure red -> 0.30*255 = 76.5.
     expect(
       await runProgram(`
 (import image)
@@ -470,7 +468,7 @@ describe('color', () => {
 (rgb-greyscale (rgb 0 0 0))
 (rgb-greyscale (rgb 255 0 0))
 `),
-    ).toEqual(['(rgba 85 85 85 255)', '(rgba 0 0 0 255)', '(rgba 25.5 25.5 25.5 255)'])
+    ).toEqual(['(rgba 255 255 255 255)', '(rgba 0 0 0 255)', '(rgba 76.5 76.5 76.5 255)'])
   })
 
   test('rgb-phaseshift', async () => {
@@ -493,16 +491,15 @@ describe('color', () => {
   })
 
   test('rgb-thin', async () => {
-    // BUG (#259): Math.min(0, alpha - 32) is at most 0 regardless of alpha
-    // (should be Math.max(0, ...)), so rgb-thin always drives alpha to 0 or
-    // below -- real, current buggy behavior, pinned here.
+    // #259: thinning lowers alpha by 32, clamped at 0 (Math.max(0, alpha-32)).
+    // 200 -> 168, and 0 stays clamped at 0.
     expect(
       await runProgram(`
 (import image)
 (rgb-thin (rgb 1 2 3 200))
 (rgb-thin (rgb 1 2 3 0))
 `),
-    ).toEqual(['(rgba 1 2 3 0)', '(rgba 1 2 3 -32)'])
+    ).toEqual(['(rgba 1 2 3 168)', '(rgba 1 2 3 0)'])
   })
 
   test('rgb-thicken', async () => {

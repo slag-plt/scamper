@@ -57,9 +57,9 @@ export function image_rgb(...args: number[]): Rgb {
   if (args.length !== 3 && args.length !== 4) {
     throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
   }
-  const red = Math.min(args[0], 255)
-  const green = Math.min(args[1], 255)
-  const blue = Math.min(args[2], 255)
+  const red = Math.max(0, Math.min(args[0], 255))
+  const green = Math.max(0, Math.min(args[1], 255))
+  const blue = Math.max(0, Math.min(args[2], 255))
   const alpha = args[3] ?? 255
   return ({
     [L.scamperTag]: 'struct', [L.structKind]: 'rgba',
@@ -372,8 +372,8 @@ function fixHue(h: number): number {
 }
 
 export function image_rgbSaturation(r: Rgb): number {
-  return rgbSaturationHelper(Math.max(r.red, r.green, r.blue),
-                             Math.min(r.red, r.green, r.blue))
+  return rgbSaturationHelper(Math.min(r.red, r.green, r.blue),
+                             Math.max(r.red, r.green, r.blue))
 }
 
 function rgbSaturationHelper(min: number, max: number): number {
@@ -489,7 +489,7 @@ export function image_rgbPseudoComplement(rgba: Rgb): Rgb {
 // rgb-complement
 
 export function image_rgbGreyscale(rgba: Rgb): Rgb {
-  const avg = (0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue) / 3
+  const avg = 0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue
   return image_rgb(avg, avg, avg, rgba.alpha)
 }
 
@@ -512,7 +512,7 @@ export function image_rgbThin(rgba: Rgb): Rgb {
     rgba.red,
     rgba.green,
     rgba.blue,
-    Math.min(0, rgba.alpha - 32)
+    Math.max(0, rgba.alpha - 32)
   )
 }
 
