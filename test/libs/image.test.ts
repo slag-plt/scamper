@@ -1614,11 +1614,11 @@ describe('image transforms', () => {
   })
 })
 
-// Rotating a drawing forces getDrawingPoints to compute a point set for the
-// wrapped shape (one switch case per drawing kind), then a rotated bounding
-// box. Asserting the box is a positive size exercises each case without
-// depending on the exact irrational post-rotation dimensions.
-describe('getDrawingPoints (via rotate)', () => {
+// Rotating a drawing turns its declared bounding-box corners into a new
+// axis-aligned box. Asserting the box is a positive size exercises every
+// drawing kind without depending on the exact irrational post-rotation
+// dimensions.
+describe('rotate produces a positive box for every shape', () => {
   async function rotatedIsPositive(shape: string): Promise<string[]> {
     return runProgram(`
 (import image)
@@ -1642,9 +1642,7 @@ describe('getDrawingPoints (via rotate)', () => {
   test('beside', async () => {
     expect(await rotatedIsPositive('(beside (square 5 "solid" "red") (square 8 "solid" "blue"))')).toEqual(['#t', '#t'])
   })
-  // Regression for #253: getDrawingPoints' `above` case used to increment
-  // `xOffset` (a copy-paste slip from the `beside` case) which isn't in scope
-  // there, throwing a ReferenceError. Now fixed to accumulate `yOffset`.
+  // Regression for #253: rotating an `above` used to throw a ReferenceError.
   test('above', async () => {
     expect(await rotatedIsPositive('(above (square 5 "solid" "red") (square 8 "solid" "blue"))')).toEqual(['#t', '#t'])
   })
@@ -1665,12 +1663,12 @@ describe('getDrawingPoints (via rotate)', () => {
   })
 })
 
-// The block above only proves each getDrawingPoints branch runs. These verify
-// its point sets are actually correct: rotating an asymmetric shape 90 degrees
-// should swap its width and height, which a wrong point set or swapped-axis
-// regression would break. (rounded to absorb the cos(90) float dust; the
-// exact-value path is covered by the `rotate` constructor test above.)
-describe('rotation dimensions (getDrawingPoints correctness)', () => {
+// The block above only proves each shape rotates. These verify the box is
+// actually correct: rotating an asymmetric shape 90 degrees should swap its
+// declared width and height, which a swapped-axis regression would break.
+// (rounded to absorb the cos(90) float dust; the exact-value path is covered
+// by the `rotate` constructor test above.)
+describe('rotation dimensions (declared-corner correctness)', () => {
   async function rounded90Dims(shape: string): Promise<string[]> {
     return runProgram(`
 (import image)
