@@ -378,9 +378,22 @@ async function scopeCheckStmt(
           )
         }
       } else if (await getFS().fileExists(s.module)) {
-        // TODO: should gather top-level bindings from the imported module, but
-        // for now, let's just assume everything is good to check the rest of the
-        // pipeline...
+        // Imported files' symbols were loaded into the DB before scope checking
+        // (see SymbolDB.loadTransitiveImports). A missing DB entry for a file
+        // that exists means it failed to parse.
+        const mod = SymbolDB.get(s.module)
+        if (mod === undefined) {
+          errors.push(
+            new ScamperError(
+              'Parser',
+              `Could not load module '${s.module}'`,
+              undefined,
+              s.range,
+            ),
+          )
+        } else {
+          mod.forEach((id) => globals.push(id.name))
+        }
       } else {
         errors.push(
           new ScamperError(
@@ -446,6 +459,8 @@ export async function scopeCheckProgram(
   errors: ScamperError[],
   prog: A.Prog,
 ) {
+  // Ensure every imported file's symbols are in the DB before we resolve names.
+  await SymbolDB.loadTransitiveImports(prog)
   const globals: string[] = []
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   for (const id of SymbolDB.get('runtime')!) {

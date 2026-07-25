@@ -186,7 +186,11 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
 /**
  * @returns the scope tree for the program, rooted at the global scope
  */
-export function makeScopeTreeFromProgram(prog: A.Prog): ScopeTree {
+export async function makeScopeTreeFromProgram(
+  prog: A.Prog,
+): Promise<ScopeTree> {
+  // Ensure every imported file's symbols are in the DB before we build the tree.
+  await SymbolDB.loadTransitiveImports(prog)
   const identifiers: A.Identifier[] = [
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     ...SymbolDB.get('runtime')!,
