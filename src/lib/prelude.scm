@@ -54,14 +54,14 @@
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is greater than or equal to `v2`.
-;;; @category math, comparator, , min, max, nan? >, <=, <, =
+;;; @category math, comparator, min, max, nan? >, <=, <, =
 (define >= (js-var "prelude_geq"))
 
 ;;; (= v1 v2) -> boolean?
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is equal to `v2`.
-;;; @category math, comparator, , min, max, nan?, >=, >, <=, <
+;;; @category math, comparator, min, max, nan?, >=, >, <=, <
 (define = (js-var "prelude_eq"))
 
 ;;; (=-eps n) -> procedure?
@@ -216,7 +216,7 @@
 ;;;  s : string?
 ;;;   presumed to be a number
 ;;; Returns the number denoted by `s` as a `number`.
-;;; @category string,  number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char 
+;;; @category string, number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char 
 (define string->number (js-var "prelude_stringToNumber"))
 
 ;;; (exp v) -> number?
@@ -322,7 +322,7 @@
 ;;; (pair? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a pair.
-;;; @category typecheck, predicates, list?, null?, procedure?, string?, vector?, void?
+;;; @category typecheck, predicates, list?, null?, procedure?, ref?, vector?, void?
 (define pair? (js-var "prelude_pairQ"))
 
 ;;; (list-of p) -> procedure?
@@ -380,13 +380,13 @@
 ;;; (null? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is the empty list.
-;;; @category list, association list, typecheck, predicates, pair?, list?, procedure?, string?, vector?, void?
+;;; @category list, association list, typecheck, predicates, pair?, list?, procedure?, ref?, vector?, void?
 (define null? (js-var "prelude_nullQ"))
 
 ;;; (list? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a list.
-;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, string?, vector?, void?
+;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, ref?, vector?, void?
 (define list? (js-var "prelude_listQ"))
 
 ;;; (list . v1) -> list?
@@ -399,25 +399,25 @@
 ;;;  n : integer?
 ;;;  v : any
 ;;; Returns a new list containing `n` copies of `v`.
-;;; @category list, list creation, association list, append, list-drop, list-tail, list-take, range, reverse, sort
+;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, range, reverse, sort
 (define make-list (js-var "prelude_makeList"))
 
 ;;; (length v) -> integer?
 ;;;  v : list?
 ;;; Returns the length of `v`.
-;;; @category list, list manipulation, index-of, length, range, string-length, vector-length, vector-range, vector-ref 
+;;; @category list, list manipulation, index-of, range, string-length, vector-length, vector-range, vector-ref 
 (define length (js-var "prelude_length"))
 
 ;;; (append . l1) -> list?
 ;;;  l1 : list?
 ;;; Returns a new list containing the elements of lists `l1`, `l2`, ... in sequence.
-;;; @category list, list manipulation
+;;; @category list, list manipulation, list-drop, list-tail, list-take, make-list, range, reverse, sort
 (define append (js-var "prelude_append"))
 
 ;;; (reverse l) -> list?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` in reverse order.
-;;; @category list, list manipulation, append, list-drop, list-tail, list-take, make-list, range, sort
+;;; @category list, list manipulation, append, list-drop, list-tail, list-take, make-list, make-string, range, sort
 (define reverse (js-var "prelude_reverse"))
 
 ;;; (list-tail l k) -> list?
@@ -449,7 +449,7 @@
 ;;;  n : integer?
 ;;;   0 <= n < (length l)
 ;;; Returns the `n`th element of `l`.
-;;; @category list, association list, assoc-ref, deref, ref, set-ref!, string-ref
+;;; @category list, association list, assoc-ref, deref, ref, ref-set!, string-ref
 (define list-ref (js-var "prelude_listRef"))
 
 ;;; (index-of l v) -> integer?
@@ -464,7 +464,7 @@
 ;;;  l : list?
 ;;;   an association list
 ;;; Returns `#t` if `k` is a key in association list `l`.
-;;; @category list, list manipulation, association list, predicates
+;;; @category list, list manipulation, association list, predicates, assoc-ref, assoc-set
 (define assoc-key? (js-var "prelude_assocKey"))
 
 ;;; (assoc-ref k l) -> any
@@ -472,7 +472,7 @@
 ;;;  l : list?
 ;;;   an association list
 ;;; Returns the value associated with key `k` in association list `l`.
-;;; @category list, list manipulation, association list, deref, list-ref, ref, set-ref!, string-ref
+;;; @category list, list manipulation, association list, deref, list-ref, ref, ref-set!, string-ref, assoc-key?
 (define assoc-ref (js-var "prelude_assocRef"))
 
 ;;; (assoc-set k v l) -> list?
@@ -481,7 +481,7 @@
 ;;;  l : list?
 ;;;   an association list
 ;;; Returns a new association list containing the same key-value pairs as `l` except that `k` is associated with `v`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, assoc-key?, assoc-ref
 (define assoc-set (js-var "prelude_assocSet"))
 
 ;;; (sort l lt?) -> list?
@@ -489,7 +489,7 @@
 ;;;  lt? : procedure?
 ;;;   returns `#t` if the first arg is less than the second
 ;;; Returns a new list containing the elements of `l` sorted in ascending order according to the comparison function `lt?`.
-;;; @category list, list manipulation, association list, append, list-drop, list-tail, list-take, make-list, range, reverse
+;;; @category list, list manipulation, association list, append, list-drop, list-tail, list-take, make-list, make-string, range, reverse
 (define sort (js-var "prelude_sort"))
 
 ;;; (char? v) -> boolean?
@@ -519,32 +519,32 @@
 ;;; (char-upcase c) -> char?
 ;;;  c : char?
 ;;; Returns the upper-case equivalent of `c`.
-;;; @category char
+;;; @category char, char-downcase, char-foldcase
 (define char-upcase (js-var "prelude_charUpcase"))
 
 ;;; (char-downcase c) -> char?
 ;;;  c : char?
 ;;; Returns the lower-case equivalent of `c`.
-;;; @category char
+;;; @category char, char-upcase, char-foldcase
 (define char-downcase (js-var "prelude_charDowncase"))
 
 ;;; (char-foldcase c) -> char?
 ;;;  c : char?
 ;;; Returns the case-folded equivalent of `c`. This is a version of `c` that is appropriate for case-insensitive comparison.
-;;; @category char
+;;; @category char, char-upcase, char-downcase
 (define char-foldcase (js-var "prelude_charFoldcase"))
 
 ;;; (string? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a string.
-;;; @category typecheck, string, predicates, boolean?, char?, integer?
+;;; @category typecheck, string, predicates, boolean?, char?, integer? 
 (define string? (js-var "prelude_stringQ"))
 
 ;;; (make-string k c) -> string?
 ;;;  k : integer?
 ;;;  c : char?
 ;;; Returns a string of length `k` with each character set to `c`.
-;;; @category string
+;;; @category string, make-list, make-vector, string-append, string-map
 (define make-string (js-var "prelude_makeString"))
 
 ;;; (string . c1) -> string?
@@ -563,25 +563,25 @@
 ;;;  s : string?
 ;;;  n : integer?
 ;;; Returns the character at index `n` of string `s`.
-;;; @category string, assoc-ref, deref, list-ref, ref, set-ref!
+;;; @category string, assoc-ref, deref, list-ref, ref, ref-set!
 (define string-ref (js-var "prelude_stringRef"))
 
 ;;; (string-upcase s) -> string?
 ;;;  s : string?
 ;;; Returns the upper-case version of `s`.
-;;; @category string
+;;; @category string, string-downcase, string-foldcase, substring, string-split, string-split-vector
 (define string-upcase (js-var "prelude_stringUpcase"))
 
 ;;; (string-downcase s) -> string?
 ;;;  s : string?
 ;;; Returns the lower-case version of `s`.
-;;; @category string
+;;; @category string, string-upcase, string-foldcase, substring, string-split, string-split-vector
 (define string-downcase (js-var "prelude_stringDowncase"))
 
 ;;; (string-foldcase s) -> string?
 ;;;  s : string?
 ;;; Returns the case-folded version of `s`. This is a version of `s` that is appropriate for case-insensitive comparison.
-;;; @category string
+;;; @category string, string-downcase, string-upcase, substring, string-split, string-split-vector
 (define string-foldcase (js-var "prelude_stringFoldcase"))
 
 ;;; (substring s start end) -> string?
@@ -589,13 +589,13 @@
 ;;;  start : integer?
 ;;;  end : integer?
 ;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive).
-;;; @category string
+;;; @category string, string-downcase, string-upcase, string-foldcase, string-split, string-split-vector
 (define substring (js-var "prelude_substring"))
 
 ;;; (string-append . s1) -> string?
 ;;;  s1 : string?
 ;;; Returns a string made by joining `s1`, `s2`, ... together.
-;;; @category string, append, list-drop, list-tail, list-take, make-list, range, reverse, sort
+;;; @category string, append, make-string, range, string-map
 (define string-append (js-var "prelude_stringAppend"))
 
 ;;; (string->list s) -> list?
@@ -626,27 +626,27 @@
 ;;;  s1 : string?
 ;;;  s2 : string?
 ;;; Returns `#t` if and only if string `s1` contains string `s2`.
-;;; @category string
+;;; @category string, string=?, string>=?, string>?, string<=?, string<?, string-ci=?, string-ci>=?, string-ci>?, string-ci<=?, string-ci<?
 (define string-contains (js-var "prelude_stringContains"))
 
 ;;; (string-split s sep) -> list?
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a list of strings obtained by splitting `s` at occurrences of `sep`.
-;;; @category string
+;;; @category string, string-downcase, string-upcase, string-foldcase, substring, string-split-vector
 (define string-split (js-var "prelude_stringSplit"))
 
 ;;; (string-split-vector s sep) -> vector?
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a vector of strings obtained by splitting `s` at occurrences of `sep`.
-;;; @category string, vectors
+;;; @category string, vectors, string-downcase, string-upcase, string-foldcase, substring, string-split 
 (define string-split-vector (js-var "prelude_stringSplitVector"))
 
 ;;; (vector? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a vector.
-;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, string?, void?
+;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, ref?, void?
 (define vector? (js-var "prelude_vectorQ"))
 
 ;;; (vector . v1) -> vector?
@@ -659,13 +659,13 @@
 ;;;  k : integer?
 ;;;  v : any
 ;;; Returns a vector of length `k` with each element set to `v`.
-;;; @category vectors
+;;; @category vectors, make-list, make-string
 (define make-vector (js-var "prelude_makeVector"))
 
 ;;; (vector-length v) -> integer?
 ;;;  v : vector?
 ;;; Returns the length of vector `v`.
-;;; @category vectors
+;;; @category vectors, vector-range, vector-ref, string-length, index-of, length, range
 (define vector-length (js-var "prelude_vectorLength"))
 
 ;;; (vector-ref v n) -> any
@@ -682,14 +682,14 @@
 ;;;   a valid index into v
 ;;;  x : any
 ;;; Sets the value at index `n` of vector `v` to `x`.
-;;; @category vectors, mutation, predicates
+;;; @category vectors, mutation, predicates, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map, vector-map!
 (define vector-set! (js-var "prelude_vectorSet"))
 
 ;;; (vector-fill! v x) -> void
 ;;;  v : vector?
 ;;;  x : any
 ;;; Sets each element of vector `v` to `x`.
-;;; @category vectors, mutation, predicates
+;;; @category vectors, mutation, predicates, vector-append, vector-filter, vector-for-each, vector-map, vector-map!, vector-set!
 (define vector-fill! (js-var "prelude_vectorFill"))
 
 ;;; (vector->list v) -> list?
@@ -718,27 +718,27 @@
 ;;; (vector-append . v1) -> vector?
 ;;;  v1 : vector?
 ;;; Returns a new vector containing the elements of `v1`, ..., `vk` in order.
-;;; @category vectors
+;;; @category vectors, vector-fill!, vector-filter, vector-for-each, vector-map, vector-map!, vector-set!
 (define vector-append (js-var "prelude_vectorAppend"))
 
 ;;; (procedure? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a procedure.
-;;; @category typecheck, predicates, pair?, list?, null?, string?, vector?, void?
+;;; @category typecheck, predicates, pair?, list?, null?, ref?, vector?, void?
 (define procedure? (js-var "prelude_procedureQ"))
 
 ;;; (string-map f s) -> string?
 ;;;  f : procedure?
 ;;;  s : string?
 ;;; Returns a new string containing the results of applying `f` to each character of `s`.
-;;; @category string
+;;; @category string, make-string, string-append, map, vector-map, vector-map!
 (define string-map (js-var "prelude_stringMap"))
 
 ;;; (map f . l) -> list?
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the results of applying `f` to each element of `l`.
-;;; @category list, list manipulation, association list
+;;; @category list, list manipulation, association list, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
 (define map (js-var "prelude_map"))
 
 ;;; (filter f l) -> list?
@@ -760,7 +760,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold` but uses the first element of `l` as the initial value.
-;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map
+;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define reduce (js-var "prelude_reduce"))
 
 ;;; (fold-left f v l) -> any
@@ -783,28 +783,28 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
-;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map
+;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define reduce-right (js-var "prelude_reduceRight"))
 
 ;;; (vector-map f . v) -> vector?
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Returns a new vector containing the results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
-;;; @category vectors
+;;; @category vectors, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map!, vector-set!
 (define vector-map (js-var "prelude_vectorMap"))
 
 ;;; (vector-map! f v) -> void
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Mutates v1 with the results of results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
-;;; @category vectors, mutation, predicates
+;;; @category vectors, mutation, predicates, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map, vector-set!
 (define vector-map! (js-var "prelude_vectorMapBang"))
 
 ;;; (vector-for-each f v) -> void
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Runs `f` on each element of `v1`, ..., `vk` in a element-wise fashion. `f` takes `k+1` arguments where the first argument is the current index and the remaining arguments are the elements of each vector at that index.
-;;; @category vectors
+;;; @category vectors, vector-append, vector-fill!, vector-filter, vector-map, vector-map!, vector-set!
 (define vector-for-each (js-var "prelude_vectorForEach"))
 
 ;;; (for-range beg end f) -> void
@@ -819,13 +819,13 @@
 ;;;  f : procedure?
 ;;;  l : vector?
 ;;; Returns a new vector containing the elements of `l` for which `f` returns `#t`.
-;;; @category vectors
+;;; @category vectors, vector-append, vector-fill!, vector-for-each, vector-map, vector-map!, vector-set!
 (define vector-filter (js-var "prelude_vectorFilter"))
 
 ;;; (void? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is the void value.
-;;; @category predicates, typecheck, pair?, list?, null?, procedure?, string?, vector?
+;;; @category predicates, typecheck, pair?, list?, null?, procedure?, ref?, vector?
 (define void? (js-var "prelude_voidQ"))
 
 ;;; (??) -> any
@@ -877,7 +877,7 @@
 ;;;   a function
 ;;;  v : any
 ;;; Calls `(f v1 .. vk)` and if an error is occurred, calls `(h err)` where `err` is the string associated with the raised error.
-;;; @category other
+;;; @category other, with-file, with-file-chooser, file->lines, file->string
 (define with-handler (js-var "prelude_withHandler"))
 
 ;;; (ignore v) -> void
@@ -890,7 +890,7 @@
 ;;;  n : any
 ;;;   number? n >= 0
 ;;; Sets the maximum recursion depth of Scamper to n. Note that tail call-optimized functions do _not_ count towards this limit.
-;;; @category mutation, predicates
+;;; @category mutation, predicates, map, reduce, reduce-right
 (define set-maximum-recursion-depth! (js-var "prelude_setMaximumRecursionDepth"))
 
 ;;; (string->words s) -> list?
@@ -908,20 +908,20 @@
 ;;; (ref? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a reference cell.
-;;; @category typecheck, predicates
+;;; @category typecheck, predicates, pair?, list?, null?, procedure?, vector?, void?
 (define ref? (js-var "prelude_isRef"))
 
 ;;; (deref r) -> any
 ;;;  r : ref?
 ;;; Returns the value contained in reference cell `r`.
-;;; @category other, assoc-ref, deref, list-ref, set-ref!, string-ref
+;;; @category other, assoc-ref, list-ref, ref-set!, string-ref
 (define deref (js-var "prelude_deref"))
 
 ;;; (ref-set! r v) -> void
 ;;;  r : ref?
 ;;;  v : any
 ;;; Sets the value contained in reference cell `r` to `v`.
-;;; @category mutation
+;;; @category mutation, assoc-ref, deref, list-ref, string-ref
 (define ref-set! (js-var "prelude_refSet"))
 
 ;;; (else) -> boolean?
@@ -953,13 +953,13 @@
 ;;;  filename : string?
 ;;;  fn : procedure?
 ;;; Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen.
-;;; @category other
+;;; @category other, with-file-chooser, with-handler, file->lines, file->string
 (define with-file (js-var "prelude_withFile"))
 
 ;;; (with-file-chooser fn) -> void
 ;;;  fn : procedure?
 ;;; Renders a file chooser widget. When the user selects a file, its contents are passed to `fn` as input. The output of `fn` is then rendered to the screen.
-;;; @category interactive
+;;; @category interactive, with-file, with-handler, file->lines, file->string
 (define with-file-chooser (js-var "prelude_withFileChooser"))
 
 ;;; (caar v) -> any
@@ -1161,149 +1161,149 @@
 ;;; (char=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters.
-;;; @category char, predicates, char=?, char-ci=?
+;;; @category char, predicates, char>=?, char>?, char<=?, char<?
 (define char=? (js-var "prelude_char=?"))
 
 ;;; (char<? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values.
-;;; @category char, predicates
+;;; @category char, predicates, char=?, char>=?, char>?, char<=?
 (define char<? (js-var "prelude_char<?"))
 
 ;;; (char>? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values.
-;;; @category char, predicates
+;;; @category char, predicates, char=?, char>=?, char<=?, char<?
 (define char>? (js-var "prelude_char>?"))
 
 ;;; (char<=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values.
-;;; @category char, predicates
+;;; @category char, predicates, char=?, char>=?, char>?, char<?
 (define char<=? (js-var "prelude_char<=?"))
 
 ;;; (char>=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values.
-;;; @category char, predicates
+;;; @category char, predicates, char=?, char>?, char<=?, char<?
 (define char>=? (js-var "prelude_char>=?"))
 
 ;;; (char-ci=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters, ignoring case.
-;;; @category char, predicates
+;;; @category char, predicates, char-ci>=?, char-ci>?, char-ci<=?, char-ci<?
 (define char-ci=? (js-var "prelude_char-ci=?"))
 
 ;;; (char-ci<? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values, ignoring case.
-;;; @category char, predicates
+;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci>?, char-ci<=?
 (define char-ci<? (js-var "prelude_char-ci<?"))
 
 ;;; (char-ci>? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values, ignoring case.
-;;; @category char, predicates
+;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci<=?, char-ci<?
 (define char-ci>? (js-var "prelude_char-ci>?"))
 
 ;;; (char-ci<=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values, ignoring case.
-;;; @category char, predicates
+;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci>?, char-ci<?
 (define char-ci<=? (js-var "prelude_char-ci<=?"))
 
 ;;; (char-ci>=? . c1) -> boolean?
 ;;;  c1 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values, ignoring case.
-;;; @category char, predicates
+;;; @category char, predicates, char-ci=?, char-ci>?, char-ci<=?, char-ci<?
 (define char-ci>=? (js-var "prelude_char-ci>=?"))
 
 ;;; (char-alphabetic? c) -> boolean?
 ;;;  c : char?
 ;;; Returns `#t` if and only `c` is an alphabetic character.
-;;; @category typecheck, char, predicates
+;;; @category typecheck, char, predicates, char-numeric?, char-lower-case?, char-upper-case?, char-whitespace?
 (define char-alphabetic? (js-var "prelude_char-alphabetic?"))
 
 ;;; (char-numeric? c) -> boolean?
 ;;;  c : char?
 ;;; Returns `#t` if and only `c` is a numeric character.
-;;; @category typecheck, char, predicates
+;;; @category typecheck, char, predicates, char-alphabetic?, char-lower-case?, char-upper-case?, char-whitespace?
 (define char-numeric? (js-var "prelude_char-numeric?"))
 
 ;;; (char-whitespace? c) -> boolean?
 ;;;  c : char?
 ;;; Returns `#t` if and only `c` is a whitespace character.
-;;; @category typecheck, char, predicates
+;;; @category typecheck, char, predicates, char-alphabetic?, char-numeric?, char-lower-case?, char-upper-case?
 (define char-whitespace? (js-var "prelude_char-whitespace?"))
 
 ;;; (char-upper-case? c) -> boolean?
 ;;;  c : char?
 ;;; Returns `#t` if and only `c` is an upper-case character.
-;;; @category typecheck, char, predicates
+;;; @category typecheck, char, predicates, char-alphabetic?, char-numeric?, char-lower-case?, char-whitespace?
 (define char-upper-case? (js-var "prelude_char-upper-case?"))
 
 ;;; (char-lower-case? c) -> boolean?
 ;;;  c : char?
 ;;; Returns `#t` if and only `c` is a lower-case character.
-;;; @category char, predicates
+;;; @category char, predicates, char-alphabetic?, char-numeric?, char-upper-case?, char-whitespace?
 (define char-lower-case? (js-var "prelude_char-lower-case?"))
 
 ;;; (string=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings.
-;;; @category string, predicates
+;;; @category string, predicates, string>=?, string>?, string<=?, string<?, string-contains
 (define string=? (js-var "prelude_string=?"))
 
 ;;; (string<? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order.
-;;; @category string, predicates
+;;; @category string, predicates, string=?, string>=?, string>?, string<=?, string-contains
 (define string<? (js-var "prelude_string<?"))
 
 ;;; (string>? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order.
-;;; @category string, predicates
+;;; @category string, predicates, string=?, string>=?, string<=?, string<?, string-contains
 (define string>? (js-var "prelude_string>?"))
 
 ;;; (string<=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order.
-;;; @category string, predicates
+;;; @category string, predicates, string=?, string>=?, string>?, string<?, string-contains
 (define string<=? (js-var "prelude_string<=?"))
 
 ;;; (string>=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order.
-;;; @category string, predicates
+;;; @category string, predicates, string=?, string>?, string<=?, string<?, string-contains
 (define string>=? (js-var "prelude_string>=?"))
 
 ;;; (string-ci=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings, ignoring case.
-;;; @category string, predicates
+;;; @category string, predicates, string-ci>=?, string-ci>?, string-ci<=?, string-ci<?, string-contains
 (define string-ci=? (js-var "prelude_string-ci=?"))
 
 ;;; (string-ci<? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order, ignoring case.
-;;; @category string, predicates
+;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci>?, string-ci<=?, string-contains
 (define string-ci<? (js-var "prelude_string-ci<?"))
 
 ;;; (string-ci>? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order, ignoring case.
-;;; @category string, predicates
+;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci<=?, string-ci<?, string-contains
 (define string-ci>? (js-var "prelude_string-ci>?"))
 
 ;;; (string-ci<=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order, ignoring case.
-;;; @category string, predicates
+;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci>?, string-ci<?, string-contains
 (define string-ci<=? (js-var "prelude_string-ci<=?"))
 
 ;;; (string-ci>=? . s1) -> boolean?
 ;;;  s1 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order, ignoring case.
-;;; @category string, predicates
+;;; @category string, predicates, string-ci=?, string-ci>?, string-ci<=?, string-ci<?, string-contains
 (define string-ci>=? (js-var "prelude_string-ci>=?"))
