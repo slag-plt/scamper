@@ -107,6 +107,8 @@ function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
         arrTag = 'hsv'
       } else if(arrTag === 'color-func'){
         arrTag = 'color'
+      } else if(arrTag === 'path-func'){
+        arrTag = 'path'
       }
       relatives.push(arrTag)
     }
