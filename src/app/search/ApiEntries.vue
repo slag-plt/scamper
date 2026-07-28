@@ -101,6 +101,13 @@ function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
   const docTags = functionDocCategories(doc)
   docTags.forEach((arrTag) => {
     if(!tagListStr.value.includes(arrTag)) {
+      if(arrTag === 'rgb-func'){
+        arrTag = 'rgb'
+      } else if(arrTag === 'hsv-func'){
+        arrTag = 'hsv'
+      } else if(arrTag === 'color-func'){
+        arrTag = 'color'
+      }
       relatives.push(arrTag)
     }
   })
