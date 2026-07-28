@@ -40,6 +40,7 @@ function showEverything() {
 function findSearch() {
   const s = props.searchIn
   const showLibs = allDocs().filter((doc) => functionDocName(doc) === s)
+  showLibs.forEach((func) => {pushRelatives(func, showLibs)})
   noSearchText.value = showLibs.length === 0 && props.searchIn !== ''
   filteredLibs.value = showLibs
 }
@@ -93,64 +94,80 @@ function addToLib() {
   })
 }
 
-const tagList = ref([
-  
-  { id: 13, val: 'char' },
-  { id: 11, val: 'string' },
-  { id: 1, val: 'list' },
-    { id: 9, val: 'association list' },
-    { id: 3, val: 'list creation' },
-    { id: 2, val: 'list manipulation' },
-  { id: 15, val: 'vectors' },
-  { id: 16, val: 'mutation' },
-  { id: 20, val: 'constants' },
-  { id: 8, val: 'function composition' },
-  
-  { id: 4, val: 'math' },
-    { id: 5, val: 'algebra' },
-    { id: 7, val: 'trigonometry' },
-    { id: 6, val: 'comparator' },
-    { id: 12, val: 'boolean/logic' },
-  
-  
+function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
+  const relatives: string[] = []
+  relativeText.value = false
 
-  { id: 25, val: 'images' },
-    { id: 26, val: 'color' },
-    { id: 33, val: 'pixel' },
-    { id: 27, val: 'rgb' },
-    { id: 28, val: 'hsv' },
+  const docTags = functionDocCategories(doc)
+  docTags.forEach((arrTag) => {
+    if(!tagListStr.value.includes(arrTag)) {
+      relatives.push(arrTag)
+    }
+  })
+
+  allDocs().forEach((func) => {
+    if(relatives.includes(functionDocName(func))) {
+      showLibs.push(func)
+      relativeText.value = true
+    }
+  })
+}
+
+const tagListStr = ref([
+  'char',
+  'string',
+  'list',
+    'association list',
+    'list creation',
+    'list manipulation',
+  'vectors',
+  'mutation',
+  'constants',
+  'function composition',
+  
+  'math',
+    'algebra',
+    'trigonometry',
+    'comparator',
+    'boolean/logic',
+
+  'images',
+    'color',
+    'pixel',
+    'rgb',
+    'hsv',
     
-    { id: 30, val: 'composition/placement' },
-    { id: 31, val: 'path' },
-  { id: 32, val: 'canvas' },
-    { id: 29, val: 'shapes' },
+    'composition/placement',
+    'path',
+  'canvas',
+    'shapes',
 
-  { id: 34, val: 'music' },
-    { id: 35, val: 'duration' },
-    { id: 36, val: 'instruments' },
-    { id: 37, val: 'note' },
-    { id: 38, val: 'modifications' },
-    { id: 39, val: 'audio' },
-    { id: 40, val: 'sound' },
+  'music',
+    'duration',
+    'instruments',
+    'note',
+    'modifications',
+    'audio',
+    'sound',
 
-  { id: 41, val: 'data' },
-    { id: 42, val: 'create' },
-    { id: 43, val: 'plot' },
-    { id: 44, val: 'parse' },
+  'data',
+    'create',
+    'plot',
+    'parse',
     
-  { id: 10, val: 'typecheck' },
+  'typecheck',
 
-  { id: 14, val: 'regexes' },
+  'regexes',
 
-  { id: 17, val: 'predicates' },
-  { id: 18, val: 'testing' },
-  { id: 19, val: 'formatting' },
+  'predicates',
+  'testing',
+  'formatting',
 
-  { id: 22, val: 'interactive' },
-  { id: 23, val: 'html' },
-  { id: 24, val: 'reactive' },
+  'interactive',
+  'html',
+  'reactive',
 
-  { id: 21, val: 'other' },
+  'other',
 ])
 
 const indentList = ref([
@@ -203,6 +220,7 @@ const aBool = ref('or')
 
 const noSearchText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && !((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
 const noTagText = ref(filteredLibs.value.length === 0 && props.searchIn !== '' && ((argumentTypes.value.length !== 0 || returnTypes.value.length !== 0 || tags.value.length !== 0)))
+const relativeText = ref(false)
 
 const types = ref([
   { id: 307, val: 'any' },
@@ -242,14 +260,14 @@ const types = ref([
 
   <div class="flex-box">
     <div>
-    <h3> <strong>Filter by Type</strong> </h3>
+    <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Filter by Type</strong> </h3>
     <div class="index">
 
 
     <p class="fix-margin">Types:{{ argumentTypes }}</p>
     <text>Arguments </text> 
     <button class="arrow-button" @click="AisOpen = !AisOpen">{{ AisOpen ? "▼" : "▶" }}</button>
-    <text>-</text> 
+    <text>・</text> 
     <select v-model="aBool">
       <option v-for="o in aBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
@@ -283,22 +301,22 @@ const types = ref([
 
   </div>
 
-  <h3><strong>Filter by Tag</strong> </h3>
+  <h3 :style="{ fontFamily: 'helvetica'}"><strong>Filter by Tag</strong> </h3>
   <div class="index">
 
     <p class="fix-margin" >Tags:{{ tags }}</p>
     <text>Tags </text>
     <button class="arrow-button" @click="TisOpen = !TisOpen">{{ TisOpen ? "▼" : "▶" }}</button>
-      <text>-</text> 
+      <text>・</text> 
     <select v-model="tBool">
       <option v-for="o in tBoolArr" :key="o.id" :value="o.val">{{ o.val }}</option>
     </select>
     <div v-if="TisOpen" class="dropdown-menu">
-      <label v-for="o in tagList" :key="o.id">
+      <label v-for="o in tagListStr" :key="o">
         <div class="flex-box-skinny">
-          <div v-if="indentList.includes(o.val)" class="left-margin"></div>
-          <p><input v-model="tags" type="checkbox" class="indent" :value= "o.val" >
-          {{ o.val }}</p>
+          <div v-if="indentList.includes(o)" class="left-margin"></div>
+          <p><input v-model="tags" type="checkbox" class="indent" :value= "o" >
+          {{ o }}</p>
         </div>
       </label>
     </div>
@@ -314,7 +332,7 @@ const types = ref([
     </div>
 
     <div>
-      <h3> <strong>Search Results</strong> </h3>
+      <h3 :style="{ fontFamily: 'helvetica'}"> <strong>Search results</strong> </h3>
       <div class="api">
         <div class="index2"> 
           <div class="entries"> 
@@ -324,7 +342,8 @@ const types = ref([
             <!-- {{(filteredLibs.length === 0 && props.searchIn !== "" && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)))? "No search results found for " + props.searchIn : null}}  -->
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
-              <div v-for="(foo) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
+              <div v-for="(foo, index) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
+                <h3 v-if="relativeText" :style="{ fontFamily: 'helvetica'}"> {{ (index === 1)? "Related functions" : null }} </h3>
                 <DocEntry
                   :id="functionDocName(foo)"
                   :key="functionDocName(foo)"
@@ -409,7 +428,7 @@ const types = ref([
   margin: 24px;
   font-size: 40px;
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-  color: #ffacac;
+  color: #4BADAC;
 }
 
 .flex-box {
