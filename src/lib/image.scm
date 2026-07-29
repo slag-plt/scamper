@@ -1,9 +1,3 @@
-;;; (canvas? v) -> boolean?
-;;;  v : any
-;;; Returns `#t` if and only if `v` is a canvas.
-;;; @category image typecheck html?
-(define canvas? (js-var "canvas_canvasQ"))
-
 ;;; (html? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.

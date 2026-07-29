@@ -111,6 +111,8 @@ function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
         arrTag = 'path'
       } else if(arrTag === 'string-func'){
         arrTag = 'string'
+      } else if(arrTag === 'tag-func'){
+        arrTag = 'tag'
       } 
       relatives.push(arrTag)
     }

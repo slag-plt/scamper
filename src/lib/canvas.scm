@@ -1,7 +1,7 @@
 ;;; (canvas? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a canvas.
-;;; @category canvas, make-canvas
+;;; @category canvas, image, typecheck, make-canvas
 (define canvas? (js-var "canvas_canvasQ"))
 
 ;;; (make-canvas width height) -> canvas?
