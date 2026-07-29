@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { FunctionDoc } from '../../scheme/docstring/docstring'
+import type { FunctionDoc, parseDocString } from '../../scheme/docstring/docstring'
 import { docRegistry } from '../../lib'
 import {
   functionDocCategories,
@@ -12,6 +12,9 @@ import DocEntry from './DocEntry.vue'
 const props = defineProps<{
   searchIn: string
 }>()
+
+const andDoc = 
+";;; (ando v1 v2) -> boolean?\n;;;  v1 : any\n;;;  v2 : any\n;;; Returns `#t` if and only `v1` and `v2` are both true.\n;;; @category predicates\n(define ando (js-var 'prelude_equalQ'))"
 
 // N.B., same module list/order as src/docs/DocsApp.vue; "runtime" is
 // LPM-internal plumbing, not user-facing, so it's deliberately excluded.
@@ -341,6 +344,7 @@ const types = ref([
           noSearchText = filteredLibs.length === 0 && props.searchIn !== '' && !((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0));
           noTagText = filteredLibs.length === 0 && ((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0));
           //console.log('noSearchText', noSearchText, 'tag', noTagText, 'filteredLibs.length', filteredLibs.length, 'argumentTypes.length', argumentTypes.length, 'returnTypes.length', returnTypes.length, 'tags.length', tags.length, 'boolean', filteredLibs.length === 0 && ((argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0)));
+          // console.log(parseDocString(andDoc as DocComment[]))
         }"><strong>Enter</strong></button>
     </div>
 

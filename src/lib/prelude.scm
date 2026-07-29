@@ -1,3 +1,31 @@
+;;; (and☀︎ v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; Returns `#t` if and only `v1` and `v2` are both true.
+;;; @category boolean/logic
+(define and☀︎ (js-var "prelude_equalQ"))
+
+;;; (if☀︎ v1 v2) -> any?
+;;;  v1 : any
+;;;  v2 : any
+;;; Executes `v2` if `v1` is true
+;;; @category boolean/logic
+(define if☀︎ (js-var "prelude_equalQ"))
+
+;;; (or☀︎ v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; Returns `#t` if either `v1` or `v2` are true.
+;;; @category boolean/logic
+(define or☀︎ (js-var "prelude_equalQ"))
+
+;;; (apply☀︎ v1 v2) -> any?
+;;;  v1 : function
+;;;  v2 : list
+;;; Applies function `v1` to every element of `v2`
+;;; @category list manipulation
+(define apply☀︎ (js-var "prelude_equalQ"))
+
 ;;; (equal? v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any
