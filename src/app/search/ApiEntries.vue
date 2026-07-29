@@ -109,7 +109,11 @@ function pushRelatives(doc: FunctionDoc, showLibs: FunctionDoc[]) {
         arrTag = 'color'
       } else if(arrTag === 'path-func'){
         arrTag = 'path'
-      }
+      } else if(arrTag === 'string-func'){
+        arrTag = 'string'
+      } else if(arrTag === 'tag-func'){
+        arrTag = 'tag'
+      } 
       relatives.push(arrTag)
     }
   })
@@ -352,7 +356,7 @@ const types = ref([
             <!-- {{(filteredLibs.length !== 0 && (argumentTypes.length !== 0 || returnTypes.length !== 0 || tags.length !== 0))? "No tag filter results found" : null}}  -->
             {{(filteredLibs.length === 0)? showEverything() : null}}
               <div v-for="(foo, index) in filteredLibs" :key="functionDocName(foo)" ref="foo['name']">
-                <h3 v-if="relativeText" :style="{ fontFamily: 'helvetica'}"> {{ (index === 1)? "Related functions" : null }} </h3>
+                <h3 v-if="relativeText" :style="{ fontFamily: 'helvetica'}"> {{ (index === 1 && props.searchIn !== '')? "Related functions" : null }} </h3>
                 <DocEntry
                   :id="functionDocName(foo)"
                   :key="functionDocName(foo)"

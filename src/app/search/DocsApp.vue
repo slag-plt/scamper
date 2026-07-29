@@ -42,7 +42,7 @@ const searched: string | null = urlParams.get('search')
         v-model="search"  
         size = "30"
         class="search-input"
-        placeholder="Search function or press enter..."
+        placeholder="Search function name or press enter..."
         @keyup.enter="searchForFunction(search)"
       >
     </div>
