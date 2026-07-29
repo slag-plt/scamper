@@ -1,11 +1,13 @@
 ;;; (canvas? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a canvas.
+;;; @category image typecheck html?
 (define canvas? (js-var "canvas_canvasQ"))
 
 ;;; (html? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.
+;;; @category html typecheck, canvas?
 (define html? (js-var "html_isElement"))
 
 ;;; (color r b g a) -> string?
@@ -83,19 +85,19 @@
 ;;; (color-name? v) -> boolean?
 ;;;  v : string
 ;;; Returns `#t` if and only if `v` is a valid color name.
-;;; @category color, image, predicates, typecheck
+;;; @category color, image, predicates, typecheck, color-func, all-color-names, find-colors
 (define color-name? (js-var "image_isColorName"))
 
 ;;; (all-color-names x1) -> list?
 ;;;  x1 : any
 ;;; Returns a list of all valid color names.
-;;; @category color, constants, image, color-func, color?, find-colors
+;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define all-color-names (js-var "image_allColorNames"))
 
 ;;; (find-colors color-name) -> list?
 ;;;  color-name : string
 ;;; Returns a list of all color names that contain `color`, case-insensitive.
-;;; @category image, color-func, color?, all-color-names
+;;; @category image, color-func, color?, all-color-names, color-name?
 (define find-colors (js-var "image_findColors"))
 
 ;;; (rgb->string rgb) -> string?
@@ -595,13 +597,13 @@
 ;;; (drawing->pixels d) -> vector?
 ;;;  d : image?
 ;;; Returns a vector of rgb values corresponding to the pixels of the given drawing.
-;;; @category image, pixel
+;;; @category image, pixel, drawing->image
 (define drawing->pixels (js-var "image_drawingToPixels"))
 
 ;;; (drawing->image drawing) -> image?
 ;;;  drawing : image?
 ;;; Returns a new image/canvas created from the provided drawing.
-;;; @category image, pixel
+;;; @category image, pixel, drawing->pixels
 (define drawing->image (js-var "image_drawingToImage"))
 
 ;;; (with-image-file callback) -> html?
@@ -621,7 +623,7 @@
 ;;;  fn : procedure?
 ;;;  img : image?
 ;;; Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
-;;; @category image, pixel, image-get-pixel, image->pixels, pixels->image
+;;; @category image, pixel, image-get-pixel, image->pixels, pixels->image, canvas-set-pixels! 
 (define pixel-map (js-var "image_pixelMap"))
 
 ;;; (image-get-pixel img x y) -> rgb?
@@ -629,13 +631,13 @@
 ;;;  x : integer?
 ;;;  y : integer?
 ;;; Returns the rgb value of the pixel at position `(x, y)` in the image.
-;;; @category color, image, pixel, rgb, pixel-map, image->pixels, pixels->image
+;;; @category color, image, pixel, rgb, pixel-map, image->pixels, pixels->image, canvas-set-pixels! 
 (define image-get-pixel (js-var "image_imageGetPixel"))
 
 ;;; (image->pixels img) -> canvas?
 ;;;  img : canvas?
 ;;; Returns a vector of `rgb` values corresponding to the pixels of the given canvas.
-;;; @category image, pixel-map, image-get-pixel, pixels->image
+;;; @category image, pixel-map, image-get-pixel, pixels->image, canvas-set-pixels! 
 (define image->pixels (js-var "image_imageToPixels"))
 
 ;;; (pixels->image pixels width height) -> canvas?
@@ -644,7 +646,7 @@
 ;;;  width : integer?
 ;;;  height : integer?
 ;;; Returns a new canvas with the given `pixels` and dimensions `width × height`.
-;;; @category image, pixel, pixel-map, image-get-pixel, image->pixels
+;;; @category image, pixel, pixel-map, image-get-pixel, image->pixels, canvas-set-pixels! 
 (define pixels->image (js-var "image_pixelsToImage"))
 
 ;;; (canvas-set-pixels! canvas pixels) -> void?
@@ -652,5 +654,5 @@
 ;;;  pixels : any
 ;;;   vector? of rgb values
 ;;; Sets the pixels of the given `canvas` to the given `pixels`.
-;;; @category canvas, image, mutation, pixel, predicates
+;;; @category canvas, image, mutation, pixel, predicates, pixel-map, image-get-pixel, image->pixels, pixels->image
 (define canvas-set-pixels! (js-var "image_canvasSetPixels"))
