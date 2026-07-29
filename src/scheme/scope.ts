@@ -1,6 +1,5 @@
-import { getFS } from '../fs'
 import * as L from '../lpm'
-import { ICE, ScamperError } from '../lpm'
+import { ICE, ScamperDiagnostic, mkDiagnostic } from '../lpm'
 import * as A from './ast.js'
 import {
   ComplexPred,
@@ -8,22 +7,21 @@ import {
   Pred,
   parseFunctionDocFromComments,
 } from './docstring/docstring'
-import { mkScamperErrorWithRange } from './util'
 import * as SymbolDB from './symbol-db.js'
 
 function checkDuplicateVars(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   vars: string[],
   range: L.Range,
 ) {
   const seen = new Set<string>()
   for (const v of vars) {
     if (seen.has(v)) {
-      errors.push(
-        new ScamperError(
-          'Parser',
+      diagnostics.push(
+        mkDiagnostic(
+          'Scope',
+          'warning',
           `Duplicate variable '${v}' encountered in binding list`,
-          undefined,
           range,
         ),
       )
@@ -32,15 +30,19 @@ function checkDuplicateVars(
   }
 }
 
-function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
+function scopeCheckPat(
+  diagnostics: ScamperDiagnostic[],
+  locals: Set<string>,
+  p: A.Pat,
+) {
   switch (p.tag) {
     case 'id': {
       if (locals.has(p.name)) {
-        errors.push(
-          new ScamperError(
-            'Parser',
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
             `Duplicate binding variable '${p.name}' encountered in pattern`,
-            undefined,
             p.range,
           ),
         )
@@ -57,7 +59,7 @@ function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
 
     case 'pctor': {
       p.args.forEach((p) => {
-        scopeCheckPat(errors, locals, p)
+        scopeCheckPat(diagnostics, locals, p)
       })
       return
     }
@@ -65,7 +67,7 @@ function scopeCheckPat(errors: ScamperError[], locals: Set<string>, p: A.Pat) {
 }
 
 function scopeCheckExp(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   globals: string[],
   locals: string[],
   e: A.Exp,
@@ -73,11 +75,11 @@ function scopeCheckExp(
   switch (e.tag) {
     case 'id': {
       if (!locals.includes(e.name) && !globals.includes(e.name)) {
-        errors.push(
-          new ScamperError(
-            'Parser',
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
             `Undefined variable '${e.name}'`,
-            undefined,
             e.range,
           ),
         )
@@ -89,9 +91,9 @@ function scopeCheckExp(
       return
 
     case 'app': {
-      scopeCheckExp(errors, globals, locals, e.head)
+      scopeCheckExp(diagnostics, globals, locals, e.head)
       e.args.forEach((e) => {
-        scopeCheckExp(errors, globals, locals, e)
+        scopeCheckExp(diagnostics, globals, locals, e)
       })
       return
     }
@@ -101,38 +103,38 @@ function scopeCheckExp(
       const allParams = (
         e.restParam ? [...e.params, e.restParam] : e.params
       ).map((p) => p.name)
-      checkDuplicateVars(errors, allParams, e.range)
-      scopeCheckExp(errors, globals, [...locals, ...allParams], e.body)
+      checkDuplicateVars(diagnostics, allParams, e.range)
+      scopeCheckExp(diagnostics, globals, [...locals, ...allParams], e.body)
       return
     }
     case 'let': {
       const vars = e.bindings.map((b) => b.id.name)
-      checkDuplicateVars(errors, vars, e.range)
+      checkDuplicateVars(diagnostics, vars, e.range)
       e.bindings.forEach((b) => {
-        scopeCheckExp(errors, globals, locals, b.value)
+        scopeCheckExp(diagnostics, globals, locals, b.value)
       })
-      scopeCheckExp(errors, globals, [...locals, ...vars], e.body)
+      scopeCheckExp(diagnostics, globals, [...locals, ...vars], e.body)
       return
     }
     case 'begin': {
       e.exps.forEach((e) => {
-        scopeCheckExp(errors, globals, locals, e)
+        scopeCheckExp(diagnostics, globals, locals, e)
       })
       return
     }
 
     case 'if': {
-      scopeCheckExp(errors, globals, locals, e.guard)
-      scopeCheckExp(errors, globals, locals, e.ifB)
-      scopeCheckExp(errors, globals, locals, e.elseB)
+      scopeCheckExp(diagnostics, globals, locals, e.guard)
+      scopeCheckExp(diagnostics, globals, locals, e.ifB)
+      scopeCheckExp(diagnostics, globals, locals, e.elseB)
       return
     }
     case 'match': {
-      scopeCheckExp(errors, globals, locals, e.scrutinee)
+      scopeCheckExp(diagnostics, globals, locals, e.scrutinee)
       e.branches.forEach((b) => {
         const bindingVars = new Set<string>()
-        scopeCheckPat(errors, bindingVars, b.pat)
-        scopeCheckExp(errors, globals, [...locals, ...bindingVars], b.body)
+        scopeCheckPat(diagnostics, bindingVars, b.pat)
+        scopeCheckExp(diagnostics, globals, [...locals, ...bindingVars], b.body)
       })
       return
     }
@@ -146,16 +148,16 @@ function scopeCheckExp(
       return
     }
     case 'error': {
-      scopeCheckExp(errors, globals, locals, e.exp)
+      scopeCheckExp(diagnostics, globals, locals, e.exp)
       return
     }
     case 'apply': {
-      scopeCheckExp(errors, globals, locals, e.fn)
-      scopeCheckExp(errors, globals, locals, e.args)
+      scopeCheckExp(diagnostics, globals, locals, e.fn)
+      scopeCheckExp(diagnostics, globals, locals, e.args)
       return
     }
     case 'report': {
-      scopeCheckExp(errors, globals, locals, e.exp)
+      scopeCheckExp(diagnostics, globals, locals, e.exp)
       return
     }
     default:
@@ -165,38 +167,36 @@ function scopeCheckExp(
 
 // TODO: test this
 function scopeCheckPred(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   predicate: Pred,
   globals: string[],
 ) {
   if (A.isVar(predicate)) {
     if (!globals.includes(predicate.name)) {
-      errors.push(
-        mkScamperErrorWithRange(
-          'Parser',
-          `Undefined predicate "${predicate.name}"`,
+      diagnostics.push(
+        mkDiagnostic('Docstring', 'warning', `Undefined predicate "${predicate.name}"`,
           predicate.range,
         ),
       )
     }
   } else {
-    scopeCheckComplexPred(errors, predicate, globals)
+    scopeCheckComplexPred(diagnostics, predicate, globals)
   }
 }
 
 // TODO: test this
 function scopeCheckComplexPred(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   { head: { name }, args, range }: ComplexPred,
   globals: string[],
 ) {
   if (!globals.includes(name)) {
-    errors.push(
-      mkScamperErrorWithRange('Parser', `Undefined predicate "${name}"`, range),
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'warning', `Undefined predicate "${name}"`, range),
     )
   }
   for (const arg of args) {
-    scopeCheckPred(errors, arg, globals)
+    scopeCheckPred(diagnostics, arg, globals)
   }
 }
 
@@ -218,30 +218,19 @@ function scopeCheckComplexPred(
 // *semantic* mismatch between an already-valid docstring and the function
 // it's attached to (wrong param names, missing description, ...), which is
 // just as much a documentation-quality issue as a malformed docstring, not
-// a real scope error. So errors are collected into a local array and
-// re-tagged with phase "Docstring" before being merged into the caller's
-// `outerErrors`, regardless of which branch below (or which nested
-// scopeCheckPred call) produced them.
+// a real scope error. Every diagnostic it (and its nested scopeCheckPred
+// calls) produce is a "Docstring" warning.
 function scopeCheckFunctionDoc(
-  outerErrors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   doc: FunctionDoc,
   { name, value }: A.Define,
   globals: string[],
 ): void {
-  const errors: ScamperError[] = []
-  try {
-    scopeCheckFunctionDocInner(errors, doc, name.name, value, globals)
-  } finally {
-    outerErrors.push(
-      ...errors.map(
-        (e) => new ScamperError('Docstring', e.message, e.modName, e.range, e.source),
-      ),
-    )
-  }
+  scopeCheckFunctionDocInner(diagnostics, doc, name.name, value, globals)
 }
 
 function scopeCheckFunctionDocInner(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   doc: FunctionDoc,
   name: string,
   value: A.Exp,
@@ -249,10 +238,8 @@ function scopeCheckFunctionDocInner(
 ): void {
   if (!A.isLam(value)) {
     // can't attach function docs onto non-function definitions
-    errors.push(
-      mkScamperErrorWithRange(
-        'Parser',
-        'Function docstring attached to non-function definition',
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'warning', 'Function docstring attached to non-function definition',
         doc.range,
       ),
     )
@@ -278,10 +265,8 @@ function scopeCheckFunctionDocInner(
 
   // (append...
   if (name !== docName) {
-    errors.push(
-      mkScamperErrorWithRange(
-        'Parser',
-        `Docstring function name "${docName}" does not match defined name "${name}"`,
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'warning', `Docstring function name "${docName}" does not match defined name "${name}"`,
         sigRange,
       ),
     )
@@ -292,20 +277,16 @@ function scopeCheckFunctionDocInner(
   for (const param of paramNames) {
     const nextDocParam = docParams.shift()
     if (nextDocParam === undefined) {
-      errors.push(
-        mkScamperErrorWithRange(
-          'Parser',
-          `Expected function parameter "${param}" to be defined in docstring signature`,
+      diagnostics.push(
+        mkDiagnostic('Docstring', 'warning', `Expected function parameter "${param}" to be defined in docstring signature`,
           sigRange,
         ),
       )
       continue
     }
     if (param !== nextDocParam) {
-      errors.push(
-        mkScamperErrorWithRange(
-          'Parser',
-          `Function signature defines parameter "${param}" in this position but docstring signature instead defines "${nextDocParam}"`,
+      diagnostics.push(
+        mkDiagnostic('Docstring', 'warning', `Function signature defines parameter "${param}" in this position but docstring signature instead defines "${nextDocParam}"`,
           sigRange,
         ),
       )
@@ -314,7 +295,7 @@ function scopeCheckFunctionDocInner(
   // don't check for remaining parameters, docstring param description check will get that
 
   // ... -> list?...
-  scopeCheckPred(errors, predicate, globals)
+  scopeCheckPred(diagnostics, predicate, globals)
 
   // ...lst : list?... (param descriptions)
   const paramWasChecked = new Map<string, boolean>(
@@ -326,25 +307,21 @@ function scopeCheckFunctionDocInner(
     range: pRange,
   } of docParamDescriptions) {
     if (!paramNames.includes(pName)) {
-      errors.push(
-        mkScamperErrorWithRange(
-          'Parser',
-          `Docstring describes unknown function parameter "${pName}"`,
+      diagnostics.push(
+        mkDiagnostic('Docstring', 'warning', `Docstring describes unknown function parameter "${pName}"`,
           pRange,
         ),
       )
     }
     paramWasChecked.set(pName, true)
-    scopeCheckPred(errors, pPred, globals)
+    scopeCheckPred(diagnostics, pPred, globals)
   }
   for (const [pName, wasChecked] of paramWasChecked) {
     if (wasChecked) {
       continue
     }
-    errors.push(
-      mkScamperErrorWithRange(
-        'Parser',
-        `Description of function parameter "${pName}" missing`,
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'warning', `Description of function parameter "${pName}" missing`,
         docRange,
       ),
     )
@@ -355,7 +332,7 @@ function scopeCheckFunctionDocInner(
 }
 
 async function scopeCheckStmt(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   globals: string[],
   s: A.Stmt,
 ) {
@@ -368,85 +345,86 @@ async function scopeCheckStmt(
             globals.push(id.name)
           }
         } else {
-          errors.push(
-            new ScamperError(
-              'Parser',
+          diagnostics.push(
+            mkDiagnostic(
+              'Scope',
+              'warning',
               `No such built-in library: '${s.module}'`,
-              undefined,
               s.range,
             ),
           )
         }
-      } else if (await getFS().fileExists(s.module)) {
-        // Imported files' symbols were loaded into the DB before scope checking
-        // (see SymbolDB.loadTransitiveImports). A missing DB entry for a file
-        // that exists means it failed to parse.
-        const mod = SymbolDB.get(s.module)
-        if (mod === undefined) {
-          errors.push(
-            new ScamperError(
-              'Parser',
-              `Could not load module '${s.module}'`,
-              undefined,
-              s.range,
-            ),
-          )
-        } else {
-          mod.forEach((id) => globals.push(id.name))
-        }
-      } else {
-        errors.push(
-          new ScamperError(
-            'Parser',
+        return
+      }
+
+      // File import. N.B., import '../fs' lazily -- a static import would pull
+      // the OPFS implementation into this module's (widely-imported) graph and
+      // disturb tests that mock the file system (see symbol-db.ts).
+      const { getFS } = await import('../fs')
+      if (!(await getFS().fileExists(s.module))) {
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
             `File '${s.module}' does not exist`,
-            undefined,
             s.range,
           ),
         )
+        return
+      }
+      // Imported files' symbols were loaded into the DB before scope checking
+      // (see SymbolDB.loadTransitiveImports). A missing DB entry for a file
+      // that exists means it failed to parse.
+      const mod = SymbolDB.get(s.module)
+      if (mod === undefined) {
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
+            `Could not load module '${s.module}'`,
+            s.range,
+          ),
+        )
+      } else {
+        mod.forEach((id) => globals.push(id.name))
       }
       return
     }
 
     case 'define': {
       if (globals.includes(s.name.name)) {
-        errors.push(
-          new ScamperError(
-            'Parser',
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
             `Global variable '${s.name.name}' is already defined`,
-            undefined,
             s.range,
           ),
         )
       } else {
         globals.push(s.name.name)
       }
-      scopeCheckExp(errors, globals, [], s.value)
+      scopeCheckExp(diagnostics, globals, [], s.value)
       if (s.docComments) {
-        // parsing (not just scope-checking) can fail here -- a malformed
-        // docstring is reported the same way as a semantic mismatch (phase
-        // "Docstring"), not as a real scope error.
-        try {
-          const doc = parseFunctionDocFromComments(s.docComments)
-          if (doc) {
-            scopeCheckFunctionDoc(errors, doc, s, globals)
-          }
-        } catch (e) {
-          if (!(e instanceof ScamperError)) {
-            throw e
-          }
-          errors.push(e)
+        // A malformed docstring is collected as a "Docstring" warning, the
+        // same treatment as a semantic mismatch -- not a real scope error.
+        const { doc, diagnostics: docDiagnostics } =
+          parseFunctionDocFromComments(s.docComments)
+        diagnostics.push(...docDiagnostics)
+        if (doc) {
+          scopeCheckFunctionDoc(diagnostics, doc, s, globals)
         }
       }
       return
     }
 
     case 'display': {
-      scopeCheckExp(errors, globals, [], s.value)
+      scopeCheckExp(diagnostics, globals, [], s.value)
       return
     }
 
     case 'stmtexp': {
-      scopeCheckExp(errors, globals, [], s.expr)
+      scopeCheckExp(diagnostics, globals, [], s.expr)
       return
     }
 
@@ -456,7 +434,7 @@ async function scopeCheckStmt(
 }
 
 export async function scopeCheckProgram(
-  errors: ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   prog: A.Prog,
 ) {
   // Ensure every imported file's symbols are in the DB before we resolve names.
@@ -471,6 +449,6 @@ export async function scopeCheckProgram(
     globals.push(id.name)
   }
   for (const s of prog) {
-    await scopeCheckStmt(errors, globals, s)
+    await scopeCheckStmt(diagnostics, globals, s)
   }
 }

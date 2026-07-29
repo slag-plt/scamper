@@ -1,3 +1,4 @@
+export * from './diagnostic.js'
 export * from './error.js'
 export * from './lang.js'
 export * from './output'

@@ -1,7 +1,6 @@
 import * as L from '../lpm'
 import { Fiber } from '../lpm/fiber.js'
 import { builtinLibs } from '../lpm/builtin-registry.js'
-import { SimpleErrorChannel } from '../lpm/output/simple-error.js'
 import * as A from '../scheme/ast.js'
 import { compile, tokenizeAndParse } from '../scheme/index.js'
 import {
@@ -17,15 +16,14 @@ import { librarySources } from './generated/sources.js'
  * snapshots the resulting top-level bindings as a Module.
  */
 async function loadLibrary(name: string, src: string): Promise<L.Module> {
-  const errChannel = new SimpleErrorChannel()
   // N.B., insertContracts=true: only the standard library gets its exports
   // wrapped with contract checks derived from their docstrings, not
   // arbitrary user programs.
-  const prog = await compile(errChannel, src, undefined, true)
-  if (prog === undefined || errChannel.errors.length > 0) {
+  const { prog, diagnostics } = await compile(src, { insertContracts: true })
+  if (prog === undefined || diagnostics.length > 0) {
     throw new L.ICE(
       'lib.loadLibrary',
-      `Failed to compile builtin library "${name}": ${errChannel.errors.map((e) => e.toString()).join('; ')}`,
+      `Failed to compile builtin library "${name}": ${diagnostics.map((d) => d.message).join('; ')}`,
     )
   }
   const fiber = new Fiber(prog)
@@ -50,15 +48,9 @@ function extractDocs(prog: A.Prog): Map<string, FunctionDoc> {
     if (stmt.tag !== 'define' || !stmt.docComments) {
       continue
     }
-    try {
-      const doc = parseFunctionDocFromComments(stmt.docComments)
-      if (doc) {
-        docs.set(stmt.name.name, doc)
-      }
-    } catch (e) {
-      if (!(e instanceof L.ScamperError)) {
-        throw e
-      }
+    const { doc } = parseFunctionDocFromComments(stmt.docComments)
+    if (doc) {
+      docs.set(stmt.name.name, doc)
     }
   }
   return docs
@@ -113,10 +105,10 @@ export async function initializeLibs(): Promise<void> {
     builtinLibs.set(name, mod)
   }
   for (const [name, src] of librarySources) {
-    const parsed = tokenizeAndParse(new SimpleErrorChannel(), src)
+    const { program } = tokenizeAndParse(src)
     docRegistry.set(
       name,
-      parsed ? extractDocs(parsed) : new Map<string, FunctionDoc>(),
+      program ? extractDocs(program) : new Map<string, FunctionDoc>(),
     )
   }
   initialized = true

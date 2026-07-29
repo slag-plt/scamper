@@ -1,25 +1,34 @@
-import { Loc, Range, ScamperError } from '../lpm'
+import { Loc, Range, ScamperDiagnostic, mkDiagnostic } from '../lpm'
 import * as A from './ast.js'
 
 /**
- * @returns prog with the statement at [queryLoc] having its deepest queried
- *          sub-expression wrapped in a Report expression, plus the range of
- *          that inner reported expression
- * @throws ScamperError if there is no valid statement to report at [queryLoc]
+ * The result of locating a queried statement: either the rewritten program
+ * and reported range, or a diagnostic explaining why the location is invalid.
  */
-export function getQueriedProgram(
-  prog: A.Prog,
-  queryLoc: Loc,
-): { prog: A.Prog; range: Range } {
+export type QueryResult =
+  | { ok: true; prog: A.Prog; range: Range }
+  | { ok: false; diagnostic: ScamperDiagnostic }
+
+/**
+ * @returns on success, prog with the statement at [queryLoc] having its
+ *          deepest queried sub-expression wrapped in a Report expression, plus
+ *          the range of that inner reported expression; otherwise a diagnostic
+ */
+export function getQueriedProgram(prog: A.Prog, queryLoc: Loc): QueryResult {
   const queriedI = prog.findIndex((stmt) => stmt.range.contains(queryLoc))
   if (queriedI < 0) {
-    throw new ScamperError(
-      'Parser',
-      `Received invalid query location: ${queryLoc.toString()}`,
-    )
+    return {
+      ok: false,
+      diagnostic: mkDiagnostic(
+        'Query',
+        'error',
+        `Received invalid query location: ${queryLoc.toString()}`,
+      ),
+    }
   }
   const { stmt, range } = getReportedStmt(prog[queriedI], queryLoc)
   return {
+    ok: true,
     prog: prog.map((s, i) => (i === queriedI ? stmt : s)),
     range,
   }

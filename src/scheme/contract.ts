@@ -181,12 +181,7 @@ export function contractStmt(s: A.Stmt): A.Stmt {
   if (s.tag !== 'define' || !s.docComments) {
     return s
   }
-  let doc
-  try {
-    doc = parseFunctionDocFromComments(s.docComments)
-  } catch {
-    return s
-  }
+  const { doc } = parseFunctionDocFromComments(s.docComments)
   if (!doc || (doc.params.length === 0 && !doc.restParam)) {
     return s
   }

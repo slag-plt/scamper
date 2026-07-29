@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
-import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperError, Stmt } from '../../src/lpm'
+import { Loc, mkAp, mkDisp, mkLit, mkRept, mkVar, Prog, ScamperDiagnostic, Stmt } from '../../src/lpm'
 import { mkId } from '../../src/scheme/ast'
 import { anyRange } from './util'
 import { compile } from '../../src/scheme'
-import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 
 const testLit = 'test lit'
 const testDispLit = 2
@@ -21,7 +20,7 @@ const testProgram = `"${testLit}"
 (if #t 1 2)`
 
 function parseTestProgram(): Prog {
-  const errors: ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, testProgram)
   expect(errors).toEqual([])
   return prog
@@ -47,7 +46,10 @@ describe('AST querying', () => {
       const prog = parseTestProgram()
       const queryLoc = locOf('yo')
       const originalStmt = prog[3]
-      const { prog: reportedProg } = getQueriedProgram(prog, queryLoc)
+      const queried = getQueriedProgram(prog, queryLoc)
+      expect(queried.ok).toBe(true)
+      if (!queried.ok) return
+      const reportedProg = queried.prog
 
       expect(reportedProg).not.toBe(prog)
       expect(reportedProg[3]).not.toBe(prog[3])
@@ -60,15 +62,16 @@ describe('AST querying', () => {
     test('returns the range of the queried expression', () => {
       const prog = parseTestProgram()
       const queryLoc = locOf('yo')
-      const { range } = getQueriedProgram(prog, queryLoc)
-      expect(range.begin.idx).toBe(testProgram.indexOf('"yo"'))
+      const queried = getQueriedProgram(prog, queryLoc)
+      expect(queried.ok).toBe(true)
+      if (!queried.ok) return
+      expect(queried.range.begin.idx).toBe(testProgram.indexOf('"yo"'))
     })
 
-    test('throws for a query location outside every statement', () => {
+    test('returns a diagnostic for a query location outside every statement', () => {
       const prog = parseTestProgram()
-      expect(() =>
-        getQueriedProgram(prog, new Loc(1000, 1, 100000)),
-      ).toThrow(ScamperError)
+      const result = getQueriedProgram(prog, new Loc(1000, 1, 100000))
+      expect(result.ok).toBe(false)
     })
   })
 
@@ -221,9 +224,14 @@ describe('AST querying', () => {
       const lineStart = src.lastIndexOf('\n', closeIdx - 1) + 1
       const queryLoc = new Loc(line, closeIdx - lineStart + 1, closeIdx)
 
-      const errors: ScamperError[] = []
+      const errors: ScamperDiagnostic[] = []
       const prog = parseProgramFromSource(errors, src)
-      const { range } = getQueriedProgram(prog, queryLoc)
+      const queried = getQueriedProgram(prog, queryLoc)
+      if (!queried.ok) {
+        expect.fail('expected a valid query location')
+        return
+      }
+      const range = queried.range
       const firstLine = range.firstLineSpan(src)
 
       expect(range.begin.line).toBeLessThan(range.end.line)
@@ -242,20 +250,22 @@ describe('AST querying', () => {
       const line = src.slice(0, oneIdx).split('\n').length
       const lineStart = src.lastIndexOf('\n', oneIdx - 1) + 1
       const queryLoc = new Loc(line, oneIdx - lineStart + 1, oneIdx)
-      const err = new SimpleErrorChannel()
 
-      const result = await compile(err, src, queryLoc)
+      const { prog, queriedRange, diagnostics } = await compile(src, { queryLoc })
 
-      expect(err.errors).toStrictEqual([])
-      if (result === undefined) {
-        expect.fail('expected compile to return a result')
+      expect(diagnostics).toStrictEqual([])
+      if (prog === undefined) {
+        expect.fail('expected compile to return a program')
         return
       }
-      const { queriedRange } = result
-      const errors: ScamperError[] = []
-      const prog = parseProgramFromSource(errors, src)
-      const { range } = getQueriedProgram(prog, queryLoc)
-      expect(queriedRange).toEqual(range.firstLineSpan(src))
+      const errors: ScamperDiagnostic[] = []
+      const parsed = parseProgramFromSource(errors, src)
+      const queried = getQueriedProgram(parsed, queryLoc)
+      if (!queried.ok) {
+        expect.fail('expected a valid query location')
+        return
+      }
+      expect(queriedRange).toEqual(queried.range.firstLineSpan(src))
     })
 
     // N.B., already skipped before this migration (see git history) --
@@ -276,7 +286,6 @@ describe('AST querying', () => {
 ;;; @example (${funcName} ${lit1.toString()} ${lit2.toString()}) -> ${lit1.toString()}
 (define ${funcName} (lambda (a b) a))`
       const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
-      const err = new SimpleErrorChannel()
 
       const expectedProg: Prog = [
         expect.anything() as Stmt,
@@ -292,13 +301,12 @@ describe('AST querying', () => {
         ),
       ]
 
-      const result = await compile(err, src, queryLoc)
-      expect(err.errors).toStrictEqual([])
-      if (result === undefined) {
-        expect.fail('expected compile to return a result')
+      const { prog: actualProg, diagnostics } = await compile(src, { queryLoc })
+      expect(diagnostics).toStrictEqual([])
+      if (actualProg === undefined) {
+        expect.fail('expected compile to return a program')
         return
       }
-      const { prog: actualProg } = result
       expect(actualProg).toStrictEqual(expectedProg)
     })
   })

@@ -6,6 +6,7 @@ import {
   Loc,
   OutputChannel,
   Range,
+  ScamperError,
   rangesEqual,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
@@ -138,14 +139,17 @@ export default class Scamper {
     isTracing,
   }: DisplayExecutionConfig): Promise<DisplayRequest | null> {
     // compile src to lpm bytecode
-    const compiled = await compile(err, src)
-    if (!compiled) {
-      // err channel should have caught the error
+    const { prog, diagnostics } = await compile(src)
+    diagnostics.forEach((d) => {
+      err.report(ScamperError.fromDiagnostic(d))
+    })
+    if (prog === undefined) {
+      // a fatal parse error left no program; diagnostics reported above
       return null
     }
 
     // make new fiber with prelude as initial environment
-    const fiber = new Fiber(compiled, getDefaultEnv())
+    const fiber = new Fiber(prog, getDefaultEnv())
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
@@ -208,13 +212,15 @@ export default class Scamper {
     err,
     queryLoc,
   }: QueryExecutionConfig): Promise<void> {
-    const compiled = await compile(err, src, queryLoc)
-    if (!compiled) {
-      // report channel should have caught the error
+    const { prog, queriedRange, diagnostics } = await compile(src, { queryLoc })
+    diagnostics.forEach((d) => {
+      err.report(ScamperError.fromDiagnostic(d))
+    })
+    if (prog === undefined || queriedRange === undefined) {
+      // diagnostics reported above
       return
     }
 
-    const { prog, queriedRange } = compiled
     if (
       this._queries
         .get(queriedRange.begin.line)

@@ -1,9 +1,10 @@
-import { ICE, Range, ScamperError } from '../../lpm'
+import { ICE, Range, ScamperDiagnostic, mkDiagnostic } from '../../lpm'
 import { Param, parseSingleParam } from './param'
 import { App, Comment, Exp, Identifier, isApp, isVar } from '../ast'
 
 import { parseFunctionDescription } from './description'
-import { hasTag, makeTagged, mkScamperErrorWithRange } from '../util'
+import { hasTag, makeTagged } from '../util'
+import { DocstringError, mkDocError } from './error'
 import { DocTag, parseAllTags } from './tags'
 import { parseSignature, Signature } from './signature'
 
@@ -92,9 +93,7 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
             (signature.function.restParam ? 1 : 0)
           if (params.length + (restParam ? 1 : 0) !== expectedParamLines) {
             // TODO: should do more granular range
-            throw mkScamperErrorWithRange(
-              'Parser',
-              signature.function.restParam && !restParam
+            throw mkDocError(signature.function.restParam && !restParam
                 ? `Rest parameter "${signature.function.restParam.name}" was declared in the signature but not documented`
                 : 'Encountered function description before all parameters were described',
               firstRange,
@@ -126,9 +125,7 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
     }
   }
   if (description === '') {
-    throw mkScamperErrorWithRange(
-      'Parser',
-      'Docstring must have a function description',
+    throw mkDocError('Docstring must have a function description',
       lastRange,
     )
   }
@@ -170,26 +167,37 @@ export function commentsToDocComments(comments: Comment[]): DocComment[] {
  * callers decide when parsing a docstring is actually necessary (e.g. the
  * IDE's live linter, or the query/example-tag feature), rather than it
  * happening unconditionally as part of the main parse pass. A malformed
- * docstring is a documentation-quality issue, not a reason to fail
- * compiling otherwise-valid code, so any ScamperError raised while parsing
- * is re-tagged with phase "Docstring" here (regardless of which internal
- * helper actually threw it) so callers -- notably linter.ts -- can report
- * it as a warning instead of a blocking error.
- * @returns undefined if there are no doc-comment lines among `comments`
- * @throws ScamperError (phase "Docstring") if the doc comments are malformed
+ * docstring is a documentation-quality issue, not a reason to fail compiling
+ * otherwise-valid code, so a parse failure is collected as a "Docstring"
+ * warning diagnostic (regardless of which internal helper threw it) rather
+ * than propagated as an error.
+ */
+export interface ParsedFunctionDoc {
+  /** The parsed doc, or undefined if the comments have no docstring or it was malformed. */
+  doc?: FunctionDoc
+  /** A single "Docstring" warning if the docstring was malformed; empty otherwise. */
+  diagnostics: ScamperDiagnostic[]
+}
+
+/**
+ * Parses a define's preceding comments into a FunctionDoc, on demand.
+ * @returns the parsed doc (absent if there is no docstring or it is malformed)
+ *          plus any malformed-docstring diagnostic
  */
 export function parseFunctionDocFromComments(
   comments: Comment[],
-): FunctionDoc | undefined {
+): ParsedFunctionDoc {
   const docComments = commentsToDocComments(comments)
   if (docComments.length === 0) {
-    return undefined
+    return { diagnostics: [] }
   }
   try {
-    return parseDocString(docComments)
+    return { doc: parseDocString(docComments), diagnostics: [] }
   } catch (e) {
-    if (e instanceof ScamperError) {
-      throw new ScamperError('Docstring', e.message, e.modName, e.range, e.source)
+    if (e instanceof DocstringError) {
+      return {
+        diagnostics: [mkDiagnostic('Docstring', 'warning', e.message, e.range)],
+      }
     }
     throw e
   }

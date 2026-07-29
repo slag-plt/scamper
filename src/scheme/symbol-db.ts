@@ -1,7 +1,7 @@
 import builtinLibs from '../lib'
 import * as A from './ast'
 import * as L from '../lpm/lang'
-import { ScamperError } from '../lpm'
+import { ScamperDiagnostic, ScamperError } from '../lpm'
 import { parseProgramFromSource } from './lezer-bridge'
 
 // A global collection of external symbols from importable modules.
@@ -50,10 +50,10 @@ async function parseFile(filename: string): Promise<A.Prog> {
   // disturb tests that mock the file system (see test/setup.ts).
   const { getFS } = await import('../fs')
   const src = await getFS().loadFile(filename)
-  const errors: ScamperError[] = []
-  const prog = parseProgramFromSource(errors, src)
-  if (errors.length > 0) {
-    throw errors[0]
+  const diagnostics: ScamperDiagnostic[] = []
+  const prog = parseProgramFromSource(diagnostics, src)
+  if (diagnostics.length > 0) {
+    throw ScamperError.fromDiagnostic(diagnostics[0])
   }
   return prog
 }

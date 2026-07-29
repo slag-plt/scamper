@@ -1,4 +1,5 @@
 import { Range } from './range.js'
+import { ScamperDiagnostic } from './diagnostic.js'
 import { Value } from './lang'
 import { toString } from './util'
 
@@ -26,16 +27,17 @@ export class ScamperError extends Error {
     this.source = source
   }
 
-  // Whether this error should block compilation/execution outright, as
-  // opposed to being surfaced as a non-blocking diagnostic (e.g. a malformed
-  // docstring is a documentation-quality issue, not a reason to fail
-  // otherwise-valid code -- see docstring.ts's parseFunctionDocFromComments
-  // and scope.ts's scopeCheckFunctionDoc). Centralized here, rather than
-  // each call site independently checking `phase === "Docstring"`, so
-  // adding a future non-fatal phase doesn't require re-auditing every place
-  // that decides whether an accumulated errors array should block anything.
-  get isFatal(): boolean {
-    return this.phase !== 'Docstring'
+  /**
+   * Promotes a static diagnostic into an error, for the boundary where a
+   * front-end diagnostic must be surfaced on an ErrorChannel (which carries
+   * ScamperErrors only). The diagnostic's phase is mapped to a display phase
+   * so, e.g., a parse diagnostic still reads as a "Parser error". Most
+   * consumers should present diagnostics directly (see linter.ts, the CLI
+   * --check presenter) rather than convert them.
+   */
+  static fromDiagnostic(d: ScamperDiagnostic): ScamperError {
+    const phase: Phase = d.phase === 'Docstring' ? 'Docstring' : 'Parser'
+    return new ScamperError(phase, d.message, d.modName, d.range, d.source)
   }
 
   toString(): string {

@@ -44,7 +44,7 @@ class Ctx {
   constructor(
     public src: string,
     public lineStarts: number[],
-    public errors: L.ScamperError[],
+    public diagnostics: L.ScamperDiagnostic[],
   ) {}
 
   // N.B., reader.ts's ranges are inclusive on the end position (it points at
@@ -129,20 +129,15 @@ const formDescriptions: Record<string, string> = {
 
 function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
   if (node.type.isError) {
-    ctx.errors.push(
-      new L.ScamperError('Parser', 'Malformed syntax.', undefined, ctx.range(node)),
+    ctx.diagnostics.push(
+      L.mkDiagnostic('Parse', 'error', 'Malformed syntax.', ctx.range(node)),
     )
     return
   }
   const desc =
     formDescriptions[node.type.name] ?? `${node.type.name.toLowerCase()} expression`
-  ctx.errors.push(
-    new L.ScamperError(
-      'Parser',
-      `Malformed ${desc}.`,
-      undefined,
-      ctx.range(node),
-    ),
+  ctx.diagnostics.push(
+    L.mkDiagnostic('Parse', 'error', `Malformed ${desc}.`, ctx.range(node)),
   )
 }
 
@@ -263,18 +258,18 @@ function identifierName(
 ): string {
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
-    ctx.errors.push(
-      new L.ScamperError(
-        'Parser',
+    ctx.diagnostics.push(
+      L.mkDiagnostic(
+        'Parse',
+        'error',
         `The identifier "${name}" is a reserved word and cannot be used as a variable name`,
-        undefined,
         ctx.range(node),
       ),
     )
     return '<error>'
   }
   if (node.type.name !== 'Identifier') {
-    ctx.errors.push(new L.ScamperError('Parser', errorMsg, undefined, ctx.range(node)))
+    ctx.diagnostics.push(L.mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
     return '<error>'
   }
   return name
@@ -568,11 +563,11 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 ///// Entry point ///////////////////////////////////////////////////////////////
 
 export function parseProgramFromSource(
-  errors: L.ScamperError[],
+  diagnostics: L.ScamperDiagnostic[],
   src: string,
 ): A.Prog {
   const tree = parser.parse(src)
-  const ctx = new Ctx(src, computeLineStarts(src), errors)
+  const ctx = new Ctx(src, computeLineStarts(src), diagnostics)
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
     if (node.type.name === 'LineComment') {

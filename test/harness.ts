@@ -29,7 +29,8 @@ export async function runProgram (src: string): Promise<string[]> {
     src = src.trim()
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
-    const prog = await Scheme.compile(out, src)
+    const { prog, diagnostics } = await Scheme.compile(src)
+    diagnostics.forEach((d) => { out.report(LPM.ScamperError.fromDiagnostic(d)) })
     if (out.log.length !== 0) { return out.log as string[] }
     if (prog === undefined) {
       throw new Error('compile produced no program and no logged errors')
@@ -42,7 +43,8 @@ export async function runProgram (src: string): Promise<string[]> {
 export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {
     src = src.trim()
     const env = Scheme.mkInitialEnv()
-    const prog = await Scheme.compile(out, src)
+    const { prog, diagnostics } = await Scheme.compile(src)
+    diagnostics.forEach((d) => { out.report(LPM.ScamperError.fromDiagnostic(d)) })
 
     if (out.levels.length > 1) { return out.levels }
     if (prog === undefined) {

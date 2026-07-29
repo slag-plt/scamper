@@ -24,7 +24,6 @@ import {
 } from '../../../src/scheme/docstring/docstring'
 import { parseFunctionDescription } from '../../../src/scheme/docstring/description'
 import { testTag1, testTag2, testTagLine1, testTagLine2 } from './test-tags'
-import { SimpleErrorChannel } from '../../../src/lpm/output/simple-error'
 import { tokenizeAndParse } from '../../../src/scheme'
 import { anyRange } from '../util'
 import { Comment } from '../../../src/scheme/ast'
@@ -40,8 +39,7 @@ describe('Docstring parsing', () => {
     const testSrc = `${rawTestComments.map((c) => c.line).join('\n')}
 (define ${identifier} ${value.toString()})`
 
-    const err = new SimpleErrorChannel()
-    const prog = tokenizeAndParse(err, testSrc)
+    const { program: prog } = tokenizeAndParse(testSrc)
     // N.B., parsing is deferred: the Define carries raw docComments, not an
     // already-parsed FunctionDoc (see ast.ts's Define.docComments).
     const expectedDefine = mkDefine(mkId(identifier, anyRange), lit, anyRange, rawTestComments)
@@ -50,7 +48,7 @@ describe('Docstring parsing', () => {
     const stmt = prog?.find((s) => s.tag === 'define')
     expect(stmt?.tag).toBe('define')
     if (stmt?.tag !== 'define') return
-    expect(parseFunctionDocFromComments(stmt.docComments ?? [])).toEqual(
+    expect(parseFunctionDocFromComments(stmt.docComments ?? []).doc).toEqual(
       expectedFunctionDoc,
     )
   })

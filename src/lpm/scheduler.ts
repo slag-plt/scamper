@@ -144,8 +144,11 @@ export class Scheduler {
           .loadFile(stepResult.filename)
           .then(
             async (_src) => {
-              const prog = await S.compile(task.err, _src)
-              if (!prog) {
+              const { prog, diagnostics } = await S.compile(_src)
+              diagnostics.forEach((d) => {
+                task.err.report(ScamperError.fromDiagnostic(d))
+              })
+              if (prog === undefined) {
                 // TODO: error channel receives the compilation errors as a side-effect,
                 // but it would be good to signal to the continuation that importing has
                 // failed at this step...

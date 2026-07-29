@@ -1,7 +1,8 @@
 import * as S from '../lpm'
-import { Loc, Range, ScamperError } from '../lpm'
+import { Loc, Range } from '../lpm'
 import { lowerProgram } from './codegen.js'
 import { expandProgram } from './expansion.js'
+import { scopeCheckProgram } from './scope.js'
 import { sugarExpr } from './sugarer.js'
 import { FiberRaiser } from '../lpm/raiser.js'
 import { raiseFiber } from './raise.js'
@@ -24,148 +25,148 @@ export const fiberRaiser: FiberRaiser<Exp> = {
   equals: S.equals,
 }
 
+/** The result of parsing: the program (absent on a fatal parse error) and any diagnostics. */
+export interface ParseResult {
+  program?: Prog
+  diagnostics: S.ScamperDiagnostic[]
+}
+
+/** A ParseResult from a query parse, additionally carrying the reported range. */
+export interface QueryParseResult extends ParseResult {
+  queriedRange?: Range
+}
+
+export function tokenizeAndParse(src: string): ParseResult
+export function tokenizeAndParse(src: string, queryLoc: Loc): QueryParseResult
 export function tokenizeAndParse(
-  err: S.ErrorChannel,
   src: string,
   queryLoc?: Loc,
-): Prog | undefined
-export function tokenizeAndParse(
-  err: S.ErrorChannel,
-  src: string,
-  queryLoc: Loc,
-): { program: Prog; queriedRange: Range } | undefined
-export function tokenizeAndParse(
-  err: S.ErrorChannel,
-  src: string,
-  queryLoc?: Loc,
-): Prog | { program: Prog; queriedRange: Range } | undefined {
-  const errors: S.ScamperError[] = []
-  const program = parseProgramFromSource(errors, src)
-  if (errors.length > 0) {
-    errors.forEach((e) => {
-      err.report(e)
-    })
-    return undefined
+): ParseResult | QueryParseResult {
+  const diagnostics: S.ScamperDiagnostic[] = []
+  const program = parseProgramFromSource(diagnostics, src)
+  if (diagnostics.length > 0) {
+    // A parse error leaves no usable program.
+    return { diagnostics }
   }
 
   if (!queryLoc) {
-    return program
+    return { program, diagnostics }
   }
 
   // given cursor position, find the deepest queried sub-expression and wrap
   // it in a report expression
-  let queriedProgram: Prog
-  let queriedRange: Range
-  try {
-    const queried = getQueriedProgram(program, queryLoc)
-    queriedProgram = queried.prog
-    queriedRange = queried.range.firstLineSpan(src)
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      err.report(e)
-      return undefined
-    }
-    throw e
+  const queried = getQueriedProgram(program, queryLoc)
+  if (!queried.ok) {
+    return { diagnostics: [queried.diagnostic] }
   }
+  const queriedProgram = queried.prog
+  const queriedRange = queried.range.firstLineSpan(src)
 
   // determine if query loc inside define statement
   const queriedStmt = queriedProgram.find((s) => s.range.contains(queryLoc))
   if (queriedStmt?.tag !== 'define' || queriedStmt.docComments === undefined) {
-    err.report(
-      new ScamperError(
-        'Parser',
-        'Querying is only allowed within function definitions with docstrings',
-      ),
-    )
-    return undefined
+    return {
+      diagnostics: [
+        S.mkDiagnostic(
+          'Query',
+          'error',
+          'Querying is only allowed within function definitions with docstrings',
+        ),
+      ],
+    }
   }
   // docstring parsing is deferred until here, since it's only ever needed
   // for this on-demand query/example-tag feature -- a malformed docstring
   // fails the query itself rather than blocking compilation altogether.
-  let doc
-  try {
-    doc = parseFunctionDocFromComments(queriedStmt.docComments)
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      err.report(e)
-      return undefined
-    }
-    throw e
+  const { doc, diagnostics: docDiagnostics } = parseFunctionDocFromComments(
+    queriedStmt.docComments,
+  )
+  if (docDiagnostics.length > 0) {
+    return { diagnostics: docDiagnostics }
   }
   if (doc === undefined) {
-    err.report(
-      new ScamperError(
-        'Parser',
-        'Querying is only allowed within function definitions with docstrings',
-      ),
-    )
-    return undefined
+    return {
+      diagnostics: [
+        S.mkDiagnostic(
+          'Query',
+          'error',
+          'Querying is only allowed within function definitions with docstrings',
+        ),
+      ],
+    }
   }
   // find example tag if exists
   const exampleTags = doc.tags.filter((t) => isExampleTag(t))
   // TODO: only choosing first example tag for input prototype
   const firstExample = exampleTags.at(0)
   if (!firstExample) {
-    err.report(new ScamperError('Parser', 'Querying requires an example tag'))
-    return undefined
+    return {
+      diagnostics: [
+        S.mkDiagnostic('Query', 'error', 'Querying requires an example tag'),
+      ],
+    }
   }
   queriedProgram.push(mkDisp(firstExample.contents.functionCall))
-  return { program: queriedProgram, queriedRange }
+  return { program: queriedProgram, queriedRange, diagnostics: [] }
+}
+
+/** Knobs for {@link compile}. */
+export interface CompileOptions {
+  /** A cursor position for the on-demand query/example feature. */
+  queryLoc?: Loc
+  /** Whether to wrap documented definitions in runtime contract checks. */
+  insertContracts?: boolean
+  /** Whether to run the (optional) scope-check pass, collecting its diagnostics. */
+  scopeCheck?: boolean
+}
+
+/** The result of compilation: the lowered program (absent on a fatal parse error) and any diagnostics. */
+export interface CompileResult {
+  prog?: S.Prog
+  diagnostics: S.ScamperDiagnostic[]
+}
+
+/** A CompileResult from a query compile, additionally carrying the reported range. */
+export interface QueryCompileResult extends CompileResult {
+  queriedRange?: Range
 }
 
 export async function compile(
-  err: S.ErrorChannel,
   src: string,
-  queryLoc?: undefined,
-  insertContracts?: boolean,
-): Promise<S.Prog | undefined>
+  opts: CompileOptions & { queryLoc: Loc },
+): Promise<QueryCompileResult>
 export async function compile(
-  err: S.ErrorChannel,
   src: string,
-  queryLoc: Loc,
-  insertContracts?: boolean,
-): Promise<{ prog: S.Prog; queriedRange: Range } | undefined>
-// Scope checking will add await here eventually.
-// eslint-disable-next-line @typescript-eslint/require-await
+  opts?: CompileOptions,
+): Promise<CompileResult>
 export async function compile(
-  err: S.ErrorChannel,
   src: string,
-  queryLoc?: Loc,
-  insertContracts = false,
-): Promise<S.Prog | { prog: S.Prog; queriedRange: Range } | undefined> {
-  if (queryLoc) {
-    const parsed = tokenizeAndParse(err, src, queryLoc) as
-      | { program: Prog; queriedRange: Range }
-      | undefined
-    if (parsed === undefined) {
-      return undefined
-    }
-    const program = insertContracts
-      ? contractProgram(parsed.program)
-      : parsed.program
-    const prog = lowerProgram(expandProgram(program))
-    return { prog, queriedRange: parsed.queriedRange }
-  }
+  opts: CompileOptions = {},
+): Promise<CompileResult | QueryCompileResult> {
+  const { queryLoc, insertContracts = false, scopeCheck = false } = opts
 
-  const program = tokenizeAndParse(err, src)
-  if (program === undefined) {
-    return undefined
+  const parsed = queryLoc
+    ? tokenizeAndParse(src, queryLoc)
+    : tokenizeAndParse(src)
+  const diagnostics = [...parsed.diagnostics]
+  if (parsed.program === undefined) {
+    return queryLoc ? { queriedRange: undefined, diagnostics } : { diagnostics }
   }
+  const program = parsed.program
 
-  // Scope checking
-  // TODO: disabled while we fix up modules
-  // const errors: S.ScamperError[] = []
-  // await scopeCheckProgram(errors, program)
-  // errors.forEach((e) => {
-  //   err.report(e)
-  // })
-  // if (errors.some((e) => e.isFatal)) {
-  //   return undefined
-  // }
+  // Scope checking is an optional pass (CLI --check); it only collects
+  // diagnostics and never blocks lowering -- callers decide, from the
+  // returned diagnostics, whether to run.
+  if (scopeCheck) {
+    await scopeCheckProgram(diagnostics, expandProgram(program))
+  }
 
   // Lowering/codegen
   const contracted = insertContracts ? contractProgram(program) : program
-  return lowerProgram(expandProgram(contracted))
+  const prog = lowerProgram(expandProgram(contracted))
+  return queryLoc
+    ? { prog, queriedRange: (parsed as QueryParseResult).queriedRange, diagnostics }
+    : { prog, diagnostics }
 }
 
 export function mkInitialEnv(): S.Env {

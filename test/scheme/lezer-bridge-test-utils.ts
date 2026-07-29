@@ -3,8 +3,8 @@ import * as L from '../../src/lpm'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { Prog } from '../../src/scheme/ast'
 
-export function parse(src: string): { prog: Prog; errors: L.ScamperError[] } {
-  const errors: L.ScamperError[] = []
+export function parse(src: string): { prog: Prog; errors: L.ScamperDiagnostic[] } {
+  const errors: L.ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, src)
   return { prog, errors }
 }
