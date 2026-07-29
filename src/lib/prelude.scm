@@ -350,7 +350,7 @@
 ;;; (pair? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a pair.
-;;; @category typecheck, predicates, list?, null?, procedure?, ref?, vector?, void?
+;;; @category typecheck, predicates, list?, null?, procedure?, ref?, rex?, vector?, void?
 (define pair? (js-var "prelude_pairQ"))
 
 ;;; (list-of p) -> procedure?
@@ -388,7 +388,7 @@
 ;;;  v1 : any
 ;;;  v2 : any
 ;;; Returns a new pair containing `v1` and `v2`.
-;;; @category list, list creation, list, string, vector, void
+;;; @category list, list creation, list, string, regex, vector, void
 (define pair (js-var "prelude_pair"))
 
 ;;; (car v) -> any
@@ -414,13 +414,13 @@
 ;;; (list? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a list.
-;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, ref?, vector?, void?
+;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, ref?, rex?, vector?, void?
 (define list? (js-var "prelude_listQ"))
 
 ;;; (list . v1) -> list?
 ;;;  v1 : any
 ;;; Returns a new list containing `v1`, `v2`, ... .
-;;; @category list, list creation, association list, pair, string, vector, void
+;;; @category list, list creation, association list, pair, string, regex, vector, void
 (define list (js-var "prelude_list"))
 
 ;;; (make-list n v) -> list?
@@ -578,7 +578,7 @@
 ;;; (string . c1) -> string?
 ;;;  c1 : char?
 ;;; Returns a string consisting of the characters `c1`, `c2`, ...
-;;; @category string, list, pair, vector, void
+;;; @category string, list, pair, rex, vector
 (define string (js-var "prelude_string"))
 
 ;;; (string-length v) -> integer?
@@ -674,13 +674,13 @@
 ;;; (vector? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a vector.
-;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, ref?, void?
+;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, ref?, rex?, void?
 (define vector? (js-var "prelude_vectorQ"))
 
 ;;; (vector . v1) -> vector?
 ;;;  v1 : any
 ;;; Returns a vector consisting of the values `v1`, `v2`, ...
-;;; @category vectors, list, pair, string, void
+;;; @category vectors, list, pair, string, regex, void
 (define vector (js-var "prelude_vector"))
 
 ;;; (make-vector k v) -> vector?
@@ -752,7 +752,7 @@
 ;;; (procedure? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a procedure.
-;;; @category typecheck, predicates, pair?, list?, null?, ref?, vector?, void?
+;;; @category typecheck, predicates, pair?, list?, null?, ref?, rex?, vector?, void?
 (define procedure? (js-var "prelude_procedureQ"))
 
 ;;; (string-map f s) -> string?
@@ -924,7 +924,7 @@
 ;;; (string->words s) -> list?
 ;;;  s : string?
 ;;; Returns a list of the words in `s`, stripping whitespace and punctuation.
-;;; @category string, string->list, string->number, string->vector
+;;; @category string, string->list, string->number, string->vector, string->chars, string->lines
 (define string->words (js-var "prelude_stringToWords"))
 
 ;;; (ref v) -> ref?
@@ -936,7 +936,7 @@
 ;;; (ref? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a reference cell.
-;;; @category typecheck, predicates, pair?, list?, null?, procedure?, vector?, void?
+;;; @category typecheck, predicates, pair?, list?, null?, procedure?, rex?, vector?, void?
 (define ref? (js-var "prelude_isRef"))
 
 ;;; (deref r) -> any
@@ -974,7 +974,7 @@
 
 ;;; (void) -> void
 ;;; The void value.
-;;; @category constants
+;;; @category constants, list, pair, vector
 (define void (js-var "prelude_voidConst"))
 
 ;;; (with-file filename fn) -> void
