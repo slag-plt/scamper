@@ -1,6 +1,7 @@
 import builtinLibs from '../lib'
 import * as A from './ast'
 import * as L from '../lpm/lang'
+import { Range } from '../lpm'
 import { ScamperDiagnostic, diagnosticToError } from './diagnostic.js'
 import { parseProgramFromSource } from './lezer-bridge'
 
@@ -81,15 +82,26 @@ export async function loadModuleFromFile(filename: string): Promise<void> {
   table().set(filename, moduleIdentifiers(await parseFile(filename)))
 }
 
+/** @returns the file-import statements in `prog`, in source order */
+function fileImportStmts(prog: A.Prog): A.Import[] {
+  return prog.filter(
+    (stmt): stmt is A.Import => stmt.tag === 'import' && stmt.kind === 'file',
+  )
+}
+
 /** @returns the file-system modules directly imported by `prog` */
 export function fileImports(prog: A.Prog): string[] {
-  const imports: string[] = []
-  for (const stmt of prog) {
-    if (stmt.tag === 'import' && stmt.kind === 'file') {
-      imports.push(stmt.module)
-    }
-  }
-  return imports
+  return fileImportStmts(prog).map((stmt) => stmt.module)
+}
+
+/** A file-import failure discovered while loading the transitive import graph. */
+export interface ImportFailure {
+  /** The module that could not be loaded or parsed. */
+  filename: string
+  /** The file whose import statement directly referenced it. */
+  importer: string
+  /** The range of the top-level import that transitively pulled it in. */
+  range: Range
 }
 
 /**
@@ -116,15 +128,33 @@ export async function transitiveFileImports(prog: A.Prog): Promise<string[]> {
 }
 
 /**
- * Loads every file transitively imported by `prog` into the DB, best-effort:
- * a module that is missing or fails to parse is skipped (its symbols simply
- * won't be available). Callers detect a skipped module by its absent DB entry
- * and report it with the import's own source range (see scope.ts).
+ * Loads every file transitively imported by `prog` into the DB. A module that
+ * is missing or fails to parse is skipped (its symbols won't be available).
+ *
+ * The top-level program's own direct-import failures are reported separately by
+ * scope checking (which detects them via the absent DB entry and the import's
+ * own range -- see scope.ts). This function therefore collects only the
+ * failures found *below* the top level -- inside an imported file -- which
+ * nothing else surfaces, and returns them so the caller can report them.
+ *
+ * @returns the transitive (non-top-level) import failures encountered
  */
-export async function loadTransitiveImports(prog: A.Prog): Promise<void> {
+export async function loadTransitiveImports(
+  prog: A.Prog,
+): Promise<ImportFailure[]> {
+  const failures: ImportFailure[] = []
   const seen = new Set<string>()
-  const visit = async (p: A.Prog): Promise<void> => {
-    for (const filename of fileImports(p)) {
+  // `importer` is the file currently being visited (undefined for the top-level
+  // program); `origin` is the top-level import statement whose subtree we're
+  // descending (undefined at the top level). Both are set together exactly when
+  // we are below the top level.
+  const visit = async (
+    p: A.Prog,
+    importer: string | undefined,
+    origin: A.Import | undefined,
+  ): Promise<void> => {
+    for (const stmt of fileImportStmts(p)) {
+      const filename = stmt.module
       if (seen.has(filename)) {
         continue
       }
@@ -132,13 +162,20 @@ export async function loadTransitiveImports(prog: A.Prog): Promise<void> {
       try {
         const imported = await parseFile(filename)
         table().set(filename, moduleIdentifiers(imported))
-        await visit(imported)
+        await visit(imported, filename, origin ?? stmt)
       } catch {
-        // Best-effort: skip a missing / unparseable module (see above).
+        // A missing / unparseable module. Skip it, but if it is below the top
+        // level record the failure: the diagnostic points at the top-level
+        // import that pulled it in (a location in the program being checked)
+        // and names the broken file and its direct importer.
+        if (importer !== undefined && origin !== undefined) {
+          failures.push({ filename, importer, range: origin.range })
+        }
       }
     }
   }
-  await visit(prog)
+  await visit(prog, undefined, undefined)
+  return failures
 }
 
 /** @returns the identifiers for the given module, or undefined if absent */
