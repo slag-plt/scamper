@@ -12,6 +12,15 @@ export async function initialize(): Promise<void> {
 }
 
 /**
+ * Installs `fs` as the global file system, replacing any existing instance.
+ * Used by non-browser hosts (e.g. the CLI) to wire in a file system other than
+ * the browser-only OPFS default.
+ */
+export function setFS(fs: FS): void {
+  instance = fs
+}
+
+/**
  * @returns a handle to the global file system, assumes that it has already
  *          been successfully initialized
  */
