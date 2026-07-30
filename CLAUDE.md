@@ -97,4 +97,4 @@ Scamper programs as a collection of fibers of execution.
     - Use standard tags, e.g., @param and @returns, when possible.
     - If a parameter's use is obvious from its name, the @param tag can be elided.
     - The different parts of a docstring should be short and to the point, appropriate for viewing in a tooltip.
-+ Text enshrined in code whether it is explanatory code comments or git commits should be concise and to the point. Favor bullets and short sentences over lengthy prose.
++ Text that lives in an artifact whether in code comments, docstrings, commit messages, etc., should be concise and to the point; a few sentences or bullets rather than paragraphs.

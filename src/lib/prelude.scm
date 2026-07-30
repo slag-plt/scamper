@@ -214,8 +214,8 @@
 
 ;;; (string->number s) -> number?
 ;;;  s : string?
-;;;   presumed to be a number
-;;; Returns the number denoted by `s` as a `number`.
+;;; Returns the number denoted by `s`, or `#f` if `s`
+;;; does not denote a number.
 ;;; @category string
 (define string->number (js-var "prelude_stringToNumber"))
 
@@ -363,16 +363,40 @@
 ;;; @category list, list creation
 (define pair (js-var "prelude_pair"))
 
+;; N.B., left undocumented, like all-satisfy?: it's contract-support
+;; infrastructure (or/p's fold over its predicates), not a user-facing
+;; binding. Documenting it would make contract.ts wrap it in a checking
+;; lambda whose own checks call all-satisfy? -> car/cdr -> back into the
+;; contracted car/cdr, so it MUST stay undocumented to avoid that cycle.
+;; Uses match (not car/cdr) to walk the list for the same reason: match
+;; decomposes via the runtime's pMatch, so it never reaches contracted car/cdr.
+(define some-satisfy?
+  (lambda (pred? lst)
+    (match lst
+      [null #f]
+      [(cons x rest) (if (pred? x) #t (some-satisfy? pred? rest))])))
+
+;; N.B., or/p combines predicates disjunctively: (or/p p q) is a predicate
+;; that holds when p OR q holds. Written in plain Scamper (not a js-var) so
+;; that applying each predicate is ordinary Scamper application -- JS code can
+;; no longer call back into Scamper (Closure.call/callScamperFn are disabled).
+;; Left UNDOCUMENTED for the same reason as some-satisfy?: a docstring would
+;; make contract.ts wrap it, and that wrapper's checks would recurse through
+;; car/cdr into or/p (which car/cdr's own contract references), re-creating the
+;; cycle. Requires at least one predicate: the arglist grammar has no
+;; zero-fixed-param rest form, and or/p over no predicates is never needed.
+(define or/p
+  (lambda (first . rest)
+    (lambda (x) (some-satisfy? (lambda (p) (p x)) (cons first rest)))))
+
 ;;; (car v) -> any
-;;;  v : any
-;;;   pair? or list?
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Returns the first element of `v`.
 ;;; @category list, list manipulation, association list
 (define car (js-var "prelude_car"))
 
 ;;; (cdr v) -> any
-;;;  v : any
-;;;   pair? or list?
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Returns the second element of `v`.
 ;;; @category list, list manipulation, association list
 (define cdr (js-var "prelude_cdr"))
@@ -388,6 +412,12 @@
 ;;; Returns `#t` if and only `v` is a list.
 ;;; @category list, association list, typecheck, predicates
 (define list? (js-var "prelude_listQ"))
+
+;;; (nonempty-list? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a non-empty list.
+;;; @category typecheck, predicates
+(define nonempty-list? (js-var "prelude_nonemptyListQ"))
 
 ;;; (list . v1) -> list?
 ;;;  v1 : any
@@ -963,199 +993,171 @@
 
 ;;; (caar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car v))`.
 ;;; @category list, list manipulation, association list
-(define caar (js-var "prelude_caar"))
+(define caar (lambda (v) (car (car v))))
 
 ;;; (cadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr v))`.
 ;;; @category list, list manipulation, association list
-(define cadr (js-var "prelude_cadr"))
+(define cadr (lambda (v) (car (cdr v))))
 
 ;;; (cdar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car v))`.
 ;;; @category list, list manipulation, association list
-(define cdar (js-var "prelude_cdar"))
+(define cdar (lambda (v) (cdr (car v))))
 
 ;;; (cddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr v))`.
 ;;; @category list, list manipulation, association list
-(define cddr (js-var "prelude_cddr"))
+(define cddr (lambda (v) (cdr (cdr v))))
 
 ;;; (caaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (car v)))`.
 ;;; @category list, list manipulation, association list
-(define caaar (js-var "prelude_caaar"))
+(define caaar (lambda (v) (car (car (car v)))))
 
 ;;; (cadar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (car v)))`.
 ;;; @category list, list manipulation, association list
-(define cadar (js-var "prelude_cadar"))
+(define cadar (lambda (v) (car (cdr (car v)))))
 
 ;;; (cdaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (car v)))`.
 ;;; @category list, list manipulation, association list
-(define cdaar (js-var "prelude_cdaar"))
+(define cdaar (lambda (v) (cdr (car (car v)))))
 
 ;;; (cddar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (car v)))`.
 ;;; @category list, list manipulation, association list
-(define cddar (js-var "prelude_cddar"))
+(define cddar (lambda (v) (cdr (cdr (car v)))))
 
 ;;; (caadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (cdr v)))`.
 ;;; @category list, list manipulation, association list
-(define caadr (js-var "prelude_caadr"))
+(define caadr (lambda (v) (car (car (cdr v)))))
 
 ;;; (caddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (cdr v)))`.
 ;;; @category list, list manipulation, association list
-(define caddr (js-var "prelude_caddr"))
+(define caddr (lambda (v) (car (cdr (cdr v)))))
 
 ;;; (cdadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (cdr v)))`.
 ;;; @category list, list manipulation, association list
-(define cdadr (js-var "prelude_cdadr"))
+(define cdadr (lambda (v) (cdr (car (cdr v)))))
 
 ;;; (cdddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (cdr v)))`.
 ;;; @category list, list manipulation, association list
-(define cdddr (js-var "prelude_cdddr"))
+(define cdddr (lambda (v) (cdr (cdr (cdr v)))))
 
 ;;; (caaaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (car (car v))))`.
 ;;; @category list, list manipulation, association list
-(define caaaar (js-var "prelude_caaaar"))
+(define caaaar (lambda (v) (car (car (car (car v))))))
 
 ;;; (cadaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (car (car v))))`.
 ;;; @category list, list manipulation, association list
-(define cadaar (js-var "prelude_cadaar"))
+(define cadaar (lambda (v) (car (cdr (car (car v))))))
 
 ;;; (cdaaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (car (car v))))`.
 ;;; @category list, list manipulation, association list
-(define cdaaar (js-var "prelude_cdaaar"))
+(define cdaaar (lambda (v) (cdr (car (car (car v))))))
 
 ;;; (cddaar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (car (car v))))`.
 ;;; @category list, list manipulation, association list
-(define cddaar (js-var "prelude_cddaar"))
+(define cddaar (lambda (v) (cdr (cdr (car (car v))))))
 
 ;;; (caadar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
-(define caadar (js-var "prelude_caadar"))
+(define caadar (lambda (v) (car (car (cdr (car v))))))
 
 ;;; (caddar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
-(define caddar (js-var "prelude_caddar"))
+(define caddar (lambda (v) (car (cdr (cdr (car v))))))
 
 ;;; (cdadar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
-(define cdadar (js-var "prelude_cdadar"))
+(define cdadar (lambda (v) (cdr (car (cdr (car v))))))
 
 ;;; (cdddar v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
-(define cdddar (js-var "prelude_cdddar"))
+(define cdddar (lambda (v) (cdr (cdr (cdr (car v))))))
 
 ;;; (caaadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define caaadr (js-var "prelude_caaadr"))
+(define caaadr (lambda (v) (car (car (car (cdr v))))))
 
 ;;; (cadadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cadadr (js-var "prelude_cadadr"))
+(define cadadr (lambda (v) (car (cdr (car (cdr v))))))
 
 ;;; (cdaadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cdaadr (js-var "prelude_cdaadr"))
+(define cdaadr (lambda (v) (cdr (car (car (cdr v))))))
 
 ;;; (cddadr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cddadr (js-var "prelude_cddadr"))
+(define cddadr (lambda (v) (cdr (cdr (car (cdr v))))))
 
 ;;; (caaddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (car (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define caaddr (js-var "prelude_caaddr"))
+(define caaddr (lambda (v) (car (car (cdr (cdr v))))))
 
 ;;; (cadddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(car (cdr (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cadddr (js-var "prelude_cadddr"))
+(define cadddr (lambda (v) (car (cdr (cdr (cdr v))))))
 
 ;;; (cdaddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (car (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cdaddr (js-var "prelude_cdaddr"))
+(define cdaddr (lambda (v) (cdr (car (cdr (cdr v))))))
 
 ;;; (cddddr v) -> any
 ;;;  v : any
-;;;   pair? or list?
 ;;; Equivalent to `(cdr (cdr (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
-(define cddddr (js-var "prelude_cddddr"))
+(define cddddr (lambda (v) (cdr (cdr (cdr (cdr v))))))
 
 ;;; (char=? . c1) -> boolean?
 ;;;  c1 : char?

@@ -6,6 +6,7 @@ import { expandProgram } from '../../src/scheme/expansion'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import * as A from '../../src/scheme/ast'
 import { Loc, Range, ScamperError } from '../../src/lpm'
+import { runProgram } from '../harness.js'
 
 // This suite exercises scope checking (`scopeCheckProgram`) and scope-tree
 // construction (`makeScopeTreeFromProgram`) across every binding form and a
@@ -566,4 +567,107 @@ describe('scope tree', () => {
       expect(names).toContain('local')
     })
   })
+})
+
+///// Scope checking through the run pipeline (not yet wired) //////////////////
+
+// N.B., preserved from main's suite. These specs describe scope-checking
+// behavior surfaced through `runProgram` (the default compile+run path), which
+// deliberately does NOT run the scope-check pass yet -- it's opt-in (see
+// compile's `scopeCheck` option / the CLI `--check` flag). They stay
+// skipped/expected-to-fail until scope checking is wired into the default
+// pipeline. The static behavior itself is covered directly above.
+
+test.fails('duplicate-binders', async () => {
+  expect(
+    await runProgram(`
+(lambda (x x y) (+ x x))
+
+(struct foo (z y z))
+`),
+  ).toEqual([
+    ':8:0: Parser error:',
+    'Duplicate name x given in definition.',
+    'In program: (x x y)',
+  ])
+})
+
+test.skip('let-binding-errors', async () => {
+  expect(
+    await runProgram(`
+; let bindings telescope
+(let
+  ([x1 1]
+   [y1 (+ x1 6)])
+  (+ x1 y1))
+
+; let bindings refer to future bindings
+
+(let
+  ([x2 y2]
+   [y2 5])
+  (+ x2 y2))
+
+(let*
+  ([x3 y3]
+   [y3 5])
+  (+ x3 y3))
+`),
+  ).toEqual([
+    "Parser error [4:11-4:12]: Undefined variable 'x1'",
+    "Parser error [10:8-10:9]: Undefined variable 'y2'",
+    "Parser error [15:8-15:9]: Undefined variable 'y3'",
+  ])
+})
+
+test.fails('match-repeated-bindings', async () => {
+  expect(
+    await runProgram(`
+(match (list 1 2 3)
+  [null "fail"]
+  [(cons x x) "fail"])
+`),
+  ).toEqual([
+    ':3:2: Scope error:',
+    'Variable x is repeated in the pattern',
+    'In program: (match (list 1 2 3)',
+    '[null "fail"]',
+    '[(cons x x) "fail"])',
+  ])
+})
+
+test.skip.fails('shadowing', async () => {
+  expect(
+    await runProgram(`
+(define x 3)
+
+(define y (+ x 2))
+
+(define x -5)
+
+(+ x y)
+
+(define f
+  (lambda (x)
+    (* x 2)))
+
+(f 3)
+
+(let*
+  ([z 10]
+   [x (+ z x)]
+   [z 100])
+  (+ x z))
+
+x
+`),
+  ).toEqual(['0', '6', '105', '-5'])
+})
+
+test.skip('undefined-variable', async () => {
+  expect(
+    await runProgram(`
+(+ x 1)
+`),
+  ).toEqual(["Parser error [1:4-1:4]: Undefined variable 'x'"])
 })

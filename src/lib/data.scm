@@ -10,9 +10,9 @@
 ;;; @category data
 (define string->chars (js-var "data_stringToChars"))
 
-;;; (string->lines chars) -> list?
-;;;  chars : list?
-;;; Splits the string `s` into a list of strings, where each string is a line of text..
+;;; (string->lines s) -> list?
+;;;  s : string?
+;;; Splits the string `s` into a list of strings, where each string is a line of text.
 ;;; @category data
 (define string->lines (js-var "data_stringToLines"))
 

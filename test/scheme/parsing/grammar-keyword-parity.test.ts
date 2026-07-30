@@ -1,12 +1,12 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, test } from 'vitest'
-import { reservedWords } from '../../src/scheme/reserved-words'
+import { reservedWords } from '../../../src/scheme/reserved-words'
 
 describe('syntax.grammar keyword parity', () => {
   test('every reserved word has a matching kw<...> production, and vice versa', () => {
     const grammarSrc = readFileSync(
-      resolve(__dirname, '../../src/scheme/syntax.grammar'),
+      resolve(__dirname, '../../../src/scheme/syntax.grammar'),
       'utf-8',
     )
     const grammarKeywords = new Set(

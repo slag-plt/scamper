@@ -1,8 +1,8 @@
 import { shallowRef } from 'vue'
 import { describe, expect, test } from 'vitest'
-import { Loc } from '../../src/lpm'
-import type { CodeMirrorEditorAdapter } from '../../src/app/web/composables/codemirror-editor-adapter'
-import { makeMockCodeMirrorEditorAdapter } from '../stubs/mock-code-mirror-editor-adapter'
+import { Loc } from '../../../src/lpm'
+import type { CodeMirrorEditorAdapter } from '../../../src/app/web/composables/codemirror-editor-adapter'
+import { makeMockCodeMirrorEditorAdapter } from '../../stubs/mock-code-mirror-editor-adapter'
 
 function createTestEditorContext() {
   const holder = shallowRef<CodeMirrorEditorAdapter | null>(null)

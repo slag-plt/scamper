@@ -1,4 +1,3 @@
-import { expect, test } from 'vitest'
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 import { Fiber } from '../src/lpm/fiber'
@@ -53,12 +52,4 @@ export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promis
     const fiber = new Fiber(prog, env)
     runFiber(fiber, out)
     return out.levels
-}
-
-export function scamperTest (label: string, src: string, expected: string[]) {
-  test(label, async () => { expect(await runProgram(src.trim())).toEqual(expected) })
-}
-
-export function failingScamperTest (label: string, src: string, expected: string[]) {
-  test.fails(label, async () => { expect(await runProgram(src.trim())).toEqual(expected) })
 }

@@ -14,17 +14,39 @@ import { Param } from './docstring/param.js'
 const contractTargetName = '##contract-target##'
 
 /**
+ * The bare name of a simple `var` predicate with any trailing `?` stripped,
+ * e.g. `pair?` ~> "pair", `nonempty-list?` ~> "nonempty-list". Used to render
+ * the disjuncts of an `(or/p ...)` predicate without an article.
+ */
+function predBareName(pred: A.Identifier): string {
+  return pred.name.endsWith('?') ? pred.name.slice(0, -1) : pred.name
+}
+
+/**
  * A short, human-readable description of a predicate, suitable for embedding
  * in an "expected ..." contract violation message, e.g. `number?` ~> `a
- * number`, `integer?` ~> `an integer`. Complex predicates (`(list-of
- * number?)`) don't reduce to a single word, so they're rendered as-is.
+ * number`, `integer?` ~> `an integer`. An `(or/p p1 ... pk)` predicate over
+ * simple `var` disjuncts renders as `p1, ..., or pk` (Oxford join, no
+ * leading article), e.g. `(or/p pair? nonempty-list?)` ~> "pair or
+ * nonempty-list". Other complex predicates (`(list-of number?)`) don't reduce
+ * to a single word, so they're rendered as-is.
  */
 function describePred(pred: Pred): string {
   if (pred.tag !== 'id') {
+    const args = pred.args
+    if (pred.head.name === 'or/p' && args.length > 0 && args.every(A.isVar)) {
+      const names = args.map(predBareName)
+      if (names.length === 1) {
+        return names[0]
+      }
+      if (names.length === 2) {
+        return `${names[0]} or ${names[1]}`
+      }
+      return `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`
+    }
     return `a value matching \`${A.expToString(pred)}\``
   }
-  const predName = pred.name
-  const name = predName.endsWith('?') ? predName.slice(0, -1) : predName
+  const name = predBareName(pred)
   const article = /^[aeiou]/i.test(name) ? 'an' : 'a'
   return `${article} ${name}`
 }

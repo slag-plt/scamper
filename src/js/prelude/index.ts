@@ -22,7 +22,7 @@ export function prelude_numberQ(x: any): boolean {
 }
 
 export function prelude_realQ(x: any): boolean {
-  return typeof x === 'number' && !Number.isInteger(x)
+  return typeof x === 'number' && Number.isFinite(x)
 }
 
 export function prelude_integerQ(x: any): boolean {
@@ -106,7 +106,15 @@ export function prelude_times(...xs: number[]): number {
 }
 
 export function prelude_div(...xs: number[]): number {
-  return xs.length === 1 ? 1 / xs[0] : xs.reduce((a, b) => a / b)
+  // `/` folds left-to-right; unary `(/ x)` means `1/x`. Any zero divisor
+  // anywhere in the chain errors rather than producing Infinity/NaN.
+  const divide = (a: number, b: number): number => {
+    if (b === 0) {
+      throw new L.ScamperError('Runtime', '/: division by zero')
+    }
+    return a / b
+  }
+  return xs.length === 1 ? divide(1, xs[0]) : xs.reduce(divide)
 }
 
 export function prelude_abs(x: number): number {
@@ -123,14 +131,23 @@ export function prelude_abs(x: number): number {
 // To avoid clutter in the documentation.
 
 export function prelude_quotient(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'quotient: division by zero')
+  }
   return Math.trunc(x / y)
 }
 
 export function prelude_remainder(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'remainder: division by zero')
+  }
   return x % y
 }
 
 export function prelude_modulo(x: number, y: number): number {
+  if (y === 0) {
+    throw new L.ScamperError('Runtime', 'modulo: division by zero')
+  }
   return ((x % y) + y) % y
 }
 
@@ -196,13 +213,14 @@ export function prelude_numberToString(x: number): string {
 //   (string->number s)
 //   (string->number s radix)
 
-export function prelude_stringToNumber(s: string): number {
+export function prelude_stringToNumber(s: string): number | boolean {
+  // N.B., per R7RS, return #f when the string does not denote a number.
   if (/^[+-]?\d+$/.test(s)) {
     return parseInt(s)
   } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
     return parseFloat(s)
   } else {
-    throw new Error(`Runtime error: string->number: invalid string: ${s}`)
+    return false
   }
 }
 
@@ -349,56 +367,13 @@ export function prelude_cdr(x: L.Value): L.Value {
   }
 }
 
-const listAccessors = [
-  // 4-character accessors
-  'caar',
-  'cadr',
-  'cdar',
-  'cddr',
-  // 5-character accessors
-  'caaar',
-  'cadar',
-  'cdaar',
-  'cddar',
-  'caadr',
-  'caddr',
-  'cdadr',
-  'cdddr',
-  // 6-character accessors
-  'caaaar',
-  'cadaar',
-  'cdaaar',
-  'cddaar',
-  'caadar',
-  'caddar',
-  'cdadar',
-  'cdddar',
-  'caaadr',
-  'cadadr',
-  'cdaadr',
-  'cddadr',
-  'caaddr',
-  'cadddr',
-  'cdaddr',
-  'cddddr',
-]
-export const prelude_listAccessorFns: Record<string, (x: L.Value) => L.Value> = {}
-listAccessors.forEach((name) => {
-  const path = name.slice(1, name.length - 1)
-  const fn = function (x: L.Value): L.Value {
-    let ret = path.endsWith('a') ? prelude_car(x) : prelude_cdr(x)
-    for (let i = path.length - 2; i >= 0; i--) {
-      ret = path[i] === 'a' ? prelude_car(ret) : prelude_cdr(ret)
-    }
-    return ret
-  }
-  prelude_listAccessorFns[`prelude_${name}`] = fn
-})
+// N.B., the c[ad]+r accessor family (caar, cadr, ..., cddddr) is defined in
+// prelude.scm as ordinary Scheme compositions over car/cdr, so it inherits
+// their (or/p pair? nonempty-list?) contract checks rather than leaking a raw
+// JS TypeError on a bad argument.
 
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
-
-// TODO: implement caar, cadr, cdar, cddr, caaar, ..., cdddr in some elegant way
 
 export function prelude_nullQ(x: any): boolean {
   return x === null
@@ -406,6 +381,10 @@ export function prelude_nullQ(x: any): boolean {
 
 export function prelude_listQ(x: any): boolean {
   return L.isList(x)
+}
+
+export function prelude_nonemptyListQ(x: L.Value): boolean {
+  return prelude_listQ(x) && x !== null
 }
 
 export function prelude_list(...xs: L.Value[]): L.List {
@@ -880,10 +859,22 @@ export function prelude_vectorLength(v: L.Value[]): number {
 }
 
 export function prelude_vectorRef(v: L.Value[], i: number): L.Value {
+  if (i < 0 || i >= v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-ref: index ${i} out of bounds of vector`,
+    )
+  }
   return v[i]
 }
 
 export function prelude_vectorSet(v: L.Value[], i: number, x: L.Value): void {
+  if (i < 0 || i >= v.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `vector-set!: index ${i} out of bounds of vector`,
+    )
+  }
   v[i] = x
 }
 

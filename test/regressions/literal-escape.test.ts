@@ -11,6 +11,6 @@ test('literal-escape', async () => {
   `)).toEqual([
     '"["',
     '"]"',
-    '"\\"'
+    '"\\\\"' // string containing a single backslash -> escaped as "\\" (see #252)
   ])
 })

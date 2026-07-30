@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { runProgram } from '../harness'
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +51,8 @@ test('append-reverse', async () => {
 (reverse (list "Hello" "World"))
 (reverse (list "abab" "abab"))
 (reverse (list 1 2 3))
+(reverse (list 1 2 3 4 5))
+(reverse (reverse (list 1 2 3 4 5 6 7 8 9 10)))
 `),
   ).toEqual([
     '(list "ab" "ba" 1 2 3)',
@@ -63,9 +65,17 @@ test('append-reverse', async () => {
     '(list "World" "Hello")',
     '(list "abab" "abab")',
     '(list 3 2 1)',
+    '(list 5 4 3 2 1)',
+    '(list 1 2 3 4 5 6 7 8 9 10)',
   ])
 })
 
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - map's own
+// implementation calls the user-supplied function argument via
+// callScamperFn regardless of whether it's a JsFunction or a closure. Only
+// the `apply` calls in this test pass; `map` needs to be rewritten in
+// Scamper itself (like all-satisfy? in prelude.scm) before this can pass.
 test.skip('apply-map', async () => {
   expect(
     await runProgram(`
@@ -252,6 +262,297 @@ test('car-cdr', async () => {
   ])
 })
 
+describe('list accessors (c[ad]+r family)', () => {
+  function mkAccessorTestSource(list: string, fn: string): string {
+    return `
+      (define test-list ${list})
+      (${fn} test-list)
+    `
+  }
+
+  test('car', async () => {
+    expect(await runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'car'))).toEqual(
+      ['"a"'],
+    )
+  })
+
+  test('cdr', async () => {
+    expect(await runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cdr'))).toEqual(
+      ['(list "b" "c")'],
+    )
+  })
+
+  // 4-character accessor tests
+  test('caar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'caar'),
+      ),
+    ).toEqual(['"a"'])
+  })
+
+  test('cadr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cadr')),
+    ).toEqual(['"b"'])
+  })
+
+  test('cdar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list (list "a" "b") (list "c" "d"))', 'cdar'),
+      ),
+    ).toEqual(['(list "b")'])
+  })
+
+  test('cddr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c")', 'cddr')),
+    ).toEqual(['(list "c")'])
+  })
+
+  // 5-character accessor tests
+  test('caaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))',
+          'caaar',
+        ),
+      ),
+    ).toEqual(['"a"'])
+  })
+
+  test('cadar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" (list "b" "c")) (list "d" (list "e" "f")))',
+          'cadar',
+        ),
+      ),
+    ).toEqual(['(list "b" "c")'])
+  })
+
+  test('cdaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h")))',
+          'cdaar',
+        ),
+      ),
+    ).toEqual(['(list "b")'])
+  })
+
+  test('cddar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" "b" "c") (list "d" "e" "f"))',
+          'cddar',
+        ),
+      ),
+    ).toEqual(['(list "c")'])
+  })
+
+  test('caadr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" (list "b" "c") "d")', 'caadr')),
+    ).toEqual(['"b"'])
+  })
+
+  test('caddr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', 'caddr')),
+    ).toEqual(['"c"'])
+  })
+
+  test('cdadr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cdadr'),
+      ),
+    ).toEqual(['(list "c" "d")'])
+  })
+
+  test('cdddr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d")', 'cdddr')),
+    ).toEqual(['(list "d")'])
+  })
+
+  // 6-character accessor tests
+  test('caaaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))',
+          'caaaar',
+        ),
+      ),
+    ).toEqual(['"a"'])
+  })
+
+  test('cadaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list "a" (list "b" "c")) (list "d" (list "e" "f"))) (list (list "g" (list "h" "i")) (list "j" (list "k" "l"))))',
+          'cadaar',
+        ),
+      ),
+    ).toEqual(['(list "b" "c")'])
+  })
+
+  test('cdaaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list (list "a" "b") (list "c" "d")) (list (list "e" "f") (list "g" "h"))) (list (list (list "i" "j") (list "k" "l")) (list (list "m" "n") (list "o" "p"))))',
+          'cdaaar',
+        ),
+      ),
+    ).toEqual(['(list "b")'])
+  })
+
+  test('cddaar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list (list "a" "b" "c") (list "d" "e" "f")) (list (list "g" "h" "i") (list "j" "k" "l")))',
+          'cddaar',
+        ),
+      ),
+    ).toEqual(['(list "c")'])
+  })
+
+  test('caadar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))',
+          'caadar',
+        ),
+      ),
+    ).toEqual(['(list "b" "c")'])
+  })
+
+  test('caddar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" "b" (list "c" "d")) (list "e" "f" (list "g" "h")))',
+          'caddar',
+        ),
+      ),
+    ).toEqual(['(list "c" "d")'])
+  })
+
+  test('cdadar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" (list (list "b" "c") (list "d" "e"))) (list "f" (list (list "g" "h") (list "i" "j"))))',
+          'cdadar',
+        ),
+      ),
+    ).toEqual(['(list (list "d" "e"))'])
+  })
+
+  test('cdddar', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list (list "a" "b" "c" "d") (list "e" "f" "g" "h"))',
+          'cdddar',
+        ),
+      ),
+    ).toEqual(['(list "d")'])
+  })
+
+  test('caaadr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list "a" (list (list "b" "c") (list "d" "e")) "f")',
+          'caaadr',
+        ),
+      ),
+    ).toEqual(['"b"'])
+  })
+
+  test('cadadr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list "a" (list "b" (list "c" "d")) "e")',
+          'cadadr',
+        ),
+      ),
+    ).toEqual(['(list "c" "d")'])
+  })
+
+  test('cdaadr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource(
+          '(list "a" (list (list "b" "c") (list "d" "e")) "f")',
+          'cdaadr',
+        ),
+      ),
+    ).toEqual(['(list "c")'])
+  })
+
+  test('cddadr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list "a" (list "b" "c" "d") "e")', 'cddadr'),
+      ),
+    ).toEqual(['(list "d")'])
+  })
+
+  test('caaddr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list "a" "b" (list "c" "d") "e")', 'caaddr'),
+      ),
+    ).toEqual(['"c"'])
+  })
+
+  test('cadddr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cadddr')),
+    ).toEqual(['"d"'])
+  })
+
+  test('cdaddr', async () => {
+    expect(
+      await runProgram(
+        mkAccessorTestSource('(list "a" "b" (list "c" "d" "e") "f")', 'cdaddr'),
+      ),
+    ).toEqual(['(list "d" "e")'])
+  })
+
+  test('cddddr', async () => {
+    expect(
+      await runProgram(mkAccessorTestSource('(list "a" "b" "c" "d" "e")', 'cddddr')),
+    ).toEqual(['(list "e")'])
+  })
+})
+
+test('ceiling', async () => {
+  expect(
+    await runProgram(`
+(ceiling 3.2)
+(ceiling 4)
+(ceiling 3.001)
+(ceiling -2.1)
+(ceiling 0.0)
+`),
+  ).toEqual(['4', '4', '4', '-2', '0'])
+})
+
 test('char-comp', async () => {
   expect(
     await runProgram(`
@@ -427,6 +728,11 @@ test('char-pred', async () => {
   ])
 })
 
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - compose and |>
+// both call their function arguments via callScamperFn, so any composition
+// of more than one function fails immediately. Needs compose/pipe rewritten
+// in Scamper itself (like all-satisfy? in prelude.scm) before this can pass.
 test.skip('compose', async () => {
   expect(
     await runProgram(`
@@ -487,6 +793,21 @@ test('cons-pair', async () => {
   ])
 })
 
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - map's own
+// implementation calls the user-supplied function argument via
+// callScamperFn regardless of whether it's a JsFunction or a closure, so
+// map now fails before it ever reaches char-upcase's contract check.
+test.skip('contract-check-map', async () => {
+  expect(
+    await runProgram(`
+(map char-upcase (list "h" "e" "l" "l" "o"))
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:44]: (map) expected a character, received string',
+  ])
+})
+
 test('equal', async () => {
   expect(
     await runProgram(`
@@ -498,6 +819,16 @@ test('equal', async () => {
 (equal? 4 4.0)
 `),
   ).toEqual(['#t', '#f', '#t', '#f', '#f', '#t'])
+})
+
+test('error', async () => {
+  expect(
+    await runProgram(`
+(error "This is an example runtime error")
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:42]: (error) This is an example runtime error',
+  ])
 })
 
 test('error-qq', async () => {
@@ -674,8 +1005,10 @@ test('length', async () => {
   expect(
     await runProgram(`
 (length (list 28 0 "know"))
+(length (list))
+(length (list 1 2 3 4 5))
 `),
-  ).toEqual(['3'])
+  ).toEqual(['3', '0', '5'])
 })
 
 test('list-makeList', async () => {
@@ -787,13 +1120,32 @@ test('min-max', async () => {
 (min 100 10 1)
 (min 2.0 2)
 (min 3.0 3.1)
+(min -5)
+(min 1 1 1 1 1 1 1)
 (max 4 7 2)
 (max 0.01 0.2 0.5)
 (max 100 10 1)
 (max 2.0 2)
 (max 3.0 3.1)
+(max -5)
+(max 1 1 1 1 1 1 1)
 `),
-  ).toEqual(['2', '0.01', '1', '2', '3', '7', '0.5', '100', '2', '3.1'])
+  ).toEqual([
+    '2',
+    '0.01',
+    '1',
+    '2',
+    '3',
+    '-5',
+    '1',
+    '7',
+    '0.5',
+    '100',
+    '2',
+    '3.1',
+    '-5',
+    '1',
+  ])
 })
 
 test('nanQ', async () => {
@@ -831,8 +1183,8 @@ test('not-boolean', async () => {
   // non-boolean argument is a contract violation, enforced by the
   // docstring-derived wrapper in contract.ts. The reported range points at
   // `not`'s own definition in prelude.scm rather than the call site -- a
-  // known, unrelated limitation of contract-wrapped errors (see cons-pair,
-  // range above).
+  // known, unrelated limitation of contract-wrapped errors (#254; see
+  // cons-pair, range above).
   expect(
     await runProgram(`
 (not #t)
@@ -975,38 +1327,27 @@ test('positive-negative', async () => {
   ).toEqual(['#f', '#f', '#f', '#t', '#t', '#f', '#t', '#t', '#f', '#f'])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - JS libs can no
-// longer invoke Scamper closures/functions directly.
-test.skip('random', async () => {
+test('qq', async () => {
   expect(
     await runProgram(`
-(define max-value 5)
-(define num-tests 100)
-
-(|> (make-list num-tests max-value)
-    (lambda (l) (map random l))
-    (lambda (l) (map (lambda (x) (and (>= x 0) (< x max-value))) l))
-    (lambda (l) (reduce (lambda (b1 b2) (and b1 b2)) l))
-    )
-
-(define dice
-  (lambda ()
-    (+ 1 (random 6))))
-
-(define make-dice-rolls
-  (lambda (n)
-    (if (zero? n)
-        null
-        (cons (dice) (make-dice-rolls (- n 1))))))
-
-(|> (make-dice-rolls num-tests)
-    (lambda (l) (map (lambda (x) (and (>= x 1) (<= x 6))) l))
-    (lambda (l) (reduce (lambda (b1 b2) (and b1 b2)) l))
-    )
-
+(+ (??) 1)
 `),
-  ).toEqual(['#t', '#t'])
+  ).toEqual(['Runtime error [1:4-1:7]: (??) Hole encountered in program!'])
+})
+
+test('random', async () => {
+  // N.B., random can no longer be driven through map/reduce pipelines (see
+  // #248), so we call it directly many times and assert every result is an
+  // integer in [0, n) -- no determinism required.
+  const results = await runProgram(
+    Array.from({ length: 100 }, () => '(random 5)').join('\n'),
+  )
+  for (const r of results) {
+    const v = Number(r)
+    expect(Number.isInteger(v)).toBe(true)
+    expect(v).toBeGreaterThanOrEqual(0)
+    expect(v).toBeLessThan(5)
+  }
 })
 
 test('range', async () => {
@@ -1102,7 +1443,7 @@ test('real', async () => {
 (real? (/ 50 2))
 (real? (/ 51 2))
 `),
-  ).toEqual(['#f', '#t', '#f', '#f', '#t'])
+  ).toEqual(['#t', '#t', '#f', '#t', '#t'])
 })
 
 test('remainder-modulo', async () => {
@@ -1212,6 +1553,15 @@ test('square-sqrt', async () => {
   ])
 })
 
+test('string-append', async () => {
+  expect(
+    await runProgram(`
+(string-append "hello" " " "world!")
+(string-append "hi")
+`),
+  ).toEqual(['"hello world!"', '"hi"'])
+})
+
 test('string-comp', async () => {
   expect(
     await runProgram(`
@@ -1315,6 +1665,16 @@ test('string-comp', async () => {
   ])
 })
 
+test('string-length', async () => {
+  expect(
+    await runProgram(`
+(string-length "hello world")
+(string-length "")
+(string-length "\n\n\n\n\n")
+`),
+  ).toEqual(['11', '0', '5'])
+})
+
 test('string-length-ref', async () => {
   expect(
     await runProgram(`
@@ -1406,6 +1766,14 @@ test('string-ops', async () => {
     '(list #\\h #\\e #\\l #\\l #\\o #\\space #\\w #\\o #\\r #\\l #\\d)',
     '"hello world"',
   ])
+})
+
+test('string-split', async () => {
+  expect(
+    await runProgram(`
+(string-split "Twas brillig and the slithy toves" " ")
+`),
+  ).toEqual(['(list "Twas" "brillig" "and" "the" "slithy" "toves")'])
 })
 
 test('string-split-append', async () => {
@@ -1619,4 +1987,972 @@ test('zero', async () => {
 (zero? 1)
 `),
   ).toEqual(['#f', '#f', '#t', '#t', '#f'])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Numeric & Comparison Operations
+
+test('nanQ-actual-nan', async () => {
+  // `(/ 0.0 0.0)` used to produce NaN, but division by zero now errors (#258).
+  // `(sqrt -1)` is a NaN source that does not go through a zero divisor.
+  expect(
+    await runProgram(`
+(nan? (sqrt -1))
+`),
+  ).toEqual(['#t'])
+})
+
+test('gt-equal', async () => {
+  expect(
+    await runProgram(`
+(> 5 5)
+(> 5.0 5)
+`),
+  ).toEqual(['#f', '#f'])
+})
+
+test('div-zero', async () => {
+  // Fixed (#258): division by zero now raises a clean runtime error instead of
+  // silently yielding Infinity/NaN. See test/regressions/division-by-zero for
+  // the full matrix (variadic mid-chain, unary, 0/0, quotient/modulo/remainder).
+  expect(
+    await runProgram(`
+(/ 5 0)
+`),
+  ).toEqual([
+    expect.stringContaining('/: division by zero'),
+  ])
+})
+
+test('quotient-negative-zero', async () => {
+  // The zero-divisor case used to yield Infinity; it now errors (#258). Valid
+  // negative-argument quotients are unaffected.
+  expect(
+    await runProgram(`
+(quotient -7 2)
+(quotient 7 -2)
+(quotient -7 -2)
+`),
+  ).toEqual(['-3', '-3', '3'])
+  expect(await runProgram('(quotient 5 0)')).toEqual([
+    expect.stringContaining('quotient: division by zero'),
+  ])
+})
+
+test('remainder-negative', async () => {
+  expect(
+    await runProgram(`
+(remainder -7 2)
+(remainder 7 -2)
+(remainder -7 -2)
+`),
+  ).toEqual(['-1', '1', '-1'])
+})
+
+test('modulo-negative-divisor', async () => {
+  expect(
+    await runProgram(`
+(modulo -7 2)
+(modulo 7 -2)
+(modulo -7 -2)
+`),
+  ).toEqual(['1', '-1', '-1'])
+})
+
+test('floor-negative', async () => {
+  expect(
+    await runProgram(`
+(floor -2.1)
+`),
+  ).toEqual(['-3'])
+})
+
+test('truncate-negative', async () => {
+  expect(
+    await runProgram(`
+(truncate -2.1)
+`),
+  ).toEqual(['-2'])
+})
+
+test('round-negative-tie', async () => {
+  expect(
+    await runProgram(`
+(round -6.1)
+(round 2.5)
+(round -2.5)
+`),
+  ).toEqual(['-6', '3', '-2'])
+})
+
+test('sqrt-negative', async () => {
+  expect(
+    await runProgram(`
+(sqrt -1)
+`),
+  ).toEqual(['NaN'])
+})
+
+test('expt-zero-negative-exponent', async () => {
+  expect(
+    await runProgram(`
+(expt 5 0)
+(expt 2 -1)
+`),
+  ).toEqual(['1', '0.5'])
+})
+
+test('log-domain-edge', async () => {
+  expect(
+    await runProgram(`
+(log 0)
+(log -1)
+`),
+  ).toEqual(['-Infinity', 'NaN'])
+})
+
+test('asin-boundary', async () => {
+  expect(
+    await runProgram(`
+(asin 1)
+(asin -1)
+`),
+  ).toEqual(['1.5707963267948966', '-1.5707963267948966'])
+})
+
+test('number-to-string-negative-zero', async () => {
+  expect(
+    await runProgram(`
+(number->string -5)
+(number->string 0)
+`),
+  ).toEqual(['"-5"', '"0"'])
+})
+
+test('string-to-number-negative', async () => {
+  expect(
+    await runProgram(`
+(string->number "-5")
+`),
+  ).toEqual(['-5'])
+})
+
+test('=-eps', async () => {
+  // N.B., =-eps's docstring declares its param `n : number?`, so a
+  // non-number argument is a contract violation -- the reported range
+  // points at =-eps's own definition in prelude.scm rather than the call
+  // site (see cons-pair, not-boolean above).
+  expect(
+    await runProgram(`
+((=-eps 0.5) 1 1.3)
+((=-eps 0.1) 1 2)
+(define close? (=-eps 0.01))
+(close? 3.001 3.002)
+(=-eps "a")
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#t',
+    'Runtime error [71:1-71:43]: (error) expected a number, received string',
+  ])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Pairs & List Accessors (car/cdr family)
+
+describe('list accessors (c[ad]+r family) - empty-list failures', () => {
+  // N.B., car/cdr now carry an `(or/p pair? nonempty-list?)` contract, and the
+  // whole c[ad]+r family is defined as Scheme compositions over them, so every
+  // member rejects the empty list with the same clean contract error (#256)
+  // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
+  // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
+  // The reported range points at that primitive's definition in prelude.scm.
+  const stripRange = (msgs: string[]): string[] =>
+    msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
+  const members = [
+    'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
+    'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',
+    'cddaar', 'caadar', 'caddar', 'cdadar', 'cdddar', 'caaadr', 'cadadr',
+    'cdaadr', 'cddadr', 'caaddr', 'cadddr', 'cdaddr', 'cddddr',
+  ]
+
+  test.each(members)('%s rejects the empty list', async (name) => {
+    expect(stripRange(await runProgram(`(${name} (list))`))).toEqual([
+      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+    ])
+  })
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Core List, Association-List, Sort & Character Operations
+
+test('cons-list', async () => {
+  expect(
+    await runProgram(`
+(cons 1 (list 2 3))
+(cons "a" (list))
+(cons #t (list #f 1 2))
+`),
+  ).toEqual([
+    '(list 1 2 3)',
+    '(list "a")',
+    '(list #t #f 1 2)',
+  ])
+})
+
+test('list-ref-out-of-range', async () => {
+  expect(
+    await runProgram(`
+(list-ref (list 1 2 3) 3)
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:25]: (list-ref) list-ref: index 3 out of bounds of list',
+  ])
+})
+
+test('list-tail-out-of-range', async () => {
+  expect(
+    await runProgram(`
+(list-tail (list 1 2 3) 4)
+`),
+  ).toEqual(['null'])
+})
+
+test('list-take-out-of-range', async () => {
+  expect(
+    await runProgram(`
+(list-take (list 1 2 3) 4)
+`),
+  ).toEqual(['(list 1 2 3)'])
+})
+
+test('list-drop-out-of-range', async () => {
+  expect(
+    await runProgram(`
+(list-drop (list 1 2 3) 4)
+`),
+  ).toEqual(['null'])
+})
+
+test('assoc-ref-missing-key', async () => {
+  expect(
+    await runProgram(`
+(assoc-ref "z" (list (pair "a" 1) (pair "b" 2)))
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:48]: (assoc-ref) assoc-ref: key z not found in association list',
+  ])
+})
+
+test('assoc-set-new-key', async () => {
+  expect(
+    await runProgram(`
+(assoc-set "c" 3 (list (pair "a" 1) (pair "b" 2)))
+`),
+  ).toEqual(['(list (pair "a" 1) (pair "b" 2) (pair "c" 3))'])
+})
+
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - sort calls
+// the comparator via callScamperFn for any list with 2+ elements, so a
+// real sort can't be exercised until sort is rewritten in Scamper itself.
+// See sort-contract below for the failure case, which is unaffected since
+// contract checks run before the comparator is ever called.
+test.skip('sort', async () => {
+  expect(
+    await runProgram(`
+(sort (list 3 1 2) <)
+(sort (list "banana" "apple" "cherry") string<?)
+`),
+  ).toEqual([
+    '(list 1 2 3)',
+    '(list "apple" "banana" "cherry")',
+  ])
+})
+
+test('sort-contract', async () => {
+  expect(
+    await runProgram(`
+(sort 5 <)
+(sort (list 1 2) 5)
+`),
+  ).toEqual([
+    'Runtime error [523:1-523:37]: (error) expected a list, received number',
+    'Runtime error [523:1-523:37]: (error) expected a procedure, received number',
+  ])
+})
+
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - the predicate
+// returned by any-of calls each f1 via callScamperFn, so invoking it always
+// fails; see any-of-call below for the actual error this raises today.
+test.skip('any-of', async () => {
+  expect(
+    await runProgram(`
+((any-of odd? even?) 3)
+((any-of odd? even?) 4)
+((any-of positive? negative?) 0)
+`),
+  ).toEqual([
+    '#t',
+    '#t',
+    '#f',
+  ])
+})
+
+test('any-of-call', async () => {
+  expect(
+    await runProgram(`
+((any-of odd? even?) 3)
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:23]: Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+// TODO: skipped because L.callScamperFn now always throws "Javascript
+// library functions can no longer call Scamper functions" - the predicate
+// returned by all-of calls each f1 via callScamperFn, so invoking it always
+// fails; see all-of-call below for the actual error this raises today.
+test.skip('all-of', async () => {
+  expect(
+    await runProgram(`
+((all-of odd? positive?) 3)
+((all-of odd? positive?) -3)
+((all-of number? string?) 5)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#f',
+  ])
+})
+
+test('all-of-call', async () => {
+  expect(
+    await runProgram(`
+((all-of odd? positive?) 3)
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:27]: Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+// N.B., list-of short-circuits on a non-list argument or an empty list
+// without ever calling the predicate, so these cases work despite the
+// callScamperFn limitation that blocks any-of/all-of/sort above.
+test('list-of', async () => {
+  expect(
+    await runProgram(`
+((list-of number?) (list))
+((list-of number?) 5)
+((list-of number?) "a")
+`),
+  ).toEqual(['#t', '#f', '#f'])
+})
+
+test('list-of-contract', async () => {
+  expect(
+    await runProgram(`
+(list-of 5)
+`),
+  ).toEqual([
+    'Runtime error [333:1-333:42]: (error) expected a procedure, received number',
+  ])
+})
+
+test('digit-value-not-digit', async () => {
+  expect(
+    await runProgram(`
+(digit-value #\\a)
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:17]: (digit-value) digit-value: a is not a decimal digit',
+  ])
+})
+
+test('charQ', async () => {
+  expect(
+    await runProgram(`
+(char? #\\a)
+(char? "a")
+(char? 5)
+(char? #t)
+`),
+  ).toEqual(['#t', '#f', '#f', '#f'])
+})
+
+test('charQ-arity', async () => {
+  expect(
+    await runProgram(`
+(char?)
+(char? #\\a #\\b)
+`),
+  ).toEqual([
+    'Runtime error [1:1-1:7]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error [2:1-2:15]: Arity mismatch in function call: expected 1 arguments, got 2',
+  ])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Strings
+
+test('string-constructor', async () => {
+  expect(
+    await runProgram(`
+(string #\\a #\\b #\\c)
+(string "a")
+`),
+  ).toEqual([
+    '"abc"',
+    'Runtime error [584:1-584:41]: (error) expected every value of c1 to be a char, but at least one was not',
+  ])
+})
+
+test('string-vector-conversions', async () => {
+  expect(
+    await runProgram(`
+(string->vector "abc")
+(vector->string (vector #\\a #\\b #\\c))
+(string->vector 5)
+(vector->string "abc")
+`),
+  ).toEqual([
+    '(vector #\\a #\\b #\\c)',
+    '"abc"',
+    'Runtime error [647:1-647:57]: (error) expected a string, received number',
+    'Runtime error [653:1-653:57]: (error) expected a vector, received string',
+  ])
+})
+
+test('string-contains', async () => {
+  expect(
+    await runProgram(`
+(string-contains "hello world" "wor")
+(string-contains "hello" "xyz")
+(string-contains "hello" "")
+(string-contains 5 "a")
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#t',
+    'Runtime error [660:1-660:58]: (error) expected a string, received number',
+  ])
+})
+
+test('string-split-vector', async () => {
+  expect(
+    await runProgram(`
+(string-split-vector "a,b,c" ",")
+(string-split-vector 5 ",")
+`),
+  ).toEqual([
+    '(vector "a" "b" "c")',
+    'Runtime error [674:1-674:65]: (error) expected a string, received number',
+  ])
+})
+
+test('string-list-empty', async () => {
+  expect(
+    await runProgram(`
+(string->list "")
+(list->string (list))
+`),
+  ).toEqual(['null', '""'])
+})
+
+test('substring-bounds', async () => {
+  expect(
+    await runProgram(`
+(substring "hello" 2 2)
+(substring "hello" 0 5)
+`),
+  ).toEqual(['""', '"hello"'])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Vectors
+
+test('vectorQ', async () => {
+  expect(
+    await runProgram(`
+(vector? (vector 1 2 3))
+(vector? (vector))
+(vector? (list 1 2 3))
+(vector? "hello")
+(vector? 5)
+(vector?)
+(vector? 5 6)
+`),
+  ).toEqual([
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+    '#f',
+    'Runtime error [6:1-6:9]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error [7:1-7:13]: Arity mismatch in function call: expected 1 arguments, got 2',
+  ])
+})
+
+test('make-vector', async () => {
+  // N.B., contract error location points at the definition site, not the call site
+  expect(
+    await runProgram(`
+(make-vector 3 "a")
+(make-vector 0 "a")
+(make-vector 5 #t)
+(make-vector "a" 1)
+`),
+  ).toEqual([
+    '(vector "a" "a" "a")',
+    '(vector)',
+    '(vector #t #t #t #t #t)',
+    'Runtime error [693:1-693:50]: (error) expected an integer, received string',
+  ])
+})
+
+test('vector-length', async () => {
+  // N.B., contract error location points at the definition site, not the call site
+  expect(
+    await runProgram(`
+(vector-length (vector 1 2 3))
+(vector-length (vector))
+(vector-length 5)
+`),
+  ).toEqual([
+    '3',
+    '0',
+    'Runtime error [699:1-699:54]: (error) expected a vector, received number',
+  ])
+})
+
+test('vector-ref', async () => {
+  // N.B., the contract (type) error points at the definition site, not the
+  // call site (#254); the #257 bounds errors, thrown from the function body,
+  // point at the call site.
+  // #257: an out-of-range index (>= length or negative) now raises a clean bounds error
+  expect(
+    await runProgram(`
+(vector-ref (vector 1 2 3) 0)
+(vector-ref (vector 1 2 3) 2)
+(vector-ref 5 0)
+(vector-ref (vector 1 2 3) 5)
+(vector-ref (vector 1 2 3) -1)
+`),
+  ).toEqual([
+    '1',
+    '3',
+    'Runtime error [707:1-707:48]: (error) expected a vector, received number',
+    'Runtime error [4:1-4:29]: (vector-ref) vector-ref: index 5 out of bounds of vector',
+    'Runtime error [5:1-5:30]: (vector-ref) vector-ref: index -1 out of bounds of vector',
+  ])
+})
+
+test('vector-append', async () => {
+  // N.B., contract error location points at the definition site, not the call site
+  expect(
+    await runProgram(`
+(vector-append (vector 1 2) (vector 3 4 5))
+(vector-append (vector 1 2) (list 3 4))
+(vector-append)
+`),
+  ).toEqual([
+    '(vector 1 2 3 4 5)',
+    'Runtime error [752:1-752:54]: (error) expected every value of v1 to be a vector, but at least one was not',
+    '(vector)',
+  ])
+})
+
+test('vector-to-list', async () => {
+  // N.B., contract error location points at the definition site, not the call site
+  expect(
+    await runProgram(`
+(vector->list (vector 1 2 3))
+(vector->list (vector))
+(vector->list (list 1 2 3))
+`),
+  ).toEqual([
+    '(list 1 2 3)',
+    'null',
+    'Runtime error [729:1-729:53]: (error) expected a vector, received list',
+  ])
+})
+
+test('list-to-vector', async () => {
+  // N.B., contract error location points at the definition site, not the call site
+  expect(
+    await runProgram(`
+(list->vector (list 1 2 3))
+(list->vector (list))
+(list->vector (vector 1 2 3))
+`),
+  ).toEqual([
+    '(vector 1 2 3)',
+    '(vector)',
+    'Runtime error [735:1-735:53]: (error) expected a list, received vector',
+  ])
+})
+
+test('vector-set-out-of-range', async () => {
+  // #257: an out-of-range index (>= length or negative) now raises a clean
+  // bounds error and leaves the vector unchanged, rather than growing it with
+  // holes (too-large index) or silently no-op'ing (negative index).
+  expect(
+    await runProgram(`
+(define v (vector 1 2 3))
+(vector-set! v 5 10)
+v
+(vector-length v)
+(define v2 (vector 1 2 3))
+(vector-set! v2 -1 10)
+v2
+`),
+  ).toEqual([
+    'Runtime error [2:1-2:20]: (vector-set!) vector-set!: index 5 out of bounds of vector',
+    '(vector 1 2 3)',
+    '3',
+    'Runtime error [6:1-6:22]: (vector-set!) vector-set!: index -1 out of bounds of vector',
+    '(vector 1 2 3)',
+  ])
+})
+
+test('vector-empty', async () => {
+  expect(
+    await runProgram(`
+(vector)
+`),
+  ).toEqual(['(vector)'])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Constants, References & Misc/Control
+
+test('voidQ', async () => {
+  expect(
+    await runProgram(`
+(void? void)
+(void? 5)
+(void?)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    'Runtime error [3:1-3:7]: Arity mismatch in function call: expected 1 arguments, got 0',
+  ])
+})
+
+test('ignore', async () => {
+  expect(
+    await runProgram(`
+(ignore 5)
+(ignore)
+`),
+  ).toEqual([
+    '[Blob: {}]',
+    'Runtime error [2:1-2:8]: Arity mismatch in function call: expected 1 arguments, got 0',
+  ])
+})
+
+test('set-maximum-recursion-depth', async () => {
+  expect(
+    await runProgram(`
+(set-maximum-recursion-depth! 100)
+(set-maximum-recursion-depth! -1)
+(set-maximum-recursion-depth!)
+`),
+  ).toEqual([
+    '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":100}]',
+    '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":-1}]',
+    'Runtime error [3:1-3:30]: Arity mismatch in function call: expected 1 arguments, got 0',
+  ])
+})
+
+test('string-to-words', async () => {
+  expect(
+    await runProgram(`
+(string->words "Hello, world! How are you?")
+(string->words "")
+(string->words "....")
+(string->words 5)
+`),
+  ).toEqual([
+    '(list "Hello" "world" "How" "are" "you")',
+    'null',
+    '(list "...")',
+    'Runtime error [929:1-929:55]: (error) expected a string, received number',
+  ])
+})
+
+test('ref-cells', async () => {
+  expect(
+    await runProgram(`
+(define r (ref 5))
+r
+(ref? r)
+(ref? 5)
+(deref r)
+(ref-set! r 10)
+(deref r)
+(ref)
+(ref?)
+(deref 5)
+(ref-set! 5 10)
+`),
+  ).toEqual([
+    '(ref 5)',
+    '#t',
+    '#f',
+    '5',
+    'void',
+    '10',
+    'Runtime error [8:1-8:5]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error [9:1-9:6]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error [947:1-947:39]: (error) expected a ref, received number',
+    'Runtime error [954:1-954:43]: (error) expected a ref, received number',
+  ])
+})
+
+test('constants', async () => {
+  expect(
+    await runProgram(`
+else
+null
+pi
+π
+void
+(else)
+(null)
+(pi)
+(π)
+(void)
+`),
+  ).toEqual([
+    '#t',
+    'null',
+    '3.141592653589793',
+    '3.141592653589793',
+    'void',
+    'Runtime error [6:1-6:6]: Not a function or closure: true',
+    'Runtime error [7:1-7:6]: Not a function or closure: null',
+    'Runtime error [8:1-8:4]: Not a function or closure: 3.141592653589793',
+    'Runtime error [9:1-9:3]: Not a function or closure: 3.141592653589793',
+    'Runtime error [10:1-10:6]: Not a function or closure: undefined',
+  ])
+})
+
+test('with-file', async () => {
+  expect(
+    await runProgram(`
+(with-file "foo.txt" (lambda (s) s))
+(with-file 5 (lambda (s) s))
+`),
+  ).toEqual([
+    '(reactive-file "foo.txt" [Function: ##anonymous##])',
+    'Runtime error [986:1-986:46]: (error) expected a string, received number',
+  ])
+})
+
+test('with-file-chooser', async () => {
+  expect(
+    await runProgram(`
+(with-file-chooser (lambda (s) s))
+(with-file-chooser 5)
+`),
+  ).toEqual([
+    '(reactive-file-chooser [Function: ##anonymous##])',
+    'Runtime error [992:1-992:61]: (error) expected a procedure, received number',
+  ])
+})
+
+test('random-wrong-type', async () => {
+  expect(
+    await runProgram(`
+(random "a")
+`),
+  ).toEqual([
+    'Runtime error [900:1-900:41]: (error) expected an integer, received string',
+  ])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Non-callback logic & error branches
+
+test('string->number-invalid', async () => {
+  // Fixed (#255): a non-numeral string returns #f (per R7RS) rather than
+  // leaking a double-wrapped internal JS exception.
+  expect(await runProgram('(string->number "abc")')).toEqual(['#f'])
+})
+
+test('char-compare-single-arg', async () => {
+  // N.B., a comparator applied to fewer than two arguments is vacuously true
+  // (exercises pairwiseSatisfies' length<=1 branch)
+  expect(await runProgram('(char=? #\\a)')).toEqual(['#t'])
+})
+
+test('list->string-non-char', async () => {
+  expect(await runProgram('(list->string (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:25]: (list->string) list->string: list contains non-character element: number',
+  ])
+})
+
+test('vector-range-errors', async () => {
+  expect(await runProgram('(vector-range)')).toEqual([
+    'Runtime error [1:1-1:14]: (vector-range) 1, 2, or 3 numbers must be passed to function',
+  ])
+  expect(await runProgram('(vector-range 0 10 0)')).toEqual([
+    'Runtime error [1:1-1:21]: (vector-range) "step" argument must be non-zero',
+  ])
+})
+
+test('range-errors', async () => {
+  expect(await runProgram('(range)')).toEqual([
+    'Runtime error [1:1-1:7]: (range) 1, 2, or 3 numbers must be passed to function',
+  ])
+  expect(await runProgram('(range 0 10 0)')).toEqual([
+    'Runtime error [1:1-1:14]: (range) "step" argument must be non-zero',
+  ])
+})
+
+////////////////////////////////////////////////////////////////////////////////
+// Higher-order functions: #248 callback limitation
+//
+// Each of these invokes a user-supplied function via L.callScamperFn, which
+// now unconditionally throws (#248). Calling with otherwise-valid arguments
+// exercises the entry/validation/setup lines up to the first callScamperFn,
+// which raises the error below. The lines reachable only after a callback
+// successfully returns stay uncovered until #248 is resolved.
+
+test('list-of-call', async () => {
+  expect(await runProgram('((list-of number?) (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:30]: Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('sort-call', async () => {
+  expect(await runProgram('(sort (list 2 1) <)')).toEqual([
+    'Runtime error [1:1-1:19]: (sort) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('string-map-call', async () => {
+  expect(await runProgram('(string-map char-upcase "ab")')).toEqual([
+    'Runtime error [1:1-1:29]: (string-map) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('map-call', async () => {
+  // 0-list (null) and length-mismatch branches take no callback; the single-
+  // list (mapOne) and multi-list (transpose) paths reach callScamperFn
+  expect(await runProgram('(map +)')).toEqual(['null'])
+  expect(await runProgram('(map + (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:18]: (map) Javascript library functions can no longer call Scamper functions',
+  ])
+  expect(await runProgram('(map + (list 1 2) (list 3))')).toEqual([
+    'Runtime error [1:1-1:27]: (map) the lists passed to the function call do not have the same length',
+  ])
+  expect(await runProgram('(map + (list 1 2) (list 3 4))')).toEqual([
+    'Runtime error [1:1-1:29]: (map) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('filter-call', async () => {
+  expect(await runProgram('(filter + (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:21]: (filter) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('fold-call', async () => {
+  expect(await runProgram('(fold + 0 (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:21]: (fold) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('reduce-call', async () => {
+  expect(await runProgram('(reduce + (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:21]: (reduce) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('fold-left-call', async () => {
+  expect(await runProgram('(fold-left + 0 (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:26]: (fold-left) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('fold-right-call', async () => {
+  expect(await runProgram('(fold-right + 0 (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:27]: (fold-right) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('reduce-right-call', async () => {
+  expect(await runProgram('(reduce-right + (list 1 2))')).toEqual([
+    'Runtime error [1:1-1:27]: (reduce-right) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('vector-map-call', async () => {
+  // empty (no callback), single-vector, length-mismatch, and multi-vector
+  expect(await runProgram('(vector-map +)')).toEqual(['(vector)'])
+  expect(await runProgram('(vector-map + (vector 1 2))')).toEqual([
+    'Runtime error [1:1-1:27]: (vector-map) Javascript library functions can no longer call Scamper functions',
+  ])
+  expect(await runProgram('(vector-map + (vector 1 2) (vector 3))')).toEqual([
+    'Runtime error [1:1-1:38]: (vector-map) the vectors passed to the function call do not have the same length',
+  ])
+  expect(await runProgram('(vector-map + (vector 1 2) (vector 3 4))')).toEqual([
+    'Runtime error [1:1-1:40]: (vector-map) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('vector-map-bang-call', async () => {
+  expect(await runProgram('(vector-map! + (vector 1 2))')).toEqual([
+    'Runtime error [1:1-1:28]: (vector-map!) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('vector-for-each-call', async () => {
+  expect(await runProgram('(vector-for-each + (vector 1 2))')).toEqual([
+    'Runtime error [1:1-1:32]: (vector-for-each) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('for-range-call', async () => {
+  // ascending and descending both reach the callback
+  expect(await runProgram('(for-range 0 3 +)')).toEqual([
+    'Runtime error [1:1-1:17]: (for-range) Javascript library functions can no longer call Scamper functions',
+  ])
+  expect(await runProgram('(for-range 3 0 +)')).toEqual([
+    'Runtime error [1:1-1:17]: (for-range) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('vector-filter-call', async () => {
+  expect(await runProgram('(vector-filter + (vector 1 2))')).toEqual([
+    'Runtime error [1:1-1:30]: (vector-filter) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('compose-call', async () => {
+  // compose returns a closure; invoking it triggers the callback
+  expect(await runProgram('((compose +) 5)')).toEqual([
+    'Runtime error [1:1-1:15]: Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('pipe-call', async () => {
+  expect(await runProgram('(|> 5 +)')).toEqual([
+    'Runtime error [1:1-1:8]: (|>) Javascript library functions can no longer call Scamper functions',
+  ])
+})
+
+test('with-handler-call', async () => {
+  // fn throws #248 immediately; the ScamperError catch branch then invokes
+  // the handler (which throws #248 again)
+  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual([
+    'Runtime error [1:1-1:24]: (with-handler) Javascript library functions can no longer call Scamper functions',
+  ])
 })

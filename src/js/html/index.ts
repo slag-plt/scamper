@@ -13,7 +13,7 @@ export function html_buttonQ(v: any): boolean {
 }
 
 export function html_textArea(id: string): HTMLTextAreaElement {
-  const ret = new HTMLTextAreaElement()
+  const ret = document.createElement('textarea')
   ret.id = id
   return ret
 }

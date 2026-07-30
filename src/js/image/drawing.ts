@@ -237,119 +237,6 @@ interface Rotate extends L.Struct {
   drawing: Drawing
 }
 
-function getDrawingPoints (drawing: Drawing): [number, number][] {
-  const points: [number, number][] = []
-  switch(drawing[L.structKind]) {
-    case 'ellipse':
-      const n = 100
-      for (let i = 1; i < n; i++) {
-        const t = 2 * Math.PI * i / n
-        points.push([
-          0.5 * drawing.width * Math.cos(t),
-          0.5 * drawing.height * Math.sin(t)
-        ])
-      }
-      return points
-    case 'rectangle':
-      return [
-        [0, 0],
-        [drawing.width, 0],
-        [drawing.width, drawing.height],
-        [0, drawing.height]
-      ]
-    case 'triangle':
-      return [
-        [0, 0],
-        [0.5 * drawing.width, drawing.height],
-        [drawing.width, 0]
-      ]
-    case 'path':
-      return drawing.points
-    case 'beside':
-      let xOffset = 0
-      drawing.drawings.forEach((subimage) => {
-        const subPoints: [number, number][] = getDrawingPoints(subimage)
-          .map(([x, y]) => [
-            x + xOffset,
-            drawing.align === 'top'
-              ? y
-              : drawing.align === 'bottom'
-                ? y + drawing.height - subimage.height
-                // N.B., assumed to be 'center'
-                : y + (drawing.height - subimage.height) / 2
-        ])
-        points.push(...subPoints)
-        xOffset += subimage.width
-      })
-      return points
-    case 'above':
-      const yOffset = 0
-      drawing.drawings.forEach((subimage) => {
-        const subPoints: [number, number][] = getDrawingPoints(subimage)
-          .map(([x, y]) => [
-            drawing.align === 'left'
-              ? x
-              : drawing.align === 'right'
-                ? x + drawing.width - subimage.width
-                // N.B., assumed to be 'middle'
-                : x + (drawing.width - subimage.width) / 2,
-            y + yOffset
-        ])
-        points.push(...subPoints)
-        xOffset += subimage.width
-      })
-      return points
-    case 'overlay': {
-      return drawing.drawings.reverse().flatMap((d) => {
-        return getDrawingPoints(d)
-          .map(([x, y]): [number, number] => [
-            drawing.xAlign === 'left'
-            ? x
-            : drawing.xAlign === 'right'
-              ? x + drawing.width - d.width
-              // N.B., assumed to be 'middle'
-              : x + (drawing.width - d.width) / 2,
-          drawing.yAlign === 'top'
-            ? y
-            : drawing.yAlign === 'bottom'
-              ? y + drawing.height - d.height
-              // N.B., assumed to be 'center'
-              : y + (drawing.height - d.height) / 2
-          ])
-      })
-    }
-    case 'overlayOffset':
-      const x1 = drawing.dx > 0 ? 0 : Math.abs(drawing.dx)
-      const y1 = drawing.dy > 0 ? 0 : Math.abs(drawing.dy)
-      const x2 = drawing.dx > 0 ? drawing.dx : 0
-      const y2 = drawing.dy > 0 ? drawing.dy : 0
-      const d1Points: [number, number][] = getDrawingPoints(drawing.d1)
-        .map(([x, y]) => [x + x1, y + y1])
-      const d2Points: [number, number][] = getDrawingPoints(drawing.d2)
-        .map(([x, y]) => [x + x2, y + y2])
-      return d1Points.concat(d2Points)
-    case 'rotate':
-      const angle = drawing.angle * Math.PI / 180
-      const rotatedPoints = getDrawingPoints(drawing.drawing)
-        .map(([x, y]) => [
-          x * Math.cos(angle) - y * Math.sin(angle),
-          x * Math.sin(angle) + y * Math.cos(angle)
-        ])
-      const xMin = Math.min(...rotatedPoints.map(([x, _]) => x))
-      const yMin = Math.min(...rotatedPoints.map(([_, y]) => y))
-      return rotatedPoints.map(([x, y]) => [x - xMin, y - yMin])
-    case 'withDash':
-      return getDrawingPoints(drawing.drawing)
-    case 'text':
-      return [
-        [0, 0],
-        [drawing.width, 0],
-        [drawing.width, drawing.height],
-        [0, drawing.height]
-      ]
-  }
-}
-
 function calculateRotatedBox (points: [number, number][], degrees: number): { width: number, height: number, dx: number, dy: number } {
   // Calculate the rotated points
   const angle = degrees * Math.PI / 180
@@ -376,7 +263,16 @@ function calculateRotatedBox (points: [number, number][], degrees: number): { wi
 }
 
 export function image_rotate(angle: number, drawing: Drawing): Rotate {
-  const dims = calculateRotatedBox(getDrawingPoints(drawing), angle)
+  // Rotate the drawing's declared bounding-box corners. At angle 0 this is the
+  // identity for every shape (box = w x h, dx = dy = 0), so `rotate` never
+  // shifts, clips, or resizes a drawing it isn't actually turning.
+  const corners: [number, number][] = [
+    [0, 0],
+    [drawing.width, 0],
+    [drawing.width, drawing.height],
+    [0, drawing.height]
+  ]
+  const dims = calculateRotatedBox(corners, angle)
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'rotate',
     width: dims.width,

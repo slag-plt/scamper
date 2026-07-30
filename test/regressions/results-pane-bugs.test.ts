@@ -8,7 +8,7 @@ import {
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
   sleep,
-} from '../test-utils'
+} from '../util.js'
 
 patchSchedulerYieldForTests()
 
