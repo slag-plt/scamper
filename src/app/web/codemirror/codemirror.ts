@@ -35,7 +35,7 @@ import {
   closeBracketsKeymap,
   completionKeymap,
 } from '@codemirror/autocomplete'
-import { lintKeymap } from '@codemirror/lint'
+import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
@@ -58,6 +58,9 @@ function mkExtensions(config: EditorStateConfig): Extension {
     highlightSpecialChars(),
     history(),
     foldGutter(),
+    // Gutter markers for lint diagnostics -- easier to spot than the inline
+    // squiggles alone. Colored by severity and shows the messages on hover.
+    lintGutter(),
     drawSelection(),
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
