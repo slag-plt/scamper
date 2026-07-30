@@ -1,10 +1,10 @@
 import { expect } from 'vitest'
-import * as L from '../../../src/lpm'
+import { ScamperDiagnostic } from '../../../src/scheme/diagnostic'
 import { parseProgramFromSource } from '../../../src/scheme/lezer-bridge'
 import { Prog } from '../../../src/scheme/ast'
 
-export function parse(src: string): { prog: Prog; errors: L.ScamperDiagnostic[] } {
-  const errors: L.ScamperDiagnostic[] = []
+export function parse(src: string): { prog: Prog; errors: ScamperDiagnostic[] } {
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, src)
   return { prog, errors }
 }

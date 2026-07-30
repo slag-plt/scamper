@@ -7,6 +7,7 @@ import type { SyntaxNode } from '@lezer/common'
 import * as A from './ast.js'
 import { parser } from './generated/parser.js'
 import * as L from '../lpm/index.js'
+import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import {
   parseCharLiteral,
   parseNumberLiteral,
@@ -44,7 +45,7 @@ class Ctx {
   constructor(
     public src: string,
     public lineStarts: number[],
-    public diagnostics: L.ScamperDiagnostic[],
+    public diagnostics: ScamperDiagnostic[],
   ) {}
 
   // N.B., reader.ts's ranges are inclusive on the end position (it points at
@@ -130,14 +131,14 @@ const formDescriptions: Record<string, string> = {
 function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
   if (node.type.isError) {
     ctx.diagnostics.push(
-      L.mkDiagnostic('Parse', 'error', 'Malformed syntax.', ctx.range(node)),
+      mkDiagnostic('Parse', 'error', 'Malformed syntax.', ctx.range(node)),
     )
     return
   }
   const desc =
     formDescriptions[node.type.name] ?? `${node.type.name.toLowerCase()} expression`
   ctx.diagnostics.push(
-    L.mkDiagnostic('Parse', 'error', `Malformed ${desc}.`, ctx.range(node)),
+    mkDiagnostic('Parse', 'error', `Malformed ${desc}.`, ctx.range(node)),
   )
 }
 
@@ -259,7 +260,7 @@ function identifierName(
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
     ctx.diagnostics.push(
-      L.mkDiagnostic(
+      mkDiagnostic(
         'Parse',
         'error',
         `The identifier "${name}" is a reserved word and cannot be used as a variable name`,
@@ -269,7 +270,7 @@ function identifierName(
     return '<error>'
   }
   if (node.type.name !== 'Identifier') {
-    ctx.diagnostics.push(L.mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
+    ctx.diagnostics.push(mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
     return '<error>'
   }
   return name
@@ -563,7 +564,7 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 ///// Entry point ///////////////////////////////////////////////////////////////
 
 export function parseProgramFromSource(
-  diagnostics: L.ScamperDiagnostic[],
+  diagnostics: ScamperDiagnostic[],
   src: string,
 ): A.Prog {
   const tree = parser.parse(src)

@@ -2,6 +2,7 @@ import * as S from '../lpm'
 import { Loc, Range } from '../lpm'
 import { lowerProgram } from './codegen.js'
 import { expandProgram } from './expansion.js'
+import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import { scopeCheckProgram } from './scope.js'
 import { sugarExpr } from './sugarer.js'
 import { FiberRaiser } from '../lpm/raiser.js'
@@ -28,7 +29,7 @@ export const fiberRaiser: FiberRaiser<Exp> = {
 /** The result of parsing: the program (absent on a fatal parse error) and any diagnostics. */
 export interface ParseResult {
   program?: Prog
-  diagnostics: S.ScamperDiagnostic[]
+  diagnostics: ScamperDiagnostic[]
 }
 
 /** A ParseResult from a query parse, additionally carrying the reported range. */
@@ -49,7 +50,7 @@ export function tokenizeAndParse(
   src: string,
   queryLoc?: Loc,
 ): ParseResult | QueryParseResult {
-  const diagnostics: S.ScamperDiagnostic[] = []
+  const diagnostics: ScamperDiagnostic[] = []
   const program = parseProgramFromSource(diagnostics, src)
   if (diagnostics.length > 0) {
     // A parse error leaves no usable program.
@@ -74,7 +75,7 @@ export function tokenizeAndParse(
   if (queriedStmt?.tag !== 'define' || queriedStmt.docComments === undefined) {
     return {
       diagnostics: [
-        S.mkDiagnostic(
+        mkDiagnostic(
           'Query',
           'error',
           'Querying is only allowed within function definitions with docstrings',
@@ -94,7 +95,7 @@ export function tokenizeAndParse(
   if (doc === undefined) {
     return {
       diagnostics: [
-        S.mkDiagnostic(
+        mkDiagnostic(
           'Query',
           'error',
           'Querying is only allowed within function definitions with docstrings',
@@ -109,7 +110,7 @@ export function tokenizeAndParse(
   if (!firstExample) {
     return {
       diagnostics: [
-        S.mkDiagnostic('Query', 'error', 'Querying requires an example tag'),
+        mkDiagnostic('Query', 'error', 'Querying requires an example tag'),
       ],
     }
   }
@@ -130,7 +131,7 @@ export interface CompileOptions {
 /** The result of compilation: the lowered program (absent on a fatal parse error) and any diagnostics. */
 export interface CompileResult {
   prog?: S.Prog
-  diagnostics: S.ScamperDiagnostic[]
+  diagnostics: ScamperDiagnostic[]
 }
 
 /** A CompileResult from a query compile, additionally carrying the reported range. */

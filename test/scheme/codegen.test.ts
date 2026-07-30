@@ -2,6 +2,7 @@ import { expect, test, describe } from 'vitest'
 
 import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
+import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
 import { runProgram } from '../harness.js'
 
@@ -9,7 +10,7 @@ async function checkMachineOutput (src: string, expected: L.Value[]) {
   src = src.trim()
   const out = new L.LoggingChannel(false, false)
   const { prog, diagnostics } = await S.compile(src)
-  diagnostics.forEach((d) => { out.report(L.ScamperError.fromDiagnostic(d)) })
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   expect(out.errLog).toEqual([])
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const fiber = new Fiber(prog!, S.mkInitialEnv())

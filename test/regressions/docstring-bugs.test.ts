@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { ScamperDiagnostic } from '../../src/lpm'
+import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { compile, tokenizeAndParse } from '../../src/scheme'
 import { parseFunctionDocFromComments } from '../../src/scheme/docstring/docstring'
 import { scopeCheckProgram } from '../../src/scheme/scope'

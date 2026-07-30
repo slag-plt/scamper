@@ -5,7 +5,8 @@ import { makeScopeTreeFromProgram, ScopeTree } from '../../src/scheme/scope-tree
 import { expandProgram } from '../../src/scheme/expansion'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import * as A from '../../src/scheme/ast'
-import { Loc, Range, ScamperDiagnostic } from '../../src/lpm'
+import { Loc, Range } from '../../src/lpm'
+import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { runProgram } from '../harness.js'
 
 // This suite exercises scope checking (`scopeCheckProgram`) and scope-tree

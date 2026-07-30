@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { parseArgs } from 'node:util'
 
-import type { ScamperDiagnostic } from '../../lpm'
+import type { ScamperDiagnostic } from '../../scheme/diagnostic'
 import { ConsoleOutput } from '../../lpm/output'
 import { compile } from '../../scheme'
 import Scamper, { initialize } from '../../scamper'

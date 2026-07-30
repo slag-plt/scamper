@@ -6,12 +6,12 @@ import {
   Loc,
   OutputChannel,
   Range,
-  ScamperError,
   rangesEqual,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
 import { Scheduler, SchedulerId } from './lpm/scheduler'
 import { compile } from './scheme'
+import { diagnosticToError } from './scheme/diagnostic'
 import * as SymbolDB from './scheme/symbol-db'
 
 interface ExecutionConfig {
@@ -141,7 +141,7 @@ export default class Scamper {
     // compile src to lpm bytecode
     const { prog, diagnostics } = await compile(src)
     diagnostics.forEach((d) => {
-      err.report(ScamperError.fromDiagnostic(d))
+      err.report(diagnosticToError(d))
     })
     if (prog === undefined) {
       // a fatal parse error left no program; diagnostics reported above
@@ -214,7 +214,7 @@ export default class Scamper {
   }: QueryExecutionConfig): Promise<void> {
     const { prog, queriedRange, diagnostics } = await compile(src, { queryLoc })
     diagnostics.forEach((d) => {
-      err.report(ScamperError.fromDiagnostic(d))
+      err.report(diagnosticToError(d))
     })
     if (prog === undefined || queriedRange === undefined) {
       // diagnostics reported above

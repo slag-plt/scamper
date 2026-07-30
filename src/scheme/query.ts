@@ -1,4 +1,5 @@
-import { Loc, Range, ScamperDiagnostic, mkDiagnostic } from '../lpm'
+import { Loc, Range } from '../lpm'
+import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import * as A from './ast.js'
 
 /**

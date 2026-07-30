@@ -1,11 +1,15 @@
 import { Diagnostic, linter } from '@codemirror/lint'
 import * as LPM from '../../../../lpm'
+import {
+  ScamperDiagnostic,
+  mkDiagnostic,
+} from '../../../../scheme/diagnostic'
 import { expandProgram } from '../../../../scheme/expansion'
 import { scopeCheckProgram } from '../../../../scheme/scope'
 import { tokenizeAndParse } from '../../../../scheme'
 
 /** Translates a Scamper diagnostic into a CodeMirror diagnostic. */
-function toCmDiagnostic(d: LPM.ScamperDiagnostic): Diagnostic {
+function toCmDiagnostic(d: ScamperDiagnostic): Diagnostic {
   let from, to
   if (d.range === undefined) {
     from = 0
@@ -23,7 +27,7 @@ function toCmDiagnostic(d: LPM.ScamperDiagnostic): Diagnostic {
 
 function makeScamperLinter(_outputId?: HTMLElement) {
   return linter(async (view) => {
-    const diagnostics: LPM.ScamperDiagnostic[] = []
+    const diagnostics: ScamperDiagnostic[] = []
     const doc = view.state.doc.toString()
     try {
       const { program, diagnostics: parseDiagnostics } = tokenizeAndParse(doc)
@@ -33,14 +37,14 @@ function makeScamperLinter(_outputId?: HTMLElement) {
       }
     } catch (e) {
       if (e instanceof LPM.ScamperError) {
-        diagnostics.push(LPM.mkDiagnostic('Parse', 'error', e.message, e.range))
+        diagnostics.push(mkDiagnostic('Parse', 'error', e.message, e.range))
       } else {
         // An unexpected failure (e.g. an ICE in the scope-check pass) must not
         // vanish silently: log it for debugging and surface a diagnostic
         // rather than showing the user nothing.
         console.error(e)
         diagnostics.push(
-          LPM.mkDiagnostic(
+          mkDiagnostic(
             'Parse',
             'error',
             e instanceof Error ? e.message : String(e),

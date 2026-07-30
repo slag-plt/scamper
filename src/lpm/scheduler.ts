@@ -4,6 +4,7 @@ import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput } from './trace/index.js'
 import { getFS } from '../fs'
 import * as S from '../scheme'
+import { diagnosticToError } from '../scheme/diagnostic'
 
 const DEFAULT_REFRESH_RATE = 60
 
@@ -146,7 +147,7 @@ export class Scheduler {
             async (_src) => {
               const { prog, diagnostics } = await S.compile(_src)
               diagnostics.forEach((d) => {
-                task.err.report(ScamperError.fromDiagnostic(d))
+                task.err.report(diagnosticToError(d))
               })
               if (prog === undefined) {
                 // TODO: error channel receives the compilation errors as a side-effect,

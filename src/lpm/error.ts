@@ -1,5 +1,4 @@
 import { Range } from './range.js'
-import { ScamperDiagnostic } from './diagnostic.js'
 import { Value } from './lang'
 import { toString } from './util'
 
@@ -25,23 +24,6 @@ export class ScamperError extends Error {
     this.modName = modName
     this.range = range
     this.source = source
-  }
-
-  /**
-   * Promotes a static diagnostic into an error, for the boundary where a
-   * front-end diagnostic must be surfaced on an ErrorChannel (which carries
-   * ScamperErrors only). The diagnostic's phase is mapped to a display phase
-   * so, e.g., a parse diagnostic still reads as a "Parser error".
-   *
-   * N.B., the result is always an error: `severity` is deliberately dropped,
-   * since a ScamperError has no warning form. Only convert diagnostics that
-   * are meant to block (severity 'error'); warnings should be presented as
-   * diagnostics directly (see linter.ts, the CLI --check presenter), never
-   * routed through here.
-   */
-  static fromDiagnostic(d: ScamperDiagnostic): ScamperError {
-    const phase: Phase = d.phase === 'Docstring' ? 'Docstring' : 'Parser'
-    return new ScamperError(phase, d.message, d.modName, d.range, d.source)
   }
 
   toString(): string {

@@ -1,5 +1,6 @@
 import * as L from '../lpm'
-import { ICE, ScamperDiagnostic, mkDiagnostic } from '../lpm'
+import { ICE } from '../lpm'
+import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import * as A from './ast.js'
 import {
   ComplexPred,

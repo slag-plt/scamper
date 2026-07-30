@@ -1,7 +1,7 @@
 import builtinLibs from '../lib'
 import * as A from './ast'
 import * as L from '../lpm/lang'
-import { ScamperDiagnostic, ScamperError } from '../lpm'
+import { ScamperDiagnostic, diagnosticToError } from './diagnostic.js'
 import { parseProgramFromSource } from './lezer-bridge'
 
 // A global collection of external symbols from importable modules.
@@ -53,7 +53,7 @@ async function parseFile(filename: string): Promise<A.Prog> {
   const diagnostics: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(diagnostics, src)
   if (diagnostics.length > 0) {
-    throw ScamperError.fromDiagnostic(diagnostics[0])
+    throw diagnosticToError(diagnostics[0])
   }
   return prog
 }

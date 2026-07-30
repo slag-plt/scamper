@@ -1,4 +1,5 @@
-import { ICE, Range, ScamperDiagnostic, mkDiagnostic } from '../../lpm'
+import { ICE, Range } from '../../lpm'
+import { ScamperDiagnostic, mkDiagnostic } from '../diagnostic.js'
 import { Param, parseSingleParam } from './param'
 import { App, Comment, Exp, Identifier, isApp, isVar } from '../ast'
 
