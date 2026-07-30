@@ -5,7 +5,7 @@ import { makeScopeTreeFromProgram, ScopeTree } from '../../src/scheme/scope-tree
 import { expandProgram } from '../../src/scheme/expansion'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import * as A from '../../src/scheme/ast'
-import { Loc, Range, ScamperError } from '../../src/lpm'
+import { Loc, Range, ScamperDiagnostic } from '../../src/lpm'
 import { runProgram } from '../harness.js'
 
 // This suite exercises scope checking (`scopeCheckProgram`) and scope-tree
@@ -16,7 +16,7 @@ import { runProgram } from '../harness.js'
 ///// Helpers //////////////////////////////////////////////////////////////////
 
 function parse(src: string): A.Prog {
-  const errs: ScamperError[] = []
+  const errs: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errs, src)
   expect(
     errs.map((e) => e.message),
@@ -28,7 +28,7 @@ function parse(src: string): A.Prog {
 // Scope-checks `src` (expanded, as the real pipeline does) and returns the
 // resulting diagnostic messages.
 async function scopeErrors(src: string): Promise<string[]> {
-  const errors: ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   await scopeCheckProgram(errors, expandProgram(parse(src)))
   return errors.map((e) => e.message)
 }
