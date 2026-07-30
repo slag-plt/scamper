@@ -375,11 +375,14 @@ describe('scope checking', () => {
         await scopeErrors('(import "utils.scm")\n((lambda (helper) helper) 5)'),
       ).toEqual([])
     })
-    test('a failure in a deep transitive import is not surfaced by the importer', async () => {
+    test('a failure in a deep transitive import is surfaced by the importer', async () => {
       // N.B., the program imports only a.scm (which parses); the broken c.scm
-      // it transitively pulls in is skipped best-effort and not reported here.
+      // it transitively pulls in is reported, pointing at the top-level import
+      // that pulled it in.
       mockFS({ 'a.scm': '(import "c.scm")\n(define fromA 1)', 'c.scm': '(1 2' })
-      expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([])
+      expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([
+        "Could not load module 'c.scm' (imported by 'a.scm')",
+      ])
     })
   })
 

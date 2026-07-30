@@ -458,7 +458,18 @@ export async function scopeCheckProgram(
   prog: A.Prog,
 ) {
   // Ensure every imported file's symbols are in the DB before we resolve names.
-  await SymbolDB.loadTransitiveImports(prog)
+  // Failures found below the top level are reported here (a direct import's
+  // failure is reported by its own statement in scopeCheckStmt).
+  for (const f of await SymbolDB.loadTransitiveImports(prog)) {
+    diagnostics.push(
+      mkDiagnostic(
+        'Scope',
+        'warning',
+        `Could not load module '${f.filename}' (imported by '${f.importer}')`,
+        f.range,
+      ),
+    )
+  }
   const globals: string[] = []
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   for (const id of SymbolDB.get('runtime')!) {
