@@ -33,8 +33,9 @@
   --header-bg: light-dark(#eeeeee, #161b22);
   --header-fg: light-dark(#333333, #e6edf3);
 
-  /* Accent (active items, run badge) */
-  --accent: light-dark(#008000, #2ea043);
+  /* Accent (active items, run badge). Dark value darkened so white text meets
+   * WCAG AA contrast (#2ea043 was ~3.4:1). */
+  --accent: light-dark(#008000, #238636);
   --accent-fg: light-dark(#ffffff, #ffffff);
 
   /* Modals */

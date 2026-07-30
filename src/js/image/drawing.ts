@@ -1,7 +1,6 @@
 import * as L from '../../lpm'
 import { Rgb, image_rgb, image_colorToRgb, image_rgbAverage, image_rgbToString } from './color.js'
 import { Font, image_font, image_fontQ, image_fontToFontString } from './font.js'
-import { onThemeChange, readColorToken } from '../../theme'
 
 /***** Core Functions *********************************************************/
 
@@ -645,12 +644,16 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
   }
 }
 
-export function image_clearDrawing (canvas: HTMLCanvasElement) {
+/**
+ * Clears `canvas` to a solid background before a drawing is rendered onto it.
+ * @param background the fill color (default 'white'). Callers rendering for
+ *   *display* pass a themed color (see DrawingRenderer.vue); the default keeps
+ *   off-screen/data uses (drawing->pixels, drawing->image) deterministic.
+ */
+export function image_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
   const ctx = canvas.getContext('2d')!
-  // Background/default stroke follow the app theme so a drawing blends into the
-  // page instead of being a bright white box on a dark background.
-  ctx.fillStyle = readColorToken('--canvas-surface')
-  ctx.strokeStyle = readColorToken('--canvas-ink')
+  ctx.fillStyle = background
+  ctx.strokeStyle = 'black'
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
@@ -661,19 +664,7 @@ export function image_renderer (drawing: Drawing): HTMLElement {
   canvas.setAttribute('aria-label', image_canvasAriaLabel)
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
-  const paint = () => {
-    image_clearDrawing(canvas)
-    image_render(0, 0, drawing, canvas)
-  }
-  paint()
-  // Repaint on theme change. Self-unsubscribe once the canvas leaves the DOM
-  // (e.g. output cleared) so listeners don't accumulate across runs.
-  const unsubscribe = onThemeChange(() => {
-    if (!canvas.isConnected) {
-      unsubscribe()
-      return
-    }
-    paint()
-  })
+  image_clearDrawing(canvas)
+  image_render(0, 0, drawing, canvas)
   return canvas
 }
