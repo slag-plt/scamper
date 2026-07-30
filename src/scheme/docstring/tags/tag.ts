@@ -1,6 +1,6 @@
 import { ICE, Range } from '../../../lpm'
 import { DocComment } from '../docstring'
-import { mkScamperErrorWithRange } from '../../util'
+import { mkDocError } from '../error'
 
 export function matchesDocTagFormat(line: string): boolean {
   const splitLine = line.split('@', 2)
@@ -31,9 +31,7 @@ export function parseAllTags(docComments: DocComment[], tags: DocTag[]) {
     }
     const { line, range } = comment
     if (!matchesDocTagFormat(line)) {
-      throw mkScamperErrorWithRange(
-        'Parser',
-        `Expected only tags at the end of docstring, but encountered a non-tag: ${line}`,
+      throw mkDocError(`Expected only tags at the end of docstring, but encountered a non-tag: ${line}`,
         range,
       )
     }
@@ -49,7 +47,7 @@ export function registerDocTagParser<T>(tag: string, parser: DocTagParser<T>) {
 function parseTag(tag: string, contents: string, range: Range): DocTag {
   const parser = DocTagParsers.get(tag)
   if (parser === undefined) {
-    throw mkScamperErrorWithRange('Parser', `Unknown doc tag: ${tag}`, range)
+    throw mkDocError(`Unknown doc tag: ${tag}`, range)
   }
   return parser(contents, range)
 }

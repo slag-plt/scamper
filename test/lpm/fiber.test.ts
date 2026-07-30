@@ -76,10 +76,7 @@ describe('Fiber', () => {
 })
 
 describe('errors', () => {
-  test('ScamperError.isFatal and SubthreadErrors expose phase and aggregated messages', () => {
-    expect(new ScamperError('Runtime', 'oops').isFatal).toBe(true)
-    expect(new ScamperError('Docstring', 'oops').isFatal).toBe(false)
-
+  test('SubthreadErrors aggregates messages', () => {
     const errors = [
       new ScamperError('Runtime', 'first'),
       new ScamperError('Parser', 'second'),

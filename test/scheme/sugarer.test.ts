@@ -5,15 +5,15 @@ import * as A from '../../src/scheme/ast.js'
 // A match with a single pvar branch is itself sugar for a let, so nesting
 // one of these inside another AST node proves sugarExpr recurses into it.
 const sugarableMatch = (scrutineeName: string, bodyName: string) =>
-  A.mkMatch(A.mkVar(scrutineeName), [
-    { pat: A.mkPVar(bodyName), body: A.mkVar(bodyName) },
+  A.mkMatch(A.mkId(scrutineeName), [
+    { pat: A.mkId(bodyName), body: A.mkId(bodyName) },
   ])
 const sugaredMatch = (scrutineeName: string, bodyName: string) =>
-  A.mkLet([{ name: bodyName, value: A.mkVar(scrutineeName) }], A.mkVar(bodyName))
+  A.mkLet([{ id: A.mkId(bodyName), value: A.mkId(scrutineeName) }], A.mkId(bodyName))
 
 test('lit, var, quote, and jsvar pass through unchanged', () => {
   expect(sugarExpr(A.mkLit(42))).toEqual(A.mkLit(42))
-  expect(sugarExpr(A.mkVar('x'))).toEqual(A.mkVar('x'))
+  expect(sugarExpr(A.mkId('x'))).toEqual(A.mkId('x'))
   expect(sugarExpr(A.mkQuote('sym'))).toEqual(A.mkQuote('sym'))
   expect(sugarExpr(A.mkJsVar('Math.sin'))).toEqual(A.mkJsVar('Math.sin'))
 })
@@ -21,11 +21,11 @@ test('lit, var, quote, and jsvar pass through unchanged', () => {
 test('match with a single pvar branch desugars to let, recursively sugaring scrutinee and body', () => {
   const actual = sugarExpr(
     A.mkMatch(sugarableMatch('n', 'm'), [
-      { pat: A.mkPVar('x'), body: sugarableMatch('b', 'c') },
+      { pat: A.mkId('x'), body: sugarableMatch('b', 'c') },
     ]),
   )
   const expected = A.mkLet(
-    [{ name: 'x', value: sugaredMatch('n', 'm') }],
+    [{ id: A.mkId('x'), value: sugaredMatch('n', 'm') }],
     sugaredMatch('b', 'c'),
   )
   expect(actual).toEqual(expected)
@@ -50,17 +50,17 @@ test('match falls through unchanged when it does not fit either sugar shape', ()
   // Unlike every other case, the default match case returns `e` itself
   // rather than a rebuilt node, so nested sugar opportunities are not
   // reached here.
-  const threeBranches = A.mkMatch(A.mkVar('n'), [
+  const threeBranches = A.mkMatch(A.mkId('n'), [
     { pat: A.mkPLit(0), body: A.mkLit('zero') },
     { pat: A.mkPLit(1), body: A.mkLit('one') },
-    { pat: A.mkPVar('x'), body: sugarableMatch('b', 'c') },
+    { pat: A.mkId('x'), body: sugarableMatch('b', 'c') },
   ])
   expect(sugarExpr(threeBranches)).toBe(threeBranches)
 
   // Two branches, but not the true/false literal shape.
-  const twoNonLiteralBranches = A.mkMatch(A.mkVar('n'), [
-    { pat: A.mkPVar('x'), body: A.mkVar('x') },
-    { pat: A.mkPVar('y'), body: A.mkVar('y') },
+  const twoNonLiteralBranches = A.mkMatch(A.mkId('n'), [
+    { pat: A.mkId('x'), body: A.mkId('x') },
+    { pat: A.mkId('y'), body: A.mkId('y') },
   ])
   expect(sugarExpr(twoNonLiteralBranches)).toBe(twoNonLiteralBranches)
 })
@@ -83,14 +83,14 @@ test('apply recursively sugars the function and argument-list expressions', () =
 })
 
 test('lam recursively sugars the body and preserves params/restParam', () => {
-  const actual = sugarExpr(A.mkLam(['a', 'b'], sugarableMatch('x', 'y'), undefined, 'rest'))
-  const expected = A.mkLam(['a', 'b'], sugaredMatch('x', 'y'), undefined, 'rest')
+  const actual = sugarExpr(A.mkLam([A.mkId('a'), A.mkId('b')], sugarableMatch('x', 'y'), undefined, A.mkId('rest')))
+  const expected = A.mkLam([A.mkId('a'), A.mkId('b')], sugaredMatch('x', 'y'), undefined, A.mkId('rest'))
   expect(actual).toEqual(expected)
 })
 
 test('let and let* recursively sugar binding values and body', () => {
-  const bindings = [{ name: 'v', value: sugarableMatch('n', 'm') }]
-  const expectedBindings = [{ name: 'v', value: sugaredMatch('n', 'm') }]
+  const bindings = [{ id: A.mkId('v'), value: sugarableMatch('n', 'm') }]
+  const expectedBindings = [{ id: A.mkId('v'), value: sugaredMatch('n', 'm') }]
 
   expect(sugarExpr(A.mkLet(bindings, sugarableMatch('x', 'y')))).toEqual(
     A.mkLet(expectedBindings, sugaredMatch('x', 'y')),
@@ -105,8 +105,8 @@ test('begin and section recursively sugar each expression', () => {
     A.mkBegin([A.mkLit(1), sugaredMatch('x', 'y')]),
   )
   expect(
-    sugarExpr(A.mkSection([A.mkVar('+'), sugarableMatch('x', 'y')])),
-  ).toEqual(A.mkSection([A.mkVar('+'), sugaredMatch('x', 'y')]))
+    sugarExpr(A.mkSection([A.mkId('+'), sugarableMatch('x', 'y')])),
+  ).toEqual(A.mkSection([A.mkId('+'), sugaredMatch('x', 'y')]))
 })
 
 test('if recursively sugars guard, then-branch, and else-branch', () => {

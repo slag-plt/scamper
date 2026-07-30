@@ -81,14 +81,21 @@ export interface Comment {
 //
 // typred ::= f | (f1 ... fk)
 
+// An identifier: a name together with its source range. Because a variable
+// reference and a pattern variable are structurally nothing more than an
+// identifier (their node range always coincides with the identifier's), the
+// Identifier node itself plays both roles -- it is a member of both the Exp
+// and Pat unions (tag 'id'), and is also used directly in binder positions
+// (lambda params, let bindings, define/struct names).
+export interface Identifier extends Tagged, Node {
+  tag: 'id'
+  name: string
+}
+
 ///// Patterns /////
 
 export interface PWild extends Tagged, Node {
   tag: 'pwild'
-}
-export interface PVar extends Tagged, Node {
-  tag: 'pvar'
-  name: string
 }
 export interface PLit extends Tagged, Node {
   tag: 'plit'
@@ -96,10 +103,10 @@ export interface PLit extends Tagged, Node {
 }
 export interface PCtor extends Tagged, Node {
   tag: 'pctor'
-  name: string
+  name: Identifier
   args: Pat[]
 }
-export type Pat = PWild | PVar | PLit | PCtor
+export type Pat = PWild | Identifier | PLit | PCtor
 
 ///// Expressions /////
 
@@ -108,10 +115,6 @@ export interface Lit extends Tagged, Node {
   tag: 'lit'
   value: L.Value
 }
-export interface Var extends Tagged, Node {
-  tag: 'var'
-  name: string
-}
 export interface App extends Tagged, Node {
   tag: 'app'
   head: Exp
@@ -119,13 +122,13 @@ export interface App extends Tagged, Node {
 }
 export interface Lam extends Tagged, Node {
   tag: 'lam'
-  params: string[]
-  restParam?: string
+  params: Identifier[]
+  restParam?: Identifier
   body: Exp
 }
 export interface Let extends Tagged, Node {
   tag: 'let'
-  bindings: { name: string; value: Exp }[]
+  bindings: { id: Identifier; value: Exp }[]
   body: Exp
 }
 export interface Begin extends Tagged, Node {
@@ -164,7 +167,7 @@ export interface Apply extends Tagged, Node {
 // Sugared Forms
 export interface LetS extends Tagged, Node {
   tag: 'let*'
-  bindings: { name: string; value: Exp }[]
+  bindings: { id: Identifier; value: Exp }[]
   body: Exp
 }
 export interface And extends Tagged, Node {
@@ -190,7 +193,7 @@ export interface Report extends Tagged, Node {
 
 export type Exp =
   | Lit
-  | Var
+  | Identifier
   | App
   | Lam
   | Let
@@ -225,7 +228,7 @@ export interface Import extends Tagged, Node {
 }
 export interface Define extends Tagged, Node {
   tag: 'define'
-  name: string
+  name: Identifier
   value: Exp
   // N.B., raw, unparsed comments -- parsing them into a FunctionDoc is
   // deferred until something actually needs the documentation (the IDE's
@@ -248,8 +251,8 @@ export interface StmtExp extends Tagged, Node {
 // Sugared Forms
 export interface Struct extends Tagged, Node {
   tag: 'struct'
-  name: string
-  fields: string[]
+  name: Identifier
+  fields: Identifier[]
 }
 
 export type Stmt = Import | Define | Disp | StmtExp | Struct
@@ -277,14 +280,17 @@ export function progToNode(prog: Prog): ProgNode {
 
 ///// Constructor Functions ////////////////////////////////////////////////////
 
+// Identifiers -- also serve as variable references (Exp) and pattern
+// variables (Pat), so mkId is the sole constructor for all three.
+export const mkId = (name: string, range: L.Range = L.Range.none): Identifier => ({
+  tag: 'id',
+  name,
+  range,
+})
+
 // Patterns (pat)
 export const mkPWild = (range: L.Range = L.Range.none): PWild => ({
   tag: 'pwild',
-  range,
-})
-export const mkPVar = (name: string, range: L.Range = L.Range.none): PVar => ({
-  tag: 'pvar',
-  name,
   range,
 })
 export const mkPLit = (
@@ -292,7 +298,7 @@ export const mkPLit = (
   range: L.Range = L.Range.none,
 ): PLit => ({ tag: 'plit', value, range })
 export const mkPCtor = (
-  name: string,
+  name: Identifier,
   args: Pat[],
   range: L.Range = L.Range.none,
 ): PCtor => ({ tag: 'pctor', name, args, range })
@@ -303,24 +309,19 @@ export const mkLit = (value: L.Value, range: L.Range = L.Range.none): Lit => ({
   value,
   range,
 })
-export const mkVar = (name: string, range: L.Range = L.Range.none): Var => ({
-  tag: 'var',
-  name,
-  range,
-})
 export const mkApp = (
   head: Exp,
   args: Exp[],
   range: L.Range = L.Range.none,
 ): App => ({ tag: 'app', head, args, range })
 export const mkLam = (
-  params: string[],
+  params: Identifier[],
   body: Exp,
   range: L.Range = L.Range.none,
-  restParam?: string,
+  restParam?: Identifier,
 ): Lam => ({ tag: 'lam', params, body, range, restParam})
 export const mkLet = (
-  bindings: { name: string; value: Exp }[],
+  bindings: { id: Identifier; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
 ): Let => ({ tag: 'let', bindings, body, range })
@@ -358,7 +359,7 @@ export const mkApply = (
   range: L.Range = L.Range.none,
 ): Apply => ({ tag: 'apply', fn, args, range })
 export const mkLetS = (
-  bindings: { name: string; value: Exp }[],
+  bindings: { id: Identifier; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
 ): LetS => ({ tag: 'let*', bindings, body, range })
@@ -393,7 +394,7 @@ export const mkImport = (
   range: L.Range = L.Range.none,
 ): Import => ({ tag: 'import', module, kind, range })
 export const mkDefine = (
-  name: string,
+  name: Identifier,
   value: Exp,
   range: L.Range = L.Range.none,
   docComments?: Comment[],
@@ -408,8 +409,8 @@ export const mkStmtExp = (
   range: L.Range = L.Range.none,
 ): StmtExp => ({ tag: 'stmtexp', expr, range })
 export const mkStruct = (
-  name: string,
-  fields: string[],
+  name: Identifier,
+  fields: Identifier[],
   range: L.Range = L.Range.none,
 ): Struct => ({ tag: 'struct', name, fields, range })
 
@@ -420,7 +421,7 @@ function isTagged(v: unknown): v is Tagged {
 }
 
 export function isPat(v: unknown): v is Pat {
-  return isTagged(v) && ['pwild', 'pvar', 'plit', 'pctor'].includes(v.tag)
+  return isTagged(v) && ['pwild', 'id', 'plit', 'pctor'].includes(v.tag)
 }
 
 export function isExp(v: unknown): v is Exp {
@@ -428,7 +429,7 @@ export function isExp(v: unknown): v is Exp {
     isTagged(v) &&
     [
       'lit',
-      'var',
+      'id',
       'app',
       'lam',
       'let',
@@ -459,7 +460,7 @@ export function isStmt(v: unknown): v is Stmt {
 export const isStmtExp = (s: Stmt): s is StmtExp =>
   isTagged(s) && s.tag === 'stmtexp'
 
-export const isVar = (e: Exp): e is Var => isTagged(e) && e.tag === 'var'
+export const isVar = (e: Exp): e is Identifier => isTagged(e) && e.tag === 'id'
 
 export const isApp = (e: Exp): e is App =>
   isTagged(e) && e.tag === 'app' && isExp(e.head)
@@ -474,16 +475,16 @@ export function patToString(pat: Pat): string {
   switch (pat.tag) {
     case 'pwild':
       return '_'
-    case 'pvar':
+    case 'id':
       return pat.name
     case 'plit':
       // TODO: should we use TextRenderer.render for this too?
       return JSON.stringify(pat.value)
     case 'pctor': {
       if (pat.args.length === 0) {
-        return `(${pat.name})`
+        return `(${pat.name.name})`
       } else {
-        return `(${pat.name} ${pat.args.map(patToString).join(' ')})`
+        return `(${pat.name.name} ${pat.args.map(patToString).join(' ')})`
       }
     }
   }
@@ -493,7 +494,7 @@ export function expToString(e: Exp): string {
   switch (e.tag) {
     case 'lit':
       return TextRenderer.render(e.value)
-    case 'var':
+    case 'id':
       return e.name
     case 'app': {
       if (e.args.length === 0) {
@@ -503,9 +504,9 @@ export function expToString(e: Exp): string {
       }
     }
     case 'lam':
-      return `(lambda (${e.params.join(' ')}${e.restParam ? ` . ${e.restParam}` : ''}) ${expToString(e.body)})`
+      return `(lambda (${e.params.map((p) => p.name).join(' ')}${e.restParam ? ` . ${e.restParam.name}` : ''}) ${expToString(e.body)})`
     case 'let':
-      return `(let (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return `(let (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'begin':
       return `(begin ${e.exps.map(expToString).join(' ')})`
     case 'if':
@@ -521,7 +522,7 @@ export function expToString(e: Exp): string {
     case 'apply':
       return `(apply ${expToString(e.fn)} ${expToString(e.args)})`
     case 'let*':
-      return `(let* (${e.bindings.map(({ name, value }) => `[${name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return `(let* (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'and':
       return `(and ${e.exps.map(expToString).join(' ')})`
     case 'or':
@@ -540,13 +541,13 @@ export function stmtToString(s: Stmt): string {
     case 'import':
       return `(import ${s.kind === 'file' ? JSON.stringify(s.module) : s.module})`
     case 'define':
-      return `(define ${s.name} ${expToString(s.value)})`
+      return `(define ${s.name.name} ${expToString(s.value)})`
     case 'display':
       return `(display ${expToString(s.value)})`
     case 'stmtexp':
       return expToString(s.expr)
     case 'struct':
-      return `(struct ${s.name} (${s.fields.join(' ')}))`
+      return `(struct ${s.name.name} (${s.fields.map((f) => f.name).join(' ')}))`
   }
 }
 
@@ -574,13 +575,13 @@ export interface HljsBindings {
 export function patEquals(p1: Pat, p2: Pat): boolean {
   if (p1.tag === 'pwild' && p2.tag === 'pwild') {
     return true
-  } else if (p1.tag === 'pvar' && p2.tag === 'pvar') {
+  } else if (p1.tag === 'id' && p2.tag === 'id') {
     return p1.name === p2.name
   } else if (p1.tag === 'plit' && p2.tag === 'plit') {
     return L.equals(p1.value, p2.value)
   } else if (p1.tag === 'pctor' && p2.tag === 'pctor') {
     return (
-      p1.name === p2.name &&
+      p1.name.name === p2.name.name &&
       p1.args.length === p2.args.length &&
       p1.args.every((arg, i) => patEquals(arg, p2.args[i]))
     )
@@ -592,7 +593,7 @@ export function patEquals(p1: Pat, p2: Pat): boolean {
 export function expEquals(e1: Exp, e2: Exp): boolean {
   if (e1.tag === 'lit' && e2.tag === 'lit') {
     return L.equals(e1.value, e2.value)
-  } else if (e1.tag === 'var' && e2.tag === 'var') {
+  } else if (e1.tag === 'id' && e2.tag === 'id') {
     return e1.name === e2.name
   } else if (e1.tag === 'app' && e2.tag === 'app') {
     return (
@@ -603,14 +604,14 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
   } else if (e1.tag === 'lam' && e2.tag === 'lam') {
     return (
       e1.params.length === e2.params.length &&
-      e1.params.every((param, i) => param === e2.params[i]) &&
-      e1.restParam === e2.restParam &&
+      e1.params.every((param, i) => param.name === e2.params[i].name) &&
+      e1.restParam?.name === e2.restParam?.name &&
       expEquals(e1.body, e2.body)
     )
   } else if (e1.tag === 'let' && e2.tag === 'let') {
     return (
       e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ name }, i) => name === e2.bindings[i].name) &&
+      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
       e1.bindings.every(({ value }, i) =>
         expEquals(value, e2.bindings[i].value),
       ) &&
@@ -645,7 +646,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
   } else if (e1.tag === 'let*' && e2.tag === 'let*') {
     return (
       e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ name }, i) => name === e2.bindings[i].name) &&
+      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
       e1.bindings.every(({ value }, i) =>
         expEquals(value, e2.bindings[i].value),
       ) &&
@@ -685,16 +686,16 @@ export function stmtEquals(s1: Stmt, s2: Stmt): boolean {
   if (s1.tag === 'import' && s2.tag === 'import') {
     return s1.module === s2.module && s1.kind === s2.kind
   } else if (s1.tag === 'define' && s2.tag === 'define') {
-    return s1.name === s2.name && expEquals(s1.value, s2.value)
+    return s1.name.name === s2.name.name && expEquals(s1.value, s2.value)
   } else if (s1.tag === 'display' && s2.tag === 'display') {
     return expEquals(s1.value, s2.value)
   } else if (s1.tag === 'stmtexp' && s2.tag === 'stmtexp') {
     return expEquals(s1.expr, s2.expr)
   } else if (s1.tag === 'struct' && s2.tag === 'struct') {
     return (
-      s1.name === s2.name &&
+      s1.name.name === s2.name.name &&
       s1.fields.length === s2.fields.length &&
-      s1.fields.every((field, i) => field === s2.fields[i])
+      s1.fields.every((field, i) => field.name === s2.fields[i].name)
     )
   } else {
     return false

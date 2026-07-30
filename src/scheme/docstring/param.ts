@@ -1,10 +1,10 @@
 import { isStmtExp } from '../ast'
-import { ICE, Range, ScamperError } from '../../lpm'
+import { ICE, Range } from '../../lpm'
 import { looksLikeIdentifier } from '../literals.js'
 import { reservedWords } from '../reserved-words.js'
-import { SimpleErrorChannel } from '../../lpm/output/simple-error'
 import { tokenizeAndParse } from '../index'
-import { catchIf, mkScamperErrorWithRange } from '../util'
+import { catchIf } from '../util'
+import { DocstringError, mkDocError } from './error'
 import { DocComment, isPred, ParseStage, Pred } from './docstring'
 
 const isWhitespace = (c: string): boolean => /\s/.test(c)
@@ -23,12 +23,9 @@ export const WhitespaceLocation = {
 type WhitespaceLocation =
   (typeof WhitespaceLocation)[keyof typeof WhitespaceLocation]
 
-class ParamParseError extends ScamperError {
-  constructor(
-    message: string,
-    public range: Range,
-  ) {
-    super('Parser', `Error while parsing param in doc string: ${message}`)
+class ParamParseError extends DocstringError {
+  constructor(message: string, range: Range) {
+    super(`Error while parsing param in doc string: ${message}`, range)
   }
 }
 
@@ -71,8 +68,7 @@ export function parseSingleParam(
   // get first description line
   const firstDescComment = docComments.shift()
   if (firstDescComment === undefined) {
-    throw mkScamperErrorWithRange(
-      'Parser',
+    throw mkDocError(
       'Doc string is missing function description',
       firstComment.range,
     )
@@ -90,8 +86,7 @@ export function parseSingleParam(
   while (docComments.length > 0) {
     const nextDescComment = docComments.shift()
     if (nextDescComment === undefined) {
-      throw mkScamperErrorWithRange(
-        'Parser',
+      throw mkDocError(
         'Doc string is missing function description',
         firstDescComment.range,
       )
@@ -108,11 +103,7 @@ export function parseSingleParam(
     param.description += ' ' + remainingDesc
   }
   // if we broke out of the while loop, we ran out of lines
-  throw mkScamperErrorWithRange(
-    'Parser',
-    'Doc string is missing function description',
-    lastRange,
-  )
+  throw mkDocError('Doc string is missing function description', lastRange)
 }
 
 const minSignatureBeginningWhitespace = 1
@@ -147,34 +138,22 @@ export function parseParamSignature(
   const [untrimmedName, ...rest] = splitDocLine
   const postNameDocLine = rest.join(':')
   const trimmedName = untrimmedName.trimEnd()
-  const errs: ScamperError[] = []
+  const errs: string[] = []
   if (!looksLikeIdentifier(trimmedName)) {
-    errs.push(
-      new ScamperError('Parser', 'Expected an identifier', undefined, Range.none),
-    )
+    errs.push('Expected an identifier')
   } else if (trimmedName.startsWith('_')) {
     errs.push(
-      new ScamperError(
-        'Parser',
-        'Identifiers cannot begin with "_" unless inside of "section" or patterns',
-        undefined,
-        Range.none,
-      ),
+      'Identifiers cannot begin with "_" unless inside of "section" or patterns',
     )
   } else if (reservedWords.includes(trimmedName)) {
     errs.push(
-      new ScamperError(
-        'Parser',
-        `The identifier "${trimmedName}" is a reserved word and cannot be used as a variable name`,
-        undefined,
-        Range.none,
-      ),
+      `The identifier "${trimmedName}" is a reserved word and cannot be used as a variable name`,
     )
   }
   const name = errs.length > 0 ? '<error>' : trimmedName
   if (errs.length > 0) {
     throw new ParamMalformedFieldError(
-      `Name field is malformed, ${errs[0].message}`,
+      `Name field is malformed, ${errs[0]}`,
       range,
     )
   }
@@ -190,11 +169,10 @@ export function parseParamSignature(
   // two cases for the predicate: either it's a simple predicate identifier i.e. "pred?"
   // or it's a complex predicate expression i.e. "(complexPred? pred1? pred2? ...)"
   const predicateStr = postNameDocLine.slice(prePredicateWhitespace).trim()
-  const errChannel = new SimpleErrorChannel()
-  const parsed = tokenizeAndParse(errChannel, predicateStr)
-  if (!parsed || errChannel.errors.length > 0 || parsed.length > 1) {
+  const { program: parsed, diagnostics } = tokenizeAndParse(predicateStr)
+  if (!parsed || diagnostics.length > 0 || parsed.length > 1) {
     throw new ParamMalformedFieldError(
-      `Predicate field is malformed${errChannel.errors.length > 0 ? ', ' + errChannel.errors[0].message : ''}`,
+      `Predicate field is malformed${diagnostics.length > 0 ? ', ' + diagnostics[0].message : ''}`,
       range,
     )
   }

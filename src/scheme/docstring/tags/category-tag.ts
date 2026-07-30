@@ -1,4 +1,4 @@
-import { mkScamperErrorWithRange } from '../../util'
+import { mkDocError } from '../error'
 import { DocTag, registerDocTagParser } from './tag'
 
 export type CategoryTag = DocTag<string[]>
@@ -13,9 +13,7 @@ registerDocTagParser('@category', (contents, range): CategoryTag => {
     .map((c) => c.trim())
     .filter((c) => c.length > 0)
   if (categories.length === 0) {
-    throw mkScamperErrorWithRange(
-      'Parser',
-      'Error in @category tag: expected at least one category',
+    throw mkDocError('Error in @category tag: expected at least one category',
       range,
     )
   }

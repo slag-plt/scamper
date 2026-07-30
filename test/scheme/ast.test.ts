@@ -8,16 +8,16 @@ describe('expToString', () => {
   })
 
   test('var', () => {
-    expect(A.expToString(A.mkVar('x', anyRange))).toBe('x')
+    expect(A.expToString(A.mkId('x', anyRange))).toBe('x')
   })
 
   test('app', () => {
-    expect(A.expToString(A.mkApp(A.mkVar('f', anyRange), [], anyRange))).toBe('(f)')
+    expect(A.expToString(A.mkApp(A.mkId('f', anyRange), [], anyRange))).toBe('(f)')
     expect(
       A.expToString(
         A.mkApp(
-          A.mkVar('f', anyRange),
-          [A.mkVar('x', anyRange), A.mkVar('y', anyRange)],
+          A.mkId('f', anyRange),
+          [A.mkId('x', anyRange), A.mkId('y', anyRange)],
           anyRange,
         ),
       ),
@@ -26,10 +26,10 @@ describe('expToString', () => {
 
   test('lam', () => {
     expect(
-      A.expToString(A.mkLam(['x', 'y'], A.mkVar('x', anyRange), anyRange)),
+      A.expToString(A.mkLam([A.mkId('x'), A.mkId('y')], A.mkId('x', anyRange), anyRange)),
     ).toBe('(lambda (x y) x)')
     expect(
-      A.expToString(A.mkLam(['x'], A.mkVar('x', anyRange), anyRange, 'rest')),
+      A.expToString(A.mkLam([A.mkId('x')], A.mkId('x', anyRange), anyRange, A.mkId('rest'))),
     ).toBe('(lambda (x . rest) x)')
   })
 
@@ -37,8 +37,8 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkLet(
-          [{ name: 'x', value: A.mkLit(1, anyRange) }],
-          A.mkVar('x', anyRange),
+          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
+          A.mkId('x', anyRange),
           anyRange,
         ),
       ),
@@ -48,7 +48,7 @@ describe('expToString', () => {
   test('begin', () => {
     expect(
       A.expToString(
-        A.mkBegin([A.mkVar('x', anyRange), A.mkVar('y', anyRange)], anyRange),
+        A.mkBegin([A.mkId('x', anyRange), A.mkId('y', anyRange)], anyRange),
       ),
     ).toBe('(begin x y)')
   })
@@ -57,9 +57,9 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkIf(
-          A.mkVar('c', anyRange),
-          A.mkVar('t', anyRange),
-          A.mkVar('e', anyRange),
+          A.mkId('c', anyRange),
+          A.mkId('t', anyRange),
+          A.mkId('e', anyRange),
           anyRange,
         ),
       ),
@@ -70,8 +70,8 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkMatch(
-          A.mkVar('x', anyRange),
-          [{ pat: A.mkPVar('y', anyRange), body: A.mkVar('y', anyRange) }],
+          A.mkId('x', anyRange),
+          [{ pat: A.mkId('y', anyRange), body: A.mkId('y', anyRange) }],
           anyRange,
         ),
       ),
@@ -97,7 +97,7 @@ describe('expToString', () => {
   test('apply', () => {
     expect(
       A.expToString(
-        A.mkApply(A.mkVar('f', anyRange), A.mkVar('args', anyRange), anyRange),
+        A.mkApply(A.mkId('f', anyRange), A.mkId('args', anyRange), anyRange),
       ),
     ).toBe('(apply f args)')
   })
@@ -106,8 +106,8 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkLetS(
-          [{ name: 'x', value: A.mkLit(1, anyRange) }],
-          A.mkVar('x', anyRange),
+          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
+          A.mkId('x', anyRange),
           anyRange,
         ),
       ),
@@ -116,13 +116,13 @@ describe('expToString', () => {
 
   test('and', () => {
     expect(
-      A.expToString(A.mkAnd([A.mkVar('a', anyRange), A.mkVar('b', anyRange)], anyRange)),
+      A.expToString(A.mkAnd([A.mkId('a', anyRange), A.mkId('b', anyRange)], anyRange)),
     ).toBe('(and a b)')
   })
 
   test('or', () => {
     expect(
-      A.expToString(A.mkOr([A.mkVar('a', anyRange), A.mkVar('b', anyRange)], anyRange)),
+      A.expToString(A.mkOr([A.mkId('a', anyRange), A.mkId('b', anyRange)], anyRange)),
     ).toBe('(or a b)')
   })
 
@@ -130,7 +130,7 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkCond(
-          [{ test: A.mkVar('a', anyRange), body: A.mkVar('b', anyRange) }],
+          [{ test: A.mkId('a', anyRange), body: A.mkId('b', anyRange) }],
           anyRange,
         ),
       ),
@@ -140,13 +140,13 @@ describe('expToString', () => {
   test('section', () => {
     expect(
       A.expToString(
-        A.mkSection([A.mkVar('_', anyRange), A.mkLit(1, anyRange)], anyRange),
+        A.mkSection([A.mkId('_', anyRange), A.mkLit(1, anyRange)], anyRange),
       ),
     ).toBe('(section _ 1)')
   })
 
   test('report', () => {
-    expect(A.expToString(A.mkReport(A.mkVar('x', anyRange), anyRange))).toBe(
+    expect(A.expToString(A.mkReport(A.mkId('x', anyRange), anyRange))).toBe(
       '(report x)',
     )
   })
@@ -160,7 +160,7 @@ describe('stmtToString', () => {
   })
 
   test('define', () => {
-    expect(A.stmtToString(A.mkDefine('x', A.mkLit(1, anyRange), anyRange))).toBe(
+    expect(A.stmtToString(A.mkDefine(A.mkId('x'), A.mkLit(1, anyRange), anyRange))).toBe(
       '(define x 1)',
     )
   })
@@ -172,11 +172,11 @@ describe('stmtToString', () => {
   })
 
   test('stmtexp', () => {
-    expect(A.stmtToString(A.mkStmtExp(A.mkVar('x', anyRange), anyRange))).toBe('x')
+    expect(A.stmtToString(A.mkStmtExp(A.mkId('x', anyRange), anyRange))).toBe('x')
   })
 
   test('struct', () => {
-    expect(A.stmtToString(A.mkStruct('point', ['x', 'y'], anyRange))).toBe(
+    expect(A.stmtToString(A.mkStruct(A.mkId('point'), [A.mkId('x'), A.mkId('y')], anyRange))).toBe(
       '(struct point (x y))',
     )
   })
@@ -184,7 +184,7 @@ describe('stmtToString', () => {
 
 describe('patToString', () => {
   test('pvar', () => {
-    expect(A.patToString(A.mkPVar('x', anyRange))).toBe('x')
+    expect(A.patToString(A.mkId('x', anyRange))).toBe('x')
   })
 
   test('plit', () => {
@@ -192,10 +192,10 @@ describe('patToString', () => {
   })
 
   test('pctor', () => {
-    expect(A.patToString(A.mkPCtor('nil', [], anyRange))).toBe('(nil)')
+    expect(A.patToString(A.mkPCtor(A.mkId('nil'), [], anyRange))).toBe('(nil)')
     expect(
       A.patToString(
-        A.mkPCtor('cons', [A.mkPVar('x', anyRange), A.mkPVar('y', anyRange)], anyRange),
+        A.mkPCtor(A.mkId('cons'), [A.mkId('x', anyRange), A.mkId('y', anyRange)], anyRange),
       ),
     ).toBe('(cons x y)')
   })

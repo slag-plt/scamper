@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { runProgram } from '../harness.js'
 import * as Scheme from '../../src/scheme/index.js'
 import { Fiber } from '../../src/lpm/fiber.js'
+import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { LoggingChannel } from '../../src/lpm/output/index.js'
 import { Scheduler } from '../../src/lpm/scheduler.js'
 
@@ -13,7 +14,8 @@ async function runProgramTraced(src: string, isTracing = true): Promise<string[]
   src = src.trim()
   const out = new LoggingChannel()
   const env = Scheme.mkInitialEnv()
-  const prog = await Scheme.compile(out, src)
+  const { prog, diagnostics } = await Scheme.compile(src)
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   if (out.log.length !== 0) {
     return out.log as string[]
   }

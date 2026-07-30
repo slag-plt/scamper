@@ -3,19 +3,17 @@ import * as prettier from 'prettier'
 import * as A from '../../src/scheme/ast'
 import { tokenizeAndParse } from '../../src/scheme'
 import ScamperPlugin from '../../src/prettier/prettier-plugin-scamper'
-import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 
 // ---- helpers ----------------------------------------------------------------
 
 function parse(src: string): A.Prog {
-  const err = new SimpleErrorChannel()
-  const prog = tokenizeAndParse(err, src)
-  if (!prog) {
+  const { program, diagnostics } = tokenizeAndParse(src)
+  if (!program) {
     throw new Error(
-      `Parse failed:\n${err.errors.map((e) => e.message).join('\n')}`,
+      `Parse failed:\n${diagnostics.map((d) => d.message).join('\n')}`,
     )
   }
-  return prog
+  return program
 }
 
 function format(src: string): Promise<string> {

@@ -6,13 +6,13 @@ function genHoleSym(): string {
   return `_${holeSymCounter++}`
 }
 
-function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
+function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
   switch (e.tag) {
-    case 'var': {
+    case 'id': {
       if (e.name === '_') {
-        const newName = genHoleSym()
-        bvars.push(newName)
-        return A.mkVar(newName, e.range)
+        const name = genHoleSym()
+        bvars.push(A.mkId(name, e.range))
+        return A.mkId(name, e.range)
       } else {
         return e
       }
@@ -35,7 +35,7 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
     case 'let':
       return A.mkLet(
         e.bindings.map((b) => ({
-          name: b.name,
+          id: b.id,
           value: collectSectionHoles(bvars, b.value),
         })),
         collectSectionHoles(bvars, e.body),
@@ -77,7 +77,7 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
     case 'let*':
       return A.mkLetS(
         e.bindings.map((b) => ({
-          name: b.name,
+          id: b.id,
           value: collectSectionHoles(bvars, b.value),
         })),
         collectSectionHoles(bvars, e.body),
@@ -114,7 +114,7 @@ function collectSectionHoles(bvars: string[], e: A.Exp): A.Exp {
 export function expandExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
     // Core forms
-    case 'var':
+    case 'id':
       return e
     case 'lit':
       return e
@@ -124,7 +124,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam)
     case 'let':
       return A.mkLet(
-        e.bindings.map((b) => ({ name: b.name, value: expandExpr(b.value) })),
+        e.bindings.map((b) => ({ id: b.id, value: expandExpr(b.value) })),
         expandExpr(e.body),
         e.range,
       )
@@ -161,7 +161,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       //   ...
       //     (let [xk ek] e))
       const bindings = e.bindings.map((b) => ({
-        name: b.name,
+        id: b.id,
         value: expandExpr(b.value),
       }))
       const body = expandExpr(e.body)
@@ -228,7 +228,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       // -->
       // (lambda (x1 ... xm) (e1' ... ek'))
       //   where occurrences of _ are replaced with fresh x1 ... xm
-      const bvars: string[] = []
+      const bvars: A.Identifier[] = []
       const exps = e.exps.map((arg) =>
         collectSectionHoles(bvars, expandExpr(arg)),
       )
@@ -258,20 +258,20 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       const ctor = A.mkDefine(
         s.name,
         A.mkApp(
-          A.mkVar('##mkCtorFn##'),
-          [A.mkLit(s.name), A.mkLit(s.fields)],
+          A.mkId('##mkCtorFn##'),
+          [A.mkLit(s.name.name), A.mkLit(s.fields.map((f) => f.name))],
           s.range,
         ),
         s.range,
       )
       const pred = A.mkDefine(
-        `${s.name}?`,
-        A.mkApp(A.mkVar('##mkPredFn##'), [A.mkLit(s.name)], s.range),
+        A.mkId(`${s.name.name}?`, s.range),
+        A.mkApp(A.mkId('##mkPredFn##'), [A.mkLit(s.name.name)], s.range),
       )
       const accessors = s.fields.map((f) =>
         A.mkDefine(
-          `${s.name}-${f}`,
-          A.mkApp(A.mkVar('##mkGetFn##'), [A.mkLit(s.name), A.mkLit(f)]),
+          A.mkId(`${s.name.name}-${f.name}`, s.range),
+          A.mkApp(A.mkId('##mkGetFn##'), [A.mkLit(s.name.name), A.mkLit(f.name)]),
           s.range,
         ),
       )

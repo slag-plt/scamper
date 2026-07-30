@@ -52,9 +52,9 @@ describe('lezer-bridge error recovery', () => {
     expect(errors.length).toBeGreaterThan(0)
     expect(prog.length).toBe(3)
     expect(prog[0].tag).toBe('define')
-    expect((prog[0] as { name: string }).name).toBe('x')
+    expect((prog[0] as { name: { name: string } }).name.name).toBe('x')
     expect(prog[2].tag).toBe('define')
-    expect((prog[2] as { name: string }).name).toBe('y')
+    expect((prog[2] as { name: { name: string } }).name.name).toBe('y')
   })
 
   test("error localized inside a nested expression doesn't discard the outer statement", () => {

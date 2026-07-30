@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pat, PCtor, PVar } from '../ast'
+import { Identifier, Pat, PCtor } from '../ast'
 import { createSimpleVueRenderer } from '../../lpm/renderers/vue/simple-renderers'
 import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 import CodeParens from './CodeParens.vue'
@@ -13,15 +13,15 @@ switch (pat.tag) {
   case 'pwild':
     computedComponent = createSimpleVueRenderer(() => '_').renderer
     break
-  case 'pvar':
-    computedComponent = createSimpleVueRenderer<PVar>(
+  case 'id':
+    computedComponent = createSimpleVueRenderer<Identifier>(
       (pat) => pat.name,
     ).renderer
     break
   case 'pctor':
     if (pat.args.length === 0) {
       computedComponent = createSimpleVueRenderer<PCtor>(
-        (pat) => `(${pat.name})`,
+        (pat) => `(${pat.name.name})`,
       ).renderer
     }
     break
@@ -32,7 +32,7 @@ switch (pat.tag) {
   <ValueRenderer v-if="pat.tag === 'plit'" :value="pat.value" />
   <CodeParens
     v-else-if="pat.tag === 'pctor' && pat.args.length > 0"
-    :args="[pat.name, ...pat.args]"
+    :args="[pat.name.name, ...pat.args]"
   />
   <component :is="computedComponent" v-else :value="pat" />
 </template>

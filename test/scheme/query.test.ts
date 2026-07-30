@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
-import { isStmtExp, mkLit, mkVar, Prog } from '../../src/scheme/ast'
-import { Loc, ScamperError } from '../../src/lpm'
+import { isStmtExp, mkId, mkLit, Prog } from '../../src/scheme/ast'
+import { Loc } from '../../src/lpm'
 import * as L from '../../src/lpm'
+import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { anyRange } from './util'
 import { compile } from '../../src/scheme'
-import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 
 const testLit = 'test lit'
 const testDispLit = 2
@@ -22,7 +22,7 @@ const testProgram = `"${testLit}"
 (if #t 1 2)`
 
 function parseTestProgram(): Prog {
-  const errors: ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, testProgram)
   expect(errors).toEqual([])
   return prog
@@ -49,7 +49,7 @@ function locOf(needle: string, occurrence = 0): Loc {
 // Parses src as a single bare-expression statement and returns its
 // expression, for tests that only need a small standalone Exp to query.
 function parseExp(src: string) {
-  const errors: ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, src)
   expect(errors).toEqual([])
   const stmt = prog[0]
@@ -65,7 +65,10 @@ describe('AST querying', () => {
       const prog = parseTestProgram()
       const queryLoc = locOf('yo')
       const originalStmt = prog[3]
-      const { prog: reportedProg } = getQueriedProgram(prog, queryLoc)
+      const queried = getQueriedProgram(prog, queryLoc)
+      expect(queried.ok).toBe(true)
+      if (!queried.ok) return
+      const reportedProg = queried.prog
 
       expect(reportedProg).not.toBe(prog)
       expect(reportedProg[3]).not.toBe(prog[3])
@@ -78,15 +81,16 @@ describe('AST querying', () => {
     test('returns the range of the queried expression', () => {
       const prog = parseTestProgram()
       const queryLoc = locOf('yo')
-      const { range } = getQueriedProgram(prog, queryLoc)
-      expect(range.begin.idx).toBe(testProgram.indexOf('"yo"'))
+      const queried = getQueriedProgram(prog, queryLoc)
+      expect(queried.ok).toBe(true)
+      if (!queried.ok) return
+      expect(queried.range.begin.idx).toBe(testProgram.indexOf('"yo"'))
     })
 
-    test('throws for a query location outside every statement', () => {
+    test('returns a diagnostic for a query location outside every statement', () => {
       const prog = parseTestProgram()
-      expect(() =>
-        getQueriedProgram(prog, new Loc(1000, 1, 100000)),
-      ).toThrow(ScamperError)
+      const result = getQueriedProgram(prog, new Loc(1000, 1, 100000))
+      expect(result.ok).toBe(false)
     })
   })
 
@@ -222,7 +226,7 @@ describe('AST querying', () => {
         if (exp.head.tag !== 'lam') return
         expect(exp.head.body).toStrictEqual({
           tag: 'report',
-          exp: mkVar('x', anyRange),
+          exp: mkId('x', anyRange),
           range: anyRange,
         })
       })
@@ -253,7 +257,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'apply') return
         expect(reported.fn).toStrictEqual({
           tag: 'report',
-          exp: mkVar('+', anyRange),
+          exp: mkId('+', anyRange),
           range: anyRange,
         })
         // the args slot is untouched
@@ -266,7 +270,7 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('apply')
         if (reported.tag !== 'apply') return
         // the fn slot is untouched
-        expect(reported.fn).toStrictEqual(mkVar('+', anyRange))
+        expect(reported.fn).toStrictEqual(mkId('+', anyRange))
         expect(reported.args.tag).toBe('report')
         if (reported.args.tag !== 'report') return
         expect(reported.args.exp.tag).toBe('app')
@@ -282,7 +286,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'lam') return
         expect(reported.body).toStrictEqual({
           tag: 'report',
-          exp: mkVar('x', anyRange),
+          exp: mkId('x', anyRange),
           range: anyRange,
         })
       })
@@ -298,11 +302,11 @@ describe('AST querying', () => {
         if (reported.tag !== 'if') return
         expect(reported.guard).toStrictEqual({
           tag: 'report',
-          exp: mkVar('a', anyRange),
+          exp: mkId('a', anyRange),
           range: anyRange,
         })
-        expect(reported.ifB).toStrictEqual(mkVar('b', anyRange))
-        expect(reported.elseB).toStrictEqual(mkVar('c', anyRange))
+        expect(reported.ifB).toStrictEqual(mkId('b', anyRange))
+        expect(reported.elseB).toStrictEqual(mkId('c', anyRange))
       })
 
       test('reports the ifB slot', () => {
@@ -310,13 +314,13 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'b'))
         expect(reported.tag).toBe('if')
         if (reported.tag !== 'if') return
-        expect(reported.guard).toStrictEqual(mkVar('a', anyRange))
+        expect(reported.guard).toStrictEqual(mkId('a', anyRange))
         expect(reported.ifB).toStrictEqual({
           tag: 'report',
-          exp: mkVar('b', anyRange),
+          exp: mkId('b', anyRange),
           range: anyRange,
         })
-        expect(reported.elseB).toStrictEqual(mkVar('c', anyRange))
+        expect(reported.elseB).toStrictEqual(mkId('c', anyRange))
       })
 
       test('reports the elseB slot', () => {
@@ -324,11 +328,11 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'c'))
         expect(reported.tag).toBe('if')
         if (reported.tag !== 'if') return
-        expect(reported.guard).toStrictEqual(mkVar('a', anyRange))
-        expect(reported.ifB).toStrictEqual(mkVar('b', anyRange))
+        expect(reported.guard).toStrictEqual(mkId('a', anyRange))
+        expect(reported.ifB).toStrictEqual(mkId('b', anyRange))
         expect(reported.elseB).toStrictEqual({
           tag: 'report',
-          exp: mkVar('c', anyRange),
+          exp: mkId('c', anyRange),
           range: anyRange,
         })
       })
@@ -341,10 +345,10 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'q'))
         expect(reported.tag).toBe('and')
         if (reported.tag !== 'and') return
-        expect(reported.exps[0]).toStrictEqual(mkVar('p', anyRange))
+        expect(reported.exps[0]).toStrictEqual(mkId('p', anyRange))
         expect(reported.exps[1]).toStrictEqual({
           tag: 'report',
-          exp: mkVar('q', anyRange),
+          exp: mkId('q', anyRange),
           range: anyRange,
         })
       })
@@ -357,10 +361,10 @@ describe('AST querying', () => {
         if (reported.tag !== 'begin') return
         expect(reported.exps[0]).toStrictEqual({
           tag: 'report',
-          exp: mkVar('p', anyRange),
+          exp: mkId('p', anyRange),
           range: anyRange,
         })
-        expect(reported.exps[1]).toStrictEqual(mkVar('q', anyRange))
+        expect(reported.exps[1]).toStrictEqual(mkId('q', anyRange))
       })
     })
 
@@ -372,14 +376,14 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let')
         if (reported.tag !== 'let') return
         expect(reported.bindings[0]).toStrictEqual({
-          name: 'x',
+          id: mkId('x', anyRange),
           value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
         })
         expect(reported.bindings[1]).toStrictEqual({
-          name: 'y',
+          id: mkId('y', anyRange),
           value: mkLit(2, anyRange),
         })
-        expect(reported.body).toStrictEqual(mkVar('z', anyRange))
+        expect(reported.body).toStrictEqual(mkId('z', anyRange))
       })
 
       test('let reports the body slot', () => {
@@ -389,16 +393,16 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let')
         if (reported.tag !== 'let') return
         expect(reported.bindings[0]).toStrictEqual({
-          name: 'x',
+          id: mkId('x', anyRange),
           value: mkLit(1, anyRange),
         })
         expect(reported.bindings[1]).toStrictEqual({
-          name: 'y',
+          id: mkId('y', anyRange),
           value: mkLit(2, anyRange),
         })
         expect(reported.body).toStrictEqual({
           tag: 'report',
-          exp: mkVar('z', anyRange),
+          exp: mkId('z', anyRange),
           range: anyRange,
         })
       })
@@ -410,10 +414,10 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let*')
         if (reported.tag !== 'let*') return
         expect(reported.bindings[0]).toStrictEqual({
-          name: 'x',
+          id: mkId('x', anyRange),
           value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
         })
-        expect(reported.body).toStrictEqual(mkVar('x', anyRange))
+        expect(reported.body).toStrictEqual(mkId('x', anyRange))
       })
     })
 
@@ -426,12 +430,12 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('cond')
         if (reported.tag !== 'cond') return
         expect(reported.branches[0]).toStrictEqual({
-          test: { tag: 'report', exp: mkVar('p', anyRange), range: anyRange },
-          body: mkVar('q', anyRange),
+          test: { tag: 'report', exp: mkId('p', anyRange), range: anyRange },
+          body: mkId('q', anyRange),
         })
         expect(reported.branches[1]).toStrictEqual({
-          test: mkVar('r', anyRange),
-          body: mkVar('s', anyRange),
+          test: mkId('r', anyRange),
+          body: mkId('s', anyRange),
         })
       })
 
@@ -441,12 +445,12 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('cond')
         if (reported.tag !== 'cond') return
         expect(reported.branches[0]).toStrictEqual({
-          test: mkVar('p', anyRange),
-          body: mkVar('q', anyRange),
+          test: mkId('p', anyRange),
+          body: mkId('q', anyRange),
         })
         expect(reported.branches[1]).toStrictEqual({
-          test: mkVar('r', anyRange),
-          body: { tag: 'report', exp: mkVar('s', anyRange), range: anyRange },
+          test: mkId('r', anyRange),
+          body: { tag: 'report', exp: mkId('s', anyRange), range: anyRange },
         })
       })
     })
@@ -461,12 +465,12 @@ describe('AST querying', () => {
         if (reported.tag !== 'match') return
         expect(reported.scrutinee).toStrictEqual({
           tag: 'report',
-          exp: mkVar('v', anyRange),
+          exp: mkId('v', anyRange),
           range: anyRange,
         })
         // patterns and branch bodies are untouched
-        expect(reported.branches[0].body).toStrictEqual(mkVar('y', anyRange))
-        expect(reported.branches[1].body).toStrictEqual(mkVar('z', anyRange))
+        expect(reported.branches[0].body).toStrictEqual(mkId('y', anyRange))
+        expect(reported.branches[1].body).toStrictEqual(mkId('z', anyRange))
       })
 
       // N.B., patterns aren't queryable slots (see slotsOf's comment in
@@ -476,11 +480,11 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'z'))
         expect(reported.tag).toBe('match')
         if (reported.tag !== 'match') return
-        expect(reported.scrutinee).toStrictEqual(mkVar('v', anyRange))
-        expect(reported.branches[0].body).toStrictEqual(mkVar('y', anyRange))
+        expect(reported.scrutinee).toStrictEqual(mkId('v', anyRange))
+        expect(reported.branches[0].body).toStrictEqual(mkId('y', anyRange))
         expect(reported.branches[1].body).toStrictEqual({
           tag: 'report',
-          exp: mkVar('z', anyRange),
+          exp: mkId('z', anyRange),
           range: anyRange,
         })
       })
@@ -495,11 +499,11 @@ describe('AST querying', () => {
         if (reported.tag !== 'app') return
         expect(reported.args[0]).toStrictEqual({
           tag: 'report',
-          exp: { tag: 'report', exp: mkVar('x', anyRange), range: anyRange },
+          exp: { tag: 'report', exp: mkId('x', anyRange), range: anyRange },
           range: anyRange,
         })
         // the sibling argument is untouched
-        expect(reported.args[1]).toStrictEqual(mkVar('y', anyRange))
+        expect(reported.args[1]).toStrictEqual(mkId('y', anyRange))
       })
     })
   })
@@ -514,9 +518,14 @@ describe('AST querying', () => {
       const lineStart = src.lastIndexOf('\n', closeIdx - 1) + 1
       const queryLoc = new Loc(line, closeIdx - lineStart + 1, closeIdx)
 
-      const errors: ScamperError[] = []
+      const errors: ScamperDiagnostic[] = []
       const prog = parseProgramFromSource(errors, src)
-      const { range } = getQueriedProgram(prog, queryLoc)
+      const queried = getQueriedProgram(prog, queryLoc)
+      if (!queried.ok) {
+        expect.fail('expected a valid query location')
+        return
+      }
+      const range = queried.range
       const firstLine = range.firstLineSpan(src)
 
       expect(range.begin.line).toBeLessThan(range.end.line)
@@ -535,20 +544,22 @@ describe('AST querying', () => {
       const line = src.slice(0, oneIdx).split('\n').length
       const lineStart = src.lastIndexOf('\n', oneIdx - 1) + 1
       const queryLoc = new Loc(line, oneIdx - lineStart + 1, oneIdx)
-      const err = new SimpleErrorChannel()
 
-      const result = await compile(err, src, queryLoc)
+      const { prog, queriedRange, diagnostics } = await compile(src, { queryLoc })
 
-      expect(err.errors).toStrictEqual([])
-      if (result === undefined) {
-        expect.fail('expected compile to return a result')
+      expect(diagnostics).toStrictEqual([])
+      if (prog === undefined) {
+        expect.fail('expected compile to return a program')
         return
       }
-      const { queriedRange } = result
-      const errors: ScamperError[] = []
-      const prog = parseProgramFromSource(errors, src)
-      const { range } = getQueriedProgram(prog, queryLoc)
-      expect(queriedRange).toEqual(range.firstLineSpan(src))
+      const errors: ScamperDiagnostic[] = []
+      const parsed = parseProgramFromSource(errors, src)
+      const queried = getQueriedProgram(parsed, queryLoc)
+      if (!queried.ok) {
+        expect.fail('expected a valid query location')
+        return
+      }
+      expect(queriedRange).toEqual(queried.range.firstLineSpan(src))
     })
 
     // N.B., verified still stale, not just historically skipped: running this
@@ -572,7 +583,6 @@ describe('AST querying', () => {
 ;;; @example (${funcName} ${lit1.toString()} ${lit2.toString()}) -> ${lit1.toString()}
 (define ${funcName} (lambda (a b) a))`
       const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
-      const err = new SimpleErrorChannel()
 
       const expectedProg: L.Prog = [
         expect.anything() as L.Stmt,
@@ -588,13 +598,12 @@ describe('AST querying', () => {
         ),
       ]
 
-      const result = await compile(err, src, queryLoc)
-      expect(err.errors).toStrictEqual([])
-      if (result === undefined) {
-        expect.fail('expected compile to return a result')
+      const { prog: actualProg, diagnostics } = await compile(src, { queryLoc })
+      expect(diagnostics).toStrictEqual([])
+      if (actualProg === undefined) {
+        expect.fail('expected compile to return a program')
         return
       }
-      const { prog: actualProg } = result
       expect(actualProg).toStrictEqual(expectedProg)
     })
   })

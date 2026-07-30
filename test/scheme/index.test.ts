@@ -4,7 +4,6 @@ import { expToString } from '../../src/scheme/ast.js'
 import { Loc } from '../../src/lpm'
 import * as LPM from '../../src/lpm/'
 import { Frame } from '../../src/lpm/frame.js'
-import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 import { makeTestFiber } from '../util.js'
 
 // Finds the Loc of the first occurrence of `needle` within `src`, so tests
@@ -32,68 +31,63 @@ describe('fiberRaiser', () => {
 })
 
 describe('tokenizeAndParse with a query location', () => {
-  test('reports an error for a query location outside every statement', () => {
-    const err = new SimpleErrorChannel()
-    const result = tokenizeAndParse(
-      err,
+  test('reports a diagnostic for a query location outside every statement', () => {
+    const { program, diagnostics } = tokenizeAndParse(
       '(define foo 1)',
       new Loc(1, 9999, 9999),
     )
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
-    expect(err.errors[0].phase).toBe('Parser')
+    expect(program).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].phase).toBe('Query')
   })
 
   test('rejects a query outside a function definition', () => {
-    const err = new SimpleErrorChannel()
     const src = '(display 1)'
-    const result = tokenizeAndParse(err, src, locOf(src, '1'))
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
-    expect(err.errors[0].message).toMatch(
+    const { program, diagnostics } = tokenizeAndParse(src, locOf(src, '1'))
+    expect(program).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].message).toMatch(
       /only allowed within function definitions/,
     )
   })
 
   test('rejects a query on a definition with a malformed docstring', () => {
-    const err = new SimpleErrorChannel()
     const src = `;;; (foo) -> number?
 (define foo 1)`
-    const result = tokenizeAndParse(err, src, locOf(src, '1'))
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
-    expect(err.errors[0].phase).toBe('Docstring')
+    const { program, diagnostics } = tokenizeAndParse(src, locOf(src, '1'))
+    expect(program).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].phase).toBe('Docstring')
   })
 
   test('rejects a query on a definition whose comment is not a docstring', () => {
-    const err = new SimpleErrorChannel()
     const src = `; just a regular comment
 (define foo 1)`
-    const result = tokenizeAndParse(err, src, locOf(src, '1'))
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
-    expect(err.errors[0].message).toMatch(
+    const { program, diagnostics } = tokenizeAndParse(src, locOf(src, '1'))
+    expect(program).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].message).toMatch(
       /only allowed within function definitions/,
     )
   })
 
   test('rejects a query on a docstring with no example tag', () => {
-    const err = new SimpleErrorChannel()
     const src = `;;; (foo) -> number?
 ;;; constant one
 (define foo 1)`
-    const result = tokenizeAndParse(err, src, locOf(src, '1'))
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
-    expect(err.errors[0].message).toMatch(/requires an example tag/)
+    const { program, diagnostics } = tokenizeAndParse(src, locOf(src, '1'))
+    expect(program).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].message).toMatch(/requires an example tag/)
   })
 })
 
 describe('compile with a query location', () => {
-  test('returns undefined when the query cannot be resolved', async () => {
-    const err = new SimpleErrorChannel()
-    const result = await compile(err, '(define foo 1)', new Loc(1, 9999, 9999))
-    expect(result).toBeUndefined()
-    expect(err.errors).toHaveLength(1)
+  test('returns no program when the query cannot be resolved', async () => {
+    const { prog, diagnostics } = await compile('(define foo 1)', {
+      queryLoc: new Loc(1, 9999, 9999),
+    })
+    expect(prog).toBeUndefined()
+    expect(diagnostics).toHaveLength(1)
   })
 })

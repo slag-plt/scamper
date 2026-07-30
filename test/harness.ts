@@ -1,5 +1,6 @@
 import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
+import { diagnosticToError } from '../src/scheme/diagnostic'
 import { Fiber } from '../src/lpm/fiber'
 import HTMLDisplay from '../src/lpm/output/html'
 
@@ -28,7 +29,8 @@ export async function runProgram (src: string): Promise<string[]> {
     src = src.trim()
     const out = new LPM.LoggingChannel()
     const env = Scheme.mkInitialEnv()
-    const prog = await Scheme.compile(out, src)
+    const { prog, diagnostics } = await Scheme.compile(src)
+    diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
     if (out.log.length !== 0) { return out.log as string[] }
     if (prog === undefined) {
       throw new Error('compile produced no program and no logged errors')
@@ -41,7 +43,8 @@ export async function runProgram (src: string): Promise<string[]> {
 export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {
     src = src.trim()
     const env = Scheme.mkInitialEnv()
-    const prog = await Scheme.compile(out, src)
+    const { prog, diagnostics } = await Scheme.compile(src)
+    diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
 
     if (out.levels.length > 1) { return out.levels }
     if (prog === undefined) {

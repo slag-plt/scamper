@@ -2,16 +2,18 @@ import { expect, test, describe } from 'vitest'
 
 import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
+import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
 import { runProgram } from '../harness.js'
 
 async function checkMachineOutput (src: string, expected: L.Value[]) {
   src = src.trim()
   const out = new L.LoggingChannel(false, false)
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const prog = (await S.compile(out, src))!
+  const { prog, diagnostics } = await S.compile(src)
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   expect(out.errLog).toEqual([])
-  const fiber = new Fiber(prog, S.mkInitialEnv())
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const fiber = new Fiber(prog!, S.mkInitialEnv())
   // TODO: this should be refactored once we've re-established a common
   // entry point for running Scamper programs
   while (!fiber.isDone()) {
