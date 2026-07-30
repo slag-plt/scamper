@@ -224,20 +224,30 @@ describe('scope checking', () => {
         await scopeErrors('(match (cons 1 2) [(cons a b) 0] [_ a])'),
       ).toEqual(["Undefined variable 'a'"])
     })
-    test('a forward reference to a later define', async () => {
-      // N.B., documents current behavior: top-level definitions are only in
-      // scope from their definition onward, so forward references (and thus
-      // mutual recursion between top-level defines) are flagged.
-      expect(await scopeErrors('x\n(define x 1)')).toEqual([
-        "Undefined variable 'x'",
-      ])
+  })
+
+  describe('top-level definitions are mutually recursive', () => {
+    // Top-level bindings share one mutually-recursive scope (Racket module
+    // semantics), so their order in the program does not affect visibility.
+    test('a forward reference to a later define resolves', async () => {
+      expect(await scopeErrors('x\n(define x 1)')).toEqual([])
     })
-    test('mutual recursion between top-level defines is flagged', async () => {
+    test('mutual recursion between top-level defines is allowed', async () => {
       expect(
         await scopeErrors(
           '(define f (lambda (n) (g n)))\n(define g (lambda (n) (f n)))',
         ),
-      ).toEqual(["Undefined variable 'g'"])
+      ).toEqual([])
+    })
+    test('a define may reference a name defined later', async () => {
+      expect(
+        await scopeErrors('(define a (lambda () (b)))\n(define b (lambda () 1))'),
+      ).toEqual([])
+    })
+    test('a genuinely undefined name is still flagged', async () => {
+      expect(await scopeErrors('(define f (lambda (n) (nope n)))')).toEqual([
+        "Undefined variable 'nope'",
+      ])
     })
   })
 
@@ -363,10 +373,24 @@ describe('scope checking', () => {
         await scopeErrors('(import "utils.scm")\n(define helper 2)'),
       ).toEqual(["Global variable 'helper' is already defined"])
     })
-    test('an import after a same-named define is not flagged (current behavior)', async () => {
+    test('an import after a same-named define is also flagged (symmetric)', async () => {
+      // A define/import name clash is an error regardless of order (Racket: an
+      // identifier can be either imported or defined, but not both).
       mockFS({ 'utils.scm': '(define helper 1)' })
       expect(
         await scopeErrors('(define helper 1)\n(import "utils.scm")'),
+      ).toEqual(["Global variable 'helper' is already defined"])
+    })
+    test('two imports exporting the same name collide', async () => {
+      mockFS({ 'x.scm': '(define dup 1)', 'y.scm': '(define dup 2)' })
+      expect(await scopeErrors('(import "x.scm")\n(import "y.scm")')).toEqual([
+        "Global variable 'dup' is already defined",
+      ])
+    })
+    test('re-importing the same module is idempotent (no collision)', async () => {
+      mockFS({ 'utils.scm': '(define helper 1)' })
+      expect(
+        await scopeErrors('(import "utils.scm")\n(import "utils.scm")\nhelper'),
       ).toEqual([])
     })
     test('a local binding may shadow an imported name', async () => {

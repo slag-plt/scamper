@@ -343,82 +343,149 @@ function scopeCheckFunctionDoc(
 }
 
 /**
- * Scope-checks a single top-level statement, extending `globals` with any
- * names it introduces (a define/struct binder, or an import's bindings).
+ * Resolves an import to the identifiers it exports, reporting a diagnostic (and
+ * returning undefined) if the module is an unknown built-in, a missing file, or
+ * a file that failed to parse.
  */
-async function scopeCheckStmt(
+async function resolveImport(
+  diagnostics: ScamperDiagnostic[],
+  s: A.Import,
+): Promise<A.Identifier[] | undefined> {
+  if (s.kind === 'builtin') {
+    const mod = SymbolDB.get(s.module)
+    if (mod === undefined) {
+      diagnostics.push(
+        mkDiagnostic(
+          'Scope',
+          'warning',
+          `No such built-in library: '${s.module}'`,
+          s.range,
+        ),
+      )
+    }
+    return mod
+  }
+
+  // File import. N.B., import '../fs' lazily -- a static import would pull the
+  // OPFS implementation into this module's (widely-imported) graph and disturb
+  // tests that mock the file system (see symbol-db.ts).
+  const { getFS } = await import('../fs')
+  if (!(await getFS().fileExists(s.module))) {
+    diagnostics.push(
+      mkDiagnostic('Scope', 'warning', `File '${s.module}' does not exist`, s.range),
+    )
+    return undefined
+  }
+  // Imported files' symbols were loaded into the DB before scope checking (see
+  // SymbolDB.loadTransitiveImports). A missing DB entry for a file that exists
+  // means it failed to parse.
+  const mod = SymbolDB.get(s.module)
+  if (mod === undefined) {
+    diagnostics.push(
+      mkDiagnostic('Scope', 'warning', `Could not load module '${s.module}'`, s.range),
+    )
+  }
+  return mod
+}
+
+/**
+ * First pass over the top level: records every binding a statement introduces
+ * (a define's name, or an import's exported names) into `globals`, so that all
+ * top-level definitions are mutually visible regardless of their order in the
+ * program. This matches Racket module semantics -- every module-level
+ * definition and import shares one mutually-recursive scope covering the whole
+ * body -- so top-level mutual recursion and forward references resolve.
+ *
+ * It also resolves imports (reporting a missing / unparseable / unknown module)
+ * and flags name collisions. A collision between two *user-introduced* names --
+ * define/define, define/import, or import/import -- is reported symmetrically,
+ * regardless of order (Racket: "an identifier can be either imported or defined
+ * ... but not both"). `sources` maps each user-introduced name to what
+ * introduced it (`null` for a define, else the module name), so re-importing
+ * the same module is idempotent and a library import that merely re-binds a
+ * standard-library name is not spuriously flagged.
+ */
+async function collectTopLevelBindings(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
+  sources: Map<string, string | null>,
   s: A.Stmt,
-) {
+): Promise<void> {
   switch (s.tag) {
     case 'import': {
-      if (s.kind === 'builtin') {
-        const mod = SymbolDB.get(s.module)
-        if (mod !== undefined) {
-          for (const id of mod) {
-            globals.push(id.name)
-          }
-        } else {
+      const ids = await resolveImport(diagnostics, s)
+      if (ids === undefined) {
+        return
+      }
+      for (const { name } of ids) {
+        const prev = sources.get(name)
+        if (prev !== undefined && prev !== s.module) {
+          // Already introduced by a define (null) or a different module.
           diagnostics.push(
             mkDiagnostic(
               'Scope',
               'warning',
-              `No such built-in library: '${s.module}'`,
+              `Global variable '${name}' is already defined`,
               s.range,
             ),
           )
+        } else if (prev === undefined) {
+          if (!globals.includes(name)) {
+            globals.push(name)
+          }
+          sources.set(name, s.module)
         }
-        return
-      }
-
-      // File import. N.B., import '../fs' lazily -- a static import would pull
-      // the OPFS implementation into this module's (widely-imported) graph and
-      // disturb tests that mock the file system (see symbol-db.ts).
-      const { getFS } = await import('../fs')
-      if (!(await getFS().fileExists(s.module))) {
-        diagnostics.push(
-          mkDiagnostic(
-            'Scope',
-            'warning',
-            `File '${s.module}' does not exist`,
-            s.range,
-          ),
-        )
-        return
-      }
-      // Imported files' symbols were loaded into the DB before scope checking
-      // (see SymbolDB.loadTransitiveImports). A missing DB entry for a file
-      // that exists means it failed to parse.
-      const mod = SymbolDB.get(s.module)
-      if (mod === undefined) {
-        diagnostics.push(
-          mkDiagnostic(
-            'Scope',
-            'warning',
-            `Could not load module '${s.module}'`,
-            s.range,
-          ),
-        )
-      } else {
-        mod.forEach((id) => globals.push(id.name))
+        // prev === s.module: the same module re-imported; idempotent, skip.
       }
       return
     }
 
     case 'define': {
-      if (globals.includes(s.name.name)) {
+      const name = s.name.name
+      if (globals.includes(name)) {
         diagnostics.push(
           mkDiagnostic(
             'Scope',
             'warning',
-            `Global variable '${s.name.name}' is already defined`,
+            `Global variable '${name}' is already defined`,
             s.range,
           ),
         )
       } else {
-        globals.push(s.name.name)
+        globals.push(name)
       }
+      // Mark as user-introduced so a later import of the same name collides.
+      sources.set(name, null)
+      return
+    }
+
+    case 'display':
+    case 'stmtexp':
+      // Introduces no top-level binding.
+      return
+
+    default:
+      throw new ICE(
+        'collectTopLevelBindings',
+        `Non-core statement encountered ${s.tag}`,
+      )
+  }
+}
+
+/**
+ * Second pass over the top level: scope-checks each statement's bodies (and a
+ * define's docstring) against the fully-populated `globals`.
+ */
+function scopeCheckStmtBodies(
+  diagnostics: ScamperDiagnostic[],
+  globals: string[],
+  s: A.Stmt,
+): void {
+  switch (s.tag) {
+    case 'import':
+      return
+
+    case 'define': {
       scopeCheckExp(diagnostics, globals, [], s.value)
       if (s.docComments) {
         // A malformed docstring is collected as a "Docstring" warning, the
@@ -433,25 +500,27 @@ async function scopeCheckStmt(
       return
     }
 
-    case 'display': {
+    case 'display':
       scopeCheckExp(diagnostics, globals, [], s.value)
       return
-    }
 
-    case 'stmtexp': {
+    case 'stmtexp':
       scopeCheckExp(diagnostics, globals, [], s.expr)
       return
-    }
 
     default:
-      throw new ICE('scopeCheckStmt', `Non-core statement encountered ${s.tag}`)
+      throw new ICE(
+        'scopeCheckStmtBodies',
+        `Non-core statement encountered ${s.tag}`,
+      )
   }
 }
 
 /**
  * Scope-checks an (expanded) program, collecting diagnostics. Loads every
  * transitively-imported file's symbols first, seeds the runtime and prelude
- * globals, then checks each statement in order.
+ * globals, then checks it in two passes so top-level definitions are mutually
+ * recursive: collect all top-level bindings, then check every statement's body.
  */
 export async function scopeCheckProgram(
   diagnostics: ScamperDiagnostic[],
@@ -459,7 +528,7 @@ export async function scopeCheckProgram(
 ) {
   // Ensure every imported file's symbols are in the DB before we resolve names.
   // Failures found below the top level are reported here (a direct import's
-  // failure is reported by its own statement in scopeCheckStmt).
+  // failure is reported when it is resolved in collectTopLevelBindings).
   for (const f of await SymbolDB.loadTransitiveImports(prog)) {
     diagnostics.push(
       mkDiagnostic(
@@ -479,7 +548,14 @@ export async function scopeCheckProgram(
   for (const id of SymbolDB.get('prelude')!) {
     globals.push(id.name)
   }
+  // Two passes so that top-level definitions are mutually recursive: collect
+  // every top-level binding first (also resolving imports and flagging name
+  // collisions), then check each statement's bodies against the full set.
+  const sources = new Map<string, string | null>()
   for (const s of prog) {
-    await scopeCheckStmt(diagnostics, globals, s)
+    await collectTopLevelBindings(diagnostics, globals, sources, s)
+  }
+  for (const s of prog) {
+    scopeCheckStmtBodies(diagnostics, globals, s)
   }
 }
