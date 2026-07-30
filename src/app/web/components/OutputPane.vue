@@ -63,8 +63,8 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border: 0.1em solid var(--border);
   border-bottom: none;
   border-top-left-radius: 0.5em;
   border-top-right-radius: 0.5em;
@@ -82,9 +82,9 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border-left: 0.1em solid #d0d7de;
-  border-right: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border-left: 0.1em solid var(--border);
+  border-right: 0.1em solid var(--border);
   z-index: -1;
 }
 
@@ -99,8 +99,8 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0.25em;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border: 0.1em solid var(--border);
   border-top: none;
   border-bottom-left-radius: 0.5em;
   border-bottom-right-radius: 0.5em;
@@ -119,9 +119,9 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border-left: 0.1em solid #d0d7de;
-  border-right: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border-left: 0.1em solid var(--border);
+  border-right: 0.1em solid var(--border);
   z-index: -2;
 }
 .trace-steps-top::after {
@@ -131,8 +131,8 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 1em;
   right: 1em;
-  background-color: #ffffff;
-  border: 0.1em dashed #d0d7de;
+  background-color: var(--surface);
+  border: 0.1em dashed var(--border);
   border-bottom: none;
   border-top-left-radius: 0.5em;
   border-top-right-radius: 0.5em;
@@ -150,9 +150,9 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border-left: 0.1em solid #d0d7de;
-  border-right: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border-left: 0.1em solid var(--border);
+  border-right: 0.1em solid var(--border);
   z-index: -2;
 }
 .trace-steps-item::after {
@@ -162,9 +162,9 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 1em;
   right: 1em;
-  background-color: #ffffff;
-  border-left: 0.1em dashed #d0d7de;
-  border-right: 0.1em dashed #d0d7de;
+  background-color: var(--surface);
+  border-left: 0.1em dashed var(--border);
+  border-right: 0.1em dashed var(--border);
   z-index: -1;
 }
 
@@ -179,9 +179,9 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #f6f8fa;
-  border-left: 0.1em solid #d0d7de;
-  border-right: 0.1em solid #d0d7de;
+  background-color: var(--surface-muted);
+  border-left: 0.1em solid var(--border);
+  border-right: 0.1em solid var(--border);
   z-index: -2;
 }
 .trace-steps-bottom::after {
@@ -191,8 +191,8 @@ defineExpose({ display, reset, scrollToBottom })
   bottom: 0.25em;
   left: 1em;
   right: 1em;
-  background-color: #ffffff;
-  border: 0.1em dashed #d0d7de;
+  background-color: var(--surface);
+  border: 0.1em dashed var(--border);
   border-top: none;
   border-bottom-left-radius: 0.5em;
   border-bottom-right-radius: 0.5em;

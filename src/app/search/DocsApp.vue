@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ApiEntries from './ApiEntries.vue'
+import ThemeToggle from '../shared/ThemeToggle.vue'
 const appVersion = APP_VERSION
 
 const search = ref('')
@@ -24,6 +25,8 @@ const searched: string | null = urlParams.get('search')
 
       </div>
       <div class="header-right">
+        <ThemeToggle />
+        ⋅
         <a href="https://github.com/slag-plt/scamper"
           ><i class="fa-brands fa-github"></i
         ></a>
@@ -87,8 +90,8 @@ body,
 }
 
 .header {
-  background: #ffacac;
-  color: #333;
+  background: var(--error-accent);
+  color: var(--header-fg);
   padding: 0.5em;
   flex: 0 0 auto;
   display: flex;
@@ -98,7 +101,10 @@ body,
 }
 
 .header-right {
-  color: #333;
+  color: var(--header-fg);
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
 }
 
 .docs {

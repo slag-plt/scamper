@@ -458,7 +458,7 @@ onUnmounted(() => {
 .sidebar-wrapper {
   width: 250px;
   flex-shrink: 0;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--border-muted);
 }
 
 .ide-main {
@@ -475,18 +475,18 @@ onUnmounted(() => {
 }
 
 .editor-pane {
-  background-color: white;
+  background-color: var(--surface);
   overflow: hidden;
 }
 
 .results-pane {
-  background-color: white;
+  background-color: var(--surface);
   display: flex;
   flex-direction: column;
 }
 
 :deep(.splitpanes__splitter) {
-  background-color: #eee;
+  background-color: var(--splitter-bg);
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
   background-repeat: no-repeat;
   background-position: 50%;
@@ -504,14 +504,14 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--overlay);
 }
 
 .loading-content {
-  background-color: #fefefe;
+  background-color: var(--modal-bg);
   margin: auto;
   padding: 20px;
-  border: 1px solid #888;
+  border: 1px solid var(--modal-border);
   width: 80%;
 }
 </style>

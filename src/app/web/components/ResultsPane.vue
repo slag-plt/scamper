@@ -44,7 +44,7 @@ defineExpose({
 .output-container {
   flex: 1;
   min-height: 0;
-  background: #fff;
-  color: #333;
+  background: var(--surface);
+  color: var(--fg);
 }
 </style>

@@ -5,7 +5,7 @@ pre code.hljs {
 }
 
 pre.hljs {
-  border: 1px solid black;
+  border: 1px solid var(--border);
   padding: 0.5em;
 }
 
@@ -23,8 +23,8 @@ pre.hljs {
   Current colors taken from GitHub's CSS
 */
 .hljs {
-  color: #24292e;
-  background: #fafafa
+  color: var(--fg);
+  background: var(--surface-muted)
 }
 .hljs-doctag,
 .hljs-keyword,
