@@ -3105,9 +3105,7 @@ test('vector-filter', async () => {
 })
 
 test('with-handler-call', async () => {
-  // fn throws #248 immediately; the ScamperError catch branch then invokes
-  // the handler (which throws #248 again)
-  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual([
-    'Runtime error [1:1-1:24]: (with-handler) Javascript library functions can no longer call Scamper functions',
-  ])
+  // No error is raised, so the handler is never invoked; with-handler applies
+  // its function to the trailing arguments and returns the result: (+ 1 2 3).
+  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual(['6'])
 })

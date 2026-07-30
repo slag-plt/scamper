@@ -117,6 +117,7 @@ const formDescriptions: Record<string, string> = {
   Report: 'report expression',
   Error: 'error expression (a message to raise)',
   Apply: 'apply expression (a function and a list of arguments)',
+  WithHandler: 'with-handler expression (a handler, a function, and its arguments)',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -398,6 +399,14 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkApply(
         expFromNode(ctx, cs[1]),
         expFromNode(ctx, cs[2]),
+        range,
+      )
+
+    case 'WithHandler':
+      return A.mkWithHandler(
+        expFromNode(ctx, cs[1]),
+        expFromNode(ctx, cs[2]),
+        cs.slice(3).map((c) => expFromNode(ctx, c)),
         range,
       )
 

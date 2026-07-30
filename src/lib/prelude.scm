@@ -996,15 +996,15 @@
 ;;; @category other
 (define random (js-var "prelude_random"))
 
-;;; (with-handler h f . v) -> any
-;;;  h : procedure?
-;;;   a handler
-;;;  f : procedure?
-;;;   a function
-;;;  v : any
-;;; Calls `(f v1 .. vk)` and if an error is occurred, calls `(h err)` where `err` is the string associated with the raised error.
-;;; @category other
-(define with-handler (js-var "prelude_withHandler"))
+;; N.B., `with-handler` is now a reserved-word special form, not a library
+;; binding -- it must install an exception handler in the bytecode, which a
+;; js-var-backed procedure cannot do. Its handler/function/args are ordinary
+;; sub-expressions; on a raised runtime error the fiber unwinds to the handler
+;; and applies it to the error's message string. Parsing lives in
+;; syntax.grammar (WithHandler) + lezer-bridge; the AST node is WithHandlerExp;
+;; codegen lowers it to push-handler/apply/pop-handler (see the LPM handler
+;; stack in src/lpm/fiber.ts). As it is no longer a documented define, it does
+;; not appear on the generated docs site (like `error`/`if`/`cond`).
 
 ;;; (ignore v) -> void
 ;;;  v : any

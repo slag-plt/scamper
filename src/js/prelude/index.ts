@@ -1,5 +1,4 @@
 import * as L from '../../lpm'
-import { SubthreadErrors } from '../../lpm'
 
 export * from './files.js'
 
@@ -936,25 +935,10 @@ export function prelude_random(n: number): number {
   return Math.floor(Math.random() * n)
 }
 
-export function prelude_withHandler(
-  handler: L.ScamperFn,
-  fn: L.ScamperFn,
-  ...args: L.Value[]
-): L.Value {
-  try {
-    return L.callScamperFn(fn, ...args)
-  } catch (e) {
-    // TODO: subthreads could theoretically throw multiple errors, don't know how we will address that
-    if (e instanceof SubthreadErrors && e.errors.length == 1) {
-      return L.callScamperFn(handler, e.errors[0].message)
-    }
-    if (e instanceof L.ScamperError) {
-      return L.callScamperFn(handler, e.message)
-    }
-    // shouldn't happen, but if it's not a ScamperError, just try to cast and see what happens.
-    return L.callScamperFn(handler, (e as L.ScamperError).message)
-  }
-}
+// N.B., `with-handler` used to live here as prelude_withHandler, but a js-var
+// procedure can no longer call Scamper functions (callScamperFn is disabled).
+// It is now a reserved-word special form lowered to the LPM handler stack; see
+// syntax.grammar / codegen / src/lpm/fiber.ts.
 
 // Exceptions (6.11)
 

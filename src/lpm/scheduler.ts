@@ -1,4 +1,4 @@
-import { ErrorChannel, ICE, OutputChannel, ScamperError } from '.'
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from '.'
 import { Fiber, StepResult } from './fiber'
 import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput } from './trace/index.js'
@@ -104,6 +104,12 @@ export class Scheduler {
         // or we have an unexpected error somewhere (which is really bad)
         // either way, we should probably just rethrow this...
         throw e
+      }
+      // Give an installed with-handler a chance to recover. ReportError (the
+      // query/inspection mechanism) is deliberately never caught by a user
+      // handler; ICEs are already excluded above.
+      if (!(e instanceof ReportError) && fiber.handleError(e)) {
+        return undefined
       }
       if (isReportTask(task)) {
         console.debug(e)

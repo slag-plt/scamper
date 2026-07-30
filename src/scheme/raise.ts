@@ -122,6 +122,26 @@ export function raiseFrame(
         break
       }
 
+      case 'push-handler': {
+        // N.B., no-op: the handler value stays on the reconstruction stack (it
+        // was left there at runtime too) and is consumed by pop-handler below.
+        break
+      }
+
+      case 'pop-handler': {
+        // Stack is [.., handler, guarded]; guarded is normally the reconstructed
+        // application of `f` to its args (from the preceding `ap`). Recover it
+        // into a with-handler form.
+        const guarded = values.pop()!
+        const handler = values.pop()!
+        if (guarded.tag === 'app') {
+          values.push(A.mkWithHandler(handler, guarded.head, guarded.args))
+        } else {
+          values.push(A.mkWithHandler(handler, guarded, []))
+        }
+        break
+      }
+
       case 'pops': {
         // N.B., pops the local environment, but we don't track that here!
         break

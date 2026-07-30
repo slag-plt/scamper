@@ -7,8 +7,10 @@ import {
 } from './handlers/stmt-handlers'
 import { Frame } from './frame'
 import { ICE, ScamperError } from './error'
+import { Range } from './range'
 import {
   ApHandler,
+  applyFn,
   ApplyHandler,
   ClsHandler,
   CtorHandler,
@@ -16,11 +18,26 @@ import {
   JsVarHandler,
   LitHandler,
   MatchHandler,
+  PopHandlerHandler,
   PopVHandler,
+  PushHandlerHandler,
   ReptHandler,
   VarHandler,
 } from './handlers/op-handlers'
 import { builtinLibs } from './builtin-registry.js'
+
+/**
+ * A record of an installed exception handler (from a `with-handler` form). See
+ * Fiber.handleError for how these are consumed on a raised ScamperError.
+ */
+export interface HandlerRecord {
+  // frame-stack length to unwind to (the frame that installed the handler stays).
+  frameDepth: number
+  // the installing frame's value-stack length just after the handler was pushed;
+  // on error we reset the stack to `valDepth - 1`, dropping the handler value.
+  valDepth: number
+  handler: Value
+}
 
 
 export interface DisplayStep { tag: 'display' }
@@ -53,6 +70,10 @@ export class Fiber {
   topLevelEnv: Env
   frames: Frame[] = []
   lastResult: Value | null = null
+  // Stack of installed exception handlers, innermost last. Pushed by the
+  // push-handler op, popped by pop-handler (normal completion) or handleError
+  // (on a raised error).
+  handlerStack: HandlerRecord[] = []
 
   private prog: Stmt[]
   private currStmtIdx = 0
@@ -183,6 +204,48 @@ export class Fiber {
   }
 
   /**
+   * Attempts to recover from a raised runtime error using the innermost
+   * installed exception handler (from a `with-handler` form). Unwinds the frame
+   * stack back to the installing frame, discards the failed sub-computation, and
+   * schedules the handler applied to the error's message string.
+   * @returns true if a handler caught the error (execution should resume), false
+   *          if no handler was installed (the caller should report the error).
+   */
+  handleError(e: ScamperError): boolean {
+    const rec = this.handlerStack.pop()
+    if (rec === undefined) {
+      return false
+    }
+    // Discard the failed sub-computation's frames, landing back on the frame
+    // that installed the handler.
+    this.frames.length = rec.frameDepth
+    const target = this.currentFrame
+    if (target === undefined) {
+      throw new ICE(
+        'Fiber.handleError',
+        'Handler unwound past the bottom of the frame stack',
+      )
+    }
+    // The installing frame's next op is the matching pop-handler (its guarded
+    // `ap` already ran). Discard it -- we're taking the error path, not
+    // completing normally.
+    const pending = target.popInstr()
+    if (pending.tag !== 'pop-handler') {
+      throw new ICE(
+        'Fiber.handleError',
+        `Expected a pop-handler op while unwinding, found ${pending.tag}`,
+      )
+    }
+    // Drop the handler value (and anything the failed computation left), so the
+    // stack is exactly as it was before the with-handler form began.
+    target.values.length = rec.valDepth - 1
+    // Apply the handler to the error's message string (matching the historical
+    // prelude_withHandler contract). Its result becomes the form's value.
+    applyFn(rec.handler, [e.message], target, this, e.range ?? Range.none)
+    return true
+  }
+
+  /**
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step
    */
@@ -230,6 +293,12 @@ export class Fiber {
         break
       case 'apply':
         isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
+        break
+      case 'push-handler':
+        isMajorStep = PushHandlerHandler(currOp, this.currentFrame, this)
+        break
+      case 'pop-handler':
+        isMajorStep = PopHandlerHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

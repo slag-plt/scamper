@@ -350,6 +350,20 @@ export interface ApplyOp {
   tag: 'apply'
   range: Range
 }
+// N.B., push-handler/pop-handler bracket the guarded application lowered from a
+// `with-handler` special form. push-handler installs the current top value as an
+// exception handler (recording the frame/value-stack depth to unwind to); on a
+// raised ScamperError the fiber unwinds to that depth and applies the handler.
+// pop-handler is the normal-completion path: it uninstalls the handler and drops
+// the (now-unused) handler value, leaving the guarded result on the stack.
+export interface PushHandler {
+  tag: 'push-handler'
+  range: Range
+}
+export interface PopHandler {
+  tag: 'pop-handler'
+  range: Range
+}
 
 export type Ops =
   | Lit
@@ -365,6 +379,8 @@ export type Ops =
   | JsVar
   | ErrorOp
   | ApplyOp
+  | PushHandler
+  | PopHandler
 export type Blk = Ops[]
 
 export interface Disp {

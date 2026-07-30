@@ -170,6 +170,12 @@ function scopeCheckExp(
       scopeCheckExp(diagnostics, globals, locals, e.args)
       return
     }
+    case 'with-handler': {
+      scopeCheckExp(diagnostics, globals, locals, e.handler)
+      scopeCheckExp(diagnostics, globals, locals, e.fn)
+      e.args.forEach((a) => scopeCheckExp(diagnostics, globals, locals, a))
+      return
+    }
     case 'report': {
       scopeCheckExp(diagnostics, globals, locals, e.exp)
       return

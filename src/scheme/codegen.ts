@@ -84,6 +84,17 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [...lowerExpr(e.exp), L.mkError(e.range)]
     case 'apply':
       return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
+    case 'with-handler':
+      // push handler, install it, then apply fn to args guarded by it; on normal
+      // completion pop-handler uninstalls it (see the LPM handler stack).
+      return [
+        ...lowerExpr(e.handler),
+        L.mkPushHandler(e.range),
+        ...lowerExpr(e.fn),
+        ...e.args.flatMap(lowerExpr),
+        L.mkAp(e.args.length, e.range),
+        L.mkPopHandler(e.range),
+      ]
     case 'report':
       return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:

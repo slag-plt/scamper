@@ -22,4 +22,5 @@ export const reservedWords = [
   'section',
   'struct',
   'report',
+  'with-handler',
 ]

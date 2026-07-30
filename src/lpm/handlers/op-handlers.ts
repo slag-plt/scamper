@@ -61,7 +61,7 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
  * Closure.call/callScamperFn are permanently disabled for JS code calling
  * back into Scamper.
  */
-function applyFn(
+export function applyFn(
   fn: Value,
   args: Value[],
   currFrame: Frame,
@@ -233,4 +233,39 @@ export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
     )
   }
   throw new ReportError(currFrame.values.at(-1), op.range)
+}
+
+// N.B., installs the top-of-stack value as an exception handler. The handler
+// value is *peeked*, not popped -- it stays on the value stack (between here and
+// the matching pop-handler) so raise.ts can reconstruct the `with-handler` form,
+// and so the fiber can find it on the stack. We record the frame- and
+// value-stack depths to unwind to if a ScamperError is raised under the guarded
+// application (see Fiber.handleError).
+export const PushHandlerHandler: OpHandler<'push-handler'> = (_op, currFrame, fiber) => {
+  if (currFrame.values.length < 1) {
+    throw new ICE('Fiber.PushHandlerHandler', 'No handler value on the stack')
+  }
+  fiber.handlerStack.push({
+    frameDepth: fiber.frames.length,
+    valDepth: currFrame.values.length,
+    handler: currFrame.values.at(-1)!,
+  })
+  return minorStep
+}
+
+// N.B., normal (no-error) completion of a guarded application. The stack is
+// [.., handler, result]; drop the handler value and its stack record, leaving
+// [.., result].
+export const PopHandlerHandler: OpHandler<'pop-handler'> = (_op, currFrame, fiber) => {
+  if (currFrame.values.length < 2) {
+    throw new ICE(
+      'Fiber.PopHandlerHandler',
+      'Expected a handler and a result on the stack',
+    )
+  }
+  const result = currFrame.values.pop()!
+  currFrame.values.pop() // drop the (unused) handler value
+  currFrame.values.push(result)
+  fiber.handlerStack.pop()
+  return minorStep
 }
