@@ -30,7 +30,7 @@ const descSpans = computed<TextSpan[]>(() => {
 
 <style scoped>
 .entry {
-  border: 1px solid black;
+  border: 1px solid var(--border);
   padding: 1em;
   margin: 1em;
   font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui,

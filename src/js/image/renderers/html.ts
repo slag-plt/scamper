@@ -12,7 +12,7 @@ function renderRgb (rgb: Rgb): HTMLElement {
   div.style.color = image_rgbToString(textColor)
   div.style.backgroundColor = image_rgbToString(rgb)
   div.style.width = 'fit-content'
-  div.style.border = '1px solid black'
+  div.style.border = '1px solid var(--border)'
   div.style.padding = '0.25em'
   div.textContent = image_rgbToString(rgb)
   return div
@@ -27,7 +27,7 @@ function renderHsv (hsv: Hsv): HTMLElement {
   div.style.color = image_rgbToString(textColor)
   div.style.backgroundColor = image_rgbToString(rgb)
   div.style.width = 'fit-content'
-  div.style.border = '1px solid black'
+  div.style.border = '1px solid var(--border)'
   div.style.padding = '0.25em'
   div.textContent = image_hsvToString(hsv)
   return div

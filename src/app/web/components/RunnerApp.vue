@@ -5,6 +5,7 @@ import { ScamperError } from '../../../lpm/error'
 import OutputPane from './OutputPane.vue'
 import type { OutputPaneType } from '../composables/use-output-pane'
 import Scamper from '../../../scamper'
+import ThemeToggle from '../../shared/ThemeToggle.vue'
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
 const version = shallowRef('')
@@ -45,7 +46,8 @@ onMounted(async () => {
 <template>
   <div class="runner">
     <div class="header">
-      Scamper <span>{{ version }}</span> ⋅ <span>{{ currentFile }}</span>
+      <span>Scamper <span>{{ version }}</span> ⋅ <span>{{ currentFile }}</span></span>
+      <ThemeToggle />
     </div>
     <div id="output" class="output-wrapper">
       <OutputPane ref="outputPaneRef" />
@@ -86,16 +88,20 @@ body {
 }
 
 .header {
-  background: #eee;
-  color: #333;
+  background: var(--header-bg);
+  color: var(--header-fg);
   padding: 0.5em;
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .output-wrapper {
   flex: 1;
   min-height: 0;
-  background: #fff;
-  color: #333;
+  background: var(--surface);
+  color: var(--fg);
 }
 </style>

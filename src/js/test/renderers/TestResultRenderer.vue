@@ -43,14 +43,14 @@ defineProps<{ value: Result }>()
   font-size: 1em;
   margin: 0.5em;
   padding: 0.25em;
-  border: dashed 1px black;
+  border: dashed 1px var(--test-border);
 }
 
 .test-result.ok {
-  background-color: #e5ffe5;
+  background-color: var(--test-ok-bg);
 }
 
 .test-result.error {
-  background-color: #ffe5e5;
+  background-color: var(--test-error-bg);
 }
 </style>

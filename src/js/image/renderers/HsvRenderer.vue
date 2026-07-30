@@ -24,7 +24,7 @@ const displayText = computed(() => image_hsvToString(props.value))
       color: textColor,
       backgroundColor: backgroundColor,
       width: 'fit-content',
-      border: '1px solid black',
+      border: '1px solid var(--border)',
       padding: '0.25em',
     }"
   >

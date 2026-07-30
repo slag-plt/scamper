@@ -644,9 +644,15 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
   }
 }
 
-export function image_clearDrawing (canvas: HTMLCanvasElement) {
+/**
+ * Clears `canvas` to a solid background before a drawing is rendered onto it.
+ * @param background the fill color (default 'white'). Callers rendering for
+ *   *display* pass a themed color (see DrawingRenderer.vue); the default keeps
+ *   off-screen/data uses (drawing->pixels, drawing->image) deterministic.
+ */
+export function image_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = background
   ctx.strokeStyle = 'black'
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }

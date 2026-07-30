@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
-import { mkNoFileEditorState } from '../codemirror/codemirror'
+import {
+  editorThemeCompartment,
+  editorThemeExtension,
+  mkNoFileEditorState,
+} from '../codemirror/codemirror'
+import { currentTheme } from '../../../theme'
 import {
   type CodeMirrorEditorAdapter,
   createCodeMirrorEditorAdapter,
@@ -25,6 +30,13 @@ onMounted(() => {
     emit('dirty')
   })
   editorRegistration.register(adapter)
+})
+
+// Live-swap the editor theme when the app theme changes.
+watch(currentTheme, (theme) => {
+  editorView?.dispatch({
+    effects: editorThemeCompartment.reconfigure(editorThemeExtension(theme)),
+  })
 })
 
 onUnmounted(() => {

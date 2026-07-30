@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 const appVersion = APP_VERSION
 import ModuleList from './ModuleList.vue'
 import ApiEntries from './ApiEntries.vue'
+import ThemeToggle from '../shared/ThemeToggle.vue'
 import { docRegistry } from '../../lib'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
 
@@ -51,6 +52,8 @@ function searchForFunction(searchTerm: string) {
 
       </div>
       <div class="header-right">
+        <ThemeToggle />
+        ⋅
         <a href="https://github.com/slag-plt/scamper"
           ><i class="fa-brands fa-github"></i
         ></a>
@@ -107,8 +110,8 @@ body,
 }
 
 .header {
-  background: #eee;
-  color: #333;
+  background: var(--header-bg);
+  color: var(--header-fg);
   padding: 0.5em;
   flex: 0 0 auto;
   display: flex;
@@ -118,7 +121,10 @@ body,
 }
 
 .header-right {
-  color: #333;
+  color: var(--header-fg);
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
 }
 
 .docs {
