@@ -1,9 +1,12 @@
 import fs from 'fs'
+import path from 'node:path'
 import { parseArgs } from 'node:util'
 
 import type { ScamperDiagnostic } from '../../scheme/diagnostic'
 import { ConsoleOutput } from '../../lpm/output'
 import { compile } from '../../scheme'
+import { setFS } from '../../fs'
+import NodeFileSystem from '../../fs/node'
 import Scamper, { initialize } from '../../scamper'
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -41,6 +44,11 @@ if (values.help || positionals.length !== 1) {
 const filename = positionals[0]
 
 const src = fs.readFileSync(filename, 'utf-8')
+
+// Wire a Node-backed file system rooted at the checked file's directory so
+// scope checking and execution can resolve the program's sibling file imports
+// (getFS() is otherwise uninitialized outside the browser -- see #287).
+setFS(await NodeFileSystem.create(path.dirname(path.resolve(filename))))
 
 await initialize()
 
