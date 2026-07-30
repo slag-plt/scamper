@@ -1,6 +1,7 @@
 import * as L from '../../lpm'
 import { Rgb, image_rgb, image_colorToRgb, image_rgbAverage, image_rgbToString } from './color.js'
 import { Font, image_font, image_fontQ, image_fontToFontString } from './font.js'
+import { onThemeChange, readColorToken } from '../../theme'
 
 /***** Core Functions *********************************************************/
 
@@ -646,8 +647,10 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
 
 export function image_clearDrawing (canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = 'white'
-  ctx.strokeStyle = 'black'
+  // Background/default stroke follow the app theme so a drawing blends into the
+  // page instead of being a bright white box on a dark background.
+  ctx.fillStyle = readColorToken('--canvas-surface')
+  ctx.strokeStyle = readColorToken('--canvas-ink')
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))
 }
 
@@ -658,7 +661,19 @@ export function image_renderer (drawing: Drawing): HTMLElement {
   canvas.setAttribute('aria-label', image_canvasAriaLabel)
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
-  image_clearDrawing(canvas)
-  image_render(0, 0, drawing, canvas)
+  const paint = () => {
+    image_clearDrawing(canvas)
+    image_render(0, 0, drawing, canvas)
+  }
+  paint()
+  // Repaint on theme change. Self-unsubscribe once the canvas leaves the DOM
+  // (e.g. output cleared) so listeners don't accumulate across runs.
+  const unsubscribe = onThemeChange(() => {
+    if (!canvas.isConnected) {
+      unsubscribe()
+      return
+    }
+    paint()
+  })
   return canvas
 }

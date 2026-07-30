@@ -60,7 +60,7 @@ const entries = computed<Entry[]>(() => {
 .index {
   margin: 1em;
   padding: 1em;
-  background-color: #ddd;
+  background-color: var(--surface-muted);
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
   width: 17em;
   flex-shrink: 0;
