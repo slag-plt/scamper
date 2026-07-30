@@ -295,52 +295,12 @@ export function prelude_xor(x: boolean, y: boolean): boolean {
   return (x && !y) || (!x && y)
 }
 
-// Additional functions
-
-export function prelude_anyOf(...fns: L.ScamperFn[]): L.ScamperFn {
-  return function (v: any): boolean {
-    for (let i = 0; i < fns.length; i++) {
-      if (L.callScamperFn(fns[i], v)) {
-        return true
-      }
-    }
-    return false
-  }
-}
-
-export function prelude_allOf(...fns: L.ScamperFn[]): L.ScamperFn {
-  return function (v: any): boolean {
-    for (let i = 0; i < fns.length; i++) {
-      if (!L.callScamperFn(fns[i], v)) {
-        return false
-      }
-    }
-    return true
-  }
-}
-
 // Pairs and Lists (6.4)
 
 // NOTE: like Clojure, we distinguish between pairs and lists (cons).
 
 export function prelude_pairQ(x: any): boolean {
   return L.isPair(x)
-}
-
-export function prelude_listOf(pred: L.ScamperFn): L.ScamperFn {
-  return function (l: L.List): boolean {
-    // N.B., list-of returns false if the input is _not_ a list
-    if (!prelude_listQ(l)) {
-      return false
-    }
-    while (l !== null) {
-      if (!L.callScamperFn(pred, l.head)) {
-        return false
-      }
-      l = l.tail
-    }
-    return true
-  } as L.JsFunction
 }
 
 export function prelude_cons(x: any, y: any): L.Value {
@@ -568,24 +528,6 @@ export function prelude_assocSet(k: L.Value, v: L.Value, l: L.List): L.List {
     }
   }
   return L.vectorToList(front.concat([L.mkPair(k, v)]))
-}
-
-// Miscellaneous list functions
-
-export function prelude_sort(l: L.List, lt: L.ScamperFn): L.List {
-  const arr = L.listToVector(l)
-  arr.sort((a, b) => {
-    const result = L.callScamperFn(lt, a, b)
-    if (typeof result !== 'boolean') {
-      throw new L.ScamperError(
-        'Runtime',
-        'sort: comparator function must return a number',
-      )
-    } else {
-      return result ? -1 : 1
-    }
-  })
-  return L.vectorToList(arr)
 }
 
 // Symbols (6.5)
@@ -944,181 +886,9 @@ export function prelude_procedureQ(x: any): boolean {
   return L.isClosure(x) || L.isJsFunction(x)
 }
 
-export function prelude_stringMap(f: L.ScamperFn, s: string): string {
-  const chs = []
-  for (let i = 0; i < s.length; i++) {
-    chs.push(L.mkChar(s[i]))
-  }
-  return chs.map((c) => (L.callScamperFn(f, c) as L.Char).value).join('')
-}
-
-/**
- * @param arr - a rectangular array of arrays, i.e., each array has the same
- * length
- * @returns the transposition of this array of arrays where rows become columns
- * and columns become rows.
- */
-function transpose<T>(arr: T[][]): T[][] {
-  if (arr.length === 0) {
-    return []
-  }
-  const numArrays = arr.length
-  // N.B., assumed that all arrays have the same length
-  const numArgs = arr[0].length
-  const result: T[][] = []
-  for (let i = 0; i < numArgs; i++) {
-    result.push([])
-  }
-  for (let i = 0; i < numArgs; i++) {
-    for (let j = 0; j < numArrays; j++) {
-      result[i].push(arr[j][i])
-    }
-  }
-  return result
-}
-
-function mapOne(f: L.ScamperFn, l: L.List): L.List {
-  const values = []
-  while (l !== null) {
-    values.push(L.callScamperFn(f, l.head))
-    l = l.tail
-  }
-  return L.vectorToList(values)
-}
-
-export function prelude_map(f: L.ScamperFn, ...lsts: L.List[]): L.List {
-  if (lsts.length === 0) {
-    return null
-  } else if (lsts.length === 1) {
-    return mapOne(f, lsts[0])
-  } else {
-    const lists = lsts.map(L.listToVector)
-    if (!lists.map((l) => l.length).every((n) => n === lists[0].length)) {
-      throw new L.ScamperError(
-        'Runtime',
-        'the lists passed to the function call do not have the same length',
-      )
-    }
-    const xs = transpose(lists)
-    return L.vectorToList(xs.map((vs) => L.callScamperFn(f, ...vs)))
-  }
-}
-
-// Additional list pipeline functions from racket/base
-
-export function prelude_filter(f: L.ScamperFn, lst: L.List): L.List {
-  const values = []
-  while (lst !== null) {
-    if (L.callScamperFn(f, lst.head)) {
-      values.push(lst.head)
-    }
-    lst = lst.tail
-  }
-  return L.vectorToList(values)
-}
-
-export function prelude_fold(f: L.ScamperFn, init: L.Value, lst: L.List): L.Value {
-  let acc = init
-  while (lst !== null) {
-    acc = L.callScamperFn(f, acc, lst.head)
-    lst = lst.tail
-  }
-  return acc
-}
-
-export function prelude_reduce(f: L.ScamperFn, lst: L.List): L.Value {
-  let acc = lst!.head
-  lst = lst!.tail
-  while (lst !== null) {
-    acc = L.callScamperFn(f, acc, lst.head)
-    lst = lst.tail
-  }
-  return acc
-}
-
-export function prelude_foldLeft(
-  f: L.ScamperFn,
-  init: L.Value,
-  lst: L.List,
-): L.Value {
-  let acc = init
-  while (lst !== null) {
-    acc = L.callScamperFn(f, lst.head, acc)
-    lst = lst.tail
-  }
-  return acc
-}
-
-export function prelude_foldRight(
-  f: L.ScamperFn,
-  init: L.Value,
-  lst: L.List,
-): L.Value {
-  const values = L.listToVector(lst)
-  let acc = init
-  for (let i = values.length - 1; i >= 0; i--) {
-    // N.B., the type of the higher-order function is a -> b -> b!
-    acc = L.callScamperFn(f, values[i], acc)
-  }
-  return acc
-}
-
-export function prelude_reduceRight(f: L.ScamperFn, lst: L.List): L.Value {
-  const values = L.listToVector(lst)
-  let acc = values.pop()
-  for (let i = values.length - 1; i >= 0; i--) {
-    // N.B., the type of the higher-order function is a -> b -> b!
-    acc = L.callScamperFn(f, values[i], acc)
-  }
-  return acc
-}
-
-export function prelude_vectorMap(f: L.ScamperFn, ...vecs: L.Value[][]): L.Value[] {
-  if (vecs.length === 0) {
-    return []
-  } else if (vecs.length === 1) {
-    return vecs[0].map((v) => L.callScamperFn(f, v))
-  } else {
-    if (!vecs.map((l) => l.length).every((n) => n === vecs[0].length)) {
-      throw new L.ScamperError(
-        'Runtime',
-        'the vectors passed to the function call do not have the same length',
-      )
-    }
-    const xs = transpose(vecs)
-    return xs.map((vs) => L.callScamperFn(f, ...vs))
-  }
-}
-
-export function prelude_vectorMapBang(f: L.ScamperFn, vec: L.Value[]): void {
-  for (let i = 0; i < vec.length; i++) {
-    vec[i] = L.callScamperFn(f, vec[i])
-  }
-}
-
-export function prelude_vectorForEach(f: L.ScamperFn, vec: L.Value[]): void {
-  for (let i = 0; i < vec.length; i++) {
-    L.callScamperFn(f, vec[i])
-  }
-}
-
-export function prelude_forRange(start: number, end: number, f: L.ScamperFn): void {
-  if (start < end) {
-    for (let i = start; i < end; i++) {
-      L.callScamperFn(f, i)
-    }
-  } else {
-    for (let i = start; i > end; i--) {
-      L.callScamperFn(f, i)
-    }
-  }
-}
-
 // TODO: implement:
 //   (for-each fn l1 ... lk)
 //   (string-for-each fn str1 ... strk)
-
-// N.B., (vector-for-each fn v1 ... vk) not implemented since vectors are not implemented.
 
 // TODO: implement:
 //   (call-with-current-continuation proc)
@@ -1129,16 +899,6 @@ export function prelude_forRange(start: number, end: number, f: L.ScamperFn): vo
 
 // Additional control features
 
-export function prelude_vectorFilter(f: L.ScamperFn, lst: L.Value[]): L.Value[] {
-  const ret = []
-  for (let i = 0; i < lst.length; i++) {
-    if (L.callScamperFn(f, lst[i])) {
-      ret.push(lst[i])
-    }
-  }
-  return ret
-}
-
 // TODO: implement fold/reduce variants for vectors
 
 export function prelude_voidQ(x: any): boolean {
@@ -1147,25 +907,6 @@ export function prelude_voidQ(x: any): boolean {
 
 export function prelude_qq(): never {
   throw new L.ScamperError('Runtime', 'Hole encountered in program!')
-}
-
-export function prelude_compose(...fss: (L.ScamperFn)[]): L.ScamperFn {
-  const first = fss[fss.length - 1]
-  return (x: L.Value) => {
-    let ret = L.callScamperFn(first, x)
-    for (let i = fss.length - 2; i >= 0; i--) {
-      ret = L.callScamperFn(fss[i], ret)
-    }
-    return ret
-  }
-}
-
-export function prelude_pipe(init: L.Value, ...fs: (L.ScamperFn)[]): L.Value {
-  let acc = init
-  for (let i = 0; i < fs.length; i++) {
-    acc = L.callScamperFn(fs[i], acc)
-  }
-  return acc
 }
 
 export function prelude_range(...args: number[]): L.List {
