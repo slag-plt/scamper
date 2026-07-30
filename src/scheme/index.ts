@@ -36,6 +36,13 @@ export interface QueryParseResult extends ParseResult {
   queriedRange?: Range
 }
 
+/**
+ * Parses source to a raw AST. With a `queryLoc`, instead rewrites the queried
+ * definition's example for on-demand evaluation (see the query/example-tag
+ * feature) and reports the queried range.
+ * @param queryLoc a cursor position to build a query program around, if any
+ * @returns the program (absent on a fatal parse or query error) and any diagnostics
+ */
 export function tokenizeAndParse(src: string): ParseResult
 export function tokenizeAndParse(src: string, queryLoc: Loc): QueryParseResult
 export function tokenizeAndParse(
@@ -131,6 +138,12 @@ export interface QueryCompileResult extends CompileResult {
   queriedRange?: Range
 }
 
+/**
+ * Compiles source to a lowered LPM program: parse, optional scope check,
+ * optional contract insertion, expand, and lower.
+ * @returns the lowered program (absent on a fatal parse error) and any
+ *          diagnostics; the caller decides, from the diagnostics, whether to run
+ */
 export async function compile(
   src: string,
   opts: CompileOptions & { queryLoc: Loc },

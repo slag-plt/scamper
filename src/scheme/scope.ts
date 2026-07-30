@@ -9,6 +9,11 @@ import {
 } from './docstring/docstring'
 import * as SymbolDB from './symbol-db.js'
 
+/**
+ * Reports a "duplicate variable" diagnostic for each name that appears more
+ * than once in a binding list (lambda parameters, let bindings).
+ * @param range the source range to attach to any diagnostic
+ */
 function checkDuplicateVars(
   diagnostics: ScamperDiagnostic[],
   vars: string[],
@@ -30,6 +35,10 @@ function checkDuplicateVars(
   }
 }
 
+/**
+ * Scope-checks a match pattern, adding its binders to `locals` and reporting
+ * any variable bound more than once within the pattern.
+ */
 function scopeCheckPat(
   diagnostics: ScamperDiagnostic[],
   locals: Set<string>,
@@ -66,6 +75,10 @@ function scopeCheckPat(
   }
 }
 
+/**
+ * Scope-checks an expression, reporting references to names bound in neither
+ * `locals` (lexical scope) nor `globals` (top level), plus duplicate binders.
+ */
 function scopeCheckExp(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
@@ -166,6 +179,10 @@ function scopeCheckExp(
 }
 
 // TODO: test this
+/**
+ * Scope-checks a docstring predicate, reporting a "Docstring" warning if it
+ * names a global that is not defined.
+ */
 function scopeCheckPred(
   diagnostics: ScamperDiagnostic[],
   predicate: Pred,
@@ -185,6 +202,7 @@ function scopeCheckPred(
 }
 
 // TODO: test this
+/** Scope-checks an applied docstring predicate and each of its arguments. */
 function scopeCheckComplexPred(
   diagnostics: ScamperDiagnostic[],
   { head: { name }, args, range }: ComplexPred,
@@ -211,15 +229,16 @@ function scopeCheckComplexPred(
 // (define append
 //   (lambda (lst val) ...))
 // TODO: test this
-//
-// N.B., takes the already-parsed `doc` (rather than reading it off the
-// Define directly) since parsing a docstring can fail, and that failure is
-// handled by the caller -- everything this function itself reports is a
-// *semantic* mismatch between an already-valid docstring and the function
-// it's attached to (wrong param names, missing description, ...), which is
-// just as much a documentation-quality issue as a malformed docstring, not
-// a real scope error. Every diagnostic it (and its nested scopeCheckPred
-// calls) produce is a "Docstring" warning.
+/**
+ * Scope-checks a definition's already-parsed docstring against the function it
+ * documents, reporting mismatches (wrong parameter names, undefined predicates,
+ * missing descriptions) as "Docstring" warnings.
+ *
+ * N.B., takes the already-parsed `doc` rather than reading it off the Define,
+ * since docstring parsing can fail and that failure is handled by the caller;
+ * everything reported here is a *semantic* mismatch between a valid docstring
+ * and its function, not a real scope error.
+ */
 function scopeCheckFunctionDoc(
   diagnostics: ScamperDiagnostic[],
   doc: FunctionDoc,
@@ -322,6 +341,10 @@ function scopeCheckFunctionDoc(
   return
 }
 
+/**
+ * Scope-checks a single top-level statement, extending `globals` with any
+ * names it introduces (a define/struct binder, or an import's bindings).
+ */
 async function scopeCheckStmt(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
@@ -424,6 +447,11 @@ async function scopeCheckStmt(
   }
 }
 
+/**
+ * Scope-checks an (expanded) program, collecting diagnostics. Loads every
+ * transitively-imported file's symbols first, seeds the runtime and prelude
+ * globals, then checks each statement in order.
+ */
 export async function scopeCheckProgram(
   diagnostics: ScamperDiagnostic[],
   prog: A.Prog,
