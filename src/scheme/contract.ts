@@ -181,6 +181,9 @@ export function contractStmt(s: A.Stmt): A.Stmt {
   if (s.tag !== 'define' || !s.docComments) {
     return s
   }
+  // A malformed docstring yields `doc: undefined` (handled below); a genuine
+  // internal error (ICE) is intentionally NOT caught here -- it should surface
+  // as a loud failure rather than silently skip contract insertion.
   const { doc } = parseFunctionDocFromComments(s.docComments)
   if (!doc || (doc.params.length === 0 && !doc.restParam)) {
     return s

@@ -34,6 +34,18 @@ function makeScamperLinter(_outputId?: HTMLElement) {
     } catch (e) {
       if (e instanceof LPM.ScamperError) {
         diagnostics.push(LPM.mkDiagnostic('Parse', 'error', e.message, e.range))
+      } else {
+        // An unexpected failure (e.g. an ICE in the scope-check pass) must not
+        // vanish silently: log it for debugging and surface a diagnostic
+        // rather than showing the user nothing.
+        console.error(e)
+        diagnostics.push(
+          LPM.mkDiagnostic(
+            'Parse',
+            'error',
+            e instanceof Error ? e.message : String(e),
+          ),
+        )
       }
     }
     // TODO: should also surface diagnostics to some window in the UI

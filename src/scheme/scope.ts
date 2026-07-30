@@ -223,19 +223,10 @@ function scopeCheckComplexPred(
 function scopeCheckFunctionDoc(
   diagnostics: ScamperDiagnostic[],
   doc: FunctionDoc,
-  { name, value }: A.Define,
+  { name: nameId, value }: A.Define,
   globals: string[],
 ): void {
-  scopeCheckFunctionDocInner(diagnostics, doc, name.name, value, globals)
-}
-
-function scopeCheckFunctionDocInner(
-  diagnostics: ScamperDiagnostic[],
-  doc: FunctionDoc,
-  name: string,
-  value: A.Exp,
-  globals: string[],
-): void {
+  const name = nameId.name
   if (!A.isLam(value)) {
     // can't attach function docs onto non-function definitions
     diagnostics.push(
