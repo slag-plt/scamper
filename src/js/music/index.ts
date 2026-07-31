@@ -406,7 +406,9 @@ export function music_playComposition (composition: Composition): number {
       if (ev.time / 1000 + startTime <= now) {
         try {
           if (ev.tag === 'trigger') {
-            L.callScamperFn(ev.callback, [])
+            // Fire the trigger's callback as a fiber at its scheduled time; a
+            // JS timer callback can no longer call the closure directly.
+            L.spawn(ev.callback, [])
           } else {
             ev.handlers.forEach(handler => {
               handler({ [L.scamperTag]: 'struct', [L.structKind]: 'event-note', id: ev.id })

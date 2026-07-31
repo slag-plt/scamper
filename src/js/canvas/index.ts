@@ -113,22 +113,18 @@ export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: 
 }
 
 export function canvas_animateWith(fn: L.ScamperFn): void {
-  function callback (time: number) {
-    let result = false
-    try {
-      result = L.callScamperFn(fn, time) as boolean
-    } catch (e) {
-      alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
-      return
-    }
-    if (typeof result !== 'boolean') {
-      alert(`animate-with callback returned a non-boolean value: ${result}`)
-    } else if (result) {
-      window.requestAnimationFrame(callback)
-    }
-    // Otherwise, let the animation die!
+  // Each frame runs `(fn time)` as a fiber; the *next* frame is only requested
+  // once that fiber finishes (in onComplete), which both moves the loop's
+  // continuation past the async boundary and gives natural back-pressure -- no
+  // pile-up of frame fibers. The loop continues only while the callback returns
+  // #t; #f, a non-boolean, or an error (result === null) lets the animation die.
+  function callback(time: number) {
+    L.spawn(fn, [time], (result) => {
+      if (result === true) {
+        window.requestAnimationFrame(callback)
+      }
+    })
   }
-
   window.requestAnimationFrame(callback)
 }
 

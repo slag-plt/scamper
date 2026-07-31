@@ -39,6 +39,14 @@ class ReactiveCanvas<T> implements ReactiveElement {
   updateFunc: L.ScamperFn
   isDirty: boolean
   finished: boolean
+  // Update and view can no longer be called synchronously from JS -- each runs
+  // as a fiber (L.spawn). Messages are queued and applied one at a time (so the
+  // model is never mutated by two overlapping update fibers), and the view is
+  // coalesced on the rAF loop: at most one view fiber in flight, run only when
+  // the model is dirty.
+  private queue: Msg[] = []
+  private updating = false
+  private drawing = false
 
   constructor(
       width: number,
@@ -70,26 +78,45 @@ class ReactiveCanvas<T> implements ReactiveElement {
   getState() { return this.state }
 
   draw () {
-    if (this.isDirty) {
-      this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
-      try {
-        L.callScamperFn(this.viewFunc, this.state as L.Value, this.canvas)
-      } catch (e) {
-        alert(`reactive-canvas: view function generated an error:\n\n${(e as Error).toString()}`)
+    if (this.finished || this.drawing || !this.isDirty) {
+      return
+    }
+    this.drawing = true
+    this.isDirty = false
+    this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    L.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
+      this.drawing = false
+      // A view error is reported to the output pane (result === null); stop.
+      if (result === null) {
         this.finished = true
       }
-      this.isDirty = false
-    }
+    })
   }
 
   update (msg: Msg) {
-    try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
-    } catch (e) {
-      alert(`reactive-canvas: update function generated an error:\n\n${(e as Error).toString()}`)
-      this.finished = true
+    if (this.finished) {
+      return
     }
-    this.isDirty = true
+    this.queue.push(msg)
+    this.processQueue()
+  }
+
+  private processQueue() {
+    if (this.updating || this.finished || this.queue.length === 0) {
+      return
+    }
+    this.updating = true
+    const msg = this.queue.shift()!
+    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+      if (newState === null) {
+        this.finished = true // an update error was reported to the output pane
+      } else {
+        this.state = newState as T
+        this.isDirty = true
+      }
+      this.updating = false
+      this.processQueue()
+    })
   }
 
   getElement (): HTMLElement { return this.canvas }
@@ -118,37 +145,66 @@ class ReactiveContainer<T> implements ReactiveElement {
   viewFunc: L.ScamperFn
   /* (msg: Msg, state: T) => T */
   updateFunc: L.ScamperFn
+  finished: boolean
+  // As with ReactiveCanvas, update and view run as fibers (L.spawn). Messages
+  // are processed one at a time, each fully (update, then re-render) before the
+  // next, so a message never sees a half-applied update.
+  private queue: Msg[] = []
+  private processing = false
 
   constructor(state: T, view: L.ScamperFn, update: L.ScamperFn) {
     this.container = document.createElement('div')
     this.state = state
     this.viewFunc = view
     this.updateFunc = update
+    this.finished = false
+  }
+
+  // Renders the current state: run the view fiber, then swap its HTMLElement
+  // result into the container. N.B., a virtual-DOM diff would be more efficient
+  // than the full re-render here.
+  private renderView(onDone?: () => void) {
+    L.spawn(this.viewFunc, [this.state as L.Value], (result) => {
+      if (result instanceof HTMLElement) {
+        this.container.innerHTML = ''
+        this.container.appendChild(result)
+      }
+      // A view error (result === null) is reported to the output pane; a
+      // non-HTMLElement result leaves the current contents in place.
+      onDone?.()
+    })
   }
 
   draw () {
-    // N.B., this is where a virtual DOM implementation with diffing ala
-    // react would be much more efficient.
-    this.container.innerHTML = ''
-    try {
-      const result = L.callScamperFn(this.viewFunc, this.state as L.Value)
-      if (result instanceof HTMLElement) {
-        this.container.appendChild(result)
-      } else {
-        alert(`reactive-container: view function must return an HTMLElement, but received ${L.typeOf(result)}`)
-      }
-    } catch (e) {
-      alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
-    }
+    this.renderView()
   }
 
   update (msg: Msg) {
-    try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
-    } catch (e) {
-      alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
+    if (this.finished) {
+      return
     }
-    this.draw()
+    this.queue.push(msg)
+    this.processQueue()
+  }
+
+  private processQueue() {
+    if (this.processing || this.finished || this.queue.length === 0) {
+      return
+    }
+    this.processing = true
+    const msg = this.queue.shift()!
+    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+      if (newState === null) {
+        this.finished = true // an update error was reported to the output pane
+        this.processing = false
+        return
+      }
+      this.state = newState as T
+      this.renderView(() => {
+        this.processing = false
+        this.processQueue()
+      })
+    })
   }
 
   getElement (): HTMLElement { return this.container }

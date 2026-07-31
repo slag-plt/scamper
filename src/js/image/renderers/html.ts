@@ -54,7 +54,6 @@ function render (rif: ReactiveImageFile): HTMLElement {
       if (e !== null && e.target !== null) {
         const img = new Image()
         img.onload = () => {
-          outp.innerHTML = ''
           const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
           if (ctx) {
@@ -62,12 +61,14 @@ function render (rif: ReactiveImageFile): HTMLElement {
             canvas.height = img.height
             ctx.drawImage(img, 0, 0)
           }
-          try {
-            const v = L.callScamperFn(rif.callback, canvas)
-            outp.appendChild(HtmlRenderer.render(v))
-          } catch (e) {
-            outp.appendChild(HtmlRenderer.render(e as L.ScamperError))
-          }
+          // Run the callback as a fiber (JS can no longer call the closure) and
+          // render its result; a callback error surfaces in the output pane.
+          L.spawn(rif.callback, [canvas], (r) => {
+            outp.innerHTML = ''
+            if (r !== null) {
+              outp.appendChild(HtmlRenderer.render(r))
+            }
+          })
         }
         img.src = e.target.result as string
       }
