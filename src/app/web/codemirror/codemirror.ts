@@ -43,6 +43,11 @@ import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
+import {
+  cursorStatus,
+  dedupeCursorStatus,
+  type CursorStatus,
+} from './enclosing-form'
 
 export const noLoadedFileText =
   '; Create and/or load a file from the left-hand sidebar!'
@@ -110,10 +115,17 @@ export const editorThemeCompartment = new Compartment()
 export interface EditorStateConfig {
   output?: HTMLElement
   dirtyAction: () => void
+  /** Notified with the cursor's status whenever the cursor moves or edits. */
+  onCursorChange?: (status: CursorStatus) => void
   isReadOnly: boolean
 }
 
 function mkExtensions(config: EditorStateConfig): Extension {
+  // Per-state deduper (mkExtensions runs once per state creation), so redundant
+  // updates -- e.g. an edit that leaves the cursor put -- don't re-notify.
+  const notifyCursor = config.onCursorChange
+    ? dedupeCursorStatus(config.onCursorChange)
+    : undefined
   return [
     // basicSetup
     lineNumbers(),
@@ -169,6 +181,9 @@ function mkExtensions(config: EditorStateConfig): Extension {
       if (update.docChanged) {
         config.dirtyAction()
       }
+      if (notifyCursor && (update.selectionSet || update.docChanged)) {
+        notifyCursor(cursorStatus(update.state))
+      }
     }),
     QueryExtension,
   ]
@@ -184,13 +199,16 @@ export function mkFreshEditorState(
   })
 }
 
-export function mkNoFileEditorState(): EditorState {
+export function mkNoFileEditorState(
+  onCursorChange?: (status: CursorStatus) => void,
+): EditorState {
   return EditorState.create({
     doc: noLoadedFileText,
     extensions: mkExtensions({
       dirtyAction: () => {
         /* empty */
       },
+      onCursorChange,
       isReadOnly: true,
     }),
   })

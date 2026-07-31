@@ -12,8 +12,9 @@ import {
   createCodeMirrorEditorAdapter,
 } from '../composables/codemirror-editor-adapter'
 import { useEditorRegistration } from '../composables/editor-context'
+import type { CursorStatus } from '../codemirror/enclosing-form'
 
-const emit = defineEmits<{ dirty: [] }>()
+const emit = defineEmits<{ dirty: []; cursorChange: [status: CursorStatus] }>()
 
 const editorRegistration = useEditorRegistration()
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -22,13 +23,20 @@ let adapter: CodeMirrorEditorAdapter | null = null
 
 onMounted(() => {
   if (!containerRef.value) return
+  const emitCursorChange = (status: CursorStatus) => {
+    emit('cursorChange', status)
+  }
   editorView = new EditorView({
-    state: mkNoFileEditorState(),
+    state: mkNoFileEditorState(emitCursorChange),
     parent: containerRef.value,
   })
-  adapter = createCodeMirrorEditorAdapter(editorView, () => {
-    emit('dirty')
-  })
+  adapter = createCodeMirrorEditorAdapter(
+    editorView,
+    () => {
+      emit('dirty')
+    },
+    emitCursorChange,
+  )
   editorRegistration.register(adapter)
 })
 

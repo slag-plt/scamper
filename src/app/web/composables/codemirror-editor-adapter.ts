@@ -5,11 +5,16 @@ import {
   mkFreshEditorState,
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
+import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
+
+/** Cursor status reported when no code is under the cursor (top of document). */
+const TOP_LEVEL: CursorStatus = { line: 1, column: 1, path: [] }
 
 export function createCodeMirrorEditorAdapter(
   view: EditorView,
   dirtyAction: () => void,
+  onCursorChange?: (status: CursorStatus) => void,
 ) {
   let loaded = false
   const scamper = Scamper.getInstance()
@@ -34,20 +39,25 @@ export function createCodeMirrorEditorAdapter(
       view.setState(
         mkFreshEditorState(src, {
           dirtyAction,
+          onCursorChange,
           isReadOnly: false,
         }),
       )
+      // setState doesn't fire update listeners; the cursor resets to the top of
+      // the document, so report the top-level status.
+      onCursorChange?.(TOP_LEVEL)
     },
 
     initializeDummyDoc() {
       loaded = false
-      view.setState(mkNoFileEditorState())
+      view.setState(mkNoFileEditorState(onCursorChange))
+      onCursorChange?.(TOP_LEVEL)
     },
 
     getCursorLoc() {
       const idx = view.state.selection.main.from
-      const line = view.state.doc.lineAt(idx)
-      return new Loc(line.number, idx - line.from, idx)
+      const { line, columnOffset } = lineColumnAt(view.state.doc, idx)
+      return new Loc(line, columnOffset, idx)
     },
 
     coordsAtIdx(idx: number) {
