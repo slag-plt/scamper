@@ -23,8 +23,11 @@ let adapter: CodeMirrorEditorAdapter | null = null
 
 onMounted(() => {
   if (!containerRef.value) return
+  const emitCursorChange = (status: CursorStatus) => {
+    emit('cursorChange', status)
+  }
   editorView = new EditorView({
-    state: mkNoFileEditorState(),
+    state: mkNoFileEditorState(emitCursorChange),
     parent: containerRef.value,
   })
   adapter = createCodeMirrorEditorAdapter(
@@ -32,9 +35,7 @@ onMounted(() => {
     () => {
       emit('dirty')
     },
-    (status) => {
-      emit('cursorChange', status)
-    },
+    emitCursorChange,
   )
   editorRegistration.register(adapter)
 })

@@ -43,7 +43,11 @@ import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
-import { cursorStatus, type CursorStatus } from './enclosing-form'
+import {
+  cursorStatus,
+  dedupeCursorStatus,
+  type CursorStatus,
+} from './enclosing-form'
 
 export const noLoadedFileText =
   '; Create and/or load a file from the left-hand sidebar!'
@@ -117,9 +121,11 @@ export interface EditorStateConfig {
 }
 
 function mkExtensions(config: EditorStateConfig): Extension {
-  // Deduped so redundant updates (e.g. an edit that leaves the cursor put) don't
-  // re-notify. Scoped per state (mkExtensions runs once per state creation).
-  let lastCursorKey: string | null = null
+  // Per-state deduper (mkExtensions runs once per state creation), so redundant
+  // updates -- e.g. an edit that leaves the cursor put -- don't re-notify.
+  const notifyCursor = config.onCursorChange
+    ? dedupeCursorStatus(config.onCursorChange)
+    : undefined
   return [
     // basicSetup
     lineNumbers(),
@@ -175,13 +181,8 @@ function mkExtensions(config: EditorStateConfig): Extension {
       if (update.docChanged) {
         config.dirtyAction()
       }
-      if (config.onCursorChange && (update.selectionSet || update.docChanged)) {
-        const status = cursorStatus(update.state)
-        const key = [status.line, status.column, ...status.path].join('|')
-        if (key !== lastCursorKey) {
-          lastCursorKey = key
-          config.onCursorChange(status)
-        }
+      if (notifyCursor && (update.selectionSet || update.docChanged)) {
+        notifyCursor(cursorStatus(update.state))
       }
     }),
     QueryExtension,
@@ -198,13 +199,16 @@ export function mkFreshEditorState(
   })
 }
 
-export function mkNoFileEditorState(): EditorState {
+export function mkNoFileEditorState(
+  onCursorChange?: (status: CursorStatus) => void,
+): EditorState {
   return EditorState.create({
     doc: noLoadedFileText,
     extensions: mkExtensions({
       dirtyAction: () => {
         /* empty */
       },
+      onCursorChange,
       isReadOnly: true,
     }),
   })

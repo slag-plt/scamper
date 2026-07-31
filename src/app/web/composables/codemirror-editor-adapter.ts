@@ -5,7 +5,7 @@ import {
   mkFreshEditorState,
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
-import type { CursorStatus } from '../codemirror/enclosing-form'
+import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
 
 /** Cursor status reported when no code is under the cursor (top of document). */
@@ -50,14 +50,14 @@ export function createCodeMirrorEditorAdapter(
 
     initializeDummyDoc() {
       loaded = false
-      view.setState(mkNoFileEditorState())
+      view.setState(mkNoFileEditorState(onCursorChange))
       onCursorChange?.(TOP_LEVEL)
     },
 
     getCursorLoc() {
       const idx = view.state.selection.main.from
-      const line = view.state.doc.lineAt(idx)
-      return new Loc(line.number, idx - line.from, idx)
+      const { line, columnOffset } = lineColumnAt(view.state.doc, idx)
+      return new Loc(line, columnOffset, idx)
     },
 
     coordsAtIdx(idx: number) {

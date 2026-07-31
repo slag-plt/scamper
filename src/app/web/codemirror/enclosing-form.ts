@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language'
-import type { EditorState } from '@codemirror/state'
+import type { EditorState, Text } from '@codemirror/state'
 import type { SyntaxNode, Tree } from '@lezer/common'
 
 // Lezer node names -> the short labels shown in the status-bar breadcrumb.
@@ -62,6 +62,19 @@ export function formPathAt(tree: Tree, pos: number): string[] {
   return path.reverse()
 }
 
+/**
+ * The 1-based line and 0-based column offset of `offset` within `doc`. The
+ * 0-based column matches Loc's convention; callers that display it (the status
+ * bar) add 1.
+ */
+export function lineColumnAt(
+  doc: Text,
+  offset: number,
+): { line: number; columnOffset: number } {
+  const line = doc.lineAt(offset)
+  return { line: line.number, columnOffset: offset - line.from }
+}
+
 /** The cursor's position and enclosing-form breadcrumb, for the status bar. */
 export interface CursorStatus {
   /** 1-based line number. */
@@ -78,10 +91,28 @@ export interface CursorStatus {
  */
 export function cursorStatus(state: EditorState): CursorStatus {
   const head = state.selection.main.head
-  const line = state.doc.lineAt(head)
+  const { line, columnOffset } = lineColumnAt(state.doc, head)
   return {
-    line: line.number,
-    column: head - line.from + 1,
+    line,
+    column: columnOffset + 1,
     path: formPathAt(syntaxTree(state), head),
+  }
+}
+
+/**
+ * Wraps `notify` so it fires only when the cursor status actually changes -- a
+ * cheap guard against redundant notifications (e.g. an edit that leaves the
+ * cursor put). Each call returns a fresh deduper with its own memory.
+ */
+export function dedupeCursorStatus(
+  notify: (status: CursorStatus) => void,
+): (status: CursorStatus) => void {
+  let lastKey: string | null = null
+  return (status) => {
+    const key = [status.line, status.column, ...status.path].join('|')
+    if (key !== lastKey) {
+      lastKey = key
+      notify(status)
+    }
   }
 }
