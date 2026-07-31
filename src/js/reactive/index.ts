@@ -39,6 +39,14 @@ class ReactiveCanvas<T> implements ReactiveElement {
   updateFunc: L.ScamperFn
   isDirty: boolean
   finished: boolean
+  // Update and view can no longer be called synchronously from JS -- each runs
+  // as a fiber (L.spawn). Messages are queued and applied one at a time (so the
+  // model is never mutated by two overlapping update fibers), and the view is
+  // coalesced on the rAF loop: at most one view fiber in flight, run only when
+  // the model is dirty.
+  private queue: Msg[] = []
+  private updating = false
+  private drawing = false
 
   constructor(
       width: number,
@@ -54,6 +62,11 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.updateFunc = update
     this.isDirty = true
     this.finished = false
+    // Stop the draw loop (and short-circuit updates) when the program is
+    // re-run/stopped, so this component doesn't leak into the next run.
+    L.currentRunSignal()?.addEventListener('abort', () => {
+      this.finished = true
+    })
 
     const blob = this
 
@@ -70,26 +83,45 @@ class ReactiveCanvas<T> implements ReactiveElement {
   getState() { return this.state }
 
   draw () {
-    if (this.isDirty) {
-      this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
-      try {
-        L.callScamperFn(this.viewFunc, this.state as L.Value, this.canvas)
-      } catch (e) {
-        alert(`reactive-canvas: view function generated an error:\n\n${(e as Error).toString()}`)
+    if (this.finished || this.drawing || !this.isDirty) {
+      return
+    }
+    this.drawing = true
+    this.isDirty = false
+    this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    L.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
+      this.drawing = false
+      // A view error is reported to the output pane (result === null); stop.
+      if (result === null) {
         this.finished = true
       }
-      this.isDirty = false
-    }
+    })
   }
 
   update (msg: Msg) {
-    try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
-    } catch (e) {
-      alert(`reactive-canvas: update function generated an error:\n\n${(e as Error).toString()}`)
-      this.finished = true
+    if (this.finished) {
+      return
     }
-    this.isDirty = true
+    this.queue.push(msg)
+    this.processQueue()
+  }
+
+  private processQueue() {
+    if (this.updating || this.finished || this.queue.length === 0) {
+      return
+    }
+    this.updating = true
+    const msg = this.queue.shift()!
+    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+      if (newState === null) {
+        this.finished = true // an update error was reported to the output pane
+      } else {
+        this.state = newState as T
+        this.isDirty = true
+      }
+      this.updating = false
+      this.processQueue()
+    })
   }
 
   getElement (): HTMLElement { return this.canvas }
@@ -118,37 +150,71 @@ class ReactiveContainer<T> implements ReactiveElement {
   viewFunc: L.ScamperFn
   /* (msg: Msg, state: T) => T */
   updateFunc: L.ScamperFn
+  finished: boolean
+  // As with ReactiveCanvas, update and view run as fibers (L.spawn). Messages
+  // are processed one at a time, each fully (update, then re-render) before the
+  // next, so a message never sees a half-applied update.
+  private queue: Msg[] = []
+  private processing = false
 
   constructor(state: T, view: L.ScamperFn, update: L.ScamperFn) {
     this.container = document.createElement('div')
     this.state = state
     this.viewFunc = view
     this.updateFunc = update
+    this.finished = false
+    // Stop processing messages when the program is re-run/stopped, so this
+    // component doesn't leak into the next run.
+    L.currentRunSignal()?.addEventListener('abort', () => {
+      this.finished = true
+    })
+  }
+
+  // Renders the current state: run the view fiber, then swap its HTMLElement
+  // result into the container. N.B., a virtual-DOM diff would be more efficient
+  // than the full re-render here.
+  private renderView(onDone?: () => void) {
+    L.spawn(this.viewFunc, [this.state as L.Value], (result) => {
+      if (result instanceof HTMLElement) {
+        this.container.innerHTML = ''
+        this.container.appendChild(result)
+      }
+      // A view error (result === null) is reported to the output pane; a
+      // non-HTMLElement result leaves the current contents in place.
+      onDone?.()
+    })
   }
 
   draw () {
-    // N.B., this is where a virtual DOM implementation with diffing ala
-    // react would be much more efficient.
-    this.container.innerHTML = ''
-    try {
-      const result = L.callScamperFn(this.viewFunc, this.state as L.Value)
-      if (result instanceof HTMLElement) {
-        this.container.appendChild(result)
-      } else {
-        alert(`reactive-container: view function must return an HTMLElement, but received ${L.typeOf(result)}`)
-      }
-    } catch (e) {
-      alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
-    }
+    this.renderView()
   }
 
   update (msg: Msg) {
-    try {
-      this.state = L.callScamperFn(this.updateFunc, msg, this.state as L.Value) as T
-    } catch (e) {
-      alert(`reactive-container: update function generated an error:\n\n${(e as Error).toString()}`)
+    if (this.finished) {
+      return
     }
-    this.draw()
+    this.queue.push(msg)
+    this.processQueue()
+  }
+
+  private processQueue() {
+    if (this.processing || this.finished || this.queue.length === 0) {
+      return
+    }
+    this.processing = true
+    const msg = this.queue.shift()!
+    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+      if (newState === null) {
+        this.finished = true // an update error was reported to the output pane
+        this.processing = false
+        return
+      }
+      this.state = newState as T
+      this.renderView(() => {
+        this.processing = false
+        this.processQueue()
+      })
+    })
   }
 
   getElement (): HTMLElement { return this.container }
@@ -210,14 +276,18 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
   return { [L.scamperTag]: 'struct', [L.structKind]: 'subscription', register: sub }
 }
 
+// N.B., every subscription registers its listener/timer with the current run's
+// AbortSignal so it is torn down when the program is re-run/stopped (see
+// currentRunSignal); otherwise a previous run's events would keep updating.
+
 export function reactive_onButtonClick(button: HTMLButtonElement): Subscription {
   return subscription((react) => {
     button.addEventListener('click', () => {
-      react.update({ 
+      react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-button-click',
         id: button.id
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -229,7 +299,7 @@ export function reactive_onMouseClick(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-click',
         button: event.button, x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -241,7 +311,7 @@ export function reactive_onMouseHover(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-hover',
         x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -252,7 +322,7 @@ export function reactive_onKeyDown(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-down',
         key: event.key
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -263,14 +333,15 @@ export function reactive_onKeyUp(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-up',
         key: event.key
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
 export function reactive_onTimer(interval: number): Subscription {
   return subscription((react) => {
     let time = performance.now()
-    setInterval(() => {
+    const signal = L.currentRunSignal()
+    const id = setInterval(() => {
       const now = performance.now()
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-timer',
@@ -278,6 +349,7 @@ export function reactive_onTimer(interval: number): Subscription {
       })
       time = now
     }, interval)
+    signal?.addEventListener('abort', () => { clearInterval(id) })
   })
 }
 

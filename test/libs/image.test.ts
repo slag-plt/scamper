@@ -1823,3 +1823,22 @@ describe('colour edge cases', () => {
 `)).toEqual(['#t'])
   })
 })
+
+// N.B., pixel-map is a Scheme function (image.scm) composing drawing->pixels,
+// vector-map, and pixels->image. jsdom's canvas mock doesn't round-trip pixel
+// data (getImageData returns zeros), so the per-pixel color transform is covered
+// by the real-canvas browser tests; here we verify the composition runs
+// end-to-end, returns a canvas, and preserves the pixel grid.
+describe('pixel-map', () => {
+  test('maps over a canvas, returning a same-size canvas of rgb pixels', async () => {
+    expect(await runProgram(`
+(import image)
+(define c (drawing->image (solid-square 2 "blue")))
+(canvas-width c)
+(canvas-height c)
+(canvas? (pixel-map (lambda (p) p) c))
+(vector-length (image->pixels (pixel-map (lambda (p) p) c)))
+(rgb? (vector-ref (image->pixels (pixel-map (lambda (p) (rgb-greyscale p)) c)) 0))
+`)).toEqual(['2', '2', '#t', '4', '#t'])
+  })
+})

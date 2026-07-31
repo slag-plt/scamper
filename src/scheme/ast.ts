@@ -163,6 +163,15 @@ export interface Apply extends Tagged, Node {
   fn: Exp
   args: Exp
 }
+// (with-handler handler fn arg ...) -- runs (fn arg ...); if a runtime error is
+// raised, runs (handler err-message) instead. A special form (not a procedure)
+// because it must install an exception handler in the bytecode.
+export interface WithHandlerExp extends Tagged, Node {
+  tag: 'with-handler'
+  handler: Exp
+  fn: Exp
+  args: Exp[]
+}
 
 // Sugared Forms
 export interface LetS extends Tagged, Node {
@@ -204,6 +213,7 @@ export type Exp =
   | JsVar
   | ErrorExp
   | Apply
+  | WithHandlerExp
   | LetS
   | And
   | Or
@@ -358,6 +368,12 @@ export const mkApply = (
   args: Exp,
   range: L.Range = L.Range.none,
 ): Apply => ({ tag: 'apply', fn, args, range })
+export const mkWithHandler = (
+  handler: Exp,
+  fn: Exp,
+  args: Exp[],
+  range: L.Range = L.Range.none,
+): WithHandlerExp => ({ tag: 'with-handler', handler, fn, args, range })
 export const mkLetS = (
   bindings: { id: Identifier; value: Exp }[],
   body: Exp,
@@ -440,6 +456,7 @@ export function isExp(v: unknown): v is Exp {
       'jsvar',
       'error',
       'apply',
+      'with-handler',
       'let*',
       'and',
       'or',
@@ -521,6 +538,8 @@ export function expToString(e: Exp): string {
       return `(error ${expToString(e.exp)})`
     case 'apply':
       return `(apply ${expToString(e.fn)} ${expToString(e.args)})`
+    case 'with-handler':
+      return `(with-handler ${expToString(e.handler)} ${expToString(e.fn)}${e.args.map((a) => ` ${expToString(a)}`).join('')})`
     case 'let*':
       return `(let* (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'and':
@@ -643,6 +662,13 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     return expEquals(e1.exp, e2.exp)
   } else if (e1.tag === 'apply' && e2.tag === 'apply') {
     return expEquals(e1.fn, e2.fn) && expEquals(e1.args, e2.args)
+  } else if (e1.tag === 'with-handler' && e2.tag === 'with-handler') {
+    return (
+      expEquals(e1.handler, e2.handler) &&
+      expEquals(e1.fn, e2.fn) &&
+      e1.args.length === e2.args.length &&
+      e1.args.every((a, i) => expEquals(a, e2.args[i]))
+    )
   } else if (e1.tag === 'let*' && e2.tag === 'let*') {
     return (
       e1.bindings.length === e2.bindings.length &&

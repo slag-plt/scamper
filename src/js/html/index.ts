@@ -25,14 +25,12 @@ export function html_textAreaGet(textArea: HTMLTextAreaElement): string {
 export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
   const ret = document.createElement('button')
   ret.textContent = label
-  ret.onclick = () => {
-    try {
-      L.callScamperFn(fn, [])
-    } catch (e) {
-      alert(`button callback threw an error:\n\n${(e as Error).toString()}`)
-      return
-    }
-  }
+  // Each click runs the (zero-argument) callback as a fresh fiber; a JS handler
+  // can no longer call the closure directly. Errors surface in the output pane.
+  // The run's AbortSignal removes the listener when the program is re-run/stopped.
+  ret.addEventListener('click', () => L.spawn(fn, []), {
+    signal: L.currentRunSignal(),
+  })
   return ret
 }
 
@@ -84,11 +82,10 @@ export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
 }
 
 export function html_onKeydown(fn: L.ScamperFn): void {
-  window.addEventListener('keydown', (e) => {
-    try {
-      L.callScamperFn(fn, e.key)
-    } catch (e) {
-      alert(`on-keydown! callback threw an error:\n\n${(e as Error).toString()}`)
-    }
+  // Each keydown runs `(fn key)` as a fresh fiber; errors surface in the output
+  // pane rather than an alert. The run's AbortSignal removes the listener when
+  // the program is re-run/stopped.
+  window.addEventListener('keydown', (e) => L.spawn(fn, [e.key]), {
+    signal: L.currentRunSignal(),
   })
 }

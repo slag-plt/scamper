@@ -23,30 +23,9 @@ export function test_testResultErrorGeneric(desc: string, reason: string): ErrGe
   return { [L.scamperTag]: 'struct', [L.structKind]: 'gen', desc, reason }
 }
 
-export function test_testCase(desc: string, eqFn: L.ScamperFn, expected: L.Value, testFn: L.ScamperFn): Result {
-  try {
-    const actual = L.callScamperFn(testFn)
-    const isEqual = L.callScamperFn(eqFn, expected, actual) 
-    if (isEqual === true) {
-      return test_testResultOk(desc)
-    } else if (isEqual === false) {
-      return test_testResultErrorExpected(desc, expected, actual)
-    } else {
-      throw new L.ScamperError('Runtime', `Test case function should have produced a boolean, produced ${L.typeOf(actual)} instead`)
-    }
-  } catch (e) {
-    return test_testResultErrorExn(desc, e as L.Value)
-  }
-}
-
-export function test_testExn(desc: string, testFn: L.ScamperFn): Result {
-  try {
-    L.callScamperFn(testFn, [])
-    return test_testResultErrorGeneric(desc, 'Test case did not throw an exception')
-  } catch (e) {
-    return test_testResultOk(desc)
-  }
-}
+// N.B., test-case and test-exn moved to test.scm (built on the `with-handler`
+// special form). A js-var procedure can no longer call the caller-supplied
+// test/equality functions, since callScamperFn is disabled.
 
 export function test_isResult (v: any): boolean {
   return L.isStructKind(v, 'ok') || L.isStructKind(v, 'exp')

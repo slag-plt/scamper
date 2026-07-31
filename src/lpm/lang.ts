@@ -350,6 +350,28 @@ export interface ApplyOp {
   tag: 'apply'
   range: Range
 }
+// N.B., check-fn/push-handler/pop-handler bracket the guarded application lowered
+// from a `with-handler` special form. The stack at check-fn is [.., handler, fn]:
+// check-fn enforces with-handler's contract that the guarded value (top) is a
+// function to apply -- it runs BEFORE push-handler, so a contract violation (or
+// an error while producing `fn`) is a plain error, not something this very
+// handler catches. push-handler then installs the handler beneath `fn` (recording
+// the frame/value-stack depth to unwind to); on a raised ScamperError the fiber
+// unwinds to that depth and applies the handler. pop-handler is the normal-
+// completion path: it uninstalls the handler and drops the (now-unused) handler
+// value, leaving the guarded result on the stack.
+export interface CheckFn {
+  tag: 'check-fn'
+  range: Range
+}
+export interface PushHandler {
+  tag: 'push-handler'
+  range: Range
+}
+export interface PopHandler {
+  tag: 'pop-handler'
+  range: Range
+}
 
 export type Ops =
   | Lit
@@ -365,6 +387,9 @@ export type Ops =
   | JsVar
   | ErrorOp
   | ApplyOp
+  | CheckFn
+  | PushHandler
+  | PopHandler
 export type Blk = Ops[]
 
 export interface Disp {

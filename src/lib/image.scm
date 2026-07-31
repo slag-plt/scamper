@@ -612,19 +612,25 @@
 ;;; @category image, with-image-from-url
 (define with-image-file (js-var "image_withImageFile"))
 
-;;; (with-image-from-url url callback) -> html?
+;;; (with-image-from-url url callback) -> any
 ;;;  url : string?
 ;;;  callback : procedure?
-;;; Returns a container that, when used, calls `callback` with the selected image and replaces the chooser with the output produced by `callback`.
+;;; Loads the image at `url` and passes it (as a canvas) to `callback`. The output of `callback` is returned (and rendered to the screen if this is a top-level expression).
 ;;; @category image, with-image-file
-(define with-image-from-url (js-var "image_withImageFromUrl"))
+(define with-image-from-url
+  (lambda (url callback)
+    (callback ((js-var "image_blockOnFetchImage") url))))
 
-;;; (pixel-map fn img) -> image?
+;;; (pixel-map fn img) -> canvas?
 ;;;  fn : procedure?
-;;;  img : image?
-;;; Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
-;;; @category image, pixel, image-get-pixel, image->pixels, pixels->image, canvas-set-pixels! 
-(define pixel-map (js-var "image_pixelMap"))
+;;;  img : canvas?
+;;; Returns a new canvas that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
+;;; @category image, pixel, image-get-pixel, image->pixels, pixels->image, canvas-set-pixels!
+(define pixel-map
+  (lambda (fn img)
+    (pixels->image (vector-map fn (image->pixels img))
+                   (canvas-width img)
+                   (canvas-height img))))
 
 ;;; (image-get-pixel img x y) -> rgb?
 ;;;  img : image?
@@ -656,3 +662,15 @@
 ;;; Sets the pixels of the given `canvas` to the given `pixels`.
 ;;; @category canvas, image, mutation, pixel, predicates, pixel-map, image-get-pixel, image->pixels, pixels->image
 (define canvas-set-pixels! (js-var "image_canvasSetPixels"))
+
+;;; (canvas-width canvas) -> integer?
+;;;  canvas : canvas?
+;;; Returns the width of the canvas in pixels.
+;;; @category canvas, image
+(define canvas-width (js-var "image_imageWidth"))
+
+;;; (canvas-height canvas) -> integer?
+;;;  canvas : canvas?
+;;; Returns the height of the canvas in pixels.
+;;; @category canvas, image
+(define canvas-height (js-var "image_imageHeight"))

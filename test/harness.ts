@@ -42,6 +42,11 @@ function runFiber (
       }
     } catch (e) {
       if (e instanceof LPM.ScamperError) {
+        // Mirror the scheduler: give an installed with-handler a chance to
+        // recover before reporting and unwinding to the next statement.
+        if (!(e instanceof LPM.ReportError) && fiber.handleError(e)) {
+          continue
+        }
         reportError(out, e, stripRanges)
         fiber.advanceStmt()
       } else {

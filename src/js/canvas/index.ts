@@ -113,34 +113,34 @@ export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: 
 }
 
 export function canvas_animateWith(fn: L.ScamperFn): void {
-  function callback (time: number) {
-    let result = false
-    try {
-      result = L.callScamperFn(fn, time) as boolean
-    } catch (e) {
-      alert(`animate-with callback threw an error:\n\n${(e as Error).toString()}`)
+  // Each frame runs `(fn time)` as a fiber; the *next* frame is only requested
+  // once that fiber finishes (in onComplete), which both moves the loop's
+  // continuation past the async boundary and gives natural back-pressure -- no
+  // pile-up of frame fibers. The loop continues only while the callback returns
+  // #t; #f, a non-boolean, or an error (result === null) lets the animation die.
+  // The run's AbortSignal also stops the loop when the program is re-run/stopped.
+  const signal = L.currentRunSignal()
+  function callback(time: number) {
+    if (signal?.aborted) {
       return
     }
-    if (typeof result !== 'boolean') {
-      alert(`animate-with callback returned a non-boolean value: ${result}`)
-    } else if (result) {
-      window.requestAnimationFrame(callback)
-    }
-    // Otherwise, let the animation die!
+    L.spawn(fn, [time], (result) => {
+      if (result === true && !signal?.aborted) {
+        window.requestAnimationFrame(callback)
+      }
+    })
   }
-
   window.requestAnimationFrame(callback)
 }
 
 export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn): void {
-  canvas.onclick = function (ev: MouseEvent) {
-    try {
-      console.log(`offset: (${ev.offsetX}, ${ev.offsetY}), client: (${ev.clientX}, ${ev.clientY}), page: (${ev.pageX}, ${ev.pageY})`)
-      L.callScamperFn(fn, ev.offsetX, ev.offsetY)
-    } catch (e) {
-      alert(`canvas-onclick! callback threw an error:\n\n${(e as Error).toString()}`)
-      return
-    }
-  }
+  // Each click runs `(fn x y)` (the click offset) as a fresh fiber; errors
+  // surface in the output pane. The run's AbortSignal removes the listener when
+  // the program is re-run/stopped.
+  canvas.addEventListener(
+    'click',
+    (ev: MouseEvent) => L.spawn(fn, [ev.offsetX, ev.offsetY]),
+    { signal: L.currentRunSignal() },
+  )
 }
 

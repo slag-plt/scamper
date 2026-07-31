@@ -1,4 +1,3 @@
-import HtmlRenderer from '../../lpm/renderers/html.js'
 import * as L from '../../lpm'
 import { Rgb, image_rgb } from './color.js'
 
@@ -21,59 +20,57 @@ export function image_isReactiveImageFile (v: any): boolean {
   return L.isStructKind(v, 'reactive-image-file')
 }
 
-export function image_withImageFromUrl(url: string, callback: L.ScamperFn): HTMLElement {
-    const container = document.createElement('div')
-    container.innerHTML = `Loading ${url}...`
-    const img = new Image()
-    img.onload = () => {
-        container.innerHTML = ''
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0)
-        try {
-          const v = L.callScamperFn(callback, canvas)
-          container.appendChild(HtmlRenderer.render(v))
-        } catch (e) {
-          if (e instanceof DOMException && e.name === 'SecurityError') {
-            container.innerHTML = `Failed to load ${url}: cannot manipulate images from domains other than scamper.cs.grinnell.edu`
-          } else {
-            container.appendChild(HtmlRenderer.render(e as L.ScamperError))
+// N.B., suspends the current fiber to load `url` into a canvas asynchronously
+// and resumes with that canvas (see SuspendSignal / Scheduler `block-on`). Used
+// by the Scheme `with-image-from-url` wrapper -- a JS function can no longer call
+// the user's callback. A failed load (or a cross-origin taint) rejects,
+// surfacing as a runtime error catchable by with-handler.
+export function image_blockOnFetchImage(url: string): L.Value {
+  throw new L.SuspendSignal(
+    () =>
+      new Promise<L.Value>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0)
+          // Trigger the cross-origin taint check now, so it surfaces as a clean
+          // runtime error rather than deep inside a later pixel operation.
+          if (canvas.width > 0 && canvas.height > 0) {
+            try {
+              ctx.getImageData(0, 0, 1, 1)
+            } catch (e) {
+              if (e instanceof DOMException && e.name === 'SecurityError') {
+                reject(
+                  new L.ScamperError(
+                    'Runtime',
+                    'cannot manipulate images from domains other than scamper.cs.grinnell.edu',
+                  ),
+                )
+                return
+              }
+              reject(e as Error)
+              return
+            }
           }
+          resolve(canvas)
         }
-    } 
-    img.src = url
-    return container
+        img.onerror = () =>
+          reject(
+            new L.ScamperError('Runtime', `Failed to load image from "${url}"`),
+          )
+        img.src = url
+      }),
+  )
 }
 
 /***** Per-pixel manipulation *************************************************/
 
-export function image_pixelMap(fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
-  const ctx = canvas.getContext('2d')!
-  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const src = inpImg.data
-
-  const outImg = ctx.createImageData(canvas.width, canvas.height)
-  const dst = outImg.data
-  for (let i = 0; i < src.length; i += 4) {
-    const c = L.callScamperFn(fn, image_rgb(src[i], src[i + 1], src[i+2], src[i+3])) as Rgb
-    dst[i] = c.red
-    dst[i + 1] = c.green
-    dst[i + 2] = c.blue
-    dst[i + 3] = c.alpha
-  }
-
-  // NOTE: clone the results to a new canvas. Will likely need to implement a
-  // mutable version of this function to mitigate the performance hit of
-  // processing large images.
-  const ret = document.createElement('canvas')
-  ret.width = canvas.width
-  ret.height = canvas.height
-  const retCtx = ret.getContext('2d')!
-  retCtx.putImageData(outImg, 0, 0)
-  return ret
-}
+// N.B., pixel-map is now defined in image.scm (Scheme) on top of image->pixels,
+// vector-map, and pixels->image -- a JS implementation can no longer call the
+// per-pixel Scamper function (callScamperFn is disabled).
 
 export function image_imageGetPixel(canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
   const ctx = canvas.getContext('2d')!

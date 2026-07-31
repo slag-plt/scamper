@@ -338,14 +338,20 @@
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
 ;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
-(define any-of (js-var "prelude_anyOf"))
+(define any-of
+  (lambda (f . fs)
+    (lambda (v)
+      (some-satisfy? (lambda (g) (g v)) (cons f fs)))))
 
 ;;; (all-of . f1) -> procedure?
 ;;;  f1 : any
 ;;;   procedure? that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
 ;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
-(define all-of (js-var "prelude_allOf"))
+(define all-of
+  (lambda (f . fs)
+    (lambda (v)
+      (all-satisfy? (lambda (g) (g v)) (cons f fs)))))
 
 ;;; (pair? v) -> boolean?
 ;;;  v : any
@@ -357,8 +363,11 @@
 ;;;  p : procedure?
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
-;;; @category list, function composition, association list, apply, filter, fold, fold-left, fold-right, for-range, map, reduce, reduce-right 
-(define list-of (js-var "prelude_listOf"))
+;;; @category list, function composition, association list, apply, filter, fold, fold-left, fold-right, for-range, map, reduce, reduce-right
+(define list-of
+  (lambda (p)
+    (lambda (l)
+      (and (list? l) (all-satisfy? p l)))))
 
 ;; N.B., deliberately plain Scamper (not js-var-backed): the contract-check
 ;; codegen (contract.ts) needs to call an arbitrary predicate -- possibly a
@@ -542,13 +551,32 @@
 ;;; @category list, list manipulation, association list, assoc-key?, assoc-ref
 (define assoc-set (js-var "prelude_assocSet"))
 
+;; N.B., internal helper for sort: merges two lists that are each already
+;; sorted by lt? into one sorted list. Undocumented (like all-satisfy?) so the
+;; contract-check codegen leaves it alone. Ties favor xs (the left list) to
+;; keep sort stable.
+(define sort-merge
+  (lambda (lt? xs ys)
+    (cond
+      [(null? xs) ys]
+      [(null? ys) xs]
+      [(lt? (car ys) (car xs)) (cons (car ys) (sort-merge lt? xs (cdr ys)))]
+      [else (cons (car xs) (sort-merge lt? (cdr xs) ys))])))
+
 ;;; (sort l lt?) -> list?
 ;;;  l : list?
 ;;;  lt? : procedure?
 ;;;   returns `#t` if the first arg is less than the second
 ;;; Returns a new list containing the elements of `l` sorted in ascending order according to the comparison function `lt?`.
 ;;; @category list, list manipulation, association list, append, list-drop, list-tail, list-take, make-list, make-string, range, reverse
-(define sort (js-var "prelude_sort"))
+(define sort
+  (lambda (l lt?)
+    (if (<= (length l) 1)
+        l
+        (let ([mid (quotient (length l) 2)])
+          (sort-merge lt?
+                      (sort (list-take l mid) lt?)
+                      (sort (list-drop l mid) lt?))))))
 
 ;;; (char? v) -> boolean?
 ;;;  v : any
@@ -790,21 +818,52 @@
 ;;;  s : string?
 ;;; Returns a new string containing the results of applying `f` to each character of `s`.
 ;;; @category string, make-string, string-append, map, vector-map, vector-map!
-(define string-map (js-var "prelude_stringMap"))
+(define string-map
+  (lambda (f s)
+    (list->string (map f (string->list s)))))
+
+;; N.B., internal helpers for n-ary map: given a list of lists, collect the
+;; cars (heads) or cdrs (tails) of each. Undocumented (like all-satisfy?) so
+;; the contract-check codegen leaves them alone.
+(define lists-cars
+  (lambda (lsts)
+    (if (null? lsts)
+        null
+        (cons (car (car lsts)) (lists-cars (cdr lsts))))))
+
+(define lists-cdrs
+  (lambda (lsts)
+    (if (null? lsts)
+        null
+        (cons (cdr (car lsts)) (lists-cdrs (cdr lsts))))))
 
 ;;; (map f . l) -> list?
 ;;;  f : procedure?
 ;;;  l : list?
-;;; Returns a new list containing the results of applying `f` to each element of `l`.
+;;; Returns a new list containing the results of applying `f` to each element of `l`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
 ;;; @category list, list manipulation, association list, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
-(define map (js-var "prelude_map"))
+(define map
+  (lambda (f . lsts)
+    (cond
+      [(null? lsts) null]
+      [(some-satisfy? null? lsts)
+       (if (all-satisfy? null? lsts)
+           null
+           (error "map: all lists must have the same length"))]
+      [else (cons (apply f (lists-cars lsts))
+                  (apply map (cons f (lists-cdrs lsts))))])))
 
 ;;; (filter f l) -> list?
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` for which `f` returns `#t`.
 ;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right
-(define filter (js-var "prelude_filter"))
+(define filter
+  (lambda (f l)
+    (cond
+      [(null? l) null]
+      [(f (car l)) (cons (car l) (filter f (cdr l)))]
+      [else (filter f (cdr l))])))
 
 ;;; (fold f v l) -> any
 ;;;  f : procedure?
@@ -812,22 +871,30 @@
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.
 ;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
-(define fold (js-var "prelude_fold"))
+(define fold
+  (lambda (f v l)
+    (if (null? l)
+        v
+        (fold f (f v (car l)) (cdr l)))))
 
 ;;; (reduce f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold` but uses the first element of `l` as the initial value.
 ;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
-(define reduce (js-var "prelude_reduce"))
+(define reduce
+  (lambda (f l)
+    (fold f (car l) (cdr l))))
 
 ;;; (fold-left f v l) -> any
 ;;;  f : procedure?
 ;;;  v : any
 ;;;  l : list?
-;;; An alias for `fold`.
+;;; Like `fold`, but the combining function `f` takes the current element as its first argument and the accumulated value as its second.
 ;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
-(define fold-left (js-var "prelude_foldLeft"))
+(define fold-left
+  (lambda (f v l)
+    (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
 
 ;;; (fold-right f v l) -> any
 ;;;  f : procedure?
@@ -835,35 +902,51 @@
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.
 ;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-right, apply, filter
-(define fold-right (js-var "prelude_foldRight"))
+(define fold-right
+  (lambda (f v l)
+    (if (null? l)
+        v
+        (f (car l) (fold-right f v (cdr l))))))
 
 ;;; (reduce-right f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
 ;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
-(define reduce-right (js-var "prelude_reduceRight"))
+(define reduce-right
+  (lambda (f l)
+    (match l
+      [(cons x null) x]
+      [(cons x rest) (f x (reduce-right f rest))])))
 
 ;;; (vector-map f . v) -> vector?
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Returns a new vector containing the results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
 ;;; @category vectors, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map!, vector-set!
-(define vector-map (js-var "prelude_vectorMap"))
+(define vector-map
+  (lambda (f . vs)
+    (list->vector (apply map (cons f (map vector->list vs))))))
 
 ;;; (vector-map! f v) -> void?
 ;;;  f : procedure?
 ;;;  v : vector?
-;;; Mutates v1 with the results of results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
+;;; Mutates `v` in place, replacing each element with the result of applying `f` to it.
 ;;; @category vectors, mutation, predicates, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map, vector-set!
-(define vector-map! (js-var "prelude_vectorMapBang"))
+(define vector-map!
+  (lambda (f v)
+    (for-range 0 (vector-length v)
+      (lambda (i) (vector-set! v i (f (vector-ref v i)))))))
 
 ;;; (vector-for-each f v) -> void?
 ;;;  f : procedure?
 ;;;  v : vector?
-;;; Runs `f` on each element of `v1`, ..., `vk` in a element-wise fashion. `f` takes `k+1` arguments where the first argument is the current index and the remaining arguments are the elements of each vector at that index.
+;;; Runs `f` on each element of `v` in order, for its side effects.
 ;;; @category vectors, vector-append, vector-fill!, vector-filter, vector-map, vector-map!, vector-set!
-(define vector-for-each (js-var "prelude_vectorForEach"))
+(define vector-for-each
+  (lambda (f v)
+    (for-range 0 (vector-length v)
+      (lambda (i) (f (vector-ref v i))))))
 
 ;;; (for-range beg end f) -> void?
 ;;;  beg : number?
@@ -871,14 +954,21 @@
 ;;;  f : procedure?
 ;;; Runs `f` on each integer in the range `[beg, end)`. `f` takes one argument, the current value of integer.
 ;;; @category other, fold-left, fold-right, list-of, map, reduce, reduce-right, apply, filter
-(define for-range (js-var "prelude_forRange"))
+(define for-range
+  (lambda (beg end f)
+    (cond
+      [(< beg end) (begin (f beg) (for-range (+ beg 1) end f))]
+      [(> beg end) (begin (f beg) (for-range (- beg 1) end f))]
+      [else void])))
 
 ;;; (vector-filter f l) -> list?
 ;;;  f : procedure?
 ;;;  l : vector?
 ;;; Returns a new vector containing the elements of `l` for which `f` returns `#t`.
 ;;; @category vectors, vector-append, vector-fill!, vector-for-each, vector-map, vector-map!, vector-set!
-(define vector-filter (js-var "prelude_vectorFilter"))
+(define vector-filter
+  (lambda (f l)
+    (list->vector (filter f (vector->list l)))))
 
 ;;; (void? v) -> boolean?
 ;;;  v : any
@@ -895,20 +985,27 @@
 ;;;  f1 : procedure?
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.
 ;;; @category function composition, all-of, any-of, =-eps, o, |>
-(define compose (js-var "prelude_compose"))
+(define compose
+  (lambda (f . fs)
+    (lambda (x)
+      (fold-right (lambda (g acc) (g acc)) x (cons f fs)))))
 
 ;;; (o . f) -> procedure?
 ;;;  f : procedure?
 ;;; A synonym for `compose`.
 ;;; @category function composition, all-of, any-of, compose, =-eps, |>
-(define o (js-var "prelude_compose"))
+(define o
+  (lambda (f . fs)
+    (apply compose (cons f fs))))
 
 ;;; (|> v . f1) -> any
 ;;;  v : any
 ;;;  f1 : procedure?
 ;;; Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.
 ;;; @category function composition, all-of, any-of, compose, =-eps, o
-(define |> (js-var "prelude_pipe"))
+(define |>
+  (lambda (v . fs)
+    (fold (lambda (acc f) (f acc)) v fs)))
 
 ;;; (range . args) -> list?
 ;;;  args : integer?
@@ -928,15 +1025,15 @@
 ;;; @category other
 (define random (js-var "prelude_random"))
 
-;;; (with-handler h f . v) -> any
-;;;  h : procedure?
-;;;   a handler
-;;;  f : procedure?
-;;;   a function
-;;;  v : any
-;;; Calls `(f v1 .. vk)` and if an error is occurred, calls `(h err)` where `err` is the string associated with the raised error.
-;;; @category other, with-file, with-file-chooser, file->lines, file->string
-(define with-handler (js-var "prelude_withHandler"))
+;; N.B., `with-handler` is now a reserved-word special form, not a library
+;; binding -- it must install an exception handler in the bytecode, which a
+;; js-var-backed procedure cannot do. Its handler/function/args are ordinary
+;; sub-expressions; on a raised runtime error the fiber unwinds to the handler
+;; and applies it to the error's message string. Parsing lives in
+;; syntax.grammar (WithHandler) + lezer-bridge; the AST node is WithHandlerExp;
+;; codegen lowers it to push-handler/apply/pop-handler (see the LPM handler
+;; stack in src/lpm/fiber.ts). As it is no longer a documented define, it does
+;; not appear on the generated docs site (like `error`/`if`/`cond`).
 
 ;;; (ignore v) -> void?
 ;;;  v : any
@@ -1007,12 +1104,14 @@
 ;;; @category constants, list, pair, vector
 (define void (js-var "prelude_voidConst"))
 
-;;; (with-file filename fn) -> void?
+;;; (with-file filename fn) -> any
 ;;;  filename : string?
 ;;;  fn : procedure?
-;;; Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen.
+;;; Loads `filename` from storage and passes its contents to `fn` as input. The output of `fn` is returned (and rendered to the screen if this is a top-level expression).
 ;;; @category other, with-file-chooser, with-handler, file->lines, file->string
-(define with-file (js-var "prelude_withFile"))
+(define with-file
+  (lambda (filename fn)
+    (fn ((js-var "prelude_blockOnReadFile") filename))))
 
 ;;; (with-file-chooser fn) -> void?
 ;;;  fn : procedure?

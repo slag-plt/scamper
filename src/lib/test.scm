@@ -43,7 +43,17 @@
 ;;;   a function that produces the actual value to be tested
 ;;; Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.
 ;;; @category testing
-(define test-case (js-var "test_testCase"))
+(define test-case
+  (lambda (desc eq? expected test-fn)
+    (with-handler
+      (lambda (err) (test-result-error-exn desc err))
+      (lambda ()
+        (let* ([actual (test-fn)]
+               [is-equal (eq? expected actual)])
+          (cond
+            [(equal? is-equal #t) (test-result-ok desc)]
+            [(equal? is-equal #f) (test-result-error-expected desc expected actual)]
+            [else (error "Test case function should have produced a boolean")]))))))
 
 ;;; (test-exn desc test-fn) -> test-result?
 ;;;  desc : string?
@@ -51,4 +61,11 @@
 ;;;   a function that should throw an exception
 ;;; Returns a test result indicating whether the given function threw an exception.
 ;;; @category testing
-(define test-exn (js-var "test_testExn"))
+(define test-exn
+  (lambda (desc test-fn)
+    (with-handler
+      (lambda (err) (test-result-ok desc))
+      (lambda ()
+        (begin
+          (test-fn)
+          (test-result-error-gen desc "Test case did not throw an exception"))))))

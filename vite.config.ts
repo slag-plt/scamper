@@ -51,8 +51,14 @@ export default defineConfig({
     // *.browser.test.ts files need a real browser's Canvas2D/font-metrics
     // implementation and run separately via `npm run test:browser` (see
     // test/vitest.browser.config.ts) -- excluded here since they'd fail under
-    // jsdom's stubbed-out canvas support.
-    exclude: ['**/node_modules/**', '**/.git/**', '**/*.browser.test.ts'],
+    // jsdom's stubbed-out canvas support. .claude holds agent git worktrees
+    // (separate checkouts); never collect tests from them.
+    exclude: [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/.claude/**',
+      '**/*.browser.test.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['lcov'],

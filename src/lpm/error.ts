@@ -74,3 +74,15 @@ export class ReportError extends ScamperError {
     super('Runtime', `Reported value: ${toString(value)}`)
   }
 }
+
+/**
+ * Thrown by a blocking library primitive to suspend the currently-running fiber
+ * while the scheduler performs an asynchronous action; the fiber then resumes
+ * with the action's resolved value pushed as the primitive call's return value
+ * (see Scheduler's `block-on` handling and Fiber.resumeWithValue). This is
+ * control flow, NOT an error -- it is caught by the scheduler before any error
+ * handling and is never surfaced to the user.
+ */
+export class SuspendSignal {
+  constructor(public action: () => Promise<Value>) {}
+}

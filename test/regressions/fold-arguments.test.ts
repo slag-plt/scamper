@@ -4,19 +4,12 @@ import { runProgram } from '../harness.js'
 // https://github.com/slag-plt/scamper/issues/138
 // https://github.com/slag-plt/scamper/issues/176
 
-// Skipped: `fold`, `fold-left`, and `fold-right` are js-var-backed
-// (src/js/prelude/index.ts's prelude_fold/prelude_foldLeft/prelude_foldRight)
-// and drive the user-supplied combiner via `L.callScamperFn`, which
-// op-handlers.ts's applyFn comment documents as *permanently* disabled --
-// JS library code can no longer call back into Scamper closures at all (see
-// src/lpm/lang.ts's callScamperFn, an unconditional throw). Confirmed still
-// failing as of 2026-07-22: every fold-left/fold-right call below throws
-// "Javascript library functions can no longer call Scamper functions".
-// Fixing this needs fold/fold-left/fold-right (and any other js-var HOF that
-// calls user closures, e.g. map/filter/reduce/for-each) reimplemented as
-// native Scamper in src/lib/prelude.scm, or a real callback mechanism added
-// to the LPM VM -- both larger than a regression-test fix.
-test.skip('fold-arguments', async () => {
+// `fold`, `fold-left`, and `fold-right` are now reimplemented in Scamper
+// (src/lib/prelude.scm), so they drive the user-supplied combiner via
+// ordinary Scamper application rather than the disabled callScamperFn.
+// fold-left/fold-right follow SRFI-1: the combiner takes the current element
+// first and the accumulated value second.
+test('fold-arguments', async () => {
   expect(
     await runProgram(`
   (fold-left string-append "" (list "!" "%" "#" "@"))

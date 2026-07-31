@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { Scheduler } from '../../src/lpm/scheduler'
-import { ICE, Range, ReportError, ScamperError } from '../../src/lpm'
+import { ICE, Range, ReportError, ScamperError, SuspendSignal } from '../../src/lpm'
 import { mkTraceOutput } from '../../src/lpm/trace'
 import * as U from '../../src/lpm/util'
 import * as FS from '../../src/fs'
@@ -457,6 +457,75 @@ describe('Scheduler', () => {
       expect(stepCount).toBeGreaterThan(1)
       expect(queryTask.err.errors).toEqual([])
     })
+  })
+
+  describe('block-on handling', () => {
+    // A blocking primitive (js-var) suspends the fiber mid-expression by
+    // throwing a SuspendSignal carrying an async action; the scheduler runs the
+    // action and resumes the SAME fiber with its result pushed as the call's
+    // value. Here `block` stands in for e.g. prelude_blockOnReadFile.
+
+    test('resumes the fiber mid-expression with the async result', async () => {
+      const sched = new Scheduler()
+      // (+ 1 (block))  where (block) suspends and resolves to 5, so the
+      // continuation of `+` must see 5 and produce 6.
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkVar('+'),
+          U.mkLit(1),
+          U.mkVar('block'),
+          U.mkAp(0),
+          U.mkAp(2),
+        ]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        'block',
+        () => {
+          throw new SuspendSignal(() => Promise.resolve(5))
+        },
+      ])
+      const task = makeTask(fiber)
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      expect(task.ch.errLog).toEqual([])
+      expect(task.ch.log).toContain(6)
+    })
+
+    test('a rejected action reports a runtime error and advances the fiber', async () => {
+      const sched = new Scheduler()
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkVar('block'), U.mkAp(0)]),
+        U.mkDisp([U.mkLit('after')]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        'block',
+        () => {
+          throw new SuspendSignal(() => Promise.reject(new Error('disk error')))
+        },
+      ])
+      const task = makeTask(fiber)
+
+      sched.schedule(task)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      await sleep(QUANTUM_WAIT_MS)
+
+      // The rejection surfaces as a runtime error at the blocking call...
+      expect(task.ch.errLog).toHaveLength(1)
+      expect(task.ch.errLog[0]).toContain('disk error')
+      // ...and the fiber advances to the next statement rather than hanging.
+      expect(task.ch.log).toContain('after')
+    })
+
+    // N.B., a blockOn rejection under an enclosing `with-handler` (the idiomatic
+    // `(with-handler h (lambda () (with-file ...)))` shape) is catchable -- it
+    // routes through fiber.handleError. That path needs the compiler's real
+    // sub-frame layout, so it's covered end-to-end via the CLI rather than with
+    // hand-built bytecode here.
   })
 
   describe('duplicate scheduling', () => {

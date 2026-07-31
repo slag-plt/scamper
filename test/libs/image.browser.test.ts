@@ -7,7 +7,7 @@
 // mid-range color channel can round off by one. So the known pixel arrays
 // below only use non-zero alpha, and only use mid-range color channels
 // alongside fully opaque (alpha 255) pixels, where premultiplication is exact.
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
 import {
   image_colorToRgb,
@@ -41,9 +41,7 @@ import {
   image_canvasSetPixels,
   image_imageGetPixel,
   image_imageToPixels,
-  image_pixelMap,
   image_pixelsToImage,
-  image_withImageFromUrl,
 } from '../../src/js/image/image.js'
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
@@ -89,13 +87,6 @@ function redPixelCount(canvas: HTMLCanvasElement): number {
   }
   return count
 }
-
-// A no-op stand-in for a Scamper closure; L.callScamperFn throws before ever
-// looking at it (see #248), so its actual behavior doesn't matter here.
-const dummyScamperFn = ((..._args: L.Value[]) => undefined) as L.ScamperFn
-
-// 1x1 red, fully-opaque PNG, built by hand (no image-authoring tool in this repo).
-const RED_PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=='
 
 describe('text', () => {
   test('reports positive width and height', () => {
@@ -305,39 +296,15 @@ describe('drawing->pixels', () => {
   })
 })
 
-describe('with-image-from-url', () => {
-  test('synchronously returns a loading placeholder before the image loads', () => {
-    const url = 'https://example.com/some-image.png'
-    const container = image_withImageFromUrl(url, dummyScamperFn)
-    expect(container.innerHTML).toBe(`Loading ${url}...`)
-  })
+// N.B., with-image-from-url is now a Scheme wrapper (image.scm) over the blocking
+// primitive image_blockOnFetchImage (SuspendSignal / Scheduler `block-on`), so it
+// runs only under the async scheduler with a real browser image loader -- not by
+// a direct JS call here.
 
-  test('loading a real same-origin image fires onload and surfaces the #248 callScamperFn error', async () => {
-    const container = image_withImageFromUrl(RED_PIXEL_PNG, dummyScamperFn)
-    await vi.waitFor(() => {
-      expect(container.innerHTML).not.toBe(`Loading ${RED_PIXEL_PNG}...`)
-    })
-    // blocked on https://github.com/slag-plt/scamper/issues/248: the onload handler
-    // calls L.callScamperFn, which always throws; that error is caught and rendered
-    expect(container.textContent).toContain('Javascript library functions can no longer call Scamper functions')
-  })
-})
-
-describe('pixel-map', () => {
-  test('throws the #248 callScamperFn error on a canvas of the given dimensions', () => {
-    const canvas = makeCanvas(3, 5)
-    // pixel-map builds its output canvas at these same dimensions (see image.ts) --
-    // but it never gets there because the very first pixel's callback throws (#248)
-    expect(canvas.width).toBe(3)
-    expect(canvas.height).toBe(5)
-    expect(() => image_pixelMap(dummyScamperFn, canvas)).toThrow(L.ScamperError)
-    expect(() => image_pixelMap(dummyScamperFn, canvas)).toThrow('Javascript library functions can no longer call Scamper functions')
-  })
-
-  test.skip('applies the callback to transform each pixel', () => {
-    // blocked on https://github.com/slag-plt/scamper/issues/248: L.callScamperFn now always throws, so pixel-map's per-pixel callback can never run end-to-end
-  })
-})
+// N.B., pixel-map is now defined in Scheme (image.scm) on top of image->pixels,
+// vector-map, and pixels->image, so it is exercised end-to-end via runProgram in
+// image.test.ts rather than by a direct JS call here. The underlying pixel
+// round-trip (image->pixels / pixels->image / image-get-pixel) is covered below.
 
 describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', () => {
   // distinct RGBA per cell, row-major: top-left, top-right, bottom-left, bottom-right

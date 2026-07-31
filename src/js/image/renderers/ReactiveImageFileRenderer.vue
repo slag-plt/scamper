@@ -25,12 +25,13 @@ function onFileChange(event: Event) {
             canvas.height = img.height
             ctx.drawImage(img, 0, 0)
           }
-          try {
-            result.value = L.callScamperFn(props.value.callback, canvas)
-          } catch (err) {
-            result.value = err as Error
-          }
-          isLoading.value = false
+          // Run the callback as a fiber (JS can no longer call the closure) and
+          // render its result in the widget; a callback error surfaces in the
+          // output pane instead.
+          L.spawn(props.value.callback, [canvas], (r) => {
+            result.value = r
+            isLoading.value = false
+          })
         }
         img.src = e.target.result as string
       }

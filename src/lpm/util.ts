@@ -164,6 +164,18 @@ export const mkApplyOp = (range: Range = Range.none): L.ApplyOp => ({
   tag: 'apply',
   range,
 })
+export const mkCheckFn = (range: Range = Range.none): L.CheckFn => ({
+  tag: 'check-fn',
+  range,
+})
+export const mkPushHandler = (range: Range = Range.none): L.PushHandler => ({
+  tag: 'push-handler',
+  range,
+})
+export const mkPopHandler = (range: Range = Range.none): L.PopHandler => ({
+  tag: 'pop-handler',
+  range,
+})
 
 // Pattern constructors
 export const mkPWild = (range: Range = Range.none): L.PWild => ({

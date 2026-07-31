@@ -37,29 +37,17 @@ test('test-result? is false for an arbitrary non-test-result value', async () =>
   `)).toEqual(['#f', '#f'])
 })
 
-// test-case's exception branch fires on EVERY call right now: test-fn is
-// invoked via callScamperFn, which unconditionally throws (#248), so the
-// lambda's own `(error "boom")` never runs. This pins the exn-result shape
-// AND that the surfaced exception is currently the #248 error, not the
-// tested function's throw. Once #248 lands, this should assert the real
-// "boom" exception instead (see the skipped Ok/mismatch tests below).
-test('test-case surfaces the #248 callScamperFn error as an exception result', async () => {
+// test-case (test.scm) now catches the tested function's own exception via the
+// `with-handler` special form and surfaces its message string as the exn result.
+test('test-case surfaces the tested function\'s exception as an exception result', async () => {
   const [line] = await runProgram(`
   (import test)
   (test-case "boom" equal? 4 (lambda () (error "boom")))
   `)
-  expect(line).toBe(
-    'Test "boom"\n❌ Failed! Exception thrown: Runtime error: Javascript library functions can no longer call Scamper functions',
-  )
+  expect(line).toBe('Test "boom"\n❌ Failed! Exception thrown: "boom"')
 })
 
-// Regression: test_testCase (src/js/test/index.ts) calls the user-supplied
-// test-fn via L.callScamperFn, which src/lpm/lang.ts now unconditionally
-// throws from (same limitation noted in fold-arguments.test.ts and
-// lang.test.ts). Every test-case call, regardless of the comparator or
-// values involved, currently lands in the exception branch above instead of
-// reaching these branches.
-test.skip('test-case reports Ok when the comparator confirms the actual value', async () => {
+test('test-case reports Ok when the comparator confirms the actual value', async () => {
   expect(await runProgram(`
   (import test)
   (test-case "add" equal? 4 (lambda () (+ 2 2)))
@@ -70,9 +58,20 @@ test.skip('test-case reports Ok when the comparator confirms the actual value', 
   ])
 })
 
-test.skip('test-case reports the expected/actual mismatch when the wrong value is produced', async () => {
+test('test-case reports the expected/actual mismatch when the wrong value is produced', async () => {
   expect(await runProgram(`
   (import test)
   (test-case "add" equal? 5 (lambda () (+ 2 2)))
   `)).toEqual(['Test "add"\n❌ Failed! Expected 5, received 4'])
+})
+
+test('test-exn reports Ok when the function throws, failure when it does not', async () => {
+  expect(await runProgram(`
+  (import test)
+  (test-exn "throws" (lambda () (error "boom")))
+  (test-exn "quiet" (lambda () 42))
+  `)).toEqual([
+    'Test "throws"\n✅ Passed!',
+    'Test "quiet"\n❌ Failed! Test case did not throw an exception',
+  ])
 })

@@ -7,20 +7,39 @@ import {
 } from './handlers/stmt-handlers'
 import { Frame } from './frame'
 import { ICE, ScamperError } from './error'
+import { Range } from './range'
 import {
   ApHandler,
+  applyFn,
   ApplyHandler,
+  CheckFnHandler,
   ClsHandler,
   CtorHandler,
   ErrorHandler,
   JsVarHandler,
   LitHandler,
   MatchHandler,
+  PopHandlerHandler,
   PopVHandler,
+  PushHandlerHandler,
   ReptHandler,
   VarHandler,
 } from './handlers/op-handlers'
 import { builtinLibs } from './builtin-registry.js'
+
+/**
+ * A record of an installed exception handler (from a `with-handler` form). See
+ * Fiber.handleError for how these are consumed on a raised ScamperError.
+ */
+export interface HandlerRecord {
+  // frame-stack length to unwind to (the frame that installed the handler stays).
+  frameDepth: number
+  // the installing frame's value-stack length before the with-handler form began;
+  // on error we reset the stack to this, dropping the handler, the guarded
+  // function, and any partial results of the guarded computation.
+  baseDepth: number
+  handler: Value
+}
 
 
 export interface DisplayStep { tag: 'display' }
@@ -31,13 +50,21 @@ export interface ImportFileStep {
   tag: 'import-file'
   filename: string
 }
+// A fiber suspended mid-expression by a blocking primitive (see SuspendSignal).
+// The scheduler runs `action`, then resumes the fiber with the resolved value
+// (Fiber.resumeWithValue).
+export interface BlockOnStep {
+  tag: 'block-on'
+  action: () => Promise<Value>
+}
 
 export type StepResult =
   DisplayStep |
   TraceStep |
   MinorStep |
   YieldStep |
-  ImportFileStep
+  ImportFileStep |
+  BlockOnStep
 
 export const displayStep: DisplayStep = { tag: 'display' }
 export const traceStep: TraceStep = { tag: 'trace' }
@@ -46,6 +73,9 @@ export const yieldStep: YieldStep = { tag: 'yield' }
 export function importFileStep(filename: string): ImportFileStep {
   return { tag: 'import-file', filename }
 }
+export function blockOnStep(action: () => Promise<Value>): BlockOnStep {
+  return { tag: 'block-on', action }
+}
 
 // a fiber is a concurrent thread of execution
 // not named thread because we can't multithread in javascript, but we can use async/await to achieve similar results
@@ -53,6 +83,10 @@ export class Fiber {
   topLevelEnv: Env
   frames: Frame[] = []
   lastResult: Value | null = null
+  // Stack of installed exception handlers, innermost last. Pushed by the
+  // push-handler op, popped by pop-handler (normal completion) or handleError
+  // (on a raised error).
+  handlerStack: HandlerRecord[] = []
 
   private prog: Stmt[]
   private currStmtIdx = 0
@@ -183,6 +217,77 @@ export class Fiber {
   }
 
   /**
+   * Attempts to recover from a raised runtime error using the innermost
+   * installed exception handler (from a `with-handler` form). Unwinds the frame
+   * stack back to the installing frame, discards the failed sub-computation, and
+   * schedules the handler applied to the error's message string.
+   * @returns true if a handler caught the error (execution should resume), false
+   *          if no handler was installed (the caller should report the error).
+   */
+  handleError(e: ScamperError): boolean {
+    const rec = this.handlerStack.pop()
+    if (rec === undefined) {
+      return false
+    }
+    // Discard the failed sub-computation's frames, landing back on the frame
+    // that installed the handler.
+    this.frames.length = rec.frameDepth
+    const target = this.currentFrame
+    if (target === undefined) {
+      throw new ICE(
+        'Fiber.handleError',
+        'Handler unwound past the bottom of the frame stack',
+      )
+    }
+    // Discard the rest of the guarded computation's ops, up to and including the
+    // matching pop-handler. The error may have been raised partway through the
+    // guarded region (e.g. during argument evaluation), so the next op is not
+    // necessarily pop-handler. A later, not-yet-evaluated argument can itself be a
+    // nested with-handler whose push-handler/pop-handler are still ahead in the op
+    // stream, so balance them: skip past any nested push/pop-handler pair and stop
+    // only at the pop-handler that closes THIS form. (Frame.popInstr ICEs if we
+    // exhaust the frame without finding it, which would be a real invariant break.)
+    let depth = 0
+    let pending = target.popInstr()
+    while (pending.tag !== 'pop-handler' || depth > 0) {
+      if (pending.tag === 'push-handler') {
+        depth++
+      } else if (pending.tag === 'pop-handler') {
+        depth--
+      }
+      pending = target.popInstr()
+    }
+    // Drop the handler, the guarded function, and anything the failed computation
+    // left, so the stack is exactly as it was before the with-handler form began.
+    target.values.length = rec.baseDepth
+    // Apply the handler to the error's message string (matching the historical
+    // prelude_withHandler contract). Its result becomes the form's value.
+    applyFn(rec.handler, [e.message], target, this, e.range ?? Range.none)
+    return true
+  }
+
+  /**
+   * Resumes a fiber suspended mid-expression by a blocking primitive (see
+   * SuspendSignal / BlockOnStep), delivering `value` as the suspended
+   * primitive-call's result. Mirrors exactly what applyFn's JsFunction branch
+   * (push the result) plus stepFrame's post-op finalize (complete the frame if
+   * it is now finished) would have done had the primitive returned synchronously.
+   */
+  resumeWithValue(value: Value): void {
+    const frame = this.currentFrame
+    if (frame === undefined) {
+      throw new ICE(
+        'Fiber.resumeWithValue',
+        'Attempted to resume a fiber with no current frame',
+      )
+    }
+    frame.values.push(value)
+    if (frame.isFinished()) {
+      this.completeCurrentFrame()
+    }
+  }
+
+  /**
    * Steps through one operation in the current frame.
    * @returns true if the step was a major step, false if it was a minor step
    */
@@ -230,6 +335,15 @@ export class Fiber {
         break
       case 'apply':
         isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
+        break
+      case 'check-fn':
+        isMajorStep = CheckFnHandler(currOp, this.currentFrame, this)
+        break
+      case 'push-handler':
+        isMajorStep = PushHandlerHandler(currOp, this.currentFrame, this)
+        break
+      case 'pop-handler':
+        isMajorStep = PopHandlerHandler(currOp, this.currentFrame, this)
         break
       // TODO: the following instructions are useless
       // should be removed later

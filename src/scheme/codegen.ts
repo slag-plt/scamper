@@ -84,6 +84,22 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [...lowerExpr(e.exp), L.mkError(e.range)]
     case 'apply':
       return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
+    case 'with-handler':
+      // Evaluate the handler and the guarded function, check the function is
+      // actually applicable (check-fn), THEN install the handler and apply fn to
+      // its args under the guard; pop-handler uninstalls on normal completion.
+      // Evaluating/checking fn before push-handler means an error producing fn (or
+      // a non-function fn) is a plain error, not one this handler would catch (see
+      // the LPM handler stack). The stack after lowering fn is [handler, fn].
+      return [
+        ...lowerExpr(e.handler),
+        ...lowerExpr(e.fn),
+        L.mkCheckFn(e.range),
+        L.mkPushHandler(e.range),
+        ...e.args.flatMap(lowerExpr),
+        L.mkAp(e.args.length, e.range),
+        L.mkPopHandler(e.range),
+      ]
     case 'report':
       return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:

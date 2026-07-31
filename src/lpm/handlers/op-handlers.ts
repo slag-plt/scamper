@@ -1,4 +1,4 @@
-import { ICE, ReportError, ScamperError } from '../error'
+import { ICE, ReportError, ScamperError, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Value } from '../lang'
 import { Frame } from '../frame'
@@ -61,7 +61,7 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
  * Closure.call/callScamperFn are permanently disabled for JS code calling
  * back into Scamper.
  */
-function applyFn(
+export function applyFn(
   fn: Value,
   args: Value[],
   currFrame: Frame,
@@ -73,6 +73,12 @@ function applyFn(
       currFrame.values.push(fn(...args))
       return traceStep
     } catch (e) {
+      if (e instanceof SuspendSignal) {
+        // A blocking primitive is suspending the fiber -- propagate untouched to
+        // Scheduler.stepTask (control flow, not an error). The result value is
+        // supplied on resume by Fiber.resumeWithValue, not by the push above.
+        throw e
+      }
       if (e instanceof ScamperError) {
         // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
         // fn was called directly, outside any named Scamper function -- in
@@ -233,4 +239,58 @@ export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
     )
   }
   throw new ReportError(currFrame.values.at(-1), op.range)
+}
+
+// N.B., enforces with-handler's contract that its second argument is a function
+// to apply. The stack is [.., handler, fn] (fn on top); check it before
+// push-handler installs the handler so the raised error isn't caught by the very
+// handler being installed -- it surfaces as a plain runtime error instead.
+export const CheckFnHandler: OpHandler<'check-fn'> = (op, currFrame) => {
+  const fn = currFrame.values.at(-1)
+  if (fn === undefined || (!isClosure(fn) && !isJsFunction(fn))) {
+    throw new ScamperError(
+      'Runtime',
+      `with-handler expects a function as its second argument, but received ${fn === undefined ? 'nothing' : typeOf(fn)}`,
+      undefined,
+      op.range,
+      'with-handler',
+    )
+  }
+  return minorStep
+}
+
+// N.B., installs the exception handler for the guarded application. The stack is
+// [.., handler, fn]: the handler is *peeked* (at -2), not popped -- both it and
+// fn stay on the value stack (between here and the matching pop-handler) so
+// raise.ts can reconstruct the `with-handler` form and the fiber can find the
+// handler on the stack. We record the frame depth and the value-stack depth to
+// reset to (dropping both handler and fn) if a ScamperError is raised under the
+// guarded application (see Fiber.handleError).
+export const PushHandlerHandler: OpHandler<'push-handler'> = (_op, currFrame, fiber) => {
+  if (currFrame.values.length < 2) {
+    throw new ICE('Fiber.PushHandlerHandler', 'Expected a handler and a guarded function on the stack')
+  }
+  fiber.handlerStack.push({
+    frameDepth: fiber.frames.length,
+    baseDepth: currFrame.values.length - 2,
+    handler: currFrame.values.at(-2)!,
+  })
+  return minorStep
+}
+
+// N.B., normal (no-error) completion of a guarded application. The stack is
+// [.., handler, result]; drop the handler value and its stack record, leaving
+// [.., result].
+export const PopHandlerHandler: OpHandler<'pop-handler'> = (_op, currFrame, fiber) => {
+  if (currFrame.values.length < 2) {
+    throw new ICE(
+      'Fiber.PopHandlerHandler',
+      'Expected a handler and a result on the stack',
+    )
+  }
+  const result = currFrame.values.pop()!
+  currFrame.values.pop() // drop the (unused) handler value
+  currFrame.values.push(result)
+  fiber.handlerStack.pop()
+  return minorStep
 }

@@ -76,7 +76,7 @@ test('append-reverse', async () => {
 // callScamperFn regardless of whether it's a JsFunction or a closure. Only
 // the `apply` calls in this test pass; `map` needs to be rewritten in
 // Scamper itself (like all-satisfy? in prelude.scm) before this can pass.
-test.skip('apply-map', async () => {
+test('apply-map', async () => {
   expect(
     await runProgram(`
 (apply string-length (list "HelloWorld"))
@@ -733,7 +733,7 @@ test('char-pred', async () => {
 // both call their function arguments via callScamperFn, so any composition
 // of more than one function fails immediately. Needs compose/pipe rewritten
 // in Scamper itself (like all-satisfy? in prelude.scm) before this can pass.
-test.skip('compose', async () => {
+test('compose', async () => {
   expect(
     await runProgram(`
 (define inc
@@ -793,18 +793,13 @@ test('cons-pair', async () => {
   ])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - map's own
-// implementation calls the user-supplied function argument via
-// callScamperFn regardless of whether it's a JsFunction or a closure, so
-// map now fails before it ever reaches char-upcase's contract check.
-test.skip('contract-check-map', async () => {
+test('contract-check-map', async () => {
   expect(
     await runProgram(`
 (map char-upcase (list "h" "e" "l" "l" "o"))
 `),
   ).toEqual([
-    'Runtime error: (map) expected a character, received string',
+    'Runtime error: (error) expected a char, received string',
   ])
 })
 
@@ -896,7 +891,7 @@ test('expt', async () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip('filter-fold-reduce', async () => {
+test('filter-fold-reduce', async () => {
   expect(
     await runProgram(`
 (filter string? (list 4 "HelloWorld" "HelloWorld" "HelloWorld" "HelloWorld" #t "HelloWorld" "HelloWorld" "HelloWorld" list))
@@ -1706,14 +1701,26 @@ test('string-length-ref', async () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip('string-map', async () => {
+test('string-map', async () => {
   expect(
     await runProgram(`
 (string-map char-upcase "hello world")
-
 (string-map char-downcase "")
+(string-map char-upcase "a")
+(string-map (lambda (c) c) "abc")
+(string-map char-downcase "ABC123")
 `),
-  ).toEqual(['"HELLO WORLD"', '""'])
+  ).toEqual([
+    '"HELLO WORLD"',
+    // empty string is the base case
+    '""',
+    // single character
+    '"A"',
+    // identity leaves the string unchanged
+    '"abc"',
+    // non-alphabetic characters are left alone by char-downcase
+    '"abc123"',
+  ])
 })
 
 test('string-number-conversions', async () => {
@@ -1867,7 +1874,7 @@ test('truncate-round', async () => {
 // TODO: skipped because L.callScamperFn now always throws "Javascript
 // library functions can no longer call Scamper functions" - JS libs can no
 // longer invoke Scamper closures/functions directly.
-test.skip('vector-immutable', async () => {
+test('vector-immutable', async () => {
   expect(
     await runProgram(`
 (define empty (vector))
@@ -1957,10 +1964,10 @@ sample-vector
   ])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - JS libs can no
-// longer invoke Scamper closures/functions directly.
-test.skip('with-handler', async () => {
+// with-handler is a reserved-word special form (see the LPM handler stack):
+// the first form applies the guarded function to its trailing arguments; the
+// second raises inside the guard, so the handler runs on the error message.
+test('with-handler', async () => {
   expect(
     await runProgram(`
 (with-handler
@@ -2250,20 +2257,32 @@ test('assoc-set-new-key', async () => {
   ).toEqual(['(list (pair "a" 1) (pair "b" 2) (pair "c" 3))'])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - sort calls
-// the comparator via callScamperFn for any list with 2+ elements, so a
-// real sort can't be exercised until sort is rewritten in Scamper itself.
-// See sort-contract below for the failure case, which is unaffected since
-// contract checks run before the comparator is ever called.
-test.skip('sort', async () => {
+test('sort', async () => {
   expect(
     await runProgram(`
+(sort (list) <)
+(sort (list 42) <)
 (sort (list 3 1 2) <)
+(sort (list 1 2 3 4 5) <)
+(sort (list 5 4 3 2 1) <)
+(sort (list 3 1 2 3 1 2) <)
+(sort (list 3 1 2) >)
 (sort (list "banana" "apple" "cherry") string<?)
 `),
   ).toEqual([
+    // base cases: empty and singleton are returned unchanged
+    'null',
+    '(list 42)',
+    // standard sort
     '(list 1 2 3)',
+    // already-sorted and reverse-sorted inputs
+    '(list 1 2 3 4 5)',
+    '(list 1 2 3 4 5)',
+    // duplicates are all kept
+    '(list 1 1 2 2 3 3)',
+    // a > comparator sorts in descending order
+    '(list 3 2 1)',
+    // sorting strings with a string comparator
     '(list "apple" "banana" "cherry")',
   ])
 })
@@ -2280,73 +2299,79 @@ test('sort-contract', async () => {
   ])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - the predicate
-// returned by any-of calls each f1 via callScamperFn, so invoking it always
-// fails; see any-of-call below for the actual error this raises today.
-test.skip('any-of', async () => {
+test('any-of', async () => {
   expect(
     await runProgram(`
+((any-of odd?) 3)
+((any-of odd?) 4)
 ((any-of odd? even?) 3)
 ((any-of odd? even?) 4)
 ((any-of positive? negative?) 0)
+((any-of number? string? procedure?) "hi")
+((any-of number? string?) #t)
 `),
   ).toEqual([
+    // single predicate: reduces to that predicate
+    '#t',
+    '#f',
+    // several predicates: true if any holds
     '#t',
     '#t',
+    // none hold
+    '#f',
+    // first non-matching predicates are skipped once one matches
+    '#t',
+    // no predicate matches
     '#f',
   ])
 })
 
-test('any-of-call', async () => {
+test('all-of', async () => {
   expect(
     await runProgram(`
-((any-of odd? even?) 3)
-`),
-  ).toEqual([
-    'Runtime error: Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - the predicate
-// returned by all-of calls each f1 via callScamperFn, so invoking it always
-// fails; see all-of-call below for the actual error this raises today.
-test.skip('all-of', async () => {
-  expect(
-    await runProgram(`
+((all-of odd?) 3)
+((all-of odd?) 4)
 ((all-of odd? positive?) 3)
 ((all-of odd? positive?) -3)
 ((all-of number? string?) 5)
+((all-of number? positive? even?) 4)
 `),
   ).toEqual([
+    // single predicate: reduces to that predicate
+    '#t',
+    '#f',
+    // several predicates: true only if all hold
     '#t',
     '#f',
     '#f',
+    '#t',
   ])
 })
 
-test('all-of-call', async () => {
-  expect(
-    await runProgram(`
-((all-of odd? positive?) 3)
-`),
-  ).toEqual([
-    'Runtime error: Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-// N.B., list-of short-circuits on a non-list argument or an empty list
-// without ever calling the predicate, so these cases work despite the
-// callScamperFn limitation that blocks any-of/all-of/sort above.
 test('list-of', async () => {
   expect(
     await runProgram(`
 ((list-of number?) (list))
+((list-of number?) (list 1 2 3))
+((list-of number?) (list 1 "a" 3))
 ((list-of number?) 5)
 ((list-of number?) "a")
+((list-of string?) (list "a" "b"))
+((list-of procedure?) (list + - map))
 `),
-  ).toEqual(['#t', '#f', '#f'])
+  ).toEqual([
+    // empty list vacuously satisfies any element predicate
+    '#t',
+    // every element satisfies the predicate
+    '#t',
+    // one element fails
+    '#f',
+    // a non-list is never a list-of anything
+    '#f',
+    '#f',
+    '#t',
+    '#t',
+  ])
 })
 
 test('list-of-contract', async () => {
@@ -2740,14 +2765,16 @@ void
   ])
 })
 
-test('with-file', async () => {
+// N.B., with-file now blocks the fiber to load the file (SuspendSignal /
+// Scheduler `block-on`) and applies the callback in Scheme, so its happy path
+// runs only under the async scheduler (validated end-to-end via the CLI), not
+// this synchronous harness. The argument contract still fails eagerly.
+test('with-file rejects a non-string filename via its contract', async () => {
   expect(
     await runProgram(`
-(with-file "foo.txt" (lambda (s) s))
 (with-file 5 (lambda (s) s))
 `),
   ).toEqual([
-    '(reactive-file "foo.txt" [Function: ##anonymous##])',
     'Runtime error: (error) expected a string, received number',
   ])
 })
@@ -2814,142 +2841,270 @@ test('range-errors', async () => {
 })
 
 ////////////////////////////////////////////////////////////////////////////////
-// Higher-order functions: #248 callback limitation
+// Higher-order functions (reimplemented in Scamper, #248)
 //
-// Each of these invokes a user-supplied function via L.callScamperFn, which
-// now unconditionally throws (#248). Calling with otherwise-valid arguments
-// exercises the entry/validation/setup lines up to the first callScamperFn,
-// which raises the error below. The lines reachable only after a callback
-// successfully returns stay uncovered until #248 is resolved.
+// These used to be JS primitives that invoked their function argument via
+// L.callScamperFn; they are now defined in prelude.scm. Each suite below
+// covers the base case (empty input), standard cases, and corner cases.
 
-test('list-of-call', async () => {
-  expect(await runProgram('((list-of number?) (list 1 2))')).toEqual([
-    'Runtime error: Javascript library functions can no longer call Scamper functions',
+test('map', async () => {
+  expect(
+    await runProgram(`
+(map (lambda (x) (* x x)) (list 1 2 3 4))
+(map (lambda (x) (* x x)) (list))
+(map (lambda (x) (+ x 1)) (list 5))
+(map (lambda (x) x) (list 1 2 3))
+(map + (list 1 2 3) (list 10 20 30))
+(map (lambda (a b c) (+ a b c)) (list 1 2) (list 3 4) (list 5 6))
+(map +)
+`),
+  ).toEqual([
+    '(list 1 4 9 16)',
+    'null',
+    '(list 6)',
+    '(list 1 2 3)',
+    '(list 11 22 33)',
+    '(list 9 12)',
+    'null',
   ])
 })
 
-test('sort-call', async () => {
-  expect(await runProgram('(sort (list 2 1) <)')).toEqual([
-    'Runtime error: (sort) Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-test('string-map-call', async () => {
-  expect(await runProgram('(string-map char-upcase "ab")')).toEqual([
-    'Runtime error: (string-map) Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-test('map-call', async () => {
-  // 0-list (null) and length-mismatch branches take no callback; the single-
-  // list (mapOne) and multi-list (transpose) paths reach callScamperFn
-  expect(await runProgram('(map +)')).toEqual(['null'])
-  expect(await runProgram('(map + (list 1 2))')).toEqual([
-    'Runtime error: (map) Javascript library functions can no longer call Scamper functions',
-  ])
+test('map-length-mismatch', async () => {
   expect(await runProgram('(map + (list 1 2) (list 3))')).toEqual([
-    'Runtime error: (map) the lists passed to the function call do not have the same length',
-  ])
-  expect(await runProgram('(map + (list 1 2) (list 3 4))')).toEqual([
-    'Runtime error: (map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (error) map: all lists must have the same length',
   ])
 })
 
-test('filter-call', async () => {
-  expect(await runProgram('(filter + (list 1 2))')).toEqual([
-    'Runtime error: (filter) Javascript library functions can no longer call Scamper functions',
+test('filter', async () => {
+  expect(
+    await runProgram(`
+(filter even? (list 1 2 3 4 5 6))
+(filter even? (list))
+(filter even? (list 1 3 5))
+(filter even? (list 2 4 6))
+(filter odd? (list 4))
+(filter odd? (list 3))
+(filter (lambda (s) (> (string-length s) 2)) (list "a" "abc" "ab" "abcd"))
+`),
+  ).toEqual([
+    '(list 2 4 6)',
+    'null',
+    'null',
+    '(list 2 4 6)',
+    'null',
+    '(list 3)',
+    '(list "abc" "abcd")',
   ])
 })
 
-test('fold-call', async () => {
-  expect(await runProgram('(fold + 0 (list 1 2))')).toEqual([
-    'Runtime error: (fold) Javascript library functions can no longer call Scamper functions',
+test('fold', async () => {
+  expect(
+    await runProgram(`
+(fold + 0 (list 1 2 3 4 5))
+(fold + 0 (list))
+(fold - 100 (list 1 2 3))
+(fold (lambda (acc x) (cons x acc)) null (list 1 2 3))
+(fold (lambda (acc x) (+ acc 1)) 0 (list 5 5 5 5))
+`),
+  ).toEqual([
+    '15',
+    '0',
+    '94',
+    '(list 3 2 1)',
+    '4',
   ])
 })
 
-test('reduce-call', async () => {
-  expect(await runProgram('(reduce + (list 1 2))')).toEqual([
-    'Runtime error: (reduce) Javascript library functions can no longer call Scamper functions',
+test('reduce', async () => {
+  expect(
+    await runProgram(`
+(reduce + (list 1 2 3 4 5))
+(reduce + (list 42))
+(reduce - (list 10 1 2 3))
+(reduce max (list 3 1 4 1 5 9 2 6))
+`),
+  ).toEqual([
+    '15',
+    '42',
+    '4',
+    '9',
   ])
 })
 
-test('fold-left-call', async () => {
-  expect(await runProgram('(fold-left + 0 (list 1 2))')).toEqual([
-    'Runtime error: (fold-left) Javascript library functions can no longer call Scamper functions',
+test('fold-left', async () => {
+  // fold-left's combiner takes the element first and the accumulator second
+  // (SRFI-1 fold), the opposite of fold's argument order.
+  expect(
+    await runProgram(`
+(fold-left + 0 (list 1 2 3 4 5))
+(fold-left + 0 (list))
+(fold-left - 0 (list 1 2 3 4 5))
+(fold-left cons null (list 1 2 3))
+(fold-left (lambda (x acc) (+ x acc)) 0 (list 1 2 3))
+`),
+  ).toEqual([
+    '15',
+    // base case: empty list returns the initial value
+    '0',
+    // element-first combiner: (- 5 (- 4 (- 3 (- 2 (- 1 0))))) = 3
+    '3',
+    // (cons elem acc) reverses the list
+    '(list 3 2 1)',
+    '6',
   ])
 })
 
-test('fold-right-call', async () => {
-  expect(await runProgram('(fold-right + 0 (list 1 2))')).toEqual([
-    'Runtime error: (fold-right) Javascript library functions can no longer call Scamper functions',
+test('fold-right', async () => {
+  expect(
+    await runProgram(`
+(fold-right + 0 (list 1 2 3 4 5))
+(fold-right + 0 (list))
+(fold-right - 5 (list 10 9 8 7 6))
+(fold-right cons null (list 1 2 3))
+(fold-right (lambda (x acc) (cons (* x 2) acc)) null (list 1 2 3))
+`),
+  ).toEqual([
+    '15',
+    '0',
+    '3',
+    '(list 1 2 3)',
+    '(list 2 4 6)',
   ])
 })
 
-test('reduce-right-call', async () => {
-  expect(await runProgram('(reduce-right + (list 1 2))')).toEqual([
-    'Runtime error: (reduce-right) Javascript library functions can no longer call Scamper functions',
+test('reduce-right', async () => {
+  expect(
+    await runProgram(`
+(reduce-right + (list 1 2 3 4 5))
+(reduce-right + (list 42))
+(reduce-right - (list 10 9 8 7 6 5))
+(reduce-right - (list 1 2 3))
+`),
+  ).toEqual([
+    '15',
+    '42',
+    '3',
+    '2',
   ])
 })
 
-test('vector-map-call', async () => {
-  // empty (no callback), single-vector, length-mismatch, and multi-vector
-  expect(await runProgram('(vector-map +)')).toEqual(['(vector)'])
-  expect(await runProgram('(vector-map + (vector 1 2))')).toEqual([
-    'Runtime error: (vector-map) Javascript library functions can no longer call Scamper functions',
+test('vector-map', async () => {
+  expect(
+    await runProgram(`
+(vector-map (lambda (x) (* x x)) (vector 1 2 3 4))
+(vector-map (lambda (x) (+ x 1)) (vector))
+(vector-map (lambda (x) (* x 2)) (vector 5))
+(vector-map + (vector 1 2 3) (vector 10 20 30))
+(vector-map +)
+`),
+  ).toEqual([
+    '(vector 1 4 9 16)',
+    '(vector)',
+    '(vector 10)',
+    '(vector 11 22 33)',
+    '(vector)',
   ])
+})
+
+test('vector-map-length-mismatch', async () => {
   expect(await runProgram('(vector-map + (vector 1 2) (vector 3))')).toEqual([
-    'Runtime error: (vector-map) the vectors passed to the function call do not have the same length',
-  ])
-  expect(await runProgram('(vector-map + (vector 1 2) (vector 3 4))')).toEqual([
-    'Runtime error: (vector-map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (error) map: all lists must have the same length',
   ])
 })
 
-test('vector-map-bang-call', async () => {
-  expect(await runProgram('(vector-map! + (vector 1 2))')).toEqual([
-    'Runtime error: (vector-map!) Javascript library functions can no longer call Scamper functions',
+test('vector-map!', async () => {
+  expect(
+    await runProgram(`
+(define v1 (vector 1 2 3 4))
+(vector-map! (lambda (x) (* x x)) v1)
+v1
+(define v2 (vector))
+(vector-map! (lambda (x) (+ x 1)) v2)
+v2
+(define v3 (vector 10))
+(vector-map! (lambda (x) (- x)) v3)
+v3
+`),
+  ).toEqual([
+    'void',
+    '(vector 1 4 9 16)',
+    'void',
+    '(vector)',
+    'void',
+    '(vector -10)',
   ])
 })
 
-test('vector-for-each-call', async () => {
-  expect(await runProgram('(vector-for-each + (vector 1 2))')).toEqual([
-    'Runtime error: (vector-for-each) Javascript library functions can no longer call Scamper functions',
+test('vector-for-each', async () => {
+  // vector-for-each runs f purely for its side effects, in order.
+  expect(
+    await runProgram(`
+(define total (ref 0))
+(vector-for-each (lambda (x) (ref-set! total (+ (deref total) x))) (vector 1 2 3 4))
+(deref total)
+(define calls (ref 0))
+(vector-for-each (lambda (x) (ref-set! calls (+ (deref calls) 1))) (vector))
+(deref calls)
+(define seen (ref null))
+(vector-for-each (lambda (x) (ref-set! seen (cons x (deref seen)))) (vector 1 2 3))
+(deref seen)
+`),
+  ).toEqual([
+    'void',
+    '10',
+    'void',
+    '0',
+    'void',
+    '(list 3 2 1)',
   ])
 })
 
-test('for-range-call', async () => {
-  // ascending and descending both reach the callback
-  expect(await runProgram('(for-range 0 3 +)')).toEqual([
-    'Runtime error: (for-range) Javascript library functions can no longer call Scamper functions',
-  ])
-  expect(await runProgram('(for-range 3 0 +)')).toEqual([
-    'Runtime error: (for-range) Javascript library functions can no longer call Scamper functions',
+test('for-range', async () => {
+  expect(
+    await runProgram(`
+(define asc (ref null))
+(for-range 0 5 (lambda (i) (ref-set! asc (cons i (deref asc)))))
+(deref asc)
+(define desc (ref null))
+(for-range 5 0 (lambda (i) (ref-set! desc (cons i (deref desc)))))
+(deref desc)
+(define empty (ref null))
+(for-range 3 3 (lambda (i) (ref-set! empty (cons i (deref empty)))))
+(deref empty)
+`),
+  ).toEqual([
+    // ascending [0, 5): visits 0 1 2 3 4
+    'void',
+    '(list 4 3 2 1 0)',
+    // descending [5, 0): visits 5 4 3 2 1
+    'void',
+    '(list 1 2 3 4 5)',
+    // empty range: no visits
+    'void',
+    'null',
   ])
 })
 
-test('vector-filter-call', async () => {
-  expect(await runProgram('(vector-filter + (vector 1 2))')).toEqual([
-    'Runtime error: (vector-filter) Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-test('compose-call', async () => {
-  // compose returns a closure; invoking it triggers the callback
-  expect(await runProgram('((compose +) 5)')).toEqual([
-    'Runtime error: Javascript library functions can no longer call Scamper functions',
-  ])
-})
-
-test('pipe-call', async () => {
-  expect(await runProgram('(|> 5 +)')).toEqual([
-    'Runtime error: (|>) Javascript library functions can no longer call Scamper functions',
+test('vector-filter', async () => {
+  expect(
+    await runProgram(`
+(vector-filter even? (vector 1 2 3 4 5 6))
+(vector-filter even? (vector))
+(vector-filter even? (vector 1 3 5))
+(vector-filter even? (vector 2 4))
+(vector-filter (lambda (x) (> x 3)) (vector 5 1 4 2 3))
+`),
+  ).toEqual([
+    '(vector 2 4 6)',
+    '(vector)',
+    '(vector)',
+    '(vector 2 4)',
+    '(vector 5 4)',
   ])
 })
 
 test('with-handler-call', async () => {
-  // fn throws #248 immediately; the ScamperError catch branch then invokes
-  // the handler (which throws #248 again)
-  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual([
-    'Runtime error: (with-handler) Javascript library functions can no longer call Scamper functions',
-  ])
+  // No error is raised, so the handler is never invoked; with-handler applies
+  // its function to the trailing arguments and returns the result: (+ 1 2 3).
+  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual(['6'])
 })
