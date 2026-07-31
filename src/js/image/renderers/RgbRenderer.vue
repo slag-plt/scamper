@@ -14,7 +14,7 @@ const textColor = computed(() => image_rgbToString(image_rgbPseudoComplement(pro
       color: textColor,
       backgroundColor: backgroundColor,
       width: 'fit-content',
-      border: '1px solid black',
+      border: '1px solid var(--border)',
       padding: '0.25em',
     }"
   >

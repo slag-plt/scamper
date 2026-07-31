@@ -160,21 +160,21 @@
 ;;; @category music, predicates, sound, typecheck, empty, instrument, mod, note, note-event, note-freq, play-composition, repeat, rest, trigger
 (define composition? (js-var "music_compositionQ"))
 
-;;; (load-instrument prog) -> void
+;;; (load-instrument prog) -> void?
 ;;;  prog : integer?
 ;;;   a valid MIDI program number (0--127)
 ;;; Downloads and loads the requested MIDI instrument soundfont.
 ;;; @category instruments, music, sound, instrument, use-high-quality-instruments
 (define load-instrument (js-var "music_loadInstrument"))
 
-;;; (load-percussion prog) -> void
+;;; (load-percussion prog) -> void?
 ;;;  prog : integer?
 ;;;   a valid MIDI program number (0--127)
 ;;; Loads the requested percussion MIDI instrument soundfont.
 ;;; @category instruments, music, sound, percussion
 (define load-percussion (js-var "music_loadPercussion"))
 
-;;; (use-high-quality-instruments enable) -> void
+;;; (use-high-quality-instruments enable) -> void?
 ;;;  enable : boolean?
 ;;;   whether to use high-quality MIDI instruments
 ;;; Enables (or disables) the use of high-quality MIDI instruments. Note that high-quality instruments are much bigger and take longer to load.
@@ -186,7 +186,7 @@
 ;;; @category music, note, sound, note-handlers
 (define make-note-handlers (js-var "music_makeNoteHandlers"))
 
-;;; (play-composition comp) -> void
+;;; (play-composition comp) -> void?
 ;;;  comp : composition?
 ;;; Plays the given composition. Note that this function must be triggered from some user action on the screen, _e.g._, a button click. Otherwise, the browser will silently block audio playback.
 ;;; @category music, sound, composition?, empty, instrument, mod, note, note-event, note-freq, repeat, rest, trigger

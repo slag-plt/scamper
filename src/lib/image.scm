@@ -77,7 +77,7 @@
 (define rgb-distance (js-var "image_rgbDistance"))
 
 ;;; (color-name? v) -> boolean?
-;;;  v : string
+;;;  v : string?
 ;;; Returns `#t` if and only if `v` is a valid color name.
 ;;; @category color, image, predicates, typecheck, color-func, all-color-names, find-colors
 (define color-name? (js-var "image_isColorName"))
@@ -89,7 +89,7 @@
 (define all-color-names (js-var "image_allColorNames"))
 
 ;;; (find-colors color-name) -> list?
-;;;  color-name : string
+;;;  color-name : string?
 ;;; Returns a list of all color names that contain `color`, case-insensitive.
 ;;; @category image, color-func, color?, all-color-names, color-name?
 (define find-colors (js-var "image_findColors"))
@@ -100,11 +100,11 @@
 ;;; @category color, image, rgb, color-name->rgb, hsv->rgb, rgb->hsv, hsv->string
 (define rgb->string (js-var "image_rgbToString"))
 
-;;; (hsv? . v) -> boolean?
+;;; (hsv? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a hsv value.
 ;;; @category color, image, hsv, predicates, typecheck, hsv-func
-(define hsv? (js-var "image_hsv"))
+(define hsv? (js-var "image_isHsv"))
 
 ;;; (hsv h s v . a) -> hsv?
 ;;;  h : number?
@@ -180,7 +180,7 @@
 (define hsv->string (js-var "image_hsvToString"))
 
 ;;; (color-name->rgb color-name) -> rgb?
-;;;  color-name : string
+;;;  color-name : string?
 ;;; Returns the rgb value of the color name.
 ;;; @category color, image, rgb, hsv->rgb, rgb->hsv, rgb->string
 (define color-name->rgb (js-var "image_colorNameToRgb"))

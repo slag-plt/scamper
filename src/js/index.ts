@@ -13,14 +13,13 @@ import * as Runtime from './runtime/index.js'
 import * as Test from './test/index.js'
 
 // N.B., prelude/index.ts groups a handful of dynamically-named functions
-// (list accessors, char/string comparators) into plain records -- keyed by
-// their already-prefixed binding names -- rather than individual named
-// exports, since JS modules can't declare a dynamic number of top-level
-// bindings. The container records themselves (prelude_listAccessorFns, etc.)
-// aren't bindings anyone should look up, so they're excluded below in favor
-// of their flattened contents.
+// (char/string comparators) into plain records -- keyed by their
+// already-prefixed binding names -- rather than individual named exports,
+// since JS modules can't declare a dynamic number of top-level bindings. The
+// container records themselves (prelude_charCompareFns, etc.) aren't bindings
+// anyone should look up, so they're excluded below in favor of their
+// flattened contents.
 const {
-  prelude_listAccessorFns,
   prelude_charCompareFns,
   prelude_charPredicateFns,
   prelude_stringCompareFns,
@@ -44,7 +43,6 @@ const internals = new Map<string, L.Value>([
   ...Object.entries(Lab),
   ...Object.entries(Music),
   ...Object.entries(preludeBindings),
-  ...Object.entries(prelude_listAccessorFns),
   ...Object.entries(prelude_charCompareFns),
   ...Object.entries(prelude_charPredicateFns),
   ...Object.entries(prelude_stringCompareFns),

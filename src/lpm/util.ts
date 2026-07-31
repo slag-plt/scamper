@@ -282,6 +282,15 @@ export function charToName(c: string): string {
     return c
   }
 }
+
+/** @return `s` with the characters special to string-literal syntax (the
+ *  backslash and the double-quote) escaped, so that wrapping the result in
+ *  quotes yields a valid, re-readable literal. Inverse of the reader's
+ *  `parseStringLiteral`. Backslashes must be escaped first to avoid
+ *  double-escaping the backslash introduced for each quote. */
+export function escapeStringLiteral(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
 /** @return a vector (array) representation of the input list. */
 export function listToVector(l: L.List): L.Value[] {
   const ret: L.Value[] = []
@@ -404,7 +413,7 @@ export function toString(v: L.Value): string {
     case 'number':
       return v.toString()
     case 'string':
-      return `"${v}"`
+      return `"${escapeStringLiteral(v)}"`
     case 'undefined':
       return 'void'
     default:

@@ -2,21 +2,21 @@
 import { defineComponent, shallowRef } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { LoggingChannel, Range } from '../src/lpm'
+import { LoggingChannel, Range } from '../../../src/lpm'
 import Scamper, {
   initialize,
   type DisplayRequest,
   type QueryMap,
-} from '../src/scamper'
-import type { EditorAccessor } from '../src/app/web/composables/editor-context'
-import IdeHeader from '../src/app/web/components/IdeHeader.vue'
+} from '../../../src/scamper'
+import type { EditorAccessor } from '../../../src/app/web/composables/editor-context'
+import IdeHeader from '../../../src/app/web/components/IdeHeader.vue'
 import {
   provideScamperSession,
   type ScamperSession,
   type ScamperSessionOptions,
-} from '../src/app/web/composables/use-scamper-session'
-import type { ResultsPaneType } from '../src/app/web/composables/use-results-pane'
-import { makeMockCodeMirrorEditorAdapter } from './stubs/mock-code-mirror-editor-adapter'
+} from '../../../src/app/web/composables/use-scamper-session'
+import type { ResultsPaneType } from '../../../src/app/web/composables/use-results-pane'
+import { makeMockCodeMirrorEditorAdapter } from '../../stubs/mock-code-mirror-editor-adapter'
 
 await initialize()
 

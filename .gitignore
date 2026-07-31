@@ -132,7 +132,6 @@ src/scheme/generated/parser.ts
 # (see scripts/generate-lib-sources.mjs / scripts/vite-plugin-lib-sources.mjs)
 src/lib/generated/sources.ts
 
-.claude
 .zed
 .cursor
 .junie

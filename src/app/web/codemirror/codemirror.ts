@@ -13,15 +13,18 @@ import {
   lineNumbers,
   rectangularSelection,
 } from '@codemirror/view'
-import { EditorState, Extension } from '@codemirror/state'
+import { Compartment, EditorState, Extension } from '@codemirror/state'
 import {
   bracketMatching,
   defaultHighlightStyle,
   foldGutter,
   foldKeymap,
+  HighlightStyle,
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language'
+import { tags as t } from '@lezer/highlight'
+import { currentTheme, type Theme } from '../../../theme'
 import {
   defaultKeymap,
   history,
@@ -35,7 +38,7 @@ import {
   closeBracketsKeymap,
   completionKeymap,
 } from '@codemirror/autocomplete'
-import { lintKeymap } from '@codemirror/lint'
+import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
@@ -43,6 +46,66 @@ import { QueryExtension } from './extensions/query'
 
 export const noLoadedFileText =
   '; Create and/or load a file from the left-hand sidebar!'
+
+// Editor theme. Light keeps CodeMirror's default light chrome + highlight; dark
+// is a GitHub-dark-inspired theme covering the tags assigned in
+// extensions/language.ts. The active theme lives in a Compartment so it can be
+// swapped live (see CodeMirrorEditor.vue) without rebuilding editor state.
+const lightThemeExtension: Extension = syntaxHighlighting(defaultHighlightStyle, {
+  fallback: true,
+})
+
+const darkHighlightStyle = HighlightStyle.define([
+  { tag: t.keyword, color: '#ff7b72' },
+  { tag: t.variableName, color: '#e6edf3' },
+  { tag: [t.bool, t.null, t.atom], color: '#79c0ff' },
+  { tag: t.number, color: '#79c0ff' },
+  { tag: [t.string, t.character], color: '#a5d6ff' },
+  { tag: [t.lineComment, t.comment], color: '#8b949e', fontStyle: 'italic' },
+  { tag: [t.paren, t.squareBracket, t.brace, t.punctuation], color: '#c9d1d9' },
+])
+
+const darkEditorTheme = EditorView.theme(
+  {
+    '&': { color: '#e6edf3', backgroundColor: '#0d1117' },
+    '.cm-content': { caretColor: '#e6edf3' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#e6edf3' },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
+      { backgroundColor: '#264f78' },
+    '.cm-gutters': {
+      backgroundColor: '#0d1117',
+      color: '#6e7681',
+      border: 'none',
+    },
+    '.cm-activeLine': { backgroundColor: 'rgba(110, 118, 129, 0.1)' },
+    '.cm-activeLineGutter': { backgroundColor: 'rgba(110, 118, 129, 0.1)' },
+    '.cm-foldPlaceholder': {
+      backgroundColor: 'transparent',
+      border: 'none',
+      color: '#8b949e',
+    },
+    '.cm-tooltip': {
+      backgroundColor: '#161b22',
+      border: '1px solid #30363d',
+      color: '#e6edf3',
+    },
+    '.cm-tooltip-autocomplete ul li[aria-selected]': {
+      backgroundColor: '#264f78',
+      color: '#e6edf3',
+    },
+  },
+  { dark: true },
+)
+
+const darkThemeExtension: Extension = [darkEditorTheme, syntaxHighlighting(darkHighlightStyle)]
+
+/** The editor theme+highlight extension for a given app theme. */
+export function editorThemeExtension(theme: Theme): Extension {
+  return theme === 'dark' ? darkThemeExtension : lightThemeExtension
+}
+
+/** Compartment holding the active editor theme, for live reconfiguration. */
+export const editorThemeCompartment = new Compartment()
 
 export interface EditorStateConfig {
   output?: HTMLElement
@@ -58,11 +121,14 @@ function mkExtensions(config: EditorStateConfig): Extension {
     highlightSpecialChars(),
     history(),
     foldGutter(),
+    // Gutter markers for lint diagnostics -- easier to spot than the inline
+    // squiggles alone. Colored by severity and shows the messages on hover.
+    lintGutter(),
     drawSelection(),
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
     indentOnInput(),
-    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    editorThemeCompartment.of(editorThemeExtension(currentTheme.value)),
     bracketMatching(),
     closeBrackets(),
     autocompletion(),

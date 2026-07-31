@@ -13,6 +13,7 @@ import { provideScamperSession } from '../composables/use-scamper-session'
 import Scamper from '../../../scamper'
 import * as FS from '../../../fs'
 import { FileEntry } from '../../../fs/fs'
+import { FileSession } from '../file-session'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
 
@@ -35,7 +36,7 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: FS.t | null = null
-let autosaveId = -1
+let fileSession: FileSession | null = null
 let config: Config = DEFAULT_CONFIG
 let isLoadingFile = false
 
@@ -93,16 +94,11 @@ async function loadConfig() {
 // ---------- autosave ----------
 
 function startAutosaving() {
-  if (autosaveId === -1) {
-    autosaveId = window.setInterval(() => {
-      void saveCurrentFile()
-    }, 3000)
-  }
+  fileSession?.startAutosave()
 }
 
 function stopAutosaving() {
-  window.clearInterval(autosaveId)
-  autosaveId = -1
+  fileSession?.stopAutosave()
 }
 
 // ---------- dirty tracking ----------
@@ -123,25 +119,29 @@ function isEditorLoaded(): boolean {
 }
 
 async function saveCurrentFile() {
-  if (!currentFile.value || !fs || isLoadingFile) return
-  if (!isEditorLoaded()) return
-  try {
-    await fs.saveFile(currentFile.value, editor().getDoc())
-  } catch (e) {
-    if (e instanceof Error) displayError(e.message)
-  }
+  if (!fileSession || isLoadingFile) return
+  await fileSession.save()
+}
+
+// Keeps the reactive `currentFile` ref (read by the template) in sync with the
+// file session's notion of the open file (used by its race-safe save/delete).
+function setCurrentFile(filename: string | null) {
+  currentFile.value = filename
+  fileSession?.setCurrentFile(filename)
 }
 
 async function switchToFile(filename: string): Promise<void> {
-  if (!fs) return
+  if (!fs || !fileSession) return
   isLoadingFile = true
   stopAutosaving()
   session.stopAll()
-  if (currentFile.value !== null) await saveCurrentFile()
 
-  currentFile.value = filename
   try {
-    const src = await fs.loadFile(currentFile.value)
+    // Forces a save of the outgoing file before loading the new one so a quick
+    // edit is never lost on switch (issue #238). The guarded saveCurrentFile()
+    // would no-op here because isLoadingFile is already set.
+    const src = await fileSession.switchTo(filename)
+    currentFile.value = filename
     editor().initializeDoc(src)
   } catch (e) {
     if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ''}`)
@@ -203,37 +203,40 @@ async function handleCreate() {
 }
 
 async function handleUploadFile(file: File) {
+  if (!fs || !fileSession) return
   const content = await file.text()
   const filename = file.name
-  if (await fs?.fileExists(filename)) {
+  if (await fs.fileExists(filename)) {
     const ok = confirm(
       `File "${filename}" already exists. Do you want to overwrite it?`,
     )
     if (!ok) return
-    stopAutosaving()
-    await fs?.deleteFile(filename)
+    // Serialize the overwrite against any in-flight save so the writable is
+    // closed before the file is removed (see file-session.ts).
+    await fileSession.deleteFile(filename)
   }
-  await fs?.saveFile(filename, content)
-  currentFile.value = null
+  await fs.saveFile(filename, content)
+  setCurrentFile(null)
   await switchToFile(filename)
 }
 
 async function handleFileDrop(droppedFiles: FileList) {
+  if (!fs || !fileSession) return
   stopAutosaving()
   for (const file of droppedFiles) {
     try {
       const content = await file.text()
       const filename = file.name
-      if (await fs?.fileExists(filename)) {
+      if (await fs.fileExists(filename)) {
         const ok = confirm(
           `File "${filename}" already exists. Do you want to overwrite it?`,
         )
         if (!ok) continue
-        stopAutosaving()
-        await fs?.deleteFile(filename)
+        // Serialize the overwrite against any in-flight save (see above).
+        await fileSession.deleteFile(filename)
       }
-      await fs?.saveFile(filename, content)
-      currentFile.value = null
+      await fs.saveFile(filename, content)
+      setCurrentFile(null)
       await switchToFile(filename)
     } catch (e) {
       if (e instanceof Error)
@@ -243,18 +246,19 @@ async function handleFileDrop(droppedFiles: FileList) {
 }
 
 async function handleRename() {
-  if (!currentFile.value) return
-  const newName = prompt(`Enter a new filename for ${currentFile.value}`)
-  if (newName === null || newName === currentFile.value) return
+  if (!currentFile.value || !fileSession) return
+  const from = currentFile.value
+  const newName = prompt(`Enter a new filename for ${from}`)
+  if (newName === null || newName === from) return
   if (await fs?.fileExists(newName)) {
     alert(`File ${newName} already exists!`)
   } else {
     try {
-      stopAutosaving()
       // N.B., renaming closes the fs worker's handle to the current file,
-      // so we load it fresh afterwards.
-      await fs?.renameFile(currentFile.value, newName)
-      currentFile.value = null
+      // so we load it fresh afterwards. The session serializes against any
+      // in-flight save first.
+      await fileSession.renameFile(from, newName)
+      setCurrentFile(null)
       await switchToFile(newName)
     } catch (e) {
       if (e instanceof Error) displayError(e.message)
@@ -263,12 +267,19 @@ async function handleRename() {
 }
 
 async function handleDelete() {
-  if (!currentFile.value) return
-  const ok = confirm(`Are you sure you want to delete ${currentFile.value}?`)
+  if (!currentFile.value || !fileSession) return
+  const target = currentFile.value
+  const ok = confirm(`Are you sure you want to delete ${target}?`)
   if (!ok) return
-  stopAutosaving()
-  await fs?.deleteFile(currentFile.value)
-  currentFile.value = null
+  try {
+    // The session stops autosave and awaits any in-flight save before removing
+    // the file, so an open OPFS writable can't block the delete (issue #184).
+    await fileSession.deleteFile(target)
+  } catch (e) {
+    if (e instanceof Error) displayError(`Failed to delete ${target}: ${e.message}`)
+    return
+  }
+  setCurrentFile(null)
   editor().initializeDummyDoc()
   config.lastOpenedFilename = null
   session.stopAll()
@@ -334,6 +345,15 @@ const beforeUnloadWrapper = (e: Event) => {
 onMounted(async () => {
   await FS.initialize()
   fs = FS.getFS()
+  fileSession = new FileSession(
+    fs,
+    { getDoc: () => editor().getDoc(), isEditorLoaded },
+    {
+      onSaveError: (message) => {
+        displayError(message)
+      },
+    },
+  )
 
   const obtainedLock = await Lock.acquireLockFile(fs)
   if (!obtainedLock) {
@@ -438,7 +458,7 @@ onUnmounted(() => {
 .sidebar-wrapper {
   width: 250px;
   flex-shrink: 0;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--border-muted);
 }
 
 .ide-main {
@@ -455,18 +475,18 @@ onUnmounted(() => {
 }
 
 .editor-pane {
-  background-color: white;
+  background-color: var(--surface);
   overflow: hidden;
 }
 
 .results-pane {
-  background-color: white;
+  background-color: var(--surface);
   display: flex;
   flex-direction: column;
 }
 
 :deep(.splitpanes__splitter) {
-  background-color: #eee;
+  background-color: var(--splitter-bg);
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
   background-repeat: no-repeat;
   background-position: 50%;
@@ -484,14 +504,14 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--overlay);
 }
 
 .loading-content {
-  background-color: #fefefe;
+  background-color: var(--modal-bg);
   margin: auto;
   padding: 20px;
-  border: 1px solid #888;
+  border: 1px solid var(--modal-border);
   width: 80%;
 }
 </style>

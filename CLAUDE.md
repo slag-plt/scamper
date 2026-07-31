@@ -93,4 +93,9 @@ Scamper programs as a collection of fibers of execution.
 + Scamper is maintained by undergraduate research students, so favor simpler designs as long as they do not cause significant headaches.
 + Additionally, readable design is paramount; when writing code, if there are design choices to be made, favor consulting the user when possible.
 + As much as possible, the codebase is meant to be written in a pure, functional style. The exception is when performance is necessary, and then effects are intentionally scoped as local as possible.
-+ Text enshrined in code whether it is code comments, docstrings, or git commits should be concise and to the point.
++ Use standard Typescript/Javadoc docstrings for function level comments with the following conventions:
+    - Use standard tags, e.g., @param and @returns, when possible.
+    - If a parameter's use is obvious from its name, the @param tag can be elided.
+    - The different parts of a docstring should be short and to the point, appropriate for viewing in a tooltip.
++ Text that lives in an artifact whether in code comments, docstrings, commit messages, etc., should be concise and to the point; a few sentences or bullets rather than paragraphs.
++ When leaving messages and comments in Git and Github (e.g., commits, issues, and pull requests), do not include a postamble marker that Claude created the message/comment or a link to the Claude code transcript. Instead. leave a message "_(Co-created with Claude Code)_" at the top of the message/comment.

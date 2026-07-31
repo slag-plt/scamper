@@ -50,7 +50,8 @@ const contentsRef = useTemplateRef('contents-ref')
   justify-content: space-between;
   box-sizing: border-box;
   box-shadow: 0 0 v-bind("ModalVerticalPadding") rgba(0, 0, 0, 0.3);
-  background-color: white;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   width: v-bind("ModalWidth");
   min-width: 0;
   padding: v-bind("ModalOverallPadding");

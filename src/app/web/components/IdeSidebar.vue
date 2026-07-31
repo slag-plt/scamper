@@ -131,12 +131,12 @@ async function handleFileInputChange(event: Event) {
   flex-direction: column;
   flex: 1;
   height: 100%;
-  background: #f6f6f6;
+  background: var(--surface-sidebar);
 }
 
 .ide-sidebar.drag-over {
   opacity: 0.5;
-  background: #e0e0e0;
+  background: var(--surface-hover);
   transition:
     opacity 0.2s ease,
     background 0.2s ease;
@@ -173,7 +173,7 @@ async function handleFileInputChange(event: Event) {
 }
 
 .file.selected {
-  background: green;
-  color: white;
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 </style>

@@ -29,3 +29,18 @@ jobs:
     - run: npm ci
     - run: npm run validate
     - run: npm run build
+
+  browser-tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+        cache: 'npm'
+    - run: npm ci
+    - run: npx playwright install --with-deps chromium
+    - run: npm run test:browser

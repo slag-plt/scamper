@@ -15,9 +15,9 @@ switch (e.tag) {
     break
   case 'lam':
     if (e.restParam) {
-      args = ['lambda', ...e.params, '.', e.restParam, e.body]
+      args = ['lambda', ...e.params.map((p) => p.name), '.', e.restParam.name, e.body]
     } else {
-      args = ['lambda', ...e.params, e.body]
+      args = ['lambda', ...e.params.map((p) => p.name), e.body]
     }
     break
   case 'begin':
@@ -51,7 +51,7 @@ switch (e.tag) {
   case 'let':
     hljsBindings = {
       head: 'let',
-      pairs: e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
+      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
       body: e.body,
     }
     break
@@ -65,7 +65,7 @@ switch (e.tag) {
   case 'let*':
     hljsBindings = {
       head: 'let*',
-      pairs: e.bindings.map(({ name, value }) => ({ lhs: name, rhs: value })),
+      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
       body: e.body,
     }
     break
@@ -79,7 +79,7 @@ switch (e.tag) {
 </script>
 
 <template>
-  <CodeElement v-if="e.tag === 'var'">
+  <CodeElement v-if="e.tag === 'id'">
     {{ e.name }}
   </CodeElement>
   <ValueRenderer v-else-if="e.tag === 'lit'" :value="e.value" />

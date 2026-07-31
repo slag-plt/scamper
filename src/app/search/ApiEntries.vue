@@ -388,7 +388,7 @@ const types = ref([
 .index {
   margin: 1em;
   padding: 1em;
-  background-color: #ddd;
+  background-color: var(--surface-muted);
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
   width: 17em;
   flex-shrink: 0;
@@ -445,7 +445,7 @@ const types = ref([
   margin: 24px;
   font-size: 40px;
   font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-  color: #4BADAC;
+  color: var(--brand);
 }
 
 .flex-box {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useScamperSession } from '../composables/use-scamper-session'
+import ThemeToggle from '../../shared/ThemeToggle.vue'
 
 defineProps<{
   currentFile?: string | null
@@ -90,6 +91,8 @@ function searchOpenWindow(searchTerm: string) {
       >
     </div>
     <div class="header-right">
+      <ThemeToggle />
+      ⋅
       <a
         href="https://github.com/slag-plt/scamper"
         role="button"
@@ -108,8 +111,8 @@ function searchOpenWindow(searchTerm: string) {
 
 <style scoped>
 .ide-header {
-  background: #eee;
-  color: #333;
+  background: var(--header-bg);
+  color: var(--header-fg);
   padding: 0.5em;
   display: flex;
   flex-direction: row;

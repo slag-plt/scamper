@@ -7,6 +7,7 @@ import type { SyntaxNode } from '@lezer/common'
 import * as A from './ast.js'
 import { parser } from './generated/parser.js'
 import * as L from '../lpm/index.js'
+import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import {
   parseCharLiteral,
   parseNumberLiteral,
@@ -44,7 +45,7 @@ class Ctx {
   constructor(
     public src: string,
     public lineStarts: number[],
-    public errors: L.ScamperError[],
+    public diagnostics: ScamperDiagnostic[],
   ) {}
 
   // N.B., reader.ts's ranges are inclusive on the end position (it points at
@@ -129,20 +130,15 @@ const formDescriptions: Record<string, string> = {
 
 function reportSyntaxError(ctx: Ctx, node: SyntaxNode): void {
   if (node.type.isError) {
-    ctx.errors.push(
-      new L.ScamperError('Parser', 'Malformed syntax.', undefined, ctx.range(node)),
+    ctx.diagnostics.push(
+      mkDiagnostic('Parse', 'error', 'Malformed syntax.', ctx.range(node)),
     )
     return
   }
   const desc =
     formDescriptions[node.type.name] ?? `${node.type.name.toLowerCase()} expression`
-  ctx.errors.push(
-    new L.ScamperError(
-      'Parser',
-      `Malformed ${desc}.`,
-      undefined,
-      ctx.range(node),
-    ),
+  ctx.diagnostics.push(
+    mkDiagnostic('Parse', 'error', `Malformed ${desc}.`, ctx.range(node)),
   )
 }
 
@@ -263,21 +259,33 @@ function identifierName(
 ): string {
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
-    ctx.errors.push(
-      new L.ScamperError(
-        'Parser',
+    ctx.diagnostics.push(
+      mkDiagnostic(
+        'Parse',
+        'error',
         `The identifier "${name}" is a reserved word and cannot be used as a variable name`,
-        undefined,
         ctx.range(node),
       ),
     )
     return '<error>'
   }
   if (node.type.name !== 'Identifier') {
-    ctx.errors.push(new L.ScamperError('Parser', errorMsg, undefined, ctx.range(node)))
+    ctx.diagnostics.push(mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
     return '<error>'
   }
   return name
+}
+
+// As identifierName, but keeps the identifier's own source range alongside its
+// text -- this is where each A.Identifier's range gets populated from the parse
+// tree. Used everywhere an identifier is a genuine AST node (variable
+// references, binders, ...) rather than a plain string (import module names).
+function identifier(
+  ctx: Ctx,
+  node: SyntaxNode,
+  errorMsg = 'Expected an identifier',
+): A.Identifier {
+  return A.mkId(identifierName(ctx, node, errorMsg), ctx.range(node))
 }
 
 ///// Comments / docstrings ////////////////////////////////////////////////////
@@ -321,19 +329,15 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
       if (!L.isSym(v)) {
         return A.mkPLit(v, range)
       }
-      const name = identifierName(
-        ctx,
-        node,
-        'Expected a valid constructor name',
-      )
-      return name === '_' ? A.mkPWild(range) : A.mkPVar(name, range)
+      const id = identifier(ctx, node, 'Expected a valid constructor name')
+      return id.name === '_' ? A.mkPWild(range) : id
     }
 
     case 'PApp': {
       if (cs.length === 0) {
         return A.mkPLit(null, range)
       }
-      const head = identifierName(
+      const head = identifier(
         ctx,
         cs[0],
         'The first element of a pattern list must be a constructor name',
@@ -374,7 +378,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       if (!L.isSym(v)) {
         return A.mkLit(v, range)
       }
-      return A.mkVar(identifierName(ctx, node), range)
+      return identifier(ctx, node)
     }
 
     case 'Quote': {
@@ -406,11 +410,11 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const argNodes = rest.slice(0, -1)
       const dotIndex = argNodes.findIndex((c) => c.type.name === 'RestDot')
       if (dotIndex === -1) {
-        const params = argNodes.map((c) => identifierName(ctx, c))
+        const params = argNodes.map((c) => identifier(ctx, c))
         return A.mkLam(params, body, range)
       }
-      const params = argNodes.slice(0, dotIndex).map((c) => identifierName(ctx, c))
-      const restParam = identifierName(ctx, argNodes[dotIndex + 1])
+      const params = argNodes.slice(0, dotIndex).map((c) => identifier(ctx, c))
+      const restParam = identifier(ctx, argNodes[dotIndex + 1])
       return A.mkLam(params, body, range, restParam)
     }
 
@@ -467,7 +471,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
-        name: identifierName(ctx, n),
+        id: identifier(ctx, n),
         value: expFromNode(ctx, v),
       }))
       return node.type.name === 'Let'
@@ -528,7 +532,7 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 
     case 'Define': {
       const rest = cs.slice(1)
-      const name = identifierName(ctx, rest[0])
+      const name = identifier(ctx, rest[0])
       const value = expFromNode(ctx, rest[1])
       const docComments = precedingComments(ctx, node)
       return A.mkDefine(name, value, range, docComments)
@@ -541,8 +545,8 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 
     case 'Struct': {
       const rest = cs.slice(1)
-      const name = identifierName(ctx, rest[0])
-      const fields = rest.slice(1).map((c) => identifierName(ctx, c))
+      const name = identifier(ctx, rest[0])
+      const fields = rest.slice(1).map((c) => identifier(ctx, c))
       return A.mkStruct(name, fields, range)
     }
 
@@ -560,11 +564,11 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 ///// Entry point ///////////////////////////////////////////////////////////////
 
 export function parseProgramFromSource(
-  errors: L.ScamperError[],
+  diagnostics: ScamperDiagnostic[],
   src: string,
 ): A.Prog {
   const tree = parser.parse(src)
-  const ctx = new Ctx(src, computeLineStarts(src), errors)
+  const ctx = new Ctx(src, computeLineStarts(src), diagnostics)
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
     if (node.type.name === 'LineComment') {

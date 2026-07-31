@@ -14,16 +14,39 @@ import { Param } from './docstring/param.js'
 const contractTargetName = '##contract-target##'
 
 /**
+ * The bare name of a simple `var` predicate with any trailing `?` stripped,
+ * e.g. `pair?` ~> "pair", `nonempty-list?` ~> "nonempty-list". Used to render
+ * the disjuncts of an `(or/p ...)` predicate without an article.
+ */
+function predBareName(pred: A.Identifier): string {
+  return pred.name.endsWith('?') ? pred.name.slice(0, -1) : pred.name
+}
+
+/**
  * A short, human-readable description of a predicate, suitable for embedding
  * in an "expected ..." contract violation message, e.g. `number?` ~> `a
- * number`, `integer?` ~> `an integer`. Complex predicates (`(list-of
- * number?)`) don't reduce to a single word, so they're rendered as-is.
+ * number`, `integer?` ~> `an integer`. An `(or/p p1 ... pk)` predicate over
+ * simple `var` disjuncts renders as `p1, ..., or pk` (Oxford join, no
+ * leading article), e.g. `(or/p pair? nonempty-list?)` ~> "pair or
+ * nonempty-list". Other complex predicates (`(list-of number?)`) don't reduce
+ * to a single word, so they're rendered as-is.
  */
 function describePred(pred: Pred): string {
-  if (pred.tag !== 'var') {
+  if (pred.tag !== 'id') {
+    const args = pred.args
+    if (pred.head.name === 'or/p' && args.length > 0 && args.every(A.isVar)) {
+      const names = args.map(predBareName)
+      if (names.length === 1) {
+        return names[0]
+      }
+      if (names.length === 2) {
+        return `${names[0]} or ${names[1]}`
+      }
+      return `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`
+    }
     return `a value matching \`${A.expToString(pred)}\``
   }
-  const name = pred.name.endsWith('?') ? pred.name.slice(0, -1) : pred.name
+  const name = predBareName(pred)
   const article = /^[aeiou]/i.test(name) ? 'an' : 'a'
   return `${article} ${name}`
 }
@@ -35,12 +58,12 @@ function describePred(pred: Pred): string {
  */
 function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar('string-append', range),
+    A.mkId('string-append', range),
     [
       A.mkLit('expected ', range),
       A.mkLit(descPred, range),
       A.mkLit(', received ', range),
-      A.mkApp(A.mkVar('##typeOf##', range), [A.mkVar(argVar, range)], range),
+      A.mkApp(A.mkId('##typeOf##', range), [A.mkId(argVar, range)], range),
     ],
     range,
   )
@@ -54,7 +77,7 @@ function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
  */
 function mkRestErrorMsg(descPred: string, restVar: string, range: Range): A.Exp {
   return A.mkApp(
-    A.mkVar('string-append', range),
+    A.mkId('string-append', range),
     [
       A.mkLit(`expected every value of ${restVar} to be `, range),
       A.mkLit(descPred, range),
@@ -81,16 +104,17 @@ function mkTargetCall(
 ): A.Exp {
   if (!restParam) {
     return A.mkApp(
-      A.mkVar(contractTargetName, range),
-      params.map((p) => A.mkVar(p.name, range)),
+      A.mkId(contractTargetName, range),
+      params.map((p) => A.mkId(p.name, range)),
       range,
     )
   }
   const combined = params.reduceRight<A.Exp>(
-    (acc, p) => A.mkApp(A.mkVar('cons', range), [A.mkVar(p.name, range), acc], range),
-    A.mkVar(restParam.name, range),
+    (acc, p) =>
+      A.mkApp(A.mkId('cons', range), [A.mkId(p.name, range), acc], range),
+    A.mkId(restParam.name, range),
   )
-  return A.mkApply(A.mkVar(contractTargetName, range), combined, range)
+  return A.mkApply(A.mkId(contractTargetName, range), combined, range)
 }
 
 /**
@@ -122,8 +146,8 @@ function mkCheckChain(
   const restCheck: A.Exp = restParam
     ? A.mkIf(
         A.mkApp(
-          A.mkVar('all-satisfy?', range),
-          [restParam.predicate, A.mkVar(restParam.name, range)],
+          A.mkId('all-satisfy?', range),
+          [restParam.predicate, A.mkId(restParam.name, range)],
           range,
         ),
         targetCall,
@@ -141,7 +165,7 @@ function mkCheckChain(
     }
     const { name, predicate } = params[i]
     return A.mkIf(
-      A.mkApp(predicate, [A.mkVar(name, range)], range),
+      A.mkApp(predicate, [A.mkId(name, range)], range),
       checkAt(i + 1),
       A.mkError(mkErrorMsg(describePred(predicate), name, range), range),
       range,
@@ -179,22 +203,20 @@ export function contractStmt(s: A.Stmt): A.Stmt {
   if (s.tag !== 'define' || !s.docComments) {
     return s
   }
-  let doc
-  try {
-    doc = parseFunctionDocFromComments(s.docComments)
-  } catch {
-    return s
-  }
+  // A malformed docstring yields `doc: undefined` (handled below); a genuine
+  // internal error (ICE) is intentionally NOT caught here -- it should surface
+  // as a loud failure rather than silently skip contract insertion.
+  const { doc } = parseFunctionDocFromComments(s.docComments)
   if (!doc || (doc.params.length === 0 && !doc.restParam)) {
     return s
   }
   const wrapped = A.mkLet(
-    [{ name: contractTargetName, value: s.value }],
+    [{ id: A.mkId(contractTargetName, s.range), value: s.value }],
     A.mkLam(
-      doc.params.map((p) => p.name),
+      doc.params.map((p) => A.mkId(p.name, s.range)),
       mkCheckChain(doc.params, doc.restParam, s.range),
       s.range,
-      doc.restParam?.name,
+      doc.restParam ? A.mkId(doc.restParam.name, s.range) : undefined,
     ),
     s.range,
   )

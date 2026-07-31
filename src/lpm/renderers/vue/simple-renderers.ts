@@ -1,5 +1,12 @@
 import { Char, Closure, Sym } from '../../lang'
-import { charToName, isChar, isClosure, isJsFunction, isSym } from '../../util'
+import {
+  charToName,
+  escapeStringLiteral,
+  isChar,
+  isClosure,
+  isJsFunction,
+  isSym,
+} from '../../util'
 import { createTextRenderer, Strategy, VueStrategyProps } from '../vue'
 
 export function createSimpleVueRenderer<T>(
@@ -23,7 +30,7 @@ const numberStrategy: Strategy = {
 }
 const stringStrategy: Strategy = {
   predicate: (v) => typeof v === 'string',
-  ...createSimpleVueRenderer<string>((v) => `"${v}"`),
+  ...createSimpleVueRenderer<string>((v) => `"${escapeStringLiteral(v)}"`),
 }
 const undefinedStrategy: Strategy = {
   predicate: (v) => v === undefined,

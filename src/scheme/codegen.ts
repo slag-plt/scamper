@@ -5,12 +5,12 @@ function lowerPat(p: A.Pat): L.Pat {
   switch (p.tag) {
     case 'pwild':
       return L.mkPWild(p.range)
-    case 'pvar':
+    case 'id':
       return L.mkPVar(p.name, p.range)
     case 'plit':
       return L.mkPLit(p.value, p.range)
     case 'pctor':
-      return L.mkPCtor(p.name, p.args.map(lowerPat), p.range)
+      return L.mkPCtor(p.name.name, p.args.map(lowerPat), p.range)
   }
 }
 
@@ -18,7 +18,7 @@ function lowerExpr(e: A.Exp): L.Blk {
   switch (e.tag) {
     case 'lit':
       return [L.mkLit(e.value, e.range)]
-    case 'var':
+    case 'id':
       return [L.mkVar(e.name, e.range)]
     case 'app':
       return [
@@ -27,7 +27,7 @@ function lowerExpr(e: A.Exp): L.Blk {
         L.mkAp(e.args.length, e.range),
       ]
     case 'lam':
-      return [L.mkCls(e.params, lowerExpr(e.body), '##anonymous##', e.range, e.restParam)]
+      return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
     case 'let': {
       // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
       // we must proceed by first evaluating all binding expressions (without binding), then
@@ -43,7 +43,7 @@ function lowerExpr(e: A.Exp): L.Blk {
       // we're building the matches inside-out.
       // for (let i = e.bindings.length - 1; i >= 0; i--) {
       e.bindings.forEach((b) => {
-        ret = [L.mkMatch([[L.mkPVar(b.name, e.range), ret]])]
+        ret = [L.mkMatch([[L.mkPVar(b.id.name, e.range), ret]])]
       })
       return [...bindings, ...ret]
     }
@@ -98,7 +98,7 @@ function lowerStmt(s: A.Stmt, displayStmtExpr = true): L.Stmt {
     case 'define':
       // N.B., docComments is documentation metadata, not executable code --
       // it deliberately doesn't carry forward into the lowered bytecode.
-      return L.mkDefine(s.name, lowerExpr(s.value), s.range)
+      return L.mkDefine(s.name.name, lowerExpr(s.value), s.range)
     case 'display':
       return L.mkDisp(lowerExpr(s.value), s.range)
     case 'stmtexp':

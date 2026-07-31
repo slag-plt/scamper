@@ -1,0 +1,87 @@
+/*
+ * Scamper theme tokens (light / dark).
+ *
+ * Every UI color is a CSS custom property resolved with light-dark(), so a
+ * single declaration carries both themes. Which one applies is driven by the
+ * `color-scheme` property:
+ *   - no [data-theme]      -> `light dark` -> follows the OS (prefers-color-scheme)
+ *   - [data-theme="light"] -> forces light
+ *   - [data-theme="dark"]  -> forces dark
+ * A tiny inline <head> script sets [data-theme] from localStorage before first
+ * paint (see the app HTML files), so an explicit choice never flashes.
+ *
+ * JS surfaces that can't read CSS variables (canvas fills, Chart.js) resolve
+ * these same tokens via readColorToken() in src/theme/index.ts, keeping one
+ * source of truth.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --bg: light-dark(#ffffff, #0d1117);
+  --fg: light-dark(#333333, #e6edf3);
+  --surface: light-dark(#ffffff, #161b22);
+  --surface-muted: light-dark(#f6f8fa, #0d1117);
+  --surface-sidebar: light-dark(#f6f6f6, #161b22);
+  --surface-hover: light-dark(#e0e0e0, #21262d);
+
+  /* Borders */
+  --border: light-dark(#d0d7de, #30363d);
+  --border-muted: light-dark(#dddddd, #30363d);
+
+  /* Header / toolbar */
+  --header-bg: light-dark(#eeeeee, #161b22);
+  --header-fg: light-dark(#333333, #e6edf3);
+
+  /* Accent (active items, run badge). Dark value darkened so white text meets
+   * WCAG AA contrast (#2ea043 was ~3.4:1). */
+  --accent: light-dark(#008000, #238636);
+  --accent-fg: light-dark(#ffffff, #ffffff);
+
+  /* Modals */
+  --modal-bg: light-dark(#fefefe, #161b22);
+  --modal-border: light-dark(#888888, #30363d);
+  --overlay: light-dark(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6));
+
+  /* Test results */
+  --test-ok-bg: light-dark(#e5ffe5, #10251b);
+  --test-error-bg: light-dark(#ffe5e5, #2d1517);
+  --test-border: light-dark(#000000, #30363d);
+
+  /* Links */
+  --link: light-dark(#0969da, #58a6ff);
+
+  /* Error accent (docs/search) */
+  --error-accent: light-dark(#ffacac, #f85149);
+
+  /* Brand accent (docs/search headers & titles) */
+  --brand: light-dark(#4badac, #4dbdbc);
+
+  /* Splitpanes splitter */
+  --splitter-bg: light-dark(#eeeeee, #30363d);
+
+  /* Canvas / chart surfaces (read from JS via readColorToken) */
+  --canvas-surface: light-dark(#ffffff, #161b22);
+  --canvas-ink: light-dark(#000000, #e6edf3);
+  --audio-wave: light-dark(rgb(200, 200, 200), rgb(80, 80, 80));
+  --chart-fg: light-dark(#666666, #adbac7);
+  --chart-grid: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.12));
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Base page colors so every app has a themed background/text by default. */
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--link);
+}

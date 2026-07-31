@@ -1,8 +1,7 @@
 import { tokenizeAndParse } from '../..'
 import { Range, Value } from '../../../lpm'
-import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import { App, isApp, isLit, isStmtExp, Stmt } from '../../ast'
-import { mkScamperErrorWithRange } from '../../util'
+import { mkDocError } from '../error'
 import { DocTag, registerDocTagParser } from './tag'
 
 interface Example {
@@ -25,15 +24,10 @@ const separator = ' -> '
 function exampleTagError(
   message: string,
   range: Range,
-  errChannel?: SimpleErrorChannel,
+  cause?: string,
 ): never {
-  const cause =
-    errChannel !== undefined && errChannel.errors.length > 0
-      ? `, ${errChannel.errors[0].message}`
-      : ''
-  throw mkScamperErrorWithRange(
-    'Parser',
-    `Error in @example tag: ${message}${cause}`,
+  throw mkDocError(
+    `Error in @example tag: ${message}${cause ? `, ${cause}` : ''}`,
     range,
   )
 }
@@ -43,10 +37,9 @@ function parseExampleExpression(
   range: Range,
   field: 'function call' | 'result',
 ): Stmt {
-  const errChannel = new SimpleErrorChannel()
-  const parsed = tokenizeAndParse(errChannel, source.trim())
-  if (!parsed || errChannel.errors.length > 0) {
-    exampleTagError(`${field} is malformed`, range, errChannel)
+  const { program: parsed, diagnostics } = tokenizeAndParse(source.trim())
+  if (!parsed || diagnostics.length > 0) {
+    exampleTagError(`${field} is malformed`, range, diagnostics[0]?.message)
   }
   if (parsed.length < 1) {
     exampleTagError(`${field} is missing`, range)

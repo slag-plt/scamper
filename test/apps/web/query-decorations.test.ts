@@ -1,13 +1,13 @@
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { afterEach, describe, expect, test } from 'vitest'
-import { Range } from '../../src/lpm'
-import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
-import Scamper, { initialize } from '../../src/scamper'
+import { Range } from '../../../src/lpm'
+import { SimpleErrorChannel } from '../../../src/lpm/output/simple-error'
+import Scamper, { initialize } from '../../../src/scamper'
 import {
   QueryExtension,
   syncQueryDecorations,
-} from '../../src/app/web/codemirror/extensions/query'
+} from '../../../src/app/web/codemirror/extensions/query'
 
 await initialize()
 
