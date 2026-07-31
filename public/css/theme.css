@@ -54,6 +54,9 @@
   /* Error accent (docs/search) */
   --error-accent: light-dark(#ffacac, #f85149);
 
+  /* Brand accent (docs/search headers & titles) */
+  --brand: light-dark(#4badac, #4dbdbc);
+
   /* Splitpanes splitter */
   --splitter-bg: light-dark(#eeeeee, #30363d);
 

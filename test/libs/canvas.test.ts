@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 import { canvas_animateWith, canvas_canvasOnclick, canvas_makeCanvas } from '../../src/js/canvas/index.js'
 
 // canvas.scm binds directly to the Canvas2D API. The functions below don't
@@ -82,7 +82,30 @@ describe('canvas-onclick!', () => {
   test.skip('invokes the Scamper callback with click coordinates')
 })
 
-test.todo('canvas-rectangle!')
+// Regression: color? and image? are used in canvas.scm's drawing-function
+// contracts but defined in image.scm. canvas.scm must re-export them; otherwise
+// every drawing call runs `(color? ...)` / `(image? ...)` against an unbound
+// name and throws "Variable not found" unless the user also imports image.
+describe('cross-module predicates (color?, image?) resolve with only canvas imported', () => {
+  test('color? and image? are in scope', async () => {
+    expect(await runProgram(`
+    (import canvas)
+    (color? "red")
+    (color? 5)
+    (image? 5)
+    `)).toEqual(['#t', '#f', '#f'])
+  })
+
+  test('canvas-rectangle! contract fires cleanly on a bad color', async () => {
+    const out = (await runProgram(`
+    (import canvas)
+    (canvas-rectangle! (make-canvas 10 10) 0 0 5 5 "solid" 42)
+    `)).join('\n')
+    expect(out).toContain('expected a color')
+    expect(out).not.toContain('Variable not found')
+  })
+})
+
 test.todo('canvas-ellipse!')
 test.todo('canvas-circle!')
 test.todo('canvas-text!')

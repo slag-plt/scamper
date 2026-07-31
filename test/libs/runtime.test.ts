@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 
 // Tests for src/js/runtime/index.ts's helpers (runtime_mkCtorFn,
 // runtime_mkPredFn, runtime_mkGetFn, runtime_typeOf, runtime_any), exercised
@@ -49,7 +49,7 @@ test('constructor called with too few arguments fails', async () => {
 (point 3)
 `),
   ).toEqual([
-    'Runtime error [3:1-3:9]: Constructor point expects 2 arguments, received 1',
+    'Runtime error: Constructor point expects 2 arguments, received 1',
   ])
 })
 
@@ -61,7 +61,7 @@ test('constructor called with too many arguments fails', async () => {
 (point 3 4 5)
 `),
   ).toEqual([
-    'Runtime error [3:1-3:13]: Constructor point expects 2 arguments, received 3',
+    'Runtime error: Constructor point expects 2 arguments, received 3',
   ])
 })
 
@@ -74,7 +74,7 @@ test('accessor called on a value of the wrong struct type fails', async () => {
 (point-x (circle (point 0 0) 5))
 `),
   ).toEqual([
-    'Runtime error [4:1-4:32]: Accessor function expects a point, received [Struct: circle]',
+    'Runtime error: Accessor function expects a point, received [Struct: circle]',
   ])
 })
 
@@ -86,7 +86,7 @@ test('accessor called on a non-struct value fails', async () => {
 (point-x 5)
 `),
   ).toEqual([
-    'Runtime error [3:1-3:11]: Accessor function expects a point, received number',
+    'Runtime error: Accessor function expects a point, received number',
   ])
 })
 
@@ -103,6 +103,6 @@ test('accessing a field name absent from the struct fails', async () => {
 (get-a (foo 10))
 `),
   ).toEqual([
-    'Runtime error [6:1-6:16]: Accessor expects field a but it is not present in the given struct value',
+    'Runtime error: Accessor expects field a but it is not present in the given struct value',
   ])
 })

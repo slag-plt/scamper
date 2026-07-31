@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { runProgram } from '../harness'
+import { runProgram } from './harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -780,11 +780,11 @@ test('cons-pair', async () => {
 (pair 0.003 100)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list',
-    'Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list',
-    'Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list',
-    'Runtime error [4:1-4:14]: (cons) The second argument to cons should be a list',
-    'Runtime error [5:1-5:16]: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
     '(pair 1 2)',
     '(pair #t #f)',
     '(pair "hi" "bye")',
@@ -799,7 +799,7 @@ test('contract-check-map', async () => {
 (map char-upcase (list "h" "e" "l" "l" "o"))
 `),
   ).toEqual([
-    'Runtime error [581:1-581:50]: (error) expected a char, received string',
+    'Runtime error: (error) expected a char, received string',
   ])
 })
 
@@ -822,7 +822,7 @@ test('error', async () => {
 (error "This is an example runtime error")
 `),
   ).toEqual([
-    'Runtime error [1:1-1:42]: (error) This is an example runtime error',
+    'Runtime error: (error) This is an example runtime error',
   ])
 })
 
@@ -833,8 +833,8 @@ test('error-qq', async () => {
 (+ 5 (??))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:18]: (error) existing',
-    'Runtime error [2:6-2:9]: (??) Hole encountered in program!',
+    'Runtime error: (error) existing',
+    'Runtime error: (??) Hole encountered in program!',
   ])
 })
 
@@ -1194,7 +1194,7 @@ test('not-boolean', async () => {
   ).toEqual([
     '#f',
     '#t',
-    'Runtime error [274:1-274:35]: (error) expected a boolean, received number',
+    'Runtime error: (error) expected a boolean, received number',
     '#t',
     '#t',
     '#f',
@@ -1327,7 +1327,7 @@ test('qq', async () => {
     await runProgram(`
 (+ (??) 1)
 `),
-  ).toEqual(['Runtime error [1:4-1:7]: (??) Hole encountered in program!'])
+  ).toEqual(['Runtime error: (??) Hole encountered in program!'])
 })
 
 test('random', async () => {
@@ -2161,7 +2161,7 @@ test('=-eps', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error [71:1-71:43]: (error) expected a number, received string',
+    'Runtime error: (error) expected a number, received string',
   ])
 })
 
@@ -2174,9 +2174,6 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   // member rejects the empty list with the same clean contract error (#256)
   // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
   // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
-  // The reported range points at that primitive's definition in prelude.scm.
-  const stripRange = (msgs: string[]): string[] =>
-    msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
   const members = [
     'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
     'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',
@@ -2185,8 +2182,8 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   ]
 
   test.each(members)('%s rejects the empty list', async (name) => {
-    expect(stripRange(await runProgram(`(${name} (list))`))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+    expect(await runProgram(`(${name} (list))`)).toEqual([
+      'Runtime error: (error) expected pair or nonempty-list, received null',
     ])
   })
 })
@@ -2214,7 +2211,7 @@ test('list-ref-out-of-range', async () => {
 (list-ref (list 1 2 3) 3)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:25]: (list-ref) list-ref: index 3 out of bounds of list',
+    'Runtime error: (list-ref) list-ref: index 3 out of bounds of list',
   ])
 })
 
@@ -2248,7 +2245,7 @@ test('assoc-ref-missing-key', async () => {
 (assoc-ref "z" (list (pair "a" 1) (pair "b" 2)))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:48]: (assoc-ref) assoc-ref: key z not found in association list',
+    'Runtime error: (assoc-ref) assoc-ref: key z not found in association list',
   ])
 })
 
@@ -2297,8 +2294,8 @@ test('sort-contract', async () => {
 (sort (list 1 2) 5)
 `),
   ).toEqual([
-    'Runtime error [544:1-551:55]: (error) expected a list, received number',
-    'Runtime error [544:1-551:55]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a list, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2383,7 +2380,7 @@ test('list-of-contract', async () => {
 (list-of 5)
 `),
   ).toEqual([
-    'Runtime error [339:1-342:43]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2393,7 +2390,7 @@ test('digit-value-not-digit', async () => {
 (digit-value #\\a)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:17]: (digit-value) digit-value: a is not a decimal digit',
+    'Runtime error: (digit-value) digit-value: a is not a decimal digit',
   ])
 })
 
@@ -2415,8 +2412,8 @@ test('charQ-arity', async () => {
 (char? #\\a #\\b)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:7]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [2:1-2:15]: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
   ])
 })
 
@@ -2431,7 +2428,7 @@ test('string-constructor', async () => {
 `),
   ).toEqual([
     '"abc"',
-    'Runtime error [612:1-612:41]: (error) expected every value of c1 to be a char, but at least one was not',
+    'Runtime error: (error) expected every value of c1 to be a char, but at least one was not',
   ])
 })
 
@@ -2446,8 +2443,8 @@ test('string-vector-conversions', async () => {
   ).toEqual([
     '(vector #\\a #\\b #\\c)',
     '"abc"',
-    'Runtime error [675:1-675:57]: (error) expected a string, received number',
-    'Runtime error [681:1-681:57]: (error) expected a vector, received string',
+    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a vector, received string',
   ])
 })
 
@@ -2463,7 +2460,7 @@ test('string-contains', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error [688:1-688:58]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2475,7 +2472,7 @@ test('string-split-vector', async () => {
 `),
   ).toEqual([
     '(vector "a" "b" "c")',
-    'Runtime error [702:1-702:65]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2517,8 +2514,8 @@ test('vectorQ', async () => {
     '#f',
     '#f',
     '#f',
-    'Runtime error [6:1-6:9]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [7:1-7:13]: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
   ])
 })
 
@@ -2535,7 +2532,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error [721:1-721:50]: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer, received string',
   ])
 })
 
@@ -2550,7 +2547,7 @@ test('vector-length', async () => {
   ).toEqual([
     '3',
     '0',
-    'Runtime error [727:1-727:54]: (error) expected a vector, received number',
+    'Runtime error: (error) expected a vector, received number',
   ])
 })
 
@@ -2570,9 +2567,9 @@ test('vector-ref', async () => {
   ).toEqual([
     '1',
     '3',
-    'Runtime error [735:1-735:48]: (error) expected a vector, received number',
-    'Runtime error [4:1-4:29]: (vector-ref) vector-ref: index 5 out of bounds of vector',
-    'Runtime error [5:1-5:30]: (vector-ref) vector-ref: index -1 out of bounds of vector',
+    'Runtime error: (error) expected a vector, received number',
+    'Runtime error: (vector-ref) vector-ref: index 5 out of bounds of vector',
+    'Runtime error: (vector-ref) vector-ref: index -1 out of bounds of vector',
   ])
 })
 
@@ -2586,7 +2583,7 @@ test('vector-append', async () => {
 `),
   ).toEqual([
     '(vector 1 2 3 4 5)',
-    'Runtime error [780:1-780:54]: (error) expected every value of v1 to be a vector, but at least one was not',
+    'Runtime error: (error) expected every value of v1 to be a vector, but at least one was not',
     '(vector)',
   ])
 })
@@ -2602,7 +2599,7 @@ test('vector-to-list', async () => {
   ).toEqual([
     '(list 1 2 3)',
     'null',
-    'Runtime error [757:1-757:53]: (error) expected a vector, received list',
+    'Runtime error: (error) expected a vector, received list',
   ])
 })
 
@@ -2617,7 +2614,7 @@ test('list-to-vector', async () => {
   ).toEqual([
     '(vector 1 2 3)',
     '(vector)',
-    'Runtime error [763:1-763:53]: (error) expected a list, received vector',
+    'Runtime error: (error) expected a list, received vector',
   ])
 })
 
@@ -2636,10 +2633,10 @@ v
 v2
 `),
   ).toEqual([
-    'Runtime error [2:1-2:20]: (vector-set!) vector-set!: index 5 out of bounds of vector',
+    'Runtime error: (vector-set!) vector-set!: index 5 out of bounds of vector',
     '(vector 1 2 3)',
     '3',
-    'Runtime error [6:1-6:22]: (vector-set!) vector-set!: index -1 out of bounds of vector',
+    'Runtime error: (vector-set!) vector-set!: index -1 out of bounds of vector',
     '(vector 1 2 3)',
   ])
 })
@@ -2665,7 +2662,7 @@ test('voidQ', async () => {
   ).toEqual([
     '#t',
     '#f',
-    'Runtime error [3:1-3:7]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2677,7 +2674,7 @@ test('ignore', async () => {
 `),
   ).toEqual([
     '[Blob: {}]',
-    'Runtime error [2:1-2:8]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2691,7 +2688,7 @@ test('set-maximum-recursion-depth', async () => {
   ).toEqual([
     '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":100}]',
     '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":-1}]',
-    'Runtime error [3:1-3:30]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2707,7 +2704,7 @@ test('string-to-words', async () => {
     '(list "Hello" "world" "How" "are" "you")',
     'null',
     '(list "...")',
-    'Runtime error [1026:1-1026:55]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2733,10 +2730,10 @@ r
     '5',
     'void',
     '10',
-    'Runtime error [8:1-8:5]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [9:1-9:6]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [1044:1-1044:39]: (error) expected a ref, received number',
-    'Runtime error [1051:1-1051:43]: (error) expected a ref, received number',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (error) expected a ref, received number',
+    'Runtime error: (error) expected a ref, received number',
   ])
 })
 
@@ -2760,11 +2757,11 @@ void
     '3.141592653589793',
     '3.141592653589793',
     'void',
-    'Runtime error [6:1-6:6]: Not a function or closure: true',
-    'Runtime error [7:1-7:6]: Not a function or closure: null',
-    'Runtime error [8:1-8:4]: Not a function or closure: 3.141592653589793',
-    'Runtime error [9:1-9:3]: Not a function or closure: 3.141592653589793',
-    'Runtime error [10:1-10:6]: Not a function or closure: undefined',
+    'Runtime error: Not a function or closure: true',
+    'Runtime error: Not a function or closure: null',
+    'Runtime error: Not a function or closure: 3.141592653589793',
+    'Runtime error: Not a function or closure: 3.141592653589793',
+    'Runtime error: Not a function or closure: undefined',
   ])
 })
 
@@ -2778,7 +2775,7 @@ test('with-file rejects a non-string filename via its contract', async () => {
 (with-file 5 (lambda (s) s))
 `),
   ).toEqual([
-    'Runtime error [1083:1-1085:56]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2790,7 +2787,7 @@ test('with-file-chooser', async () => {
 `),
   ).toEqual([
     '(reactive-file-chooser [Function: ##anonymous##])',
-    'Runtime error [1091:1-1091:61]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2800,7 +2797,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error [997:1-997:41]: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer, received string',
   ])
 })
 
@@ -2821,25 +2818,25 @@ test('char-compare-single-arg', async () => {
 
 test('list->string-non-char', async () => {
   expect(await runProgram('(list->string (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:25]: (list->string) list->string: list contains non-character element: number',
+    'Runtime error: (list->string) list->string: list contains non-character element: number',
   ])
 })
 
 test('vector-range-errors', async () => {
   expect(await runProgram('(vector-range)')).toEqual([
-    'Runtime error [1:1-1:14]: (vector-range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: (vector-range) 1, 2, or 3 numbers must be passed to function',
   ])
   expect(await runProgram('(vector-range 0 10 0)')).toEqual([
-    'Runtime error [1:1-1:21]: (vector-range) "step" argument must be non-zero',
+    'Runtime error: (vector-range) "step" argument must be non-zero',
   ])
 })
 
 test('range-errors', async () => {
   expect(await runProgram('(range)')).toEqual([
-    'Runtime error [1:1-1:7]: (range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: (range) 1, 2, or 3 numbers must be passed to function',
   ])
   expect(await runProgram('(range 0 10 0)')).toEqual([
-    'Runtime error [1:1-1:14]: (range) "step" argument must be non-zero',
+    'Runtime error: (range) "step" argument must be non-zero',
   ])
 })
 
@@ -2874,7 +2871,7 @@ test('map', async () => {
 
 test('map-length-mismatch', async () => {
   expect(await runProgram('(map + (list 1 2) (list 3))')).toEqual([
-    'Runtime error [823:12-823:61]: (error) map: all lists must have the same length',
+    'Runtime error: (error) map: all lists must have the same length',
   ])
 })
 
@@ -3011,7 +3008,7 @@ test('vector-map', async () => {
 
 test('vector-map-length-mismatch', async () => {
   expect(await runProgram('(vector-map + (vector 1 2) (vector 3))')).toEqual([
-    'Runtime error [823:12-823:61]: (error) map: all lists must have the same length',
+    'Runtime error: (error) map: all lists must have the same length',
   ])
 })
 

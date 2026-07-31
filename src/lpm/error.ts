@@ -31,6 +31,15 @@ export class ScamperError extends Error {
     const src = this.source ? `(${this.source}) ` : ''
     return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
   }
+
+  /**
+   * @returns a copy of this error with its source range removed, so its
+   * rendered form omits the `[line:col-...]` location. Lets tests assert on
+   * error messages without coupling to (fragile) source line numbers.
+   */
+  stripRange(): ScamperError {
+    return new ScamperError(this.phase, this.message, this.modName, undefined, this.source)
+  }
 }
 
 /** Internal compiler errors arise due to bugs in Scamper. */
