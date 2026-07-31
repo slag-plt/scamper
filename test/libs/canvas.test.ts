@@ -63,11 +63,18 @@ describe('animate-with', () => {
 })
 
 describe('canvas-onclick!', () => {
-  test('registers an onclick handler on the canvas', () => {
+  test('registers a click listener on the canvas', () => {
     const canvas = canvas_makeCanvas(10, 10)
-    expect(canvas.onclick).toBeNull()
+    const spy = vi.spyOn(canvas, 'addEventListener')
     canvas_canvasOnclick(canvas, () => undefined)
-    expect(typeof canvas.onclick).toBe('function')
+    // Registered via addEventListener (with the run's AbortSignal in the options
+    // object) so the listener is torn down when the program is re-run/stopped.
+    expect(spy).toHaveBeenCalledWith(
+      'click',
+      expect.any(Function),
+      expect.any(Object),
+    )
+    spy.mockRestore()
   })
 
   // L.callScamperFn (src/lpm/lang.ts) now unconditionally throws, so

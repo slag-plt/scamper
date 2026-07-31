@@ -397,8 +397,14 @@ export function music_playComposition (composition: Composition): number {
 
   // Set up a timer to discharge triggers and events
   let idx = 0
+  // Stop discharging triggers/events when the program is re-run/stopped.
+  const signal = L.currentRunSignal()
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const id = window.setInterval(async () => {
+    if (signal?.aborted) {
+      clearInterval(id)
+      return
+    }
     // N.B., in milliseconds
     const now = waf()!.audioContext.currentTime
     while (idx < events.length) {
@@ -430,6 +436,7 @@ export function music_playComposition (composition: Composition): number {
       clearInterval(id)
     }
   })
+  signal?.addEventListener('abort', () => { clearInterval(id) })
   return id
 }
 

@@ -105,9 +105,17 @@ describe('button', () => {
     expect(b.textContent).toBe('Click me')
   })
 
-  test('assigns a click handler', () => {
-    const b = html_button('Click me', () => undefined)
-    expect(typeof b.onclick).toBe('function')
+  test('registers a click listener', () => {
+    const spy = vi.spyOn(HTMLButtonElement.prototype, 'addEventListener')
+    html_button('Click me', () => undefined)
+    // Registered via addEventListener (with the run's AbortSignal in the options
+    // object) so the listener is torn down when the program is re-run/stopped.
+    expect(spy).toHaveBeenCalledWith(
+      'click',
+      expect.any(Function),
+      expect.any(Object),
+    )
+    spy.mockRestore()
   })
 
   // L.callScamperFn (src/lpm/lang.ts) now unconditionally throws, so
@@ -194,7 +202,13 @@ describe('on-keydown!', () => {
   test('registers a keydown listener on window', () => {
     const spy = vi.spyOn(window, 'addEventListener')
     html_onKeydown(() => undefined)
-    expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function))
+    // Registered with the run's AbortSignal in the options object so the listener
+    // is torn down when the program is re-run/stopped.
+    expect(spy).toHaveBeenCalledWith(
+      'keydown',
+      expect.any(Function),
+      expect.any(Object),
+    )
     spy.mockRestore()
   })
 

@@ -41,3 +41,21 @@ export function spawn(
   }
   impl(fn, args, onComplete)
 }
+
+let signalProvider: (() => AbortSignal | undefined) | undefined
+
+/** Registered by the Scamper singleton; see currentRunSignal. */
+export function setRunSignalProvider(fn: () => AbortSignal | undefined): void {
+  signalProvider = fn
+}
+
+/**
+ * The current program run's AbortSignal, aborted when the program is re-run or
+ * stopped. Long-lived event handlers (DOM listeners, timers, animation loops)
+ * capture this AT REGISTRATION and use it to tear themselves down -- pass it as
+ * addEventListener's `{ signal }`, clear an interval on 'abort', or stop an rAF
+ * loop when `aborted` -- so a previous run's callbacks don't leak into the next.
+ */
+export function currentRunSignal(): AbortSignal | undefined {
+  return signalProvider?.()
+}

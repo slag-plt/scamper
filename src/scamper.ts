@@ -11,6 +11,7 @@ import {
   Prog,
   Range,
   rangesEqual,
+  setRunSignalProvider,
   setSpawn,
   Value,
 } from './lpm'
@@ -135,12 +136,18 @@ export default class Scamper {
   // report errors to the same place.
   private mainFiber?: Fiber
   private mainErr?: ErrorChannel
+  // Aborted when the current program is re-run or stopped, so the previous run's
+  // background handlers (DOM listeners, timers, animation loops) tear themselves
+  // down instead of leaking into the next run (see currentRunSignal).
+  private currentRunController?: AbortController
+  private currentRunId?: SchedulerId
 
   private constructor() {
     this.scheduler = new Scheduler()
-    // Let library event handlers run Scamper closures as fibers (spawn()) without
-    // importing this singleton directly.
+    // Let library event handlers run Scamper closures as fibers (spawn()) and
+    // find the current run's AbortSignal, without importing this singleton.
     setSpawn((fn, args, onComplete) => this.spawnClosure(fn, args, onComplete))
+    setRunSignalProvider(() => this.currentRunController?.signal)
   }
 
   /**
@@ -200,11 +207,16 @@ export default class Scamper {
     // error channel.
     this.mainFiber = fiber
     this.mainErr = err
+    // Supersede the previous run: abort its background handlers (timers, DOM
+    // listeners, animation loops) so they don't leak into this run.
+    this.currentRunController?.abort()
+    this.currentRunController = new AbortController()
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
     // should never be a problem but just noting for future
     const id = crypto.randomUUID()
+    this.currentRunId = id
     const tracing = isTracing ?? false
     const { promise, resolve } = deferred()
     this.scheduler.schedule({
@@ -222,6 +234,10 @@ export default class Scamper {
 
   /*  =====  scheduler  =====  */
   public cancel(id: SchedulerId) {
+    // Stopping the main run also tears down its background handlers.
+    if (id === this.currentRunId) {
+      this.currentRunController?.abort()
+    }
     this.scheduler.cancelTask(id)
   }
 

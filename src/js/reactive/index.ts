@@ -62,6 +62,11 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.updateFunc = update
     this.isDirty = true
     this.finished = false
+    // Stop the draw loop (and short-circuit updates) when the program is
+    // re-run/stopped, so this component doesn't leak into the next run.
+    L.currentRunSignal()?.addEventListener('abort', () => {
+      this.finished = true
+    })
 
     const blob = this
 
@@ -158,6 +163,11 @@ class ReactiveContainer<T> implements ReactiveElement {
     this.viewFunc = view
     this.updateFunc = update
     this.finished = false
+    // Stop processing messages when the program is re-run/stopped, so this
+    // component doesn't leak into the next run.
+    L.currentRunSignal()?.addEventListener('abort', () => {
+      this.finished = true
+    })
   }
 
   // Renders the current state: run the view fiber, then swap its HTMLElement
@@ -266,14 +276,18 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
   return { [L.scamperTag]: 'struct', [L.structKind]: 'subscription', register: sub }
 }
 
+// N.B., every subscription registers its listener/timer with the current run's
+// AbortSignal so it is torn down when the program is re-run/stopped (see
+// currentRunSignal); otherwise a previous run's events would keep updating.
+
 export function reactive_onButtonClick(button: HTMLButtonElement): Subscription {
   return subscription((react) => {
     button.addEventListener('click', () => {
-      react.update({ 
+      react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-button-click',
         id: button.id
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -285,7 +299,7 @@ export function reactive_onMouseClick(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-click',
         button: event.button, x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -297,7 +311,7 @@ export function reactive_onMouseHover(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-hover',
         x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -308,7 +322,7 @@ export function reactive_onKeyDown(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-down',
         key: event.key
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
@@ -319,14 +333,15 @@ export function reactive_onKeyUp(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-up',
         key: event.key
       })
-    })
+    }, { signal: L.currentRunSignal() })
   })
 }
 
 export function reactive_onTimer(interval: number): Subscription {
   return subscription((react) => {
     let time = performance.now()
-    setInterval(() => {
+    const signal = L.currentRunSignal()
+    const id = setInterval(() => {
       const now = performance.now()
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-timer',
@@ -334,6 +349,7 @@ export function reactive_onTimer(interval: number): Subscription {
       })
       time = now
     }, interval)
+    signal?.addEventListener('abort', () => { clearInterval(id) })
   })
 }
 
