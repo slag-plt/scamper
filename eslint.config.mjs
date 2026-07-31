@@ -29,6 +29,9 @@ export default defineConfig(
       'dist/*',
       'types/*',
       'coverage/*',
+      // Agent worktrees (git worktrees created under .claude/) are separate
+      // checkouts; never lint into them.
+      '.claude/**',
       'src/js/webaudiofont/*',
       'src/scheme/generated/*',
       'src/lib/generated/*',
