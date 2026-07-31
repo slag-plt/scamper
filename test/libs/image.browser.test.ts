@@ -41,7 +41,6 @@ import {
   image_canvasSetPixels,
   image_imageGetPixel,
   image_imageToPixels,
-  image_pixelMap,
   image_pixelsToImage,
   image_withImageFromUrl,
 } from '../../src/js/image/image.js'
@@ -323,21 +322,10 @@ describe('with-image-from-url', () => {
   })
 })
 
-describe('pixel-map', () => {
-  test('throws the #248 callScamperFn error on a canvas of the given dimensions', () => {
-    const canvas = makeCanvas(3, 5)
-    // pixel-map builds its output canvas at these same dimensions (see image.ts) --
-    // but it never gets there because the very first pixel's callback throws (#248)
-    expect(canvas.width).toBe(3)
-    expect(canvas.height).toBe(5)
-    expect(() => image_pixelMap(dummyScamperFn, canvas)).toThrow(L.ScamperError)
-    expect(() => image_pixelMap(dummyScamperFn, canvas)).toThrow('Javascript library functions can no longer call Scamper functions')
-  })
-
-  test.skip('applies the callback to transform each pixel', () => {
-    // blocked on https://github.com/slag-plt/scamper/issues/248: L.callScamperFn now always throws, so pixel-map's per-pixel callback can never run end-to-end
-  })
-})
+// N.B., pixel-map is now defined in Scheme (image.scm) on top of image->pixels,
+// vector-map, and pixels->image, so it is exercised end-to-end via runProgram in
+// image.test.ts rather than by a direct JS call here. The underlying pixel
+// round-trip (image->pixels / pixels->image / image-get-pixel) is covered below.
 
 describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', () => {
   // distinct RGBA per cell, row-major: top-left, top-right, bottom-left, bottom-right

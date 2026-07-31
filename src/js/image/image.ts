@@ -49,31 +49,9 @@ export function image_withImageFromUrl(url: string, callback: L.ScamperFn): HTML
 
 /***** Per-pixel manipulation *************************************************/
 
-export function image_pixelMap(fn: L.ScamperFn, canvas: HTMLCanvasElement): HTMLCanvasElement {
-  const ctx = canvas.getContext('2d')!
-  const inpImg = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const src = inpImg.data
-
-  const outImg = ctx.createImageData(canvas.width, canvas.height)
-  const dst = outImg.data
-  for (let i = 0; i < src.length; i += 4) {
-    const c = L.callScamperFn(fn, image_rgb(src[i], src[i + 1], src[i+2], src[i+3])) as Rgb
-    dst[i] = c.red
-    dst[i + 1] = c.green
-    dst[i + 2] = c.blue
-    dst[i + 3] = c.alpha
-  }
-
-  // NOTE: clone the results to a new canvas. Will likely need to implement a
-  // mutable version of this function to mitigate the performance hit of
-  // processing large images.
-  const ret = document.createElement('canvas')
-  ret.width = canvas.width
-  ret.height = canvas.height
-  const retCtx = ret.getContext('2d')!
-  retCtx.putImageData(outImg, 0, 0)
-  return ret
-}
+// N.B., pixel-map is now defined in image.scm (Scheme) on top of image->pixels,
+// vector-map, and pixels->image -- a JS implementation can no longer call the
+// per-pixel Scamper function (callScamperFn is disabled).
 
 export function image_imageGetPixel(canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
   const ctx = canvas.getContext('2d')!

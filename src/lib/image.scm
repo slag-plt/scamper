@@ -616,12 +616,16 @@
 ;;; @category image
 (define with-image-from-url (js-var "image_withImageFromUrl"))
 
-;;; (pixel-map fn img) -> image?
+;;; (pixel-map fn img) -> canvas?
 ;;;  fn : procedure?
-;;;  img : image?
-;;; Returns a new `img` that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
+;;;  img : canvas?
+;;; Returns a new canvas that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
 ;;; @category image, pixel
-(define pixel-map (js-var "image_pixelMap"))
+(define pixel-map
+  (lambda (fn img)
+    (pixels->image (vector-map fn (image->pixels img))
+                   (canvas-width img)
+                   (canvas-height img))))
 
 ;;; (image-get-pixel img x y) -> rgb?
 ;;;  img : image?
@@ -653,3 +657,15 @@
 ;;; Sets the pixels of the given `canvas` to the given `pixels`.
 ;;; @category canvas, image, mutation, pixel, predicates
 (define canvas-set-pixels! (js-var "image_canvasSetPixels"))
+
+;;; (canvas-width canvas) -> integer?
+;;;  canvas : canvas?
+;;; Returns the width of the canvas in pixels.
+;;; @category canvas, image
+(define canvas-width (js-var "image_imageWidth"))
+
+;;; (canvas-height canvas) -> integer?
+;;;  canvas : canvas?
+;;; Returns the height of the canvas in pixels.
+;;; @category canvas, image
+(define canvas-height (js-var "image_imageHeight"))
