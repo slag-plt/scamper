@@ -6,7 +6,12 @@ import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
 import { runProgram } from '../harness.js'
 
-async function checkMachineOutput (src: string, expected: L.Value[]) {
+// `stripRanges` drops the `[line:col]` location from error output, for the
+// rare case whose error range points into the .scm library source (contract
+// errors report the offending definition's line) and would otherwise shift
+// whenever a library file is edited. User-source ranges are stable, so most
+// callers leave it off and assert the range.
+async function checkMachineOutput (src: string, expected: L.Value[], stripRanges = false) {
   src = src.trim()
   const out = new L.LoggingChannel(false, false)
   const { prog, diagnostics } = await S.compile(src)
@@ -24,7 +29,7 @@ async function checkMachineOutput (src: string, expected: L.Value[]) {
       }
     } catch (e) {
       if (e instanceof L.ScamperError) {
-        out.log.push(e.toString())
+        out.log.push((stripRanges ? e.stripRange() : e).toString())
         fiber.advanceStmt()
       } else {
         throw e
@@ -182,19 +187,20 @@ describe('End-to-end cases', () => {
     // N.B., the reported ranges point at string-length's/+'s own definitions
     // in prelude.scm rather than the call site -- a known limitation of
     // contract-wrapped errors (#254; see cons-pair, range, not-boolean in
-    // prelude.test.ts).
+    // prelude.test.ts). We assert with ranges stripped so this test stays
+    // decoupled from prelude.scm's line numbers.
     await checkMachineOutput(`
 (string-length (list 1 2 3))
 
 (+ 1 2 3 "bye")
 `, [
-      'Runtime error [590:1-590:54]: (error) expected a string, received list',
+      'Runtime error: (error) expected a string, received list',
       // N.B., "+" is documented as a rest param (`. v1`), so its contract
       // check is a single all-satisfy? over the whole argument list rather
       // than a per-argument check -- it can report that *some* argument
       // failed, not *which one*.
-      'Runtime error [119:1-119:34]: (error) expected every value of v1 to be a number, but at least one was not',
-    ])
+      'Runtime error: (error) expected every value of v1 to be a number, but at least one was not',
+    ], true)
   })
 
   test('define-test1', async () => {

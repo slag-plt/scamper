@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { runProgram } from '../harness'
+import { runProgram } from './harness.js'
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -780,11 +780,11 @@ test('cons-pair', async () => {
 (pair 0.003 100)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:12]: (cons) The second argument to cons should be a list',
-    'Runtime error [2:1-2:10]: (cons) The second argument to cons should be a list',
-    'Runtime error [3:1-3:17]: (cons) The second argument to cons should be a list',
-    'Runtime error [4:1-4:14]: (cons) The second argument to cons should be a list',
-    'Runtime error [5:1-5:16]: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
+    'Runtime error: (cons) The second argument to cons should be a list',
     '(pair 1 2)',
     '(pair #t #f)',
     '(pair "hi" "bye")',
@@ -804,7 +804,7 @@ test.skip('contract-check-map', async () => {
 (map char-upcase (list "h" "e" "l" "l" "o"))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:44]: (map) expected a character, received string',
+    'Runtime error: (map) expected a character, received string',
   ])
 })
 
@@ -827,7 +827,7 @@ test('error', async () => {
 (error "This is an example runtime error")
 `),
   ).toEqual([
-    'Runtime error [1:1-1:42]: (error) This is an example runtime error',
+    'Runtime error: (error) This is an example runtime error',
   ])
 })
 
@@ -838,8 +838,8 @@ test('error-qq', async () => {
 (+ 5 (??))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:18]: (error) existing',
-    'Runtime error [2:6-2:9]: (??) Hole encountered in program!',
+    'Runtime error: (error) existing',
+    'Runtime error: (??) Hole encountered in program!',
   ])
 })
 
@@ -1199,7 +1199,7 @@ test('not-boolean', async () => {
   ).toEqual([
     '#f',
     '#t',
-    'Runtime error [274:1-274:35]: (error) expected a boolean, received number',
+    'Runtime error: (error) expected a boolean, received number',
     '#t',
     '#t',
     '#f',
@@ -1332,7 +1332,7 @@ test('qq', async () => {
     await runProgram(`
 (+ (??) 1)
 `),
-  ).toEqual(['Runtime error [1:4-1:7]: (??) Hole encountered in program!'])
+  ).toEqual(['Runtime error: (??) Hole encountered in program!'])
 })
 
 test('random', async () => {
@@ -2154,7 +2154,7 @@ test('=-eps', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error [71:1-71:43]: (error) expected a number, received string',
+    'Runtime error: (error) expected a number, received string',
   ])
 })
 
@@ -2167,9 +2167,6 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   // member rejects the empty list with the same clean contract error (#256)
   // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
   // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
-  // The reported range points at that primitive's definition in prelude.scm.
-  const stripRange = (msgs: string[]): string[] =>
-    msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
   const members = [
     'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
     'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',
@@ -2178,8 +2175,8 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   ]
 
   test.each(members)('%s rejects the empty list', async (name) => {
-    expect(stripRange(await runProgram(`(${name} (list))`))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+    expect(await runProgram(`(${name} (list))`)).toEqual([
+      'Runtime error: (error) expected pair or nonempty-list, received null',
     ])
   })
 })
@@ -2207,7 +2204,7 @@ test('list-ref-out-of-range', async () => {
 (list-ref (list 1 2 3) 3)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:25]: (list-ref) list-ref: index 3 out of bounds of list',
+    'Runtime error: (list-ref) list-ref: index 3 out of bounds of list',
   ])
 })
 
@@ -2241,7 +2238,7 @@ test('assoc-ref-missing-key', async () => {
 (assoc-ref "z" (list (pair "a" 1) (pair "b" 2)))
 `),
   ).toEqual([
-    'Runtime error [1:1-1:48]: (assoc-ref) assoc-ref: key z not found in association list',
+    'Runtime error: (assoc-ref) assoc-ref: key z not found in association list',
   ])
 })
 
@@ -2278,8 +2275,8 @@ test('sort-contract', async () => {
 (sort (list 1 2) 5)
 `),
   ).toEqual([
-    'Runtime error [523:1-523:37]: (error) expected a list, received number',
-    'Runtime error [523:1-523:37]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a list, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2307,7 +2304,7 @@ test('any-of-call', async () => {
 ((any-of odd? even?) 3)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:23]: Javascript library functions can no longer call Scamper functions',
+    'Runtime error: Javascript library functions can no longer call Scamper functions',
   ])
 })
 
@@ -2335,7 +2332,7 @@ test('all-of-call', async () => {
 ((all-of odd? positive?) 3)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:27]: Javascript library functions can no longer call Scamper functions',
+    'Runtime error: Javascript library functions can no longer call Scamper functions',
   ])
 })
 
@@ -2358,7 +2355,7 @@ test('list-of-contract', async () => {
 (list-of 5)
 `),
   ).toEqual([
-    'Runtime error [333:1-333:42]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2368,7 +2365,7 @@ test('digit-value-not-digit', async () => {
 (digit-value #\\a)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:17]: (digit-value) digit-value: a is not a decimal digit',
+    'Runtime error: (digit-value) digit-value: a is not a decimal digit',
   ])
 })
 
@@ -2390,8 +2387,8 @@ test('charQ-arity', async () => {
 (char? #\\a #\\b)
 `),
   ).toEqual([
-    'Runtime error [1:1-1:7]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [2:1-2:15]: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
   ])
 })
 
@@ -2406,7 +2403,7 @@ test('string-constructor', async () => {
 `),
   ).toEqual([
     '"abc"',
-    'Runtime error [584:1-584:41]: (error) expected every value of c1 to be a char, but at least one was not',
+    'Runtime error: (error) expected every value of c1 to be a char, but at least one was not',
   ])
 })
 
@@ -2421,8 +2418,8 @@ test('string-vector-conversions', async () => {
   ).toEqual([
     '(vector #\\a #\\b #\\c)',
     '"abc"',
-    'Runtime error [647:1-647:57]: (error) expected a string, received number',
-    'Runtime error [653:1-653:57]: (error) expected a vector, received string',
+    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a vector, received string',
   ])
 })
 
@@ -2438,7 +2435,7 @@ test('string-contains', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error [660:1-660:58]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2450,7 +2447,7 @@ test('string-split-vector', async () => {
 `),
   ).toEqual([
     '(vector "a" "b" "c")',
-    'Runtime error [674:1-674:65]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2492,8 +2489,8 @@ test('vectorQ', async () => {
     '#f',
     '#f',
     '#f',
-    'Runtime error [6:1-6:9]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [7:1-7:13]: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
   ])
 })
 
@@ -2510,7 +2507,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error [693:1-693:50]: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer, received string',
   ])
 })
 
@@ -2525,7 +2522,7 @@ test('vector-length', async () => {
   ).toEqual([
     '3',
     '0',
-    'Runtime error [699:1-699:54]: (error) expected a vector, received number',
+    'Runtime error: (error) expected a vector, received number',
   ])
 })
 
@@ -2545,9 +2542,9 @@ test('vector-ref', async () => {
   ).toEqual([
     '1',
     '3',
-    'Runtime error [707:1-707:48]: (error) expected a vector, received number',
-    'Runtime error [4:1-4:29]: (vector-ref) vector-ref: index 5 out of bounds of vector',
-    'Runtime error [5:1-5:30]: (vector-ref) vector-ref: index -1 out of bounds of vector',
+    'Runtime error: (error) expected a vector, received number',
+    'Runtime error: (vector-ref) vector-ref: index 5 out of bounds of vector',
+    'Runtime error: (vector-ref) vector-ref: index -1 out of bounds of vector',
   ])
 })
 
@@ -2561,7 +2558,7 @@ test('vector-append', async () => {
 `),
   ).toEqual([
     '(vector 1 2 3 4 5)',
-    'Runtime error [752:1-752:54]: (error) expected every value of v1 to be a vector, but at least one was not',
+    'Runtime error: (error) expected every value of v1 to be a vector, but at least one was not',
     '(vector)',
   ])
 })
@@ -2577,7 +2574,7 @@ test('vector-to-list', async () => {
   ).toEqual([
     '(list 1 2 3)',
     'null',
-    'Runtime error [729:1-729:53]: (error) expected a vector, received list',
+    'Runtime error: (error) expected a vector, received list',
   ])
 })
 
@@ -2592,7 +2589,7 @@ test('list-to-vector', async () => {
   ).toEqual([
     '(vector 1 2 3)',
     '(vector)',
-    'Runtime error [735:1-735:53]: (error) expected a list, received vector',
+    'Runtime error: (error) expected a list, received vector',
   ])
 })
 
@@ -2611,10 +2608,10 @@ v
 v2
 `),
   ).toEqual([
-    'Runtime error [2:1-2:20]: (vector-set!) vector-set!: index 5 out of bounds of vector',
+    'Runtime error: (vector-set!) vector-set!: index 5 out of bounds of vector',
     '(vector 1 2 3)',
     '3',
-    'Runtime error [6:1-6:22]: (vector-set!) vector-set!: index -1 out of bounds of vector',
+    'Runtime error: (vector-set!) vector-set!: index -1 out of bounds of vector',
     '(vector 1 2 3)',
   ])
 })
@@ -2640,7 +2637,7 @@ test('voidQ', async () => {
   ).toEqual([
     '#t',
     '#f',
-    'Runtime error [3:1-3:7]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2652,7 +2649,7 @@ test('ignore', async () => {
 `),
   ).toEqual([
     '[Blob: {}]',
-    'Runtime error [2:1-2:8]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2666,7 +2663,7 @@ test('set-maximum-recursion-depth', async () => {
   ).toEqual([
     '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":100}]',
     '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":-1}]',
-    'Runtime error [3:1-3:30]: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
 
@@ -2682,7 +2679,7 @@ test('string-to-words', async () => {
     '(list "Hello" "world" "How" "are" "you")',
     'null',
     '(list "...")',
-    'Runtime error [929:1-929:55]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2708,10 +2705,10 @@ r
     '5',
     'void',
     '10',
-    'Runtime error [8:1-8:5]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [9:1-9:6]: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error [947:1-947:39]: (error) expected a ref, received number',
-    'Runtime error [954:1-954:43]: (error) expected a ref, received number',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (error) expected a ref, received number',
+    'Runtime error: (error) expected a ref, received number',
   ])
 })
 
@@ -2735,11 +2732,11 @@ void
     '3.141592653589793',
     '3.141592653589793',
     'void',
-    'Runtime error [6:1-6:6]: Not a function or closure: true',
-    'Runtime error [7:1-7:6]: Not a function or closure: null',
-    'Runtime error [8:1-8:4]: Not a function or closure: 3.141592653589793',
-    'Runtime error [9:1-9:3]: Not a function or closure: 3.141592653589793',
-    'Runtime error [10:1-10:6]: Not a function or closure: undefined',
+    'Runtime error: Not a function or closure: true',
+    'Runtime error: Not a function or closure: null',
+    'Runtime error: Not a function or closure: 3.141592653589793',
+    'Runtime error: Not a function or closure: 3.141592653589793',
+    'Runtime error: Not a function or closure: undefined',
   ])
 })
 
@@ -2751,7 +2748,7 @@ test('with-file', async () => {
 `),
   ).toEqual([
     '(reactive-file "foo.txt" [Function: ##anonymous##])',
-    'Runtime error [986:1-986:46]: (error) expected a string, received number',
+    'Runtime error: (error) expected a string, received number',
   ])
 })
 
@@ -2763,7 +2760,7 @@ test('with-file-chooser', async () => {
 `),
   ).toEqual([
     '(reactive-file-chooser [Function: ##anonymous##])',
-    'Runtime error [992:1-992:61]: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure, received number',
   ])
 })
 
@@ -2773,7 +2770,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error [900:1-900:41]: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer, received string',
   ])
 })
 
@@ -2794,25 +2791,25 @@ test('char-compare-single-arg', async () => {
 
 test('list->string-non-char', async () => {
   expect(await runProgram('(list->string (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:25]: (list->string) list->string: list contains non-character element: number',
+    'Runtime error: (list->string) list->string: list contains non-character element: number',
   ])
 })
 
 test('vector-range-errors', async () => {
   expect(await runProgram('(vector-range)')).toEqual([
-    'Runtime error [1:1-1:14]: (vector-range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: (vector-range) 1, 2, or 3 numbers must be passed to function',
   ])
   expect(await runProgram('(vector-range 0 10 0)')).toEqual([
-    'Runtime error [1:1-1:21]: (vector-range) "step" argument must be non-zero',
+    'Runtime error: (vector-range) "step" argument must be non-zero',
   ])
 })
 
 test('range-errors', async () => {
   expect(await runProgram('(range)')).toEqual([
-    'Runtime error [1:1-1:7]: (range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: (range) 1, 2, or 3 numbers must be passed to function',
   ])
   expect(await runProgram('(range 0 10 0)')).toEqual([
-    'Runtime error [1:1-1:14]: (range) "step" argument must be non-zero',
+    'Runtime error: (range) "step" argument must be non-zero',
   ])
 })
 
@@ -2827,19 +2824,19 @@ test('range-errors', async () => {
 
 test('list-of-call', async () => {
   expect(await runProgram('((list-of number?) (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:30]: Javascript library functions can no longer call Scamper functions',
+    'Runtime error: Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('sort-call', async () => {
   expect(await runProgram('(sort (list 2 1) <)')).toEqual([
-    'Runtime error [1:1-1:19]: (sort) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (sort) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('string-map-call', async () => {
   expect(await runProgram('(string-map char-upcase "ab")')).toEqual([
-    'Runtime error [1:1-1:29]: (string-map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (string-map) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
@@ -2848,49 +2845,49 @@ test('map-call', async () => {
   // list (mapOne) and multi-list (transpose) paths reach callScamperFn
   expect(await runProgram('(map +)')).toEqual(['null'])
   expect(await runProgram('(map + (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:18]: (map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (map) Javascript library functions can no longer call Scamper functions',
   ])
   expect(await runProgram('(map + (list 1 2) (list 3))')).toEqual([
-    'Runtime error [1:1-1:27]: (map) the lists passed to the function call do not have the same length',
+    'Runtime error: (map) the lists passed to the function call do not have the same length',
   ])
   expect(await runProgram('(map + (list 1 2) (list 3 4))')).toEqual([
-    'Runtime error [1:1-1:29]: (map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (map) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('filter-call', async () => {
   expect(await runProgram('(filter + (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:21]: (filter) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (filter) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('fold-call', async () => {
   expect(await runProgram('(fold + 0 (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:21]: (fold) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (fold) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('reduce-call', async () => {
   expect(await runProgram('(reduce + (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:21]: (reduce) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (reduce) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('fold-left-call', async () => {
   expect(await runProgram('(fold-left + 0 (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:26]: (fold-left) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (fold-left) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('fold-right-call', async () => {
   expect(await runProgram('(fold-right + 0 (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:27]: (fold-right) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (fold-right) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('reduce-right-call', async () => {
   expect(await runProgram('(reduce-right + (list 1 2))')).toEqual([
-    'Runtime error [1:1-1:27]: (reduce-right) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (reduce-right) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
@@ -2898,54 +2895,54 @@ test('vector-map-call', async () => {
   // empty (no callback), single-vector, length-mismatch, and multi-vector
   expect(await runProgram('(vector-map +)')).toEqual(['(vector)'])
   expect(await runProgram('(vector-map + (vector 1 2))')).toEqual([
-    'Runtime error [1:1-1:27]: (vector-map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (vector-map) Javascript library functions can no longer call Scamper functions',
   ])
   expect(await runProgram('(vector-map + (vector 1 2) (vector 3))')).toEqual([
-    'Runtime error [1:1-1:38]: (vector-map) the vectors passed to the function call do not have the same length',
+    'Runtime error: (vector-map) the vectors passed to the function call do not have the same length',
   ])
   expect(await runProgram('(vector-map + (vector 1 2) (vector 3 4))')).toEqual([
-    'Runtime error [1:1-1:40]: (vector-map) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (vector-map) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('vector-map-bang-call', async () => {
   expect(await runProgram('(vector-map! + (vector 1 2))')).toEqual([
-    'Runtime error [1:1-1:28]: (vector-map!) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (vector-map!) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('vector-for-each-call', async () => {
   expect(await runProgram('(vector-for-each + (vector 1 2))')).toEqual([
-    'Runtime error [1:1-1:32]: (vector-for-each) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (vector-for-each) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('for-range-call', async () => {
   // ascending and descending both reach the callback
   expect(await runProgram('(for-range 0 3 +)')).toEqual([
-    'Runtime error [1:1-1:17]: (for-range) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (for-range) Javascript library functions can no longer call Scamper functions',
   ])
   expect(await runProgram('(for-range 3 0 +)')).toEqual([
-    'Runtime error [1:1-1:17]: (for-range) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (for-range) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('vector-filter-call', async () => {
   expect(await runProgram('(vector-filter + (vector 1 2))')).toEqual([
-    'Runtime error [1:1-1:30]: (vector-filter) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (vector-filter) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('compose-call', async () => {
   // compose returns a closure; invoking it triggers the callback
   expect(await runProgram('((compose +) 5)')).toEqual([
-    'Runtime error [1:1-1:15]: Javascript library functions can no longer call Scamper functions',
+    'Runtime error: Javascript library functions can no longer call Scamper functions',
   ])
 })
 
 test('pipe-call', async () => {
   expect(await runProgram('(|> 5 +)')).toEqual([
-    'Runtime error [1:1-1:8]: (|>) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (|>) Javascript library functions can no longer call Scamper functions',
   ])
 })
 
@@ -2953,6 +2950,6 @@ test('with-handler-call', async () => {
   // fn throws #248 immediately; the ScamperError catch branch then invokes
   // the handler (which throws #248 again)
   expect(await runProgram('(with-handler + + 1 2 3)')).toEqual([
-    'Runtime error [1:1-1:24]: (with-handler) Javascript library functions can no longer call Scamper functions',
+    'Runtime error: (with-handler) Javascript library functions can no longer call Scamper functions',
   ])
 })

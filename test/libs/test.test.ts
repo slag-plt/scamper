@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 
 test('test-result-ok prints as a passing result', async () => {
   expect(await runProgram(`

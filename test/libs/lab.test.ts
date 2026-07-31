@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 import { lab_title, lab_part, lab_problem, lab_description } from '../../src/js/lab/index.js'
 
 // N.B., these functions set content via `.innerText`, which jsdom stores
@@ -51,7 +51,7 @@ describe('title', () => {
     (import lab)
     (title 5)
     `)).toEqual([
-      'Runtime error [10:1-10:35]: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
     ])
   })
 })
@@ -68,7 +68,7 @@ describe('part', () => {
     (import lab)
     (part 5)
     `)).toEqual([
-      'Runtime error [16:1-16:33]: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
     ])
   })
 })
@@ -85,7 +85,7 @@ describe('problem', () => {
     (import lab)
     (problem 5)
     `)).toEqual([
-      'Runtime error [22:1-22:39]: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
     ])
   })
 })
@@ -104,7 +104,7 @@ describe('description', () => {
     (import lab)
     (description 5)
     `)).toEqual([
-      'Runtime error [28:1-28:47]: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
     ])
   })
 })

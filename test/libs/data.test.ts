@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 
 test('tally-all', async () => {
   expect(await runProgram(`
@@ -25,7 +25,7 @@ describe('parse-csv', () => {
     (import data)
     (parse-csv "")
     `)).toEqual([
-      `Runtime error [2:5-2:18]: (parse-csv) Error(s) parsing CSV files:
+      `Runtime error: (parse-csv) Error(s) parsing CSV files:
 Delimiter (row undefined): Unable to auto-detect delimiting character; defaulted to ','`
     ])
   })
@@ -35,7 +35,7 @@ Delimiter (row undefined): Unable to auto-detect delimiting character; defaulted
     (import data)
     (parse-csv "a,\\"b\nc,d")
     `)).toEqual([
-      `Runtime error [2:5-3:5]: (parse-csv) Error(s) parsing CSV files:
+      `Runtime error: (parse-csv) Error(s) parsing CSV files:
 Quotes (row 0): Quoted field unterminated`
     ])
   })
@@ -65,7 +65,7 @@ describe('string->chars', () => {
     (import data)
     (string->chars 5)
     `)).toEqual([
-      'Runtime error [11:1-11:52]: (error) expected a string, received number'
+      'Runtime error: (error) expected a string, received number'
     ])
   })
 })
@@ -89,7 +89,7 @@ describe('string->lines', () => {
     (import data)
     (string->lines (list "a" "b"))
     `)).toEqual([
-      'Runtime error [17:1-17:52]: (error) expected a string, received list'
+      'Runtime error: (error) expected a string, received list'
     ])
   })
 })

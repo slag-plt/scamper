@@ -46,7 +46,7 @@ function searchForFunction(searchTerm: string) {
         <input
       v-model="search"  
       size = "30"
-      placeholder="Search function or press enter..."
+      placeholder="Search function name or press enter..."
       @keyup.enter="searchForFunction(search)"
         >
 

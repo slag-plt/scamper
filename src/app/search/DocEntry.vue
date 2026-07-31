@@ -14,11 +14,18 @@ const descSpans = computed<TextSpan[]>(() => {
   const parts = props.doc.description.trim().split('`')
   return parts.map((text, i) => ({ text, code: i % 2 === 1 }))
 })
+
+function catchSun(sun: string) {
+  if(sun.includes('☀︎')) {
+    return sun.replace('☀︎', '')
+  }
+  return sun
+}
 </script>
 
 <template>
   <div :id="id" class="entry">
-    <pre class="sig"><code>{{ functionDocSignature(doc) }}</code></pre>
+    <pre class="sig"><code>{{ catchSun(functionDocSignature(doc)) }}</code></pre>
     <p class="desc">
       <template v-for="(span, i) in descSpans" :key="i">
         <code v-if="span.code">{{ span.text }}</code>

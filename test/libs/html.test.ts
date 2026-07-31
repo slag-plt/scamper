@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 import {
   html_button,
   html_buttonQ,

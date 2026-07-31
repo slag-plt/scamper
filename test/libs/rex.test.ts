@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 
 // Adapted froM: https://eikmeier.sites.grinnell.edu/csc-151-fall-2025/readings/regexp.html
 
@@ -315,7 +315,7 @@ test('regex bad pattern', async () => {
     (rex-matches? bad "a")
   `)).toEqual([
     '"["',
-    'Runtime error [91:1-91:47]: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[$/: Unterminated character class'
+    'Runtime error: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[$/: Unterminated character class'
   ])
 })
 
@@ -327,7 +327,7 @@ test('char-range reversed', async () => {
     (rex-matches? bad "m")
   `)).toEqual([
     '"[z-a]"',
-    'Runtime error [91:1-91:47]: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[z-a]$/: Range out of order in character class'
+    'Runtime error: Unexpected error in Javascript function call: SyntaxError: Invalid regular expression: /^[z-a]$/: Range out of order in character class'
   ])
 })
 
@@ -339,10 +339,10 @@ test('bad combinator arguments', async () => {
     (rex-optional 5)
     (rex-any-of (rex-string "a") "b")
   `)).toEqual([
-    'Runtime error [22:1-22:44]: (error) expected a rex, received string',
-    'Runtime error [34:1-34:44]: (error) expected every value of xs to be a rex, but at least one was not',
-    'Runtime error [70:1-70:48]: (error) expected a rex, received number',
-    'Runtime error [64:1-64:43]: (error) expected every value of xs to be a rex, but at least one was not'
+    'Runtime error: (error) expected a rex, received string',
+    'Runtime error: (error) expected every value of xs to be a rex, but at least one was not',
+    'Runtime error: (error) expected a rex, received number',
+    'Runtime error: (error) expected every value of xs to be a rex, but at least one was not'
   ])
 })
 

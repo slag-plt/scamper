@@ -3,7 +3,7 @@
 // strategy that is a separate, larger effort. Until that lands, this file
 // just tracks which functions still need real tests.
 import { describe, expect, test } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 
 // Regression: button? is used in reactive.scm's on-button-click contract but
 // defined in html.scm. reactive.scm must re-export it; otherwise on-button-click

@@ -86,7 +86,7 @@ function searchOpenWindow(searchTerm: string) {
       <input
         v-model="search"  
         size = "30"
-        placeholder="Search function or press enter..."
+        placeholder="Search function name or press enter..."
         @keyup.enter="searchOpenWindow(search)"
       >
     </div>
