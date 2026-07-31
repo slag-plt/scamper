@@ -2768,15 +2768,17 @@ void
   ])
 })
 
-test('with-file', async () => {
+// N.B., with-file now blocks the fiber to load the file (SuspendSignal /
+// Scheduler `block-on`) and applies the callback in Scheme, so its happy path
+// runs only under the async scheduler (validated end-to-end via the CLI), not
+// this synchronous harness. The argument contract still fails eagerly.
+test('with-file rejects a non-string filename via its contract', async () => {
   expect(
     await runProgram(`
-(with-file "foo.txt" (lambda (s) s))
 (with-file 5 (lambda (s) s))
 `),
   ).toEqual([
-    '(reactive-file "foo.txt" [Function: ##anonymous##])',
-    'Runtime error [1083:1-1083:46]: (error) expected a string, received number',
+    'Runtime error [1083:1-1085:56]: (error) expected a string, received number',
   ])
 })
 
@@ -2788,7 +2790,7 @@ test('with-file-chooser', async () => {
 `),
   ).toEqual([
     '(reactive-file-chooser [Function: ##anonymous##])',
-    'Runtime error [1089:1-1089:61]: (error) expected a procedure, received number',
+    'Runtime error [1091:1-1091:61]: (error) expected a procedure, received number',
   ])
 })
 

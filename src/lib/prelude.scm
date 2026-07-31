@@ -1075,12 +1075,14 @@
 ;;; @category constants
 (define void (js-var "prelude_voidConst"))
 
-;;; (with-file filename fn) -> void
+;;; (with-file filename fn) -> any
 ;;;  filename : string?
 ;;;  fn : procedure?
-;;; Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen.
+;;; Loads `filename` from storage and passes its contents to `fn` as input. The output of `fn` is returned (and rendered to the screen if this is a top-level expression).
 ;;; @category other
-(define with-file (js-var "prelude_withFile"))
+(define with-file
+  (lambda (filename fn)
+    (fn ((js-var "prelude_blockOnReadFile") filename))))
 
 ;;; (with-file-chooser fn) -> void
 ;;;  fn : procedure?

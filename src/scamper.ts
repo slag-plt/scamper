@@ -4,9 +4,15 @@ import {
   Env,
   ErrorChannel,
   Loc,
+  mkAp,
+  mkLit,
+  mkStmtExp,
   OutputChannel,
+  Prog,
   Range,
   rangesEqual,
+  setSpawn,
+  Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
 import { Scheduler, SchedulerId } from './lpm/scheduler'
@@ -124,9 +130,48 @@ export default class Scamper {
   private _queries = new Map<number, QueryEntry[]>()
   private _expandedQueryId: SchedulerId | null = null
   private queryBus = new EventTarget()
+  // The most recent top-level program's fiber and error channel, so spawned
+  // event-handler fibers (see spawnClosure) run in the user's environment and
+  // report errors to the same place.
+  private mainFiber?: Fiber
+  private mainErr?: ErrorChannel
 
   private constructor() {
     this.scheduler = new Scheduler()
+    // Let library event handlers run Scamper closures as fibers (spawn()) without
+    // importing this singleton directly.
+    setSpawn((fn, args, onComplete) => this.spawnClosure(fn, args, onComplete))
+  }
+
+  /**
+   * Runs the closure `fn` applied to `args` as a fresh fiber in the current
+   * program's top-level environment (so it sees the user's definitions and
+   * imports). Used by event/callback library functions -- a DOM/timer callback
+   * fires with no fiber running, so it must originate a new one. `onComplete`
+   * receives the closure's result (or null).
+   */
+  private spawnClosure(
+    fn: Value,
+    args: Value[],
+    onComplete?: (result: Value | null) => void,
+  ): void {
+    const env = this.mainFiber?.topLevelEnv
+    const err = this.mainErr
+    if (env === undefined || err === undefined) {
+      // No active program to run the callback in; drop it.
+      return
+    }
+    const prog: Prog = [
+      mkStmtExp([mkLit(fn), ...args.map((a) => mkLit(a)), mkAp(args.length)]),
+    ]
+    const fiber = new Fiber(prog, env)
+    const id = crypto.randomUUID()
+    this.scheduler.schedule({
+      id,
+      fiber,
+      err,
+      onComplete: () => onComplete?.(fiber.lastResult),
+    })
   }
 
   /**
@@ -150,6 +195,11 @@ export default class Scamper {
 
     // make new fiber with prelude as initial environment
     const fiber = new Fiber(prog, getDefaultEnv())
+    // Remember this run's fiber/error channel so spawned event-handler fibers
+    // (spawnClosure) run in its evolving top-level env and report to the same
+    // error channel.
+    this.mainFiber = fiber
+    this.mainErr = err
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.

@@ -1,5 +1,5 @@
-import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError } from '.'
-import { Fiber, StepResult } from './fiber'
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError, SuspendSignal } from '.'
+import { blockOnStep, Fiber, StepResult } from './fiber'
 import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput } from './trace/index.js'
 import { getFS } from '../fs'
@@ -99,6 +99,11 @@ export class Scheduler {
     try {
       return fiber.step()
     } catch (e) {
+      if (e instanceof SuspendSignal) {
+        // A blocking primitive suspended the fiber; hand the async action to
+        // processStepResult, which runs it and resumes the fiber with the result.
+        return blockOnStep(e.action)
+      }
       if (!(e instanceof ScamperError)) {
         // either the runtime broke and threw an ICE (which is bad)
         // or we have an unexpected error somewhere (which is really bad)
@@ -190,6 +195,43 @@ export class Scheduler {
             },
           )
       }
+    }
+
+    if (stepResult.tag === 'block-on') {
+      // A blocking primitive suspended the fiber mid-expression. Mirror the
+      // import-file pattern: pull the task out of the run queue, run the async
+      // action, and on completion resume the SAME fiber in place -- pushing the
+      // resolved value as the primitive's result (no advanceStmt: we're mid
+      // expression, not at a statement boundary).
+      this.removeTaskFromQueue(this.currTaskIdx)
+      stepResult.action().then(
+        (value) => {
+          fiber.resumeWithValue(value)
+          this.schedule(task)
+        },
+        (err: unknown) => {
+          // A rejected async action surfaces as a runtime error at the blocking
+          // call, catchable by an enclosing with-handler (via handleError).
+          const scamperErr =
+            err instanceof ScamperError
+              ? err
+              : new ScamperError(
+                  'Runtime',
+                  err instanceof Error ? err.message : String(err),
+                )
+          if (!fiber.handleError(scamperErr)) {
+            task.err.report(scamperErr)
+            fiber.advanceStmt()
+          }
+          // advanceStmt may have completed the program; a done fiber must not be
+          // re-scheduled (its completion is signaled instead).
+          if (fiber.isDone()) {
+            task.onComplete?.()
+          } else {
+            this.schedule(task)
+          }
+        },
+      )
     }
 
     if (!isDisplayTask(task)) {

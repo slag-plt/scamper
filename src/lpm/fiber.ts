@@ -48,13 +48,21 @@ export interface ImportFileStep {
   tag: 'import-file'
   filename: string
 }
+// A fiber suspended mid-expression by a blocking primitive (see SuspendSignal).
+// The scheduler runs `action`, then resumes the fiber with the resolved value
+// (Fiber.resumeWithValue).
+export interface BlockOnStep {
+  tag: 'block-on'
+  action: () => Promise<Value>
+}
 
 export type StepResult =
   DisplayStep |
   TraceStep |
   MinorStep |
   YieldStep |
-  ImportFileStep
+  ImportFileStep |
+  BlockOnStep
 
 export const displayStep: DisplayStep = { tag: 'display' }
 export const traceStep: TraceStep = { tag: 'trace' }
@@ -62,6 +70,9 @@ export const minorStep: MinorStep = { tag: 'minor' }
 export const yieldStep: YieldStep = { tag: 'yield' }
 export function importFileStep(filename: string): ImportFileStep {
   return { tag: 'import-file', filename }
+}
+export function blockOnStep(action: () => Promise<Value>): BlockOnStep {
+  return { tag: 'block-on', action }
 }
 
 // a fiber is a concurrent thread of execution
@@ -243,6 +254,27 @@ export class Fiber {
     // prelude_withHandler contract). Its result becomes the form's value.
     applyFn(rec.handler, [e.message], target, this, e.range ?? Range.none)
     return true
+  }
+
+  /**
+   * Resumes a fiber suspended mid-expression by a blocking primitive (see
+   * SuspendSignal / BlockOnStep), delivering `value` as the suspended
+   * primitive-call's result. Mirrors exactly what applyFn's JsFunction branch
+   * (push the result) plus stepFrame's post-op finalize (complete the frame if
+   * it is now finished) would have done had the primitive returned synchronously.
+   */
+  resumeWithValue(value: Value): void {
+    const frame = this.currentFrame
+    if (frame === undefined) {
+      throw new ICE(
+        'Fiber.resumeWithValue',
+        'Attempted to resume a fiber with no current frame',
+      )
+    }
+    frame.values.push(value)
+    if (frame.isFinished()) {
+      this.completeCurrentFrame()
+    }
   }
 
   /**

@@ -1,4 +1,4 @@
-import { ICE, ReportError, ScamperError } from '../error'
+import { ICE, ReportError, ScamperError, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Value } from '../lang'
 import { Frame } from '../frame'
@@ -73,6 +73,12 @@ export function applyFn(
       currFrame.values.push(fn(...args))
       return traceStep
     } catch (e) {
+      if (e instanceof SuspendSignal) {
+        // A blocking primitive is suspending the fiber -- propagate untouched to
+        // Scheduler.stepTask (control flow, not an error). The result value is
+        // supplied on resume by Fiber.resumeWithValue, not by the push above.
+        throw e
+      }
       if (e instanceof ScamperError) {
         // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
         // fn was called directly, outside any named Scamper function -- in

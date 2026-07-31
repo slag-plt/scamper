@@ -609,12 +609,14 @@
 ;;; @category image
 (define with-image-file (js-var "image_withImageFile"))
 
-;;; (with-image-from-url url callback) -> html?
+;;; (with-image-from-url url callback) -> any
 ;;;  url : string?
 ;;;  callback : procedure?
-;;; Returns a container that, when used, calls `callback` with the selected image and replaces the chooser with the output produced by `callback`.
+;;; Loads the image at `url` and passes it (as a canvas) to `callback`. The output of `callback` is returned (and rendered to the screen if this is a top-level expression).
 ;;; @category image
-(define with-image-from-url (js-var "image_withImageFromUrl"))
+(define with-image-from-url
+  (lambda (url callback)
+    (callback ((js-var "image_blockOnFetchImage") url))))
 
 ;;; (pixel-map fn img) -> canvas?
 ;;;  fn : procedure?

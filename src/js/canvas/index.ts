@@ -133,14 +133,8 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
 }
 
 export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn): void {
-  canvas.onclick = function (ev: MouseEvent) {
-    try {
-      console.log(`offset: (${ev.offsetX}, ${ev.offsetY}), client: (${ev.clientX}, ${ev.clientY}), page: (${ev.pageX}, ${ev.pageY})`)
-      L.callScamperFn(fn, ev.offsetX, ev.offsetY)
-    } catch (e) {
-      alert(`canvas-onclick! callback threw an error:\n\n${(e as Error).toString()}`)
-      return
-    }
-  }
+  // Each click runs `(fn x y)` (the click offset) as a fresh fiber; errors
+  // surface in the output pane.
+  canvas.onclick = (ev: MouseEvent) => L.spawn(fn, [ev.offsetX, ev.offsetY])
 }
 
