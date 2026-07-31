@@ -122,6 +122,12 @@ export function raiseFrame(
         break
       }
 
+      case 'check-fn': {
+        // N.B., no-op: check-fn only validates the guarded function at runtime; it
+        // leaves the stack ([.., handler, fn]) untouched for push-handler below.
+        break
+      }
+
       case 'push-handler': {
         // N.B., no-op: the handler value stays on the reconstruction stack (it
         // was left there at runtime too) and is consumed by pop-handler below.

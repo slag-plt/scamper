@@ -241,20 +241,39 @@ export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
   throw new ReportError(currFrame.values.at(-1), op.range)
 }
 
-// N.B., installs the top-of-stack value as an exception handler. The handler
-// value is *peeked*, not popped -- it stays on the value stack (between here and
-// the matching pop-handler) so raise.ts can reconstruct the `with-handler` form,
-// and so the fiber can find it on the stack. We record the frame- and
-// value-stack depths to unwind to if a ScamperError is raised under the guarded
-// application (see Fiber.handleError).
+// N.B., enforces with-handler's contract that its second argument is a function
+// to apply. The stack is [.., handler, fn] (fn on top); check it before
+// push-handler installs the handler so the raised error isn't caught by the very
+// handler being installed -- it surfaces as a plain runtime error instead.
+export const CheckFnHandler: OpHandler<'check-fn'> = (op, currFrame) => {
+  const fn = currFrame.values.at(-1)
+  if (fn === undefined || (!isClosure(fn) && !isJsFunction(fn))) {
+    throw new ScamperError(
+      'Runtime',
+      `with-handler expects a function as its second argument, but received ${fn === undefined ? 'nothing' : typeOf(fn)}`,
+      undefined,
+      op.range,
+      'with-handler',
+    )
+  }
+  return minorStep
+}
+
+// N.B., installs the exception handler for the guarded application. The stack is
+// [.., handler, fn]: the handler is *peeked* (at -2), not popped -- both it and
+// fn stay on the value stack (between here and the matching pop-handler) so
+// raise.ts can reconstruct the `with-handler` form and the fiber can find the
+// handler on the stack. We record the frame depth and the value-stack depth to
+// reset to (dropping both handler and fn) if a ScamperError is raised under the
+// guarded application (see Fiber.handleError).
 export const PushHandlerHandler: OpHandler<'push-handler'> = (_op, currFrame, fiber) => {
-  if (currFrame.values.length < 1) {
-    throw new ICE('Fiber.PushHandlerHandler', 'No handler value on the stack')
+  if (currFrame.values.length < 2) {
+    throw new ICE('Fiber.PushHandlerHandler', 'Expected a handler and a guarded function on the stack')
   }
   fiber.handlerStack.push({
     frameDepth: fiber.frames.length,
-    valDepth: currFrame.values.length,
-    handler: currFrame.values.at(-1)!,
+    baseDepth: currFrame.values.length - 2,
+    handler: currFrame.values.at(-2)!,
   })
   return minorStep
 }

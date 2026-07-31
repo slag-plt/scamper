@@ -178,3 +178,48 @@ describe('handler errors and unguarded errors', () => {
     expect(out[2]).toBe('3')
   })
 })
+
+describe('with-handler contract (second argument must be a function)', () => {
+  test('a non-function guarded value is a plain error, not caught by the handler', async () => {
+    // check-fn runs before the handler is installed, so this surfaces the
+    // contract error rather than routing it through the handler.
+    const out = await runProgram(`
+    (with-handler (lambda (e) "caught") 5)
+    `)
+    expect(out).toHaveLength(1)
+    expect(out[0]).toContain('with-handler expects a function')
+  })
+
+  test('an error while producing the guarded value is surfaced, not caught', async () => {
+    // The second argument is an application that errors as it evaluates -- which
+    // happens before the handler is installed, so the handler does not catch it
+    // (and the fiber does not crash).
+    const out = await runProgram(`
+    (with-handler (lambda (e) "caught") (car (list)))
+    `)
+    expect(out).toHaveLength(1)
+    expect(out[0]).not.toContain('caught')
+    expect(out[0]).toContain('pair')
+  })
+
+  test('a function applied to trailing arguments is guarded normally', async () => {
+    // The idiomatic non-thunk form: with-handler applies `car` to `(list)`; the
+    // resulting error IS caught because it happens under the guard.
+    expect(await runProgram(`
+    (with-handler (lambda (e) "caught") car (list))
+    `)).toEqual(['"caught"'])
+  })
+
+  test('an earlier argument error unwinds past a later argument\'s nested with-handler', async () => {
+    // The first argument errors during evaluation, before the second argument's
+    // nested with-handler installs its own handler. Unwinding must skip past the
+    // nested push/pop-handler pair still ahead in the op stream and land on THIS
+    // form's handler (regression: an unbalanced scan stopped at the inner
+    // pop-handler and corrupted the stack).
+    expect(await runProgram(`
+    (with-handler (lambda (e) "outer") +
+      (error "x")
+      (with-handler (lambda (e) "inner") + 1 2))
+    `)).toEqual(['"outer"'])
+  })
+})

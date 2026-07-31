@@ -12,6 +12,7 @@ import {
   ApHandler,
   applyFn,
   ApplyHandler,
+  CheckFnHandler,
   ClsHandler,
   CtorHandler,
   ErrorHandler,
@@ -33,9 +34,10 @@ import { builtinLibs } from './builtin-registry.js'
 export interface HandlerRecord {
   // frame-stack length to unwind to (the frame that installed the handler stays).
   frameDepth: number
-  // the installing frame's value-stack length just after the handler was pushed;
-  // on error we reset the stack to `valDepth - 1`, dropping the handler value.
-  valDepth: number
+  // the installing frame's value-stack length before the with-handler form began;
+  // on error we reset the stack to this, dropping the handler, the guarded
+  // function, and any partial results of the guarded computation.
+  baseDepth: number
   handler: Value
 }
 
@@ -237,19 +239,27 @@ export class Fiber {
         'Handler unwound past the bottom of the frame stack',
       )
     }
-    // The installing frame's next op is the matching pop-handler (its guarded
-    // `ap` already ran). Discard it -- we're taking the error path, not
-    // completing normally.
-    const pending = target.popInstr()
-    if (pending.tag !== 'pop-handler') {
-      throw new ICE(
-        'Fiber.handleError',
-        `Expected a pop-handler op while unwinding, found ${pending.tag}`,
-      )
+    // Discard the rest of the guarded computation's ops, up to and including the
+    // matching pop-handler. The error may have been raised partway through the
+    // guarded region (e.g. during argument evaluation), so the next op is not
+    // necessarily pop-handler. A later, not-yet-evaluated argument can itself be a
+    // nested with-handler whose push-handler/pop-handler are still ahead in the op
+    // stream, so balance them: skip past any nested push/pop-handler pair and stop
+    // only at the pop-handler that closes THIS form. (Frame.popInstr ICEs if we
+    // exhaust the frame without finding it, which would be a real invariant break.)
+    let depth = 0
+    let pending = target.popInstr()
+    while (pending.tag !== 'pop-handler' || depth > 0) {
+      if (pending.tag === 'push-handler') {
+        depth++
+      } else if (pending.tag === 'pop-handler') {
+        depth--
+      }
+      pending = target.popInstr()
     }
-    // Drop the handler value (and anything the failed computation left), so the
-    // stack is exactly as it was before the with-handler form began.
-    target.values.length = rec.valDepth - 1
+    // Drop the handler, the guarded function, and anything the failed computation
+    // left, so the stack is exactly as it was before the with-handler form began.
+    target.values.length = rec.baseDepth
     // Apply the handler to the error's message string (matching the historical
     // prelude_withHandler contract). Its result becomes the form's value.
     applyFn(rec.handler, [e.message], target, this, e.range ?? Range.none)
@@ -325,6 +335,9 @@ export class Fiber {
         break
       case 'apply':
         isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
+        break
+      case 'check-fn':
+        isMajorStep = CheckFnHandler(currOp, this.currentFrame, this)
         break
       case 'push-handler':
         isMajorStep = PushHandlerHandler(currOp, this.currentFrame, this)
