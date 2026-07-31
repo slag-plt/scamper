@@ -7,7 +7,7 @@ const appVersion = APP_VERSION
 const search = ref('')
 
 function searchForFunction(searchTerm: string) {
-  window.open('/src/app/search/search.html?search=' + encodeURIComponent(searchTerm), '_self')
+  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_self')
 }
 
 const urlParams = new URLSearchParams(window.location.search)

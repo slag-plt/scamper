@@ -1,7 +1,13 @@
+;;; (canvas? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a canvas.
+;;; @category canvas, image, typecheck, predicates, html?
+(define canvas? (js-var "canvas_canvasQ"))
+
 ;;; (html? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.
-;;; @category html typecheck, canvas?
+;;; @category html, typecheck, predicates, canvas?
 (define html? (js-var "html_isElement"))
 
 ;;; (color r b g a) -> string?

@@ -1,3 +1,8 @@
+;;; (html? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is an HTML element.
+(define html? (js-var "html_isElement"))
+
 ;;; (title text) -> html?
 ;;;  text : string?
 ;;; Returns a title element.

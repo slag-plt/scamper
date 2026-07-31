@@ -61,7 +61,7 @@
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is strictly less than `v2`.
-;;; @category math, comparator, , min, max, nan?, >=, >, <=, =
+;;; @category math, comparator, min, max, nan?, >=, >, <=, =
 (define < (js-var "prelude_lt"))
 
 ;;; (<= v1 v2) -> boolean?
@@ -82,7 +82,7 @@
 ;;;  v1 : number?
 ;;;  v2 : number?
 ;;; Returns `#t` if and only `v1` is greater than or equal to `v2`.
-;;; @category math, comparator, min, max, nan? >, <=, <, =
+;;; @category math, comparator, min, max, nan?, >, <=, <, =
 (define >= (js-var "prelude_geq"))
 
 ;;; (= v1 v2) -> boolean?

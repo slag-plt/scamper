@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { runProgram } from '../harness.js'
+import { runProgram } from './harness.js'
 import { canvas_animateWith, canvas_canvasOnclick, canvas_makeCanvas } from '../../src/js/canvas/index.js'
 
 // canvas.scm binds directly to the Canvas2D API. The functions below don't

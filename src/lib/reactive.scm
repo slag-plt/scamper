@@ -1,3 +1,8 @@
+;;; (html? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is an HTML element.
+(define html? (js-var "html_isElement"))
+
 ;;; (button? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a button.
@@ -6,7 +11,7 @@
 ;;; (subscription? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a subscription.
-;;; @category reactive, html? canvas?
+;;; @category reactive, html?, canvas?
 (define subscription? (js-var "reactive_subscriptionQ"))
 
 ;;; (reactive-canvas width height initial view update sub1) -> html?
