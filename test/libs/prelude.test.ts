@@ -1964,10 +1964,10 @@ sample-vector
   ])
 })
 
-// TODO: skipped because L.callScamperFn now always throws "Javascript
-// library functions can no longer call Scamper functions" - JS libs can no
-// longer invoke Scamper closures/functions directly.
-test.skip('with-handler', async () => {
+// with-handler is a reserved-word special form (see the LPM handler stack):
+// the first form applies the guarded function to its trailing arguments; the
+// second raises inside the guard, so the handler runs on the error message.
+test('with-handler', async () => {
   expect(
     await runProgram(`
 (with-handler
