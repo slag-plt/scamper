@@ -8,6 +8,7 @@ import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
 import IdeStatusBar from './IdeStatusBar.vue'
+import type { CursorStatus } from '../codemirror/enclosing-form'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
@@ -49,7 +50,7 @@ const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
-const currentFormPath = ref<string[]>([])
+const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
 
 // ---------- editor context + child component refs ----------
 
@@ -110,8 +111,8 @@ function makeDirty() {
   session.invalidateAllQueries()
 }
 
-function handleFormChange(path: string[]) {
-  currentFormPath.value = path
+function handleCursorChange(status: CursorStatus) {
+  cursorStatus.value = status
 }
 
 // ---------- file operations ----------
@@ -422,7 +423,7 @@ onUnmounted(() => {
       <div class="content-area">
         <Splitpanes>
           <Pane :size="65" class="editor-pane">
-            <CodeMirrorEditor @dirty="makeDirty" @form-change="handleFormChange" />
+            <CodeMirrorEditor @dirty="makeDirty" @cursor-change="handleCursorChange" />
           </Pane>
           <Pane :size="35" class="results-pane">
             <ResultsPane
@@ -437,7 +438,11 @@ onUnmounted(() => {
           </Pane>
         </Splitpanes>
       </div>
-      <IdeStatusBar :path="currentFormPath" />
+      <IdeStatusBar
+        :line="cursorStatus.line"
+        :column="cursorStatus.column"
+        :path="cursorStatus.path"
+      />
     </div>
   </div>
   <div v-show="isLoading" class="loading">

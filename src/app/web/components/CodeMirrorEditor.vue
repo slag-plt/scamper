@@ -12,8 +12,9 @@ import {
   createCodeMirrorEditorAdapter,
 } from '../composables/codemirror-editor-adapter'
 import { useEditorRegistration } from '../composables/editor-context'
+import type { CursorStatus } from '../codemirror/enclosing-form'
 
-const emit = defineEmits<{ dirty: []; formChange: [path: string[]] }>()
+const emit = defineEmits<{ dirty: []; cursorChange: [status: CursorStatus] }>()
 
 const editorRegistration = useEditorRegistration()
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -31,8 +32,8 @@ onMounted(() => {
     () => {
       emit('dirty')
     },
-    (path) => {
-      emit('formChange', path)
+    (status) => {
+      emit('cursorChange', status)
     },
   )
   editorRegistration.register(adapter)

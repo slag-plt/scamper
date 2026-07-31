@@ -4,7 +4,7 @@ import { ensureSyntaxTree } from '@codemirror/language'
 import { parser } from '../../../src/scheme/generated/parser.js'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
 import {
-  enclosingFormPath,
+  cursorStatus,
   formPathAt,
 } from '../../../src/app/web/codemirror/enclosing-form'
 
@@ -71,23 +71,34 @@ describe('formPathAt', () => {
   })
 })
 
-describe('enclosingFormPath', () => {
-  // Exercises the production path: the breadcrumb read off a real CodeMirror
-  // state configured with ScamperSupport, at state.selection.head. In the app
-  // the EditorView drives parsing; here ensureSyntaxTree forces it.
-  test('reads the cursor form from a live editor state', () => {
-    const doc = '(define f (lambda (num) (cond [(pos? num) 10] [else 20])))'
+describe('cursorStatus', () => {
+  // Exercises the production path: status read off a real CodeMirror state
+  // configured with ScamperSupport, at state.selection.head. In the app the
+  // EditorView drives parsing; here ensureSyntaxTree forces it.
+  function statusAt(doc: string, anchor: number) {
     const state = EditorState.create({
       doc,
-      selection: { anchor: doc.indexOf('10') + 1 },
+      selection: { anchor },
       extensions: [ScamperSupport()],
     })
     ensureSyntaxTree(state, doc.length, 5000)
-    expect(enclosingFormPath(state)).toEqual([
-      'define',
-      'lambda',
-      'cond',
-      'number',
-    ])
+    return cursorStatus(state)
+  }
+
+  test('reads breadcrumb plus 1-based line/column on a single line', () => {
+    const doc = '(define f (lambda (num) (cond [(pos? num) 10] [else 20])))'
+    const anchor = doc.indexOf('10') + 1
+    const status = statusAt(doc, anchor)
+    expect(status.path).toEqual(['define', 'lambda', 'cond', 'number'])
+    expect(status.line).toBe(1)
+    expect(status.column).toBe(anchor + 1)
+  })
+
+  test('computes 1-based line/column across multiple lines', () => {
+    const doc = '(define x\n  10)'
+    const status = statusAt(doc, doc.indexOf('10') + 1)
+    expect(status.line).toBe(2)
+    expect(status.column).toBe(4)
+    expect(status.path).toEqual(['define', 'number'])
   })
 })

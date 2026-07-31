@@ -53,17 +53,35 @@ export function formPathAt(tree: Tree, pos: number): string[] {
   const path: string[] = []
   let node: SyntaxNode | null = tree.resolveInner(pos, -1)
   while (node) {
-    const label = FORM_LABELS[node.name]
+    // Record indexing is typed as `string`, but this is a partial map: node
+    // types with no label (wrappers, brackets, keyword tokens) return undefined.
+    const label = FORM_LABELS[node.name] as string | undefined
     if (label !== undefined) path.push(label)
     node = node.parent
   }
   return path.reverse()
 }
 
+/** The cursor's position and enclosing-form breadcrumb, for the status bar. */
+export interface CursorStatus {
+  /** 1-based line number. */
+  line: number
+  /** 1-based column number. */
+  column: number
+  /** Enclosing-form breadcrumb, outermost first (see {@link formPathAt}). */
+  path: string[]
+}
+
 /**
- * The enclosing-form breadcrumb at the cursor, read off the editor's live
- * (incrementally-maintained) syntax tree.
+ * Reads the cursor's line/column and enclosing-form breadcrumb off the editor's
+ * live (incrementally-maintained) syntax tree.
  */
-export function enclosingFormPath(state: EditorState): string[] {
-  return formPathAt(syntaxTree(state), state.selection.main.head)
+export function cursorStatus(state: EditorState): CursorStatus {
+  const head = state.selection.main.head
+  const line = state.doc.lineAt(head)
+  return {
+    line: line.number,
+    column: head - line.from + 1,
+    path: formPathAt(syntaxTree(state), head),
+  }
 }
