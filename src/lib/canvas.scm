@@ -3,6 +3,18 @@
 ;;; Returns `#t` if and only if `v` is a canvas.
 (define canvas? (js-var "canvas_canvasQ"))
 
+;;; (color? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a valid color: a string containing a named color, an `rgb` value, or an `hsv` value.
+;;; @category color, hsv, image, predicates, rgb, typecheck
+(define color? (js-var "image_colorQ"))
+
+;;; (image? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an image.
+;;; @category image, predicates, typecheck
+(define image? (js-var "image_drawingQ"))
+
 ;;; (make-canvas width height) -> canvas?
 ;;;  width : integer?
 ;;;   positive

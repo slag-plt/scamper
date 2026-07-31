@@ -706,7 +706,7 @@
 ;;; @category vectors
 (define vector-ref (js-var "prelude_vectorRef"))
 
-;;; (vector-set! v n x) -> void
+;;; (vector-set! v n x) -> void?
 ;;;  v : vector?
 ;;;  n : integer?
 ;;;   a valid index into v
@@ -715,7 +715,7 @@
 ;;; @category vectors, mutation, predicates
 (define vector-set! (js-var "prelude_vectorSet"))
 
-;;; (vector-fill! v x) -> void
+;;; (vector-fill! v x) -> void?
 ;;;  v : vector?
 ;;;  x : any
 ;;; Sets each element of vector `v` to `x`.
@@ -822,21 +822,21 @@
 ;;; @category vectors
 (define vector-map (js-var "prelude_vectorMap"))
 
-;;; (vector-map! f v) -> void
+;;; (vector-map! f v) -> void?
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Mutates v1 with the results of results of applying `f` to each element of `v1`, ..., `vk` in a element-wise fashion.
 ;;; @category vectors, mutation, predicates
 (define vector-map! (js-var "prelude_vectorMapBang"))
 
-;;; (vector-for-each f v) -> void
+;;; (vector-for-each f v) -> void?
 ;;;  f : procedure?
 ;;;  v : vector?
 ;;; Runs `f` on each element of `v1`, ..., `vk` in a element-wise fashion. `f` takes `k+1` arguments where the first argument is the current index and the remaining arguments are the elements of each vector at that index.
 ;;; @category vectors
 (define vector-for-each (js-var "prelude_vectorForEach"))
 
-;;; (for-range beg end f) -> void
+;;; (for-range beg end f) -> void?
 ;;;  beg : number?
 ;;;  end : number?
 ;;;  f : procedure?
@@ -909,13 +909,13 @@
 ;;; @category other
 (define with-handler (js-var "prelude_withHandler"))
 
-;;; (ignore v) -> void
+;;; (ignore v) -> void?
 ;;;  v : any
 ;;; Suppresses the output of value `v` to the page.
 ;;; @category other
 (define ignore (js-var "prelude_ignore"))
 
-;;; (set-maximum-recursion-depth! n) -> void
+;;; (set-maximum-recursion-depth! n) -> void?
 ;;;  n : any
 ;;;   number? n >= 0
 ;;; Sets the maximum recursion depth of Scamper to n. Note that tail call-optimized functions do _not_ count towards this limit.
@@ -946,7 +946,7 @@
 ;;; @category other
 (define deref (js-var "prelude_deref"))
 
-;;; (ref-set! r v) -> void
+;;; (ref-set! r v) -> void?
 ;;;  r : ref?
 ;;;  v : any
 ;;; Sets the value contained in reference cell `r` to `v`.
@@ -973,19 +973,19 @@
 ;;; @category math, algebra, constants
 (define π (js-var "prelude_piConst"))
 
-;;; (void) -> void
+;;; (void) -> void?
 ;;; The void value.
 ;;; @category constants
 (define void (js-var "prelude_voidConst"))
 
-;;; (with-file filename fn) -> void
+;;; (with-file filename fn) -> void?
 ;;;  filename : string?
 ;;;  fn : procedure?
 ;;; Loads `filename` from browser storage and passes its contents to `fn` as input. The output of `fn` is then rendered to the screen.
 ;;; @category other
 (define with-file (js-var "prelude_withFile"))
 
-;;; (with-file-chooser fn) -> void
+;;; (with-file-chooser fn) -> void?
 ;;;  fn : procedure?
 ;;; Renders a file chooser widget. When the user selects a file, its contents are passed to `fn` as input. The output of `fn` is then rendered to the screen.
 ;;; @category interactive

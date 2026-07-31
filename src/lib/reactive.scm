@@ -3,6 +3,11 @@
 ;;; Returns `#t` if and only if `v` is an HTML element.
 (define html? (js-var "html_isElement"))
 
+;;; (button? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a button.
+(define button? (js-var "html_buttonQ"))
+
 ;;; (subscription? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a subscription.
