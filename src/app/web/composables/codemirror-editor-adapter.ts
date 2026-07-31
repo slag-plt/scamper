@@ -10,6 +10,7 @@ import { syncQueryDecorations } from '../codemirror/extensions/query'
 export function createCodeMirrorEditorAdapter(
   view: EditorView,
   dirtyAction: () => void,
+  onFormChange?: (path: string[]) => void,
 ) {
   let loaded = false
   const scamper = Scamper.getInstance()
@@ -34,14 +35,19 @@ export function createCodeMirrorEditorAdapter(
       view.setState(
         mkFreshEditorState(src, {
           dirtyAction,
+          onFormChange,
           isReadOnly: false,
         }),
       )
+      // setState doesn't fire update listeners; the cursor resets to the top of
+      // the document, so the enclosing form is "top level" (an empty path).
+      onFormChange?.([])
     },
 
     initializeDummyDoc() {
       loaded = false
       view.setState(mkNoFileEditorState())
+      onFormChange?.([])
     },
 
     getCursorLoc() {

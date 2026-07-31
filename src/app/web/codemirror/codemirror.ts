@@ -43,6 +43,7 @@ import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
+import { enclosingFormPath } from './enclosing-form'
 
 export const noLoadedFileText =
   '; Create and/or load a file from the left-hand sidebar!'
@@ -110,10 +111,15 @@ export const editorThemeCompartment = new Compartment()
 export interface EditorStateConfig {
   output?: HTMLElement
   dirtyAction: () => void
+  /** Notified with the enclosing-form breadcrumb whenever the cursor moves. */
+  onFormChange?: (path: string[]) => void
   isReadOnly: boolean
 }
 
 function mkExtensions(config: EditorStateConfig): Extension {
+  // Deduped so cursor movement within the same form doesn't re-notify on every
+  // keystroke. Scoped per state (mkExtensions runs once per state creation).
+  let lastFormKey: string | null = null
   return [
     // basicSetup
     lineNumbers(),
@@ -168,6 +174,14 @@ function mkExtensions(config: EditorStateConfig): Extension {
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         config.dirtyAction()
+      }
+      if (config.onFormChange && (update.selectionSet || update.docChanged)) {
+        const path = enclosingFormPath(update.state)
+        const key = path.join(' ')
+        if (key !== lastFormKey) {
+          lastFormKey = key
+          config.onFormChange(path)
+        }
       }
     }),
     QueryExtension,

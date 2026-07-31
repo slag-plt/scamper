@@ -13,7 +13,7 @@ import {
 } from '../composables/codemirror-editor-adapter'
 import { useEditorRegistration } from '../composables/editor-context'
 
-const emit = defineEmits<{ dirty: [] }>()
+const emit = defineEmits<{ dirty: []; formChange: [path: string[]] }>()
 
 const editorRegistration = useEditorRegistration()
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -26,9 +26,15 @@ onMounted(() => {
     state: mkNoFileEditorState(),
     parent: containerRef.value,
   })
-  adapter = createCodeMirrorEditorAdapter(editorView, () => {
-    emit('dirty')
-  })
+  adapter = createCodeMirrorEditorAdapter(
+    editorView,
+    () => {
+      emit('dirty')
+    },
+    (path) => {
+      emit('formChange', path)
+    },
+  )
   editorRegistration.register(adapter)
 })
 

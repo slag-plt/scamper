@@ -7,6 +7,7 @@ import IdeSidebar from './IdeSidebar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
+import IdeStatusBar from './IdeStatusBar.vue'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
@@ -48,6 +49,7 @@ const files = ref<FileEntry[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
+const currentFormPath = ref<string[]>([])
 
 // ---------- editor context + child component refs ----------
 
@@ -106,6 +108,10 @@ function stopAutosaving() {
 function makeDirty() {
   isDirty.value = true
   session.invalidateAllQueries()
+}
+
+function handleFormChange(path: string[]) {
+  currentFormPath.value = path
 }
 
 // ---------- file operations ----------
@@ -416,7 +422,7 @@ onUnmounted(() => {
       <div class="content-area">
         <Splitpanes>
           <Pane :size="65" class="editor-pane">
-            <CodeMirrorEditor @dirty="makeDirty" />
+            <CodeMirrorEditor @dirty="makeDirty" @form-change="handleFormChange" />
           </Pane>
           <Pane :size="35" class="results-pane">
             <ResultsPane
@@ -431,6 +437,7 @@ onUnmounted(() => {
           </Pane>
         </Splitpanes>
       </div>
+      <IdeStatusBar :path="currentFormPath" />
     </div>
   </div>
   <div v-show="isLoading" class="loading">
