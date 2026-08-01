@@ -43,6 +43,7 @@ import { ScamperSupport } from './extensions/language'
 import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
+import { scamperLspExtensions } from './lsp'
 import {
   cursorStatus,
   dedupeCursorStatus,
@@ -177,6 +178,8 @@ function mkExtensions(config: EditorStateConfig): Extension {
     ]),
     ScamperSupport(),
     makeScamperLinter(config.output),
+    // In-process LSP features (hover docs); see codemirror/lsp.
+    scamperLspExtensions(),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         config.dirtyAction()

@@ -1,0 +1,188 @@
+import type {
+  DidChangeTextDocumentParams,
+  DidCloseTextDocumentParams,
+  DidOpenTextDocumentParams,
+  Hover,
+  HoverParams,
+  InitializeResult,
+  ServerCapabilities,
+  TextDocumentContentChangeEvent,
+} from 'vscode-languageserver-protocol'
+import { hoverAt } from './hover'
+import {
+  computeLineStarts,
+  positionToOffset,
+  rangeFromOffsets,
+} from './positions'
+
+/** A document tracked by the server, with line starts cached for position math. */
+interface TrackedDoc {
+  version: number
+  text: string
+  lineStarts: number[]
+}
+
+/** JSON-RPC method-not-found error code. */
+const METHOD_NOT_FOUND = -32601
+
+/**
+ * An in-process LSP server backed directly by Scamper's language services.
+ * It answers the subset of the protocol the CodeMirror LSP client needs,
+ * synchronously on the main thread -- no worker, wasm, or socket. Messages
+ * are bare JSON-RPC strings (no LSP headers); responses are pushed back out
+ * through the {@link setSend} callback.
+ */
+export class ScamperLanguageServer {
+  private readonly docs = new Map<string, TrackedDoc>()
+  private send: (message: string) => void = () => {
+    /* replaced by the transport via setSend */
+  }
+
+  /** Registers the callback used to deliver responses/notifications to the client. */
+  setSend(send: (message: string) => void): void {
+    this.send = send
+  }
+
+  /** Dispatches a single incoming JSON-RPC message. */
+  handle(message: string): void {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(message)
+    } catch {
+      return
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+      return
+    }
+    const msg = parsed as {
+      id?: number | string | null
+      method?: string
+      params?: unknown
+    }
+    // We only ever receive requests and notifications (we never send requests
+    // to the client), so anything without a method is a stray we can ignore.
+    if (typeof msg.method !== 'string') {
+      return
+    }
+    if (msg.id !== undefined && msg.id !== null) {
+      this.handleRequest(msg.id, msg.method, msg.params)
+    } else {
+      this.handleNotification(msg.method, msg.params)
+    }
+  }
+
+  private handleRequest(
+    id: number | string,
+    method: string,
+    params: unknown,
+  ): void {
+    switch (method) {
+      case 'initialize':
+        this.respond(id, this.initializeResult())
+        break
+      case 'shutdown':
+        this.respond(id, null)
+        break
+      case 'textDocument/hover':
+        this.respond(id, this.hover(params as HoverParams))
+        break
+      default:
+        this.respondError(id, METHOD_NOT_FOUND, `Method not found: ${method}`)
+    }
+  }
+
+  private handleNotification(method: string, params: unknown): void {
+    switch (method) {
+      case 'textDocument/didOpen':
+        this.didOpen(params as DidOpenTextDocumentParams)
+        break
+      case 'textDocument/didChange':
+        this.didChange(params as DidChangeTextDocumentParams)
+        break
+      case 'textDocument/didClose':
+        this.didClose(params as DidCloseTextDocumentParams)
+        break
+      // `initialized`, `exit`, `$/setTrace`, `$/cancelRequest`, etc. need no action.
+    }
+  }
+
+  private initializeResult(): InitializeResult {
+    const capabilities: ServerCapabilities = {
+      // Full sync: each change carries the whole document (see didChange).
+      textDocumentSync: 1,
+      hoverProvider: true,
+    }
+    return { capabilities, serverInfo: { name: 'scamper-lsp', version: '0.1.0' } }
+  }
+
+  private hover(params: HoverParams): Hover | null {
+    const doc = this.docs.get(params.textDocument.uri)
+    if (doc === undefined) {
+      return null
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    const result = hoverAt(doc.text, offset)
+    if (result === null) {
+      return null
+    }
+    return {
+      contents: result.contents,
+      range: rangeFromOffsets(result.from, result.to, doc.lineStarts),
+    }
+  }
+
+  private didOpen(params: DidOpenTextDocumentParams): void {
+    const { uri, text, version } = params.textDocument
+    this.docs.set(uri, track(text, version))
+  }
+
+  private didChange(params: DidChangeTextDocumentParams): void {
+    const existing = this.docs.get(params.textDocument.uri)
+    if (existing === undefined) {
+      return
+    }
+    let text = existing.text
+    for (const change of params.contentChanges) {
+      text = applyChange(text, change)
+    }
+    this.docs.set(
+      params.textDocument.uri,
+      track(text, params.textDocument.version),
+    )
+  }
+
+  private didClose(params: DidCloseTextDocumentParams): void {
+    this.docs.delete(params.textDocument.uri)
+  }
+
+  private respond(id: number | string, result: unknown): void {
+    this.send(JSON.stringify({ jsonrpc: '2.0', id, result }))
+  }
+
+  private respondError(
+    id: number | string,
+    code: number,
+    message: string,
+  ): void {
+    this.send(JSON.stringify({ jsonrpc: '2.0', id, error: { code, message } }))
+  }
+}
+
+function track(text: string, version: number): TrackedDoc {
+  return { version, text, lineStarts: computeLineStarts(text) }
+}
+
+/**
+ * Applies one content change. We advertise Full sync, so changes normally
+ * carry the whole document; the incremental (ranged) branch is a defensive
+ * fallback in case a client sends one anyway.
+ */
+function applyChange(text: string, change: TextDocumentContentChangeEvent): string {
+  if ('range' in change) {
+    const lineStarts = computeLineStarts(text)
+    const from = positionToOffset(change.range.start, lineStarts, text.length)
+    const to = positionToOffset(change.range.end, lineStarts, text.length)
+    return text.slice(0, from) + change.text + text.slice(to)
+  }
+  return change.text
+}
