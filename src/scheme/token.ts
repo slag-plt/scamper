@@ -83,3 +83,26 @@ export function enclosingCallAt(
   const activeParam = args.filter((a) => a.to <= offset).length
   return { name: src.slice(head.from, head.to), activeParam }
 }
+
+/**
+ * Every occurrence of the identifier [name] in [src], as half-open `[from, to)`
+ * spans, via a full walk of the (error-tolerant) Lezer tree. Reserved words are
+ * specialized nodes, so this only matches genuine identifier tokens. Callers
+ * that care about binding (not just spelling) must still resolve each span.
+ */
+export function identifierOccurrences(
+  src: string,
+  name: string,
+): IdentifierToken[] {
+  const cursor = parser.parse(src).cursor()
+  const result: IdentifierToken[] = []
+  do {
+    if (
+      cursor.name === 'Identifier' &&
+      src.slice(cursor.from, cursor.to) === name
+    ) {
+      result.push({ name, from: cursor.from, to: cursor.to })
+    }
+  } while (cursor.next())
+  return result
+}

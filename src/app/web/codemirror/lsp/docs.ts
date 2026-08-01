@@ -13,6 +13,17 @@ export interface DocLookup {
   module?: string
 }
 
+/** Looks up a name in the builtin doc registry only (no user-source reparse). */
+export function findBuiltinDoc(name: string): DocLookup | undefined {
+  for (const [module, entries] of docRegistry) {
+    const doc = entries.get(name)
+    if (doc !== undefined) {
+      return { doc, module }
+    }
+  }
+  return undefined
+}
+
 /**
  * Resolves an identifier name to its documentation: first the builtin doc
  * registry (robust -- no reparse of the user's buffer), then, as a best
@@ -24,11 +35,9 @@ export function lookupFunctionDoc(
   src: string,
   name: string,
 ): DocLookup | undefined {
-  for (const [module, entries] of docRegistry) {
-    const doc = entries.get(name)
-    if (doc !== undefined) {
-      return { doc, module }
-    }
+  const builtin = findBuiltinDoc(name)
+  if (builtin !== undefined) {
+    return builtin
   }
   const { program } = tokenizeAndParse(src)
   if (program === undefined) {

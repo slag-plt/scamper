@@ -1,13 +1,25 @@
 import type { Extension } from '@codemirror/state'
+import { keymap } from '@codemirror/view'
 import {
   LSPClient,
+  closeReferencePanel,
+  findReferences,
   hoverTooltips,
+  jumpToDefinition,
   serverCompletion,
   serverDiagnostics,
   signatureHelp,
 } from '@codemirror/lsp-client'
 import { ScamperLanguageServer } from './server'
 import { createInProcessTransport } from './transport'
+
+// Navigation keybindings. Deliberately not the library defaults (F12 /
+// Shift-F12), which browsers hijack for devtools.
+const navigationKeymap = keymap.of([
+  { key: 'Alt-.', run: jumpToDefinition, preventDefault: true },
+  { key: 'Shift-Alt-.', run: findReferences, preventDefault: true },
+  { key: 'Escape', run: closeReferencePanel },
+])
 
 // The editor shows one Scamper file at a time, so a single stable URI is
 // enough: switching files closes and reopens this URI with the new contents.
@@ -33,6 +45,7 @@ function getClient(): LSPClient {
         serverCompletion(),
         signatureHelp(),
         serverDiagnostics(),
+        navigationKeymap,
       ],
     }).connect(createInProcessTransport(server))
   }
@@ -41,7 +54,8 @@ function getClient(): LSPClient {
 
 /**
  * CodeMirror extension connecting the editor to the in-process Scamper
- * language server: hover docs, completion, signature help, and diagnostics.
+ * language server: hover docs, completion, signature help, diagnostics,
+ * goto-definition (Alt-.), and find-references (Shift-Alt-.).
  */
 export function scamperLspExtensions(): Extension {
   return getClient().plugin(SCAMPER_DOC_URI, SCAMPER_LANGUAGE_ID)

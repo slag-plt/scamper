@@ -1,12 +1,15 @@
 import type {
   CompletionItem,
   CompletionParams,
+  DefinitionParams,
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   Hover,
   HoverParams,
   InitializeResult,
+  Location,
+  ReferenceParams,
   ServerCapabilities,
   SignatureHelp,
   SignatureHelpParams,
@@ -15,6 +18,8 @@ import type {
 import { hoverAt } from './hover'
 import { completionsFor } from './completion'
 import { signatureHelpAt } from './signature'
+import { definitionAt } from './definition'
+import { referencesAt } from './references'
 import { computeDiagnostics } from './diagnostics'
 import {
   computeLineStarts,
@@ -29,8 +34,9 @@ interface TrackedDoc {
   lineStarts: number[]
 }
 
-/** JSON-RPC method-not-found error code. */
+/** JSON-RPC error codes. */
 const METHOD_NOT_FOUND = -32601
+const INTERNAL_ERROR = -32603
 
 /**
  * An in-process LSP server backed directly by Scamper's language services.
@@ -94,10 +100,16 @@ export class ScamperLanguageServer {
         this.respond(id, this.hover(params as HoverParams))
         break
       case 'textDocument/completion':
-        this.respond(id, this.completion(params as CompletionParams))
+        this.respondAsync(id, this.completion(params as CompletionParams))
         break
       case 'textDocument/signatureHelp':
         this.respond(id, this.signatureHelp(params as SignatureHelpParams))
+        break
+      case 'textDocument/definition':
+        this.respondAsync(id, this.definition(params as DefinitionParams))
+        break
+      case 'textDocument/references':
+        this.respondAsync(id, this.references(params as ReferenceParams))
         break
       default:
         this.respondError(id, METHOD_NOT_FOUND, `Method not found: ${method}`)
@@ -126,6 +138,8 @@ export class ScamperLanguageServer {
       hoverProvider: true,
       completionProvider: { resolveProvider: false },
       signatureHelpProvider: { triggerCharacters: ['(', ' '] },
+      definitionProvider: true,
+      referencesProvider: true,
     }
     return { capabilities, serverInfo: { name: 'scamper-lsp', version: '0.1.0' } }
   }
@@ -146,9 +160,13 @@ export class ScamperLanguageServer {
     }
   }
 
-  private completion(params: CompletionParams): CompletionItem[] {
+  private async completion(params: CompletionParams): Promise<CompletionItem[]> {
     const doc = this.docs.get(params.textDocument.uri)
-    return doc === undefined ? [] : completionsFor(doc.text)
+    if (doc === undefined) {
+      return []
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    return completionsFor(doc.text, offset)
   }
 
   private signatureHelp(params: SignatureHelpParams): SignatureHelp | null {
@@ -158,6 +176,35 @@ export class ScamperLanguageServer {
     }
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
     return signatureHelpAt(doc.text, offset)
+  }
+
+  private async definition(params: DefinitionParams): Promise<Location | null> {
+    const doc = this.docs.get(params.textDocument.uri)
+    if (doc === undefined) {
+      return null
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    const span = await definitionAt(doc.text, offset)
+    if (span === null) {
+      return null
+    }
+    return {
+      uri: params.textDocument.uri,
+      range: rangeFromOffsets(span.from, span.to, doc.lineStarts),
+    }
+  }
+
+  private async references(params: ReferenceParams): Promise<Location[]> {
+    const doc = this.docs.get(params.textDocument.uri)
+    if (doc === undefined) {
+      return []
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    const spans = await referencesAt(doc.text, offset)
+    return spans.map((span) => ({
+      uri: params.textDocument.uri,
+      range: rangeFromOffsets(span.from, span.to, doc.lineStarts),
+    }))
   }
 
   private didOpen(params: DidOpenTextDocumentParams): void {
@@ -204,6 +251,18 @@ export class ScamperLanguageServer {
 
   private respond(id: number | string, result: unknown): void {
     this.send(JSON.stringify({ jsonrpc: '2.0', id, result }))
+  }
+
+  /** Responds once [result] settles; a rejection becomes a JSON-RPC error. */
+  private respondAsync(id: number | string, result: Promise<unknown>): void {
+    result.then(
+      (value) => {
+        this.respond(id, value)
+      },
+      (err: unknown) => {
+        this.respondError(id, INTERNAL_ERROR, err instanceof Error ? err.message : String(err))
+      },
+    )
   }
 
   private respondError(

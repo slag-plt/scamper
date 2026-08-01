@@ -122,7 +122,7 @@ describe('ScamperLanguageServer', () => {
 
   test('reports method-not-found for unsupported requests', () => {
     const { request, reply } = drive()
-    request(9, 'textDocument/definition', {})
+    request(9, 'textDocument/rename', {})
     expect(reply(9).error?.code).toBe(-32601)
   })
 })

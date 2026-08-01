@@ -6,24 +6,38 @@ import { ScamperLanguageServer } from '../../../src/app/web/codemirror/lsp/serve
 // docRegistry is populated by the global test setup (initializeLibs()).
 
 describe('completionsFor', () => {
-  test('offers prelude bindings', () => {
-    const labels = completionsFor('(display )').map((i) => i.label)
+  const labelsOf = async (src: string, offset: number) =>
+    (await completionsFor(src, offset)).map((i) => i.label)
+
+  test('offers prelude bindings', async () => {
+    const labels = await labelsOf('', 0)
     expect(labels).toContain('car')
     expect(labels).toContain('length')
   })
 
-  test('includes the program\'s own top-level definitions', () => {
-    const labels = completionsFor('(define my-thing 42)\n').map((i) => i.label)
-    expect(labels).toContain('my-thing')
+  test('includes the program\'s own top-level definitions', async () => {
+    expect(await labelsOf('(define my-thing 42)\n', 0)).toContain('my-thing')
   })
 
-  test('adds bindings from an imported module', () => {
-    const base = completionsFor('').length
-    expect(completionsFor('(import image)').length).toBeGreaterThan(base)
+  test('includes locals visible at the cursor', async () => {
+    // Cursor on the lambda body `x`, where the parameter is in scope.
+    const src = '(lambda (x) x)'
+    expect(await labelsOf(src, src.length - 2)).toContain('x')
   })
 
-  test('carries a signature detail on documented items', () => {
-    const car = completionsFor('').find((i) => i.label === 'car')
+  test('excludes internal ## machinery names', async () => {
+    expect((await labelsOf('', 0)).some((l) => l.includes('##'))).toBe(false)
+  })
+
+  test('adds bindings from an imported module', async () => {
+    const base = (await completionsFor('', 0)).length
+    expect((await completionsFor('(import image)', 14)).length).toBeGreaterThan(
+      base,
+    )
+  })
+
+  test('carries a signature detail on documented items', async () => {
+    const car = (await completionsFor('', 0)).find((i) => i.label === 'car')
     expect(car?.detail).toContain('car')
   })
 })
@@ -75,7 +89,8 @@ describe('ScamperLanguageServer: completion & signature help', () => {
     )
     const reply = (id: number) =>
       sent.find((m) => m.id === id) as { result: any }
-    return { request, reply }
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 20))
+    return { request, reply, flush }
   }
 
   test('advertises completion and signature-help capabilities', () => {
@@ -85,12 +100,13 @@ describe('ScamperLanguageServer: completion & signature help', () => {
     expect(caps.signatureHelpProvider).toBeDefined()
   })
 
-  test('answers a completion request', () => {
-    const { request, reply } = serve('(display )')
+  test('answers a completion request', async () => {
+    const { request, reply, flush } = serve('(+ 1 2)')
     request(2, 'textDocument/completion', {
       textDocument: { uri: 'inmemory://main.scm' },
-      position: { line: 0, character: 9 },
+      position: { line: 0, character: 3 },
     })
+    await flush()
     const labels = (reply(2).result as { label: string }[]).map((i) => i.label)
     expect(labels).toContain('car')
   })

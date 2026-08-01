@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
-import { enclosingCallAt, identifierAt } from '../../src/scheme/token'
+import {
+  enclosingCallAt,
+  identifierAt,
+  identifierOccurrences,
+} from '../../src/scheme/token'
 
 describe('identifierAt', () => {
   test('finds an identifier in application-head position', () => {
@@ -73,5 +77,18 @@ describe('enclosingCallAt', () => {
   test('returns undefined outside any call', () => {
     expect(enclosingCallAt('42', 1)).toBeUndefined()
     expect(enclosingCallAt('x', 0)).toBeUndefined()
+  })
+})
+
+describe('identifierOccurrences', () => {
+  test('finds every occurrence of a name', () => {
+    const occ = identifierOccurrences('(+ x (f x x))', 'x')
+    expect(occ.length).toBe(3)
+    expect(occ.every((o) => o.name === 'x')).toBe(true)
+  })
+
+  test('matches whole tokens only, not substrings', () => {
+    // `xs` is a different token from `x`.
+    expect(identifierOccurrences('(xs x)', 'x').length).toBe(1)
   })
 })
