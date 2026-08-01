@@ -65,11 +65,19 @@ class Ctx {
   }
 }
 
+// Collects a node's meaningful children for AST construction. LineComment is a
+// @skip token, so Lezer may attach one anywhere between other children -- e.g.
+// an inline comment inside an application, (+ 1 ; note\n 2). Comments carry no
+// AST meaning here (docstrings are recovered separately via prevSibling, see
+// precedingComments), so they're dropped to keep positional access (cs[0], ...)
+// and expression-list iteration stable regardless of where a comment lands.
 function children(node: SyntaxNode): SyntaxNode[] {
   const result: SyntaxNode[] = []
   let child = node.firstChild
   while (child) {
-    result.push(child)
+    if (child.type.name !== 'LineComment') {
+      result.push(child)
+    }
     child = child.nextSibling
   }
   return result
@@ -580,9 +588,6 @@ export function parseProgramFromSource(
   const ctx = new Ctx(src, computeLineStarts(src), diagnostics)
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
-    if (node.type.name === 'LineComment') {
-      continue
-    }
     // N.B., a stray error node here (e.g. an extra unmatched closing paren)
     // isn't part of any statement at all -- there's nothing to attach a
     // placeholder statement to, so just record the error and move on.
