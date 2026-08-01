@@ -129,7 +129,7 @@ describe('scope checking', () => {
       ['self-recursive define', '(define f (lambda (n) (f n)))'],
       ['lambda parameter', '(lambda (x) x)'],
       ['lambda with several parameters', '(lambda (x y z) (+ x (+ y z)))'],
-      ['lambda with a rest parameter', '(lambda (x . rest) rest)'],
+      ['lambda with a rest parameter', '(lambda (x & rest) rest)'],
       ['nullary lambda', '(lambda () 0)'],
       ['let binding', '(let ([x 1]) x)'],
       ['let with independent bindings', '(let ([x 1] [y 2]) (+ x y))'],
@@ -258,7 +258,7 @@ describe('scope checking', () => {
       )
     })
     test('a parameter colliding with the rest parameter', async () => {
-      expect(await scopeErrors('(lambda (x . x) x)')).toContain(
+      expect(await scopeErrors('(lambda (x & x) x)')).toContain(
         "Duplicate variable 'x' encountered in binding list",
       )
     })
@@ -487,7 +487,7 @@ describe('scope tree', () => {
     })
     test('a rest parameter is visible in the body', async () => {
       const names = await visibleAt(
-        '(define f (lambda (x . rest) rest))',
+        '(define f (lambda (x & rest) rest))',
         'rest',
         1,
       )

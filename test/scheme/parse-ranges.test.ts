@@ -203,7 +203,7 @@ describe('lambda', () => {
     assertSpan(asExp(lam.body, 'id').range, src, 'x', 1)
   })
   test('rest parameter', () => {
-    const src = '(lambda (x . rest) rest)'
+    const src = '(lambda (x & rest) rest)'
     const lam = asExp(parseExp(src), 'lam')
     expect(lam.params.map((p) => p.name)).toEqual(['x'])
     assertSpan(lam.params[0].range, src, 'x')

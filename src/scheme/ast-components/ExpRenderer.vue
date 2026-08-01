@@ -15,7 +15,7 @@ switch (e.tag) {
     break
   case 'lam':
     if (e.restParam) {
-      args = ['lambda', ...e.params.map((p) => p.name), '.', e.restParam.name, e.body]
+      args = ['lambda', ...e.params.map((p) => p.name), '&', e.restParam.name, e.body]
     } else {
       args = ['lambda', ...e.params.map((p) => p.name), e.body]
     }

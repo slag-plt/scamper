@@ -43,7 +43,7 @@ export function functionDocSignature(doc: FunctionDoc): string {
   }
   const argNames = [
     ...doc.params.map((p) => p.name),
-    ...(doc.restParam ? [`. ${doc.restParam.name}`] : []),
+    ...(doc.restParam ? [`& ${doc.restParam.name}`] : []),
   ].join(' ')
   const paramLine = (p: FunctionDoc['params'][number]) =>
     `  ${p.name}: ${predToString(p.predicate)}${p.description ? `\n    ${p.description}` : ''}`

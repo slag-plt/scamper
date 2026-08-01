@@ -14,7 +14,7 @@ simplearglist {
 
 arglist {
   simplearglist |
-  paren<Identifier+ RestDot Identifier>
+  paren<Identifier* Amp Identifier>
 }
 
 binding {
@@ -85,18 +85,19 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
     ) (("e" | "E") $[+\-]? $[0-9]+)?
   }
 
-  // N.B., mirrors reader.ts's tokenizer, which treats any run of characters
-  // not delimited by whitespace, brackets, a string quote, or an unescaped
-  // "'"/";" as an atom (disambiguated into number/boolean/char/identifier
-  // afterward). This is deliberately permissive so that identifiers like
-  // ">", "<=", "null?", and "set!" tokenize correctly.
-  Identifier { ![ \t\n\r()\[\]{}'";.]+ }
+  // N.B., treats any run of characters not delimited by whitespace, brackets, a
+  // string quote, an unescaped "'"/";", "." (number/rest disambiguation), or "&"
+  // (the rest-parameter marker below) as an atom (disambiguated into
+  // number/boolean/char/identifier afterward). This is deliberately permissive
+  // so that identifiers like ">", "<=", "null?", and "set!" tokenize correctly.
+  Identifier { ![ \t\n\r()\[\]{}'";.&]+ }
 
-  // The "." separating a lambda's fixed parameters from its rest parameter,
-  // e.g. (lambda (x y . z) ...). Named (rather than an inline anonymous
-  // literal) so it shows up in the parse tree and arglist can tell a rest
-  // parameter apart from an ordinary trailing identifier.
-  RestDot { "." }
+  // The "&" separating a lambda's fixed parameters from its rest parameter,
+  // e.g. (lambda (x y & z) ...), or introducing a rest-only list, e.g.
+  // (lambda (& z) ...). Clojure-style. Named (rather than an inline anonymous
+  // literal) so it shows up in the parse tree and arglist can tell the rest
+  // marker apart from an ordinary identifier.
+  Amp { "&" }
 
   String { '"' (!["\\] | "\\" _)* '"' }
 

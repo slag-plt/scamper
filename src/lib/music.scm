@@ -82,13 +82,13 @@
 ;;; @category constants, interactive, music, sound, composition?, empty, instrument, mod, note, note-event, note-freq, play-composition, repeat, rest
 (define trigger (js-var "music_trigger"))
 
-;;; (par . comp1) -> composition?
+;;; (par & comp1) -> composition?
 ;;;  comp1 : composition?
 ;;; Creates a new composition that plays `comp1`, `comp2`, ..., in parallel.
 ;;; @category music, sound, pickup, seq
 (define par (js-var "music_par"))
 
-;;; (seq . comp1) -> composition?
+;;; (seq & comp1) -> composition?
 ;;;  comp1 : composition?
 ;;; Creates a new composition that plays `comp1`, `comp2`, ..., in sequence.
 ;;; @category music, sound, par, pickup

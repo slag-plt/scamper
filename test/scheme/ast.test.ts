@@ -30,7 +30,11 @@ describe('expToString', () => {
     ).toBe('(lambda (x y) x)')
     expect(
       A.expToString(A.mkLam([A.mkId('x')], A.mkId('x', anyRange), anyRange, A.mkId('rest'))),
-    ).toBe('(lambda (x . rest) x)')
+    ).toBe('(lambda (x & rest) x)')
+    // Rest-only (no fixed parameters): (lambda (& rest) rest).
+    expect(
+      A.expToString(A.mkLam([], A.mkId('rest', anyRange), anyRange, A.mkId('rest'))),
+    ).toBe('(lambda (& rest) rest)')
   })
 
   test('let', () => {

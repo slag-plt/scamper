@@ -27,7 +27,7 @@
 ;;; @category regexes, rex-concat, rex-repeat
 (define rex-repeat-0 (js-var "rex_rexRepeat0"))
 
-;;; (rex-concat . xs) -> rex?
+;;; (rex-concat & xs) -> rex?
 ;;;  xs : rex?
 ;;; Returns a regex that matches the concatenation of the regexes `rs` in order.
 ;;; @category regexes, rex-repeat, rex-repeat-o
@@ -57,7 +57,7 @@
 ;;; @category regexes, rex-any-char, rex-char-antiset, rex-char-set
 (define rex-char-range (js-var "rex_rexCharRange"))
 
-;;; (rex-any-of . xs) -> rex?
+;;; (rex-any-of & xs) -> rex?
 ;;;  xs : rex?
 ;;; Returns a regex that matches any one of the regexes `rs`.
 ;;; @category regexes, rex-optional
