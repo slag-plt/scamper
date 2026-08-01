@@ -31,6 +31,24 @@ describe('in-process LSP transport', () => {
       })
       expect(hover).not.toBeNull()
       expect(hover?.contents.value).toContain('car')
+
+      const completions = await client.request<unknown, { label: string }[]>(
+        'textDocument/completion',
+        {
+          textDocument: { uri: 'inmemory://main.scm' },
+          position: { line: 0, character: 14 },
+        },
+      )
+      expect(completions.some((c) => c.label === 'car')).toBe(true)
+
+      const sig = await client.request<
+        unknown,
+        { signatures: { label: string }[] } | null
+      >('textDocument/signatureHelp', {
+        textDocument: { uri: 'inmemory://main.scm' },
+        position: { line: 0, character: 1 },
+      })
+      expect(sig?.signatures[0].label).toContain('car')
     } finally {
       client.disconnect()
     }

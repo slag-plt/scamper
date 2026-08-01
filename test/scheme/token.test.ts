@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { identifierAt } from '../../src/scheme/token'
+import { enclosingCallAt, identifierAt } from '../../src/scheme/token'
 
 describe('identifierAt', () => {
   test('finds an identifier in application-head position', () => {
@@ -34,5 +34,44 @@ describe('identifierAt', () => {
   test('does not match reserved words (specialized grammar nodes)', () => {
     expect(identifierAt('(define x 1)', 1)).toBeUndefined() // 'define'
     expect(identifierAt('(lambda (x) x)', 1)).toBeUndefined() // 'lambda'
+  })
+})
+
+describe('enclosingCallAt', () => {
+  test('finds the callee and the active argument slot', () => {
+    const src = '(map f lst)'
+    expect(enclosingCallAt(src, src.indexOf('f'))).toEqual({
+      name: 'map',
+      activeParam: 0,
+    })
+    expect(enclosingCallAt(src, src.indexOf('lst'))).toEqual({
+      name: 'map',
+      activeParam: 1,
+    })
+  })
+
+  test('reports the next slot once an argument is complete', () => {
+    // Cursor just before the close paren, after "f " -> second slot.
+    expect(enclosingCallAt('(cons f )', 8)).toEqual({
+      name: 'cons',
+      activeParam: 1,
+    })
+  })
+
+  test('uses the innermost call for nested applications', () => {
+    const src = '(map (f x) lst)'
+    expect(enclosingCallAt(src, src.indexOf('x'))).toEqual({
+      name: 'f',
+      activeParam: 0,
+    })
+  })
+
+  test('works on an unclosed call', () => {
+    expect(enclosingCallAt('(map f', 5)?.name).toBe('map')
+  })
+
+  test('returns undefined outside any call', () => {
+    expect(enclosingCallAt('42', 1)).toBeUndefined()
+    expect(enclosingCallAt('x', 0)).toBeUndefined()
   })
 })

@@ -1,5 +1,10 @@
 import type { Extension } from '@codemirror/state'
-import { LSPClient, hoverTooltips } from '@codemirror/lsp-client'
+import {
+  LSPClient,
+  hoverTooltips,
+  serverCompletion,
+  signatureHelp,
+} from '@codemirror/lsp-client'
 import { ScamperLanguageServer } from './server'
 import { createInProcessTransport } from './transport'
 
@@ -18,18 +23,20 @@ let client: LSPClient | undefined
 function getClient(): LSPClient {
   if (client === undefined) {
     const server = new ScamperLanguageServer()
-    client = new LSPClient().connect(createInProcessTransport(server))
+    client = new LSPClient({
+      // Editor features; each stays dormant until the server advertises the
+      // matching capability (see ScamperLanguageServer). client.plugin() below
+      // pulls these into the editor.
+      extensions: [hoverTooltips(), serverCompletion(), signatureHelp()],
+    }).connect(createInProcessTransport(server))
   }
   return client
 }
 
 /**
- * CodeMirror extensions that connect the editor to the in-process Scamper
- * language server. Phase 1 provides hover documentation; further features
- * (completion, goto-definition, ...) are added here as the server advertises
- * the matching capabilities.
+ * CodeMirror extension connecting the editor to the in-process Scamper
+ * language server: hover docs, completion, and signature help.
  */
 export function scamperLspExtensions(): Extension {
-  const c = getClient()
-  return [c.plugin(SCAMPER_DOC_URI, SCAMPER_LANGUAGE_ID), hoverTooltips()]
+  return getClient().plugin(SCAMPER_DOC_URI, SCAMPER_LANGUAGE_ID)
 }

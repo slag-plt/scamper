@@ -1,4 +1,6 @@
 import type {
+  CompletionItem,
+  CompletionParams,
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
@@ -6,9 +8,13 @@ import type {
   HoverParams,
   InitializeResult,
   ServerCapabilities,
+  SignatureHelp,
+  SignatureHelpParams,
   TextDocumentContentChangeEvent,
 } from 'vscode-languageserver-protocol'
 import { hoverAt } from './hover'
+import { completionsFor } from './completion'
+import { signatureHelpAt } from './signature'
 import {
   computeLineStarts,
   positionToOffset,
@@ -86,6 +92,12 @@ export class ScamperLanguageServer {
       case 'textDocument/hover':
         this.respond(id, this.hover(params as HoverParams))
         break
+      case 'textDocument/completion':
+        this.respond(id, this.completion(params as CompletionParams))
+        break
+      case 'textDocument/signatureHelp':
+        this.respond(id, this.signatureHelp(params as SignatureHelpParams))
+        break
       default:
         this.respondError(id, METHOD_NOT_FOUND, `Method not found: ${method}`)
     }
@@ -111,6 +123,8 @@ export class ScamperLanguageServer {
       // Full sync: each change carries the whole document (see didChange).
       textDocumentSync: 1,
       hoverProvider: true,
+      completionProvider: { resolveProvider: false },
+      signatureHelpProvider: { triggerCharacters: ['(', ' '] },
     }
     return { capabilities, serverInfo: { name: 'scamper-lsp', version: '0.1.0' } }
   }
@@ -129,6 +143,20 @@ export class ScamperLanguageServer {
       contents: result.contents,
       range: rangeFromOffsets(result.from, result.to, doc.lineStarts),
     }
+  }
+
+  private completion(params: CompletionParams): CompletionItem[] {
+    const doc = this.docs.get(params.textDocument.uri)
+    return doc === undefined ? [] : completionsFor(doc.text)
+  }
+
+  private signatureHelp(params: SignatureHelpParams): SignatureHelp | null {
+    const doc = this.docs.get(params.textDocument.uri)
+    if (doc === undefined) {
+      return null
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    return signatureHelpAt(doc.text, offset)
   }
 
   private didOpen(params: DidOpenTextDocumentParams): void {
