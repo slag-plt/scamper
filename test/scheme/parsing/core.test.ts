@@ -185,6 +185,70 @@ describe('lezer-bridge parsing', () => {
     ])
   })
 
+  test('inline line comments are skipped anywhere, not just at top level (#302)', () => {
+    // N.B., LineComment is a @skip token, so Lezer can attach one between any
+    // two children. Regression: comments inside a form used to reach the AST
+    // builder and throw "Unexpected expression node: LineComment".
+    expectParses("(+ 1 ; this shouldn't be an error\n   1)")
+    expectParses('(+ 1\n ; own-line comment\n 1)')
+    expectParses('(define x ; the value\n 5)')
+    expectParses('(let ([x 1] ; binding\n [y 2]) (+ x y))')
+    expectParses('(cond [(> 1 0) ; yes\n 1] [else 2])')
+    expectParses('(list 1 2 ; trailing before close paren\n)')
+  })
+
+  test('an inline comment does not shift positional parsing (#302)', () => {
+    // The comment between 1 and 2 must not become a phantom argument.
+    const { prog, errors } = parse('(+ 1 ; note\n 2)')
+    expect(errors).toEqual([])
+    const stmt = prog[0]
+    expect(stmt.tag).toBe('stmtexp')
+    if (stmt.tag !== 'stmtexp') return
+    expect(stmt.expr.tag).toBe('app')
+    if (stmt.expr.tag !== 'app') return
+    expect(stmt.expr.args.length).toBe(2)
+  })
+
+  test('an inline comment inside raw data (quote/vector) is dropped, not turned into a phantom element (#302)', () => {
+    // N.B., quoted lists and vector literals are built by nodeToRawValue, which
+    // also reads children(). Pre-fix this path failed *silently*: the comment
+    // became a phantom '() / undefined element rather than throwing.
+    const q = parse("'(1 2 ; note\n 3)")
+    expect(q.errors).toEqual([])
+    const qStmt = q.prog[0]
+    expect(qStmt.tag).toBe('stmtexp')
+    if (qStmt.tag !== 'stmtexp' || qStmt.expr.tag !== 'quote') return
+    const elems: unknown[] = []
+    let cur = qStmt.expr.value as { head: unknown; tail: unknown } | null
+    while (cur !== null) {
+      elems.push(cur.head)
+      cur = cur.tail as { head: unknown; tail: unknown } | null
+    }
+    expect(elems).toEqual([1, 2, 3])
+
+    const v = parse('(display [1 2 ; note\n 3])')
+    expect(v.errors).toEqual([])
+    const vStmt = v.prog[0]
+    expect(vStmt.tag).toBe('display')
+    if (vStmt.tag !== 'display' || vStmt.value.tag !== 'lit') return
+    expect(vStmt.value.value).toEqual([1, 2, 3])
+  })
+
+  test("a define's docstring is still captured when its body has an inline comment (#302)", () => {
+    const src = [
+      ';;; (add1 x) -> number?',
+      '(define add1 (lambda (x) ; add one\n (+ x 1)))',
+    ].join('\n')
+    const { prog, errors } = parse(src)
+    expect(errors).toEqual([])
+    const stmt = prog[0]
+    expect(stmt.tag).toBe('define')
+    if (stmt.tag !== 'define') return
+    expect(stmt.docComments?.map((c) => c.line)).toEqual([
+      ';;; (add1 x) -> number?',
+    ])
+  })
+
   test('every reserved word is exercised by at least one sample above', () => {
     // N.B., a lightweight guard against silently losing coverage of a form
     // as reservedWords grows.
