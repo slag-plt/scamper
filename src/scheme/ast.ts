@@ -6,6 +6,16 @@ export interface Tagged {
 }
 export interface Node {
   range: L.Range
+  // Source comments attached to this node (issue #304). Populated only on demand
+  // (see attachComments in comments.ts) -- normal compilation leaves them unset,
+  // so the compiler pays nothing. Structural equality ignores them.
+  //   leading:  comments on their own line(s) immediately before the node.
+  //   trailing: a comment on the same line, after the node.
+  //   dangling: comments inside a form with no following child (e.g. before its
+  //             closing paren, or the whole content of a comment-only program).
+  leading?: Comment[]
+  trailing?: Comment[]
+  dangling?: Comment[]
 }
 
 /** A single line comment, tracked so docstrings can be reassembled from it. */
