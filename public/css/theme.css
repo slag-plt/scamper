@@ -38,6 +38,11 @@
   --accent: light-dark(#008000, #238636);
   --accent-fg: light-dark(#ffffff, #ffffff);
 
+  /* Danger (destructive actions, e.g. a delete confirm button). Reds chosen so
+   * white text clears WCAG AA (4.5:1): #c9352b is ~4.7:1, #b62a20 ~5.6:1. */
+  --danger: light-dark(#c9352b, #b62a20);
+  --danger-fg: light-dark(#ffffff, #ffffff);
+
   /* Modals */
   --modal-bg: light-dark(#fefefe, #161b22);
   --modal-border: light-dark(#888888, #30363d);

@@ -50,8 +50,6 @@ describe('IDE does not overwrite open file after editor reset (HMR split-brain)'
   })
 
   test('autosave does not persist the unloaded placeholder over real file content', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue(FILENAME)
-
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await flushPromises()
@@ -59,6 +57,13 @@ describe('IDE does not overwrite open file after editor reset (HMR split-brain)'
       fireEvent.click(
         getByRole(document.body, 'button', { name: 'Create file' }),
       )
+      // Fill in the new-file modal that replaced window.prompt (#305).
+      const nameInput = await findByRole(document.body, 'textbox', {
+        name: 'Enter a file name for your new program.',
+      })
+      fireEvent.input(nameInput, { target: { value: FILENAME } })
+      await flushPromises()
+      fireEvent.click(getByRole(document.body, 'button', { name: 'OK' }))
       await findByRole(document.body, 'button', {
         name: `Open ${FILENAME}`,
       })

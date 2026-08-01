@@ -49,8 +49,6 @@ describe('consecutive runs replace results pane', () => {
   })
 
   test('Run replaces results from the previous run', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('regression.scm')
-
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await flushPromises()
@@ -58,6 +56,13 @@ describe('consecutive runs replace results pane', () => {
       fireEvent.click(
         getByRole(document.body, 'button', { name: 'Create file' }),
       )
+      // Fill in the new-file modal that replaced window.prompt (#305).
+      const nameInput = await findByRole(document.body, 'textbox', {
+        name: 'Enter a file name for your new program.',
+      })
+      fireEvent.input(nameInput, { target: { value: 'regression.scm' } })
+      await flushPromises()
+      fireEvent.click(getByRole(document.body, 'button', { name: 'OK' }))
       await findByRole(document.body, 'button', { name: 'Open regression.scm' })
       const editor = getByRole(document.body, 'textbox', {
         name: 'Source code',
