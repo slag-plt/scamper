@@ -49,7 +49,7 @@ export default defineConfig(
             'scripts/generate-lib-sources.mjs',
             'scripts/vite-plugin-lib-sources.mjs',
             'scripts/vite-plugin-flatten-html.mjs',
-            'scripts/vite-plugin-dev-root-redirect.mjs',
+            'scripts/vite-plugin-dev-flat-html.mjs',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
