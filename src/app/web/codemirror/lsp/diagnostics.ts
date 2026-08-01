@@ -11,10 +11,9 @@ const SEVERITY_ERROR = 1
 const SEVERITY_WARNING = 2
 
 /**
- * Runs the same analysis as the native CodeMirror linter
- * (parse -> expand -> scope-check) and returns the results as LSP diagnostics.
- * Kept deliberately identical to extensions/linter.ts so the two paths differ
- * only in transport, not in content.
+ * Runs the standard analysis (parse -> expand -> scope-check) and returns the
+ * results as LSP diagnostics, pushed to the editor via publishDiagnostics.
+ * This is the sole diagnostics source (it replaced the CodeMirror linter).
  */
 export async function computeDiagnostics(
   src: string,
@@ -42,7 +41,7 @@ export async function computeDiagnostics(
 
 function toLspDiagnostic(d: ScamperDiagnostic, lineStarts: number[]): Diagnostic {
   const from = d.range === undefined ? 0 : d.range.begin.idx
-  // +1 to cover the token's right edge, matching the native linter (see linter.ts).
+  // +1 to cover the token's right edge (Scamper ranges are end-inclusive).
   const to = d.range === undefined ? 0 : d.range.end.idx + 1
   return {
     range: rangeFromOffsets(from, to, lineStarts),

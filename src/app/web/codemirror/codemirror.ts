@@ -40,10 +40,9 @@ import {
 } from '@codemirror/autocomplete'
 import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { ScamperSupport } from './extensions/language'
-import makeScamperLinter from './extensions/linter'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
-import { lspDiagnosticsEnabled, scamperLspExtensions } from './lsp'
+import { scamperLspExtensions } from './lsp'
 import {
   cursorStatus,
   dedupeCursorStatus,
@@ -114,7 +113,6 @@ export function editorThemeExtension(theme: Theme): Extension {
 export const editorThemeCompartment = new Compartment()
 
 export interface EditorStateConfig {
-  output?: HTMLElement
   dirtyAction: () => void
   /** Notified with the cursor's status whenever the cursor moves or edits. */
   onCursorChange?: (status: CursorStatus) => void
@@ -177,11 +175,8 @@ function mkExtensions(config: EditorStateConfig): Extension {
       },
     ]),
     ScamperSupport(),
-    // Diagnostics come from the native linter by default, or over LSP when the
-    // ?lsp-diagnostics flag is set (A/B comparison -- see codemirror/lsp).
-    ...(lspDiagnosticsEnabled() ? [] : [makeScamperLinter(config.output)]),
-    // In-process LSP features (hover, completion, signature help, and -- when
-    // the flag is set -- diagnostics); see codemirror/lsp.
+    // In-process LSP features: hover, completion, signature help, and
+    // diagnostics (which feed the lintGutter above). See codemirror/lsp.
     scamperLspExtensions(),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {

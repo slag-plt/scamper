@@ -20,8 +20,8 @@ describe('computeDiagnostics', () => {
 })
 
 describe('ScamperLanguageServer diagnostics push', () => {
-  function open(text: string, options: { publishDiagnostics?: boolean }) {
-    const server = new ScamperLanguageServer(options)
+  function open(text: string) {
+    const server = new ScamperLanguageServer()
     const notes: { method?: string; params?: { diagnostics: unknown[] } }[] = []
     server.setSend((m) => {
       notes.push(JSON.parse(m) as { method?: string })
@@ -44,22 +44,18 @@ describe('ScamperLanguageServer diagnostics push', () => {
   }
 
   const flush = () => new Promise((resolve) => setTimeout(resolve, 20))
+  const publishOf = (notes: { method?: string; params?: { diagnostics: unknown[] } }[]) =>
+    notes.find((n) => n.method === 'textDocument/publishDiagnostics')
 
-  test('pushes publishDiagnostics when enabled', async () => {
-    const notes = open('(+ zzz 1)', { publishDiagnostics: true })
+  test('pushes publishDiagnostics with the errors on open', async () => {
+    const notes = open('(+ zzz 1)')
     await flush()
-    const publish = notes.find(
-      (n) => n.method === 'textDocument/publishDiagnostics',
-    )
-    expect(publish).toBeDefined()
-    expect(publish?.params?.diagnostics.length).toBeGreaterThan(0)
+    expect(publishOf(notes)?.params?.diagnostics.length).toBeGreaterThan(0)
   })
 
-  test('does not push when disabled (default)', async () => {
-    const notes = open('(+ zzz 1)', {})
+  test('pushes an empty diagnostic set for clean code', async () => {
+    const notes = open('(+ 1 2)')
     await flush()
-    expect(
-      notes.find((n) => n.method === 'textDocument/publishDiagnostics'),
-    ).toBeUndefined()
+    expect(publishOf(notes)?.params?.diagnostics).toEqual([])
   })
 })

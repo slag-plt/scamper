@@ -41,14 +41,8 @@ const METHOD_NOT_FOUND = -32601
  */
 export class ScamperLanguageServer {
   private readonly docs = new Map<string, TrackedDoc>()
-  private readonly publishDiags: boolean
   private send: (message: string) => void = () => {
     /* replaced by the transport via setSend */
-  }
-
-  /** @param options.publishDiagnostics push `publishDiagnostics` on edits (experimental; off by default) */
-  constructor(options: { publishDiagnostics?: boolean } = {}) {
-    this.publishDiags = options.publishDiagnostics ?? false
   }
 
   /** Registers the callback used to deliver responses/notifications to the client. */
@@ -188,11 +182,8 @@ export class ScamperLanguageServer {
     this.publishDiagnostics(params.textDocument.uri)
   }
 
-  /** Computes diagnostics for a document and pushes them to the client (when enabled). */
+  /** Computes diagnostics for a document and pushes them to the client. */
   private publishDiagnostics(uri: string): void {
-    if (!this.publishDiags) {
-      return
-    }
     const doc = this.docs.get(uri)
     if (doc === undefined) {
       return
