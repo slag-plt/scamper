@@ -40,10 +40,10 @@ function validateIdentifierToken(token: string, range: Range): void {
 
 // N.B., deliberately not parsed via tokenizeAndParse/the real grammar, unlike
 // the rest of this file: the signature line's rest-parameter notation
-// (`(+ . xs)`, mirroring lambda's `(lambda (x1 . rest) ...)`) has no
-// equivalent in Application's grammar (paren<expression*> has no RestDot
+// (`(+ & xs)`, mirroring lambda's `(lambda (x1 & rest) ...)`) has no
+// equivalent in Application's grammar (paren<expression*> has no rest-marker
 // alternative -- that's Lambda's arglist-only), and adding one there would
-// make dotted-rest applications parse as ordinary (if meaningless) Scamper
+// make rest-marked applications parse as ordinary (if meaningless) Scamper
 // source everywhere, not just inside docstrings. Since every token here is
 // always a bare identifier (never a nested expression), hand-tokenizing on
 // whitespace and validating each token the same way param.ts already does
@@ -69,22 +69,22 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
   const [nameTok, ...rest] = tokens
   validateIdentifierToken(nameTok, range)
 
-  const dotIdx = rest.indexOf('.')
+  const ampIdx = rest.indexOf('&')
   let argToks: string[]
   let restTok: string | undefined
-  if (dotIdx === -1) {
+  if (ampIdx === -1) {
     argToks = rest
   } else {
-    if (dotIdx !== rest.length - 2) {
-      throw mkDocError('Malformed rest parameter: expected a single "." immediately before the final (rest) parameter name',
+    if (ampIdx !== rest.length - 2) {
+      throw mkDocError('Malformed rest parameter: expected a single "&" immediately before the final (rest) parameter name',
         range,
       )
     }
-    argToks = rest.slice(0, dotIdx)
-    restTok = rest[dotIdx + 1]
+    argToks = rest.slice(0, ampIdx)
+    restTok = rest[ampIdx + 1]
   }
-  if (rest.filter((t) => t === '.').length > 1) {
-    throw mkDocError('Malformed function signature: more than one "." found',
+  if (rest.filter((t) => t === '&').length > 1) {
+    throw mkDocError('Malformed function signature: more than one "&" found',
       range,
     )
   }

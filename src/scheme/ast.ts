@@ -23,7 +23,7 @@ export interface Comment {
 //     -- Special forms
 //     | (lambda (x1 ... xk)
 //         e)
-//     | (lambda (x1 ... xk-1 . xk)
+//     | (lambda (x1 ... xk-1 & xk)
 //         e)
 //     | (let
 //         ([x1 e1]
@@ -520,8 +520,11 @@ export function expToString(e: Exp): string {
         return `(${expToString(e.head)} ${e.args.map(expToString).join(' ')})`
       }
     }
-    case 'lam':
-      return `(lambda (${e.params.map((p) => p.name).join(' ')}${e.restParam ? ` . ${e.restParam.name}` : ''}) ${expToString(e.body)})`
+    case 'lam': {
+      const params = e.params.map((p) => p.name)
+      if (e.restParam) params.push('&', e.restParam.name)
+      return `(lambda (${params.join(' ')}) ${expToString(e.body)})`
+    }
     case 'let':
       return `(let (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'begin':

@@ -86,15 +86,19 @@ export const SchemePrinter: Printer = {
           ')',
         ])
 
-      case 'lam':
+      case 'lam': {
+        // Rest parameters use Clojure-style "&", e.g. (lambda (x & xs) ...) or
+        // the rest-only (lambda (& xs) ...).
+        const params = node.params.map((p) => p.name)
+        if (node.restParam) params.push('&', node.restParam.name)
         return group([
           '(lambda (',
-          join(' ', node.params.map((p) => p.name)),
-          node.restParam ? [' . ', node.restParam.name] : '',
+          join(' ', params),
           ')',
           indent([line, path.call(print, 'body')]),
           ')',
         ])
+      }
 
       case 'let': {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {

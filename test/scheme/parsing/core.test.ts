@@ -16,6 +16,42 @@ describe('lezer-bridge parsing', () => {
     expectParses('(or 1 2 3)')
   })
 
+  test('rest parameters use Clojure-style "&", including zero fixed params (#272)', () => {
+    // A rest parameter after one or more fixed parameters.
+    const one = parse('(lambda (x & rest) rest)')
+    expect(one.errors).toEqual([])
+    const s1 = one.prog[0]
+    expect(s1.tag).toBe('stmtexp')
+    if (s1.tag !== 'stmtexp' || s1.expr.tag !== 'lam') return
+    expect(s1.expr.params.map((p) => p.name)).toEqual(['x'])
+    expect(s1.expr.restParam?.name).toBe('rest')
+
+    // A rest-only parameter list -- the case Scheme's dotted syntax couldn't
+    // express unambiguously.
+    const zero = parse('(lambda (& rest) rest)')
+    expect(zero.errors).toEqual([])
+    const s2 = zero.prog[0]
+    expect(s2.tag).toBe('stmtexp')
+    if (s2.tag !== 'stmtexp' || s2.expr.tag !== 'lam') return
+    expect(s2.expr.params).toEqual([])
+    expect(s2.expr.restParam?.name).toBe('rest')
+
+    expectParses('(lambda (a b c & rest) rest)')
+  })
+
+  test('the old Scheme dotted rest syntax is no longer accepted (#272)', () => {
+    // "." is not a valid identifier or rest marker anymore.
+    expect(parse('(lambda (x . y) y)').errors.length).toBeGreaterThan(0)
+    expect(parse('(lambda (. y) y)').errors.length).toBeGreaterThan(0)
+  })
+
+  test('a rest marker requires exactly one trailing identifier (#272)', () => {
+    // "&" with no rest name, or more than one name after it, is malformed.
+    expect(parse('(lambda (&) x)').errors.length).toBeGreaterThan(0)
+    expect(parse('(lambda (x &) x)').errors.length).toBeGreaterThan(0)
+    expect(parse('(lambda (x & y z) x)').errors.length).toBeGreaterThan(0)
+  })
+
   test('curly braces as an alternate to parens, mixed freely (each closed with its own kind)', () => {
     expectParses('{+ 1 2}')
     expectParses('(+ {* 3 4} (- 5 1))')

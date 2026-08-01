@@ -71,7 +71,7 @@
 ;;; @category canvas, mutation, predicates, shapes, canvas-rectangle!, canvas-ellipse!
 (define canvas-circle! (js-var "canvas_canvasCircle"))
 
-;;; (canvas-text! canvas x y text size mode color . font) -> void?
+;;; (canvas-text! canvas x y text size mode color & font) -> void?
 ;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?

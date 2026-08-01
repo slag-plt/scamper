@@ -41,7 +41,7 @@
 ;;; @category color, image, predicates, rgb, typecheck, rgb-func, color-func, rgb-component?, rgb-distance
 (define rgb? (js-var "image_isRgb"))
 
-;;; (rgb r g b . a) -> rgb?
+;;; (rgb r g b & a) -> rgb?
 ;;;  r : rgb-component?
 ;;;  g : rgb-component?
 ;;;  b : rgb-component?
@@ -112,7 +112,7 @@
 ;;; @category color, image, hsv, predicates, typecheck, hsv-func
 (define hsv? (js-var "image_isHsv"))
 
-;;; (hsv h s v . a) -> hsv?
+;;; (hsv h s v & a) -> hsv?
 ;;;  h : number?
 ;;;   0 <= h <= 360
 ;;;  s : number?
@@ -389,13 +389,13 @@
 ;;; @category image, path, with-dash
 (define path (js-var "image_path"))
 
-;;; (beside . d1) -> image?
+;;; (beside & d1) -> image?
 ;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other (horizontally).
 ;;; @category composition/placement, image, beside/align, above, above/align, overlay, overlay/align, overlay/offset, rotate
 (define beside (js-var "image_beside"))
 
-;;; (beside/align align . d1) -> image?
+;;; (beside/align align & d1) -> image?
 ;;;  align : string?
 ;;;   either "top", "center", or "bottom"
 ;;;  d1 : image?
@@ -403,13 +403,13 @@
 ;;; @category composition/placement, image, beside, above, above/align, overlay, overlay/align, overlay/offset, rotate
 (define beside/align (js-var "image_besideAlign"))
 
-;;; (above . d1) -> image?
+;;; (above & d1) -> image?
 ;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other (vertically in descending order).
 ;;; @category composition/placement, image, beside, beside/align, above/align, overlay, overlay/align, overlay/offset, rotate
 (define above (js-var "image_above"))
 
-;;; (above/align align . d1) -> image?
+;;; (above/align align & d1) -> image?
 ;;;  align : string?
 ;;;   either "left", "middle", or "right"
 ;;;  d1 : image?
@@ -417,13 +417,13 @@
 ;;; @category composition/placement, image, beside, beside/align, above, overlay, overlay/align, overlay/offset, rotate
 (define above/align (js-var "image_aboveAlign"))
 
-;;; (overlay . d1) -> image?
+;;; (overlay & d1) -> image?
 ;;;  d1 : image?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other. (`d1` is the topmost drawing).
 ;;; @category composition/placement, image, beside, beside/align, above, above/align, overlay/align, overlay/offset, rotate
 (define overlay (js-var "image_overlay"))
 
-;;; (overlay/align xAlign yAlign . d1) -> image?
+;;; (overlay/align xAlign yAlign & d1) -> image?
 ;;;  xAlign : string?
 ;;;   either "left", "middle", or "right"
 ;;;  yAlign : string?
@@ -458,7 +458,7 @@
 ;;; @category canvas, image, shapes, path-func
 (define with-dash (js-var "image_withDash"))
 
-;;; (text str size color . font) -> image?
+;;; (text str size color & font) -> image?
 ;;;  str : string?
 ;;;  size : any
 ;;;   number? A valid font size (in px)

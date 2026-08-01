@@ -425,13 +425,13 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const argNodes = rest.slice(0, -1)
-      const dotIndex = argNodes.findIndex((c) => c.type.name === 'RestDot')
-      if (dotIndex === -1) {
+      const ampIndex = argNodes.findIndex((c) => c.type.name === 'Amp')
+      if (ampIndex === -1) {
         const params = argNodes.map((c) => identifier(ctx, c))
         return A.mkLam(params, body, range)
       }
-      const params = argNodes.slice(0, dotIndex).map((c) => identifier(ctx, c))
-      const restParam = identifier(ctx, argNodes[dotIndex + 1])
+      const params = argNodes.slice(0, ampIndex).map((c) => identifier(ctx, c))
+      const restParam = identifier(ctx, argNodes[ampIndex + 1])
       return A.mkLam(params, body, range, restParam)
     }
 

@@ -183,7 +183,7 @@ function mkCheckChain(
  *
  *   (define name
  *     (let ([##contract-target## expr])
- *       (lambda (x1 ... xk [. rest])
+ *       (lambda (x1 ... xk [& rest])
  *         <cascading predicate checks, then (##contract-target## x1 ... xk)>)))
  *
  * @returns the statement unchanged if it isn't a define, has no docstring,

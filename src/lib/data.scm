@@ -50,14 +50,14 @@
 ;;; @category data, create, with-plot-options
 (define with-dataset-options (js-var "data_withDatasetOptions"))
 
-;;; (plot-linear . datasets) -> plot?
+;;; (plot-linear & datasets) -> plot?
 ;;;  datasets : any
 ;;;   list of datasets
 ;;; Creates a linear plot from the provided list of datasets. Valid datasets for this plot include line, bar, scatter, and bubble datasets.
 ;;; @category data, create, plot, plot-category, plot-radial
 (define plot-linear (js-var "data_plotLinear"))
 
-;;; (plot-category labels . datasets) -> plot?
+;;; (plot-category labels & datasets) -> plot?
 ;;;  labels : any
 ;;;   list of strings
 ;;;  datasets : any
@@ -66,7 +66,7 @@
 ;;; @category data, create, plot, plot-linear, plot-radial
 (define plot-category (js-var "data_plotCategory"))
 
-;;; (plot-radial labels . datasets) -> plot?
+;;; (plot-radial labels & datasets) -> plot?
 ;;;  labels : any
 ;;;   list of strings
 ;;;  datasets : any

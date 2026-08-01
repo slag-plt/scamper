@@ -35,14 +35,14 @@
 ;;; @category html, button?
 (define button (js-var "html_button"))
 
-;;; (tag name . c) -> element?
+;;; (tag name & c) -> element?
 ;;;  name : string?
 ;;;  c : any
 ;;; Creates an HTML element with the given name and children.
 ;;; @category html, tag-set-children?
 (define tag (js-var "html_tag"))
 
-;;; (tag-set-children! elt . c) -> element?
+;;; (tag-set-children! elt & c) -> element?
 ;;;  elt : any
 ;;;   an HTML element
 ;;;  c : any

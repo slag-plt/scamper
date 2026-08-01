@@ -46,16 +46,13 @@ const symbolStrategy: Strategy = {
 }
 const closureStrategy: Strategy = {
   predicate: (v) => isClosure(v),
-  ...createSimpleVueRenderer<Closure>(
-    (v) =>
-      `(lambda (${
-        v.params.length > 0
-          ? v.params.reduce((acc, curr) => `${acc} ${curr}`)
-          : ''
-      }${
-        v.restParam ? ` . ${v.restParam}` : ''
-      }) ...)`,
-  ),
+  ...createSimpleVueRenderer<Closure>((v) => {
+    // Rest parameters use Clojure-style "&", e.g. (lambda (x & xs) ...) and the
+    // rest-only (lambda (& xs) ...).
+    const params = [...v.params]
+    if (v.restParam) params.push('&', v.restParam)
+    return `(lambda (${params.join(' ')}) ...)`
+  }),
 }
 const jsFunctionStrategy: Strategy = {
   predicate: (v) => isJsFunction(v),

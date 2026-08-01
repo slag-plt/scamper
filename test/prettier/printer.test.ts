@@ -45,6 +45,17 @@ describe('roundtrip', () => {
   test('lambda with multiple params', () =>
     roundtrip('(define f (lambda (x y) (+ x y)))'))
 
+  test('lambda with a rest parameter (#272)', () =>
+    roundtrip('(define f (lambda (x & xs) xs))'))
+
+  test('lambda with a rest-only parameter list (#272)', () =>
+    roundtrip('(define g (lambda (& xs) xs))'))
+
+  test('rest parameters are printed with "&" (#272)', async () => {
+    expect(await format('(define f (lambda (x & xs) xs))')).toContain('(x & xs)')
+    expect(await format('(define g (lambda (& xs) xs))')).toContain('(& xs)')
+  })
+
   test('if expression', () =>
     roundtrip('(define abs (lambda (n) (if (>= n 0) n (- 0 n))))'))
 
