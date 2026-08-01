@@ -46,6 +46,7 @@ const highlightPlugin = ViewPlugin.fromClass(
     private timer: ReturnType<typeof setTimeout> | undefined
     // Bumped per request so a slow response from a stale caret is discarded.
     private token = 0
+    private destroyed = false
 
     constructor(private readonly view: EditorView) {
       this.schedule()
@@ -89,8 +90,9 @@ const highlightPlugin = ViewPlugin.fromClass(
       } catch {
         return
       }
-      // Discard if the caret moved again or the document changed under us.
-      if (myToken !== this.token || view.state.doc !== docBefore) {
+      // Discard if the plugin was torn down, the caret moved again, or the
+      // document changed under us (a stale dispatch would throw or mis-place).
+      if (this.destroyed || myToken !== this.token || view.state.doc !== docBefore) {
         return
       }
       const marks: Mark[] = (result ?? [])
@@ -111,6 +113,7 @@ const highlightPlugin = ViewPlugin.fromClass(
     }
 
     destroy() {
+      this.destroyed = true
       clearTimeout(this.timer)
     }
   },

@@ -64,7 +64,7 @@ function onContextMenu(e: MouseEvent) {
     { separator: true },
     { label: 'Format file', kbd: `${mod}+Shift+I`, disabled: readOnly, run: () => { formatScamperDocument(view) } },
     { separator: true },
-    { label: 'Cut', disabled: readOnly || !hasSelection, run: () => { cutSelection(view) } },
+    { label: 'Cut', disabled: readOnly || !hasSelection, run: () => cutSelection(view) },
     { label: 'Copy', disabled: !hasSelection, run: () => { copySelection(view) } },
     { label: 'Paste', disabled: readOnly, run: () => { pasteClipboard(view) } },
     { label: 'Select all', run: () => { selectAllText(view) } },
@@ -80,12 +80,18 @@ function closeMenu() {
 
 function copySelection(view: EditorView) {
   const { from, to } = view.state.selection.main
-  void navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+  void navigator.clipboard.writeText(view.state.sliceDoc(from, to)).catch(() => {
+    /* clipboard write unavailable or denied */
+  })
 }
 
-function cutSelection(view: EditorView) {
+async function cutSelection(view: EditorView) {
   const { from, to } = view.state.selection.main
-  void navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+  try {
+    await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+  } catch {
+    return // don't delete the text if it couldn't be copied to the clipboard
+  }
   view.dispatch({ changes: { from, to } })
 }
 
