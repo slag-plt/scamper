@@ -15,6 +15,7 @@ import type {
 import { hoverAt } from './hover'
 import { completionsFor } from './completion'
 import { signatureHelpAt } from './signature'
+import { computeDiagnostics } from './diagnostics'
 import {
   computeLineStarts,
   positionToOffset,
@@ -40,8 +41,14 @@ const METHOD_NOT_FOUND = -32601
  */
 export class ScamperLanguageServer {
   private readonly docs = new Map<string, TrackedDoc>()
+  private readonly publishDiags: boolean
   private send: (message: string) => void = () => {
     /* replaced by the transport via setSend */
+  }
+
+  /** @param options.publishDiagnostics push `publishDiagnostics` on edits (experimental; off by default) */
+  constructor(options: { publishDiagnostics?: boolean } = {}) {
+    this.publishDiags = options.publishDiagnostics ?? false
   }
 
   /** Registers the callback used to deliver responses/notifications to the client. */
@@ -162,6 +169,7 @@ export class ScamperLanguageServer {
   private didOpen(params: DidOpenTextDocumentParams): void {
     const { uri, text, version } = params.textDocument
     this.docs.set(uri, track(text, version))
+    this.publishDiagnostics(uri)
   }
 
   private didChange(params: DidChangeTextDocumentParams): void {
@@ -177,6 +185,26 @@ export class ScamperLanguageServer {
       params.textDocument.uri,
       track(text, params.textDocument.version),
     )
+    this.publishDiagnostics(params.textDocument.uri)
+  }
+
+  /** Computes diagnostics for a document and pushes them to the client (when enabled). */
+  private publishDiagnostics(uri: string): void {
+    if (!this.publishDiags) {
+      return
+    }
+    const doc = this.docs.get(uri)
+    if (doc === undefined) {
+      return
+    }
+    const { text, lineStarts, version } = doc
+    void computeDiagnostics(text, lineStarts).then((diagnostics) => {
+      this.notify('textDocument/publishDiagnostics', { uri, version, diagnostics })
+    })
+  }
+
+  private notify(method: string, params: unknown): void {
+    this.send(JSON.stringify({ jsonrpc: '2.0', method, params }))
   }
 
   private didClose(params: DidCloseTextDocumentParams): void {
