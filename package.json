@@ -8,7 +8,6 @@
     "generate": "npm run generate-parser && npm run generate-lib-sources",
     "generate-parser": "node scripts/generate-parser.mjs",
     "generate-lib-sources": "node scripts/generate-lib-sources.mjs",
-
     "dev": "vite",
     "cli": "tsx src/app/cli/index.ts",
     "precli": "npm run generate",
@@ -16,7 +15,6 @@
     "prebuild": "npm run generate",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-
     "typecheck": "vue-tsc -noEmit",
     "pretypecheck": "npm run generate",
     "test": "vitest",
@@ -27,7 +25,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "validate": "./scripts/validate-build",
-
     "deploy": "./scripts/deploy $npm_package_version",
     "deploy:latest": "./scripts/update-latest $npm_package_version"
   },
@@ -61,6 +58,7 @@
     "vite": "^8.1.5",
     "vitest": "^4.1.2",
     "vitest-canvas-mock": "^1.1.3",
+    "vscode-languageserver-protocol": "^3.18.2",
     "vue-tsc": "^3.2.6"
   },
   "//": "TODO: highlight.js is unused, but it's still used in commented out code. Remove it when we don't use it anymore (or keep it otherwise).",
@@ -69,6 +67,7 @@
     "@codemirror/commands": "^6.10.2",
     "@codemirror/language": "^6.9.0",
     "@codemirror/lint": "^6.9.4",
+    "@codemirror/lsp-client": "^6.2.5",
     "@codemirror/merge": "^6.12.1",
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.5.4",

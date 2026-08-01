@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useScamperSession } from '../composables/use-scamper-session'
 import ThemeToggle from '../../shared/ThemeToggle.vue'
+import ShortcutsHelp from './ShortcutsHelp.vue'
 
 defineProps<{
   currentFile?: string | null
@@ -105,6 +106,8 @@ function searchOpenWindow(searchTerm: string) {
           >Report an issue</a
         ></em
       >
+      ⋅
+      <ShortcutsHelp />
     </div>
   </div>
 </template>
