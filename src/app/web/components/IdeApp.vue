@@ -18,6 +18,12 @@ import { FileEntry } from '../../../fs/fs'
 import { FileSession } from '../file-session'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
+import ModalHost from './ModalHost.vue'
+import {
+  modalAlert,
+  modalConfirm,
+  modalPrompt,
+} from '../composables/use-modals'
 
 // ---------- config ----------
 
@@ -199,10 +205,13 @@ async function handleStepAll() {
 // ---------- sidebar event handlers ----------
 
 async function handleCreate() {
-  const filename = prompt('Enter a file name for your new program.')
+  const filename = await modalPrompt({
+    title: 'New file',
+    message: 'Enter a file name for your new program.',
+  })
   if (filename === null) return
   if (await fs?.fileExists(filename)) {
-    alert(`File ${filename} already exists!`)
+    await modalAlert({ message: `File ${filename} already exists!` })
   } else {
     await fs?.saveFile(filename, `; ${filename}`)
     await switchToFile(filename)
@@ -214,9 +223,11 @@ async function handleUploadFile(file: File) {
   const content = await file.text()
   const filename = file.name
   if (await fs.fileExists(filename)) {
-    const ok = confirm(
-      `File "${filename}" already exists. Do you want to overwrite it?`,
-    )
+    const ok = await modalConfirm({
+      title: 'Overwrite file',
+      message: `File "${filename}" already exists. Do you want to overwrite it?`,
+      confirmLabel: 'Overwrite',
+    })
     if (!ok) return
     // Serialize the overwrite against any in-flight save so the writable is
     // closed before the file is removed (see file-session.ts).
@@ -235,9 +246,11 @@ async function handleFileDrop(droppedFiles: FileList) {
       const content = await file.text()
       const filename = file.name
       if (await fs.fileExists(filename)) {
-        const ok = confirm(
-          `File "${filename}" already exists. Do you want to overwrite it?`,
-        )
+        const ok = await modalConfirm({
+          title: 'Overwrite file',
+          message: `File "${filename}" already exists. Do you want to overwrite it?`,
+          confirmLabel: 'Overwrite',
+        })
         if (!ok) continue
         // Serialize the overwrite against any in-flight save (see above).
         await fileSession.deleteFile(filename)
@@ -255,10 +268,14 @@ async function handleFileDrop(droppedFiles: FileList) {
 async function handleRename() {
   if (!currentFile.value || !fileSession) return
   const from = currentFile.value
-  const newName = prompt(`Enter a new filename for ${from}`)
+  const newName = await modalPrompt({
+    title: 'Rename file',
+    message: `Enter a new filename for ${from}`,
+    defaultValue: from,
+  })
   if (newName === null || newName === from) return
   if (await fs?.fileExists(newName)) {
-    alert(`File ${newName} already exists!`)
+    await modalAlert({ message: `File ${newName} already exists!` })
   } else {
     try {
       // N.B., renaming closes the fs worker's handle to the current file,
@@ -276,7 +293,12 @@ async function handleRename() {
 async function handleDelete() {
   if (!currentFile.value || !fileSession) return
   const target = currentFile.value
-  const ok = confirm(`Are you sure you want to delete ${target}?`)
+  const ok = await modalConfirm({
+    title: 'Delete file',
+    message: `Are you sure you want to delete ${target}?`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
   if (!ok) return
   try {
     // The session stops autosave and awaits any in-flight save before removing
@@ -458,6 +480,7 @@ onUnmounted(() => {
     v-if="expandedQueryId !== null"
     :query-id="expandedQueryId"
   />
+  <ModalHost />
 </template>
 
 <style scoped>
