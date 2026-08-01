@@ -12,6 +12,7 @@ import {
 } from '@codemirror/lsp-client'
 import { ScamperLanguageServer } from './server'
 import { createInProcessTransport } from './transport'
+import { occurrenceHighlighter } from './highlight-extension'
 
 // Navigation keybindings. Deliberately not the library defaults (F12 /
 // Shift-F12), which browsers hijack for devtools.
@@ -45,6 +46,7 @@ function getClient(): LSPClient {
         serverCompletion(),
         signatureHelp(),
         serverDiagnostics(),
+        occurrenceHighlighter(),
         navigationKeymap,
       ],
     }).connect(createInProcessTransport(server))
@@ -55,7 +57,8 @@ function getClient(): LSPClient {
 /**
  * CodeMirror extension connecting the editor to the in-process Scamper
  * language server: hover docs, completion, signature help, diagnostics,
- * goto-definition (Alt-.), and find-references (Shift-Alt-.).
+ * occurrence highlighting, goto-definition (Alt-.), and find-references
+ * (Shift-Alt-.).
  */
 export function scamperLspExtensions(): Extension {
   return getClient().plugin(SCAMPER_DOC_URI, SCAMPER_LANGUAGE_ID)

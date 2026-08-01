@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { definitionAt } from '../../../src/app/web/codemirror/lsp/definition'
 import { referencesAt } from '../../../src/app/web/codemirror/lsp/references'
+import { documentHighlightsAt } from '../../../src/app/web/codemirror/lsp/highlight'
 import { ScamperLanguageServer } from '../../../src/app/web/codemirror/lsp/server'
 
 // Symbol DB + docRegistry are populated by the global test setup.
@@ -44,6 +45,23 @@ describe('referencesAt', () => {
   })
 })
 
+describe('documentHighlightsAt', () => {
+  test('flags the binder as write and uses as read', async () => {
+    // (lambda (x) (+ x x)): parameter x at index 9, two uses after.
+    const highlights = await documentHighlightsAt('(lambda (x) (+ x x))', 15)
+    expect(highlights.length).toBe(3)
+    const writes = highlights.filter((h) => h.write)
+    expect(writes.length).toBe(1)
+    expect(writes[0].from).toBe(9)
+  })
+
+  test('marks all builtin occurrences as read (no in-buffer binder)', async () => {
+    const highlights = await documentHighlightsAt('(+ (+ 1 2) 3)', 1)
+    expect(highlights.length).toBe(2)
+    expect(highlights.some((h) => h.write)).toBe(false)
+  })
+})
+
 describe('ScamperLanguageServer: navigation', () => {
   function serve(text: string) {
     const server = new ScamperLanguageServer()
@@ -73,11 +91,12 @@ describe('ScamperLanguageServer: navigation', () => {
     return { request, reply, flush }
   }
 
-  test('advertises definition and references capabilities', () => {
+  test('advertises definition, references, and document-highlight capabilities', () => {
     const { reply } = serve('')
     const caps = reply(1).result.capabilities
     expect(caps.definitionProvider).toBe(true)
     expect(caps.referencesProvider).toBe(true)
+    expect(caps.documentHighlightProvider).toBe(true)
   })
 
   test('answers a definition request with a Location', async () => {
@@ -99,5 +118,18 @@ describe('ScamperLanguageServer: navigation', () => {
     })
     await flush()
     expect(reply(3).result.length).toBe(3)
+  })
+
+  test('answers a document-highlight request with kinds', async () => {
+    const { request, reply, flush } = serve('(lambda (x) (+ x x))')
+    request(4, 'textDocument/documentHighlight', {
+      textDocument: { uri: 'inmemory://main.scm' },
+      position: { line: 0, character: 15 },
+    })
+    await flush()
+    const kinds = (reply(4).result as { kind: number }[]).map((h) => h.kind)
+    expect(kinds.length).toBe(3)
+    expect(kinds.filter((k) => k === 3).length).toBe(1) // one Write (the binder)
+    expect(kinds.filter((k) => k === 2).length).toBe(2) // two Read (uses)
   })
 })

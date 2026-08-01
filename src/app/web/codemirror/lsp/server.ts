@@ -5,6 +5,8 @@ import type {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
+  DocumentHighlight,
+  DocumentHighlightParams,
   Hover,
   HoverParams,
   InitializeResult,
@@ -20,6 +22,7 @@ import { completionsFor } from './completion'
 import { signatureHelpAt } from './signature'
 import { definitionAt } from './definition'
 import { referencesAt } from './references'
+import { documentHighlightsAt } from './highlight'
 import { computeDiagnostics } from './diagnostics'
 import {
   computeLineStarts,
@@ -111,6 +114,12 @@ export class ScamperLanguageServer {
       case 'textDocument/references':
         this.respondAsync(id, this.references(params as ReferenceParams))
         break
+      case 'textDocument/documentHighlight':
+        this.respondAsync(
+          id,
+          this.documentHighlight(params as DocumentHighlightParams),
+        )
+        break
       default:
         this.respondError(id, METHOD_NOT_FOUND, `Method not found: ${method}`)
     }
@@ -140,6 +149,7 @@ export class ScamperLanguageServer {
       signatureHelpProvider: { triggerCharacters: ['(', ' '] },
       definitionProvider: true,
       referencesProvider: true,
+      documentHighlightProvider: true,
     }
     return { capabilities, serverInfo: { name: 'scamper-lsp', version: '0.1.0' } }
   }
@@ -204,6 +214,22 @@ export class ScamperLanguageServer {
     return spans.map((span) => ({
       uri: params.textDocument.uri,
       range: rangeFromOffsets(span.from, span.to, doc.lineStarts),
+    }))
+  }
+
+  private async documentHighlight(
+    params: DocumentHighlightParams,
+  ): Promise<DocumentHighlight[]> {
+    const doc = this.docs.get(params.textDocument.uri)
+    if (doc === undefined) {
+      return []
+    }
+    const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
+    const highlights = await documentHighlightsAt(doc.text, offset)
+    return highlights.map((h) => ({
+      range: rangeFromOffsets(h.from, h.to, doc.lineStarts),
+      // DocumentHighlightKind: Write (3) = the binder, Read (2) = a use.
+      kind: h.write ? 3 : 2,
     }))
   }
 

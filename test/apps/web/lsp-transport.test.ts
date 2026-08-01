@@ -49,6 +49,15 @@ describe('in-process LSP transport', () => {
         position: { line: 0, character: 1 },
       })
       expect(sig?.signatures[0].label).toContain('car')
+
+      const highlights = await client.request<unknown, unknown[] | null>(
+        'textDocument/documentHighlight',
+        {
+          textDocument: { uri: 'inmemory://main.scm' },
+          position: { line: 0, character: 1 },
+        },
+      )
+      expect(Array.isArray(highlights)).toBe(true)
     } finally {
       client.disconnect()
     }
