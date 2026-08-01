@@ -24,6 +24,8 @@ import {
   modalConfirm,
   modalPrompt,
 } from '../composables/use-modals'
+import PatchNotesModal from './PatchNotesModal.vue'
+import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
 
@@ -45,7 +47,7 @@ const appVersion = `(${APP_VERSION})`
 
 let fs: FS.t | null = null
 let fileSession: FileSession | null = null
-let config: Config = DEFAULT_CONFIG
+let config: Config = { ...DEFAULT_CONFIG }
 let isLoadingFile = false
 
 // ---------- reactive state ----------
@@ -57,6 +59,8 @@ const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
 const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
+const patchNotesToShow = ref<PatchNote[]>([])
+const showPatchNotes = ref(false)
 
 // ---------- editor context + child component refs ----------
 
@@ -93,11 +97,43 @@ async function saveConfig() {
 async function loadConfig() {
   if (!fs) return
   if (await fs.fileExists(CONFIG_FILENAME)) {
-    config = JSON.parse(await fs.loadFile(CONFIG_FILENAME)) as Config
+    // Merge over the defaults so a config written by an older build (missing a
+    // newer field) still loads with sane values.
+    const stored = JSON.parse(await fs.loadFile(CONFIG_FILENAME)) as Partial<Config>
+    config = { ...DEFAULT_CONFIG, ...stored }
   } else {
-    config = DEFAULT_CONFIG
+    // A brand-new user starts already "caught up" to the current version, so
+    // they aren't greeted with a backlog of patch notes.
+    config = { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
     await saveConfig()
   }
+}
+
+// Records the current version as seen so its patch notes aren't shown again.
+// Only ever moves forward, so running an older build never rewinds the seen
+// version (which would re-show notes on a later re-upgrade).
+async function markVersionSeen() {
+  if (compareVersions(config.lastVersionAccessed, APP_VERSION) < 0) {
+    config.lastVersionAccessed = APP_VERSION
+    await saveConfig()
+  }
+}
+
+// Shows patch notes for any versions the user hasn't seen yet. The version is
+// recorded as seen as soon as the notes are shown (not on dismissal), so a user
+// who closes the tab without clicking through still isn't shown them again.
+async function showPatchNotesIfNeeded() {
+  const unseen = patchNotesSince(config.lastVersionAccessed, APP_VERSION)
+  await markVersionSeen()
+  if (unseen.length > 0) {
+    patchNotesToShow.value = unseen
+    showPatchNotes.value = true
+  }
+}
+
+function handlePatchNotesClose() {
+  showPatchNotes.value = false
+  patchNotesToShow.value = []
 }
 
 // ---------- autosave ----------
@@ -409,6 +445,8 @@ onMounted(async () => {
 
   isLoading.value = false
   Scamper.getInstance().calibrateScheduler()
+
+  await showPatchNotesIfNeeded()
 })
 
 onUnmounted(() => {
@@ -481,6 +519,11 @@ onUnmounted(() => {
     :query-id="expandedQueryId"
   />
   <ModalHost />
+  <PatchNotesModal
+    :open="showPatchNotes"
+    :notes="patchNotesToShow"
+    @close="handlePatchNotesClose"
+  />
 </template>
 
 <style scoped>
