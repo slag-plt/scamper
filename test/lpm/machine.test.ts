@@ -333,3 +333,50 @@ describe('rest parameters', () => {
     expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
   })
 })
+
+describe('define statement', () => {
+  test('a later define of the same name shadows the earlier binding', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([
+      U.mkDefine('x', [U.mkLit(1)]),
+      U.mkDefine('x', [U.mkLit(2)]),
+      U.mkDisp([U.mkVar('x')]),
+    ])
+    testExecute(fiber, out)
+    expect(out.log).toStrictEqual([2])
+  })
+
+  test('a defined closure adopts the define name; an alias does not rename it', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([
+      U.mkDefine('f', [U.mkCls(['x'], [U.mkVar('x')])]),
+      U.mkDefine('g', [U.mkVar('f')]),
+      U.mkDisp([U.mkVar('g')]),
+    ])
+    testExecute(fiber, out)
+    // g is the same closure object as f; it keeps the name it first received.
+    expect(U.typeOf(out.log.at(0))).toBe('[Function: f]')
+  })
+})
+
+describe('import statement', () => {
+  test('a builtin import succeeds and produces no display output', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
+    testExecute(fiber, out)
+    expect(out.log).toStrictEqual([])
+  })
+
+  test('a builtin import binds the module for later variable lookups', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
+    testExecute(fiber, out)
+    expect(fiber.topLevelEnv.has('circle')).toBe(true)
+  })
+
+  test('an unknown builtin import throws', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('no-such-lib', 'builtin')])
+    expect(() => { testExecute(fiber, out) }).toThrow(/No such built-in library/)
+  })
+})

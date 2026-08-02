@@ -6,6 +6,7 @@ import {
   LoggingChannel,
   OutputChannel,
   ReportError,
+  ScamperError,
   Value,
 } from '../../src/lpm'
 import { makeTestFiber } from '../util'
@@ -42,8 +43,19 @@ describe('basic ops', () => {
     }).toThrow(matcher)
   }
 
-  const litCases: Value[] = [42, 'hi', false, null]
-  test.for(litCases)('lit %o', (lit) => {
+  const litCases: [string, Value][] = [
+    ['number', 42],
+    ['string', 'hi'],
+    ['empty string', ''],
+    ['boolean', false],
+    ['null', null],
+    ['void', undefined],
+    ['char', U.mkChar('a')],
+    ['symbol', U.mkSym('x')],
+    ['vector', [1, 2, 3]],
+    ['nested struct', U.mkStruct('point', ['x', 'y'], [1, 2])],
+  ]
+  test.for(litCases)('lit %s', ([, lit]) => {
     const fiber = makeTestFiber([U.mkDisp([U.mkLit(lit)])])
     expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([lit])
@@ -83,6 +95,24 @@ describe('basic ops', () => {
     )
   })
 
+  test('ctor with zero fields produces an empty struct', () => {
+    const fiber = makeTestFiber([U.mkDisp([U.mkCtor('unit', [])])])
+    expectSuccessfulExec(fiber)
+    expect(out.log.at(0)).toStrictEqual(U.mkStruct('unit', [], []))
+  })
+
+  test('ctor with zero fields leaves existing stack values untouched', () => {
+    // A leading lit puts a sentinel on the value stack. A correct zero-field
+    // ctor must consume nothing; the trailing popv then drops the struct,
+    // leaving the sentinel as the frame's single result. (Regression guard for
+    // the `splice(-0)` bug, which would splice the sentinel away.)
+    const fiber = makeTestFiber([
+      U.mkDisp([U.mkLit('sentinel'), U.mkCtor('unit', []), U.mkPopv()]),
+    ])
+    expectSuccessfulExec(fiber)
+    expect(out.log).toStrictEqual(['sentinel'])
+  })
+
   test('cls', () => {
     const clsBody = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
     const fiber = makeTestFiber([
@@ -90,6 +120,21 @@ describe('basic ops', () => {
     ])
     expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(2)
+  })
+
+  test('cls: a returned closure captures its defining scope', () => {
+    // ((lambda (x) (lambda (y) (+ x y))) 10) applied to 5 => 15
+    const inner = U.mkCls(
+      ['y'],
+      [U.mkVar('+'), U.mkVar('x'), U.mkVar('y'), U.mkAp(2)],
+      'inner',
+    )
+    const outer = U.mkCls(['x'], [inner], 'outer')
+    const fiber = makeTestFiber([
+      U.mkDisp([outer, U.mkLit(10), U.mkAp(1), U.mkLit(5), U.mkAp(1)]),
+    ])
+    expectSuccessfulExec(fiber)
+    expect(out.log).toStrictEqual([15])
   })
 
   test('ap', () => {
@@ -257,6 +302,92 @@ describe('basic ops', () => {
       ])
       expectFailedExec(fiber, ICE)
     })
+
+    // plit uses structural `equals`, so each literal kind must match its own
+    // value (chars compare by value; numbers/strings/booleans/null by identity
+    // or primitive equality).
+    const plitCases: [string, Value][] = [
+      ['number', 0],
+      ['string', 'hi'],
+      ['boolean', false],
+      ['null', null],
+      ['char', U.mkChar('a')],
+    ]
+    test.for(plitCases)('plit matches a %s literal', ([, v]) => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(v),
+          U.mkMatch([
+            [U.mkPLit(v), [U.mkLit('matched')]],
+            [U.mkPWild(), [U.mkLit('fallthrough')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['matched'])
+    })
+
+    test('w/ nested pctor binds sub-pattern variables', () => {
+      // scrutinee (pair (pair 1 2) 3); pattern (pair (pair a b) c) => a+b+c = 6
+      const pattern = U.mkPCtor('pair', [
+        U.mkPCtor('pair', [U.mkPVar('a'), U.mkPVar('b')]),
+        U.mkPVar('c'),
+      ])
+      const body = [
+        U.mkVar('+'),
+        U.mkVar('a'),
+        U.mkVar('+'),
+        U.mkVar('b'),
+        U.mkVar('c'),
+        U.mkAp(2),
+        U.mkAp(2),
+      ]
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(1),
+          U.mkLit(2),
+          U.mkCtor('pair', ['fst', 'snd']),
+          U.mkLit(3),
+          U.mkCtor('pair', ['fst', 'snd']),
+          U.mkMatch([
+            [pattern, body],
+            [U.mkPWild(), [U.mkLit(-1)]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([6])
+    })
+
+    test('w/ zero-arg pctor', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkCtor('unit', []),
+          U.mkMatch([
+            [U.mkPCtor('unit', []), [U.mkLit('matched')]],
+            [U.mkPWild(), [U.mkLit('no')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['matched'])
+    })
+
+    test('pctor with a mismatched ctor name falls through', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(1),
+          U.mkLit(2),
+          U.mkCtor('point', ['x', 'y']),
+          U.mkMatch([
+            [U.mkPCtor('other', [U.mkPWild(), U.mkPWild()]), [U.mkLit('wrong')]],
+            [U.mkPWild(), [U.mkLit('fallthrough')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['fallthrough'])
+    })
   })
 
   describe('error', () => {
@@ -339,6 +470,82 @@ describe('basic ops', () => {
     }
 
     expect(testRunner()).toStrictEqual(expectedError)
+  })
+
+  describe('popv', () => {
+    test('discards the top value, leaving the one beneath it', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit(1), U.mkLit(2), U.mkPopv()]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([1])
+    })
+
+    test('popping the frame empty then finishing throws an ICE', () => {
+      // popv empties the value stack; the frame then finishes with zero values,
+      // which the fiber rejects (frames must end with exactly one value).
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(1), U.mkPopv()])])
+      expectFailedExec(fiber, ICE)
+    })
+  })
+
+  describe('jsvar', () => {
+    test('resolves a bound JS internal to its value', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkJsVar('prelude_numberQ')])])
+      expectSuccessfulExec(fiber)
+      expect(typeof out.log.at(0)).toBe('function')
+    })
+
+    test('throws when the internal name is not bound', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkJsVar('definitely_not_a_real_binding')]),
+      ])
+      expectFailedExec(fiber, ScamperError)
+    })
+  })
+
+  describe('deprecated opcodes', () => {
+    test('executing a raise op throws an ICE', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkRaise('boom')])])
+      expectFailedExec(fiber, ICE)
+    })
+
+    test('executing a pops op throws an ICE', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(1), U.mkPops()])])
+      expectFailedExec(fiber, ICE)
+    })
+  })
+
+  describe('with-handler opcodes', () => {
+    test('check-fn accepts a function as the guarded value', () => {
+      // stack top is `+` (a function); check-fn passes, then popv drops the
+      // extra value so the frame finishes cleanly with one.
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkVar('+'), U.mkVar('+'), U.mkCheckFn(), U.mkPopv()]),
+      ])
+      expectSuccessfulExec(fiber)
+    })
+
+    test('check-fn throws when the guarded value is not a function', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit('handler'), U.mkLit(42), U.mkCheckFn()]),
+      ])
+      expectFailedExec(fiber, /with-handler expects a function/)
+    })
+
+    test('push-handler with fewer than two stack values throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit('only-one'), U.mkPushHandler()]),
+      ])
+      expectFailedExec(fiber, ICE)
+    })
+
+    test('pop-handler with fewer than two stack values throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit('only-one'), U.mkPopHandler()]),
+      ])
+      expectFailedExec(fiber, ICE)
+    })
   })
 })
 

@@ -65,6 +65,33 @@ describe('equals', () => {
     expect(U.equals(outerA, outerB)).toBe(true)
   })
 
+  test('equal and unequal pairs (compared as structs)', () => {
+    expect(U.equals(U.mkPair(1, 2), U.mkPair(1, 2))).toBe(true)
+    expect(U.equals(U.mkPair(1, 2), U.mkPair(1, 99))).toBe(false)
+  })
+
+  test('equal lists, unequal lists, and the empty list', () => {
+    expect(U.equals(U.mkList(1, 2, 3), U.mkList(1, 2, 3))).toBe(true)
+    expect(U.equals(U.mkList(1, 2), U.mkList(1, 2, 3))).toBe(false)
+    expect(U.equals(U.mkList(), U.mkList())).toBe(true) // both null
+  })
+
+  test('nested vectors compare element-wise', () => {
+    expect(U.equals([[1, 2], [3]], [[1, 2], [3]])).toBe(true)
+    expect(U.equals([[1, 2], [3]], [[1, 2], [4]])).toBe(false)
+  })
+
+  test('symbols compare by identity, not by value', () => {
+    // NOTE: `equals` has no symbol branch, so two distinct sym objects with the
+    // same value are unequal here -- only reference-identical symbols match.
+    // At the source level 'x always refers to the same interned symbol
+    // (SymbolDB), so (equal? 'x 'x) still holds; this only bites raw mkSym
+    // values. Flagged as a corner to revisit in the LPM unification.
+    const s = U.mkSym('x')
+    expect(U.equals(s, s)).toBe(true)
+    expect(U.equals(U.mkSym('x'), U.mkSym('x'))).toBe(false)
+  })
+
   test('falls through to false when comparing two completely different value kinds', () => {
     const s = U.mkStruct('point', ['x', 'y'], [1, 2])
     expect(U.equals(s, U.mkSym('point'))).toBe(false)

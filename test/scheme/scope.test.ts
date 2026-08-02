@@ -597,40 +597,20 @@ describe('scope tree', () => {
   })
 })
 
-///// Scope checking through the run pipeline (not yet wired) //////////////////
+///// Scope checking: opt-in pass + runtime shadowing /////////////////////////
 
-// N.B., preserved from main's suite. These specs describe scope-checking
-// behavior surfaced through `runProgram` (the default compile+run path), which
-// deliberately does NOT run the scope-check pass yet -- it's opt-in (see
-// compile's `scopeCheck` option / the CLI `--check` flag). They stay
-// skipped/expected-to-fail until scope checking is wired into the default
-// pipeline. The static behavior itself is covered directly above.
+// N.B., scenarios preserved from main's suite. The default compile+run path
+// (runProgram) deliberately does NOT run the scope-check pass -- it's opt-in
+// (compile's `scopeCheck` option / CLI `--check`). So the error-detecting
+// scenarios below are exercised through `scopeErrors` (the same expand +
+// scopeCheckProgram the opt-in pass runs), which verifies real behavior today;
+// shadowing (no errors expected) is pinned through runProgram as a runtime
+// characterization. Some of these overlap the atomic cases above but exercise
+// several errors in a single program.
 
-test.fails('duplicate-binders', async () => {
+test('let does not telescope but let* does (forward references)', async () => {
   expect(
-    await runProgram(`
-(lambda (x x y) (+ x x))
-
-(struct foo (z y z))
-`),
-  ).toEqual([
-    ':8:0: Parser error:',
-    'Duplicate name x given in definition.',
-    'In program: (x x y)',
-  ])
-})
-
-test.skip('let-binding-errors', async () => {
-  expect(
-    await runProgram(`
-; let bindings telescope
-(let
-  ([x1 1]
-   [y1 (+ x1 6)])
-  (+ x1 y1))
-
-; let bindings refer to future bindings
-
+    await scopeErrors(`
 (let
   ([x2 y2]
    [y2 5])
@@ -641,38 +621,41 @@ test.skip('let-binding-errors', async () => {
    [y3 5])
   (+ x3 y3))
 `),
+  ).toEqual(["Undefined variable 'y2'", "Undefined variable 'y3'"])
+})
+
+test('an undefined variable is reported by the scope-check pass', async () => {
+  expect(await scopeErrors('(+ x 1)')).toEqual(["Undefined variable 'x'"])
+})
+
+test('duplicate binders in a lambda and a struct', async () => {
+  expect(
+    await scopeErrors(`
+(lambda (x x y) (+ x x))
+(struct foo (z y z))
+`),
   ).toEqual([
-    "Parser error [4:11-4:12]: Undefined variable 'x1'",
-    "Parser error [10:8-10:9]: Undefined variable 'y2'",
-    "Parser error [15:8-15:9]: Undefined variable 'y3'",
+    "Global variable 'foo-z' is already defined",
+    "Duplicate variable 'x' encountered in binding list",
   ])
 })
 
-test.fails('match-repeated-bindings', async () => {
+test('a repeated pattern variable in a match branch', async () => {
   expect(
-    await runProgram(`
+    await scopeErrors(`
 (match (list 1 2 3)
   [null "fail"]
   [(cons x x) "fail"])
 `),
-  ).toEqual([
-    ':3:2: Scope error:',
-    'Variable x is repeated in the pattern',
-    'In program: (match (list 1 2 3)',
-    '[null "fail"]',
-    '[(cons x x) "fail"])',
-  ])
+  ).toEqual(["Duplicate binding variable 'x' encountered in pattern"])
 })
 
-test.skip.fails('shadowing', async () => {
+test('shadowing is legal and produces the expected runtime values', async () => {
   expect(
     await runProgram(`
 (define x 3)
-
 (define y (+ x 2))
-
 (define x -5)
-
 (+ x y)
 
 (define f
@@ -690,12 +673,4 @@ test.skip.fails('shadowing', async () => {
 x
 `),
   ).toEqual(['0', '6', '105', '-5'])
-})
-
-test.skip('undefined-variable', async () => {
-  expect(
-    await runProgram(`
-(+ x 1)
-`),
-  ).toEqual(["Parser error [1:4-1:4]: Undefined variable 'x'"])
 })

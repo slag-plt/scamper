@@ -28,9 +28,11 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
 }
 
 export const CtorHandler: OpHandler<'ctor'> = (op, currFrame) => {
-  currFrame.values.push(
-    mkStruct(op.name, op.fields, currFrame.values.splice(-op.fields.length)),
-  )
+  // N.B., guard the zero-field case explicitly: `splice(-0)` is `splice(0)`,
+  // which would splice off the *entire* value stack rather than nothing.
+  const args =
+    op.fields.length === 0 ? [] : currFrame.values.splice(-op.fields.length)
+  currFrame.values.push(mkStruct(op.name, op.fields, args))
   return minorStep
 }
 

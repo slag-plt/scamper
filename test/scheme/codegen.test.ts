@@ -534,19 +534,27 @@ t1
     ])
   })
 
-  // TODO: skipped because L.callScamperFn now always throws "Javascript
-  // library functions can no longer call Scamper functions" - JS libs can no
-  // longer invoke Scamper closures/functions directly.
-  test.skip('section', async () => {
+  test('section desugars to a lambda and applies (simple holes)', async () => {
+    await checkMachineOutput(`
+((section + _ 1) 1)
+((section + 1 _) 10)
+((section - 10 _) 3)
+((section * _ _) 5 6)
+`, [2, 11, 7, 30])
+  })
+
+  // Still blocked: `map` here is a JS library function receiving a Scamper
+  // closure `(section string-upcase _)`; invoking that closure from JS routes
+  // through L.callScamperFn, which is permanently disabled ("Javascript library
+  // functions can no longer call Scamper functions"). Re-enable once the LPM
+  // unification lets library higher-order functions drive Scamper closures.
+  test.skip('section as an argument to a JS higher-order function (map)', async () => {
     expect(
       await runProgram(`
-((section + _ 1) 1)
-
 (|> (list "a" "b" "c" "d" "e")
     (section map (section string-upcase _) _))
-
 `),
-    ).toEqual(['2', '(list "A" "B" "C" "D" "E")'])
+    ).toEqual(['(list "A" "B" "C" "D" "E")'])
   })
 })
 
@@ -675,5 +683,147 @@ describe('Rest parameters', () => {
     (display ((lambda (& xs) xs) 1 2 3))
     (display ((lambda (& xs) xs)))
     `)).toEqual(['(list 1 2 3)', 'null'])
+  })
+})
+
+describe('Construct semantics (comprehensiveness audit)', () => {
+  describe('begin', () => {
+    test('a single-expression begin yields that expression', async () => {
+      await checkMachineOutput('(begin 42)', [42])
+    })
+
+    test('a multi-expression begin yields its last expression', async () => {
+      await checkMachineOutput('(begin 1 2 3)', [3])
+    })
+
+    test('begin evaluates earlier expressions (an error in the first propagates)', async () => {
+      await checkMachineOutput('(begin (error "boom") 99)',
+        ['Runtime error: (error) boom'], true)
+    })
+  })
+
+  describe('match', () => {
+    test('a match with no matching branch is an inexhaustive-match error', async () => {
+      await checkMachineOutput('(match 5 [6 "six"])',
+        ['Runtime error: Inexhaustive pattern match failure'], true)
+    })
+
+    test('plit matches a char literal', async () => {
+      await checkMachineOutput('(match #\\a [#\\a "yes"] [_ "no"])', ['yes'])
+    })
+
+    test('plit matches a string literal', async () => {
+      await checkMachineOutput('(match "hi" ["hi" 1] [_ 2])', [1])
+    })
+
+    test('plit matches a boolean literal', async () => {
+      await checkMachineOutput('(match #f [#f 1] [_ 2])', [1])
+    })
+
+    test('nested constructor patterns bind sub-pattern variables', async () => {
+      await checkMachineOutput(`
+        (struct node (l r))
+        (match (node (node 1 2) 3)
+          [(node (node a b) c) (+ (+ a b) c)])
+      `, [6])
+    })
+
+    test('a repeated pattern variable takes the last binding (no repeat check at runtime)', async () => {
+      await checkMachineOutput('(match (pair 1 1) [(pair a a) a])', [1])
+    })
+
+    test('overlapping branches take the first match', async () => {
+      await checkMachineOutput('(match 5 [x "first"] [_ "second"])', ['first'])
+    })
+  })
+
+  describe('quote', () => {
+    test('nested quoted lists', async () => {
+      expect(await runProgram("'(1 (2 (3)))")).toEqual([
+        '(list 1 (list 2 (list 3)))',
+      ])
+    })
+
+    test('mixed literal types in a quoted list', async () => {
+      expect(await runProgram('\'(1 "two" #\\c #t)')).toEqual([
+        '(list 1 "two" #\\c #t)',
+      ])
+    })
+
+    test('the empty quoted list is null', async () => {
+      expect(await runProgram("'()")).toEqual(['null'])
+    })
+
+    test('a quoted symbol', async () => {
+      expect(await runProgram("'foo")).toEqual(['foo'])
+    })
+  })
+
+  describe('struct', () => {
+    test('a single-field struct round-trips through its accessor', async () => {
+      await checkMachineOutput('(struct box (v)) (box-v (box 42))', [42])
+    })
+
+    test('a struct with many fields exposes each accessor', async () => {
+      await checkMachineOutput(
+        '(struct hex (a b c d e f)) (hex-f (hex 1 2 3 4 5 6))', [6])
+    })
+
+    test('a zero-field struct constructs and its predicate holds', async () => {
+      await checkMachineOutput('(struct unit ()) (unit? (unit))', [true])
+    })
+
+    test('a predicate distinguishes its own struct from other values', async () => {
+      await checkMachineOutput(
+        '(struct pt (x y)) (pt? (pt 1 2)) (pt? 5)', [true, false])
+    })
+
+    test('an accessor applied to the wrong struct is a runtime error', async () => {
+      await checkMachineOutput(
+        '(struct a (x)) (struct b (y)) (a-x (b 1))',
+        ['Runtime error: Accessor function expects a a, received [Struct: b]'], true)
+    })
+  })
+
+  describe('apply', () => {
+    test('apply spreads a list as the call arguments', async () => {
+      await checkMachineOutput('(apply + (list 1 2 3))', [6])
+    })
+
+    test('apply with an empty argument list', async () => {
+      await checkMachineOutput('(apply + (list))', [0])
+    })
+
+    test('apply with a non-list argument is a runtime error', async () => {
+      await checkMachineOutput('(apply + 5)',
+        ['Runtime error: (apply) expected a list, received number'], true)
+    })
+  })
+
+  describe('js-var', () => {
+    test('a js-var resolves to its JS internal, callable as a function', async () => {
+      await checkMachineOutput('((js-var "prelude_numberQ") 5)', [true])
+    })
+  })
+
+  describe('define', () => {
+    test('a later top-level define shadows the earlier binding', async () => {
+      await checkMachineOutput('(define x 1) (define x 2) x', [2])
+    })
+
+    test('a function body can forward-reference a later top-level define', async () => {
+      await checkMachineOutput(`
+        (define f (lambda () (g)))
+        (define g (lambda () 42))
+        (f)
+      `, [42])
+    })
+  })
+
+  describe('import', () => {
+    test('importing an unknown builtin library is a runtime error', async () => {
+      await checkMachineOutput('(import no-such-lib)',
+        ['Runtime error: No such built-in library: no-such-lib'], true)
+    })
   })
 })

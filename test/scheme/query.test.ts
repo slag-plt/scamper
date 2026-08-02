@@ -562,49 +562,38 @@ describe('AST querying', () => {
       expect(queriedRange).toEqual(queried.range.firstLineSpan(src))
     })
 
-    // N.B., verified still stale, not just historically skipped: running this
-    // against the current codegen shows the rept opcode inside the *first*
-    // prog statement (the define's closure body: `[var a, rept]`), not the
-    // second (the synthesized example-call disp) that expectedProg checks --
-    // that disp's expr is plainly `[var myid, lit 1, lit 2, ap(2)]`, no rept
-    // at all. So expectedProg's shape doesn't match how report compiles post-
-    // redesign. Pinning the correct shape would make this a codegen.ts-level
-    // test (lowering of `report`), which is out of scope for query.ts;
-    // getQueriedProgram's placement of the report-wrapped sub-expression is
-    // otherwise covered directly by the tests above.
-    test.skip('report operation is contained in bytecode', async () => {
+    // The query loc points at `a` in the lambda body of the *first* statement
+    // (the define), so `report` lowers to a rept op inside that closure body
+    // (`[var a, rept]`) -- not the synthesized @example disp, whose expr is a
+    // plain call (`[var myid, lit 1, lit 2, ap 2]`). We assert by op-tag
+    // location, robust to ranges and closure internals.
+    test('a queried sub-expression lowers `report` to a rept op in its own statement', async () => {
       const funcName = 'myid'
-      const lit1 = 1
-      const lit2 = 2
       const src = `;;; (${funcName} a b) -> number?
 ;;;  a : number?
 ;;;  b : number?
 ;;; returns a
-;;; @example (${funcName} ${lit1.toString()} ${lit2.toString()}) -> ${lit1.toString()}
+;;; @example (${funcName} 1 2) -> 1
 (define ${funcName} (lambda (a b) a))`
       const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
 
-      const expectedProg: L.Prog = [
-        expect.anything() as L.Stmt,
-        L.mkDisp(
-          [
-            L.mkVar(funcName, anyRange),
-            L.mkRept(anyRange),
-            L.mkLit(lit1, anyRange),
-            L.mkLit(lit2, anyRange),
-            L.mkAp(2, anyRange),
-          ],
-          anyRange,
-        ),
-      ]
-
-      const { prog: actualProg, diagnostics } = await compile(src, { queryLoc })
+      const { prog, diagnostics } = await compile(src, { queryLoc })
       expect(diagnostics).toStrictEqual([])
-      if (actualProg === undefined) {
+      if (prog === undefined) {
         expect.fail('expected compile to return a program')
         return
       }
-      expect(actualProg).toStrictEqual(expectedProg)
+
+      // Collect every op tag in a block, recursing into closure bodies.
+      const tagsOf = (blk: L.Blk): string[] =>
+        blk.flatMap((op) =>
+          op.tag === 'cls' ? ['cls', ...tagsOf(op.body)] : [op.tag],
+        )
+
+      const define = prog[0] as L.Define
+      const disp = prog[prog.length - 1] as L.Disp
+      expect(tagsOf(define.expr)).toContain('rept')
+      expect(tagsOf(disp.expr)).not.toContain('rept')
     })
   })
 })
