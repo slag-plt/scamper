@@ -145,10 +145,6 @@ export const mkRept = (range: Range = Range.none): L.Rept => ({
   tag: 'rept',
   range,
 })
-export const mkError = (range: Range = Range.none): L.ErrorOp => ({
-  tag: 'error',
-  range,
-})
 export const mkApSpread = (range: Range = Range.none): L.ApSpread => ({
   tag: 'ap-spread',
   range,

@@ -7,7 +7,6 @@ export const reservedWords = [
   'begin',
   'cond',
   'define',
-  'error',
   'if',
   'import',
   'display',

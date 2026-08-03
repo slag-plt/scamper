@@ -232,21 +232,6 @@ describe('AST querying', () => {
       })
     })
 
-    describe('error', () => {
-      test('reports the wrapped expression', () => {
-        const src = '(error "boom")'
-        const exp = parseExp(src)
-        const { exp: reported } = getReportedExp(exp, locIn(src, '"boom"'))
-        expect(reported.tag).toBe('error')
-        if (reported.tag !== 'error') return
-        expect(reported.exp).toStrictEqual({
-          tag: 'report',
-          exp: mkLit('boom', anyRange),
-          range: anyRange,
-        })
-      })
-    })
-
     describe('lam', () => {
       test('reports the body slot', () => {
         const src = '(lambda (x) x)'

@@ -389,22 +389,6 @@ describe('basic ops', () => {
     })
   })
 
-  describe('error', () => {
-    test('raises a runtime error with the given message', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit('boom'), U.mkError()])])
-      expect(() => {
-        testExecute(fiber, out)
-      }).toThrow('boom')
-    })
-
-    test('non-string value throws', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit(42), U.mkError()])])
-      expect(() => {
-        testExecute(fiber, out)
-      }).toThrow(/expected a string/)
-    })
-  })
-
   test('rept without a pending value throws an ICE', () => {
     const fiber = makeTestFiber([U.mkDisp([U.mkRept()])])
     expectFailedExec(fiber, ICE)

@@ -12,6 +12,10 @@
 ;;; @category function
 (define with-handler (js-var "prelude_withHandler"))
 
+; `error` raises a runtime error with the given message; a first-class
+; procedure backed by prelude_error.
+(define error (js-var "prelude_error"))
+
 ;;; (and☀︎ v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any

@@ -2,6 +2,24 @@ import * as L from '../../lpm'
 
 export * from './files.js'
 
+// `error` raises a runtime error carrying `msg`. It's an ordinary procedure
+// (not a special form): it throws a ScamperError whose source is fixed to
+// "error" but leaves the range unset, so applyFn attributes it to the call
+// site (applyFn fills range/source only when unset). Bound via
+// `(define error (js-var "prelude_error"))`.
+export const prelude_error = L.nameFn('error', (msg: L.Value): L.Value => {
+  if (typeof msg !== 'string') {
+    throw new L.ScamperError(
+      'Runtime',
+      `expected a string, received ${L.typeOf(msg)}`,
+      undefined,
+      undefined,
+      'error',
+    )
+  }
+  throw new L.ScamperError('Runtime', msg, undefined, undefined, 'error')
+}) as L.JsFunction
+
 // `apply` can't be a plain JS function -- JS can't call a Scamper closure -- so
 // its native implementation is the minimal bytecode closure
 // `(lambda (f args) «ap-spread»)`: push f and args, then the ap-spread op does

@@ -305,15 +305,6 @@ describe('quote', () => {
   })
 })
 
-describe('error', () => {
-  test('message expression range', () => {
-    const src = '(error "boom")'
-    const err = asExp(parseExp(src), 'error')
-    assertSpan(err.range, src, '(error "boom")')
-    assertSpan(err.exp.range, src, '"boom"')
-  })
-})
-
 ///// Sugared expression forms /////////////////////////////////////////////////
 
 describe('and / or', () => {

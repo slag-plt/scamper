@@ -153,11 +153,6 @@ test('mkCls operation raising without a name produces a lambda expression', () =
   expect(result).toBe('(lambda (x) x)')
 })
 
-test('error operation raising', () => {
-  const result = raiseBlk([LPM.mkLit('boom'), LPM.mkError()])
-  expect(result).toBe('(error "boom")')
-})
-
 test('ap-spread operation raising', () => {
   const result = raiseBlk([LPM.mkVar('f'), LPM.mkVar('args'), LPM.mkApSpread()])
   expect(result).toBe('(apply f args)')

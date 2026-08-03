@@ -92,9 +92,12 @@ export function applyFn(
         // callRange/name: the range/name of the Ap that invoked *this
         // frame*, i.e. wherever the user (or an enclosing function) really
         // wrote the call.
+        // Fill range/source only when the error didn't set them itself: most JS
+        // primitives throw context-free errors (we supply both), but some (e.g.
+        // `error`) fix their own source, which we must not clobber.
         const useFrame = !currFrame.name.startsWith('##')
-        e.range = useFrame ? currFrame.callRange : range
-        e.source = useFrame ? currFrame.name : fn.name
+        e.range ??= useFrame ? currFrame.callRange : range
+        e.source ??= useFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
@@ -211,20 +214,6 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
 export const PopVHandler: OpHandler<'popv'> = (_, currFrame) => {
   currFrame.values.pop()
   return traceStep
-}
-
-export const ErrorHandler: OpHandler<'error'> = (op, currFrame) => {
-  const msg = currFrame.values.pop()
-  if (typeof msg !== 'string') {
-    throw new ScamperError(
-      'Runtime',
-      `expected a string, received ${typeOf(msg)}`,
-      undefined,
-      op.range,
-      'error',
-    )
-  }
-  throw new ScamperError('Runtime', msg, undefined, op.range, 'error')
 }
 
 export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {

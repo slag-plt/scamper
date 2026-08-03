@@ -47,7 +47,7 @@ describe('Expanded expressions', () => {
       A.mkIf(A.mkId('X'), A.mkId('A'),
         A.mkIf(A.mkId('Y'), A.mkId('B'),
           A.mkIf(A.mkId('Z'), A.mkId('C'),
-            A.mkError(A.mkLit('No matching clause in cond')))))
+            A.mkApp(A.mkId('error'), [A.mkLit('No matching clause in cond')]))))
     expect(actual).toEqual(expected)
   })
 
@@ -194,18 +194,6 @@ describe('Section hole collection', () => {
     expect(actual).toEqual(expected)
   })
 
-  test('error', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkError(A.mkId('_'))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(1)
-    const [h] = actual.params
-    const expected =
-      A.mkLam([h], A.mkApp(A.mkId('f'), [A.mkError(h)]))
-    expect(actual).toEqual(expected)
-  })
-
   test('and', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
@@ -252,7 +240,7 @@ describe('Section hole collection', () => {
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
           A.mkIf(h1, h2,
-            A.mkError(A.mkLit('No matching clause in cond')))
+            A.mkApp(A.mkId('error'), [A.mkLit('No matching clause in cond')]))
         ]))
     expect(actual).toEqual(expected)
   })

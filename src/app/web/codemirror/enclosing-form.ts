@@ -25,7 +25,6 @@ const FORM_LABELS: Record<string, string> = {
   Begin: 'begin',
   Section: 'section',
   Quote: 'quote',
-  Error: 'error',
   Vector: 'vector',
   Application: 'application',
   // Patterns

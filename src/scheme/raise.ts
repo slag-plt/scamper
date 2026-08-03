@@ -105,12 +105,6 @@ export function raiseFrame(
         break
       }
 
-      case 'error': {
-        const arg = values.pop()!
-        values.push(A.mkError(arg))
-        break
-      }
-
       case 'ap-spread': {
         const [fn, args] = values.splice(-2)
         values.push(A.mkApp(A.mkId('apply'), [fn, args]))

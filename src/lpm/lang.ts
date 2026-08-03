@@ -329,10 +329,6 @@ export interface Rept {
   tag: 'rept'
   range: Range
 }
-export interface ErrorOp {
-  tag: 'error'
-  range: Range
-}
 export interface ApSpread {
   tag: 'ap-spread'
   range: Range
@@ -363,7 +359,6 @@ export type Ops =
   | Match
   | PopV
   | Rept
-  | ErrorOp
   | ApSpread
   | PushHandler
   | PopHandler

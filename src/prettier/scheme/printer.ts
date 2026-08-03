@@ -163,9 +163,6 @@ export const SchemePrinter: Printer = {
       case 'quote':
         return `'${TextRenderer.render(node.value)}`
 
-      case 'error':
-        return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
-
       case 'let*': {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node

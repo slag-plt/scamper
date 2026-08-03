@@ -123,7 +123,6 @@ const formDescriptions: Record<string, string> = {
   Begin: 'begin expression (at least one sub-expression)',
   Section: 'section expression (at least one sub-expression)',
   Report: 'report expression',
-  Error: 'error expression (a message to raise)',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -392,9 +391,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const inner = cs.length === 2 ? cs[1] : cs[0]
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
-
-    case 'Error':
-      return A.mkError(expFromNode(ctx, cs[1]), range)
 
     case 'Vector':
       return A.mkLit(nodeToRawValue(ctx, node), range)

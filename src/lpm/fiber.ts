@@ -14,7 +14,6 @@ import {
   ApSpreadHandler,
   ClsHandler,
   CtorHandler,
-  ErrorHandler,
   LitHandler,
   MatchHandler,
   PopHandlerHandler,
@@ -324,9 +323,6 @@ export class Fiber {
         break
       case 'rept':
         isMajorStep = ReptHandler(currOp, this.currentFrame, this)
-        break
-      case 'error':
-        isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
         break
       case 'ap-spread':
         isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)

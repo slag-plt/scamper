@@ -86,12 +86,6 @@ describe('expToString', () => {
     expect(A.expToString(A.mkQuote(1, anyRange))).toBe('(quote 1)')
   })
 
-  test('error', () => {
-    expect(A.expToString(A.mkError(A.mkLit('boom', anyRange), anyRange))).toBe(
-      '(error "boom")',
-    )
-  })
-
   test('let*', () => {
     expect(
       A.expToString(

@@ -156,10 +156,6 @@ function scopeCheckExp(
       // N.B., no need to scope check a "frozen" AST
       return
     }
-    case 'error': {
-      scopeCheckExp(diagnostics, globals, locals, e.exp)
-      return
-    }
     case 'report': {
       scopeCheckExp(diagnostics, globals, locals, e.exp)
       return

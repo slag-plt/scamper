@@ -46,7 +46,6 @@ expression {
   Boolean |
   Char |
   Quote { "'" expression | paren<kw<"quote"> expression> } |
-  Error { paren<kw<"error"> expression> } |
   Vector { "[" expression* "]" } |
   Lambda { paren<kw<"lambda"> arglist expression> } |
   If { paren<kw<"if"> expression expression expression> } |
