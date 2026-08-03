@@ -66,13 +66,14 @@ describe('Scheduler', () => {
     test('sends trace output for non-disp major steps when tracing', async () => {
       const sched = new Scheduler()
       const fiber = makeTestFiber([U.mkStmtExp([U.mkLit('traced')])])
-      const task = makeTask(fiber, true)
+      // The trace branch renders each major step via the task's stepper; a mock
+      // one returns a sentinel so this (LPM-layer) test needn't raise/sugar.
+      const stepper = { render: () => 'RENDERED', final: () => undefined }
+      const task = makeTask(fiber, true, stepper)
       sched.schedule(task)
       await sleep(QUANTUM_WAIT_MS)
       sched.pauseExecution()
-      expect(task.ch.log.length).toBeGreaterThan(0)
-      // the stmtexp's final major step should trace the computed result
-      expect(task.ch.log.at(-1)).toEqual(mkTraceOutput('traced'))
+      expect(task.ch.log).toContainEqual(mkTraceOutput('RENDERED'))
     })
 
     test('disp output is sent raw even with tracing enabled', async () => {

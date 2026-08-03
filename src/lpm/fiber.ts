@@ -132,6 +132,15 @@ export class Fiber {
     return this.currStmtIdx >= this.prog.length
   }
 
+  /**
+   * @returns the index of the statement currently executing. It advances
+   * (via advanceStmt) exactly when a statement completes, so step mode watches
+   * it to pause at statement boundaries.
+   */
+  get stmtIndex(): number {
+    return this.currStmtIdx
+  }
+
   // TODO: this may be unnecessary later
   get lastStatement(): Stmt {
     const stmt = this.prog.at(this.currStmtIdx - 1)

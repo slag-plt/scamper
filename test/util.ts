@@ -9,6 +9,7 @@ import {
   Value,
 } from '../src/lpm'
 import { DisplayTask, QueryTask, SchedulerTask } from '../src/lpm/scheduler'
+import { FiberTraceStepper } from '../src/lpm/raiser'
 import { SimpleErrorChannel } from '../src/lpm/output/simple-error'
 import * as U from '../src/lpm/util'
 import * as process from 'node:process'
@@ -165,6 +166,7 @@ export interface TestTask extends DisplayTask {
 export function makeTask(
   fiber: MockFiber | Fiber,
   isTracing = false,
+  stepper?: FiberTraceStepper,
 ): TestTask {
   const ch = new LoggingChannel(false, false)
   return {
@@ -173,6 +175,7 @@ export function makeTask(
     out: ch,
     err: ch,
     isTracing,
+    stepper,
     ch,
   }
 }

@@ -5,12 +5,12 @@ import { Fiber } from '../../src/lpm/fiber.js'
 import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { LoggingChannel } from '../../src/lpm/output/index.js'
 import { Scheduler } from '../../src/lpm/scheduler.js'
-import { traceReductions } from '../../src/scheme/trace.js'
+import { makeTraceStepper, traceReductions } from '../../src/scheme/trace.js'
 
 // runProgram (test/harness.ts) steps a fiber directly and has no tracing
-// toggle, so tracing needs the real Scheduler wired up with isTracing --
-// that's the only thing that ever emits trace-wrapped output (see the
-// isTracing branch in src/lpm/scheduler.ts).
+// toggle, so tracing needs the real Scheduler wired up with isTracing and a
+// stepper (as Scamper.execute does) -- that's what emits the reduction trace
+// (see the isTracing branch in src/lpm/scheduler.ts).
 async function runProgramTraced(src: string, isTracing = true): Promise<string[]> {
   src = src.trim()
   const out = new LoggingChannel()
@@ -32,6 +32,7 @@ async function runProgramTraced(src: string, isTracing = true): Promise<string[]
       out,
       err: out,
       isTracing,
+      stepper: isTracing ? makeTraceStepper() : undefined,
       onComplete: resolve,
     })
   })
@@ -47,39 +48,31 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('traces each define with an arrow-prefixed value, never a bare one', async () => {
+test('traces each define with its defined value', async () => {
   expect(
     await runProgramTraced(`
       (define x 5)
       (define y 10)
     `),
-  ).toEqual(['--> null', '--> 5', '--> 5', '--> 10'])
+  ).toEqual(['--> 5', '--> 10'])
 })
 
-test('traces a builtin import as a single step', async () => {
-  expect(await runProgramTraced('(import music)')).toEqual(['--> null'])
+test('a builtin import produces no reduction steps', async () => {
+  expect(await runProgramTraced('(import music)')).toEqual([])
 })
 
-test('a traced top-level expression ends with its correct value, then displays it raw', async () => {
-  const result = await runProgramTraced('(+ 1 2)')
-  // fiber.lastResult only updates once the whole statement finishes, so every
-  // trace line emitted while still evaluating the expression reports the
-  // fiber's previous (here: still-initial) result rather than a partial one.
-  // Only the last trace line -- emitted once evaluation completes -- is
-  // accurate; this is the "coarse" granularity the scheduler offers.
-  expect(result.slice(0, -2).every((line) => line === '--> null')).toBe(true)
-  expect(result.slice(-2)).toEqual(['--> 3', '3'])
+test('a traced expression shows its reduction, ending at the value', async () => {
+  // The scheduler now emits the reduction trace (raise + sugar per step), not
+  // the old coarse `--> lastResult`.
+  expect(await runProgramTraced('(+ 1 2)')).toEqual(['--> (+ 1 2)', '--> 3'])
 })
 
-test('tracing only adds arrow-prefixed lines on top of the untraced output', async () => {
-  const src = `
-    (define x 5)
-    (display "hi")
-    (+ x 1)
-  `
-  const traced = await runProgramTraced(src)
-  const untraced = await runProgram(src)
-  expect(traced.filter((line) => !line.startsWith('--> '))).toEqual(untraced)
+test('a traced program renders every statement as arrow-prefixed reductions', async () => {
+  // In trace mode the output *is* the reduction trace: each statement's steps
+  // (and its value) are arrow-prefixed, rather than raw output plus annotations.
+  const traced = await runProgramTraced('(define x 5)\n(display "hi")\n(+ x 1)')
+  expect(traced.every((line) => line.startsWith('--> '))).toBe(true)
+  expect(traced).toEqual(['--> 5', '--> "hi"', '--> (+ 5 1)', '--> 6'])
 })
 
 test('tracing disabled never emits arrow-prefixed lines', async () => {
