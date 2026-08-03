@@ -54,11 +54,6 @@ export interface Comment {
 //     | (cond [e11 e12] ... [e1k e2k])
 //     | (section e1 ... ek)
 //
-//     -- Internal form, produced only by the query system (query.ts) to
-//        wrap the expression under a cursor for tooltip evaluation; not
-//        user-facing surface syntax
-//     | (report e)
-//
 // s ::= e
 //     | (import m)
 //     | (define x e)
@@ -172,11 +167,6 @@ export interface Section extends Tagged, Node {
   tag: 'section'
   exps: Exp[]
 }
-export interface Report extends Tagged, Node {
-  tag: 'report'
-  exp: Exp
-}
-
 export type Exp =
   | Lit
   | Identifier
@@ -192,7 +182,6 @@ export type Exp =
   | Or
   | Cond
   | Section
-  | Report
 
 ///// Statements /////
 
@@ -351,11 +340,6 @@ export const mkSection = (
   exps: Exp[],
   range: L.Range = L.Range.none,
 ): Section => ({ tag: 'section', exps, range })
-export const mkReport = (exp: Exp, range: L.Range = L.Range.none): Report => ({
-  tag: 'report',
-  exp,
-  range,
-})
 
 // Statements (stmt)
 export const mkImport = (
@@ -412,7 +396,6 @@ export function isExp(v: unknown): v is Exp {
       'or',
       'cond',
       'section',
-      'report',
     ].includes(v.tag)
   )
 }
@@ -495,8 +478,6 @@ export function expToString(e: Exp): string {
       return `(cond ${e.branches.map(({ test, body }) => `[${expToString(test)} ${expToString(body)}]`).join(' ')})`
     case 'section':
       return `(section ${e.exps.map(expToString).join(' ')})`
-    case 'report':
-      return `(report ${expToString(e.exp)})`
   }
 }
 
@@ -633,8 +614,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.exps.length === e2.exps.length &&
       e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
-  } else if (e1.tag === 'report' && e2.tag === 'report') {
-    return expEquals(e1.exp, e2.exp)
   } else {
     return false
   }

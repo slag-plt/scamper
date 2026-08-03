@@ -18,5 +18,4 @@ export const reservedWords = [
   'quote',
   'section',
   'struct',
-  'report',
 ]

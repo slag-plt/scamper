@@ -12,8 +12,9 @@ export type QueryResult =
 
 /**
  * @returns on success, prog with the statement at [queryLoc] having its
- *          deepest queried sub-expression wrapped in a Report expression, plus
- *          the range of that inner reported expression; otherwise a diagnostic
+ *          deepest queried sub-expression wrapped in an `(##report## ...)`
+ *          application, plus the range of that inner reported expression;
+ *          otherwise a diagnostic
  */
 export function getQueriedProgram(prog: A.Prog, queryLoc: Loc): QueryResult {
   const queriedI = prog.findIndex((stmt) => stmt.range.contains(queryLoc))
@@ -214,9 +215,6 @@ function slotsOf(exp: A.Exp): Slot[] {
             ),
         })),
       ]
-
-    case 'report':
-      return [{ exp: exp.exp, rebuild: (r) => A.mkReport(r, exp.range) }]
   }
 }
 
@@ -238,5 +236,8 @@ export function getReportedExp(
   // query must have landed on syntax that belongs to this node itself (a
   // keyword, a bracket, or a leaf with no children at all). Wrap the whole
   // thing.
-  return { exp: A.mkReport(exp, exp.range), range: exp.range }
+  return {
+    exp: A.mkApp(A.mkId('##report##', exp.range), [exp], exp.range),
+    range: exp.range,
+  }
 }

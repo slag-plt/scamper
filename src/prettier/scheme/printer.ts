@@ -219,9 +219,6 @@ export const SchemePrinter: Printer = {
           ')',
         ])
 
-      case 'report':
-        return group(['(report', indent([line, path.call(print, 'exp')]), ')'])
-
       ///// Patterns //////////////////////////////////////////////////////////////
 
       case 'pwild':

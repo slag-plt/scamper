@@ -132,8 +132,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
       // N.B., a section's `_` holes only become bound parameters after
       // expansion, so at this (surface) level a section binds nothing.
       return exp.exps.flatMap(scopesInExp)
-    case 'report':
-      return scopesInExp(exp.exp)
     case 'cond':
       return exp.branches.flatMap((b) => [
         ...scopesInExp(b.test),

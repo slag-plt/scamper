@@ -1,15 +1,21 @@
 import { describe, expect, test } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { getQueriedProgram, getReportedExp, getReportedStmt } from '../../src/scheme/query'
-import { isStmtExp, mkId, mkLit, Prog } from '../../src/scheme/ast'
+import { Exp, isStmtExp, mkApp, mkId, mkLit, Prog } from '../../src/scheme/ast'
 import { Loc } from '../../src/lpm'
 import * as L from '../../src/lpm'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { anyRange } from './util'
-import { compile } from '../../src/scheme'
+import { compile, mkInitialEnv } from '../../src/scheme'
+import { Fiber } from '../../src/lpm/fiber'
 
 const testLit = 'test lit'
 const testDispLit = 2
+
+// The query system wraps its target sub-expression in an (##report## e)
+// application; this builds the expected wrapper (ranges are wildcards).
+const reportWrap = (exp: Exp) =>
+  mkApp(mkId('##report##', anyRange), [exp], anyRange)
 
 const testProgram = `"${testLit}"
 ()
@@ -103,7 +109,7 @@ describe('AST querying', () => {
       const { stmt: reported } = getReportedStmt(stmt, locOf(`"${testLit}"`))
       expect(reported).toStrictEqual({
         tag: 'stmtexp',
-        expr: { tag: 'report', exp: mkLit(testLit, anyRange), range: anyRange },
+        expr: reportWrap(mkLit(testLit, anyRange)),
         range: anyRange,
       })
     })
@@ -116,7 +122,7 @@ describe('AST querying', () => {
       const { stmt: reported } = getReportedStmt(stmt, locOf('()'))
       expect(reported).toStrictEqual({
         tag: 'stmtexp',
-        expr: { tag: 'report', exp: mkLit(null, anyRange), range: anyRange },
+        expr: reportWrap(mkLit(null, anyRange)),
         range: anyRange,
       })
     })
@@ -131,7 +137,7 @@ describe('AST querying', () => {
       // bracket" position, conceptually) always wraps the whole thing --
       // there's nothing deeper to recurse into.
       const { exp } = getReportedExp(stmt.value, locOf(testDispLit.toString()))
-      expect(exp.tag).toBe('report')
+      expect(exp.tag).toBe('app')
     })
 
     describe('recursive case: queried a non-head argument', () => {
@@ -143,11 +149,7 @@ describe('AST querying', () => {
         const { exp } = getReportedExp(stmt.expr, locOf('"yo"'))
         expect(exp.tag).toBe('app')
         if (exp.tag !== 'app') return
-        expect(exp.args[0]).toStrictEqual({
-          tag: 'report',
-          exp: mkLit('yo', anyRange),
-          range: anyRange,
-        })
+        expect(exp.args[0]).toStrictEqual(reportWrap(mkLit('yo', anyRange)))
         // the sibling argument is untouched
         expect(exp.args[1].tag).toBe('app')
       })
@@ -164,11 +166,7 @@ describe('AST querying', () => {
         const inner = exp.args[1]
         expect(inner.tag).toBe('app')
         if (inner.tag !== 'app') return
-        expect(inner.args[0]).toStrictEqual({
-          tag: 'report',
-          exp: mkLit("what's up", anyRange),
-          range: anyRange,
-        })
+        expect(inner.args[0]).toStrictEqual(reportWrap(mkLit("what's up", anyRange)))
       })
 
       test('does not mutate the input expression', () => {
@@ -190,9 +188,9 @@ describe('AST querying', () => {
         expect(stmt.tag).toBe('stmtexp')
         if (stmt.tag !== 'stmtexp') return
         const { exp } = getReportedExp(stmt.expr, locOf('if'))
-        expect(exp.tag).toBe('report')
-        if (exp.tag !== 'report') return
-        expect(exp.exp.tag).toBe('if')
+        expect(exp.tag).toBe('app')
+        if (exp.tag !== 'app') return
+        expect(exp.args[0].tag).toBe('if')
       })
     })
 
@@ -205,11 +203,7 @@ describe('AST querying', () => {
         const { exp } = getReportedExp(stmt.expr, locOf('"not-a-fn"'))
         expect(exp.tag).toBe('app')
         if (exp.tag !== 'app') return
-        expect(exp.head).toStrictEqual({
-          tag: 'report',
-          exp: mkLit('not-a-fn', anyRange),
-          range: anyRange,
-        })
+        expect(exp.head).toStrictEqual(reportWrap(mkLit('not-a-fn', anyRange)))
         // the argument is untouched
         expect(exp.args[0]).toStrictEqual(mkLit(1, anyRange))
       })
@@ -224,11 +218,7 @@ describe('AST querying', () => {
         if (exp.tag !== 'app') return
         expect(exp.head.tag).toBe('lam')
         if (exp.head.tag !== 'lam') return
-        expect(exp.head.body).toStrictEqual({
-          tag: 'report',
-          exp: mkId('x', anyRange),
-          range: anyRange,
-        })
+        expect(exp.head.body).toStrictEqual(reportWrap(mkId('x', anyRange)))
       })
     })
 
@@ -239,11 +229,7 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'x', 1))
         expect(reported.tag).toBe('lam')
         if (reported.tag !== 'lam') return
-        expect(reported.body).toStrictEqual({
-          tag: 'report',
-          exp: mkId('x', anyRange),
-          range: anyRange,
-        })
+        expect(reported.body).toStrictEqual(reportWrap(mkId('x', anyRange)))
       })
     })
 
@@ -255,11 +241,7 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'a'))
         expect(reported.tag).toBe('if')
         if (reported.tag !== 'if') return
-        expect(reported.guard).toStrictEqual({
-          tag: 'report',
-          exp: mkId('a', anyRange),
-          range: anyRange,
-        })
+        expect(reported.guard).toStrictEqual(reportWrap(mkId('a', anyRange)))
         expect(reported.ifB).toStrictEqual(mkId('b', anyRange))
         expect(reported.elseB).toStrictEqual(mkId('c', anyRange))
       })
@@ -270,11 +252,7 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('if')
         if (reported.tag !== 'if') return
         expect(reported.guard).toStrictEqual(mkId('a', anyRange))
-        expect(reported.ifB).toStrictEqual({
-          tag: 'report',
-          exp: mkId('b', anyRange),
-          range: anyRange,
-        })
+        expect(reported.ifB).toStrictEqual(reportWrap(mkId('b', anyRange)))
         expect(reported.elseB).toStrictEqual(mkId('c', anyRange))
       })
 
@@ -285,11 +263,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'if') return
         expect(reported.guard).toStrictEqual(mkId('a', anyRange))
         expect(reported.ifB).toStrictEqual(mkId('b', anyRange))
-        expect(reported.elseB).toStrictEqual({
-          tag: 'report',
-          exp: mkId('c', anyRange),
-          range: anyRange,
-        })
+        expect(reported.elseB).toStrictEqual(reportWrap(mkId('c', anyRange)))
       })
     })
 
@@ -301,11 +275,7 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('and')
         if (reported.tag !== 'and') return
         expect(reported.exps[0]).toStrictEqual(mkId('p', anyRange))
-        expect(reported.exps[1]).toStrictEqual({
-          tag: 'report',
-          exp: mkId('q', anyRange),
-          range: anyRange,
-        })
+        expect(reported.exps[1]).toStrictEqual(reportWrap(mkId('q', anyRange)))
       })
 
       test('begin reports an element and rebuilds via mkBegin', () => {
@@ -314,11 +284,7 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'p'))
         expect(reported.tag).toBe('begin')
         if (reported.tag !== 'begin') return
-        expect(reported.exps[0]).toStrictEqual({
-          tag: 'report',
-          exp: mkId('p', anyRange),
-          range: anyRange,
-        })
+        expect(reported.exps[0]).toStrictEqual(reportWrap(mkId('p', anyRange)))
         expect(reported.exps[1]).toStrictEqual(mkId('q', anyRange))
       })
     })
@@ -332,7 +298,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'let') return
         expect(reported.bindings[0]).toStrictEqual({
           pat: mkId('x', anyRange),
-          value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
+          value: reportWrap(mkLit(1, anyRange)),
         })
         expect(reported.bindings[1]).toStrictEqual({
           pat: mkId('y', anyRange),
@@ -355,11 +321,7 @@ describe('AST querying', () => {
           pat: mkId('y', anyRange),
           value: mkLit(2, anyRange),
         })
-        expect(reported.body).toStrictEqual({
-          tag: 'report',
-          exp: mkId('z', anyRange),
-          range: anyRange,
-        })
+        expect(reported.body).toStrictEqual(reportWrap(mkId('z', anyRange)))
       })
 
       test('let* reports a binding value slot', () => {
@@ -370,7 +332,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'let*') return
         expect(reported.bindings[0]).toStrictEqual({
           pat: mkId('x', anyRange),
-          value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
+          value: reportWrap(mkLit(1, anyRange)),
         })
         expect(reported.body).toStrictEqual(mkId('x', anyRange))
       })
@@ -385,7 +347,7 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('cond')
         if (reported.tag !== 'cond') return
         expect(reported.branches[0]).toStrictEqual({
-          test: { tag: 'report', exp: mkId('p', anyRange), range: anyRange },
+          test: reportWrap(mkId('p', anyRange)),
           body: mkId('q', anyRange),
         })
         expect(reported.branches[1]).toStrictEqual({
@@ -405,7 +367,7 @@ describe('AST querying', () => {
         })
         expect(reported.branches[1]).toStrictEqual({
           test: mkId('r', anyRange),
-          body: { tag: 'report', exp: mkId('s', anyRange), range: anyRange },
+          body: reportWrap(mkId('s', anyRange)),
         })
       })
     })
@@ -418,11 +380,7 @@ describe('AST querying', () => {
         const { exp: reported } = getReportedExp(exp, locIn(src, 'v'))
         expect(reported.tag).toBe('match')
         if (reported.tag !== 'match') return
-        expect(reported.scrutinee).toStrictEqual({
-          tag: 'report',
-          exp: mkId('v', anyRange),
-          range: anyRange,
-        })
+        expect(reported.scrutinee).toStrictEqual(reportWrap(mkId('v', anyRange)))
         // patterns and branch bodies are untouched
         expect(reported.branches[0].body).toStrictEqual(mkId('y', anyRange))
         expect(reported.branches[1].body).toStrictEqual(mkId('z', anyRange))
@@ -437,28 +395,7 @@ describe('AST querying', () => {
         if (reported.tag !== 'match') return
         expect(reported.scrutinee).toStrictEqual(mkId('v', anyRange))
         expect(reported.branches[0].body).toStrictEqual(mkId('y', anyRange))
-        expect(reported.branches[1].body).toStrictEqual({
-          tag: 'report',
-          exp: mkId('z', anyRange),
-          range: anyRange,
-        })
-      })
-    })
-
-    describe('report', () => {
-      test('is transparent when nested inside another slot', () => {
-        const src = '(f (report x) y)'
-        const exp = parseExp(src)
-        const { exp: reported } = getReportedExp(exp, locIn(src, 'x'))
-        expect(reported.tag).toBe('app')
-        if (reported.tag !== 'app') return
-        expect(reported.args[0]).toStrictEqual({
-          tag: 'report',
-          exp: { tag: 'report', exp: mkId('x', anyRange), range: anyRange },
-          range: anyRange,
-        })
-        // the sibling argument is untouched
-        expect(reported.args[1]).toStrictEqual(mkId('y', anyRange))
+        expect(reported.branches[1].body).toStrictEqual(reportWrap(mkId('z', anyRange)))
       })
     })
   })
@@ -518,11 +455,11 @@ describe('AST querying', () => {
     })
 
     // The query loc points at `a` in the lambda body of the *first* statement
-    // (the define), so `report` lowers to a rept op inside that closure body
-    // (`[var a, rept]`) -- not the synthesized @example disp, whose expr is a
-    // plain call (`[var myid, lit 1, lit 2, ap 2]`). We assert by op-tag
-    // location, robust to ranges and closure internals.
-    test('a queried sub-expression lowers `report` to a rept op in its own statement', async () => {
+    // (the define), so the query wraps it as `(##report## a)` inside that
+    // closure body -- not the synthesized @example disp. We assert by locating
+    // the `##report##` variable reference, robust to ranges and closure
+    // internals.
+    test('a queried sub-expression wraps in ##report## in its own statement', async () => {
       const funcName = 'myid'
       const src = `;;; (${funcName} a b) -> number?
 ;;;  a : number?
@@ -539,16 +476,51 @@ describe('AST querying', () => {
         return
       }
 
-      // Collect every op tag in a block, recursing into closure bodies.
-      const tagsOf = (blk: L.Blk): string[] =>
+      // Collect var names referenced in a block, recursing into closures.
+      const varsOf = (blk: L.Blk): string[] =>
         blk.flatMap((op) =>
-          op.tag === 'cls' ? ['cls', ...tagsOf(op.body)] : [op.tag],
+          op.tag === 'cls'
+            ? varsOf(op.body)
+            : op.tag === 'var'
+              ? [op.name]
+              : [],
         )
 
       const define = prog[0] as L.Define
       const disp = prog[prog.length - 1] as L.Disp
-      expect(tagsOf(define.expr)).toContain('rept')
-      expect(tagsOf(disp.expr)).not.toContain('rept')
+      expect(varsOf(define.expr)).toContain('##report##')
+      expect(varsOf(disp.expr)).not.toContain('##report##')
+    })
+
+    test('running the queried program throws a ReportError carrying the reported value', async () => {
+      // End-to-end: the @example call runs the function, whose body `a` is
+      // wrapped as `(##report## a)`, so evaluating it aborts with a ReportError
+      // whose value is that sub-expression's value.
+      const funcName = 'myid'
+      const src = `;;; (${funcName} a b) -> number?
+;;;  a : number?
+;;;  b : number?
+;;; returns a
+;;; @example (${funcName} 1 2) -> 1
+(define ${funcName} (lambda (a b) a))`
+      const queryLoc = new Loc(6, 34, src.lastIndexOf('a)'))
+
+      const { prog, diagnostics } = await compile(src, { queryLoc })
+      expect(diagnostics).toStrictEqual([])
+      if (prog === undefined) {
+        expect.fail('expected compile to return a program')
+        return
+      }
+
+      const fiber = new Fiber(prog, mkInitialEnv())
+      let caught: unknown
+      try {
+        while (!fiber.isDone()) fiber.step()
+      } catch (e) {
+        caught = e
+      }
+      expect(caught).toBeInstanceOf(L.ReportError)
+      expect((caught as L.ReportError).value).toBe(1)
     })
   })
 })

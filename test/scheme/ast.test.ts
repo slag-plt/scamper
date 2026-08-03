@@ -128,12 +128,6 @@ describe('expToString', () => {
       ),
     ).toBe('(section _ 1)')
   })
-
-  test('report', () => {
-    expect(A.expToString(A.mkReport(A.mkId('x', anyRange), anyRange))).toBe(
-      '(report x)',
-    )
-  })
 })
 
 describe('stmtToString', () => {

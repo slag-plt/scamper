@@ -1,4 +1,4 @@
-import { ICE, ReportError, ScamperError, SuspendSignal } from '../error'
+import { ICE, ScamperError, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Value } from '../lang'
 import { Frame } from '../frame'
@@ -215,16 +215,6 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     currFrame.pushBlk(blk)
   }
   return traceStep
-}
-
-export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
-  if (currFrame.values.length < 1) {
-    throw new ICE(
-      'Fiber.ReptHandler',
-      'Expected to report a value, but none remain?',
-    )
-  }
-  throw new ReportError(currFrame.values.at(-1), op.range)
 }
 
 // N.B., installs the exception handler for the guarded application. The stack is

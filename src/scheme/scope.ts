@@ -157,10 +157,6 @@ function scopeCheckExp(
       // N.B., no need to scope check a "frozen" AST
       return
     }
-    case 'report': {
-      scopeCheckExp(diagnostics, globals, locals, e.exp)
-      return
-    }
     default:
       throw new ICE('scopeCheckExp', `Non-core expression encountered ${e.tag}`)
   }

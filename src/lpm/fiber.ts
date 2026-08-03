@@ -18,7 +18,6 @@ import {
   MatchHandler,
   PopHandlerHandler,
   PushHandlerHandler,
-  ReptHandler,
   VarHandler,
 } from './handlers/op-handlers'
 import { builtinLibs } from './builtin-registry.js'
@@ -316,9 +315,6 @@ export class Fiber {
         break
       case 'match':
         isMajorStep = MatchHandler(currOp, this.currentFrame, this)
-        break
-      case 'rept':
-        isMajorStep = ReptHandler(currOp, this.currentFrame, this)
         break
       case 'ap-spread':
         isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)

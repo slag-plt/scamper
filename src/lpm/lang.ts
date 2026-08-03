@@ -325,10 +325,6 @@ export interface Match {
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
-export interface Rept {
-  tag: 'rept'
-  range: Range
-}
 export interface ApSpread {
   tag: 'ap-spread'
   range: Range
@@ -357,7 +353,6 @@ export type Ops =
   | Cls
   | Ap
   | Match
-  | Rept
   | ApSpread
   | PushHandler
   | PopHandler

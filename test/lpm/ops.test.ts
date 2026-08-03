@@ -5,11 +5,9 @@ import {
   ICE,
   LoggingChannel,
   OutputChannel,
-  ReportError,
   Value,
 } from '../../src/lpm'
 import { makeTestFiber } from '../util'
-import { anyRange } from '../scheme/util'
 
 function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
@@ -395,11 +393,6 @@ describe('basic ops', () => {
     })
   })
 
-  test('rept without a pending value throws an ICE', () => {
-    const fiber = makeTestFiber([U.mkDisp([U.mkRept()])])
-    expectFailedExec(fiber, ICE)
-  })
-
   test('define', () => {
     const fiber = makeTestFiber([
       U.mkDefine('x', [U.mkLit(1)]),
@@ -440,25 +433,6 @@ describe('basic ops', () => {
     ])
     expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([120])
-  })
-
-  test('report', () => {
-    const fiber = makeTestFiber([
-      U.mkDisp([U.mkVar('+'), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRept()]),
-    ])
-
-    const expectedError = new ReportError(3, anyRange)
-
-    const testRunner = () => {
-      try {
-        testExecute(fiber, out)
-        expect.fail('oops... should not have gotten here')
-      } catch (e) {
-        return e
-      }
-    }
-
-    expect(testRunner()).toStrictEqual(expectedError)
   })
 
   describe('with-handler opcodes', () => {

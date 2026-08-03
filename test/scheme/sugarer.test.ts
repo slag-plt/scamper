@@ -129,9 +129,3 @@ test('and, or, and cond recursively sugar their sub-expressions', () => {
     A.mkCond([{ test: sugaredMatch('p', 'q'), body: sugaredMatch('x', 'y') }]),
   )
 })
-
-test('report recursively sugars its wrapped expression', () => {
-  expect(sugarExpr(A.mkReport(sugarableMatch('x', 'y')))).toEqual(
-    A.mkReport(sugaredMatch('x', 'y')),
-  )
-})

@@ -95,9 +95,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       // N.B., we do not collect holes in embedded sections
       return A.mkSection(e.exps, e.range)
     }
-    case 'report': {
-      return A.mkReport(collectSectionHoles(bvars, e.exp), e.range)
-    }
   }
 }
 
@@ -234,9 +231,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         collectSectionHoles(bvars, expandExpr(arg)),
       )
       return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
-    }
-    case 'report': {
-      return A.mkReport(expandExpr(e.exp), e.range)
     }
   }
 }

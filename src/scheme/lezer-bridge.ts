@@ -122,7 +122,6 @@ const formDescriptions: Record<string, string> = {
   Or: 'or expression',
   Begin: 'begin expression (at least one sub-expression)',
   Section: 'section expression (at least one sub-expression)',
-  Report: 'report expression',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -442,9 +441,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
-
-    case 'Report':
-      return A.mkReport(expFromNode(ctx, cs[1]), range)
 
     case 'Application': {
       if (cs.length === 0) {

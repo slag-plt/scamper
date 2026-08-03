@@ -89,8 +89,5 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case 'section': {
       return AST.mkSection(e.exps.map(sugarExpr))
     }
-    case 'report': {
-      return AST.mkReport(sugarExpr(e.exp))
-    }
   }
 }

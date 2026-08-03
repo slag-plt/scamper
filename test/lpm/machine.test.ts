@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import { LoggingChannel, OutputChannel, ReportError, Value } from '../../src/lpm'
+import { LoggingChannel, OutputChannel, Value } from '../../src/lpm'
 import { makeTestFiber } from '../util'
 import { anyRange } from '../scheme/util'
 
@@ -139,16 +139,6 @@ describe('basic ops', () => {
     expect(out.log).toEqual(['hello world'])
   })
 
-  test('rept', () => {
-    const out = new LoggingChannel(false, false)
-    const fiber = makeTestFiber([
-      U.mkDisp([U.mkLit('test error'), U.mkRept()]),
-    ])
-    expect(() => {
-      testExecute(fiber, out)
-    }).toThrow(new ReportError('test error', anyRange))
-  })
-
   // TODO: need a pop test?
 })
 
@@ -218,7 +208,7 @@ describe('pattern matching', () => {
       U.mkCtor('test-struct', ['field1', 'field2']),
     ]
     const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
-    const elseBranch = [U.mkLit('no match'), U.mkRept()]
+    const elseBranch = [U.mkLit('no match')]
     const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
 
     const fiber = makeTestFiber([

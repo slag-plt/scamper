@@ -54,7 +54,6 @@ expression {
   Begin { paren<kw<"begin"> expression expression*> } |
   Cond { paren<kw<"cond"> condBranch*> } |
   Section { paren<kw<"section"> expression expression*> } |
-  Report { paren<kw<"report"> expression> } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> paren<binding*> expression> } |
   LetStar { paren<kw<"let*"> paren<binding*> expression> } |

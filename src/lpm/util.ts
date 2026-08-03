@@ -141,10 +141,6 @@ export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
 ): L.StmtExp => ({ tag: 'stmtexp', expr, range })
-export const mkRept = (range: Range = Range.none): L.Rept => ({
-  tag: 'rept',
-  range,
-})
 export const mkApSpread = (range: Range = Range.none): L.ApSpread => ({
   tag: 'ap-spread',
   range,
