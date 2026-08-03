@@ -41,45 +41,32 @@ function lowerExpr(e: A.Exp): L.Blk {
     case 'lam':
       return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
     case 'let': {
-      // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
-      // we must proceed by first evaluating all binding expressions (without binding), then
-      // bind the variables, and finally evaluate the body.
-      //
-      // This behavior _really_ makes me want to embrace Clojure-style Scheme more and more
-      // where let telescopes by default, i.e., is let*. But we support traditional Scheme
-      // behavior for now.
-      const bindings = e.bindings.flatMap((b) => lowerExpr(b.value))
-
-      let ret = lowerExpr(e.body)
-      // We must ensure that the inner-most match corresponds to the _first_ binding since
-      // we're building the matches inside-out.
-      // for (let i = e.bindings.length - 1; i >= 0; i--) {
-      e.bindings.forEach((b) => {
-        // A binding is a single-branch match; a value that doesn't match the
-        // pattern raises a binding-flavored runtime error (irrefutable
-        // patterns -- plain identifiers, `_` -- simply never trigger it).
-        ret = [
-          L.mkMatch(
-            [[lowerPat(b.pat), ret]],
-            e.range,
-            `let: value did not match pattern ${A.patToString(b.pat)}`,
-          ),
-        ]
-      })
-      return [...bindings, ...ret]
+      // let-bindings do not telescope: evaluate every binding value inline
+      // first, then a single `let` op binds each pattern to its value in a
+      // fresh scope and runs the body. The trailing `pop-scope` discards that
+      // scope so the binders don't leak past the body.
+      const values = e.bindings.flatMap((b) => lowerExpr(b.value))
+      const patterns = e.bindings.map((b) => lowerPat(b.pat))
+      // A value that fails to match its pattern raises a binding-flavored error
+      // (irrefutable patterns -- plain identifiers, `_` -- never trigger it).
+      const failMsg =
+        e.bindings.length === 1
+          ? `let: value did not match pattern ${A.patToString(e.bindings[0].pat)}`
+          : 'let: value did not match its pattern'
+      return [
+        ...values,
+        L.mkLet(patterns, lowerExpr(e.body), e.range, failMsg),
+        L.mkPopScope(e.range),
+      ]
     }
     case 'if':
       return [
         ...lowerExpr(e.guard),
-        L.mkMatch(
-          [
-            [L.mkPLit(true), lowerExpr(e.ifB)],
-            [L.mkPLit(false), lowerExpr(e.elseB)],
-          ],
-          e.range,
-        ),
+        L.mkIf(lowerExpr(e.ifB), lowerExpr(e.elseB), e.range),
       ]
     case 'match':
+      // A matched branch binds its pattern variables in a fresh scope; the
+      // trailing `pop-scope` discards them once the branch body completes.
       return [
         ...lowerExpr(e.scrutinee),
         L.mkMatch(
@@ -89,6 +76,7 @@ function lowerExpr(e: A.Exp): L.Blk {
           ),
           e.range,
         ),
+        L.mkPopScope(e.range),
       ]
     case 'quote':
       return [L.mkLit(e.value, e.range)]

@@ -4,7 +4,6 @@ import { lowerProgram } from './codegen.js'
 import { expandProgram } from './expansion.js'
 import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import { scopeCheckProgram } from './scope.js'
-import { sugarExpr } from './sugarer.js'
 import { FiberRaiser } from '../lpm/raiser.js'
 import { raiseFiber } from './raise.js'
 import { parseProgramFromSource } from './lezer-bridge.js'
@@ -22,7 +21,9 @@ import { contractProgram } from './contract.js'
 import { builtinLibs } from '../lib'
 
 export const fiberRaiser: FiberRaiser<Exp> = {
-  raise: (fiber) => sugarExpr(raiseFiber(fiber)),
+  // Each core surface form has a 1:1 IR op, so raising is a direct inverse --
+  // no un-sugaring pass is needed.
+  raise: (fiber) => raiseFiber(fiber),
   equals: S.equals,
 }
 

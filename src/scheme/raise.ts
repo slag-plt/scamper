@@ -20,6 +20,19 @@ function raisePat(pat: LPM.Pat): A.Pat {
   }
 }
 
+/** @return the variable names bound by an LPM pattern (recursively). */
+function lpmPatVars(pat: LPM.Pat): string[] {
+  switch (pat.tag) {
+    case 'pvar':
+      return [pat.name]
+    case 'pctor':
+      return pat.args.flatMap(lpmPatVars)
+    case 'pwild':
+    case 'plit':
+      return []
+  }
+}
+
 /** @return a stack of expressions created from the given value stack. */
 export function valuesToExps(values: LPM.Value[]): A.Exp[] {
   return values.map((v) => {
@@ -98,10 +111,46 @@ export function raiseFrame(
       case 'match': {
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
-          const bodyExp = raiseFrame([], env, body.toReversed())
+          const bodyExp = raiseFrame(
+            [],
+            env.withoutLocals(...lpmPatVars(pat)),
+            body.toReversed(),
+          )
           return { pat: raisePat(pat), body: bodyExp }
         })
         values.push(A.mkMatch(scrutinee, matches))
+        break
+      }
+
+      case 'let': {
+        // The k binding values were reconstructed inline before this op.
+        const vals =
+          op.patterns.length === 0 ? [] : values.splice(-op.patterns.length)
+        const bindings = op.patterns.map((pat, i) => ({
+          pat: raisePat(pat),
+          value: vals[i],
+        }))
+        // Exclude the binders so their occurrences in the body render as names,
+        // not substituted values (they shadow any same-named outer binding).
+        const body = raiseFrame(
+          [],
+          env.withoutLocals(...op.patterns.flatMap(lpmPatVars)),
+          op.body.toReversed(),
+        )
+        values.push(A.mkLet(bindings, body))
+        break
+      }
+
+      case 'if': {
+        const guard = values.pop()!
+        const thenExp = raiseFrame([], env, op.thenB.toReversed())
+        const elseExp = raiseFrame([], env, op.elseB.toReversed())
+        values.push(A.mkIf(guard, thenExp, elseExp))
+        break
+      }
+
+      case 'pop-scope': {
+        // Runtime scope bookkeeping only; nothing to reconstruct.
         break
       }
 

@@ -135,8 +135,9 @@ export function applyFn(
       fn.code,
       range,
     )
-    if (currFrame.isFinished()) {
-      // tail-call optimize by replacing current empty frame
+    if (currFrame.canTailCall()) {
+      // tail-call optimize by replacing the current frame (any leftover
+      // pop-scope ops would only discard scopes we're dropping with the frame)
       fiber.replaceFrame(newFrame)
     } else {
       fiber.pushFrame(newFrame)
@@ -198,10 +199,7 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
   op.currBranchIdx ??= 0
   const currBranch = op.branches.at(op.currBranchIdx++)
   if (!currBranch) {
-    throw new ScamperError(
-      'Runtime',
-      op.failMsg ?? 'Inexhaustive pattern match failure',
-    )
+    throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
   }
   const [pat, blk] = currBranch
   const bindings = pMatch(scrutinee, pat)
@@ -210,11 +208,62 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     // make sure to push the scrutinee back for the next branch!
     currFrame.values.push(scrutinee)
   } else {
-    currFrame.env = currFrame.env.extendWithLocals(...bindings)
+    // Push the branch's binders as a fresh scope; the `pop-scope` codegen
+    // emits right after this match op discards it once the branch completes.
+    currFrame.env = currFrame.env.pushScope(bindings)
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
   return traceStep
+}
+
+export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
+  // The k binding values were evaluated inline and are on the value stack
+  // (v1..vk, vk on top). Bind each pattern to its value in a fresh scope; the
+  // `pop-scope` codegen emits after the body discards that scope.
+  const k = op.patterns.length
+  if (currFrame.values.length < k) {
+    throw new ICE('Fiber.LetHandler', 'let requires its binding values on the stack')
+  }
+  const vals = k === 0 ? [] : currFrame.values.splice(-k)
+  const bindings: [string, Value][] = []
+  for (let i = 0; i < k; i++) {
+    const bs = pMatch(vals[i], op.patterns[i])
+    if (!bs) {
+      throw new ScamperError(
+        'Runtime',
+        op.failMsg ?? 'let: value did not match its pattern',
+      )
+    }
+    bindings.push(...bs)
+  }
+  currFrame.env = currFrame.env.pushScope(bindings)
+  currFrame.pushBlk(op.body)
+  return traceStep
+}
+
+export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
+  // The guard was evaluated inline and is on top of the value stack.
+  if (currFrame.values.length === 0) {
+    throw new ICE('Fiber.IfHandler', 'if requires a guard value')
+  }
+  const guard = currFrame.values.pop()
+  if (guard === true) {
+    currFrame.pushBlk(op.thenB)
+  } else if (guard === false) {
+    currFrame.pushBlk(op.elseB)
+  } else {
+    throw new ScamperError(
+      'Runtime',
+      `if: expected a boolean guard, received ${typeOf(guard)}`,
+    )
+  }
+  return traceStep
+}
+
+export const PopScopeHandler: OpHandler<'pop-scope'> = (_op, currFrame) => {
+  currFrame.env = currFrame.env.popScope()
+  return minorStep
 }
 
 // N.B., installs the exception handler for the guarded application. The stack is

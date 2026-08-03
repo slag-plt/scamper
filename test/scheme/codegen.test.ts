@@ -322,6 +322,33 @@ describe('End-to-end cases', () => {
     expect(out[0]).toContain('let: value did not match pattern (pair a b)')
   })
 
+  test('let and match bindings do not leak past their scope', async () => {
+    // Regression: let/match used to extend the frame env in place and never
+    // retract it, so a binding shadowed an outer/global name for the rest of
+    // the frame. Each `x` below must resolve to the global 10, not the binder.
+    await checkMachineOutput(`
+(define x 10)
+(begin (let ([x 1]) x) x)
+(begin (match 5 [x x]) x)
+`, [10, 10])
+  })
+
+  test('tail recursion through if and let does not grow the stack', async () => {
+    // The recursive call sits in tail position inside a let body inside an if
+    // else-branch, and 12000 > the 10000-frame default limit. A broken TCO
+    // (frames piling up behind the let's trailing pop-scope) would exceed the
+    // limit and error; tail calls must not accumulate frames.
+    await checkMachineOutput(`
+(define count
+  (lambda (n acc)
+    (if (= n 0)
+        acc
+        (let ([m (- n 1)])
+          (count m (+ acc 1))))))
+(count 12000 0)
+`, [12000])
+  })
+
   test('list-length', async () => {
     await checkMachineOutput(`
 (define list-length

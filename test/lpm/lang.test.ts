@@ -32,6 +32,54 @@ describe('Env.withoutLocals', () => {
   })
 })
 
+describe('Env scopes (pushScope / popScope)', () => {
+  test('pushScope adds an innermost scope whose bindings resolve', () => {
+    expect(Env.empty.pushScope([['x', 1]]).get('x')).toBe(1)
+  })
+
+  test('popScope drops the innermost scope', () => {
+    expect(Env.empty.pushScope([['x', 1]]).popScope().has('x')).toBe(false)
+  })
+
+  test('an inner scope shadows an outer scope; popScope restores the outer', () => {
+    const inner = Env.empty.pushScope([['x', 'outer']]).pushScope([['x', 'inner']])
+    expect(inner.get('x')).toBe('inner')
+    expect(inner.popScope().get('x')).toBe('outer')
+  })
+
+  test('a local scope shadows a top-level binding; popScope restores it', () => {
+    const env = Env.empty
+      .extendWithTopLevel(['x', 'top'])
+      .pushScope([['x', 'local']])
+    expect(env.get('x')).toBe('local')
+    expect(env.popScope().get('x')).toBe('top')
+  })
+
+  test('getLocals flattens every scope with the innermost winning', () => {
+    const env = Env.empty
+      .pushScope([['x', 1], ['y', 2]])
+      .pushScope([['y', 20], ['z', 3]])
+    expect([...env.getLocals().entries()].sort()).toStrictEqual([
+      ['x', 1],
+      ['y', 20],
+      ['z', 3],
+    ])
+  })
+
+  test('popScope on an env with no local scopes is a no-op', () => {
+    expect(Env.empty.extendWithTopLevel(['t', 9]).popScope().get('t')).toBe(9)
+  })
+
+  test('extendWithLocals pushes a fresh scope rather than merging', () => {
+    const env = Env.empty.extendWithLocals(['x', 1]).extendWithLocals(['y', 2])
+    expect(env.get('x')).toBe(1)
+    expect(env.get('y')).toBe(2)
+    // popping the innermost scope drops only the most recent binding
+    expect(env.popScope().has('y')).toBe(false)
+    expect(env.popScope().get('x')).toBe(1)
+  })
+})
+
 describe('Module.fromLibs', () => {
   test('combines bindings from multiple modules', () => {
     const a = mkModule({ x: 1 })

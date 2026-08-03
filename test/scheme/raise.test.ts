@@ -158,6 +158,76 @@ test('ap-spread operation raising', () => {
   expect(result).toBe('(apply f args)')
 })
 
+test('Frame.canTailCall is true only when nothing but pop-scope ops remain', () => {
+  // The TCO predicate that preserves tail calls through let/match bodies.
+  expect(new Frame('f', LPM.Env.empty, []).canTailCall()).toBe(true)
+  expect(
+    new Frame('f', LPM.Env.empty, [LPM.mkPopScope(), LPM.mkPopScope()]).canTailCall(),
+  ).toBe(true)
+  expect(
+    new Frame('f', LPM.Env.empty, [LPM.mkLit(1), LPM.mkPopScope()]).canTailCall(),
+  ).toBe(false)
+})
+
+test('if operation raising', () => {
+  const result = raiseBlk([
+    LPM.mkVar('b'),
+    LPM.mkIf([LPM.mkLit(1)], [LPM.mkLit(2)]),
+  ])
+  expect(result).toBe('(if b 1 2)')
+})
+
+test('let operation raising', () => {
+  const result = raiseBlk([
+    LPM.mkLit(1),
+    LPM.mkLet([LPM.mkPVar('x')], [LPM.mkVar('x')]),
+    LPM.mkPopScope(),
+  ])
+  expect(result).toBe('(let ([x 1]) x)')
+})
+
+test('let with a constructor pattern raising', () => {
+  const result = raiseBlk([
+    LPM.mkVar('p'),
+    LPM.mkLet(
+      [LPM.mkPCtor('pair', [LPM.mkPVar('a'), LPM.mkPVar('b')])],
+      [LPM.mkVar('a')],
+    ),
+    LPM.mkPopScope(),
+  ])
+  expect(result).toBe('(let ([(pair a b) p]) a)')
+})
+
+test('let with multiple bindings raising', () => {
+  const result = raiseBlk([
+    LPM.mkLit(1),
+    LPM.mkLit(2),
+    LPM.mkLet([LPM.mkPVar('x'), LPM.mkPVar('y')], [LPM.mkVar('x')]),
+    LPM.mkPopScope(),
+  ])
+  expect(result).toBe('(let ([x 1] [y 2]) x)')
+})
+
+test('pop-scope is transparent to raising', () => {
+  const result = raiseBlk([LPM.mkLit(5), LPM.mkPopScope()])
+  expect(result).toBe('5')
+})
+
+test('a let binder shadowing an outer local raises as a name, not its value', () => {
+  // x=99 is in the frame env; the let rebinds x, so the body's `x` must render
+  // as the variable itself, not the substituted outer value.
+  const fiber = makeTestFiber([])
+  const env = LPM.Env.empty.extendWithLocals(['x', 99])
+  fiber.pushFrame(
+    new Frame('f1', env, [
+      LPM.mkLit(1),
+      LPM.mkLet([LPM.mkPVar('x')], [LPM.mkVar('x')]),
+      LPM.mkPopScope(),
+    ]),
+  )
+  expect(expToString(raiseFiber(fiber))).toBe('(let ([x 1]) x)')
+})
+
 test('raiseFrames throws when there are no frames to raise', () => {
   const fiber = makeTestFiber([])
   expect(() => raiseFiber(fiber)).toThrow(LPM.ICE)

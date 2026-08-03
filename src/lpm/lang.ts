@@ -34,14 +34,14 @@ export class Env {
   private imports: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
-  /** A mapping of local bindings */
-  private locals: Map<string, Value>
+  /** A stack of local binding scopes; the last element is the innermost. */
+  private locals: Map<string, Value>[]
 
   /** Constructs a new environemnt from the given maps */
   constructor(
     imports: Map<string, Module>,
     topLevel: Map<string, Value>,
-    locals: Map<string, Value>,
+    locals: Map<string, Value>[],
   ) {
     this.imports = imports
     this.topLevel = topLevel
@@ -49,7 +49,7 @@ export class Env {
   }
 
   /** The empty environment */
-  static empty: Env = new Env(new Map(), new Map(), new Map())
+  static empty: Env = new Env(new Map(), new Map(), [])
 
   /**
    * @param name the (simple) name of the variable to look up
@@ -57,9 +57,11 @@ export class Env {
    *         exist
    */
   get(name: string): Value {
-    // 1. Local scope
-    if (this.locals.has(name)) {
-      return this.locals.get(name)
+    // 1. Local scopes, innermost (most recently pushed) first
+    for (let i = this.locals.length - 1; i >= 0; i--) {
+      if (this.locals[i].has(name)) {
+        return this.locals[i].get(name)
+      }
     }
 
     // 2. Top-level scope
@@ -88,9 +90,18 @@ export class Env {
     return ret
   }
 
-  /** @return the locals bound in this environment */
+  /**
+   * @return all in-scope local bindings flattened into one map (innermost
+   *         scope wins). Used to snapshot a closure's captured environment.
+   */
   getLocals(): Map<string, Value> {
-    return this.locals
+    const flat = new Map<string, Value>()
+    for (const scope of this.locals) {
+      for (const [name, value] of scope) {
+        flat.set(name, value)
+      }
+    }
+    return flat
   }
 
   /**
@@ -99,7 +110,7 @@ export class Env {
    */
   has(name: string): boolean {
     return (
-      this.locals.has(name) ||
+      this.locals.some((scope) => scope.has(name)) ||
       this.topLevel.has(name) ||
       [...this.imports.values()].some((lib) => lib.bindings.has(name))
     )
@@ -117,12 +128,22 @@ export class Env {
     )
   }
 
+  /** Push a new innermost local scope containing `locals`. */
   extendWithLocals(...locals: [string, Value][]): Env {
-    return new Env(
-      this.imports,
-      this.topLevel,
-      this.extendBindings(this.locals, locals),
-    )
+    return this.pushScope(locals)
+  }
+
+  /** Push a new innermost local scope with the given bindings. */
+  pushScope(bindings: [string, Value][]): Env {
+    return new Env(this.imports, this.topLevel, [
+      ...this.locals,
+      new Map(bindings),
+    ])
+  }
+
+  /** Drop the innermost local scope (inverse of {@link pushScope}). */
+  popScope(): Env {
+    return new Env(this.imports, this.topLevel, this.locals.slice(0, -1))
   }
 
   extendImports(name: string, lib: Module) {
@@ -133,16 +154,15 @@ export class Env {
     return new Map([...old, ...newBindings])
   }
 
+  /** Replace all local scopes with a single scope holding `locals`. */
   extendReplacingLocals(...locals: [string, Value][]): Env {
-    return new Env(this.imports, this.topLevel, new Map(locals))
+    return new Env(this.imports, this.topLevel, [new Map(locals)])
   }
 
+  /** Collapse the local scopes into one, dropping the named bindings. */
   withoutLocals(...names: string[]): Env {
-    return new Env(
-      this.imports,
-      this.topLevel,
-      new Map([...this.locals].filter(([x, _v]) => !names.includes(x))),
-    )
+    const kept = [...this.getLocals()].filter(([x]) => !names.includes(x))
+    return new Env(this.imports, this.topLevel, [new Map(kept)])
   }
 }
 
@@ -318,12 +338,33 @@ export interface Match {
   tag: 'match'
   branches: [Pat, Blk][]
   range: Range
-  // Message thrown when no branch matches. Lets `let`-lowering supply a
-  // binding-flavored error; defaults to the generic match-failure message.
-  failMsg?: string
   // hack fix to not modify original branch
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
+}
+// let/if linearize the corresponding core surface forms directly, so raising is
+// a 1:1 inverse rather than a heuristic un-sugaring of `match`. `let` evaluates
+// its k binding values inline (before this op), binds each `patterns[i]` to the
+// i-th value in a fresh scope, then runs `body`; codegen emits a `pop-scope`
+// immediately after to discard that scope. `match` is likewise followed by a
+// `pop-scope`.
+export interface Let {
+  tag: 'let'
+  patterns: Pat[]
+  body: Blk
+  range: Range
+  // Message thrown when a binding value does not match its pattern.
+  failMsg?: string
+}
+export interface If {
+  tag: 'if'
+  thenB: Blk
+  elseB: Blk
+  range: Range
+}
+export interface PopScope {
+  tag: 'pop-scope'
+  range: Range
 }
 export interface ApSpread {
   tag: 'ap-spread'
@@ -353,6 +394,9 @@ export type Ops =
   | Cls
   | Ap
   | Match
+  | Let
+  | If
+  | PopScope
   | ApSpread
   | PushHandler
   | PopHandler

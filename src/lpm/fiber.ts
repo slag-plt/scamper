@@ -14,9 +14,12 @@ import {
   ApSpreadHandler,
   ClsHandler,
   CtorHandler,
+  IfHandler,
+  LetHandler,
   LitHandler,
   MatchHandler,
   PopHandlerHandler,
+  PopScopeHandler,
   PushHandlerHandler,
   VarHandler,
 } from './handlers/op-handlers'
@@ -315,6 +318,15 @@ export class Fiber {
         break
       case 'match':
         isMajorStep = MatchHandler(currOp, this.currentFrame, this)
+        break
+      case 'let':
+        isMajorStep = LetHandler(currOp, this.currentFrame, this)
+        break
+      case 'if':
+        isMajorStep = IfHandler(currOp, this.currentFrame, this)
+        break
+      case 'pop-scope':
+        isMajorStep = PopScopeHandler(currOp, this.currentFrame, this)
         break
       case 'ap-spread':
         isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)
