@@ -120,7 +120,8 @@ export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({
 export const mkMatch = (
   branches: [L.Pat, L.Blk][],
   range: Range = Range.none,
-): L.Match => ({ tag: 'match', branches, range })
+  failMsg?: string,
+): L.Match => ({ tag: 'match', branches, range, failMsg })
 export const mkDisp = (expr: L.Blk, range: Range = Range.none): L.Disp => ({
   tag: 'disp',
   expr,

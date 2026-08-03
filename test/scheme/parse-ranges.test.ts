@@ -220,10 +220,10 @@ describe('let and let*', () => {
     const src = '(let ([x 1] [y 2]) x)'
     const let_ = asExp(parseExp(src), 'let')
     assertSpan(let_.range, src, '(let ([x 1] [y 2]) x)')
-    expect(let_.bindings.map((b) => b.id.name)).toEqual(['x', 'y'])
-    assertSpan(let_.bindings[0].id.range, src, 'x', 0)
+    expect(let_.bindings.map((b) => b.pat.name)).toEqual(['x', 'y'])
+    assertSpan(let_.bindings[0].pat.range, src, 'x', 0)
     assertSpan(let_.bindings[0].value.range, src, '1')
-    assertSpan(let_.bindings[1].id.range, src, 'y', 0)
+    assertSpan(let_.bindings[1].pat.range, src, 'y', 0)
     assertSpan(let_.bindings[1].value.range, src, '2')
     assertSpan(asExp(let_.body, 'id').range, src, 'x', 1)
   })
@@ -231,7 +231,7 @@ describe('let and let*', () => {
     const src = '(let* ([x 1]) x)'
     const lets = asExp(parseExp(src), 'let*')
     assertSpan(lets.range, src, '(let* ([x 1]) x)')
-    assertSpan(lets.bindings[0].id.range, src, 'x', 0)
+    assertSpan(lets.bindings[0].pat.range, src, 'x', 0)
     assertSpan(lets.bindings[0].value.range, src, '1')
     assertSpan(asExp(lets.body, 'id').range, src, 'x', 1)
   })
@@ -545,7 +545,7 @@ describe('real-world programs', () => {
     assertSpan(asPat(pc.args[1], 'id').range, src, 'tl', 0)
 
     const let_ = asExp(m.branches[1].body, 'let')
-    assertSpan(let_.bindings[0].id.range, src, 'rest', 0)
+    assertSpan(let_.bindings[0].pat.range, src, 'rest', 0)
     const call = asExp(let_.bindings[0].value, 'app') // (length tl)
     assertSpan(asExp(call.head, 'id').range, src, 'length', 1)
     assertSpan(asExp(call.args[0], 'id').range, src, 'tl', 1)

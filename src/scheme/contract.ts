@@ -222,7 +222,7 @@ export function contractStmt(s: A.Stmt): A.Stmt {
     return s
   }
   const wrapped = A.mkLet(
-    [{ id: A.mkId(contractTargetName, s.range), value: s.value }],
+    [{ pat: A.mkId(contractTargetName, s.range), value: s.value }],
     A.mkLam(
       doc.params.map((p) => A.mkId(p.name, s.range)),
       mkCheckChain(doc.params, doc.restParam, s.range),

@@ -122,12 +122,20 @@ function scopeCheckExp(
       return
     }
     case 'let': {
-      const vars = e.bindings.map((b) => b.id.name)
-      checkDuplicateVars(diagnostics, vars, e.range)
+      // `let` does not telescope: every binding value is checked in the
+      // enclosing scope, and all binders (collected across the patterns) are
+      // visible only in the body. A binder repeated within a single pattern is
+      // reported by scopeCheckPat; one repeated across bindings is reported as
+      // a binding-list duplicate.
+      const allVars: string[] = []
       e.bindings.forEach((b) => {
         scopeCheckExp(diagnostics, globals, locals, b.value)
+        const patVars = new Set<string>()
+        scopeCheckPat(diagnostics, patVars, b.pat)
+        allVars.push(...patVars)
       })
-      scopeCheckExp(diagnostics, globals, [...locals, ...vars], e.body)
+      checkDuplicateVars(diagnostics, allVars, e.range)
+      scopeCheckExp(diagnostics, globals, [...locals, ...allVars], e.body)
       return
     }
     case 'begin': {

@@ -156,7 +156,7 @@ function slotsOf(exp: A.Exp): Slot[] {
           rebuild: (r: A.Exp) =>
             mk(
               exp.bindings.map((x, j) =>
-                j === i ? { id: x.id, value: r } : x,
+                j === i ? { pat: x.pat, value: r } : x,
               ),
               exp.body,
               exp.range,

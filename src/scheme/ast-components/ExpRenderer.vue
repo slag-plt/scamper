@@ -45,7 +45,7 @@ switch (e.tag) {
   case 'let':
     hljsBindings = {
       head: 'let',
-      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
+      pairs: e.bindings.map(({ pat, value }) => ({ lhs: pat, rhs: value })),
       body: e.body,
     }
     break
@@ -59,7 +59,7 @@ switch (e.tag) {
   case 'let*':
     hljsBindings = {
       head: 'let*',
-      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
+      pairs: e.bindings.map(({ pat, value }) => ({ lhs: pat, rhs: value })),
       body: e.body,
     }
     break

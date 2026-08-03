@@ -35,7 +35,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
     case 'let':
       return A.mkLet(
         e.bindings.map((b) => ({
-          id: b.id,
+          pat: b.pat,
           value: collectSectionHoles(bvars, b.value),
         })),
         collectSectionHoles(bvars, e.body),
@@ -67,7 +67,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
     case 'let*':
       return A.mkLetS(
         e.bindings.map((b) => ({
-          id: b.id,
+          pat: b.pat,
           value: collectSectionHoles(bvars, b.value),
         })),
         collectSectionHoles(bvars, e.body),
@@ -114,7 +114,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam)
     case 'let':
       return A.mkLet(
-        e.bindings.map((b) => ({ id: b.id, value: expandExpr(b.value) })),
+        e.bindings.map((b) => ({ pat: b.pat, value: expandExpr(b.value) })),
         expandExpr(e.body),
         e.range,
       )
@@ -144,7 +144,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       //   ...
       //     (let [xk ek] e))
       const bindings = e.bindings.map((b) => ({
-        id: b.id,
+        pat: b.pat,
         value: expandExpr(b.value),
       }))
       const body = expandExpr(e.body)

@@ -100,7 +100,7 @@ function letStarScopes(exp: A.LetS): ScopeTree[] {
     const children = isLast
       ? scopesInExp(body)
       : [...scopesInExp(bindings[i + 1].value), build(i + 1)]
-    return new ScopeTree(range, [bindings[i].id], children)
+    return new ScopeTree(range, patternIdentifiers(bindings[i].pat), children)
   }
   return [...scopesInExp(bindings[0].value), build(0)]
 }
@@ -155,7 +155,7 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
       const valueScopes = exp.bindings.flatMap((b) => scopesInExp(b.value))
       const letScope = new ScopeTree(
         exp.body.range,
-        exp.bindings.map((b) => b.id),
+        exp.bindings.flatMap((b) => patternIdentifiers(b.pat)),
         scopesInExp(exp.body),
       )
       return [...valueScopes, letScope]

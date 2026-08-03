@@ -25,14 +25,14 @@ describe('Expanded expressions', () => {
 
   test('let*', () => {
     const actual = expandExpr(A.mkLetS([
-      { id: A.mkId('x'), value: A.mkLit(1) },
-      { id: A.mkId('y'), value: A.mkId('x') },
-      { id: A.mkId('z'), value: A.mkId('y') }
+      { pat: A.mkId('x'), value: A.mkLit(1) },
+      { pat: A.mkId('y'), value: A.mkId('x') },
+      { pat: A.mkId('z'), value: A.mkId('y') }
     ], A.mkId('z')))
     const expected = 
-      A.mkLet([{ id: A.mkId('x'), value: A.mkLit(1) }],
-        A.mkLet([{ id: A.mkId('y'), value: A.mkId('x') }],
-          A.mkLet([{ id: A.mkId('z'), value: A.mkId('y') }],
+      A.mkLet([{ pat: A.mkId('x'), value: A.mkLit(1) }],
+        A.mkLet([{ pat: A.mkId('y'), value: A.mkId('x') }],
+          A.mkLet([{ pat: A.mkId('z'), value: A.mkId('y') }],
             A.mkId('z'))))
     expect(actual).toEqual(expected)
   })
@@ -106,7 +106,7 @@ describe('Section hole collection', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
       A.mkLet(
-        [{ id: A.mkId('x'), value: A.mkId('_') }],
+        [{ pat: A.mkId('x'), value: A.mkId('_') }],
         A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
     ])) as A.Lam
     expect(actual.params.length).toBe(2)
@@ -115,7 +115,7 @@ describe('Section hole collection', () => {
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
           A.mkLet(
-            [{ id: A.mkId('x'), value: h1 }],
+            [{ pat: A.mkId('x'), value: h1 }],
             A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
         ]))
     expect(actual).toEqual(expected)
@@ -125,7 +125,7 @@ describe('Section hole collection', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
       A.mkLetS(
-        [{ id: A.mkId('x'), value: A.mkId('_') }],
+        [{ pat: A.mkId('x'), value: A.mkId('_') }],
         A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
     ])) as A.Lam
     expect(actual.params.length).toBe(2)
@@ -134,7 +134,7 @@ describe('Section hole collection', () => {
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
           A.mkLet(
-            [{ id: A.mkId('x'), value: h1 }],
+            [{ pat: A.mkId('x'), value: h1 }],
             A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
         ]))
     expect(actual).toEqual(expected)

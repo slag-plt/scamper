@@ -128,7 +128,7 @@ export interface Lam extends Tagged, Node {
 }
 export interface Let extends Tagged, Node {
   tag: 'let'
-  bindings: { id: Identifier; value: Exp }[]
+  bindings: { pat: Pat; value: Exp }[]
   body: Exp
 }
 export interface Begin extends Tagged, Node {
@@ -153,7 +153,7 @@ export interface Quote extends Tagged, Node {
 // Sugared Forms
 export interface LetS extends Tagged, Node {
   tag: 'let*'
-  bindings: { id: Identifier; value: Exp }[]
+  bindings: { pat: Pat; value: Exp }[]
   body: Exp
 }
 export interface And extends Tagged, Node {
@@ -304,7 +304,7 @@ export const mkLam = (
   restParam?: Identifier,
 ): Lam => ({ tag: 'lam', params, body, range, restParam})
 export const mkLet = (
-  bindings: { id: Identifier; value: Exp }[],
+  bindings: { pat: Pat; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
 ): Let => ({ tag: 'let', bindings, body, range })
@@ -329,7 +329,7 @@ export const mkQuote = (
   range: L.Range = L.Range.none,
 ): Quote => ({ tag: 'quote', value, range })
 export const mkLetS = (
-  bindings: { id: Identifier; value: Exp }[],
+  bindings: { pat: Pat; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
 ): LetS => ({ tag: 'let*', bindings, body, range })
@@ -476,7 +476,7 @@ export function expToString(e: Exp): string {
       return `(lambda (${params.join(' ')}) ${expToString(e.body)})`
     }
     case 'let':
-      return `(let (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return `(let (${e.bindings.map(({ pat, value }) => `[${patToString(pat)} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'begin':
       return `(begin ${e.exps.map(expToString).join(' ')})`
     case 'if':
@@ -486,7 +486,7 @@ export function expToString(e: Exp): string {
     case 'quote':
       return `(quote ${JSON.stringify(e.value)})`
     case 'let*':
-      return `(let* (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return `(let* (${e.bindings.map(({ pat, value }) => `[${patToString(pat)} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'and':
       return `(and ${e.exps.map(expToString).join(' ')})`
     case 'or':
@@ -575,7 +575,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
   } else if (e1.tag === 'let' && e2.tag === 'let') {
     return (
       e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
+      e1.bindings.every(({ pat }, i) => patEquals(pat, e2.bindings[i].pat)) &&
       e1.bindings.every(({ value }, i) =>
         expEquals(value, e2.bindings[i].value),
       ) &&
@@ -604,7 +604,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
   } else if (e1.tag === 'let*' && e2.tag === 'let*') {
     return (
       e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
+      e1.bindings.every(({ pat }, i) => patEquals(pat, e2.bindings[i].pat)) &&
       e1.bindings.every(({ value }, i) =>
         expEquals(value, e2.bindings[i].value),
       ) &&

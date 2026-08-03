@@ -16,8 +16,8 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     }
     case 'let': {
       return AST.mkLet(
-        e.bindings.map(({ id, value }) => ({
-          id,
+        e.bindings.map(({ pat, value }) => ({
+          pat,
           value: sugarExpr(value),
         })),
         sugarExpr(e.body),
@@ -30,10 +30,12 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
       return AST.mkIf(sugarExpr(e.guard), sugarExpr(e.ifB), sugarExpr(e.elseB))
     }
     case 'match': {
-      // Let binding
-      if (e.branches.length === 1 && e.branches[0].pat.tag === 'id') {
+      // Let binding: a single-branch match is exactly `(let ([pat scrutinee])
+      // body)` -- both bind the pattern and error on a non-match -- so any
+      // single-branch match sugars back to a let, whatever the pattern.
+      if (e.branches.length === 1) {
         return AST.mkLet(
-          [{ id: e.branches[0].pat, value: sugarExpr(e.scrutinee) }],
+          [{ pat: e.branches[0].pat, value: sugarExpr(e.scrutinee) }],
           sugarExpr(e.branches[0].body),
         )
       }
@@ -63,8 +65,8 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     }
     case 'let*': {
       return AST.mkLetS(
-        e.bindings.map(({ id, value }) => ({
-          id,
+        e.bindings.map(({ pat, value }) => ({
+          pat,
           value: sugarExpr(value),
         })),
         sugarExpr(e.body),

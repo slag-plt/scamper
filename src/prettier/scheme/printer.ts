@@ -14,8 +14,8 @@ export function isSchemeNode(v: unknown): v is A.SchemeNode {
   return typeof v.tag === 'string'
 }
 
-function isLetBinding(v: unknown): v is { id: A.Identifier; value: A.Exp } {
-  return typeof v === 'object' && v !== null && 'id' in v && 'value' in v
+function isLetBinding(v: unknown): v is { pat: A.Pat; value: A.Exp } {
+  return typeof v === 'object' && v !== null && 'pat' in v && 'value' in v
 }
 
 function isMatchBranch(v: unknown): v is { pat: A.Pat; body: A.Exp } {
@@ -106,7 +106,7 @@ export const SchemePrinter: Printer = {
           if (!isLetBinding(raw)) return ''
           return group([
             '[',
-            raw.id.name,
+            bindingPath.call(print, 'pat'),
             ' ',
             bindingPath.call(print, 'value'),
             ']',
@@ -169,7 +169,7 @@ export const SchemePrinter: Printer = {
           if (!isLetBinding(raw)) return ''
           return group([
             '[',
-            raw.id.name,
+            bindingPath.call(print, 'pat'),
             ' ',
             bindingPath.call(print, 'value'),
             ']',

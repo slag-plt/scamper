@@ -462,7 +462,7 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
-        id: identifier(ctx, n),
+        pat: patFromNode(ctx, n),
         value: expFromNode(ctx, v),
       }))
       return node.type.name === 'Let'

@@ -41,7 +41,7 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkLet(
-          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
+          [{ pat: A.mkId('x'), value: A.mkLit(1, anyRange) }],
           A.mkId('x', anyRange),
           anyRange,
         ),
@@ -90,7 +90,7 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkLetS(
-          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
+          [{ pat: A.mkId('x'), value: A.mkLit(1, anyRange) }],
           A.mkId('x', anyRange),
           anyRange,
         ),

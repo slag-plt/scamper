@@ -195,7 +195,10 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
   op.currBranchIdx ??= 0
   const currBranch = op.branches.at(op.currBranchIdx++)
   if (!currBranch) {
-    throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
+    throw new ScamperError(
+      'Runtime',
+      op.failMsg ?? 'Inexhaustive pattern match failure',
+    )
   }
   const [pat, blk] = currBranch
   const bindings = pMatch(scrutinee, pat)

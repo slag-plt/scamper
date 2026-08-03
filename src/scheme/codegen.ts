@@ -55,7 +55,16 @@ function lowerExpr(e: A.Exp): L.Blk {
       // we're building the matches inside-out.
       // for (let i = e.bindings.length - 1; i >= 0; i--) {
       e.bindings.forEach((b) => {
-        ret = [L.mkMatch([[L.mkPVar(b.id.name, e.range), ret]])]
+        // A binding is a single-branch match; a value that doesn't match the
+        // pattern raises a binding-flavored runtime error (irrefutable
+        // patterns -- plain identifiers, `_` -- simply never trigger it).
+        ret = [
+          L.mkMatch(
+            [[lowerPat(b.pat), ret]],
+            e.range,
+            `let: value did not match pattern ${A.patToString(b.pat)}`,
+          ),
+        ]
       })
       return [...bindings, ...ret]
     }

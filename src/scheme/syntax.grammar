@@ -18,7 +18,7 @@ arglist {
 }
 
 binding {
-  "[" Identifier expression "]"
+  "[" pattern expression "]"
 }
 
 branch {

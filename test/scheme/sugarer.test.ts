@@ -9,7 +9,7 @@ const sugarableMatch = (scrutineeName: string, bodyName: string) =>
     { pat: A.mkId(bodyName), body: A.mkId(bodyName) },
   ])
 const sugaredMatch = (scrutineeName: string, bodyName: string) =>
-  A.mkLet([{ id: A.mkId(bodyName), value: A.mkId(scrutineeName) }], A.mkId(bodyName))
+  A.mkLet([{ pat: A.mkId(bodyName), value: A.mkId(scrutineeName) }], A.mkId(bodyName))
 
 test('lit, var, and quote pass through unchanged', () => {
   expect(sugarExpr(A.mkLit(42))).toEqual(A.mkLit(42))
@@ -24,7 +24,7 @@ test('match with a single pvar branch desugars to let, recursively sugaring scru
     ]),
   )
   const expected = A.mkLet(
-    [{ id: A.mkId('x'), value: sugaredMatch('n', 'm') }],
+    [{ pat: A.mkId('x'), value: sugaredMatch('n', 'm') }],
     sugaredMatch('b', 'c'),
   )
   expect(actual).toEqual(expected)
@@ -82,8 +82,8 @@ test('lam recursively sugars the body and preserves params/restParam', () => {
 })
 
 test('let and let* recursively sugar binding values and body', () => {
-  const bindings = [{ id: A.mkId('v'), value: sugarableMatch('n', 'm') }]
-  const expectedBindings = [{ id: A.mkId('v'), value: sugaredMatch('n', 'm') }]
+  const bindings = [{ pat: A.mkId('v'), value: sugarableMatch('n', 'm') }]
+  const expectedBindings = [{ pat: A.mkId('v'), value: sugaredMatch('n', 'm') }]
 
   expect(sugarExpr(A.mkLet(bindings, sugarableMatch('x', 'y')))).toEqual(
     A.mkLet(expectedBindings, sugaredMatch('x', 'y')),

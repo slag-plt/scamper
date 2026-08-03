@@ -318,6 +318,9 @@ export interface Match {
   tag: 'match'
   branches: [Pat, Blk][]
   range: Range
+  // Message thrown when no branch matches. Lets `let`-lowering supply a
+  // binding-flavored error; defaults to the generic match-failure message.
+  failMsg?: string
   // hack fix to not modify original branch
   // TODO: making this better requires better bytecode
   currBranchIdx?: number

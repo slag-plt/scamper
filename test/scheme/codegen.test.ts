@@ -296,6 +296,28 @@ describe('End-to-end cases', () => {
 `, [19, 19, 19])
   })
 
+  test('let-binding with patterns', async () => {
+    await checkMachineOutput(`
+; a constructor pattern destructures the bound value
+(let ([(pair a b) (pair 1 2)])
+  (+ a b))
+
+; a wildcard binding runs the value for effect, then returns the body
+(let ([_ 99]) 42)
+
+; patterns work in let* too, and still telescope
+(let* ([(pair a b) (pair 3 4)]
+       [c (+ a b)])
+  c)
+`, [3, 42, 7])
+  })
+
+  test('let-binding: a value not matching the pattern is a runtime error', async () => {
+    const out = await runProgram('(let ([(pair a b) 5]) a)')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('let: value did not match pattern (pair a b)')
+  })
+
   test('list-length', async () => {
     await checkMachineOutput(`
 (define list-length

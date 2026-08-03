@@ -331,11 +331,11 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let')
         if (reported.tag !== 'let') return
         expect(reported.bindings[0]).toStrictEqual({
-          id: mkId('x', anyRange),
+          pat: mkId('x', anyRange),
           value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
         })
         expect(reported.bindings[1]).toStrictEqual({
-          id: mkId('y', anyRange),
+          pat: mkId('y', anyRange),
           value: mkLit(2, anyRange),
         })
         expect(reported.body).toStrictEqual(mkId('z', anyRange))
@@ -348,11 +348,11 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let')
         if (reported.tag !== 'let') return
         expect(reported.bindings[0]).toStrictEqual({
-          id: mkId('x', anyRange),
+          pat: mkId('x', anyRange),
           value: mkLit(1, anyRange),
         })
         expect(reported.bindings[1]).toStrictEqual({
-          id: mkId('y', anyRange),
+          pat: mkId('y', anyRange),
           value: mkLit(2, anyRange),
         })
         expect(reported.body).toStrictEqual({
@@ -369,7 +369,7 @@ describe('AST querying', () => {
         expect(reported.tag).toBe('let*')
         if (reported.tag !== 'let*') return
         expect(reported.bindings[0]).toStrictEqual({
-          id: mkId('x', anyRange),
+          pat: mkId('x', anyRange),
           value: { tag: 'report', exp: mkLit(1, anyRange), range: anyRange },
         })
         expect(reported.body).toStrictEqual(mkId('x', anyRange))
