@@ -6,7 +6,6 @@ import {
   LoggingChannel,
   OutputChannel,
   ReportError,
-  ScamperError,
   Value,
 } from '../../src/lpm'
 import { makeTestFiber } from '../util'
@@ -486,21 +485,6 @@ describe('basic ops', () => {
       // which the fiber rejects (frames must end with exactly one value).
       const fiber = makeTestFiber([U.mkDisp([U.mkLit(1), U.mkPopv()])])
       expectFailedExec(fiber, ICE)
-    })
-  })
-
-  describe('jsvar', () => {
-    test('resolves a bound JS internal to its value', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkJsVar('prelude_numberQ')])])
-      expectSuccessfulExec(fiber)
-      expect(typeof out.log.at(0)).toBe('function')
-    })
-
-    test('throws when the internal name is not bound', () => {
-      const fiber = makeTestFiber([
-        U.mkDisp([U.mkJsVar('definitely_not_a_real_binding')]),
-      ])
-      expectFailedExec(fiber, ScamperError)
     })
   })
 

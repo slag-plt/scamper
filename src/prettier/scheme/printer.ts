@@ -163,9 +163,6 @@ export const SchemePrinter: Printer = {
       case 'quote':
         return `'${TextRenderer.render(node.value)}`
 
-      case 'jsvar':
-        return `(js-var ${JSON.stringify(node.name)})`
-
       case 'error':
         return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
 

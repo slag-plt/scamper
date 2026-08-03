@@ -88,18 +88,6 @@ describe('lezer-bridge parsing', () => {
     expectParses("''a")
   })
 
-  test('js-var takes a single string literal naming a JS binding', () => {
-    const { prog, errors } = parse('(js-var "prelude_plus")')
-    expect(errors).toEqual([])
-    expect(prog.length).toBe(1)
-    const stmt = prog[0]
-    expect(stmt.tag).toBe('stmtexp')
-    if (stmt.tag !== 'stmtexp') return
-    expect(stmt.expr.tag).toBe('jsvar')
-    if (stmt.expr.tag !== 'jsvar') return
-    expect(stmt.expr.name).toBe('prelude_plus')
-  })
-
   test('vector literals are literal data, not sub-expressions to evaluate', () => {
     const { prog, errors } = parse('(display [1 2 3])')
     expect(errors).toEqual([])
@@ -289,7 +277,6 @@ describe('lezer-bridge parsing', () => {
         'error',
         'if',
         'import',
-        'js-var',
         'lambda',
         'let',
         'let*',

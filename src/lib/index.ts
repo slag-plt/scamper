@@ -3,6 +3,7 @@ import { Fiber } from '../lpm/fiber.js'
 import { builtinLibs } from '../lpm/builtin-registry.js'
 import * as A from '../scheme/ast.js'
 import { compile, tokenizeAndParse } from '../scheme/index.js'
+import { jsVar } from '../js/index.js'
 import {
   FunctionDoc,
   parseFunctionDocFromComments,
@@ -26,7 +27,15 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
       `Failed to compile builtin library "${name}": ${diagnostics.map((d) => d.message).join('; ')}`,
     )
   }
-  const fiber = new Fiber(prog)
+  // js-var is the FFI root primitive -- it can't be bound via itself, so it's
+  // injected directly into every library's load environment. Because a library's
+  // top-level env becomes its Module (getTopLevelAsModule below), this also makes
+  // js-var an export of each built-in module, so user code and the scope-checker
+  // pick it up without any further wiring.
+  const fiber = new Fiber(
+    prog,
+    L.Env.empty.extendWithTopLevel(['js-var', jsVar]),
+  )
   while (!fiber.isDone()) {
     fiber.step()
   }

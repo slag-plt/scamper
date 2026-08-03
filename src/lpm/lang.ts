@@ -329,11 +329,6 @@ export interface Rept {
   tag: 'rept'
   range: Range
 }
-export interface JsVar {
-  tag: 'jsvar'
-  name: string
-  range: Range
-}
 export interface ErrorOp {
   tag: 'error'
   range: Range
@@ -368,7 +363,6 @@ export type Ops =
   | Match
   | PopV
   | Rept
-  | JsVar
   | ErrorOp
   | ApSpread
   | PushHandler

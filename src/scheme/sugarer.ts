@@ -61,9 +61,6 @@ export function sugarExpr(e: AST.Exp): AST.Exp {
     case 'quote': {
       return e
     }
-    case 'jsvar': {
-      return e
-    }
     case 'error': {
       return AST.mkError(sugarExpr(e.exp))
     }

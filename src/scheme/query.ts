@@ -85,7 +85,6 @@ function slotsOf(exp: A.Exp): Slot[] {
     case 'lit':
     case 'id':
     case 'quote':
-    case 'jsvar':
       return []
 
     case 'error':

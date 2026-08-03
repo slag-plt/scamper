@@ -305,15 +305,6 @@ describe('quote', () => {
   })
 })
 
-describe('js-var', () => {
-  test('range and name', () => {
-    const src = '(js-var "Math.PI")'
-    const jsv = asExp(parseExp(src), 'jsvar')
-    expect(jsv.name).toBe('Math.PI')
-    assertSpan(jsv.range, src, '(js-var "Math.PI")')
-  })
-})
-
 describe('error', () => {
   test('message expression range', () => {
     const src = '(error "boom")'

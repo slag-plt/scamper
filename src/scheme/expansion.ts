@@ -64,8 +64,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       )
     case 'quote':
       return e
-    case 'jsvar':
-      return e
     case 'error':
       return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
     case 'let*':
@@ -138,8 +136,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         e.range,
       )
     case 'quote':
-      return e
-    case 'jsvar':
       return e
     case 'error':
       return A.mkError(expandExpr(e.exp), e.range)

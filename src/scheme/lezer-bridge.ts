@@ -393,11 +393,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
 
-    case 'JsVar': {
-      const name = leafValue(ctx, cs[1]) as string
-      return A.mkJsVar(name, range)
-    }
-
     case 'Error':
       return A.mkError(expFromNode(ctx, cs[1]), range)
 

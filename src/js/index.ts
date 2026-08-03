@@ -66,3 +66,12 @@ export function lookup(name: string): L.Value {
   }
   return internals.get(name)
 }
+
+/**
+ * The `js-var` primitive, exposed as an ordinary function: resolves a built-in
+ * (JavaScript) binding by its prefixed internal name. Injected into every
+ * library's load environment (src/lib/index.ts) -- and, because a library's
+ * top-level env becomes its Module, exported by each built-in module -- so
+ * `(js-var "prelude_numberQ")` is an ordinary application, not a special form.
+ */
+export const jsVar = L.nameFn('js-var', (name: string) => lookup(name)) as L.JsFunction

@@ -25,10 +25,7 @@ const FORM_LABELS: Record<string, string> = {
   Begin: 'begin',
   Section: 'section',
   Quote: 'quote',
-  Apply: 'apply',
-  WithHandler: 'with-handler',
   Error: 'error',
-  JsVar: 'js-var',
   Vector: 'vector',
   Application: 'application',
   // Patterns

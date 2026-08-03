@@ -118,7 +118,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'id':
     case 'lit':
     case 'quote':
-    case 'jsvar':
       return []
 
     // Transparent forms: forward the scopes of every sub-expression.

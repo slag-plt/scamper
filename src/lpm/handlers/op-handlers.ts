@@ -4,7 +4,6 @@ import { Ops, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
 import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from '../util'
-import { lookup } from '../../js/index.js'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -212,11 +211,6 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
 export const PopVHandler: OpHandler<'popv'> = (_, currFrame) => {
   currFrame.values.pop()
   return traceStep
-}
-
-export const JsVarHandler: OpHandler<'jsvar'> = (op, currFrame) => {
-  currFrame.values.push(lookup(op.name))
-  return minorStep
 }
 
 export const ErrorHandler: OpHandler<'error'> = (op, currFrame) => {

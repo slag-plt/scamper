@@ -11,11 +11,10 @@ const sugarableMatch = (scrutineeName: string, bodyName: string) =>
 const sugaredMatch = (scrutineeName: string, bodyName: string) =>
   A.mkLet([{ id: A.mkId(bodyName), value: A.mkId(scrutineeName) }], A.mkId(bodyName))
 
-test('lit, var, quote, and jsvar pass through unchanged', () => {
+test('lit, var, and quote pass through unchanged', () => {
   expect(sugarExpr(A.mkLit(42))).toEqual(A.mkLit(42))
   expect(sugarExpr(A.mkId('x'))).toEqual(A.mkId('x'))
   expect(sugarExpr(A.mkQuote('sym'))).toEqual(A.mkQuote('sym'))
-  expect(sugarExpr(A.mkJsVar('Math.sin'))).toEqual(A.mkJsVar('Math.sin'))
 })
 
 test('match with a single pvar branch desugars to let, recursively sugaring scrutinee and body', () => {

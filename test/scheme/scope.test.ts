@@ -153,7 +153,7 @@ describe('scope checking', () => {
       ['apply form', '(apply + (list 1 2))'],
       ['section with a hole', '(section + _ 1)'],
       ['section with several holes', '(section + _ _)'],
-      ['js-var is not scope-checked', '(js-var "Math")'],
+      ['js-var is a bound global (its arg is a literal)', '(js-var "Math")'],
       ['display', '(define x 1)\n(display x)'],
       ['struct definition', '(struct posn (x y))'],
       [
