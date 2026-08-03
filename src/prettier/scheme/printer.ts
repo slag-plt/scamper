@@ -169,14 +169,6 @@ export const SchemePrinter: Printer = {
       case 'error':
         return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
 
-      case 'apply':
-        return group([
-          '(apply ',
-          path.call(print, 'fn'),
-          indent([line, path.call(print, 'args')]),
-          ')',
-        ])
-
       case 'with-handler':
         return group([
           '(with-handler ',

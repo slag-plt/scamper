@@ -150,10 +150,10 @@ describe('basic ops', () => {
     expectFailedExec(fiber, ICE)
   })
 
-  describe('apply', () => {
+  describe('ap-spread', () => {
     test('spreads a list as call arguments', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('+'), U.mkLit(U.mkList(3, 4)), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('+'), U.mkLit(U.mkList(3, 4)), U.mkApSpread()]),
       ])
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([7])
@@ -161,26 +161,26 @@ describe('basic ops', () => {
 
     test('malformed args: arg value is not a list', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('+'), U.mkLit(42), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('+'), U.mkLit(42), U.mkApSpread()]),
       ])
       expectFailedExec(fiber)
     })
 
     test('without enough values on the stack throws an ICE', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApplyOp()])])
+      const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApSpread()])])
       expectFailedExec(fiber, ICE)
     })
 
     test('applying a non-function, non-closure value', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkLit(42), U.mkLit(U.mkList()), U.mkApplyOp()]),
+        U.mkDisp([U.mkLit(42), U.mkLit(U.mkList()), U.mkApSpread()]),
       ])
       expectFailedExec(fiber)
     })
 
     test('a JS function throwing a non-Scamper error gets wrapped', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('boom'), U.mkLit(U.mkList()), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('boom'), U.mkLit(U.mkList()), U.mkApSpread()]),
       ])
       fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
         'boom',
@@ -281,7 +281,7 @@ describe('basic ops', () => {
         U.mkCtor('test-struct', ['field1', 'field2']),
       ]
       const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
-      const elseBranch = [U.mkRaise('no match'), U.mkPops()]
+      const elseBranch = [U.mkLit('no match')]
       const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
       const fiber = makeTestFiber([
         U.mkDisp([
@@ -501,18 +501,6 @@ describe('basic ops', () => {
         U.mkDisp([U.mkJsVar('definitely_not_a_real_binding')]),
       ])
       expectFailedExec(fiber, ScamperError)
-    })
-  })
-
-  describe('deprecated opcodes', () => {
-    test('executing a raise op throws an ICE', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkRaise('boom')])])
-      expectFailedExec(fiber, ICE)
-    })
-
-    test('executing a pops op throws an ICE', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit(1), U.mkPops()])])
-      expectFailedExec(fiber, ICE)
     })
   })
 

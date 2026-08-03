@@ -151,10 +151,6 @@ describe('lezer-bridge parsing', () => {
     expectParses('(error "something went wrong")')
   })
 
-  test('apply', () => {
-    expectParses('(apply + (list 1 2 3))')
-  })
-
   test('with-handler', () => {
     expectParses('(with-handler (lambda (e) e) (lambda () (error "boom")))')
     expectParses('(with-handler handle f 1 2 3)')
@@ -291,7 +287,6 @@ describe('lezer-bridge parsing', () => {
     expect(reservedWords.slice().sort()).toEqual(
       [
         'and',
-        'apply',
         'begin',
         'cond',
         'define',

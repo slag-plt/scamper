@@ -105,20 +105,15 @@ export function raiseFrame(
         break
       }
 
-      case 'raise': {
-        values.push(A.mkApp(A.mkId('raise'), [A.mkLit(op.msg)]))
-        break
-      }
-
       case 'error': {
         const arg = values.pop()!
         values.push(A.mkError(arg))
         break
       }
 
-      case 'apply': {
+      case 'ap-spread': {
         const [fn, args] = values.splice(-2)
-        values.push(A.mkApply(fn, args))
+        values.push(A.mkApp(A.mkId('apply'), [fn, args]))
         break
       }
 
@@ -145,11 +140,6 @@ export function raiseFrame(
         } else {
           values.push(A.mkWithHandler(handler, guarded, []))
         }
-        break
-      }
-
-      case 'pops': {
-        // N.B., pops the local environment, but we don't track that here!
         break
       }
 

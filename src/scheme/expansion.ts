@@ -68,12 +68,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       return e
     case 'error':
       return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
-    case 'apply':
-      return A.mkApply(
-        collectSectionHoles(bvars, e.fn),
-        collectSectionHoles(bvars, e.args),
-        e.range,
-      )
     case 'with-handler':
       return A.mkWithHandler(
         collectSectionHoles(bvars, e.handler),
@@ -156,8 +150,6 @@ export function expandExpr(e: A.Exp): A.Exp {
       return e
     case 'error':
       return A.mkError(expandExpr(e.exp), e.range)
-    case 'apply':
-      return A.mkApply(expandExpr(e.fn), expandExpr(e.args), e.range)
     case 'with-handler':
       return A.mkWithHandler(
         expandExpr(e.handler),

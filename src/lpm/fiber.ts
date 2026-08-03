@@ -11,7 +11,7 @@ import { Range } from './range'
 import {
   ApHandler,
   applyFn,
-  ApplyHandler,
+  ApSpreadHandler,
   CheckFnHandler,
   ClsHandler,
   CtorHandler,
@@ -333,8 +333,8 @@ export class Fiber {
       case 'error':
         isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
         break
-      case 'apply':
-        isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
+      case 'ap-spread':
+        isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)
         break
       case 'check-fn':
         isMajorStep = CheckFnHandler(currOp, this.currentFrame, this)
@@ -345,11 +345,6 @@ export class Fiber {
       case 'pop-handler':
         isMajorStep = PopHandlerHandler(currOp, this.currentFrame, this)
         break
-      // TODO: the following instructions are useless
-      // should be removed later
-      case 'raise':
-      case 'pops':
-        throw new ICE('Fiber.stepFrame', `${currOp.tag} is deprecated!`)
     }
 
     if (this.currentFrame.isFinished()) {

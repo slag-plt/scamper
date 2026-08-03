@@ -55,7 +55,7 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
 
 /**
  * Shared by ApHandler (a statically-known arg count baked into the "ap" op
- * at compile time) and ApplyHandler ("apply"'s arg count is only known at
+ * at compile time) and ApSpreadHandler (ap-spread's arg count is only known at
  * runtime, from the length of the spread list) -- both ultimately need the
  * same dispatch: call directly if fn is a JsFunction (rewriting a thrown
  * ScamperError's range to the call site), or push a new Frame if fn is a
@@ -163,11 +163,11 @@ export const ApHandler: OpHandler<'ap'> = (op, currFrame, fiber) => {
   return applyFn(fn, args, currFrame, fiber, op.range)
 }
 
-export const ApplyHandler: OpHandler<'apply'> = (op, currFrame, fiber) => {
+export const ApSpreadHandler: OpHandler<'ap-spread'> = (op, currFrame, fiber) => {
   if (currFrame.values.length < 2) {
     throw new ICE(
-      'Fiber.ApplyHandler',
-      `Not enough values for apply: expected 2, currently have ${currFrame.values.length.toString()}`,
+      'Fiber.ApSpreadHandler',
+      `Not enough values for ap-spread: expected 2, currently have ${currFrame.values.length.toString()}`,
     )
   }
   const [fn, argList] = currFrame.values.splice(-2)

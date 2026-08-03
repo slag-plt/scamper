@@ -98,14 +98,6 @@ describe('expToString', () => {
     )
   })
 
-  test('apply', () => {
-    expect(
-      A.expToString(
-        A.mkApply(A.mkId('f', anyRange), A.mkId('args', anyRange), anyRange),
-      ),
-    ).toBe('(apply f args)')
-  })
-
   test('let*', () => {
     expect(
       A.expToString(

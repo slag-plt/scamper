@@ -322,14 +322,6 @@ export interface Match {
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
-export interface Raise {
-  tag: 'raise'
-  msg: string
-  range: Range
-}
-export interface PopS {
-  tag: 'pops'
-}
 export interface PopV {
   tag: 'popv'
 }
@@ -346,8 +338,8 @@ export interface ErrorOp {
   tag: 'error'
   range: Range
 }
-export interface ApplyOp {
-  tag: 'apply'
+export interface ApSpread {
+  tag: 'ap-spread'
   range: Range
 }
 // N.B., check-fn/push-handler/pop-handler bracket the guarded application lowered
@@ -380,13 +372,11 @@ export type Ops =
   | Cls
   | Ap
   | Match
-  | Raise
-  | PopS
   | PopV
   | Rept
   | JsVar
   | ErrorOp
-  | ApplyOp
+  | ApSpread
   | CheckFn
   | PushHandler
   | PopHandler

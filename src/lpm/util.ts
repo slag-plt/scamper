@@ -140,12 +140,6 @@ export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
 ): L.StmtExp => ({ tag: 'stmtexp', expr, range })
-export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({
-  tag: 'raise',
-  msg,
-  range,
-})
-export const mkPops = (): L.PopS => ({ tag: 'pops' })
 export const mkPopv = (): L.PopV => ({ tag: 'popv' })
 export const mkRept = (range: Range = Range.none): L.Rept => ({
   tag: 'rept',
@@ -160,8 +154,8 @@ export const mkError = (range: Range = Range.none): L.ErrorOp => ({
   tag: 'error',
   range,
 })
-export const mkApplyOp = (range: Range = Range.none): L.ApplyOp => ({
-  tag: 'apply',
+export const mkApSpread = (range: Range = Range.none): L.ApSpread => ({
+  tag: 'ap-spread',
   range,
 })
 export const mkCheckFn = (range: Range = Range.none): L.CheckFn => ({

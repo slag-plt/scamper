@@ -4,7 +4,6 @@
 // be used as a variable/identifier name.
 export const reservedWords = [
   'and',
-  'apply',
   'begin',
   'cond',
   'define',

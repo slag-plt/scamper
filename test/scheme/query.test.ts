@@ -247,36 +247,6 @@ describe('AST querying', () => {
       })
     })
 
-    describe('apply', () => {
-      const src = '(apply + (list 1 2))'
-
-      test('reports the fn slot', () => {
-        const exp = parseExp(src)
-        const { exp: reported } = getReportedExp(exp, locIn(src, '+'))
-        expect(reported.tag).toBe('apply')
-        if (reported.tag !== 'apply') return
-        expect(reported.fn).toStrictEqual({
-          tag: 'report',
-          exp: mkId('+', anyRange),
-          range: anyRange,
-        })
-        // the args slot is untouched
-        expect(reported.args.tag).toBe('app')
-      })
-
-      test('reports the args slot', () => {
-        const exp = parseExp(src)
-        const { exp: reported } = getReportedExp(exp, locIn(src, '(list 1 2)'))
-        expect(reported.tag).toBe('apply')
-        if (reported.tag !== 'apply') return
-        // the fn slot is untouched
-        expect(reported.fn).toStrictEqual(mkId('+', anyRange))
-        expect(reported.args.tag).toBe('report')
-        if (reported.args.tag !== 'report') return
-        expect(reported.args.exp.tag).toBe('app')
-      })
-    })
-
     describe('lam', () => {
       test('reports the body slot', () => {
         const src = '(lambda (x) x)'

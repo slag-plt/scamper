@@ -1,3 +1,7 @@
+; `apply` is a first-class procedure backed by the ap-spread VM primitive
+; (native implementation: prelude_apply in src/js/prelude/index.ts).
+(define apply (js-var "prelude_apply"))
+
 ;;; (and☀︎ v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any

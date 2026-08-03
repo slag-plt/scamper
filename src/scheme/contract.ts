@@ -92,10 +92,12 @@ function mkRestErrorMsg(descPred: string, restVar: string, range: Range): A.Exp 
  * passed. For a fixed-arity function this is just `(##contract-target##
  * x1 ... xk)`. When there's also a rest parameter, the fixed args and the
  * rest list have to be combined into a single list first (via nested cons,
- * innermost-out) and passed through `apply`, since Ap's bytecode always has
+ * innermost-out) and spread into the call via an inline `ap-spread` (the
+ * internal `##ap-spread##` form; see codegen), since Ap's bytecode always has
  * a compile-time-fixed argument count -- there's no way to statically emit
  * "call with N args" when N (the rest list's length) is only known at
- * runtime.
+ * runtime. An inline ap-spread keeps a raised error attributed to this
+ * contract-wrapper frame rather than to the user-facing `apply` closure.
  */
 function mkTargetCall(
   params: Param[],
@@ -114,7 +116,11 @@ function mkTargetCall(
       A.mkApp(A.mkId('cons', range), [A.mkId(p.name, range), acc], range),
     A.mkId(restParam.name, range),
   )
-  return A.mkApply(A.mkId(contractTargetName, range), combined, range)
+  return A.mkApp(
+    A.mkId('##ap-spread##', range),
+    [A.mkId(contractTargetName, range), combined],
+    range,
+  )
 }
 
 /**

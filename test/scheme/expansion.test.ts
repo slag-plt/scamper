@@ -206,19 +206,6 @@ describe('Section hole collection', () => {
     expect(actual).toEqual(expected)
   })
 
-  test('apply', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkApply(A.mkId('_'), A.mkId('_'))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [A.mkApply(h1, h2)]))
-    expect(actual).toEqual(expected)
-  })
-
   test('and', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),

@@ -21,6 +21,18 @@ function lowerExpr(e: A.Exp): L.Blk {
     case 'id':
       return [L.mkVar(e.name, e.range)]
     case 'app':
+      // Internal spread-application `(##ap-spread## fn argList)`, emitted by
+      // contract.ts for rest-parameter targets. Lowered to an *inline*
+      // ap-spread (not the user-facing `apply` closure) so a raised error is
+      // attributed to the enclosing contract-wrapper frame rather than to a
+      // synthetic `apply` frame. Never produced by the reader.
+      if (e.head.tag === 'id' && e.head.name === '##ap-spread##') {
+        return [
+          ...lowerExpr(e.args[0]),
+          ...lowerExpr(e.args[1]),
+          L.mkApSpread(e.range),
+        ]
+      }
       return [
         ...lowerExpr(e.head),
         ...e.args.flatMap(lowerExpr),
@@ -82,8 +94,6 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [L.mkJsVar(e.name, e.range)]
     case 'error':
       return [...lowerExpr(e.exp), L.mkError(e.range)]
-    case 'apply':
-      return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
     case 'with-handler':
       // Evaluate the handler and the guarded function, check the function is
       // actually applicable (check-fn), THEN install the handler and apply fn to

@@ -323,16 +323,6 @@ describe('error', () => {
   })
 })
 
-describe('apply', () => {
-  test('function and argument ranges', () => {
-    const src = '(apply foo bar)'
-    const ap = asExp(parseExp(src), 'apply')
-    assertSpan(ap.range, src, '(apply foo bar)')
-    assertSpan(asExp(ap.fn, 'id').range, src, 'foo')
-    assertSpan(asExp(ap.args, 'id').range, src, 'bar')
-  })
-})
-
 ///// Sugared expression forms /////////////////////////////////////////////////
 
 describe('and / or', () => {

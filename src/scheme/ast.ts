@@ -158,11 +158,6 @@ export interface ErrorExp extends Tagged, Node {
   tag: 'error'
   exp: Exp
 }
-export interface Apply extends Tagged, Node {
-  tag: 'apply'
-  fn: Exp
-  args: Exp
-}
 // (with-handler handler fn arg ...) -- runs (fn arg ...); if a runtime error is
 // raised, runs (handler err-message) instead. A special form (not a procedure)
 // because it must install an exception handler in the bytecode.
@@ -212,7 +207,6 @@ export type Exp =
   | Quote
   | JsVar
   | ErrorExp
-  | Apply
   | WithHandlerExp
   | LetS
   | And
@@ -363,11 +357,6 @@ export const mkError = (
   exp: Exp,
   range: L.Range = L.Range.none,
 ): ErrorExp => ({ tag: 'error', exp, range })
-export const mkApply = (
-  fn: Exp,
-  args: Exp,
-  range: L.Range = L.Range.none,
-): Apply => ({ tag: 'apply', fn, args, range })
 export const mkWithHandler = (
   handler: Exp,
   fn: Exp,
@@ -455,7 +444,6 @@ export function isExp(v: unknown): v is Exp {
       'quote',
       'jsvar',
       'error',
-      'apply',
       'with-handler',
       'let*',
       'and',
@@ -539,8 +527,6 @@ export function expToString(e: Exp): string {
       return `(js-var ${JSON.stringify(e.name)})`
     case 'error':
       return `(error ${expToString(e.exp)})`
-    case 'apply':
-      return `(apply ${expToString(e.fn)} ${expToString(e.args)})`
     case 'with-handler':
       return `(with-handler ${expToString(e.handler)} ${expToString(e.fn)}${e.args.map((a) => ` ${expToString(a)}`).join('')})`
     case 'let*':
@@ -663,8 +649,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     return e1.name === e2.name
   } else if (e1.tag === 'error' && e2.tag === 'error') {
     return expEquals(e1.exp, e2.exp)
-  } else if (e1.tag === 'apply' && e2.tag === 'apply') {
-    return expEquals(e1.fn, e2.fn) && expEquals(e1.args, e2.args)
   } else if (e1.tag === 'with-handler' && e2.tag === 'with-handler') {
     return (
       expEquals(e1.handler, e2.handler) &&

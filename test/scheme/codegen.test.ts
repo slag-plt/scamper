@@ -798,6 +798,16 @@ describe('Construct semantics (comprehensiveness audit)', () => {
       await checkMachineOutput('(apply + 5)',
         ['Runtime error: (apply) expected a list, received number'], true)
     })
+
+    // apply is now an ordinary first-class procedure (not a special form): it
+    // can be tested with procedure?, sectioned, and passed to higher-order fns.
+    test('apply is a first-class value (procedure?, section, passed to a HOF)', async () => {
+      await checkMachineOutput(`
+        (procedure? apply)
+        ((section apply _ _) + (list 1 2))
+        (map (lambda (p) (apply + p)) (list (list 1 2) (list 3 4)))
+      `, [true, 3, L.mkList(3, 7)])
+    })
   })
 
   describe('js-var', () => {

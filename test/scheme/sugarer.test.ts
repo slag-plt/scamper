@@ -76,12 +76,6 @@ test('app recursively sugars head and each argument', () => {
   expect(actual).toEqual(expected)
 })
 
-test('apply recursively sugars the function and argument-list expressions', () => {
-  const actual = sugarExpr(A.mkApply(sugarableMatch('f', 'g'), sugarableMatch('xs', 'ys')))
-  const expected = A.mkApply(sugaredMatch('f', 'g'), sugaredMatch('xs', 'ys'))
-  expect(actual).toEqual(expected)
-})
-
 test('lam recursively sugars the body and preserves params/restParam', () => {
   const actual = sugarExpr(A.mkLam([A.mkId('a'), A.mkId('b')], sugarableMatch('x', 'y'), undefined, A.mkId('rest')))
   const expected = A.mkLam([A.mkId('a'), A.mkId('b')], sugaredMatch('x', 'y'), undefined, A.mkId('rest'))

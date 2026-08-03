@@ -37,14 +37,6 @@ describe('Fiber', () => {
     expect(() => fiber.stepFrame()).toThrow(ICE)
   })
 
-  test('stepFrame throws ICE for deprecated raise and pops ops', () => {
-    for (const op of [U.mkRaise('boom'), U.mkPops()]) {
-      const fiber = makeTestFiber([])
-      fiber.pushFrame(new Frame('f', fiber.topLevelEnv, [op]))
-      expect(() => fiber.stepFrame()).toThrow(/deprecated/)
-    }
-  })
-
   test('completeCurrentFrame guards against invalid completion states', () => {
     const fiber = makeTestFiber([])
     fiber.pushFrame(

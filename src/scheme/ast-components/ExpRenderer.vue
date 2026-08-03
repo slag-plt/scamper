@@ -32,9 +32,6 @@ switch (e.tag) {
   case 'error':
     args = ['error', e.exp]
     break
-  case 'apply':
-    args = ['apply', e.fn, e.args]
-    break
   case 'with-handler':
     args = ['with-handler', e.handler, e.fn, ...e.args]
     break

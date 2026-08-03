@@ -165,11 +165,6 @@ function scopeCheckExp(
       scopeCheckExp(diagnostics, globals, locals, e.exp)
       return
     }
-    case 'apply': {
-      scopeCheckExp(diagnostics, globals, locals, e.fn)
-      scopeCheckExp(diagnostics, globals, locals, e.args)
-      return
-    }
     case 'with-handler': {
       scopeCheckExp(diagnostics, globals, locals, e.handler)
       scopeCheckExp(diagnostics, globals, locals, e.fn)

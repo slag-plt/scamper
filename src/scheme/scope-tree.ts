@@ -136,8 +136,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'error':
     case 'report':
       return scopesInExp(exp.exp)
-    case 'apply':
-      return [...scopesInExp(exp.fn), ...scopesInExp(exp.args)]
     case 'with-handler':
       return [
         ...scopesInExp(exp.handler),

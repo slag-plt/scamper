@@ -2,6 +2,22 @@ import * as L from '../../lpm'
 
 export * from './files.js'
 
+// `apply` can't be a plain JS function -- JS can't call a Scamper closure -- so
+// its native implementation is the minimal bytecode closure
+// `(lambda (f args) «ap-spread»)`: push f and args, then the ap-spread op does
+// the runtime-arity spread-and-call. Bound to `apply` in prelude.scm via
+// `(js-var "prelude_apply")`. The `call` field is never invoked (the VM applies
+// a closure by pushing a frame, not by calling `.call`).
+export const prelude_apply: L.Value = L.mkClosure(
+  ['f', 'args'],
+  [L.mkVar('f'), L.mkVar('args'), L.mkApSpread()],
+  new Map(),
+  () => {
+    throw new L.ICE('prelude_apply', 'apply closure.call must never be invoked')
+  },
+  'apply',
+)
+
 // Equivalence predicates (6.1)
 
 // N.B., don't need these functions:

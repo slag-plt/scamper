@@ -85,11 +85,6 @@ test('mkMatch operation raising', () => {
   expect(result).toBe('(match 1 [1 "one"] [_ "other"])')
 })
 
-test('mkRaise operation raising', () => {
-  const result = raiseBlk([LPM.mkRaise('Test error message')])
-  expect(result).toBe('(raise "Test error message")')
-})
-
 test('nested operations raising', () => {
   const result = raiseBlk([
     LPM.mkVar('+'),
@@ -163,18 +158,13 @@ test('error operation raising', () => {
   expect(result).toBe('(error "boom")')
 })
 
-test('apply operation raising', () => {
-  const result = raiseBlk([LPM.mkVar('f'), LPM.mkVar('args'), LPM.mkApplyOp()])
+test('ap-spread operation raising', () => {
+  const result = raiseBlk([LPM.mkVar('f'), LPM.mkVar('args'), LPM.mkApSpread()])
   expect(result).toBe('(apply f args)')
 })
 
-test('pops and popv operations raising', () => {
-  const result = raiseBlk([
-    LPM.mkLit(1),
-    LPM.mkLit(2),
-    LPM.mkPops(),
-    LPM.mkPopv(),
-  ])
+test('popv operation raising', () => {
+  const result = raiseBlk([LPM.mkLit(1), LPM.mkLit(2), LPM.mkPopv()])
   expect(result).toBe('1')
 })
 
