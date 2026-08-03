@@ -23,20 +23,6 @@ describe('Expanded expressions', () => {
     expect(actual).toEqual(expected)
   })
 
-  test('let*', () => {
-    const actual = expandExpr(A.mkLetS([
-      { pat: A.mkId('x'), value: A.mkLit(1) },
-      { pat: A.mkId('y'), value: A.mkId('x') },
-      { pat: A.mkId('z'), value: A.mkId('y') }
-    ], A.mkId('z')))
-    const expected = 
-      A.mkLet([{ pat: A.mkId('x'), value: A.mkLit(1) }],
-        A.mkLet([{ pat: A.mkId('y'), value: A.mkId('x') }],
-          A.mkLet([{ pat: A.mkId('z'), value: A.mkId('y') }],
-            A.mkId('z'))))
-    expect(actual).toEqual(expected)
-  })
-
   test('cond', () => {
     const actual = expandExpr(A.mkCond([
       { test: A.mkId('X'), body: A.mkId('A') },
@@ -106,25 +92,6 @@ describe('Section hole collection', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
       A.mkLet(
-        [{ pat: A.mkId('x'), value: A.mkId('_') }],
-        A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          A.mkLet(
-            [{ pat: A.mkId('x'), value: h1 }],
-            A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
-        ]))
-    expect(actual).toEqual(expected)
-  })
-
-  test('let*', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkLetS(
         [{ pat: A.mkId('x'), value: A.mkId('_') }],
         A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
     ])) as A.Lam

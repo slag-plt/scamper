@@ -64,15 +64,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       )
     case 'quote':
       return e
-    case 'let*':
-      return A.mkLetS(
-        e.bindings.map((b) => ({
-          pat: b.pat,
-          value: collectSectionHoles(bvars, b.value),
-        })),
-        collectSectionHoles(bvars, e.body),
-        e.range,
-      )
     case 'and':
       return A.mkAnd(
         e.exps.map((a) => collectSectionHoles(bvars, a)),
@@ -132,23 +123,6 @@ export function expandExpr(e: A.Exp): A.Exp {
       return e
     // Derived forms
 
-    case 'let*': {
-      // (let* [x1 e1] ... [xk ek] e)
-      // -->
-      // (let [x1 e1]
-      //   ...
-      //     (let [xk ek] e))
-      const bindings = e.bindings.map((b) => ({
-        pat: b.pat,
-        value: expandExpr(b.value),
-      }))
-      const body = expandExpr(e.body)
-      let ret = body
-      for (let i = bindings.length - 1; i >= 0; i--) {
-        ret = A.mkLet([bindings[i]], ret, e.range)
-      }
-      return ret
-    }
     case 'begin': {
       // (begin e1 ... ek)
       // -->

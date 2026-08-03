@@ -41,21 +41,17 @@ function lowerExpr(e: A.Exp): L.Blk {
     case 'lam':
       return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
     case 'let': {
-      // let-bindings do not telescope: evaluate every binding value inline
-      // first, then a single `let` op binds each pattern to its value in a
-      // fresh scope and runs the body. The trailing `pop-scope` discards that
-      // scope so the binders don't leak past the body.
-      const values = e.bindings.flatMap((b) => lowerExpr(b.value))
-      const patterns = e.bindings.map((b) => lowerPat(b.pat))
-      // A value that fails to match its pattern raises a binding-flavored error
-      // (irrefutable patterns -- plain identifiers, `_` -- never trigger it).
-      const failMsg =
-        e.bindings.length === 1
-          ? `let: value did not match pattern ${A.patToString(e.bindings[0].pat)}`
-          : 'let: value did not match its pattern'
+      // letrec: every binder shares one scope (declared as holes); the `let`
+      // op evaluates each value sub-block left-to-right, filling holes as it
+      // goes, then runs the body. The trailing `pop-scope` discards the scope.
+      // A value that fails to match its pattern raises a binding-flavored error.
+      const bindings = e.bindings.map((b) => ({
+        pat: lowerPat(b.pat),
+        value: lowerExpr(b.value),
+        failMsg: `let: value did not match pattern ${A.patToString(b.pat)}`,
+      }))
       return [
-        ...values,
-        L.mkLet(patterns, lowerExpr(e.body), e.range, failMsg),
+        L.mkLet(bindings, lowerExpr(e.body), e.range),
         L.mkPopScope(e.range),
       ]
     }

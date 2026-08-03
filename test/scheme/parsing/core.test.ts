@@ -270,7 +270,6 @@ describe('lezer-bridge parsing', () => {
         'import',
         'lambda',
         'let',
-        'let*',
         'match',
         'or',
         'quote',

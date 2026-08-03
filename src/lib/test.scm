@@ -48,8 +48,8 @@
     (with-handler
       (lambda (err) (test-result-error-exn desc err))
       (lambda ()
-        (let* ([actual (test-fn)]
-               [is-equal (eq? expected actual)])
+        (let ([actual (test-fn)]
+              [is-equal (eq? expected actual)])
           (cond
             [(equal? is-equal #t) (test-result-ok desc)]
             [(equal? is-equal #f) (test-result-error-expected desc expected actual)]

@@ -163,25 +163,6 @@ export const SchemePrinter: Printer = {
       case 'quote':
         return `'${TextRenderer.render(node.value)}`
 
-      case 'let*': {
-        const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
-          const raw: unknown = bindingPath.node
-          if (!isLetBinding(raw)) return ''
-          return group([
-            '[',
-            bindingPath.call(print, 'pat'),
-            ' ',
-            bindingPath.call(print, 'value'),
-            ']',
-          ])
-        }, 'bindings')
-        return group([
-          '(let*',
-          indent([line, group(['(', join(line, bindingDocs), ')'])]),
-          indent([line, path.call(print, 'body')]),
-          ')',
-        ])
-      }
 
       case 'and':
         return group([

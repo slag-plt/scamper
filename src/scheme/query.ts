@@ -148,14 +148,12 @@ function slotsOf(exp: A.Exp): Slot[] {
       }))
     }
 
-    case 'let':
-    case 'let*': {
-      const mk = exp.tag === 'let' ? A.mkLet : A.mkLetS
+    case 'let': {
       return [
         ...exp.bindings.map((b, i) => ({
           exp: b.value,
           rebuild: (r: A.Exp) =>
-            mk(
+            A.mkLet(
               exp.bindings.map((x, j) =>
                 j === i ? { pat: x.pat, value: r } : x,
               ),
@@ -165,7 +163,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         })),
         {
           exp: exp.body,
-          rebuild: (r: A.Exp) => mk(exp.bindings, r, exp.range),
+          rebuild: (r: A.Exp) => A.mkLet(exp.bindings, r, exp.range),
         },
       ]
     }

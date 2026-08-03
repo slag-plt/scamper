@@ -21,8 +21,9 @@ describe('fiberRaiser', () => {
     const fiber = makeTestFiber([])
     fiber.pushFrame(
       new Frame('f1', LPM.Env.empty, [
-        LPM.mkLit(1),
-        LPM.mkLet([LPM.mkPVar('n')], [LPM.mkVar('n')]),
+        LPM.mkLet([{ pat: LPM.mkPVar('n'), value: [LPM.mkLit(1)] }], [
+          LPM.mkVar('n'),
+        ]),
         LPM.mkPopScope(),
       ]),
     )

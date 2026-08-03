@@ -122,20 +122,29 @@ function scopeCheckExp(
       return
     }
     case 'let': {
-      // `let` does not telescope: every binding value is checked in the
-      // enclosing scope, and all binders (collected across the patterns) are
-      // visible only in the body. A binder repeated within a single pattern is
-      // reported by scopeCheckPat; one repeated across bindings is reported as
-      // a binding-list duplicate.
-      const allVars: string[] = []
+      // letrec: every binder is in scope throughout -- across all binding
+      // values and the body. A forward reference to a not-yet-evaluated binding
+      // is an eager-evaluation *runtime* error, not a scope error, so it is not
+      // flagged here. A name bound by more than one binding has no single
+      // letrec slot, so it is a hard error.
+      const bindingVars = new Set<string>()
       e.bindings.forEach((b) => {
-        scopeCheckExp(diagnostics, globals, locals, b.value)
         const patVars = new Set<string>()
         scopeCheckPat(diagnostics, patVars, b.pat)
-        allVars.push(...patVars)
+        for (const v of patVars) {
+          if (bindingVars.has(v)) {
+            diagnostics.push(
+              mkDiagnostic('Scope', 'error', `Duplicate binding '${v}' in let`, e.range),
+            )
+          }
+          bindingVars.add(v)
+        }
       })
-      checkDuplicateVars(diagnostics, allVars, e.range)
-      scopeCheckExp(diagnostics, globals, [...locals, ...allVars], e.body)
+      const scope = [...locals, ...bindingVars]
+      e.bindings.forEach((b) => {
+        scopeCheckExp(diagnostics, globals, scope, b.value)
+      })
+      scopeCheckExp(diagnostics, globals, scope, e.body)
       return
     }
     case 'if': {

@@ -1,9 +1,9 @@
 import { ICE, ScamperError, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
-import { Ops, Value } from '../lang'
+import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, pMatch, typeOf, vectorToList } from '../util'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, patVars, pMatch, typeOf, vectorToList } from '../util'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -31,7 +31,9 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
     mkClosure(
       op.params,
       op.body,
-      currFrame.env.getLocals(),
+      // Capture the scope stack by reference so a binding filled after this
+      // closure is created (letrec) is visible through the shared scopes.
+      currFrame.env.getScopes(),
       // TODO: this dummy function should exist until we remove all calls to L.callScamperFn
       () => {
         throw new ICE('Fiber.ClsHandler', 'Closure.call was deprecated!')
@@ -117,12 +119,12 @@ export function applyFn(
     const bindings = fn.params.map((p: string, i: number): [string, Value] =>
       [p, namedArgs[i]]).concat(
         fn.restParam ? [[fn.restParam, vectorToList(args.slice(fn.params.length))]] : [])
+    // The callee sees the closure's captured scopes (shared, so letrec fills
+    // are visible) with the parameters as a fresh innermost scope on top.
+    const paramScope: Scope = new Map(bindings)
     const newFrame = new Frame(
       fn.name ?? '##anonymous##',
-      fiber.topLevelEnv.extendReplacingLocals(
-        ...fn.locals,
-        ...bindings
-      ),
+      fiber.topLevelEnv.withLocalScopes([...fn.locals, paramScope]),
       fn.code,
       range,
     )
@@ -209,27 +211,41 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
 }
 
 export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
-  // The k binding values were evaluated inline and are on the value stack
-  // (v1..vk, vk on top). Bind each pattern to its value in a fresh scope; the
-  // `pop-scope` codegen emits after the body discards that scope.
-  const k = op.patterns.length
-  if (currFrame.values.length < k) {
-    throw new ICE('Fiber.LetHandler', 'let requires its binding values on the stack')
-  }
-  const vals = k === 0 ? [] : currFrame.values.splice(-k)
-  const bindings: [string, Value][] = []
-  for (let i = 0; i < k; i++) {
-    const bs = pMatch(vals[i], op.patterns[i])
+  // letrec: on the first run (idx 0) declare every binder as a HOLE in one
+  // shared scope; on each later run, the previous binding's value is on the
+  // stack -- match it and fill its holes. Then evaluate the next binding's
+  // value (re-entering with idx+1 via a fresh op copy) or run the body. The
+  // trailing `pop-scope` codegen emits discards the scope after the body.
+  const k = op.bindings.length
+  if (op.idx === 0) {
+    currFrame.env = currFrame.env.declareScope(
+      op.bindings.flatMap((b) => patVars(b.pat)),
+    )
+  } else {
+    if (currFrame.values.length === 0) {
+      throw new ICE('Fiber.LetHandler', 'let binding value missing from the stack')
+    }
+    const value = currFrame.values.pop()
+    const binding = op.bindings[op.idx - 1]
+    const bs = pMatch(value, binding.pat)
     if (!bs) {
       throw new ScamperError(
         'Runtime',
-        op.failMsg ?? 'let: value did not match its pattern',
+        binding.failMsg ?? 'let: value did not match its pattern',
       )
     }
-    bindings.push(...bs)
+    for (const [name, v] of bs) {
+      currFrame.env.assign(name, v)
+    }
   }
-  currFrame.env = currFrame.env.pushScope(bindings)
-  currFrame.pushBlk(op.body)
+  if (op.idx < k) {
+    currFrame.pushBlk([
+      ...op.bindings[op.idx].value,
+      mkLet(op.bindings, op.body, op.range, op.idx + 1),
+    ])
+  } else {
+    currFrame.pushBlk(op.body)
+  }
   return traceStep
 }
 

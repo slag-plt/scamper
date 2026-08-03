@@ -12,7 +12,6 @@ export const reservedWords = [
   'display',
   'lambda',
   'let',
-  'let*',
   'match',
   'or',
   'quote',

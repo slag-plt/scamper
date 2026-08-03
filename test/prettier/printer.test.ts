@@ -62,9 +62,6 @@ describe('roundtrip', () => {
   test('let binding', () =>
     roundtrip('(define sum (lambda (x y) (let ([a x] [b y]) (+ a b))))'))
 
-  test('let* binding', () =>
-    roundtrip('(define chain (lambda (x) (let* ([a x] [b (+ a 1)]) (* a b))))'))
-
   test('match expression', () =>
     roundtrip('(define desc (lambda (n) (match n [0 "zero"] [_ "nonzero"])))'))
 

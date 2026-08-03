@@ -215,7 +215,7 @@ describe('lambda', () => {
   })
 })
 
-describe('let and let*', () => {
+describe('let', () => {
   test('let binding identifiers, values, and body', () => {
     const src = '(let ([x 1] [y 2]) x)'
     const let_ = asExp(parseExp(src), 'let')
@@ -226,14 +226,6 @@ describe('let and let*', () => {
     assertSpan(let_.bindings[1].pat.range, src, 'y', 0)
     assertSpan(let_.bindings[1].value.range, src, '2')
     assertSpan(asExp(let_.body, 'id').range, src, 'x', 1)
-  })
-  test('let* binding and body', () => {
-    const src = '(let* ([x 1]) x)'
-    const lets = asExp(parseExp(src), 'let*')
-    assertSpan(lets.range, src, '(let* ([x 1]) x)')
-    assertSpan(lets.bindings[0].pat.range, src, 'x', 0)
-    assertSpan(lets.bindings[0].value.range, src, '1')
-    assertSpan(asExp(lets.body, 'id').range, src, 'x', 1)
   })
 })
 

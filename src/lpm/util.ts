@@ -42,7 +42,7 @@ export const isList = (v: L.Value): v is L.List =>
 export const mkClosure = (
   params: L.Id[],
   code: L.Blk,
-  env: Map<string, L.Value>,
+  env: L.Scope[],
   call: (...args: any) => any,
   name?: L.Id,
   restParam?: string
@@ -117,11 +117,24 @@ export const mkMatch = (
   range: Range = Range.none,
 ): L.Match => ({ tag: 'match', branches, range })
 export const mkLet = (
-  patterns: L.Pat[],
+  bindings: { pat: L.Pat; value: L.Blk; failMsg?: string }[],
   body: L.Blk,
   range: Range = Range.none,
-  failMsg?: string,
-): L.Let => ({ tag: 'let', patterns, body, range, failMsg })
+  idx = 0,
+): L.Let => ({ tag: 'let', bindings, body, range, idx })
+
+/** @return the variable names bound by an LPM pattern (recursively). */
+export const patVars = (pat: L.Pat): string[] => {
+  switch (pat.tag) {
+    case 'pvar':
+      return [pat.name]
+    case 'pctor':
+      return pat.args.flatMap(patVars)
+    case 'pwild':
+    case 'plit':
+      return []
+  }
+}
 export const mkIf = (
   thenB: L.Blk,
   elseB: L.Blk,

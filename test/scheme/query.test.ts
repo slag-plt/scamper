@@ -289,7 +289,7 @@ describe('AST querying', () => {
       })
     })
 
-    describe('let/let*', () => {
+    describe('let', () => {
       test('let reports a binding value slot', () => {
         const src = '(let ([x 1] [y 2]) z)'
         const exp = parseExp(src)
@@ -324,18 +324,6 @@ describe('AST querying', () => {
         expect(reported.body).toStrictEqual(reportWrap(mkId('z', anyRange)))
       })
 
-      test('let* reports a binding value slot', () => {
-        const src = '(let* ([x 1]) x)'
-        const exp = parseExp(src)
-        const { exp: reported } = getReportedExp(exp, locIn(src, '1'))
-        expect(reported.tag).toBe('let*')
-        if (reported.tag !== 'let*') return
-        expect(reported.bindings[0]).toStrictEqual({
-          pat: mkId('x', anyRange),
-          value: reportWrap(mkLit(1, anyRange)),
-        })
-        expect(reported.body).toStrictEqual(mkId('x', anyRange))
-      })
     })
 
     describe('cond', () => {

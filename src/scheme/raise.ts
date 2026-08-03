@@ -20,19 +20,6 @@ function raisePat(pat: LPM.Pat): A.Pat {
   }
 }
 
-/** @return the variable names bound by an LPM pattern (recursively). */
-function lpmPatVars(pat: LPM.Pat): string[] {
-  switch (pat.tag) {
-    case 'pvar':
-      return [pat.name]
-    case 'pctor':
-      return pat.args.flatMap(lpmPatVars)
-    case 'pwild':
-    case 'plit':
-      return []
-  }
-}
-
 /** @return a stack of expressions created from the given value stack. */
 export function valuesToExps(values: LPM.Value[]): A.Exp[] {
   return values.map((v) => {
@@ -58,14 +45,13 @@ export function raiseFrame(
       }
 
       case 'var': {
-        if (env.has(op.name)) {
-          const v = env.get(op.name)!
-          if (LPM.isFunction(v)) {
-            values.push(A.mkId(op.name))
-          } else {
-            values.push(A.mkLit(env.get(op.name)))
-          }
+        const r = env.lookup(op.name)
+        if (r.found && r.slot !== LPM.HOLE && !LPM.isFunction(r.slot)) {
+          // A bound non-function value: substitute it (shows the value in
+          // traces, e.g. a let binder that has already been filled).
+          values.push(A.mkLit(r.slot))
         } else {
+          // Unbound, a still-unassigned hole, or a function: show the name.
           values.push(A.mkId(op.name))
         }
         break
@@ -106,7 +92,7 @@ export function raiseFrame(
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame(
             [],
-            env.withoutLocals(...lpmPatVars(pat)),
+            env.withoutLocals(...LPM.patVars(pat)),
             body.toReversed(),
           )
           return { pat: raisePat(pat), body: bodyExp }
@@ -116,21 +102,34 @@ export function raiseFrame(
       }
 
       case 'let': {
-        // The k binding values were reconstructed inline before this op.
-        const vals =
-          op.patterns.length === 0 ? [] : values.splice(-op.patterns.length)
-        const bindings = op.patterns.map((pat, i) => ({
-          pat: raisePat(pat),
-          value: vals[i],
-        }))
-        // Exclude the binders so their occurrences in the body render as names,
-        // not substituted values (they shadow any same-named outer binding).
-        const body = raiseFrame(
-          [],
-          env.withoutLocals(...op.patterns.flatMap(lpmPatVars)),
-          op.body.toReversed(),
-        )
-        values.push(A.mkLet(bindings, body))
+        // Reconstruct the let so a trace shows per-binding progress: bindings
+        // already assigned are omitted (their values substitute into what
+        // remains, via the env); the binding in flight shows its current value
+        // (reconstructed on the stack); pending bindings show their original
+        // value expressions. Still-unassigned binders are excluded so they
+        // render as names rather than substituted values or holes.
+        if (op.idx === 0) {
+          const excl = env.withoutLocals(
+            ...op.bindings.flatMap((b) => LPM.patVars(b.pat)),
+          )
+          const bindings = op.bindings.map((b) => ({
+            pat: raisePat(b.pat),
+            value: raiseFrame([], excl, b.value.toReversed()),
+          }))
+          values.push(A.mkLet(bindings, raiseFrame([], excl, op.body.toReversed())))
+        } else {
+          const currentValue = values.pop()!
+          const remaining = op.bindings.slice(op.idx - 1)
+          const excl = env.withoutLocals(
+            ...remaining.flatMap((b) => LPM.patVars(b.pat)),
+          )
+          const bindings = remaining.map((b, i) => ({
+            pat: raisePat(b.pat),
+            value:
+              i === 0 ? currentValue : raiseFrame([], excl, b.value.toReversed()),
+          }))
+          values.push(A.mkLet(bindings, raiseFrame([], excl, op.body.toReversed())))
+        }
         break
       }
 

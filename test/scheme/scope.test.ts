@@ -134,7 +134,7 @@ describe('scope checking', () => {
       ['let binding', '(let ([x 1]) x)'],
       ['let with independent bindings', '(let ([x 1] [y 2]) (+ x y))'],
       ['nested let shadowing', '(let ([x 1]) (let ([x 2]) x))'],
-      ['let* telescoping binding', '(let* ([x 1] [y x]) y)'],
+      ['let telescoping (a later binding sees an earlier one)', '(let ([x 1] [y x]) y)'],
       ['and / or', '(and #t (or #f #t))'],
       ['cond', '(cond [#t 1] [#f 2])'],
       ['if', '(if #t 1 2)'],
@@ -194,15 +194,10 @@ describe('scope checking', () => {
         "Undefined variable 'x'",
       ])
     })
-    test('a let binding is not visible in its own value (non-telescoping)', async () => {
-      expect(await scopeErrors('(let ([x 1] [y x]) y)')).toEqual([
-        "Undefined variable 'x'",
-      ])
-    })
-    test('a let binding is not visible in an earlier binding value', async () => {
-      expect(await scopeErrors('(let ([a b] [b 1]) a)')).toEqual([
-        "Undefined variable 'b'",
-      ])
+    test('letrec: a binder is in scope in sibling binding values (not a scope error)', async () => {
+      // A forward reference to a not-yet-evaluated binding is a *runtime* error,
+      // not a scope error -- the name is genuinely in scope.
+      expect(await scopeErrors('(let ([a b] [b 1]) a)')).toEqual([])
     })
     test('inside an if branch', async () => {
       expect(await scopeErrors('(if #t x 2)')).toEqual([
@@ -262,9 +257,9 @@ describe('scope checking', () => {
         "Duplicate variable 'x' encountered in binding list",
       )
     })
-    test('duplicate let bindings', async () => {
+    test('duplicate let bindings are an error', async () => {
       expect(await scopeErrors('(let ([x 1] [x 2]) x)')).toContain(
-        "Duplicate variable 'x' encountered in binding list",
+        "Duplicate binding 'x' in let",
       )
     })
     test('duplicate match pattern variables', async () => {
@@ -493,23 +488,17 @@ describe('scope tree', () => {
       )
       expect(names).toEqual(expect.arrayContaining(['x', 'rest']))
     })
-    test('a let binding is visible in the body but not in binding values', async () => {
+    test('letrec: let binders are visible in binding values and in the body', async () => {
       const src = '(define f (let ([c 5] [d c]) d))'
       // in the body, both bindings are visible
       expect(await visibleAt(src, 'd', 1)).toEqual(
         expect.arrayContaining(['c', 'd']),
       )
       // at the `c` reference inside `[d c]` (a binding value), the let's own
-      // bindings are out of scope
-      const atValue = await visibleAt(src, 'c', 1)
-      expect(atValue).not.toContain('c')
-      expect(atValue).not.toContain('d')
-    })
-    test('let* makes earlier bindings visible in later binding values', async () => {
-      // same shape as the let case above, but telescoping
-      expect(
-        await visibleAt('(define f (let* ([c 5] [d c]) d))', 'c', 1),
-      ).toContain('c')
+      // bindings are also visible (letrec)
+      expect(await visibleAt(src, 'c', 1)).toEqual(
+        expect.arrayContaining(['c', 'd']),
+      )
     })
     test('match pattern variables are visible only in their branch body', async () => {
       const src = '(define f (lambda (p) (match p [(cons a b) (+ a b)])))'
@@ -608,20 +597,17 @@ describe('scope tree', () => {
 // characterization. Some of these overlap the atomic cases above but exercise
 // several errors in a single program.
 
-test('let does not telescope but let* does (forward references)', async () => {
+test('letrec: a forward reference is in scope (a runtime, not a scope, concern)', async () => {
+  // Every binder is in scope throughout, so referencing a later one is not a
+  // scope error (it is caught at runtime when the still-unfilled slot is read).
   expect(
     await scopeErrors(`
 (let
   ([x2 y2]
    [y2 5])
   (+ x2 y2))
-
-(let*
-  ([x3 y3]
-   [y3 5])
-  (+ x3 y3))
 `),
-  ).toEqual(["Undefined variable 'y2'", "Undefined variable 'y3'"])
+  ).toEqual([])
 })
 
 test('an undefined variable is reported by the scope-check pass', async () => {
@@ -664,11 +650,11 @@ test('shadowing is legal and produces the expected runtime values', async () => 
 
 (f 3)
 
-(let*
+(let
   ([z 10]
-   [x (+ z x)]
-   [z 100])
-  (+ x z))
+   [w (+ z x)]
+   [v 100])
+  (+ w v))
 
 x
 `),

@@ -1,5 +1,5 @@
 import { Range } from './range.js'
-import { ScamperError } from './error.js'
+import { ICE, ScamperError } from './error.js'
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -29,19 +29,30 @@ export type Idx = number
  * Environments are also _immutable_: operations return new environments rather
  * mutating the current environment.
  */
+/**
+ * Sentinel for a local binding that has been declared (its name is in scope)
+ * but not yet assigned -- the transient state of a `let` binding whose value is
+ * still being evaluated. Looking one up is a "referenced before defined"
+ * runtime error; a thunk that captured the scope sees the value once filled.
+ */
+export const HOLE: unique symbol = Symbol('hole')
+
+/** A local binding scope: names to values (or HOLE while still unassigned). */
+export type Scope = Map<string, Value | typeof HOLE>
+
 export class Env {
   /** A mapping of imported modules to their bound libraries */
   private imports: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
   /** A stack of local binding scopes; the last element is the innermost. */
-  private locals: Map<string, Value>[]
+  private locals: Scope[]
 
   /** Constructs a new environemnt from the given maps */
   constructor(
     imports: Map<string, Module>,
     topLevel: Map<string, Value>,
-    locals: Map<string, Value>[],
+    locals: Scope[],
   ) {
     this.imports = imports
     this.topLevel = topLevel
@@ -56,29 +67,53 @@ export class Env {
    * @return the value bound to this variable name or undefined if it does not
    *         exist
    */
-  get(name: string): Value {
+  /**
+   * Resolve a name without throwing: a found slot (which may be a HOLE for an
+   * as-yet-unassigned local), or not-found. Used by get() and by the raiser,
+   * which must tolerate holes.
+   */
+  lookup(
+    name: string,
+  ): { found: true; slot: Value | typeof HOLE } | { found: false } {
     // 1. Local scopes, innermost (most recently pushed) first
     for (let i = this.locals.length - 1; i >= 0; i--) {
-      if (this.locals[i].has(name)) {
-        return this.locals[i].get(name)
+      const scope = this.locals[i]
+      if (scope.has(name)) {
+        return { found: true, slot: scope.get(name) }
       }
     }
-
     // 2. Top-level scope
     if (this.topLevel.has(name)) {
-      return this.topLevel.get(name)
+      return { found: true, slot: this.topLevel.get(name) }
     }
-
     // 3. Imported modules, most recent imports first
     for (const library of [...this.imports.values()].toReversed()) {
       if (library.bindings.has(name)) {
-        return library.bindings.get(name)
+        return { found: true, slot: library.bindings.get(name) }
       }
     }
-    throw new ScamperError(
-      'Runtime',
-      `Attempted to look up variable "${name}" but it is not bound in this environment!`,
-    )
+    return { found: false }
+  }
+
+  /**
+   * @param name the (simple) name of the variable to look up
+   * @return the value bound to this variable name
+   */
+  get(name: string): Value {
+    const r = this.lookup(name)
+    if (!r.found) {
+      throw new ScamperError(
+        'Runtime',
+        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+      )
+    }
+    if (r.slot === HOLE) {
+      throw new ScamperError(
+        'Runtime',
+        `Variable "${name}" is referenced before it is defined`,
+      )
+    }
+    return r.slot
   }
 
   /** @return the top-level bindings of this environment as a Module */
@@ -97,11 +132,49 @@ export class Env {
   getLocals(): Map<string, Value> {
     const flat = new Map<string, Value>()
     for (const scope of this.locals) {
-      for (const [name, value] of scope) {
-        flat.set(name, value)
+      for (const [name, slot] of scope) {
+        if (slot !== HOLE) flat.set(name, slot)
       }
     }
     return flat
+  }
+
+  /**
+   * @return the local scope stack by reference (a shallow copy of the array;
+   *         the scope objects are shared). Closures capture this so that a
+   *         binding filled after the closure is created -- letrec -- is visible.
+   */
+  getScopes(): Scope[] {
+    return [...this.locals]
+  }
+
+  /**
+   * Push a fresh innermost scope declaring each of `names` as a HOLE (in scope
+   * but unassigned). `assign` later fills the holes. Used by `let`.
+   */
+  declareScope(names: string[]): Env {
+    const scope: Scope = new Map(names.map((n) => [n, HOLE]))
+    return new Env(this.imports, this.topLevel, [...this.locals, scope])
+  }
+
+  /**
+   * Fill a declared binding in place, mutating the scope object so that any
+   * closure that captured it sees the value. Assigns to the innermost scope
+   * that declares `name`.
+   */
+  assign(name: string, value: Value): void {
+    for (let i = this.locals.length - 1; i >= 0; i--) {
+      if (this.locals[i].has(name)) {
+        this.locals[i].set(name, value)
+        return
+      }
+    }
+    throw new ICE('Env.assign', `assigned undeclared local "${name}"`)
+  }
+
+  /** Replace the local scope stack wholesale (used to build a callee frame). */
+  withLocalScopes(scopes: Scope[]): Env {
+    return new Env(this.imports, this.topLevel, scopes)
   }
 
   /**
@@ -202,7 +275,9 @@ export interface Closure extends TaggedObject {
   [scamperTag]: 'closure'
   params: Id[]
   code: Blk
-  locals: Map<string, Value>
+  // The captured local scope stack, by reference: a binding filled after this
+  // closure is created (letrec) is visible through the shared scope objects.
+  locals: Scope[]
   restParam?: string
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
@@ -336,19 +411,21 @@ export interface Match {
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
-// let/if linearize the corresponding core surface forms directly, so raising is
-// a 1:1 inverse rather than a heuristic un-sugaring of `match`. `let` evaluates
-// its k binding values inline (before this op), binds each `patterns[i]` to the
-// i-th value in a fresh scope, then runs `body`; codegen emits a `pop-scope`
-// immediately after to discard that scope. `match` is likewise followed by a
-// `pop-scope`.
+// `let` is letrec: a single scope holds every binder, declared as HOLEs, then
+// filled left-to-right as the value sub-blocks evaluate (each may reference any
+// binder -- a still-HOLE one is a "referenced before defined" error unless
+// deferred in a thunk). `idx` counts the bindings already assigned and is
+// threaded through fresh op copies (never mutated in place), so recursion
+// through a binding value is re-entrancy-safe. codegen emits a trailing
+// `pop-scope`. `if`/`match` linearize their core forms directly too; `match` is
+// likewise followed by a `pop-scope`.
 export interface Let {
   tag: 'let'
-  patterns: Pat[]
+  bindings: { pat: Pat; value: Blk; failMsg?: string }[]
   body: Blk
   range: Range
-  // Message thrown when a binding value does not match its pattern.
-  failMsg?: string
+  // Number of bindings already assigned; 0 on the initial (declaring) run.
+  idx: number
 }
 export interface If {
   tag: 'if'

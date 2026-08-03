@@ -86,17 +86,6 @@ describe('expToString', () => {
     expect(A.expToString(A.mkQuote(1, anyRange))).toBe('(quote 1)')
   })
 
-  test('let*', () => {
-    expect(
-      A.expToString(
-        A.mkLetS(
-          [{ pat: A.mkId('x'), value: A.mkLit(1, anyRange) }],
-          A.mkId('x', anyRange),
-          anyRange,
-        ),
-      ),
-    ).toBe('(let* ([x 1]) x)')
-  })
 
   test('and', () => {
     expect(

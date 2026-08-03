@@ -316,26 +316,48 @@ describe('raising each LPM instruction', () => {
     })
   })
 
-  describe('let', () => {
+  describe('let (unstarted: idx 0)', () => {
+    // A let that has not begun evaluating: all bindings come from their value
+    // sub-blocks, and every binder renders as a name.
+    const bind = (name: string, value: LPM.Blk) => ({
+      pat: LPM.mkPVar(name),
+      value,
+    })
+
     test('a single binding', () => {
       expect(
         raiseBlk([
-          LPM.mkLit(1),
-          LPM.mkLet([LPM.mkPVar('x')], [LPM.mkVar('x')]),
+          LPM.mkLet([bind('x', [LPM.mkLit(1)])], [LPM.mkVar('x')]),
           LPM.mkPopScope(),
         ]),
       ).toBe('(let ([x 1]) x)')
     })
 
-    test('multiple bindings (values evaluated before the op)', () => {
+    test('multiple bindings', () => {
       expect(
         raiseBlk([
-          LPM.mkLit(1),
-          LPM.mkLit(2),
-          LPM.mkLet([LPM.mkPVar('x'), LPM.mkPVar('y')], [LPM.mkVar('y')]),
+          LPM.mkLet(
+            [bind('x', [LPM.mkLit(1)]), bind('y', [LPM.mkLit(2)])],
+            [LPM.mkVar('y')],
+          ),
           LPM.mkPopScope(),
         ]),
       ).toBe('(let ([x 1] [y 2]) y)')
+    })
+
+    test('a binder referenced in a later value renders as a name', () => {
+      expect(
+        raiseBlk([
+          LPM.mkLet(
+            [
+              bind('x', [LPM.mkLit(1)]),
+              bind('y', [LPM.mkVar('+'), LPM.mkVar('x'), LPM.mkLit(1), LPM.mkAp(2)]),
+            ],
+            [LPM.mkVar('y')],
+          ),
+          LPM.mkPopScope(),
+        ]),
+      ).toBe('(let ([x 1] [y (+ x 1)]) y)')
     })
 
     test('zero bindings', () => {
@@ -347,9 +369,13 @@ describe('raising each LPM instruction', () => {
     test('a constructor pattern binding', () => {
       expect(
         raiseBlk([
-          LPM.mkVar('p'),
           LPM.mkLet(
-            [LPM.mkPCtor('pair', [LPM.mkPVar('a'), LPM.mkPVar('b')])],
+            [
+              {
+                pat: LPM.mkPCtor('pair', [LPM.mkPVar('a'), LPM.mkPVar('b')]),
+                value: [LPM.mkVar('p')],
+              },
+            ],
             [LPM.mkVar('a')],
           ),
           LPM.mkPopScope(),
@@ -357,31 +383,84 @@ describe('raising each LPM instruction', () => {
       ).toBe('(let ([(pair a b) p]) a)')
     })
 
-    test('binders are excluded from the body (shadow an outer binding as a name)', () => {
-      // x=99 is captured in the env; the let rebinds x, so the body shows `x`
+    test('a computed binding value', () => {
+      expect(
+        raiseBlk([
+          LPM.mkLet(
+            [bind('x', [LPM.mkVar('f'), LPM.mkLit(1), LPM.mkAp(1)])],
+            [LPM.mkVar('x')],
+          ),
+          LPM.mkPopScope(),
+        ]),
+      ).toBe('(let ([x (f 1)]) x)')
+    })
+
+    test('binders render as names even when an outer binding shadows them', () => {
       const env = LPM.Env.empty.extendWithLocals(['x', 99])
       expect(
         raiseState(
           [
-            LPM.mkLit(1),
-            LPM.mkLet([LPM.mkPVar('x')], [LPM.mkVar('x')]),
+            LPM.mkLet([bind('x', [LPM.mkLit(1)])], [LPM.mkVar('x')]),
             LPM.mkPopScope(),
           ],
           { env },
         ),
       ).toBe('(let ([x 1]) x)')
     })
+  })
 
-    test('a computed binding value', () => {
-      expect(
-        raiseBlk([
-          LPM.mkVar('f'),
+  describe('let (per-binding progress: idx > 0)', () => {
+    // These reconstruct mid-let states so a trace shows progress. The Let op's
+    // `idx` is the number of assigned bindings; the current binding's value is
+    // on the stack, done bindings are substituted from the env, and pending
+    // binders render as names. Tracks (let ([x (+ 1 1)] [y (+ x 1)]) y).
+    const bindings = [
+      {
+        pat: LPM.mkPVar('x'),
+        value: [LPM.mkVar('+'), LPM.mkLit(1), LPM.mkLit(1), LPM.mkAp(2)],
+      },
+      {
+        pat: LPM.mkPVar('y'),
+        value: [LPM.mkVar('+'), LPM.mkVar('x'), LPM.mkLit(1), LPM.mkAp(2)],
+      },
+    ]
+    const body: LPM.Blk = [LPM.mkVar('y')]
+
+    test("x's value has reduced to 2 but is not yet assigned", () => {
+      // scope declared (both holes); 2 sits on the stack as x's computed value
+      const result = raiseState(
+        [LPM.mkLet(bindings, body, undefined, 1), LPM.mkPopScope()],
+        { values: [2], env: LPM.Env.empty.declareScope(['x', 'y']) },
+      )
+      expect(result).toBe('(let ([x 2] [y (+ x 1)]) y)')
+    })
+
+    test('x is assigned and omitted; y = (+ x 1) is evaluating with x substituted', () => {
+      const env = LPM.Env.empty.declareScope(['x', 'y'])
+      env.assign('x', 2)
+      const result = raiseState(
+        [
+          // y's value ops in flight, then the Let op at idx 2 (x already assigned)
+          LPM.mkVar('+'),
+          LPM.mkVar('x'),
           LPM.mkLit(1),
-          LPM.mkAp(1),
-          LPM.mkLet([LPM.mkPVar('x')], [LPM.mkVar('x')]),
+          LPM.mkAp(2),
+          LPM.mkLet(bindings, body, undefined, 2),
           LPM.mkPopScope(),
-        ]),
-      ).toBe('(let ([x (f 1)]) x)')
+        ],
+        { env },
+      )
+      expect(result).toBe('(let ([y (+ 2 1)]) y)')
+    })
+
+    test("y's value has reduced to 3 but is not yet assigned", () => {
+      const env = LPM.Env.empty.declareScope(['x', 'y'])
+      env.assign('x', 2)
+      const result = raiseState(
+        [LPM.mkLet(bindings, body, undefined, 2), LPM.mkPopScope()],
+        { values: [3], env },
+      )
+      expect(result).toBe('(let ([y 3]) y)')
     })
   })
 

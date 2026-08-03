@@ -29,7 +29,7 @@ export const prelude_error = L.nameFn('error', (msg: L.Value): L.Value => {
 export const prelude_apply: L.Value = L.mkClosure(
   ['f', 'args'],
   [L.mkVar('f'), L.mkVar('args'), L.mkApSpread()],
-  new Map(),
+  [],
   () => {
     throw new L.ICE('prelude_apply', 'apply closure.call must never be invoked')
   },
@@ -54,7 +54,7 @@ export const prelude_withHandler: L.Value = L.mkClosure(
     L.mkAp(0),
     L.mkPopHandler(),
   ],
-  new Map(),
+  [],
   () => {
     throw new L.ICE('prelude_withHandler', 'closure.call must never be invoked')
   },

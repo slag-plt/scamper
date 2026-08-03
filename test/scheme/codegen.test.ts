@@ -4,6 +4,8 @@ import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
 import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
+import { raiseFiber } from '../../src/scheme/raise.js'
+import { expToString } from '../../src/scheme/ast.js'
 import { runProgram } from '../harness.js'
 
 // `stripRanges` drops the `[line:col]` location from error output, for the
@@ -148,7 +150,7 @@ describe('End-to-end cases', () => {
 (((f3 11) 3) 7)
 
 (define f4
-  (let* ([x 51]
+  (let ([x 51]
          [f (lambda (y) (+ x y))]
          [g (lambda (x) (+ (f x) 1))])
     g))
@@ -281,14 +283,14 @@ describe('End-to-end cases', () => {
    [z 11])
   (+ x y z))
 
-(let*
+(let
   ([x 1]
    [y 7]
    [z 11])
   (+ x y z))
 
 ; bindings telescope
-(let*
+(let
   ([x 1]
    [y (+ x 6)]
    [z (+ y 4)])
@@ -309,8 +311,8 @@ describe('End-to-end cases', () => {
 ; it for an empty stack (this is how (begin (f x) ...) now desugars)
 (let ([_ void]) 42)
 
-; patterns work in let* too, and still telescope
-(let* ([(pair a b) (pair 3 4)]
+; patterns work with several bindings, and telescope
+(let ([(pair a b) (pair 3 4)]
        [c (+ a b)])
   c)
 `, [3, 42, 42, 7])
@@ -320,6 +322,57 @@ describe('End-to-end cases', () => {
     const out = await runProgram('(let ([(pair a b) 5]) a)')
     expect(out.length).toBe(1)
     expect(out[0]).toContain('let: value did not match pattern (pair a b)')
+  })
+
+  test('let is letrec: let*, mutual recursion, and thunk-deferred references', async () => {
+    await checkMachineOutput(`
+; let* -- a later binding sees an earlier one
+(let ([x 1] [y (+ x 1)]) y)
+
+; letrec -- a thunk sees a later binding once it is filled
+(let ([f (lambda () x)] [x 5]) (f))
+
+; mutual recursion between two binding thunks
+(let ([even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))]
+      [odd?  (lambda (n) (if (= n 0) #f (even? (- n 1))))])
+  (even? 10))
+`, [2, 5, true])
+  })
+
+  test('let: an eager forward reference to an unfilled binding is a runtime error', async () => {
+    const out = await runProgram('(let ([x (+ y 1)] [y 5]) x)')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('is referenced before it is defined')
+  })
+
+  test('let: self-shadowing an outer binding is a referenced-before-defined error', async () => {
+    // the inner x shadows the outer throughout, so its own value hits the hole
+    const out = await runProgram('(let ([x 10]) (let ([y x] [x 5]) y))')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('is referenced before it is defined')
+  })
+
+  test('let evaluation traces show per-binding progress', async () => {
+    // (let ([x (+ 1 1)] [y (+ x 1)]) (+ x y)) steps through, and raising the
+    // fiber at each step yields the intermediate forms below.
+    const { prog, diagnostics } = await S.compile(
+      '(let ([x (+ 1 1)] [y (+ x 1)]) (+ x y))',
+    )
+    expect(diagnostics).toEqual([])
+    const fiber = new Fiber(prog!, S.mkInitialEnv())
+    const trace: string[] = []
+    while (!fiber.isDone()) {
+      fiber.step()
+      if (fiber.frames.length > 0) {
+        trace.push(expToString(raiseFiber(fiber)))
+      }
+    }
+    // x's value has reduced to 2 but is not yet bound (still shown as a binding)
+    expect(trace).toContain('(let ([x 2] [y (+ x 1)]) (+ x y))')
+    // x is bound (=2) and omitted; it substitutes into y's value and the body
+    expect(trace).toContain('(let ([y (+ 2 1)]) (+ 2 y))')
+    // y's value has reduced to 3
+    expect(trace).toContain('(let ([y 3]) (+ 2 y))')
   })
 
   test('let and match bindings do not leak past their scope', async () => {

@@ -85,7 +85,7 @@ function children(node: SyntaxNode): SyntaxNode[] {
 
 // Splits a flat, even-length list into adjacent pairs: [a, b, c, d] ->
 // [[a, b], [c, d]]. Used for the several grammar productions that flatten a
-// list of pairs into their parent's children (let/let* bindings, cond
+// list of pairs into their parent's children (let bindings, cond
 // branches, match branches) rather than wrapping each pair in its own node.
 function pairs<T>(items: T[]): [T, T][] {
   const result: [T, T][] = []
@@ -115,7 +115,6 @@ const formDescriptions: Record<string, string> = {
   Lambda: 'lambda expression (a list of parameters and a body)',
   If: 'if expression (a guard, an if-branch, and an else-branch)',
   Let: 'let expression (a list of bindings and a body)',
-  LetStar: 'let* expression (a list of bindings and a body)',
   Cond: 'cond expression (a list of [test body] branches)',
   Match: 'match expression (a scrutinee and a list of [pattern body] branches)',
   And: 'and expression',
@@ -453,17 +452,14 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       )
     }
 
-    case 'Let':
-    case 'LetStar': {
+    case 'Let': {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
         pat: patFromNode(ctx, n),
         value: expFromNode(ctx, v),
       }))
-      return node.type.name === 'Let'
-        ? A.mkLet(bindings, body, range)
-        : A.mkLetS(bindings, body, range)
+      return A.mkLet(bindings, body, range)
     }
 
     case 'Cond': {

@@ -56,13 +56,6 @@ switch (e.tag) {
       scrutinee: e.scrutinee,
     }
     break
-  case 'let*':
-    hljsBindings = {
-      head: 'let*',
-      pairs: e.bindings.map(({ pat, value }) => ({ lhs: pat, rhs: value })),
-      body: e.body,
-    }
-    break
   case 'cond':
     hljsBindings = {
       head: 'cond',

@@ -56,7 +56,6 @@ expression {
   Section { paren<kw<"section"> expression expression*> } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> paren<binding*> expression> } |
-  LetStar { paren<kw<"let*"> paren<binding*> expression> } |
   Match { paren<kw<"match"> expression branch*> }
 }
 

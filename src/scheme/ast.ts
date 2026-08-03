@@ -44,11 +44,6 @@ export interface Comment {
 //     | (quote e)
 //
 //     -- Sugared forms
-//     | (let*
-//         ([x1 e1]
-//          ...
-//          [xk ek])
-//    e)
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
@@ -146,11 +141,6 @@ export interface Quote extends Tagged, Node {
   value: L.Value
 }
 // Sugared Forms
-export interface LetS extends Tagged, Node {
-  tag: 'let*'
-  bindings: { pat: Pat; value: Exp }[]
-  body: Exp
-}
 export interface And extends Tagged, Node {
   tag: 'and'
   exps: Exp[]
@@ -177,7 +167,6 @@ export type Exp =
   | If
   | Match
   | Quote
-  | LetS
   | And
   | Or
   | Cond
@@ -317,11 +306,6 @@ export const mkQuote = (
   value: L.Value,
   range: L.Range = L.Range.none,
 ): Quote => ({ tag: 'quote', value, range })
-export const mkLetS = (
-  bindings: { pat: Pat; value: Exp }[],
-  body: Exp,
-  range: L.Range = L.Range.none,
-): LetS => ({ tag: 'let*', bindings, body, range })
 export const mkAnd = (exps: Exp[], range: L.Range = L.Range.none): And => ({
   tag: 'and',
   exps,
@@ -391,7 +375,6 @@ export function isExp(v: unknown): v is Exp {
       'if',
       'match',
       'quote',
-      'let*',
       'and',
       'or',
       'cond',
@@ -468,8 +451,6 @@ export function expToString(e: Exp): string {
       return `(match ${expToString(e.scrutinee)} ${e.branches.map(({ pat, body }) => `[${patToString(pat)} ${expToString(body)}]`).join(' ')})`
     case 'quote':
       return `(quote ${JSON.stringify(e.value)})`
-    case 'let*':
-      return `(let* (${e.bindings.map(({ pat, value }) => `[${patToString(pat)} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'and':
       return `(and ${e.exps.map(expToString).join(' ')})`
     case 'or':
@@ -582,15 +563,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     )
   } else if (e1.tag === 'quote' && e2.tag === 'quote') {
     return L.equals(e1.value, e2.value)
-  } else if (e1.tag === 'let*' && e2.tag === 'let*') {
-    return (
-      e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ pat }, i) => patEquals(pat, e2.bindings[i].pat)) &&
-      e1.bindings.every(({ value }, i) =>
-        expEquals(value, e2.bindings[i].value),
-      ) &&
-      expEquals(e1.body, e2.body)
-    )
   } else if (e1.tag === 'and' && e2.tag === 'and') {
     return (
       e1.exps.length === e2.exps.length &&

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { callScamperFn, Env, JsFunction, Module, ScamperError, Value } from '../../src/lpm'
+import { callScamperFn, Env, HOLE, ICE, JsFunction, Module, ScamperError, Value } from '../../src/lpm'
 
 function mkModule(bindings: Record<string, unknown>): Module {
   const mod = new Module()
@@ -77,6 +77,50 @@ describe('Env scopes (pushScope / popScope)', () => {
     // popping the innermost scope drops only the most recent binding
     expect(env.popScope().has('y')).toBe(false)
     expect(env.popScope().get('x')).toBe(1)
+  })
+})
+
+describe('Env letrec scopes (declareScope / assign / holes)', () => {
+  test('declareScope puts names in scope as holes; looking one up throws', () => {
+    const env = Env.empty.declareScope(['x', 'y'])
+    expect(env.has('x')).toBe(true)
+    expect(() => env.get('x')).toThrow(/referenced before it is defined/)
+  })
+
+  test('lookup reports a hole without throwing', () => {
+    const r = Env.empty.declareScope(['x']).lookup('x')
+    expect(r.found).toBe(true)
+    if (r.found) expect(r.slot).toBe(HOLE)
+  })
+
+  test('assign fills a hole so get returns the value', () => {
+    const env = Env.empty.declareScope(['x'])
+    env.assign('x', 42)
+    expect(env.get('x')).toBe(42)
+  })
+
+  test('a hole shadows an outer binding of the same name until filled', () => {
+    const env = Env.empty.extendWithTopLevel(['x', 10]).declareScope(['x'])
+    expect(() => env.get('x')).toThrow(/referenced before it is defined/)
+    env.assign('x', 5)
+    expect(env.get('x')).toBe(5)
+  })
+
+  test('assign mutates the shared scope so a captured env sees the fill', () => {
+    const env = Env.empty.declareScope(['x'])
+    const captured = Env.empty.withLocalScopes(env.getScopes()) // shares the scope
+    env.assign('x', 7)
+    expect(captured.get('x')).toBe(7)
+  })
+
+  test('assigning an undeclared name is an ICE', () => {
+    expect(() => Env.empty.assign('nope', 1)).toThrow(ICE)
+  })
+
+  test('getLocals omits holes', () => {
+    const env = Env.empty.declareScope(['x', 'y'])
+    env.assign('x', 1)
+    expect([...env.getLocals().entries()]).toEqual([['x', 1]])
   })
 })
 
