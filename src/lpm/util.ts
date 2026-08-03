@@ -158,10 +158,6 @@ export const mkApSpread = (range: Range = Range.none): L.ApSpread => ({
   tag: 'ap-spread',
   range,
 })
-export const mkCheckFn = (range: Range = Range.none): L.CheckFn => ({
-  tag: 'check-fn',
-  range,
-})
 export const mkPushHandler = (range: Range = Range.none): L.PushHandler => ({
   tag: 'push-handler',
   range,

@@ -151,11 +151,6 @@ describe('lezer-bridge parsing', () => {
     expectParses('(error "something went wrong")')
   })
 
-  test('with-handler', () => {
-    expectParses('(with-handler (lambda (e) e) (lambda () (error "boom")))')
-    expectParses('(with-handler handle f 1 2 3)')
-  })
-
   test('import/define/display, including empty top-level list', () => {
     expectParses('(import lists)\n(define f (lambda (x) x))\n(display (f 1))')
     expectParses('()')
@@ -304,7 +299,6 @@ describe('lezer-bridge parsing', () => {
         'report',
         'section',
         'struct',
-        'with-handler',
       ].sort(),
     )
   })

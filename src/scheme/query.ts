@@ -91,27 +91,6 @@ function slotsOf(exp: A.Exp): Slot[] {
     case 'error':
       return [{ exp: exp.exp, rebuild: (r) => A.mkError(r, exp.range) }]
 
-    case 'with-handler':
-      return [
-        {
-          exp: exp.handler,
-          rebuild: (r) => A.mkWithHandler(r, exp.fn, exp.args, exp.range),
-        },
-        {
-          exp: exp.fn,
-          rebuild: (r) => A.mkWithHandler(exp.handler, r, exp.args, exp.range),
-        },
-        ...exp.args.map((a, i) => ({
-          exp: a,
-          rebuild: (r: A.Exp) =>
-            A.mkWithHandler(
-              exp.handler,
-              exp.fn,
-              exp.args.map((x, j) => (j === i ? r : x)),
-              exp.range,
-            ),
-        })),
-      ]
 
     case 'app':
       return [

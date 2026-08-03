@@ -136,12 +136,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'error':
     case 'report':
       return scopesInExp(exp.exp)
-    case 'with-handler':
-      return [
-        ...scopesInExp(exp.handler),
-        ...scopesInExp(exp.fn),
-        ...exp.args.flatMap(scopesInExp),
-      ]
     case 'cond':
       return exp.branches.flatMap((b) => [
         ...scopesInExp(b.test),

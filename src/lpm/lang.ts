@@ -342,20 +342,14 @@ export interface ApSpread {
   tag: 'ap-spread'
   range: Range
 }
-// N.B., check-fn/push-handler/pop-handler bracket the guarded application lowered
-// from a `with-handler` special form. The stack at check-fn is [.., handler, fn]:
-// check-fn enforces with-handler's contract that the guarded value (top) is a
-// function to apply -- it runs BEFORE push-handler, so a contract violation (or
-// an error while producing `fn`) is a plain error, not something this very
-// handler catches. push-handler then installs the handler beneath `fn` (recording
-// the frame/value-stack depth to unwind to); on a raised ScamperError the fiber
-// unwinds to that depth and applies the handler. pop-handler is the normal-
-// completion path: it uninstalls the handler and drops the (now-unused) handler
-// value, leaving the guarded result on the stack.
-export interface CheckFn {
-  tag: 'check-fn'
-  range: Range
-}
+// N.B., push-handler/pop-handler bracket the guarded thunk in `with-handler`'s
+// closure body. push-handler installs the handler (recording the frame/value-
+// stack depth to unwind to); on a raised ScamperError the fiber unwinds to that
+// depth and applies the handler (see Fiber.handleError). pop-handler is the
+// normal-completion path: it uninstalls the handler and drops the (now-unused)
+// handler value, leaving the guarded result on the stack. That with-handler's
+// arguments are procedures is enforced by its prelude contract, before
+// push-handler runs -- replacing the old check-fn op.
 export interface PushHandler {
   tag: 'push-handler'
   range: Range
@@ -377,7 +371,6 @@ export type Ops =
   | JsVar
   | ErrorOp
   | ApSpread
-  | CheckFn
   | PushHandler
   | PopHandler
 export type Blk = Ops[]

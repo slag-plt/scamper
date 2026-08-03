@@ -505,22 +505,6 @@ describe('basic ops', () => {
   })
 
   describe('with-handler opcodes', () => {
-    test('check-fn accepts a function as the guarded value', () => {
-      // stack top is `+` (a function); check-fn passes, then popv drops the
-      // extra value so the frame finishes cleanly with one.
-      const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('+'), U.mkVar('+'), U.mkCheckFn(), U.mkPopv()]),
-      ])
-      expectSuccessfulExec(fiber)
-    })
-
-    test('check-fn throws when the guarded value is not a function', () => {
-      const fiber = makeTestFiber([
-        U.mkDisp([U.mkLit('handler'), U.mkLit(42), U.mkCheckFn()]),
-      ])
-      expectFailedExec(fiber, /with-handler expects a function/)
-    })
-
     test('push-handler with fewer than two stack values throws an ICE', () => {
       const fiber = makeTestFiber([
         U.mkDisp([U.mkLit('only-one'), U.mkPushHandler()]),

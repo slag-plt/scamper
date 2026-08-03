@@ -2,6 +2,16 @@
 ; (native implementation: prelude_apply in src/js/prelude/index.ts).
 (define apply (js-var "prelude_apply"))
 
+;;; (with-handler handler thunk) -> any?
+;;;  handler : procedure?
+;;;  thunk : procedure?
+;;; Runs `(thunk)`. Returns its value if it completes normally; if it raises an
+;;; error, calls `(handler msg)` with the error's message string and returns that
+;;; instead. `handler`/`thunk` being procedures is enforced by this contract,
+;;; which runs before the handler is installed. Native impl: prelude_withHandler.
+;;; @category function
+(define with-handler (js-var "prelude_withHandler"))
+
 ;;; (and☀︎ v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any

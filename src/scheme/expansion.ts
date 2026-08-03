@@ -68,13 +68,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       return e
     case 'error':
       return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
-    case 'with-handler':
-      return A.mkWithHandler(
-        collectSectionHoles(bvars, e.handler),
-        collectSectionHoles(bvars, e.fn),
-        e.args.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-      )
     case 'let*':
       return A.mkLetS(
         e.bindings.map((b) => ({
@@ -150,14 +143,6 @@ export function expandExpr(e: A.Exp): A.Exp {
       return e
     case 'error':
       return A.mkError(expandExpr(e.exp), e.range)
-    case 'with-handler':
-      return A.mkWithHandler(
-        expandExpr(e.handler),
-        expandExpr(e.fn),
-        e.args.map(expandExpr),
-        e.range,
-      )
-
     // Derived forms
 
     case 'let*': {

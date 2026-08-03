@@ -18,6 +18,31 @@ export const prelude_apply: L.Value = L.mkClosure(
   'apply',
 )
 
+// `with-handler` installs an exception handler around a thunk. Like `apply`, it
+// can't be a plain JS function (it drives the fiber's handler stack), so it's a
+// builtin closure: `[push-handler, (thunk), pop-handler]` -- install the handler,
+// run the thunk under it, uninstall on normal completion. On a raised error the
+// fiber unwinds to this frame and applies `handler` to the error's message (see
+// Fiber.handleError). Validating that `handler`/`thunk` are procedures is left to
+// the contract wrapper generated from its prelude.scm docstring, which runs
+// BEFORE this closure's push-handler -- so a bad argument is a plain error, not
+// one the handler would catch (this is what the old `check-fn` op did).
+export const prelude_withHandler: L.Value = L.mkClosure(
+  ['handler', 'thunk'],
+  [
+    L.mkVar('handler'),
+    L.mkVar('thunk'),
+    L.mkPushHandler(),
+    L.mkAp(0),
+    L.mkPopHandler(),
+  ],
+  new Map(),
+  () => {
+    throw new L.ICE('prelude_withHandler', 'closure.call must never be invoked')
+  },
+  'with-handler',
+)
+
 // Equivalence predicates (6.1)
 
 // N.B., don't need these functions:

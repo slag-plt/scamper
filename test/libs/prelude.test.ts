@@ -1964,21 +1964,18 @@ sample-vector
   ])
 })
 
-// with-handler is a reserved-word special form (see the LPM handler stack):
-// the first form applies the guarded function to its trailing arguments; the
-// second raises inside the guard, so the handler runs on the error message.
+// with-handler runs a thunk; the first thunk completes normally (returning 6),
+// the second raises, so the handler runs on the error message.
 test('with-handler', async () => {
   expect(
     await runProgram(`
 (with-handler
   (lambda (err) (string-append "This is the error that was generated: " err))
-  (lambda (x y z) (+ x y z))
-  1 2 3)
+  (lambda () (+ 1 2 3)))
 
 (with-handler
   (lambda (err) (string-append "This is the error that was generated: " err))
-  (lambda (x y z) (error "oh no, an error!"))
-  1 2 3)
+  (lambda () (error "oh no, an error!")))
 
 `),
   ).toEqual(['6', '"This is the error that was generated: oh no, an error!"'])
@@ -3104,7 +3101,7 @@ test('vector-filter', async () => {
 })
 
 test('with-handler-call', async () => {
-  // No error is raised, so the handler is never invoked; with-handler applies
-  // its function to the trailing arguments and returns the result: (+ 1 2 3).
-  expect(await runProgram('(with-handler + + 1 2 3)')).toEqual(['6'])
+  // No error is raised, so the handler is never invoked; with-handler returns
+  // the thunk's result: (+ 1 2 3).
+  expect(await runProgram('(with-handler + (lambda () (+ 1 2 3)))')).toEqual(['6'])
 })

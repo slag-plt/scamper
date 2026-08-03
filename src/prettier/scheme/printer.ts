@@ -169,18 +169,6 @@ export const SchemePrinter: Printer = {
       case 'error':
         return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
 
-      case 'with-handler':
-        return group([
-          '(with-handler ',
-          path.call(print, 'handler'),
-          indent([
-            line,
-            path.call(print, 'fn'),
-            ...path.map((argPath) => [line, print(argPath)], 'args'),
-          ]),
-          ')',
-        ])
-
       case 'let*': {
         const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
           const raw: unknown = bindingPath.node

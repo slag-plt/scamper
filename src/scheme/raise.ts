@@ -117,12 +117,6 @@ export function raiseFrame(
         break
       }
 
-      case 'check-fn': {
-        // N.B., no-op: check-fn only validates the guarded function at runtime; it
-        // leaves the stack ([.., handler, fn]) untouched for push-handler below.
-        break
-      }
-
       case 'push-handler': {
         // N.B., no-op: the handler value stays on the reconstruction stack (it
         // was left there at runtime too) and is consumed by pop-handler below.
@@ -130,16 +124,12 @@ export function raiseFrame(
       }
 
       case 'pop-handler': {
-        // Stack is [.., handler, guarded]; guarded is normally the reconstructed
-        // application of `f` to its args (from the preceding `ap`). Recover it
-        // into a with-handler form.
-        const guarded = values.pop()!
-        const handler = values.pop()!
-        if (guarded.tag === 'app') {
-          values.push(A.mkWithHandler(handler, guarded.head, guarded.args))
-        } else {
-          values.push(A.mkWithHandler(handler, guarded, []))
-        }
+        // with-handler is now an ordinary procedure, reconstructed at its call
+        // site, so these bracketing ops are transparent to reconstruction: drop
+        // the (peeked) handler value, leaving the guarded result.
+        const result = values.pop()!
+        values.pop()
+        values.push(result)
         break
       }
 

@@ -12,7 +12,6 @@ import {
   ApHandler,
   applyFn,
   ApSpreadHandler,
-  CheckFnHandler,
   ClsHandler,
   CtorHandler,
   ErrorHandler,
@@ -335,9 +334,6 @@ export class Fiber {
         break
       case 'ap-spread':
         isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)
-        break
-      case 'check-fn':
-        isMajorStep = CheckFnHandler(currOp, this.currentFrame, this)
         break
       case 'push-handler':
         isMajorStep = PushHandlerHandler(currOp, this.currentFrame, this)
