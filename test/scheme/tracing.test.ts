@@ -5,9 +5,7 @@ import { Fiber } from '../../src/lpm/fiber.js'
 import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { LoggingChannel } from '../../src/lpm/output/index.js'
 import { Scheduler } from '../../src/lpm/scheduler.js'
-import { sugarExpr } from '../../src/scheme/sugar.js'
-import { raiseFiber } from '../../src/scheme/raise.js'
-import { expToString, mkLit } from '../../src/scheme/ast.js'
+import { traceReductions } from '../../src/scheme/trace.js'
 
 // runProgram (test/harness.ts) steps a fiber directly and has no tracing
 // toggle, so tracing needs the real Scheduler wired up with isTracing --
@@ -95,35 +93,13 @@ test('tracing disabled never emits arrow-prefixed lines', async () => {
 // The above scheduler traces are coarse (they emit `fiber.lastResult`, which
 // only advances per statement). The *reduction* trace -- the readable
 // program-state-per-step sequence the raise/sugar/provenance machinery was
-// built for -- is produced by raising the fiber back to an expression at each
-// major step. reductionTrace composes the real pieces end to end:
-//   compile -> Fiber -> step -> raiseFiber -> sugarExpr -> expToString.
-//
-// Granularity policy: snapshot only at the top frame (`frames.length === 1`),
-// so a called function's internal steps are atomic, and drop any snapshot that
-// still mentions an internal name (`##...##`, e.g. a contract wrapper), which
-// is never user-visible. The fiber's final value is appended so a trace ends at
-// the answer even when the last reduction is a builtin application (whose value
-// is produced inside its frame, off the top level).
+// built for -- is produced by traceReductions (src/scheme/trace.ts), a
+// generator that raises + sugars the fiber at each top-level step. Draining it
+// here gives the full sequence; the CLI's --trace drives the same generator.
 async function reductionTrace(src: string): Promise<string[]> {
   const { prog, diagnostics } = await Scheme.compile(src.trim())
   expect(diagnostics).toEqual([])
-  const fiber = new Fiber(prog!, Scheme.mkInitialEnv())
-  const out: string[] = []
-  const push = (s: string) => {
-    if (!s.includes('##') && s !== out[out.length - 1]) out.push(s)
-  }
-  const snap = () => {
-    if (fiber.frames.length === 1) {
-      push(expToString(sugarExpr(raiseFiber(fiber))))
-    }
-  }
-  snap()
-  while (!fiber.isDone()) {
-    if (fiber.step().tag === 'trace') snap()
-  }
-  if (fiber.lastResult !== null) push(expToString(mkLit(fiber.lastResult)))
-  return out
+  return [...traceReductions(new Fiber(prog!, Scheme.mkInitialEnv()))]
 }
 
 describe('stepwise reduction traces, by construct', () => {

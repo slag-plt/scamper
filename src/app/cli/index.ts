@@ -3,8 +3,12 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 
 import type { ScamperDiagnostic } from '../../scheme/diagnostic'
+import { diagnosticToError } from '../../scheme/diagnostic'
 import { ConsoleOutput } from '../../lpm/output'
-import { compile } from '../../scheme'
+import { compile, mkInitialEnv } from '../../scheme'
+import { traceReductions } from '../../scheme/trace'
+import { Fiber } from '../../lpm/fiber'
+import { ScamperError } from '../../lpm/error'
 import { setFS } from '../../fs'
 import NodeFileSystem from '../../fs/node'
 import Scamper, { initialize } from '../../scamper'
@@ -34,7 +38,9 @@ if (values.help || positionals.length !== 1) {
   console.log('Usage: scamper [options] filename')
   console.log('Options:')
   console.log('  -?, --help       Show this help message')
-  console.log('  --trace          Enable step-by-step tracing')
+  console.log(
+    "  --trace          Print the program's step-by-step reduction trace instead of running it",
+  )
   console.log(
     '  --check          Scope-check the program and report diagnostics without running it',
   )
@@ -70,10 +76,42 @@ if (values.check) {
   process.exit(diagnostics.length > 0 ? 1 : 0)
 }
 
+// --trace: print the program's reduction trace -- each top-level step rendered
+// as a sugared expression -- instead of running it normally. Driven by the
+// traceReductions generator, so this steps one reduction at a time (an
+// interactive step-by-step mode could drive the same generator on demand).
+// Synchronous programs only: file imports and async operations aren't stepped
+// here (see traceReductions).
+if (values.trace) {
+  const traceOut = new ConsoleOutput()
+  const { prog, diagnostics } = await compile(src)
+  diagnostics.forEach((d) => {
+    traceOut.report(diagnosticToError(d))
+  })
+  if (prog === undefined) {
+    process.exit(1)
+  }
+  const fiber = new Fiber(prog, mkInitialEnv())
+  try {
+    let first = true
+    for (const step of traceReductions(fiber)) {
+      console.log(first ? step : `--> ${step}`)
+      first = false
+    }
+  } catch (e) {
+    if (e instanceof ScamperError) {
+      traceOut.report(e)
+    } else {
+      throw e
+    }
+  }
+  process.exit(traceOut.seenError ? 1 : 0)
+}
+
 const out = new ConsoleOutput()
 
 const request = await Scamper.getInstance().execute({
-  src, out, err: out, isTracing: values.trace ?? false
+  src, out, err: out
 })
 
 if (request === null) {
