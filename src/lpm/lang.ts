@@ -325,9 +325,6 @@ export interface Match {
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
-export interface PopV {
-  tag: 'popv'
-}
 export interface Rept {
   tag: 'rept'
   range: Range
@@ -360,7 +357,6 @@ export type Ops =
   | Cls
   | Ap
   | Match
-  | PopV
   | Rept
   | ApSpread
   | PushHandler

@@ -186,10 +186,13 @@ export const ApSpreadHandler: OpHandler<'ap-spread'> = (op, currFrame, fiber) =>
 }
 
 export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
-  const scrutinee = currFrame.values.pop()
-  if (scrutinee === undefined) {
+  // Check length, not `pop() === undefined`: `void` is a legitimate value that
+  // *is* `undefined`, so a scrutinee of `void` (e.g. `(let ([_ (display x)])
+  // ...)`) must not be mistaken for an empty stack.
+  if (currFrame.values.length === 0) {
     throw new ICE('Fiber.MatchHandler', 'Match requires at least one value')
   }
+  const scrutinee = currFrame.values.pop()
   // we will always step match to abide by a small work quantum
   // TODO: we need to figure out if we want to keep this, hack fix for now
   op.currBranchIdx ??= 0
@@ -211,11 +214,6 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
-  return traceStep
-}
-
-export const PopVHandler: OpHandler<'popv'> = (_, currFrame) => {
-  currFrame.values.pop()
   return traceStep
 }
 

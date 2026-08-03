@@ -102,14 +102,20 @@ describe('basic ops', () => {
 
   test('ctor with zero fields leaves existing stack values untouched', () => {
     // A leading lit puts a sentinel on the value stack. A correct zero-field
-    // ctor must consume nothing; the trailing popv then drops the struct,
-    // leaving the sentinel as the frame's single result. (Regression guard for
-    // the `splice(-0)` bug, which would splice the sentinel away.)
+    // ctor consumes nothing, so wrapping the sentinel and the unit struct in a
+    // pair sees the sentinel intact as `fst`. (Regression guard for the
+    // `splice(-0)` bug, which would splice the sentinel away.)
     const fiber = makeTestFiber([
-      U.mkDisp([U.mkLit('sentinel'), U.mkCtor('unit', []), U.mkPopv()]),
+      U.mkDisp([
+        U.mkLit('sentinel'),
+        U.mkCtor('unit', []),
+        U.mkCtor('pair', ['fst', 'snd']),
+      ]),
     ])
     expectSuccessfulExec(fiber)
-    expect(out.log).toStrictEqual(['sentinel'])
+    expect(out.log).toStrictEqual([
+      U.mkStruct('pair', ['fst', 'snd'], ['sentinel', U.mkStruct('unit', [], [])]),
+    ])
   })
 
   test('cls', () => {
@@ -453,23 +459,6 @@ describe('basic ops', () => {
     }
 
     expect(testRunner()).toStrictEqual(expectedError)
-  })
-
-  describe('popv', () => {
-    test('discards the top value, leaving the one beneath it', () => {
-      const fiber = makeTestFiber([
-        U.mkDisp([U.mkLit(1), U.mkLit(2), U.mkPopv()]),
-      ])
-      expectSuccessfulExec(fiber)
-      expect(out.log).toStrictEqual([1])
-    })
-
-    test('popping the frame empty then finishing throws an ICE', () => {
-      // popv empties the value stack; the frame then finishes with zero values,
-      // which the fiber rejects (frames must end with exactly one value).
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit(1), U.mkPopv()])])
-      expectFailedExec(fiber, ICE)
-    })
   })
 
   describe('with-handler opcodes', () => {

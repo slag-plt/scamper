@@ -68,13 +68,6 @@ function lowerExpr(e: A.Exp): L.Blk {
       })
       return [...bindings, ...ret]
     }
-    case 'begin': {
-      const last = lowerExpr(e.exps[e.exps.length - 1])
-      const exps = e.exps
-        .slice(0, e.exps.length - 1)
-        .flatMap((e) => [...lowerExpr(e), L.mkPopv()])
-      return [...exps, ...last]
-    }
     case 'if':
       return [
         ...lowerExpr(e.guard),

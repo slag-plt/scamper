@@ -141,7 +141,6 @@ export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
 ): L.StmtExp => ({ tag: 'stmtexp', expr, range })
-export const mkPopv = (): L.PopV => ({ tag: 'popv' })
 export const mkRept = (range: Range = Range.none): L.Rept => ({
   tag: 'rept',
   range,

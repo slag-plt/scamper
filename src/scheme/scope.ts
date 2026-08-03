@@ -138,13 +138,6 @@ function scopeCheckExp(
       scopeCheckExp(diagnostics, globals, [...locals, ...allVars], e.body)
       return
     }
-    case 'begin': {
-      e.exps.forEach((e) => {
-        scopeCheckExp(diagnostics, globals, locals, e)
-      })
-      return
-    }
-
     case 'if': {
       scopeCheckExp(diagnostics, globals, locals, e.guard)
       scopeCheckExp(diagnostics, globals, locals, e.ifB)

@@ -158,11 +158,6 @@ test('ap-spread operation raising', () => {
   expect(result).toBe('(apply f args)')
 })
 
-test('popv operation raising', () => {
-  const result = raiseBlk([LPM.mkLit(1), LPM.mkLit(2), LPM.mkPopv()])
-  expect(result).toBe('1')
-})
-
 test('raiseFrames throws when there are no frames to raise', () => {
   const fiber = makeTestFiber([])
   expect(() => raiseFiber(fiber)).toThrow(LPM.ICE)

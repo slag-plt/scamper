@@ -127,10 +127,6 @@ export function raiseFrame(
         break
       }
 
-      case 'popv': {
-        values.pop()!
-        break
-      }
     }
   }
   return values.pop()!

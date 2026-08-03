@@ -153,10 +153,10 @@ describe('Section hole collection', () => {
     const expected =
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
-          A.mkBegin([
-            A.mkApp(A.mkId('display'), [h1]),
-            h2
-          ])
+          A.mkLet(
+            [{ pat: A.mkPWild(), value: A.mkApp(A.mkId('display'), [h1]) }],
+            h2,
+          )
         ]))
     expect(actual).toEqual(expected)
   })

@@ -305,11 +305,15 @@ describe('End-to-end cases', () => {
 ; a wildcard binding runs the value for effect, then returns the body
 (let ([_ 99]) 42)
 
+; the bound value may be void (which is undefined) -- match must not mistake
+; it for an empty stack (this is how (begin (f x) ...) now desugars)
+(let ([_ void]) 42)
+
 ; patterns work in let* too, and still telescope
 (let* ([(pair a b) (pair 3 4)]
        [c (+ a b)])
   c)
-`, [3, 42, 7])
+`, [3, 42, 42, 7])
   })
 
   test('let-binding: a value not matching the pattern is a runtime error', async () => {

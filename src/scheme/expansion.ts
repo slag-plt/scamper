@@ -118,8 +118,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         expandExpr(e.body),
         e.range,
       )
-    case 'begin':
-      return A.mkBegin(e.exps.map(expandExpr), e.range)
     case 'if':
       return A.mkIf(
         expandExpr(e.guard),
@@ -151,6 +149,25 @@ export function expandExpr(e: A.Exp): A.Exp {
       let ret = body
       for (let i = bindings.length - 1; i >= 0; i--) {
         ret = A.mkLet([bindings[i]], ret, e.range)
+      }
+      return ret
+    }
+    case 'begin': {
+      // (begin e1 ... ek)
+      // -->
+      // (let ([_ e1])
+      //   ...
+      //     (let ([_ e(k-1)]) ek))
+      // Each non-final expression binds to a fresh wildcard, so it runs for
+      // effect and its value is discarded; ek is the result.
+      const exps = e.exps.map(expandExpr)
+      let ret = exps[exps.length - 1]
+      for (let i = exps.length - 2; i >= 0; i--) {
+        ret = A.mkLet(
+          [{ pat: A.mkPWild(e.range), value: exps[i] }],
+          ret,
+          e.range,
+        )
       }
       return ret
     }
