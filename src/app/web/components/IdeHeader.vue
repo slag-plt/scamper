@@ -22,7 +22,9 @@ async function handleRun() {
 }
 
 function handleTrace() {
-  void session.execute({ tracing: true })
+  // Start a stepping run: it pauses at the first reduction; the Results toolbar's
+  // step buttons then drive it (step once / statement / all).
+  void session.execute({ stepping: true })
 }
 
 const search = ref('')

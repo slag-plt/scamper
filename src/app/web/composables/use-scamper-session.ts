@@ -107,7 +107,10 @@ function createScamperSession(
     stopRun()
   }
 
-  const execute = async ({ tracing = false }: { tracing?: boolean } = {}) => {
+  const execute = async ({
+    tracing = false,
+    stepping = false,
+  }: { tracing?: boolean; stepping?: boolean } = {}) => {
     const ch = display()
     if (!ch) return
 
@@ -120,6 +123,7 @@ function createScamperSession(
       out: ch,
       err: ch,
       isTracing: tracing,
+      stepping,
     })
     if (!run) {
       activeRun.value = null
@@ -145,6 +149,27 @@ function createScamperSession(
     onRunScheduled?.()
   }
 
+  // Step controls for a stepping run (see execute({ stepping: true })). They
+  // target the active run's id; no-op when nothing is running.
+  const step = () => {
+    const id = currentRun.value
+    if (id) scamper.step(id)
+  }
+  const stepStmt = async () => {
+    const id = currentRun.value
+    if (id) await scamper.resume(id, 'statement')
+  }
+  const stepAll = async () => {
+    const id = currentRun.value
+    if (id) await scamper.resume(id, 'all')
+  }
+  // Stop an in-flight statement/all burst, re-pausing at the next reduction
+  // (keeps the stepping session alive, unlike stopRun which cancels the run).
+  const abortStep = () => {
+    const id = currentRun.value
+    if (id) scamper.pauseStepping(id)
+  }
+
   return {
     queries,
     expandedQueryId,
@@ -160,6 +185,10 @@ function createScamperSession(
     stopAll,
     execute,
     query,
+    step,
+    stepStmt,
+    stepAll,
+    abortStep,
     getQueryOrThrow,
   }
 }
