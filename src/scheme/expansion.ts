@@ -24,6 +24,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.head),
         e.args.map((a) => collectSectionHoles(bvars, a)),
         e.range,
+        e.provenance,
       )
     case 'lam':
       return A.mkLam(
@@ -40,6 +41,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
         })),
         collectSectionHoles(bvars, e.body),
         e.range,
+        e.provenance,
       )
     case 'begin':
       return A.mkBegin(
@@ -52,6 +54,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.ifB),
         collectSectionHoles(bvars, e.elseB),
         e.range,
+        e.provenance,
       )
     case 'match':
       return A.mkMatch(
@@ -138,6 +141,7 @@ export function expandExpr(e: A.Exp): A.Exp {
           [{ pat: A.mkPWild(e.range), value: exps[i] }],
           ret,
           e.range,
+          'begin',
         )
       }
       return ret
@@ -153,9 +157,9 @@ export function expandExpr(e: A.Exp): A.Exp {
       //   ...
       //   #f)
       const exps = e.exps.map(expandExpr)
-      let ret: A.Exp = A.mkLit(true)
+      let ret: A.Exp = A.mkLit(true, e.range, 'and')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], ret, A.mkLit(false), e.range)
+        ret = A.mkIf(exps[i], ret, A.mkLit(false, e.range, 'and'), e.range, 'and')
       }
       return ret
     }
@@ -169,9 +173,9 @@ export function expandExpr(e: A.Exp): A.Exp {
       //       #t
       //       #f))
       const exps = e.exps.map(expandExpr)
-      let ret: A.Exp = A.mkLit(false)
+      let ret: A.Exp = A.mkLit(false, e.range, 'or')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], A.mkLit(true), ret, e.range)
+        ret = A.mkIf(exps[i], A.mkLit(true, e.range, 'or'), ret, e.range, 'or')
       }
       return ret
     }
@@ -189,9 +193,10 @@ export function expandExpr(e: A.Exp): A.Exp {
         A.mkId('error', e.range),
         [A.mkLit('No matching clause in cond', e.range)],
         e.range,
+        'cond',
       )
       for (let i = branches.length - 1; i >= 0; i--) {
-        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range)
+        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range, 'cond')
       }
       return ret
     }

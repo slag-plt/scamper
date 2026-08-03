@@ -40,7 +40,7 @@ export function raiseFrame(
     const op = ops[i]
     switch (op.tag) {
       case 'lit': {
-        values.push(A.mkLit(op.value))
+        values.push(A.mkLit(op.value, op.range, op.provenance))
         break
       }
 
@@ -83,7 +83,7 @@ export function raiseFrame(
         const vs = values.splice(-(op.numArgs + 1))
         const head = vs[0]
         const args = op.numArgs === 0 ? [] : vs.slice(1)
-        values.push(A.mkApp(head, args))
+        values.push(A.mkApp(head, args, op.range, op.provenance))
         break
       }
 
@@ -116,7 +116,14 @@ export function raiseFrame(
             pat: raisePat(b.pat),
             value: raiseFrame([], excl, b.value.toReversed()),
           }))
-          values.push(A.mkLet(bindings, raiseFrame([], excl, op.body.toReversed())))
+          values.push(
+            A.mkLet(
+              bindings,
+              raiseFrame([], excl, op.body.toReversed()),
+              op.range,
+              op.provenance,
+            ),
+          )
         } else {
           const currentValue = values.pop()!
           const remaining = op.bindings.slice(op.idx - 1)
@@ -128,7 +135,14 @@ export function raiseFrame(
             value:
               i === 0 ? currentValue : raiseFrame([], excl, b.value.toReversed()),
           }))
-          values.push(A.mkLet(bindings, raiseFrame([], excl, op.body.toReversed())))
+          values.push(
+            A.mkLet(
+              bindings,
+              raiseFrame([], excl, op.body.toReversed()),
+              op.range,
+              op.provenance,
+            ),
+          )
         }
         break
       }
@@ -137,7 +151,7 @@ export function raiseFrame(
         const guard = values.pop()!
         const thenExp = raiseFrame([], env, op.thenB.toReversed())
         const elseExp = raiseFrame([], env, op.elseB.toReversed())
-        values.push(A.mkIf(guard, thenExp, elseExp))
+        values.push(A.mkIf(guard, thenExp, elseExp, op.range, op.provenance))
         break
       }
 

@@ -3,6 +3,9 @@ import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { expandExpr, expandProgram } from '../../src/scheme/expansion'
 import { sugarExpr, sugarProgram } from '../../src/scheme/sugar'
 import * as A from '../../src/scheme/ast'
+import * as S from '../../src/scheme'
+import { Fiber } from '../../src/lpm/fiber'
+import { raiseFiber } from '../../src/scheme/raise'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 
 // ---- Helpers ---------------------------------------------------------------
@@ -40,11 +43,10 @@ describe('and', () => {
   test('several operands', () => {
     expect(roundTrip('(and a b c d)')).toBe('(and a b c d)')
   })
-  test('a single operand is left as its (ambiguous) if-shape', () => {
-    // (and e) and (or e) both expand to (if e #t #f), so neither is recovered
-    expect(roundTrip('(and a)')).toBe('(if a #t #f)')
+  test('a single operand is recovered (provenance disambiguates it from or)', () => {
+    expect(roundTrip('(and a)')).toBe('(and a)')
   })
-  test('the empty and expands to #t and stays #t', () => {
+  test('the empty and expands to a bare #t and stays #t', () => {
     expect(roundTrip('(and)')).toBe('#t')
   })
   test('operands may be literals', () => {
@@ -60,10 +62,10 @@ describe('or', () => {
   test('several operands', () => {
     expect(roundTrip('(or a b c d)')).toBe('(or a b c d)')
   })
-  test('a single operand is left as its (ambiguous) if-shape', () => {
-    expect(roundTrip('(or a)')).toBe('(if a #t #f)')
+  test('a single operand is recovered (provenance disambiguates it from and)', () => {
+    expect(roundTrip('(or a)')).toBe('(or a)')
   })
-  test('the empty or expands to #f and stays #f', () => {
+  test('the empty or expands to a bare #f and stays #f', () => {
     expect(roundTrip('(or)')).toBe('#f')
   })
 })
@@ -200,16 +202,34 @@ describe('does not over-sugar look-alike core shapes', () => {
   })
 })
 
-// ---- Look-alikes that are recovered (documented equivalences) --------------
+// ---- Provenance makes recovery exact ---------------------------------------
 
-describe('semantically-equivalent core shapes are recovered', () => {
-  test('a single wildcard-binding let is recovered as a begin', () => {
-    expect(sugarStr('(let ([_ a]) b)')).toBe('(begin a b)')
+describe('untagged look-alikes are never over-sugared', () => {
+  // These core shapes are exactly what begin/cond expand to, but written by
+  // hand they carry no provenance, so they must be left precisely as-is.
+  test('a hand-written single wildcard-binding let stays a let', () => {
+    expect(sugarStr('(let ([_ a]) b)')).toBe('(let ([_ a]) b)')
   })
-  test('an if ending in the cond sentinel is recovered as a cond', () => {
+  test('a hand-written if ending in the cond error call stays an if', () => {
     expect(sugarStr('(if a b (error "No matching clause in cond"))')).toBe(
-      '(cond [a b])',
+      '(if a b (error "No matching clause in cond"))',
     )
+  })
+})
+
+describe('provenance disambiguates otherwise-identical shapes', () => {
+  test('(and e) and (or e) expand to the same core shape but recover distinctly', () => {
+    // both expand to (if e #t #f); only the provenance tag tells them apart
+    expect(roundTrip('(and a)')).toBe('(and a)')
+    expect(roundTrip('(or a)')).toBe('(or a)')
+  })
+  test('the same (if e #t #f): tagged by expansion recovers, hand-written does not', () => {
+    expect(roundTrip('(and a)')).toBe('(and a)')
+    expect(sugarStr('(if a #t #f)')).toBe('(if a #t #f)')
+  })
+  test('a tagged wildcard-let recovers, an identical hand-written one does not', () => {
+    expect(roundTrip('(begin a b)')).toBe('(begin a b)')
+    expect(sugarStr('(let ([_ a]) b)')).toBe('(let ([_ a]) b)')
   })
 })
 
@@ -260,5 +280,46 @@ describe('statements and programs', () => {
     expect(roundTripProg(src)).toBe(
       '(define f (and a b))\n(display (or c d))\n(begin e g)',
     )
+  })
+})
+
+// ---- Recovery through the LPM (provenance survives codegen -> ops -> raise) --
+
+describe('provenance survives the whole AST -> op -> AST round trip', () => {
+  // Collect the sugared reconstruction at every VM step of `src`.
+  async function trace(src: string): Promise<string[]> {
+    const { prog, diagnostics } = await S.compile(src)
+    expect(diagnostics).toEqual([])
+    const fiber = new Fiber(prog!, S.mkInitialEnv())
+    const out: string[] = []
+    while (!fiber.isDone()) {
+      fiber.step()
+      if (fiber.frames.length > 0) {
+        out.push(A.expToString(sugarExpr(raiseFiber(fiber))))
+      }
+    }
+    return out
+  }
+
+  test('an `and` is recovered mid-run (codegen tagged the if/lit ops)', async () => {
+    // once the first operand reduces to #t, raising + sugaring shows the `and`
+    expect(await trace('(and (< 1 2) (< 3 4))')).toContain('(and #t (< 3 4))')
+  })
+
+  test('an `or` is recovered mid-run', async () => {
+    expect(await trace('(or (< 5 1) (< 3 4))')).toContain('(or #f (< 3 4))')
+  })
+
+  test('a `cond` is recovered mid-run', async () => {
+    expect(await trace('(cond [(< 5 1) 1] [(< 3 4) 2])')).toContain(
+      '(cond [#f 1] [(< 3 4) 2])',
+    )
+  })
+
+  test('a `begin` is recovered mid-run (the let op kept its begin tag)', async () => {
+    // the wildcard-binding let carries provenance through codegen and the
+    // idx-threaded continuation ops, so a trace shows `begin`, not `let`
+    const forms = await trace('(begin (+ 1 1) (+ 2 2))')
+    expect(forms.some((f) => f.startsWith('(begin '))).toBe(true)
   })
 })

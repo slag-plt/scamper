@@ -17,7 +17,7 @@ function lowerPat(p: A.Pat): L.Pat {
 function lowerExpr(e: A.Exp): L.Blk {
   switch (e.tag) {
     case 'lit':
-      return [L.mkLit(e.value, e.range)]
+      return [L.mkLit(e.value, e.range, e.provenance)]
     case 'id':
       return [L.mkVar(e.name, e.range)]
     case 'app':
@@ -36,7 +36,7 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [
         ...lowerExpr(e.head),
         ...e.args.flatMap(lowerExpr),
-        L.mkAp(e.args.length, e.range),
+        L.mkAp(e.args.length, e.range, e.provenance),
       ]
     case 'lam':
       return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
@@ -51,14 +51,14 @@ function lowerExpr(e: A.Exp): L.Blk {
         failMsg: `let: value did not match pattern ${A.patToString(b.pat)}`,
       }))
       return [
-        L.mkLet(bindings, lowerExpr(e.body), e.range),
+        L.mkLet(bindings, lowerExpr(e.body), e.range, 0, e.provenance),
         L.mkPopScope(e.range),
       ]
     }
     case 'if':
       return [
         ...lowerExpr(e.guard),
-        L.mkIf(lowerExpr(e.ifB), lowerExpr(e.elseB), e.range),
+        L.mkIf(lowerExpr(e.ifB), lowerExpr(e.elseB), e.range, e.provenance),
       ]
     case 'match':
       // A matched branch binds its pattern variables in a fresh scope; the

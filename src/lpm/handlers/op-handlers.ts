@@ -241,7 +241,7 @@ export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
   if (op.idx < k) {
     currFrame.pushBlk([
       ...op.bindings[op.idx].value,
-      mkLet(op.bindings, op.body, op.range, op.idx + 1),
+      mkLet(op.bindings, op.body, op.range, op.idx + 1, op.provenance),
     ])
   } else {
     currFrame.pushBlk(op.body)

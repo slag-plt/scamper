@@ -6,6 +6,10 @@ export interface Tagged {
 }
 export interface Node {
   range: L.Range
+  // Set when this node was inserted by expanding a derived form (expansion.ts);
+  // threaded through to the LPM op and back on raise so sugaring can recover the
+  // derived form exactly. Undefined on parsed nodes. See L.Provenance.
+  provenance?: L.Provenance
 }
 
 /** A single line comment, tracked so docstrings can be reassembled from it. */
@@ -265,16 +269,31 @@ export const mkPCtor = (
 ): PCtor => ({ tag: 'pctor', name, args, range })
 
 // Expressions (exp)
-export const mkLit = (value: L.Value, range: L.Range = L.Range.none): Lit => ({
+// Omit `provenance` when unset so it is a truly optional key (absent, not
+// `undefined`); keeps structural `toStrictEqual` comparisons against parsed
+// nodes clean.
+export const mkLit = (
+  value: L.Value,
+  range: L.Range = L.Range.none,
+  provenance?: L.Provenance,
+): Lit => ({
   tag: 'lit',
   value,
   range,
+  ...(provenance !== undefined ? { provenance } : {}),
 })
 export const mkApp = (
   head: Exp,
   args: Exp[],
   range: L.Range = L.Range.none,
-): App => ({ tag: 'app', head, args, range })
+  provenance?: L.Provenance,
+): App => ({
+  tag: 'app',
+  head,
+  args,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkLam = (
   params: Identifier[],
   body: Exp,
@@ -285,7 +304,14 @@ export const mkLet = (
   bindings: { pat: Pat; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
-): Let => ({ tag: 'let', bindings, body, range })
+  provenance?: L.Provenance,
+): Let => ({
+  tag: 'let',
+  bindings,
+  body,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkBegin = (exps: Exp[], range: L.Range = L.Range.none): Begin => ({
   tag: 'begin',
   exps,
@@ -296,7 +322,15 @@ export const mkIf = (
   ifB: Exp,
   elseB: Exp,
   range: L.Range = L.Range.none,
-): If => ({ tag: 'if', guard, ifB, elseB, range })
+  provenance?: L.Provenance,
+): If => ({
+  tag: 'if',
+  guard,
+  ifB,
+  elseB,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkMatch = (
   scrutinee: Exp,
   branches: { pat: Pat; body: Exp }[],

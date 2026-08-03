@@ -90,10 +90,15 @@ export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
 export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
 
 // Op constructors
-export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({
+export const mkLit = (
+  value: L.Value,
+  range: Range = Range.none,
+  provenance?: L.Provenance,
+): L.Lit => ({
   tag: 'lit',
   value,
   range,
+  provenance,
 })
 export const mkVar = (name: string, range: Range = Range.none): L.Var => ({
   tag: 'var',
@@ -107,10 +112,15 @@ export const mkCls = (
   range: Range = Range.none,
   restParam?: string
 ): L.Cls => ({ tag: 'cls', params, body, name, range, restParam })
-export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({
+export const mkAp = (
+  numArgs: number,
+  range: Range = Range.none,
+  provenance?: L.Provenance,
+): L.Ap => ({
   tag: 'ap',
   numArgs,
   range,
+  provenance,
 })
 export const mkMatch = (
   branches: [L.Pat, L.Blk][],
@@ -121,7 +131,8 @@ export const mkLet = (
   body: L.Blk,
   range: Range = Range.none,
   idx = 0,
-): L.Let => ({ tag: 'let', bindings, body, range, idx })
+  provenance?: L.Provenance,
+): L.Let => ({ tag: 'let', bindings, body, range, idx, provenance })
 
 /** @return the variable names bound by an LPM pattern (recursively). */
 export const patVars = (pat: L.Pat): string[] => {
@@ -139,7 +150,8 @@ export const mkIf = (
   thenB: L.Blk,
   elseB: L.Blk,
   range: Range = Range.none,
-): L.If => ({ tag: 'if', thenB, elseB, range })
+  provenance?: L.Provenance,
+): L.If => ({ tag: 'if', thenB, elseB, range, provenance })
 export const mkPopScope = (range: Range = Range.none): L.PopScope => ({
   tag: 'pop-scope',
   range,

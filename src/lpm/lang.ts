@@ -380,10 +380,18 @@ export type List = null | Cons
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
+// Records that a node was inserted by expanding a derived form (expansion.ts):
+// codegen copies it from the AST onto the op, raise copies it back, and sugaring
+// uses it to recover the derived form exactly (no heuristics). Undefined on
+// nodes that came straight from the parser. `section` is not tracked (it is not
+// recovered).
+export type Provenance = 'and' | 'or' | 'begin' | 'cond'
+
 export interface Lit {
   tag: 'lit'
   value: Value
   range: Range
+  provenance?: Provenance
 }
 export interface Var {
   tag: 'var'
@@ -402,6 +410,7 @@ export interface Ap {
   tag: 'ap'
   numArgs: number
   range: Range
+  provenance?: Provenance
 }
 export interface Match {
   tag: 'match'
@@ -426,12 +435,14 @@ export interface Let {
   range: Range
   // Number of bindings already assigned; 0 on the initial (declaring) run.
   idx: number
+  provenance?: Provenance
 }
 export interface If {
   tag: 'if'
   thenB: Blk
   elseB: Blk
   range: Range
+  provenance?: Provenance
 }
 export interface PopScope {
   tag: 'pop-scope'

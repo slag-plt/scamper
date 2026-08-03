@@ -400,7 +400,9 @@ describe('End-to-end cases', () => {
           (count m (+ acc 1))))))
 (count 12000 0)
 `, [12000])
-  })
+    // 12000 interpreter iterations can exceed the 5s default under full parallel
+    // load, so give this heavy TCO check a realistic timeout.
+  }, 30000)
 
   test('list-length', async () => {
     await checkMachineOutput(`
