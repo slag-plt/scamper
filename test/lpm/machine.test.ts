@@ -30,20 +30,6 @@ describe('basic ops', () => {
     expect(out.log).toEqual([fiber.topLevelEnv.get('+')])
   })
 
-  test('ctor', () => {
-    const out = new LoggingChannel(false, false)
-    const fiber = makeTestFiber([
-      U.mkDisp([
-        U.mkLit('test'),
-        U.mkLit(2),
-        U.mkCtor('test-ctor', ['a', 'b']),
-      ]),
-    ])
-    testExecute(fiber, out)
-    const result = out.log[0]
-    expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
-  })
-
   test('cls', () => {
     const out = new LoggingChannel(false, false)
     const body = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
@@ -203,9 +189,7 @@ describe('pattern matching', () => {
     const out = new LoggingChannel(false, false)
     // First create a struct to match against
     const setupStruct = [
-      U.mkLit(1),
-      U.mkLit(2),
-      U.mkCtor('test-struct', ['field1', 'field2']),
+      U.mkLit(U.mkStruct('test-struct', ['field1', 'field2'], [1, 2])),
     ]
     const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
     const elseBranch = [U.mkLit('no match')]

@@ -13,7 +13,6 @@ import {
   applyFn,
   ApSpreadHandler,
   ClsHandler,
-  CtorHandler,
   IfHandler,
   LetHandler,
   LitHandler,
@@ -306,9 +305,6 @@ export class Fiber {
         break
       case 'var':
         isMajorStep = VarHandler(currOp, this.currentFrame, this)
-        break
-      case 'ctor':
-        isMajorStep = CtorHandler(currOp, this.currentFrame, this)
         break
       case 'cls':
         isMajorStep = ClsHandler(currOp, this.currentFrame, this)

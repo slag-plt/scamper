@@ -71,13 +71,6 @@ export function raiseFrame(
         break
       }
 
-      case 'ctor': {
-        const arity = op.fields.length
-        const args = arity === 0 ? [] : values.splice(-arity)
-        values.push(A.mkApp(A.mkId(op.name), args))
-        break
-      }
-
       case 'cls': {
         const excluded = op.restParam ? [...op.params, op.restParam] : op.params
         const body = raiseFrame(

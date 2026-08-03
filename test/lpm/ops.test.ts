@@ -78,44 +78,6 @@ describe('basic ops', () => {
     })
   })
 
-  test('ctor', () => {
-    const fiber = makeTestFiber([
-      U.mkDisp([
-        U.mkLit('test'),
-        U.mkLit(2),
-        U.mkCtor('test-ctor', ['a', 'b']),
-      ]),
-    ])
-    expectSuccessfulExec(fiber)
-    expect(out.log.at(0)).toStrictEqual(
-      U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]),
-    )
-  })
-
-  test('ctor with zero fields produces an empty struct', () => {
-    const fiber = makeTestFiber([U.mkDisp([U.mkCtor('unit', [])])])
-    expectSuccessfulExec(fiber)
-    expect(out.log.at(0)).toStrictEqual(U.mkStruct('unit', [], []))
-  })
-
-  test('ctor with zero fields leaves existing stack values untouched', () => {
-    // A leading lit puts a sentinel on the value stack. A correct zero-field
-    // ctor consumes nothing, so wrapping the sentinel and the unit struct in a
-    // pair sees the sentinel intact as `fst`. (Regression guard for the
-    // `splice(-0)` bug, which would splice the sentinel away.)
-    const fiber = makeTestFiber([
-      U.mkDisp([
-        U.mkLit('sentinel'),
-        U.mkCtor('unit', []),
-        U.mkCtor('pair', ['fst', 'snd']),
-      ]),
-    ])
-    expectSuccessfulExec(fiber)
-    expect(out.log).toStrictEqual([
-      U.mkStruct('pair', ['fst', 'snd'], ['sentinel', U.mkStruct('unit', [], [])]),
-    ])
-  })
-
   test('cls', () => {
     const clsBody = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
     const fiber = makeTestFiber([
@@ -279,9 +241,7 @@ describe('basic ops', () => {
 
     test('w/ pctor', () => {
       const testStruct = [
-        U.mkLit(1),
-        U.mkLit(2),
-        U.mkCtor('test-struct', ['field1', 'field2']),
+        U.mkLit(U.mkStruct('test-struct', ['field1', 'field2'], [1, 2])),
       ]
       const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
       const elseBranch = [U.mkLit('no match')]
@@ -347,11 +307,12 @@ describe('basic ops', () => {
       ]
       const fiber = makeTestFiber([
         U.mkDisp([
-          U.mkLit(1),
-          U.mkLit(2),
-          U.mkCtor('pair', ['fst', 'snd']),
-          U.mkLit(3),
-          U.mkCtor('pair', ['fst', 'snd']),
+          U.mkLit(
+            U.mkStruct('pair', ['fst', 'snd'], [
+              U.mkStruct('pair', ['fst', 'snd'], [1, 2]),
+              3,
+            ]),
+          ),
           U.mkMatch([
             [pattern, body],
             [U.mkPWild(), [U.mkLit(-1)]],
@@ -365,7 +326,7 @@ describe('basic ops', () => {
     test('w/ zero-arg pctor', () => {
       const fiber = makeTestFiber([
         U.mkDisp([
-          U.mkCtor('unit', []),
+          U.mkLit(U.mkStruct('unit', [], [])),
           U.mkMatch([
             [U.mkPCtor('unit', []), [U.mkLit('matched')]],
             [U.mkPWild(), [U.mkLit('no')]],
@@ -379,9 +340,7 @@ describe('basic ops', () => {
     test('pctor with a mismatched ctor name falls through', () => {
       const fiber = makeTestFiber([
         U.mkDisp([
-          U.mkLit(1),
-          U.mkLit(2),
-          U.mkCtor('point', ['x', 'y']),
+          U.mkLit(U.mkStruct('point', ['x', 'y'], [1, 2])),
           U.mkMatch([
             [U.mkPCtor('other', [U.mkPWild(), U.mkPWild()]), [U.mkLit('wrong')]],
             [U.mkPWild(), [U.mkLit('fallthrough')]],
@@ -496,30 +455,30 @@ describe('basic ops', () => {
     })
 
     test('bindings are positional and non-telescoping (p1<-v1, p2<-v2)', () => {
-      // Rebuild the pair (a . b) so both binders are observable at once.
+      // (- a b) = -1 confirms a<-1 (first value) and b<-2 (second), not swapped.
       const fiber = makeTestFiber([
         U.mkDisp([
           U.mkLit(1),
           U.mkLit(2),
           U.mkLet(
             [U.mkPVar('a'), U.mkPVar('b')],
-            [U.mkVar('a'), U.mkVar('b'), U.mkCtor('pair', ['fst', 'snd'])],
+            [U.mkVar('-'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)],
           ),
           U.mkPopScope(),
         ]),
       ])
-      expectSuccessfulExec(fiber)
-      expect(out.log).toStrictEqual([
-        U.mkStruct('pair', ['fst', 'snd'], [1, 2]),
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        '-',
+        (a: number, b: number) => a - b,
       ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([-1])
     })
 
     test('a constructor pattern destructures the bound value', () => {
       const fiber = makeTestFiber([
         U.mkDisp([
-          U.mkLit(3),
-          U.mkLit(4),
-          U.mkCtor('pair', ['fst', 'snd']),
+          U.mkLit(U.mkStruct('pair', ['fst', 'snd'], [3, 4])),
           U.mkLet(
             [U.mkPCtor('pair', [U.mkPVar('a'), U.mkPVar('b')])],
             [U.mkVar('b')],

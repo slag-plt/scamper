@@ -100,11 +100,6 @@ export const mkVar = (name: string, range: Range = Range.none): L.Var => ({
   name,
   range,
 })
-export const mkCtor = (
-  name: string,
-  fields: string[],
-  range: Range = Range.none,
-): L.Ctor => ({ tag: 'ctor', name, fields, range })
 export const mkCls = (
   params: string[],
   body: L.Blk,

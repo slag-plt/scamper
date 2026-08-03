@@ -315,12 +315,6 @@ export interface Var {
   name: string
   range: Range
 }
-export interface Ctor {
-  tag: 'ctor'
-  name: string
-  fields: string[]
-  range: Range
-}
 export interface Cls {
   tag: 'cls'
   params: string[]
@@ -390,7 +384,6 @@ export interface PopHandler {
 export type Ops =
   | Lit
   | Var
-  | Ctor
   | Cls
   | Ap
   | Match

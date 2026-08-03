@@ -3,7 +3,7 @@ import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from '../util'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, pMatch, typeOf, vectorToList } from '../util'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -23,15 +23,6 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
     throw new ScamperError('Runtime', `Variable not found: ${op.name}`)
   }
   currFrame.values.push(currFrame.env.get(op.name))
-  return minorStep
-}
-
-export const CtorHandler: OpHandler<'ctor'> = (op, currFrame) => {
-  // N.B., guard the zero-field case explicitly: `splice(-0)` is `splice(0)`,
-  // which would splice off the *entire* value stack rather than nothing.
-  const args =
-    op.fields.length === 0 ? [] : currFrame.values.splice(-op.fields.length)
-  currFrame.values.push(mkStruct(op.name, op.fields, args))
   return minorStep
 }
 

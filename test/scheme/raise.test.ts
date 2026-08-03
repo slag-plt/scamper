@@ -52,15 +52,6 @@ test('mkLit operation raising with boolean', () => {
   expect(result).toBe('#t')
 })
 
-test('mkCtor operation raising', () => {
-  const result = raiseBlk([
-    LPM.mkLit(1),
-    LPM.mkLit(2),
-    LPM.mkCtor('pair', ['fst', 'snd']),
-  ])
-  expect(result).toBe('(pair 1 2)')
-})
-
 test('mkCls operation raising', () => {
   const result = raiseBlk([LPM.mkCls(['x'], [LPM.mkVar('x')], 'identity')])
   expect(result).toBe('identity')
@@ -96,16 +87,6 @@ test('nested operations raising', () => {
     LPM.mkAp(2),
   ])
   expect(result).toBe('(+ (* 2 3) 4)')
-})
-
-test('complex constructor with multiple fields', () => {
-  const result = raiseBlk([
-    LPM.mkLit('John'),
-    LPM.mkLit(30),
-    LPM.mkLit('Engineer'),
-    LPM.mkCtor('person', ['name', 'age', 'job']),
-  ])
-  expect(result).toBe('(person "John" 30 "Engineer")')
 })
 
 test('lambda with multiple parameters', () => {
