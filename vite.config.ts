@@ -1,4 +1,5 @@
 // vite.config.ts
+import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { defineConfig } from 'vitest/config'
 
@@ -8,7 +9,14 @@ import { libSourcesPlugin } from './scripts/vite-plugin-lib-sources.mjs'
 import { flattenHtmlPlugin } from './scripts/vite-plugin-flatten-html.mjs'
 import { devFlatHtmlPlugin } from './scripts/vite-plugin-dev-flat-html.mjs'
 
-const AppVersion = process.env.npm_package_version ?? 'unknown'
+// Read the version from package.json directly so it's correct regardless of
+// how the build/test runner was launched. `npm_package_version` is only set by
+// the npm lifecycle (`npm run ...`), not by IDE test runners or a bare
+// `vitest`, so relying on it alone leaves APP_VERSION as 'unknown' there.
+const pkg = JSON.parse(
+  readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
+)
+const AppVersion = process.env.npm_package_version ?? pkg.version ?? 'unknown'
 
 // The single source of truth for the HTML entry points, so the build input,
 // the production flattening (flattenHtmlPlugin), and the dev server's flat
