@@ -38,7 +38,9 @@ const undefinedStrategy: Strategy = {
 }
 const nullStrategy: Strategy = {
   predicate: (v) => v === null,
-  ...createSimpleVueRenderer<null>(() => '()'),
+  // Render the empty list / null value as `null`, matching TextRenderer (and the
+  // CLI). The web renderer previously diverged, showing `()`.
+  ...createSimpleVueRenderer<null>(() => 'null'),
 }
 const symbolStrategy: Strategy = {
   predicate: (v) => isSym(v),

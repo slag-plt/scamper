@@ -1,0 +1,24 @@
+/*
+ * Syntax highlighting for code rendered directly from the AST (step-by-step
+ * traces). LayoutRenderer (src/scheme/ast-components) tags each token's role
+ * with these classes as it builds the HTML, so there is no highlight.js
+ * tokenizer pass. Colors mirror GitHub's light/dark syntax palette (the light
+ * values match the vendored scamper-hljs.css) and follow the active theme via
+ * light-dark().
+ *
+ * Colors live here inline rather than as theme.css tokens on purpose: the embed
+ * page (web.html) omits theme.css, and light-dark() still resolves -- to the
+ * light value -- when no color-scheme is set, so the embed stays readable.
+ */
+.scamper-hl-keyword {
+  color: light-dark(#d73a49, #ff7b72);
+}
+.scamper-hl-number {
+  color: light-dark(#005cc5, #79c0ff);
+}
+.scamper-hl-string {
+  color: light-dark(#032f62, #a5d6ff);
+}
+.scamper-hl-literal {
+  color: light-dark(#005cc5, #79c0ff);
+}

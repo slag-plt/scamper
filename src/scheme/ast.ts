@@ -446,80 +446,159 @@ export const isLam = (e: Exp): e is Lam => isTagged(e) && e.tag === 'lam'
 
 export const isLit = (e: Exp): e is Lit => isTagged(e) && e.tag === 'lit'
 
-///// Stringifying Functions ///////////////////////////////////////////////////
+///// Surface-syntax layout ////////////////////////////////////////////////////
 
-export function patToString(pat: Pat): string {
+// The surface syntax of every AST node is uniformly a tree of delimited groups
+// over token and value leaves -- `(f a b)`, `[x 1]`, and `(let (...) body)` are
+// all just groups, nested groups, and groups-of-groups. `Layout` captures that
+// one structure so both backends walk it: layoutToString renders it to text and
+// LayoutRenderer.vue renders it to DOM. Keeping a single description is what
+// keeps the text and web renderings from drifting (previously hand-synced, #318)
+// and is the natural place to later hang line-breaking/indentation for traces.
+// A token's syntactic role, used only for syntax highlighting: LayoutRenderer
+// maps it to a CSS class; layoutToString ignores it. Identifiers/punctuation are
+// left untagged (default color). Extend as finer highlighting is wanted.
+export type Highlight = 'keyword'
+
+export type Layout =
+  // A literal token: a keyword, an identifier, "&", "_". `hl` tags its
+  // highlight role (see Highlight); absent = default, unhighlighted text.
+  | { kind: 'tok'; text: string; hl?: Highlight }
+  // A runtime value (a lit/quote/plit payload) rendered by the value renderer --
+  // TextRenderer for text, ValueRenderer for the web (so images, lists, etc.
+  // substituted into a trace render correctly). Highlighted by runtime type.
+  | { kind: 'val'; value: L.Value }
+  // A delimited group whose children are space-separated.
+  | { kind: 'group'; delim: 'paren' | 'bracket'; children: Layout[] }
+
+const tok = (text: string): Layout => ({ kind: 'tok', text })
+const kw = (text: string): Layout => ({ kind: 'tok', text, hl: 'keyword' })
+const val = (value: L.Value): Layout => ({ kind: 'val', value })
+const parens = (children: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  children,
+})
+const brackets = (children: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'bracket',
+  children,
+})
+
+export function patToLayout(pat: Pat): Layout {
   switch (pat.tag) {
     case 'pwild':
-      return '_'
+      return tok('_')
     case 'id':
-      return pat.name
+      return tok(pat.name)
     case 'plit':
-      // TODO: should we use TextRenderer.render for this too?
-      return JSON.stringify(pat.value)
-    case 'pctor': {
-      if (pat.args.length === 0) {
-        return `(${pat.name.name})`
-      } else {
-        return `(${pat.name.name} ${pat.args.map(patToString).join(' ')})`
-      }
-    }
+      return val(pat.value)
+    case 'pctor':
+      return parens([tok(pat.name.name), ...pat.args.map(patToLayout)])
   }
 }
 
-export function expToString(e: Exp): string {
+export function expToLayout(e: Exp): Layout {
   switch (e.tag) {
     case 'lit':
-      return TextRenderer.render(e.value)
+      return val(e.value)
     case 'id':
-      return e.name
-    case 'app': {
-      if (e.args.length === 0) {
-        return `(${expToString(e.head)})`
-      } else {
-        return `(${expToString(e.head)} ${e.args.map(expToString).join(' ')})`
-      }
-    }
+      return tok(e.name)
+    case 'app':
+      return parens([expToLayout(e.head), ...e.args.map(expToLayout)])
     case 'lam': {
-      const params = e.params.map((p) => p.name)
-      if (e.restParam) params.push('&', e.restParam.name)
-      return `(lambda (${params.join(' ')}) ${expToString(e.body)})`
+      const params = e.params.map((p) => tok(p.name))
+      if (e.restParam) params.push(tok('&'), tok(e.restParam.name))
+      return parens([kw('lambda'), parens(params), expToLayout(e.body)])
     }
     case 'let':
-      return `(let (${e.bindings.map(({ pat, value }) => `[${patToString(pat)} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return parens([
+        kw('let'),
+        parens(
+          e.bindings.map(({ pat, value }) =>
+            brackets([patToLayout(pat), expToLayout(value)]),
+          ),
+        ),
+        expToLayout(e.body),
+      ])
     case 'begin':
-      return `(begin ${e.exps.map(expToString).join(' ')})`
+      return parens([kw('begin'), ...e.exps.map(expToLayout)])
     case 'if':
-      return `(if ${expToString(e.guard)} ${expToString(e.ifB)} ${expToString(e.elseB)})`
+      return parens([
+        kw('if'),
+        expToLayout(e.guard),
+        expToLayout(e.ifB),
+        expToLayout(e.elseB),
+      ])
     case 'match':
-      return `(match ${expToString(e.scrutinee)} ${e.branches.map(({ pat, body }) => `[${patToString(pat)} ${expToString(body)}]`).join(' ')})`
+      return parens([
+        kw('match'),
+        expToLayout(e.scrutinee),
+        ...e.branches.map(({ pat, body }) =>
+          brackets([patToLayout(pat), expToLayout(body)]),
+        ),
+      ])
     case 'quote':
-      return `(quote ${JSON.stringify(e.value)})`
+      return parens([kw('quote'), val(e.value)])
     case 'and':
-      return `(and ${e.exps.map(expToString).join(' ')})`
+      return parens([kw('and'), ...e.exps.map(expToLayout)])
     case 'or':
-      return `(or ${e.exps.map(expToString).join(' ')})`
+      return parens([kw('or'), ...e.exps.map(expToLayout)])
     case 'cond':
-      return `(cond ${e.branches.map(({ test, body }) => `[${expToString(test)} ${expToString(body)}]`).join(' ')})`
+      return parens([
+        kw('cond'),
+        ...e.branches.map(({ test, body }) =>
+          brackets([expToLayout(test), expToLayout(body)]),
+        ),
+      ])
     case 'section':
-      return `(section ${e.exps.map(expToString).join(' ')})`
+      return parens([kw('section'), ...e.exps.map(expToLayout)])
   }
 }
 
-export function stmtToString(s: Stmt): string {
+export function stmtToLayout(s: Stmt): Layout {
   switch (s.tag) {
     case 'import':
-      return `(import ${s.kind === 'file' ? JSON.stringify(s.module) : s.module})`
+      return parens([
+        kw('import'),
+        tok(s.kind === 'file' ? JSON.stringify(s.module) : s.module),
+      ])
     case 'define':
-      return `(define ${s.name.name} ${expToString(s.value)})`
+      return parens([kw('define'), tok(s.name.name), expToLayout(s.value)])
     case 'display':
-      return `(display ${expToString(s.value)})`
+      return parens([kw('display'), expToLayout(s.value)])
     case 'stmtexp':
-      return expToString(s.expr)
+      return expToLayout(s.expr)
     case 'struct':
-      return `(struct ${s.name.name} (${s.fields.map((f) => f.name).join(' ')}))`
+      return parens([
+        kw('struct'),
+        tok(s.name.name),
+        parens(s.fields.map((f) => tok(f.name))),
+      ])
   }
 }
+
+///// Stringifying Functions ///////////////////////////////////////////////////
+
+const DELIMS = { paren: ['(', ')'], bracket: ['[', ']'] } as const
+
+/** Render a {@link Layout} to text: the text backend of the surface syntax. */
+export function layoutToString(l: Layout): string {
+  switch (l.kind) {
+    case 'tok':
+      return l.text
+    case 'val':
+      return TextRenderer.render(l.value)
+    case 'group': {
+      const [open, close] = DELIMS[l.delim]
+      return `${open}${l.children.map(layoutToString).join(' ')}${close}`
+    }
+  }
+}
+
+export const patToString = (pat: Pat): string => layoutToString(patToLayout(pat))
+export const expToString = (e: Exp): string => layoutToString(expToLayout(e))
+export const stmtToString = (s: Stmt): string => layoutToString(stmtToLayout(s))
 
 export function progToString(p: Prog): string {
   return p.map(stmtToString).join('\n')
@@ -528,21 +607,6 @@ export function progToString(p: Prog): string {
 TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
 TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
 TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
-
-///// AST argument shapes (consumed by the Vue-based renderers) /////////////////
-
-export type ASTArg = string | Pat | Exp | Stmt
-
-export interface HljsBindings {
-  head: string
-  pairs: { lhs: string | Pat | Exp; rhs: Exp }[]
-  body?: Exp
-  scrutinee?: Exp
-  // Whether the pair list is wrapped in its own parentheses, as `let`'s
-  // binding list is -- `(let ([x 1] [y 2]) body)` -- but `match`/`cond`
-  // clauses are not. Keeps the web rendering in step with expToString (#318).
-  parenthesizePairs?: boolean
-}
 
 ///// Equality /////////////////////////////////////////////////////////////////
 

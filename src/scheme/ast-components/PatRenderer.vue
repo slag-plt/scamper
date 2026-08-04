@@ -1,40 +1,14 @@
 <script setup lang="ts">
-import { Identifier, Pat, PCtor } from '../ast'
-import { createSimpleVueRenderer } from '../../lpm/renderers/vue/simple-renderers'
-import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
-import CodeParens from './CodeParens.vue'
-import { FallbackRenderer } from '../../lpm/renderers/vue'
+import { computed } from 'vue'
+import { Pat, patToLayout } from '../ast'
+import LayoutRenderer from './LayoutRenderer.vue'
 
-const { value: pat } = defineProps<{ value: Pat }>()
-
-// `plit` / `pctor`+args use the template branches (non-`value` props).
-let computedComponent: unknown = FallbackRenderer
-switch (pat.tag) {
-  case 'pwild':
-    computedComponent = createSimpleVueRenderer(() => '_').renderer
-    break
-  case 'id':
-    computedComponent = createSimpleVueRenderer<Identifier>(
-      (pat) => pat.name,
-    ).renderer
-    break
-  case 'pctor':
-    if (pat.args.length === 0) {
-      computedComponent = createSimpleVueRenderer<PCtor>(
-        (pat) => `(${pat.name.name})`,
-      ).renderer
-    }
-    break
-}
+const props = defineProps<{ value: Pat }>()
+const layout = computed(() => patToLayout(props.value))
 </script>
 
 <template>
-  <ValueRenderer v-if="pat.tag === 'plit'" :value="pat.value" />
-  <CodeParens
-    v-else-if="pat.tag === 'pctor' && pat.args.length > 0"
-    :args="[pat.name.name, ...pat.args]"
-  />
-  <component :is="computedComponent" v-else :value="pat" />
+  <LayoutRenderer :layout="layout" />
 </template>
 
 <style scoped></style>
