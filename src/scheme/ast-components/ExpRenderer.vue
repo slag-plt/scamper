@@ -47,6 +47,7 @@ switch (e.tag) {
       head: 'let',
       pairs: e.bindings.map(({ pat, value }) => ({ lhs: pat, rhs: value })),
       body: e.body,
+      parenthesizePairs: true,
     }
     break
   case 'match':

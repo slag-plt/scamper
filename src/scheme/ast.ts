@@ -538,6 +538,10 @@ export interface HljsBindings {
   pairs: { lhs: string | Pat | Exp; rhs: Exp }[]
   body?: Exp
   scrutinee?: Exp
+  // Whether the pair list is wrapped in its own parentheses, as `let`'s
+  // binding list is -- `(let ([x 1] [y 2]) body)` -- but `match`/`cond`
+  // clauses are not. Keeps the web rendering in step with expToString (#318).
+  parenthesizePairs?: boolean
 }
 
 ///// Equality /////////////////////////////////////////////////////////////////
