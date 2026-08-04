@@ -6,6 +6,7 @@ import {
   mkApp,
   mkCond,
   mkId,
+  mkLam,
   mkLet,
   mkLit,
   mkMatch,
@@ -16,12 +17,14 @@ import ExpRenderer from '../../src/scheme/ast-components/ExpRenderer.vue'
 // dispatches to (mirrors what src/app/web/renderers.ts wires up in the IDE).
 import '../../src/scheme/renderers/vue.js'
 
-// Regression for #318: in the interactive (web) trace, a `let` rendered via the
-// shared HljsBindingForm component dropped the parentheses around its binding
-// list and doubled the space after `let`, e.g. `(let  [next (- 5 1)] body)`
-// instead of the correct `(let ([next (- 5 1)]) body)`. The canonical text form
-// (expToString) was always correct; only the Vue rendering diverged. Assert the
-// Vue rendering's text matches expToString for the binding forms.
+// Regression for #318 and the follow-on renderer unification: the web trace and
+// the canonical text form (expToString) must render every surface form
+// identically. Both now derive from a single Layout (src/scheme/ast.ts) -- text
+// via layoutToString, web via LayoutRenderer -- so parity holds by construction
+// rather than by hand-syncing two components. (#318 originally: a `let` rendered
+// via the old HljsBindingForm dropped its binding-list parens and doubled the
+// space after `let`, e.g. `(let  [next (- 5 1)] body)`.) These tests pin that
+// the web rendering's text equals expToString for the forms with sub-structure.
 
 /** The exact text the web renderer paints for expression `e`. */
 function renderedText(e: Exp): string {
@@ -65,5 +68,49 @@ describe('binding forms render (web) identically to their text form (#318)', () 
       { test: mkLit(true), body: mkLit(1) },
     ])
     expect(renderedText(e)).toBe(expToString(e))
+  })
+
+  test('lambda parenthesizes its parameter list (web matches text)', () => {
+    // The old web renderer dropped the param parens, e.g. `(lambda x y ...)`.
+    const e = mkLam([mkId('x'), mkId('y')], mkApp(mkId('+'), [mkId('x'), mkId('y')]))
+    expect(renderedText(e)).toBe(expToString(e))
+    expect(renderedText(e)).toBe('(lambda (x y) (+ x y))')
+  })
+
+  test('null renders as null, not () (web matches text)', () => {
+    // A null (empty-list) value substituted into a trace renders as `null`, the
+    // same token the text renderer uses -- not `()`, which the web value
+    // renderer used to emit.
+    const e = mkLit(null)
+    expect(renderedText(e)).toBe(expToString(e))
+    expect(renderedText(e)).toBe('null')
+  })
+})
+
+// The web renderer tags each token's syntactic role with the scamper-hl-*
+// classes the highlight stylesheet themes, straight from the AST -- no hljs
+// tokenizer run. Highlighting must never change the rendered text, only classes.
+describe('syntax highlighting is emitted directly on the AST HTML', () => {
+  function mountExp(e: Exp): HTMLElement {
+    return mount(ExpRenderer, { props: { value: e } }).element as HTMLElement
+  }
+
+  test('special-form keywords get the keyword class', () => {
+    const e = mkLet([{ pat: mkId('x'), value: mkLit(1) }], mkId('x'))
+    const el = mountExp(e)
+    expect(el.querySelector('.scamper-hl-keyword')?.textContent).toBe('let')
+    // Classes only -- the text is untouched.
+    expect(el.textContent).toBe(expToString(e))
+  })
+
+  test('numeric literals get the number class', () => {
+    expect(
+      mountExp(mkLit(42)).querySelector('.scamper-hl-number')?.textContent,
+    ).toBe('42')
+  })
+
+  test('plain identifiers are not highlighted', () => {
+    const el = mountExp(mkApp(mkId('f'), [mkId('x')]))
+    expect(el.querySelector('.scamper-hl-keyword')).toBeNull()
   })
 })
