@@ -26,7 +26,7 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   return minorStep
 }
 
-export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
+export const ClsHandler: OpHandler<'cls'> = (op, currFrame, fiber) => {
   currFrame.values.push(
     mkClosure(
       op.params,
@@ -40,6 +40,9 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
       },
       op.name,
       op.restParam,
+      // Closures born while a library/import fiber runs are stepped over in
+      // traces (see Fiber.stepOverClosures / Closure.stepOver).
+      fiber.stepOverClosures,
     ),
   )
   return minorStep
@@ -127,6 +130,7 @@ export function applyFn(
       fiber.topLevelEnv.withLocalScopes([...fn.locals, paramScope]),
       fn.code,
       range,
+      fn.stepOver ?? false,
     )
     if (currFrame.canTailCall()) {
       // tail-call optimize by replacing the current frame (any leftover

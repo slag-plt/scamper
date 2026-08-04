@@ -34,6 +34,8 @@ export const prelude_apply: L.Value = L.mkClosure(
     throw new L.ICE('prelude_apply', 'apply closure.call must never be invoked')
   },
   'apply',
+  undefined,
+  true, // a library procedure: traces step over it (see Closure.stepOver)
 )
 
 // `with-handler` installs an exception handler around a thunk. Like `apply`, it
@@ -59,6 +61,8 @@ export const prelude_withHandler: L.Value = L.mkClosure(
     throw new L.ICE('prelude_withHandler', 'closure.call must never be invoked')
   },
   'with-handler',
+  undefined,
+  true, // a library procedure: traces step over it (see Closure.stepOver)
 )
 
 // Equivalence predicates (6.1)

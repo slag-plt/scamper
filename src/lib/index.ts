@@ -35,6 +35,9 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   const fiber = new Fiber(
     prog,
     L.Env.empty.extendWithTopLevel(['js-var', jsVar]),
+    // Mark every closure this library defines as step-over, so a reduction
+    // trace treats library calls atomically (see Closure.stepOver).
+    true,
   )
   while (!fiber.isDone()) {
     fiber.step()

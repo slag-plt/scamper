@@ -45,8 +45,9 @@ export const mkClosure = (
   env: L.Scope[],
   call: (...args: any) => any,
   name?: L.Id,
-  restParam?: string
-): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam })
+  restParam?: string,
+  stepOver = false
+): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, stepOver })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: 'char',
   value: v,
