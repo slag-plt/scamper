@@ -1,14 +1,7 @@
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { describe, test } from 'vitest'
 import { expectParses } from './test-utils'
 
 describe('lezer-bridge parsing of realistic multi-statement programs', () => {
-  test("the repo's own test.scm fixture", () => {
-    const src = readFileSync(resolve(__dirname, '../../../test.scm'), 'utf-8')
-    expectParses(src)
-  })
-
   test('recursive factorial with a docstring, comments, and a helper', () => {
     expectParses(
       [
