@@ -83,7 +83,6 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
     case 'begin':
     case 'and':
     case 'or':
-    case 'section':
       return node.exps
     case 'if':
       return [node.guard, node.ifB, node.elseB]

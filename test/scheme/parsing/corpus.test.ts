@@ -43,7 +43,7 @@ describe('lezer-bridge parsing of realistic multi-statement programs', () => {
     )
   })
 
-  test('nested let/let*/cond/and/or/section combined', () => {
+  test('nested let/let*/cond/and/or combined', () => {
     expectParses(
       [
         '(define classify',
@@ -54,7 +54,6 @@ describe('lezer-bridge parsing of realistic multi-statement programs', () => {
         '            [even? "even"]',
         '            [#t "odd"]))))',
         '(display (map classify (list -4 -3 0 1 2)))',
-        '(display (map (section classify _) (list 5 6 7)))',
       ].join('\n'),
     )
   })

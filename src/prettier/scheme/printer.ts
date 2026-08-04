@@ -202,13 +202,6 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
       return group(['(cond', indent([line, join(line, branchDocs)]), ')'])
     }
 
-    case 'section':
-      return group([
-        '(section',
-        indent([line, join(line, path.map(print, 'exps'))]),
-        ')',
-      ])
-
     ///// Patterns //////////////////////////////////////////////////////////////
 
     case 'pwild':

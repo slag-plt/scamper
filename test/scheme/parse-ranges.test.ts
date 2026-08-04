@@ -329,18 +329,6 @@ describe('cond', () => {
   })
 })
 
-describe('section', () => {
-  test('operator and hole ranges', () => {
-    const src = '(section + _ 1)'
-    const sec = asExp(parseExp(src), 'section')
-    assertSpan(sec.range, src, '(section + _ 1)')
-    expect(sec.exps.length).toBe(3)
-    assertSpan(asExp(sec.exps[0], 'id').range, src, '+')
-    assertSpan(asExp(sec.exps[1], 'id').range, src, '_')
-    assertSpan(sec.exps[2].range, src, '1')
-  })
-})
-
 ///// Statements ///////////////////////////////////////////////////////////////
 
 describe('statements', () => {

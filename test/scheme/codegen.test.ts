@@ -641,29 +641,6 @@ t1
       L.mkList('a', 'b', 'c'),
     ])
   })
-
-  test('section desugars to a lambda and applies (simple holes)', async () => {
-    await checkMachineOutput(`
-((section + _ 1) 1)
-((section + 1 _) 10)
-((section - 10 _) 3)
-((section * _ _) 5 6)
-`, [2, 11, 7, 30])
-  })
-
-  // Still blocked: `map` here is a JS library function receiving a Scamper
-  // closure `(section string-upcase _)`; invoking that closure from JS routes
-  // through L.callScamperFn, which is permanently disabled ("Javascript library
-  // functions can no longer call Scamper functions"). Re-enable once the LPM
-  // unification lets library higher-order functions drive Scamper closures.
-  test.skip('section as an argument to a JS higher-order function (map)', async () => {
-    expect(
-      await runProgram(`
-(|> (list "a" "b" "c" "d" "e")
-    (section map (section string-upcase _) _))
-`),
-    ).toEqual(['(list "A" "B" "C" "D" "E")'])
-  })
 })
 
 describe('Rest parameters', () => {
@@ -908,11 +885,12 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     })
 
     // apply is now an ordinary first-class procedure (not a special form): it
-    // can be tested with procedure?, sectioned, and passed to higher-order fns.
-    test('apply is a first-class value (procedure?, section, passed to a HOF)', async () => {
+    // can be tested with procedure?, bound to a variable, and passed to
+    // higher-order fns.
+    test('apply is a first-class value (procedure?, bound, passed to a HOF)', async () => {
       await checkMachineOutput(`
         (procedure? apply)
-        ((section apply _ _) + (list 1 2))
+        (let ([a apply]) (a + (list 1 2)))
         (map (lambda (p) (apply + p)) (list (list 1 2) (list 3 4)))
       `, [true, 3, L.mkList(3, 7)])
     })

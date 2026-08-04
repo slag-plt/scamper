@@ -1,97 +1,5 @@
 import * as A from './ast.js'
 
-let holeSymCounter = 0
-
-function genHoleSym(): string {
-  return `_${holeSymCounter++}`
-}
-
-function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
-  switch (e.tag) {
-    case 'id': {
-      if (e.name === '_') {
-        const name = genHoleSym()
-        bvars.push(A.mkId(name, e.range))
-        return A.mkId(name, e.range)
-      } else {
-        return e
-      }
-    }
-    case 'lit':
-      return e
-    case 'app':
-      return A.mkApp(
-        collectSectionHoles(bvars, e.head),
-        e.args.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-        e.provenance,
-      )
-    case 'lam':
-      return A.mkLam(
-        e.params,
-        collectSectionHoles(bvars, e.body),
-        e.range,
-        e.restParam,
-      )
-    case 'let':
-      return A.mkLet(
-        e.bindings.map((b) => ({
-          pat: b.pat,
-          value: collectSectionHoles(bvars, b.value),
-        })),
-        collectSectionHoles(bvars, e.body),
-        e.range,
-        e.provenance,
-      )
-    case 'begin':
-      return A.mkBegin(
-        e.exps.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-      )
-    case 'if':
-      return A.mkIf(
-        collectSectionHoles(bvars, e.guard),
-        collectSectionHoles(bvars, e.ifB),
-        collectSectionHoles(bvars, e.elseB),
-        e.range,
-        e.provenance,
-      )
-    case 'match':
-      return A.mkMatch(
-        collectSectionHoles(bvars, e.scrutinee),
-        e.branches.map((b) => ({
-          pat: b.pat,
-          body: collectSectionHoles(bvars, b.body),
-        })),
-        e.range,
-      )
-    case 'quote':
-      return e
-    case 'and':
-      return A.mkAnd(
-        e.exps.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-      )
-    case 'or':
-      return A.mkOr(
-        e.exps.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-      )
-    case 'cond':
-      return A.mkCond(
-        e.branches.map((b) => ({
-          test: collectSectionHoles(bvars, b.test),
-          body: collectSectionHoles(bvars, b.body),
-        })),
-        e.range,
-      )
-    case 'section': {
-      // N.B., we do not collect holes in embedded sections
-      return A.mkSection(e.exps, e.range)
-    }
-  }
-}
-
 export function expandExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
     // Core forms
@@ -199,17 +107,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range, 'cond')
       }
       return ret
-    }
-    case 'section': {
-      // (section e1 ... ek)
-      // -->
-      // (lambda (x1 ... xm) (e1' ... ek'))
-      //   where occurrences of _ are replaced with fresh x1 ... xm
-      const bvars: A.Identifier[] = []
-      const exps = e.exps.map((arg) =>
-        collectSectionHoles(bvars, expandExpr(arg)),
-      )
-      return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
     }
   }
 }

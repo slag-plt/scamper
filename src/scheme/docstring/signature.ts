@@ -27,7 +27,7 @@ function validateIdentifierToken(token: string, range: Range): void {
     throw mkDocError('Expected an identifier', range)
   }
   if (token.startsWith('_')) {
-    throw mkDocError('Identifiers cannot begin with "_" unless inside of "section" or patterns',
+    throw mkDocError('Identifiers cannot begin with "_" unless inside of patterns',
       range,
     )
   }

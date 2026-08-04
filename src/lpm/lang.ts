@@ -390,8 +390,7 @@ export type List = null | Cons
 // Records that a node was inserted by expanding a derived form (expansion.ts):
 // codegen copies it from the AST onto the op, raise copies it back, and sugaring
 // uses it to recover the derived form exactly (no heuristics). Undefined on
-// nodes that came straight from the parser. `section` is not tracked (it is not
-// recovered).
+// nodes that came straight from the parser.
 export type Provenance = 'and' | 'or' | 'begin' | 'cond'
 
 export interface Lit {

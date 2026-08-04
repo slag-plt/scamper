@@ -120,7 +120,6 @@ const formDescriptions: Record<string, string> = {
   And: 'and expression',
   Or: 'or expression',
   Begin: 'begin expression (at least one sub-expression)',
-  Section: 'section expression (at least one sub-expression)',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -431,12 +430,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
 
     case 'Begin':
       return A.mkBegin(
-        cs.slice(1).map((c) => expFromNode(ctx, c)),
-        range,
-      )
-
-    case 'Section':
-      return A.mkSection(
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )

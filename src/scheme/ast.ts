@@ -61,7 +61,6 @@ export interface Comment {
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
-//     | (section e1 ... ek)
 //
 // s ::= e
 //     | (import m)
@@ -167,10 +166,6 @@ export interface Cond extends Tagged, Node {
   tag: 'cond'
   branches: { test: Exp; body: Exp }[]
 }
-export interface Section extends Tagged, Node {
-  tag: 'section'
-  exps: Exp[]
-}
 export type Exp =
   | Lit
   | Identifier
@@ -184,7 +179,6 @@ export type Exp =
   | And
   | Or
   | Cond
-  | Section
 
 ///// Statements /////
 
@@ -364,10 +358,6 @@ export const mkCond = (
   branches: { test: Exp; body: Exp }[],
   range: L.Range = L.Range.none,
 ): Cond => ({ tag: 'cond', branches, range })
-export const mkSection = (
-  exps: Exp[],
-  range: L.Range = L.Range.none,
-): Section => ({ tag: 'section', exps, range })
 
 // Statements (stmt)
 export const mkImport = (
@@ -422,7 +412,6 @@ export function isExp(v: unknown): v is Exp {
       'and',
       'or',
       'cond',
-      'section',
     ].includes(v.tag)
   )
 }
@@ -551,8 +540,6 @@ export function expToLayout(e: Exp): Layout {
           brackets([expToLayout(test), expToLayout(body)]),
         ),
       ])
-    case 'section':
-      return parens([kw('section'), ...e.exps.map(expToLayout)])
   }
 }
 
@@ -692,11 +679,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
         expEquals(test, e2.branches[i].test),
       ) &&
       e1.branches.every(({ body }, i) => expEquals(body, e2.branches[i].body))
-    )
-  } else if (e1.tag === 'section' && e2.tag === 'section') {
-    return (
-      e1.exps.length === e2.exps.length &&
-      e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
   } else {
     return false

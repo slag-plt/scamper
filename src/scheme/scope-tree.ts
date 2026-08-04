@@ -105,9 +105,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'begin':
     case 'and':
     case 'or':
-    case 'section':
-      // N.B., a section's `_` holes only become bound parameters after
-      // expansion, so at this (surface) level a section binds nothing.
       return exp.exps.flatMap(scopesInExp)
     case 'cond':
       return exp.branches.flatMap((b) => [

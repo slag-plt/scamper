@@ -23,7 +23,6 @@ const FORM_LABELS: Record<string, string> = {
   And: 'and',
   Or: 'or',
   Begin: 'begin',
-  Section: 'section',
   Quote: 'quote',
   Vector: 'vector',
   Application: 'application',

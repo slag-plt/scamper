@@ -3,7 +3,6 @@ import * as A from './ast.js'
 // Sugaring is the dual of expansion (expansion.ts): a recursive AST -> AST walk
 // (sugarExpr / sugarStmt / sugarProgram) that recovers the derived forms `and`,
 // `or`, `begin`, and `cond` from the core `if`/`let` shapes they expand to.
-// `section` is intentionally not recovered.
 //
 // Recovery is *exact*, not heuristic. Expansion tags every node it inserts with
 // a `provenance` (see L.Provenance), and that tag is threaded through the LPM op
@@ -153,8 +152,6 @@ export function sugarExpr(e: A.Exp): A.Exp {
         })),
         e.range,
       )
-    case 'section':
-      return A.mkSection(e.exps.map(sugarExpr), e.range)
   }
 }
 
