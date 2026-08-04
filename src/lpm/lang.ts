@@ -284,6 +284,13 @@ export interface Closure extends TaggedObject {
   // Machine can be referenced by call to perform evaluation.
   call: (...args: Value[]) => Value
   name?: Id
+  // When true, a reduction trace steps *over* (not into) a call to this
+  // closure: its internal reductions stay hidden and the call reduces to its
+  // value atomically. Set for closures defined in imported modules -- the
+  // builtin libraries (incl. the prelude) and user file imports -- so a trace
+  // steps through the user's own module/local definitions but not library
+  // code. See src/scheme/trace.ts.
+  stepOver?: boolean
 }
 
 /** A char is a tagged object that captures a single character (a one-character string). */

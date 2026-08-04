@@ -18,13 +18,25 @@ export class Frame {
   // synthetic per-statement frame beginProcessingBlk creates, which has no
   // caller of its own.
   callRange: Range
+  // True when this frame runs a closure a trace steps *over* (a library/import
+  // function -- see Closure.stepOver). Propagated from the applied closure so
+  // the tracer can keep the whole call atomic. False for the synthetic
+  // per-statement frame and for the user's own closures.
+  stepOver: boolean
 
-  constructor(name: string, env: L.Env, blk: L.Blk, callRange: Range = Range.none) {
+  constructor(
+    name: string,
+    env: L.Env,
+    blk: L.Blk,
+    callRange: Range = Range.none,
+    stepOver = false,
+  ) {
     this.name = name
     this.env = env
     this.values = []
     this.ops = blk.toReversed()
     this.callRange = callRange
+    this.stepOver = stepOver
   }
 
   isFinished(): boolean {

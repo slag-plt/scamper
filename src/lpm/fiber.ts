@@ -89,10 +89,16 @@ export class Fiber {
   private currStmtIdx = 0
   private _isProcessingBlk = false
   private maxCallStackDepth = 10_000
+  // When true, every closure created while this fiber runs is marked
+  // `stepOver` (see Closure.stepOver). Set for the fibers that load an
+  // imported module -- the builtin libraries and user file imports -- so a
+  // reduction trace steps over their functions but into the user's own.
+  readonly stepOverClosures: boolean
 
-  constructor(prog: Prog, topLevelEnv: Env = Env.empty) {
+  constructor(prog: Prog, topLevelEnv: Env = Env.empty, stepOverClosures = false) {
     this.prog = prog
     this.topLevelEnv = topLevelEnv
+    this.stepOverClosures = stepOverClosures
   }
 
   /**

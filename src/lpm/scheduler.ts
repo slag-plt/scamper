@@ -213,7 +213,9 @@ export class Scheduler {
                 // failed at this step...
                 return
               }
-              const moduleFiber = new Fiber(prog)
+              // Closures defined in an imported file are stepped over in
+              // traces, like the builtin libraries (see Closure.stepOver).
+              const moduleFiber = new Fiber(prog, undefined, true)
               const id = crypto.randomUUID()
               this.schedule({
                 id,

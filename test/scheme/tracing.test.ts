@@ -194,6 +194,8 @@ describe('reduction traces show derived forms sugared, not desugared', () => {
 })
 
 describe('stepwise reduction traces of substantial programs', () => {
+  // A recursive call to a user-defined function is stepped *into*, so the
+  // trace unfolds every nested call rather than skipping over it (#319).
   test('factorial unfolds the recursion and multiplies back up', async () => {
     const src =
       '(define fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))\n(fact 3)'
@@ -203,6 +205,18 @@ describe('stepwise reduction traces of substantial programs', () => {
       '(if #f 1 (* 3 (fact (- 3 1))))',
       '(* 3 (fact (- 3 1)))',
       '(* 3 (fact 2))',
+      '(* 3 (if (= 2 0) 1 (* 2 (fact (- 2 1)))))',
+      '(* 3 (if #f 1 (* 2 (fact (- 2 1)))))',
+      '(* 3 (* 2 (fact (- 2 1))))',
+      '(* 3 (* 2 (fact 1)))',
+      '(* 3 (* 2 (if (= 1 0) 1 (* 1 (fact (- 1 1))))))',
+      '(* 3 (* 2 (if #f 1 (* 1 (fact (- 1 1))))))',
+      '(* 3 (* 2 (* 1 (fact (- 1 1)))))',
+      '(* 3 (* 2 (* 1 (fact 0))))',
+      '(* 3 (* 2 (* 1 (if (= 0 0) 1 (* 0 (fact (- 0 1)))))))',
+      '(* 3 (* 2 (* 1 (if #t 1 (* 0 (fact (- 0 1)))))))',
+      '(* 3 (* 2 (* 1 1)))',
+      '(* 3 (* 2 1))',
       '(* 3 2)',
       '6',
     ])
@@ -217,6 +231,13 @@ describe('stepwise reduction traces of substantial programs', () => {
       '(if #f 0 (+ 1 (len (cdr (list 7 8)))))',
       '(+ 1 (len (cdr (list 7 8))))',
       '(+ 1 (len (list 8)))',
+      '(+ 1 (if (null? (list 8)) 0 (+ 1 (len (cdr (list 8))))))',
+      '(+ 1 (if #f 0 (+ 1 (len (cdr (list 8))))))',
+      '(+ 1 (+ 1 (len (cdr (list 8)))))',
+      '(+ 1 (+ 1 (len null)))',
+      '(+ 1 (+ 1 (if (null? null) 0 (+ 1 (len (cdr null))))))',
+      '(+ 1 (+ 1 (if #t 0 (+ 1 (len (cdr null))))))',
+      '(+ 1 (+ 1 0))',
       '(+ 1 1)',
       '2',
     ])
