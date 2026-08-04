@@ -66,13 +66,18 @@ export function* traceReductions(fiber: Fiber): Generator<string> {
   const first = stepper.render(fiber)
   if (first !== undefined) yield expToString(first)
   while (!fiber.isDone()) {
-    if (fiber.step().tag === 'trace') {
+    const result = fiber.step()
+    if (result.tag === 'display') {
+      // A completed statement: render its value as the final reduction step, at
+      // *each* statement boundary (not just once at the end), so multi-statement
+      // programs show every value. Mirrors the scheduler's display branch.
+      if (fiber.lastResult !== null) {
+        const e = stepper.final(fiber.lastResult)
+        if (e !== undefined) yield expToString(e)
+      }
+    } else if (result.tag === 'trace') {
       const e = stepper.render(fiber)
       if (e !== undefined) yield expToString(e)
     }
-  }
-  if (fiber.lastResult !== null) {
-    const e = stepper.final(fiber.lastResult)
-    if (e !== undefined) yield expToString(e)
   }
 }

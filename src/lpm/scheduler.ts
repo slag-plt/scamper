@@ -48,6 +48,10 @@ interface SteppingGate {
   // The fiber's statement index as of the last step, so 'statement' mode can
   // detect when a statement completes (the index advances).
   lastStmtIdx: number
+  // True only while the task is parked at a reduction (not in the run queue and
+  // not mid-block-on). Guards wakeGate so a running or async-suspended task is
+  // never re-scheduled onto the queue twice.
+  parked: boolean
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,6 +86,7 @@ export class Scheduler {
         mode: 'step',
         resolve: () => {},
         lastStmtIdx: task.fiber.stmtIndex,
+        parked: false,
       })
     }
     this.tasks.push(task)
@@ -237,6 +242,9 @@ export class Scheduler {
             },
           )
       }
+      // This step is fully handled asynchronously; do not fall through to the
+      // display-task branch (which would treat it as a reduction and park).
+      return
     }
 
     if (stepResult.tag === 'block-on') {
@@ -274,6 +282,10 @@ export class Scheduler {
           }
         },
       )
+      // Handled asynchronously; don't fall through to the display-task branch
+      // (which would re-process this suspended fiber as a reduction and re-park,
+      // double-removing it from the queue).
+      return
     }
 
     if (!isDisplayTask(task)) {
@@ -344,6 +356,7 @@ export class Scheduler {
     this.removeTaskFromQueue(this.currTaskIdx)
     const gate = this.steppingGates.get(task.id)
     if (gate) {
+      gate.parked = true
       const resolve = gate.resolve
       gate.resolve = () => {}
       resolve()
@@ -351,15 +364,13 @@ export class Scheduler {
   }
 
   /** Re-schedules a parked task (reviving the idle loop, exactly as block-on's
-   * `this.schedule(task)` does). No-op if it is already running or finished. */
+   * `this.schedule(task)` does). No-op unless the task is genuinely parked. */
   private wakeGate(id: SchedulerId): void {
     const gate = this.steppingGates.get(id)
-    if (!gate) {
-      return
-    }
-    if (this.tasks.some((t) => t.id === id)) {
-      // Already in the queue (e.g. mid-block-on resume); a task lives in exactly
-      // one place, so don't double-schedule.
+    // Only wake a *parked* task. A running task, or one suspended mid-block-on
+    // (removed from the queue but not parked), must not be re-scheduled -- doing
+    // so would run the fiber twice / double-queue it.
+    if (!gate || !gate.parked) {
       return
     }
     if (gate.task.fiber.isDone()) {
@@ -369,6 +380,7 @@ export class Scheduler {
       resolve()
       return
     }
+    gate.parked = false
     this.schedule(gate.task)
   }
 
@@ -392,6 +404,11 @@ export class Scheduler {
     if (!gate) {
       return Promise.resolve()
     }
+    // Settle any previously-pending resume awaiter before taking over its slot,
+    // so its promise can't be lost (which would hang it forever).
+    const prev = gate.resolve
+    gate.resolve = () => {}
+    prev()
     return new Promise<void>((resolve) => {
       gate.mode = mode
       gate.resolve = resolve

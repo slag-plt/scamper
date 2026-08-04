@@ -228,4 +228,15 @@ describe('stepwise reduction traces of substantial programs', () => {
     expect(trace[0]).toBe(src)
     expect(trace[trace.length - 1]).toBe((await runProgram(src))[0])
   })
+
+  test('every statement value is shown, not just the last (regression)', async () => {
+    // Each statement's value is emitted at its own boundary; earlier a single
+    // post-loop emit dropped all but the final program value.
+    expect(await reductionTrace('(+ 1 2)\n(* 3 4)')).toEqual([
+      '(+ 1 2)',
+      '3',
+      '(* 3 4)',
+      '12',
+    ])
+  })
 })

@@ -5,8 +5,11 @@ import { Scheduler } from '../../src/lpm/scheduler.js'
 import type { StepMode } from '../../src/lpm/scheduler.js'
 import { makeTraceStepper } from '../../src/scheme/trace.js'
 import { expToString, mkLit } from '../../src/scheme/ast.js'
+import * as U from '../../src/lpm/util.js'
 import { isStructKind } from '../../src/lpm/util.js'
+import { SuspendSignal } from '../../src/lpm/index.js'
 import type { Value } from '../../src/lpm/lang.js'
+import { makeTestFiber } from '../util.js'
 
 // End-to-end tests for the scheduler's step mode: a run pauses ("parks") after
 // each user-visible reduction and advances only on step()/resume(). Drives the
@@ -143,5 +146,77 @@ describe('abort and cancel', () => {
     // the gate is gone: a further resume is a no-op and emits nothing more
     await run.resume('step')
     expect(run.steps.filter((s) => !s.startsWith('ERR:'))).toEqual(['(fact 3)'])
+  })
+})
+
+describe('robustness regressions', () => {
+  test('overlapping resume() calls never leave a promise unresolved', async () => {
+    // Two resumes in flight: the earlier one must be settled, not lost (which
+    // would hang its promise forever). Promise.all would time out on a hang.
+    const run = await startStepping(FACTORIAL)
+    const p1 = run.resume('statement')
+    const p2 = run.resume('all')
+    await Promise.all([p1, p2])
+    expect(run.isFinished()).toBe(true)
+    expect(run.steps).toEqual(FACTORIAL_TRACE)
+  })
+
+  test('a stray step() while suspended in block-on does not double-run the fiber', async () => {
+    // (+ 1 (block)) where (block) suspends via a controllable async action. The
+    // step buttons stay enabled during the async wait, so a click can land while
+    // the fiber is out of the run queue but not parked -- it must be a no-op,
+    // not a re-schedule that double-runs the fiber.
+    const sched = new Scheduler()
+    const fiber = makeTestFiber([
+      U.mkDisp([
+        U.mkVar('+'),
+        U.mkLit(1),
+        U.mkVar('block'),
+        U.mkAp(0),
+        U.mkAp(2),
+      ]),
+    ])
+    let resolveAction!: (v: unknown) => void
+    const actionPromise = new Promise<unknown>((r) => {
+      resolveAction = r
+    })
+    fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+      'block',
+      (() => {
+        throw new SuspendSignal(() => actionPromise)
+      }) as unknown as Value,
+    ])
+    const steps: string[] = []
+    const errs: string[] = []
+    const ch = {
+      send: (v: Value) => steps.push(render(v)),
+      report: (e: { message: string }) => errs.push(e.message),
+      pushLevel: () => {},
+      popLevel: () => {},
+    }
+    let finished = false
+    sched.schedule({
+      id: 'r',
+      fiber,
+      out: ch,
+      err: ch,
+      isTracing: true,
+      stepping: true,
+      stepper: makeTraceStepper(),
+      onComplete: () => {
+        finished = true
+      },
+    })
+    const done = sched.resume('r', 'all') // runs to the block-on and suspends there
+    await new Promise((r) => setTimeout(r, 50))
+    // suspended in block-on: these must be no-ops, not re-schedules
+    sched.step('r')
+    sched.step('r')
+    resolveAction(5) // (+ 1 5)
+    await done
+    expect(errs).toEqual([])
+    expect(finished).toBe(true)
+    // exactly one correct result -- a double-run would corrupt the frame / value
+    expect(steps.filter((s) => s === '6')).toHaveLength(1)
   })
 })
