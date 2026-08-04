@@ -24,6 +24,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.head),
         e.args.map((a) => collectSectionHoles(bvars, a)),
         e.range,
+        e.provenance,
       )
     case 'lam':
       return A.mkLam(
@@ -35,11 +36,12 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
     case 'let':
       return A.mkLet(
         e.bindings.map((b) => ({
-          id: b.id,
+          pat: b.pat,
           value: collectSectionHoles(bvars, b.value),
         })),
         collectSectionHoles(bvars, e.body),
         e.range,
+        e.provenance,
       )
     case 'begin':
       return A.mkBegin(
@@ -52,6 +54,7 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
         collectSectionHoles(bvars, e.ifB),
         collectSectionHoles(bvars, e.elseB),
         e.range,
+        e.provenance,
       )
     case 'match':
       return A.mkMatch(
@@ -64,32 +67,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       )
     case 'quote':
       return e
-    case 'jsvar':
-      return e
-    case 'error':
-      return A.mkError(collectSectionHoles(bvars, e.exp), e.range)
-    case 'apply':
-      return A.mkApply(
-        collectSectionHoles(bvars, e.fn),
-        collectSectionHoles(bvars, e.args),
-        e.range,
-      )
-    case 'with-handler':
-      return A.mkWithHandler(
-        collectSectionHoles(bvars, e.handler),
-        collectSectionHoles(bvars, e.fn),
-        e.args.map((a) => collectSectionHoles(bvars, a)),
-        e.range,
-      )
-    case 'let*':
-      return A.mkLetS(
-        e.bindings.map((b) => ({
-          id: b.id,
-          value: collectSectionHoles(bvars, b.value),
-        })),
-        collectSectionHoles(bvars, e.body),
-        e.range,
-      )
     case 'and':
       return A.mkAnd(
         e.exps.map((a) => collectSectionHoles(bvars, a)),
@@ -112,9 +89,6 @@ function collectSectionHoles(bvars: A.Identifier[], e: A.Exp): A.Exp {
       // N.B., we do not collect holes in embedded sections
       return A.mkSection(e.exps, e.range)
     }
-    case 'report': {
-      return A.mkReport(collectSectionHoles(bvars, e.exp), e.range)
-    }
   }
 }
 
@@ -131,12 +105,10 @@ export function expandExpr(e: A.Exp): A.Exp {
       return A.mkLam(e.params, expandExpr(e.body), e.range, e.restParam)
     case 'let':
       return A.mkLet(
-        e.bindings.map((b) => ({ id: b.id, value: expandExpr(b.value) })),
+        e.bindings.map((b) => ({ pat: b.pat, value: expandExpr(b.value) })),
         expandExpr(e.body),
         e.range,
       )
-    case 'begin':
-      return A.mkBegin(e.exps.map(expandExpr), e.range)
     case 'if':
       return A.mkIf(
         expandExpr(e.guard),
@@ -152,36 +124,25 @@ export function expandExpr(e: A.Exp): A.Exp {
       )
     case 'quote':
       return e
-    case 'jsvar':
-      return e
-    case 'error':
-      return A.mkError(expandExpr(e.exp), e.range)
-    case 'apply':
-      return A.mkApply(expandExpr(e.fn), expandExpr(e.args), e.range)
-    case 'with-handler':
-      return A.mkWithHandler(
-        expandExpr(e.handler),
-        expandExpr(e.fn),
-        e.args.map(expandExpr),
-        e.range,
-      )
-
     // Derived forms
 
-    case 'let*': {
-      // (let* [x1 e1] ... [xk ek] e)
+    case 'begin': {
+      // (begin e1 ... ek)
       // -->
-      // (let [x1 e1]
+      // (let ([_ e1])
       //   ...
-      //     (let [xk ek] e))
-      const bindings = e.bindings.map((b) => ({
-        id: b.id,
-        value: expandExpr(b.value),
-      }))
-      const body = expandExpr(e.body)
-      let ret = body
-      for (let i = bindings.length - 1; i >= 0; i--) {
-        ret = A.mkLet([bindings[i]], ret, e.range)
+      //     (let ([_ e(k-1)]) ek))
+      // Each non-final expression binds to a fresh wildcard, so it runs for
+      // effect and its value is discarded; ek is the result.
+      const exps = e.exps.map(expandExpr)
+      let ret = exps[exps.length - 1]
+      for (let i = exps.length - 2; i >= 0; i--) {
+        ret = A.mkLet(
+          [{ pat: A.mkPWild(e.range), value: exps[i] }],
+          ret,
+          e.range,
+          'begin',
+        )
       }
       return ret
     }
@@ -196,9 +157,9 @@ export function expandExpr(e: A.Exp): A.Exp {
       //   ...
       //   #f)
       const exps = e.exps.map(expandExpr)
-      let ret: A.Exp = A.mkLit(true)
+      let ret: A.Exp = A.mkLit(true, e.range, 'and')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], ret, A.mkLit(false), e.range)
+        ret = A.mkIf(exps[i], ret, A.mkLit(false, e.range, 'and'), e.range, 'and')
       }
       return ret
     }
@@ -212,9 +173,9 @@ export function expandExpr(e: A.Exp): A.Exp {
       //       #t
       //       #f))
       const exps = e.exps.map(expandExpr)
-      let ret: A.Exp = A.mkLit(false)
+      let ret: A.Exp = A.mkLit(false, e.range, 'or')
       for (let i = exps.length - 1; i >= 0; i--) {
-        ret = A.mkIf(exps[i], A.mkLit(true), ret, e.range)
+        ret = A.mkIf(exps[i], A.mkLit(true, e.range, 'or'), ret, e.range, 'or')
       }
       return ret
     }
@@ -228,12 +189,14 @@ export function expandExpr(e: A.Exp): A.Exp {
         test: expandExpr(c.test),
         body: expandExpr(c.body),
       }))
-      let ret: A.Exp = A.mkError(
-        A.mkLit('No matching clause in cond', e.range),
+      let ret: A.Exp = A.mkApp(
+        A.mkId('error', e.range),
+        [A.mkLit('No matching clause in cond', e.range)],
         e.range,
+        'cond',
       )
       for (let i = branches.length - 1; i >= 0; i--) {
-        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range)
+        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range, 'cond')
       }
       return ret
     }
@@ -247,9 +210,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         collectSectionHoles(bvars, expandExpr(arg)),
       )
       return A.mkLam(bvars, A.mkApp(exps[0], exps.slice(1)), e.range)
-    }
-    case 'report': {
-      return A.mkReport(expandExpr(e.exp), e.range)
     }
   }
 }

@@ -75,7 +75,9 @@ const session = provideScamperSession(resultsRef, {
 const { isTracing, queries, expandedQueryId } = session
 
 function abortTraceStep() {
-  // TODO: cancel in-flight trace step burst when step handlers are implemented
+  // Stop an in-flight statement/all burst, re-pausing the session (vs. stopRun,
+  // which cancels the whole run).
+  session.abortStep()
 }
 
 // ---------- file drawer ----------
@@ -227,15 +229,15 @@ function toggleSidebar() {
 // ---------- step handlers ----------
 
 function handleStepOnce() {
-  // TODO: implement
+  session.step()
 }
 
 async function handleStepStmt() {
-  // TODO: implement
+  await session.stepStmt()
 }
 
 async function handleStepAll() {
-  // TODO: implement
+  await session.stepAll()
 }
 
 // ---------- sidebar event handlers ----------

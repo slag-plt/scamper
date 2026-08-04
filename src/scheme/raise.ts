@@ -40,28 +40,20 @@ export function raiseFrame(
     const op = ops[i]
     switch (op.tag) {
       case 'lit': {
-        values.push(A.mkLit(op.value))
+        values.push(A.mkLit(op.value, op.range, op.provenance))
         break
       }
 
       case 'var': {
-        if (env.has(op.name)) {
-          const v = env.get(op.name)!
-          if (LPM.isFunction(v)) {
-            values.push(A.mkId(op.name))
-          } else {
-            values.push(A.mkLit(env.get(op.name)))
-          }
+        const r = env.lookup(op.name)
+        if (r.found && r.slot !== LPM.HOLE && !LPM.isFunction(r.slot)) {
+          // A bound non-function value: substitute it (shows the value in
+          // traces, e.g. a let binder that has already been filled).
+          values.push(A.mkLit(r.slot))
         } else {
+          // Unbound, a still-unassigned hole, or a function: show the name.
           values.push(A.mkId(op.name))
         }
-        break
-      }
-
-      case 'ctor': {
-        const arity = op.fields.length
-        const args = arity === 0 ? [] : values.splice(-arity)
-        values.push(A.mkApp(A.mkId(op.name), args))
         break
       }
 
@@ -91,40 +83,86 @@ export function raiseFrame(
         const vs = values.splice(-(op.numArgs + 1))
         const head = vs[0]
         const args = op.numArgs === 0 ? [] : vs.slice(1)
-        values.push(A.mkApp(head, args))
+        values.push(A.mkApp(head, args, op.range, op.provenance))
         break
       }
 
       case 'match': {
         const scrutinee = values.pop()!
         const matches = op.branches.map(([pat, body]) => {
-          const bodyExp = raiseFrame([], env, body.toReversed())
+          const bodyExp = raiseFrame(
+            [],
+            env.withoutLocals(...LPM.patVars(pat)),
+            body.toReversed(),
+          )
           return { pat: raisePat(pat), body: bodyExp }
         })
         values.push(A.mkMatch(scrutinee, matches))
         break
       }
 
-      case 'raise': {
-        values.push(A.mkApp(A.mkId('raise'), [A.mkLit(op.msg)]))
+      case 'let': {
+        // Reconstruct the let so a trace shows per-binding progress: bindings
+        // already assigned are omitted (their values substitute into what
+        // remains, via the env); the binding in flight shows its current value
+        // (reconstructed on the stack); pending bindings show their original
+        // value expressions. Still-unassigned binders are excluded so they
+        // render as names rather than substituted values or holes.
+        if (op.idx === 0) {
+          const excl = env.withoutLocals(
+            ...op.bindings.flatMap((b) => LPM.patVars(b.pat)),
+          )
+          const bindings = op.bindings.map((b) => ({
+            pat: raisePat(b.pat),
+            value: raiseFrame([], excl, b.value.toReversed()),
+          }))
+          values.push(
+            A.mkLet(
+              bindings,
+              raiseFrame([], excl, op.body.toReversed()),
+              op.range,
+              op.provenance,
+            ),
+          )
+        } else {
+          const currentValue = values.pop()!
+          const remaining = op.bindings.slice(op.idx - 1)
+          const excl = env.withoutLocals(
+            ...remaining.flatMap((b) => LPM.patVars(b.pat)),
+          )
+          const bindings = remaining.map((b, i) => ({
+            pat: raisePat(b.pat),
+            value:
+              i === 0 ? currentValue : raiseFrame([], excl, b.value.toReversed()),
+          }))
+          values.push(
+            A.mkLet(
+              bindings,
+              raiseFrame([], excl, op.body.toReversed()),
+              op.range,
+              op.provenance,
+            ),
+          )
+        }
         break
       }
 
-      case 'error': {
-        const arg = values.pop()!
-        values.push(A.mkError(arg))
+      case 'if': {
+        const guard = values.pop()!
+        const thenExp = raiseFrame([], env, op.thenB.toReversed())
+        const elseExp = raiseFrame([], env, op.elseB.toReversed())
+        values.push(A.mkIf(guard, thenExp, elseExp, op.range, op.provenance))
         break
       }
 
-      case 'apply': {
+      case 'pop-scope': {
+        // Runtime scope bookkeeping only; nothing to reconstruct.
+        break
+      }
+
+      case 'ap-spread': {
         const [fn, args] = values.splice(-2)
-        values.push(A.mkApply(fn, args))
-        break
-      }
-
-      case 'check-fn': {
-        // N.B., no-op: check-fn only validates the guarded function at runtime; it
-        // leaves the stack ([.., handler, fn]) untouched for push-handler below.
+        values.push(A.mkApp(A.mkId('apply'), [fn, args]))
         break
       }
 
@@ -135,28 +173,15 @@ export function raiseFrame(
       }
 
       case 'pop-handler': {
-        // Stack is [.., handler, guarded]; guarded is normally the reconstructed
-        // application of `f` to its args (from the preceding `ap`). Recover it
-        // into a with-handler form.
-        const guarded = values.pop()!
-        const handler = values.pop()!
-        if (guarded.tag === 'app') {
-          values.push(A.mkWithHandler(handler, guarded.head, guarded.args))
-        } else {
-          values.push(A.mkWithHandler(handler, guarded, []))
-        }
+        // with-handler is now an ordinary procedure, reconstructed at its call
+        // site, so these bracketing ops are transparent to reconstruction: drop
+        // the (peeked) handler value, leaving the guarded result.
+        const result = values.pop()!
+        values.pop()
+        values.push(result)
         break
       }
 
-      case 'pops': {
-        // N.B., pops the local environment, but we don't track that here!
-        break
-      }
-
-      case 'popv': {
-        values.pop()!
-        break
-      }
     }
   }
   return values.pop()!

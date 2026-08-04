@@ -11,18 +11,15 @@ import { Range } from './range'
 import {
   ApHandler,
   applyFn,
-  ApplyHandler,
-  CheckFnHandler,
+  ApSpreadHandler,
   ClsHandler,
-  CtorHandler,
-  ErrorHandler,
-  JsVarHandler,
+  IfHandler,
+  LetHandler,
   LitHandler,
   MatchHandler,
   PopHandlerHandler,
-  PopVHandler,
+  PopScopeHandler,
   PushHandlerHandler,
-  ReptHandler,
   VarHandler,
 } from './handlers/op-handlers'
 import { builtinLibs } from './builtin-registry.js'
@@ -133,6 +130,15 @@ export class Fiber {
 
   isDone(): boolean {
     return this.currStmtIdx >= this.prog.length
+  }
+
+  /**
+   * @returns the index of the statement currently executing. It advances
+   * (via advanceStmt) exactly when a statement completes, so step mode watches
+   * it to pause at statement boundaries.
+   */
+  get stmtIndex(): number {
+    return this.currStmtIdx
   }
 
   // TODO: this may be unnecessary later
@@ -309,9 +315,6 @@ export class Fiber {
       case 'var':
         isMajorStep = VarHandler(currOp, this.currentFrame, this)
         break
-      case 'ctor':
-        isMajorStep = CtorHandler(currOp, this.currentFrame, this)
-        break
       case 'cls':
         isMajorStep = ClsHandler(currOp, this.currentFrame, this)
         break
@@ -321,23 +324,17 @@ export class Fiber {
       case 'match':
         isMajorStep = MatchHandler(currOp, this.currentFrame, this)
         break
-      case 'popv':
-        isMajorStep = PopVHandler(currOp, this.currentFrame, this)
+      case 'let':
+        isMajorStep = LetHandler(currOp, this.currentFrame, this)
         break
-      case 'rept':
-        isMajorStep = ReptHandler(currOp, this.currentFrame, this)
+      case 'if':
+        isMajorStep = IfHandler(currOp, this.currentFrame, this)
         break
-      case 'jsvar':
-        isMajorStep = JsVarHandler(currOp, this.currentFrame, this)
+      case 'pop-scope':
+        isMajorStep = PopScopeHandler(currOp, this.currentFrame, this)
         break
-      case 'error':
-        isMajorStep = ErrorHandler(currOp, this.currentFrame, this)
-        break
-      case 'apply':
-        isMajorStep = ApplyHandler(currOp, this.currentFrame, this)
-        break
-      case 'check-fn':
-        isMajorStep = CheckFnHandler(currOp, this.currentFrame, this)
+      case 'ap-spread':
+        isMajorStep = ApSpreadHandler(currOp, this.currentFrame, this)
         break
       case 'push-handler':
         isMajorStep = PushHandlerHandler(currOp, this.currentFrame, this)
@@ -345,11 +342,6 @@ export class Fiber {
       case 'pop-handler':
         isMajorStep = PopHandlerHandler(currOp, this.currentFrame, this)
         break
-      // TODO: the following instructions are useless
-      // should be removed later
-      case 'raise':
-      case 'pops':
-        throw new ICE('Fiber.stepFrame', `${currOp.tag} is deprecated!`)
     }
 
     if (this.currentFrame.isFinished()) {

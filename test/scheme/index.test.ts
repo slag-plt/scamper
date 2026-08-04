@@ -17,12 +17,14 @@ function locOf(src: string, needle: string): Loc {
 }
 
 describe('fiberRaiser', () => {
-  test('raise sugars the raised expression', () => {
+  test('raise reconstructs a let op directly (no un-sugaring pass)', () => {
     const fiber = makeTestFiber([])
     fiber.pushFrame(
       new Frame('f1', LPM.Env.empty, [
-        LPM.mkLit(1),
-        LPM.mkMatch([[LPM.mkPVar('n'), [LPM.mkVar('n')]]]),
+        LPM.mkLet([{ pat: LPM.mkPVar('n'), value: [LPM.mkLit(1)] }], [
+          LPM.mkVar('n'),
+        ]),
+        LPM.mkPopScope(),
       ]),
     )
     const raised = fiberRaiser.raise(fiber)

@@ -16,8 +16,9 @@ import {
   Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
-import { Scheduler, SchedulerId } from './lpm/scheduler'
+import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
 import { compile } from './scheme'
+import { makeTraceStepper } from './scheme/trace'
 import { diagnosticToError } from './scheme/diagnostic'
 import * as SymbolDB from './scheme/symbol-db'
 
@@ -29,6 +30,9 @@ interface DisplayExecutionConfig extends ExecutionConfig {
   out: OutputChannel
   err: ErrorChannel
   isTracing?: boolean // whether to enable tracing of execution steps
+  // Start the run paused in step mode: it advances one user-visible reduction at
+  // a time, driven by step()/resume(). Implies tracing.
+  stepping?: boolean
 }
 
 interface QueryExecutionConfig extends ExecutionConfig {
@@ -189,6 +193,7 @@ export default class Scamper {
     out,
     err,
     isTracing,
+    stepping,
   }: DisplayExecutionConfig): Promise<DisplayRequest | null> {
     // compile src to lpm bytecode
     const { prog, diagnostics } = await compile(src)
@@ -217,19 +222,24 @@ export default class Scamper {
     // should never be a problem but just noting for future
     const id = crypto.randomUUID()
     this.currentRunId = id
-    const tracing = isTracing ?? false
+    const isStepping = stepping ?? false
+    // Stepping implies tracing (each step renders a reduction); a stepper is
+    // needed by any traced run.
+    const traced = (isTracing ?? false) || isStepping
     const { promise, resolve } = deferred()
     this.scheduler.schedule({
       id,
       fiber,
       out,
       err,
-      isTracing: tracing,
+      isTracing: traced,
+      stepping: isStepping,
+      stepper: traced ? makeTraceStepper() : undefined,
       onComplete: () => {
         resolve()
       },
     })
-    return { id, tracing, done: promise }
+    return { id, tracing: traced, done: promise }
   }
 
   /*  =====  scheduler  =====  */
@@ -239,6 +249,24 @@ export default class Scamper {
       this.currentRunController?.abort()
     }
     this.scheduler.cancelTask(id)
+  }
+
+  /* =====  step mode  ===== */
+
+  /** Advance a paused step-mode run by one user-visible reduction. */
+  public step(id: SchedulerId): void {
+    this.scheduler.step(id)
+  }
+
+  /** Resume a paused step-mode run to the next statement boundary or to
+   * completion; resolves when it next pauses or finishes. */
+  public resume(id: SchedulerId, mode: StepMode): Promise<void> {
+    return this.scheduler.resume(id, mode)
+  }
+
+  /** Stop an in-flight statement/all burst, re-pausing at the next reduction. */
+  public pauseStepping(id: SchedulerId): void {
+    this.scheduler.pauseStepping(id)
   }
 
   public calibrateScheduler(): void {

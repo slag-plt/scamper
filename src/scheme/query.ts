@@ -12,8 +12,9 @@ export type QueryResult =
 
 /**
  * @returns on success, prog with the statement at [queryLoc] having its
- *          deepest queried sub-expression wrapped in a Report expression, plus
- *          the range of that inner reported expression; otherwise a diagnostic
+ *          deepest queried sub-expression wrapped in an `(##report## ...)`
+ *          application, plus the range of that inner reported expression;
+ *          otherwise a diagnostic
  */
 export function getQueriedProgram(prog: A.Prog, queryLoc: Loc): QueryResult {
   const queriedI = prog.findIndex((stmt) => stmt.range.contains(queryLoc))
@@ -85,39 +86,7 @@ function slotsOf(exp: A.Exp): Slot[] {
     case 'lit':
     case 'id':
     case 'quote':
-    case 'jsvar':
       return []
-
-    case 'error':
-      return [{ exp: exp.exp, rebuild: (r) => A.mkError(r, exp.range) }]
-
-    case 'apply':
-      return [
-        { exp: exp.fn, rebuild: (r) => A.mkApply(r, exp.args, exp.range) },
-        { exp: exp.args, rebuild: (r) => A.mkApply(exp.fn, r, exp.range) },
-      ]
-
-    case 'with-handler':
-      return [
-        {
-          exp: exp.handler,
-          rebuild: (r) => A.mkWithHandler(r, exp.fn, exp.args, exp.range),
-        },
-        {
-          exp: exp.fn,
-          rebuild: (r) => A.mkWithHandler(exp.handler, r, exp.args, exp.range),
-        },
-        ...exp.args.map((a, i) => ({
-          exp: a,
-          rebuild: (r: A.Exp) =>
-            A.mkWithHandler(
-              exp.handler,
-              exp.fn,
-              exp.args.map((x, j) => (j === i ? r : x)),
-              exp.range,
-            ),
-        })),
-      ]
 
     case 'app':
       return [
@@ -179,16 +148,14 @@ function slotsOf(exp: A.Exp): Slot[] {
       }))
     }
 
-    case 'let':
-    case 'let*': {
-      const mk = exp.tag === 'let' ? A.mkLet : A.mkLetS
+    case 'let': {
       return [
         ...exp.bindings.map((b, i) => ({
           exp: b.value,
           rebuild: (r: A.Exp) =>
-            mk(
+            A.mkLet(
               exp.bindings.map((x, j) =>
-                j === i ? { id: x.id, value: r } : x,
+                j === i ? { pat: x.pat, value: r } : x,
               ),
               exp.body,
               exp.range,
@@ -196,7 +163,7 @@ function slotsOf(exp: A.Exp): Slot[] {
         })),
         {
           exp: exp.body,
-          rebuild: (r: A.Exp) => mk(exp.bindings, r, exp.range),
+          rebuild: (r: A.Exp) => A.mkLet(exp.bindings, r, exp.range),
         },
       ]
     }
@@ -246,9 +213,6 @@ function slotsOf(exp: A.Exp): Slot[] {
             ),
         })),
       ]
-
-    case 'report':
-      return [{ exp: exp.exp, rebuild: (r) => A.mkReport(r, exp.range) }]
   }
 }
 
@@ -270,5 +234,8 @@ export function getReportedExp(
   // query must have landed on syntax that belongs to this node itself (a
   // keyword, a bracket, or a leaf with no children at all). Wrap the whole
   // thing.
-  return { exp: A.mkReport(exp, exp.range), range: exp.range }
+  return {
+    exp: A.mkApp(A.mkId('##report##', exp.range), [exp], exp.range),
+    range: exp.range,
+  }
 }

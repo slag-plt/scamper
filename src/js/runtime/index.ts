@@ -1,6 +1,18 @@
 import * as L from '../../lpm'
 
 /**
+ * Aborts the running fiber, reporting `value` as the answer to a
+ * live-evaluation query. Bound to the internal `##report##`; a query wraps its
+ * target sub-expression in `(##report## <expr>)`. The thrown ReportError
+ * bypasses with-handler in the scheduler and is caught by the query runner,
+ * which reads its `value`. The range is unused by the consumer (the queried
+ * range is computed separately), so Range.none suffices.
+ */
+export function runtime_report (value: L.Value): L.Value {
+  throw new L.ReportError(value, L.Range.none)
+}
+
+/**
  * @returns a predicate function for struct types t.
  */
 export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {

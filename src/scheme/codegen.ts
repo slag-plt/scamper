@@ -17,55 +17,52 @@ function lowerPat(p: A.Pat): L.Pat {
 function lowerExpr(e: A.Exp): L.Blk {
   switch (e.tag) {
     case 'lit':
-      return [L.mkLit(e.value, e.range)]
+      return [L.mkLit(e.value, e.range, e.provenance)]
     case 'id':
       return [L.mkVar(e.name, e.range)]
     case 'app':
+      // Internal spread-application `(##ap-spread## fn argList)`, emitted by
+      // contract.ts for rest-parameter targets. Lowered to an *inline*
+      // ap-spread (not the user-facing `apply` closure) so a raised error is
+      // attributed to the enclosing contract-wrapper frame rather than to a
+      // synthetic `apply` frame. Never produced by the reader.
+      if (e.head.tag === 'id' && e.head.name === '##ap-spread##') {
+        return [
+          ...lowerExpr(e.args[0]),
+          ...lowerExpr(e.args[1]),
+          L.mkApSpread(e.range),
+        ]
+      }
       return [
         ...lowerExpr(e.head),
         ...e.args.flatMap(lowerExpr),
-        L.mkAp(e.args.length, e.range),
+        L.mkAp(e.args.length, e.range, e.provenance),
       ]
     case 'lam':
       return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
     case 'let': {
-      // N.B., this was solved by copilot! Because let-bindings, by default, do not telescope,
-      // we must proceed by first evaluating all binding expressions (without binding), then
-      // bind the variables, and finally evaluate the body.
-      //
-      // This behavior _really_ makes me want to embrace Clojure-style Scheme more and more
-      // where let telescopes by default, i.e., is let*. But we support traditional Scheme
-      // behavior for now.
-      const bindings = e.bindings.flatMap((b) => lowerExpr(b.value))
-
-      let ret = lowerExpr(e.body)
-      // We must ensure that the inner-most match corresponds to the _first_ binding since
-      // we're building the matches inside-out.
-      // for (let i = e.bindings.length - 1; i >= 0; i--) {
-      e.bindings.forEach((b) => {
-        ret = [L.mkMatch([[L.mkPVar(b.id.name, e.range), ret]])]
-      })
-      return [...bindings, ...ret]
-    }
-    case 'begin': {
-      const last = lowerExpr(e.exps[e.exps.length - 1])
-      const exps = e.exps
-        .slice(0, e.exps.length - 1)
-        .flatMap((e) => [...lowerExpr(e), L.mkPopv()])
-      return [...exps, ...last]
+      // letrec: every binder shares one scope (declared as holes); the `let`
+      // op evaluates each value sub-block left-to-right, filling holes as it
+      // goes, then runs the body. The trailing `pop-scope` discards the scope.
+      // A value that fails to match its pattern raises a binding-flavored error.
+      const bindings = e.bindings.map((b) => ({
+        pat: lowerPat(b.pat),
+        value: lowerExpr(b.value),
+        failMsg: `let: value did not match pattern ${A.patToString(b.pat)}`,
+      }))
+      return [
+        L.mkLet(bindings, lowerExpr(e.body), e.range, 0, e.provenance),
+        L.mkPopScope(e.range),
+      ]
     }
     case 'if':
       return [
         ...lowerExpr(e.guard),
-        L.mkMatch(
-          [
-            [L.mkPLit(true), lowerExpr(e.ifB)],
-            [L.mkPLit(false), lowerExpr(e.elseB)],
-          ],
-          e.range,
-        ),
+        L.mkIf(lowerExpr(e.ifB), lowerExpr(e.elseB), e.range, e.provenance),
       ]
     case 'match':
+      // A matched branch binds its pattern variables in a fresh scope; the
+      // trailing `pop-scope` discards them once the branch body completes.
       return [
         ...lowerExpr(e.scrutinee),
         L.mkMatch(
@@ -75,33 +72,10 @@ function lowerExpr(e: A.Exp): L.Blk {
           ),
           e.range,
         ),
+        L.mkPopScope(e.range),
       ]
     case 'quote':
       return [L.mkLit(e.value, e.range)]
-    case 'jsvar':
-      return [L.mkJsVar(e.name, e.range)]
-    case 'error':
-      return [...lowerExpr(e.exp), L.mkError(e.range)]
-    case 'apply':
-      return [...lowerExpr(e.fn), ...lowerExpr(e.args), L.mkApplyOp(e.range)]
-    case 'with-handler':
-      // Evaluate the handler and the guarded function, check the function is
-      // actually applicable (check-fn), THEN install the handler and apply fn to
-      // its args under the guard; pop-handler uninstalls on normal completion.
-      // Evaluating/checking fn before push-handler means an error producing fn (or
-      // a non-function fn) is a plain error, not one this handler would catch (see
-      // the LPM handler stack). The stack after lowering fn is [handler, fn].
-      return [
-        ...lowerExpr(e.handler),
-        ...lowerExpr(e.fn),
-        L.mkCheckFn(e.range),
-        L.mkPushHandler(e.range),
-        ...e.args.flatMap(lowerExpr),
-        L.mkAp(e.args.length, e.range),
-        L.mkPopHandler(e.range),
-      ]
-    case 'report':
-      return [...lowerExpr(e.exp), L.mkRept(e.range)]
     default:
       throw new L.ICE('lowerExpr', `Non-core expression encountered: ${e.tag}`)
   }

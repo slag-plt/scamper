@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import { LoggingChannel, OutputChannel, ReportError, Value } from '../../src/lpm'
+import { LoggingChannel, OutputChannel, Value } from '../../src/lpm'
 import { makeTestFiber } from '../util'
 import { anyRange } from '../scheme/util'
 
@@ -28,20 +28,6 @@ describe('basic ops', () => {
     const fiber = makeTestFiber([U.mkDisp([U.mkVar('+')])])
     testExecute(fiber, out)
     expect(out.log).toEqual([fiber.topLevelEnv.get('+')])
-  })
-
-  test('ctor', () => {
-    const out = new LoggingChannel(false, false)
-    const fiber = makeTestFiber([
-      U.mkDisp([
-        U.mkLit('test'),
-        U.mkLit(2),
-        U.mkCtor('test-ctor', ['a', 'b']),
-      ]),
-    ])
-    testExecute(fiber, out)
-    const result = out.log[0]
-    expect(result).toEqual(U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]))
   })
 
   test('cls', () => {
@@ -139,16 +125,6 @@ describe('basic ops', () => {
     expect(out.log).toEqual(['hello world'])
   })
 
-  test('rept', () => {
-    const out = new LoggingChannel(false, false)
-    const fiber = makeTestFiber([
-      U.mkDisp([U.mkLit('test error'), U.mkRept()]),
-    ])
-    expect(() => {
-      testExecute(fiber, out)
-    }).toThrow(new ReportError('test error', anyRange))
-  })
-
   // TODO: need a pop test?
 })
 
@@ -213,12 +189,10 @@ describe('pattern matching', () => {
     const out = new LoggingChannel(false, false)
     // First create a struct to match against
     const setupStruct = [
-      U.mkLit(1),
-      U.mkLit(2),
-      U.mkCtor('test-struct', ['field1', 'field2']),
+      U.mkLit(U.mkStruct('test-struct', ['field1', 'field2'], [1, 2])),
     ]
     const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
-    const elseBranch = [U.mkLit('no match'), U.mkRept()]
+    const elseBranch = [U.mkLit('no match')]
     const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
 
     const fiber = makeTestFiber([
@@ -331,5 +305,52 @@ describe('rest parameters', () => {
       U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
     ])
     expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
+  })
+})
+
+describe('define statement', () => {
+  test('a later define of the same name shadows the earlier binding', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([
+      U.mkDefine('x', [U.mkLit(1)]),
+      U.mkDefine('x', [U.mkLit(2)]),
+      U.mkDisp([U.mkVar('x')]),
+    ])
+    testExecute(fiber, out)
+    expect(out.log).toStrictEqual([2])
+  })
+
+  test('a defined closure adopts the define name; an alias does not rename it', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([
+      U.mkDefine('f', [U.mkCls(['x'], [U.mkVar('x')])]),
+      U.mkDefine('g', [U.mkVar('f')]),
+      U.mkDisp([U.mkVar('g')]),
+    ])
+    testExecute(fiber, out)
+    // g is the same closure object as f; it keeps the name it first received.
+    expect(U.typeOf(out.log.at(0))).toBe('[Function: f]')
+  })
+})
+
+describe('import statement', () => {
+  test('a builtin import succeeds and produces no display output', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
+    testExecute(fiber, out)
+    expect(out.log).toStrictEqual([])
+  })
+
+  test('a builtin import binds the module for later variable lookups', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
+    testExecute(fiber, out)
+    expect(fiber.topLevelEnv.has('circle')).toBe(true)
+  })
+
+  test('an unknown builtin import throws', () => {
+    const out = new LoggingChannel(false, false)
+    const fiber = makeTestFiber([U.mkImport('no-such-lib', 'builtin')])
+    expect(() => { testExecute(fiber, out) }).toThrow(/No such built-in library/)
   })
 })

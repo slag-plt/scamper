@@ -79,8 +79,7 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
         node.body,
       ]
     case 'let':
-    case 'let*':
-      return [...node.bindings.flatMap((b) => [b.id, b.value]), node.body]
+      return [...node.bindings.flatMap((b) => [b.pat, b.value]), node.body]
     case 'begin':
     case 'and':
     case 'or':
@@ -92,20 +91,12 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
       return [node.scrutinee, ...node.branches.flatMap((b) => [b.pat, b.body])]
     case 'cond':
       return node.branches.flatMap((b) => [b.test, b.body])
-    case 'error':
-    case 'report':
-      return [node.exp]
-    case 'apply':
-      return [node.fn, node.args]
-    case 'with-handler':
-      return [node.handler, node.fn, ...node.args]
     case 'pctor':
       return [node.name, ...node.args]
     case 'import':
     case 'lit':
     case 'id':
     case 'quote':
-    case 'jsvar':
     case 'pwild':
     case 'plit':
       return []

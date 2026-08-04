@@ -1,10 +1,9 @@
-import { ICE, ReportError, ScamperError, SuspendSignal } from '../error'
+import { ICE, ScamperError, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
-import { Ops, Value } from '../lang'
+import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkStruct, pMatch, typeOf, vectorToList } from '../util'
-import { lookup } from '../../js/index.js'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, patVars, pMatch, typeOf, vectorToList } from '../util'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -27,19 +26,14 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   return minorStep
 }
 
-export const CtorHandler: OpHandler<'ctor'> = (op, currFrame) => {
-  currFrame.values.push(
-    mkStruct(op.name, op.fields, currFrame.values.splice(-op.fields.length)),
-  )
-  return minorStep
-}
-
 export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
   currFrame.values.push(
     mkClosure(
       op.params,
       op.body,
-      currFrame.env.getLocals(),
+      // Capture the scope stack by reference so a binding filled after this
+      // closure is created (letrec) is visible through the shared scopes.
+      currFrame.env.getScopes(),
       // TODO: this dummy function should exist until we remove all calls to L.callScamperFn
       () => {
         throw new ICE('Fiber.ClsHandler', 'Closure.call was deprecated!')
@@ -53,7 +47,7 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
 
 /**
  * Shared by ApHandler (a statically-known arg count baked into the "ap" op
- * at compile time) and ApplyHandler ("apply"'s arg count is only known at
+ * at compile time) and ApSpreadHandler (ap-spread's arg count is only known at
  * runtime, from the length of the spread list) -- both ultimately need the
  * same dispatch: call directly if fn is a JsFunction (rewriting a thrown
  * ScamperError's range to the call site), or push a new Frame if fn is a
@@ -91,9 +85,12 @@ export function applyFn(
         // callRange/name: the range/name of the Ap that invoked *this
         // frame*, i.e. wherever the user (or an enclosing function) really
         // wrote the call.
+        // Fill range/source only when the error didn't set them itself: most JS
+        // primitives throw context-free errors (we supply both), but some (e.g.
+        // `error`) fix their own source, which we must not clobber.
         const useFrame = !currFrame.name.startsWith('##')
-        e.range = useFrame ? currFrame.callRange : range
-        e.source = useFrame ? currFrame.name : fn.name
+        e.range ??= useFrame ? currFrame.callRange : range
+        e.source ??= useFrame ? currFrame.name : fn.name
         throw e
       } else {
         throw new ScamperError(
@@ -122,17 +119,18 @@ export function applyFn(
     const bindings = fn.params.map((p: string, i: number): [string, Value] =>
       [p, namedArgs[i]]).concat(
         fn.restParam ? [[fn.restParam, vectorToList(args.slice(fn.params.length))]] : [])
+    // The callee sees the closure's captured scopes (shared, so letrec fills
+    // are visible) with the parameters as a fresh innermost scope on top.
+    const paramScope: Scope = new Map(bindings)
     const newFrame = new Frame(
       fn.name ?? '##anonymous##',
-      fiber.topLevelEnv.extendReplacingLocals(
-        ...fn.locals,
-        ...bindings
-      ),
+      fiber.topLevelEnv.withLocalScopes([...fn.locals, paramScope]),
       fn.code,
       range,
     )
-    if (currFrame.isFinished()) {
-      // tail-call optimize by replacing current empty frame
+    if (currFrame.canTailCall()) {
+      // tail-call optimize by replacing the current frame (any leftover
+      // pop-scope ops would only discard scopes we're dropping with the frame)
       fiber.replaceFrame(newFrame)
     } else {
       fiber.pushFrame(newFrame)
@@ -161,11 +159,11 @@ export const ApHandler: OpHandler<'ap'> = (op, currFrame, fiber) => {
   return applyFn(fn, args, currFrame, fiber, op.range)
 }
 
-export const ApplyHandler: OpHandler<'apply'> = (op, currFrame, fiber) => {
+export const ApSpreadHandler: OpHandler<'ap-spread'> = (op, currFrame, fiber) => {
   if (currFrame.values.length < 2) {
     throw new ICE(
-      'Fiber.ApplyHandler',
-      `Not enough values for apply: expected 2, currently have ${currFrame.values.length.toString()}`,
+      'Fiber.ApSpreadHandler',
+      `Not enough values for ap-spread: expected 2, currently have ${currFrame.values.length.toString()}`,
     )
   }
   const [fn, argList] = currFrame.values.splice(-2)
@@ -182,10 +180,13 @@ export const ApplyHandler: OpHandler<'apply'> = (op, currFrame, fiber) => {
 }
 
 export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
-  const scrutinee = currFrame.values.pop()
-  if (scrutinee === undefined) {
+  // Check length, not `pop() === undefined`: `void` is a legitimate value that
+  // *is* `undefined`, so a scrutinee of `void` (e.g. `(let ([_ (display x)])
+  // ...)`) must not be mistaken for an empty stack.
+  if (currFrame.values.length === 0) {
     throw new ICE('Fiber.MatchHandler', 'Match requires at least one value')
   }
+  const scrutinee = currFrame.values.pop()
   // we will always step match to abide by a small work quantum
   // TODO: we need to figure out if we want to keep this, hack fix for now
   op.currBranchIdx ??= 0
@@ -200,62 +201,75 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     // make sure to push the scrutinee back for the next branch!
     currFrame.values.push(scrutinee)
   } else {
-    currFrame.env = currFrame.env.extendWithLocals(...bindings)
+    // Push the branch's binders as a fresh scope; the `pop-scope` codegen
+    // emits right after this match op discards it once the branch completes.
+    currFrame.env = currFrame.env.pushScope(bindings)
     op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
   return traceStep
 }
 
-export const PopVHandler: OpHandler<'popv'> = (_, currFrame) => {
-  currFrame.values.pop()
+export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
+  // letrec: on the first run (idx 0) declare every binder as a HOLE in one
+  // shared scope; on each later run, the previous binding's value is on the
+  // stack -- match it and fill its holes. Then evaluate the next binding's
+  // value (re-entering with idx+1 via a fresh op copy) or run the body. The
+  // trailing `pop-scope` codegen emits discards the scope after the body.
+  const k = op.bindings.length
+  if (op.idx === 0) {
+    currFrame.env = currFrame.env.declareScope(
+      op.bindings.flatMap((b) => patVars(b.pat)),
+    )
+  } else {
+    if (currFrame.values.length === 0) {
+      throw new ICE('Fiber.LetHandler', 'let binding value missing from the stack')
+    }
+    const value = currFrame.values.pop()
+    const binding = op.bindings[op.idx - 1]
+    const bs = pMatch(value, binding.pat)
+    if (!bs) {
+      throw new ScamperError(
+        'Runtime',
+        binding.failMsg ?? 'let: value did not match its pattern',
+      )
+    }
+    for (const [name, v] of bs) {
+      currFrame.env.assign(name, v)
+    }
+  }
+  if (op.idx < k) {
+    currFrame.pushBlk([
+      ...op.bindings[op.idx].value,
+      mkLet(op.bindings, op.body, op.range, op.idx + 1, op.provenance),
+    ])
+  } else {
+    currFrame.pushBlk(op.body)
+  }
   return traceStep
 }
 
-export const JsVarHandler: OpHandler<'jsvar'> = (op, currFrame) => {
-  currFrame.values.push(lookup(op.name))
-  return minorStep
-}
-
-export const ErrorHandler: OpHandler<'error'> = (op, currFrame) => {
-  const msg = currFrame.values.pop()
-  if (typeof msg !== 'string') {
+export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
+  // The guard was evaluated inline and is on top of the value stack.
+  if (currFrame.values.length === 0) {
+    throw new ICE('Fiber.IfHandler', 'if requires a guard value')
+  }
+  const guard = currFrame.values.pop()
+  if (guard === true) {
+    currFrame.pushBlk(op.thenB)
+  } else if (guard === false) {
+    currFrame.pushBlk(op.elseB)
+  } else {
     throw new ScamperError(
       'Runtime',
-      `expected a string, received ${typeOf(msg)}`,
-      undefined,
-      op.range,
-      'error',
+      `if: expected a boolean guard, received ${typeOf(guard)}`,
     )
   }
-  throw new ScamperError('Runtime', msg, undefined, op.range, 'error')
+  return traceStep
 }
 
-export const ReptHandler: OpHandler<'rept'> = (op, currFrame) => {
-  if (currFrame.values.length < 1) {
-    throw new ICE(
-      'Fiber.ReptHandler',
-      'Expected to report a value, but none remain?',
-    )
-  }
-  throw new ReportError(currFrame.values.at(-1), op.range)
-}
-
-// N.B., enforces with-handler's contract that its second argument is a function
-// to apply. The stack is [.., handler, fn] (fn on top); check it before
-// push-handler installs the handler so the raised error isn't caught by the very
-// handler being installed -- it surfaces as a plain runtime error instead.
-export const CheckFnHandler: OpHandler<'check-fn'> = (op, currFrame) => {
-  const fn = currFrame.values.at(-1)
-  if (fn === undefined || (!isClosure(fn) && !isJsFunction(fn))) {
-    throw new ScamperError(
-      'Runtime',
-      `with-handler expects a function as its second argument, but received ${fn === undefined ? 'nothing' : typeOf(fn)}`,
-      undefined,
-      op.range,
-      'with-handler',
-    )
-  }
+export const PopScopeHandler: OpHandler<'pop-scope'> = (_op, currFrame) => {
+  currFrame.env = currFrame.env.popScope()
   return minorStep
 }
 

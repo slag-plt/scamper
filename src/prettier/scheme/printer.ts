@@ -14,8 +14,8 @@ export function isSchemeNode(v: unknown): v is A.SchemeNode {
   return typeof v.tag === 'string'
 }
 
-function isLetBinding(v: unknown): v is { id: A.Identifier; value: A.Exp } {
-  return typeof v === 'object' && v !== null && 'id' in v && 'value' in v
+function isLetBinding(v: unknown): v is { pat: A.Pat; value: A.Exp } {
+  return typeof v === 'object' && v !== null && 'pat' in v && 'value' in v
 }
 
 function isMatchBranch(v: unknown): v is { pat: A.Pat; body: A.Exp } {
@@ -123,7 +123,7 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         if (!isLetBinding(bindingPath.node)) return ''
         return group([
           '[',
-          bindingPath.call(print, 'id'),
+          bindingPath.call(print, 'pat'),
           ' ',
           bindingPath.call(print, 'value'),
           ']',
@@ -174,51 +174,6 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
     case 'quote':
       return `'${TextRenderer.render(node.value)}`
 
-    case 'jsvar':
-      return `(js-var ${JSON.stringify(node.name)})`
-
-    case 'error':
-      return group(['(error', indent([line, path.call(print, 'exp')]), ')'])
-
-    case 'apply':
-      return group([
-        '(apply ',
-        path.call(print, 'fn'),
-        indent([line, path.call(print, 'args')]),
-        ')',
-      ])
-
-    case 'with-handler':
-      return group([
-        '(with-handler ',
-        path.call(print, 'handler'),
-        indent([
-          line,
-          path.call(print, 'fn'),
-          ...path.map((argPath) => [line, print(argPath)], 'args'),
-        ]),
-        ')',
-      ])
-
-    case 'let*': {
-      const bindingDocs: Doc[] = path.map((bindingPath: AstPath) => {
-        if (!isLetBinding(bindingPath.node)) return ''
-        return group([
-          '[',
-          bindingPath.call(print, 'id'),
-          ' ',
-          bindingPath.call(print, 'value'),
-          ']',
-        ])
-      }, 'bindings')
-      return group([
-        '(let*',
-        indent([line, group(['(', join(line, bindingDocs), ')'])]),
-        indent([line, path.call(print, 'body')]),
-        ')',
-      ])
-    }
-
     case 'and':
       return group([
         '(and',
@@ -253,9 +208,6 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         indent([line, join(line, path.map(print, 'exps'))]),
         ')',
       ])
-
-    case 'report':
-      return group(['(report', indent([line, path.call(print, 'exp')]), ')'])
 
     ///// Patterns //////////////////////////////////////////////////////////////
 

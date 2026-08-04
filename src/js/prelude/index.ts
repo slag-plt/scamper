@@ -2,6 +2,65 @@ import * as L from '../../lpm'
 
 export * from './files.js'
 
+// `error` raises a runtime error carrying `msg`. It's an ordinary procedure
+// (not a special form): it throws a ScamperError whose source is fixed to
+// "error" but leaves the range unset, so applyFn attributes it to the call
+// site (applyFn fills range/source only when unset). Bound via
+// `(define error (js-var "prelude_error"))`.
+export const prelude_error = L.nameFn('error', (msg: L.Value): L.Value => {
+  if (typeof msg !== 'string') {
+    throw new L.ScamperError(
+      'Runtime',
+      `expected a string, received ${L.typeOf(msg)}`,
+      undefined,
+      undefined,
+      'error',
+    )
+  }
+  throw new L.ScamperError('Runtime', msg, undefined, undefined, 'error')
+}) as L.JsFunction
+
+// `apply` can't be a plain JS function -- JS can't call a Scamper closure -- so
+// its native implementation is the minimal bytecode closure
+// `(lambda (f args) «ap-spread»)`: push f and args, then the ap-spread op does
+// the runtime-arity spread-and-call. Bound to `apply` in prelude.scm via
+// `(js-var "prelude_apply")`. The `call` field is never invoked (the VM applies
+// a closure by pushing a frame, not by calling `.call`).
+export const prelude_apply: L.Value = L.mkClosure(
+  ['f', 'args'],
+  [L.mkVar('f'), L.mkVar('args'), L.mkApSpread()],
+  [],
+  () => {
+    throw new L.ICE('prelude_apply', 'apply closure.call must never be invoked')
+  },
+  'apply',
+)
+
+// `with-handler` installs an exception handler around a thunk. Like `apply`, it
+// can't be a plain JS function (it drives the fiber's handler stack), so it's a
+// builtin closure: `[push-handler, (thunk), pop-handler]` -- install the handler,
+// run the thunk under it, uninstall on normal completion. On a raised error the
+// fiber unwinds to this frame and applies `handler` to the error's message (see
+// Fiber.handleError). Validating that `handler`/`thunk` are procedures is left to
+// the contract wrapper generated from its prelude.scm docstring, which runs
+// BEFORE this closure's push-handler -- so a bad argument is a plain error, not
+// one the handler would catch (this is what the old `check-fn` op did).
+export const prelude_withHandler: L.Value = L.mkClosure(
+  ['handler', 'thunk'],
+  [
+    L.mkVar('handler'),
+    L.mkVar('thunk'),
+    L.mkPushHandler(),
+    L.mkAp(0),
+    L.mkPopHandler(),
+  ],
+  [],
+  () => {
+    throw new L.ICE('prelude_withHandler', 'closure.call must never be invoked')
+  },
+  'with-handler',
+)
+
 // Equivalence predicates (6.1)
 
 // N.B., don't need these functions:

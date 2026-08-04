@@ -2,38 +2,35 @@ import { expect, test, describe } from 'vitest'
 import { expandExpr } from '../../src/scheme/expansion.js'
 import * as A from '../../src/scheme/ast.js'
 
+// Expansion tags every node it inserts with the derived form's name (its
+// provenance) so sugaring can recover the form exactly. These helpers build the
+// expected tagged nodes for the structural comparisons below.
+const andIf = (g: A.Exp, t: A.Exp, e: A.Exp) => A.mkIf(g, t, e, undefined, 'and')
+const andBool = (v: boolean) => A.mkLit(v, undefined, 'and')
+const orIf = (g: A.Exp, t: A.Exp, e: A.Exp) => A.mkIf(g, t, e, undefined, 'or')
+const orBool = (v: boolean) => A.mkLit(v, undefined, 'or')
+const condIf = (g: A.Exp, t: A.Exp, e: A.Exp) => A.mkIf(g, t, e, undefined, 'cond')
+const condSentinel = () =>
+  A.mkApp(A.mkId('error'), [A.mkLit('No matching clause in cond')], undefined, 'cond')
+
 describe('Expanded expressions', () => {
   test('and', () => {
     const actual = expandExpr(A.mkAnd([A.mkId('X'), A.mkId('Y'), A.mkId('Z')]))
-    const expected = 
-      A.mkIf(A.mkId('X'),
-        A.mkIf(A.mkId('Y'),
-          A.mkIf(A.mkId('Z'), A.mkLit(true), A.mkLit(false)),
-          A.mkLit(false)),
-        A.mkLit(false))
+    const expected =
+      andIf(A.mkId('X'),
+        andIf(A.mkId('Y'),
+          andIf(A.mkId('Z'), andBool(true), andBool(false)),
+          andBool(false)),
+        andBool(false))
     expect(actual).toEqual(expected)
   })
 
   test('or', () => {
     const actual = expandExpr(A.mkOr([A.mkId('X'), A.mkId('Y'), A.mkId('Z')]))
-    const expected = 
-      A.mkIf(A.mkId('X'), A.mkLit(true),
-        A.mkIf(A.mkId('Y'), A.mkLit(true),
-          A.mkIf(A.mkId('Z'), A.mkLit(true), A.mkLit(false))))
-    expect(actual).toEqual(expected)
-  })
-
-  test('let*', () => {
-    const actual = expandExpr(A.mkLetS([
-      { id: A.mkId('x'), value: A.mkLit(1) },
-      { id: A.mkId('y'), value: A.mkId('x') },
-      { id: A.mkId('z'), value: A.mkId('y') }
-    ], A.mkId('z')))
-    const expected = 
-      A.mkLet([{ id: A.mkId('x'), value: A.mkLit(1) }],
-        A.mkLet([{ id: A.mkId('y'), value: A.mkId('x') }],
-          A.mkLet([{ id: A.mkId('z'), value: A.mkId('y') }],
-            A.mkId('z'))))
+    const expected =
+      orIf(A.mkId('X'), orBool(true),
+        orIf(A.mkId('Y'), orBool(true),
+          orIf(A.mkId('Z'), orBool(true), orBool(false))))
     expect(actual).toEqual(expected)
   })
 
@@ -43,11 +40,10 @@ describe('Expanded expressions', () => {
       { test: A.mkId('Y'), body: A.mkId('B') },
       { test: A.mkId('Z'), body: A.mkId('C') }
     ]))
-    const expected = 
-      A.mkIf(A.mkId('X'), A.mkId('A'),
-        A.mkIf(A.mkId('Y'), A.mkId('B'),
-          A.mkIf(A.mkId('Z'), A.mkId('C'),
-            A.mkError(A.mkLit('No matching clause in cond')))))
+    const expected =
+      condIf(A.mkId('X'), A.mkId('A'),
+        condIf(A.mkId('Y'), A.mkId('B'),
+          condIf(A.mkId('Z'), A.mkId('C'), condSentinel())))
     expect(actual).toEqual(expected)
   })
 
@@ -106,7 +102,7 @@ describe('Section hole collection', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
       A.mkLet(
-        [{ id: A.mkId('x'), value: A.mkId('_') }],
+        [{ pat: A.mkId('x'), value: A.mkId('_') }],
         A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
     ])) as A.Lam
     expect(actual.params.length).toBe(2)
@@ -115,26 +111,7 @@ describe('Section hole collection', () => {
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
           A.mkLet(
-            [{ id: A.mkId('x'), value: h1 }],
-            A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
-        ]))
-    expect(actual).toEqual(expected)
-  })
-
-  test('let*', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkLetS(
-        [{ id: A.mkId('x'), value: A.mkId('_') }],
-        A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          A.mkLet(
-            [{ id: A.mkId('x'), value: h1 }],
+            [{ pat: A.mkId('x'), value: h1 }],
             A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
         ]))
     expect(actual).toEqual(expected)
@@ -153,10 +130,12 @@ describe('Section hole collection', () => {
     const expected =
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
-          A.mkBegin([
-            A.mkApp(A.mkId('display'), [h1]),
-            h2
-          ])
+          A.mkLet(
+            [{ pat: A.mkPWild(), value: A.mkApp(A.mkId('display'), [h1]) }],
+            h2,
+            undefined,
+            'begin',
+          )
         ]))
     expect(actual).toEqual(expected)
   })
@@ -194,31 +173,6 @@ describe('Section hole collection', () => {
     expect(actual).toEqual(expected)
   })
 
-  test('error', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkError(A.mkId('_'))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(1)
-    const [h] = actual.params
-    const expected =
-      A.mkLam([h], A.mkApp(A.mkId('f'), [A.mkError(h)]))
-    expect(actual).toEqual(expected)
-  })
-
-  test('apply', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkApply(A.mkId('_'), A.mkId('_'))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [A.mkApply(h1, h2)]))
-    expect(actual).toEqual(expected)
-  })
-
   test('and', () => {
     const actual = expandExpr(A.mkSection([
       A.mkId('f'),
@@ -229,9 +183,9 @@ describe('Section hole collection', () => {
     const expected =
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
-          A.mkIf(h1,
-            A.mkIf(h2, A.mkLit(true), A.mkLit(false)),
-            A.mkLit(false))
+          andIf(h1,
+            andIf(h2, andBool(true), andBool(false)),
+            andBool(false))
         ]))
     expect(actual).toEqual(expected)
   })
@@ -246,8 +200,8 @@ describe('Section hole collection', () => {
     const expected =
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
-          A.mkIf(h1, A.mkLit(true),
-            A.mkIf(h2, A.mkLit(true), A.mkLit(false)))
+          orIf(h1, orBool(true),
+            orIf(h2, orBool(true), orBool(false)))
         ]))
     expect(actual).toEqual(expected)
   })
@@ -264,8 +218,7 @@ describe('Section hole collection', () => {
     const expected =
       A.mkLam([h1, h2],
         A.mkApp(A.mkId('f'), [
-          A.mkIf(h1, h2,
-            A.mkError(A.mkLit('No matching clause in cond')))
+          condIf(h1, h2, condSentinel())
         ]))
     expect(actual).toEqual(expected)
   })

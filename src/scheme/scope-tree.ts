@@ -83,29 +83,6 @@ function patternIdentifiers(pat: A.Pat): A.Identifier[] {
 }
 
 /**
- * A let* telescopes like nested lets -- each binding scopes the later values and body.
- * @returns the scopes it introduces
- */
-function letStarScopes(exp: A.LetS): ScopeTree[] {
-  const { bindings, body } = exp
-  if (bindings.length === 0) {
-    return scopesInExp(body)
-  }
-  const build = (i: number): ScopeTree => {
-    const isLast = i === bindings.length - 1
-    // Binding i is visible from the next value (or the body, if last) through
-    // the end of the body.
-    const next = isLast ? body : bindings[i + 1].value
-    const range = Range.union(next.range, body.range)
-    const children = isLast
-      ? scopesInExp(body)
-      : [...scopesInExp(bindings[i + 1].value), build(i + 1)]
-    return new ScopeTree(range, [bindings[i].id], children)
-  }
-  return [...scopesInExp(bindings[0].value), build(0)]
-}
-
-/**
  * @returns the child scopes introduced within the expression, in source order, for the enclosing scope
  */
 function scopesInExp(exp: A.Exp): ScopeTree[] {
@@ -118,7 +95,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'id':
     case 'lit':
     case 'quote':
-    case 'jsvar':
       return []
 
     // Transparent forms: forward the scopes of every sub-expression.
@@ -133,17 +109,6 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
       // N.B., a section's `_` holes only become bound parameters after
       // expansion, so at this (surface) level a section binds nothing.
       return exp.exps.flatMap(scopesInExp)
-    case 'error':
-    case 'report':
-      return scopesInExp(exp.exp)
-    case 'apply':
-      return [...scopesInExp(exp.fn), ...scopesInExp(exp.args)]
-    case 'with-handler':
-      return [
-        ...scopesInExp(exp.handler),
-        ...scopesInExp(exp.fn),
-        ...exp.args.flatMap(scopesInExp),
-      ]
     case 'cond':
       return exp.branches.flatMap((b) => [
         ...scopesInExp(b.test),
@@ -160,18 +125,15 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
       return [new ScopeTree(exp.range, bound, scopesInExp(exp.body))]
     }
     case 'let': {
-      // Bindings are visible in the body only; the values are evaluated in the
-      // enclosing scope, so their scopes bubble up as siblings of the let.
-      const valueScopes = exp.bindings.flatMap((b) => scopesInExp(b.value))
-      const letScope = new ScopeTree(
-        exp.body.range,
-        exp.bindings.map((b) => b.id),
-        scopesInExp(exp.body),
-      )
-      return [...valueScopes, letScope]
+      // letrec: every binder is in scope across all binding values and the
+      // body, so the whole let is one scope with those as children.
+      const binders = exp.bindings.flatMap((b) => patternIdentifiers(b.pat))
+      const children = [
+        ...exp.bindings.flatMap((b) => scopesInExp(b.value)),
+        ...scopesInExp(exp.body),
+      ]
+      return [new ScopeTree(exp.range, binders, children)]
     }
-    case 'let*':
-      return letStarScopes(exp)
     case 'match': {
       // The scrutinee is evaluated in the enclosing scope; each branch's
       // pattern variables are visible only within that branch's body.

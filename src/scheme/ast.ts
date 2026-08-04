@@ -6,6 +6,10 @@ export interface Tagged {
 }
 export interface Node {
   range: L.Range
+  // Set when this node was inserted by expanding a derived form (expansion.ts);
+  // threaded through to the LPM op and back on raise so sugaring can recover the
+  // derived form exactly. Undefined on parsed nodes. See L.Provenance.
+  provenance?: L.Provenance
   // Source comments attached to this node (issue #304). Populated only on demand
   // (see attachComments in comments.ts) -- normal compilation leaves them unset,
   // so the compiler pays nothing. Structural equality ignores them.
@@ -54,20 +58,10 @@ export interface Comment {
 //     | (quote e)
 //
 //     -- Sugared forms
-//     | (let*
-//         ([x1 e1]
-//          ...
-//          [xk ek])
-//    e)
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
 //     | (section e1 ... ek)
-//
-//     -- Internal form, produced only by the query system (query.ts) to
-//        wrap the expression under a cursor for tooltip evaluation; not
-//        user-facing surface syntax
-//     | (report e)
 //
 // s ::= e
 //     | (import m)
@@ -138,7 +132,7 @@ export interface Lam extends Tagged, Node {
 }
 export interface Let extends Tagged, Node {
   tag: 'let'
-  bindings: { id: Identifier; value: Exp }[]
+  bindings: { pat: Pat; value: Exp }[]
   body: Exp
 }
 export interface Begin extends Tagged, Node {
@@ -160,35 +154,7 @@ export interface Quote extends Tagged, Node {
   tag: 'quote'
   value: L.Value
 }
-export interface JsVar extends Tagged, Node {
-  tag: 'jsvar'
-  name: string
-}
-export interface ErrorExp extends Tagged, Node {
-  tag: 'error'
-  exp: Exp
-}
-export interface Apply extends Tagged, Node {
-  tag: 'apply'
-  fn: Exp
-  args: Exp
-}
-// (with-handler handler fn arg ...) -- runs (fn arg ...); if a runtime error is
-// raised, runs (handler err-message) instead. A special form (not a procedure)
-// because it must install an exception handler in the bytecode.
-export interface WithHandlerExp extends Tagged, Node {
-  tag: 'with-handler'
-  handler: Exp
-  fn: Exp
-  args: Exp[]
-}
-
 // Sugared Forms
-export interface LetS extends Tagged, Node {
-  tag: 'let*'
-  bindings: { id: Identifier; value: Exp }[]
-  body: Exp
-}
 export interface And extends Tagged, Node {
   tag: 'and'
   exps: Exp[]
@@ -205,11 +171,6 @@ export interface Section extends Tagged, Node {
   tag: 'section'
   exps: Exp[]
 }
-export interface Report extends Tagged, Node {
-  tag: 'report'
-  exp: Exp
-}
-
 export type Exp =
   | Lit
   | Identifier
@@ -220,16 +181,10 @@ export type Exp =
   | If
   | Match
   | Quote
-  | JsVar
-  | ErrorExp
-  | Apply
-  | WithHandlerExp
-  | LetS
   | And
   | Or
   | Cond
   | Section
-  | Report
 
 ///// Statements /////
 
@@ -324,16 +279,31 @@ export const mkPCtor = (
 ): PCtor => ({ tag: 'pctor', name, args, range })
 
 // Expressions (exp)
-export const mkLit = (value: L.Value, range: L.Range = L.Range.none): Lit => ({
+// Omit `provenance` when unset so it is a truly optional key (absent, not
+// `undefined`); keeps structural `toStrictEqual` comparisons against parsed
+// nodes clean.
+export const mkLit = (
+  value: L.Value,
+  range: L.Range = L.Range.none,
+  provenance?: L.Provenance,
+): Lit => ({
   tag: 'lit',
   value,
   range,
+  ...(provenance !== undefined ? { provenance } : {}),
 })
 export const mkApp = (
   head: Exp,
   args: Exp[],
   range: L.Range = L.Range.none,
-): App => ({ tag: 'app', head, args, range })
+  provenance?: L.Provenance,
+): App => ({
+  tag: 'app',
+  head,
+  args,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkLam = (
   params: Identifier[],
   body: Exp,
@@ -341,10 +311,17 @@ export const mkLam = (
   restParam?: Identifier,
 ): Lam => ({ tag: 'lam', params, body, range, restParam})
 export const mkLet = (
-  bindings: { id: Identifier; value: Exp }[],
+  bindings: { pat: Pat; value: Exp }[],
   body: Exp,
   range: L.Range = L.Range.none,
-): Let => ({ tag: 'let', bindings, body, range })
+  provenance?: L.Provenance,
+): Let => ({
+  tag: 'let',
+  bindings,
+  body,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkBegin = (exps: Exp[], range: L.Range = L.Range.none): Begin => ({
   tag: 'begin',
   exps,
@@ -355,7 +332,15 @@ export const mkIf = (
   ifB: Exp,
   elseB: Exp,
   range: L.Range = L.Range.none,
-): If => ({ tag: 'if', guard, ifB, elseB, range })
+  provenance?: L.Provenance,
+): If => ({
+  tag: 'if',
+  guard,
+  ifB,
+  elseB,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkMatch = (
   scrutinee: Exp,
   branches: { pat: Pat; body: Exp }[],
@@ -365,30 +350,6 @@ export const mkQuote = (
   value: L.Value,
   range: L.Range = L.Range.none,
 ): Quote => ({ tag: 'quote', value, range })
-export const mkJsVar = (
-  name: string,
-  range: L.Range = L.Range.none,
-): JsVar => ({ tag: 'jsvar', name, range })
-export const mkError = (
-  exp: Exp,
-  range: L.Range = L.Range.none,
-): ErrorExp => ({ tag: 'error', exp, range })
-export const mkApply = (
-  fn: Exp,
-  args: Exp,
-  range: L.Range = L.Range.none,
-): Apply => ({ tag: 'apply', fn, args, range })
-export const mkWithHandler = (
-  handler: Exp,
-  fn: Exp,
-  args: Exp[],
-  range: L.Range = L.Range.none,
-): WithHandlerExp => ({ tag: 'with-handler', handler, fn, args, range })
-export const mkLetS = (
-  bindings: { id: Identifier; value: Exp }[],
-  body: Exp,
-  range: L.Range = L.Range.none,
-): LetS => ({ tag: 'let*', bindings, body, range })
 export const mkAnd = (exps: Exp[], range: L.Range = L.Range.none): And => ({
   tag: 'and',
   exps,
@@ -407,11 +368,6 @@ export const mkSection = (
   exps: Exp[],
   range: L.Range = L.Range.none,
 ): Section => ({ tag: 'section', exps, range })
-export const mkReport = (exp: Exp, range: L.Range = L.Range.none): Report => ({
-  tag: 'report',
-  exp,
-  range,
-})
 
 // Statements (stmt)
 export const mkImport = (
@@ -463,16 +419,10 @@ export function isExp(v: unknown): v is Exp {
       'if',
       'match',
       'quote',
-      'jsvar',
-      'error',
-      'apply',
-      'with-handler',
-      'let*',
       'and',
       'or',
       'cond',
       'section',
-      'report',
     ].includes(v.tag)
   )
 }
@@ -536,7 +486,7 @@ export function expToString(e: Exp): string {
       return `(lambda (${params.join(' ')}) ${expToString(e.body)})`
     }
     case 'let':
-      return `(let (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
+      return `(let (${e.bindings.map(({ pat, value }) => `[${patToString(pat)} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'begin':
       return `(begin ${e.exps.map(expToString).join(' ')})`
     case 'if':
@@ -545,16 +495,6 @@ export function expToString(e: Exp): string {
       return `(match ${expToString(e.scrutinee)} ${e.branches.map(({ pat, body }) => `[${patToString(pat)} ${expToString(body)}]`).join(' ')})`
     case 'quote':
       return `(quote ${JSON.stringify(e.value)})`
-    case 'jsvar':
-      return `(js-var ${JSON.stringify(e.name)})`
-    case 'error':
-      return `(error ${expToString(e.exp)})`
-    case 'apply':
-      return `(apply ${expToString(e.fn)} ${expToString(e.args)})`
-    case 'with-handler':
-      return `(with-handler ${expToString(e.handler)} ${expToString(e.fn)}${e.args.map((a) => ` ${expToString(a)}`).join('')})`
-    case 'let*':
-      return `(let* (${e.bindings.map(({ id, value }) => `[${id.name} ${expToString(value)}]`).join(' ')}) ${expToString(e.body)})`
     case 'and':
       return `(and ${e.exps.map(expToString).join(' ')})`
     case 'or':
@@ -563,8 +503,6 @@ export function expToString(e: Exp): string {
       return `(cond ${e.branches.map(({ test, body }) => `[${expToString(test)} ${expToString(body)}]`).join(' ')})`
     case 'section':
       return `(section ${e.exps.map(expToString).join(' ')})`
-    case 'report':
-      return `(report ${expToString(e.exp)})`
   }
 }
 
@@ -643,7 +581,7 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
   } else if (e1.tag === 'let' && e2.tag === 'let') {
     return (
       e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
+      e1.bindings.every(({ pat }, i) => patEquals(pat, e2.bindings[i].pat)) &&
       e1.bindings.every(({ value }, i) =>
         expEquals(value, e2.bindings[i].value),
       ) &&
@@ -669,28 +607,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     )
   } else if (e1.tag === 'quote' && e2.tag === 'quote') {
     return L.equals(e1.value, e2.value)
-  } else if (e1.tag === 'jsvar' && e2.tag === 'jsvar') {
-    return e1.name === e2.name
-  } else if (e1.tag === 'error' && e2.tag === 'error') {
-    return expEquals(e1.exp, e2.exp)
-  } else if (e1.tag === 'apply' && e2.tag === 'apply') {
-    return expEquals(e1.fn, e2.fn) && expEquals(e1.args, e2.args)
-  } else if (e1.tag === 'with-handler' && e2.tag === 'with-handler') {
-    return (
-      expEquals(e1.handler, e2.handler) &&
-      expEquals(e1.fn, e2.fn) &&
-      e1.args.length === e2.args.length &&
-      e1.args.every((a, i) => expEquals(a, e2.args[i]))
-    )
-  } else if (e1.tag === 'let*' && e2.tag === 'let*') {
-    return (
-      e1.bindings.length === e2.bindings.length &&
-      e1.bindings.every(({ id }, i) => id.name === e2.bindings[i].id.name) &&
-      e1.bindings.every(({ value }, i) =>
-        expEquals(value, e2.bindings[i].value),
-      ) &&
-      expEquals(e1.body, e2.body)
-    )
   } else if (e1.tag === 'and' && e2.tag === 'and') {
     return (
       e1.exps.length === e2.exps.length &&
@@ -714,8 +630,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.exps.length === e2.exps.length &&
       e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
-  } else if (e1.tag === 'report' && e2.tag === 'report') {
-    return expEquals(e1.exp, e2.exp)
   } else {
     return false
   }

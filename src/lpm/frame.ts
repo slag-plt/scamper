@@ -31,6 +31,16 @@ export class Frame {
     return this.ops.length === 0
   }
 
+  /**
+   * True when nothing remains to run except `pop-scope` bookkeeping. Those
+   * scopes belong to this frame, which a tail call is about to discard, so it
+   * is safe to replace the frame (preserving tail-call optimization through
+   * `let`/`match` bodies) rather than push a new one.
+   */
+  canTailCall(): boolean {
+    return this.ops.every((op) => op.tag === 'pop-scope')
+  }
+
   pushBlk(blk: L.Blk) {
     this.ops.push(...blk.toReversed())
   }

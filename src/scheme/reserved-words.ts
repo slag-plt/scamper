@@ -4,23 +4,17 @@
 // be used as a variable/identifier name.
 export const reservedWords = [
   'and',
-  'apply',
   'begin',
   'cond',
   'define',
-  'error',
   'if',
   'import',
   'display',
-  'js-var',
   'lambda',
   'let',
-  'let*',
   'match',
   'or',
   'quote',
   'section',
   'struct',
-  'report',
-  'with-handler',
 ]

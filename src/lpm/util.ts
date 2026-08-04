@@ -42,7 +42,7 @@ export const isList = (v: L.Value): v is L.List =>
 export const mkClosure = (
   params: L.Id[],
   code: L.Blk,
-  env: Map<string, L.Value>,
+  env: L.Scope[],
   call: (...args: any) => any,
   name?: L.Id,
   restParam?: string
@@ -90,21 +90,21 @@ export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
 export const mkList = (...values: L.Value[]): L.List => vectorToList(values)
 
 // Op constructors
-export const mkLit = (value: L.Value, range: Range = Range.none): L.Lit => ({
+export const mkLit = (
+  value: L.Value,
+  range: Range = Range.none,
+  provenance?: L.Provenance,
+): L.Lit => ({
   tag: 'lit',
   value,
   range,
+  provenance,
 })
 export const mkVar = (name: string, range: Range = Range.none): L.Var => ({
   tag: 'var',
   name,
   range,
 })
-export const mkCtor = (
-  name: string,
-  fields: string[],
-  range: Range = Range.none,
-): L.Ctor => ({ tag: 'ctor', name, fields, range })
 export const mkCls = (
   params: string[],
   body: L.Blk,
@@ -112,15 +112,50 @@ export const mkCls = (
   range: Range = Range.none,
   restParam?: string
 ): L.Cls => ({ tag: 'cls', params, body, name, range, restParam })
-export const mkAp = (numArgs: number, range: Range = Range.none): L.Ap => ({
+export const mkAp = (
+  numArgs: number,
+  range: Range = Range.none,
+  provenance?: L.Provenance,
+): L.Ap => ({
   tag: 'ap',
   numArgs,
   range,
+  provenance,
 })
 export const mkMatch = (
   branches: [L.Pat, L.Blk][],
   range: Range = Range.none,
 ): L.Match => ({ tag: 'match', branches, range })
+export const mkLet = (
+  bindings: { pat: L.Pat; value: L.Blk; failMsg?: string }[],
+  body: L.Blk,
+  range: Range = Range.none,
+  idx = 0,
+  provenance?: L.Provenance,
+): L.Let => ({ tag: 'let', bindings, body, range, idx, provenance })
+
+/** @return the variable names bound by an LPM pattern (recursively). */
+export const patVars = (pat: L.Pat): string[] => {
+  switch (pat.tag) {
+    case 'pvar':
+      return [pat.name]
+    case 'pctor':
+      return pat.args.flatMap(patVars)
+    case 'pwild':
+    case 'plit':
+      return []
+  }
+}
+export const mkIf = (
+  thenB: L.Blk,
+  elseB: L.Blk,
+  range: Range = Range.none,
+  provenance?: L.Provenance,
+): L.If => ({ tag: 'if', thenB, elseB, range, provenance })
+export const mkPopScope = (range: Range = Range.none): L.PopScope => ({
+  tag: 'pop-scope',
+  range,
+})
 export const mkDisp = (expr: L.Blk, range: Range = Range.none): L.Disp => ({
   tag: 'disp',
   expr,
@@ -140,32 +175,8 @@ export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,
 ): L.StmtExp => ({ tag: 'stmtexp', expr, range })
-export const mkRaise = (msg: string, range: Range = Range.none): L.Raise => ({
-  tag: 'raise',
-  msg,
-  range,
-})
-export const mkPops = (): L.PopS => ({ tag: 'pops' })
-export const mkPopv = (): L.PopV => ({ tag: 'popv' })
-export const mkRept = (range: Range = Range.none): L.Rept => ({
-  tag: 'rept',
-  range,
-})
-export const mkJsVar = (name: string, range: Range = Range.none): L.JsVar => ({
-  tag: 'jsvar',
-  name,
-  range,
-})
-export const mkError = (range: Range = Range.none): L.ErrorOp => ({
-  tag: 'error',
-  range,
-})
-export const mkApplyOp = (range: Range = Range.none): L.ApplyOp => ({
-  tag: 'apply',
-  range,
-})
-export const mkCheckFn = (range: Range = Range.none): L.CheckFn => ({
-  tag: 'check-fn',
+export const mkApSpread = (range: Range = Range.none): L.ApSpread => ({
+  tag: 'ap-spread',
   range,
 })
 export const mkPushHandler = (range: Range = Range.none): L.PushHandler => ({

@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import { runProgram } from '../harness.js'
 
-// End-to-end coverage of runtime error raising (`error`) and catching (the
-// `with-handler` special form, backed by the LPM in-fiber handler stack). These
+// End-to-end coverage of runtime error raising (`error`) and catching
+// (`with-handler`, a procedure backed by the LPM in-fiber handler stack). These
 // exercise the stack discipline: unwinding to the installing frame, restoring the
-// value stack, and resuming -- including handlers nested within a single frame,
-// across frames, and installed mid-computation.
+// value stack, and resuming -- including handlers nested across frames and
+// installed mid-computation.
 
 describe('with-handler basics', () => {
   test('catches a raised error and returns the handler result', async () => {
@@ -26,9 +26,9 @@ describe('with-handler basics', () => {
     `)).toEqual(['"boom"'])
   })
 
-  test('applies the guarded function to the trailing arguments', async () => {
+  test('returns the thunk\'s computed value when it completes normally', async () => {
     expect(await runProgram(`
-    (with-handler (lambda (e) 0) + 1 2 3)
+    (with-handler (lambda (e) 0) (lambda () (+ 1 2 3)))
     `)).toEqual(['6'])
   })
 
@@ -67,13 +67,13 @@ describe('which errors are caught', () => {
 })
 
 describe('nested handlers within a single frame', () => {
-  test('an inner guarded argument catches its own error; the outer application proceeds', async () => {
-    // outer f is `+`; its second argument is itself a with-handler that throws.
+  test('an inner guarded expression catches its own error; the outer thunk proceeds', async () => {
+    // The outer thunk computes (+ 1 <inner>), where the inner with-handler throws
+    // and is caught (yielding 99); the outer thunk then completes with 100.
     expect(await runProgram(`
     (with-handler (lambda (e) "outer-caught")
-      +
-      1
-      (with-handler (lambda (e) 99) (lambda () (error "x"))))
+      (lambda ()
+        (+ 1 (with-handler (lambda (e) 99) (lambda () (error "x"))))))
     `)).toEqual(['100'])
   })
 
@@ -179,15 +179,17 @@ describe('handler errors and unguarded errors', () => {
   })
 })
 
-describe('with-handler contract (second argument must be a function)', () => {
-  test('a non-function guarded value is a plain error, not caught by the handler', async () => {
-    // check-fn runs before the handler is installed, so this surfaces the
-    // contract error rather than routing it through the handler.
+describe('with-handler contract (thunk must be a procedure)', () => {
+  test('a non-procedure thunk is a plain error, not caught by the handler', async () => {
+    // The prelude contract validates the thunk before the handler is installed,
+    // so this surfaces the contract error rather than routing it through the
+    // handler.
     const out = await runProgram(`
     (with-handler (lambda (e) "caught") 5)
     `)
     expect(out).toHaveLength(1)
-    expect(out[0]).toContain('with-handler expects a function')
+    expect(out[0]).toContain('procedure')
+    expect(out[0]).not.toContain('caught')
   })
 
   test('an error while producing the guarded value is surfaced, not caught', async () => {
@@ -202,24 +204,9 @@ describe('with-handler contract (second argument must be a function)', () => {
     expect(out[0]).toContain('pair')
   })
 
-  test('a function applied to trailing arguments is guarded normally', async () => {
-    // The idiomatic non-thunk form: with-handler applies `car` to `(list)`; the
-    // resulting error IS caught because it happens under the guard.
+  test('an error raised inside the thunk is caught under the guard', async () => {
     expect(await runProgram(`
-    (with-handler (lambda (e) "caught") car (list))
+    (with-handler (lambda (e) "caught") (lambda () (car (list))))
     `)).toEqual(['"caught"'])
-  })
-
-  test('an earlier argument error unwinds past a later argument\'s nested with-handler', async () => {
-    // The first argument errors during evaluation, before the second argument's
-    // nested with-handler installs its own handler. Unwinding must skip past the
-    // nested push/pop-handler pair still ahead in the op stream and land on THIS
-    // form's handler (regression: an unbalanced scan stopped at the inner
-    // pop-handler and corrupted the stack).
-    expect(await runProgram(`
-    (with-handler (lambda (e) "outer") +
-      (error "x")
-      (with-handler (lambda (e) "inner") + 1 2))
-    `)).toEqual(['"outer"'])
   })
 })

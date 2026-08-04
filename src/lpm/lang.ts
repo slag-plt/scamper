@@ -1,5 +1,5 @@
 import { Range } from './range.js'
-import { ScamperError } from './error.js'
+import { ICE, ScamperError } from './error.js'
 
 ///// Runtime values ///////////////////////////////////////////////////////////
 
@@ -29,19 +29,30 @@ export type Idx = number
  * Environments are also _immutable_: operations return new environments rather
  * mutating the current environment.
  */
+/**
+ * Sentinel for a local binding that has been declared (its name is in scope)
+ * but not yet assigned -- the transient state of a `let` binding whose value is
+ * still being evaluated. Looking one up is a "referenced before defined"
+ * runtime error; a thunk that captured the scope sees the value once filled.
+ */
+export const HOLE: unique symbol = Symbol('hole')
+
+/** A local binding scope: names to values (or HOLE while still unassigned). */
+export type Scope = Map<string, Value | typeof HOLE>
+
 export class Env {
   /** A mapping of imported modules to their bound libraries */
   private imports: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
-  /** A mapping of local bindings */
-  private locals: Map<string, Value>
+  /** A stack of local binding scopes; the last element is the innermost. */
+  private locals: Scope[]
 
   /** Constructs a new environemnt from the given maps */
   constructor(
     imports: Map<string, Module>,
     topLevel: Map<string, Value>,
-    locals: Map<string, Value>,
+    locals: Scope[],
   ) {
     this.imports = imports
     this.topLevel = topLevel
@@ -49,34 +60,60 @@ export class Env {
   }
 
   /** The empty environment */
-  static empty: Env = new Env(new Map(), new Map(), new Map())
+  static empty: Env = new Env(new Map(), new Map(), [])
 
   /**
    * @param name the (simple) name of the variable to look up
    * @return the value bound to this variable name or undefined if it does not
    *         exist
    */
-  get(name: string): Value {
-    // 1. Local scope
-    if (this.locals.has(name)) {
-      return this.locals.get(name)
+  /**
+   * Resolve a name without throwing: a found slot (which may be a HOLE for an
+   * as-yet-unassigned local), or not-found. Used by get() and by the raiser,
+   * which must tolerate holes.
+   */
+  lookup(
+    name: string,
+  ): { found: true; slot: Value | typeof HOLE } | { found: false } {
+    // 1. Local scopes, innermost (most recently pushed) first
+    for (let i = this.locals.length - 1; i >= 0; i--) {
+      const scope = this.locals[i]
+      if (scope.has(name)) {
+        return { found: true, slot: scope.get(name) }
+      }
     }
-
     // 2. Top-level scope
     if (this.topLevel.has(name)) {
-      return this.topLevel.get(name)
+      return { found: true, slot: this.topLevel.get(name) }
     }
-
     // 3. Imported modules, most recent imports first
     for (const library of [...this.imports.values()].toReversed()) {
       if (library.bindings.has(name)) {
-        return library.bindings.get(name)
+        return { found: true, slot: library.bindings.get(name) }
       }
     }
-    throw new ScamperError(
-      'Runtime',
-      `Attempted to look up variable "${name}" but it is not bound in this environment!`,
-    )
+    return { found: false }
+  }
+
+  /**
+   * @param name the (simple) name of the variable to look up
+   * @return the value bound to this variable name
+   */
+  get(name: string): Value {
+    const r = this.lookup(name)
+    if (!r.found) {
+      throw new ScamperError(
+        'Runtime',
+        `Attempted to look up variable "${name}" but it is not bound in this environment!`,
+      )
+    }
+    if (r.slot === HOLE) {
+      throw new ScamperError(
+        'Runtime',
+        `Variable "${name}" is referenced before it is defined`,
+      )
+    }
+    return r.slot
   }
 
   /** @return the top-level bindings of this environment as a Module */
@@ -88,9 +125,56 @@ export class Env {
     return ret
   }
 
-  /** @return the locals bound in this environment */
+  /**
+   * @return all in-scope local bindings flattened into one map (innermost
+   *         scope wins). Used to snapshot a closure's captured environment.
+   */
   getLocals(): Map<string, Value> {
-    return this.locals
+    const flat = new Map<string, Value>()
+    for (const scope of this.locals) {
+      for (const [name, slot] of scope) {
+        if (slot !== HOLE) flat.set(name, slot)
+      }
+    }
+    return flat
+  }
+
+  /**
+   * @return the local scope stack by reference (a shallow copy of the array;
+   *         the scope objects are shared). Closures capture this so that a
+   *         binding filled after the closure is created -- letrec -- is visible.
+   */
+  getScopes(): Scope[] {
+    return [...this.locals]
+  }
+
+  /**
+   * Push a fresh innermost scope declaring each of `names` as a HOLE (in scope
+   * but unassigned). `assign` later fills the holes. Used by `let`.
+   */
+  declareScope(names: string[]): Env {
+    const scope: Scope = new Map(names.map((n) => [n, HOLE]))
+    return new Env(this.imports, this.topLevel, [...this.locals, scope])
+  }
+
+  /**
+   * Fill a declared binding in place, mutating the scope object so that any
+   * closure that captured it sees the value. Assigns to the innermost scope
+   * that declares `name`.
+   */
+  assign(name: string, value: Value): void {
+    for (let i = this.locals.length - 1; i >= 0; i--) {
+      if (this.locals[i].has(name)) {
+        this.locals[i].set(name, value)
+        return
+      }
+    }
+    throw new ICE('Env.assign', `assigned undeclared local "${name}"`)
+  }
+
+  /** Replace the local scope stack wholesale (used to build a callee frame). */
+  withLocalScopes(scopes: Scope[]): Env {
+    return new Env(this.imports, this.topLevel, scopes)
   }
 
   /**
@@ -99,7 +183,7 @@ export class Env {
    */
   has(name: string): boolean {
     return (
-      this.locals.has(name) ||
+      this.locals.some((scope) => scope.has(name)) ||
       this.topLevel.has(name) ||
       [...this.imports.values()].some((lib) => lib.bindings.has(name))
     )
@@ -117,12 +201,22 @@ export class Env {
     )
   }
 
+  /** Push a new innermost local scope containing `locals`. */
   extendWithLocals(...locals: [string, Value][]): Env {
-    return new Env(
-      this.imports,
-      this.topLevel,
-      this.extendBindings(this.locals, locals),
-    )
+    return this.pushScope(locals)
+  }
+
+  /** Push a new innermost local scope with the given bindings. */
+  pushScope(bindings: [string, Value][]): Env {
+    return new Env(this.imports, this.topLevel, [
+      ...this.locals,
+      new Map(bindings),
+    ])
+  }
+
+  /** Drop the innermost local scope (inverse of {@link pushScope}). */
+  popScope(): Env {
+    return new Env(this.imports, this.topLevel, this.locals.slice(0, -1))
   }
 
   extendImports(name: string, lib: Module) {
@@ -133,16 +227,15 @@ export class Env {
     return new Map([...old, ...newBindings])
   }
 
+  /** Replace all local scopes with a single scope holding `locals`. */
   extendReplacingLocals(...locals: [string, Value][]): Env {
-    return new Env(this.imports, this.topLevel, new Map(locals))
+    return new Env(this.imports, this.topLevel, [new Map(locals)])
   }
 
+  /** Collapse the local scopes into one, dropping the named bindings. */
   withoutLocals(...names: string[]): Env {
-    return new Env(
-      this.imports,
-      this.topLevel,
-      new Map([...this.locals].filter(([x, _v]) => !names.includes(x))),
-    )
+    const kept = [...this.getLocals()].filter(([x]) => !names.includes(x))
+    return new Env(this.imports, this.topLevel, [new Map(kept)])
   }
 }
 
@@ -182,7 +275,9 @@ export interface Closure extends TaggedObject {
   [scamperTag]: 'closure'
   params: Id[]
   code: Blk
-  locals: Map<string, Value>
+  // The captured local scope stack, by reference: a binding filled after this
+  // closure is created (letrec) is visible through the shared scope objects.
+  locals: Scope[]
   restParam?: string
   // N.B., call is required so that Javascript code can call Scamper closures similarly
   // to Javascript functions. Since closures are generated during runtime, the underlying
@@ -285,20 +380,22 @@ export type List = null | Cons
 
 ///// The Little Pattern Machine language //////////////////////////////////////
 
+// Records that a node was inserted by expanding a derived form (expansion.ts):
+// codegen copies it from the AST onto the op, raise copies it back, and sugaring
+// uses it to recover the derived form exactly (no heuristics). Undefined on
+// nodes that came straight from the parser. `section` is not tracked (it is not
+// recovered).
+export type Provenance = 'and' | 'or' | 'begin' | 'cond'
+
 export interface Lit {
   tag: 'lit'
   value: Value
   range: Range
+  provenance?: Provenance
 }
 export interface Var {
   tag: 'var'
   name: string
-  range: Range
-}
-export interface Ctor {
-  tag: 'ctor'
-  name: string
-  fields: string[]
   range: Range
 }
 export interface Cls {
@@ -313,6 +410,7 @@ export interface Ap {
   tag: 'ap'
   numArgs: number
   range: Range
+  provenance?: Provenance
 }
 export interface Match {
   tag: 'match'
@@ -322,48 +420,46 @@ export interface Match {
   // TODO: making this better requires better bytecode
   currBranchIdx?: number
 }
-export interface Raise {
-  tag: 'raise'
-  msg: string
+// `let` is letrec: a single scope holds every binder, declared as HOLEs, then
+// filled left-to-right as the value sub-blocks evaluate (each may reference any
+// binder -- a still-HOLE one is a "referenced before defined" error unless
+// deferred in a thunk). `idx` counts the bindings already assigned and is
+// threaded through fresh op copies (never mutated in place), so recursion
+// through a binding value is re-entrancy-safe. codegen emits a trailing
+// `pop-scope`. `if`/`match` linearize their core forms directly too; `match` is
+// likewise followed by a `pop-scope`.
+export interface Let {
+  tag: 'let'
+  bindings: { pat: Pat; value: Blk; failMsg?: string }[]
+  body: Blk
+  range: Range
+  // Number of bindings already assigned; 0 on the initial (declaring) run.
+  idx: number
+  provenance?: Provenance
+}
+export interface If {
+  tag: 'if'
+  thenB: Blk
+  elseB: Blk
+  range: Range
+  provenance?: Provenance
+}
+export interface PopScope {
+  tag: 'pop-scope'
   range: Range
 }
-export interface PopS {
-  tag: 'pops'
-}
-export interface PopV {
-  tag: 'popv'
-}
-export interface Rept {
-  tag: 'rept'
+export interface ApSpread {
+  tag: 'ap-spread'
   range: Range
 }
-export interface JsVar {
-  tag: 'jsvar'
-  name: string
-  range: Range
-}
-export interface ErrorOp {
-  tag: 'error'
-  range: Range
-}
-export interface ApplyOp {
-  tag: 'apply'
-  range: Range
-}
-// N.B., check-fn/push-handler/pop-handler bracket the guarded application lowered
-// from a `with-handler` special form. The stack at check-fn is [.., handler, fn]:
-// check-fn enforces with-handler's contract that the guarded value (top) is a
-// function to apply -- it runs BEFORE push-handler, so a contract violation (or
-// an error while producing `fn`) is a plain error, not something this very
-// handler catches. push-handler then installs the handler beneath `fn` (recording
-// the frame/value-stack depth to unwind to); on a raised ScamperError the fiber
-// unwinds to that depth and applies the handler. pop-handler is the normal-
-// completion path: it uninstalls the handler and drops the (now-unused) handler
-// value, leaving the guarded result on the stack.
-export interface CheckFn {
-  tag: 'check-fn'
-  range: Range
-}
+// N.B., push-handler/pop-handler bracket the guarded thunk in `with-handler`'s
+// closure body. push-handler installs the handler (recording the frame/value-
+// stack depth to unwind to); on a raised ScamperError the fiber unwinds to that
+// depth and applies the handler (see Fiber.handleError). pop-handler is the
+// normal-completion path: it uninstalls the handler and drops the (now-unused)
+// handler value, leaving the guarded result on the stack. That with-handler's
+// arguments are procedures is enforced by its prelude contract, before
+// push-handler runs -- replacing the old check-fn op.
 export interface PushHandler {
   tag: 'push-handler'
   range: Range
@@ -376,18 +472,13 @@ export interface PopHandler {
 export type Ops =
   | Lit
   | Var
-  | Ctor
   | Cls
   | Ap
   | Match
-  | Raise
-  | PopS
-  | PopV
-  | Rept
-  | JsVar
-  | ErrorOp
-  | ApplyOp
-  | CheckFn
+  | Let
+  | If
+  | PopScope
+  | ApSpread
   | PushHandler
   | PopHandler
 export type Blk = Ops[]

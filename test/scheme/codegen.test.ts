@@ -4,6 +4,8 @@ import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
 import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
+import { raiseFiber } from '../../src/scheme/raise.js'
+import { expToString } from '../../src/scheme/ast.js'
 import { runProgram } from '../harness.js'
 
 // `stripRanges` drops the `[line:col]` location from error output, for the
@@ -148,7 +150,7 @@ describe('End-to-end cases', () => {
 (((f3 11) 3) 7)
 
 (define f4
-  (let* ([x 51]
+  (let ([x 51]
          [f (lambda (y) (+ x y))]
          [g (lambda (x) (+ (f x) 1))])
     g))
@@ -281,20 +283,126 @@ describe('End-to-end cases', () => {
    [z 11])
   (+ x y z))
 
-(let*
+(let
   ([x 1]
    [y 7]
    [z 11])
   (+ x y z))
 
 ; bindings telescope
-(let*
+(let
   ([x 1]
    [y (+ x 6)]
    [z (+ y 4)])
   (+ x y z))
 `, [19, 19, 19])
   })
+
+  test('let-binding with patterns', async () => {
+    await checkMachineOutput(`
+; a constructor pattern destructures the bound value
+(let ([(pair a b) (pair 1 2)])
+  (+ a b))
+
+; a wildcard binding runs the value for effect, then returns the body
+(let ([_ 99]) 42)
+
+; the bound value may be void (which is undefined) -- match must not mistake
+; it for an empty stack (this is how (begin (f x) ...) now desugars)
+(let ([_ void]) 42)
+
+; patterns work with several bindings, and telescope
+(let ([(pair a b) (pair 3 4)]
+       [c (+ a b)])
+  c)
+`, [3, 42, 42, 7])
+  })
+
+  test('let-binding: a value not matching the pattern is a runtime error', async () => {
+    const out = await runProgram('(let ([(pair a b) 5]) a)')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('let: value did not match pattern (pair a b)')
+  })
+
+  test('let is letrec: let*, mutual recursion, and thunk-deferred references', async () => {
+    await checkMachineOutput(`
+; let* -- a later binding sees an earlier one
+(let ([x 1] [y (+ x 1)]) y)
+
+; letrec -- a thunk sees a later binding once it is filled
+(let ([f (lambda () x)] [x 5]) (f))
+
+; mutual recursion between two binding thunks
+(let ([even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))]
+      [odd?  (lambda (n) (if (= n 0) #f (even? (- n 1))))])
+  (even? 10))
+`, [2, 5, true])
+  })
+
+  test('let: an eager forward reference to an unfilled binding is a runtime error', async () => {
+    const out = await runProgram('(let ([x (+ y 1)] [y 5]) x)')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('is referenced before it is defined')
+  })
+
+  test('let: self-shadowing an outer binding is a referenced-before-defined error', async () => {
+    // the inner x shadows the outer throughout, so its own value hits the hole
+    const out = await runProgram('(let ([x 10]) (let ([y x] [x 5]) y))')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('is referenced before it is defined')
+  })
+
+  test('let evaluation traces show per-binding progress', async () => {
+    // (let ([x (+ 1 1)] [y (+ x 1)]) (+ x y)) steps through, and raising the
+    // fiber at each step yields the intermediate forms below.
+    const { prog, diagnostics } = await S.compile(
+      '(let ([x (+ 1 1)] [y (+ x 1)]) (+ x y))',
+    )
+    expect(diagnostics).toEqual([])
+    const fiber = new Fiber(prog!, S.mkInitialEnv())
+    const trace: string[] = []
+    while (!fiber.isDone()) {
+      fiber.step()
+      if (fiber.frames.length > 0) {
+        trace.push(expToString(raiseFiber(fiber)))
+      }
+    }
+    // x's value has reduced to 2 but is not yet bound (still shown as a binding)
+    expect(trace).toContain('(let ([x 2] [y (+ x 1)]) (+ x y))')
+    // x is bound (=2) and omitted; it substitutes into y's value and the body
+    expect(trace).toContain('(let ([y (+ 2 1)]) (+ 2 y))')
+    // y's value has reduced to 3
+    expect(trace).toContain('(let ([y 3]) (+ 2 y))')
+  })
+
+  test('let and match bindings do not leak past their scope', async () => {
+    // Regression: let/match used to extend the frame env in place and never
+    // retract it, so a binding shadowed an outer/global name for the rest of
+    // the frame. Each `x` below must resolve to the global 10, not the binder.
+    await checkMachineOutput(`
+(define x 10)
+(begin (let ([x 1]) x) x)
+(begin (match 5 [x x]) x)
+`, [10, 10])
+  })
+
+  test('tail recursion through if and let does not grow the stack', async () => {
+    // The recursive call sits in tail position inside a let body inside an if
+    // else-branch, and 12000 > the 10000-frame default limit. A broken TCO
+    // (frames piling up behind the let's trailing pop-scope) would exceed the
+    // limit and error; tail calls must not accumulate frames.
+    await checkMachineOutput(`
+(define count
+  (lambda (n acc)
+    (if (= n 0)
+        acc
+        (let ([m (- n 1)])
+          (count m (+ acc 1))))))
+(count 12000 0)
+`, [12000])
+    // 12000 interpreter iterations can exceed the 5s default under full parallel
+    // load, so give this heavy TCO check a realistic timeout.
+  }, 30000)
 
   test('list-length', async () => {
     await checkMachineOutput(`
@@ -534,19 +642,27 @@ t1
     ])
   })
 
-  // TODO: skipped because L.callScamperFn now always throws "Javascript
-  // library functions can no longer call Scamper functions" - JS libs can no
-  // longer invoke Scamper closures/functions directly.
-  test.skip('section', async () => {
+  test('section desugars to a lambda and applies (simple holes)', async () => {
+    await checkMachineOutput(`
+((section + _ 1) 1)
+((section + 1 _) 10)
+((section - 10 _) 3)
+((section * _ _) 5 6)
+`, [2, 11, 7, 30])
+  })
+
+  // Still blocked: `map` here is a JS library function receiving a Scamper
+  // closure `(section string-upcase _)`; invoking that closure from JS routes
+  // through L.callScamperFn, which is permanently disabled ("Javascript library
+  // functions can no longer call Scamper functions"). Re-enable once the LPM
+  // unification lets library higher-order functions drive Scamper closures.
+  test.skip('section as an argument to a JS higher-order function (map)', async () => {
     expect(
       await runProgram(`
-((section + _ 1) 1)
-
 (|> (list "a" "b" "c" "d" "e")
     (section map (section string-upcase _) _))
-
 `),
-    ).toEqual(['2', '(list "A" "B" "C" "D" "E")'])
+    ).toEqual(['(list "A" "B" "C" "D" "E")'])
   })
 })
 
@@ -675,5 +791,157 @@ describe('Rest parameters', () => {
     (display ((lambda (& xs) xs) 1 2 3))
     (display ((lambda (& xs) xs)))
     `)).toEqual(['(list 1 2 3)', 'null'])
+  })
+})
+
+describe('Construct semantics (comprehensiveness audit)', () => {
+  describe('begin', () => {
+    test('a single-expression begin yields that expression', async () => {
+      await checkMachineOutput('(begin 42)', [42])
+    })
+
+    test('a multi-expression begin yields its last expression', async () => {
+      await checkMachineOutput('(begin 1 2 3)', [3])
+    })
+
+    test('begin evaluates earlier expressions (an error in the first propagates)', async () => {
+      await checkMachineOutput('(begin (error "boom") 99)',
+        ['Runtime error: (error) boom'], true)
+    })
+  })
+
+  describe('match', () => {
+    test('a match with no matching branch is an inexhaustive-match error', async () => {
+      await checkMachineOutput('(match 5 [6 "six"])',
+        ['Runtime error: Inexhaustive pattern match failure'], true)
+    })
+
+    test('plit matches a char literal', async () => {
+      await checkMachineOutput('(match #\\a [#\\a "yes"] [_ "no"])', ['yes'])
+    })
+
+    test('plit matches a string literal', async () => {
+      await checkMachineOutput('(match "hi" ["hi" 1] [_ 2])', [1])
+    })
+
+    test('plit matches a boolean literal', async () => {
+      await checkMachineOutput('(match #f [#f 1] [_ 2])', [1])
+    })
+
+    test('nested constructor patterns bind sub-pattern variables', async () => {
+      await checkMachineOutput(`
+        (struct node (l r))
+        (match (node (node 1 2) 3)
+          [(node (node a b) c) (+ (+ a b) c)])
+      `, [6])
+    })
+
+    test('a repeated pattern variable takes the last binding (no repeat check at runtime)', async () => {
+      await checkMachineOutput('(match (pair 1 1) [(pair a a) a])', [1])
+    })
+
+    test('overlapping branches take the first match', async () => {
+      await checkMachineOutput('(match 5 [x "first"] [_ "second"])', ['first'])
+    })
+  })
+
+  describe('quote', () => {
+    test('nested quoted lists', async () => {
+      expect(await runProgram("'(1 (2 (3)))")).toEqual([
+        '(list 1 (list 2 (list 3)))',
+      ])
+    })
+
+    test('mixed literal types in a quoted list', async () => {
+      expect(await runProgram('\'(1 "two" #\\c #t)')).toEqual([
+        '(list 1 "two" #\\c #t)',
+      ])
+    })
+
+    test('the empty quoted list is null', async () => {
+      expect(await runProgram("'()")).toEqual(['null'])
+    })
+
+    test('a quoted symbol', async () => {
+      expect(await runProgram("'foo")).toEqual(['foo'])
+    })
+  })
+
+  describe('struct', () => {
+    test('a single-field struct round-trips through its accessor', async () => {
+      await checkMachineOutput('(struct box (v)) (box-v (box 42))', [42])
+    })
+
+    test('a struct with many fields exposes each accessor', async () => {
+      await checkMachineOutput(
+        '(struct hex (a b c d e f)) (hex-f (hex 1 2 3 4 5 6))', [6])
+    })
+
+    test('a zero-field struct constructs and its predicate holds', async () => {
+      await checkMachineOutput('(struct unit ()) (unit? (unit))', [true])
+    })
+
+    test('a predicate distinguishes its own struct from other values', async () => {
+      await checkMachineOutput(
+        '(struct pt (x y)) (pt? (pt 1 2)) (pt? 5)', [true, false])
+    })
+
+    test('an accessor applied to the wrong struct is a runtime error', async () => {
+      await checkMachineOutput(
+        '(struct a (x)) (struct b (y)) (a-x (b 1))',
+        ['Runtime error: Accessor function expects a a, received [Struct: b]'], true)
+    })
+  })
+
+  describe('apply', () => {
+    test('apply spreads a list as the call arguments', async () => {
+      await checkMachineOutput('(apply + (list 1 2 3))', [6])
+    })
+
+    test('apply with an empty argument list', async () => {
+      await checkMachineOutput('(apply + (list))', [0])
+    })
+
+    test('apply with a non-list argument is a runtime error', async () => {
+      await checkMachineOutput('(apply + 5)',
+        ['Runtime error: (apply) expected a list, received number'], true)
+    })
+
+    // apply is now an ordinary first-class procedure (not a special form): it
+    // can be tested with procedure?, sectioned, and passed to higher-order fns.
+    test('apply is a first-class value (procedure?, section, passed to a HOF)', async () => {
+      await checkMachineOutput(`
+        (procedure? apply)
+        ((section apply _ _) + (list 1 2))
+        (map (lambda (p) (apply + p)) (list (list 1 2) (list 3 4)))
+      `, [true, 3, L.mkList(3, 7)])
+    })
+  })
+
+  describe('js-var', () => {
+    test('a js-var resolves to its JS internal, callable as a function', async () => {
+      await checkMachineOutput('((js-var "prelude_numberQ") 5)', [true])
+    })
+  })
+
+  describe('define', () => {
+    test('a later top-level define shadows the earlier binding', async () => {
+      await checkMachineOutput('(define x 1) (define x 2) x', [2])
+    })
+
+    test('a function body can forward-reference a later top-level define', async () => {
+      await checkMachineOutput(`
+        (define f (lambda () (g)))
+        (define g (lambda () 42))
+        (f)
+      `, [42])
+    })
+  })
+
+  describe('import', () => {
+    test('importing an unknown builtin library is a runtime error', async () => {
+      await checkMachineOutput('(import no-such-lib)',
+        ['Runtime error: No such built-in library: no-such-lib'], true)
+    })
   })
 })

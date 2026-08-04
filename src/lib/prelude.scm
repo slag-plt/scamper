@@ -1,3 +1,21 @@
+; `apply` is a first-class procedure backed by the ap-spread VM primitive
+; (native implementation: prelude_apply in src/js/prelude/index.ts).
+(define apply (js-var "prelude_apply"))
+
+;;; (with-handler handler thunk) -> any?
+;;;  handler : procedure?
+;;;  thunk : procedure?
+;;; Runs `(thunk)`. Returns its value if it completes normally; if it raises an
+;;; error, calls `(handler msg)` with the error's message string and returns that
+;;; instead. `handler`/`thunk` being procedures is enforced by this contract,
+;;; which runs before the handler is installed. Native impl: prelude_withHandler.
+;;; @category function
+(define with-handler (js-var "prelude_withHandler"))
+
+; `error` raises a runtime error with the given message; a first-class
+; procedure backed by prelude_error.
+(define error (js-var "prelude_error"))
+
 ;;; (and☀︎ v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any

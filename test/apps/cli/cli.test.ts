@@ -30,6 +30,42 @@ describe('scamper CLI', () => {
     expect(result.status).toBe(1)
   })
 
+  test('--trace prints the reduction trace of factorial', () => {
+    const result = runCli(['--trace', fixture('factorial.scm')])
+
+    expect(result.stdout).toBe(
+      [
+        '(fact 3)',
+        '--> (if (= 3 0) 1 (* 3 (fact (- 3 1))))',
+        '--> (if #f 1 (* 3 (fact (- 3 1))))',
+        '--> (* 3 (fact (- 3 1)))',
+        '--> (* 3 (fact 2))',
+        '--> (* 3 2)',
+        '--> 6',
+        '',
+      ].join('\n'),
+    )
+    expect(result.status).toBe(0)
+  })
+
+  test('--trace prints the reduction trace of list length', () => {
+    const result = runCli(['--trace', fixture('list-length.scm')])
+
+    expect(result.stdout).toBe(
+      [
+        '(len (list 7 8))',
+        '--> (if (null? (list 7 8)) 0 (+ 1 (len (cdr (list 7 8)))))',
+        '--> (if #f 0 (+ 1 (len (cdr (list 7 8)))))',
+        '--> (+ 1 (len (cdr (list 7 8))))',
+        '--> (+ 1 (len (list 8)))',
+        '--> (+ 1 1)',
+        '--> 2',
+        '',
+      ].join('\n'),
+    )
+    expect(result.status).toBe(0)
+  })
+
   test('no arguments prints usage and exits 0', () => {
     const result = runCli([])
 

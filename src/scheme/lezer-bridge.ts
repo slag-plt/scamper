@@ -85,7 +85,7 @@ function children(node: SyntaxNode): SyntaxNode[] {
 
 // Splits a flat, even-length list into adjacent pairs: [a, b, c, d] ->
 // [[a, b], [c, d]]. Used for the several grammar productions that flatten a
-// list of pairs into their parent's children (let/let* bindings, cond
+// list of pairs into their parent's children (let bindings, cond
 // branches, match branches) rather than wrapping each pair in its own node.
 function pairs<T>(items: T[]): [T, T][] {
   const result: [T, T][] = []
@@ -115,17 +115,12 @@ const formDescriptions: Record<string, string> = {
   Lambda: 'lambda expression (a list of parameters and a body)',
   If: 'if expression (a guard, an if-branch, and an else-branch)',
   Let: 'let expression (a list of bindings and a body)',
-  LetStar: 'let* expression (a list of bindings and a body)',
   Cond: 'cond expression (a list of [test body] branches)',
   Match: 'match expression (a scrutinee and a list of [pattern body] branches)',
   And: 'and expression',
   Or: 'or expression',
   Begin: 'begin expression (at least one sub-expression)',
   Section: 'section expression (at least one sub-expression)',
-  Report: 'report expression',
-  Error: 'error expression (a message to raise)',
-  Apply: 'apply expression (a function and a list of arguments)',
-  WithHandler: 'with-handler expression (a handler, a function, and its arguments)',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -395,29 +390,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkQuote(nodeToRawValue(ctx, inner), range)
     }
 
-    case 'JsVar': {
-      const name = leafValue(ctx, cs[1]) as string
-      return A.mkJsVar(name, range)
-    }
-
-    case 'Error':
-      return A.mkError(expFromNode(ctx, cs[1]), range)
-
-    case 'Apply':
-      return A.mkApply(
-        expFromNode(ctx, cs[1]),
-        expFromNode(ctx, cs[2]),
-        range,
-      )
-
-    case 'WithHandler':
-      return A.mkWithHandler(
-        expFromNode(ctx, cs[1]),
-        expFromNode(ctx, cs[2]),
-        cs.slice(3).map((c) => expFromNode(ctx, c)),
-        range,
-      )
-
     case 'Vector':
       return A.mkLit(nodeToRawValue(ctx, node), range)
 
@@ -469,9 +441,6 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
         range,
       )
 
-    case 'Report':
-      return A.mkReport(expFromNode(ctx, cs[1]), range)
-
     case 'Application': {
       if (cs.length === 0) {
         return A.mkLit(null, range)
@@ -483,17 +452,14 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       )
     }
 
-    case 'Let':
-    case 'LetStar': {
+    case 'Let': {
       const rest = cs.slice(1)
       const body = expFromNode(ctx, rest[rest.length - 1])
       const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
-        id: identifier(ctx, n),
+        pat: patFromNode(ctx, n),
         value: expFromNode(ctx, v),
       }))
-      return node.type.name === 'Let'
-        ? A.mkLet(bindings, body, range)
-        : A.mkLetS(bindings, body, range)
+      return A.mkLet(bindings, body, range)
     }
 
     case 'Cond': {

@@ -18,7 +18,7 @@ arglist {
 }
 
 binding {
-  "[" Identifier expression "]"
+  "[" pattern expression "]"
 }
 
 branch {
@@ -46,10 +46,6 @@ expression {
   Boolean |
   Char |
   Quote { "'" expression | paren<kw<"quote"> expression> } |
-  JsVar { paren<kw<"js-var"> String> } |
-  Error { paren<kw<"error"> expression> } |
-  Apply { paren<kw<"apply"> expression expression> } |
-  WithHandler { paren<kw<"with-handler"> expression expression expression*> } |
   Vector { "[" expression* "]" } |
   Lambda { paren<kw<"lambda"> arglist expression> } |
   If { paren<kw<"if"> expression expression expression> } |
@@ -58,10 +54,8 @@ expression {
   Begin { paren<kw<"begin"> expression expression*> } |
   Cond { paren<kw<"cond"> condBranch*> } |
   Section { paren<kw<"section"> expression expression*> } |
-  Report { paren<kw<"report"> expression> } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> paren<binding*> expression> } |
-  LetStar { paren<kw<"let*"> paren<binding*> expression> } |
   Match { paren<kw<"match"> expression branch*> }
 }
 

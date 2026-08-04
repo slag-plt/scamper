@@ -29,15 +29,6 @@ switch (e.tag) {
   case 'quote':
     args = ['quote', mkLit(e.value)]
     break
-  case 'error':
-    args = ['error', e.exp]
-    break
-  case 'apply':
-    args = ['apply', e.fn, e.args]
-    break
-  case 'with-handler':
-    args = ['with-handler', e.handler, e.fn, ...e.args]
-    break
   case 'and':
     args = ['and', ...e.exps]
     break
@@ -54,7 +45,7 @@ switch (e.tag) {
   case 'let':
     hljsBindings = {
       head: 'let',
-      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
+      pairs: e.bindings.map(({ pat, value }) => ({ lhs: pat, rhs: value })),
       body: e.body,
     }
     break
@@ -63,13 +54,6 @@ switch (e.tag) {
       head: 'match',
       pairs: e.branches.map(({ pat, body }) => ({ lhs: pat, rhs: body })),
       scrutinee: e.scrutinee,
-    }
-    break
-  case 'let*':
-    hljsBindings = {
-      head: 'let*',
-      pairs: e.bindings.map(({ id, value }) => ({ lhs: id.name, rhs: value })),
-      body: e.body,
     }
     break
   case 'cond':

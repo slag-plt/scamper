@@ -41,7 +41,7 @@ describe('expToString', () => {
     expect(
       A.expToString(
         A.mkLet(
-          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
+          [{ pat: A.mkId('x'), value: A.mkLit(1, anyRange) }],
           A.mkId('x', anyRange),
           anyRange,
         ),
@@ -86,37 +86,6 @@ describe('expToString', () => {
     expect(A.expToString(A.mkQuote(1, anyRange))).toBe('(quote 1)')
   })
 
-  test('jsvar', () => {
-    expect(A.expToString(A.mkJsVar('Math.sqrt', anyRange))).toBe(
-      '(js-var "Math.sqrt")',
-    )
-  })
-
-  test('error', () => {
-    expect(A.expToString(A.mkError(A.mkLit('boom', anyRange), anyRange))).toBe(
-      '(error "boom")',
-    )
-  })
-
-  test('apply', () => {
-    expect(
-      A.expToString(
-        A.mkApply(A.mkId('f', anyRange), A.mkId('args', anyRange), anyRange),
-      ),
-    ).toBe('(apply f args)')
-  })
-
-  test('let*', () => {
-    expect(
-      A.expToString(
-        A.mkLetS(
-          [{ id: A.mkId('x'), value: A.mkLit(1, anyRange) }],
-          A.mkId('x', anyRange),
-          anyRange,
-        ),
-      ),
-    ).toBe('(let* ([x 1]) x)')
-  })
 
   test('and', () => {
     expect(
@@ -147,12 +116,6 @@ describe('expToString', () => {
         A.mkSection([A.mkId('_', anyRange), A.mkLit(1, anyRange)], anyRange),
       ),
     ).toBe('(section _ 1)')
-  })
-
-  test('report', () => {
-    expect(A.expToString(A.mkReport(A.mkId('x', anyRange), anyRange))).toBe(
-      '(report x)',
-    )
   })
 })
 

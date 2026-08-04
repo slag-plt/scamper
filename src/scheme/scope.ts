@@ -122,21 +122,31 @@ function scopeCheckExp(
       return
     }
     case 'let': {
-      const vars = e.bindings.map((b) => b.id.name)
-      checkDuplicateVars(diagnostics, vars, e.range)
+      // letrec: every binder is in scope throughout -- across all binding
+      // values and the body. A forward reference to a not-yet-evaluated binding
+      // is an eager-evaluation *runtime* error, not a scope error, so it is not
+      // flagged here. A name bound by more than one binding has no single
+      // letrec slot, so it is a hard error.
+      const bindingVars = new Set<string>()
       e.bindings.forEach((b) => {
-        scopeCheckExp(diagnostics, globals, locals, b.value)
+        const patVars = new Set<string>()
+        scopeCheckPat(diagnostics, patVars, b.pat)
+        for (const v of patVars) {
+          if (bindingVars.has(v)) {
+            diagnostics.push(
+              mkDiagnostic('Scope', 'error', `Duplicate binding '${v}' in let`, e.range),
+            )
+          }
+          bindingVars.add(v)
+        }
       })
-      scopeCheckExp(diagnostics, globals, [...locals, ...vars], e.body)
+      const scope = [...locals, ...bindingVars]
+      e.bindings.forEach((b) => {
+        scopeCheckExp(diagnostics, globals, scope, b.value)
+      })
+      scopeCheckExp(diagnostics, globals, scope, e.body)
       return
     }
-    case 'begin': {
-      e.exps.forEach((e) => {
-        scopeCheckExp(diagnostics, globals, locals, e)
-      })
-      return
-    }
-
     case 'if': {
       scopeCheckExp(diagnostics, globals, locals, e.guard)
       scopeCheckExp(diagnostics, globals, locals, e.ifB)
@@ -154,30 +164,6 @@ function scopeCheckExp(
     }
     case 'quote': {
       // N.B., no need to scope check a "frozen" AST
-      return
-    }
-    case 'jsvar': {
-      // N.B., no variable references to check -- the argument is a literal
-      // string naming a JS binding, resolved at runtime.
-      return
-    }
-    case 'error': {
-      scopeCheckExp(diagnostics, globals, locals, e.exp)
-      return
-    }
-    case 'apply': {
-      scopeCheckExp(diagnostics, globals, locals, e.fn)
-      scopeCheckExp(diagnostics, globals, locals, e.args)
-      return
-    }
-    case 'with-handler': {
-      scopeCheckExp(diagnostics, globals, locals, e.handler)
-      scopeCheckExp(diagnostics, globals, locals, e.fn)
-      e.args.forEach((a) => scopeCheckExp(diagnostics, globals, locals, a))
-      return
-    }
-    case 'report': {
-      scopeCheckExp(diagnostics, globals, locals, e.exp)
       return
     }
     default:

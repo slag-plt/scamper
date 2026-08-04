@@ -1,5 +1,6 @@
 import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError, SuspendSignal } from '.'
 import { blockOnStep, Fiber, StepResult } from './fiber'
+import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
 import { mkTraceOutput } from './trace/index.js'
 import { getFS } from '../fs'
@@ -12,6 +13,10 @@ const DEFAULT_REFRESH_RATE = 60
 
 export type SchedulerId = string
 
+// How far a paused step-mode run advances when resumed: one user-visible
+// reduction, to the next statement boundary, or to completion.
+export type StepMode = 'step' | 'statement' | 'all'
+
 interface BaseSchedulerTask {
   id: SchedulerId
   fiber: Fiber
@@ -22,11 +27,32 @@ interface BaseSchedulerTask {
 export interface DisplayTask extends BaseSchedulerTask {
   out: OutputChannel
   isTracing: boolean
+  // Step mode: the run pauses ("parks") after each user-visible reduction,
+  // awaiting a step()/resume() call. `stepper` renders each step (set by Scamper
+  // whenever tracing) -- see FiberTraceStepper.
+  stepping?: boolean
+  stepper?: FiberTraceStepper
 }
 
 export type QueryTask = BaseSchedulerTask
 
 export type SchedulerTask = DisplayTask | QueryTask
+
+// A parked step-mode task, keyed by SchedulerId in `steppingGates`: it is NOT in
+// the run queue while parked (mirrors how block-on pulls a task out). `resolve`
+// wakes any pending resume() awaiter when the task next parks or completes.
+interface SteppingGate {
+  task: DisplayTask
+  mode: StepMode
+  resolve: () => void
+  // The fiber's statement index as of the last step, so 'statement' mode can
+  // detect when a statement completes (the index advances).
+  lastStmtIdx: number
+  // True only while the task is parked at a reduction (not in the run queue and
+  // not mid-block-on). Guards wakeGate so a running or async-suspended task is
+  // never re-scheduled onto the queue twice.
+  parked: boolean
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -37,6 +63,8 @@ export class Scheduler {
   // - schedule disallows pushing completed fibers
   // - execute should remove tasks that complete during the loop.
   private tasks: SchedulerTask[] = []
+  // Parked step-mode tasks, keyed by id. A parked task lives here, not in `tasks`.
+  private steppingGates: Map<SchedulerId, SteppingGate> = new Map()
   private isRunning = false
   // allows for resuming execution
   private currTaskIdx = 0
@@ -50,6 +78,17 @@ export class Scheduler {
         'Scheduling invariant violated: scheduling completed fibers is disallowed!',
       )
     }
+    // Seed the step gate on the initial schedule of a step-mode run (not on the
+    // re-schedules that wakeGate performs, which must preserve mode/dedup state).
+    if (isDisplayTask(task) && task.stepping && !this.steppingGates.has(task.id)) {
+      this.steppingGates.set(task.id, {
+        task,
+        mode: 'step',
+        resolve: () => {},
+        lastStmtIdx: task.fiber.stmtIndex,
+        parked: false,
+      })
+    }
     this.tasks.push(task)
     this.resumeExecution()
   }
@@ -57,17 +96,25 @@ export class Scheduler {
   cancelTask(id: SchedulerId): void {
     const wasPaused = this.wasPaused()
     this.pauseExecution()
+    // A step-mode task may be parked in a gate (not in `tasks`), running a burst
+    // (in both), or a plain task may be in `tasks` only. Handle all cases.
+    const gate = this.steppingGates.get(id)
     const taskI = this.tasks.findIndex((t) => t.id === id)
-    if (taskI === -1) {
+    if (gate === undefined && taskI === -1) {
       if (!wasPaused) {
         this.resumeExecution()
       }
       return
     }
-    this.tasks[taskI].err.report(
-      new ScamperError('Runtime', 'Evaluation cancelled'),
-    )
-    this.tasks.splice(taskI, 1)
+    const errCh = gate?.task.err ?? this.tasks[taskI].err
+    errCh.report(new ScamperError('Runtime', 'Evaluation cancelled'))
+    if (taskI !== -1) {
+      this.tasks.splice(taskI, 1)
+    }
+    if (gate) {
+      this.steppingGates.delete(id)
+      gate.resolve() // unblock any pending stepStmt/stepAll awaiter
+    }
     if (!wasPaused) {
       this.resumeExecution()
     }
@@ -195,6 +242,9 @@ export class Scheduler {
             },
           )
       }
+      // This step is fully handled asynchronously; do not fall through to the
+      // display-task branch (which would treat it as a reduction and park).
+      return
     }
 
     if (stepResult.tag === 'block-on') {
@@ -232,27 +282,146 @@ export class Scheduler {
           }
         },
       )
+      // Handled asynchronously; don't fall through to the display-task branch
+      // (which would re-process this suspended fiber as a reduction and re-park,
+      // double-removing it from the queue).
+      return
     }
 
     if (!isDisplayTask(task)) {
       return
     }
 
-    const { out, isTracing } = task
-    // we don't output minor steps (for now)
-    // TODO: maybe consider fine-grained tracing?
-    if (stepResult.tag === 'minor' || stepResult.tag === 'yield') {
+    const { out } = task
+    const gate = task.stepping ? this.steppingGates.get(task.id) : undefined
+    const isMinor =
+      stepResult.tag === 'minor' || stepResult.tag === 'yield'
+
+    // Emit this step's output, tracking whether it produced a user-visible
+    // reduction. A completed statement (display) renders its value as the final
+    // reduction step (`--> value`) in a traced run, or raw otherwise.
+    let emittedVisible = false
+    if (stepResult.tag === 'display') {
+      if (task.isTracing && task.stepper && fiber.lastResult !== null) {
+        const v = task.stepper.final(fiber.lastResult)
+        if (v !== undefined) {
+          out.send(mkTraceOutput(v))
+          emittedVisible = true
+        }
+      } else {
+        out.send(fiber.lastResult)
+      }
+    } else if (!isMinor && task.isTracing && task.stepper) {
+      // A trace (major) step: render the reduction, if it is user-visible.
+      const v = task.stepper.render(fiber)
+      if (v !== undefined) {
+        out.send(mkTraceOutput(v))
+        emittedVisible = true
+      }
+    }
+
+    // Step-mode pause: 'step' pauses after each user-visible reduction;
+    // 'statement' after each completed statement (the index advances -- checked
+    // here so we pause *after* the statement's value is emitted, not on the
+    // interior step that merely empties the frame stack); 'all' never pauses. A
+    // finished fiber is never parked (it completes via moveNextTask instead).
+    if (gate) {
+      const advanced = fiber.stmtIndex > gate.lastStmtIdx
+      gate.lastStmtIdx = fiber.stmtIndex
+      const park =
+        !fiber.isDone() &&
+        (gate.mode === 'step'
+          ? emittedVisible
+          : gate.mode === 'statement'
+            ? advanced
+            : false)
+      if (park) {
+        this.parkInGate(task)
+        return
+      }
+    }
+
+    if (isMinor) {
       this.currTaskIdx++
+    }
+  }
+
+  /**
+   * Pulls the current (stepping) task out of the run queue and parks it in its
+   * gate, awaiting a step()/resume(). Mirrors the block-on suspend at
+   * `processStepResult`: removeTaskFromQueue + return, never touching
+   * currTaskIdx. Wakes any pending resume() awaiter.
+   */
+  private parkInGate(task: DisplayTask): void {
+    this.removeTaskFromQueue(this.currTaskIdx)
+    const gate = this.steppingGates.get(task.id)
+    if (gate) {
+      gate.parked = true
+      const resolve = gate.resolve
+      gate.resolve = () => {}
+      resolve()
+    }
+  }
+
+  /** Re-schedules a parked task (reviving the idle loop, exactly as block-on's
+   * `this.schedule(task)` does). No-op unless the task is genuinely parked. */
+  private wakeGate(id: SchedulerId): void {
+    const gate = this.steppingGates.get(id)
+    // Only wake a *parked* task. A running task, or one suspended mid-block-on
+    // (removed from the queue but not parked), must not be re-scheduled -- doing
+    // so would run the fiber twice / double-queue it.
+    if (!gate || !gate.parked) {
       return
     }
-    // we always output if we just completed a display statement
-    if (stepResult.tag === 'display') {
-      out.send(fiber.lastResult)
+    if (gate.task.fiber.isDone()) {
+      this.steppingGates.delete(id)
+      const resolve = gate.resolve
+      gate.task.onComplete?.()
+      resolve()
+      return
     }
-    // implied that stepResult === TraceStep
-    else if (isTracing) {
-      // package it up in a nice little trace output and send it
-      out.send(mkTraceOutput(fiber.lastResult))
+    gate.parked = false
+    this.schedule(gate.task)
+  }
+
+  /** Advance a parked step-mode run by one user-visible reduction, then re-park. */
+  step(id: SchedulerId): void {
+    const gate = this.steppingGates.get(id)
+    if (!gate) {
+      return
+    }
+    gate.mode = 'step'
+    this.wakeGate(id)
+  }
+
+  /**
+   * Resume a parked step-mode run under a pause policy. The returned promise
+   * resolves when the run next parks (statement boundary), completes, or is
+   * aborted (pauseStepping/cancel).
+   */
+  resume(id: SchedulerId, mode: StepMode): Promise<void> {
+    const gate = this.steppingGates.get(id)
+    if (!gate) {
+      return Promise.resolve()
+    }
+    // Settle any previously-pending resume awaiter before taking over its slot,
+    // so its promise can't be lost (which would hang it forever).
+    const prev = gate.resolve
+    gate.resolve = () => {}
+    prev()
+    return new Promise<void>((resolve) => {
+      gate.mode = mode
+      gate.resolve = resolve
+      this.wakeGate(id)
+    })
+  }
+
+  /** Downgrade a running statement/all burst back to single-step, so it re-parks
+   * at the next user-visible reduction (keeps the stepping session alive). */
+  pauseStepping(id: SchedulerId): void {
+    const gate = this.steppingGates.get(id)
+    if (gate) {
+      gate.mode = 'step'
     }
   }
 
@@ -307,6 +476,13 @@ export class Scheduler {
   private endCurrFiber() {
     const task = this.removeTaskFromQueue(this.currTaskIdx)
     if (task) {
+      // A completed step-mode run: drop its gate and wake any pending
+      // stepStmt/stepAll awaiter, then signal completion.
+      const gate = this.steppingGates.get(task.id)
+      if (gate) {
+        this.steppingGates.delete(task.id)
+        gate.resolve()
+      }
       task.onComplete?.()
     }
   }

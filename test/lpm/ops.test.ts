@@ -5,11 +5,9 @@ import {
   ICE,
   LoggingChannel,
   OutputChannel,
-  ReportError,
   Value,
 } from '../../src/lpm'
 import { makeTestFiber } from '../util'
-import { anyRange } from '../scheme/util'
 
 function testExecute(fiber: Fiber, out: OutputChannel) {
   // execute fiber until it's done
@@ -42,8 +40,19 @@ describe('basic ops', () => {
     }).toThrow(matcher)
   }
 
-  const litCases: Value[] = [42, 'hi', false, null]
-  test.for(litCases)('lit %o', (lit) => {
+  const litCases: [string, Value][] = [
+    ['number', 42],
+    ['string', 'hi'],
+    ['empty string', ''],
+    ['boolean', false],
+    ['null', null],
+    ['void', undefined],
+    ['char', U.mkChar('a')],
+    ['symbol', U.mkSym('x')],
+    ['vector', [1, 2, 3]],
+    ['nested struct', U.mkStruct('point', ['x', 'y'], [1, 2])],
+  ]
+  test.for(litCases)('lit %s', ([, lit]) => {
     const fiber = makeTestFiber([U.mkDisp([U.mkLit(lit)])])
     expectSuccessfulExec(fiber)
     expect(out.log).toStrictEqual([lit])
@@ -69,20 +78,6 @@ describe('basic ops', () => {
     })
   })
 
-  test('ctor', () => {
-    const fiber = makeTestFiber([
-      U.mkDisp([
-        U.mkLit('test'),
-        U.mkLit(2),
-        U.mkCtor('test-ctor', ['a', 'b']),
-      ]),
-    ])
-    expectSuccessfulExec(fiber)
-    expect(out.log.at(0)).toStrictEqual(
-      U.mkStruct('test-ctor', ['a', 'b'], ['test', 2]),
-    )
-  })
-
   test('cls', () => {
     const clsBody = [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)]
     const fiber = makeTestFiber([
@@ -90,6 +85,21 @@ describe('basic ops', () => {
     ])
     expectSuccessfulExec(fiber)
     expect(out.log.at(0)).toStrictEqual(2)
+  })
+
+  test('cls: a returned closure captures its defining scope', () => {
+    // ((lambda (x) (lambda (y) (+ x y))) 10) applied to 5 => 15
+    const inner = U.mkCls(
+      ['y'],
+      [U.mkVar('+'), U.mkVar('x'), U.mkVar('y'), U.mkAp(2)],
+      'inner',
+    )
+    const outer = U.mkCls(['x'], [inner], 'outer')
+    const fiber = makeTestFiber([
+      U.mkDisp([outer, U.mkLit(10), U.mkAp(1), U.mkLit(5), U.mkAp(1)]),
+    ])
+    expectSuccessfulExec(fiber)
+    expect(out.log).toStrictEqual([15])
   })
 
   test('ap', () => {
@@ -105,10 +115,10 @@ describe('basic ops', () => {
     expectFailedExec(fiber, ICE)
   })
 
-  describe('apply', () => {
+  describe('ap-spread', () => {
     test('spreads a list as call arguments', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('+'), U.mkLit(U.mkList(3, 4)), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('+'), U.mkLit(U.mkList(3, 4)), U.mkApSpread()]),
       ])
       expectSuccessfulExec(fiber)
       expect(out.log).toStrictEqual([7])
@@ -116,26 +126,26 @@ describe('basic ops', () => {
 
     test('malformed args: arg value is not a list', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('+'), U.mkLit(42), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('+'), U.mkLit(42), U.mkApSpread()]),
       ])
       expectFailedExec(fiber)
     })
 
     test('without enough values on the stack throws an ICE', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApplyOp()])])
+      const fiber = makeTestFiber([U.mkDisp([U.mkVar('+'), U.mkApSpread()])])
       expectFailedExec(fiber, ICE)
     })
 
     test('applying a non-function, non-closure value', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkLit(42), U.mkLit(U.mkList()), U.mkApplyOp()]),
+        U.mkDisp([U.mkLit(42), U.mkLit(U.mkList()), U.mkApSpread()]),
       ])
       expectFailedExec(fiber)
     })
 
     test('a JS function throwing a non-Scamper error gets wrapped', () => {
       const fiber = makeTestFiber([
-        U.mkDisp([U.mkVar('boom'), U.mkLit(U.mkList()), U.mkApplyOp()]),
+        U.mkDisp([U.mkVar('boom'), U.mkLit(U.mkList()), U.mkApSpread()]),
       ])
       fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
         'boom',
@@ -231,12 +241,10 @@ describe('basic ops', () => {
 
     test('w/ pctor', () => {
       const testStruct = [
-        U.mkLit(1),
-        U.mkLit(2),
-        U.mkCtor('test-struct', ['field1', 'field2']),
+        U.mkLit(U.mkStruct('test-struct', ['field1', 'field2'], [1, 2])),
       ]
       const ifBranch = [U.mkVar('+'), U.mkVar('a'), U.mkVar('b'), U.mkAp(2)]
-      const elseBranch = [U.mkRaise('no match'), U.mkPops()]
+      const elseBranch = [U.mkLit('no match')]
       const pattern = U.mkPCtor('test-struct', [U.mkPVar('a'), U.mkPVar('b')])
       const fiber = makeTestFiber([
         U.mkDisp([
@@ -257,27 +265,91 @@ describe('basic ops', () => {
       ])
       expectFailedExec(fiber, ICE)
     })
-  })
 
-  describe('error', () => {
-    test('raises a runtime error with the given message', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit('boom'), U.mkError()])])
-      expect(() => {
-        testExecute(fiber, out)
-      }).toThrow('boom')
+    // plit uses structural `equals`, so each literal kind must match its own
+    // value (chars compare by value; numbers/strings/booleans/null by identity
+    // or primitive equality).
+    const plitCases: [string, Value][] = [
+      ['number', 0],
+      ['string', 'hi'],
+      ['boolean', false],
+      ['null', null],
+      ['char', U.mkChar('a')],
+    ]
+    test.for(plitCases)('plit matches a %s literal', ([, v]) => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(v),
+          U.mkMatch([
+            [U.mkPLit(v), [U.mkLit('matched')]],
+            [U.mkPWild(), [U.mkLit('fallthrough')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['matched'])
     })
 
-    test('non-string value throws', () => {
-      const fiber = makeTestFiber([U.mkDisp([U.mkLit(42), U.mkError()])])
-      expect(() => {
-        testExecute(fiber, out)
-      }).toThrow(/expected a string/)
+    test('w/ nested pctor binds sub-pattern variables', () => {
+      // scrutinee (pair (pair 1 2) 3); pattern (pair (pair a b) c) => a+b+c = 6
+      const pattern = U.mkPCtor('pair', [
+        U.mkPCtor('pair', [U.mkPVar('a'), U.mkPVar('b')]),
+        U.mkPVar('c'),
+      ])
+      const body = [
+        U.mkVar('+'),
+        U.mkVar('a'),
+        U.mkVar('+'),
+        U.mkVar('b'),
+        U.mkVar('c'),
+        U.mkAp(2),
+        U.mkAp(2),
+      ]
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(
+            U.mkStruct('pair', ['fst', 'snd'], [
+              U.mkStruct('pair', ['fst', 'snd'], [1, 2]),
+              3,
+            ]),
+          ),
+          U.mkMatch([
+            [pattern, body],
+            [U.mkPWild(), [U.mkLit(-1)]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([6])
     })
-  })
 
-  test('rept without a pending value throws an ICE', () => {
-    const fiber = makeTestFiber([U.mkDisp([U.mkRept()])])
-    expectFailedExec(fiber, ICE)
+    test('w/ zero-arg pctor', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(U.mkStruct('unit', [], [])),
+          U.mkMatch([
+            [U.mkPCtor('unit', []), [U.mkLit('matched')]],
+            [U.mkPWild(), [U.mkLit('no')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['matched'])
+    })
+
+    test('pctor with a mismatched ctor name falls through', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(U.mkStruct('point', ['x', 'y'], [1, 2])),
+          U.mkMatch([
+            [U.mkPCtor('other', [U.mkPWild(), U.mkPWild()]), [U.mkLit('wrong')]],
+            [U.mkPWild(), [U.mkLit('fallthrough')]],
+          ]),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['fallthrough'])
+    })
   })
 
   test('define', () => {
@@ -322,23 +394,267 @@ describe('basic ops', () => {
     expect(out.log).toStrictEqual([120])
   })
 
-  test('report', () => {
-    const fiber = makeTestFiber([
-      U.mkDisp([U.mkVar('+'), U.mkLit(1), U.mkLit(2), U.mkAp(2), U.mkRept()]),
-    ])
+  describe('if', () => {
+    test('a #t guard runs the then-branch', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit(true), U.mkIf([U.mkLit('then')], [U.mkLit('else')])]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['then'])
+    })
 
-    const expectedError = new ReportError(3, anyRange)
+    test('a #f guard runs the else-branch', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit(false), U.mkIf([U.mkLit('then')], [U.mkLit('else')])]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['else'])
+    })
 
-    const testRunner = () => {
-      try {
-        testExecute(fiber, out)
-        expect.fail('oops... should not have gotten here')
-      } catch (e) {
-        return e
-      }
-    }
+    test('the chosen branch is evaluated, not returned as a literal block', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(true),
+          U.mkIf([U.mkVar('+'), U.mkLit(1), U.mkLit(2), U.mkAp(2)], [U.mkLit(0)]),
+        ]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        '+',
+        (a: number, b: number) => a + b,
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([3])
+    })
 
-    expect(testRunner()).toStrictEqual(expectedError)
+    test('a non-boolean guard throws a clear runtime error', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit(5), U.mkIf([U.mkLit('then')], [U.mkLit('else')])]),
+      ])
+      expectFailedExec(fiber, /expected a boolean guard/)
+    })
+
+    test('no guard on the stack throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkIf([U.mkLit('then')], [U.mkLit('else')])]),
+      ])
+      expectFailedExec(fiber, ICE)
+    })
+  })
+
+  describe('let (letrec)', () => {
+    const plus = (): [string, Value] => ['+', (a: number, b: number) => a + b]
+
+    test('a single pvar binding is visible in the body', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet([{ pat: U.mkPVar('x'), value: [U.mkLit(42)] }], [U.mkVar('x')]),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([42])
+    })
+
+    test('let*: a later binding sees an earlier one', () => {
+      // (let ([x 1] [y (+ x 1)]) y) => 2
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [
+              { pat: U.mkPVar('x'), value: [U.mkLit(1)] },
+              {
+                pat: U.mkPVar('y'),
+                value: [U.mkVar('+'), U.mkVar('x'), U.mkLit(1), U.mkAp(2)],
+              },
+            ],
+            [U.mkVar('y')],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(plus())
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([2])
+    })
+
+    test('letrec: a thunk sees a later binding once it is filled', () => {
+      // (let ([f (lambda () x)] [x 5]) (f)) => 5
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [
+              { pat: U.mkPVar('f'), value: [U.mkCls([], [U.mkVar('x')], 'f')] },
+              { pat: U.mkPVar('x'), value: [U.mkLit(5)] },
+            ],
+            [U.mkVar('f'), U.mkAp(0)],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([5])
+    })
+
+    test('an eager forward reference to an unfilled binding errors', () => {
+      // (let ([x (+ y 1)] [y 5]) x) -> referenced before defined
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [
+              {
+                pat: U.mkPVar('x'),
+                value: [U.mkVar('+'), U.mkVar('y'), U.mkLit(1), U.mkAp(2)],
+              },
+              { pat: U.mkPVar('y'), value: [U.mkLit(5)] },
+            ],
+            [U.mkVar('x')],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(plus())
+      expectFailedExec(fiber, /referenced before it is defined/)
+    })
+
+    test('an eager self reference errors', () => {
+      // (let ([x x]) x)
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet([{ pat: U.mkPVar('x'), value: [U.mkVar('x')] }], [U.mkVar('x')]),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectFailedExec(fiber, /referenced before it is defined/)
+    })
+
+    test('a constructor pattern destructures the bound value', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [
+              {
+                pat: U.mkPCtor('pair', [U.mkPVar('a'), U.mkPVar('b')]),
+                value: [U.mkLit(U.mkStruct('pair', ['fst', 'snd'], [3, 4]))],
+              },
+            ],
+            [U.mkVar('b')],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([4])
+    })
+
+    test('a wildcard binding runs the value for effect and returns the body', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet([{ pat: U.mkPWild(), value: [U.mkLit(99)] }], [U.mkLit(42)]),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([42])
+    })
+
+    test('a matching literal pattern binds nothing and runs the body', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet([{ pat: U.mkPLit(7), value: [U.mkLit(7)] }], [U.mkLit('ok')]),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['ok'])
+    })
+
+    test('zero bindings run the body directly', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLet([], [U.mkLit(7)]), U.mkPopScope()]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([7])
+    })
+
+    test('a void binding value fills its slot', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [{ pat: U.mkPVar('x'), value: [U.mkLit(undefined)] }],
+            [U.mkLit('body')],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual(['body'])
+    })
+
+    test('a value that does not match its pattern throws the failMsg', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet(
+            [
+              {
+                pat: U.mkPCtor('pair', [U.mkPVar('a'), U.mkPVar('b')]),
+                value: [U.mkLit(5)],
+                failMsg: 'let: nope',
+              },
+            ],
+            [U.mkVar('a')],
+          ),
+          U.mkPopScope(),
+        ]),
+      ])
+      expectFailedExec(fiber, /let: nope/)
+    })
+
+    test('a binder does not leak past its pop-scope', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLet([{ pat: U.mkPVar('x'), value: [U.mkLit(1)] }], [U.mkVar('x')]),
+          U.mkPopScope(),
+          U.mkVar('x'),
+        ]),
+      ])
+      expectFailedExec(fiber, /Variable not found/)
+    })
+  })
+
+  describe('pop-scope', () => {
+    test('is a no-op when there are no local scopes', () => {
+      const fiber = makeTestFiber([U.mkDisp([U.mkLit(5), U.mkPopScope()])])
+      expectSuccessfulExec(fiber)
+      expect(out.log).toStrictEqual([5])
+    })
+
+    test('a match branch binder does not leak past the trailing pop-scope', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          U.mkLit(7),
+          U.mkMatch([[U.mkPVar('m'), [U.mkVar('m')]]]),
+          U.mkPopScope(),
+          U.mkVar('m'),
+        ]),
+      ])
+      expectFailedExec(fiber, /Variable not found/)
+    })
+  })
+
+  describe('with-handler opcodes', () => {
+    test('push-handler with fewer than two stack values throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit('only-one'), U.mkPushHandler()]),
+      ])
+      expectFailedExec(fiber, ICE)
+    })
+
+    test('pop-handler with fewer than two stack values throws an ICE', () => {
+      const fiber = makeTestFiber([
+        U.mkDisp([U.mkLit('only-one'), U.mkPopHandler()]),
+      ])
+      expectFailedExec(fiber, ICE)
+    })
   })
 })
 
