@@ -213,9 +213,14 @@ export class Scheduler {
                 // failed at this step...
                 return
               }
+              // A module loads with the standard library in scope, exactly as a
+              // user program does, so its top-level statements resolve at load
+              // time (notably `struct`, which expands to `runtime` calls). The
+              // library sits in the env's imports, not its top level, so it is
+              // not re-exported by the module (see Env.getTopLevelAsModule).
               // Closures defined in an imported file are stepped over in
               // traces, like the builtin libraries (see Closure.stepOver).
-              const moduleFiber = new Fiber(prog, undefined, true)
+              const moduleFiber = new Fiber(prog, S.mkInitialEnv(), true)
               const id = crypto.randomUUID()
               this.schedule({
                 id,

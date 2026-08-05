@@ -76,7 +76,7 @@ async function runIn(env: LPM.Env, src: string): Promise<string[]> {
 }
 
 /**
- * Loads `moduleSrc` as a module (as the scheduler does: run in an empty env,
+ * Loads `moduleSrc` as a module (as the scheduler does: run in an initial env,
  * snapshot exports), imports it into a fresh user env under `alias` (qualified)
  * or flat (alias undefined), then runs `userSrc` there. Lets us drive a *file*
  * module's import + use synchronously, without the async scheduler.
@@ -89,7 +89,7 @@ async function withImportedModule(
   const compiled = await S.compile(moduleSrc)
   expect(compiled.diagnostics.map((d) => d.message)).toEqual([])
   if (compiled.prog === undefined) throw new Error('module did not compile')
-  const modFiber = new Fiber(compiled.prog, undefined, true)
+  const modFiber = new Fiber(compiled.prog, S.mkInitialEnv(), true)
   while (!modFiber.isDone()) modFiber.step()
   const mod = modFiber.getModule()
   const env =
