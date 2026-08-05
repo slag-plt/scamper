@@ -100,7 +100,16 @@ describe('anonymous function restrictions', () => {
   })
 
   test('an identifier that starts with % but is not a valid % identifier is rejected', () => {
-    for (const src of ['#(+ %foo 1)', '#(+ %0 1)', '#(+ %01 1)', '#(+ %1a 1)']) {
+    for (const src of [
+      '#(+ %foo 1)',
+      '#(+ %0 1)',
+      '#(+ %01 1)',
+      '#(+ %1a 1)',
+      // "%&"-prefixed junk tokenizes as one identifier (not "%&" + rest), so it
+      // is caught by the same rule rather than slipping through as two params.
+      '#(f %&x)',
+      '#(f %&%)',
+    ]) {
       expect(errorsFor(src), src).toContainEqual(
         expect.stringContaining('identifiers cannot begin with "%"'),
       )

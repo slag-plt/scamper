@@ -381,4 +381,9 @@ describe('provenance survives the whole AST -> op -> AST round trip', () => {
     const forms = await trace('(map #(* %1 %1) (list 1 2 3))')
     expect(forms.some((f) => f.includes('#(* %1 %1)'))).toBe(true)
   })
+
+  test('an ordinary lambda never renders as #(...) (the anon-fn tag does not leak)', async () => {
+    const forms = await trace('(map (lambda (x) (* x x)) (list 1 2 3))')
+    expect(forms.every((f) => !f.includes('#('))).toBe(true)
+  })
 })

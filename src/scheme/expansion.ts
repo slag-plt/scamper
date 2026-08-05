@@ -183,7 +183,7 @@ export function expandExpr(e: A.Exp): A.Exp {
       const body = collectAndNormalizePercent(expandExpr(e.body), acc)
       const params: A.Identifier[] = []
       for (let i = 1; i <= acc.maxNum; i++) {
-        params.push(A.mkId(`%${i}`, e.range))
+        params.push(A.mkId(`%${String(i)}`, e.range))
       }
       const restParam = acc.hasRest ? A.mkId('%&', e.range) : undefined
       return A.mkLam(params, body, e.range, restParam, 'anon-fn')

@@ -33,5 +33,6 @@ export function generateParser() {
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`
 if (isMain) {
-  console.log(`Wrote ${generateParser()}`)
+  const parserPath = generateParser()
+  console.log(`Wrote ${parserPath} (+ parser.terms.ts)`)
 }

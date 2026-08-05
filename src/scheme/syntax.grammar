@@ -96,7 +96,9 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
   // so that identifiers like ">", "<=", "null?", and "set!" tokenize correctly.
   // The leading "%&" alternative lets the anonymous-function rest parameter
   // tokenize as a single identifier even though "&" is otherwise a delimiter.
-  Identifier { "%&" | ![ \t\n\r()\[\]{}'";.&]+ }
+  // It greedily consumes any trailing atom characters so that e.g. "%&x" is one
+  // (invalid) identifier rather than "%&" followed by "x".
+  Identifier { "%&" ![ \t\n\r()\[\]{}'";.&]* | ![ \t\n\r()\[\]{}'";.&]+ }
 
   // The "&" separating a lambda's fixed parameters from its rest parameter,
   // e.g. (lambda (x y & z) ...), or introducing a rest-only list, e.g.
