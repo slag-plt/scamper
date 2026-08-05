@@ -94,6 +94,58 @@ describe('cond', () => {
   })
 })
 
+describe('anonymous functions #(...)', () => {
+  test('a single numbered parameter', () => {
+    expect(roundTrip('#(+ %1 1)')).toBe('#(+ %1 1)')
+  })
+  test('% shorthand is recovered as its canonical %1', () => {
+    // Expansion canonicalizes `%` to `%1`, so the recovered form uses `%1`.
+    expect(roundTrip('#(+ % 1)')).toBe('#(+ %1 1)')
+  })
+  test('several parameters', () => {
+    expect(roundTrip('#(list %1 %2 %3)')).toBe('#(list %1 %2 %3)')
+  })
+  test('a rest parameter', () => {
+    expect(roundTrip('#(apply + %&)')).toBe('#(apply + %&)')
+  })
+  test('numbered plus rest parameters', () => {
+    expect(roundTrip('#(cons %1 %&)')).toBe('#(cons %1 %&)')
+  })
+  test('a zero-operand thunk', () => {
+    expect(roundTrip('#(g)')).toBe('#(g)')
+  })
+  test('the empty #()', () => {
+    expect(roundTrip('#()')).toBe('#()')
+  })
+  test('an operand that is itself a derived form is also recovered', () => {
+    expect(roundTrip('#(f (and %1 %2))')).toBe('#(f (and %1 %2))')
+  })
+  test('a #(...) nested in another derived form is recovered', () => {
+    expect(roundTrip('(map #(* %1 %1) xs)')).toBe('(map #(* %1 %1) xs)')
+  })
+
+  // The body may be any parenthesized form, including the special forms.
+  test('an if body', () => {
+    expect(roundTrip('#(if %1 %2 %3)')).toBe('#(if %1 %2 %3)')
+  })
+  test('a let body', () => {
+    expect(roundTrip('#(let ([x %1]) (+ x %2))')).toBe(
+      '#(let ([x %1]) (+ x %2))',
+    )
+  })
+  test('an and body (recovered through its expansion)', () => {
+    expect(roundTrip('#(and %1 %2)')).toBe('#(and %1 %2)')
+  })
+  test('a cond body', () => {
+    expect(roundTrip('#(cond [%1 1] [#t 2])')).toBe('#(cond [%1 1] [#t 2])')
+  })
+  test('a match body', () => {
+    expect(roundTrip('#(match %1 [0 "z"] [_ "o"])')).toBe(
+      '#(match %1 [0 "z"] [_ "o"])',
+    )
+  })
+})
+
 // ---- Nested derived forms (careful recursion) ------------------------------
 
 describe('nested derived forms are recovered, not lost', () => {
@@ -321,5 +373,12 @@ describe('provenance survives the whole AST -> op -> AST round trip', () => {
     // idx-threaded continuation ops, so a trace shows `begin`, not `let`
     const forms = await trace('(begin (+ 1 1) (+ 2 2))')
     expect(forms.some((f) => f.startsWith('(begin '))).toBe(true)
+  })
+
+  test('a `#(...)` is recovered before its closure op executes (cls kept its anon-fn tag)', async () => {
+    // Before the `cls` op runs, raising + sugaring shows the anonymous function
+    // rather than a bare `(lambda ...)`; codegen tagged the cls op `anon-fn`.
+    const forms = await trace('(map #(* %1 %1) (list 1 2 3))')
+    expect(forms.some((f) => f.includes('#(* %1 %1)'))).toBe(true)
   })
 })

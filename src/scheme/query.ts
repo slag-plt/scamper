@@ -146,6 +146,11 @@ function slotsOf(exp: A.Exp): Slot[] {
       }))
     }
 
+    case 'anonfn':
+      return [
+        { exp: exp.body, rebuild: (r) => A.mkAnonFn(r, exp.range) },
+      ]
+
     case 'let': {
       return [
         ...exp.bindings.map((b, i) => ({

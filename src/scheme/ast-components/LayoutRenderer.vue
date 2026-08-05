@@ -41,6 +41,10 @@ function valClass(v: unknown): string {
     /></span>
     <ValueRenderer v-else :value="layout.value" />
   </template>
+  <template v-else-if="layout.kind === 'hash'">
+    <CodeElement>#</CodeElement>
+    <LayoutRenderer :layout="layout.child" />
+  </template>
   <template v-else>
     <CodeElement>{{ DELIMS[layout.delim][0] }}</CodeElement>
     <template v-for="(child, idx) in layout.children" :key="idx">

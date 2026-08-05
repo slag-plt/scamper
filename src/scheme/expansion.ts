@@ -1,4 +1,66 @@
 import * as A from './ast.js'
+import { ICE } from '../lpm/index.js'
+
+/**
+ * Walks a (core, already-expanded) expression to canonicalize the anonymous
+ * function shorthand `%` to `%1` and record which parameters it references, so
+ * the enclosing `#(...)` can build its lambda. `acc.maxNum` tracks the largest
+ * `%k` index seen (the arity) and `acc.hasRest` whether `%&` appears. The parser
+ * guarantees `%` identifiers appear only inside a `#(...)` and that `#(...)`
+ * forms never nest, so this may descend through every sub-expression freely.
+ */
+function collectAndNormalizePercent(
+  e: A.Exp,
+  acc: { maxNum: number; hasRest: boolean },
+): A.Exp {
+  const rec = (x: A.Exp) => collectAndNormalizePercent(x, acc)
+  switch (e.tag) {
+    case 'lit':
+    case 'quote':
+      // Inert data: a `%` inside a vector or quote literal is a plain symbol,
+      // not a parameter reference, so it is left untouched (and does not count
+      // toward the arity).
+      return e
+    case 'id': {
+      if (e.name === '%&') {
+        acc.hasRest = true
+        return e
+      }
+      if (e.name === '%') {
+        // `%` is shorthand for `%1`; canonicalize it so both spellings bind the
+        // same parameter.
+        acc.maxNum = Math.max(acc.maxNum, 1)
+        return A.mkId('%1', e.range)
+      }
+      if (/^%[1-9][0-9]*$/.test(e.name)) {
+        acc.maxNum = Math.max(acc.maxNum, parseInt(e.name.slice(1), 10))
+      }
+      return e
+    }
+    case 'app':
+      return A.mkApp(rec(e.head), e.args.map(rec), e.range, e.provenance)
+    case 'lam':
+      return A.mkLam(e.params, rec(e.body), e.range, e.restParam, e.provenance)
+    case 'let':
+      return A.mkLet(
+        e.bindings.map((b) => ({ pat: b.pat, value: rec(b.value) })),
+        rec(e.body),
+        e.range,
+        e.provenance,
+      )
+    case 'if':
+      return A.mkIf(rec(e.guard), rec(e.ifB), rec(e.elseB), e.range, e.provenance)
+    case 'match':
+      return A.mkMatch(
+        rec(e.scrutinee),
+        e.branches.map((b) => ({ pat: b.pat, body: rec(b.body) })),
+        e.range,
+      )
+    default:
+      // and/or/begin/cond/anonfn are removed by expandExpr before we get here.
+      throw new ICE('collectAndNormalizePercent', `Unexpected form: ${e.tag}`)
+  }
+}
 
 export function expandExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
@@ -107,6 +169,24 @@ export function expandExpr(e: A.Exp): A.Exp {
         ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range, 'cond')
       }
       return ret
+    }
+    case 'anonfn': {
+      // #(body)
+      // -->
+      // (lambda (%1 ... %m [& %&]) body')
+      //   where each `%` in body is canonicalized to `%1`, the arity m is the
+      //   largest `%k` index referenced, and `%&` (if present) is the rest
+      //   parameter. The resulting lambda is tagged `anon-fn` so sugaring
+      //   recovers the `#(...)`. The body is expanded first so the collection
+      //   walk only meets core forms.
+      const acc = { maxNum: 0, hasRest: false }
+      const body = collectAndNormalizePercent(expandExpr(e.body), acc)
+      const params: A.Identifier[] = []
+      for (let i = 1; i <= acc.maxNum; i++) {
+        params.push(A.mkId(`%${i}`, e.range))
+      }
+      const restParam = acc.hasRest ? A.mkId('%&', e.range) : undefined
+      return A.mkLam(params, body, e.range, restParam, 'anon-fn')
     }
   }
 }

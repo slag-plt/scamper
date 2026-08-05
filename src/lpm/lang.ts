@@ -390,8 +390,9 @@ export type List = null | Cons
 // Records that a node was inserted by expanding a derived form (expansion.ts):
 // codegen copies it from the AST onto the op, raise copies it back, and sugaring
 // uses it to recover the derived form exactly (no heuristics). Undefined on
-// nodes that came straight from the parser.
-export type Provenance = 'and' | 'or' | 'begin' | 'cond'
+// nodes that came straight from the parser. `anon-fn` tags the `lambda` an
+// anonymous function `#(...)` expands to, so sugaring can recover the `#(...)`.
+export type Provenance = 'and' | 'or' | 'begin' | 'cond' | 'anon-fn'
 
 export interface Lit {
   tag: 'lit'
@@ -411,6 +412,7 @@ export interface Cls {
   name?: string
   range: Range
   restParam?: string
+  provenance?: Provenance
 }
 export interface Ap {
   tag: 'ap'

@@ -42,6 +42,12 @@ function locOf(offset: number, lineStarts: number[]): L.Loc {
 }
 
 class Ctx {
+  // How many enclosing `#(...)` forms we are inside. Drives the `%`-identifier
+  // rules in identifierName: a `%` identifier is legal only at depth > 0, and a
+  // `#(...)` nested at depth > 0 is rejected (see the AnonFn case in
+  // expFromNode).
+  public anonFnDepth = 0
+
   constructor(
     public src: string,
     public lineStarts: number[],
@@ -120,6 +126,7 @@ const formDescriptions: Record<string, string> = {
   And: 'and expression',
   Or: 'or expression',
   Begin: 'begin expression (at least one sub-expression)',
+  AnonFn: 'anonymous function #(...)',
   Application: 'function application',
   Quote: 'quoted expression',
   Vector: 'vector literal',
@@ -238,6 +245,11 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
       return L.mkList(L.mkSym('quote'), nodeToRawValue(ctx, inner))
     }
 
+    case 'AnonFn':
+      // As raw data, `#(body)` is just its parenthesized body. cs[0] is the "#"
+      // marker (carrying no data); cs[1] is the body form.
+      return nodeToRawValue(ctx, cs[1])
+
     default:
       // A keyword token (e.g. the "lambda" in a Lambda node) is a leaf
       // whose node type name is exactly the keyword text, thanks to the
@@ -255,10 +267,21 @@ function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
   }
 }
 
+// The special identifiers of the anonymous-function form `#(...)`: `%` (the
+// first parameter), `%1`, `%2`, ... (the k-th parameter), and `%&` (the rest
+// parameter). Every other `%`-prefixed name is an illegal identifier.
+function isPercentId(name: string): boolean {
+  return name === '%' || name === '%&' || /^%[1-9][0-9]*$/.test(name)
+}
+
+// `allowPercent` is set only for a variable *reference* (see the Identifier
+// case in expFromNode); a `%` identifier is legal there (inside a `#(...)`) but
+// never as a binder, so every binder call leaves it false.
 function identifierName(
   ctx: Ctx,
   node: SyntaxNode,
   errorMsg = 'Expected an identifier',
+  allowPercent = false,
 ): string {
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
@@ -276,6 +299,44 @@ function identifierName(
     ctx.diagnostics.push(mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
     return '<error>'
   }
+  if (name.startsWith('%')) {
+    if (!isPercentId(name)) {
+      ctx.diagnostics.push(
+        mkDiagnostic(
+          'Parse',
+          'error',
+          `The identifier "${name}" is invalid: identifiers cannot begin with "%" (only "%", "%1", ..., "%k", and "%&" may, and only inside an anonymous function #(...))`,
+          ctx.range(node),
+        ),
+      )
+      return '<error>'
+    }
+    if (!allowPercent) {
+      // A binder position: `%` identifiers are the implicit parameters of a
+      // `#(...)` and may only be referenced, never bound (binding one would
+      // shadow/clash with the parameter it names).
+      ctx.diagnostics.push(
+        mkDiagnostic(
+          'Parse',
+          'error',
+          `The identifier "${name}" cannot be used as a binding name`,
+          ctx.range(node),
+        ),
+      )
+      return '<error>'
+    }
+    if (ctx.anonFnDepth === 0) {
+      ctx.diagnostics.push(
+        mkDiagnostic(
+          'Parse',
+          'error',
+          `The identifier "${name}" can only be used inside an anonymous function #(...)`,
+          ctx.range(node),
+        ),
+      )
+      return '<error>'
+    }
+  }
   return name
 }
 
@@ -287,8 +348,12 @@ function identifier(
   ctx: Ctx,
   node: SyntaxNode,
   errorMsg = 'Expected an identifier',
+  allowPercent = false,
 ): A.Identifier {
-  return A.mkId(identifierName(ctx, node, errorMsg), ctx.range(node))
+  return A.mkId(
+    identifierName(ctx, node, errorMsg, allowPercent),
+    ctx.range(node),
+  )
 }
 
 ///// Comments / docstrings ////////////////////////////////////////////////////
@@ -381,7 +446,9 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       if (!L.isSym(v)) {
         return A.mkLit(v, range)
       }
-      return identifier(ctx, node)
+      // A variable reference: the only position where a `%` identifier (a
+      // #(...) parameter) is permitted.
+      return identifier(ctx, node, 'Expected an identifier', true)
     }
 
     case 'Quote': {
@@ -433,6 +500,26 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
         cs.slice(1).map((c) => expFromNode(ctx, c)),
         range,
       )
+
+    case 'AnonFn': {
+      // #(body). cs[0] is the "#" marker; cs[1] is the parenthesized body.
+      // `%` identifiers inside are legal (anonFnDepth > 0), and a `#(...)` that
+      // is itself nested inside one is rejected.
+      if (ctx.anonFnDepth > 0) {
+        ctx.diagnostics.push(
+          mkDiagnostic(
+            'Parse',
+            'error',
+            'Anonymous functions #(...) cannot be nested',
+            range,
+          ),
+        )
+      }
+      ctx.anonFnDepth++
+      const body = expFromNode(ctx, cs[1])
+      ctx.anonFnDepth--
+      return A.mkAnonFn(body, range)
+    }
 
     case 'Application': {
       if (cs.length === 0) {

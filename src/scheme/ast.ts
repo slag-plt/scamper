@@ -61,6 +61,7 @@ export interface Comment {
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
+//     | #(e1 ... ek)
 //
 // s ::= e
 //     | (import m)
@@ -166,6 +167,15 @@ export interface Cond extends Tagged, Node {
   tag: 'cond'
   branches: { test: Exp; body: Exp }[]
 }
+// A Clojure-style anonymous function `#(body)` -- the `#` marker followed by a
+// parenthesized expression. Expansion (expansion.ts) rewrites it to a `lambda`
+// (tagged `provenance:'anon-fn'`) whose body is that expression verbatim and
+// whose parameters come from the `%`, `%1`, ..., `%k`, `%&` identifiers
+// referenced within; nothing downstream of expansion ever sees this node.
+export interface AnonFn extends Tagged, Node {
+  tag: 'anonfn'
+  body: Exp
+}
 export type Exp =
   | Lit
   | Identifier
@@ -179,6 +189,7 @@ export type Exp =
   | And
   | Or
   | Cond
+  | AnonFn
 
 ///// Statements /////
 
@@ -303,7 +314,15 @@ export const mkLam = (
   body: Exp,
   range: L.Range = L.Range.none,
   restParam?: Identifier,
-): Lam => ({ tag: 'lam', params, body, range, restParam})
+  provenance?: L.Provenance,
+): Lam => ({
+  tag: 'lam',
+  params,
+  body,
+  range,
+  restParam,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
 export const mkLet = (
   bindings: { pat: Pat; value: Exp }[],
   body: Exp,
@@ -358,6 +377,10 @@ export const mkCond = (
   branches: { test: Exp; body: Exp }[],
   range: L.Range = L.Range.none,
 ): Cond => ({ tag: 'cond', branches, range })
+export const mkAnonFn = (
+  body: Exp,
+  range: L.Range = L.Range.none,
+): AnonFn => ({ tag: 'anonfn', body, range })
 
 // Statements (stmt)
 export const mkImport = (
@@ -412,6 +435,7 @@ export function isExp(v: unknown): v is Exp {
       'and',
       'or',
       'cond',
+      'anonfn',
     ].includes(v.tag)
   )
 }
@@ -459,6 +483,9 @@ export type Layout =
   | { kind: 'val'; value: L.Value }
   // A delimited group whose children are space-separated.
   | { kind: 'group'; delim: 'paren' | 'bracket'; children: Layout[] }
+  // A "#" written immediately (no space) before its child -- the anonymous
+  // function `#(body)`, whose child is the parenthesized body layout.
+  | { kind: 'hash'; child: Layout }
 
 const tok = (text: string): Layout => ({ kind: 'tok', text })
 const kw = (text: string): Layout => ({ kind: 'tok', text, hl: 'keyword' })
@@ -473,6 +500,7 @@ const brackets = (children: Layout[]): Layout => ({
   delim: 'bracket',
   children,
 })
+const hash = (child: Layout): Layout => ({ kind: 'hash', child })
 
 export function patToLayout(pat: Pat): Layout {
   switch (pat.tag) {
@@ -540,6 +568,12 @@ export function expToLayout(e: Exp): Layout {
           brackets([expToLayout(test), expToLayout(body)]),
         ),
       ])
+    case 'anonfn':
+      // #(body): "#" then the body's own parenthesized layout. An empty #()
+      // (whose body parsed to the `null` literal) is rendered literally.
+      return e.body.tag === 'lit' && e.body.value === null
+        ? tok('#()')
+        : hash(expToLayout(e.body))
   }
 }
 
@@ -580,6 +614,8 @@ export function layoutToString(l: Layout): string {
       const [open, close] = DELIMS[l.delim]
       return `${open}${l.children.map(layoutToString).join(' ')}${close}`
     }
+    case 'hash':
+      return `#${layoutToString(l.child)}`
   }
 }
 
@@ -680,6 +716,8 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       ) &&
       e1.branches.every(({ body }, i) => expEquals(body, e2.branches[i].body))
     )
+  } else if (e1.tag === 'anonfn' && e2.tag === 'anonfn') {
+    return expEquals(e1.body, e2.body)
   } else {
     return false
   }

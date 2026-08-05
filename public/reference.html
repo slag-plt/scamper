@@ -136,6 +136,16 @@ x
 (match lst
   [null #t]
   [(cons _ _) #f])
+
+; Anonymous function shorthand: #(<body>) is a lambda whose body is the
+; parenthesized expression <body>. Its parameters are the % identifiers used
+; inside: % (or %1) is the first argument, %2 the second, ..., and %& collects
+; the rest. The arity is the largest %k referenced. The body may be any
+; parenthesized form, including the special forms (if, let, cond, ...).
+#(+ %1 1)              ; same as (lambda (x) (+ x 1))
+#(* % %)              ; same as (lambda (x) (* x x))
+#(apply + %&)          ; same as (lambda (& xs) (apply + xs))
+#(if (> % 0) % (- 0 %)) ; same as (lambda (x) (if (> x 0) x (- 0 x)))
     </pre>
   </div>
 </body>

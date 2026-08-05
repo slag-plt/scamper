@@ -923,3 +923,71 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     })
   })
 })
+
+describe('Anonymous functions #(...)', () => {
+  test('applies numbered parameters positionally', async () => {
+    expect(await runProgram('(display (#(+ %1 %2) 3 4))')).toEqual(['7'])
+    expect(await runProgram('(display (#(- %1 %2) 10 3))')).toEqual(['7'])
+  })
+
+  test('% is the first parameter and aliases %1', async () => {
+    expect(await runProgram('(display (#(+ % 1) 10))')).toEqual(['11'])
+    expect(await runProgram('(display (#(+ % %1) 5))')).toEqual(['10'])
+  })
+
+  test('a zero-parameter #(...) is a thunk', async () => {
+    expect(await runProgram('(display (#(* 2 3)))')).toEqual(['6'])
+  })
+
+  test('arity is the largest index; skipped positions are ignored', async () => {
+    expect(await runProgram('(display (#(list %1 %3) 1 2 3))')).toEqual([
+      '(list 1 3)',
+    ])
+  })
+
+  test('%& collects the rest of the arguments', async () => {
+    expect(await runProgram('(display (#(apply + %&) 1 2 3))')).toEqual(['6'])
+    expect(await runProgram('(display (#(cons %1 %&) 1 2 3))')).toEqual([
+      '(list 1 2 3)',
+    ])
+  })
+
+  test('works as an argument to higher-order functions', async () => {
+    expect(await runProgram('(display (map #(* %1 %1) (list 1 2 3 4)))')).toEqual(
+      ['(list 1 4 9 16)'],
+    )
+    expect(
+      await runProgram('(display (filter #(> % 2) (list 1 2 3 4)))'),
+    ).toEqual(['(list 3 4)'])
+  })
+
+  test('a single-operand #(...) applies its operand', async () => {
+    // #(%1) is (lambda (%1) (%1)): it calls its argument with no arguments.
+    expect(await runProgram('(display (#(%1) (lambda () 42)))')).toEqual(['42'])
+  })
+
+  test('a special form may be the body', async () => {
+    // #(if ...) -- the body is a conditional, not an application.
+    expect(await runProgram('(display (#(if (> % 0) "pos" "neg") 5))')).toEqual([
+      '"pos"',
+    ])
+    expect(await runProgram('(display (#(if (> % 0) "pos" "neg") -5))')).toEqual(
+      ['"neg"'],
+    )
+    // #(let ...) -- a let body that references a parameter.
+    expect(
+      await runProgram('(display (#(let ([d (* %1 2)]) (+ d %2)) 3 4))'),
+    ).toEqual(['10'])
+    // #(cond ...) used as a mapped predicate-ish transform.
+    expect(
+      await runProgram(
+        '(display (map #(cond [(> % 0) 1] [(< % 0) -1] [#t 0]) (list -3 0 7)))',
+      ),
+    ).toEqual(['(list -1 0 1)'])
+  })
+
+  test('calling a #(...) with the wrong arity is a runtime error', async () => {
+    await checkMachineOutput('(#(+ %1 %2) 1)',
+      ['Runtime error: Arity mismatch in function call: expected 2 arguments, got 1'], true)
+  })
+})

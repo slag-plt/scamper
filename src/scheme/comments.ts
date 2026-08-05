@@ -84,6 +84,8 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
     case 'and':
     case 'or':
       return node.exps
+    case 'anonfn':
+      return [node.body]
     case 'if':
       return [node.guard, node.ifB, node.elseB]
     case 'match':

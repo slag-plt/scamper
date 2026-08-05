@@ -39,7 +39,7 @@ function lowerExpr(e: A.Exp): L.Blk {
         L.mkAp(e.args.length, e.range, e.provenance),
       ]
     case 'lam':
-      return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name)]
+      return [L.mkCls(e.params.map((p) => p.name), lowerExpr(e.body), '##anonymous##', e.range, e.restParam?.name, e.provenance)]
     case 'let': {
       // letrec: every binder shares one scope (declared as holes); the `let`
       // op evaluates each value sub-block left-to-right, filling holes as it

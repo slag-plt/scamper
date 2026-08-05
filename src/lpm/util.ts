@@ -111,8 +111,9 @@ export const mkCls = (
   body: L.Blk,
   name?: string,
   range: Range = Range.none,
-  restParam?: string
-): L.Cls => ({ tag: 'cls', params, body, name, range, restParam })
+  restParam?: string,
+  provenance?: L.Provenance,
+): L.Cls => ({ tag: 'cls', params, body, name, range, restParam, provenance })
 export const mkAp = (
   numArgs: number,
   range: Range = Range.none,

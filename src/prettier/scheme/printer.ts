@@ -202,6 +202,13 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
       return group(['(cond', indent([line, join(line, branchDocs)]), ')'])
     }
 
+    case 'anonfn':
+      // #(body): "#" immediately before the body's parenthesized doc. An empty
+      // #() (whose body is the `null` literal) is printed literally.
+      return node.body.tag === 'lit' && node.body.value === null
+        ? '#()'
+        : ['#', path.call(print, 'body')]
+
     ///// Patterns //////////////////////////////////////////////////////////////
 
     case 'pwild':

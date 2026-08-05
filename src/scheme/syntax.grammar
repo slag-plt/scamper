@@ -53,6 +53,11 @@ expression {
   Or { paren<kw<"or"> expression*> } |
   Begin { paren<kw<"begin"> expression expression*> } |
   Cond { paren<kw<"cond"> condBranch*> } |
+  // A Clojure-style anonymous function: the "#" marker followed by an ordinary
+  // parenthesized expression, e.g. #(+ %1 1) or #(let ([x 1]) (+ x %)). Because
+  // the body is a normal expression, any parenthesized form (application, let,
+  // if, ...) can appear -- expansion wraps it verbatim in a lambda.
+  AnonFn { AnonHash expression } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> paren<binding*> expression> } |
   Match { paren<kw<"match"> expression branch*> }
@@ -67,6 +72,12 @@ statement {
 }
 
 kw<term> { @specialize[@name={term}]<Identifier, term> }
+
+// The "#" that opens #(...). An external tokenizer (anon-tokens.ts) emits it
+// only when the "#" is immediately followed by "(" or "{", so "#t"/"#f"/"#\c"
+// and "#"-containing identifiers (e.g. ##report##) are unaffected. Declared
+// before @tokens so it takes precedence over Identifier for a bare "#".
+@external tokens anonHash from "../anon-tokens.js" { AnonHash }
 
 @tokens {
   @precedence { Number, Boolean, Char, Identifier }
@@ -83,7 +94,9 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
   // (the rest-parameter marker below) as an atom (disambiguated into
   // number/boolean/char/identifier afterward). This is deliberately permissive
   // so that identifiers like ">", "<=", "null?", and "set!" tokenize correctly.
-  Identifier { ![ \t\n\r()\[\]{}'";.&]+ }
+  // The leading "%&" alternative lets the anonymous-function rest parameter
+  // tokenize as a single identifier even though "&" is otherwise a delimiter.
+  Identifier { "%&" | ![ \t\n\r()\[\]{}'";.&]+ }
 
   // The "&" separating a lambda's fixed parameters from its rest parameter,
   // e.g. (lambda (x y & z) ...), or introducing a rest-only list, e.g.

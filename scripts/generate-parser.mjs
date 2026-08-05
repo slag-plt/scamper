@@ -7,10 +7,11 @@ import { fileURLToPath } from 'url'
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)))
 export const grammarPath = join(rootDir, 'src/scheme/syntax.grammar')
 const outPath = join(rootDir, 'src/scheme/generated/parser.ts')
+const termsPath = join(rootDir, 'src/scheme/generated/parser.terms.ts')
 
 export function generateParser() {
   const grammarSrc = readFileSync(grammarPath, 'utf-8')
-  const { parser } = buildParserFile(grammarSrc, {
+  const { parser, terms } = buildParserFile(grammarSrc, {
     fileName: 'syntax.grammar',
     moduleStyle: 'es',
     typeScript: true,
@@ -24,6 +25,9 @@ export function generateParser() {
 
   mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, header + parser)
+  // The terms module exports the token/node ids used by external tokenizers
+  // (src/scheme/anon-tokens.ts imports AnonHash from it).
+  writeFileSync(termsPath, header + terms)
   return outPath
 }
 
