@@ -76,6 +76,27 @@ describe('roundtrip', () => {
       '(define sign (lambda (n) (cond [(> n 0) 1] [(< n 0) -1] [#t 0])))',
     ))
 
+  test('anonymous function #(...)', () =>
+    roundtrip('(define inc #(+ %1 1))'))
+
+  test('anonymous function with a rest parameter', () =>
+    roundtrip('(define total #(apply + %&))'))
+
+  test('anonymous function nested in an application', () =>
+    roundtrip('(display (map #(* %1 %1) (list 1 2 3)))'))
+
+  test('anonymous function with a special-form body', () =>
+    roundtrip('(define f #(if (> % 0) % (- 0 %)))'))
+
+  test('anonymous function with a let body', () =>
+    roundtrip('(define g #(let ([d (* %1 2)]) (+ d %2)))'))
+
+  test('empty anonymous function', () => roundtrip('(define k #())'))
+
+  test('anonymous function prints with the "#(" delimiter', async () => {
+    expect(await format('(define inc #(+ %1 1))')).toContain('#(+ %1 1)')
+  })
+
   test('nullary application', () => roundtrip('(define zero (lambda () 0))'))
 
   test('import statement', () => roundtrip('(import image)'))

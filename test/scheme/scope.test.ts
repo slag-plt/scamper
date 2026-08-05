@@ -151,8 +151,6 @@ describe('scope checking', () => {
       ['quote form is not scope-checked', '(quote (foo bar baz))'],
       ['error form', '(error "boom")'],
       ['apply form', '(apply + (list 1 2))'],
-      ['section with a hole', '(section + _ 1)'],
-      ['section with several holes', '(section + _ _)'],
       ['js-var is a bound global (its arg is a literal)', '(js-var "Math")'],
       ['display', '(define x 1)\n(display x)'],
       ['struct definition', '(struct posn (x y))'],

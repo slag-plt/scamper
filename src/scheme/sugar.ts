@@ -2,8 +2,8 @@ import * as A from './ast.js'
 
 // Sugaring is the dual of expansion (expansion.ts): a recursive AST -> AST walk
 // (sugarExpr / sugarStmt / sugarProgram) that recovers the derived forms `and`,
-// `or`, `begin`, and `cond` from the core `if`/`let` shapes they expand to.
-// `section` is intentionally not recovered.
+// `or`, `begin`, `cond`, and `#(...)` from the core `if`/`let`/`lambda` shapes
+// they expand to.
 //
 // Recovery is *exact*, not heuristic. Expansion tags every node it inserts with
 // a `provenance` (see L.Provenance), and that tag is threaded through the LPM op
@@ -88,8 +88,15 @@ export function sugarExpr(e: A.Exp): A.Exp {
     case 'app':
       return A.mkApp(sugarExpr(e.head), e.args.map(sugarExpr), e.range)
 
-    case 'lam':
+    case 'lam': {
+      if (e.provenance === 'anon-fn') {
+        // The lambda an `#(...)` expanded to: recover `#(body)` directly. The
+        // synthesized `%` parameters are dropped, as they are re-derived from
+        // the `%` references the body still carries.
+        return A.mkAnonFn(sugarExpr(e.body), e.range)
+      }
       return A.mkLam(e.params, sugarExpr(e.body), e.range, e.restParam)
+    }
 
     case 'if': {
       // A tagged `if` is the head of exactly one of and/or/cond; recover it and
@@ -153,8 +160,8 @@ export function sugarExpr(e: A.Exp): A.Exp {
         })),
         e.range,
       )
-    case 'section':
-      return A.mkSection(e.exps.map(sugarExpr), e.range)
+    case 'anonfn':
+      return A.mkAnonFn(sugarExpr(e.body), e.range)
   }
 }
 

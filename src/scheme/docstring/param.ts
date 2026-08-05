@@ -143,7 +143,7 @@ export function parseParamSignature(
     errs.push('Expected an identifier')
   } else if (trimmedName.startsWith('_')) {
     errs.push(
-      'Identifiers cannot begin with "_" unless inside of "section" or patterns',
+      'Identifiers cannot begin with "_" unless inside of patterns',
     )
   } else if (reservedWords.includes(trimmedName)) {
     errs.push(

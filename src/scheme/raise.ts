@@ -64,7 +64,18 @@ export function raiseFrame(
           env.withoutLocals(...excluded),
           op.body.toReversed(),
         )
-        if (op.name) {
+        if (op.provenance === 'anon-fn') {
+          // Reconstruct the tagged lambda so sugaring recovers the `#(...)`.
+          values.push(
+            A.mkLam(
+              op.params.map((p) => A.mkId(p)),
+              body,
+              op.range,
+              op.restParam ? A.mkId(op.restParam) : undefined,
+              'anon-fn',
+            ),
+          )
+        } else if (op.name) {
           values.push(A.mkId(op.name))
         } else {
           values.push(

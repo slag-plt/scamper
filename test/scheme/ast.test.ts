@@ -109,14 +109,6 @@ describe('expToString', () => {
       ),
     ).toBe('(cond [a b])')
   })
-
-  test('section', () => {
-    expect(
-      A.expToString(
-        A.mkSection([A.mkId('_', anyRange), A.mkLit(1, anyRange)], anyRange),
-      ),
-    ).toBe('(section _ 1)')
-  })
 })
 
 describe('stmtToString', () => {

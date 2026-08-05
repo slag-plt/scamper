@@ -105,10 +105,12 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'begin':
     case 'and':
     case 'or':
-    case 'section':
-      // N.B., a section's `_` holes only become bound parameters after
-      // expansion, so at this (surface) level a section binds nothing.
       return exp.exps.flatMap(scopesInExp)
+    // #(...) binds its `%` parameters implicitly (they have no binder nodes to
+    // surface here), so it is treated as transparent: forward its body's scopes
+    // and leave the `%` references to resolve elsewhere.
+    case 'anonfn':
+      return scopesInExp(exp.body)
     case 'cond':
       return exp.branches.flatMap((b) => [
         ...scopesInExp(b.test),

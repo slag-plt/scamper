@@ -1,6 +1,23 @@
 import { expect, test, describe } from 'vitest'
 import { expandExpr } from '../../src/scheme/expansion.js'
+import { parseProgramFromSource } from '../../src/scheme/lezer-bridge.js'
+import { ScamperDiagnostic } from '../../src/scheme/diagnostic.js'
 import * as A from '../../src/scheme/ast.js'
+
+/** Parse a single bare-expression statement, expand it, and return the result. */
+function expand(src: string): A.Exp {
+  const errors: ScamperDiagnostic[] = []
+  const prog = parseProgramFromSource(errors, src)
+  expect(errors, `parse errors for ${JSON.stringify(src)}`).toEqual([])
+  const stmt = prog[0]
+  if (!A.isStmtExp(stmt)) throw new Error('expected a bare expression')
+  return expandExpr(stmt.expr)
+}
+
+/** The expanded form of `src`, rendered as text (ranges/provenance ignored). */
+function expandStr(src: string): string {
+  return A.expToString(expand(src))
+}
 
 // Expansion tags every node it inserts with the derived form's name (its
 // provenance) so sugaring can recover the form exactly. These helpers build the
@@ -46,210 +63,81 @@ describe('Expanded expressions', () => {
           condIf(A.mkId('Z'), A.mkId('C'), condSentinel())))
     expect(actual).toEqual(expected)
   })
-
-  test('section', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('+'),
-      A.mkId('_'),
-      A.mkLit(1)
-    ]))
-    const expected =
-      A.mkLam([A.mkId('_0')],
-        A.mkApp(A.mkId('+'), [A.mkId('_0'), A.mkLit(1)]))
-    expect(actual).toEqual(expected)
-  })
 })
 
-// N.B., genHoleSym's counter is module-level and carries over between
-// tests, so these tests read the generated names back off the actual
-// result rather than hardcoding them.
-describe('Section hole collection', () => {
-  test('app', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('+'),
-      A.mkApp(A.mkId('double'), [A.mkId('_')]),
-      A.mkLit(1)
-    ])) as A.Lam
-    expect(actual.params.length).toBe(1)
-    const [h] = actual.params
-    const expected =
-      A.mkLam([h],
-        A.mkApp(A.mkId('+'), [
-          A.mkApp(A.mkId('double'), [h]),
-          A.mkLit(1)
-        ]))
-    expect(actual).toEqual(expected)
+describe('Anonymous functions #(...)', () => {
+  test('a single numbered parameter', () => {
+    expect(expandStr('#(+ %1 1)')).toBe('(lambda (%1) (+ %1 1))')
   })
 
-  test('lam', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('map'),
-      A.mkLam([A.mkId('x')], A.mkApp(A.mkId('+'), [A.mkId('x'), A.mkId('_')])),
-      A.mkId('xs')
-    ])) as A.Lam
-    expect(actual.params.length).toBe(1)
-    const [h] = actual.params
-    const expected =
-      A.mkLam([h],
-        A.mkApp(A.mkId('map'), [
-          A.mkLam([A.mkId('x')], A.mkApp(A.mkId('+'), [A.mkId('x'), h])),
-          A.mkId('xs')
-        ]))
-    expect(actual).toEqual(expected)
+  test('% is shorthand for %1', () => {
+    expect(expandStr('#(+ % 1)')).toBe('(lambda (%1) (+ %1 1))')
   })
 
-  test('let', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkLet(
-        [{ pat: A.mkId('x'), value: A.mkId('_') }],
-        A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          A.mkLet(
-            [{ pat: A.mkId('x'), value: h1 }],
-            A.mkApp(A.mkId('g'), [A.mkId('x'), h2]))
-        ]))
-    expect(actual).toEqual(expected)
+  test('% and %1 name the same parameter (arity stays 1)', () => {
+    expect(expandStr('#(* % %1)')).toBe('(lambda (%1) (* %1 %1))')
   })
 
-  test('begin', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkBegin([
-        A.mkApp(A.mkId('display'), [A.mkId('_')]),
-        A.mkId('_')
-      ])
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          A.mkLet(
-            [{ pat: A.mkPWild(), value: A.mkApp(A.mkId('display'), [h1]) }],
-            h2,
-            undefined,
-            'begin',
-          )
-        ]))
-    expect(actual).toEqual(expected)
+  test('several distinct parameters', () => {
+    expect(expandStr('#(list %1 %2 %3)')).toBe(
+      '(lambda (%1 %2 %3) (list %1 %2 %3))',
+    )
   })
 
-  test('if', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkIf(A.mkId('_'), A.mkId('_'), A.mkId('_'))
-    ])) as A.Lam
-    expect(actual.params.length).toBe(3)
-    expect(new Set(actual.params).size).toBe(3)
-    const [h1, h2, h3] = actual.params
-    const expected =
-      A.mkLam([h1, h2, h3],
-        A.mkApp(A.mkId('f'), [A.mkIf(h1, h2, h3)]))
-    expect(actual).toEqual(expected)
+  test('the arity is the largest index used; skipped indices become unused params', () => {
+    expect(expandStr('#(f %3)')).toBe('(lambda (%1 %2 %3) (f %3))')
   })
 
-  test('match', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkMatch(A.mkId('_'), [
-        { pat: A.mkId('x'), body: A.mkApp(A.mkId('g'), [A.mkId('x'), A.mkId('_')]) }
-      ])
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          A.mkMatch(h1, [
-            { pat: A.mkId('x'), body: A.mkApp(A.mkId('g'), [A.mkId('x'), h2]) }
-          ])
-        ]))
-    expect(actual).toEqual(expected)
+  test('%& alone is a rest parameter (arity 0)', () => {
+    expect(expandStr('#(apply + %&)')).toBe('(lambda (& %&) (apply + %&))')
   })
 
-  test('and', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkAnd([A.mkId('_'), A.mkId('_')])
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          andIf(h1,
-            andIf(h2, andBool(true), andBool(false)),
-            andBool(false))
-        ]))
-    expect(actual).toEqual(expected)
+  test('numbered parameters plus a rest parameter', () => {
+    expect(expandStr('#(cons %1 %&)')).toBe('(lambda (%1 & %&) (cons %1 %&))')
   })
 
-  test('or', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkOr([A.mkId('_'), A.mkId('_')])
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          orIf(h1, orBool(true),
-            orIf(h2, orBool(true), orBool(false)))
-        ]))
-    expect(actual).toEqual(expected)
+  test('no parameters yields a thunk that applies its single operand', () => {
+    expect(expandStr('#(g)')).toBe('(lambda () (g))')
   })
 
-  test('cond', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('f'),
-      A.mkCond([
-        { test: A.mkId('_'), body: A.mkId('_') }
-      ])
-    ])) as A.Lam
-    expect(actual.params.length).toBe(2)
-    const [h1, h2] = actual.params
-    const expected =
-      A.mkLam([h1, h2],
-        A.mkApp(A.mkId('f'), [
-          condIf(h1, h2, condSentinel())
-        ]))
-    expect(actual).toEqual(expected)
+  test('an empty #() expands to a lambda returning null', () => {
+    expect(expandStr('#()')).toBe('(lambda () null)')
   })
 
-  test('nested section holes are not collected by the outer section', () => {
-    const inner = A.mkSection([A.mkId('+'), A.mkId('_'), A.mkLit(1)])
-    const actual = expandExpr(A.mkSection([A.mkId('call'), inner])) as A.Lam
-    expect(actual.params).toEqual([])
-    const innerLam = (actual.body as A.App).args[0] as A.Lam
-    expect(innerLam.params.length).toBe(1)
-    const [h] = innerLam.params
-    const expected =
-      A.mkApp(A.mkId('call'), [
-        A.mkLam([h], A.mkApp(A.mkId('+'), [h, A.mkLit(1)]))
-      ])
-    expect(actual.body).toEqual(expected)
+  test('operands may themselves be compound (derived) forms', () => {
+    expect(expandStr('#(f (if %1 %2 %3))')).toBe(
+      '(lambda (%1 %2 %3) (f (if %1 %2 %3)))',
+    )
+    // `and` is a derived form; the % refs inside it still count toward arity.
+    expect(expandStr('#(f (and %1 %2))')).toBe(
+      '(lambda (%1 %2) (f (if %1 (if %2 #t #f) #f)))',
+    )
   })
 
-  test('multiple underscores get distinct fresh names', () => {
-    const actual = expandExpr(A.mkSection([
-      A.mkId('list'),
-      A.mkId('_'),
-      A.mkId('_'),
-      A.mkId('_')
-    ])) as A.Lam
-    expect(actual.params.length).toBe(3)
-    expect(new Set(actual.params).size).toBe(3)
-    const [h1, h2, h3] = actual.params
-    const expected =
-      A.mkLam([h1, h2, h3],
-        A.mkApp(A.mkId('list'), [h1, h2, h3]))
-    expect(actual).toEqual(expected)
+  test('parameters referenced inside a nested lambda still count toward arity', () => {
+    expect(expandStr('#(map (lambda (x) (+ x %2)) %1)')).toBe(
+      '(lambda (%1 %2) (map (lambda (x) (+ x %2)) %1))',
+    )
+  })
+
+  test('the body may be a special form, wrapped verbatim in the lambda', () => {
+    // `if`/`let` are core forms, so they survive expansion unchanged.
+    expect(expandStr('#(if % 1 2)')).toBe('(lambda (%1) (if %1 1 2))')
+    expect(expandStr('#(let ([x %1]) (+ x %2))')).toBe(
+      '(lambda (%1 %2) (let ([x %1]) (+ x %2)))',
+    )
+  })
+
+  test('a derived form as the body expands through, still collecting its % refs', () => {
+    // `and` is itself expanded, and the % refs inside it drive the arity.
+    expect(expandStr('#(and % %2)')).toBe(
+      '(lambda (%1 %2) (if %1 (if %2 #t #f) #f))',
+    )
+  })
+
+  test('the expanded lambda is tagged with anon-fn provenance', () => {
+    const lam = expand('#(+ %1 1)')
+    expect(lam.tag).toBe('lam')
+    expect(lam.provenance).toBe('anon-fn')
   })
 })

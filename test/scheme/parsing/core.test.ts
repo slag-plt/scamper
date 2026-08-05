@@ -125,8 +125,7 @@ describe('lezer-bridge parsing', () => {
     expectParses('(cond [(> x 0) "pos"] [(< x 0) "neg"] [#t "zero"])')
   })
 
-  test('section and struct', () => {
-    expectParses('(display (map (section + _ 1) (list 1 2 3)))')
+  test('struct', () => {
     expectParses('(struct point (x y))')
     expectParses('(struct empty ())')
   })
@@ -273,7 +272,6 @@ describe('lezer-bridge parsing', () => {
         'match',
         'or',
         'quote',
-        'section',
         'struct',
       ].sort(),
     )

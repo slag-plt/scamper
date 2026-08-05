@@ -267,7 +267,7 @@ describe('AST querying', () => {
       })
     })
 
-    describe('and/or/begin/section (shared flat-list-of-expressions slot logic)', () => {
+    describe('and/or/begin (shared flat-list-of-expressions slot logic)', () => {
       test('and reports an element and rebuilds via mkAnd', () => {
         const src = '(and p q)'
         const exp = parseExp(src)

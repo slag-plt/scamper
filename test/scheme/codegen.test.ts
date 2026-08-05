@@ -641,29 +641,6 @@ t1
       L.mkList('a', 'b', 'c'),
     ])
   })
-
-  test('section desugars to a lambda and applies (simple holes)', async () => {
-    await checkMachineOutput(`
-((section + _ 1) 1)
-((section + 1 _) 10)
-((section - 10 _) 3)
-((section * _ _) 5 6)
-`, [2, 11, 7, 30])
-  })
-
-  // Still blocked: `map` here is a JS library function receiving a Scamper
-  // closure `(section string-upcase _)`; invoking that closure from JS routes
-  // through L.callScamperFn, which is permanently disabled ("Javascript library
-  // functions can no longer call Scamper functions"). Re-enable once the LPM
-  // unification lets library higher-order functions drive Scamper closures.
-  test.skip('section as an argument to a JS higher-order function (map)', async () => {
-    expect(
-      await runProgram(`
-(|> (list "a" "b" "c" "d" "e")
-    (section map (section string-upcase _) _))
-`),
-    ).toEqual(['(list "A" "B" "C" "D" "E")'])
-  })
 })
 
 describe('Rest parameters', () => {
@@ -908,11 +885,12 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     })
 
     // apply is now an ordinary first-class procedure (not a special form): it
-    // can be tested with procedure?, sectioned, and passed to higher-order fns.
-    test('apply is a first-class value (procedure?, section, passed to a HOF)', async () => {
+    // can be tested with procedure?, bound to a variable, and passed to
+    // higher-order fns.
+    test('apply is a first-class value (procedure?, bound, passed to a HOF)', async () => {
       await checkMachineOutput(`
         (procedure? apply)
-        ((section apply _ _) + (list 1 2))
+        (let ([a apply]) (a + (list 1 2)))
         (map (lambda (p) (apply + p)) (list (list 1 2) (list 3 4)))
       `, [true, 3, L.mkList(3, 7)])
     })
@@ -943,5 +921,73 @@ describe('Construct semantics (comprehensiveness audit)', () => {
       await checkMachineOutput('(import no-such-lib)',
         ['Runtime error: No such built-in library: no-such-lib'], true)
     })
+  })
+})
+
+describe('Anonymous functions #(...)', () => {
+  test('applies numbered parameters positionally', async () => {
+    expect(await runProgram('(display (#(+ %1 %2) 3 4))')).toEqual(['7'])
+    expect(await runProgram('(display (#(- %1 %2) 10 3))')).toEqual(['7'])
+  })
+
+  test('% is the first parameter and aliases %1', async () => {
+    expect(await runProgram('(display (#(+ % 1) 10))')).toEqual(['11'])
+    expect(await runProgram('(display (#(+ % %1) 5))')).toEqual(['10'])
+  })
+
+  test('a zero-parameter #(...) is a thunk', async () => {
+    expect(await runProgram('(display (#(* 2 3)))')).toEqual(['6'])
+  })
+
+  test('arity is the largest index; skipped positions are ignored', async () => {
+    expect(await runProgram('(display (#(list %1 %3) 1 2 3))')).toEqual([
+      '(list 1 3)',
+    ])
+  })
+
+  test('%& collects the rest of the arguments', async () => {
+    expect(await runProgram('(display (#(apply + %&) 1 2 3))')).toEqual(['6'])
+    expect(await runProgram('(display (#(cons %1 %&) 1 2 3))')).toEqual([
+      '(list 1 2 3)',
+    ])
+  })
+
+  test('works as an argument to higher-order functions', async () => {
+    expect(await runProgram('(display (map #(* %1 %1) (list 1 2 3 4)))')).toEqual(
+      ['(list 1 4 9 16)'],
+    )
+    expect(
+      await runProgram('(display (filter #(> % 2) (list 1 2 3 4)))'),
+    ).toEqual(['(list 3 4)'])
+  })
+
+  test('a single-operand #(...) applies its operand', async () => {
+    // #(%1) is (lambda (%1) (%1)): it calls its argument with no arguments.
+    expect(await runProgram('(display (#(%1) (lambda () 42)))')).toEqual(['42'])
+  })
+
+  test('a special form may be the body', async () => {
+    // #(if ...) -- the body is a conditional, not an application.
+    expect(await runProgram('(display (#(if (> % 0) "pos" "neg") 5))')).toEqual([
+      '"pos"',
+    ])
+    expect(await runProgram('(display (#(if (> % 0) "pos" "neg") -5))')).toEqual(
+      ['"neg"'],
+    )
+    // #(let ...) -- a let body that references a parameter.
+    expect(
+      await runProgram('(display (#(let ([d (* %1 2)]) (+ d %2)) 3 4))'),
+    ).toEqual(['10'])
+    // #(cond ...) used as a mapped predicate-ish transform.
+    expect(
+      await runProgram(
+        '(display (map #(cond [(> % 0) 1] [(< % 0) -1] [#t 0]) (list -3 0 7)))',
+      ),
+    ).toEqual(['(list -1 0 1)'])
+  })
+
+  test('calling a #(...) with the wrong arity is a runtime error', async () => {
+    await checkMachineOutput('(#(+ %1 %2) 1)',
+      ['Runtime error: Arity mismatch in function call: expected 2 arguments, got 1'], true)
   })
 })
