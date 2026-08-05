@@ -22,7 +22,7 @@ describe('#287: scope-checking file imports outside the browser', () => {
 
   beforeAll(async () => {
     dir = await mkdtemp(path.join(tmpdir(), 'scamper-287-'))
-    await writeFile(path.join(dir, 'bar.scm'), '(define helper 1)\n', 'utf-8')
+    await writeFile(path.join(dir, 'bar.scm'), '(define-export helper 1)\n', 'utf-8')
     // Mirror the CLI: install a Node-backed FS rooted at the file's directory.
     setFS(await NodeFileSystem.create(dir))
   })

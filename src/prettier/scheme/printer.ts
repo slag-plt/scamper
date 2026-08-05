@@ -70,6 +70,19 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         ')',
       ])
 
+    case 'export':
+      return node.names.length === 0
+        ? '(export)'
+        : group(['(export ', join(' ', path.map(print, 'names')), ')'])
+
+    case 'defexport':
+      return group([
+        '(define-export ',
+        path.call(print, 'name'),
+        indent([line, path.call(print, 'value')]),
+        ')',
+      ])
+
     case 'display':
       return group(['(display', indent([line, path.call(print, 'value')]), ')'])
 

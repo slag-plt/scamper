@@ -147,11 +147,18 @@ export class Env {
     return r.slot
   }
 
-  /** @return the top-level bindings of this environment as a Module */
-  getTopLevelAsModule(): Module {
+  /**
+   * @param exports when given, only these top-level names are included (a
+   *   module exports only what it declares -- see Fiber.getModule); when
+   *   omitted, every top-level binding is included.
+   * @return the top-level bindings of this environment as a Module
+   */
+  getTopLevelAsModule(exports?: Set<string>): Module {
     const ret = new Module()
     for (const [name, value] of this.topLevel) {
-      ret.registerValue(name, value)
+      if (exports === undefined || exports.has(name)) {
+        ret.registerValue(name, value)
+      }
     }
     return ret
   }
@@ -480,7 +487,16 @@ export type List = null | Cons
 // uses it to recover the derived form exactly (no heuristics). Undefined on
 // nodes that came straight from the parser. `anon-fn` tags the `lambda` an
 // anonymous function `#(...)` expands to, so sugaring can recover the `#(...)`.
-export type Provenance = 'and' | 'or' | 'begin' | 'cond' | 'anon-fn'
+export type Provenance =
+  | 'and'
+  | 'or'
+  | 'begin'
+  | 'cond'
+  | 'anon-fn'
+  // Tags the (define ...) and (export ...) that a (define-export ...) expands
+  // to, so sugaring can recover the define-export exactly (see sugar.ts). This
+  // one only ever tags statements (Define/Export), never an LPM op.
+  | 'define-export'
 
 export interface Lit {
   tag: 'lit'
@@ -605,7 +621,14 @@ export interface StmtExp {
   expr: Blk
   range: Range
 }
-export type Stmt = Disp | Import | Define | StmtExp
+// Records names the running module exports (see Fiber). A module exports only
+// the names its export statements name; a program with none exports nothing.
+export interface Export {
+  tag: 'export'
+  names: string[]
+  range: Range
+}
+export type Stmt = Disp | Import | Define | StmtExp | Export
 export type Prog = Stmt[]
 
 export interface PWild {

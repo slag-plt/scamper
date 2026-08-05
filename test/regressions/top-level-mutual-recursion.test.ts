@@ -65,28 +65,28 @@ describe('#283: top-level definitions are mutually recursive', () => {
 
 describe('#284: define/import collisions are order-independent', () => {
   test('import then same-named define collides', async () => {
-    mockFS({ 'utils.scm': '(define helper 1)' })
+    mockFS({ 'utils.scm': '(define-export helper 1)' })
     expect(
       await scopeErrors('(import "utils.scm")\n(define helper 2)'),
     ).toEqual(["Global variable 'helper' is already defined"])
   })
 
   test('define then same-named import collides (symmetric)', async () => {
-    mockFS({ 'utils.scm': '(define helper 1)' })
+    mockFS({ 'utils.scm': '(define-export helper 1)' })
     expect(
-      await scopeErrors('(define helper 1)\n(import "utils.scm")'),
+      await scopeErrors('(define-export helper 1)\n(import "utils.scm")'),
     ).toEqual(["Global variable 'helper' is already defined"])
   })
 
   test('two imports of the same name from different modules collide', async () => {
-    mockFS({ 'x.scm': '(define dup 1)', 'y.scm': '(define dup 2)' })
+    mockFS({ 'x.scm': '(define-export dup 1)', 'y.scm': '(define-export dup 2)' })
     expect(await scopeErrors('(import "x.scm")\n(import "y.scm")')).toEqual([
       "Global variable 'dup' is already defined",
     ])
   })
 
   test('re-importing the same module is not a collision', async () => {
-    mockFS({ 'utils.scm': '(define helper 1)' })
+    mockFS({ 'utils.scm': '(define-export helper 1)' })
     expect(
       await scopeErrors('(import "utils.scm")\n(import "utils.scm")'),
     ).toEqual([])

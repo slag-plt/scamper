@@ -73,7 +73,10 @@ export function tokenizeAndParse(
 
   // determine if query loc inside define statement
   const queriedStmt = queriedProgram.find((s) => s.range.contains(queryLoc))
-  if (queriedStmt?.tag !== 'define' || queriedStmt.docComments === undefined) {
+  if (
+    (queriedStmt?.tag !== 'define' && queriedStmt?.tag !== 'defexport') ||
+    queriedStmt.docComments === undefined
+  ) {
     return {
       diagnostics: [
         mkDiagnostic(

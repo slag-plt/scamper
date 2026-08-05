@@ -14,6 +14,8 @@ describe('lezer-bridge parsing', () => {
     expectParses('(and 1 2 3)')
     expectParses('(or)')
     expectParses('(or 1 2 3)')
+    expectParses('(export a b c)')
+    expectParses('(define-export x 1)')
   })
 
   test('rest parameters use Clojure-style "&", including zero fixed params (#272)', () => {
@@ -264,6 +266,8 @@ describe('lezer-bridge parsing', () => {
         'begin',
         'cond',
         'define',
+        'define-export',
+        'export',
         'display',
         'if',
         'import',

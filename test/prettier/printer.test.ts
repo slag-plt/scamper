@@ -108,6 +108,10 @@ describe('roundtrip', () => {
 
   test('struct definition', () => roundtrip('(struct point (x y))'))
 
+  test('export statement', () => roundtrip('(export a b c)'))
+
+  test('define-export statement', () => roundtrip('(define-export x 5)'))
+
   test('multi-statement program', () =>
     roundtrip('(define x 1)\n(define y 2)\n(display (+ x y))'))
 

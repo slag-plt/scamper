@@ -514,9 +514,11 @@ async function collectTopLevelBindings(
       return
     }
 
+    case 'export':
     case 'display':
     case 'stmtexp':
-      // Introduces no top-level binding.
+      // Introduces no top-level binding. (An export's names are validated in
+      // the second pass, once every top-level binding has been collected.)
       return
 
     default:
@@ -535,11 +537,35 @@ function scopeCheckStmtBodies(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
   qualified: QualifiedModules,
+  sources: Map<string, string | null>,
   s: A.Stmt,
 ): void {
   switch (s.tag) {
     case 'import':
       return
+
+    case 'export': {
+      // A module can only export names it defines itself (`sources` records a
+      // define as null; an import records its module name). Re-exporting an
+      // imported or standard-library name is a no-op at runtime, and exporting
+      // an unbound name is a typo.
+      for (const name of s.names) {
+        if (sources.get(name.name) === null) {
+          continue
+        }
+        diagnostics.push(
+          mkDiagnostic(
+            'Scope',
+            'warning',
+            globals.includes(name.name)
+              ? `Cannot export '${name.name}': it is not defined in this module`
+              : `Exporting undefined variable '${name.name}'`,
+            name.range,
+          ),
+        )
+      }
+      return
+    }
 
     case 'define': {
       scopeCheckExp(diagnostics, globals, qualified, [], s.value)
@@ -614,6 +640,6 @@ export async function scopeCheckProgram(
     await collectTopLevelBindings(diagnostics, globals, qualified, sources, s)
   }
   for (const s of prog) {
-    scopeCheckStmtBodies(diagnostics, globals, qualified, s)
+    scopeCheckStmtBodies(diagnostics, globals, qualified, sources, s)
   }
 }

@@ -77,7 +77,7 @@ describe('qualified imports: scope checking', () => {
   })
 
   test('re-importing the same module under the same alias is idempotent', async () => {
-    mockFS({ 'utils.scm': '(define helper 1)' })
+    mockFS({ 'utils.scm': '(define-export helper 1)' })
     expect(
       await scopeErrors(
         '(import "utils.scm" u)\n(import "utils.scm" u)\nu.helper',
@@ -86,7 +86,7 @@ describe('qualified imports: scope checking', () => {
   })
 
   test('binding one alias to two different modules is a collision', async () => {
-    mockFS({ 'a.scm': '(define fromA 1)', 'b.scm': '(define fromB 2)' })
+    mockFS({ 'a.scm': '(define-export fromA 1)', 'b.scm': '(define-export fromB 2)' })
     expect(
       await scopeErrors('(import "a.scm" m)\n(import "b.scm" m)'),
     ).toEqual(["Qualified name 'm' is already bound to module 'a.scm'"])
@@ -95,7 +95,7 @@ describe('qualified imports: scope checking', () => {
   test('a qualified file import surfaces struct-derived export names', async () => {
     // A struct's synthesized `${name}?` / `${name}-${field}` bindings exist at
     // runtime, so a qualified reference to them must scope-check cleanly.
-    mockFS({ 'shapes.scm': '(struct point (x y))' })
+    mockFS({ 'shapes.scm': '(struct point (x y)) (export point point? point-x point-y)' })
     expect(
       await scopeErrors(
         '(import "shapes.scm" s)\n(s.point 1 2)\ns.point?\ns.point-x\ns.point-y',
@@ -104,7 +104,7 @@ describe('qualified imports: scope checking', () => {
   })
 
   test('a qualified file import exposes its exports only as alias.member', async () => {
-    mockFS({ 'utils.scm': '(define helper 1)\n(define other 2)' })
+    mockFS({ 'utils.scm': '(define-export helper 1)\n(define-export other 2)' })
     expect(await scopeErrors('(import "utils.scm" u)\nu.helper\nu.other')).toEqual(
       [],
     )
