@@ -28,10 +28,8 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
     )
   }
   // js-var is the FFI root primitive -- it can't be bound via itself, so it's
-  // injected directly into every library's load environment. Because a library's
-  // top-level env becomes its Module (getTopLevelAsModule below), this also makes
-  // js-var an export of each built-in module, so user code and the scope-checker
-  // pick it up without any further wiring.
+  // injected directly into every library's load environment (and exported
+  // explicitly below, since it carries no export statement).
   const fiber = new Fiber(
     prog,
     L.Env.empty.extendWithTopLevel(['js-var', jsVar]),

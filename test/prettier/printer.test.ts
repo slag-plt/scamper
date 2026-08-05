@@ -110,6 +110,8 @@ describe('roundtrip', () => {
 
   test('export statement', () => roundtrip('(export a b c)'))
 
+  test('empty export statement', () => roundtrip('(export)'))
+
   test('define-export statement', () => roundtrip('(define-export x 5)'))
 
   test('multi-statement program', () =>
