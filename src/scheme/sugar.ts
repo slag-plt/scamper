@@ -15,6 +15,13 @@ import * as A from './ast.js'
 // Each form's operands are collected from the tagged chain and then sugared
 // *recursively*, so a derived form nested inside a recovered one -- in an
 // operand, a branch, or the body -- is itself recovered rather than lost.
+//
+// N.B., `sugarExpr` is what the reduction tracer uses (trace.ts). The
+// statement-level entry points `sugarStmt` / `sugarProgram` -- including
+// `define-export` recovery, which spans two statements -- have no production
+// caller yet; they provide the exact program-level round trip
+// (`sugarProgram(expandProgram(p))`) the derived statement forms are specified
+// against, and are exercised by the sugar / exports test suites.
 
 /**
  * @return the operands of an `and` if `e` is (the head of) its expansion, else
