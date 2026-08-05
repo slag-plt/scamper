@@ -23,6 +23,11 @@ export class Frame {
   // the tracer can keep the whole call atomic. False for the synthetic
   // per-statement frame and for the user's own closures.
   stepOver: boolean
+  // The applied closure's `home` env, if any (see Closure.home). Propagated so
+  // that a lambda created while this frame runs inherits the same home -- a
+  // closure returned by a qualified-module function must still resolve the
+  // module's siblings. Undefined for ordinary frames (dynamic fiber resolution).
+  home?: L.Env
 
   constructor(
     name: string,
@@ -30,6 +35,7 @@ export class Frame {
     blk: L.Blk,
     callRange: Range = Range.none,
     stepOver = false,
+    home?: L.Env,
   ) {
     this.name = name
     this.env = env
@@ -37,6 +43,7 @@ export class Frame {
     this.ops = blk.toReversed()
     this.callRange = callRange
     this.stepOver = stepOver
+    this.home = home
   }
 
   isFinished(): boolean {

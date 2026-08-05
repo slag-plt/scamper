@@ -64,7 +64,10 @@ expression {
 }
 
 statement {
-  Import { paren<kw<"import"> (Identifier | String)> } |
+  // The optional trailing Identifier is the module's qualified name (alias) in
+  // the importing file, e.g. (import image img) -- see lezer-bridge.ts. It must
+  // be a simple (unqualified) name; that is enforced there, not in the grammar.
+  Import { paren<kw<"import"> (Identifier | String) Identifier?> } |
   Define { paren<kw<"define"> Identifier expression> } |
   Display { paren<kw<"display"> expression> } |
   Struct { paren<kw<"struct"> Identifier simplearglist> } |
@@ -98,7 +101,16 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
   // tokenize as a single identifier even though "&" is otherwise a delimiter.
   // It greedily consumes any trailing atom characters so that e.g. "%&x" is one
   // (invalid) identifier rather than "%&" followed by "x".
-  Identifier { "%&" ![ \t\n\r()\[\]{}'";.&]* | ![ \t\n\r()\[\]{}'";.&]+ }
+  //
+  // An identifier may also be a one-level *qualified* name -- two base names
+  // joined by a single "." (e.g. img.outlined-square) -- used to reference a
+  // binding through an imported module's alias. Exactly one "." is allowed, so
+  // there is no nested qualification (a.b.c does not tokenize as one name), and
+  // a bare/trailing "." never joins the token. Whether a qualified name is legal
+  // in a given position (a reference, never a binder) is decided in
+  // lezer-bridge.ts, not here.
+  baseIdentifier { "%&" ![ \t\n\r()\[\]{}'";.&]* | ![ \t\n\r()\[\]{}'";.&]+ }
+  Identifier { baseIdentifier ("." baseIdentifier)? }
 
   // The "&" separating a lambda's fixed parameters from its rest parameter,
   // e.g. (lambda (x y & z) ...), or introducing a rest-only list, e.g.

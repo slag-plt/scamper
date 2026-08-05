@@ -46,8 +46,9 @@ export const mkClosure = (
   call: (...args: any) => any,
   name?: L.Id,
   restParam?: string,
-  stepOver = false
-): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, stepOver })
+  stepOver = false,
+  home?: L.Env
+): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, stepOver, home })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: 'char',
   value: v,
@@ -172,7 +173,14 @@ export const mkImport = (
   name: string,
   kind: 'builtin' | 'file',
   range: Range = Range.none,
-): L.Import => ({ tag: 'import', name, kind, range })
+  alias?: string,
+): L.Import => ({
+  tag: 'import',
+  name,
+  kind,
+  range,
+  ...(alias !== undefined ? { alias } : {}),
+})
 export const mkStmtExp = (
   expr: L.Blk,
   range: Range = Range.none,

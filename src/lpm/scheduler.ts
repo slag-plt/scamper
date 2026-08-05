@@ -223,10 +223,18 @@ export class Scheduler {
                 err: task.err,
                 onComplete: () => {
                   const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
-                  fiber.topLevelEnv = fiber.topLevelEnv.extendWithImport(
-                    stepResult.filename,
-                    mod,
-                  )
+                  // A qualified file import (alias set) is reachable only as
+                  // `alias.member`; an unqualified one injects into scope.
+                  fiber.topLevelEnv =
+                    stepResult.alias !== undefined
+                      ? fiber.topLevelEnv.extendWithQualifiedImport(
+                          stepResult.alias,
+                          mod,
+                        )
+                      : fiber.topLevelEnv.extendWithImport(
+                          stepResult.filename,
+                          mod,
+                        )
                   fiber.advanceStmt()
                   this.schedule(task)
                 },

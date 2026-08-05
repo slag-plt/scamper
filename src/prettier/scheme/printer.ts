@@ -57,8 +57,10 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
 
     ///// Statements ////////////////////////////////////////////////////////////
 
-    case 'import':
-      return `(import ${node.kind === 'file' ? JSON.stringify(node.module) : node.module})`
+    case 'import': {
+      const mod = node.kind === 'file' ? JSON.stringify(node.module) : node.module
+      return `(import ${mod}${node.alias !== undefined ? ` ${node.alias}` : ''})`
+    }
 
     case 'define':
       return group([
