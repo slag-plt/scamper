@@ -581,6 +581,20 @@ describe('scope tree', () => {
         .map((i) => i.name)
       expect(names).toContain('local')
     })
+    test('a qualified import does not surface its names in the flat scope', async () => {
+      // Names of a module imported under an alias are reachable only as
+      // `alias.member`, so they must not appear in the flat visible set.
+      const qualified = (await treeOf('(import image img)'))
+        .getVisibleIdentifiers()
+        .map((i) => i.name)
+      expect(qualified).not.toContain('rgb')
+      expect(qualified).not.toContain('rgb-red')
+      // Sanity: the unqualified form still surfaces them.
+      const flat = (await treeOf('(import image)'))
+        .getVisibleIdentifiers()
+        .map((i) => i.name)
+      expect(flat).toContain('rgb')
+    })
   })
 })
 

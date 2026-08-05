@@ -481,6 +481,21 @@ export function isStmt(v: unknown): v is Stmt {
 export const isStmtExp = (s: Stmt): s is StmtExp =>
   isTagged(s) && s.tag === 'stmtexp'
 
+/**
+ * Maps each qualified import's alias to its Import statement, so a qualified
+ * reference `alias.member` can be resolved back to the module it names. The last
+ * import wins if an alias is (erroneously) reused.
+ */
+export function qualifiedImportMap(prog: Prog): Map<string, Import> {
+  const m = new Map<string, Import>()
+  for (const s of prog) {
+    if (s.tag === 'import' && s.alias !== undefined) {
+      m.set(s.alias, s)
+    }
+  }
+  return m
+}
+
 export const isVar = (e: Exp): e is Identifier => isTagged(e) && e.tag === 'id'
 
 export const isApp = (e: Exp): e is App =>

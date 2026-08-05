@@ -1,6 +1,7 @@
 import type { MarkupContent } from 'vscode-languageserver-protocol'
 import { tokenizeAndParse } from '../../../../scheme'
 import { docRegistry } from '../../../../lib'
+import * as A from '../../../../scheme/ast'
 import {
   FunctionDoc,
   parseFunctionDocFromComments,
@@ -35,6 +36,11 @@ export function lookupFunctionDoc(
   src: string,
   name: string,
 ): DocLookup | undefined {
+  // A qualified name (`alias.member`) resolves through the module its alias
+  // imports, not the flat doc registry.
+  if (A.isQualifiedName(name)) {
+    return lookupQualifiedDoc(src, name)
+  }
   const builtin = findBuiltinDoc(name)
   if (builtin !== undefined) {
     return builtin
@@ -56,6 +62,26 @@ export function lookupFunctionDoc(
     }
   }
   return undefined
+}
+
+/**
+ * Resolves a qualified name `alias.member` to its documentation: find the
+ * import that introduced `alias`, then look up `member` in that module's doc
+ * registry. Only built-in modules carry registered docs; a file module has
+ * none, so its members resolve to undefined (no hover).
+ */
+function lookupQualifiedDoc(src: string, name: string): DocLookup | undefined {
+  const { qualifier, member } = A.splitQualifiedName(name)
+  const { program } = tokenizeAndParse(src)
+  if (program === undefined) {
+    return undefined
+  }
+  const imp = A.qualifiedImportMap(program).get(qualifier)
+  if (imp === undefined) {
+    return undefined
+  }
+  const doc = docRegistry.get(imp.module)?.get(member)
+  return doc !== undefined ? { doc, module: imp.module } : undefined
 }
 
 /** Renders a doc entry as Markdown: a signature code block, the description, then the source module. */

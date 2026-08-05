@@ -30,6 +30,22 @@ describe('hoverAt', () => {
     const offset = src.lastIndexOf('double') // the call site
     expect(hoverAt(src, offset)?.contents.value).toContain('Doubles')
   })
+
+  test('documents a qualified reference through its module', () => {
+    const src = '(import image img)\n(img.rgb 1 2 3)'
+    const offset = src.indexOf('img.rgb') + 5 // on the `rgb` half
+    const result = hoverAt(src, offset)
+    expect(result).not.toBeNull()
+    expect(result?.contents.value).toContain('rgb')
+    expect(result?.contents.value).toContain('image') // source-module footer
+    // The hover span covers the whole dotted identifier.
+    expect(src.slice(result?.from, result?.to)).toBe('img.rgb')
+  })
+
+  test('a qualified reference through an unknown alias has no hover', () => {
+    const src = '(nope.rgb 1 2 3)'
+    expect(hoverAt(src, src.indexOf('nope.rgb') + 1)).toBeNull()
+  })
 })
 
 describe('ScamperLanguageServer', () => {
