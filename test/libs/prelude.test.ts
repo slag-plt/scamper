@@ -1176,10 +1176,7 @@ test('not-boolean', async () => {
   // N.B., unlike standard Scheme (where any non-#f value is truthy), we are
   // stricter: `not`'s docstring declares its param `boolean?`, so a
   // non-boolean argument is a contract violation, enforced by the
-  // docstring-derived wrapper in contract.ts. The reported range points at
-  // `not`'s own definition in prelude.scm rather than the call site -- a
-  // known, unrelated limitation of contract-wrapped errors (#254; see
-  // cons-pair, range above).
+  // docstring-derived wrapper in contract.ts.
   expect(
     await runProgram(`
 (not #t)
@@ -2143,9 +2140,7 @@ test('string-to-number-negative', async () => {
 
 test('=-eps', async () => {
   // N.B., =-eps's docstring declares its param `n : number?`, so a
-  // non-number argument is a contract violation -- the reported range
-  // points at =-eps's own definition in prelude.scm rather than the call
-  // site (see cons-pair, not-boolean above).
+  // non-number argument is a contract violation.
   expect(
     await runProgram(`
 ((=-eps 0.5) 1 1.3)
@@ -2517,7 +2512,6 @@ test('vectorQ', async () => {
 })
 
 test('make-vector', async () => {
-  // N.B., contract error location points at the definition site, not the call site
   expect(
     await runProgram(`
 (make-vector 3 "a")
@@ -2534,7 +2528,6 @@ test('make-vector', async () => {
 })
 
 test('vector-length', async () => {
-  // N.B., contract error location points at the definition site, not the call site
   expect(
     await runProgram(`
 (vector-length (vector 1 2 3))
@@ -2549,9 +2542,6 @@ test('vector-length', async () => {
 })
 
 test('vector-ref', async () => {
-  // N.B., the contract (type) error points at the definition site, not the
-  // call site (#254); the #257 bounds errors, thrown from the function body,
-  // point at the call site.
   // #257: an out-of-range index (>= length or negative) now raises a clean bounds error
   expect(
     await runProgram(`
@@ -2571,7 +2561,6 @@ test('vector-ref', async () => {
 })
 
 test('vector-append', async () => {
-  // N.B., contract error location points at the definition site, not the call site
   expect(
     await runProgram(`
 (vector-append (vector 1 2) (vector 3 4 5))
@@ -2586,7 +2575,6 @@ test('vector-append', async () => {
 })
 
 test('vector-to-list', async () => {
-  // N.B., contract error location points at the definition site, not the call site
   expect(
     await runProgram(`
 (vector->list (vector 1 2 3))
@@ -2601,7 +2589,6 @@ test('vector-to-list', async () => {
 })
 
 test('list-to-vector', async () => {
-  // N.B., contract error location points at the definition site, not the call site
   expect(
     await runProgram(`
 (list->vector (list 1 2 3))
