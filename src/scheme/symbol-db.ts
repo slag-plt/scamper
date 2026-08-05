@@ -59,23 +59,50 @@ async function parseFile(filename: string): Promise<A.Prog> {
   return prog
 }
 
-/** @returns the identifiers a module exports: its top-level definitions */
+/**
+ * @returns the identifiers a module exports: the names its `export` /
+ *   `define-export` statements declare (the union), restricted to those it
+ *   actually binds at top level. A module with no export statement exports
+ *   nothing. Mirrors the runtime (Fiber.getModule / getTopLevelAsModule).
+ */
 function moduleIdentifiers(prog: A.Prog): A.Identifier[] {
-  // TODO: re-exported imports aren't surfaced.
-  const ids: A.Identifier[] = []
+  // The names the module binds at top level, and which of them it exports.
+  const defined = new Map<string, A.Identifier>()
+  const exported = new Set<string>()
+  const bind = (id: A.Identifier) => defined.set(id.name, id)
   for (const stmt of prog) {
-    if (stmt.tag === 'define') {
-      ids.push(stmt.name)
-    } else if (stmt.tag === 'struct') {
-      // A struct also exports the `${name}?` predicate and `${name}-${field}`
-      // accessors that expansion synthesizes (see expansion.ts) and that the
-      // module actually binds at runtime -- so a qualified import can reach
-      // them as `alias.point?` / `alias.point-x`.
-      ids.push(stmt.name)
-      ids.push(A.mkId(`${stmt.name.name}?`, stmt.name.range))
-      for (const field of stmt.fields) {
-        ids.push(A.mkId(`${stmt.name.name}-${field.name}`, stmt.name.range))
-      }
+    switch (stmt.tag) {
+      case 'define':
+        bind(stmt.name)
+        break
+      case 'defexport':
+        bind(stmt.name)
+        exported.add(stmt.name.name)
+        break
+      case 'struct':
+        // A struct binds the constructor plus the synthesized `${name}?`
+        // predicate and `${name}-${field}` accessors (see expansion.ts); any of
+        // them may be named by an export statement.
+        bind(stmt.name)
+        bind(A.mkId(`${stmt.name.name}?`, stmt.name.range))
+        for (const field of stmt.fields) {
+          bind(A.mkId(`${stmt.name.name}-${field.name}`, stmt.name.range))
+        }
+        break
+      case 'export':
+        for (const n of stmt.names) {
+          exported.add(n.name)
+        }
+        break
+    }
+  }
+  // Export only names actually bound here (re-exporting an import is a no-op, as
+  // at runtime -- imports aren't top-level bindings of this module).
+  const ids: A.Identifier[] = []
+  for (const name of exported) {
+    const id = defined.get(name)
+    if (id !== undefined) {
+      ids.push(id)
     }
   }
   return ids

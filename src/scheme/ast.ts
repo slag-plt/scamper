@@ -69,11 +69,13 @@ export interface Comment {
 //     | (define x e)
 //     | <docstring>
 //       (define x e)
+//     | (export x1 ... xk)
 //     | (display e)
 //     | e
 //
-//     -- Sugared form
+//     -- Sugared forms
 //     | (struct S (f1 ... fk))
+//     | (define-export x e)   -- (define x e) (export x)
 //
 // <docstring> ::= ;;; (fn x1 ... xk) -> typred
 //                 ;;;   x1 : typred - <description>
@@ -257,6 +259,13 @@ export interface StmtExp extends Tagged, Node {
   tag: 'stmtexp'
   expr: Exp
 }
+// A module-export declaration: (export name1 ... namek). A module exports only
+// the names its export statements list (the union across all of them). The
+// names are references to the module's own top-level bindings.
+export interface Export extends Tagged, Node {
+  tag: 'export'
+  names: Identifier[]
+}
 
 // Sugared Forms
 export interface Struct extends Tagged, Node {
@@ -264,8 +273,23 @@ export interface Struct extends Tagged, Node {
   name: Identifier
   fields: Identifier[]
 }
+// (define-export x e): sugar for (define x e) followed by (export x). Kept as a
+// surface node (like Struct) so it renders as written; expansion.ts lowers it.
+export interface DefineExport extends Tagged, Node {
+  tag: 'defexport'
+  name: Identifier
+  value: Exp
+  docComments?: Comment[]
+}
 
-export type Stmt = Import | Define | Disp | StmtExp | Struct
+export type Stmt =
+  | Import
+  | Define
+  | Disp
+  | StmtExp
+  | Export
+  | Struct
+  | DefineExport
 
 ///// Programs /////
 
@@ -424,7 +448,31 @@ export const mkDefine = (
   value: Exp,
   range: L.Range = L.Range.none,
   docComments?: Comment[],
-): Define => ({ tag: 'define', name, value, range, docComments })
+  provenance?: L.Provenance,
+): Define => ({
+  tag: 'define',
+  name,
+  value,
+  range,
+  docComments,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
+export const mkExport = (
+  names: Identifier[],
+  range: L.Range = L.Range.none,
+  provenance?: L.Provenance,
+): Export => ({
+  tag: 'export',
+  names,
+  range,
+  ...(provenance !== undefined ? { provenance } : {}),
+})
+export const mkDefineExport = (
+  name: Identifier,
+  value: Exp,
+  range: L.Range = L.Range.none,
+  docComments?: Comment[],
+): DefineExport => ({ tag: 'defexport', name, value, range, docComments })
 export const mkDisp = (value: Exp, range: L.Range = L.Range.none): Disp => ({
   tag: 'display',
   value,
@@ -474,7 +522,9 @@ export function isExp(v: unknown): v is Exp {
 export function isStmt(v: unknown): v is Stmt {
   return (
     isTagged(v) &&
-    ['import', 'define', 'display', 'stmtexp', 'struct'].includes(v.tag)
+    ['import', 'define', 'display', 'stmtexp', 'export', 'struct', 'defexport'].includes(
+      v.tag,
+    )
   )
 }
 
@@ -633,6 +683,14 @@ export function stmtToLayout(s: Stmt): Layout {
       ])
     case 'define':
       return parens([kw('define'), tok(s.name.name), expToLayout(s.value)])
+    case 'export':
+      return parens([kw('export'), ...s.names.map((n) => tok(n.name))])
+    case 'defexport':
+      return parens([
+        kw('define-export'),
+        tok(s.name.name),
+        expToLayout(s.value),
+      ])
     case 'display':
       return parens([kw('display'), expToLayout(s.value)])
     case 'stmtexp':
@@ -776,6 +834,13 @@ export function stmtEquals(s1: Stmt, s2: Stmt): boolean {
       s1.module === s2.module && s1.kind === s2.kind && s1.alias === s2.alias
     )
   } else if (s1.tag === 'define' && s2.tag === 'define') {
+    return s1.name.name === s2.name.name && expEquals(s1.value, s2.value)
+  } else if (s1.tag === 'export' && s2.tag === 'export') {
+    return (
+      s1.names.length === s2.names.length &&
+      s1.names.every((n, i) => n.name === s2.names[i].name)
+    )
+  } else if (s1.tag === 'defexport' && s2.tag === 'defexport') {
     return s1.name.name === s2.name.name && expEquals(s1.value, s2.value)
   } else if (s1.tag === 'display' && s2.tag === 'display') {
     return expEquals(s1.value, s2.value)

@@ -222,7 +222,8 @@ export class Scheduler {
                 fiber: moduleFiber,
                 err: task.err,
                 onComplete: () => {
-                  const mod = moduleFiber.topLevelEnv.getTopLevelAsModule()
+                  // Only the file's declared exports are visible to the importer.
+                  const mod = moduleFiber.getModule()
                   // A qualified file import (alias set) is reachable only as
                   // `alias.member`; an unqualified one injects into scope.
                   fiber.topLevelEnv =

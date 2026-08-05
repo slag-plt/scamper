@@ -14,6 +14,13 @@ export const ImportHandler: StatementHandler<'import'> = (stmt, fiber) => {
   }
   return result
 }
+export const ExportHandler: StatementHandler<'export'> = (stmt, fiber) => {
+  // Records the exported names; the module snapshot (Fiber.getModule) restricts
+  // its bindings to them. Introduces no binding and produces no value.
+  fiber.addExports(stmt.names)
+  fiber.advanceStmt()
+  return traceStep
+}
 export const DefineHandler: StatementHandler<'define'> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {
     fiber.beginProcessingBlk(stmt.expr)

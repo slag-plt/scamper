@@ -306,11 +306,11 @@ describe('scope checking', () => {
       ])
     })
     test("a file import's definitions become visible", async () => {
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(await scopeErrors('(import "utils.scm")\nhelper')).toEqual([])
     })
     test('only names the module actually defines are imported', async () => {
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(await scopeErrors('(import "utils.scm")\nmissing')).toEqual([
         "Undefined variable 'missing'",
       ])
@@ -338,8 +338,8 @@ describe('scope checking', () => {
     })
     test('transitively-imported names are not directly visible', async () => {
       mockFS({
-        'a.scm': '(import "b.scm")\n(define fromA 1)',
-        'b.scm': '(define fromB 2)',
+        'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+        'b.scm': '(define-export fromB 2)',
       })
       expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([])
       expect(await scopeErrors('(import "a.scm")\nfromB')).toEqual([
@@ -348,9 +348,9 @@ describe('scope checking', () => {
     })
     test('imports resolve through several layers, exposing only direct names', async () => {
       mockFS({
-        'a.scm': '(import "b.scm")\n(define fromA 1)',
-        'b.scm': '(import "c.scm")\n(define fromB 2)',
-        'c.scm': '(define fromC 3)',
+        'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+        'b.scm': '(import "c.scm")\n(define-export fromB 2)',
+        'c.scm': '(define-export fromC 3)',
       })
       expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([])
       expect(await scopeErrors('(import "a.scm")\nfromB')).toEqual([
@@ -361,7 +361,7 @@ describe('scope checking', () => {
       ])
     })
     test('defining a name already brought in by an import is disallowed', async () => {
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(
         await scopeErrors('(import "utils.scm")\n(define helper 2)'),
       ).toEqual(["Global variable 'helper' is already defined"])
@@ -369,25 +369,25 @@ describe('scope checking', () => {
     test('an import after a same-named define is also flagged (symmetric)', async () => {
       // A define/import name clash is an error regardless of order (Racket: an
       // identifier can be either imported or defined, but not both).
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(
-        await scopeErrors('(define helper 1)\n(import "utils.scm")'),
+        await scopeErrors('(define-export helper 1)\n(import "utils.scm")'),
       ).toEqual(["Global variable 'helper' is already defined"])
     })
     test('two imports exporting the same name collide', async () => {
-      mockFS({ 'x.scm': '(define dup 1)', 'y.scm': '(define dup 2)' })
+      mockFS({ 'x.scm': '(define-export dup 1)', 'y.scm': '(define-export dup 2)' })
       expect(await scopeErrors('(import "x.scm")\n(import "y.scm")')).toEqual([
         "Global variable 'dup' is already defined",
       ])
     })
     test('re-importing the same module is idempotent (no collision)', async () => {
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(
         await scopeErrors('(import "utils.scm")\n(import "utils.scm")\nhelper'),
       ).toEqual([])
     })
     test('a local binding may shadow an imported name', async () => {
-      mockFS({ 'utils.scm': '(define helper 1)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)' })
       expect(
         await scopeErrors('(import "utils.scm")\n((lambda (helper) helper) 5)'),
       ).toEqual([])
@@ -396,7 +396,7 @@ describe('scope checking', () => {
       // N.B., the program imports only a.scm (which parses); the broken c.scm
       // it transitively pulls in is reported, pointing at the top-level import
       // that pulled it in.
-      mockFS({ 'a.scm': '(import "c.scm")\n(define fromA 1)', 'c.scm': '(1 2' })
+      mockFS({ 'a.scm': '(import "c.scm")\n(define-export fromA 1)', 'c.scm': '(1 2' })
       expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([
         "Could not load module 'c.scm' (imported by 'a.scm')",
       ])
@@ -544,7 +544,7 @@ describe('scope tree', () => {
 
   describe('imports', () => {
     test("a file import's definitions are visible globally", async () => {
-      mockFS({ 'utils.scm': '(define helper 1)\n(define other 2)' })
+      mockFS({ 'utils.scm': '(define-export helper 1)\n(define-export other 2)' })
       const names = (await treeOf('(import "utils.scm")'))
         .getVisibleIdentifiers()
         .map((i) => i.name)
@@ -552,8 +552,8 @@ describe('scope tree', () => {
     })
     test('only directly-imported names are visible, not transitive ones', async () => {
       mockFS({
-        'a.scm': '(import "b.scm")\n(define fromA 1)',
-        'b.scm': '(define fromB 2)',
+        'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+        'b.scm': '(define-export fromB 2)',
       })
       const names = (await treeOf('(import "a.scm")'))
         .getVisibleIdentifiers()
@@ -563,9 +563,9 @@ describe('scope tree', () => {
     })
     test('imports are followed through several layers, exposing only direct names', async () => {
       mockFS({
-        'a.scm': '(import "b.scm")\n(define fromA 1)',
-        'b.scm': '(import "c.scm")\n(define fromB 2)',
-        'c.scm': '(define fromC 3)',
+        'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+        'b.scm': '(import "c.scm")\n(define-export fromB 2)',
+        'c.scm': '(define-export fromC 3)',
       })
       const names = (await treeOf('(import "a.scm")'))
         .getVisibleIdentifiers()

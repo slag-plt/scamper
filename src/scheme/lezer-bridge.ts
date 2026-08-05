@@ -134,6 +134,8 @@ const formDescriptions: Record<string, string> = {
   PVector: 'vector pattern',
   Import: 'import statement (a built-in library name, or a quoted file name)',
   Define: 'define statement (a name and a value)',
+  Export: 'export statement (a list of names to export)',
+  DefineExport: 'define-export statement (a name and a value)',
   Display: 'display statement (a value to display)',
   Struct: 'struct statement (a name and a list of fields)',
 }
@@ -663,6 +665,21 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
       const value = expFromNode(ctx, rest[1])
       const docComments = precedingComments(ctx, node)
       return A.mkDefine(name, value, range, docComments)
+    }
+
+    case 'Export': {
+      // Each name is a reference to a top-level binding -- a simple identifier
+      // (identifier rejects a qualified name), never a binder.
+      const names = cs.slice(1).map((c) => identifier(ctx, c))
+      return A.mkExport(names, range)
+    }
+
+    case 'DefineExport': {
+      const rest = cs.slice(1)
+      const name = identifier(ctx, rest[0])
+      const value = expFromNode(ctx, rest[1])
+      const docComments = precedingComments(ctx, node)
+      return A.mkDefineExport(name, value, range, docComments)
     }
 
     case 'Display': {

@@ -21,14 +21,15 @@ const DOCUMENTED = [
   'test-result-error-gen',
 ]
 
-function definesByName(): Map<string, A.Define> {
+function definesByName(): Map<string, A.Define | A.DefineExport> {
   const src = readFileSync(resolve(__dirname, '../../src/lib/test.scm'), 'utf-8')
   const diagnostics: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(diagnostics, src)
   expect(diagnostics.map((d) => d.message)).toEqual([])
-  const byName = new Map<string, A.Define>()
+  // The library documents its exports with define-export (see src/lib/test.scm).
+  const byName = new Map<string, A.Define | A.DefineExport>()
   for (const s of prog) {
-    if (s.tag === 'define') {
+    if (s.tag === 'define' || s.tag === 'defexport') {
       byName.set(s.name.name, s)
     }
   }

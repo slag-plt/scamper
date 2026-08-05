@@ -211,7 +211,10 @@ function mkCheckChain(
  *          is still wrapped even with zero fixed params.
  */
 export function contractStmt(s: A.Stmt): A.Stmt {
-  if (s.tag !== 'define' || !s.docComments) {
+  // Both a plain define and a define-export bind a documented value that a
+  // docstring can describe (the standard library uses define-export -- see
+  // src/lib/*.scm), so both are wrapped, preserving the original form.
+  if ((s.tag !== 'define' && s.tag !== 'defexport') || !s.docComments) {
     return s
   }
   // A malformed docstring yields `doc: undefined` (handled below); a genuine
@@ -231,7 +234,9 @@ export function contractStmt(s: A.Stmt): A.Stmt {
     ),
     s.range,
   )
-  return A.mkDefine(s.name, wrapped, s.range, s.docComments)
+  return s.tag === 'define'
+    ? A.mkDefine(s.name, wrapped, s.range, s.docComments)
+    : A.mkDefineExport(s.name, wrapped, s.range, s.docComments)
 }
 
 /** Applies contractStmt to every statement in a program. */

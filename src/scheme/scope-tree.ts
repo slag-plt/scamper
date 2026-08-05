@@ -175,6 +175,15 @@ export async function makeScopeTreeFromProgram(
         identifiers.push(stmt.name)
         children.push(...scopesInExp(stmt.value))
         break
+      case 'defexport':
+        // Binds its name in the current file exactly like a define; the export
+        // half only affects what an *importer* sees, not local visibility.
+        identifiers.push(stmt.name)
+        children.push(...scopesInExp(stmt.value))
+        break
+      case 'export':
+        // References existing names; introduces no binding.
+        break
       case 'struct':
         // The constructor name is bound directly. The derived predicate
         // (`${name}?`) and field accessors (`${name}-${field}`) are

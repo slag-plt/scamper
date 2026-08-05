@@ -167,7 +167,10 @@ function documentedItem(
 function topLevelUserDocs(program: Prog): Map<string, FunctionDoc> {
   const docs = new Map<string, FunctionDoc>()
   for (const stmt of program) {
-    if (stmt.tag === 'define' && stmt.docComments !== undefined) {
+    if (
+      (stmt.tag === 'define' || stmt.tag === 'defexport') &&
+      stmt.docComments !== undefined
+    ) {
       const { doc } = parseFunctionDocFromComments(stmt.docComments)
       if (doc !== undefined) {
         docs.set(stmt.name.name, doc)
