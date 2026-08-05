@@ -186,11 +186,10 @@ describe('End-to-end cases', () => {
   })
 
   test('contract-check', async () => {
-    // N.B., the reported ranges point at string-length's/+'s own definitions
-    // in prelude.scm rather than the call site -- a known limitation of
-    // contract-wrapped errors (#254; see cons-pair, range, not-boolean in
-    // prelude.test.ts). We assert with ranges stripped so this test stays
-    // decoupled from prelude.scm's line numbers.
+    // N.B., ranges are stripped because this test is about the machine's
+    // output, not error locations. The ranges themselves point at the call
+    // site; that is asserted in
+    // test/regressions/contract-error-call-site.test.ts.
     await checkMachineOutput(`
 (string-length (list 1 2 3))
 

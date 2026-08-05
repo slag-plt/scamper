@@ -11,9 +11,9 @@ import { runProgram } from '../harness.js'
 // Non-integer indices were, and remain, caught by the `integer?` docstring
 // contract.
 //
-// Ranges are stripped from error messages here: they point at vector-ref /
-// vector-set!'s definitions in prelude.scm and would shift with any edit to
-// that file.
+// Ranges are stripped from error messages here: this test is about the bounds
+// *message*, not the location. The ranges point at the call site, asserted in
+// contract-error-call-site.test.ts.
 
 const stripRange = (msgs: string[]): string[] =>
   msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
