@@ -149,7 +149,12 @@ export class Fiber {
    *   sees. A program with no export statements exports nothing.
    */
   getModule(): Module {
-    return this.topLevelEnv.getTopLevelAsModule(this._exportedNames)
+    const mod = this.topLevelEnv.getTopLevelAsModule(this._exportedNames)
+    // Retain the full top-level bindings (private helpers included) so an
+    // importer can re-home the module's closures to reach them -- see
+    // Env.rehomeExports. The importer still only ever reads `mod.bindings`.
+    mod.allBindings = this.topLevelEnv.getTopLevelAsModule().bindings
+    return mod
   }
 
   /* Statement execution helper functions */

@@ -2,6 +2,7 @@ import { describe, test, expect, vi, afterEach } from 'vitest'
 import * as fs from '../../src/fs'
 import * as A from '../../src/scheme/ast'
 import * as S from '../../src/scheme'
+import * as LPM from '../../src/lpm'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { expandProgram } from '../../src/scheme/expansion'
 import { sugarProgram } from '../../src/scheme/sugar'
@@ -50,6 +51,52 @@ async function moduleExports(src: string): Promise<string[]> {
   const fiber = new Fiber(prog, S.mkInitialEnv())
   while (!fiber.isDone()) fiber.step()
   return [...fiber.getModule().bindings.keys()].sort()
+}
+
+/** Compiles and runs `src` in `env`, returning its displayed/reported output. */
+async function runIn(env: LPM.Env, src: string): Promise<string[]> {
+  const { prog, diagnostics } = await S.compile(src)
+  expect(diagnostics.map((d) => d.message)).toEqual([])
+  if (prog === undefined) throw new Error('compile produced no program')
+  const out = new LPM.LoggingChannel()
+  const fiber = new Fiber(prog, env)
+  while (!fiber.isDone()) {
+    try {
+      if (fiber.step().tag === 'display') out.send(fiber.lastResult)
+    } catch (e) {
+      if (e instanceof LPM.ScamperError) {
+        out.report(e.stripRange())
+        fiber.advanceStmt()
+      } else {
+        throw e
+      }
+    }
+  }
+  return out.log as string[]
+}
+
+/**
+ * Loads `moduleSrc` as a module (as the scheduler does: run in an empty env,
+ * snapshot exports), imports it into a fresh user env under `alias` (qualified)
+ * or flat (alias undefined), then runs `userSrc` there. Lets us drive a *file*
+ * module's import + use synchronously, without the async scheduler.
+ */
+async function withImportedModule(
+  moduleSrc: string,
+  alias: string | undefined,
+  userSrc: string,
+): Promise<string[]> {
+  const compiled = await S.compile(moduleSrc)
+  expect(compiled.diagnostics.map((d) => d.message)).toEqual([])
+  if (compiled.prog === undefined) throw new Error('module did not compile')
+  const modFiber = new Fiber(compiled.prog, undefined, true)
+  while (!modFiber.isDone()) modFiber.step()
+  const mod = modFiber.getModule()
+  const env =
+    alias === undefined
+      ? S.mkInitialEnv().extendWithImport('m.scm', mod)
+      : S.mkInitialEnv().extendWithQualifiedImport(alias, mod)
+  return runIn(env, userSrc)
 }
 
 afterEach(() => {
@@ -175,5 +222,43 @@ describe('runtime module snapshot', () => {
 
   test('exporting a name the program does not bind exports nothing for it', async () => {
     expect(await moduleExports('(define a 1)\n(export a missing)')).toEqual(['a'])
+  })
+})
+
+describe('a module exported function can call its private helpers (regression)', () => {
+  // A module's exported function routinely calls non-exported (private) top-level
+  // helpers by bare name. Strict exports must not break that: the helper isn't
+  // visible to the importer, but the module's own closures still reach it.
+  const MOD =
+    '(define helper (lambda (x) (* x 10)))\n(define-export pub (lambda (x) (helper x)))'
+
+  test('unqualified: an exported fn resolves its private helper at runtime', async () => {
+    expect(await withImportedModule(MOD, undefined, '(pub 5)')).toEqual(['50'])
+  })
+
+  test('qualified: an exported fn resolves its private helper at runtime', async () => {
+    expect(await withImportedModule(MOD, 'm', '(m.pub 5)')).toEqual(['50'])
+  })
+
+  test('the private helper is NOT visible to the importer (unqualified)', async () => {
+    const out = await withImportedModule(MOD, undefined, 'helper')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('helper')
+    expect(out[0]).toContain('not found')
+  })
+
+  test('the private helper is NOT reachable as a qualified member', async () => {
+    const out = await withImportedModule(MOD, 'm', 'm.helper')
+    expect(out.length).toBe(1)
+    expect(out[0]).toContain('not found')
+  })
+
+  test('a private helper calling another private helper also resolves', async () => {
+    const mod =
+      '(define twice (lambda (x) (* x 2)))\n' +
+      '(define helper (lambda (x) (twice (twice x))))\n' +
+      '(define-export pub (lambda (x) (helper x)))'
+    expect(await withImportedModule(mod, undefined, '(pub 3)')).toEqual(['12'])
+    expect(await withImportedModule(mod, 'm', '(m.pub 3)')).toEqual(['12'])
   })
 })
