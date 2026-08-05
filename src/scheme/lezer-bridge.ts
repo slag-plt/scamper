@@ -626,7 +626,9 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
     case 'Import': {
       const target = cs[1]
       // The optional third child is the qualified name (alias): a simple
-      // identifier, so identifierName rejects a qualified or reserved alias.
+      // identifier, so identifierName rejects a *qualified* alias. A reserved
+      // word or non-identifier in that slot isn't an Identifier node at all, so
+      // it's already caught above by errorOr as a malformed import.
       const alias =
         cs.length > 2
           ? identifierName(ctx, cs[2], 'Expected a module alias')

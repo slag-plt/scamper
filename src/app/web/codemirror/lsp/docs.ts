@@ -1,5 +1,6 @@
 import type { MarkupContent } from 'vscode-languageserver-protocol'
 import { tokenizeAndParse } from '../../../../scheme'
+import { parseProgramFromSource } from '../../../../scheme/lezer-bridge'
 import { docRegistry } from '../../../../lib'
 import * as A from '../../../../scheme/ast'
 import {
@@ -72,10 +73,10 @@ export function lookupFunctionDoc(
  */
 function lookupQualifiedDoc(src: string, name: string): DocLookup | undefined {
   const { qualifier, member } = A.splitQualifiedName(name)
-  const { program } = tokenizeAndParse(src)
-  if (program === undefined) {
-    return undefined
-  }
+  // Parse tolerantly (not tokenizeAndParse, which yields no program on any
+  // error) so hover keeps working while the rest of the buffer is mid-edit --
+  // the import statements survive an error elsewhere.
+  const program = parseProgramFromSource([], src)
   const imp = A.qualifiedImportMap(program).get(qualifier)
   if (imp === undefined) {
     return undefined

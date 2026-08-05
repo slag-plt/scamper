@@ -61,13 +61,21 @@ async function parseFile(filename: string): Promise<A.Prog> {
 
 /** @returns the identifiers a module exports: its top-level definitions */
 function moduleIdentifiers(prog: A.Prog): A.Identifier[] {
-  // TODO: a struct also exports its `${name}?` predicate and `${name}-${field}`
-  // accessors (only synthesized during expansion); re-exported imports aren't
-  // surfaced either.
+  // TODO: re-exported imports aren't surfaced.
   const ids: A.Identifier[] = []
   for (const stmt of prog) {
-    if (stmt.tag === 'define' || stmt.tag === 'struct') {
+    if (stmt.tag === 'define') {
       ids.push(stmt.name)
+    } else if (stmt.tag === 'struct') {
+      // A struct also exports the `${name}?` predicate and `${name}-${field}`
+      // accessors that expansion synthesizes (see expansion.ts) and that the
+      // module actually binds at runtime -- so a qualified import can reach
+      // them as `alias.point?` / `alias.point-x`.
+      ids.push(stmt.name)
+      ids.push(A.mkId(`${stmt.name.name}?`, stmt.name.range))
+      for (const field of stmt.fields) {
+        ids.push(A.mkId(`${stmt.name.name}-${field.name}`, stmt.name.range))
+      }
     }
   }
   return ids

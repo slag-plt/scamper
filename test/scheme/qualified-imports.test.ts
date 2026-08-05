@@ -92,6 +92,17 @@ describe('qualified imports: scope checking', () => {
     ).toEqual(["Qualified name 'm' is already bound to module 'a.scm'"])
   })
 
+  test('a qualified file import surfaces struct-derived export names', async () => {
+    // A struct's synthesized `${name}?` / `${name}-${field}` bindings exist at
+    // runtime, so a qualified reference to them must scope-check cleanly.
+    mockFS({ 'shapes.scm': '(struct point (x y))' })
+    expect(
+      await scopeErrors(
+        '(import "shapes.scm" s)\n(s.point 1 2)\ns.point?\ns.point-x\ns.point-y',
+      ),
+    ).toEqual([])
+  })
+
   test('a qualified file import exposes its exports only as alias.member', async () => {
     mockFS({ 'utils.scm': '(define helper 1)\n(define other 2)' })
     expect(await scopeErrors('(import "utils.scm" u)\nu.helper\nu.other')).toEqual(
@@ -126,6 +137,18 @@ describe('qualified imports: runtime', () => {
     expect(out.length).toBe(1)
     expect(out[0]).toContain('rgb-red')
     expect(out[0]).toContain('not found')
+  })
+
+  test('a user define does not shadow a qualified module internal name', async () => {
+    // `rgb-component?` is an internal predicate of the image module. Defining a
+    // same-named value (allowed -- aliases are a separate namespace) must not
+    // capture the module's own internal reference to it: img.rgb's contract
+    // check still resolves the module's predicate, not the user's.
+    expect(
+      await runProgram(
+        '(define rgb-component? (lambda (x) #f))\n(import image img)\n(img.rgb-red (img.rgb 10 20 30))',
+      ),
+    ).toEqual(['10'])
   })
 
   test('the one-argument import form still injects names at runtime', async () => {

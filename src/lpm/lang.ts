@@ -239,9 +239,22 @@ export class Env {
    */
   extendWithQualifiedImport(alias: string, lib: Module): Env {
     const rehomed = new Module()
-    // `home` imports the (about-to-be-filled) re-homed module, so a sibling
-    // lookup lands on a re-homed closure too -- keeping the chain within `lib`.
-    const home = this.extendWithImport(alias, rehomed)
+    // `home` resolves a re-homed closure's free names against, in order: the
+    // module's own bindings, then this base env's imports (the standard library
+    // and the importer's other imports). It deliberately drops the importer's
+    // *top-level* bindings: the module's internals -- siblings and the contract
+    // predicates they reference -- must not be shadowed by a user define that
+    // happens to share a name (an alias is a separate namespace, so such a
+    // define is not even flagged as a collision). `rehomed` is added to imports
+    // last so it wins over the standard library; the map holds it by reference,
+    // so the closures filled into it below are visible through `home` too,
+    // keeping the resolution chain within `lib`.
+    const home = new Env(
+      this.extendImports(alias, rehomed),
+      new Map(),
+      this.locals,
+      this.qualified,
+    )
     for (const [name, value] of lib.bindings) {
       rehomed.registerValue(
         name,
