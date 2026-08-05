@@ -40,9 +40,25 @@ export const HOLE: unique symbol = Symbol('hole')
 /** A local binding scope: names to values (or HOLE while still unassigned). */
 export type Scope = Map<string, Value | typeof HOLE>
 
+// A closure test local to this module (util.ts's isClosure would be circular).
+// Used by extendWithQualifiedImport to pick out the closures to re-home.
+function isClosureValue(v: Value): v is Closure {
+  return (
+    v !== null &&
+    typeof v === 'object' &&
+    (v as Partial<TaggedObject>)[scamperTag] === 'closure'
+  )
+}
+
 export class Env {
-  /** A mapping of imported modules to their bound libraries */
+  /** A mapping of unqualified imported modules to their bound libraries */
   private imports: Map<string, Module>
+  /**
+   * A mapping of qualified imports: each module's alias to its library. Kept
+   * separate from `imports` because these are reachable *only* through a
+   * qualified name (`alias.member`, see lookup), never flattened into scope.
+   */
+  private qualified: Map<string, Module>
   /** A mapping of top-level (module-level) bindings */
   private topLevel: Map<string, Value>
   /** A stack of local binding scopes; the last element is the innermost. */
@@ -53,10 +69,12 @@ export class Env {
     imports: Map<string, Module>,
     topLevel: Map<string, Value>,
     locals: Scope[],
+    qualified: Map<string, Module> = new Map(),
   ) {
     this.imports = imports
     this.topLevel = topLevel
     this.locals = locals
+    this.qualified = qualified
   }
 
   /** The empty environment */
@@ -75,6 +93,19 @@ export class Env {
   lookup(
     name: string,
   ): { found: true; slot: Value | typeof HOLE } | { found: false } {
+    // 0. A qualified name (`alias.member`) resolves *only* through a qualified
+    // import's alias -- it is never a local, a top-level binding, or an
+    // unqualified import (binders can't be qualified). The scheme grammar admits
+    // exactly one separator, so split on the first one.
+    const dot = name.indexOf('.')
+    if (dot >= 0) {
+      const module = this.qualified.get(name.slice(0, dot))
+      const member = name.slice(dot + 1)
+      if (module !== undefined && module.bindings.has(member)) {
+        return { found: true, slot: module.bindings.get(member) }
+      }
+      return { found: false }
+    }
     // 1. Local scopes, innermost (most recently pushed) first
     for (let i = this.locals.length - 1; i >= 0; i--) {
       const scope = this.locals[i]
@@ -154,7 +185,7 @@ export class Env {
    */
   declareScope(names: string[]): Env {
     const scope: Scope = new Map(names.map((n) => [n, HOLE]))
-    return new Env(this.imports, this.topLevel, [...this.locals, scope])
+    return new Env(this.imports, this.topLevel, [...this.locals, scope], this.qualified)
   }
 
   /**
@@ -174,7 +205,7 @@ export class Env {
 
   /** Replace the local scope stack wholesale (used to build a callee frame). */
   withLocalScopes(scopes: Scope[]): Env {
-    return new Env(this.imports, this.topLevel, scopes)
+    return new Env(this.imports, this.topLevel, scopes, this.qualified)
   }
 
   /**
@@ -182,15 +213,60 @@ export class Env {
    * @return true iff the variable is bound in this environment
    */
   has(name: string): boolean {
-    return (
-      this.locals.some((scope) => scope.has(name)) ||
-      this.topLevel.has(name) ||
-      [...this.imports.values()].some((lib) => lib.bindings.has(name))
-    )
+    return this.lookup(name).found
   }
 
   extendWithImport(name: string, lib: Module): Env {
-    return new Env(this.extendImports(name, lib), this.topLevel, this.locals)
+    return new Env(
+      this.extendImports(name, lib),
+      this.topLevel,
+      this.locals,
+      this.qualified,
+    )
+  }
+
+  /**
+   * Import `lib` under the qualified name `alias`: its bindings become reachable
+   * only as `alias.member` (see lookup), never injected unqualified into scope.
+   *
+   * Because `lib`'s names are not in the importing scope, its own functions
+   * could not otherwise resolve their siblings (or the contract predicates they
+   * reference) at call time -- those are bare names, and applyFn resolves a
+   * closure's free names against the running fiber's env. So each of `lib`'s
+   * closures is re-homed: given a `home` env in which `lib`'s bindings resolve,
+   * layered over this base env (which carries the standard library). applyFn
+   * uses that `home` instead of the fiber env. Non-closure values need none.
+   */
+  extendWithQualifiedImport(alias: string, lib: Module): Env {
+    const rehomed = new Module()
+    // `home` resolves a re-homed closure's free names against, in order: the
+    // module's own bindings, then this base env's imports (the standard library
+    // and the importer's other imports). It deliberately drops the importer's
+    // *top-level* bindings: the module's internals -- siblings and the contract
+    // predicates they reference -- must not be shadowed by a user define that
+    // happens to share a name (an alias is a separate namespace, so such a
+    // define is not even flagged as a collision). `rehomed` is added to imports
+    // last so it wins over the standard library; the map holds it by reference,
+    // so the closures filled into it below are visible through `home` too,
+    // keeping the resolution chain within `lib`.
+    const home = new Env(
+      this.extendImports(alias, rehomed),
+      new Map(),
+      this.locals,
+      this.qualified,
+    )
+    for (const [name, value] of lib.bindings) {
+      rehomed.registerValue(
+        name,
+        isClosureValue(value) ? { ...value, home } : value,
+      )
+    }
+    return new Env(
+      this.imports,
+      this.topLevel,
+      this.locals,
+      new Map([...this.qualified, [alias, rehomed]]),
+    )
   }
 
   extendWithTopLevel(...bindings: [string, Value][]): Env {
@@ -198,6 +274,7 @@ export class Env {
       this.imports,
       this.extendBindings(this.topLevel, bindings),
       this.locals,
+      this.qualified,
     )
   }
 
@@ -208,15 +285,17 @@ export class Env {
 
   /** Push a new innermost local scope with the given bindings. */
   pushScope(bindings: [string, Value][]): Env {
-    return new Env(this.imports, this.topLevel, [
-      ...this.locals,
-      new Map(bindings),
-    ])
+    return new Env(
+      this.imports,
+      this.topLevel,
+      [...this.locals, new Map(bindings)],
+      this.qualified,
+    )
   }
 
   /** Drop the innermost local scope (inverse of {@link pushScope}). */
   popScope(): Env {
-    return new Env(this.imports, this.topLevel, this.locals.slice(0, -1))
+    return new Env(this.imports, this.topLevel, this.locals.slice(0, -1), this.qualified)
   }
 
   extendImports(name: string, lib: Module) {
@@ -229,13 +308,13 @@ export class Env {
 
   /** Replace all local scopes with a single scope holding `locals`. */
   extendReplacingLocals(...locals: [string, Value][]): Env {
-    return new Env(this.imports, this.topLevel, [new Map(locals)])
+    return new Env(this.imports, this.topLevel, [new Map(locals)], this.qualified)
   }
 
   /** Collapse the local scopes into one, dropping the named bindings. */
   withoutLocals(...names: string[]): Env {
     const kept = [...this.getLocals()].filter(([x]) => !names.includes(x))
-    return new Env(this.imports, this.topLevel, [new Map(kept)])
+    return new Env(this.imports, this.topLevel, [new Map(kept)], this.qualified)
   }
 }
 
@@ -291,6 +370,15 @@ export interface Closure extends TaggedObject {
   // steps through the user's own module/local definitions but not library
   // code. See src/scheme/trace.ts.
   stepOver?: boolean
+  // The environment this closure resolves its free top-level names against,
+  // instead of the running fiber's env (applyFn). Set only for closures of a
+  // module imported under a qualified name (see extendWithQualifiedImport): that
+  // module's bindings are NOT injected into the importing scope, so its own
+  // functions -- and the contract predicates they reference -- must resolve
+  // their siblings here. Undefined for ordinary closures, which resolve
+  // dynamically against the fiber's top-level env so that top-level forward
+  // references / letrec keep working.
+  home?: Env
 }
 
 /** A char is a tagged object that captures a single character (a one-character string). */
@@ -501,6 +589,10 @@ export interface Import {
   name: string
   kind: 'builtin' | 'file'
   range: Range
+  // When set, the module is imported under this qualified name (alias): its
+  // bindings are reachable only as `alias.<name>` (via Env's qualified map),
+  // not injected unqualified. Absent for the plain (import m) form.
+  alias?: string
 }
 export interface Define {
   tag: 'define'

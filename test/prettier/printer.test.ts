@@ -101,6 +101,11 @@ describe('roundtrip', () => {
 
   test('import statement', () => roundtrip('(import image)'))
 
+  test('qualified import statement', () => roundtrip('(import image img)'))
+
+  test('qualified file import statement', () =>
+    roundtrip('(import "utils.scm" u)'))
+
   test('struct definition', () => roundtrip('(struct point (x y))'))
 
   test('multi-statement program', () =>

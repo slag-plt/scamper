@@ -185,7 +185,12 @@ export async function makeScopeTreeFromProgram(
         break
       case 'import':
         // TODO: do we need to scope imports? Are later imports visible in earlier code?
-        SymbolDB.get(stmt.module)?.forEach((id) => identifiers.push(id))
+        // A qualified import (with an alias) binds only `alias.member` names,
+        // which live outside the flat scope, so its exports are not surfaced
+        // here. An unqualified import injects the module's names into scope.
+        if (stmt.alias === undefined) {
+          SymbolDB.get(stmt.module)?.forEach((id) => identifiers.push(id))
+        }
         break
       case 'display':
         children.push(...scopesInExp(stmt.value))

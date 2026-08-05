@@ -274,14 +274,39 @@ function isPercentId(name: string): boolean {
   return name === '%' || name === '%&' || /^%[1-9][0-9]*$/.test(name)
 }
 
+// Validates a qualified reference `mod.member` (only reached when allowQualified
+// is set -- see identifierName). Each half must be a legal simple name: neither
+// a reserved word nor a `%` identifier (those name a `#(...)` parameter, which
+// can't be qualified). Returns the name unchanged, or '<error>' after reporting.
+function qualifiedName(ctx: Ctx, node: SyntaxNode, name: string): string {
+  const { qualifier, member } = A.splitQualifiedName(name)
+  for (const half of [qualifier, member]) {
+    if (reservedWords.includes(half) || half.startsWith('%')) {
+      ctx.diagnostics.push(
+        mkDiagnostic(
+          'Parse',
+          'error',
+          `The qualified name "${name}" is invalid: "${half}" is not a valid name`,
+          ctx.range(node),
+        ),
+      )
+      return '<error>'
+    }
+  }
+  return name
+}
+
 // `allowPercent` is set only for a variable *reference* (see the Identifier
 // case in expFromNode); a `%` identifier is legal there (inside a `#(...)`) but
-// never as a binder, so every binder call leaves it false.
+// never as a binder, so every binder call leaves it false. `allowQualified` is
+// likewise set only for a reference: a qualified name (`mod.member`) resolves a
+// binding through an imported module and is meaningless in a binder position.
 function identifierName(
   ctx: Ctx,
   node: SyntaxNode,
   errorMsg = 'Expected an identifier',
   allowPercent = false,
+  allowQualified = false,
 ): string {
   const name = ctx.text(node)
   if (reservedWords.includes(name)) {
@@ -298,6 +323,20 @@ function identifierName(
   if (node.type.name !== 'Identifier') {
     ctx.diagnostics.push(mkDiagnostic('Parse', 'error', errorMsg, ctx.range(node)))
     return '<error>'
+  }
+  if (A.isQualifiedName(name)) {
+    if (!allowQualified) {
+      ctx.diagnostics.push(
+        mkDiagnostic(
+          'Parse',
+          'error',
+          `Qualified names (like "${name}") may only be used as variable references, not as a binding name`,
+          ctx.range(node),
+        ),
+      )
+      return '<error>'
+    }
+    return qualifiedName(ctx, node, name)
   }
   if (name.startsWith('%')) {
     if (!isPercentId(name)) {
@@ -349,9 +388,10 @@ function identifier(
   node: SyntaxNode,
   errorMsg = 'Expected an identifier',
   allowPercent = false,
+  allowQualified = false,
 ): A.Identifier {
   return A.mkId(
-    identifierName(ctx, node, errorMsg, allowPercent),
+    identifierName(ctx, node, errorMsg, allowPercent, allowQualified),
     ctx.range(node),
   )
 }
@@ -447,8 +487,8 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
         return A.mkLit(v, range)
       }
       // A variable reference: the only position where a `%` identifier (a
-      // #(...) parameter) is permitted.
-      return identifier(ctx, node, 'Expected an identifier', true)
+      // #(...) parameter) or a qualified name (`mod.member`) is permitted.
+      return identifier(ctx, node, 'Expected an identifier', true, true)
     }
 
     case 'Quote': {
@@ -585,12 +625,36 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
   switch (node.type.name) {
     case 'Import': {
       const target = cs[1]
+      // The optional third child is the qualified name (alias): a simple
+      // identifier, so identifierName rejects a *qualified* alias. A reserved
+      // word or non-identifier in that slot isn't an Identifier node at all, so
+      // it's already caught above by errorOr as a malformed import.
+      const alias =
+        cs.length > 2
+          ? identifierName(ctx, cs[2], 'Expected a module alias')
+          : undefined
       if (target.type.name === 'String') {
         const filename = leafValue(ctx, target) as string
-        return A.mkImport(filename, 'file', range)
+        return A.mkImport(filename, 'file', range, alias)
       }
-      const name = identifierName(ctx, target)
-      return A.mkImport(name, 'builtin', range)
+      const name = ctx.text(target)
+      if (target.type.name === 'Identifier' && A.isQualifiedName(name)) {
+        // A dotted, unquoted module name -- a builtin library name is always a
+        // simple identifier, so this is almost certainly a file name missing
+        // its quotes. Point the user at the fix rather than the generic
+        // qualified-name-in-a-binder message.
+        ctx.diagnostics.push(
+          mkDiagnostic(
+            'Parse',
+            'error',
+            `Malformed import statement: a file name like "${name}" must be quoted, e.g. (import "${name}")`,
+            ctx.range(target),
+          ),
+        )
+        return A.mkStmtExp(A.mkLit(undefined, range), range)
+      }
+      const modName = identifierName(ctx, target)
+      return A.mkImport(modName, 'builtin', range, alias)
     }
 
     case 'Define': {

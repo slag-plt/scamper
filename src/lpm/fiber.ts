@@ -46,6 +46,9 @@ export interface YieldStep { tag: 'yield' }
 export interface ImportFileStep {
   tag: 'import-file'
   filename: string
+  // When set, import the file under this qualified name (alias) rather than
+  // injecting its bindings unqualified. Mirrors Import.alias.
+  alias?: string
 }
 // A fiber suspended mid-expression by a blocking primitive (see SuspendSignal).
 // The scheduler runs `action`, then resumes the fiber with the resolved value
@@ -67,8 +70,11 @@ export const displayStep: DisplayStep = { tag: 'display' }
 export const traceStep: TraceStep = { tag: 'trace' }
 export const minorStep: MinorStep = { tag: 'minor' }
 export const yieldStep: YieldStep = { tag: 'yield' }
-export function importFileStep(filename: string): ImportFileStep {
-  return { tag: 'import-file', filename }
+export function importFileStep(
+  filename: string,
+  alias?: string,
+): ImportFileStep {
+  return { tag: 'import-file', filename, ...(alias !== undefined ? { alias } : {}) }
 }
 export function blockOnStep(action: () => Promise<Value>): BlockOnStep {
   return { tag: 'block-on', action }
@@ -357,7 +363,11 @@ export class Fiber {
   }
 
   /* Module importing helper functions */
-  loadModule(name: string, kind: 'builtin' | 'file'): StepResult {
+  loadModule(
+    name: string,
+    kind: 'builtin' | 'file',
+    alias?: string,
+  ): StepResult {
     if (kind === 'builtin') {
       const builtin = builtinLibs.get(name)
       if (!builtin) {
@@ -368,14 +378,19 @@ export class Fiber {
       // with an initializer at this point is the music lib, so we might
       // want to remove initializers altogether and do something for
       // the music lib instead.
-      this.topLevelEnv = this.topLevelEnv.extendWithImport(name, builtin)
+      // A qualified import (alias set) binds the module under its alias so it
+      // is reachable only as `alias.member`; otherwise it injects unqualified.
+      this.topLevelEnv =
+        alias !== undefined
+          ? this.topLevelEnv.extendWithQualifiedImport(alias, builtin)
+          : this.topLevelEnv.extendWithImport(name, builtin)
       return traceStep
     } else {
       // ...otherwise, we're loading a user file as a lib. The libname
       // should correspond to the exact name of the source file. This will
       // be handled by the scheduler who will, ultimately, pause the current
       // fiber and execute an asynchronous load of that file.
-      return importFileStep(name)
+      return importFileStep(name, alias)
     }
   }
 }

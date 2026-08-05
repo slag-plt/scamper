@@ -65,6 +65,7 @@ export interface Comment {
 //
 // s ::= e
 //     | (import m)
+//     | (import m x)     -- m imported under the qualified name (alias) x
 //     | (define x e)
 //     | <docstring>
 //       (define x e)
@@ -91,9 +92,35 @@ export interface Comment {
 // Identifier node itself plays both roles -- it is a member of both the Exp
 // and Pat unions (tag 'id'), and is also used directly in binder positions
 // (lambda params, let bindings, define/struct names).
+//
+// `name` may be a one-level *qualified* name (`mod.member`) -- but only when the
+// identifier is a variable *reference*. Binder positions reject qualified names
+// (see lezer-bridge.ts), so a name in any binding/pattern/top-level slot is
+// always simple. Use isQualifiedName/splitQualifiedName to inspect one.
 export interface Identifier extends Tagged, Node {
   tag: 'id'
   name: string
+}
+
+/** The separator joining the two halves of a qualified name (`mod.member`). */
+export const QUALIFIER_SEP = '.'
+
+/** @returns whether `name` is a qualified reference of the form `mod.member` */
+export function isQualifiedName(name: string): boolean {
+  return name.includes(QUALIFIER_SEP)
+}
+
+/**
+ * Splits a qualified `mod.member` name into its `qualifier` (the module alias)
+ * and `member` halves. The grammar admits exactly one separator, so this splits
+ * on the first (and only) one.
+ */
+export function splitQualifiedName(name: string): {
+  qualifier: string
+  member: string
+} {
+  const i = name.indexOf(QUALIFIER_SEP)
+  return { qualifier: name.slice(0, i), member: name.slice(i + 1) }
 }
 
 ///// Patterns /////
@@ -200,11 +227,14 @@ export interface Import extends Tagged, Node {
   // "builtin" for a bare identifier (e.g. (import prelude)), resolved
   // against the standard library; "file" for a quoted string (e.g.
   // (import "my-file.scm")), resolved against the user's file system. A
-  // bare identifier can never contain "." (see syntax.grammar's Identifier
-  // token), so file names -- which routinely do -- must be quoted; this
-  // also means the two import kinds no longer need to be disambiguated by
-  // probing existence at runtime.
+  // module name is a simple identifier or a quoted string, so the two import
+  // kinds need not be disambiguated by probing existence at runtime.
   kind: 'builtin' | 'file'
+  // An optional qualified name (alias): (import image img) binds the module
+  // under `img`, and its exports are reachable only as `img.<name>` (never
+  // injected unqualified into the top level). Absent for the one-argument
+  // form (import image), which injects the module's names into global scope.
+  alias?: string
 }
 export interface Define extends Tagged, Node {
   tag: 'define'
@@ -387,7 +417,8 @@ export const mkImport = (
   module: string,
   kind: 'builtin' | 'file',
   range: L.Range = L.Range.none,
-): Import => ({ tag: 'import', module, kind, range })
+  alias?: string,
+): Import => ({ tag: 'import', module, kind, range, ...(alias !== undefined ? { alias } : {}) })
 export const mkDefine = (
   name: Identifier,
   value: Exp,
@@ -449,6 +480,21 @@ export function isStmt(v: unknown): v is Stmt {
 
 export const isStmtExp = (s: Stmt): s is StmtExp =>
   isTagged(s) && s.tag === 'stmtexp'
+
+/**
+ * Maps each qualified import's alias to its Import statement, so a qualified
+ * reference `alias.member` can be resolved back to the module it names. The last
+ * import wins if an alias is (erroneously) reused.
+ */
+export function qualifiedImportMap(prog: Prog): Map<string, Import> {
+  const m = new Map<string, Import>()
+  for (const s of prog) {
+    if (s.tag === 'import' && s.alias !== undefined) {
+      m.set(s.alias, s)
+    }
+  }
+  return m
+}
 
 export const isVar = (e: Exp): e is Identifier => isTagged(e) && e.tag === 'id'
 
@@ -583,6 +629,7 @@ export function stmtToLayout(s: Stmt): Layout {
       return parens([
         kw('import'),
         tok(s.kind === 'file' ? JSON.stringify(s.module) : s.module),
+        ...(s.alias !== undefined ? [tok(s.alias)] : []),
       ])
     case 'define':
       return parens([kw('define'), tok(s.name.name), expToLayout(s.value)])
@@ -725,7 +772,9 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
 
 export function stmtEquals(s1: Stmt, s2: Stmt): boolean {
   if (s1.tag === 'import' && s2.tag === 'import') {
-    return s1.module === s2.module && s1.kind === s2.kind
+    return (
+      s1.module === s2.module && s1.kind === s2.kind && s1.alias === s2.alias
+    )
   } else if (s1.tag === 'define' && s2.tag === 'define') {
     return s1.name.name === s2.name.name && expEquals(s1.value, s2.value)
   } else if (s1.tag === 'display' && s2.tag === 'display') {

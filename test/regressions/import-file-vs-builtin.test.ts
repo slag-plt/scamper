@@ -4,13 +4,12 @@ import { tokenizeAndParse } from '../../src/scheme'
 // A bare-identifier import, e.g. `(import lists)`, denotes a built-in
 // library. A quoted-string import, e.g. `(import "my-file.scm")`, denotes a
 // user file. These two forms are distinguished at parse time -- not, as
-// before, by probing for the name's existence at runtime -- because a file
-// name routinely contains a "." (its extension), and "." can never appear in
-// a bare identifier (see syntax.grammar's Identifier token, which carves "."
-// out to make room for the lambda rest-parameter dot). Before this was
-// fixed, `(import example-defns.scm)` failed to parse at all: "." isn't part
-// of Identifier, so the module name split into three tokens and Import's
-// grammar production (which only ever accepted one Identifier) rejected it.
+// before, by probing for the name's existence at runtime -- because a built-in
+// library name is always a simple identifier, whereas a file name routinely
+// contains a "." (its extension). A dotted, unquoted name now tokenizes as a
+// *qualified* identifier (see syntax.grammar), which is illegal as a module
+// name, so `(import example-defns.scm)` is still a parse error -- but with a
+// message that points at the fix (quote it).
 
 describe('import: built-in library vs. file', () => {
   test('a bare identifier import is parsed as a built-in library', () => {
@@ -37,9 +36,9 @@ describe('import: built-in library vs. file', () => {
     expect(stmt.kind).toBe('file')
   })
 
-  // A file import must be quoted -- a bare identifier can never contain ".",
-  // so this remains a parse error, just with a message that now points at
-  // the fix (quote it) instead of the old generic "malformed" message.
+  // A file import must be quoted -- an unquoted dotted name is a qualified
+  // identifier, illegal as a module name -- so this remains a parse error,
+  // with a message that points at the fix (quote it).
   test('an unquoted, dotted import is still a parse error', () => {
     const { program: prog, diagnostics } = tokenizeAndParse(
       '(import example-defns.scm)',
@@ -47,5 +46,6 @@ describe('import: built-in library vs. file', () => {
     expect(prog).toBeUndefined()
     expect(diagnostics.length).toBe(1)
     expect(diagnostics[0].message).toMatch(/malformed import statement/i)
+    expect(diagnostics[0].message).toMatch(/must be quoted/i)
   })
 })

@@ -43,6 +43,9 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame, fiber) => {
       // Closures born while a library/import fiber runs are stepped over in
       // traces (see Fiber.stepOverClosures / Closure.stepOver).
       fiber.stepOverClosures,
+      // Inherit the enclosing frame's home so a lambda returned by a
+      // qualified-module function still resolves the module's siblings.
+      currFrame.home,
     ),
   )
   return minorStep
@@ -123,14 +126,18 @@ export function applyFn(
       [p, namedArgs[i]]).concat(
         fn.restParam ? [[fn.restParam, vectorToList(args.slice(fn.params.length))]] : [])
     // The callee sees the closure's captured scopes (shared, so letrec fills
-    // are visible) with the parameters as a fresh innermost scope on top.
+    // are visible) with the parameters as a fresh innermost scope on top. Its
+    // free top-level names resolve against the closure's `home` env when set (a
+    // qualified-module closure -- see Closure.home), else the running fiber's
+    // env (so top-level forward references / letrec keep working).
     const paramScope: Scope = new Map(bindings)
     const newFrame = new Frame(
       fn.name ?? '##anonymous##',
-      fiber.topLevelEnv.withLocalScopes([...fn.locals, paramScope]),
+      (fn.home ?? fiber.topLevelEnv).withLocalScopes([...fn.locals, paramScope]),
       fn.code,
       range,
       fn.stepOver ?? false,
+      fn.home,
     )
     if (currFrame.canTailCall()) {
       // tail-call optimize by replacing the current frame (any leftover

@@ -77,17 +77,54 @@ function scopeCheckPat(
 }
 
 /**
+ * A qualified-import table: each imported module's alias (the qualified name it
+ * was given, e.g. `img` from `(import image img)`) mapped to the source module
+ * it names and the set of binding names it exports. Aliases live in their own
+ * namespace, distinct from value bindings -- `img` names the module for
+ * `img.member` references and never collides with a `(define img ...)`.
+ */
+type QualifiedModules = Map<string, { module: string; exports: Set<string> }>
+
+/**
  * Scope-checks an expression, reporting references to names bound in neither
- * `locals` (lexical scope) nor `globals` (top level), plus duplicate binders.
+ * `locals` (lexical scope) nor `globals` (top level), plus duplicate binders. A
+ * qualified reference (`mod.member`) is resolved against `qualified` instead.
  */
 function scopeCheckExp(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
+  qualified: QualifiedModules,
   locals: string[],
   e: A.Exp,
 ) {
   switch (e.tag) {
     case 'id': {
+      if (A.isQualifiedName(e.name)) {
+        // A qualified reference resolves only through its module's alias -- never
+        // against locals/globals (a binder can never be qualified).
+        const { qualifier, member } = A.splitQualifiedName(e.name)
+        const mod = qualified.get(qualifier)
+        if (mod === undefined) {
+          diagnostics.push(
+            mkDiagnostic(
+              'Scope',
+              'warning',
+              `No imported module is qualified as '${qualifier}'`,
+              e.range,
+            ),
+          )
+        } else if (!mod.exports.has(member)) {
+          diagnostics.push(
+            mkDiagnostic(
+              'Scope',
+              'warning',
+              `Module '${qualifier}' (${mod.module}) has no exported binding '${member}'`,
+              e.range,
+            ),
+          )
+        }
+        return
+      }
       if (!locals.includes(e.name) && !globals.includes(e.name)) {
         diagnostics.push(
           mkDiagnostic(
@@ -105,9 +142,9 @@ function scopeCheckExp(
       return
 
     case 'app': {
-      scopeCheckExp(diagnostics, globals, locals, e.head)
+      scopeCheckExp(diagnostics, globals, qualified, locals, e.head)
       e.args.forEach((e) => {
-        scopeCheckExp(diagnostics, globals, locals, e)
+        scopeCheckExp(diagnostics, globals, qualified, locals, e)
       })
       return
     }
@@ -118,7 +155,7 @@ function scopeCheckExp(
         e.restParam ? [...e.params, e.restParam] : e.params
       ).map((p) => p.name)
       checkDuplicateVars(diagnostics, allParams, e.range)
-      scopeCheckExp(diagnostics, globals, [...locals, ...allParams], e.body)
+      scopeCheckExp(diagnostics, globals, qualified, [...locals, ...allParams], e.body)
       return
     }
     case 'let': {
@@ -142,23 +179,23 @@ function scopeCheckExp(
       })
       const scope = [...locals, ...bindingVars]
       e.bindings.forEach((b) => {
-        scopeCheckExp(diagnostics, globals, scope, b.value)
+        scopeCheckExp(diagnostics, globals, qualified, scope, b.value)
       })
-      scopeCheckExp(diagnostics, globals, scope, e.body)
+      scopeCheckExp(diagnostics, globals, qualified, scope, e.body)
       return
     }
     case 'if': {
-      scopeCheckExp(diagnostics, globals, locals, e.guard)
-      scopeCheckExp(diagnostics, globals, locals, e.ifB)
-      scopeCheckExp(diagnostics, globals, locals, e.elseB)
+      scopeCheckExp(diagnostics, globals, qualified, locals, e.guard)
+      scopeCheckExp(diagnostics, globals, qualified, locals, e.ifB)
+      scopeCheckExp(diagnostics, globals, qualified, locals, e.elseB)
       return
     }
     case 'match': {
-      scopeCheckExp(diagnostics, globals, locals, e.scrutinee)
+      scopeCheckExp(diagnostics, globals, qualified, locals, e.scrutinee)
       e.branches.forEach((b) => {
         const bindingVars = new Set<string>()
         scopeCheckPat(diagnostics, bindingVars, b.pat)
-        scopeCheckExp(diagnostics, globals, [...locals, ...bindingVars], b.body)
+        scopeCheckExp(diagnostics, globals, qualified, [...locals, ...bindingVars], b.body)
       })
       return
     }
@@ -400,6 +437,7 @@ async function resolveImport(
 async function collectTopLevelBindings(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
+  qualified: QualifiedModules,
   sources: Map<string, string | null>,
   s: A.Stmt,
 ): Promise<void> {
@@ -407,6 +445,31 @@ async function collectTopLevelBindings(
     case 'import': {
       const ids = await resolveImport(diagnostics, s)
       if (ids === undefined) {
+        return
+      }
+      if (s.alias !== undefined) {
+        // Qualified import: the module's names are reachable only as
+        // `alias.member`, never injected unqualified into `globals`. Register
+        // the alias -> exports mapping (in its own namespace, so it never
+        // collides with a define/value name). Re-importing the same module
+        // under the same alias is idempotent; a different module under an
+        // in-use alias is a collision.
+        const prev = qualified.get(s.alias)
+        if (prev !== undefined && prev.module !== s.module) {
+          diagnostics.push(
+            mkDiagnostic(
+              'Scope',
+              'warning',
+              `Qualified name '${s.alias}' is already bound to module '${prev.module}'`,
+              s.range,
+            ),
+          )
+        } else if (prev === undefined) {
+          qualified.set(s.alias, {
+            module: s.module,
+            exports: new Set(ids.map((id) => id.name)),
+          })
+        }
         return
       }
       for (const { name } of ids) {
@@ -471,6 +534,7 @@ async function collectTopLevelBindings(
 function scopeCheckStmtBodies(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
+  qualified: QualifiedModules,
   s: A.Stmt,
 ): void {
   switch (s.tag) {
@@ -478,7 +542,7 @@ function scopeCheckStmtBodies(
       return
 
     case 'define': {
-      scopeCheckExp(diagnostics, globals, [], s.value)
+      scopeCheckExp(diagnostics, globals, qualified, [], s.value)
       if (s.docComments) {
         // A malformed docstring is collected as a "Docstring" warning, the
         // same treatment as a semantic mismatch -- not a real scope error.
@@ -493,11 +557,11 @@ function scopeCheckStmtBodies(
     }
 
     case 'display':
-      scopeCheckExp(diagnostics, globals, [], s.value)
+      scopeCheckExp(diagnostics, globals, qualified, [], s.value)
       return
 
     case 'stmtexp':
-      scopeCheckExp(diagnostics, globals, [], s.expr)
+      scopeCheckExp(diagnostics, globals, qualified, [], s.expr)
       return
 
     default:
@@ -541,13 +605,15 @@ export async function scopeCheckProgram(
     globals.push(id.name)
   }
   // Two passes so that top-level definitions are mutually recursive: collect
-  // every top-level binding first (also resolving imports and flagging name
-  // collisions), then check each statement's bodies against the full set.
+  // every top-level binding first (also resolving imports, registering qualified
+  // module aliases, and flagging name collisions), then check each statement's
+  // bodies against the full set.
   const sources = new Map<string, string | null>()
+  const qualified: QualifiedModules = new Map()
   for (const s of prog) {
-    await collectTopLevelBindings(diagnostics, globals, sources, s)
+    await collectTopLevelBindings(diagnostics, globals, qualified, sources, s)
   }
   for (const s of prog) {
-    scopeCheckStmtBodies(diagnostics, globals, s)
+    scopeCheckStmtBodies(diagnostics, globals, qualified, s)
   }
 }

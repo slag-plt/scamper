@@ -1,5 +1,4 @@
 import type { CompletionItem } from 'vscode-languageserver-protocol'
-import { tokenizeAndParse } from '../../../../scheme'
 import { docRegistry } from '../../../../lib'
 import {
   FunctionDoc,
@@ -7,13 +6,24 @@ import {
 } from '../../../../scheme/docstring/docstring'
 import { functionDocSignature } from '../../../../scheme/docstring/render'
 import { makeScopeTreeFromProgram } from '../../../../scheme/scope-tree'
+import * as A from '../../../../scheme/ast'
 import type { Prog } from '../../../../scheme/ast'
+import * as SymbolDB from '../../../../scheme/symbol-db'
+import { parseProgramFromSource } from '../../../../scheme/lezer-bridge'
+import { ScamperDiagnostic } from '../../../../scheme/diagnostic'
 import { findBuiltinDoc, functionDocMarkdown } from './docs'
 import { rangeAtOffset } from './scope'
+import { computeLineStarts, rangeFromOffsets } from './positions'
 
 // CompletionItemKind values (vscode-languageserver-protocol).
 const KIND_FUNCTION = 3
 const KIND_VARIABLE = 6
+const KIND_MODULE = 9
+
+// The run of identifier characters ending at the cursor (its delimiters mirror
+// syntax.grammar's Identifier token). Used to detect a qualified `alias.member`
+// context mid-word, since a half-typed `alias.` doesn't parse into a program.
+const TRAILING_TOKEN = /[^\s()[\]{}'";&]*$/
 
 /**
  * Completion candidates in scope at [offset]: everything visible per the scope
@@ -27,10 +37,29 @@ export async function completionsFor(
   src: string,
   offset: number,
 ): Promise<CompletionItem[]> {
-  const { program } = tokenizeAndParse(src)
-  if (program === undefined) {
+  // Parse tolerantly (not tokenizeAndParse, which yields no program on any
+  // error): a half-typed qualified name like `img.` doesn't parse, but the
+  // earlier import statements do, and the qualified branch below needs them to
+  // resolve the alias mid-edit.
+  const diagnostics: ScamperDiagnostic[] = []
+  const program = parseProgramFromSource(diagnostics, src)
+  // Make sure imported file modules are in the symbol DB before we resolve
+  // either qualified members or the flat scope tree (both read from it).
+  await SymbolDB.loadTransitiveImports(program)
+
+  // Typing `alias.` (a qualified name) offers that module's members instead of
+  // the flat scope -- nothing else is in scope after the dot.
+  const qualified = qualifiedMemberCompletions(src, offset, program)
+  if (qualified !== undefined) {
+    return qualified
+  }
+
+  // Outside a qualified context, a buffer that doesn't parse cleanly falls back
+  // to prelude so completion still works mid-edit.
+  if (diagnostics.length > 0) {
     return preludeFallback()
   }
+
   const userDocs = topLevelUserDocs(program)
   const tree = await makeScopeTreeFromProgram(program)
   const scope = tree.getInnermostScope(rangeAtOffset(offset)) ?? tree
@@ -45,6 +74,62 @@ export async function completionsFor(
     }
     seen.add(id.name)
     items.push(itemFor(id.name, userDocs))
+  }
+  // Surface qualified-import aliases so the user can discover `alias.member`.
+  for (const alias of A.qualifiedImportMap(program).keys()) {
+    if (!seen.has(alias)) {
+      seen.add(alias)
+      items.push({ label: alias, kind: KIND_MODULE })
+    }
+  }
+  return items
+}
+
+/**
+ * When the cursor sits in a qualified name `alias.partial` for a known
+ * qualified-import alias, the completion candidates are that module's exported
+ * members (as `alias.member`), each with a textEdit spanning the whole dotted
+ * token so insertion is correct regardless of the editor's word boundaries
+ * (`.` isn't a word character). Returns undefined when not in a qualified
+ * context, so the caller falls back to ordinary scope completion.
+ */
+function qualifiedMemberCompletions(
+  src: string,
+  offset: number,
+  program: Prog,
+): CompletionItem[] | undefined {
+  const token = TRAILING_TOKEN.exec(src.slice(0, offset))?.[0] ?? ''
+  if (!A.isQualifiedName(token)) {
+    return undefined
+  }
+  const { qualifier } = A.splitQualifiedName(token)
+  const imp = A.qualifiedImportMap(program).get(qualifier)
+  if (imp === undefined) {
+    return undefined
+  }
+  const range = rangeFromOffsets(offset - token.length, offset, computeLineStarts(src))
+  const docs = docRegistry.get(imp.module)
+  const items: CompletionItem[] = []
+  const seen = new Set<string>()
+  for (const { name: member } of SymbolDB.get(imp.module) ?? []) {
+    if (member.includes('##') || seen.has(member)) {
+      continue
+    }
+    seen.add(member)
+    const label = `${qualifier}.${member}`
+    const doc = docs?.get(member)
+    items.push({
+      label,
+      kind: doc !== undefined ? KIND_FUNCTION : KIND_VARIABLE,
+      filterText: label,
+      textEdit: { range, newText: label },
+      ...(doc !== undefined
+        ? {
+            detail: functionDocSignature(doc).split('\n')[0],
+            documentation: functionDocMarkdown(doc, imp.module),
+          }
+        : {}),
+    })
   }
   return items
 }

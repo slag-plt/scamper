@@ -188,6 +188,49 @@ describe('Env.get resolution order', () => {
   })
 })
 
+describe('Env qualified imports (extendWithQualifiedImport)', () => {
+  test('a qualified name resolves to the aliased module member', () => {
+    const env = Env.empty.extendWithQualifiedImport(
+      'img',
+      mkModule({ 'rgb-red': 'red-fn' }),
+    )
+    expect(env.get('img.rgb-red')).toBe('red-fn')
+  })
+
+  test("a qualified import's members are NOT reachable unqualified", () => {
+    const env = Env.empty.extendWithQualifiedImport('img', mkModule({ x: 1 }))
+    expect(env.has('x')).toBe(false)
+    expect(() => env.get('x')).toThrow(ScamperError)
+  })
+
+  test('a qualified name against an unknown alias is unbound', () => {
+    const env = Env.empty.extendWithQualifiedImport('img', mkModule({ x: 1 }))
+    expect(env.has('other.x')).toBe(false)
+    expect(() => env.get('other.x')).toThrow(ScamperError)
+  })
+
+  test('a qualified name for a member the module lacks is unbound', () => {
+    const env = Env.empty.extendWithQualifiedImport('img', mkModule({ x: 1 }))
+    expect(env.has('img.nope')).toBe(false)
+  })
+
+  test('an unqualified import is not reachable through a qualified name', () => {
+    // Alias-only qualified handles: (import image) injects flat but does not
+    // create an `image.` qualifier.
+    const env = Env.empty.extendWithImport('image', mkModule({ x: 1 }))
+    expect(env.has('image.x')).toBe(false)
+    expect(env.get('x')).toBe(1)
+  })
+
+  test('an alias and a same-named value binding coexist (separate namespaces)', () => {
+    const env = Env.empty
+      .extendWithQualifiedImport('img', mkModule({ x: 'from-module' }))
+      .extendWithTopLevel(['img', 'a-value'])
+    expect(env.get('img')).toBe('a-value')
+    expect(env.get('img.x')).toBe('from-module')
+  })
+})
+
 describe('Env.has', () => {
   test('true for a local, top-level, or imported binding; false otherwise', () => {
     const env = Env.empty

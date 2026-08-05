@@ -42,6 +42,51 @@ describe('completionsFor', () => {
   })
 })
 
+describe('completionsFor: qualified imports', () => {
+  const prelude = '(import image img)\n'
+  const labelsOf = async (src: string, offset: number) =>
+    (await completionsFor(src, offset)).map((i) => i.label)
+
+  test('typing `alias.` offers the module members as alias.member', async () => {
+    const src = `${prelude}img.`
+    const labels = await labelsOf(src, src.length)
+    expect(labels).toContain('img.rgb')
+    expect(labels).toContain('img.rgb-red')
+  })
+
+  test('member completions are qualified, never bare', async () => {
+    const src = `${prelude}img.`
+    const labels = await labelsOf(src, src.length)
+    expect(labels).not.toContain('rgb')
+  })
+
+  test('member completions carry a textEdit and filterText for the dotted token', async () => {
+    const src = `${prelude}img.rg`
+    const item = (await completionsFor(src, src.length)).find(
+      (i) => i.label === 'img.rgb',
+    )
+    expect(item?.filterText).toBe('img.rgb')
+    expect(item?.textEdit).toBeDefined()
+  })
+
+  test('a qualified import does not inject member names into the flat scope', async () => {
+    // At a non-qualified position, `rgb` is only reachable as `img.rgb`.
+    const labels = await labelsOf(prelude, prelude.length)
+    expect(labels).not.toContain('rgb')
+    expect(labels).not.toContain('rgb-red')
+  })
+
+  test('the alias itself is surfaced as a completion', async () => {
+    expect(await labelsOf(prelude, prelude.length)).toContain('img')
+  })
+
+  test('an unqualified import does not create a qualified alias', async () => {
+    // `image.` is not a known alias, so no members are offered under it.
+    const src = '(import image)\nimage.'
+    expect(await labelsOf(src, src.length)).not.toContain('image.rgb')
+  })
+})
+
 describe('signatureHelpAt', () => {
   test('describes a one-argument call with the active parameter', () => {
     const sig = signatureHelpAt('(car )', 5)
