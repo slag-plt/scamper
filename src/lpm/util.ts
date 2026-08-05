@@ -48,7 +48,10 @@ export const mkClosure = (
   restParam?: string,
   stepOver = false,
   home?: L.Env
-): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, stepOver, home })
+  // Omit `home` when unset so an ordinary closure keeps the exact shape it had
+  // before module-home resolution existed (only a qualified/private-module
+  // closure carries one); see Closure.home.
+): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, stepOver, ...(home !== undefined ? { home } : {}) })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: 'char',
   value: v,
