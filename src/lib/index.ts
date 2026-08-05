@@ -28,10 +28,8 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
     )
   }
   // js-var is the FFI root primitive -- it can't be bound via itself, so it's
-  // injected directly into every library's load environment. Because a library's
-  // top-level env becomes its Module (getTopLevelAsModule below), this also makes
-  // js-var an export of each built-in module, so user code and the scope-checker
-  // pick it up without any further wiring.
+  // injected directly into every library's load environment (and exported
+  // explicitly below, since it carries no export statement).
   const fiber = new Fiber(
     prog,
     L.Env.empty.extendWithTopLevel(['js-var', jsVar]),
@@ -42,7 +40,12 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   while (!fiber.isDone()) {
     fiber.step()
   }
-  return fiber.topLevelEnv.getTopLevelAsModule()
+  // Every library now declares its exports with `define-export` (see src/lib/*.scm).
+  // js-var is injected rather than defined (it's the FFI root, so it can't be
+  // bound via itself), so it carries no export statement -- add it explicitly so
+  // user code and the scope-checker pick it up, as before.
+  fiber.addExports(['js-var'])
+  return fiber.getModule()
 }
 
 /**
@@ -57,7 +60,9 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
 function extractDocs(prog: A.Prog): Map<string, FunctionDoc> {
   const docs = new Map<string, FunctionDoc>()
   for (const stmt of prog) {
-    if (stmt.tag !== 'define' || !stmt.docComments) {
+    // Libraries document their exports with define-export (see src/lib/*.scm);
+    // a plain documented define is still supported for anything not exported.
+    if ((stmt.tag !== 'define' && stmt.tag !== 'defexport') || !stmt.docComments) {
       continue
     }
     const { doc } = parseFunctionDocFromComments(stmt.docComments)

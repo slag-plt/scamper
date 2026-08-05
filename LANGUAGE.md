@@ -23,14 +23,22 @@ expr ::= <identifier>
        | ( let ( [ pat1 expr1 ] ... [ patk exprk ] ) expr )
        | ( match expr [ pat1 expr1 ] ... [ patk exprk ] )
 
-stmt ::= ( import <identifier> ) | ( import <string> ) | ( import <string> <identifier> )
+stmt ::= ( import <identifier> ) | ( import <identifier> <identifier> )
+       | ( import <string> ) | ( import <string> <identifier> )
        | ( define <identifier> expr )
+       | ( export x1 ... xk )
        | ( display <expr> )
        | ( struct <identifier> ( x1 ... xk ) )
        | expr
 
 prog ::= stmt1 ... stmt k
 ~~~
+
+A one-argument `import` injects a module's exported names into the current
+scope. A two-argument `import` instead binds the module under a qualified name
+(alias): its exports are reachable only as `<alias>.<name>` and are not injected
+into scope. A module exports only the names its `export` statements list (the
+union of them); a module with no `export` statement exports nothing.
 
 ## Derived Forms
 
@@ -56,6 +64,10 @@ Derived forms are surface syntax that are desugared into the core surface langua
   = (if expr11 expr12
       ...
         (if exprk1 exprk2 void))
+
+(define-export x expr)
+  = (define x expr)
+    (export x)
 ~~~
 
 ## The Runtime

@@ -51,6 +51,13 @@ export function getReportedStmt(
         range: inner.range,
       }
     }
+    case 'defexport': {
+      const inner = getReportedExp(stmt.value, queryLoc)
+      return {
+        stmt: A.mkDefineExport(stmt.name, inner.exp, stmt.range, stmt.docComments),
+        range: inner.range,
+      }
+    }
     case 'display': {
       const inner = getReportedExp(stmt.value, queryLoc)
       return { stmt: A.mkDisp(inner.exp, stmt.range), range: inner.range }
@@ -61,10 +68,11 @@ export function getReportedStmt(
     }
     case 'import':
     case 'struct':
+    case 'export':
       // N.B., these have no expression content to report on. In practice
       // this is unreachable from the UI: the caller (tokenizeAndParse) only
-      // ever acts on the result when the queried statement is a `define`
-      // with a docstring, so querying an import/struct statement is always
+      // ever acts on the result when the queried statement is a `define`/
+      // `define-export` with a docstring, so querying one of these is always
       // rejected downstream regardless of what's returned here.
       return { stmt, range: stmt.range }
   }

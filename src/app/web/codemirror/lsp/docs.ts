@@ -52,7 +52,7 @@ export function lookupFunctionDoc(
   }
   for (const stmt of program) {
     if (
-      stmt.tag === 'define' &&
+      (stmt.tag === 'define' || stmt.tag === 'defexport') &&
       stmt.name.name === name &&
       stmt.docComments !== undefined
     ) {

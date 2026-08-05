@@ -64,6 +64,10 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
       return node.body
     case 'define':
       return [node.name, node.value]
+    case 'defexport':
+      return [node.name, node.value]
+    case 'export':
+      return node.names
     case 'display':
       return [node.value]
     case 'stmtexp':

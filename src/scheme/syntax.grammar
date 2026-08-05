@@ -69,6 +69,11 @@ statement {
   // be a simple (unqualified) name; that is enforced there, not in the grammar.
   Import { paren<kw<"import"> (Identifier | String) Identifier?> } |
   Define { paren<kw<"define"> Identifier expression> } |
+  // Explicit module exports: (export a b c) lists names to export; a module
+  // exports only what its export statements name (see scope.ts / the fiber).
+  Export { paren<kw<"export"> Identifier*> } |
+  // (define-export x e) is sugar for (define x e) (export x); see expansion.ts.
+  DefineExport { paren<kw<"define-export"> Identifier expression> } |
   Display { paren<kw<"display"> expression> } |
   Struct { paren<kw<"struct"> Identifier simplearglist> } |
   SExpr { expression }

@@ -147,11 +147,18 @@ export class Env {
     return r.slot
   }
 
-  /** @return the top-level bindings of this environment as a Module */
-  getTopLevelAsModule(): Module {
+  /**
+   * @param exports when given, only these top-level names are included (a
+   *   module exports only what it declares -- see Fiber.getModule); when
+   *   omitted, every top-level binding is included.
+   * @return the top-level bindings of this environment as a Module
+   */
+  getTopLevelAsModule(exports?: Set<string>): Module {
     const ret = new Module()
     for (const [name, value] of this.topLevel) {
-      ret.registerValue(name, value)
+      if (exports === undefined || exports.has(name)) {
+        ret.registerValue(name, value)
+      }
     }
     return ret
   }
@@ -217,8 +224,17 @@ export class Env {
   }
 
   extendWithImport(name: string, lib: Module): Env {
+    // A module with private (non-exported) bindings must re-home its exported
+    // closures so they can still reach those private siblings at call time --
+    // the importer's flat scope only holds the exported names (see
+    // rehomeExports). When everything is exported (every builtin library), skip
+    // re-homing: the injected exports already cover every sibling, and closures
+    // resolve dynamically against the fiber env exactly as before.
+    const injected = this.moduleHasPrivates(lib)
+      ? this.rehomeExports(lib, name)
+      : lib
     return new Env(
-      this.extendImports(name, lib),
+      this.extendImports(name, injected),
       this.topLevel,
       this.locals,
       this.qualified,
@@ -226,47 +242,68 @@ export class Env {
   }
 
   /**
-   * Import `lib` under the qualified name `alias`: its bindings become reachable
+   * Import `lib` under the qualified name `alias`: its exports become reachable
    * only as `alias.member` (see lookup), never injected unqualified into scope.
-   *
-   * Because `lib`'s names are not in the importing scope, its own functions
-   * could not otherwise resolve their siblings (or the contract predicates they
-   * reference) at call time -- those are bare names, and applyFn resolves a
-   * closure's free names against the running fiber's env. So each of `lib`'s
-   * closures is re-homed: given a `home` env in which `lib`'s bindings resolve,
-   * layered over this base env (which carries the standard library). applyFn
-   * uses that `home` instead of the fiber env. Non-closure values need none.
+   * Its closures are re-homed (rehomeExports) so their siblings and contract
+   * predicates still resolve even though the module's names aren't in scope.
    */
   extendWithQualifiedImport(alias: string, lib: Module): Env {
-    const rehomed = new Module()
-    // `home` resolves a re-homed closure's free names against, in order: the
-    // module's own bindings, then this base env's imports (the standard library
-    // and the importer's other imports). It deliberately drops the importer's
-    // *top-level* bindings: the module's internals -- siblings and the contract
-    // predicates they reference -- must not be shadowed by a user define that
-    // happens to share a name (an alias is a separate namespace, so such a
-    // define is not even flagged as a collision). `rehomed` is added to imports
-    // last so it wins over the standard library; the map holds it by reference,
-    // so the closures filled into it below are visible through `home` too,
-    // keeping the resolution chain within `lib`.
-    const home = new Env(
-      this.extendImports(alias, rehomed),
-      new Map(),
-      this.locals,
-      this.qualified,
-    )
-    for (const [name, value] of lib.bindings) {
-      rehomed.registerValue(
-        name,
-        isClosureValue(value) ? { ...value, home } : value,
-      )
-    }
     return new Env(
       this.imports,
       this.topLevel,
       this.locals,
-      new Map([...this.qualified, [alias, rehomed]]),
+      new Map([...this.qualified, [alias, this.rehomeExports(lib, alias)]]),
     )
+  }
+
+  /** @return whether `lib` binds any name it does not export. */
+  private moduleHasPrivates(lib: Module): boolean {
+    return (
+      lib.allBindings !== undefined && lib.allBindings.size > lib.bindings.size
+    )
+  }
+
+  /**
+   * Re-homes `lib`'s closures so their free top-level names resolve against the
+   * module's FULL top-level bindings (private helpers included), layered over
+   * this base env (which carries the standard library) -- never the importer's
+   * own top-level scope. applyFn uses that `home` instead of the fiber env, so a
+   * module's exported function can still call its private helpers, while a user
+   * define can't shadow the module's internals.
+   *
+   * @return a Module exposing only `lib`'s exported subset (their re-homed
+   *   versions). `importKey` keys the home env's self-import (arbitrary).
+   */
+  private rehomeExports(lib: Module, importKey: string): Module {
+    // The module's full top-level bindings; falls back to the exported set for a
+    // Module carrying no separate full snapshot (then there are no privates).
+    const all = lib.allBindings ?? lib.bindings
+    // `home` imports the (about-to-be-filled) re-homed full module, so a sibling
+    // -- exported or private -- resolves to a re-homed closure too, keeping the
+    // resolution chain within the module. Its top-level map is empty so the
+    // importer's own defines can't shadow the module's internals.
+    const rehomedAll = new Module()
+    const home = new Env(
+      this.extendImports(importKey, rehomedAll),
+      new Map(),
+      this.locals,
+      this.qualified,
+    )
+    for (const [name, value] of all) {
+      rehomedAll.registerValue(
+        name,
+        isClosureValue(value) ? { ...value, home } : value,
+      )
+    }
+    // Expose only the exported names (their re-homed versions) to the importer.
+    const exported = new Module()
+    for (const name of lib.bindings.keys()) {
+      const value = rehomedAll.bindings.get(name)
+      if (value !== undefined) {
+        exported.registerValue(name, value)
+      }
+    }
+    return exported
   }
 
   extendWithTopLevel(...bindings: [string, Value][]): Env {
@@ -320,7 +357,15 @@ export class Env {
 
 /** A module is a collection of importable top-level definitions. */
 export class Module {
+  /** The module's exported bindings -- what an importer sees. */
   bindings: Map<string, Value>
+  /**
+   * The module's FULL top-level bindings, including non-exported private
+   * helpers. Used only to re-home the module's closures so their internal
+   * references resolve (see Env.rehomeExports); the importer never sees these.
+   * Undefined ⇒ treat as equal to `bindings` (the module has no privates).
+   */
+  allBindings?: Map<string, Value>
 
   constructor() {
     this.bindings = new Map()
@@ -480,7 +525,16 @@ export type List = null | Cons
 // uses it to recover the derived form exactly (no heuristics). Undefined on
 // nodes that came straight from the parser. `anon-fn` tags the `lambda` an
 // anonymous function `#(...)` expands to, so sugaring can recover the `#(...)`.
-export type Provenance = 'and' | 'or' | 'begin' | 'cond' | 'anon-fn'
+export type Provenance =
+  | 'and'
+  | 'or'
+  | 'begin'
+  | 'cond'
+  | 'anon-fn'
+  // Tags the (define ...) and (export ...) that a (define-export ...) expands
+  // to, so sugaring can recover the define-export exactly (see sugar.ts). This
+  // one only ever tags statements (Define/Export), never an LPM op.
+  | 'define-export'
 
 export interface Lit {
   tag: 'lit'
@@ -605,7 +659,14 @@ export interface StmtExp {
   expr: Blk
   range: Range
 }
-export type Stmt = Disp | Import | Define | StmtExp
+// Records names the running module exports (see Fiber). A module exports only
+// the names its export statements name; a program with none exports nothing.
+export interface Export {
+  tag: 'export'
+  names: string[]
+  range: Range
+}
+export type Stmt = Disp | Import | Define | StmtExp | Export
 export type Prog = Stmt[]
 
 export interface PWild {

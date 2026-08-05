@@ -2,7 +2,7 @@
 ;;;  desc : string?
 ;;; Returns a test result indicating that the test named `desc` passed.
 ;;; @category testing
-(define test-result-ok (js-var "test_testResultOk"))
+(define-export test-result-ok (js-var "test_testResultOk"))
 
 ;;; (test-result-error-expected desc expected actual) -> test-result?
 ;;;  desc : string?
@@ -11,7 +11,7 @@
 ;;; Returns a test result indicating that the test named `desc` failed because
 ;;; it produced `actual` instead of the `expected` value.
 ;;; @category testing
-(define test-result-error-expected (js-var "test_testResultErrorExpected"))
+(define-export test-result-error-expected (js-var "test_testResultErrorExpected"))
 
 ;;; (test-result-error-exn desc exn) -> test-result?
 ;;;  desc : string?
@@ -19,7 +19,7 @@
 ;;; Returns a test result indicating that the test named `desc` failed because
 ;;; it raised the unexpected exception `exn`.
 ;;; @category testing
-(define test-result-error-exn (js-var "test_testResultErrorExn"))
+(define-export test-result-error-exn (js-var "test_testResultErrorExn"))
 
 ;;; (test-result-error-gen desc reason) -> test-result?
 ;;;  desc : string?
@@ -27,12 +27,12 @@
 ;;; Returns a test result indicating that the test named `desc` failed for the
 ;;; given `reason`. (This constructor was formerly named `test-error`.)
 ;;; @category testing
-(define test-result-error-gen (js-var "test_testResultErrorGeneric"))
+(define-export test-result-error-gen (js-var "test_testResultErrorGeneric"))
 
 ;;; (test-result? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a test result.
-(define test-result? (js-var "test_isResult"))
+(define-export test-result? (js-var "test_isResult"))
 
 ;;; (test-case desc eq? expected test-fn) -> test-result?
 ;;;  desc : string?
@@ -43,7 +43,7 @@
 ;;;   a function that produces the actual value to be tested
 ;;; Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.
 ;;; @category testing
-(define test-case
+(define-export test-case
   (lambda (desc eq? expected test-fn)
     (with-handler
       (lambda (err) (test-result-error-exn desc err))
@@ -61,7 +61,7 @@
 ;;;   a function that should throw an exception
 ;;; Returns a test result indicating whether the given function threw an exception.
 ;;; @category testing
-(define test-exn
+(define-export test-exn
   (lambda (desc test-fn)
     (with-handler
       (lambda (err) (test-result-ok desc))

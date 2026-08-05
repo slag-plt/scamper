@@ -1,7 +1,8 @@
-import { Blk, Env, Prog, Stmt, Value } from './lang'
+import { Blk, Env, Module, Prog, Stmt, Value } from './lang'
 import {
   DefineHandler,
   DispHandler,
+  ExportHandler,
   ImportHandler,
   StmtExpHandler,
 } from './handlers/stmt-handlers'
@@ -95,6 +96,10 @@ export class Fiber {
   private currStmtIdx = 0
   private _isProcessingBlk = false
   private maxCallStackDepth = 10_000
+  // The names this fiber's program has declared for export (the union across its
+  // export statements). Consulted only when the fiber's top level is snapshotted
+  // as a module (getModule); a program run for its own sake never exports.
+  private _exportedNames = new Set<string>()
   // When true, every closure created while this fiber runs is marked
   // `stepOver` (see Closure.stepOver). Set for the fibers that load an
   // imported module -- the builtin libraries and user file imports -- so a
@@ -122,11 +127,34 @@ export class Fiber {
         return ImportHandler(currStmt, this)
       case 'define':
         return DefineHandler(currStmt, this)
+      case 'export':
+        return ExportHandler(currStmt, this)
       case 'disp':
         return DispHandler(currStmt, this)
       case 'stmtexp':
         return StmtExpHandler(currStmt, this)
     }
+  }
+
+  /** Records the names of an export statement (see ExportHandler). */
+  addExports(names: string[]) {
+    for (const name of names) {
+      this._exportedNames.add(name)
+    }
+  }
+
+  /**
+   * @return this fiber's top-level bindings, restricted to the names it declared
+   *   for export, as a Module. This is what an `import` of the fiber's program
+   *   sees. A program with no export statements exports nothing.
+   */
+  getModule(): Module {
+    const mod = this.topLevelEnv.getTopLevelAsModule(this._exportedNames)
+    // Retain the full top-level bindings (private helpers included) so an
+    // importer can re-home the module's closures to reach them -- see
+    // Env.rehomeExports. The importer still only ever reads `mod.bindings`.
+    mod.allBindings = this.topLevelEnv.getTopLevelAsModule().bindings
+    return mod
   }
 
   /* Statement execution helper functions */

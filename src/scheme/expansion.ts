@@ -197,6 +197,25 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       return [s]
     case 'define':
       return [A.mkDefine(s.name, expandExpr(s.value), s.range, s.docComments)]
+    case 'export':
+      return [s]
+    case 'defexport':
+      // (define-export x e)
+      // -->
+      // (define x e)
+      // (export x)
+      // Both are tagged 'define-export' so sugaring recovers the define-export
+      // exactly (a hand-written define + export pair is left untouched).
+      return [
+        A.mkDefine(
+          s.name,
+          expandExpr(s.value),
+          s.range,
+          s.docComments,
+          'define-export',
+        ),
+        A.mkExport([s.name], s.range, 'define-export'),
+      ]
     case 'display':
       return [A.mkDisp(expandExpr(s.value), s.range)]
     case 'struct': {

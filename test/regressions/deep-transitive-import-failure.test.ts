@@ -41,14 +41,14 @@ afterEach(() => {
 
 describe('#285: deep transitive import failures are surfaced', () => {
   test('an unparseable module one level down is reported', async () => {
-    mockFS({ 'a.scm': '(import "c.scm")\n(define fromA 1)', 'c.scm': '(1 2' })
+    mockFS({ 'a.scm': '(import "c.scm")\n(define-export fromA 1)', 'c.scm': '(1 2' })
     expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([
       "Could not load module 'c.scm' (imported by 'a.scm')",
     ])
   })
 
   test('a missing module one level down is reported', async () => {
-    mockFS({ 'a.scm': '(import "gone.scm")\n(define fromA 1)' })
+    mockFS({ 'a.scm': '(import "gone.scm")\n(define-export fromA 1)' })
     expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([
       "Could not load module 'gone.scm' (imported by 'a.scm')",
     ])
@@ -58,8 +58,8 @@ describe('#285: deep transitive import failures are surfaced', () => {
     // prog -> a.scm -> b.scm -> c.scm(broken): c.scm's direct importer is
     // b.scm, but the reported location is the top-level `(import "a.scm")`.
     mockFS({
-      'a.scm': '(import "b.scm")\n(define fromA 1)',
-      'b.scm': '(import "c.scm")\n(define fromB 2)',
+      'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+      'b.scm': '(import "c.scm")\n(define-export fromB 2)',
       'c.scm': '(1 2',
     })
     expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([
@@ -69,8 +69,8 @@ describe('#285: deep transitive import failures are surfaced', () => {
 
   test('a healthy transitive graph still reports nothing', async () => {
     mockFS({
-      'a.scm': '(import "b.scm")\n(define fromA 1)',
-      'b.scm': '(define fromB 2)',
+      'a.scm': '(import "b.scm")\n(define-export fromA 1)',
+      'b.scm': '(define-export fromB 2)',
     })
     expect(await scopeErrors('(import "a.scm")\nfromA')).toEqual([])
   })

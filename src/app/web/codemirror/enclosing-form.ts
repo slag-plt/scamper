@@ -10,6 +10,8 @@ import type { SyntaxNode, Tree } from '@lezer/common'
 const FORM_LABELS: Record<string, string> = {
   // Statements
   Define: 'define',
+  DefineExport: 'define-export',
+  Export: 'export',
   Display: 'display',
   Struct: 'struct',
   Import: 'import',

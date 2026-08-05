@@ -15,6 +15,13 @@ import * as A from './ast.js'
 // Each form's operands are collected from the tagged chain and then sugared
 // *recursively*, so a derived form nested inside a recovered one -- in an
 // operand, a branch, or the body -- is itself recovered rather than lost.
+//
+// N.B., `sugarExpr` is what the reduction tracer uses (trace.ts). The
+// statement-level entry points `sugarStmt` / `sugarProgram` -- including
+// `define-export` recovery, which spans two statements -- have no production
+// caller yet; they provide the exact program-level round trip
+// (`sugarProgram(expandProgram(p))`) the derived statement forms are specified
+// against, and are exercised by the sugar / exports test suites.
 
 /**
  * @return the operands of an `and` if `e` is (the head of) its expansion, else
@@ -169,9 +176,12 @@ export function sugarStmt(s: A.Stmt): A.Stmt {
   switch (s.tag) {
     case 'import':
     case 'struct':
+    case 'export':
       return s
     case 'define':
       return A.mkDefine(s.name, sugarExpr(s.value), s.range, s.docComments)
+    case 'defexport':
+      return A.mkDefineExport(s.name, sugarExpr(s.value), s.range, s.docComments)
     case 'display':
       return A.mkDisp(sugarExpr(s.value), s.range)
     case 'stmtexp':
@@ -179,6 +189,43 @@ export function sugarStmt(s: A.Stmt): A.Stmt {
   }
 }
 
+/**
+ * @return the define-export a `(define x e)` immediately followed by `(export x)`
+ * came from, if both carry the `define-export` provenance expansion tagged them
+ * with (see expandStmt), else null. A hand-written define + export pair is not
+ * tagged, so it is left as two statements -- recovery is exact, not heuristic.
+ */
+function collectDefineExport(
+  s: A.Stmt,
+  next: A.Stmt | undefined,
+): A.DefineExport | null {
+  if (
+    s.tag === 'define' &&
+    s.provenance === 'define-export' &&
+    next !== undefined &&
+    next.tag === 'export' &&
+    next.provenance === 'define-export' &&
+    next.names.length === 1 &&
+    next.names[0].name === s.name.name
+  ) {
+    return A.mkDefineExport(s.name, sugarExpr(s.value), s.range, s.docComments)
+  }
+  return null
+}
+
 export function sugarProgram(prog: A.Prog): A.Prog {
-  return prog.map(sugarStmt)
+  // A left-to-right fold rather than a map: a define-export expands to *two*
+  // statements, so recovering it collapses an adjacent (tagged) define + export
+  // pair back into one.
+  const out: A.Prog = []
+  for (let i = 0; i < prog.length; i++) {
+    const defexport = collectDefineExport(prog[i], prog[i + 1])
+    if (defexport !== null) {
+      out.push(defexport)
+      i++ // consume the paired export
+    } else {
+      out.push(sugarStmt(prog[i]))
+    }
+  }
+  return out
 }
