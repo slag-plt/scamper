@@ -28,7 +28,7 @@ describe('rotate of an above drawing (#253)', () => {
   test('the beside sibling still rotates cleanly', async () => {
     const result = await runProgram(`
 (import image)
-(> (image-width (rotate 45 (beside (rectangle 20 20 "solid" "red") (rectangle 20 20 "solid" "blue")))) 0)
+(> (drawing-width (rotate 45 (beside (rectangle 20 20 "solid" "red") (rectangle 20 20 "solid" "blue")))) 0)
 `)
     expect(result).toEqual(['#t'])
   })
@@ -38,8 +38,8 @@ describe('rotate of an above drawing (#253)', () => {
   test('a stacked above keeps its full height when rotated', async () => {
     expect(await runProgram(`
 (import image)
-(round (image-width (rotate 90 (above (rectangle 20 20 "solid" "red") (rectangle 20 30 "solid" "blue")))))
-(round (image-height (rotate 90 (above (rectangle 20 20 "solid" "red") (rectangle 20 30 "solid" "blue")))))
+(round (drawing-width (rotate 90 (above (rectangle 20 20 "solid" "red") (rectangle 20 30 "solid" "blue")))))
+(round (drawing-height (rotate 90 (above (rectangle 20 20 "solid" "red") (rectangle 20 30 "solid" "blue")))))
 `)).toEqual(['50', '20'])
   })
 
@@ -48,7 +48,7 @@ describe('rotate of an above drawing (#253)', () => {
   test('a nested above/beside combination rotates cleanly', async () => {
     expect(await runProgram(`
 (import image)
-(> (image-width (rotate 30 (beside (above (square 5 "solid" "red") (square 8 "solid" "blue")) (square 4 "solid" "green")))) 0)
+(> (drawing-width (rotate 30 (beside (above (square 5 "solid" "red") (square 8 "solid" "blue")) (square 4 "solid" "green")))) 0)
 `)).toEqual(['#t'])
   })
 })

@@ -30,6 +30,9 @@ export const patchNotes: PatchNote[] = [
       'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',
       'for-range now takes its function first: (for-range f 0 10), like map, filter, and for-each.',
       'Maps built with { ... } now have functions to work with them: hash-ref, hash-set, hash-set!, hash-keys, and more.',
+      'Pictures built from shapes are now called drawings: image? is drawing?, image-width is drawing-width, and so on. shape? has been removed — use drawing?.',
+      'The pixel functions now say canvas, since that is what they work on: canvas->pixels, pixels->canvas, canvas-get-pixel, and drawing->canvas.',
+      'A shape\'s fill must now be "solid" or "outline". Anything else used to be accepted and then quietly drew nothing.',
     ],
   },
   {

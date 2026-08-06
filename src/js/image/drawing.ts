@@ -1,13 +1,18 @@
 import * as L from '../../lpm'
-import { Rgb, image_rgb, image_colorToRgb, image_rgbAverage, image_rgbToString } from './color.js'
-import { Font, image_font, image_fontQ, image_fontToFontString } from './font.js'
+import { Rgb, color_rgb, color_colorToRgb, color_rgbAverage, color_rgbToString } from './color.js'
+import { Font, font_font, font_fontQ, font_fontToFontString } from './font.js'
 
 /***** Core Functions *********************************************************/
 
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
-export function image_drawingQ (v: any): boolean {
+/** A fill mode: the string "solid" or "outline". */
+export function drawing_fillModeQ (v: any): boolean {
+  return v === 'solid' || v === 'outline'
+}
+
+export function drawing_drawingQ (v: any): boolean {
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
          L.isStructKind(v, 'beside') || L.isStructKind(v, 'above') ||
@@ -30,14 +35,14 @@ interface Ellipse extends L.Struct {
 
 const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ellipse => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'ellipse',
-  width, height, mode, color: image_colorToRgb(color)
+  width, height, mode, color: color_colorToRgb(color)
 })
 
-export function image_ellipse(width: number, height: number, mode: Mode, color: any): Ellipse {
+export function drawing_ellipse(width: number, height: number, mode: Mode, color: any): Ellipse {
   return ellipsePrim(width, height, mode, color)
 }
 
-export function image_circle(radius: number, mode: Mode, color: any): Ellipse {
+export function drawing_circle(radius: number, mode: Mode, color: any): Ellipse {
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
 
@@ -51,14 +56,14 @@ interface Rectangle extends L.Struct {
 
 const rectanglePrim = (width: number, height: number, mode: Mode, color: any): Rectangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'rectangle',
-  width, height, mode, color: image_colorToRgb(color)
+  width, height, mode, color: color_colorToRgb(color)
 })
 
-export function image_rectangle(width: number, height: number, mode: Mode, color: any): Rectangle {
+export function drawing_rectangle(width: number, height: number, mode: Mode, color: any): Rectangle {
   return rectanglePrim(width, height, mode, color)
 }
 
-export function image_square(length: number, mode: Mode, color: any): Rectangle {
+export function drawing_square(length: number, mode: Mode, color: any): Rectangle {
   return rectanglePrim(length, length, mode, color)
 }
 
@@ -72,14 +77,14 @@ interface Triangle extends L.Struct {
 
 const trianglePrim = (width: number, height: number, mode: Mode, color: any): Triangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'triangle',
-  width, height, mode, color: image_colorToRgb(color)
+  width, height, mode, color: color_colorToRgb(color)
 })
 
-export function image_triangle(length: number, mode: Mode, color: any): Triangle {
+export function drawing_triangle(length: number, mode: Mode, color: any): Triangle {
   return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
 }
 
-export function image_isoscelesTriangle(width: number, height: number, mode: Mode, color: any): Triangle {
+export function drawing_isoscelesTriangle(width: number, height: number, mode: Mode, color: any): Triangle {
   return trianglePrim(width, height, mode, color)
 }
 
@@ -94,10 +99,10 @@ interface Path extends L.Struct {
 
 const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: any): Path => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'path',
-  width, height, points, mode, color: image_colorToRgb(color)
+  width, height, points, mode, color: color_colorToRgb(color)
 })
 
-export function image_path(width: number, height: number, points: L.List, mode: Mode, color: any): Path {
+export function drawing_path(width: number, height: number, points: L.List, mode: Mode, color: any): Path {
   return pathPrim(width, height,
     L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
     mode, color)
@@ -119,11 +124,11 @@ const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
   drawings
 })
 
-export function image_beside(...drawings: Drawing[]): Beside {
+export function drawing_beside(...drawings: Drawing[]): Beside {
   return besideAlignPrim('center', ...drawings)
 }
 
-export function image_besideAlign(align: string, ...drawings: Drawing[]): Beside {
+export function drawing_besideAlign(align: string, ...drawings: Drawing[]): Beside {
   return besideAlignPrim(align, ...drawings)
 }
 
@@ -143,11 +148,11 @@ const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
   drawings
 })
 
-export function image_above(...drawings: Drawing[]): Above {
+export function drawing_above(...drawings: Drawing[]): Above {
   return aboveAlignPrim('middle', ...drawings)
 }
 
-export function image_aboveAlign(align: string, ...drawings: Drawing[]): Above {
+export function drawing_aboveAlign(align: string, ...drawings: Drawing[]): Above {
   return aboveAlignPrim(align, ...drawings)
 }
 
@@ -169,11 +174,11 @@ const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]
   drawings
 })
 
-export function image_overlay(...drawings: Drawing[]) {
+export function drawing_overlay(...drawings: Drawing[]) {
   return overlayAlignPrim('middle', 'center', ...drawings)
 }
 
-export function image_overlayAlign(xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
+export function drawing_overlayAlign(xAlign: string, yAlign: string, ...drawings: Drawing[]): Overlay {
   return overlayAlignPrim(xAlign, yAlign, ...drawings)
 }
 
@@ -199,7 +204,7 @@ function overlayOffsetPrim (dx: number, dy: number, width: number, height: numbe
   }
 }
 
-export function image_overlayOffset(dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
+export function drawing_overlayOffset(dx: number, dy: number, d1: Drawing, d2: Drawing): OverlayOffset {
   // N.B., tricky! Need to account for whether (a) we are shifting the smaller
   // or larger image and (b) whether we are shifting it positively or
   // negatively.
@@ -262,7 +267,7 @@ function calculateRotatedBox (points: [number, number][], degrees: number): { wi
   }
 }
 
-export function image_rotate(angle: number, drawing: Drawing): Rotate {
+export function drawing_rotate(angle: number, drawing: Drawing): Rotate {
   // Rotate the drawing's declared bounding-box corners. At angle 0 this is the
   // identity for every shape (box = w x h, dx = dy = 0), so `rotate` never
   // shifts, clips, or resizes a drawing it isn't actually turning.
@@ -292,7 +297,7 @@ interface WithDash extends L.Struct {
   height: number
 }
 
-export function image_withDash(dashSpec: number[], drawing: Drawing): WithDash {
+export function drawing_withDash(dashSpec: number[], drawing: Drawing): WithDash {
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
     dashSpec,
@@ -315,16 +320,16 @@ function textPrim (width: number, height: number, text: string,
     font: Font, size: number, color: any): DText {
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'text',
-    width, height, text, size, color: image_colorToRgb(color), font
+    width, height, text, size, color: color_colorToRgb(color), font
   }
 }
 
-export function image_text(text: string, size: number, color: Rgb, ...rest: any[]): DText {
-  let f: Font = image_font('Arial')
+export function drawing_text(text: string, size: number, color: Rgb, ...rest: any[]): DText {
+  let f: Font = font_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
-  } else if (rest.length == 1 && image_fontQ(rest[0])) {
-    if (image_fontQ(rest[0])) {
+  } else if (rest.length == 1 && font_fontQ(rest[0])) {
+    if (font_fontQ(rest[0])) {
       f = rest[0] as Font
     } else {
       throw new L.ScamperError('Runtime', `expected a font, received ${L.typeOf(rest[0])}`)
@@ -335,8 +340,8 @@ export function image_text(text: string, size: number, color: Rgb, ...rest: any[
   // temporary canvas to measure the text's dimensions.
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
-  ctx.font = image_fontToFontString(f, size)
-  console.log(image_fontToFontString(f, size))
+  ctx.font = font_fontToFontString(f, size)
+  console.log(font_fontToFontString(f, size))
   const met = ctx.measureText(text)
   const width = met.width
   const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent + 1
@@ -346,74 +351,74 @@ export function image_text(text: string, size: number, color: Rgb, ...rest: any[
 
 /***** Extended Functions *****************************************************/
 
-export function image_solidSquare(length: number, color: any): Rectangle {
-  return image_square(length, 'solid', color)
+export function drawing_solidSquare(length: number, color: any): Rectangle {
+  return drawing_square(length, 'solid', color)
 }
 
-export function image_outlinedSquare(length: number, color: any): Rectangle {
-  return image_square(length, 'outline', color)
+export function drawing_outlinedSquare(length: number, color: any): Rectangle {
+  return drawing_square(length, 'outline', color)
 }
 
-export function image_solidRectangle(width: number, height: number, color: any): Rectangle {
-  return image_rectangle(width, height, 'solid', color)
+export function drawing_solidRectangle(width: number, height: number, color: any): Rectangle {
+  return drawing_rectangle(width, height, 'solid', color)
 }
 
-export function image_outlinedRectangle(width: number, height: number, color: any): Rectangle {
-  return image_rectangle(width, height, 'outline', color)
+export function drawing_outlinedRectangle(width: number, height: number, color: any): Rectangle {
+  return drawing_rectangle(width, height, 'outline', color)
 }
 
-export function image_solidCircle(radius: number, color: any): Ellipse {
-  return image_circle(radius, 'solid', color)
+export function drawing_solidCircle(radius: number, color: any): Ellipse {
+  return drawing_circle(radius, 'solid', color)
 }
 
-export function image_outlinedCircle(radius: number, color: any): Ellipse {
-  return image_circle(radius, 'outline', color)
+export function drawing_outlinedCircle(radius: number, color: any): Ellipse {
+  return drawing_circle(radius, 'outline', color)
 }
 
-export function image_solidEllipse(width: number, height: number, color: any): Ellipse {
-  return image_ellipse(width, height, 'solid', color)
+export function drawing_solidEllipse(width: number, height: number, color: any): Ellipse {
+  return drawing_ellipse(width, height, 'solid', color)
 }
 
-export function image_outlinedEllipse(width: number, height: number, color: any): Ellipse {
-  return image_ellipse(width, height, 'outline', color)
+export function drawing_outlinedEllipse(width: number, height: number, color: any): Ellipse {
+  return drawing_ellipse(width, height, 'outline', color)
 }
 
-export function image_solidTriangle(length: number, color: any): Triangle {
-  return image_triangle(length, 'solid', color)
+export function drawing_solidTriangle(length: number, color: any): Triangle {
+  return drawing_triangle(length, 'solid', color)
 }
 
-export function image_outlinedTriangle(length: number, color: any): Triangle {
-  return image_triangle(length, 'outline', color)
+export function drawing_outlinedTriangle(length: number, color: any): Triangle {
+  return drawing_triangle(length, 'outline', color)
 }
 
-export function image_solidIsoscelesTriangle(width: number, height: number, color: any): Triangle {
-  return image_isoscelesTriangle(width, height, 'solid', color)
+export function drawing_solidIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+  return drawing_isoscelesTriangle(width, height, 'solid', color)
 }
 
-export function image_outlinedIsoscelesTriangle(width: number, height: number, color: any): Triangle {
-  return image_isoscelesTriangle(width, height, 'outline', color)
+export function drawing_outlinedIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+  return drawing_isoscelesTriangle(width, height, 'outline', color)
 }
 
 // TODO: this need to be factored out to a general image lib that handles both
 // drawings and canvases.
 
-export function image_imageWidth(drawing: Drawing): number {
-  if (image_drawingQ(drawing)) {
+export function drawing_drawingWidth(drawing: Drawing): number {
+  if (drawing_drawingQ(drawing)) {
     return drawing.width
   } else {
     return (drawing as unknown as HTMLCanvasElement).width
   }
 }
 
-export function image_imageHeight(drawing: Drawing): number {
-  if (image_drawingQ(drawing)) {
+export function drawing_drawingHeight(drawing: Drawing): number {
+  if (drawing_drawingQ(drawing)) {
     return drawing.height
   } else {
     return (drawing as unknown as HTMLCanvasElement).height
   }
 }
 
-export function image_imageColor(drawing: Drawing): Rgb {
+export function drawing_drawingColor(drawing: Drawing): Rgb {
   switch(drawing[L.structKind]) {
     case 'ellipse':
     case 'rectangle':
@@ -424,24 +429,24 @@ export function image_imageColor(drawing: Drawing): Rgb {
     case 'beside':
     case 'above':
     case 'overlay': {
-      let avg = image_imageColor(drawing.drawings[0])
+      let avg = drawing_drawingColor(drawing.drawings[0])
       for (let i = 1; i < drawing.drawings.length; i++) {
-        avg = image_rgbAverage(avg, image_imageColor(drawing.drawings[i]))
+        avg = color_rgbAverage(avg, drawing_drawingColor(drawing.drawings[i]))
       }
       return avg
     }
     case 'overlayOffset':
-      return image_rgbAverage(image_imageColor(drawing.d1), image_imageColor(drawing.d2))
+      return color_rgbAverage(drawing_drawingColor(drawing.d1), drawing_drawingColor(drawing.d2))
     case 'rotate':
-      return image_imageColor(drawing.drawing)
+      return drawing_drawingColor(drawing.drawing)
     case 'withDash':
-      return image_imageColor(drawing.drawing)
+      return drawing_drawingColor(drawing.drawing)
     case 'text':
       return drawing.color
   }
 }
 
-export function image_imageRecolor(drawing: Drawing, color: any): Drawing {
+export function drawing_drawingRecolor(drawing: Drawing, color: any): Drawing {
   switch(drawing[L.structKind]) {
     case 'ellipse':
       return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
@@ -452,46 +457,57 @@ export function image_imageRecolor(drawing: Drawing, color: any): Drawing {
     case 'path':
       return pathPrim(drawing.width, drawing.height, drawing.points, drawing.mode, color)
     case 'beside':
-      return besideAlignPrim(drawing.align, ...drawing.drawings.map(d => image_imageRecolor(d, color)))
+      return besideAlignPrim(drawing.align, ...drawing.drawings.map(d => drawing_drawingRecolor(d, color)))
     case 'above':
-      return aboveAlignPrim(drawing.align, ...drawing.drawings.map(d => image_imageRecolor(d, color)))
+      return aboveAlignPrim(drawing.align, ...drawing.drawings.map(d => drawing_drawingRecolor(d, color)))
     case 'overlay':
-      return overlayAlignPrim(drawing.xAlign, drawing.yAlign, ...drawing.drawings.map(d => image_imageRecolor(d, color)))
+      return overlayAlignPrim(drawing.xAlign, drawing.yAlign, ...drawing.drawings.map(d => drawing_drawingRecolor(d, color)))
     case 'overlayOffset':
-      return overlayOffsetPrim(drawing.dx, drawing.dy, drawing.width, drawing.height, image_imageRecolor(drawing.d1, color), image_imageRecolor(drawing.d2, color))
+      return overlayOffsetPrim(drawing.dx, drawing.dy, drawing.width, drawing.height, drawing_drawingRecolor(drawing.d1, color), drawing_drawingRecolor(drawing.d2, color))
     case 'rotate':
-      return image_rotate(drawing.angle, image_imageRecolor(drawing.drawing, color))
+      return drawing_rotate(drawing.angle, drawing_drawingRecolor(drawing.drawing, color))
     case 'withDash':
-      return image_withDash(drawing.dashSpec, image_imageRecolor(drawing.drawing, color))
+      return drawing_withDash(drawing.dashSpec, drawing_drawingRecolor(drawing.drawing, color))
     case 'text':
       return textPrim(drawing.width, drawing.height, drawing.text,
         drawing.font, drawing.size, drawing.color)
   }
 }
 
-export function image_drawingToPixels(drawing: Drawing): Rgb[] {
-  const canvas = image_renderer(drawing) as HTMLCanvasElement
+export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
+  const canvas = drawing_renderer(drawing) as HTMLCanvasElement
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
-    ret.push(image_rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
+    ret.push(color_rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
   }
   return ret
 }
 
-export function image_drawingToImage(drawing: Drawing): HTMLCanvasElement {
-  return image_renderer(drawing) as HTMLCanvasElement
+export function drawing_drawingToCanvas(drawing: Drawing): HTMLCanvasElement {
+  return drawing_renderer(drawing) as HTMLCanvasElement
 }
 
 /***** Rendering **************************************************************/
 
-export function image_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
+// N.B., a mode that is neither 'solid' nor 'outline' used to fall through every
+// branch and draw *nothing*, silently -- which is what (ellipse w h #t color)
+// did, the very call ellipse's own (wrong) `boolean?` contract demanded. The
+// fill-mode? contract now stops that at construction; this is the backstop.
+function badMode(mode: unknown): L.ScamperError {
+  return new L.ScamperError(
+    'Runtime',
+    `Cannot draw a shape whose fill is ${JSON.stringify(mode)}: expected "solid" or "outline"`,
+  )
+}
+
+export function drawing_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   switch (drawing[L.structKind]) {
     case 'ellipse': {
-      ctx.fillStyle = image_rgbToString(drawing.color)
-      ctx.strokeStyle = image_rgbToString(drawing.color)
+      ctx.fillStyle = color_rgbToString(drawing.color)
+      ctx.strokeStyle = color_rgbToString(drawing.color)
       const radiusX = drawing.width / 2
       const radiusY = drawing.height / 2
       const centerX = x + radiusX
@@ -502,22 +518,26 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
         ctx.fill()
       } else if (drawing.mode === 'outline') {
         ctx.stroke()
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }
     case 'rectangle': {
-      ctx.fillStyle = image_rgbToString(drawing.color)
-      ctx.strokeStyle = image_rgbToString(drawing.color)
+      ctx.fillStyle = color_rgbToString(drawing.color)
+      ctx.strokeStyle = color_rgbToString(drawing.color)
       if (drawing.mode === 'solid') {
         ctx.fillRect(x, y, drawing.width, drawing.height)
       } else if (drawing.mode === 'outline') {
         ctx.strokeRect(x, y, drawing.width, drawing.height)
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }
     case 'triangle': {
-      ctx.fillStyle = image_rgbToString(drawing.color)
-      ctx.strokeStyle = image_rgbToString(drawing.color)
+      ctx.fillStyle = color_rgbToString(drawing.color)
+      ctx.strokeStyle = color_rgbToString(drawing.color)
       ctx.beginPath()
       // Start in the bottom-left corner of the triangle...
       ctx.moveTo(x, y + drawing.height)
@@ -531,13 +551,15 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
         ctx.fill()
       } else if (drawing.mode === 'outline') {
         ctx.stroke()
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }
     case 'path': {
       if (drawing.points.length === 0) { break }
-      ctx.fillStyle = image_rgbToString(drawing.color)
-      ctx.strokeStyle = image_rgbToString(drawing.color)
+      ctx.fillStyle = color_rgbToString(drawing.color)
+      ctx.strokeStyle = color_rgbToString(drawing.color)
       ctx.beginPath()
       ctx.moveTo(x + drawing.points[0][0], y + drawing.points[0][1])
       drawing.points.slice(1).forEach(p => {
@@ -552,7 +574,7 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
     }
     case 'beside': {
       drawing.drawings.forEach(d => {
-        image_render(
+        drawing_render(
           x,
           drawing.align === 'top'
             ? y
@@ -568,7 +590,7 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
     }
     case 'above': {
       drawing.drawings.forEach(d => {
-        image_render(
+        drawing_render(
           drawing.align === 'left'
             ? x
             : drawing.align === 'right'
@@ -585,7 +607,7 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
     case 'overlay': {
       // N.B., need to draw in reverse order to get the overlay effect to work
       [...drawing.drawings].reverse().forEach(d => {
-        image_render(
+        drawing_render(
           drawing.xAlign === 'left'
             ? x
             : drawing.xAlign === 'right'
@@ -609,8 +631,8 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
       const x2 = drawing.dx > 0 ? x + drawing.dx : x
       const y2 = drawing.dy > 0 ? y + drawing.dy : y
       // N.B., render d2 first so d1 is on top
-      image_render(x2, y2, drawing.d2, canvas)
-      image_render(x1, y1, drawing.d1, canvas)
+      drawing_render(x2, y2, drawing.d2, canvas)
+      drawing_render(x1, y1, drawing.d1, canvas)
       break
     }
     case 'rotate': {
@@ -623,7 +645,7 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
       ctx.translate(offsetX, offsetY)
       ctx.rotate(angle)
       
-      image_render(0, 0, drawing.drawing, canvas)
+      drawing_render(0, 0, drawing.drawing, canvas)
       
       ctx.rotate(-angle)
       ctx.translate(-offsetX, -offsetY)
@@ -631,13 +653,13 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
     }
     case 'withDash': {
       ctx.setLineDash(drawing.dashSpec)
-      image_render(x, y, drawing.drawing, canvas)
+      drawing_render(x, y, drawing.drawing, canvas)
       ctx.setLineDash([])
       break
     }
     case 'text': {
-      ctx.fillStyle = image_rgbToString(drawing.color)
-      ctx.font = image_fontToFontString(drawing.font, drawing.size) 
+      ctx.fillStyle = color_rgbToString(drawing.color)
+      ctx.font = font_fontToFontString(drawing.font, drawing.size) 
       const metrics = ctx.measureText(drawing.text)
       ctx.fillText(drawing.text, x, y + metrics.actualBoundingBoxAscent + 1)
     }
@@ -650,7 +672,7 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
  *   *display* pass a themed color (see DrawingRenderer.vue); the default keeps
  *   off-screen/data uses (drawing->pixels, drawing->image) deterministic.
  */
-export function image_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
+export function drawing_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = background
   ctx.strokeStyle = 'black'
@@ -658,13 +680,13 @@ export function image_clearDrawing (canvas: HTMLCanvasElement, background: strin
 }
 
 // TODO: aria labels should be in a central location
-export const image_canvasAriaLabel = 'scamper-canvas'
-export function image_renderer (drawing: Drawing): HTMLElement {
+export const drawing_canvasAriaLabel = 'scamper-canvas'
+export function drawing_renderer (drawing: Drawing): HTMLElement {
   const canvas = document.createElement('canvas')
-  canvas.setAttribute('aria-label', image_canvasAriaLabel)
+  canvas.setAttribute('aria-label', drawing_canvasAriaLabel)
   canvas.width = Math.ceil(drawing.width)
   canvas.height = Math.ceil(drawing.height)
-  image_clearDrawing(canvas)
-  image_render(0, 0, drawing, canvas)
+  drawing_clearDrawing(canvas)
+  drawing_render(0, 0, drawing, canvas)
   return canvas
 }

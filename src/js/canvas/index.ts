@@ -1,10 +1,21 @@
 import * as L from '../../lpm'
-import { Drawing, image_render } from '../image/drawing.js'
-import { image_colorToRgb, image_rgbToString } from '../image/color.js'
-import { Font, image_font, image_fontQ, image_fontToFontString } from '../image/font.js'
+import { Drawing, drawing_render } from '../image/drawing.js'
+import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/color.js'
+import { Font, font_font, font_fontQ, font_fontToFontString } from '../image/font.js'
 
 export function canvas_canvasQ(v: any): boolean {
   return v instanceof HTMLCanvasElement
+}
+
+// N.B., canvas-width/canvas-height used to be bound to the *drawing* accessors,
+// which accept either kind via a cast. Splitting them gives each an honest
+// contract (#103).
+export function canvas_canvasWidth(canvas: HTMLCanvasElement): number {
+  return canvas.width
+}
+
+export function canvas_canvasHeight(canvas: HTMLCanvasElement): number {
+  return canvas.height
 }
 
 export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElement {
@@ -16,8 +27,8 @@ export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElem
 
 export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   if (mode === 'solid') {
     ctx.fillRect(x, y, width, height)
   } else if (mode === 'outline') {
@@ -29,8 +40,8 @@ export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: 
 
 export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.beginPath()
   ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
   if (mode === 'solid') {
@@ -44,8 +55,8 @@ export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: nu
 
 export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, 2 * Math.PI)
   if (mode === 'solid') {
@@ -58,11 +69,11 @@ export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: num
 }
 
 export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
-  let f: Font = image_font('Arial')
+  let f: Font = font_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
   } else if (rest.length == 1) {
-    if (image_fontQ(rest[0])) {
+    if (font_fontQ(rest[0])) {
       f = rest[0] as Font
     } else {
       throw new L.ScamperError('Runtime', `expected a font, received ${L.typeOf(rest[0])}`)
@@ -70,9 +81,9 @@ export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: numbe
   }
 
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.font = image_fontToFontString(f, size)
+  ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.font = font_fontToFontString(f, size)
   if (mode === 'solid') {
     ctx.fillText(text, x, y)
   } else if (mode === 'outline') {
@@ -83,7 +94,7 @@ export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: numbe
 }
 
 export function canvas_canvasDrawing(canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
-  image_render(x, y, drawing, canvas)
+  drawing_render(x, y, drawing, canvas)
 }
 
 export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
@@ -96,8 +107,8 @@ export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: 
     return
   }
 
-  ctx.fillStyle = image_rgbToString(image_colorToRgb(color))
-  ctx.strokeStyle = image_rgbToString(image_colorToRgb(color))
+  ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
+  ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.beginPath()
   let p: L.Pair = pairs[0] as L.Pair
   ctx.moveTo(p.fst as number, p.snd as number)
@@ -144,3 +155,74 @@ export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn)
   )
 }
 
+/***** Per-pixel manipulation *************************************************/
+
+// N.B., pixel-map is now defined in image.scm (Scheme) on top of image->pixels,
+// vector-map, and pixels->image -- a JS implementation can no longer call the
+// per-pixel Scamper function (callScamperFn is disabled).
+
+export function canvas_canvasGetPixel(canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
+  const ctx = canvas.getContext('2d')!
+  const img = ctx.getImageData(x, y, 1, 1)
+  const data = img.data
+  return color_rgb(data[0], data[1], data[2], data[3])
+}
+
+/***** Pixels ****************************************************************/
+
+/**
+ * Pixels: a vector of rgb values, what canvas->pixels produces and
+ * pixels->canvas consumes. There is no distinct runtime type -- this is the
+ * contract the pixel operations were previously declared `any` for.
+ */
+export function canvas_pixelsQ(v: L.Value): boolean {
+  return L.isArray(v) && v.every((p) => L.isStructKind(p, 'rgba'))
+}
+
+export function canvas_canvasToPixels(canvas: HTMLCanvasElement): L.Struct[] {
+  const ctx = canvas.getContext('2d')!
+  const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+  const ret = []
+  for (let i = 0; i < src.length; i += 4) {
+    ret.push(color_rgb(src[i], src[i + 1], src[i + 2], src[i + 3]))
+  }
+  return ret
+}
+
+export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height: number): HTMLCanvasElement {
+  const ret = document.createElement('canvas')
+  ret.width = width
+  ret.height = height
+  const ctx = ret.getContext('2d')!
+  const outImg = ctx.createImageData(width, height)
+  const data = outImg.data
+  for (let i = 0; i < pixels.length; i++) {
+    const c = pixels[i] as Rgb
+    data[i*4] = c.red
+    data[i*4 + 1] = c.green
+    data[i*4 + 2] = c.blue
+    data[i*4 + 3] = c.alpha
+  }
+  ctx.putImageData(outImg, 0, 0)
+  return ret
+}
+
+export function canvas_canvasSetPixels(canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
+  const ctx = canvas.getContext('2d')!
+  const outImg = ctx.createImageData(canvas.width, canvas.height)
+  const data = outImg.data
+  for (let i = 0; i < pixels.length; i++) {
+    const c = pixels[i] as Rgb
+    data[i*4] = c.red
+    data[i*4 + 1] = c.green
+    data[i*4 + 2] = c.blue
+    data[i*4 + 3] = c.alpha
+  }
+  ctx.putImageData(outImg, 0, 0)
+}
+
+/***** Exports ****************************************************************/
+
+// Image loading
+
+// Per-pixel manipulation
