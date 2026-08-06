@@ -2,6 +2,8 @@ import * as L from '../lpm'
 import * as Audio from './audio/index.js'
 import * as Canvas from './canvas/index.js'
 import * as Data from './data/index.js'
+// N.B., `FileLib`, not `File`: `File` is a DOM global.
+import * as FileLib from './file/index.js'
 import * as Html from './html/index.js'
 import * as Image from './image/index.js'
 import * as Lab from './lab/index.js'
@@ -38,6 +40,7 @@ const internals = new Map<string, L.Value>([
   ...Object.entries(Audio),
   ...Object.entries(Canvas),
   ...Object.entries(Data),
+  ...Object.entries(FileLib),
   ...Object.entries(Html),
   ...Object.entries(Image),
   ...Object.entries(Lab),

@@ -1,5 +1,16 @@
-import { describe, expect, test } from 'vitest'
-import { runProgram } from './harness.js'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { runProgram, runProgramAsync } from './harness.js'
+import { getFS, setFS, type t as FS } from '../../src/fs'
+import { MockFileSystem } from '../stubs/mock-file-system'
+
+/** getFS throws when no file system is installed; this reports that as undefined. */
+function tryGetFS(): FS | undefined {
+  try {
+    return getFS()
+  } catch {
+    return undefined
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -2749,18 +2760,75 @@ void
   ])
 })
 
-// N.B., with-file now blocks the fiber to load the file (SuspendSignal /
-// Scheduler `block-on`) and applies the callback in Scheme, so its happy path
-// runs only under the async scheduler (validated end-to-end via the CLI), not
-// this synchronous harness. The argument contract still fails eagerly.
-test('with-file rejects a non-string filename via its contract', async () => {
-  expect(
-    await runProgram(`
+// with-file blocks the fiber to load the file (SuspendSignal / Scheduler
+// `block-on`) and applies the callback in Scheme, so its happy path only runs
+// under the async scheduler -- runProgramAsync, not the synchronous runProgram.
+// The argument contract still fails eagerly.
+//
+// N.B., this happy path went untested for a while -- the CLI was the only thing
+// exercising it -- which is part of why a scheduler bug on the block-on path
+// survived (see the block-on tests in test/lpm/scheduler.test.ts). These cases
+// are behavior coverage, though, not a guard for that invariant: they pass
+// either way. The scheduler's own tests are what pin it down.
+describe('with-file', () => {
+  // N.B., setFS is a global, so it is restored afterwards -- otherwise every
+  // test *following* this block would silently run against the mock.
+  let previousFS: FS | undefined
+
+  beforeEach(async () => {
+    previousFS = tryGetFS()
+    const fs = await MockFileSystem.create()
+    await fs.saveFile('greet.txt', 'hello\nthere\n')
+    setFS(fs)
+  })
+
+  afterEach(() => {
+    if (previousFS !== undefined) {
+      setFS(previousFS)
+    }
+  })
+
+  test('passes the file contents to its callback', async () => {
+    expect(
+      await runProgramAsync(`
+(with-file "greet.txt" (lambda (s) (string-length s)))
+`),
+    ).toEqual(['12'])
+  })
+
+  test('returns the callback result, which renders at the top level', async () => {
+    expect(
+      await runProgramAsync(`
+(with-file "greet.txt" (lambda (s) s))
+`),
+    ).toEqual(['"hello\nthere\n"'])
+  })
+
+  test('a missing file raises a runtime error', async () => {
+    expect(
+      await runProgramAsync(`
+(with-file "nope.txt" (lambda (s) s))
+`),
+    ).toEqual(['Runtime error: File "nope.txt" does not exist'])
+  })
+
+  test('a missing file is catchable by with-handler', async () => {
+    // The idiomatic (with-handler h (lambda () (with-file ...))) shape: the
+    // rejection routes through fiber.handleError rather than unwinding.
+    expect(
+      await runProgramAsync(`
+(with-handler (lambda (e) "caught") (lambda () (with-file "nope.txt" (lambda (s) s))))
+`),
+    ).toEqual(['"caught"'])
+  })
+
+  test('rejects a non-string filename via its contract', async () => {
+    expect(
+      await runProgram(`
 (with-file 5 (lambda (s) s))
 `),
-  ).toEqual([
-    'Runtime error: (error) expected a string, received number',
-  ])
+    ).toEqual(['Runtime error: (error) expected a string, received number'])
+  })
 })
 
 test('with-file-chooser', async () => {

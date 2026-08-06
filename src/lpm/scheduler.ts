@@ -174,13 +174,26 @@ export class Scheduler {
     }
   }
 
+  /**
+   * @returns true when this step took over managing the task's place in the run
+   * queue -- it has already dequeued the task and will re-schedule it (or signal
+   * its completion) itself, asynchronously. The caller must then NOT also
+   * advance/remove it: doing so removes a *second* task, or trips
+   * removeTaskFromQueue's atomicity check when the queue is now empty.
+   *
+   * N.B., stepTask's isReportTask error branch also dequeues (via endCurrFiber)
+   * and then yields `undefined` here, which reports false -- the one place that
+   * does not follow this rule. It is harmless today only because that fiber is
+   * never done at that point, so the caller's moveNextTask just mis-advances
+   * currTaskIdx rather than removing a second task.
+   */
   async processStepResult(
     stepResult: StepResult | undefined,
     task: SchedulerTask,
-  ) {
+  ): Promise<boolean> {
     const fiber = task.fiber
     if (!stepResult) {
-      return
+      return false
     }
     if (stepResult.tag === 'import-file') {
       // TODO: this branch (and the getFS()/fileExists() call in particular)
@@ -260,7 +273,7 @@ export class Scheduler {
       }
       // This step is fully handled asynchronously; do not fall through to the
       // display-task branch (which would treat it as a reduction and park).
-      return
+      return true
     }
 
     if (stepResult.tag === 'block-on') {
@@ -301,11 +314,11 @@ export class Scheduler {
       // Handled asynchronously; don't fall through to the display-task branch
       // (which would re-process this suspended fiber as a reduction and re-park,
       // double-removing it from the queue).
-      return
+      return true
     }
 
     if (!isDisplayTask(task)) {
-      return
+      return false
     }
 
     const { out } = task
@@ -352,14 +365,18 @@ export class Scheduler {
             ? advanced
             : false)
       if (park) {
+        // parkInGate dequeued the task, so the caller must leave currTaskIdx
+        // alone -- removeTaskFromQueue swapped a different task into this slot,
+        // and advancing past it would skip that task for a round.
         this.parkInGate(task)
-        return
+        return true
       }
     }
 
     if (isMinor) {
       this.currTaskIdx++
     }
+    return false
   }
 
   /**
@@ -471,8 +488,14 @@ export class Scheduler {
           )
         }
         const stepResult = this.stepTask(task)
-        await this.processStepResult(stepResult, task)
-        this.moveNextTask(task.fiber)
+        // A step that suspended the fiber (block-on, import-file) or parked it
+        // has already taken the task out of the run queue and owns re-scheduling
+        // it. Advancing here as well would remove a second task -- or, if the
+        // async action already finished the program during the await above,
+        // trip removeTaskFromQueue's atomicity check on an empty queue.
+        if (!(await this.processStepResult(stepResult, task))) {
+          this.moveNextTask(task.fiber)
+        }
       }
     }
   }

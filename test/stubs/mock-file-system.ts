@@ -22,7 +22,18 @@ export class MockFileSystem implements FS {
   }
 
   loadFile(filename: string) {
-    return Promise.resolve(this.files.get(filename) ?? '')
+    // N.B., rejects for a file that isn't here, like both real implementations
+    // (NodeFileSystem's readFile throws ENOENT, OPFS's getFileHandle throws
+    // NotFoundError). Returning '' instead would make a *missing* file
+    // indistinguishable from an *empty* one, which silently voids any test
+    // asserting that something wrote an empty file.
+    const contents = this.files.get(filename)
+    if (contents === undefined) {
+      return Promise.reject(
+        new Error(`MockFileSystem: file "${filename}" does not exist`),
+      )
+    }
+    return Promise.resolve(contents)
   }
 
   saveFile(filename: string, contents: string) {
@@ -36,7 +47,12 @@ export class MockFileSystem implements FS {
   }
 
   renameFile(from: string, to: string) {
-    const contents = this.files.get(from) ?? ''
+    const contents = this.files.get(from)
+    if (contents === undefined) {
+      return Promise.reject(
+        new Error(`MockFileSystem: file "${from}" does not exist`),
+      )
+    }
     this.files.set(to, contents)
     this.files.delete(from)
     return Promise.resolve()

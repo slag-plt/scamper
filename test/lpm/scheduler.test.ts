@@ -522,6 +522,51 @@ describe('Scheduler', () => {
       expect(task.ch.log).toContain('after')
     })
 
+    test('an action that completes the program does not corrupt the run queue', async () => {
+      // Regression (found building the `file` library, #315): the block-on
+      // branch dequeues the task and owns re-scheduling it, but execute() then
+      // called moveNextTask anyway. When the action settled fast enough that
+      // advanceStmt finished the program during the intervening `await`,
+      // moveNextTask saw a done fiber and tried to remove a task from an
+      // already-empty queue -- tripping removeTaskFromQueue's atomicity ICE.
+      //
+      // That ICE was thrown inside execute()'s detached promise, so it reached
+      // no caller: the run looked green apart from an unhandled rejection. The
+      // previous test doesn't catch it because its blocking call is followed by
+      // another statement, so the fiber isn't done at that moment. Here the
+      // blocking call IS the last statement.
+      const rejections: unknown[] = []
+      const capture = (e: unknown) => rejections.push(e)
+      process.on('unhandledRejection', capture)
+      try {
+        const sched = new Scheduler()
+        const fiber = makeTestFiber([U.mkDisp([U.mkVar('block'), U.mkAp(0)])])
+        fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+          'block',
+          () => {
+            throw new SuspendSignal(() => Promise.reject(new Error('disk error')))
+          },
+        ])
+        let completed = 0
+        const task = { ...makeTask(fiber), onComplete: () => completed++ }
+
+        sched.schedule(task)
+        await sleep(QUANTUM_WAIT_MS)
+        sched.pauseExecution()
+        await sleep(QUANTUM_WAIT_MS)
+
+        expect(task.ch.errLog).toHaveLength(1)
+        expect(task.ch.errLog[0]).toContain('disk error')
+        // The program completed exactly once, and nothing escaped into a
+        // detached promise.
+        expect(completed).toBe(1)
+        expect(rejections).toEqual([])
+      } finally {
+        await sleep(QUANTUM_WAIT_MS)
+        process.off('unhandledRejection', capture)
+      }
+    })
+
     // N.B., a blockOn rejection under an enclosing `with-handler` (the idiomatic
     // `(with-handler h (lambda () (with-file ...)))` shape) is catchable -- it
     // routes through fiber.handleError. That path needs the compiler's real
