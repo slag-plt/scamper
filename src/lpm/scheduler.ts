@@ -255,7 +255,7 @@ export class Scheduler {
                           mod,
                         )
                   fiber.advanceStmt()
-                  this.schedule(task)
+                  this.resumeOrComplete(task)
                 },
               })
             },
@@ -267,7 +267,7 @@ export class Scheduler {
                 ),
               )
               fiber.advanceStmt()
-              this.schedule(task)
+              this.resumeOrComplete(task)
             },
           )
       }
@@ -302,13 +302,7 @@ export class Scheduler {
             task.err.report(scamperErr)
             fiber.advanceStmt()
           }
-          // advanceStmt may have completed the program; a done fiber must not be
-          // re-scheduled (its completion is signaled instead).
-          if (fiber.isDone()) {
-            task.onComplete?.()
-          } else {
-            this.schedule(task)
-          }
+          this.resumeOrComplete(task)
         },
       )
       // Handled asynchronously; don't fall through to the display-task branch
@@ -523,6 +517,24 @@ export class Scheduler {
         gate.resolve()
       }
       task.onComplete?.()
+    }
+  }
+
+  /**
+   * Returns a task that an async branch dequeued -- a file import, a blocking
+   * primitive -- to the run queue now that its action has settled, or signals
+   * its completion if that action's statement was the program's last.
+   *
+   * N.B., the isDone check is the point: `schedule` rejects a finished fiber, so
+   * re-scheduling one raises an ICE from inside a detached promise, killing the
+   * run silently (#341). The task is already out of the queue at this point, so
+   * completion is signaled directly rather than through endCurrFiber.
+   */
+  private resumeOrComplete(task: SchedulerTask) {
+    if (task.fiber.isDone()) {
+      task.onComplete?.()
+    } else {
+      this.schedule(task)
     }
   }
 
