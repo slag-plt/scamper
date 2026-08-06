@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, test } from 'vitest'
 
@@ -110,5 +112,37 @@ describe('scamper CLI', () => {
     expect(result.stdout).toBe('(hsv 0 100 100 255)\n(rgba 255 0 0 255)\n')
     expect(result.stderr).toBe('')
     expect(result.status).toBe(0)
+  })
+
+  // The `file` library (#315) suspends the fiber on every read/write, so it only
+  // works under the real scheduler. This runs the actual binary against a real
+  // Node filesystem end-to-end. Written to a temp directory rather than
+  // fixtures/, since the program creates files as it runs.
+  test('the file library round-trips through the real filesystem (#315)', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'scamper-cli-file-'))
+    try {
+      writeFileSync(
+        path.join(dir, 'prog.scm'),
+        [
+          '(import file)',
+          '(string->file "alpha" "a.txt")',
+          '(file->string "a.txt")',
+          '(lines->file (list "x" "y") "b.txt")',
+          '(file->lines "b.txt")',
+        ].join('\n'),
+        'utf-8',
+      )
+
+      const result = runCli([path.join(dir, 'prog.scm')])
+
+      expect(result.stderr).toBe('')
+      expect(result.status).toBe(0)
+      expect(result.stdout).toBe('void\n"alpha"\nvoid\n(list "x" "y")\n')
+      // The writes really landed on disk, next to the program.
+      expect(readFileSync(path.join(dir, 'a.txt'), 'utf-8')).toBe('alpha')
+      expect(readFileSync(path.join(dir, 'b.txt'), 'utf-8')).toBe('x\ny\n')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

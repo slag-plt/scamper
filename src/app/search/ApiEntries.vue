@@ -17,7 +17,7 @@ const props = defineProps<{
 // LPM-internal plumbing, not user-facing, so it's deliberately excluded.
 const moduleOrder = [
   'prelude', 'image', 'lab', 'music', 'test',
-  'audio', 'canvas', 'html', 'reactive', 'data', 'rex',
+  'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
 ]
 
 function allDocs(): FunctionDoc[] {

@@ -13,7 +13,7 @@ import type { FunctionDoc } from '../../scheme/docstring/docstring'
 // plumbing, not user-facing, so it's deliberately excluded here.
 const moduleOrder = [
   'prelude', 'image', 'lab', 'music', 'test',
-  'audio', 'canvas', 'html', 'reactive', 'data', 'rex',
+  'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
 ]
 const libs: [string, Map<string, FunctionDoc>][] = moduleOrder.map(
   (name) => [name, docRegistry.get(name) ?? new Map<string, FunctionDoc>()],
