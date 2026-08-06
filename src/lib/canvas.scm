@@ -8,13 +8,13 @@
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a valid color: a string containing a named color, an `rgb` value, or an `hsv` value.
 ;;; @category color, hsv, image, predicates, rgb, typecheck
-(define-export color? (js-var "image_colorQ"))
+(define-export color? (js-var "color_colorQ"))
 
 ;;; (drawing? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a drawing: the kind of value the shape constructors build.
 ;;; @category image, predicates, typecheck
-(define-export drawing? (js-var "image_drawingQ"))
+(define-export drawing? (js-var "drawing_drawingQ"))
 
 ;;; (fill-mode? v) -> boolean?
 ;;;  v : any
@@ -23,7 +23,7 @@
 ;;; N.B., re-exported here (like color? and drawing?) because this module's own
 ;;; contracts name it, and a contract predicate must resolve in the module that
 ;;; uses it -- see the cross-module predicate test in test/libs/canvas.test.ts.
-(define-export fill-mode? (js-var "image_fillModeQ"))
+(define-export fill-mode? (js-var "drawing_fillModeQ"))
 
 ;;; (make-canvas width height) -> canvas?
 ;;;  width : integer?

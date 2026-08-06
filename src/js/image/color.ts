@@ -17,20 +17,20 @@ import colorsys from 'colorsys'
 // Rgb remains the stored color type for shapes; use `rgb` to build one.
 
 /** Converts between various representations of color in Scamper. */
-export function image_colorToRgb (v: any): Rgb {
+export function color_colorToRgb (v: any): Rgb {
   if (L.isStructKind(v, 'rgba')) {
     return v as Rgb
   } else if (typeof v === 'string') {
-    return image_colorNameToRgb(v)
+    return color_colorNameToRgb(v)
   } else if (L.isStructKind(v, 'hsv')) {
-    return image_hsvToRgb(v as Hsv)
+    return color_hsvToRgb(v as Hsv)
   } else {
     throw new L.ScamperError('Runtime', `Shapes expect a valid color, received a: ${L.typeOf(v)}`)
   }
 }
 
-export function image_colorQ (v: any): boolean {
-  return (typeof v === 'string' && image_isColorName(v)) ||
+export function color_colorQ (v: any): boolean {
+  return (typeof v === 'string' && color_isColorName(v)) ||
     L.isStructKind(v, 'rgba') ||
     L.isStructKind(v, 'hsv')
 }
@@ -45,15 +45,15 @@ export interface Rgb extends L.Struct {
   alpha: number
 }
 
-export function image_isRgbComponent(n: number): boolean {
+export function color_isRgbComponent(n: number): boolean {
   return n >= 0 && n <= 255
 }
 
-export function image_isRgb (v: any): boolean {
+export function color_isRgb (v: any): boolean {
   return L.isStructKind(v, 'rgba')
 }
 
-export function image_rgb(...args: number[]): Rgb {
+export function color_rgb(...args: number[]): Rgb {
   if (args.length !== 3 && args.length !== 4) {
     throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
   }
@@ -67,23 +67,23 @@ export function image_rgb(...args: number[]): Rgb {
   })
 }
 
-export function image_rgbRed(rgba: Rgb): number {
+export function color_rgbRed(rgba: Rgb): number {
   return rgba.red
 }
 
-export function image_rgbGreen(rgba: Rgb): number {
+export function color_rgbGreen(rgba: Rgb): number {
   return rgba.green
 }
 
-export function image_rgbBlue(rgba: Rgb): number {
+export function color_rgbBlue(rgba: Rgb): number {
   return rgba.blue
 }
 
-export function image_rgbAlpha(rgba: Rgb): number {
+export function color_rgbAlpha(rgba: Rgb): number {
   return rgba.alpha
 }
 
-export function image_rgbDistance(rgba1: Rgb, rgba2: Rgb): number {
+export function color_rgbDistance(rgba1: Rgb, rgba2: Rgb): number {
   return Math.sqrt(
     Math.pow(rgba1.red - rgba2.red, 2) +
     Math.pow(rgba1.green - rgba2.green, 2) +
@@ -94,158 +94,158 @@ export function image_rgbDistance(rgba1: Rgb, rgba2: Rgb): number {
 /***** Color Names ************************************************************/
 
 const namedCssColors = new Map<string, Rgb>([
-  ['aliceblue', image_rgb(240, 248, 255)],
-  ['antiquewhite', image_rgb(250, 235, 215)],
-  ['aqua', image_rgb(0, 255, 255)],
-  ['aquamarine', image_rgb(127, 255, 212)],
-  ['azure', image_rgb(240, 255, 255)],
-  ['beige', image_rgb(245, 245, 220)],
-  ['bisque', image_rgb(255, 228, 196)],
-  ['black', image_rgb(0, 0, 0)],
-  ['blanchedalmond', image_rgb(255, 235, 205)],
-  ['blue', image_rgb(0, 0, 255)],
-  ['blueviolet', image_rgb(138, 43, 226)],
-  ['brown', image_rgb(165, 42, 42)],
-  ['burlywood', image_rgb(222, 184, 135)],
-  ['cadetblue', image_rgb(95, 158, 160)],
-  ['chartreuse', image_rgb(127, 255, 0)],
-  ['chocolate', image_rgb(210, 105, 30)],
-  ['coral', image_rgb(255, 127, 80)],
-  ['cornflowerblue', image_rgb(100, 149, 237)],
-  ['cornsilk', image_rgb(255, 248, 220)],
-  ['crimson', image_rgb(220, 20, 60)],
-  ['cyan', image_rgb(0, 255, 255)],
-  ['darkblue', image_rgb(0, 0, 139)],
-  ['darkcyan', image_rgb(0, 139, 139)],
-  ['darkgoldenrod', image_rgb(184, 134, 11)],
-  ['darkgray', image_rgb(169, 169, 169)],
-  ['darkgreen', image_rgb(0, 100, 0)],
-  ['darkkhaki', image_rgb(189, 183, 107)],
-  ['darkmagenta', image_rgb(139, 0, 139)],
-  ['darkolivegreen', image_rgb(85, 107, 47)],
-  ['darkorange', image_rgb(255, 140, 0)],
-  ['darkorchid', image_rgb(153, 50, 204)],
-  ['darkred', image_rgb(139, 0, 0)],
-  ['darksalmon', image_rgb(233, 150, 122)],
-  ['darkseagreen', image_rgb(143, 188, 143)],
-  ['darkslateblue', image_rgb(72, 61, 139)],
-  ['darkslategray', image_rgb(47, 79, 79)],
-  ['darkturquoise', image_rgb(0, 206, 209)],
-  ['darkviolet', image_rgb(148, 0, 211)],
-  ['deeppink', image_rgb(255, 20, 147)],
-  ['deepskyblue', image_rgb(0, 191, 255)],
-  ['dimgray', image_rgb(105, 105, 105)],
-  ['dodgerblue', image_rgb(30, 144, 255)],
-  ['firebrick', image_rgb(178, 34, 34)],
-  ['floralwhite', image_rgb(255, 250, 240)],
-  ['forestgreen', image_rgb(34, 139, 34)],
-  ['fuchsia', image_rgb(255, 0, 255)],
-  ['gainsboro', image_rgb(220, 220, 220)],
-  ['ghostwhite', image_rgb(248, 248, 255)],
-  ['gold', image_rgb(255, 215, 0)],
-  ['goldenrod', image_rgb(218, 165, 32)],
-  ['gray', image_rgb(128, 128, 128)],
-  ['green', image_rgb(0, 128, 0)],
-  ['greenyellow', image_rgb(173, 255, 47)],
-  ['honeydew', image_rgb(240, 255, 240)],
-  ['hotpink', image_rgb(255, 105, 180)],
-  ['indianred', image_rgb(205, 92, 92)],
-  ['indigo', image_rgb(75, 0, 130)],
-  ['ivory', image_rgb(255, 255, 240)],
-  ['khaki', image_rgb(240, 230, 140)],
-  ['lavender', image_rgb(230, 230, 250)],
-  ['lavenderblush', image_rgb(255, 240, 245)],
-  ['lawngreen', image_rgb(124, 252, 0)],
-  ['lemonchiffon', image_rgb(255, 250, 205)],
-  ['lightblue', image_rgb(173, 216, 230)],
-  ['lightcoral', image_rgb(240, 128, 128)],
-  ['lightcyan', image_rgb(224, 255, 255)],
-  ['lightgoldenrodyellow', image_rgb(250, 250, 210)],
-  ['lightgray', image_rgb(211, 211, 211)],
-  ['lightgreen', image_rgb(144, 238, 144)],
-  ['lightpink', image_rgb(255, 182, 193)],
-  ['lightsalmon', image_rgb(255, 160, 122)],
-  ['lightseagreen', image_rgb(32, 178, 170)],
-  ['lightskyblue', image_rgb(135, 206, 250)],
-  ['lightslategray', image_rgb(119, 136, 153)],
-  ['lightsteelblue', image_rgb(176, 196, 222)],
-  ['lightyellow', image_rgb(255, 255, 224)],
-  ['lime', image_rgb(0, 255, 0)],
-  ['limegreen', image_rgb(50, 205, 50)],
-  ['linen', image_rgb(250, 240, 230)],
-  ['magenta', image_rgb(255, 0, 255)],
-  ['maroon', image_rgb(128, 0, 0)],
-  ['mediumaquamarine', image_rgb(102, 205, 170)],
-  ['mediumblue', image_rgb(0, 0, 205)],
-  ['mediumorchid', image_rgb(186, 85, 211)],
-  ['mediumpurple', image_rgb(147, 112, 219)],
-  ['mediumseagreen', image_rgb(60, 179, 113)],
-  ['mediumslateblue', image_rgb(123, 104, 238)],
-  ['mediumspringgreen', image_rgb(0, 250, 154)],
-  ['mediumturquoise', image_rgb(72, 209, 204)],
-  ['mediumvioletred', image_rgb(199, 21, 133)],
-  ['midnightblue', image_rgb(25, 25, 112)],
-  ['mintcream', image_rgb(245, 255, 250)],
-  ['mistyrose', image_rgb(255, 228, 225)],
-  ['moccasin', image_rgb(255, 228, 181)],
-  ['navajowhite', image_rgb(255, 222, 173)],
-  ['navy', image_rgb(0, 0, 128)],
-  ['oldlace', image_rgb(253, 245, 230)],
-  ['olive', image_rgb(128, 128, 0)],
-  ['olivedrab', image_rgb(107, 142, 35)],
-  ['orange', image_rgb(255, 165, 0)],
-  ['orangered', image_rgb(255, 69, 0)],
-  ['orchid', image_rgb(218, 112, 214)],
-  ['palegoldenrod', image_rgb(238, 232, 170)],
-  ['palegreen', image_rgb(152, 251, 152)],
-  ['paleturquoise', image_rgb(175, 238, 238)],
-  ['palevioletred', image_rgb(219, 112, 147)],
-  ['papayawhip', image_rgb(255, 239, 213)],
-  ['peachpuff', image_rgb(255, 218, 185)],
-  ['peru', image_rgb(205, 133, 63)],
-  ['pink', image_rgb(255, 192, 203)],
-  ['plum', image_rgb(221, 160, 221)],
-  ['powderblue', image_rgb(176, 224, 230)],
-  ['purple', image_rgb(128, 0, 128)],
-  ['rebeccapurple', image_rgb(102, 51, 153)],
-  ['red', image_rgb(255, 0, 0)],
-  ['rosybrown', image_rgb(188, 143, 143)],
-  ['royalblue', image_rgb(65, 105, 225)],
-  ['saddlebrown', image_rgb(139, 69, 19)],
-  ['salmon', image_rgb(250, 128, 114)],
-  ['sandybrown', image_rgb(244, 164, 96)],
-  ['seagreen', image_rgb(46, 139, 87)],
-  ['seashell', image_rgb(255, 245, 238)],
-  ['sienna', image_rgb(160, 82, 45)],
-  ['silver', image_rgb(192, 192, 192)],
-  ['skyblue', image_rgb(135, 206, 235)],
-  ['slateblue', image_rgb(106, 90, 205)],
-  ['slategray', image_rgb(112, 128, 144)],
-  ['snow', image_rgb(255, 250, 250)],
-  ['springgreen', image_rgb(0, 255, 127)],
-  ['steelblue', image_rgb(70, 130, 180)],
-  ['tan', image_rgb(210, 180, 140)],
-  ['teal', image_rgb(0, 128, 128)],
-  ['thistle', image_rgb(216, 191, 216)],
-  ['tomato', image_rgb(255, 99, 71)],
-  ['turquoise', image_rgb(64, 224, 208)],
-  ['violet', image_rgb(238, 130, 238)],
-  ['wheat', image_rgb(245, 222, 179)],
-  ['white', image_rgb(255, 255, 255)],
-  ['whitesmoke', image_rgb(245, 245, 245)],
-  ['yellow', image_rgb(255, 255, 0)],
-  ['yellowgreen', image_rgb(154, 205, 50)]
+  ['aliceblue', color_rgb(240, 248, 255)],
+  ['antiquewhite', color_rgb(250, 235, 215)],
+  ['aqua', color_rgb(0, 255, 255)],
+  ['aquamarine', color_rgb(127, 255, 212)],
+  ['azure', color_rgb(240, 255, 255)],
+  ['beige', color_rgb(245, 245, 220)],
+  ['bisque', color_rgb(255, 228, 196)],
+  ['black', color_rgb(0, 0, 0)],
+  ['blanchedalmond', color_rgb(255, 235, 205)],
+  ['blue', color_rgb(0, 0, 255)],
+  ['blueviolet', color_rgb(138, 43, 226)],
+  ['brown', color_rgb(165, 42, 42)],
+  ['burlywood', color_rgb(222, 184, 135)],
+  ['cadetblue', color_rgb(95, 158, 160)],
+  ['chartreuse', color_rgb(127, 255, 0)],
+  ['chocolate', color_rgb(210, 105, 30)],
+  ['coral', color_rgb(255, 127, 80)],
+  ['cornflowerblue', color_rgb(100, 149, 237)],
+  ['cornsilk', color_rgb(255, 248, 220)],
+  ['crimson', color_rgb(220, 20, 60)],
+  ['cyan', color_rgb(0, 255, 255)],
+  ['darkblue', color_rgb(0, 0, 139)],
+  ['darkcyan', color_rgb(0, 139, 139)],
+  ['darkgoldenrod', color_rgb(184, 134, 11)],
+  ['darkgray', color_rgb(169, 169, 169)],
+  ['darkgreen', color_rgb(0, 100, 0)],
+  ['darkkhaki', color_rgb(189, 183, 107)],
+  ['darkmagenta', color_rgb(139, 0, 139)],
+  ['darkolivegreen', color_rgb(85, 107, 47)],
+  ['darkorange', color_rgb(255, 140, 0)],
+  ['darkorchid', color_rgb(153, 50, 204)],
+  ['darkred', color_rgb(139, 0, 0)],
+  ['darksalmon', color_rgb(233, 150, 122)],
+  ['darkseagreen', color_rgb(143, 188, 143)],
+  ['darkslateblue', color_rgb(72, 61, 139)],
+  ['darkslategray', color_rgb(47, 79, 79)],
+  ['darkturquoise', color_rgb(0, 206, 209)],
+  ['darkviolet', color_rgb(148, 0, 211)],
+  ['deeppink', color_rgb(255, 20, 147)],
+  ['deepskyblue', color_rgb(0, 191, 255)],
+  ['dimgray', color_rgb(105, 105, 105)],
+  ['dodgerblue', color_rgb(30, 144, 255)],
+  ['firebrick', color_rgb(178, 34, 34)],
+  ['floralwhite', color_rgb(255, 250, 240)],
+  ['forestgreen', color_rgb(34, 139, 34)],
+  ['fuchsia', color_rgb(255, 0, 255)],
+  ['gainsboro', color_rgb(220, 220, 220)],
+  ['ghostwhite', color_rgb(248, 248, 255)],
+  ['gold', color_rgb(255, 215, 0)],
+  ['goldenrod', color_rgb(218, 165, 32)],
+  ['gray', color_rgb(128, 128, 128)],
+  ['green', color_rgb(0, 128, 0)],
+  ['greenyellow', color_rgb(173, 255, 47)],
+  ['honeydew', color_rgb(240, 255, 240)],
+  ['hotpink', color_rgb(255, 105, 180)],
+  ['indianred', color_rgb(205, 92, 92)],
+  ['indigo', color_rgb(75, 0, 130)],
+  ['ivory', color_rgb(255, 255, 240)],
+  ['khaki', color_rgb(240, 230, 140)],
+  ['lavender', color_rgb(230, 230, 250)],
+  ['lavenderblush', color_rgb(255, 240, 245)],
+  ['lawngreen', color_rgb(124, 252, 0)],
+  ['lemonchiffon', color_rgb(255, 250, 205)],
+  ['lightblue', color_rgb(173, 216, 230)],
+  ['lightcoral', color_rgb(240, 128, 128)],
+  ['lightcyan', color_rgb(224, 255, 255)],
+  ['lightgoldenrodyellow', color_rgb(250, 250, 210)],
+  ['lightgray', color_rgb(211, 211, 211)],
+  ['lightgreen', color_rgb(144, 238, 144)],
+  ['lightpink', color_rgb(255, 182, 193)],
+  ['lightsalmon', color_rgb(255, 160, 122)],
+  ['lightseagreen', color_rgb(32, 178, 170)],
+  ['lightskyblue', color_rgb(135, 206, 250)],
+  ['lightslategray', color_rgb(119, 136, 153)],
+  ['lightsteelblue', color_rgb(176, 196, 222)],
+  ['lightyellow', color_rgb(255, 255, 224)],
+  ['lime', color_rgb(0, 255, 0)],
+  ['limegreen', color_rgb(50, 205, 50)],
+  ['linen', color_rgb(250, 240, 230)],
+  ['magenta', color_rgb(255, 0, 255)],
+  ['maroon', color_rgb(128, 0, 0)],
+  ['mediumaquamarine', color_rgb(102, 205, 170)],
+  ['mediumblue', color_rgb(0, 0, 205)],
+  ['mediumorchid', color_rgb(186, 85, 211)],
+  ['mediumpurple', color_rgb(147, 112, 219)],
+  ['mediumseagreen', color_rgb(60, 179, 113)],
+  ['mediumslateblue', color_rgb(123, 104, 238)],
+  ['mediumspringgreen', color_rgb(0, 250, 154)],
+  ['mediumturquoise', color_rgb(72, 209, 204)],
+  ['mediumvioletred', color_rgb(199, 21, 133)],
+  ['midnightblue', color_rgb(25, 25, 112)],
+  ['mintcream', color_rgb(245, 255, 250)],
+  ['mistyrose', color_rgb(255, 228, 225)],
+  ['moccasin', color_rgb(255, 228, 181)],
+  ['navajowhite', color_rgb(255, 222, 173)],
+  ['navy', color_rgb(0, 0, 128)],
+  ['oldlace', color_rgb(253, 245, 230)],
+  ['olive', color_rgb(128, 128, 0)],
+  ['olivedrab', color_rgb(107, 142, 35)],
+  ['orange', color_rgb(255, 165, 0)],
+  ['orangered', color_rgb(255, 69, 0)],
+  ['orchid', color_rgb(218, 112, 214)],
+  ['palegoldenrod', color_rgb(238, 232, 170)],
+  ['palegreen', color_rgb(152, 251, 152)],
+  ['paleturquoise', color_rgb(175, 238, 238)],
+  ['palevioletred', color_rgb(219, 112, 147)],
+  ['papayawhip', color_rgb(255, 239, 213)],
+  ['peachpuff', color_rgb(255, 218, 185)],
+  ['peru', color_rgb(205, 133, 63)],
+  ['pink', color_rgb(255, 192, 203)],
+  ['plum', color_rgb(221, 160, 221)],
+  ['powderblue', color_rgb(176, 224, 230)],
+  ['purple', color_rgb(128, 0, 128)],
+  ['rebeccapurple', color_rgb(102, 51, 153)],
+  ['red', color_rgb(255, 0, 0)],
+  ['rosybrown', color_rgb(188, 143, 143)],
+  ['royalblue', color_rgb(65, 105, 225)],
+  ['saddlebrown', color_rgb(139, 69, 19)],
+  ['salmon', color_rgb(250, 128, 114)],
+  ['sandybrown', color_rgb(244, 164, 96)],
+  ['seagreen', color_rgb(46, 139, 87)],
+  ['seashell', color_rgb(255, 245, 238)],
+  ['sienna', color_rgb(160, 82, 45)],
+  ['silver', color_rgb(192, 192, 192)],
+  ['skyblue', color_rgb(135, 206, 235)],
+  ['slateblue', color_rgb(106, 90, 205)],
+  ['slategray', color_rgb(112, 128, 144)],
+  ['snow', color_rgb(255, 250, 250)],
+  ['springgreen', color_rgb(0, 255, 127)],
+  ['steelblue', color_rgb(70, 130, 180)],
+  ['tan', color_rgb(210, 180, 140)],
+  ['teal', color_rgb(0, 128, 128)],
+  ['thistle', color_rgb(216, 191, 216)],
+  ['tomato', color_rgb(255, 99, 71)],
+  ['turquoise', color_rgb(64, 224, 208)],
+  ['violet', color_rgb(238, 130, 238)],
+  ['wheat', color_rgb(245, 222, 179)],
+  ['white', color_rgb(255, 255, 255)],
+  ['whitesmoke', color_rgb(245, 245, 245)],
+  ['yellow', color_rgb(255, 255, 0)],
+  ['yellowgreen', color_rgb(154, 205, 50)]
 ])
 
-export function image_isColorName(name: string): boolean {
+export function color_isColorName(name: string): boolean {
   return namedCssColors.has(name.toLowerCase())
 }
 
-export function image_allColorNames(): L.List {
+export function color_allColorNames(): L.List {
   return L.mkList(...Array.from(namedCssColors.keys()))
 }
 
-export function image_findColors(name: string): L.List {
+export function color_findColors(name: string): L.List {
   const results = []
   for (const [key, _value] of namedCssColors) {
     if (key.includes(name.toLowerCase())) {
@@ -264,7 +264,7 @@ function fracToPercentString(n: number, m: number): string {
   return `${Math.trunc(n/m * 100)}%`
 }
 
-export function image_rgbToString (rgba: Rgb): string {
+export function color_rgbToString (rgba: Rgb): string {
   return `rgb(${rgba.red}  ${rgba.green}  ${rgba.blue} / ${fracToPercentString(rgba.alpha, 255)})`
 }
 
@@ -288,13 +288,13 @@ export interface Hsv extends L.Struct {
   alpha: number
 }
 
-export function image_isHsv(v: any): boolean {
+export function color_isHsv(v: any): boolean {
   return L.isStructKind(v, 'hsv')
 }
 
 // hsv
 
-export function image_hsv(...args: number[]): Hsv {
+export function color_hsv(...args: number[]): Hsv {
   if (args.length !== 3 && args.length !== 4) {
     throw new L.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
   }
@@ -324,30 +324,30 @@ export function image_hsv(...args: number[]): Hsv {
   })
 }
 
-export function image_hsvHue(hsv: Hsv): number {
+export function color_hsvHue(hsv: Hsv): number {
   return hsv.hue
 }
 
-export function image_hsvSaturation(hsv: Hsv): number {
+export function color_hsvSaturation(hsv: Hsv): number {
   return hsv.saturation
 }
 
-export function image_hsvValue(hsv: Hsv): number {
+export function color_hsvValue(hsv: Hsv): number {
   return hsv.value
 }
 
-export function image_hsvAlpha(hsv: Hsv): number {
+export function color_hsvAlpha(hsv: Hsv): number {
   return hsv.alpha
 }
 
-export function image_hsvComplement(h: Hsv): Hsv {
-  return image_hsv((h.hue + 180) % 360, h.saturation, h.value, h.alpha)
+export function color_hsvComplement(h: Hsv): Hsv {
+  return color_hsv((h.hue + 180) % 360, h.saturation, h.value, h.alpha)
 }
 
 // N.B., translated from the csc151 mediascheme implementation:
 // https://github.com/grinnell-cs/csc151/blob/8dbcc594fbb5e3579e08ccc897c5fba7d973b779/colors.rkt#L379
 
-export function image_rgbHue(r: Rgb): number {
+export function color_rgbHue(r: Rgb): number {
   return rgbHueHelper(r.red, r.green, r.blue)
 }
 
@@ -371,7 +371,7 @@ function fixHue(h: number): number {
   return Math.round(60 * (h < 0 ? h + 6 : h))
 }
 
-export function image_rgbSaturation(r: Rgb): number {
+export function color_rgbSaturation(r: Rgb): number {
   return rgbSaturationHelper(Math.min(r.red, r.green, r.blue),
                              Math.max(r.red, r.green, r.blue))
 }
@@ -380,16 +380,16 @@ function rgbSaturationHelper(min: number, max: number): number {
   return max === 0 ? 0 : 100 * ((max - min) / max)
 }
 
-export function image_rgbValue(r: Rgb): number {
+export function color_rgbValue(r: Rgb): number {
   return Math.round(100 * (Math.max(r.red, r.green, r.blue) / 255))
 }
 
-export function image_rgbToHsv(r: Rgb) {
+export function color_rgbToHsv(r: Rgb) {
   const ret = colorsys.rgbToHsv(r.red, r.green, r.blue)
-  return image_hsv(ret.h, ret.s, ret.v, r.alpha)
+  return color_hsv(ret.h, ret.s, ret.v, r.alpha)
 }
 
-export function image_hsvToString(hsv: Hsv): string {
+export function color_hsvToString(hsv: Hsv): string {
   return `hsv(${hsv.hue} ${fracToPercentString(hsv.saturation, 100)}  ${fracToPercentString(hsv.value, 100)} / ${fracToPercentString(hsv.alpha, 255)})`
 }
 
@@ -399,8 +399,8 @@ export function image_hsvToString(hsv: Hsv): string {
 
 /***** Color conversion *******************************************************/
 
-export function image_colorNameToRgb(name: string): Rgb {
-  if (!image_isColorName(name)) {
+export function color_colorNameToRgb(name: string): Rgb {
+  if (!color_isColorName(name)) {
     throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
   }
   return namedCssColors.get(name)!
@@ -409,9 +409,9 @@ export function image_colorNameToRgb(name: string): Rgb {
 // rgb->color-name
 // color->rgb
 
-export function image_hsvToRgb(hsv: Hsv): Rgb {
+export function color_hsvToRgb(hsv: Hsv): Rgb {
   const ret = colorsys.hsvToRgb(hsv.hue, hsv.saturation, hsv.value)
-  return image_rgb(ret.r, ret.g, ret.b, hsv.alpha)
+  return color_rgb(ret.r, ret.g, ret.b, hsv.alpha)
 }
 
 // color->color-name
@@ -432,8 +432,8 @@ export function image_hsvToRgb(hsv: Hsv): Rgb {
 
 /***** Color transformations **************************************************/
 
-export function image_rgbDarker(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbDarker(rgba: Rgb): Rgb {
+  return color_rgb(
     Math.max(0, rgba.red - 16),
     Math.max(0, rgba.green - 16),
     Math.max(0, rgba.blue - 16),
@@ -441,8 +441,8 @@ export function image_rgbDarker(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbLighter(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbLighter(rgba: Rgb): Rgb {
+  return color_rgb(
     Math.min(255, rgba.red + 16),
     Math.min(255, rgba.green + 16),
     Math.min(255, rgba.blue + 16),
@@ -450,8 +450,8 @@ export function image_rgbLighter(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbRedder(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbRedder(rgba: Rgb): Rgb {
+  return color_rgb(
     Math.min(255, rgba.red + 32),
     Math.max(0, rgba.green - 16),
     Math.max(0, rgba.blue - 16),
@@ -459,8 +459,8 @@ export function image_rgbRedder(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbBluer(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbBluer(rgba: Rgb): Rgb {
+  return color_rgb(
     Math.max(0, rgba.red - 16),
     Math.max(0, rgba.green - 16),
     Math.min(255, rgba.blue + 32),
@@ -468,8 +468,8 @@ export function image_rgbBluer(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbGreener(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbGreener(rgba: Rgb): Rgb {
+  return color_rgb(
     Math.max(0, rgba.red - 16),
     Math.min(255, rgba.green + 32),
     Math.max(0, rgba.blue - 16),
@@ -477,8 +477,8 @@ export function image_rgbGreener(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbPseudoComplement(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbPseudoComplement(rgba: Rgb): Rgb {
+  return color_rgb(
     255 - rgba.red,
     255 - rgba.green,
     255 - rgba.blue,
@@ -488,14 +488,14 @@ export function image_rgbPseudoComplement(rgba: Rgb): Rgb {
 
 // rgb-complement
 
-export function image_rgbGreyscale(rgba: Rgb): Rgb {
+export function color_rgbGreyscale(rgba: Rgb): Rgb {
   const avg = 0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue
-  return image_rgb(avg, avg, avg, rgba.alpha)
+  return color_rgb(avg, avg, avg, rgba.alpha)
 }
 
-export function image_rgbPhaseshift(rgba: Rgb): Rgb {
+export function color_rgbPhaseshift(rgba: Rgb): Rgb {
   const shift = 128
-  return image_rgb(
+  return color_rgb(
     (rgba.red + shift) % 256,
     (rgba.green + shift) % 256,
     (rgba.blue + shift) % 256,
@@ -503,12 +503,12 @@ export function image_rgbPhaseshift(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbRotateComponents(rgba: Rgb): Rgb {
-  return image_rgb(rgba.green, rgba.blue, rgba.red, rgba.alpha)
+export function color_rgbRotateComponents(rgba: Rgb): Rgb {
+  return color_rgb(rgba.green, rgba.blue, rgba.red, rgba.alpha)
 }
 
-export function image_rgbThin(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbThin(rgba: Rgb): Rgb {
+  return color_rgb(
     rgba.red,
     rgba.green,
     rgba.blue,
@@ -516,8 +516,8 @@ export function image_rgbThin(rgba: Rgb): Rgb {
   )
 }
 
-export function image_rgbThicken(rgba: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbThicken(rgba: Rgb): Rgb {
+  return color_rgb(
     rgba.red,
     rgba.green,
     rgba.blue,
@@ -527,8 +527,8 @@ export function image_rgbThicken(rgba: Rgb): Rgb {
 
 /***** Color combinations *****************************************************/
 
-export function image_rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
+  return color_rgb(
     Math.min(255, rgba1.red + rgba2.red),
     Math.min(255, rgba1.green + rgba2.green),
     Math.min(255, rgba1.blue + rgba2.blue),
@@ -536,8 +536,8 @@ export function image_rgbAdd(rgba1: Rgb, rgba2: Rgb): Rgb {
   )
 }
 
-export function image_rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
+  return color_rgb(
     Math.max(0, rgba1.red - rgba2.red),
     Math.max(0, rgba1.green - rgba2.green),
     Math.max(0, rgba1.blue - rgba2.blue),
@@ -545,8 +545,8 @@ export function image_rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
   )
 }
 
-export function image_rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
-  return image_rgb(
+export function color_rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
+  return color_rgb(
     (rgba1.red + rgba2.red) / 2,
     (rgba1.green + rgba2.green) / 2,
     (rgba1.blue + rgba2.blue) / 2,

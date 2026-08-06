@@ -10,38 +10,38 @@
 import { describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
 import {
-  image_colorToRgb,
-  image_hsv,
-  image_hsvAlpha,
-  image_hsvComplement,
-  image_hsvHue,
-  image_hsvSaturation,
-  image_hsvToRgb,
-  image_hsvToString,
-  image_hsvValue,
-  image_rgb,
-  image_rgbToHsv,
+  color_colorToRgb,
+  color_hsv,
+  color_hsvAlpha,
+  color_hsvComplement,
+  color_hsvHue,
+  color_hsvSaturation,
+  color_hsvToRgb,
+  color_hsvToString,
+  color_hsvValue,
+  color_rgb,
+  color_rgbToHsv,
 } from '../../src/js/image/color.js'
 import {
-  image_above,
-  image_beside,
-  image_drawingToImage,
-  image_drawingToPixels,
-  image_ellipse,
-  image_isoscelesTriangle,
-  image_overlay,
-  image_overlayOffset,
-  image_path,
-  image_rectangle,
-  image_rotate,
-  image_text,
-  image_withDash,
+  drawing_above,
+  drawing_beside,
+  drawing_drawingToCanvas,
+  drawing_drawingToPixels,
+  drawing_ellipse,
+  drawing_isoscelesTriangle,
+  drawing_overlay,
+  drawing_overlayOffset,
+  drawing_path,
+  drawing_rectangle,
+  drawing_rotate,
+  drawing_text,
+  drawing_withDash,
 } from '../../src/js/image/drawing.js'
 import {
-  image_canvasSetPixels,
-  image_imageGetPixel,
-  image_imageToPixels,
-  image_pixelsToImage,
+  canvas_canvasSetPixels,
+  canvas_canvasGetPixel,
+  canvas_canvasToPixels,
+  canvas_pixelsToCanvas,
 } from '../../src/js/image/image.js'
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
@@ -63,7 +63,7 @@ function pixel(canvas: HTMLCanvasElement, x: number, y: number): number[] {
   return Array.from(context2d(canvas).getImageData(x, y, 1, 1).data)
 }
 
-// True if any pixel departs from the opaque-white background image_clearDrawing
+// True if any pixel departs from the opaque-white background drawing_clearDrawing
 // lays down -- i.e. the drawing actually put ink on the canvas.
 function hasColoredPixel(canvas: HTMLCanvasElement): boolean {
   const data = context2d(canvas).getImageData(0, 0, canvas.width, canvas.height).data
@@ -90,33 +90,33 @@ function redPixelCount(canvas: HTMLCanvasElement): number {
 
 describe('text', () => {
   test('reports positive width and height', () => {
-    const t = image_text('hello', 20, image_rgb(0, 0, 0, 255))
+    const t = drawing_text('hello', 20, color_rgb(0, 0, 0, 255))
     expect(t.width).toBeGreaterThan(0)
     expect(t.height).toBeGreaterThan(0)
   })
 
   test('longer text is wider', () => {
-    const short = image_text('a', 20, image_rgb(0, 0, 0, 255))
-    const long = image_text('a much longer piece of text', 20, image_rgb(0, 0, 0, 255))
+    const short = drawing_text('a', 20, color_rgb(0, 0, 0, 255))
+    const long = drawing_text('a much longer piece of text', 20, color_rgb(0, 0, 0, 255))
     expect(long.width).toBeGreaterThan(short.width)
   })
 
   test('a larger size produces a larger width and height', () => {
-    const small = image_text('hello', 10, image_rgb(0, 0, 0, 255))
-    const big = image_text('hello', 40, image_rgb(0, 0, 0, 255))
+    const small = drawing_text('hello', 10, color_rgb(0, 0, 0, 255))
+    const big = drawing_text('hello', 40, color_rgb(0, 0, 0, 255))
     expect(big.width).toBeGreaterThan(small.width)
     expect(big.height).toBeGreaterThan(small.height)
   })
 
   test('empty text has zero width', () => {
-    const t = image_text('', 20, image_rgb(0, 0, 0, 255))
+    const t = drawing_text('', 20, color_rgb(0, 0, 0, 255))
     expect(t.width).toBe(0)
   })
 })
 
 describe('drawing->image', () => {
   test('renders a single shape to a canvas of the drawing size', () => {
-    const canvas = image_drawingToImage(image_rectangle(2, 2, 'solid', 'red'))
+    const canvas = drawing_drawingToCanvas(drawing_rectangle(2, 2, 'solid', 'red'))
     expect(canvas.width).toBe(2)
     expect(canvas.height).toBe(2)
     expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255])
@@ -124,11 +124,11 @@ describe('drawing->image', () => {
   })
 
   test('renders a composite drawing tree, positioning each subdrawing', () => {
-    const tree = image_beside(
-      image_rectangle(2, 2, 'solid', 'red'),
-      image_rectangle(2, 2, 'solid', 'blue'),
+    const tree = drawing_beside(
+      drawing_rectangle(2, 2, 'solid', 'red'),
+      drawing_rectangle(2, 2, 'solid', 'blue'),
     )
-    const canvas = image_drawingToImage(tree)
+    const canvas = drawing_drawingToCanvas(tree)
     expect(canvas.width).toBe(4)
     expect(canvas.height).toBe(2)
     expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255])
@@ -136,18 +136,18 @@ describe('drawing->image', () => {
   })
 })
 
-// One test per image_render branch, driven end-to-end through a real Canvas2D.
+// One test per drawing_render branch, driven end-to-end through a real Canvas2D.
 // rectangle and beside are already exercised by drawing->image above.
 describe('render per-shape branches', () => {
   test('ellipse fills its interior', () => {
-    const canvas = image_drawingToImage(image_ellipse(10, 10, 'solid', 'red'))
+    const canvas = drawing_drawingToCanvas(drawing_ellipse(10, 10, 'solid', 'red'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     expect(pixel(canvas, 5, 5)).toEqual([255, 0, 0, 255])
   })
 
   test('triangle fills its interior', () => {
-    const canvas = image_drawingToImage(image_isoscelesTriangle(10, 10, 'solid', 'blue'))
+    const canvas = drawing_drawingToCanvas(drawing_isoscelesTriangle(10, 10, 'solid', 'blue'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     expect(pixel(canvas, 5, 8)).toEqual([0, 0, 255, 255])
@@ -157,7 +157,7 @@ describe('render per-shape branches', () => {
     const points = L.mkList(
       L.mkPair(0, 0), L.mkPair(10, 0), L.mkPair(10, 10), L.mkPair(0, 10),
     )
-    const canvas = image_drawingToImage(image_path(10, 10, points, 'solid', 'green'))
+    const canvas = drawing_drawingToCanvas(drawing_path(10, 10, points, 'solid', 'green'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     // green is (0, 128, 0); alpha 255 keeps the mid-range channel exact
@@ -165,14 +165,14 @@ describe('render per-shape branches', () => {
   })
 
   test('ellipse outline strokes its boundary', () => {
-    const canvas = image_drawingToImage(image_ellipse(10, 10, 'outline', 'red'))
+    const canvas = drawing_drawingToCanvas(drawing_ellipse(10, 10, 'outline', 'red'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
   test('triangle outline strokes its edges', () => {
-    const canvas = image_drawingToImage(image_isoscelesTriangle(10, 10, 'outline', 'blue'))
+    const canvas = drawing_drawingToCanvas(drawing_isoscelesTriangle(10, 10, 'outline', 'blue'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     expect(hasColoredPixel(canvas)).toBe(true)
@@ -180,16 +180,16 @@ describe('render per-shape branches', () => {
 
   test('path outline strokes the polyline it traces', () => {
     const points = L.mkList(L.mkPair(1, 1), L.mkPair(8, 1), L.mkPair(4, 8))
-    const canvas = image_drawingToImage(image_path(10, 10, points, 'outline', 'green'))
+    const canvas = drawing_drawingToCanvas(drawing_path(10, 10, points, 'outline', 'green'))
     expect(canvas.width).toBe(10)
     expect(canvas.height).toBe(10)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
   test('above stacks subdrawings vertically', () => {
-    const canvas = image_drawingToImage(image_above(
-      image_rectangle(4, 4, 'solid', 'red'),
-      image_rectangle(4, 4, 'solid', 'blue'),
+    const canvas = drawing_drawingToCanvas(drawing_above(
+      drawing_rectangle(4, 4, 'solid', 'red'),
+      drawing_rectangle(4, 4, 'solid', 'blue'),
     ))
     expect(canvas.width).toBe(4)
     expect(canvas.height).toBe(8)
@@ -198,9 +198,9 @@ describe('render per-shape branches', () => {
   })
 
   test('overlay draws the first drawing on top of the rest', () => {
-    const canvas = image_drawingToImage(image_overlay(
-      image_rectangle(4, 4, 'solid', 'blue'),
-      image_rectangle(8, 8, 'solid', 'red'),
+    const canvas = drawing_drawingToCanvas(drawing_overlay(
+      drawing_rectangle(4, 4, 'solid', 'blue'),
+      drawing_rectangle(8, 8, 'solid', 'red'),
     ))
     expect(canvas.width).toBe(8)
     expect(canvas.height).toBe(8)
@@ -209,10 +209,10 @@ describe('render per-shape branches', () => {
   })
 
   test('overlay/offset shifts the second drawing and keeps the first on top', () => {
-    const canvas = image_drawingToImage(image_overlayOffset(
+    const canvas = drawing_drawingToCanvas(drawing_overlayOffset(
       2, 2,
-      image_rectangle(4, 4, 'solid', 'red'),
-      image_rectangle(4, 4, 'solid', 'blue'),
+      drawing_rectangle(4, 4, 'solid', 'red'),
+      drawing_rectangle(4, 4, 'solid', 'blue'),
     ))
     expect(canvas.width).toBe(6)
     expect(canvas.height).toBe(6)
@@ -221,21 +221,21 @@ describe('render per-shape branches', () => {
   })
 
   test('rotate fills the interior of its grown bounding box', () => {
-    const canvas = image_drawingToImage(image_rotate(90, image_rectangle(10, 20, 'solid', 'red')))
+    const canvas = drawing_drawingToCanvas(drawing_rotate(90, drawing_rectangle(10, 20, 'solid', 'red')))
     expect(canvas.width).toBeGreaterThan(0)
     expect(canvas.height).toBeGreaterThan(0)
     expect(pixel(canvas, 10, 5)).toEqual([255, 0, 0, 255])
   })
 
   test('with-dash strokes a dashed outline', () => {
-    const canvas = image_drawingToImage(image_withDash([4, 4], image_rectangle(20, 20, 'outline', 'red')))
+    const canvas = drawing_drawingToCanvas(drawing_withDash([4, 4], drawing_rectangle(20, 20, 'outline', 'red')))
     expect(canvas.width).toBe(20)
     expect(canvas.height).toBe(20)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
   test('text draws visible ink on the canvas', () => {
-    const canvas = image_drawingToImage(image_text('H', 40, image_rgb(0, 0, 0, 255)))
+    const canvas = drawing_drawingToCanvas(drawing_text('H', 40, color_rgb(0, 0, 0, 255)))
     expect(canvas.width).toBeGreaterThan(0)
     expect(canvas.height).toBeGreaterThan(0)
     expect(hasColoredPixel(canvas)).toBe(true)
@@ -254,9 +254,9 @@ describe('rotate 0 is a no-op (#102)', () => {
   // top-left origin, so rotate-0 translated the circle down-right by its radius
   // -- its center read as background and ~3/4 of its ink fell off the canvas.
   test('does not shift or clip a circle', () => {
-    const circle = image_ellipse(20, 20, 'solid', 'red')
-    const plain = image_drawingToImage(circle)
-    const rotated = image_drawingToImage(image_rotate(0, circle))
+    const circle = drawing_ellipse(20, 20, 'solid', 'red')
+    const plain = drawing_drawingToCanvas(circle)
+    const rotated = drawing_drawingToCanvas(drawing_rotate(0, circle))
     // center pixel is red, not the white background it clipped to before
     expect(pixel(rotated, 10, 10)).toEqual([255, 0, 0, 255])
     // and about as much red survives as the un-rotated circle, not ~1/4
@@ -267,26 +267,26 @@ describe('rotate 0 is a no-op (#102)', () => {
   // Bug B: the overlay case reversed the shared child array in place, so
   // rotating an overlay flipped its z-order -- and mutated the caller's input.
   test('does not reverse an overlay it wraps', () => {
-    const ov = image_overlay(
-      image_rectangle(20, 20, 'solid', 'red'),
-      image_rectangle(20, 20, 'solid', 'blue'),
+    const ov = drawing_overlay(
+      drawing_rectangle(20, 20, 'solid', 'red'),
+      drawing_rectangle(20, 20, 'solid', 'blue'),
     )
     // red is listed first, so it draws on top: the center is red
-    expect(pixel(image_drawingToImage(ov), 10, 10)).toEqual([255, 0, 0, 255])
+    expect(pixel(drawing_drawingToCanvas(ov), 10, 10)).toEqual([255, 0, 0, 255])
     // rotating the overlay must not touch `ov`...
-    image_rotate(0, ov)
+    drawing_rotate(0, ov)
     // ...so re-rendering the SAME overlay still shows red on top
-    expect(pixel(image_drawingToImage(ov), 10, 10)).toEqual([255, 0, 0, 255])
+    expect(pixel(drawing_drawingToCanvas(ov), 10, 10)).toEqual([255, 0, 0, 255])
   })
 })
 
 describe('drawing->pixels', () => {
   test('flattens a rendered drawing into a row-major Rgb array', () => {
-    const tree = image_beside(
-      image_rectangle(2, 2, 'solid', 'red'),
-      image_rectangle(2, 2, 'solid', 'blue'),
+    const tree = drawing_beside(
+      drawing_rectangle(2, 2, 'solid', 'red'),
+      drawing_rectangle(2, 2, 'solid', 'blue'),
     )
-    const pixels = image_drawingToPixels(tree)
+    const pixels = drawing_drawingToPixels(tree)
     expect(pixels.length).toBe(4 * 2)
     // row 0: red, red, blue, blue
     expect(pixels[0]).toMatchObject({ red: 255, green: 0, blue: 0, alpha: 255 })
@@ -309,14 +309,14 @@ describe('drawing->pixels', () => {
 describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', () => {
   // distinct RGBA per cell, row-major: top-left, top-right, bottom-left, bottom-right
   const knownPixels = [
-    image_rgb(255, 0, 0, 255),
-    image_rgb(0, 255, 0, 128),
-    image_rgb(0, 0, 255, 64),
-    image_rgb(10, 20, 30, 255),
+    color_rgb(255, 0, 0, 255),
+    color_rgb(0, 255, 0, 128),
+    color_rgb(0, 0, 255, 64),
+    color_rgb(10, 20, 30, 255),
   ]
 
   test('pixels->image places each pixel at its row-major position', () => {
-    const canvas = image_pixelsToImage(knownPixels, 2, 2)
+    const canvas = canvas_pixelsToCanvas(knownPixels, 2, 2)
     expect(canvas.width).toBe(2)
     expect(canvas.height).toBe(2)
     expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255])
@@ -326,22 +326,22 @@ describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', ()
   })
 
   test('image-get-pixel reads back the exact value at each coordinate', () => {
-    const canvas = image_pixelsToImage(knownPixels, 2, 2)
-    expect(image_imageGetPixel(canvas, 0, 0)).toMatchObject({ red: 255, green: 0, blue: 0, alpha: 255 })
-    expect(image_imageGetPixel(canvas, 1, 0)).toMatchObject({ red: 0, green: 255, blue: 0, alpha: 128 })
-    expect(image_imageGetPixel(canvas, 0, 1)).toMatchObject({ red: 0, green: 0, blue: 255, alpha: 64 })
-    expect(image_imageGetPixel(canvas, 1, 1)).toMatchObject({ red: 10, green: 20, blue: 30, alpha: 255 })
+    const canvas = canvas_pixelsToCanvas(knownPixels, 2, 2)
+    expect(canvas_canvasGetPixel(canvas, 0, 0)).toMatchObject({ red: 255, green: 0, blue: 0, alpha: 255 })
+    expect(canvas_canvasGetPixel(canvas, 1, 0)).toMatchObject({ red: 0, green: 255, blue: 0, alpha: 128 })
+    expect(canvas_canvasGetPixel(canvas, 0, 1)).toMatchObject({ red: 0, green: 0, blue: 255, alpha: 64 })
+    expect(canvas_canvasGetPixel(canvas, 1, 1)).toMatchObject({ red: 10, green: 20, blue: 30, alpha: 255 })
   })
 
   test('image->pixels flattens the canvas back into the original row-major array', () => {
-    const canvas = image_pixelsToImage(knownPixels, 2, 2)
-    const roundTripped = image_imageToPixels(canvas)
+    const canvas = canvas_pixelsToCanvas(knownPixels, 2, 2)
+    const roundTripped = canvas_canvasToPixels(canvas)
     expect(roundTripped).toEqual(knownPixels)
   })
 
   test('canvas-set-pixels! overwrites an existing canvas in place', () => {
     const canvas = makeCanvas(2, 2)
-    image_canvasSetPixels(canvas, knownPixels)
+    canvas_canvasSetPixels(canvas, knownPixels)
     expect(pixel(canvas, 0, 0)).toEqual([255, 0, 0, 255])
     expect(pixel(canvas, 1, 0)).toEqual([0, 255, 0, 128])
     expect(pixel(canvas, 0, 1)).toEqual([0, 0, 255, 64])
@@ -350,12 +350,12 @@ describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', ()
 
   test('image-get-pixel on a freshly created canvas defaults to transparent black', () => {
     const canvas = makeCanvas(3, 3)
-    expect(image_imageGetPixel(canvas, 1, 1)).toMatchObject({ red: 0, green: 0, blue: 0, alpha: 0 })
+    expect(canvas_canvasGetPixel(canvas, 1, 1)).toMatchObject({ red: 0, green: 0, blue: 0, alpha: 0 })
   })
 
   test('image->pixels on a freshly created canvas is all transparent black', () => {
     const canvas = makeCanvas(2, 2)
-    const pixels = image_imageToPixels(canvas)
+    const pixels = canvas_canvasToPixels(canvas)
     expect(pixels.length).toBe(4)
     pixels.forEach(p => {
       expect(p).toMatchObject({ red: 0, green: 0, blue: 0, alpha: 0 })
@@ -368,59 +368,59 @@ describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', ()
 // on it. Calling the functions directly here bypasses that layer and also lets
 // colorsys resolve correctly under Vite (see image.test.ts's rgb->hsv skip).
 describe('hsv colors (called directly to bypass #250)', () => {
-  const c = image_hsv(200, 50, 60, 128)
+  const c = color_hsv(200, 50, 60, 128)
 
   test('hsv-hue, hsv-saturation, hsv-value, hsv-alpha read each field', () => {
-    expect(image_hsvHue(c)).toBe(200)
-    expect(image_hsvSaturation(c)).toBe(50)
-    expect(image_hsvValue(c)).toBe(60)
-    expect(image_hsvAlpha(c)).toBe(128)
+    expect(color_hsvHue(c)).toBe(200)
+    expect(color_hsvSaturation(c)).toBe(50)
+    expect(color_hsvValue(c)).toBe(60)
+    expect(color_hsvAlpha(c)).toBe(128)
   })
 
   test('hsv-complement rotates the hue 180 degrees, preserving the other fields', () => {
-    const comp = image_hsvComplement(c)
-    expect(image_hsvHue(comp)).toBe(20)
-    expect(image_hsvSaturation(comp)).toBe(50)
-    expect(image_hsvValue(comp)).toBe(60)
-    expect(image_hsvAlpha(comp)).toBe(128)
+    const comp = color_hsvComplement(c)
+    expect(color_hsvHue(comp)).toBe(20)
+    expect(color_hsvSaturation(comp)).toBe(50)
+    expect(color_hsvValue(comp)).toBe(60)
+    expect(color_hsvAlpha(comp)).toBe(128)
   })
 
   test('hsv->string formats the components as percentages', () => {
-    expect(image_hsvToString(c)).toBe('hsv(200 50%  60% / 50%)')
+    expect(color_hsvToString(c)).toBe('hsv(200 50%  60% / 50%)')
   })
 
   test('rgb->hsv converts red to hue 0, full saturation and value', () => {
-    const hsv = image_rgbToHsv(image_rgb(255, 0, 0))
-    expect(image_hsvHue(hsv)).toBe(0)
-    expect(image_hsvSaturation(hsv)).toBe(100)
-    expect(image_hsvValue(hsv)).toBe(100)
-    expect(image_hsvAlpha(hsv)).toBe(255)
+    const hsv = color_rgbToHsv(color_rgb(255, 0, 0))
+    expect(color_hsvHue(hsv)).toBe(0)
+    expect(color_hsvSaturation(hsv)).toBe(100)
+    expect(color_hsvValue(hsv)).toBe(100)
+    expect(color_hsvAlpha(hsv)).toBe(255)
   })
 
   test('hsv->rgb converts a full-saturation red hue back to rgb red', () => {
-    const rgb = image_hsvToRgb(image_hsv(0, 100, 100, 255))
+    const rgb = color_hsvToRgb(color_hsv(0, 100, 100, 255))
     expect(rgb).toMatchObject({ red: 255, green: 0, blue: 0, alpha: 255 })
   })
 })
 
-describe('image_colorToRgb (colour normalization)', () => {
+describe('color_colorToRgb (colour normalization)', () => {
   // colorToRgb accepts an rgba struct, a colour-name string, or an hsv struct.
   // The hsv branch routes through colorsys (which resolves under Vite here but
   // not in the jsdom suite), and the fall-through rejects anything else.
   test('passes an rgba struct through unchanged', () => {
-    expect(image_colorToRgb(image_rgb(10, 20, 30))).toMatchObject({
+    expect(color_colorToRgb(color_rgb(10, 20, 30))).toMatchObject({
       red: 10, green: 20, blue: 30,
     })
   })
   test('converts a colour-name string', () => {
-    expect(image_colorToRgb('red')).toMatchObject({ red: 255, green: 0, blue: 0 })
+    expect(color_colorToRgb('red')).toMatchObject({ red: 255, green: 0, blue: 0 })
   })
   test('converts an hsv struct via colorsys', () => {
-    expect(image_colorToRgb(image_hsv(0, 100, 100))).toMatchObject({
+    expect(color_colorToRgb(color_hsv(0, 100, 100))).toMatchObject({
       red: 255, green: 0, blue: 0,
     })
   })
   test('throws on a value that is not a colour', () => {
-    expect(() => image_colorToRgb(42)).toThrow(/valid color/)
+    expect(() => color_colorToRgb(42)).toThrow(/valid color/)
   })
 })

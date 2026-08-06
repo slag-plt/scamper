@@ -15,8 +15,8 @@ import {
   canvas_canvasRectangle,
   canvas_canvasText,
 } from '../../src/js/canvas/index.js'
-import { image_ellipse } from '../../src/js/image/drawing.js'
-import { image_font } from '../../src/js/image/font.js'
+import { drawing_ellipse } from '../../src/js/image/drawing.js'
+import { font_font } from '../../src/js/image/font.js'
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
@@ -131,7 +131,7 @@ describe('canvas-text!', () => {
 
   test('solid draws filled glyphs using an explicit font', () => {
     const canvas = makeCanvas(100, 50)
-    canvas_canvasText(canvas, 10, 40, 'W', 24, 'solid', 'red', image_font('Georgia', 'serif', true, true))
+    canvas_canvasText(canvas, 10, 40, 'W', 24, 'solid', 'red', font_font('Georgia', 'serif', true, true))
     expect(hasColorPixel(canvas, 255, 0, 0)).toBe(true)
   })
 
@@ -153,16 +153,16 @@ describe('canvas-text!', () => {
 
   test('2 or more extra arguments throws', () => {
     const canvas = makeCanvas(100, 50)
-    expect(() => { canvas_canvasText(canvas, 10, 40, 'W', 30, 'solid', 'red', image_font('Arial'), 'extra') }).toThrow(L.ScamperError)
+    expect(() => { canvas_canvasText(canvas, 10, 40, 'W', 30, 'solid', 'red', font_font('Arial'), 'extra') }).toThrow(L.ScamperError)
   })
 })
 
 describe('canvas-drawing!', () => {
   test('renders a drawing at the given offset', () => {
     const canvas = makeCanvas(30, 30)
-    const drawing = image_ellipse(10, 10, 'solid', 'purple')
+    const drawing = drawing_ellipse(10, 10, 'solid', 'purple')
     canvas_canvasDrawing(canvas, 5, 5, drawing)
-    // image_render centers the ellipse's bounding box at (x + w/2, y + h/2)
+    // drawing_render centers the ellipse's bounding box at (x + w/2, y + h/2)
     expect(pixel(canvas, 10, 10)).toEqual([128, 0, 128, 255])
     expect(pixel(canvas, 1, 1)).toEqual([0, 0, 0, 0])
   })
