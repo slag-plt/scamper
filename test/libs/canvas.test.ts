@@ -84,7 +84,7 @@ describe('canvas-onclick!', () => {
 
 // Regression: color? and image? are used in canvas.scm's drawing-function
 // contracts but defined in image.scm. canvas.scm must re-export them; otherwise
-// every drawing call runs `(color? ...)` / `(image? ...)` against an unbound
+// every drawing call runs `(color? ...)` / `(drawing? ...)` against an unbound
 // name and throws "Variable not found" unless the user also imports image.
 describe('cross-module predicates (color?, image?) resolve with only canvas imported', () => {
   test('color? and image? are in scope', async () => {
@@ -92,7 +92,7 @@ describe('cross-module predicates (color?, image?) resolve with only canvas impo
     (import canvas)
     (color? "red")
     (color? 5)
-    (image? 5)
+    (drawing? 5)
     `)).toEqual(['#t', '#f', '#f'])
   })
 

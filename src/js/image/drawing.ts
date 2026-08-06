@@ -7,6 +7,11 @@ import { Font, image_font, image_fontQ, image_fontToFontString } from './font.js
 type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
+/** A fill mode: the string "solid" or "outline". */
+export function image_fillModeQ (v: any): boolean {
+  return v === 'solid' || v === 'outline'
+}
+
 export function image_drawingQ (v: any): boolean {
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
@@ -486,6 +491,17 @@ export function image_drawingToImage(drawing: Drawing): HTMLCanvasElement {
 
 /***** Rendering **************************************************************/
 
+// N.B., a mode that is neither 'solid' nor 'outline' used to fall through every
+// branch and draw *nothing*, silently -- which is what (ellipse w h #t color)
+// did, the very call ellipse's own (wrong) `boolean?` contract demanded. The
+// fill-mode? contract now stops that at construction; this is the backstop.
+function badMode(mode: unknown): L.ScamperError {
+  return new L.ScamperError(
+    'Runtime',
+    `Cannot draw a shape whose fill is ${JSON.stringify(mode)}: expected "solid" or "outline"`,
+  )
+}
+
 export function image_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext('2d')!
   switch (drawing[L.structKind]) {
@@ -502,6 +518,8 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
         ctx.fill()
       } else if (drawing.mode === 'outline') {
         ctx.stroke()
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }
@@ -512,6 +530,8 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
         ctx.fillRect(x, y, drawing.width, drawing.height)
       } else if (drawing.mode === 'outline') {
         ctx.strokeRect(x, y, drawing.width, drawing.height)
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }
@@ -531,6 +551,8 @@ export function image_render (x: number, y: number, drawing: Drawing, canvas: HT
         ctx.fill()
       } else if (drawing.mode === 'outline') {
         ctx.stroke()
+      } else {
+        throw badMode(drawing.mode)
       }
       break
     }

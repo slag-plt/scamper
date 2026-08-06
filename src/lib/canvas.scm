@@ -10,11 +10,20 @@
 ;;; @category color, hsv, image, predicates, rgb, typecheck
 (define-export color? (js-var "image_colorQ"))
 
-;;; (image? v) -> boolean?
+;;; (drawing? v) -> boolean?
 ;;;  v : any
-;;; Returns `#t` if and only `v` is an image.
+;;; Returns `#t` if and only if `v` is a drawing: the kind of value the shape constructors build.
 ;;; @category image, predicates, typecheck
-(define-export image? (js-var "image_drawingQ"))
+(define-export drawing? (js-var "image_drawingQ"))
+
+;;; (fill-mode? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a fill mode: the string `"solid"` or `"outline"`.
+;;; @category canvas, shapes, typecheck, predicates
+;;; N.B., re-exported here (like color? and drawing?) because this module's own
+;;; contracts name it, and a contract predicate must resolve in the module that
+;;; uses it -- see the cross-module predicate test in test/libs/canvas.test.ts.
+(define-export fill-mode? (js-var "image_fillModeQ"))
 
 ;;; (make-canvas width height) -> canvas?
 ;;;  width : integer?
@@ -33,7 +42,7 @@
 ;;;   non-negative
 ;;;  height : integer?
 ;;;   non-negative
-;;;  mode : string?
+;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
 ;;; Renders a rectangle whose upper-left corner is at `(x, y)`.
@@ -51,7 +60,7 @@
 ;;;  rotation : number?
 ;;;  startAngle : number?
 ;;;  endAngle : number?
-;;;  mode : string?
+;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
 ;;; Renders an ellipse whose center is at `(x, y)`, radii `radiusX` and `radiusY`, `rotation`, `startAngle`, and `endAngle`.
@@ -64,7 +73,7 @@
 ;;;  y : number?
 ;;;  radius : number?
 ;;;   non-negative
-;;;  mode : string?
+;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
 ;;; Renders a circle whose center is at `(x, y)` and radius `radius`.
@@ -78,7 +87,7 @@
 ;;;  text : string?
 ;;;  size : number?
 ;;;   positive
-;;;  mode : string?
+;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
 ;;;  font : string?
@@ -91,7 +100,7 @@
 ;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?
-;;;  drawing : image?
+;;;  drawing : drawing?
 ;;; Draws the given drawing (created via the `image` library) at the given coordinates.
 ;;; @category canvas, mutation, predicates, canvas-text!, canvas-path!
 (define-export canvas-drawing! (js-var "canvas_canvasDrawing"))
@@ -100,7 +109,7 @@
 ;;;  canvas : canvas?
 ;;;  pairs : list?
 ;;;   a list of pairs of numbers
-;;;  mode : string?
+;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
 ;;; Renders a path from the given list of pairs of numbers.

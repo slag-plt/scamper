@@ -7,6 +7,17 @@ export function canvas_canvasQ(v: any): boolean {
   return v instanceof HTMLCanvasElement
 }
 
+// N.B., canvas-width/canvas-height used to be bound to the *drawing* accessors,
+// which accept either kind via a cast. Splitting them gives each an honest
+// contract (#103).
+export function canvas_canvasWidth(canvas: HTMLCanvasElement): number {
+  return canvas.width
+}
+
+export function canvas_canvasHeight(canvas: HTMLCanvasElement): number {
+  return canvas.height
+}
+
 export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = width
