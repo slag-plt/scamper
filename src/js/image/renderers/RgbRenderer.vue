@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Rgb, image_rgbToString, image_rgbPseudoComplement } from '../color'
+import { Rgb, color_rgbToString, color_rgbPseudoComplement } from '../color'
 
 const props = defineProps<{ value: Rgb }>()
 
-const backgroundColor = computed(() => image_rgbToString(props.value))
-const textColor = computed(() => image_rgbToString(image_rgbPseudoComplement(props.value)))
+const backgroundColor = computed(() => color_rgbToString(props.value))
+const textColor = computed(() => color_rgbToString(color_rgbPseudoComplement(props.value)))
 </script>
 
 <template>

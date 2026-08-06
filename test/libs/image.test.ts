@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
 import { runProgram } from './harness.js'
 import { image_isReactiveImageFile, image_withImageFile } from '../../src/js/image/image.js'
-import { image_imageWidth, image_imageHeight } from '../../src/js/image/drawing.js'
+import { drawing_drawingWidth, drawing_drawingHeight } from '../../src/js/image/drawing.js'
 
 describe('color', () => {
   // N.B., the legacy `color` constructor was retired in #103 -- it was a pure
@@ -222,7 +222,7 @@ describe('color', () => {
       '141',
       '"aliceblue"',
       // the docstring documents a parameter ("x1 : any") that the real
-      // implementation (image_allColorNames, which takes none) never uses,
+      // implementation (color_allColorNames, which takes none) never uses,
       // so calling with the documented arity actually works, and the
       // "expected" zero-argument call is itself the arity failure.
       'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
@@ -246,8 +246,8 @@ describe('color', () => {
     ])
   })
 
-  // hsv? is bound to the hsv constructor (image_hsv) instead of the
-  // predicate (image_isHsv) -- calling it tries to construct a struct
+  // hsv? is bound to the hsv constructor (color_hsv) instead of the
+  // predicate (color_isHsv) -- calling it tries to construct a struct
   // instead of testing one (github.com/slag-plt/scamper#250).
   test.skip('hsv?')
 
@@ -609,7 +609,7 @@ describe('font', () => {
 // Every color parameter accepts any of the three color representations (#103).
 // Before that, shapes declared `color : string?`, so passing an rgb -- the most
 // natural thing to write -- failed its contract even though the implementation
-// converted it fine via image_colorToRgb.
+// converted it fine via color_colorToRgb.
 describe('color parameters accept every color representation', () => {
   test('a name, an rgb, and an hsv all produce the same shape', async () => {
     const red = '(rectangle 10 10 "solid" (rgba 255 0 0 255))'
@@ -1274,7 +1274,7 @@ describe('drawing', () => {
       ).toEqual(['(text 2 1 "hi" 12 (rgba 0 0 0 255) (font "Georgia" "serif" #t #f))'])
     })
 
-    // A non-font fourth argument fails the image_fontQ guard, so it is silently
+    // A non-font fourth argument fails the font_fontQ guard, so it is silently
     // dropped rather than rejected and the default font is kept.
     test('silently ignores a non-font fourth argument', async () => {
       expect(
@@ -1852,14 +1852,14 @@ describe('image-width / image-height of a canvas', () => {
     const canvas = document.createElement('canvas')
     canvas.width = 30
     canvas.height = 20
-    expect(image_imageWidth(canvas as unknown as never)).toBe(30)
-    expect(image_imageHeight(canvas as unknown as never)).toBe(20)
+    expect(drawing_drawingWidth(canvas as unknown as never)).toBe(30)
+    expect(drawing_drawingHeight(canvas as unknown as never)).toBe(20)
   })
 })
 
 describe('colour edge cases', () => {
   // Too few args trip the outer call-arity contract; too many (5) reach
-  // image_hsv's own "expects 3 or 4 arguments" guard.
+  // color_hsv's own "expects 3 or 4 arguments" guard.
   test('hsv rejects too many arguments', async () => {
     expect(await runProgram(`
 (import image)

@@ -33,9 +33,15 @@ const {
 // the browser -- this map and that file are two independent enumerations of
 // the same library set.
 //
-// Every binding name below is prefixed with its defining module (e.g.
-// `prelude_numberQ`, `canvas_makeCanvas`) so that flattening all modules
-// into a single map can't collide.
+// Every binding name below is prefixed so that flattening all modules into a
+// single map can't collide. The prefix names the *concept*, which for most
+// modules is the same as the module (`prelude_numberQ`, `canvas_makeCanvas`).
+//
+// N.B., `src/js/image/` is the exception: it backs the `image` Scheme library,
+// which covers four concepts, so it exports `drawing_*`, `color_*`, `font_*`,
+// and `image_*` (the last reserved for image *files*) -- see #103. A Scheme
+// module drawing on several JS prefixes is already normal: image.scm binds
+// `canvas?` to `canvas_canvasQ`.
 const internals = new Map<string, L.Value>([
   ...Object.entries(Audio),
   ...Object.entries(Canvas),
