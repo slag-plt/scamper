@@ -1070,6 +1070,110 @@ export function prelude_refSet(r: Ref, v: L.Value): void {
   r.value = v
 }
 
+// Maps (the `{...}` literal, issue #103)
+//
+// A map is the plain Javascript object a `{k1 v1 ...}` literal builds (see
+// ##mkObj## in src/js/runtime): string keys, arbitrary values. These operations
+// are *functional* -- hash-set and hash-remove return a new map and leave the
+// original alone -- which is both what the rest of the library does and what
+// makes them safe to use in a reduction trace.
+//
+// N.B., deliberately not SRFI-69/125 `hash-table-*`: those tables are mutable,
+// opaque, and carry their own hash function and equality predicate, so they
+// would not operate on what `{...}` produces. (R7RS-small has no hash tables at
+// all.) The shape here follows Racket's functional hash interface instead.
+
+/** Raises unless `k` is a string, mirroring the map literal's own key rule. */
+function checkKey(who: string, k: L.Value): string {
+  if (typeof k !== 'string') {
+    throw new L.ScamperError(
+      'Runtime',
+      `${who}: a map key must be a string, received ${L.typeOf(k)}`,
+    )
+  }
+  return k
+}
+
+export function prelude_hashQ(v: L.Value): boolean {
+  return L.isObj(v)
+}
+
+export function prelude_hashRef(h: Record<string, L.Value>, k: L.Value): L.Value {
+  const key = checkKey('hash-ref', k)
+  if (!Object.prototype.hasOwnProperty.call(h, key)) {
+    throw new L.ScamperError('Runtime', `hash-ref: no value for key "${key}"`)
+  }
+  return h[key]
+}
+
+export function prelude_hashRefOr(
+  h: Record<string, L.Value>,
+  k: L.Value,
+  fallback: L.Value,
+): L.Value {
+  const key = checkKey('hash-ref-or', k)
+  return Object.prototype.hasOwnProperty.call(h, key) ? h[key] : fallback
+}
+
+export function prelude_hashHasKeyQ(h: Record<string, L.Value>, k: L.Value): boolean {
+  return Object.prototype.hasOwnProperty.call(h, checkKey('hash-has-key?', k))
+}
+
+export function prelude_hashSet(
+  h: Record<string, L.Value>,
+  k: L.Value,
+  v: L.Value,
+): Record<string, L.Value> {
+  return { ...h, [checkKey('hash-set', k)]: v }
+}
+
+export function prelude_hashRemove(
+  h: Record<string, L.Value>,
+  k: L.Value,
+): Record<string, L.Value> {
+  const key = checkKey('hash-remove', k)
+  // Rebuilt rather than copy-then-delete so the result is a fresh plain object
+  // either way, and the original is untouched.
+  const ret: Record<string, L.Value> = {}
+  for (const f of Object.keys(h)) {
+    if (f !== key) {
+      ret[f] = h[f]
+    }
+  }
+  return ret
+}
+
+export function prelude_hashCount(h: Record<string, L.Value>): number {
+  return Object.keys(h).length
+}
+
+export function prelude_hashKeys(h: Record<string, L.Value>): L.List {
+  return L.vectorToList(Object.keys(h))
+}
+
+export function prelude_hashValues(h: Record<string, L.Value>): L.List {
+  return L.vectorToList(Object.keys(h).map((k) => h[k]))
+}
+
+export function prelude_hashToList(h: Record<string, L.Value>): L.List {
+  return L.vectorToList(Object.keys(h).map((k) => L.mkPair(k, h[k])))
+}
+
+export function prelude_listToHash(l: L.List): Record<string, L.Value> {
+  const ret: Record<string, L.Value> = {}
+  for (const entry of L.listToVector(l)) {
+    if (!L.isPair(entry)) {
+      throw new L.ScamperError(
+        'Runtime',
+        `list->hash: expected a list of pairs, but the list contains ${L.typeOf(entry)}`,
+      )
+    }
+    // A later pair wins, matching the map literal's duplicate-key behavior.
+    ret[checkKey('list->hash', entry.fst)] = entry.snd
+  }
+  return ret
+}
+
 // Additional constants
 
 export const prelude_elseConst = true

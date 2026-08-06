@@ -1097,6 +1097,79 @@
 ;;; @category mutation, assoc-ref, deref, list-ref, string-ref
 (define-export ref-set! (js-var "prelude_refSet"))
 
+;;; (hash? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a map, the kind of value a `{ ... }` literal produces.
+;;; @category maps, typecheck, predicates, hash-ref, hash-set, hash-keys
+(define-export hash? (js-var "prelude_hashQ"))
+
+;;; (hash-ref h k) -> any
+;;;  h : hash?
+;;;  k : string?
+;;; Returns the value that map `h` associates with key `k`. Raises an error if `h` has no such key; use `hash-ref-or` to supply a default instead.
+;;; @category maps, hash-ref-or, hash-has-key?, hash-set, hash-keys
+(define-export hash-ref (js-var "prelude_hashRef"))
+
+;;; (hash-ref-or h k default) -> any
+;;;  h : hash?
+;;;  k : string?
+;;;  default : any
+;;; Returns the value that map `h` associates with key `k`, or `default` if `h` has no such key.
+;;; @category maps, hash-ref, hash-has-key?, hash-set
+(define-export hash-ref-or (js-var "prelude_hashRefOr"))
+
+;;; (hash-has-key? h k) -> boolean?
+;;;  h : hash?
+;;;  k : string?
+;;; Returns `#t` if and only if map `h` associates a value with key `k`.
+;;; @category maps, typecheck, predicates, hash-ref, hash-ref-or, hash-keys
+(define-export hash-has-key? (js-var "prelude_hashHasKeyQ"))
+
+;;; (hash-set h k v) -> hash?
+;;;  h : hash?
+;;;  k : string?
+;;;  v : any
+;;; Returns a new map like `h` but with key `k` associated with `v`. `h` itself is unchanged.
+;;; @category maps, hash-remove, hash-ref, hash-count
+(define-export hash-set (js-var "prelude_hashSet"))
+
+;;; (hash-remove h k) -> hash?
+;;;  h : hash?
+;;;  k : string?
+;;; Returns a new map like `h` but with key `k` removed. `h` itself is unchanged, and removing a key that is not present is not an error.
+;;; @category maps, hash-set, hash-ref, hash-count
+(define-export hash-remove (js-var "prelude_hashRemove"))
+
+;;; (hash-count h) -> integer?
+;;;  h : hash?
+;;; Returns the number of key-value pairs in map `h`.
+;;; @category maps, hash-keys, hash-values, hash-set
+(define-export hash-count (js-var "prelude_hashCount"))
+
+;;; (hash-keys h) -> list?
+;;;  h : hash?
+;;; Returns a list of the keys of map `h`.
+;;; @category maps, hash-values, hash->list, hash-count, hash-has-key?
+(define-export hash-keys (js-var "prelude_hashKeys"))
+
+;;; (hash-values h) -> list?
+;;;  h : hash?
+;;; Returns a list of the values of map `h`, in the same order as `hash-keys`.
+;;; @category maps, hash-keys, hash->list, hash-count
+(define-export hash-values (js-var "prelude_hashValues"))
+
+;;; (hash->list h) -> list?
+;;;  h : hash?
+;;; Returns the contents of map `h` as a list of key-value pairs.
+;;; @category maps, list->hash, hash-keys, hash-values
+(define-export hash->list (js-var "prelude_hashToList"))
+
+;;; (list->hash l) -> hash?
+;;;  l : list?
+;;; Returns a map built from `l`, a list of key-value pairs whose keys are strings. If a key appears more than once, the last pair wins.
+;;; @category maps, hash->list, hash-set, hash-keys
+(define-export list->hash (js-var "prelude_listToHash"))
+
 ;;; (else) -> boolean?
 ;;; A synonym for `#t` appropriate for use as the final guard of a `cond` expression.
 ;;; @category boolean/logic, constants
