@@ -73,29 +73,42 @@ export function applyFn(
       currFrame.values.push(fn(...args))
       return traceStep
     } catch (e) {
+      // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
+      // fn was called directly, outside any named Scamper function -- in
+      // that case op.range/fn.name (this call's own, real range and the
+      // JS function's own name) are already exactly right. Otherwise fn
+      // is being invoked from inside a named function's frame -- most
+      // often a contract wrapper's own ##contract-target## call, whose Ap
+      // op only ever carries the *wrapped definition's* range, never the
+      // user's actual call site. In that case prefer the frame's own
+      // callRange/name: the range/name of the Ap that invoked *this
+      // frame*, i.e. wherever the user (or an enclosing function) really
+      // wrote the call.
+      const useFrame = !currFrame.name.startsWith('##')
+      const callRange = useFrame ? currFrame.callRange : range
       if (e instanceof SuspendSignal) {
-        // A blocking primitive is suspending the fiber -- propagate untouched to
+        // A blocking primitive is suspending the fiber -- propagate to
         // Scheduler.stepTask (control flow, not an error). The result value is
         // supplied on resume by Fiber.resumeWithValue, not by the push above.
+        // Record the call site on the way out: the action's own error is raised
+        // later, in the scheduler, with no other route back here (#342).
+        //
+        // N.B., only when that site is in the user's own program. An unnamed
+        // *library* frame (stepOver) is a library-defined Scheme wrapper around
+        // the primitive -- `with-file`, `with-image-from-url` -- whose op ranges
+        // point into prelude.scm/image.scm. Underlining a line of the standard
+        // library in the student's editor is worse than no range at all, so
+        // those two keep reporting unlocated, as they always have.
+        if (useFrame || !currFrame.stepOver) {
+          e.range ??= callRange
+        }
         throw e
       }
       if (e instanceof ScamperError) {
-        // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
-        // fn was called directly, outside any named Scamper function -- in
-        // that case op.range/fn.name (this call's own, real range and the
-        // JS function's own name) are already exactly right. Otherwise fn
-        // is being invoked from inside a named function's frame -- most
-        // often a contract wrapper's own ##contract-target## call, whose Ap
-        // op only ever carries the *wrapped definition's* range, never the
-        // user's actual call site. In that case prefer the frame's own
-        // callRange/name: the range/name of the Ap that invoked *this
-        // frame*, i.e. wherever the user (or an enclosing function) really
-        // wrote the call.
         // Fill range/source only when the error didn't set them itself: most JS
         // primitives throw context-free errors (we supply both), but some (e.g.
         // `error`) fix their own source, which we must not clobber.
-        const useFrame = !currFrame.name.startsWith('##')
-        e.range ??= useFrame ? currFrame.callRange : range
+        e.range ??= callRange
         e.source ??= useFrame ? currFrame.name : fn.name
         throw e
       } else {
