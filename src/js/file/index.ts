@@ -44,6 +44,13 @@ function splitLines(contents: string): string[] {
   return lines
 }
 
+export function file_fileExistsQ(filename: string): L.Value {
+  throw new L.SuspendSignal(async () => {
+    const { getFS } = await import('../../fs')
+    return getFS().fileExists(filename)
+  })
+}
+
 export function file_fileToString(filename: string): L.Value {
   throw new L.SuspendSignal(async () => readFile(filename))
 }

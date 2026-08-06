@@ -74,6 +74,46 @@ const read = (name: string) => readFile(path.join(dir, name), 'utf-8')
 const write = (name: string, contents: string) =>
   writeFile(path.join(dir, name), contents, 'utf-8')
 
+describe('file-exists?', () => {
+  test('is #t for a file that exists and #f otherwise', async () => {
+    await write('here.txt', 'contents')
+    expect(
+      await runFileProgram(`
+(import file)
+(file-exists? "here.txt")
+(file-exists? "nope.txt")
+`),
+    ).toEqual(['#t', '#f'])
+  })
+
+  test('sees a file created earlier in the same program', async () => {
+    expect(
+      await runFileProgram(`
+(import file)
+(file-exists? "made.txt")
+(string->file "x" "made.txt")
+(file-exists? "made.txt")
+`),
+    ).toEqual(['#f', 'void', '#t'])
+  })
+
+  test('an empty file still exists', async () => {
+    await write('empty.txt', '')
+    expect(await runFileProgram('(import file)\n(file-exists? "empty.txt")')).toEqual(['#t'])
+  })
+
+  test('guards a read that would otherwise raise', async () => {
+    // The idiom file-exists? is for: check before reading, rather than wrapping
+    // the read in with-handler.
+    expect(
+      await runFileProgram(`
+(import file)
+(if (file-exists? "nope.txt") (file->string "nope.txt") "no such file")
+`),
+    ).toEqual(['"no such file"'])
+  })
+})
+
 describe('file->string', () => {
   test('reads a file back as a string', async () => {
     await write('greet.txt', 'hello\nworld\n')
@@ -204,6 +244,7 @@ describe('argument contracts', () => {
       await runProgram(
         `
 (import file)
+(file-exists? 5)
 (file->string 5)
 (file->lines 5)
 (string->file "s" 5)
@@ -212,6 +253,7 @@ describe('argument contracts', () => {
         { stripRanges: true },
       ),
     ).toEqual([
+      'Runtime error: (error) expected a string, received number',
       'Runtime error: (error) expected a string, received number',
       'Runtime error: (error) expected a string, received number',
       'Runtime error: (error) expected a string, received number',
