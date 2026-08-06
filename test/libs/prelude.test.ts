@@ -985,14 +985,27 @@ test('index-of', async () => {
     await runProgram(`
 (define l (list "a" "b" "c" "d" "e"))
 
-(index-of l "a")
-(index-of l "b")
-(index-of l "c")
-(index-of l "d")
-(index-of l "e")
-(index-of l "f")
+(index-of "a" l)
+(index-of "b" l)
+(index-of "c" l)
+(index-of "d" l)
+(index-of "e" l)
+(index-of "f" l)
 `),
   ).toEqual(['0', '1', '2', '3', '4', '-1'])
+})
+
+// Argument order standardized in #103: index-of takes the value first, matching
+// R7RS's member/assoc family -- (member obj list), (assoc obj alist) -- rather
+// than the data-first order the accessors (list-ref, vector-ref) use.
+test('index-of takes the value first', async () => {
+  expect(
+    await runProgram(`
+(index-of 3 (list 1 2 3 4))
+(index-of 9 (list 1 2 3))
+(index-of 1 null)
+`),
+  ).toEqual(['2', '-1', '-1'])
 })
 
 test('integer', async () => {
@@ -3115,13 +3128,13 @@ test('for-range', async () => {
   expect(
     await runProgram(`
 (define asc (ref null))
-(for-range 0 5 (lambda (i) (ref-set! asc (cons i (deref asc)))))
+(for-range (lambda (i) (ref-set! asc (cons i (deref asc)))) 0 5)
 (deref asc)
 (define desc (ref null))
-(for-range 5 0 (lambda (i) (ref-set! desc (cons i (deref desc)))))
+(for-range (lambda (i) (ref-set! desc (cons i (deref desc)))) 5 0)
 (deref desc)
 (define empty (ref null))
-(for-range 3 3 (lambda (i) (ref-set! empty (cons i (deref empty)))))
+(for-range (lambda (i) (ref-set! empty (cons i (deref empty)))) 3 3)
 (deref empty)
 `),
   ).toEqual([
@@ -3159,4 +3172,32 @@ test('with-handler-call', async () => {
   // No error is raised, so the handler is never invoked; with-handler returns
   // the thunk's result: (+ 1 2 3).
   expect(await runProgram('(with-handler + (lambda () (+ 1 2 3)))')).toEqual(['6'])
+})
+
+// #103: for-range takes its procedure first, like every other higher-order
+// function in the library (map, filter, fold, vector-map, vector-for-each,
+// string-map). It was the lone exception with the procedure last.
+test('for-range takes its procedure first, and vector-for-each still drives it', async () => {
+  expect(
+    await runProgram(`
+(define acc (ref null))
+(for-range (lambda (i) (ref-set! acc (cons i (deref acc)))) 0 4)
+(deref acc)
+(define acc2 (ref null))
+(vector-for-each (lambda (x) (ref-set! acc2 (cons x (deref acc2)))) (vector 7 8))
+(deref acc2)
+`),
+  ).toEqual(['void', '(list 3 2 1 0)', 'void', '(list 8 7)'])
+})
+
+// #103: vector-filter returns a vector, and said so only after its docstring
+// was corrected -- it had declared `-> list?`.
+test('vector-filter returns a vector', async () => {
+  expect(
+    await runProgram(`
+(vector-filter even? (vector 1 2 3 4))
+(vector? (vector-filter even? (vector 1 2)))
+(vector-filter even? (vector))
+`),
+  ).toEqual(['(vector 2 4)', '#t', '(vector)'])
 })

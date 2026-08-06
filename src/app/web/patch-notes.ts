@@ -19,6 +19,14 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '3.6.0',
+    title: 'Argument order cleanup',
+    notes: [
+      'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',
+      'for-range now takes its function first: (for-range f 0 10), like map, filter, and for-each.',
+    ],
+  },
+  {
     version: '3.5.0',
     title: 'Editor upgrades',
     notes: [
