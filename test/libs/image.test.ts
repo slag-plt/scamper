@@ -630,10 +630,10 @@ describe('color parameters accept every color representation', () => {
 ; N.B., ellipse's fill is a boolean while rectangle's is a "solid"/"outline"
 ; string -- an inconsistency in its own right, but a fill-mode one, not a
 ; color one, so out of scope here.
-(image-color (ellipse 10 20 #t (rgb 1 2 3)))
-(image-color (rectangle 10 20 "solid" (hsv 0 0 0)))
-(image-color (triangle 10 "solid" "red"))
-(image-color (path 10 10 (list (pair 0 0) (pair 5 5)) "solid" (rgb 4 5 6)))
+(drawing-color (ellipse 10 20 "solid" (rgb 1 2 3)))
+(drawing-color (rectangle 10 20 "solid" (hsv 0 0 0)))
+(drawing-color (triangle 10 "solid" "red"))
+(drawing-color (path 10 10 (list (pair 0 0) (pair 5 5)) "solid" (rgb 4 5 6)))
 `),
     ).toEqual([
       '(rgba 1 2 3 255)',
@@ -707,14 +707,14 @@ describe('drawing', () => {
     })
   })
 
-  describe('image? and shape?', () => {
+  describe('drawing?', () => {
     test('are aliases, true for any drawing', async () => {
       expect(
         await runProgram(`
 (import image)
-(image? (rectangle 10 10 "solid" "red"))
-(shape? (rectangle 10 10 "solid" "red"))
-(image? (beside (rectangle 10 10 "solid" "red") (circle 5 "solid" "blue")))
+(drawing? (rectangle 10 10 "solid" "red"))
+(drawing? (rectangle 10 10 "solid" "red"))
+(drawing? (beside (rectangle 10 10 "solid" "red") (circle 5 "solid" "blue")))
 `),
       ).toEqual(['#t', '#t', '#t'])
     })
@@ -723,9 +723,9 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image? 5)
-(shape? "shape")
-(image? (font "Arial" "sans-serif" #f #f))
+(drawing? 5)
+(drawing? "shape")
+(drawing? (font "Arial" "sans-serif" #f #f))
 `),
       ).toEqual(['#f', '#f', '#f'])
     })
@@ -739,24 +739,29 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(ellipse 10 20 #t "red")
-(ellipse 10 20 #f "blue")
+(ellipse 10 20 "solid" "red")
+(ellipse 10 20 "outline" "blue")
 `),
       ).toEqual([
-        '(ellipse 10 20 #t (rgba 255 0 0 255))',
-        '(ellipse 10 20 #f (rgba 0 0 255 255))',
+        '(ellipse 10 20 "solid" (rgba 255 0 0 255))',
+        '(ellipse 10 20 "outline" (rgba 0 0 255 255))',
       ])
     })
 
-    test('rejects a non-boolean fill or a non-color', async () => {
+    test('rejects a non-fill-mode fill or a non-color', async () => {
+      // #103: ellipse used to declare `fill : boolean?` -- alone among the seven
+      // primitives -- and a boolean matched neither render branch, so the call
+      // its own contract demanded drew nothing at all, silently.
       expect(
         await runProgram(`
 (import image)
-(ellipse 10 20 "solid" "red")
-(ellipse 10 20 #t 5)
+(ellipse 10 20 #t "red")
+(ellipse 10 20 "diagonal" "red")
+(ellipse 10 20 "solid" 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected a boolean, received string',
+        'Runtime error: (error) expected a fill-mode, received boolean',
+        'Runtime error: (error) expected a fill-mode, received string',
         'Runtime error: (error) expected a color, received number',
       ])
     })
@@ -765,7 +770,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(ellipse 10 20 #t)
+(ellipse 10 20 "solid")
 `),
       ).toEqual([
         'Runtime error: Arity mismatch in function call: expected 4 arguments, got 3',
@@ -800,14 +805,14 @@ describe('drawing', () => {
       ])
     })
 
-    test('rejects a non-string fill', async () => {
+    test('rejects a non-fill-mode fill', async () => {
       expect(
         await runProgram(`
 (import image)
 (circle 5 #t "red")
 `),
       ).toEqual([
-        'Runtime error: (error) expected a string, received boolean',
+        'Runtime error: (error) expected a fill-mode, received boolean',
       ])
     })
   })
@@ -826,13 +831,20 @@ describe('drawing', () => {
       ])
     })
 
-    test('accepts any string as fill, not just "solid"/"outline"', async () => {
+    test('rejects a fill that is not "solid" or "outline"', async () => {
+      // #103: an arbitrary fill string used to be accepted and stored, and then
+      // matched no render branch -- the shape silently did not draw. The
+      // fill-mode? contract stops it at the call instead.
       expect(
         await runProgram(`
 (import image)
 (rectangle 10 20 "diagonal" "red")
+(rectangle 10 20 "Solid" "red")
 `),
-      ).toEqual(['(rectangle 10 20 "diagonal" (rgba 255 0 0 255))'])
+      ).toEqual([
+        'Runtime error: (error) expected a fill-mode, received string',
+        'Runtime error: (error) expected a fill-mode, received string',
+      ])
     })
 
     test('rejects a non-numeric width, an unknown color name, or a non-color', async () => {
@@ -953,8 +965,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-width (path 100 200 (list (pair 0 0)) "solid" "red"))
-(image-height (path 100 200 (list (pair 0 0)) "solid" "red"))
+(drawing-width (path 100 200 (list (pair 0 0)) "solid" "red"))
+(drawing-height (path 100 200 (list (pair 0 0)) "solid" "red"))
 `),
       ).toEqual(['100', '200'])
     })
@@ -978,10 +990,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(beside (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(beside (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(beside "center" 14 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(beside "center" 14 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -989,8 +1001,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-width (beside (rectangle 10 10 "solid" "red")))
-(image-height (beside (rectangle 10 10 "solid" "red")))
+(drawing-width (beside (rectangle 10 10 "solid" "red")))
+(drawing-height (beside (rectangle 10 10 "solid" "red")))
 `),
       ).toEqual(['10', '10'])
     })
@@ -1011,7 +1023,7 @@ describe('drawing', () => {
 (beside (rectangle 10 10 "solid" "red") "not-a-drawing")
 `),
       ).toEqual([
-        'Runtime error: (error) expected every value of d1 to be an image, but at least one was not',
+        'Runtime error: (error) expected every value of d1 to be a drawing, but at least one was not',
       ])
     })
   })
@@ -1021,10 +1033,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(beside/align "top" (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(beside/align "top" (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(beside "top" 14 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(beside "top" 14 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -1045,10 +1057,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(above (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(above (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(above "middle" 10 16 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(above "middle" 10 16 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -1067,10 +1079,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(above/align "left" (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(above/align "left" (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(above "left" 10 16 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(above "left" 10 16 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -1091,10 +1103,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(overlay (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(overlay (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(overlay "middle" "center" 10 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(overlay "middle" "center" 10 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -1113,10 +1125,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(overlay/align "left" "top" (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(overlay/align "left" "top" (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(overlay "left" "top" 10 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255))))',
+        '(overlay "left" "top" 10 10 (vector (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255))))',
       ])
     })
 
@@ -1137,12 +1149,12 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(overlay/offset 3 4 (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
-(overlay/offset -3 -4 (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue"))
+(overlay/offset 3 4 (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
+(overlay/offset -3 -4 (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue"))
 `),
       ).toEqual([
-        '(overlayOffset 3 4 10 10 (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255)))',
-        '(overlayOffset -3 -4 13 14 (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 #t (rgba 0 0 255 255)))',
+        '(overlayOffset 3 4 10 10 (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255)))',
+        '(overlayOffset -3 -4 13 14 (rectangle 10 10 "solid" (rgba 255 0 0 255)) (ellipse 4 6 "solid" (rgba 0 0 255 255)))',
       ])
     })
 
@@ -1164,7 +1176,7 @@ describe('drawing', () => {
 (overlay/offset 0 0 "not-a-drawing" (rectangle 10 10 "solid" "red"))
 `),
       ).toEqual([
-        'Runtime error: (error) expected an image, received string',
+        'Runtime error: (error) expected a drawing, received string',
       ])
     })
   })
@@ -1199,7 +1211,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         'Runtime error: (error) expected a number, received string',
-        'Runtime error: (error) expected an image, received number',
+        'Runtime error: (error) expected a drawing, received number',
       ])
     })
   })
@@ -1236,7 +1248,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         'Runtime error: (error) expected a list, received number',
-        'Runtime error: (error) expected an image, received number',
+        'Runtime error: (error) expected a drawing, received number',
       ])
     })
   })
@@ -1450,8 +1462,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-width (rectangle 10 20 "solid" "red"))
-(image-width (beside (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
+(drawing-width (rectangle 10 20 "solid" "red"))
+(drawing-width (beside (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
 `),
       ).toEqual(['10', '15'])
     })
@@ -1461,12 +1473,12 @@ describe('drawing', () => {
         await runProgram(`
 (import image)
 (import canvas)
-(image-width 5)
-(image-width (make-canvas 20 15))
+(drawing-width 5)
+(drawing-width (make-canvas 20 15))
 `),
       ).toEqual([
-        'Runtime error: (error) expected an image, received number',
-        'Runtime error: (error) expected an image, received object',
+        'Runtime error: (error) expected a drawing, received number',
+        'Runtime error: (error) expected a drawing, received object',
       ])
     })
   })
@@ -1476,8 +1488,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-height (rectangle 10 20 "solid" "red"))
-(image-height (above (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
+(drawing-height (rectangle 10 20 "solid" "red"))
+(drawing-height (above (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
 `),
       ).toEqual(['20', '15'])
     })
@@ -1487,12 +1499,12 @@ describe('drawing', () => {
         await runProgram(`
 (import image)
 (import canvas)
-(image-height 5)
-(image-height (make-canvas 20 15))
+(drawing-height 5)
+(drawing-height (make-canvas 20 15))
 `),
       ).toEqual([
-        'Runtime error: (error) expected an image, received number',
-        'Runtime error: (error) expected an image, received object',
+        'Runtime error: (error) expected a drawing, received number',
+        'Runtime error: (error) expected a drawing, received object',
       ])
     })
   })
@@ -1502,7 +1514,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-color (rectangle 10 20 "solid" "red"))
+(drawing-color (rectangle 10 20 "solid" "red"))
 `),
       ).toEqual(['(rgba 255 0 0 255)'])
     })
@@ -1511,8 +1523,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-color (beside (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
-(image-color (overlay/offset 3 4 (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
+(drawing-color (beside (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
+(drawing-color (overlay/offset 3 4 (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
 `),
       ).toEqual(['(rgba 127.5 0 127.5 255)', '(rgba 127.5 0 127.5 255)'])
     })
@@ -1521,8 +1533,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-color (rotate 45 (rectangle 10 10 "solid" "red")))
-(image-color (with-dash (list 4 2) (rectangle 10 10 "solid" "red")))
+(drawing-color (rotate 45 (rectangle 10 10 "solid" "red")))
+(drawing-color (with-dash (list 4 2) (rectangle 10 10 "solid" "red")))
 `),
       ).toEqual(['(rgba 255 0 0 255)', '(rgba 255 0 0 255)'])
     })
@@ -1531,7 +1543,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-color (text "hi" 12 "black"))
+(drawing-color (text "hi" 12 "black"))
 `),
       ).toEqual(['(rgba 0 0 0 255)'])
     })
@@ -1540,10 +1552,10 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-color 5)
+(drawing-color 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected an image, received number',
+        'Runtime error: (error) expected a drawing, received number',
       ])
     })
   })
@@ -1553,8 +1565,8 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-recolor (rectangle 10 10 "solid" "red") "blue")
-(image-recolor (rectangle 10 10 "solid" "red") (rgb 1 2 3))
+(drawing-recolor (rectangle 10 10 "solid" "red") "blue")
+(drawing-recolor (rectangle 10 10 "solid" "red") (rgb 1 2 3))
 `),
       ).toEqual([
         '(rectangle 10 10 "solid" (rgba 0 0 255 255))',
@@ -1566,12 +1578,12 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-recolor (beside (rectangle 10 10 "solid" "red") (ellipse 4 6 #t "blue")) "green")
-(image-recolor (rotate 45 (rectangle 10 10 "solid" "red")) "green")
-(image-recolor (with-dash (list 4 2) (rectangle 10 10 "solid" "red")) "green")
+(drawing-recolor (beside (rectangle 10 10 "solid" "red") (ellipse 4 6 "solid" "blue")) "green")
+(drawing-recolor (rotate 45 (rectangle 10 10 "solid" "red")) "green")
+(drawing-recolor (with-dash (list 4 2) (rectangle 10 10 "solid" "red")) "green")
 `),
       ).toEqual([
-        '(beside "center" 14 10 (vector (rectangle 10 10 "solid" (rgba 0 128 0 255)) (ellipse 4 6 #t (rgba 0 128 0 255))))',
+        '(beside "center" 14 10 (vector (rectangle 10 10 "solid" (rgba 0 128 0 255)) (ellipse 4 6 "solid" (rgba 0 128 0 255))))',
         '(rotate 14.142135623730951 14.142135623730951 7.071067811865475 0 45 (rectangle 10 10 "solid" (rgba 0 128 0 255)))',
         '(withDash (list 4 2) (rectangle 10 10 "solid" (rgba 0 128 0 255)) 10 10)',
       ])
@@ -1583,7 +1595,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-recolor (text "hi" 12 "black") "green")
+(drawing-recolor (text "hi" 12 "black") "green")
 `),
       ).toEqual(['(text 2 1 "hi" 12 (rgba 0 0 0 255) (font "Arial" "sans-serif" #f #f))'])
     })
@@ -1592,11 +1604,11 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(image-recolor 5 "red")
-(image-recolor (rectangle 10 10 "solid" "red") 5)
+(drawing-recolor 5 "red")
+(drawing-recolor (rectangle 10 10 "solid" "red") 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected an image, received number',
+        'Runtime error: (error) expected a drawing, received number',
         'Runtime error: (error) expected a color, received number',
       ])
     })
@@ -1681,13 +1693,13 @@ describe('rotate produces a positive box for every shape', () => {
   async function rotatedIsPositive(shape: string): Promise<string[]> {
     return runProgram(`
 (import image)
-(> (image-width (rotate 45 ${shape})) 0)
-(> (image-height (rotate 45 ${shape})) 0)
+(> (drawing-width (rotate 45 ${shape})) 0)
+(> (drawing-height (rotate 45 ${shape})) 0)
 `)
   }
 
   test('ellipse', async () => {
-    expect(await rotatedIsPositive('(ellipse 10 20 #t "red")')).toEqual(['#t', '#t'])
+    expect(await rotatedIsPositive('(ellipse 10 20 "solid" "red")')).toEqual(['#t', '#t'])
   })
   test('rectangle', async () => {
     expect(await rotatedIsPositive('(rectangle 10 20 "solid" "red")')).toEqual(['#t', '#t'])
@@ -1731,13 +1743,13 @@ describe('rotation dimensions (declared-corner correctness)', () => {
   async function rounded90Dims(shape: string): Promise<string[]> {
     return runProgram(`
 (import image)
-(round (image-width (rotate 90 ${shape})))
-(round (image-height (rotate 90 ${shape})))
+(round (drawing-width (rotate 90 ${shape})))
+(round (drawing-height (rotate 90 ${shape})))
 `)
   }
 
   test('ellipse swaps 10x20 -> 20x10', async () => {
-    expect(await rounded90Dims('(ellipse 10 20 #t "red")')).toEqual(['20', '10'])
+    expect(await rounded90Dims('(ellipse 10 20 "solid" "red")')).toEqual(['20', '10'])
   })
   test('rectangle swaps 10x20 -> 20x10', async () => {
     expect(await rounded90Dims('(rectangle 10 20 "solid" "red")')).toEqual(['20', '10'])
@@ -1762,9 +1774,9 @@ describe('image-color of composite drawings', () => {
   test('beside/above/overlay average their children (uniform colour)', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (beside (square 10 "solid" "red") (square 10 "solid" "red")))
-(image-color (above (square 10 "solid" "red") (square 10 "solid" "red")))
-(image-color (overlay (square 10 "solid" "red") (square 10 "solid" "red")))
+(drawing-color (beside (square 10 "solid" "red") (square 10 "solid" "red")))
+(drawing-color (above (square 10 "solid" "red") (square 10 "solid" "red")))
+(drawing-color (overlay (square 10 "solid" "red") (square 10 "solid" "red")))
 `)).toEqual([
       '(rgba 255 0 0 255)',
       '(rgba 255 0 0 255)',
@@ -1774,20 +1786,20 @@ describe('image-color of composite drawings', () => {
   test('overlay/offset averages its two drawings', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (overlay/offset 2 2 (square 10 "solid" "red") (square 10 "solid" "red")))
+(drawing-color (overlay/offset 2 2 (square 10 "solid" "red") (square 10 "solid" "red")))
 `)).toEqual(['(rgba 255 0 0 255)'])
   })
   test('rotate and with-dash delegate to the wrapped drawing', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (rotate 45 (square 10 "solid" "red")))
-(image-color (with-dash (list 5 5) (square 10 "solid" "red")))
+(drawing-color (rotate 45 (square 10 "solid" "red")))
+(drawing-color (with-dash (list 5 5) (square 10 "solid" "red")))
 `)).toEqual(['(rgba 255 0 0 255)', '(rgba 255 0 0 255)'])
   })
   test('text returns its own colour', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (text "hi" 20 "red"))
+(drawing-color (text "hi" 20 "red"))
 `)).toEqual(['(rgba 255 0 0 255)'])
   })
 })
@@ -1798,23 +1810,23 @@ describe('image-recolor of composite drawings', () => {
   test('leaf kinds (triangle, path)', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (image-recolor (triangle 10 "solid" "red") "green"))
-(image-color (image-recolor (path 10 10 (list (pair 0 0) (pair 5 5)) "solid" "red") "green"))
+(drawing-color (drawing-recolor (triangle 10 "solid" "red") "green"))
+(drawing-color (drawing-recolor (path 10 10 (list (pair 0 0) (pair 5 5)) "solid" "red") "green"))
 `)).toEqual(['(rgba 0 128 0 255)', '(rgba 0 128 0 255)'])
   })
   test('aggregate kinds (above, overlay, overlay/offset)', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (image-recolor (above (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
-(image-color (image-recolor (overlay (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
-(image-color (image-recolor (overlay/offset 2 2 (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
+(drawing-color (drawing-recolor (above (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
+(drawing-color (drawing-recolor (overlay (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
+(drawing-color (drawing-recolor (overlay/offset 2 2 (square 5 "solid" "red") (square 8 "solid" "red")) "green"))
 `)).toEqual(['(rgba 0 128 0 255)', '(rgba 0 128 0 255)', '(rgba 0 128 0 255)'])
   })
   test('wrapper kinds (rotate, with-dash)', async () => {
     expect(await runProgram(`
 (import image)
-(image-color (image-recolor (rotate 45 (square 5 "solid" "red")) "green"))
-(image-color (image-recolor (with-dash (list 5 5) (square 5 "solid" "red")) "green"))
+(drawing-color (drawing-recolor (rotate 45 (square 5 "solid" "red")) "green"))
+(drawing-color (drawing-recolor (with-dash (list 5 5) (square 5 "solid" "red")) "green"))
 `)).toEqual(['(rgba 0 128 0 255)', '(rgba 0 128 0 255)'])
   })
 })
@@ -1826,8 +1838,8 @@ describe('overlay/offset dimension branches', () => {
   test('smaller first drawing with positive offset stays positive', async () => {
     expect(await runProgram(`
 (import image)
-(> (image-width (overlay/offset 3 4 (square 5 "solid" "red") (square 20 "solid" "blue"))) 0)
-(> (image-height (overlay/offset 3 4 (square 5 "solid" "red") (square 20 "solid" "blue"))) 0)
+(> (drawing-width (overlay/offset 3 4 (square 5 "solid" "red") (square 20 "solid" "blue"))) 0)
+(> (drawing-height (overlay/offset 3 4 (square 5 "solid" "red") (square 20 "solid" "blue"))) 0)
 `)).toEqual(['#t', '#t'])
   })
 })
@@ -1871,12 +1883,12 @@ describe('pixel-map', () => {
   test('maps over a canvas, returning a same-size canvas of rgb pixels', async () => {
     expect(await runProgram(`
 (import image)
-(define c (drawing->image (solid-square 2 "blue")))
+(define c (drawing->canvas (solid-square 2 "blue")))
 (canvas-width c)
 (canvas-height c)
 (canvas? (pixel-map (lambda (p) p) c))
-(vector-length (image->pixels (pixel-map (lambda (p) p) c)))
-(rgb? (vector-ref (image->pixels (pixel-map (lambda (p) (rgb-greyscale p)) c)) 0))
+(vector-length (canvas->pixels (pixel-map (lambda (p) p) c)))
+(rgb? (vector-ref (canvas->pixels (pixel-map (lambda (p) (rgb-greyscale p)) c)) 0))
 `)).toEqual(['2', '2', '#t', '4', '#t'])
   })
 })

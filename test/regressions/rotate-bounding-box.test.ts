@@ -22,8 +22,8 @@ describe('rotate bounding box (#102)', () => {
   async function dims (shape: string): Promise<string[]> {
     return runProgram(`
 (import image)
-(round (image-width ${shape}))
-(round (image-height ${shape}))
+(round (drawing-width ${shape}))
+(round (drawing-height ${shape}))
 `)
   }
 

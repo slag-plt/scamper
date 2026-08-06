@@ -290,30 +290,30 @@
 ;;; @category image, font?, text
 (define-export font (js-var "image_font"))
 
-;;; (image? v) -> boolean?
+;;; (drawing? v) -> boolean?
 ;;;  v : any
-;;; Returns `#t` if and only `v` is an image.
-;;; @category image, predicates, typecheck, shape?
-(define-export image? (js-var "image_drawingQ"))
+;;; Returns `#t` if and only if `v` is a drawing: the kind of value the shape constructors build. A canvas is not a drawing, and neither is a loaded image file.
+;;; @category image, predicates, typecheck, shapes, canvas?
+(define-export drawing? (js-var "image_drawingQ"))
 
-;;; (shape? v) -> boolean?
+;;; (fill-mode? v) -> boolean?
 ;;;  v : any
-;;; Returns `#t` if and only `v` is a shape.
-;;; @category image, predicates, shapes, typecheck, image?
-(define-export shape? (js-var "image_drawingQ"))
+;;; Returns `#t` if and only if `v` is a fill mode: the string `"solid"` or `"outline"`.
+;;; @category image, shapes, typecheck, predicates, ellipse, rectangle
+(define-export fill-mode? (js-var "image_fillModeQ"))
 
-;;; (ellipse width height fill color) -> image?
+;;; (ellipse width height fill color) -> drawing?
 ;;;  width : integer?
 ;;;  height : integer?
-;;;  fill : boolean?
+;;;  fill : fill-mode?
 ;;;  color : color?
 ;;; Returns a new drawing containing an ellipse with dimensions `width × height`.
 ;;; @category image, shapes, solid-ellipse, outlined-ellipse
 (define-export ellipse (js-var "image_ellipse"))
 
-;;; (circle radius fill color) -> image?
+;;; (circle radius fill color) -> drawing?
 ;;;  radius : number?
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -321,10 +321,10 @@
 ;;; @category image, shapes, solid-circle, outlined-circle
 (define-export circle (js-var "image_circle"))
 
-;;; (rectangle width height fill color) -> image?
+;;; (rectangle width height fill color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -332,9 +332,9 @@
 ;;; @category image, shapes, solid-rectangle, outlined-rectangle
 (define-export rectangle (js-var "image_rectangle"))
 
-;;; (square width fill color) -> image?
+;;; (square width fill color) -> drawing?
 ;;;  width : number?
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -342,9 +342,9 @@
 ;;; @category image, shapes, solid-square, outlined-square
 (define-export square (js-var "image_square"))
 
-;;; (triangle length fill color) -> image?
+;;; (triangle length fill color) -> drawing?
 ;;;  length : number?
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -352,10 +352,10 @@
 ;;; @category image, shapes, solid-triangle, outlined-triangle
 (define-export triangle (js-var "image_triangle"))
 
-;;; (isosceles-triangle width height fill color) -> image?
+;;; (isosceles-triangle width height fill color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -363,12 +363,12 @@
 ;;; @category image, shapes, solid-isosceles-triangle, outlined-isosceles-triangle
 (define-export isosceles-triangle (js-var "image_isoscelesTriangle"))
 
-;;; (path width height points fill color) -> image?
+;;; (path width height points fill color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  points : list?
 ;;;   a list of points, pairs of numbers
-;;;  fill : string?
+;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -376,76 +376,76 @@
 ;;; @category image, path, with-dash
 (define-export path (js-var "image_path"))
 
-;;; (beside & d1) -> image?
-;;;  d1 : image?
+;;; (beside & d1) -> drawing?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other (horizontally).
 ;;; @category composition/placement, image, beside/align, above, above/align, overlay, overlay/align, overlay/offset, rotate
 (define-export beside (js-var "image_beside"))
 
-;;; (beside/align align & d1) -> image?
+;;; (beside/align align & d1) -> drawing?
 ;;;  align : string?
 ;;;   either "top", "center", or "bottom"
-;;;  d1 : image?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., beside each other on the x-axis, aligning them along the y-axis according to `align`.
 ;;; @category composition/placement, image, beside, above, above/align, overlay, overlay/align, overlay/offset, rotate
 (define-export beside/align (js-var "image_besideAlign"))
 
-;;; (above & d1) -> image?
-;;;  d1 : image?
+;;; (above & d1) -> drawing?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other (vertically in descending order).
 ;;; @category composition/placement, image, beside, beside/align, above/align, overlay, overlay/align, overlay/offset, rotate
 (define-export above (js-var "image_above"))
 
-;;; (above/align align & d1) -> image?
+;;; (above/align align & d1) -> drawing?
 ;;;  align : string?
 ;;;   either "left", "middle", or "right"
-;;;  d1 : image?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., above each other on the y-axis, aligning them along the x-axis according to `align`.
 ;;; @category composition/placement, image, beside, beside/align, above, overlay, overlay/align, overlay/offset, rotate
 (define-export above/align (js-var "image_aboveAlign"))
 
-;;; (overlay & d1) -> image?
-;;;  d1 : image?
+;;; (overlay & d1) -> drawing?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other. (`d1` is the topmost drawing).
 ;;; @category composition/placement, image, beside, beside/align, above, above/align, overlay/align, overlay/offset, rotate
 (define-export overlay (js-var "image_overlay"))
 
-;;; (overlay/align xAlign yAlign & d1) -> image?
+;;; (overlay/align xAlign yAlign & d1) -> drawing?
 ;;;  xAlign : string?
 ;;;   either "left", "middle", or "right"
 ;;;  yAlign : string?
 ;;;   either "top", "center", or "bottom"
-;;;  d1 : image?
+;;;  d1 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1`, `d2`, ..., on top of each other, aligning them according to `xAlign` and `yAlign`.
 ;;; @category composition/placement, image, beside, beside/align, above, above/align, overlay, overlay/offset, rotate
 (define-export overlay/align (js-var "image_overlayAlign"))
 
-;;; (overlay/offset dx dy d1 d2) -> image?
+;;; (overlay/offset dx dy d1 d2) -> drawing?
 ;;;  dx : number?
 ;;;  dy : number?
-;;;  d1 : image?
-;;;  d2 : image?
+;;;  d1 : drawing?
+;;;  d2 : drawing?
 ;;; Creates a new drawing formed by places the drawing `d1` on top of `d2`, offset by `(dx, dy)`.
 ;;; @category composition/placement, image, beside, beside/align, above, above/align, overlay, overlay/align, rotate
 (define-export overlay/offset (js-var "image_overlayOffset"))
 
-;;; (rotate angle d) -> image?
+;;; (rotate angle d) -> drawing?
 ;;;  angle : number?
 ;;;   in degrees
-;;;  d : image?
+;;;  d : drawing?
 ;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Note: currently buggy and shifts off-center.
 ;;; @category image, beside, beside/align, above, above/align, overlay, overlay/align, overlay/offset
 (define-export rotate (js-var "image_rotate"))
 
-;;; (with-dash dash-spec d) -> image?
+;;; (with-dash dash-spec d) -> drawing?
 ;;;  dash-spec : list?
 ;;;   a list of numbers
-;;;  d : image?
+;;;  d : drawing?
 ;;; Returns a new drawing formed by drawing `d` but with lines drawn according to `dash-spec`. `dash-spec` is an list of numbers where each successive pair of numbers describe the length of a dash and the length of the subsequent gap.
 ;;; @category canvas, image, shapes, path-func
 (define-export with-dash (js-var "image_withDash"))
 
-;;; (text str size color & font) -> image?
+;;; (text str size color & font) -> drawing?
 ;;;  str : string?
 ;;;  size : any
 ;;;   number? A valid font size (in px)
@@ -456,7 +456,7 @@
 ;;; @category image, font, font?
 (define-export text (js-var "image_text"))
 
-;;; (solid-square width color) -> image?
+;;; (solid-square width color) -> drawing?
 ;;;  width : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -464,7 +464,7 @@
 ;;; @category image, shapes, square, outlined-square
 (define-export solid-square (js-var "image_solidSquare"))
 
-;;; (outlined-square width color) -> image?
+;;; (outlined-square width color) -> drawing?
 ;;;  width : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -472,7 +472,7 @@
 ;;; @category image, shapes, square, solid-square
 (define-export outlined-square (js-var "image_outlinedSquare"))
 
-;;; (solid-rectangle width height color) -> image?
+;;; (solid-rectangle width height color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
@@ -481,7 +481,7 @@
 ;;; @category image, shapes, rectangle, outlined-rectangle
 (define-export solid-rectangle (js-var "image_solidRectangle"))
 
-;;; (outlined-rectangle width height color) -> image?
+;;; (outlined-rectangle width height color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
@@ -490,7 +490,7 @@
 ;;; @category image, shapes, rectangle, solid-rectangle
 (define-export outlined-rectangle (js-var "image_outlinedRectangle"))
 
-;;; (solid-circle radius color) -> image?
+;;; (solid-circle radius color) -> drawing?
 ;;;  radius : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -498,7 +498,7 @@
 ;;; @category image, shapes, circle, outlined-circle
 (define-export solid-circle (js-var "image_solidCircle"))
 
-;;; (outlined-circle radius color) -> image?
+;;; (outlined-circle radius color) -> drawing?
 ;;;  radius : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -506,7 +506,7 @@
 ;;; @category image, shapes, circle, solid-circle
 (define-export outlined-circle (js-var "image_outlinedCircle"))
 
-;;; (solid-ellipse width height color) -> image?
+;;; (solid-ellipse width height color) -> drawing?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  color : color?
@@ -514,7 +514,7 @@
 ;;; @category image, shapes, ellipse, outlined-ellipse
 (define-export solid-ellipse (js-var "image_solidEllipse"))
 
-;;; (outlined-ellipse width height color) -> image?
+;;; (outlined-ellipse width height color) -> drawing?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  color : color?
@@ -522,7 +522,7 @@
 ;;; @category image, shapes, ellipse, solid-ellipse
 (define-export outlined-ellipse (js-var "image_outlinedEllipse"))
 
-;;; (solid-triangle length color) -> image?
+;;; (solid-triangle length color) -> drawing?
 ;;;  length : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -530,7 +530,7 @@
 ;;; @category image, shapes, triangle, outlined-triangle
 (define-export solid-triangle (js-var "image_solidTriangle"))
 
-;;; (outlined-triangle length color) -> image?
+;;; (outlined-triangle length color) -> drawing?
 ;;;  length : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
@@ -538,7 +538,7 @@
 ;;; @category image, shapes, triangle, solid-triangle
 (define-export outlined-triangle (js-var "image_outlinedTriangle"))
 
-;;; (solid-isosceles-triangle width height color) -> image?
+;;; (solid-isosceles-triangle width height color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
@@ -547,7 +547,7 @@
 ;;; @category image, shapes, isosceles-triangle, outlined-isosceles-triangle
 (define-export solid-isosceles-triangle (js-var "image_solidIsoscelesTriangle"))
 
-;;; (outlined-isosceles-triangle width height color) -> image?
+;;; (outlined-isosceles-triangle width height color) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
@@ -556,42 +556,42 @@
 ;;; @category image, shapes, isosceles-triangle, solid-isosceles-triangle
 (define-export outlined-isosceles-triangle (js-var "image_outlinedIsoscelesTriangle"))
 
-;;; (image-width img) -> number?
-;;;  img : image?
-;;; Returns the width of the image.
-;;; @category image, image-height
-(define-export image-width (js-var "image_imageWidth"))
+;;; (drawing-width drawing) -> number?
+;;;  drawing : drawing?
+;;; Returns the width of the drawing.
+;;; @category image, drawing-height
+(define-export drawing-width (js-var "image_imageWidth"))
 
-;;; (image-height img) -> number?
-;;;  img : image?
-;;; Returns the height of the image.
-;;; @category image, image-width
-(define-export image-height (js-var "image_imageHeight"))
+;;; (drawing-height drawing) -> number?
+;;;  drawing : drawing?
+;;; Returns the height of the drawing.
+;;; @category image, drawing-width
+(define-export drawing-height (js-var "image_imageHeight"))
 
-;;; (image-color img) -> rgb?
-;;;  img : image?
-;;; Returns the color of the image. For a composite image, this is the average of its parts' colors.
-;;; @category image, image-recolor
-(define-export image-color (js-var "image_imageColor"))
+;;; (drawing-color drawing) -> rgb?
+;;;  drawing : drawing?
+;;; Returns the color of the drawing. For a composite drawing, this is the average of its parts' colors.
+;;; @category image, drawing-recolor
+(define-export drawing-color (js-var "image_imageColor"))
 
-;;; (image-recolor img color) -> image?
-;;;  img : image?
+;;; (drawing-recolor drawing color) -> drawing?
+;;;  drawing : drawing?
 ;;;  color : color?
-;;; Returns a new image with the same dimensions as `img` but with the color `color`.
-;;; @category image, image-color
-(define-export image-recolor (js-var "image_imageRecolor"))
+;;; Returns a new drawing with the same dimensions as `drawing` but with the color `color`.
+;;; @category image, drawing-color
+(define-export drawing-recolor (js-var "image_imageRecolor"))
 
 ;;; (drawing->pixels d) -> vector?
-;;;  d : image?
+;;;  d : drawing?
 ;;; Returns a vector of rgb values corresponding to the pixels of the given drawing.
-;;; @category image, pixel, drawing->image
+;;; @category image, pixel, drawing->canvas
 (define-export drawing->pixels (js-var "image_drawingToPixels"))
 
-;;; (drawing->image drawing) -> image?
-;;;  drawing : image?
-;;; Returns a new image/canvas created from the provided drawing.
+;;; (drawing->canvas drawing) -> canvas?
+;;;  drawing : drawing?
+;;; Renders `drawing` onto a new canvas and returns it.
 ;;; @category image, pixel, drawing->pixels
-(define-export drawing->image (js-var "image_drawingToImage"))
+(define-export drawing->canvas (js-var "image_drawingToImage"))
 
 ;;; (with-image-file callback) -> html?
 ;;;  callback : procedure?
@@ -608,56 +608,60 @@
   (lambda (url callback)
     (callback ((js-var "image_blockOnFetchImage") url))))
 
-;;; (pixel-map fn img) -> canvas?
+;;; (pixel-map fn canvas) -> canvas?
 ;;;  fn : procedure?
-;;;  img : canvas?
-;;; Returns a new canvas that is the result of applying `fn` to each pixel (represented as a rgb value) of the original `img`.
-;;; @category image, pixel, image-get-pixel, image->pixels, pixels->image, canvas-set-pixels!
+;;;  canvas : canvas?
+;;; Returns a new canvas that is the result of applying `fn` to each pixel (an rgb value) of `canvas`. `canvas` itself is unchanged.
+;;; @category image, pixel, canvas-get-pixel, canvas->pixels, pixels->canvas, canvas-set-pixels!
 (define-export pixel-map
   (lambda (fn img)
-    (pixels->image (vector-map fn (image->pixels img))
+    (pixels->canvas (vector-map fn (canvas->pixels img))
                    (canvas-width img)
                    (canvas-height img))))
 
-;;; (image-get-pixel img x y) -> rgb?
-;;;  img : image?
+;;; (canvas-get-pixel img x y) -> rgb?
+;;;  img : drawing?
 ;;;  x : integer?
 ;;;  y : integer?
-;;; Returns the rgb value of the pixel at position `(x, y)` in the image.
-;;; @category color, image, pixel, rgb, pixel-map, image->pixels, pixels->image, canvas-set-pixels! 
-(define-export image-get-pixel (js-var "image_imageGetPixel"))
+;;; Returns the rgb value of the pixel at position `(x, y)` of `canvas`.
+;;; @category color, image, pixel, rgb, pixel-map, canvas->pixels, pixels->canvas, canvas-set-pixels! 
+(define-export canvas-get-pixel (js-var "image_imageGetPixel"))
 
-;;; (image->pixels img) -> canvas?
-;;;  img : canvas?
-;;; Returns a vector of `rgb` values corresponding to the pixels of the given canvas.
-;;; @category image, pixel-map, image-get-pixel, pixels->image, canvas-set-pixels! 
-(define-export image->pixels (js-var "image_imageToPixels"))
+;;; (pixels? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a vector of `rgb` values, the representation `canvas->pixels` produces and `pixels->canvas` consumes.
+;;; @category image, pixel, typecheck, predicates, canvas->pixels, pixels->canvas
+(define-export pixels? (js-var "image_pixelsQ"))
 
-;;; (pixels->image pixels width height) -> canvas?
-;;;  pixels : any
-;;;   vector? of rgb values
+;;; (canvas->pixels canvas) -> pixels?
+;;;  canvas : canvas?
+;;; Returns the pixels of `canvas` as a vector of `rgb` values, read left-to-right and top-to-bottom. The result is a snapshot: changing it does not change `canvas`. Use `canvas-set-pixels!` to write pixels back.
+;;; @category image, pixel-map, canvas-get-pixel, pixels->canvas, canvas-set-pixels! 
+(define-export canvas->pixels (js-var "image_imageToPixels"))
+
+;;; (pixels->canvas pixels width height) -> canvas?
+;;;  pixels : pixels?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;; Returns a new canvas with the given `pixels` and dimensions `width × height`.
-;;; @category image, pixel, pixel-map, image-get-pixel, image->pixels, canvas-set-pixels! 
-(define-export pixels->image (js-var "image_pixelsToImage"))
+;;; @category image, pixel, pixel-map, canvas-get-pixel, canvas->pixels, canvas-set-pixels! 
+(define-export pixels->canvas (js-var "image_pixelsToImage"))
 
 ;;; (canvas-set-pixels! canvas pixels) -> void?
 ;;;  canvas : canvas?
-;;;  pixels : any
-;;;   vector? of rgb values
-;;; Sets the pixels of the given `canvas` to the given `pixels`.
-;;; @category canvas, image, mutation, pixel, predicates, pixel-map, image-get-pixel, image->pixels, pixels->image
+;;;  pixels : pixels?
+;;; Sets the pixels of `canvas` to `pixels`, mutating it in place.
+;;; @category canvas, image, mutation, pixel, predicates, pixel-map, canvas-get-pixel, canvas->pixels, pixels->canvas
 (define-export canvas-set-pixels! (js-var "image_canvasSetPixels"))
 
 ;;; (canvas-width canvas) -> integer?
 ;;;  canvas : canvas?
 ;;; Returns the width of the canvas in pixels.
 ;;; @category canvas, image
-(define-export canvas-width (js-var "image_imageWidth"))
+(define-export canvas-width (js-var "canvas_canvasWidth"))
 
 ;;; (canvas-height canvas) -> integer?
 ;;;  canvas : canvas?
 ;;; Returns the height of the canvas in pixels.
 ;;; @category canvas, image
-(define-export canvas-height (js-var "image_imageHeight"))
+(define-export canvas-height (js-var "canvas_canvasHeight"))

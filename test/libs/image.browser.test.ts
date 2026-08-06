@@ -304,7 +304,7 @@ describe('drawing->pixels', () => {
 // N.B., pixel-map is now defined in Scheme (image.scm) on top of image->pixels,
 // vector-map, and pixels->image, so it is exercised end-to-end via runProgram in
 // image.test.ts rather than by a direct JS call here. The underlying pixel
-// round-trip (image->pixels / pixels->image / image-get-pixel) is covered below.
+// round-trip (canvas->pixels / pixels->image / image-get-pixel) is covered below.
 
 describe('pixels->image, image-get-pixel, image->pixels, canvas-set-pixels!', () => {
   // distinct RGBA per cell, row-major: top-left, top-right, bottom-left, bottom-right

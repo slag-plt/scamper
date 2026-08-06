@@ -79,6 +79,15 @@ export function image_imageGetPixel(canvas: HTMLCanvasElement, x: number, y: num
   return image_rgb(data[0], data[1], data[2], data[3])
 }
 
+/**
+ * Pixels: a vector of rgb values, what canvas->pixels produces and
+ * pixels->canvas consumes. There is no distinct runtime type -- this is the
+ * contract the pixel operations were previously declared `any` for.
+ */
+export function image_pixelsQ(v: L.Value): boolean {
+  return L.isArray(v) && v.every((p) => L.isStructKind(p, 'rgba'))
+}
+
 export function image_imageToPixels(canvas: HTMLCanvasElement): L.Struct[] {
   const ctx = canvas.getContext('2d')!
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
