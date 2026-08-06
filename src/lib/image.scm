@@ -10,19 +10,6 @@
 ;;; @category html, typecheck, predicates, canvas?
 (define-export html? (js-var "html_isElement"))
 
-;;; (color r b g a) -> string?
-;;;  r : integer?
-;;;   0 <= r <= 255
-;;;  b : integer?
-;;;   0 <= b <= 255
-;;;  g : integer?
-;;;   0 <= g <= 255
-;;;  a : integer?
-;;;   0 <= a <= 1
-;;; Returns a string of the form `"rgba(r, g, b, a)"` appropriate for use as a color.
-;;; @category color, hsv, image, rgb, color-func, color?, find-colors, all-color-names
-(define-export color (js-var "image_color"))
-
 ;;; (color? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a valid color: a string containing a named color, an `rgb` value, or an `hsv` value.
@@ -319,7 +306,7 @@
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  fill : boolean?
-;;;  color : string?
+;;;  color : color?
 ;;; Returns a new drawing containing an ellipse with dimensions `width × height`.
 ;;; @category image, shapes, solid-ellipse, outlined-ellipse
 (define-export ellipse (js-var "image_ellipse"))
@@ -328,7 +315,7 @@
 ;;;  radius : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a circle of radius `radius`.
 ;;; @category image, shapes, solid-circle, outlined-circle
@@ -339,7 +326,7 @@
 ;;;  height : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a rectangle with dimensions `width × height`.
 ;;; @category image, shapes, solid-rectangle, outlined-rectangle
@@ -349,7 +336,7 @@
 ;;;  width : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a square with length `width`.
 ;;; @category image, shapes, solid-square, outlined-square
@@ -359,7 +346,7 @@
 ;;;  length : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a equilateral triangle with length `length`.
 ;;; @category image, shapes, solid-triangle, outlined-triangle
@@ -370,7 +357,7 @@
 ;;;  height : number?
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a isosceles triangle with base `base` and height `height`.
 ;;; @category image, shapes, solid-isosceles-triangle, outlined-isosceles-triangle
@@ -383,7 +370,7 @@
 ;;;   a list of points, pairs of numbers
 ;;;  fill : string?
 ;;;   either "solid" or "outline"
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing with dimensions `width × height` formed by connecting the points in `points` with straight lines. The points are specified as a `pair` of coordinates.
 ;;; @category image, path, with-dash
@@ -471,7 +458,7 @@
 
 ;;; (solid-square width color) -> image?
 ;;;  width : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid square with length `width`.
 ;;; @category image, shapes, square, outlined-square
@@ -479,7 +466,7 @@
 
 ;;; (outlined-square width color) -> image?
 ;;;  width : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outline square with length `width`.
 ;;; @category image, shapes, square, solid-square
@@ -488,7 +475,7 @@
 ;;; (solid-rectangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid rectangle with dimensions `width × height`.
 ;;; @category image, shapes, rectangle, outlined-rectangle
@@ -497,7 +484,7 @@
 ;;; (outlined-rectangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined rectangle with dimensions `width × height`.
 ;;; @category image, shapes, rectangle, solid-rectangle
@@ -505,7 +492,7 @@
 
 ;;; (solid-circle radius color) -> image?
 ;;;  radius : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid circle of radius `radius`.
 ;;; @category image, shapes, circle, outlined-circle
@@ -513,7 +500,7 @@
 
 ;;; (outlined-circle radius color) -> image?
 ;;;  radius : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined circle of radius `radius`.
 ;;; @category image, shapes, circle, solid-circle
@@ -522,7 +509,7 @@
 ;;; (solid-ellipse width height color) -> image?
 ;;;  width : integer?
 ;;;  height : integer?
-;;;  color : string?
+;;;  color : color?
 ;;; Returns a new drawing containing a solid ellipse with dimensions `width × height`.
 ;;; @category image, shapes, ellipse, outlined-ellipse
 (define-export solid-ellipse (js-var "image_solidEllipse"))
@@ -530,14 +517,14 @@
 ;;; (outlined-ellipse width height color) -> image?
 ;;;  width : integer?
 ;;;  height : integer?
-;;;  color : string?
+;;;  color : color?
 ;;; Returns a new drawing containing an outlined ellipse with dimensions `width × height`.
 ;;; @category image, shapes, ellipse, solid-ellipse
 (define-export outlined-ellipse (js-var "image_outlinedEllipse"))
 
 ;;; (solid-triangle length color) -> image?
 ;;;  length : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid equilateral triangle with length `length`.
 ;;; @category image, shapes, triangle, outlined-triangle
@@ -545,7 +532,7 @@
 
 ;;; (outlined-triangle length color) -> image?
 ;;;  length : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined equilateral triangle with length `length`.
 ;;; @category image, shapes, triangle, solid-triangle
@@ -554,7 +541,7 @@
 ;;; (solid-isosceles-triangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of a solid isosceles triangle with base `base` and height `height`.
 ;;; @category image, shapes, isosceles-triangle, outlined-isosceles-triangle
@@ -563,7 +550,7 @@
 ;;; (outlined-isosceles-triangle width height color) -> image?
 ;;;  width : number?
 ;;;  height : number?
-;;;  color : string?
+;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;; Returns a drawing consisting of an outlined isosceles triangle with base `base` and height `height`.
 ;;; @category image, shapes, isosceles-triangle, solid-isosceles-triangle
@@ -581,9 +568,9 @@
 ;;; @category image, image-width
 (define-export image-height (js-var "image_imageHeight"))
 
-;;; (image-color img) -> string?
+;;; (image-color img) -> rgb?
 ;;;  img : image?
-;;; Returns the color of the image.
+;;; Returns the color of the image. For a composite image, this is the average of its parts' colors.
 ;;; @category image, image-recolor
 (define-export image-color (js-var "image_imageColor"))
 

@@ -19,6 +19,14 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '3.6.0',
+    title: 'Colors everywhere',
+    notes: [
+      'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',
+      'The old `color` function has been removed. Use `rgb` instead: (rgb 255 0 0) in place of (color 255 0 0 255).',
+    ],
+  },
+  {
     version: '3.5.0',
     title: 'Editor upgrades',
     notes: [

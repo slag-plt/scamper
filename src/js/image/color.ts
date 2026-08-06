@@ -10,11 +10,11 @@ import colorsys from 'colorsys'
 
 /***** Generic Colors *********************************************************/
 
-// N.B., color is a legacy function from the htdp library. Currently, we standardize
-// on Rgb as the stored color type for shapes.
-export function image_color(r: number, g: number, b: number, a: number): Rgb {
-  return image_rgb(r, g, b, a)
-}
+// N.B., `color` -- a legacy constructor from the htdp library -- was retired in
+// #103. It was a pure alias for `rgb` whose documentation had never matched it:
+// it listed its parameters as `r b g a` (the implementation took r, g, b, a),
+// declared a `string?` return while returning an rgb, and capped alpha at 1.
+// Rgb remains the stored color type for shapes; use `rgb` to build one.
 
 /** Converts between various representations of color in Scamper. */
 export function image_colorToRgb (v: any): Rgb {

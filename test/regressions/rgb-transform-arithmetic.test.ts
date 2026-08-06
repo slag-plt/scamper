@@ -68,20 +68,40 @@ describe('rgb-thin lowers alpha by 32 clamped at 0 (#259)', () => {
   })
 })
 
-describe('rgb/color clamps components on both ends of [0, 255] (#259)', () => {
+describe('rgb clamps components on both ends of [0, 255] (#259)', () => {
   // Old code only clamped from above (Math.min(x, 255)); negatives passed
   // through into color math and CSS rendering.
-  test('a negative channel clamps to 0, not through', async () => {
+  //
+  // N.B., these used to call the `color` constructor with an out-of-range
+  // component. That worked only because `color` declared its parameters
+  // `integer?` while `rgb` declares them `rgb-component?` (0-255) -- so `color`
+  // was the lenient door to the same clamping code, not a pure alias for `rgb`
+  // as it looked. With `color` retired in #103, out-of-range components can
+  // only arise the way #259 actually described: from color *arithmetic*. That
+  // is what these now exercise, and it is the reachable path.
+  test('a channel driven below 0 clamps to 0, not through', async () => {
     expect(await runProgram(`
 (import image)
-(color -10 0 0 255)
+(rgb-subtract (rgb 10 0 0) (rgb 50 0 0))
 `)).toEqual(['(rgba 0 0 0 255)'])
   })
 
-  test('an above-range channel still clamps to 255 (upper boundary)', async () => {
+  test('a channel driven above 255 still clamps to 255 (upper boundary)', async () => {
     expect(await runProgram(`
 (import image)
-(color 300 0 0 255)
+(rgb-add (rgb 200 0 0) (rgb 100 0 0))
 `)).toEqual(['(rgba 255 0 0 255)'])
+  })
+
+  test('the constructor itself rejects an out-of-range component', async () => {
+    // The other half of the guarantee: nothing out of range gets *in* by hand.
+    expect(await runProgram(`
+(import image)
+(rgb -10 0 0 255)
+(rgb 300 0 0 255)
+`, { stripRanges: true })).toEqual([
+      'Runtime error: (error) expected a rgb-component, received number',
+      'Runtime error: (error) expected a rgb-component, received number',
+    ])
   })
 })
