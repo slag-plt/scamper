@@ -396,7 +396,24 @@ async function resolveImport(
   // OPFS implementation into this module's (widely-imported) graph and disturb
   // tests that mock the file system (see symbol-db.ts).
   const { getFS } = await import('../fs')
-  if (!(await getFS().fileExists(s.module))) {
+  let exists: boolean
+  try {
+    exists = await getFS().fileExists(s.module)
+  } catch (e) {
+    // The host can refuse a name outright -- notably one that reaches outside
+    // the working directory (#340). Report its complaint as a diagnostic rather
+    // than letting it abort the whole check.
+    diagnostics.push(
+      mkDiagnostic(
+        'Scope',
+        'warning',
+        e instanceof Error ? e.message : String(e),
+        s.range,
+      ),
+    )
+    return undefined
+  }
+  if (!exists) {
     diagnostics.push(
       mkDiagnostic('Scope', 'warning', `File '${s.module}' does not exist`, s.range),
     )

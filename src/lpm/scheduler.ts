@@ -196,13 +196,27 @@ export class Scheduler {
       return false
     }
     if (stepResult.tag === 'import-file') {
-      // TODO: this branch (and the getFS()/fileExists() call in particular)
-      //  isn't wrapped in a try/catch. If it throws or rejects for any reason
-      //  (e.g. the FS singleton isn't initialized, or a real I/O error), the
-      //  exception escapes execute() uncaught, which kills the scheduler loop
-      //  entirely and silently stops stepping every other running task, not
-      //  just this one. Should report the failure to task.err instead.
-      if (!(await getFS().fileExists(stepResult.filename))) {
+      // The existence probe can fail outright -- the FS singleton may be
+      // uninitialized, or the host may refuse the name (one that reaches
+      // outside the working directory, say -- see #340). Report that to the
+      // task's error channel: letting it escape execute() would kill the
+      // scheduler loop and silently stop stepping every other running task.
+      let exists: boolean
+      try {
+        exists = await getFS().fileExists(stepResult.filename)
+      } catch (e) {
+        task.err.report(
+          e instanceof ScamperError
+            ? e
+            : new ScamperError(
+                'Runtime',
+                `Attempted to import file "${stepResult.filename}" but it could not be read!`,
+              ),
+        )
+        this.endCurrFiber()
+        return true
+      }
+      if (!exists) {
         task.err.report(
           new ScamperError(
             'Runtime',
