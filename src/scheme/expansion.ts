@@ -16,10 +16,6 @@ function collectAndNormalizePercent(
   const rec = (x: A.Exp) => collectAndNormalizePercent(x, acc)
   switch (e.tag) {
     case 'lit':
-    case 'quote':
-      // Inert data: a `%` inside a vector or quote literal is a plain symbol,
-      // not a parameter reference, so it is left untouched (and does not count
-      // toward the arity).
       return e
     case 'id': {
       if (e.name === '%&') {
@@ -57,7 +53,8 @@ function collectAndNormalizePercent(
         e.range,
       )
     default:
-      // and/or/begin/cond/anonfn are removed by expandExpr before we get here.
+      // and/or/begin/cond/anonfn/vec/obj are removed by expandExpr before we
+      // get here.
       throw new ICE('collectAndNormalizePercent', `Unexpected form: ${e.tag}`)
   }
 }
@@ -92,8 +89,6 @@ export function expandExpr(e: A.Exp): A.Exp {
         e.branches.map((b) => ({ pat: b.pat, body: expandExpr(b.body) })),
         e.range,
       )
-    case 'quote':
-      return e
     // Derived forms
 
     case 'begin': {
@@ -188,6 +183,33 @@ export function expandExpr(e: A.Exp): A.Exp {
       const restParam = acc.hasRest ? A.mkId('%&', e.range) : undefined
       return A.mkLam(params, body, e.range, restParam, 'anon-fn')
     }
+    case 'vec':
+      // [e1 ... ek]
+      // -->
+      // (##mkVec## e1 ... ek)
+      // ##mkVec## is a runtime primitive (src/js/runtime), *not* the prelude's
+      // `vector`: a literal's meaning must not depend on whether the user
+      // happens to have bound the name `vector`. Tagged `vector-lit` so
+      // sugaring recovers the bracket form exactly.
+      return A.mkApp(
+        A.mkId('##mkVec##', e.range),
+        e.exps.map(expandExpr),
+        e.range,
+        'vector-lit',
+      )
+    case 'obj':
+      // {k1 v1 ... kn vn}
+      // -->
+      // (##mkObj## k1 v1 ... kn vn)
+      // ##mkObj## likewise pairs its arguments up into a Javascript object; it
+      // raises if a key is not a string. Tagged `obj-lit` so sugaring recovers
+      // the brace form.
+      return A.mkApp(
+        A.mkId('##mkObj##', e.range),
+        e.pairs.flatMap(({ key, value }) => [expandExpr(key), expandExpr(value)]),
+        e.range,
+        'obj-lit',
+      )
   }
 }
 

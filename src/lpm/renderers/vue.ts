@@ -6,9 +6,10 @@ import ListRenderer from './vue/components/ListRenderer.vue'
 import PairRenderer from './vue/components/PairRenderer.vue'
 import { simpleRenderers } from './vue/simple-renderers'
 import StructRenderer from './vue/components/StructRenderer.vue'
+import ObjRenderer from './vue/components/ObjRenderer.vue'
 import DOMElementRenderer from './vue/components/DOMElementRenderer.vue'
 import { Value } from '../lang'
-import { isArray, isList, isPair, isStruct } from '../util'
+import { isArray, isList, isObj, isPair, isStruct } from '../util'
 
 export interface VueStrategyProps {
   type: 'vue'
@@ -81,6 +82,14 @@ const errorStrategy: VueStrategy = {
   type: 'vue',
   renderer: createTextRenderer<Error>((v) => v.toString()),
 }
+// A map value. Deliberately checked *after* the custom renderers, alongside the
+// struct fallback: a library that registers a renderer for its own plain-object
+// value still wins over the generic map rendering.
+const objStrategy: VueStrategy = {
+  predicate: (v) => isObj(v),
+  type: 'vue',
+  renderer: ObjRenderer,
+}
 
 class _VueRenderer extends Renderer<Component> {
   getStrategy(value: Value): Strategy | undefined {
@@ -105,6 +114,9 @@ class _VueRenderer extends Renderer<Component> {
     }
     if (errorStrategy.predicate(value)) {
       return errorStrategy.renderer
+    }
+    if (objStrategy.predicate(value)) {
+      return objStrategy.renderer
     }
     console.warn('no renderer for', value)
     return FallbackRenderer

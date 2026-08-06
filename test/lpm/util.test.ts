@@ -82,19 +82,20 @@ describe('equals', () => {
   })
 
   test('symbols compare by identity, not by value', () => {
-    // NOTE: `equals` has no symbol branch, so two distinct sym objects with the
-    // same value are unequal here -- only reference-identical symbols match.
-    // At the source level 'x always refers to the same interned symbol
-    // (SymbolDB), so (equal? 'x 'x) still holds; this only bites raw mkSym
-    // values. Flagged as a corner to revisit in the LPM unification.
-    const s = U.mkSym('x')
-    expect(U.equals(s, s)).toBe(true)
-    expect(U.equals(U.mkSym('x'), U.mkSym('x'))).toBe(false)
+    // A map (plain object) compares structurally: same keys bound to equal
+    // values, regardless of key order.
+    expect(U.equals({ a: 1 }, { a: 1 })).toBe(true)
+    expect(U.equals({ a: 1, b: 2 }, { b: 2, a: 1 })).toBe(true)
+    expect(U.equals({ a: 1 }, { a: 2 })).toBe(false)
+    expect(U.equals({ a: 1 }, { a: 1, b: 2 })).toBe(false)
+    expect(U.equals({ a: [1, 2] }, { a: [1, 2] })).toBe(true)
   })
 
   test('falls through to false when comparing two completely different value kinds', () => {
     const s = U.mkStruct('point', ['x', 'y'], [1, 2])
-    expect(U.equals(s, U.mkSym('point'))).toBe(false)
+    expect(U.equals(s, 'point')).toBe(false)
+    // A struct is a tagged object, so it is never equal to a plain map.
+    expect(U.equals(s, { x: 1, y: 2 })).toBe(false)
   })
 })
 
@@ -117,11 +118,10 @@ describe('typeOf', () => {
       '[Function: add-one]',
     ],
     ['char', U.mkChar('a'), 'char'],
-    ['symbol', U.mkSym('x'), 'symbol'],
+    ['map', { a: 1 }, 'object'],
     ['pair', U.mkPair(1, 2), 'pair'],
     ['list', U.mkList(1, 2), 'list'],
     ['struct', U.mkStruct('point', ['x', 'y'], [1, 2]), '[Struct: point]'],
-    ['generic fallback default case', { foo: 1 }, 'object'],
   ]
 
   test.for(cases)('%s', ([, v, expected]) => {
@@ -141,7 +141,8 @@ describe('toString', () => {
     ['string', 'hi', '"hi"'],
     ['void', undefined, 'void'],
     ['null', null, 'null'],
-    ['symbol', U.mkSym('x'), 'x'],
+    ['empty map', {}, '{}'],
+    ['map', { a: 1, b: 'hi' }, '{ "a" : 1, "b" : "hi" }'],
     ['empty vector', [], '(vector)'],
     ['vector', [1, 2], '(vector 1 2)'],
     [
@@ -177,7 +178,11 @@ describe('toString', () => {
   })
 
   test('falls back to a Blob representation for an unrecognized value', () => {
-    const v = { foo: 1 }
+    // A plain object is a map, so the fallback needs something that is neither
+    // a map nor any other known kind -- here, a class instance.
+    const v = new (class {
+      foo = 1
+    })()
     expect(U.toString(v)).toBe(`[Blob: ${JSON.stringify(v)}]`)
   })
 })

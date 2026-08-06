@@ -68,7 +68,7 @@ describe('color', () => {
 (rgb? (hsv 1 2 3))
 (rgb? "red")
 (rgb? 5)
-(rgb? '())
+(rgb? null)
 `),
     ).toEqual(['#t', '#f', '#f', '#f', '#f'])
   })
@@ -138,11 +138,11 @@ describe('color', () => {
       await runProgram(`
 (import image)
 (rgb-blue (rgb 10 20 30))
-(rgb-blue 'x)
+(rgb-blue "x")
 `),
     ).toEqual([
       '30',
-      'Runtime error: (error) expected a rgb, received symbol',
+      'Runtime error: (error) expected a rgb, received string',
     ])
   })
 
@@ -152,7 +152,7 @@ describe('color', () => {
 (import image)
 (rgb-alpha (rgb 10 20 30 128))
 (rgb-alpha (rgb 10 20 30))
-(rgb-alpha '())
+(rgb-alpha null)
 `),
     ).toEqual([
       '128',
@@ -167,7 +167,7 @@ describe('color', () => {
 (import image)
 (rgb-distance (rgb 0 0 0) (rgb 255 255 255))
 (rgb-distance (rgb 10 20 30) (rgb 10 20 30))
-(rgb-distance (rgb 0 0 0) '())
+(rgb-distance (rgb 0 0 0) null)
 `),
     ).toEqual([
       '441.6729559300637',
@@ -290,7 +290,7 @@ describe('color', () => {
       await runProgram(`
 (import image)
 (hsv 1 2)
-(hsv 'a 0 0)
+(hsv "a" 0 0)
 (hsv -1 0 0)
 (hsv 361 0 0)
 (hsv 0 101 0)
@@ -299,7 +299,7 @@ describe('color', () => {
 `),
     ).toEqual([
       'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
-      'Runtime error: (error) expected a number, received symbol',
+      'Runtime error: (error) expected a number, received string',
       'Runtime error: (hsv) hsv: expects hue to be in the an angle (0–360), but got -1',
       'Runtime error: (hsv) hsv: expects hue to be in the an angle (0–360), but got 361',
       'Runtime error: (hsv) hsv: expects saturation to be a percentage (0–100), but got 101',

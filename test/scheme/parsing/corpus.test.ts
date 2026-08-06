@@ -58,15 +58,15 @@ describe('lezer-bridge parsing of realistic multi-statement programs', () => {
     )
   })
 
-  test('quoted data and vector literals mixed into a larger program', () => {
+  test('vector and map literals mixed into a larger program', () => {
     expectParses(
       [
-        "(define shopping-list '(eggs milk bread))",
+        '(define shopping-list (list "eggs" "milk" "bread"))',
         '(define matrix [[1 2] [3 4]])',
-        "(define tagged (list 'point [1 2] \"label\" #\\!))",
+        '(define entry {"name" "point" "at" [1 2] "label" #\\!})',
         '(display shopping-list)',
         '(display matrix)',
-        '(display tagged)',
+        '(display entry)',
       ].join('\n'),
     )
   })

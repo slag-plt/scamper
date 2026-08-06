@@ -26,8 +26,8 @@ const FORM_LABELS: Record<string, string> = {
   Or: 'or',
   Begin: 'begin',
   AnonFn: 'anonymous function',
-  Quote: 'quote',
   Vector: 'vector',
+  Obj: 'map literal',
   Application: 'application',
   // Patterns
   PApp: 'pattern',

@@ -67,7 +67,8 @@ function scopeCheckPat(
     case 'plit':
       return
 
-    case 'pctor': {
+    case 'pctor':
+    case 'pvec': {
       p.args.forEach((p) => {
         scopeCheckPat(diagnostics, locals, p)
       })
@@ -197,10 +198,6 @@ function scopeCheckExp(
         scopeCheckPat(diagnostics, bindingVars, b.pat)
         scopeCheckExp(diagnostics, globals, qualified, [...locals, ...bindingVars], b.body)
       })
-      return
-    }
-    case 'quote': {
-      // N.B., no need to scope check a "frozen" AST
       return
     }
     default:

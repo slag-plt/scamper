@@ -1,11 +1,10 @@
-import { Char, Closure, Sym } from '../../lang'
+import { Char, Closure } from '../../lang'
 import {
   charToName,
   escapeStringLiteral,
   isChar,
   isClosure,
   isJsFunction,
-  isSym,
 } from '../../util'
 import { createTextRenderer, Strategy, VueStrategyProps } from '../vue'
 
@@ -42,10 +41,6 @@ const nullStrategy: Strategy = {
   // CLI). The web renderer previously diverged, showing `()`.
   ...createSimpleVueRenderer<null>(() => 'null'),
 }
-const symbolStrategy: Strategy = {
-  predicate: (v) => isSym(v),
-  ...createSimpleVueRenderer<Sym>((v) => v.value),
-}
 const closureStrategy: Strategy = {
   predicate: (v) => isClosure(v),
   ...createSimpleVueRenderer<Closure>((v) => {
@@ -73,7 +68,6 @@ export const simpleRenderers: Strategy[] = [
   stringStrategy,
   undefinedStrategy,
   nullStrategy,
-  symbolStrategy,
   closureStrategy,
   jsFunctionStrategy,
   charStrategy,

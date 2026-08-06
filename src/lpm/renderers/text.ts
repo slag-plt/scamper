@@ -17,8 +17,6 @@ class Renderer extends R.Renderer<string> {
         default:
           if (v === null) {
             return 'null'
-          } else if (U.isSym(v)) {
-            return v.value
           } else if (U.isArray(v)) {
             return v.length === 0 ? '(vector)' :
               `(vector ${v.map((v) => this.render(v)).join(' ')})`
@@ -47,6 +45,8 @@ class Renderer extends R.Renderer<string> {
             return v.toString()
           } else if (v instanceof Error) {
             return v.toString()
+          } else if (U.isObj(v)) {
+            return U.objToString(v, (x) => this.render(x))
           } else {
             return `[Blob: ${JSON.stringify(v)}]`
           }

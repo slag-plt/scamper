@@ -93,7 +93,6 @@ function slotsOf(exp: A.Exp): Slot[] {
   switch (exp.tag) {
     case 'lit':
     case 'id':
-    case 'quote':
       return []
 
     case 'app':
@@ -224,6 +223,38 @@ function slotsOf(exp: A.Exp): Slot[] {
             ),
         })),
       ]
+
+    case 'vec':
+      return exp.exps.map((e, i) => ({
+        exp: e,
+        rebuild: (r: A.Exp) =>
+          A.mkVec(
+            exp.exps.map((x, j) => (j === i ? r : x)),
+            exp.range,
+          ),
+      }))
+
+    case 'obj':
+      return exp.pairs.flatMap((p, i) => [
+        {
+          exp: p.key,
+          rebuild: (r: A.Exp) =>
+            A.mkObj(
+              exp.pairs.map((x, j) =>
+                j === i ? { key: r, value: x.value } : x,
+              ),
+              exp.range,
+            ),
+        },
+        {
+          exp: p.value,
+          rebuild: (r: A.Exp) =>
+            A.mkObj(
+              exp.pairs.map((x, j) => (j === i ? { key: x.key, value: r } : x)),
+              exp.range,
+            ),
+        },
+      ])
   }
 }
 

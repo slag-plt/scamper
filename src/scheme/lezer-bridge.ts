@@ -14,6 +14,7 @@ import {
   parseStringLiteral,
 } from './literals.js'
 import { reservedWords } from './reserved-words.js'
+import { pairs } from './util.js'
 
 ///// Source position bookkeeping ////////////////////////////////////////////////
 
@@ -89,18 +90,6 @@ function children(node: SyntaxNode): SyntaxNode[] {
   return result
 }
 
-// Splits a flat, even-length list into adjacent pairs: [a, b, c, d] ->
-// [[a, b], [c, d]]. Used for the several grammar productions that flatten a
-// list of pairs into their parent's children (let bindings, cond
-// branches, match branches) rather than wrapping each pair in its own node.
-function pairs<T>(items: T[]): [T, T][] {
-  const result: [T, T][] = []
-  for (let i = 0; i < items.length; i += 2) {
-    result.push([items[i], items[i + 1]])
-  }
-  return result
-}
-
 ///// Error recovery ///////////////////////////////////////////////////////////
 
 // Lezer always produces a tree, marking unparseable spans with an anonymous
@@ -128,8 +117,8 @@ const formDescriptions: Record<string, string> = {
   Begin: 'begin expression (at least one sub-expression)',
   AnonFn: 'anonymous function #(...)',
   Application: 'function application',
-  Quote: 'quoted expression',
   Vector: 'vector literal',
+  Obj: 'map literal (an even number of key/value expressions)',
   PApp: 'constructor pattern',
   PVector: 'vector pattern',
   Import: 'import statement (a built-in library name, or a quoted file name)',
@@ -190,8 +179,6 @@ function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
       return text === '#t'
     case 'Char':
       return parseCharLiteral(text, ctx.range(node))
-    case 'Identifier':
-      return text === 'null' ? null : L.mkSym(text)
     default:
       throw new L.ICE(
         'lezer-bridge.leafValue',
@@ -200,74 +187,9 @@ function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
   }
 }
 
-// Quote payloads and vector literals are inert data, not sub-expressions to
-// evaluate (e.g., (quote (lambda (x) x)) is a 3-element list, not a real
-// lambda) -- so this walks the tree directly into a raw L.Value rather than
-// through expFromNode, which would (incorrectly) treat e.g. a nested Lambda
-// node as a real closure to construct. The result is fully raw, recursively:
-// no element of quoted/vector data is ever wrapped in metadata (no source
-// range, no Syntax struct) -- this dialect has no true quotation (no
-// quasiquote/unquote, no macros), so nothing downstream has any legitimate
-// reason to inspect a quoted element's provenance. (An earlier version of
-// this function wrapped nested elements in a Syntax struct to match the old
-// reader.ts/parser.ts pipeline's actual behavior, but that turned out to be
-// a real bug, not a deliberate design: nothing in the runtime knows how to
-// unwrap a Syntax struct, so e.g. (car '(1 2 3)), (+ (car '(1 2 3)) 1), and
-// (equal? '(1 2 3) '(1 2 3)) were all broken.)
-//
-// N.B., checks for errors at every level of its own recursion (unlike
-// expFromNode/patFromNode's check, which only re-runs because they recurse
-// into each other -- nodeToRawValue recurses into itself directly, so it
-// needs its own check or a syntax error nested inside quoted/vector data
-// would silently produce a corrupted value instead of a reported error).
-function nodeToRawValue(ctx: Ctx, node: SyntaxNode): L.Value {
-  const cs = children(node)
-  if (node.type.isError || cs.some((c) => c.type.isError)) {
-    reportSyntaxError(ctx, node)
-    return undefined
-  }
-  switch (node.type.name) {
-    case 'Number':
-    case 'String':
-    case 'Boolean':
-    case 'Char':
-      return leafValue(ctx, node)
-
-    case 'Identifier': {
-      const text = ctx.text(node)
-      return text === 'null' ? null : L.mkSym(text)
-    }
-
-    case 'Vector':
-    case 'PVector':
-      return cs.map((c) => nodeToRawValue(ctx, c))
-
-    case 'Quote': {
-      const inner = cs.length === 2 ? cs[1] : cs[0]
-      return L.mkList(L.mkSym('quote'), nodeToRawValue(ctx, inner))
-    }
-
-    case 'AnonFn':
-      // As raw data, `#(body)` is just its parenthesized body. cs[0] is the "#"
-      // marker (carrying no data); cs[1] is the body form.
-      return nodeToRawValue(ctx, cs[1])
-
-    default:
-      // A keyword token (e.g. the "lambda" in a Lambda node) is a leaf
-      // whose node type name is exactly the keyword text, thanks to the
-      // grammar's kw<> specialization -- reduce it to the equivalent
-      // symbol, matching what reader.ts's reading would have produced
-      // before any special-form recognition ever happened.
-      if (reservedWords.includes(node.type.name)) {
-        return L.mkSym(node.type.name)
-      }
-      // Any other compound node (Lambda, If, Let, Application, PApp, ...)
-      // is just a plain list of its children when treated as raw,
-      // unevaluated data -- there's no such thing as a "special form" at
-      // this level; (lambda (x) x), quoted, is just a 3-element list.
-      return L.mkList(...cs.map((c) => nodeToRawValue(ctx, c)))
-  }
-}
+/** `null` is spelled as an identifier, but denotes the empty-list value. */
+const isNullLiteral = (ctx: Ctx, node: SyntaxNode): boolean =>
+  node.type.name === 'Identifier' && ctx.text(node) === 'null'
 
 // The special identifiers of the anonymous-function form `#(...)`: `%` (the
 // first parameter), `%1`, `%2`, ... (the k-th parameter), and `%&` (the rest
@@ -435,9 +357,8 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
       return A.mkPLit(leafValue(ctx, node), range)
 
     case 'Identifier': {
-      const v = leafValue(ctx, node)
-      if (!L.isSym(v)) {
-        return A.mkPLit(v, range)
+      if (isNullLiteral(ctx, node)) {
+        return A.mkPLit(null, range)
       }
       const id = identifier(ctx, node, 'Expected a valid constructor name')
       return id.name === '_' ? A.mkPWild(range) : id
@@ -457,7 +378,13 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
     }
 
     case 'PVector':
-      return A.mkPLit(nodeToRawValue(ctx, node), range)
+      // `[p1 ... pk]`: a vector pattern, whose elements are ordinary
+      // sub-patterns -- so `[1 x]` binds `x` rather than matching a literal
+      // vector containing the symbol `x` (issue #325).
+      return A.mkPVec(
+        cs.map((c) => patFromNode(ctx, c)),
+        range,
+      )
 
     default:
       throw new L.ICE(
@@ -484,22 +411,45 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return A.mkLit(leafValue(ctx, node), range)
 
     case 'Identifier': {
-      const v = leafValue(ctx, node)
-      if (!L.isSym(v)) {
-        return A.mkLit(v, range)
+      if (isNullLiteral(ctx, node)) {
+        return A.mkLit(null, range)
       }
       // A variable reference: the only position where a `%` identifier (a
       // #(...) parameter) or a qualified name (`mod.member`) is permitted.
       return identifier(ctx, node, 'Expected an identifier', true, true)
     }
 
-    case 'Quote': {
-      const inner = cs.length === 2 ? cs[1] : cs[0]
-      return A.mkQuote(nodeToRawValue(ctx, inner), range)
-    }
-
     case 'Vector':
-      return A.mkLit(nodeToRawValue(ctx, node), range)
+      // `[e1 ... ek]`: every element is an ordinary sub-expression, evaluated
+      // like any other (issue #325).
+      return A.mkVec(
+        cs.map((c) => expFromNode(ctx, c)),
+        range,
+      )
+
+    case 'Obj': {
+      // `{k1 v1 ... kn vn}`: alternating keys and values, so an odd number of
+      // elements leaves a key with no value. The grammar cannot count, so the
+      // check lives here.
+      if (cs.length % 2 !== 0) {
+        ctx.diagnostics.push(
+          mkDiagnostic(
+            'Parse',
+            'error',
+            `A map literal must have an even number of expressions (alternating keys and values), but this one has ${cs.length.toString()}`,
+            range,
+          ),
+        )
+        return A.mkLit(undefined, range)
+      }
+      return A.mkObj(
+        pairs(cs.map((c) => expFromNode(ctx, c))).map(([key, value]) => ({
+          key,
+          value,
+        })),
+        range,
+      )
+    }
 
     case 'Lambda': {
       const rest = cs.slice(1)

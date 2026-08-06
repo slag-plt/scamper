@@ -98,10 +98,15 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
       return node.branches.flatMap((b) => [b.test, b.body])
     case 'pctor':
       return [node.name, ...node.args]
+    case 'pvec':
+      return node.args
+    case 'vec':
+      return node.exps
+    case 'obj':
+      return node.pairs.flatMap((p) => [p.key, p.value])
     case 'import':
     case 'lit':
     case 'id':
-    case 'quote':
     case 'pwild':
     case 'plit':
       return []

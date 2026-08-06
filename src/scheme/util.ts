@@ -40,6 +40,20 @@ export function hasTag<Sym extends symbol>(
   return isTagged(val) && val[IS_TAGGED] === sym
 }
 
+/**
+ * Splits a flat, even-length list into adjacent pairs: `[a, b, c, d]` ->
+ * `[[a, b], [c, d]]`. Used for the forms that flatten a list of pairs into a
+ * single sequence: let bindings, cond/match branches, and the alternating
+ * keys and values of a map literal.
+ */
+export function pairs<T>(items: T[]): [T, T][] {
+  const result: [T, T][] = []
+  for (let i = 0; i < items.length; i += 2) {
+    result.push([items[i], items[i + 1]])
+  }
+  return result
+}
+
 export function mkScamperErrorWithRange(
   phase: ScamperError['phase'],
   message: ScamperError['message'],

@@ -58,7 +58,7 @@ function parseExp(src: string): A.Exp {
 // A character that cannot appear inside a Scheme identifier, hence a token
 // boundary. `undefined` (string start/end) counts as a boundary too.
 function isDelim(ch: string | undefined): boolean {
-  return ch === undefined || /[\s()[\]'"]/.test(ch)
+  return ch === undefined || /[\s()[\]{}"]/.test(ch)
 }
 
 // Index of the `n`-th (0-based) occurrence of `text` in `s` that stands as a
@@ -286,14 +286,22 @@ describe('match and patterns', () => {
   })
 })
 
-describe('quote', () => {
-  test('(quote ...) form', () => {
-    const src = '(quote abc)'
-    assertSpan(asExp(parseExp(src), 'quote').range, src, '(quote abc)')
+describe('vector literal', () => {
+  test('spans the brackets, and each element spans itself', () => {
+    const src = '[1 (+ 2 3)]'
+    const v = asExp(parseExp(src), 'vec')
+    assertSpan(v.range, src, '[1 (+ 2 3)]')
+    assertSpan(asExp(v.exps[1], 'app').range, src, '(+ 2 3)')
   })
-  test("' shorthand", () => {
-    const src = "'abc"
-    assertSpan(asExp(parseExp(src), 'quote').range, src, "'abc")
+})
+
+describe('map literal', () => {
+  test('spans the braces, and each key/value spans itself', () => {
+    const src = '{"a" (+ 1 2)}'
+    const o = asExp(parseExp(src), 'obj')
+    assertSpan(o.range, src, '{"a" (+ 1 2)}')
+    assertSpan(asExp(o.pairs[0].key, 'lit').range, src, '"a"')
+    assertSpan(asExp(o.pairs[0].value, 'app').range, src, '(+ 1 2)')
   })
 })
 

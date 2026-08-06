@@ -11,6 +11,8 @@ function lowerPat(p: A.Pat): L.Pat {
       return L.mkPLit(p.value, p.range)
     case 'pctor':
       return L.mkPCtor(p.name.name, p.args.map(lowerPat), p.range)
+    case 'pvec':
+      return L.mkPVec(p.args.map(lowerPat), p.range)
   }
 }
 
@@ -74,8 +76,6 @@ function lowerExpr(e: A.Exp): L.Blk {
         ),
         L.mkPopScope(e.range),
       ]
-    case 'quote':
-      return [L.mkLit(e.value, e.range)]
     default:
       throw new L.ICE('lowerExpr', `Non-core expression encountered: ${e.tag}`)
   }

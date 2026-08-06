@@ -33,6 +33,11 @@ export interface Comment {
 // e ::= n | b | s | c
 //     | null | void
 //     | (e1 ... ek)
+//     | [e1 ... ek]         -- a vector literal; every ei is evaluated
+//     | {e1 e2 ... e(k-1) ek}
+//                           -- a map literal; k is even, the odd-indexed
+//                              elements are keys (which must evaluate to
+//                              strings) and the even-indexed ones their values
 //
 //     -- Special forms
 //     | (lambda (x1 ... xk)
@@ -55,7 +60,6 @@ export interface Comment {
 //         [p1 e1]
 //         ...
 //         [pk ek])
-//     | (quote e)
 //
 //     -- Sugared forms
 //     | (and e1 ... ek)
@@ -139,7 +143,15 @@ export interface PCtor extends Tagged, Node {
   name: Identifier
   args: Pat[]
 }
-export type Pat = PWild | Identifier | PLit | PCtor
+// A vector pattern `[p1 ... pk]`: matches a vector of exactly k elements, each
+// matching the corresponding sub-pattern. Sub-patterns are ordinary patterns,
+// so `[1 x]` binds `x` to the second element rather than (as it once did)
+// matching the literal two-element vector containing the symbol `x`.
+export interface PVec extends Tagged, Node {
+  tag: 'pvec'
+  args: Pat[]
+}
+export type Pat = PWild | Identifier | PLit | PCtor | PVec
 
 ///// Expressions /////
 
@@ -179,11 +191,21 @@ export interface Match extends Tagged, Node {
   scrutinee: Exp
   branches: { pat: Pat; body: Exp }[]
 }
-export interface Quote extends Tagged, Node {
-  tag: 'quote'
-  value: L.Value
-}
 // Sugared Forms
+// A vector literal `[e1 ... ek]`. Expansion (expansion.ts) rewrites it to
+// `(vector e1 ... ek)` tagged `provenance:'vector-lit'`; nothing downstream of
+// expansion ever sees this node.
+export interface Vec extends Tagged, Node {
+  tag: 'vec'
+  exps: Exp[]
+}
+// A map literal `{k1 v1 ... kn vn}`. Expansion rewrites it to
+// `(##mkObj## k1 v1 ... kn vn)` tagged `provenance:'obj-lit'`. The parser
+// guarantees the element count is even, so the pairs are always complete.
+export interface Obj extends Tagged, Node {
+  tag: 'obj'
+  pairs: { key: Exp; value: Exp }[]
+}
 export interface And extends Tagged, Node {
   tag: 'and'
   exps: Exp[]
@@ -214,11 +236,12 @@ export type Exp =
   | Begin
   | If
   | Match
-  | Quote
   | And
   | Or
   | Cond
   | AnonFn
+  | Vec
+  | Obj
 
 ///// Statements /////
 
@@ -336,6 +359,10 @@ export const mkPCtor = (
   args: Pat[],
   range: L.Range = L.Range.none,
 ): PCtor => ({ tag: 'pctor', name, args, range })
+export const mkPVec = (
+  args: Pat[],
+  range: L.Range = L.Range.none,
+): PVec => ({ tag: 'pvec', args, range })
 
 // Expressions (exp)
 // Omit `provenance` when unset so it is a truly optional key (absent, not
@@ -413,10 +440,6 @@ export const mkMatch = (
   branches: { pat: Pat; body: Exp }[],
   range: L.Range = L.Range.none,
 ): Match => ({ tag: 'match', scrutinee, branches, range })
-export const mkQuote = (
-  value: L.Value,
-  range: L.Range = L.Range.none,
-): Quote => ({ tag: 'quote', value, range })
 export const mkAnd = (exps: Exp[], range: L.Range = L.Range.none): And => ({
   tag: 'and',
   exps,
@@ -435,6 +458,15 @@ export const mkAnonFn = (
   body: Exp,
   range: L.Range = L.Range.none,
 ): AnonFn => ({ tag: 'anonfn', body, range })
+export const mkVec = (exps: Exp[], range: L.Range = L.Range.none): Vec => ({
+  tag: 'vec',
+  exps,
+  range,
+})
+export const mkObj = (
+  pairs: { key: Exp; value: Exp }[],
+  range: L.Range = L.Range.none,
+): Obj => ({ tag: 'obj', pairs, range })
 
 // Statements (stmt)
 export const mkImport = (
@@ -494,13 +526,23 @@ function isTagged(v: unknown): v is Tagged {
   return typeof v === 'object' && v !== null && 'tag' in v
 }
 
+// An AST node is a tagged object that also carries a source `range` (every node
+// has one -- see Node). The `range` check is what keeps these predicates from
+// claiming a *runtime map value*, which since map literals landed (#334) is
+// also a plain object a user can give a "tag" key: without it,
+// `{"tag" "lit"}` would be mistaken for a Lit node by the renderer dispatch at
+// the bottom of this file and print as `void` rather than as itself.
+function isNode(v: unknown): v is Tagged & Node {
+  return isTagged(v) && 'range' in v
+}
+
 export function isPat(v: unknown): v is Pat {
-  return isTagged(v) && ['pwild', 'id', 'plit', 'pctor'].includes(v.tag)
+  return isNode(v) && ['pwild', 'id', 'plit', 'pctor', 'pvec'].includes(v.tag)
 }
 
 export function isExp(v: unknown): v is Exp {
   return (
-    isTagged(v) &&
+    isNode(v) &&
     [
       'lit',
       'id',
@@ -510,18 +552,19 @@ export function isExp(v: unknown): v is Exp {
       'begin',
       'if',
       'match',
-      'quote',
       'and',
       'or',
       'cond',
       'anonfn',
+      'vec',
+      'obj',
     ].includes(v.tag)
   )
 }
 
 export function isStmt(v: unknown): v is Stmt {
   return (
-    isTagged(v) &&
+    isNode(v) &&
     ['import', 'define', 'display', 'stmtexp', 'export', 'struct', 'defexport'].includes(
       v.tag,
     )
@@ -578,7 +621,7 @@ export type Layout =
   // substituted into a trace render correctly). Highlighted by runtime type.
   | { kind: 'val'; value: L.Value }
   // A delimited group whose children are space-separated.
-  | { kind: 'group'; delim: 'paren' | 'bracket'; children: Layout[] }
+  | { kind: 'group'; delim: 'paren' | 'bracket' | 'brace'; children: Layout[] }
   // A "#" written immediately (no space) before its child -- the anonymous
   // function `#(body)`, whose child is the parenthesized body layout.
   | { kind: 'hash'; child: Layout }
@@ -596,6 +639,11 @@ const brackets = (children: Layout[]): Layout => ({
   delim: 'bracket',
   children,
 })
+const braces = (children: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'brace',
+  children,
+})
 const hash = (child: Layout): Layout => ({ kind: 'hash', child })
 
 export function patToLayout(pat: Pat): Layout {
@@ -608,6 +656,8 @@ export function patToLayout(pat: Pat): Layout {
       return val(pat.value)
     case 'pctor':
       return parens([tok(pat.name.name), ...pat.args.map(patToLayout)])
+    case 'pvec':
+      return brackets(pat.args.map(patToLayout))
   }
 }
 
@@ -651,8 +701,6 @@ export function expToLayout(e: Exp): Layout {
           brackets([patToLayout(pat), expToLayout(body)]),
         ),
       ])
-    case 'quote':
-      return parens([kw('quote'), val(e.value)])
     case 'and':
       return parens([kw('and'), ...e.exps.map(expToLayout)])
     case 'or':
@@ -670,6 +718,16 @@ export function expToLayout(e: Exp): Layout {
       return e.body.tag === 'lit' && e.body.value === null
         ? tok('#()')
         : hash(expToLayout(e.body))
+    case 'vec':
+      return brackets(e.exps.map(expToLayout))
+    case 'obj':
+      // {k1 v1 ... kn vn}: the pairs are flattened back out, exactly as written.
+      return braces(
+        e.pairs.flatMap(({ key, value }) => [
+          expToLayout(key),
+          expToLayout(value),
+        ]),
+      )
   }
 }
 
@@ -706,7 +764,11 @@ export function stmtToLayout(s: Stmt): Layout {
 
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
-const DELIMS = { paren: ['(', ')'], bracket: ['[', ']'] } as const
+const DELIMS = {
+  paren: ['(', ')'],
+  bracket: ['[', ']'],
+  brace: ['{', '}'],
+} as const
 
 /** Render a {@link Layout} to text: the text backend of the surface syntax. */
 export function layoutToString(l: Layout): string {
@@ -748,6 +810,11 @@ export function patEquals(p1: Pat, p2: Pat): boolean {
   } else if (p1.tag === 'pctor' && p2.tag === 'pctor') {
     return (
       p1.name.name === p2.name.name &&
+      p1.args.length === p2.args.length &&
+      p1.args.every((arg, i) => patEquals(arg, p2.args[i]))
+    )
+  } else if (p1.tag === 'pvec' && p2.tag === 'pvec') {
+    return (
       p1.args.length === p2.args.length &&
       p1.args.every((arg, i) => patEquals(arg, p2.args[i]))
     )
@@ -801,8 +868,6 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.branches.every(({ pat }, i) => patEquals(pat, e2.branches[i].pat)) &&
       e1.branches.every(({ body }, i) => expEquals(body, e2.branches[i].body))
     )
-  } else if (e1.tag === 'quote' && e2.tag === 'quote') {
-    return L.equals(e1.value, e2.value)
   } else if (e1.tag === 'and' && e2.tag === 'and') {
     return (
       e1.exps.length === e2.exps.length &&
@@ -823,6 +888,19 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
     )
   } else if (e1.tag === 'anonfn' && e2.tag === 'anonfn') {
     return expEquals(e1.body, e2.body)
+  } else if (e1.tag === 'vec' && e2.tag === 'vec') {
+    return (
+      e1.exps.length === e2.exps.length &&
+      e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
+    )
+  } else if (e1.tag === 'obj' && e2.tag === 'obj') {
+    return (
+      e1.pairs.length === e2.pairs.length &&
+      e1.pairs.every(
+        ({ key, value }, i) =>
+          expEquals(key, e2.pairs[i].key) && expEquals(value, e2.pairs[i].value),
+      )
+    )
   } else {
     return false
   }

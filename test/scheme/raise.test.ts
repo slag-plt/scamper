@@ -51,11 +51,11 @@ describe('valuesToExps (value stack -> expressions)', () => {
   test('primitive values render as their printed literals', () => {
     const vals: LPM.Value[] = [
       42, -3.5, 'hi', true, false, null, undefined,
-      LPM.mkChar('a'), LPM.mkSym('sym'), [1, 2, 3], [],
+      LPM.mkChar('a'), [1, 2, 3], [], { a: 1 }, {},
     ]
     expect(valuesToExps(vals).map(expToString)).toEqual([
       '42', '-3.5', '"hi"', '#t', '#f', 'null', 'void',
-      '#\\a', 'sym', '(vector 1 2 3)', '(vector)',
+      '#\\a', '(vector 1 2 3)', '(vector)', '{ "a" : 1 }', '{}',
     ])
   })
 
@@ -107,9 +107,9 @@ describe('raising each LPM instruction', () => {
       expect(raiseBlk([LPM.mkLit(undefined)])).toBe('void')
     })
 
-    test('char, symbol, vector, struct, and list values', () => {
+    test('char, vector, map, struct, and list values', () => {
       expect(raiseBlk([LPM.mkLit(LPM.mkChar('a'))])).toBe('#\\a')
-      expect(raiseBlk([LPM.mkLit(LPM.mkSym('sym'))])).toBe('sym')
+      expect(raiseBlk([LPM.mkLit({ a: 1 })])).toBe('{ "a" : 1 }')
       expect(raiseBlk([LPM.mkLit([1, 2, 3])])).toBe('(vector 1 2 3)')
       expect(
         raiseBlk([LPM.mkLit(LPM.mkStruct('point', ['x', 'y'], [1, 2]))]),

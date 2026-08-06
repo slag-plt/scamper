@@ -261,3 +261,27 @@ describe('stepwise reduction traces of substantial programs', () => {
     ])
   })
 })
+
+// Vector and map literals expand into applications, so a reduction trace would
+// show `(vector ...)` / `(##mkObj## ...)` unless sugaring recovers the surface
+// form from the provenance tag it carries (see sugar.ts).
+describe('vector and map literals in a reduction trace (#334)', () => {
+  // N.B., the final line of each trace is the *value*, which prints in its own
+  // form ((vector ...) / { "k" : v }) rather than the source form -- only the
+  // reduction steps in between are surface syntax.
+  test('a vector literal reduces as [...], never as (vector ...)', async () => {
+    expect(await runProgramTraced('[1 (+ 1 1)]')).toEqual([
+      '--> [1 (+ 1 1)]',
+      '--> [1 2]',
+      '--> (vector 1 2)',
+    ])
+  })
+
+  test('a map literal reduces as {...}, never as (##mkObj## ...)', async () => {
+    expect(await runProgramTraced('{"a" (+ 1 1)}')).toEqual([
+      '--> {"a" (+ 1 1)}',
+      '--> {"a" 2}',
+      '--> { "a" : 2 }',
+    ])
+  })
+})

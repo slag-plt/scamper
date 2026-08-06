@@ -79,6 +79,40 @@ describe('roundtrip', () => {
   test('anonymous function #(...)', () =>
     roundtrip('(define inc #(+ %1 1))'))
 
+  test('vector literal', () => roundtrip('(define v [1 (+ 1 2) "x"])'))
+
+  test('empty vector literal', () => roundtrip('(define v [])'))
+
+  test('map literal', () => roundtrip('(define m {"a" 1 "b" (+ 1 2)})'))
+
+  test('empty map literal', () => roundtrip('(define m {})'))
+
+  test('nested vector and map literals', () =>
+    roundtrip('(define m {"a" {"b" [1 2]} "c" [[3] [4]]})'))
+
+  test('vector pattern', () =>
+    roundtrip('(define f (lambda (v) (match v [[1 x] x] [_ 0])))'))
+
+  test('literals keep their bracket/brace spelling', async () => {
+    expect(await format('(define v [1 2])')).toContain('[1 2]')
+    expect(await format('(define m {"a" 1})')).toContain('{"a" 1}')
+    expect(await format('(define v [])')).toContain('[]')
+    expect(await format('(define m {})')).toContain('{}')
+  })
+
+  test('a map that must break splits between pairs, never inside one', async () => {
+    const out = await prettier.format(
+      '(define m {"alpha" 1 "beta" 2 "gamma" 3 "delta" 4 "epsilon" 5 "zeta" 6})',
+      { parser: 'scamper-scheme', plugins: [ScamperPlugin], printWidth: 40 },
+    )
+    for (const line of out.trimEnd().split('\n')) {
+      // Every wrapped line holds a whole "key value" pair, so no line ends with
+      // a dangling key.
+      expect(line).not.toMatch(/"\s*$/)
+    }
+    expect(parse(out)).toBeTruthy()
+  })
+
   test('anonymous function with a rest parameter', () =>
     roundtrip('(define total #(apply + %&))'))
 
@@ -261,14 +295,21 @@ describe('comment placement relocates but stays valid (#304)', () => {
     })
   }
 
-  test('a comment inside quoted data is preserved (quote rendering is a separate bug)', async () => {
-    // N.B. quoted data itself does not round-trip today: (quote (1 2 3)) prints
-    // as '(list 1 2 3), which reparses differently -- a pre-existing quote
-    // printer bug independent of comments. So we only assert the comment
-    // survives in valid output, not idempotency.
-    const out = await format("(define xs '(1 ; one\n 2 3))")
+  // Vector and map literals are ordinary AST nodes (not raw data), so unlike
+  // the quoted data they replaced, they round-trip through the printer exactly
+  // -- comments included.
+  test('a comment inside a vector literal is preserved, and formatting is idempotent', async () => {
+    const out = await format('(define xs [1 ; one\n 2 3])')
     expect(tokenizeAndParse(out).diagnostics).toEqual([])
     expect(out).toContain('; one')
+    expect(await format(out)).toBe(out)
+  })
+
+  test('a comment inside a map literal is preserved, and formatting is idempotent', async () => {
+    const out = await format('(define m {"a" 1 ; one\n "b" 2})')
+    expect(tokenizeAndParse(out).diagnostics).toEqual([])
+    expect(out).toContain('; one')
+    expect(await format(out)).toBe(out)
   })
 })
 

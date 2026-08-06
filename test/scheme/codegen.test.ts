@@ -69,7 +69,7 @@ describe('End-to-end cases', () => {
           (if (null? l)
               0
               (+ 1 (list-length (cdr l))))))
-      (display (list-length '()))
+      (display (list-length null))
     `, [0])
   })
 
@@ -512,13 +512,13 @@ describe('End-to-end cases', () => {
 `, [1, 4])
   })
 
-  test('mixed-brackets', async () => {
+  test('nested parens across several lines', async () => {
     await checkMachineOutput(`
-{- {* 3
-     (+ {* 1
-           { / 5 8}}
-         12)}
-   (- 5 1)}
+(- (* 3
+      (+ (* 1
+            (/ 5 8))
+         12))
+   (- 5 1))
 `, [33.875])
   })
 
@@ -821,25 +821,101 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     })
   })
 
-  describe('quote', () => {
-    test('nested quoted lists', async () => {
-      expect(await runProgram("'(1 (2 (3)))")).toEqual([
-        '(list 1 (list 2 (list 3)))',
+  describe('vector literal', () => {
+    test('evaluates its elements (#325)', async () => {
+      expect(await runProgram('[1 (+ 1 1) "three"]')).toEqual([
+        '(vector 1 2 "three")',
       ])
     })
 
-    test('mixed literal types in a quoted list', async () => {
-      expect(await runProgram('\'(1 "two" #\\c #t)')).toEqual([
-        '(list 1 "two" #\\c #t)',
+    test('the empty vector literal is an empty vector', async () => {
+      expect(await runProgram('[]')).toEqual(['(vector)'])
+    })
+
+    test('an identifier inside it is a live reference, not a symbol (#325)', async () => {
+      expect(await runProgram('(let ([x 5]) [x (+ x 1)])')).toEqual([
+        '(vector 5 6)',
       ])
     })
 
-    test('the empty quoted list is null', async () => {
-      expect(await runProgram("'()")).toEqual(['null'])
+    test('a `%` parameter inside it is captured by the enclosing #(...) (#325)', async () => {
+      expect(
+        await runProgram('(map #(list %2 [%1]) (list 1 2) (list 3 4))'),
+      ).toEqual(['(list (list 3 (vector 1)) (list 4 (vector 2)))'])
     })
 
-    test('a quoted symbol', async () => {
-      expect(await runProgram("'foo")).toEqual(['foo'])
+    test('nests', async () => {
+      expect(await runProgram('[[1 2] [3 4]]')).toEqual([
+        '(vector (vector 1 2) (vector 3 4))',
+      ])
+    })
+  })
+
+  describe('map literal', () => {
+    test('builds an object from alternating keys and values (#334)', async () => {
+      expect(await runProgram('{"name" "Alice" "age" 30}')).toEqual([
+        '{ "name" : "Alice", "age" : 30 }',
+      ])
+    })
+
+    test('the empty map literal is an empty object', async () => {
+      expect(await runProgram('{}')).toEqual(['{}'])
+    })
+
+    test('evaluates both its keys and its values', async () => {
+      expect(
+        await runProgram('(let ([k "a"]) {k (+ 1 1)})'),
+      ).toEqual(['{ "a" : 2 }'])
+    })
+
+    test('nests', async () => {
+      expect(await runProgram('{"a" {"b" [1 2]}}')).toEqual([
+        '{ "a" : { "b" : (vector 1 2) } }',
+      ])
+    })
+
+    test('a later duplicate key wins', async () => {
+      expect(await runProgram('{"a" 1 "a" 2}')).toEqual(['{ "a" : 2 }'])
+    })
+
+    test('a non-string key is a runtime error', async () => {
+      expect(await runProgram('{1 2}')).toEqual([
+        'Runtime error [1:1-1:5]: (##mkObj##) A map key must be a string, received number',
+      ])
+    })
+
+    test('maps compare structurally, regardless of key order', async () => {
+      expect(
+        await runProgram(
+          '(equal? {"a" 1 "b" 2} {"b" 2 "a" 1})\n(equal? {"a" 1} {"a" 2})',
+        ),
+      ).toEqual(['#t', '#f'])
+    })
+  })
+
+  describe('vector pattern', () => {
+    test('destructures a vector of matching length (#325)', async () => {
+      expect(await runProgram('(match (vector 1 2) [[1 y] y])')).toEqual(['2'])
+    })
+
+    test('a length mismatch falls through to the next branch', async () => {
+      expect(
+        await runProgram(
+          '(match (vector 1 2 3) [[1 y] "two"] [[1 y z] "three"])',
+        ),
+      ).toEqual(['"three"'])
+    })
+
+    test('nests, and binds through a let pattern', async () => {
+      expect(
+        await runProgram('(let ([[a [b c]] (vector 1 (vector 2 3))]) (+ a b c))'),
+      ).toEqual(['6'])
+    })
+
+    test('does not match a non-vector', async () => {
+      expect(
+        await runProgram('(match (list 1 2) [[1 y] "vector"] [_ "other"])'),
+      ).toEqual(['"other"'])
     })
   })
 

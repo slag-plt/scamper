@@ -432,12 +432,6 @@ export interface Char extends TaggedObject {
   value: string
 }
 
-/** A symbol is a tagged object representing an identifier. */
-export interface Sym extends TaggedObject {
-  [scamperTag]: 'sym'
-  value: string
-}
-
 // NOTE: to maximize interoperability, a struct is an object with at least
 // a ##scamperTag## and ##kind## field. The rest of the fields are the fields of the
 // the struct.
@@ -531,6 +525,11 @@ export type Provenance =
   | 'begin'
   | 'cond'
   | 'anon-fn'
+  // Tags the `(vector ...)` a vector literal `[...]` expands to, and the
+  // `(##mkObj## ...)` a map literal `{...}` expands to, so sugaring recovers
+  // the bracket/brace form exactly.
+  | 'vector-lit'
+  | 'obj-lit'
   // Tags the (define ...) and (export ...) that a (define-export ...) expands
   // to, so sugaring can recover the define-export exactly (see sugar.ts). This
   // one only ever tags statements (Define/Export), never an LPM op.
@@ -689,4 +688,10 @@ export interface PCtor {
   args: Pat[]
   range: Range
 }
-export type Pat = PWild | PLit | PVar | PCtor
+/** A vector pattern: matches an array of exactly `args.length` elements. */
+export interface PVec {
+  tag: 'pvec'
+  args: Pat[]
+  range: Range
+}
+export type Pat = PWild | PLit | PVar | PCtor | PVec
