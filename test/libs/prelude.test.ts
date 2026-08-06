@@ -3201,3 +3201,171 @@ test('vector-filter returns a vector', async () => {
 `),
   ).toEqual(['(vector 2 4)', '#t', '(vector)'])
 })
+
+// Maps: the operations over what a `{ ... }` literal produces (#103). These are
+// functional -- hash-set/hash-remove return a new map and leave the original
+// alone -- which is the property most of these tests are really about.
+describe('maps', () => {
+  test('hash? distinguishes maps from other aggregates', async () => {
+    expect(
+      await runProgram(`
+(hash? {"a" 1})
+(hash? {})
+(hash? (list 1 2))
+(hash? (vector 1 2))
+(hash? (pair 1 2))
+(hash? "a")
+`),
+    ).toEqual(['#t', '#t', '#f', '#f', '#f', '#f'])
+  })
+
+  test('hash-ref reads a key, and errors when it is absent', async () => {
+    expect(
+      await runProgram(`
+(hash-ref {"a" 1 "b" 2} "b")
+(hash-ref {"a" 1} "z")
+`),
+    ).toEqual(['2', 'Runtime error: (hash-ref) hash-ref: no value for key "z"'])
+  })
+
+  test('hash-ref-or supplies a default instead of erroring', async () => {
+    expect(
+      await runProgram(`
+(hash-ref-or {"a" 1} "a" "none")
+(hash-ref-or {"a" 1} "z" "none")
+(hash-ref-or {} "z" 0)
+`),
+    ).toEqual(['1', '"none"', '0'])
+  })
+
+  test('hash-has-key?', async () => {
+    expect(
+      await runProgram(`
+(hash-has-key? {"a" 1} "a")
+(hash-has-key? {"a" 1} "z")
+(hash-has-key? {} "a")
+`),
+    ).toEqual(['#t', '#f', '#f'])
+  })
+
+  test('hash-set returns a new map and leaves the original alone', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(hash-set m "b" 2)
+m
+(hash-set m "a" 99)
+m
+`),
+    ).toEqual([
+      '{ "a" : 1, "b" : 2 }',
+      '{ "a" : 1 }',
+      '{ "a" : 99 }',
+      '{ "a" : 1 }',
+    ])
+  })
+
+  test('hash-set! mutates in place, where hash-set does not', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(define alias m)
+(hash-set! m "b" 2)
+m
+alias
+`),
+    ).toEqual(['void', '{ "a" : 1, "b" : 2 }', '{ "a" : 1, "b" : 2 }'])
+  })
+
+  test('hash-set! overwrites an existing key and rejects a non-string one', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(hash-set! m "a" 99)
+m
+(hash-set! m 5 0)
+`),
+    ).toEqual([
+      'void',
+      '{ "a" : 99 }',
+      'Runtime error: (error) expected a string, received number',
+    ])
+  })
+
+  test('hash-remove returns a new map, and removing an absent key is not an error', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1 "b" 2})
+(hash-remove m "a")
+m
+(hash-remove m "z")
+(hash-remove {} "a")
+`),
+    ).toEqual([
+      '{ "b" : 2 }',
+      '{ "a" : 1, "b" : 2 }',
+      '{ "a" : 1, "b" : 2 }',
+      '{}',
+    ])
+  })
+
+  test('hash-count, hash-keys, and hash-values agree', async () => {
+    expect(
+      await runProgram(`
+(hash-count {"a" 1 "b" 2})
+(hash-count {})
+(hash-keys {"a" 1 "b" 2})
+(hash-values {"a" 1 "b" 2})
+(hash-keys {})
+`),
+    ).toEqual(['2', '0', '(list "a" "b")', '(list 1 2)', 'null'])
+  })
+
+  test('hash->list and list->hash round-trip', async () => {
+    expect(
+      await runProgram(`
+(hash->list {"a" 1 "b" 2})
+(list->hash (list (pair "x" 1) (pair "y" 2)))
+(equal? (list->hash (hash->list {"a" 1 "b" 2})) {"a" 1 "b" 2})
+(list->hash null)
+`),
+    ).toEqual([
+      '(list (pair "a" 1) (pair "b" 2))',
+      '{ "x" : 1, "y" : 2 }',
+      '#t',
+      '{}',
+    ])
+  })
+
+  test('a later duplicate key wins in list->hash, as in the literal', async () => {
+    expect(await runProgram('(list->hash (list (pair "a" 1) (pair "a" 2)))')).toEqual([
+      '{ "a" : 2 }',
+    ])
+  })
+
+  test('maps compare structurally regardless of how they were built', async () => {
+    expect(
+      await runProgram(`
+(equal? (hash-set {"a" 1} "b" 2) {"a" 1 "b" 2})
+(equal? (hash-set {"a" 1} "b" 2) {"b" 2 "a" 1})
+(equal? (hash-remove {"a" 1 "b" 2} "b") {"a" 1})
+`),
+    ).toEqual(['#t', '#t', '#t'])
+  })
+
+  test('non-string keys and non-map arguments are rejected by contracts', async () => {
+    expect(
+      await runProgram(`
+(hash-ref {"a" 1} 5)
+(hash-set {"a" 1} 5 0)
+(hash-ref (list 1 2) "a")
+(list->hash (list 5))
+`),
+    ).toEqual([
+      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a hash, received list',
+      'Runtime error: (list->hash) list->hash: expected a list of pairs, but the list contains number',
+    ])
+  })
+})
