@@ -537,9 +537,9 @@
 ;;; @category list, association list, assoc-ref, deref, ref, ref-set!, string-ref
 (define-export list-ref (js-var "prelude_listRef"))
 
-;;; (index-of l v) -> integer?
-;;;  l : list?
+;;; (index-of v l) -> integer?
 ;;;  v : any
+;;;  l : list?
 ;;; Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.
 ;;; @category list, list manipulation, association list, range, string-length, vector-length, vector-range, vector-ref 
 (define-export index-of (js-var "prelude_indexOf"))
@@ -953,8 +953,8 @@
 ;;; @category vectors, mutation, predicates, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map, vector-set!
 (define-export vector-map!
   (lambda (f v)
-    (for-range 0 (vector-length v)
-      (lambda (i) (vector-set! v i (f (vector-ref v i)))))))
+    (for-range (lambda (i) (vector-set! v i (f (vector-ref v i))))
+      0 (vector-length v))))
 
 ;;; (vector-for-each f v) -> void?
 ;;;  f : procedure?
@@ -963,30 +963,30 @@
 ;;; @category vectors, vector-append, vector-fill!, vector-filter, vector-map, vector-map!, vector-set!
 (define-export vector-for-each
   (lambda (f v)
-    (for-range 0 (vector-length v)
-      (lambda (i) (f (vector-ref v i))))))
+    (for-range (lambda (i) (f (vector-ref v i)))
+      0 (vector-length v))))
 
-;;; (for-range beg end f) -> void?
+;;; (for-range f beg end) -> void?
+;;;  f : procedure?
 ;;;  beg : number?
 ;;;  end : number?
-;;;  f : procedure?
 ;;; Runs `f` on each integer in the range `[beg, end)`. `f` takes one argument, the current value of integer.
 ;;; @category other, fold-left, fold-right, list-of, map, reduce, reduce-right, apply, filter
 (define-export for-range
-  (lambda (beg end f)
+  (lambda (f beg end)
     (cond
-      [(< beg end) (begin (f beg) (for-range (+ beg 1) end f))]
-      [(> beg end) (begin (f beg) (for-range (- beg 1) end f))]
+      [(< beg end) (begin (f beg) (for-range f (+ beg 1) end))]
+      [(> beg end) (begin (f beg) (for-range f (- beg 1) end))]
       [else void])))
 
-;;; (vector-filter f l) -> list?
+;;; (vector-filter f v) -> vector?
 ;;;  f : procedure?
-;;;  l : vector?
-;;; Returns a new vector containing the elements of `l` for which `f` returns `#t`.
+;;;  v : vector?
+;;; Returns a new vector containing the elements of `v` for which `f` returns `#t`.
 ;;; @category vectors, vector-append, vector-fill!, vector-for-each, vector-map, vector-map!, vector-set!
 (define-export vector-filter
-  (lambda (f l)
-    (list->vector (filter f (vector->list l)))))
+  (lambda (f v)
+    (list->vector (filter f (vector->list v)))))
 
 ;;; (void? v) -> boolean?
 ;;;  v : any
@@ -1036,7 +1036,7 @@
 ;;; @category list, list creation, append, list-drop, list-tail, list-take, make-list, reverse, sort, index-of, length, string-length, vector-length, vector-range, vector-ref 
 (define-export range (js-var "prelude_range"))
 
-;;; (random n) -> list?
+;;; (random n) -> number?
 ;;;  n : integer?
 ;;;   n >= 0
 ;;; Returns a random number in the range 0 to n (exclusive).
@@ -1096,6 +1096,87 @@
 ;;; Sets the value contained in reference cell `r` to `v`.
 ;;; @category mutation, assoc-ref, deref, list-ref, string-ref
 (define-export ref-set! (js-var "prelude_refSet"))
+
+;;; (hash? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a map, the kind of value a `{ ... }` literal produces.
+;;; @category hashmap, typecheck, predicates, hash-ref, hash-set, hash-keys
+(define-export hash? (js-var "prelude_hashQ"))
+
+;;; (hash-ref h k) -> any
+;;;  h : hash?
+;;;  k : string?
+;;; Returns the value that map `h` associates with key `k`. Raises an error if `h` has no such key; use `hash-ref-or` to supply a default instead.
+;;; @category hashmap, hash-ref-or, hash-has-key?, hash-set, hash-keys
+(define-export hash-ref (js-var "prelude_hashRef"))
+
+;;; (hash-ref-or h k default) -> any
+;;;  h : hash?
+;;;  k : string?
+;;;  default : any
+;;; Returns the value that map `h` associates with key `k`, or `default` if `h` has no such key.
+;;; @category hashmap, hash-ref, hash-has-key?, hash-set
+(define-export hash-ref-or (js-var "prelude_hashRefOr"))
+
+;;; (hash-has-key? h k) -> boolean?
+;;;  h : hash?
+;;;  k : string?
+;;; Returns `#t` if and only if map `h` associates a value with key `k`.
+;;; @category hashmap, typecheck, predicates, hash-ref, hash-ref-or, hash-keys
+(define-export hash-has-key? (js-var "prelude_hashHasKeyQ"))
+
+;;; (hash-set h k v) -> hash?
+;;;  h : hash?
+;;;  k : string?
+;;;  v : any
+;;; Returns a new map like `h` but with key `k` associated with `v`. `h` itself is unchanged.
+;;; @category hashmap, hash-remove, hash-ref, hash-count
+(define-export hash-set (js-var "prelude_hashSet"))
+
+;;; (hash-set! h k v) -> void?
+;;;  h : hash?
+;;;  k : string?
+;;;  v : any
+;;; Mutates map `h` in place, associating key `k` with `v`. Unlike `hash-set`, no new map is made, so every binding that refers to `h` sees the change.
+;;; @category hashmap, mutation, hash-set, hash-ref, hash-remove
+(define-export hash-set! (js-var "prelude_hashSetBang"))
+
+;;; (hash-remove h k) -> hash?
+;;;  h : hash?
+;;;  k : string?
+;;; Returns a new map like `h` but with key `k` removed. `h` itself is unchanged, and removing a key that is not present is not an error.
+;;; @category hashmap, hash-set, hash-ref, hash-count
+(define-export hash-remove (js-var "prelude_hashRemove"))
+
+;;; (hash-count h) -> integer?
+;;;  h : hash?
+;;; Returns the number of key-value pairs in map `h`.
+;;; @category hashmap, hash-keys, hash-values, hash-set
+(define-export hash-count (js-var "prelude_hashCount"))
+
+;;; (hash-keys h) -> list?
+;;;  h : hash?
+;;; Returns a list of the keys of map `h`.
+;;; @category hashmap, hash-values, hash->list, hash-count, hash-has-key?
+(define-export hash-keys (js-var "prelude_hashKeys"))
+
+;;; (hash-values h) -> list?
+;;;  h : hash?
+;;; Returns a list of the values of map `h`, in the same order as `hash-keys`.
+;;; @category hashmap, hash-keys, hash->list, hash-count
+(define-export hash-values (js-var "prelude_hashValues"))
+
+;;; (hash->list h) -> list?
+;;;  h : hash?
+;;; Returns the contents of map `h` as a list of key-value pairs.
+;;; @category hashmap, list->hash, hash-keys, hash-values
+(define-export hash->list (js-var "prelude_hashToList"))
+
+;;; (list->hash l) -> hash?
+;;;  l : list?
+;;; Returns a map built from `l`, a list of key-value pairs whose keys are strings. If a key appears more than once, the last pair wins.
+;;; @category hashmap, hash->list, hash-set, hash-keys
+(define-export list->hash (js-var "prelude_listToHash"))
 
 ;;; (else) -> boolean?
 ;;; A synonym for `#t` appropriate for use as the final guard of a `cond` expression.

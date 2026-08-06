@@ -985,14 +985,27 @@ test('index-of', async () => {
     await runProgram(`
 (define l (list "a" "b" "c" "d" "e"))
 
-(index-of l "a")
-(index-of l "b")
-(index-of l "c")
-(index-of l "d")
-(index-of l "e")
-(index-of l "f")
+(index-of "a" l)
+(index-of "b" l)
+(index-of "c" l)
+(index-of "d" l)
+(index-of "e" l)
+(index-of "f" l)
 `),
   ).toEqual(['0', '1', '2', '3', '4', '-1'])
+})
+
+// Argument order standardized in #103: index-of takes the value first, matching
+// R7RS's member/assoc family -- (member obj list), (assoc obj alist) -- rather
+// than the data-first order the accessors (list-ref, vector-ref) use.
+test('index-of takes the value first', async () => {
+  expect(
+    await runProgram(`
+(index-of 3 (list 1 2 3 4))
+(index-of 9 (list 1 2 3))
+(index-of 1 null)
+`),
+  ).toEqual(['2', '-1', '-1'])
 })
 
 test('integer', async () => {
@@ -3115,13 +3128,13 @@ test('for-range', async () => {
   expect(
     await runProgram(`
 (define asc (ref null))
-(for-range 0 5 (lambda (i) (ref-set! asc (cons i (deref asc)))))
+(for-range (lambda (i) (ref-set! asc (cons i (deref asc)))) 0 5)
 (deref asc)
 (define desc (ref null))
-(for-range 5 0 (lambda (i) (ref-set! desc (cons i (deref desc)))))
+(for-range (lambda (i) (ref-set! desc (cons i (deref desc)))) 5 0)
 (deref desc)
 (define empty (ref null))
-(for-range 3 3 (lambda (i) (ref-set! empty (cons i (deref empty)))))
+(for-range (lambda (i) (ref-set! empty (cons i (deref empty)))) 3 3)
 (deref empty)
 `),
   ).toEqual([
@@ -3159,4 +3172,200 @@ test('with-handler-call', async () => {
   // No error is raised, so the handler is never invoked; with-handler returns
   // the thunk's result: (+ 1 2 3).
   expect(await runProgram('(with-handler + (lambda () (+ 1 2 3)))')).toEqual(['6'])
+})
+
+// #103: for-range takes its procedure first, like every other higher-order
+// function in the library (map, filter, fold, vector-map, vector-for-each,
+// string-map). It was the lone exception with the procedure last.
+test('for-range takes its procedure first, and vector-for-each still drives it', async () => {
+  expect(
+    await runProgram(`
+(define acc (ref null))
+(for-range (lambda (i) (ref-set! acc (cons i (deref acc)))) 0 4)
+(deref acc)
+(define acc2 (ref null))
+(vector-for-each (lambda (x) (ref-set! acc2 (cons x (deref acc2)))) (vector 7 8))
+(deref acc2)
+`),
+  ).toEqual(['void', '(list 3 2 1 0)', 'void', '(list 8 7)'])
+})
+
+// #103: vector-filter returns a vector, and said so only after its docstring
+// was corrected -- it had declared `-> list?`.
+test('vector-filter returns a vector', async () => {
+  expect(
+    await runProgram(`
+(vector-filter even? (vector 1 2 3 4))
+(vector? (vector-filter even? (vector 1 2)))
+(vector-filter even? (vector))
+`),
+  ).toEqual(['(vector 2 4)', '#t', '(vector)'])
+})
+
+// Maps: the operations over what a `{ ... }` literal produces (#103). These are
+// functional -- hash-set/hash-remove return a new map and leave the original
+// alone -- which is the property most of these tests are really about.
+describe('maps', () => {
+  test('hash? distinguishes maps from other aggregates', async () => {
+    expect(
+      await runProgram(`
+(hash? {"a" 1})
+(hash? {})
+(hash? (list 1 2))
+(hash? (vector 1 2))
+(hash? (pair 1 2))
+(hash? "a")
+`),
+    ).toEqual(['#t', '#t', '#f', '#f', '#f', '#f'])
+  })
+
+  test('hash-ref reads a key, and errors when it is absent', async () => {
+    expect(
+      await runProgram(`
+(hash-ref {"a" 1 "b" 2} "b")
+(hash-ref {"a" 1} "z")
+`),
+    ).toEqual(['2', 'Runtime error: (hash-ref) hash-ref: no value for key "z"'])
+  })
+
+  test('hash-ref-or supplies a default instead of erroring', async () => {
+    expect(
+      await runProgram(`
+(hash-ref-or {"a" 1} "a" "none")
+(hash-ref-or {"a" 1} "z" "none")
+(hash-ref-or {} "z" 0)
+`),
+    ).toEqual(['1', '"none"', '0'])
+  })
+
+  test('hash-has-key?', async () => {
+    expect(
+      await runProgram(`
+(hash-has-key? {"a" 1} "a")
+(hash-has-key? {"a" 1} "z")
+(hash-has-key? {} "a")
+`),
+    ).toEqual(['#t', '#f', '#f'])
+  })
+
+  test('hash-set returns a new map and leaves the original alone', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(hash-set m "b" 2)
+m
+(hash-set m "a" 99)
+m
+`),
+    ).toEqual([
+      '{ "a" : 1, "b" : 2 }',
+      '{ "a" : 1 }',
+      '{ "a" : 99 }',
+      '{ "a" : 1 }',
+    ])
+  })
+
+  test('hash-set! mutates in place, where hash-set does not', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(define alias m)
+(hash-set! m "b" 2)
+m
+alias
+`),
+    ).toEqual(['void', '{ "a" : 1, "b" : 2 }', '{ "a" : 1, "b" : 2 }'])
+  })
+
+  test('hash-set! overwrites an existing key and rejects a non-string one', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(hash-set! m "a" 99)
+m
+(hash-set! m 5 0)
+`),
+    ).toEqual([
+      'void',
+      '{ "a" : 99 }',
+      'Runtime error: (error) expected a string, received number',
+    ])
+  })
+
+  test('hash-remove returns a new map, and removing an absent key is not an error', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1 "b" 2})
+(hash-remove m "a")
+m
+(hash-remove m "z")
+(hash-remove {} "a")
+`),
+    ).toEqual([
+      '{ "b" : 2 }',
+      '{ "a" : 1, "b" : 2 }',
+      '{ "a" : 1, "b" : 2 }',
+      '{}',
+    ])
+  })
+
+  test('hash-count, hash-keys, and hash-values agree', async () => {
+    expect(
+      await runProgram(`
+(hash-count {"a" 1 "b" 2})
+(hash-count {})
+(hash-keys {"a" 1 "b" 2})
+(hash-values {"a" 1 "b" 2})
+(hash-keys {})
+`),
+    ).toEqual(['2', '0', '(list "a" "b")', '(list 1 2)', 'null'])
+  })
+
+  test('hash->list and list->hash round-trip', async () => {
+    expect(
+      await runProgram(`
+(hash->list {"a" 1 "b" 2})
+(list->hash (list (pair "x" 1) (pair "y" 2)))
+(equal? (list->hash (hash->list {"a" 1 "b" 2})) {"a" 1 "b" 2})
+(list->hash null)
+`),
+    ).toEqual([
+      '(list (pair "a" 1) (pair "b" 2))',
+      '{ "x" : 1, "y" : 2 }',
+      '#t',
+      '{}',
+    ])
+  })
+
+  test('a later duplicate key wins in list->hash, as in the literal', async () => {
+    expect(await runProgram('(list->hash (list (pair "a" 1) (pair "a" 2)))')).toEqual([
+      '{ "a" : 2 }',
+    ])
+  })
+
+  test('maps compare structurally regardless of how they were built', async () => {
+    expect(
+      await runProgram(`
+(equal? (hash-set {"a" 1} "b" 2) {"a" 1 "b" 2})
+(equal? (hash-set {"a" 1} "b" 2) {"b" 2 "a" 1})
+(equal? (hash-remove {"a" 1 "b" 2} "b") {"a" 1})
+`),
+    ).toEqual(['#t', '#t', '#t'])
+  })
+
+  test('non-string keys and non-map arguments are rejected by contracts', async () => {
+    expect(
+      await runProgram(`
+(hash-ref {"a" 1} 5)
+(hash-set {"a" 1} 5 0)
+(hash-ref (list 1 2) "a")
+(list->hash (list 5))
+`),
+    ).toEqual([
+      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a hash, received list',
+      'Runtime error: (list->hash) list->hash: expected a list of pairs, but the list contains number',
+    ])
+  })
 })

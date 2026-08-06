@@ -20,10 +20,16 @@ export interface PatchNote {
 export const patchNotes: PatchNote[] = [
   {
     version: '3.6.0',
-    title: 'Colors everywhere',
+    // N.B., one entry per *release*, not per change: the colors work (#344) and
+    // the argument-order work (#345) both ship in 3.6.0, so their notes belong
+    // in the same block.
+    title: 'Library cleanup',
     notes: [
       'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',
       'The old `color` function has been removed. Use `rgb` instead: (rgb 255 0 0) in place of (color 255 0 0 255).',
+      'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',
+      'for-range now takes its function first: (for-range f 0 10), like map, filter, and for-each.',
+      'Maps built with { ... } now have functions to work with them: hash-ref, hash-set, hash-set!, hash-keys, and more.',
     ],
   },
   {
