@@ -5,29 +5,12 @@ import { image_isReactiveImageFile, image_withImageFile } from '../../src/js/ima
 import { image_imageWidth, image_imageHeight } from '../../src/js/image/drawing.js'
 
 describe('color', () => {
-  test('color', async () => {
-    expect(
-      await runProgram(`
-(import image)
-(color 255 0 0 255)
-(color 0 0 0 0)
-(color 300 0 0 255)
-(color -10 0 0 255)
-(color 255 0 0)
-(color 255.5 0 0 255)
-`),
-    ).toEqual([
-      '(rgba 255 0 0 255)',
-      '(rgba 0 0 0 0)',
-      // Components are clamped from above (Math.min(r, 255)): an integer above
-      // 255 is silently clamped rather than rejected, since color's own
-      // docstring contract only checks integer?, not the 0-255 range.
-      '(rgba 255 0 0 255)',
-      // ...and now clamped from below too (Math.max(0, ...)), so a negative
-      // integer is clamped to 0 rather than passing through (#259).
-      '(rgba 0 0 0 255)',
-      'Runtime error: Arity mismatch in function call: expected 4 arguments, got 3',
-      'Runtime error: (error) expected an integer, received number',
+  // N.B., the legacy `color` constructor was retired in #103 -- it was a pure
+  // alias for `rgb` whose docstring had never matched it. Its clamping and
+  // arity behavior is `rgb`'s, covered by the `rgb` test below.
+  test('color is no longer bound', async () => {
+    expect(await runProgram('(import image)\n(color 255 0 0 255)')).toEqual([
+      'Runtime error: Variable not found: color',
     ])
   })
 
@@ -623,6 +606,59 @@ describe('font', () => {
   })
 })
 
+// Every color parameter accepts any of the three color representations (#103).
+// Before that, shapes declared `color : string?`, so passing an rgb -- the most
+// natural thing to write -- failed its contract even though the implementation
+// converted it fine via image_colorToRgb.
+describe('color parameters accept every color representation', () => {
+  test('a name, an rgb, and an hsv all produce the same shape', async () => {
+    const red = '(rectangle 10 10 "solid" (rgba 255 0 0 255))'
+    expect(
+      await runProgram(`
+(import image)
+(solid-square 10 "red")
+(solid-square 10 (rgb 255 0 0))
+(solid-square 10 (hsv 0 100 100))
+`),
+    ).toEqual([red, red, red])
+  })
+
+  test('across the shape constructors, not just one', async () => {
+    expect(
+      await runProgram(`
+(import image)
+; N.B., ellipse's fill is a boolean while rectangle's is a "solid"/"outline"
+; string -- an inconsistency in its own right, but a fill-mode one, not a
+; color one, so out of scope here.
+(image-color (ellipse 10 20 #t (rgb 1 2 3)))
+(image-color (rectangle 10 20 "solid" (hsv 0 0 0)))
+(image-color (triangle 10 "solid" "red"))
+(image-color (path 10 10 (list (pair 0 0) (pair 5 5)) "solid" (rgb 4 5 6)))
+`),
+    ).toEqual([
+      '(rgba 1 2 3 255)',
+      '(rgba 0 0 0 255)',
+      '(rgba 255 0 0 255)',
+      '(rgba 4 5 6 255)',
+    ])
+  })
+
+  test('a value that is no color at all is still rejected', async () => {
+    expect(
+      await runProgram(`
+(import image)
+(solid-square 10 5)
+(solid-square 10 "not-a-color")
+(solid-square 10 (list 255 0 0))
+`),
+    ).toEqual([
+      'Runtime error: (error) expected a color, received number',
+      'Runtime error: (error) expected a color, received string',
+      'Runtime error: (error) expected a color, received list',
+    ])
+  })
+})
+
 describe('drawing', () => {
   describe('canvas?', () => {
     test('is true for a value made by make-canvas', async () => {
@@ -712,7 +748,7 @@ describe('drawing', () => {
       ])
     })
 
-    test('rejects a non-boolean fill or a non-string color', async () => {
+    test('rejects a non-boolean fill or a non-color', async () => {
       expect(
         await runProgram(`
 (import image)
@@ -721,7 +757,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         'Runtime error: (error) expected a boolean, received string',
-        'Runtime error: (error) expected a string, received number',
+        'Runtime error: (error) expected a color, received number',
       ])
     })
 
@@ -799,7 +835,7 @@ describe('drawing', () => {
       ).toEqual(['(rectangle 10 20 "diagonal" (rgba 255 0 0 255))'])
     })
 
-    test('rejects a non-numeric width, an unknown color name, or a non-string color', async () => {
+    test('rejects a non-numeric width, an unknown color name, or a non-color', async () => {
       expect(
         await runProgram(`
 (import image)
@@ -809,8 +845,10 @@ describe('drawing', () => {
 `),
       ).toEqual([
         'Runtime error: (error) expected a number, received string',
-        'Runtime error: (rectangle) color-name->rgb: unknown color name not-a-color',
-        'Runtime error: (error) expected a string, received number',
+        // An unknown name is now caught by the color? contract up front, rather
+      // than deep inside color-name->rgb.
+      'Runtime error: (error) expected a color, received string',
+        'Runtime error: (error) expected a color, received number',
       ])
     })
   })
@@ -1261,7 +1299,7 @@ describe('drawing', () => {
       ])
     })
 
-    test('reject a non-string color', async () => {
+    test('reject a non-color', async () => {
       expect(
         await runProgram(`
 (import image)
@@ -1269,8 +1307,8 @@ describe('drawing', () => {
 (outlined-square 10 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected a string, received number',
-        'Runtime error: (error) expected a string, received number',
+        'Runtime error: (error) expected a color, received number',
+        'Runtime error: (error) expected a color, received number',
       ])
     })
   })
@@ -1317,14 +1355,14 @@ describe('drawing', () => {
       ])
     })
 
-    test('reject a non-string color', async () => {
+    test('reject a non-color', async () => {
       expect(
         await runProgram(`
 (import image)
 (solid-circle 5 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected a string, received number',
+        'Runtime error: (error) expected a color, received number',
       ])
     })
   })
