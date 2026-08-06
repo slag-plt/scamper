@@ -54,55 +54,68 @@ describe('lezer-bridge parsing', () => {
     expect(parse('(lambda (x & y z) x)').errors.length).toBeGreaterThan(0)
   })
 
-  test('curly braces as an alternate to parens, mixed freely (each closed with its own kind)', () => {
-    expectParses('{+ 1 2}')
-    expectParses('(+ {* 3 4} (- 5 1))')
-    expectParses('{define f (lambda (x) {+ x 1})}')
-    expectParses('{if #t {+ 1 2} 3}')
-    expectParses('{let ([x 1]) {+ x 1}}')
-  })
-
-  test('quote shorthand desugars to (quote <payload>), fully raw with no nested wrapping', () => {
-    const { prog, errors } = parse("'(1 2 3)")
+  test('curly braces are no longer an alternate spelling of parens (#334)', () => {
+    // "{" now opens a map literal, so these are either a map (when they happen
+    // to hold an even number of elements) or a malformed one -- never a call.
+    expect(parse('{+ 1 2}').errors.length).toBeGreaterThan(0)
+    expect(parse('{define f (lambda (x) x)}').errors.length).toBeGreaterThan(0)
+    const { prog, errors } = parse('{* 3}')
     expect(errors).toEqual([])
-    expect(prog.length).toBe(1)
-    const stmt = prog[0]
-    expect(stmt.tag).toBe('stmtexp')
-    if (stmt.tag !== 'stmtexp') return
-    expect(stmt.expr.tag).toBe('quote')
-    if (stmt.expr.tag !== 'quote') return
-    // N.B., quoted data is fully raw, recursively -- no element carries a
-    // Syntax wrapper or source range. This dialect has no true quotation
-    // (no quasiquote/unquote, no macros), so nothing has a legitimate reason
-    // to inspect a quoted element's provenance; an earlier version of
-    // nodeToRawValue did wrap nested elements (matching the old parser's
-    // real behavior), but that made every one of car/+/equal?/display on a
-    // quoted list's elements broken at runtime, since nothing knew how to
-    // unwrap a Syntax struct.
-    const value = stmt.expr.value as { head: unknown; tail: unknown }
-    expect(value).toHaveProperty('head')
-    expect(value.head).toBe(1)
+    expect(prog[0].tag).toBe('stmtexp')
+    if (prog[0].tag !== 'stmtexp') return
+    expect(prog[0].expr.tag).toBe('obj')
   })
 
-  test('explicit quote form and nested quote', () => {
-    expectParses('(quote (1 2 3))')
-    expectParses("'(a (b c) #\\x \"s\" #t)")
-    expectParses("''a")
+  test('quotation has been removed from the language (#334)', () => {
+    // "'" is not part of any token, so the shorthand is a syntax error...
+    expect(parse("'(1 2 3)").errors.length).toBeGreaterThan(0)
+    expect(parse("'a").errors.length).toBeGreaterThan(0)
+    // ...and "quote" is now just an ordinary identifier, so (quote x) parses as
+    // a plain application (which fails later, at scope-check/run time).
+    const { prog, errors } = parse('(quote x)')
+    expect(errors).toEqual([])
+    expect(prog[0].tag).toBe('stmtexp')
+    if (prog[0].tag !== 'stmtexp') return
+    expect(prog[0].expr.tag).toBe('app')
   })
 
-  test('vector literals are literal data, not sub-expressions to evaluate', () => {
+  test('vector literals are sub-expressions to evaluate, not literal data (#325)', () => {
     const { prog, errors } = parse('(display [1 2 3])')
     expect(errors).toEqual([])
     const stmt = prog[0]
     expect(stmt.tag).toBe('display')
     if (stmt.tag !== 'display') return
-    expect(stmt.value.tag).toBe('lit')
-    if (stmt.value.tag !== 'lit') return
-    // fully raw elements, no Syntax wrapping -- see the quote test above.
-    expect(stmt.value.value).toEqual([1, 2, 3])
+    expect(stmt.value.tag).toBe('vec')
+    if (stmt.value.tag !== 'vec') return
+    expect(stmt.value.exps.map((e) => e.tag)).toEqual(['lit', 'lit', 'lit'])
 
     expectParses('[]')
     expectParses('(display [(+ 1 2) "x" #t])')
+    // An identifier inside a vector literal is a real variable reference.
+    const v = parse('(let ([x 1]) [x])')
+    expect(v.errors).toEqual([])
+  })
+
+  test('map literals parse to alternating key/value pairs (#334)', () => {
+    const { prog, errors } = parse('(display {"a" 1 "b" (+ 1 1)})')
+    expect(errors).toEqual([])
+    const stmt = prog[0]
+    expect(stmt.tag).toBe('display')
+    if (stmt.tag !== 'display') return
+    expect(stmt.value.tag).toBe('obj')
+    if (stmt.value.tag !== 'obj') return
+    expect(stmt.value.pairs.length).toBe(2)
+    expect(stmt.value.pairs.map((p) => p.key.tag)).toEqual(['lit', 'lit'])
+    expect(stmt.value.pairs.map((p) => p.value.tag)).toEqual(['lit', 'app'])
+
+    expectParses('{}')
+    expectParses('{"nested" {"a" [1 2]}}')
+  })
+
+  test('a map literal with an odd number of elements is an error (#334)', () => {
+    const { errors } = parse('{"a" 1 "b"}')
+    expect(errors.length).toBe(1)
+    expect(errors[0].message).toMatch(/even number of expressions/)
   })
 
   test('match with number/string/char/vector/ctor/wildcard patterns', () => {
@@ -217,29 +230,21 @@ describe('lezer-bridge parsing', () => {
     expect(stmt.expr.args.length).toBe(2)
   })
 
-  test('an inline comment inside raw data (quote/vector) is dropped, not turned into a phantom element (#302)', () => {
-    // N.B., quoted lists and vector literals are built by nodeToRawValue, which
-    // also reads children(). Pre-fix this path failed *silently*: the comment
-    // became a phantom '() / undefined element rather than throwing.
-    const q = parse("'(1 2 ; note\n 3)")
-    expect(q.errors).toEqual([])
-    const qStmt = q.prog[0]
-    expect(qStmt.tag).toBe('stmtexp')
-    if (qStmt.tag !== 'stmtexp' || qStmt.expr.tag !== 'quote') return
-    const elems: unknown[] = []
-    let cur = qStmt.expr.value as { head: unknown; tail: unknown } | null
-    while (cur !== null) {
-      elems.push(cur.head)
-      cur = cur.tail as { head: unknown; tail: unknown } | null
-    }
-    expect(elems).toEqual([1, 2, 3])
-
+  test('an inline comment inside a vector or map literal is dropped, not turned into a phantom element (#302)', () => {
     const v = parse('(display [1 2 ; note\n 3])')
     expect(v.errors).toEqual([])
     const vStmt = v.prog[0]
     expect(vStmt.tag).toBe('display')
-    if (vStmt.tag !== 'display' || vStmt.value.tag !== 'lit') return
-    expect(vStmt.value.value).toEqual([1, 2, 3])
+    if (vStmt.tag !== 'display' || vStmt.value.tag !== 'vec') return
+    expect(vStmt.value.exps.length).toBe(3)
+
+    // A comment must not count toward the map literal's element parity either.
+    const m = parse('(display {"a" 1 ; note\n "b" 2})')
+    expect(m.errors).toEqual([])
+    const mStmt = m.prog[0]
+    expect(mStmt.tag).toBe('display')
+    if (mStmt.tag !== 'display' || mStmt.value.tag !== 'obj') return
+    expect(mStmt.value.pairs.length).toBe(2)
   })
 
   test("a define's docstring is still captured when its body has an inline comment (#302)", () => {
@@ -275,7 +280,6 @@ describe('lezer-bridge parsing', () => {
         'let',
         'match',
         'or',
-        'quote',
         'struct',
       ].sort(),
     )

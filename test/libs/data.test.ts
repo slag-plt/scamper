@@ -118,7 +118,7 @@ describe('with-plot-options', () => {
       (list (pair "x-min" 0) (pair "x-max" 10) (pair "y-label" "Count") (pair "title" "My Plot"))
       (plot-linear (dataset-bar "Sales" (list 1 2 3))))
     `)).toEqual([
-      '(plot [Blob: {"data":{"datasets":[{"type":"bar","label":"Sales","data":[1,2,3]}]},"options":{"scales":{"x":{"type":"linear","min":0,"max":10},"y":{"title":{"display":true,"text":"Count"}}},"plugins":{"title":{"display":true,"text":"My Plot"}}}}])'
+      '(plot { "data" : { "datasets" : (vector { "type" : "bar", "label" : "Sales", "data" : (vector 1 2 3) }) }, "options" : { "scales" : { "x" : { "type" : "linear", "min" : 0, "max" : 10 }, "y" : { "title" : { "display" : #t, "text" : "Count" } } }, "plugins" : { "title" : { "display" : #t, "text" : "My Plot" } } } })'
     ])
   })
 })
@@ -131,7 +131,7 @@ describe('with-dataset-options', () => {
       (list (pair "background-color" "red") (pair "border-color" "blue"))
       (dataset-bar "Sales" (list 1 2 3)))
     `)).toEqual([
-      '(dataset [Blob: {"type":"bar","label":"Sales","data":[1,2,3],"backgroundColor":"red","borderColor":"blue"}])'
+      '(dataset { "type" : "bar", "label" : "Sales", "data" : (vector 1 2 3), "backgroundColor" : "red", "borderColor" : "blue" })'
     ])
   })
 })
@@ -144,9 +144,9 @@ describe('plot builders', () => {
     (plot-category (list "Q1" "Q2") (dataset-bar "Sales" (list 1 2)))
     (plot-radial (list "Q1" "Q2") (dataset-radar "Sales" (list 1 2)))
     `)).toEqual([
-      '(plot [Blob: {"data":{"datasets":[{"type":"bar","label":"Sales","data":[1,2,3]}]},"options":{"scales":{"x":{"type":"linear"}}}}])',
-      '(plot [Blob: {"data":{"labels":["Q1","Q2"],"datasets":[{"type":"bar","label":"Sales","data":[1,2]}]},"options":{"scales":{"x":{"type":"category"}}}}])',
-      '(plot [Blob: {"data":{"labels":["Q1","Q2"],"datasets":[{"type":"radar","label":"Sales","data":[1,2]}]}}])'
+      '(plot { "data" : { "datasets" : (vector { "type" : "bar", "label" : "Sales", "data" : (vector 1 2 3) }) }, "options" : { "scales" : { "x" : { "type" : "linear" } } } })',
+      '(plot { "data" : { "labels" : (vector "Q1" "Q2"), "datasets" : (vector { "type" : "bar", "label" : "Sales", "data" : (vector 1 2) }) }, "options" : { "scales" : { "x" : { "type" : "category" } } } })',
+      '(plot { "data" : { "labels" : (vector "Q1" "Q2"), "datasets" : (vector { "type" : "radar", "label" : "Sales", "data" : (vector 1 2) }) } })'
     ])
   })
 })
@@ -158,8 +158,8 @@ describe('dataset-line', () => {
     (dataset-line "Growth" (list 1 2 3))
     (dataset-line "Growth" (list (pair 0 1) (pair 1 4)))
     `)).toEqual([
-      '(dataset [Blob: {"type":"line","label":"Growth","data":[1,2,3]}])',
-      '(dataset [Blob: {"type":"line","label":"Growth","data":[{"x":0,"y":1},{"x":1,"y":4}]}])'
+      '(dataset { "type" : "line", "label" : "Growth", "data" : (vector 1 2 3) })',
+      '(dataset { "type" : "line", "label" : "Growth", "data" : (vector { "x" : 0, "y" : 1 } { "x" : 1, "y" : 4 }) })'
     ])
   })
 })
@@ -173,10 +173,10 @@ describe('dataset-bar, dataset-pie, dataset-polar, dataset-radar', () => {
     (dataset-polar "Sales" (list 1 2 3))
     (dataset-radar "Sales" (list 1 2 3))
     `)).toEqual([
-      '(dataset [Blob: {"type":"bar","label":"Sales","data":[1,2,3]}])',
-      '(dataset [Blob: {"type":"pie","label":"Sales","data":[1,2,3]}])',
-      '(dataset [Blob: {"type":"polarArea","label":"Sales","data":[1,2,3]}])',
-      '(dataset [Blob: {"type":"radar","label":"Sales","data":[1,2,3]}])'
+      '(dataset { "type" : "bar", "label" : "Sales", "data" : (vector 1 2 3) })',
+      '(dataset { "type" : "pie", "label" : "Sales", "data" : (vector 1 2 3) })',
+      '(dataset { "type" : "polarArea", "label" : "Sales", "data" : (vector 1 2 3) })',
+      '(dataset { "type" : "radar", "label" : "Sales", "data" : (vector 1 2 3) })'
     ])
   })
 })
@@ -188,8 +188,8 @@ describe('dataset-scatter, dataset-bubble', () => {
     (dataset-scatter "Points" (list (pair 1 2) (pair 3 4)))
     (dataset-bubble "Points" (list (list 1 2 3) (list 4 5 6)))
     `)).toEqual([
-      '(dataset [Blob: {"type":"scatter","label":"Points","data":[{"x":1,"y":2},{"x":3,"y":4}]}])',
-      '(dataset [Blob: {"type":"bubble","label":"Points","data":[{"x":1,"y":2,"r":3},{"x":4,"y":5,"r":6}]}])'
+      '(dataset { "type" : "scatter", "label" : "Points", "data" : (vector { "x" : 1, "y" : 2 } { "x" : 3, "y" : 4 }) })',
+      '(dataset { "type" : "bubble", "label" : "Points", "data" : (vector { "x" : 1, "y" : 2, "r" : 3 } { "x" : 4, "y" : 5, "r" : 6 }) })'
     ])
   })
 })

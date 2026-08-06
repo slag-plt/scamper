@@ -62,3 +62,37 @@ export function runtime_typeOf (v: L.Value): string {
 export function runtime_any (_v: L.Value): boolean {
   return true
 }
+
+/**
+ * Builds the vector a `[e1 ... ek]` literal denotes. Bound to the internal
+ * `##mkVec##` rather than reusing the prelude's `vector` so that a user binding
+ * named `vector` cannot change what a vector literal means.
+ * @returns a vector of the arguments, in order
+ */
+export function runtime_mkVec (...args: L.Value[]): L.Value[] {
+  return args
+}
+
+/**
+ * Builds the map (Javascript object) a `{k1 v1 ... kn vn}` literal denotes.
+ * Bound to the internal `##mkObj##`; expansion rewrites every map literal into
+ * a call to it.
+ * @param args alternating keys and values; each key must be a string
+ * @returns the object mapping each key to its value
+ */
+export function runtime_mkObj (...args: L.Value[]): object {
+  // The parser rejects an odd element count, so this only fires if something
+  // calls ##mkObj## directly.
+  if (args.length % 2 !== 0) {
+    throw new L.ScamperError('Runtime', `A map requires an even number of arguments (alternating keys and values), received ${args.length.toString()}`)
+  }
+  const ret: Record<string, L.Value> = {}
+  for (let i = 0; i < args.length; i += 2) {
+    const key = args[i]
+    if (typeof key !== 'string') {
+      throw new L.ScamperError('Runtime', `A map key must be a string, received ${L.typeOf(key)}`)
+    }
+    ret[key] = args[i + 1]
+  }
+  return ret
+}

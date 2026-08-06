@@ -5,7 +5,11 @@ import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
 defineProps<{ layout: Layout }>()
 
-const DELIMS = { paren: ['(', ')'], bracket: ['[', ']'] } as const
+const DELIMS = {
+  paren: ['(', ')'],
+  bracket: ['[', ']'],
+  brace: ['{', '}'],
+} as const
 
 // Syntax highlighting is done by tagging the HTML directly: because we build the
 // output from the AST, each token's role is already known, so there is no need

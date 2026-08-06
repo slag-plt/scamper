@@ -208,6 +208,45 @@ describe('nested derived forms are recovered, not lost', () => {
   })
 })
 
+describe('vector literal', () => {
+  test('the (vector ...) it expands to is recovered as [...]', () => {
+    expect(roundTrip('[1 2 3]')).toBe('[1 2 3]')
+    expect(roundTrip('[]')).toBe('[]')
+  })
+
+  test('operands are sugared recursively', () => {
+    expect(roundTrip('[(and a b) (or c d)]')).toBe('[(and a b) (or c d)]')
+  })
+
+  test('nests, and is recovered inside another derived form', () => {
+    expect(roundTrip('[[1 2] [3 4]]')).toBe('[[1 2] [3 4]]')
+    expect(roundTrip('(and [1] x)')).toBe('(and [1] x)')
+  })
+
+  test('a hand-written (vector ...) is left alone -- recovery is exact', () => {
+    expect(roundTrip('(vector 1 2 3)')).toBe('(vector 1 2 3)')
+  })
+})
+
+describe('map literal', () => {
+  test('the (##mkObj## ...) it expands to is recovered as {...}', () => {
+    expect(roundTrip('{"a" 1 "b" 2}')).toBe('{"a" 1 "b" 2}')
+    expect(roundTrip('{}')).toBe('{}')
+  })
+
+  test('keys and values are sugared recursively', () => {
+    expect(roundTrip('{(and a b) (or c d)}')).toBe('{(and a b) (or c d)}')
+  })
+
+  test('nests with vector literals', () => {
+    expect(roundTrip('{"a" {"b" [1 2]}}')).toBe('{"a" {"b" [1 2]}}')
+  })
+
+  test('a hand-written (##mkObj## ...) is left alone -- recovery is exact', () => {
+    expect(roundTrip('(##mkObj## "a" 1)')).toBe('(##mkObj## "a" 1)')
+  })
+})
+
 // ---- Nothing to sugar (core forms pass through unchanged) ------------------
 
 describe('nothing to sugar (core forms unchanged)', () => {
@@ -216,7 +255,6 @@ describe('nothing to sugar (core forms unchanged)', () => {
     ['a string', '"hi"'],
     ['a boolean', '#t'],
     ['an identifier', 'x'],
-    ['a quote', "'(1 2 3)"],
     ['an application', '(f a b)'],
     ['a lambda', '(lambda (x y) (+ x y))'],
     ['a plain if', '(if a b c)'],

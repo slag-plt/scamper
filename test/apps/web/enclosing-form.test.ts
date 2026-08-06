@@ -70,11 +70,18 @@ describe('formPathAt', () => {
     ])
   })
 
-  test('quoted list data', () => {
-    expect(pathAtCursor("(define q '(1 2 3|0))")).toEqual([
+  test('vector literal', () => {
+    expect(pathAtCursor('(define v [1 2 3|0])')).toEqual([
       'define',
-      'quote',
-      'application',
+      'vector',
+      'number',
+    ])
+  })
+
+  test('map literal', () => {
+    expect(pathAtCursor('(define m {"a" 1|0})')).toEqual([
+      'define',
+      'map literal',
       'number',
     ])
   })

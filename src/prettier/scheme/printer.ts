@@ -26,6 +26,10 @@ function isCondBranch(v: unknown): v is { test: A.Exp; body: A.Exp } {
   return typeof v === 'object' && v !== null && 'test' in v && 'body' in v
 }
 
+function isObjPair(v: unknown): v is { key: A.Exp; value: A.Exp } {
+  return typeof v === 'object' && v !== null && 'key' in v && 'value' in v
+}
+
 // ---- Comments (issue #304) -------------------------------------------------
 // Comments are attached to AST nodes by the parser (see scheme/comments.ts);
 // the printer reads them off each node. Every node is wrapped by `print` below,
@@ -186,9 +190,6 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
       ])
     }
 
-    case 'quote':
-      return `'${TextRenderer.render(node.value)}`
-
     case 'and':
       return group([
         '(and',
@@ -224,6 +225,33 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         ? '#()'
         : ['#', path.call(print, 'body')]
 
+    case 'vec':
+      if (node.exps.length === 0) {
+        return '[]'
+      }
+      return group([
+        '[',
+        indent(join(line, path.map(print, 'exps'))),
+        ']',
+      ])
+
+    case 'obj': {
+      // {k1 v1 ... kn vn}: each pair prints as an unbreakable "key value" unit,
+      // so a map that has to break does so between pairs, never inside one.
+      if (node.pairs.length === 0) {
+        return '{}'
+      }
+      const pairDocs: Doc[] = path.map((pairPath: AstPath) => {
+        if (!isObjPair(pairPath.node)) return ''
+        return group([
+          pairPath.call(print, 'key'),
+          ' ',
+          pairPath.call(print, 'value'),
+        ])
+      }, 'pairs')
+      return group(['{', indent(join(line, pairDocs)), '}'])
+    }
+
     ///// Patterns //////////////////////////////////////////////////////////////
 
     case 'pwild':
@@ -242,6 +270,12 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         indent([line, join(line, path.map(print, 'args'))]),
         ')',
       ])
+
+    case 'pvec':
+      if (node.args.length === 0) {
+        return '[]'
+      }
+      return group(['[', indent(join(line, path.map(print, 'args'))), ']'])
   }
   return ''
 }

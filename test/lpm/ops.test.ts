@@ -48,7 +48,7 @@ describe('basic ops', () => {
     ['null', null],
     ['void', undefined],
     ['char', U.mkChar('a')],
-    ['symbol', U.mkSym('x')],
+    ['map', { a: 1 }],
     ['vector', [1, 2, 3]],
     ['nested struct', U.mkStruct('point', ['x', 'y'], [1, 2])],
   ]

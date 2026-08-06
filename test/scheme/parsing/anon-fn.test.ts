@@ -38,8 +38,24 @@ describe('anonymous function parsing', () => {
     expectParses('#(cond [% 1] [#t 2])')
     expectParses('#(match % [0 "zero"] [_ "other"])')
     expectParses('#(map (lambda (x) (+ x %1)) %&)')
-    // The brace form of a paren works too.
-    expectParses('#{+ %1 1}')
+    // A `%` parameter inside a vector or map literal is a real reference now
+    // that those forms evaluate their elements (#325).
+    expectParses('#(list %2 [%1])')
+    expectParses('#({"k" %1})')
+  })
+
+  test('#{...} is a map literal, not the brace spelling of #(...) (#334)', () => {
+    // "{" no longer opens an anonymous function, so the "#" is left dangling as
+    // its own (undefined) identifier and the braces read as a map literal.
+    const { prog, errors } = parse('#{"a" 1}')
+    expect(errors).toEqual([])
+    expect(prog.length).toBe(2)
+    expect(prog[0].tag).toBe('stmtexp')
+    if (prog[0].tag !== 'stmtexp') return
+    expect(prog[0].expr.tag).toBe('id')
+    expect(prog[1].tag).toBe('stmtexp')
+    if (prog[1].tag !== 'stmtexp') return
+    expect(prog[1].expr.tag).toBe('obj')
   })
 
   test('#(...) parses to an anonfn node wrapping the body expression', () => {
@@ -143,12 +159,4 @@ describe('anonymous function restrictions', () => {
     }
   })
 
-  test('quoted #(...) is raw list data with no spurious null', () => {
-    // #(...) as inert data is just the list of its operands (finding: the "#("
-    // token must not leak in as an empty-list null).
-    expect(A.expToString(parseExp("'#(f x)"))).toBe(
-      A.expToString(parseExp("'(f x)")),
-    )
-    expect(A.expToString(parseExp("'#(f x)"))).not.toContain('null')
-  })
 })

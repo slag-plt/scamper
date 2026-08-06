@@ -7,8 +7,6 @@ import * as L from './lang.js'
 export const isNumber = (v: L.Value): v is number => typeof v === 'number'
 export const isBoolean = (v: L.Value): v is boolean => typeof v === 'boolean'
 export const isString = (v: L.Value): v is string => typeof v === 'string'
-export const isSymName = (v: L.Value, name: string): boolean =>
-  isSym(v) && v.value === name
 export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
 export const isArray = (v: L.Value): v is L.Value[] => Array.isArray(v)
@@ -22,8 +20,17 @@ export const isFunction = (v: L.Value): v is L.ScamperFn =>
   isJsFunction(v) || isClosure(v)
 export const isChar = (v: L.Value): v is L.Char =>
   isTaggedObject(v) && v[L.scamperTag] === 'char'
-export const isSym = (v: L.Value): v is L.Sym =>
-  isTaggedObject(v) && v[L.scamperTag] === 'sym'
+/**
+ * A map value: a *plain* Javascript object, i.e. what a `{...}` literal builds
+ * (and what JSON-shaped library data looks like). Deliberately excludes every
+ * tagged value and every class instance -- an HTMLElement, an Error, a struct,
+ * or a Chart.js option bag is not a map and keeps its own handling.
+ */
+export const isObj = (v: L.Value): v is Record<string, L.Value> =>
+  typeof v === 'object' &&
+  v !== null &&
+  Object.getPrototypeOf(v) === Object.prototype &&
+  !isTaggedObject(v)
 export const isStruct = (v: L.Value): v is L.Struct =>
   isTaggedObject(v) && v[L.scamperTag] === 'struct'
 export const isStructKind = <T extends L.Struct>(
@@ -56,7 +63,6 @@ export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: 'char',
   value: v,
 })
-export const mkSym = (v: string): L.Sym => ({ [L.scamperTag]: 'sym', value: v })
 export const mkStruct = (
   kind: string,
   fields: string[],
@@ -146,6 +152,7 @@ export const patVars = (pat: L.Pat): string[] => {
     case 'pvar':
       return [pat.name]
     case 'pctor':
+    case 'pvec':
       return pat.args.flatMap(patVars)
     case 'pwild':
     case 'plit':
@@ -225,6 +232,10 @@ export const mkPCtor = (
   args: L.Pat[],
   range: Range = Range.none,
 ): L.PCtor => ({ tag: 'pctor', name, args, range })
+export const mkPVec = (
+  args: L.Pat[],
+  range: Range = Range.none,
+): L.PVec => ({ tag: 'pvec', args, range })
 
 ///// Utility Functions ////////////////////////////////////////////////////////
 
@@ -271,6 +282,24 @@ export function pMatch(v: L.Value, p: L.Pat): [string, L.Value][] | null {
         return bindings
       }
       return null
+    }
+
+    case 'pvec': {
+      // A vector pattern matches an array of exactly the same length, element
+      // by element. A length mismatch is an ordinary failed match (the branch
+      // falls through), not an error.
+      if (!isArray(v) || v.length !== p.args.length) {
+        return null
+      }
+      const bindings: [string, L.Value][] = []
+      for (let i = 0; i < p.args.length; i++) {
+        const match = pMatch(v[i], p.args[i])
+        if (!match) {
+          return null
+        }
+        bindings.push(...match)
+      }
+      return bindings
     }
   }
 }
@@ -407,9 +436,34 @@ export function equals(v: L.Value, u: L.Value): boolean {
       }
     }
     return true
+  } else if (isObj(v) && isObj(u)) {
+    // Two maps are equal when they have the same keys bound to equal values.
+    // Key *order* is not part of a map's identity, so it is not compared.
+    const vKeys = Object.keys(v)
+    if (vKeys.length !== Object.keys(u).length) {
+      return false
+    }
+    return vKeys.every(
+      (k) => Object.prototype.hasOwnProperty.call(u, k) && equals(v[k], u[k]),
+    )
   } else {
     return false
   }
+}
+
+/**
+ * @returns the printed form of a map value, `{ "k1" : v1, "k2" : v2 }` (`{}`
+ * when empty), given a renderer for its values. Shared by every backend so the
+ * text and web renderings cannot drift.
+ */
+export function objToString(
+  v: Record<string, L.Value>,
+  render: (v: L.Value) => string,
+): string {
+  const entries = Object.keys(v).map(
+    (k) => `"${escapeStringLiteral(k)}" : ${render(v[k])}`,
+  )
+  return entries.length === 0 ? '{}' : `{ ${entries.join(', ')} }`
 }
 
 /** @returns the type of the given value as a string (for debugging purposes) */
@@ -432,14 +486,14 @@ export function typeOf(v: L.Value): string {
     return `[Function: ${v.name ?? '##anonymous##'}]`
   } else if (isChar(v)) {
     return 'char'
-  } else if (isSym(v)) {
-    return 'symbol'
   } else if (isPair(v)) {
     return 'pair'
   } else if (isList(v)) {
     return 'list'
   } else if (isStruct(v)) {
     return `[Struct: ${v[L.structKind]}]`
+  } else if (isObj(v)) {
+    return 'object'
   } else {
     return typeof v
   }
@@ -459,8 +513,6 @@ export function toString(v: L.Value): string {
     default:
       if (v === null) {
         return 'null'
-      } else if (isSym(v)) {
-        return v.value
       } else if (isArray(v)) {
         return v.length === 0
           ? '(vector)'
@@ -493,6 +545,8 @@ export function toString(v: L.Value): string {
         return v.toString()
       } else if (v instanceof Error) {
         return v.toString()
+      } else if (isObj(v)) {
+        return objToString(v, toString)
       } else {
         return `[Blob: ${JSON.stringify(v)}]`
       }

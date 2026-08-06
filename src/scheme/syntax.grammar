@@ -2,11 +2,12 @@
 
 @skip { space | LineComment }
 
-// N.B., reader.ts's readValue treats any bracket other than "[" as producing
-// a plain list -- "(" and "{" are fully interchangeable (as long as each is
-// closed with its own matching kind: "(...)" or "{...}", never mixed), and
-// can appear anywhere a list is expected, including special forms.
-paren<content> { "(" content ")" | "{" content "}" }
+// N.B., each of the three bracket kinds means exactly one thing: "(...)" is a
+// list/application/special form, "[...]" is a vector (or, in a pattern, a vector
+// pattern) or one of the fixed [pattern expression] pair positions, and "{...}"
+// is a map literal. "{" used to be interchangeable with "(", but that spelling
+// was given up so the map literal could have it (issue #334).
+paren<content> { "(" content ")" }
 
 simplearglist {
   paren<Identifier*>
@@ -45,8 +46,12 @@ expression {
   String |
   Boolean |
   Char |
-  Quote { "'" expression | paren<kw<"quote"> expression> } |
   Vector { "[" expression* "]" } |
+  // A Clojure-style map literal: an even number of expressions read as
+  // alternating keys and values, e.g. {"name" "Alice" "age" 30}. Every element
+  // is an ordinary sub-expression (the even-length check lives in
+  // lezer-bridge.ts, which the grammar cannot express).
+  Obj { "{" expression* "}" } |
   Lambda { paren<kw<"lambda"> arglist expression> } |
   If { paren<kw<"if"> expression expression expression> } |
   And { paren<kw<"and"> expression*> } |
@@ -82,8 +87,8 @@ statement {
 kw<term> { @specialize[@name={term}]<Identifier, term> }
 
 // The "#" that opens #(...). An external tokenizer (anon-tokens.ts) emits it
-// only when the "#" is immediately followed by "(" or "{", so "#t"/"#f"/"#\c"
-// and "#"-containing identifiers (e.g. ##report##) are unaffected. Declared
+// only when the "#" is immediately followed by "(", so "#t"/"#f"/"#\c" and
+// "#"-containing identifiers (e.g. ##report##) are unaffected. Declared
 // before @tokens so it takes precedence over Identifier for a bare "#".
 @external tokens anonHash from "../anon-tokens.js" { AnonHash }
 

@@ -17,6 +17,8 @@ function raisePat(pat: LPM.Pat): A.Pat {
       return A.mkId(pat.name, pat.range)
     case 'pctor':
       return A.mkPCtor(A.mkId(pat.name, pat.range), pat.args.map(raisePat), pat.range)
+    case 'pvec':
+      return A.mkPVec(pat.args.map(raisePat), pat.range)
   }
 }
 

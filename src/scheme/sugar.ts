@@ -1,4 +1,5 @@
 import * as A from './ast.js'
+import { pairs } from './util.js'
 
 // Sugaring is the dual of expansion (expansion.ts): a recursive AST -> AST walk
 // (sugarExpr / sugarStmt / sugarProgram) that recovers the derived forms `and`,
@@ -89,11 +90,22 @@ export function sugarExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
     case 'lit':
     case 'id':
-    case 'quote':
       return e
 
-    case 'app':
+    case 'app': {
+      // A tagged application is the expansion of a vector or map literal; the
+      // operands are sugared recursively, as everywhere else here.
+      if (e.provenance === 'vector-lit') {
+        return A.mkVec(e.args.map(sugarExpr), e.range)
+      }
+      if (e.provenance === 'obj-lit') {
+        return A.mkObj(
+          pairs(e.args.map(sugarExpr)).map(([key, value]) => ({ key, value })),
+          e.range,
+        )
+      }
       return A.mkApp(sugarExpr(e.head), e.args.map(sugarExpr), e.range)
+    }
 
     case 'lam': {
       if (e.provenance === 'anon-fn') {
@@ -169,6 +181,16 @@ export function sugarExpr(e: A.Exp): A.Exp {
       )
     case 'anonfn':
       return A.mkAnonFn(sugarExpr(e.body), e.range)
+    case 'vec':
+      return A.mkVec(e.exps.map(sugarExpr), e.range)
+    case 'obj':
+      return A.mkObj(
+        e.pairs.map(({ key, value }) => ({
+          key: sugarExpr(key),
+          value: sugarExpr(value),
+        })),
+        e.range,
+      )
   }
 }
 

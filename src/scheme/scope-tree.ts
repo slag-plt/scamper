@@ -75,6 +75,7 @@ function patternIdentifiers(pat: A.Pat): A.Identifier[] {
     // N.B., a constructor's head is a reference, not a binder -- only its
     // arguments contribute pattern variables.
     case 'pctor':
+    case 'pvec':
       return pat.args.flatMap(patternIdentifiers)
     case 'pwild':
     case 'plit':
@@ -94,12 +95,18 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     // Leaves: no sub-expressions, no scopes.
     case 'id':
     case 'lit':
-    case 'quote':
       return []
 
     // Transparent forms: forward the scopes of every sub-expression.
     case 'app':
       return [exp.head, ...exp.args].flatMap(scopesInExp)
+    case 'vec':
+      return exp.exps.flatMap(scopesInExp)
+    case 'obj':
+      return exp.pairs.flatMap((p) => [
+        ...scopesInExp(p.key),
+        ...scopesInExp(p.value),
+      ])
     case 'if':
       return [exp.guard, exp.ifB, exp.elseB].flatMap(scopesInExp)
     case 'begin':

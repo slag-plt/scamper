@@ -24,8 +24,6 @@ export class Renderer extends R.Renderer<HTMLElement> {
       default:
         if (v === null) {
           return mkCodeElement('()')
-        } else if (U.isSym(v)) {
-          return mkCodeElement(v.value)
         } else if (U.isArray(v)) {
           if (v.length === 0) {
             return mkCodeElement('(vector)')
@@ -95,6 +93,24 @@ export class Renderer extends R.Renderer<HTMLElement> {
             return mkCodeElement(v.toString())
           } else if (v instanceof Error) {
             return mkCodeElement(v.toString())
+          } else if (U.isObj(v)) {
+            // { "k1" : v1, "k2" : v2 } -- the values are rendered as elements
+            // so a map holding an image or a list renders those properly.
+            const keys = Object.keys(v)
+            if (keys.length === 0) {
+              return mkCodeElement('{}')
+            }
+            const ret = mkCodeElement('{ ')
+            keys.forEach((k, i) => {
+              ret.appendChild(
+                mkCodeElement(
+                  `${i > 0 ? ', ' : ''}"${U.escapeStringLiteral(k)}" : `,
+                ),
+              )
+              ret.appendChild(this.render(v[k]))
+            })
+            ret.append(mkCodeElement(' }'))
+            return ret
           } else {
             return mkCodeElement(`[Blob: ${JSON.stringify(v)}]`)
           }

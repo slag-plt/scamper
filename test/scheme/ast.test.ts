@@ -82,8 +82,23 @@ describe('expToString', () => {
     ).toBe('(match x [y y])')
   })
 
-  test('quote', () => {
-    expect(A.expToString(A.mkQuote(1, anyRange))).toBe('(quote 1)')
+  test('vector literal', () => {
+    expect(A.expToString(A.mkVec([], anyRange))).toBe('[]')
+    expect(
+      A.expToString(A.mkVec([A.mkLit(1, anyRange), A.mkId('x', anyRange)], anyRange)),
+    ).toBe('[1 x]')
+  })
+
+  test('map literal', () => {
+    expect(A.expToString(A.mkObj([], anyRange))).toBe('{}')
+    expect(
+      A.expToString(
+        A.mkObj(
+          [{ key: A.mkLit('a', anyRange), value: A.mkId('x', anyRange) }],
+          anyRange,
+        ),
+      ),
+    ).toBe('{"a" x}')
   })
 
 
