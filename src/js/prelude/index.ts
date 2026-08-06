@@ -1127,6 +1127,22 @@ export function prelude_hashSet(
   return { ...h, [checkKey('hash-set', k)]: v }
 }
 
+/**
+ * Mutates `h` in place, unlike `hash-set`. Named with the usual `!`, and the
+ * counterpart of vector-set!/ref-set!.
+ *
+ * N.B., a map built by a `{...}` literal is an ordinary Javascript object, so
+ * there is nothing to stop this -- but note that a map shared by two bindings
+ * is changed for both, which is exactly what `hash-set` avoids.
+ */
+export function prelude_hashSetBang(
+  h: Record<string, L.Value>,
+  k: L.Value,
+  v: L.Value,
+): void {
+  h[checkKey('hash-set!', k)] = v
+}
+
 export function prelude_hashRemove(
   h: Record<string, L.Value>,
   k: L.Value,

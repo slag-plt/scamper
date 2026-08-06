@@ -134,7 +134,7 @@ const tagListStr = ref([
     'list creation',
     'list manipulation',
   'vectors',
-  'maps',
+  'hashmap',
   'mutation',
   'constants',
   'function composition',

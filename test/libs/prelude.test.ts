@@ -3200,6 +3200,8 @@ test('vector-filter returns a vector', async () => {
 (vector-filter even? (vector))
 `),
   ).toEqual(['(vector 2 4)', '#t', '(vector)'])
+})
+
 // Maps: the operations over what a `{ ... }` literal produces (#103). These are
 // functional -- hash-set/hash-remove return a new map and leave the original
 // alone -- which is the property most of these tests are really about.
@@ -3260,6 +3262,33 @@ m
       '{ "a" : 1 }',
       '{ "a" : 99 }',
       '{ "a" : 1 }',
+    ])
+  })
+
+  test('hash-set! mutates in place, where hash-set does not', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(define alias m)
+(hash-set! m "b" 2)
+m
+alias
+`),
+    ).toEqual(['void', '{ "a" : 1, "b" : 2 }', '{ "a" : 1, "b" : 2 }'])
+  })
+
+  test('hash-set! overwrites an existing key and rejects a non-string one', async () => {
+    expect(
+      await runProgram(`
+(define m {"a" 1})
+(hash-set! m "a" 99)
+m
+(hash-set! m 5 0)
+`),
+    ).toEqual([
+      'void',
+      '{ "a" : 99 }',
+      'Runtime error: (error) expected a string, received number',
     ])
   })
 
