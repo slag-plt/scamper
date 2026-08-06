@@ -537,7 +537,10 @@ export function prelude_listRef(l: L.List, n: number): L.Value {
 
 // Other list functions
 
-export function prelude_indexOf(l: L.List, v: L.Value): number {
+// N.B., the value comes first, matching R7RS's member/assoc family --
+// `(member obj list)`, `(assoc obj alist)` -- rather than the data-first order
+// the accessors use (#103).
+export function prelude_indexOf(v: L.Value, l: L.List): number {
   let i = 0
   while (l !== null) {
     if (L.equals(l.head, v)) {

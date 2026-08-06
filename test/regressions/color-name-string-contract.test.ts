@@ -19,7 +19,7 @@ test('color-name?/find-colors/color-name->rgb accept string arguments', async ()
   (rgb-green (color-name->rgb "red"))
   (rgb-blue (color-name->rgb "red"))
   (list? (find-colors "red"))
-  (>= (index-of (find-colors "red") "red") 0)
+  (>= (index-of "red" (find-colors "red")) 0)
   `)).toEqual([
     '#t',
     '#f',

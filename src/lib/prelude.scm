@@ -537,9 +537,9 @@
 ;;; @category list, association list, assoc-ref, deref, ref, ref-set!, string-ref
 (define-export list-ref (js-var "prelude_listRef"))
 
-;;; (index-of l v) -> integer?
-;;;  l : list?
+;;; (index-of v l) -> integer?
 ;;;  v : any
+;;;  l : list?
 ;;; Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.
 ;;; @category list, list manipulation, association list, range, string-length, vector-length, vector-range, vector-ref 
 (define-export index-of (js-var "prelude_indexOf"))
@@ -953,8 +953,8 @@
 ;;; @category vectors, mutation, predicates, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map, vector-set!
 (define-export vector-map!
   (lambda (f v)
-    (for-range 0 (vector-length v)
-      (lambda (i) (vector-set! v i (f (vector-ref v i)))))))
+    (for-range (lambda (i) (vector-set! v i (f (vector-ref v i))))
+      0 (vector-length v))))
 
 ;;; (vector-for-each f v) -> void?
 ;;;  f : procedure?
@@ -963,30 +963,30 @@
 ;;; @category vectors, vector-append, vector-fill!, vector-filter, vector-map, vector-map!, vector-set!
 (define-export vector-for-each
   (lambda (f v)
-    (for-range 0 (vector-length v)
-      (lambda (i) (f (vector-ref v i))))))
+    (for-range (lambda (i) (f (vector-ref v i)))
+      0 (vector-length v))))
 
-;;; (for-range beg end f) -> void?
+;;; (for-range f beg end) -> void?
+;;;  f : procedure?
 ;;;  beg : number?
 ;;;  end : number?
-;;;  f : procedure?
 ;;; Runs `f` on each integer in the range `[beg, end)`. `f` takes one argument, the current value of integer.
 ;;; @category other, fold-left, fold-right, list-of, map, reduce, reduce-right, apply, filter
 (define-export for-range
-  (lambda (beg end f)
+  (lambda (f beg end)
     (cond
-      [(< beg end) (begin (f beg) (for-range (+ beg 1) end f))]
-      [(> beg end) (begin (f beg) (for-range (- beg 1) end f))]
+      [(< beg end) (begin (f beg) (for-range f (+ beg 1) end))]
+      [(> beg end) (begin (f beg) (for-range f (- beg 1) end))]
       [else void])))
 
-;;; (vector-filter f l) -> list?
+;;; (vector-filter f v) -> vector?
 ;;;  f : procedure?
-;;;  l : vector?
-;;; Returns a new vector containing the elements of `l` for which `f` returns `#t`.
+;;;  v : vector?
+;;; Returns a new vector containing the elements of `v` for which `f` returns `#t`.
 ;;; @category vectors, vector-append, vector-fill!, vector-for-each, vector-map, vector-map!, vector-set!
 (define-export vector-filter
-  (lambda (f l)
-    (list->vector (filter f (vector->list l)))))
+  (lambda (f v)
+    (list->vector (filter f (vector->list v)))))
 
 ;;; (void? v) -> boolean?
 ;;;  v : any
@@ -1036,7 +1036,7 @@
 ;;; @category list, list creation, append, list-drop, list-tail, list-take, make-list, reverse, sort, index-of, length, string-length, vector-length, vector-range, vector-ref 
 (define-export range (js-var "prelude_range"))
 
-;;; (random n) -> list?
+;;; (random n) -> number?
 ;;;  n : integer?
 ;;;   n >= 0
 ;;; Returns a random number in the range 0 to n (exclusive).
