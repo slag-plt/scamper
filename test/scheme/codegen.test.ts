@@ -385,11 +385,18 @@ describe('End-to-end cases', () => {
 `, [10, 10])
   })
 
-  test('tail recursion through if and let does not grow the stack', async () => {
+  test('tail recursion through if and let returns the right answer', async () => {
     // The recursive call sits in tail position inside a let body inside an if
-    // else-branch, and 12000 > the 10000-frame default limit. A broken TCO
-    // (frames piling up behind the let's trailing pop-scope) would exceed the
-    // limit and error; tail calls must not accumulate frames.
+    // else-branch. This is the end-to-end check that such a loop computes the
+    // right value; that it runs at a *constant frame depth* -- the TCO property
+    // itself -- is asserted directly in test/regressions/tco-frame-depth.test.ts.
+    //
+    // N.B., this used to run 12000 iterations so that a frame leak would trip
+    // the fiber's 10000-frame limit. That proof cost ~9.2 million interpreter
+    // steps (~4s idle, 77% of vitest's 5s default) and went flaky under
+    // parallel load, so it needed a 30s timeout to be reliable (#316). The
+    // frame-depth assertion proves the same property on the first iteration,
+    // which leaves this free to be an ordinary, cheap output check.
     await checkMachineOutput(`
 (define count
   (lambda (n acc)
@@ -397,11 +404,9 @@ describe('End-to-end cases', () => {
         acc
         (let ([m (- n 1)])
           (count m (+ acc 1))))))
-(count 12000 0)
-`, [12000])
-    // 12000 interpreter iterations can exceed the 5s default under full parallel
-    // load, so give this heavy TCO check a realistic timeout.
-  }, 30000)
+(count 1000 0)
+`, [1000])
+  })
 
   test('list-length', async () => {
     await checkMachineOutput(`
