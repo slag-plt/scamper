@@ -17,7 +17,10 @@ import * as L from '../../lpm'
  * N.B., the host's own failures (a directory rather than a file, a permission
  * error, ...) are rewritten into a Scamper error: a raw "EISDIR: illegal
  * operation on a directory" is not something to put in front of a student, and
- * the wording would differ between Node and OPFS besides.
+ * the wording would differ between Node and OPFS besides. A ScamperError from
+ * the host is passed through untouched: it is already worded for a student and
+ * says something more specific than this can (e.g. a name that reaches outside
+ * the working directory -- see #340).
  */
 async function readFile(filename: string): Promise<string> {
   const { getFS } = await import('../../fs')
@@ -27,17 +30,19 @@ async function readFile(filename: string): Promise<string> {
   }
   try {
     return await fs.loadFile(filename)
-  } catch {
+  } catch (e) {
+    if (e instanceof L.ScamperError) { throw e }
     throw new L.ScamperError('Runtime', `Could not read the file "${filename}"`)
   }
 }
 
-/** Writes `contents` to `filename`, creating or overwriting it. */
+/** Writes `contents` to `filename`, creating or overwriting it. See readFile. */
 async function writeFile(filename: string, contents: string): Promise<void> {
   const { getFS } = await import('../../fs')
   try {
     await getFS().saveFile(filename, contents)
-  } catch {
+  } catch (e) {
+    if (e instanceof L.ScamperError) { throw e }
     throw new L.ScamperError('Runtime', `Could not write to the file "${filename}"`)
   }
 }

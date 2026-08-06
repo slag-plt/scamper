@@ -24,9 +24,26 @@ export class NodeFileSystem implements FS {
     return new NodeFileSystem(path.resolve(root))
   }
 
-  /** @return the path to `filename` within this file system's root */
+  /**
+   * @return the path to `filename` within this file system's root
+   * @throws ScamperError if `filename` names something outside that root
+   *
+   * N.B., the containment check lives here rather than in the `file` library so
+   * that every consumer -- the library, `with-file`, file imports -- is covered
+   * at once (#340). A program may only reach files in the directory it was run
+   * from; both an escaping relative name ("../x") and an absolute one are
+   * refused. The check is on the name, not the file: a symlink already inside
+   * the root can still point out of it, but Scamper has no way to create one.
+   */
   private resolve(filename: string): string {
-    return path.join(this.root, filename)
+    const target = path.resolve(this.root, filename)
+    if (target !== this.root && !target.startsWith(this.root + path.sep)) {
+      throw new ScamperError(
+        'Runtime',
+        `Cannot access "${filename}": the file is outside the working directory`,
+      )
+    }
+    return target
   }
 
   /** @return the list of files found at the root of the file system */
@@ -72,8 +89,11 @@ export class NodeFileSystem implements FS {
 
   /** @return true iff the given file exists */
   async fileExists(filename: string): Promise<boolean> {
+    // N.B., resolve() is called outside the try: a name we refuse to service is
+    // an error, not a #f. Only the access() failure means "no such file".
+    const target = this.resolve(filename)
     try {
-      await fs.access(this.resolve(filename))
+      await fs.access(target)
       return true
     } catch {
       return false
