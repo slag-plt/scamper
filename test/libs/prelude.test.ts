@@ -1,7 +1,16 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { runProgram, runProgramAsync } from './harness.js'
-import { setFS } from '../../src/fs'
+import { getFS, setFS, type t as FS } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
+
+/** getFS throws when no file system is installed; this reports that as undefined. */
+function tryGetFS(): FS | undefined {
+  try {
+    return getFS()
+  } catch {
+    return undefined
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -2762,10 +2771,21 @@ void
 // are behavior coverage, though, not a guard for that invariant: they pass
 // either way. The scheduler's own tests are what pin it down.
 describe('with-file', () => {
+  // N.B., setFS is a global, so it is restored afterwards -- otherwise every
+  // test *following* this block would silently run against the mock.
+  let previousFS: FS | undefined
+
   beforeEach(async () => {
+    previousFS = tryGetFS()
     const fs = await MockFileSystem.create()
     await fs.saveFile('greet.txt', 'hello\nthere\n')
     setFS(fs)
+  })
+
+  afterEach(() => {
+    if (previousFS !== undefined) {
+      setFS(previousFS)
+    }
   })
 
   test('passes the file contents to its callback', async () => {

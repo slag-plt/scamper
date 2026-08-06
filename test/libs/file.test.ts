@@ -175,6 +175,9 @@ describe('lines->file', () => {
 
   test('the empty list writes an empty file, not a lone newline', async () => {
     expect(await runProgramAsync('(import file)\n(lines->file null "out.txt")')).toEqual(['void'])
+    // The existence check matters: without it this passes even if nothing is
+    // written at all, so long as reading a missing file yields "".
+    expect(await fs.fileExists('out.txt')).toBe(true)
     expect(await read('out.txt')).toBe('')
   })
 

@@ -180,6 +180,12 @@ export class Scheduler {
    * its completion) itself, asynchronously. The caller must then NOT also
    * advance/remove it: doing so removes a *second* task, or trips
    * removeTaskFromQueue's atomicity check when the queue is now empty.
+   *
+   * N.B., stepTask's isReportTask error branch also dequeues (via endCurrFiber)
+   * and then yields `undefined` here, which reports false -- the one place that
+   * does not follow this rule. It is harmless today only because that fiber is
+   * never done at that point, so the caller's moveNextTask just mis-advances
+   * currTaskIdx rather than removing a second task.
    */
   async processStepResult(
     stepResult: StepResult | undefined,

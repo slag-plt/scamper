@@ -167,7 +167,9 @@ const tagListStr = ref([
     'create',
     'plot',
     'parse',
-    
+
+  'file',
+
   'typecheck',
 
   'regexes',

@@ -11,20 +11,35 @@ import * as L from '../../lpm'
 // eagerly importing src/fs there would grab the real OPFS out from under tests
 // that mock it. Same reasoning as src/js/prelude/files.ts.
 
-/** Loads `filename`, or rejects if it does not exist. */
+/**
+ * Loads `filename`, or rejects if it does not exist.
+ *
+ * N.B., the host's own failures (a directory rather than a file, a permission
+ * error, ...) are rewritten into a Scamper error: a raw "EISDIR: illegal
+ * operation on a directory" is not something to put in front of a student, and
+ * the wording would differ between Node and OPFS besides.
+ */
 async function readFile(filename: string): Promise<string> {
   const { getFS } = await import('../../fs')
   const fs = getFS()
   if (!(await fs.fileExists(filename))) {
     throw new L.ScamperError('Runtime', `File "${filename}" does not exist`)
   }
-  return fs.loadFile(filename)
+  try {
+    return await fs.loadFile(filename)
+  } catch {
+    throw new L.ScamperError('Runtime', `Could not read the file "${filename}"`)
+  }
 }
 
 /** Writes `contents` to `filename`, creating or overwriting it. */
 async function writeFile(filename: string, contents: string): Promise<void> {
   const { getFS } = await import('../../fs')
-  await getFS().saveFile(filename, contents)
+  try {
+    await getFS().saveFile(filename, contents)
+  } catch {
+    throw new L.ScamperError('Runtime', `Could not write to the file "${filename}"`)
+  }
 }
 
 /**
@@ -37,8 +52,9 @@ async function writeFile(filename: string, contents: string): Promise<void> {
  * `file` library depend on `data`.
  */
 function splitLines(contents: string): string[] {
+  // split always yields at least one element, so no length guard is needed.
   const lines = contents.split(/\r?\n/g)
-  if (lines.length > 0 && lines[lines.length - 1] === '') {
+  if (lines[lines.length - 1] === '') {
     lines.pop()
   }
   return lines

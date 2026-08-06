@@ -1,6 +1,6 @@
 ;;; (file-exists? fname) -> boolean?
 ;;;  fname : string?
-;;; Returns `#t` if a file named `fname` exists and `#f` otherwise.
+;;; Returns `#t` if `fname` names something in storage and `#f` otherwise. Note that a directory counts as existing, so a `#t` here does not guarantee that `file->string` will succeed.
 ;;; @category file, file->string, file->lines, string->file, lines->file
 (define-export file-exists? (js-var "file_fileExistsQ"))
 
@@ -26,6 +26,6 @@
 ;;; (lines->file lines fname) -> void?
 ;;;  lines : list?
 ;;;  fname : string?
-;;; Writes `lines`, a list of strings, to the file named `fname`, one line each, creating the file if it does not exist and replacing its contents if it does. The file ends with a trailing newline, so that `file->lines` reads back exactly `lines`.
+;;; Writes `lines`, a list of strings, to the file named `fname`, one line each, creating the file if it does not exist and replacing its contents if it does. A non-empty list is written with a trailing newline, so that `file->lines` reads it back unchanged; the empty list writes an empty file. A string that itself contains a newline is written as-is, so it reads back as more than one line.
 ;;; @category file, string->file, file->lines, file->string, file-exists?
 (define-export lines->file (js-var "file_linesToFile"))

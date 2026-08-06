@@ -8,7 +8,7 @@ import { ConsoleOutput } from '../../lpm/output'
 import { compile, mkInitialEnv } from '../../scheme'
 import { traceReductions } from '../../scheme/trace'
 import { Fiber } from '../../lpm/fiber'
-import { ScamperError } from '../../lpm/error'
+import { ScamperError, SuspendSignal } from '../../lpm/error'
 import { setFS } from '../../fs'
 import NodeFileSystem from '../../fs/node'
 import Scamper, { initialize } from '../../scamper'
@@ -101,6 +101,17 @@ if (values.trace) {
   } catch (e) {
     if (e instanceof ScamperError) {
       traceOut.report(e)
+    } else if (e instanceof SuspendSignal) {
+      // A blocking primitive (the `file` library, with-file, images from a URL)
+      // suspended the fiber. Only the scheduler can resume it, and this path
+      // steps the fiber directly -- so report that rather than letting a raw
+      // SuspendSignal abort the process. See issue #339.
+      traceOut.report(
+        new ScamperError(
+          'Runtime',
+          'Blocking operations (reading a file, loading an image) cannot be traced; run the program without --trace',
+        ),
+      )
     } else {
       throw e
     }
