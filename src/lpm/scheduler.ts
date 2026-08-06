@@ -148,8 +148,10 @@ export class Scheduler {
     } catch (e) {
       if (e instanceof SuspendSignal) {
         // A blocking primitive suspended the fiber; hand the async action to
-        // processStepResult, which runs it and resumes the fiber with the result.
-        return blockOnStep(e.action)
+        // processStepResult, which runs it and resumes the fiber with the
+        // result. The signal's range is the call that suspended (see applyFn),
+        // carried along so a rejection can be reported there.
+        return blockOnStep(e.action, e.range)
       }
       if (!(e instanceof ScamperError)) {
         // either the runtime broke and threw an ICE (which is bad)
@@ -312,6 +314,11 @@ export class Scheduler {
                   'Runtime',
                   err instanceof Error ? err.message : String(err),
                 )
+          // The error was raised inside the action, far from the call that
+          // suspended the fiber, so it arrives unlocated. Point it at that call
+          // -- the range the step carries -- unless it named a site itself
+          // (#342). Done before handleError so a with-handler sees it too.
+          scamperErr.range ??= stepResult.range
           if (!fiber.handleError(scamperErr)) {
             task.err.report(scamperErr)
             fiber.advanceStmt()

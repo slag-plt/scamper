@@ -84,5 +84,14 @@ export class ReportError extends ScamperError {
  * handling and is never surfaced to the user.
  */
 export class SuspendSignal {
+  /**
+   * Where the suspending call was written. A primitive throws this signal with
+   * no range -- it has no idea -- and `applyFn` fills it in on the way out,
+   * with the same call site it would have given a synchronously-thrown error.
+   * The scheduler then attaches it to whatever the action rejects with, which
+   * is otherwise raised far from the call and arrives unlocated (#342).
+   */
+  range?: Range
+
   constructor(public action: () => Promise<Value>) {}
 }

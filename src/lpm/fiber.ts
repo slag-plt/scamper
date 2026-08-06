@@ -53,10 +53,12 @@ export interface ImportFileStep {
 }
 // A fiber suspended mid-expression by a blocking primitive (see SuspendSignal).
 // The scheduler runs `action`, then resumes the fiber with the resolved value
-// (Fiber.resumeWithValue).
+// (Fiber.resumeWithValue). `range` is where the suspending call was written, so
+// that an error from `action` can be reported there (#342).
 export interface BlockOnStep {
   tag: 'block-on'
   action: () => Promise<Value>
+  range?: Range
 }
 
 export type StepResult =
@@ -77,8 +79,11 @@ export function importFileStep(
 ): ImportFileStep {
   return { tag: 'import-file', filename, ...(alias !== undefined ? { alias } : {}) }
 }
-export function blockOnStep(action: () => Promise<Value>): BlockOnStep {
-  return { tag: 'block-on', action }
+export function blockOnStep(
+  action: () => Promise<Value>,
+  range?: Range,
+): BlockOnStep {
+  return { tag: 'block-on', action, range }
 }
 
 // a fiber is a concurrent thread of execution
