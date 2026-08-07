@@ -39,6 +39,7 @@ import {
   completionKeymap,
 } from '@codemirror/autocomplete'
 import { lintGutter, lintKeymap } from '@codemirror/lint'
+import { unifiedMergeView } from '@codemirror/merge'
 import { ScamperSupport } from './extensions/language'
 import { PrettierExtension } from './extensions/prettier'
 import { QueryExtension } from './extensions/query'
@@ -197,6 +198,29 @@ export function mkFreshEditorState(
   return EditorState.create({
     doc,
     extensions: mkExtensions(config),
+  })
+}
+
+/**
+ * A read-only state showing `doc` with the edits that turned `original` into
+ * it marked inline, for previewing a file's saved history.
+ *
+ * Deliberately far smaller than {@link mkFreshEditorState}: an old version is
+ * being read, not worked on, so it gets no LSP, lint, queries, or editing
+ * keymaps -- diagnostics against a snapshot would be noise at best.
+ */
+export function mkDiffEditorState(doc: string, original: string): EditorState {
+  return EditorState.create({
+    doc,
+    extensions: [
+      lineNumbers(),
+      highlightSpecialChars(),
+      editorThemeCompartment.of(editorThemeExtension(currentTheme.value)),
+      EditorState.readOnly.of(true),
+      EditorView.editable.of(false),
+      ScamperSupport(),
+      unifiedMergeView({ original, mergeControls: false }),
+    ],
   })
 }
 

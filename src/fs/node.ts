@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ScamperError } from '../lpm/error'
-import type { FS, FileEntry } from './fs'
+import { isHiddenName, type FS, type FileEntry } from './fs'
 
 /**
  * An implementation of FS backed by Node's `fs` module, rooted at a
@@ -55,7 +55,9 @@ export class NodeFileSystem implements FS {
       const isDirectory = entry.isDirectory()
       let preview: string | null = null
 
-      if (!isDirectory) {
+      // A preview costs a full read of the file, and only the file drawer
+      // displays one -- which never shows dotted names (see isHiddenName).
+      if (!isDirectory && !isHiddenName(entry.name)) {
         try {
           preview = await this.getFilePreview(entry.name)
         } catch {

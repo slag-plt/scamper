@@ -6,13 +6,22 @@ export interface FileEntry {
 }
 
 /**
+ * @returns true iff `name` belongs to a file an app keeps for itself rather
+ *          than one of the user's own. By convention a dotted name marks
+ *          internal state -- the IDE's config and lock files, a file's saved
+ *          history -- and the file drawer hides them.
+ */
+export function isHiddenName(name: string): boolean {
+  return name.startsWith('.')
+}
+
+/**
  * @returns true iff `entry` is one of the user's own files, i.e., a regular
- *          file whose name isn't dotted. By convention, a dotted name marks a
- *          file an app keeps for itself. The file drawer and the zip export
+ *          file whose name isn't internal. The file drawer and the zip export
  *          share this notion of "the user's files" so they never disagree.
  */
 export function isUserFile(entry: FileEntry): boolean {
-  return !entry.isDirectory && !entry.name.startsWith('.')
+  return !entry.isDirectory && !isHiddenName(entry.name)
 }
 
 /*
