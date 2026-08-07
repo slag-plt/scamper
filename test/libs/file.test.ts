@@ -5,9 +5,8 @@ import { runProgram } from './harness.js'
 
 // The `file` library (issue #315): whole-file reads and writes, each of which
 // suspends the fiber on an async filesystem action (SuspendSignal / Scheduler
-// `block-on`). Those only resolve under the scheduler, so the happy path runs
-// on runProgram rather than the synchronous runProgram. Argument contracts
-// still fail eagerly, so those cases use the plain harness.
+// `block-on`). Those only resolve under the scheduler, which is what runProgram
+// drives, so the happy path runs there like anything else.
 //
 // Backed by the in-memory MockFileSystem: these tests are about the library's
 // semantics, not Node I/O, and an in-memory FS keeps them fast and leaves no

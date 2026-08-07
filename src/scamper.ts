@@ -352,6 +352,17 @@ export default class Scamper {
       onComplete: () => {
         resolve()
       },
+      // As in execute(): surface the failure and settle, rather than leaving
+      // `done` pending forever on a run that has already died.
+      onFatal: (e: unknown) => {
+        err.report(
+          new ScamperError(
+            'Runtime',
+            e instanceof Error ? e.toString() : String(e),
+          ),
+        )
+        resolve()
+      },
     })
     const entry: QueryEntry = {
       id,

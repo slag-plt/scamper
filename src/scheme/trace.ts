@@ -25,8 +25,9 @@ function visibleReduction(fiber: Fiber): { exp: Exp; str: string } | undefined {
  * step-by-step trace. `render` raises + sugars the fiber's current state to the
  * next user-visible reduction (deduping consecutive repeats); `final` renders a
  * completed statement's value as its last step. Structurally a
- * `FiberTraceStepper` (see src/lpm/raiser.ts), so both the CLI trace
- * (`traceReductions`) and the scheduler's step mode drive identical logic.
+ * `FiberTraceStepper` (see src/lpm/raiser.ts), so the scheduler can drive this
+ * policy -- for a batch trace (`scamper --trace`) or the IDE's step mode --
+ * without importing src/scheme.
  */
 export function makeTraceStepper(): {
   render: (fiber: Fiber) => Exp | undefined

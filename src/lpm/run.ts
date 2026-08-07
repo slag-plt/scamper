@@ -25,6 +25,8 @@ export interface RunFiberOptions {
  * reported to `err` and do not reject -- the run continues at the next
  * statement, as it does in the IDE.
  */
+let nextRunId = 0
+
 export function runFiberOnScheduler(
   fiber: Fiber,
   opts: RunFiberOptions,
@@ -37,7 +39,12 @@ export function runFiberOnScheduler(
   const sched = new Scheduler()
   return new Promise<void>((resolve, reject) => {
     sched.schedule({
-      id: crypto.randomUUID(),
+      // A counter, not crypto.randomUUID: this runs during initialize() to load
+      // the builtin libraries, and randomUUID needs a secure context -- using it
+      // here would turn an insecure-origin deployment from "Run fails" into "the
+      // app never boots". Uniqueness within this scheduler is all that is needed
+      // (it holds exactly one task).
+      id: `run-${(nextRunId++).toString()}`,
       fiber,
       out: opts.out,
       err: opts.err,

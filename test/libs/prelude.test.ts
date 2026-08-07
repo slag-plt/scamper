@@ -2775,8 +2775,7 @@ void
 
 // with-file blocks the fiber to load the file (SuspendSignal / Scheduler
 // `block-on`) and applies the callback in Scheme, so its happy path only runs
-// under the async scheduler -- runProgram, not the synchronous runProgram.
-// The argument contract still fails eagerly.
+// under the scheduler -- which is what runProgram drives.
 //
 // N.B., this happy path went untested for a while -- the CLI was the only thing
 // exercising it -- which is part of why a scheduler bug on the block-on path

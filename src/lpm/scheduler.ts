@@ -269,6 +269,18 @@ export class Scheduler {
                 id,
                 fiber: moduleFiber,
                 err: task.err,
+                // A fatal error inside the module would otherwise kill the loop
+                // with the importer already dequeued, stranding it forever.
+                onFatal: (e: unknown) => {
+                  task.err.report(
+                    new ScamperError(
+                      'Runtime',
+                      `Attempted to import file "${stepResult.filename}" but it failed to run: ${e instanceof Error ? e.toString() : String(e)}`,
+                    ),
+                  )
+                  fiber.advanceStmt()
+                  this.resumeOrComplete(task)
+                },
                 onComplete: () => {
                   // Only the file's declared exports are visible to the importer.
                   const mod = moduleFiber.getModule()
@@ -409,11 +421,16 @@ export class Scheduler {
   }
 
   /**
-   * Wraps a traced run's reduction for output. The first one is the trace's
-   * opening line -- the program as written, before it reduces -- so it renders
-   * bare; every later one carries the `-->` reduction marker. A fresh fiber has
-   * no frames to raise, which is why the opening line is the first *emitted*
-   * reduction rather than something rendered up front.
+   * Wraps a traced run's reduction for output. The run's *first* emitted value
+   * renders bare and every later one carries the `-->` reduction marker, which
+   * reads as "reduced from the line above".
+   *
+   * N.B. this is per-*run*, not per-statement: a fresh fiber has no frames to
+   * raise, so the opening line can only be the first thing actually emitted --
+   * for `(define x 5)` that is the defined value, not the source text. Later
+   * statements therefore have their opening state marked `-->` even though
+   * nothing reduced to it. Longstanding CLI behavior, preserved deliberately;
+   * per-statement tracking would change the pinned `--trace` output.
    */
   private mkTraceValue(task: DisplayTask, v: Value): Value {
     if (this.tracesStarted.has(task.id)) {
@@ -452,6 +469,7 @@ export class Scheduler {
     }
     if (gate.task.fiber.isDone()) {
       this.steppingGates.delete(id)
+      this.tracesStarted.delete(id)
       const resolve = gate.resolve
       gate.task.onComplete?.()
       resolve()
@@ -545,10 +563,18 @@ export class Scheduler {
           // An ICE or a genuine runtime bug (stepTask rethrows anything that is
           // not a ScamperError). This loop is detached, so rethrowing would
           // strand the task's owner on a promise that never settles.
+          // Drop the task either way: it is poisoned, and leaving it queued
+          // means the next round dies on it again.
+          this.dropTask(task)
           if (task.onFatal === undefined) {
+            // Nobody to hand this to, so let it escape as an unhandled
+            // rejection (the old behavior) -- but clear isRunning first, or
+            // resumeExecution() sees a "running" loop that has in fact died and
+            // returns early forever, wedging this scheduler (and, for the
+            // Scamper singleton, every later run) with nothing surfaced.
+            this.isRunning = false
             throw e
           }
-          this.dropTask(task)
           task.onFatal(e)
         }
       }
@@ -566,7 +592,14 @@ export class Scheduler {
     if (i !== -1) {
       this.tasks.splice(i, 1)
     }
-    this.steppingGates.delete(task.id)
+    // Resolve the gate as cancelTask/endCurrFiber do: a step-mode run killed
+    // mid-burst still has a resume() awaiter, and the IDE's step buttons stay
+    // disabled until it settles.
+    const gate = this.steppingGates.get(task.id)
+    if (gate) {
+      this.steppingGates.delete(task.id)
+      gate.resolve()
+    }
     this.tracesStarted.delete(task.id)
   }
 
