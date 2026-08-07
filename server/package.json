@@ -1,0 +1,13 @@
+{
+  "name": "@scamper/server",
+  "version": "3.5.0",
+  "description": "The Scamper file server: per-user storage behind the FS interface",
+  "private": true,
+  "type": "module",
+  "license": "ISC",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

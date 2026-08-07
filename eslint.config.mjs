@@ -74,6 +74,56 @@ export default defineConfig(
     },
   },
   {
+    files: ['server/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  // The client/server boundary. `server/` is a workspace of this repo, so npm
+  // hoists its dependencies into the root node_modules and nothing physically
+  // stops a Vue component from importing `better-auth`. These two rules are
+  // what keep the split real rather than merely conventional.
+  {
+    files: ['src/**/*.ts', 'src/**/*.vue'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              group: ['**/server', '**/server/**'],
+              message:
+                'The client must not import server code. The two share only the FS contract in src/fs/fs.ts, which the server imports from here -- not the other way around.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['server/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              group: ['**/src', '**/src/**'],
+              // Type-only imports are erased at compile time, so they create no
+              // runtime coupling and cannot drag browser code into the server.
+              // That is exactly how the server shares FS and FileEntry.
+              allowTypeImports: true,
+              message:
+                'The server may import *types* from src/ (use `import type`), but never values -- src/ is browser code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'warn',

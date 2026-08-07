@@ -27,6 +27,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 + `npm install`: installs dependencies
 + `npm run dev`: starts development server
++ `npm run dev:server`: starts the `server/` back end, watching for changes (`PORT` overrides its port)
 + `npm run build`: full production build (compilation + bundling)
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
@@ -36,6 +37,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 + `npm run validate`: runs the full validation process (test, typecheck, lint)
 + `npm run test`: runs the full test suite
 + `npm run typecheck`: runs the typechecker 
++ `npm run typecheck:server`: runs the typechecker over the `server/` workspace
 + `npm run lint`: runs the linter
 + `npm run lint:fix`: automatically fixes simple linter errors
 
@@ -57,6 +59,7 @@ This file provides guidance to LLM agents when working with code in this reposit
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
++ `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/`, and `server/` may import only *types* from `src/`.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline
