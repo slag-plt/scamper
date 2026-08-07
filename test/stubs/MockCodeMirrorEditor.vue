@@ -25,6 +25,12 @@ const adapter = makeMockCodeMirrorEditorAdapter({
     loaded.value = false
     src.value = noLoadedFileText
   },
+  replaceDoc(nextSrc: string) {
+    // The real adapter applies this as an undoable edit; for the stub the
+    // observable part is that the document changed and the file is dirty.
+    src.value = nextSrc
+    emit('dirty')
+  },
 })
 
 onMounted(() => {

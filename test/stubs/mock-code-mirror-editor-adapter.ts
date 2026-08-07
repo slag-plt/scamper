@@ -13,6 +13,9 @@ export function makeMockCodeMirrorEditorAdapter(
     initializeDummyDoc: () => {
       /* noop */
     },
+    replaceDoc: () => {
+      /* noop */
+    },
     getCursorLoc: () => new Loc(0, 0, 0),
     coordsAtIdx: () => null,
     destroy: () => {

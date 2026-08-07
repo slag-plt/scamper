@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view'
+import { diff } from '@codemirror/merge'
 import { Loc } from '../../../lpm'
 import Scamper, { QUERIES_CHANGED } from '../../../scamper'
 import {
@@ -52,6 +53,32 @@ export function createCodeMirrorEditorAdapter(
       loaded = false
       view.setState(mkNoFileEditorState(onCursorChange))
       onCursorChange?.(TOP_LEVEL)
+    },
+
+    /**
+     * Replaces the document with `src` as an ordinary edit rather than a fresh
+     * state: a minimal change set derived from a diff, so the cursor keeps its
+     * place, the change is undoable, and it marks the file dirty like any
+     * other. Used to restore a snapshot from the file's history.
+     */
+    replaceDoc(src: string) {
+      const current = view.state.doc.toString()
+      if (current === src) return
+      const changes = diff(current, src).map((c) => ({
+        from: c.fromA,
+        to: c.toA,
+        insert: src.slice(c.fromB, c.toB),
+      }))
+      const changeSet = view.state.changes(changes)
+      const sel = view.state.selection.main
+      view.dispatch({
+        changes,
+        selection: {
+          anchor: changeSet.mapPos(sel.anchor, 1),
+          head: changeSet.mapPos(sel.head, 1),
+        },
+        scrollIntoView: true,
+      })
     },
 
     getCursorLoc() {

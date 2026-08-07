@@ -39,6 +39,33 @@ export const MAX_SNAPSHOTS = 50
  */
 export const MERGE_WINDOW_MS = 60_000
 
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+/**
+ * Renders a snapshot's time for the history list: `2:04pm` for one taken
+ * today, `Aug 7, 2:04pm` for an older one. Formatted by hand rather than
+ * through toLocaleString so the result doesn't shift with the host's locale.
+ * @param now the day to read `time` as relative to
+ */
+export function formatSnapshotTime(time: string, now: Date): string {
+  const at = new Date(time)
+  if (Number.isNaN(at.getTime())) return 'unknown'
+  const hour = at.getHours() % 12 === 0 ? 12 : at.getHours() % 12
+  const clock = `${hour.toString()}:${at.getMinutes().toString().padStart(2, '0')}${
+    at.getHours() < 12 ? 'am' : 'pm'
+  }`
+  const sameDay =
+    at.getFullYear() === now.getFullYear() &&
+    at.getMonth() === now.getMonth() &&
+    at.getDate() === now.getDate()
+  return sameDay
+    ? clock
+    : `${MONTHS[at.getMonth()]} ${at.getDate().toString()}, ${clock}`
+}
+
 /** @returns the name of the file holding `filename`'s history. */
 export function historyFilename(filename: string): string {
   return `.${filename}.history`

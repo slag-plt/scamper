@@ -25,6 +25,8 @@ import {
   modalPrompt,
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
+import FileHistoryModal from './FileHistoryModal.vue'
+import { loadHistory, type Snapshot } from '../file-history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
@@ -61,6 +63,9 @@ const loadingContent = ref('Loading Scamper...')
 const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
 const patchNotesToShow = ref<PatchNote[]>([])
 const showPatchNotes = ref(false)
+const showHistory = ref(false)
+const historySnapshots = ref<Snapshot[]>([])
+const historyContents = ref('')
 
 // ---------- editor context + child component refs ----------
 
@@ -365,6 +370,39 @@ async function handleDownload() {
   a.click()
 }
 
+// Opens the file's saved history (issue #42). Browsing deliberately saves
+// nothing: the editor's contents are shown as their own "current" row, so
+// recording them here would only add an entry identical to it. Restoring is
+// what pins state, since that is when there is something to lose.
+async function handleHistory() {
+  if (!fs || !currentFile.value) return
+  try {
+    historySnapshots.value = (await loadHistory(fs, currentFile.value)).snapshots
+  } catch {
+    historySnapshots.value = []
+  }
+  historyContents.value = isEditorLoaded() ? editor().getDoc() : ''
+  showHistory.value = true
+}
+
+function handleHistoryClose() {
+  showHistory.value = false
+  historySnapshots.value = []
+}
+
+// Restores a snapshot by editing the document rather than reloading it, so the
+// restore is undoable and keeps the cursor. Both the version being left and the
+// one being restored are pinned in the history, so a restore never costs the
+// student the state they were in.
+async function handleRestoreSnapshot(snapshot: Snapshot) {
+  if (!fileSession || !isEditorLoaded()) return
+  showHistory.value = false
+  historySnapshots.value = []
+  await fileSession.save({ force: true })
+  editor().replaceDoc(snapshot.contents)
+  await fileSession.save({ force: true })
+}
+
 async function handleSelectFile(filename: string) {
   if (!isLoadingFile) await switchToFile(filename)
 }
@@ -471,6 +509,7 @@ onUnmounted(() => {
         :rename="handleRename"
         :delete-file="handleDelete"
         :download="handleDownload"
+        :history="handleHistory"
         :select-file="handleSelectFile"
         :upload-file="handleUploadFile"
         :file-drop="handleFileDrop"
@@ -525,6 +564,15 @@ onUnmounted(() => {
     :open="showPatchNotes"
     :notes="patchNotesToShow"
     @close="handlePatchNotesClose"
+  />
+  <FileHistoryModal
+    v-if="currentFile"
+    :open="showHistory"
+    :filename="currentFile"
+    :snapshots="historySnapshots"
+    :current-contents="historyContents"
+    @close="handleHistoryClose"
+    @restore="handleRestoreSnapshot"
   />
 </template>
 
