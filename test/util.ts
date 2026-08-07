@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import { displayStep, Fiber, StepResult, traceStep } from '../src/lpm/fiber'
 import {
   LoggingChannel,
+  OutputChannel,
   Prog,
   Range,
   ReportError,
@@ -43,7 +44,8 @@ export function stepFiberToCompletion(fiber: Fiber): void {
 }
 
 /**
- * Steps `fiber` directly to completion, calling `onStep` after each step.
+ * Steps `fiber` directly to completion, calling `onStep` with the fiber and
+ * that step's result after each step.
  *
  * The escape hatch for tests that must observe the fiber *between* steps --
  * frame depth, or raising/sugaring the machine state at a finer granularity
@@ -53,12 +55,29 @@ export function stepFiberToCompletion(fiber: Fiber): void {
  */
 export function stepFiberWith(
   fiber: Fiber,
-  onStep?: (fiber: Fiber) => void,
+  onStep?: (fiber: Fiber, result: StepResult) => void,
 ): void {
   while (!fiber.isDone()) {
-    fiber.step()
-    onStep?.(fiber)
+    const result = fiber.step()
+    onStep?.(fiber, result)
   }
+}
+
+/**
+ * Steps `fiber` directly to completion, sending each completed statement's
+ * value to `out`.
+ *
+ * For the opcode-level specs (test/lpm/{ops,machine}.test.ts), which assemble
+ * op sequences by hand rather than compiling Scheme. Deliberately does no error
+ * recovery: a raised error escapes to the caller, which is what those specs
+ * assert with `expect(...).toThrow(...)` and what a scheduler would swallow.
+ */
+export function stepFiberToOutput(fiber: Fiber, out: OutputChannel): void {
+  stepFiberWith(fiber, (f, result) => {
+    if (result.tag === 'display') {
+      out.send(f.lastResult)
+    }
+  })
 }
 
 /**
