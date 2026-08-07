@@ -354,51 +354,66 @@ async function handleDelete() {
   startAutosaving()
 }
 
-async function handleDownload() {
-  if (!currentFile.value || !fs) return
-  const contents = await fs.loadFile(currentFile.value)
+// How long a generated object URL is kept alive after its download starts.
+// Generous on purpose: the cost of holding a zip a few seconds too long is a
+// little memory, while releasing it too early loses the download.
+const DOWNLOAD_URL_LIFETIME_MS = 10_000
+
+/** Hands `href` to the browser as a download named `filename`. */
+function startDownload(filename: string, href: string) {
   const a = document.createElement('a')
-  a.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
+  a.href = href
   a.target = '_blank'
-  a.download = currentFile.value
+  a.download = filename
   a.click()
 }
 
-// Downloads every file in the drawer as one zip archive (issue #42). The open
-// file is saved first so in-progress edits are in the archive too.
+async function handleDownload() {
+  if (!currentFile.value || !fs) return
+  const contents = await fs.loadFile(currentFile.value)
+  startDownload(
+    currentFile.value,
+    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+  )
+}
+
+// An archive can take a moment to build, and the button stays clickable while
+// it does; the flag keeps a second click from starting a second export.
+let isArchiving = false
+
+// Downloads every file in the drawer as one zip archive (issue #42).
 async function handleArchive() {
-  if (!fs) return
-  const count = files.value.length
-  if (count === 0) {
-    await modalAlert({
-      title: 'Export files',
-      message: 'There are no files to export.',
-    })
-    return
-  }
+  if (!fs || isArchiving) return
   const ok = await modalConfirm({
     title: 'Export files',
-    message: `Download all ${count.toString()} of your files as a zip archive?`,
+    message: 'Download all of your files as a zip archive?',
     confirmLabel: 'Download',
   })
   if (!ok) return
+  isArchiving = true
   try {
+    // Pause autosave and let any in-flight write settle before reading every
+    // file, the same way the other file operations serialize against the
+    // session (see file-session.ts). Saving first also puts the edits still
+    // sitting in the editor into the archive.
+    stopAutosaving()
     await saveCurrentFile()
     const url = URL.createObjectURL(await buildArchive(fs))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = archiveFilename()
-    a.click()
-    // Revoking in the same task can cancel the download the click just started,
-    // so let that task finish first.
+    startDownload(archiveFilename(), url)
+    // The browser takes its own reference to the blob shortly after the click,
+    // not during it, so revoking immediately can cancel the download. Hold the
+    // URL well past that point, then let the blob go.
     window.setTimeout(() => {
       URL.revokeObjectURL(url)
-    }, 0)
+    }, DOWNLOAD_URL_LIFETIME_MS)
   } catch (e) {
     await modalAlert({
       title: 'Export failed',
-      message: `Your files could not be exported. ${e instanceof Error ? e.message : ''}`,
+      message: `Your files could not be exported.\n\n${e instanceof Error ? e.message : String(e)}`,
     })
+  } finally {
+    isArchiving = false
+    startAutosaving()
   }
 }
 

@@ -11,10 +11,10 @@ import { isUserFile } from '../../fs/fs'
 
 /** The archive's date-stamped name, e.g. `scamper-files-2026-08-07.zip`. */
 export function archiveFilename(now: Date = new Date()): string {
-  const pad = (n: number, width = 2) => n.toString().padStart(width, '0')
+  const pad = (n: number) => n.toString().padStart(2, '0')
   // Local time, not UTC: the stamp should match the day the student sees on
   // their own clock.
-  const date = `${pad(now.getFullYear(), 4)}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  const date = `${now.getFullYear().toString()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
   return `scamper-files-${date}.zip`
 }
 
@@ -24,8 +24,8 @@ export function archiveFilename(now: Date = new Date()): string {
  * @throws if a listed file cannot be read
  */
 export async function buildArchive(fs: FS.t): Promise<Blob> {
-  // JSZip is ~100KB and exporting is a rare, deliberate action, so it is
-  // fetched on first use rather than bundled into the IDE's initial load.
+  // JSZip is 96KB (28KB gzipped) and exporting is a rare, deliberate action, so
+  // it is fetched on first use rather than bundled into the IDE's initial load.
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
   const entries = (await fs.getFileList()).filter(isUserFile)

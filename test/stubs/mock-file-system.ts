@@ -2,19 +2,33 @@ import { FS } from '../../src/fs/fs'
 
 export class MockFileSystem implements FS {
   private files = new Map<string, string>()
+  private directories = new Set<string>()
 
   static create(): Promise<MockFileSystem> {
     return Promise.resolve(new MockFileSystem())
   }
 
+  /**
+   * Adds a directory to the listing. Nothing in the IDE creates one, but both
+   * the file drawer and the zip export have to leave them alone.
+   */
+  addDirectory(name: string): void {
+    this.directories.add(name)
+  }
+
   getFileList() {
-    return Promise.resolve(
-      [...this.files.entries()].map(([name, preview]) => ({
+    return Promise.resolve([
+      ...[...this.files.entries()].map(([name, preview]) => ({
         name,
         preview,
         isDirectory: false,
       })),
-    )
+      ...[...this.directories].map((name) => ({
+        name,
+        preview: null,
+        isDirectory: true,
+      })),
+    ])
   }
 
   fileExists(filename: string) {

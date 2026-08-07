@@ -7,9 +7,9 @@ export interface FileEntry {
 
 /**
  * @returns true iff `entry` is one of the user's own files, i.e., a regular
- *          file that isn't one of the internal dotfiles (the IDE's config,
- *          lock, and swap files). The file drawer and the zip export share this
- *          notion of "the user's files" so they never disagree.
+ *          file whose name isn't dotted. By convention, a dotted name marks a
+ *          file an app keeps for itself. The file drawer and the zip export
+ *          share this notion of "the user's files" so they never disagree.
  */
 export function isUserFile(entry: FileEntry): boolean {
   return !entry.isDirectory && !entry.name.startsWith('.')

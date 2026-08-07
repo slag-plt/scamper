@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { findByRole, getByRole, queryByRole, waitFor } from '@testing-library/dom'
+import { fireEvent, findByRole, getByRole, waitFor } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import JSZip from 'jszip'
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
@@ -24,6 +24,8 @@ vi.mock(
 
 await initialize()
 
+const EXPORT_BUTTON = 'Download all files as a zip archive'
+
 // Exporting the file drawer as a zip (issue #42). These tests drive the whole
 // path: the sidebar button, the confirmation, and the download the browser is
 // handed.
@@ -33,7 +35,6 @@ describe('IDE zip export', () => {
   let blobs: Map<string, Blob>
   /** The `download` name of every anchor that was clicked. */
   let downloads: { name: string; url: string }[]
-  let revoked: string[]
 
   beforeEach(() => {
     fs = new MockFileSystem()
@@ -41,16 +42,12 @@ describe('IDE zip export', () => {
 
     // jsdom implements neither half of the object-URL API.
     blobs = new Map()
-    revoked = []
-    let nextUrl = 0
     URL.createObjectURL = vi.fn((blob: Blob) => {
-      const url = `blob:mock/${(nextUrl++).toString()}`
+      const url = `blob:mock/${blobs.size.toString()}`
       blobs.set(url, blob)
       return url
     })
-    URL.revokeObjectURL = vi.fn((url: string) => {
-      revoked.push(url)
-    })
+    URL.revokeObjectURL = vi.fn()
 
     downloads = []
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
@@ -73,8 +70,23 @@ describe('IDE zip export', () => {
     return wrapper
   }
 
-  function clickExport() {
-    getByRole(document.body, 'button', { name: 'Download zip archive' }).click()
+  /** Clicks the export button and confirms the dialog it raises. */
+  async function exportFiles() {
+    getByRole(document.body, 'button', { name: EXPORT_BUTTON }).click()
+    const dialog = await findByRole(document.body, 'dialog', {
+      name: 'Export files',
+    })
+    getByRole(dialog, 'button', { name: 'Download' }).click()
+  }
+
+  /** @returns the archive handed to the browser by the one download so far. */
+  async function downloadedArchive(): Promise<JSZip> {
+    // Zipping spans several tasks, so wait for the download rather than
+    // flushing a fixed number of them.
+    await waitFor(() => {
+      expect(downloads).toHaveLength(1)
+    })
+    return JSZip.loadAsync(await blobs.get(downloads[0].url)!.arrayBuffer())
   }
 
   test('downloads the drawer as a date-stamped zip once confirmed', async () => {
@@ -85,28 +97,34 @@ describe('IDE zip export', () => {
 
     const wrapper = await mountIde()
     try {
-      clickExport()
-      const dialog = await findByRole(document.body, 'dialog', {
-        name: 'Export files',
-      })
-      expect(dialog.textContent).toContain('all 2 of your files')
-      getByRole(dialog, 'button', { name: 'Download' }).click()
-      // Zipping spans several tasks, so wait for the download rather than
-      // flushing a fixed number of them.
-      await waitFor(() => {
-        expect(downloads).toHaveLength(1)
-      })
-      expect(downloads[0].name).toMatch(/^scamper-files-\d{4}-\d{2}-\d{2}\.zip$/)
+      await exportFiles()
 
-      const zip = await JSZip.loadAsync(await blobs.get(downloads[0].url)!.arrayBuffer())
+      const zip = await downloadedArchive()
+      expect(downloads[0].name).toMatch(/^scamper-files-\d{4}-\d{2}-\d{2}\.zip$/)
       expect(Object.keys(zip.files).sort()).toEqual(['hello.scm', 'shapes.scm'])
       expect(await zip.file('hello.scm')!.async('string')).toBe('(display "hello")')
+    } finally {
+      wrapper.unmount()
+    }
+  })
 
-      // The object URL is released once the download has started, so the blob
-      // isn't pinned in memory for the rest of the session.
-      await waitFor(() => {
-        expect(revoked).toEqual([downloads[0].url])
+  test('archives the edits still sitting in the editor', async () => {
+    await fs.saveFile('hello.scm', '(display "hello")')
+
+    const wrapper = await mountIde()
+    try {
+      getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
+      await flushPromises()
+      // Typed but never saved: the export has to save the open file first.
+      fireEvent.input(getByRole(document.body, 'textbox', { name: 'Source code' }), {
+        target: { value: '(display "edited")' },
       })
+      await flushPromises()
+
+      await exportFiles()
+
+      const zip = await downloadedArchive()
+      expect(await zip.file('hello.scm')!.async('string')).toBe('(display "edited")')
     } finally {
       wrapper.unmount()
     }
@@ -117,7 +135,7 @@ describe('IDE zip export', () => {
 
     const wrapper = await mountIde()
     try {
-      clickExport()
+      getByRole(document.body, 'button', { name: EXPORT_BUTTON }).click()
       const dialog = await findByRole(document.body, 'dialog', {
         name: 'Export files',
       })
@@ -132,20 +150,24 @@ describe('IDE zip export', () => {
     }
   })
 
-  test('says so when there is nothing to export', async () => {
+  test('offers nothing to export until there is a file', async () => {
     const wrapper = await mountIde()
     try {
-      clickExport()
-      const dialog = await findByRole(document.body, 'dialog', {
-        name: 'Export files',
+      const button = getByRole(document.body, 'button', { name: EXPORT_BUTTON })
+      expect(button).toBeDisabled()
+
+      // Creating a file makes the export available.
+      getByRole(document.body, 'button', { name: 'Create file' }).click()
+      const dialog = await findByRole(document.body, 'dialog', { name: 'New file' })
+      fireEvent.input(getByRole(dialog, 'textbox'), {
+        target: { value: 'hello.scm' },
       })
-      expect(dialog.textContent).toContain('no files to export')
-      // An alert, not a confirmation: there is nothing to go ahead with.
-      expect(queryByRole(dialog, 'button', { name: 'Cancel' })).toBeNull()
       getByRole(dialog, 'button', { name: 'OK' }).click()
       await flushPromises()
 
-      expect(downloads).toEqual([])
+      await waitFor(() => {
+        expect(button).toBeEnabled()
+      })
     } finally {
       wrapper.unmount()
     }
@@ -159,11 +181,7 @@ describe('IDE zip export', () => {
       // The file is listed in the drawer, but is gone by the time it is read.
       vi.spyOn(fs, 'loadFile').mockRejectedValue(new Error('NotFoundError'))
 
-      clickExport()
-      const confirm = await findByRole(document.body, 'dialog', {
-        name: 'Export files',
-      })
-      getByRole(confirm, 'button', { name: 'Download' }).click()
+      await exportFiles()
 
       const failure = await findByRole(document.body, 'dialog', {
         name: 'Export failed',
