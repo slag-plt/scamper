@@ -141,3 +141,7 @@ src/lib/generated/sources.ts
 # `git add -A` from the root will otherwise stage it as an embedded repository.
 # Only the worktrees: .claude/skills/ is checked in.
 .claude/worktrees/
+
+# Artifacts a failing browser test leaves behind (npm run test:browser)
+__screenshots__/
+.vitest-attachments/
