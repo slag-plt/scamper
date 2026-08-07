@@ -25,6 +25,7 @@ export const patchNotes: PatchNote[] = [
     // in the same block.
     title: 'Library cleanup',
     notes: [
+      'The zip button in the file drawer downloads all of your files at once, so you can keep a copy of your work.',
       'The clock button in the file drawer shows the versions of a file Scamper saved as you worked, and what changed between them. Pick one and restore it to carry on from there — the version you were on is kept too, so restoring by mistake costs nothing.',
       'Deleting a file no longer throws its history away. The history view lists deleted files, and you can bring one back.',
       'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',

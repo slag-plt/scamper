@@ -14,8 +14,9 @@ import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
 import Scamper from '../../../scamper'
 import * as FS from '../../../fs'
-import { FileEntry } from '../../../fs/fs'
+import { FileEntry, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
+import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
 import ModalHost from './ModalHost.vue'
@@ -98,9 +99,7 @@ function abortTraceStep() {
 async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
-  files.value = allFiles.filter(
-    (f: FileEntry) => !f.isDirectory && !f.name.startsWith('.'),
-  )
+  files.value = allFiles.filter(isUserFile)
 }
 
 // ---------- config persistence ----------
@@ -397,14 +396,67 @@ async function handleDelete() {
   startAutosaving()
 }
 
+// How long a generated object URL is kept alive after its download starts.
+// Generous on purpose: the cost of holding a zip a few seconds too long is a
+// little memory, while releasing it too early loses the download.
+const DOWNLOAD_URL_LIFETIME_MS = 10_000
+
+/** Hands `href` to the browser as a download named `filename`. */
+function startDownload(filename: string, href: string) {
+  const a = document.createElement('a')
+  a.href = href
+  a.target = '_blank'
+  a.download = filename
+  a.click()
+}
+
 async function handleDownload() {
   if (!currentFile.value || !fs) return
   const contents = await fs.loadFile(currentFile.value)
-  const a = document.createElement('a')
-  a.href = 'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents)
-  a.target = '_blank'
-  a.download = currentFile.value
-  a.click()
+  startDownload(
+    currentFile.value,
+    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+  )
+}
+
+// An archive can take a moment to build, and the button stays clickable while
+// it does; the flag keeps a second click from starting a second export.
+let isArchiving = false
+
+// Downloads every file in the drawer as one zip archive (issue #42).
+async function handleArchive() {
+  if (!fs || isArchiving) return
+  const ok = await modalConfirm({
+    title: 'Export files',
+    message: 'Download all of your files as a zip archive?',
+    confirmLabel: 'Download',
+  })
+  if (!ok) return
+  isArchiving = true
+  try {
+    // Pause autosave and let any in-flight write settle before reading every
+    // file, the same way the other file operations serialize against the
+    // session (see file-session.ts). Saving first also puts the edits still
+    // sitting in the editor into the archive.
+    stopAutosaving()
+    await saveCurrentFile()
+    const url = URL.createObjectURL(await buildArchive(fs))
+    startDownload(archiveFilename(), url)
+    // The browser takes its own reference to the blob shortly after the click,
+    // not during it, so revoking immediately can cancel the download. Hold the
+    // URL well past that point, then let the blob go.
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url)
+    }, DOWNLOAD_URL_LIFETIME_MS)
+  } catch (e) {
+    await modalAlert({
+      title: 'Export failed',
+      message: `Your files could not be exported.\n\n${e instanceof Error ? e.message : String(e)}`,
+    })
+  } finally {
+    isArchiving = false
+    startAutosaving()
+  }
 }
 
 // Opens the file's saved history (issue #42). Browsing deliberately saves
@@ -603,6 +655,7 @@ onUnmounted(() => {
         :rename="handleRename"
         :delete-file="handleDelete"
         :download="handleDownload"
+        :archive="handleArchive"
         :history="handleHistory"
         :select-file="handleSelectFile"
         :upload-file="handleUploadFile"

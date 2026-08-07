@@ -80,6 +80,7 @@
     "chart.js": "^4.5.1",
     "colorsys": "^1.0.22",
     "highlight.js": "^11.10.0",
+    "jszip": "^3.10.1",
     "papaparse": "^5.5.3",
     "showdown": "^2.1.0",
     "splitpanes": "^4.0.4",
