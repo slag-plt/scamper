@@ -86,7 +86,6 @@ async function handleFileInputChange(event: Event) {
       <button
         class="fa-solid fa-file-zipper"
         aria-label="Download zip archive"
-        disabled
         @click="archive?.()"
       ></button>
       ⋅

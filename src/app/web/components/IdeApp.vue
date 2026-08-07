@@ -14,8 +14,9 @@ import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
 import Scamper from '../../../scamper'
 import * as FS from '../../../fs'
-import { FileEntry } from '../../../fs/fs'
+import { FileEntry, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
+import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
 import ModalHost from './ModalHost.vue'
@@ -85,9 +86,7 @@ function abortTraceStep() {
 async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
-  files.value = allFiles.filter(
-    (f: FileEntry) => !f.isDirectory && !f.name.startsWith('.'),
-  )
+  files.value = allFiles.filter(isUserFile)
 }
 
 // ---------- config persistence ----------
@@ -365,6 +364,44 @@ async function handleDownload() {
   a.click()
 }
 
+// Downloads every file in the drawer as one zip archive (issue #42). The open
+// file is saved first so in-progress edits are in the archive too.
+async function handleArchive() {
+  if (!fs) return
+  const count = files.value.length
+  if (count === 0) {
+    await modalAlert({
+      title: 'Export files',
+      message: 'There are no files to export.',
+    })
+    return
+  }
+  const ok = await modalConfirm({
+    title: 'Export files',
+    message: `Download all ${count.toString()} of your files as a zip archive?`,
+    confirmLabel: 'Download',
+  })
+  if (!ok) return
+  try {
+    await saveCurrentFile()
+    const url = URL.createObjectURL(await buildArchive(fs))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = archiveFilename()
+    a.click()
+    // Revoking in the same task can cancel the download the click just started,
+    // so let that task finish first.
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url)
+    }, 0)
+  } catch (e) {
+    await modalAlert({
+      title: 'Export failed',
+      message: `Your files could not be exported. ${e instanceof Error ? e.message : ''}`,
+    })
+  }
+}
+
 async function handleSelectFile(filename: string) {
   if (!isLoadingFile) await switchToFile(filename)
 }
@@ -471,6 +508,7 @@ onUnmounted(() => {
         :rename="handleRename"
         :delete-file="handleDelete"
         :download="handleDownload"
+        :archive="handleArchive"
         :select-file="handleSelectFile"
         :upload-file="handleUploadFile"
         :file-drop="handleFileDrop"

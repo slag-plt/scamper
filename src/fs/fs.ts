@@ -5,6 +5,16 @@ export interface FileEntry {
   isDirectory: boolean
 }
 
+/**
+ * @returns true iff `entry` is one of the user's own files, i.e., a regular
+ *          file that isn't one of the internal dotfiles (the IDE's config,
+ *          lock, and swap files). The file drawer and the zip export share this
+ *          notion of "the user's files" so they never disagree.
+ */
+export function isUserFile(entry: FileEntry): boolean {
+  return !entry.isDirectory && !entry.name.startsWith('.')
+}
+
 /*
  * A instance of FS provides Scamper with access to the system's underlying file
  * system.

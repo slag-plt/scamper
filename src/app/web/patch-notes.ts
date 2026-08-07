@@ -25,6 +25,7 @@ export const patchNotes: PatchNote[] = [
     // in the same block.
     title: 'Library cleanup',
     notes: [
+      'The zip button in the file drawer downloads all of your files at once, so you can keep a copy of your work.',
       'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',
       'The old `color` function has been removed. Use `rgb` instead: (rgb 255 0 0) in place of (color 255 0 0 255).',
       'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',
