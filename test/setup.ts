@@ -1,5 +1,6 @@
 import * as matchers from '@testing-library/jest-dom/matchers'
-import { expect } from 'vitest'
+import { afterEach, expect } from 'vitest'
+import { activeModal, dismissModal } from '../src/app/web/composables/use-modals'
 import 'vitest-canvas-mock'
 import { initializeLibs } from '../src/lib'
 import * as SymbolDB from '../src/scheme/symbol-db'
@@ -18,3 +19,13 @@ await initializeLibs()
 // N.B., after initializeLibs(): the symbol DB snapshots the just-loaded
 // builtin libraries.
 SymbolDB.initialize()
+
+// use-modals keeps a single module-level queue of pending dialogs, so a test
+// that opens one and never answers it leaves the request active -- and the next
+// test's freshly mounted ModalHost renders that stale dialog instead of the one
+// it is waiting for. Draining between tests keeps that from crossing files.
+afterEach(() => {
+  while (activeModal.value !== null) {
+    dismissModal()
+  }
+})
