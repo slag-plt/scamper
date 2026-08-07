@@ -5,6 +5,16 @@ export interface FileEntry {
   isDirectory: boolean
 }
 
+/**
+ * @returns true iff `name` belongs to a file an app keeps for itself rather
+ *          than one of the user's own. By convention a dotted name marks
+ *          internal state -- the IDE's config and lock files, a file's saved
+ *          history -- and the file drawer hides them.
+ */
+export function isHiddenName(name: string): boolean {
+  return name.startsWith('.')
+}
+
 /*
  * A instance of FS provides Scamper with access to the system's underlying file
  * system.
