@@ -1,9 +1,18 @@
 import type * as FS from '../../fs'
+import {
+  markHistoryDeleted,
+  recordSnapshot,
+  renameHistory,
+  type Snapshot,
+} from './file-history'
 
 /**
  * The FileSession owns the IDE's file lifecycle: which file is currently open,
  * the autosave timer, and the save/delete/rename operations that read from the
  * editor and write to the file system.
+ *
+ * It is also where a file's save history is recorded (see file-history.ts),
+ * since this is the one place the editor's contents reach storage.
  *
  * The key invariant it enforces is that a delete (or a delete-before-overwrite
  * during rename/upload) always waits for any in-flight save to settle before
@@ -44,6 +53,10 @@ export class FileSession {
   // The promise of the save currently writing to disk, if any. Delete/rename
   // await this so the writable is closed before the file is removed.
   private inFlightSave: Promise<void> | null = null
+  // The newest snapshot of the open file, so a save that adds nothing to its
+  // history costs no reads. Dropped whenever the file it describes changes
+  // identity (switch, delete, rename), as file-history.ts requires.
+  private historyHead: { filename: string; head: Snapshot | null } | null = null
 
   constructor(
     fs: FS.t,
@@ -97,8 +110,11 @@ export class FileSession {
   /**
    * Saves the current file, coalescing with any in-flight save so at most one
    * write is outstanding at a time. Resolves once the write has settled.
+   * @param options.force takes a history snapshot even inside the merge window
+   *        (see file-history.ts). A save that coalesces with one already in
+   *        flight cannot force, since that save is already past this point.
    */
-  async save(): Promise<void> {
+  async save(options: { force?: boolean } = {}): Promise<void> {
     if (this.inFlightSave) {
       await this.inFlightSave
       return
@@ -112,12 +128,40 @@ export class FileSession {
         await this.fs.saveFile(filename, doc)
       } catch (e) {
         if (e instanceof Error) this.onSaveError?.(e.message)
+        // A save that failed is not history.
+        return
       }
+      // Inside the in-flight promise on purpose: delete and rename await
+      // settle(), so this puts the history write inside the same critical
+      // section as the file's own, rather than racing it.
+      await this.recordHistory(filename, doc, options.force ?? false)
     })()
     try {
       await this.inFlightSave
     } finally {
       this.inFlightSave = null
+    }
+  }
+
+  /**
+   * Records the just-saved contents as a snapshot of `filename`. A history is
+   * a convenience, so a failure here is swallowed: the file itself saved, and
+   * taking over the screen with an error would cost more than a missing entry.
+   */
+  private async recordHistory(
+    filename: string,
+    contents: string,
+    force: boolean,
+  ): Promise<void> {
+    try {
+      const cached = this.historyHead
+      const { head } = await recordSnapshot(this.fs, filename, contents, new Date(), {
+        force,
+        ...(cached?.filename === filename ? { knownHead: cached.head } : {}),
+      })
+      this.historyHead = { filename, head }
+    } catch {
+      // Deliberately ignored; see above.
     }
   }
 
@@ -138,9 +182,12 @@ export class FileSession {
    * @returns the contents of the newly-opened file.
    */
   async switchTo(filename: string): Promise<string> {
-    if (this.currentFile !== null) await this.save()
+    // Forced, so leaving a file always closes out its history with what is
+    // actually on disk rather than leaving the last minute of edits unrecorded.
+    if (this.currentFile !== null) await this.save({ force: true })
     const src = await this.fs.loadFile(filename)
     this.currentFile = filename
+    this.historyHead = null
     return src
   }
 
@@ -153,11 +200,45 @@ export class FileSession {
    * a save that starts afterwards no-ops and cannot recreate the file. Errors
    * are surfaced (rethrown) rather than swallowed.
    */
-  async deleteFile(filename: string): Promise<void> {
+  async deleteFile(
+    filename: string,
+    options: { replacing?: boolean } = {},
+  ): Promise<void> {
     this.stopAutosave()
     await this.settle()
-    if (this.currentFile === filename) this.currentFile = null
+    const wasOpen = this.currentFile === filename
+    if (wasOpen) this.currentFile = null
+    this.historyHead = null
+
+    // Pin what is about to disappear. A file deleted before its first autosave
+    // would otherwise have no history at all, and recovering an accidental
+    // delete is half of what the history is for (#42). The editor's contents
+    // are used rather than the file's, since that is what the student sees.
+    if (options.replacing !== true && wasOpen && this.editor.isEditorLoaded()) {
+      try {
+        await recordSnapshot(
+          this.fs,
+          filename,
+          this.editor.getDoc(),
+          new Date(),
+          { force: true },
+        )
+      } catch {
+        // A history is a convenience; never fail the delete over one.
+      }
+    }
+
     await this.fs.deleteFile(filename)
+    // The history outlives the file so it can be recovered (#42) -- but only
+    // when the file is really going away. An overwrite deletes first purely to
+    // close the writable, and the file is back a moment later.
+    if (options.replacing !== true) {
+      try {
+        await markHistoryDeleted(this.fs, filename, new Date())
+      } catch {
+        // A history is a convenience; never fail the delete over one.
+      }
+    }
   }
 
   // ---------- renaming ----------
@@ -171,7 +252,13 @@ export class FileSession {
     this.stopAutosave()
     await this.settle()
     if (this.currentFile === from) this.currentFile = null
+    this.historyHead = null
     await this.fs.renameFile(from, to)
     this.currentFile = to
+    try {
+      await renameHistory(this.fs, from, to)
+    } catch {
+      // A history is a convenience; never fail the rename over one.
+    }
   }
 }

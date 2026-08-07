@@ -27,6 +27,10 @@ function browserTestFiles(): string[] {
   return readdirSync(testRoot, { recursive: true, encoding: 'utf-8' })
     .filter((f) => f.endsWith('.browser.test.ts'))
     .map((f) => resolve(testRoot, f))
+    // A failed browser test leaves a screenshot directory *named* after it
+    // (`__screenshots__/foo.browser.test.ts/`), which reads as EISDIR and
+    // fails this suite until someone deletes it by hand.
+    .filter((f) => statSync(f).isFile())
     .sort()
 }
 

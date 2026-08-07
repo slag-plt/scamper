@@ -48,6 +48,7 @@ Scamper has a comprehensive test suite whose structure nearly mirrors the struct
 + A few libs/ specs need a real Canvas2D/font-metrics implementation to test meaningfully (real pixel rendering, getImageData round-trips, measureText); these live in test/libs/canvas.browser.test.ts and test/libs/image.browser.test.ts and run under real headless Chromium via Vitest's browser mode + Playwright (test/vitest.browser.config.ts), not jsdom
 + Excluded from `npm test`/`npm run validate` (see vite.config.ts's test.exclude) since a missing Playwright browser binary fails vitest's browser-mode startup outright -- this is a deliberately separate, opt-in suite; CI runs it as its own job
 + One-time setup: `npm run playwright:install` downloads a headless Chromium binary (cached outside the repo); then run with `npm run test:browser` / `npm run coverage:browser`
++ On a bare Linux box the binary needs system libraries that are not installed with it. The symptom is a startup failure naming a missing shared object -- `error while loading shared libraries: libatk-1.0.so.0` -- which reads like a broken test run but is an environment gap: nothing in the suite is at fault and no amount of editing it will help. Install them once with `npx playwright install --with-deps chromium` (needs root; it is what CI's browser-tests job runs). Headlessness is not the problem -- CI runs headless too
 
 ## Style
 

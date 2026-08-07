@@ -11,6 +11,7 @@ const props = defineProps<{
   deleteFile?: () => void
   download?: () => void
   archive?: () => void
+  history?: () => void
   selectFile?: (filename: string) => void
   uploadFile?: (file: File) => Promise<void>
   fileDrop?: (files: FileList) => Promise<void>
@@ -85,8 +86,8 @@ async function handleFileInputChange(event: Event) {
       ></button>
       <button
         class="fa-solid fa-file-zipper"
-        aria-label="Download zip archive"
-        disabled
+        aria-label="Download all files as a zip archive"
+        :disabled="!props.files?.length"
         @click="archive?.()"
       ></button>
       ⋅
@@ -107,6 +108,11 @@ async function handleFileInputChange(event: Event) {
         aria-label="Download file"
         :disabled="!props.currentFile"
         @click="download?.()"
+      ></button>
+      <button
+        class="fa-solid fa-clock-rotate-left"
+        aria-label="File history"
+        @click="history?.()"
       ></button>
     </div>
     <div class="file-drawer">
