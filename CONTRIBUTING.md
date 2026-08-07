@@ -109,6 +109,17 @@ Once that's working, take the codebase tour:
 
 ### Hopefully this was an accelerated course in web development!
 
+## A note on committing
+
+`npm install` points git at the hooks in `.githooks/`, which refuse a commit that
+contains an embedded git repository or anything under `.claude/worktrees/`. Those
+directories are checkouts of Scamper that coding agents work in, and `git add -A`
+from the repo root will otherwise stage one as a pointer to a commit nobody else
+has. If the hook stops you, unstage the path (`git rm --cached -r <path>`) and
+stage the files you meant to commit by name.
+
+If you cloned before this existed, run `npm run hooks` once.
+
 ## No-AI policy (during onboarding only)
 
 For the week this guide covers, please don't use generative AI tools (ChatGPT, Copilot, Cursor's agent, Google's AI Overview, etc.) to write your code or read the docs for you. The goal is to build the mental model of how a TypeScript/Vue/Vite project fits together so that after onboarding, when you *do* use AI tools, you can tell when they're hallucinating. Once you're done onboarding, use whatever makes you productive (and whatever Sam lets you use).

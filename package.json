@@ -4,8 +4,9 @@
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
   "scripts": {
-    "postinstall": "npm run generate",
+    "postinstall": "npm run generate && npm run hooks",
     "generate": "npm run generate-parser && npm run generate-lib-sources",
+    "hooks": "git config core.hooksPath .githooks || true",
     "generate-parser": "node scripts/generate-parser.mjs",
     "generate-lib-sources": "node scripts/generate-lib-sources.mjs",
     "dev": "vite",

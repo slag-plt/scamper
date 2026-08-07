@@ -1,0 +1,30 @@
+#!/bin/sh
+# Refuses two things that are easy to stage by accident with `git add -A` and
+# awkward to undo once pushed.
+#
+# Agents create git worktrees under .claude/worktrees/. Each is a full checkout
+# of this repo, so staging one records it as an embedded repository (a gitlink)
+# rather than as files -- a clone of scamper would then contain a pointer to a
+# commit nobody else has. .gitignore covers the path, but only while it is
+# untracked, and neither guard helps once it is in the index.
+
+embedded=$(git diff --cached --raw | awk '$2 == "160000" { print $NF }')
+if [ -n "$embedded" ]; then
+  echo "pre-commit: refusing to commit an embedded git repository:" >&2
+  echo "$embedded" | sed 's/^/  /' >&2
+  echo >&2
+  echo "This is usually a worktree swept up by 'git add -A'. Unstage it with:" >&2
+  echo "  git rm --cached -r <path>" >&2
+  echo "and stage explicit paths instead of -A." >&2
+  exit 1
+fi
+
+worktrees=$(git diff --cached --name-only | grep '^\.claude/worktrees/')
+if [ -n "$worktrees" ]; then
+  echo "pre-commit: refusing to commit another session's worktree:" >&2
+  echo "$worktrees" | sed 's/^/  /' >&2
+  echo "  git rm --cached -r .claude/worktrees" >&2
+  exit 1
+fi
+
+exit 0
