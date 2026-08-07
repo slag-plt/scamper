@@ -136,3 +136,8 @@ src/lib/generated/sources.ts
 .zed
 .cursor
 .junie
+
+# Git worktrees created by coding agents. Each is a checkout of this repo, so
+# `git add -A` from the root will otherwise stage it as an embedded repository.
+# Only the worktrees: .claude/skills/ is checked in.
+.claude/worktrees/
