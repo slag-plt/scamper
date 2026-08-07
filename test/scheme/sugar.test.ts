@@ -7,6 +7,7 @@ import * as S from '../../src/scheme'
 import { Fiber } from '../../src/lpm/fiber'
 import { raiseFiber } from '../../src/scheme/raise'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
+import { stepFiberWith } from '../util'
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -382,12 +383,11 @@ describe('provenance survives the whole AST -> op -> AST round trip', () => {
     expect(diagnostics).toEqual([])
     const fiber = new Fiber(prog!, S.mkInitialEnv())
     const out: string[] = []
-    while (!fiber.isDone()) {
-      fiber.step()
-      if (fiber.frames.length > 0) {
-        out.push(A.expToString(sugarExpr(raiseFiber(fiber))))
+    stepFiberWith(fiber, (f) => {
+      if (f.frames.length > 0) {
+        out.push(A.expToString(sugarExpr(raiseFiber(f))))
       }
-    }
+    })
     return out
   }
 

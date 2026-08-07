@@ -7,7 +7,7 @@ defineProps<{ value: TraceStart }>()
 
 <template>
   <div class="scamper-trace-start">
-    {{ `${value.preamble} ` }}
+    <template v-if="value.preamble !== ''">{{ `${value.preamble} ` }}</template>
     <ValueRenderer v-if="value.output != null" :value="value.output" />
   </div>
 </template>

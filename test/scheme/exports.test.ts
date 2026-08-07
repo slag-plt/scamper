@@ -9,6 +9,8 @@ import { sugarProgram } from '../../src/scheme/sugar'
 import { scopeCheckProgram } from '../../src/scheme/scope'
 import { Fiber } from '../../src/lpm/fiber'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
+import { runFiberOnScheduler } from '../../src/lpm/run'
+import { runProgram } from '../harness.js'
 
 // Explicit module exports: (export ...) and its sugar (define-export x e). A
 // module exports only the names its export statements name; the union across
@@ -49,54 +51,26 @@ async function moduleExports(src: string): Promise<string[]> {
   expect(diagnostics.map((d) => d.message)).toEqual([])
   if (prog === undefined) throw new Error('compile produced no program')
   const fiber = new Fiber(prog, S.mkInitialEnv())
-  while (!fiber.isDone()) fiber.step()
+  const out = new LPM.LoggingChannel()
+  await runFiberOnScheduler(fiber, { out, err: out })
   return [...fiber.getModule().bindings.keys()].sort()
 }
 
-/** Compiles and runs `src` in `env`, returning its displayed/reported output. */
-async function runIn(env: LPM.Env, src: string): Promise<string[]> {
-  const { prog, diagnostics } = await S.compile(src)
-  expect(diagnostics.map((d) => d.message)).toEqual([])
-  if (prog === undefined) throw new Error('compile produced no program')
-  const out = new LPM.LoggingChannel()
-  const fiber = new Fiber(prog, env)
-  while (!fiber.isDone()) {
-    try {
-      if (fiber.step().tag === 'display') out.send(fiber.lastResult)
-    } catch (e) {
-      if (e instanceof LPM.ScamperError) {
-        out.report(e.stripRange())
-        fiber.advanceStmt()
-      } else {
-        throw e
-      }
-    }
-  }
-  return out.log as string[]
-}
-
 /**
- * Loads `moduleSrc` as a module (as the scheduler does: run in an initial env,
- * snapshot exports), imports it into a fresh user env under `alias` (qualified)
- * or flat (alias undefined), then runs `userSrc` there. Lets us drive a *file*
- * module's import + use synchronously, without the async scheduler.
+ * Imports `moduleSrc` as the file module `m.scm` -- flat, or qualified under
+ * `alias` -- then runs `userSrc` against it, and returns the displayed/reported
+ * output. Goes through the scheduler's real `import-file` handling over a mock
+ * file system, rather than staging the module load by hand.
  */
 async function withImportedModule(
   moduleSrc: string,
   alias: string | undefined,
   userSrc: string,
 ): Promise<string[]> {
-  const compiled = await S.compile(moduleSrc)
-  expect(compiled.diagnostics.map((d) => d.message)).toEqual([])
-  if (compiled.prog === undefined) throw new Error('module did not compile')
-  const modFiber = new Fiber(compiled.prog, S.mkInitialEnv(), true)
-  while (!modFiber.isDone()) modFiber.step()
-  const mod = modFiber.getModule()
-  const env =
-    alias === undefined
-      ? S.mkInitialEnv().extendWithImport('m.scm', mod)
-      : S.mkInitialEnv().extendWithQualifiedImport(alias, mod)
-  return runIn(env, userSrc)
+  mockFS({ 'm.scm': moduleSrc })
+  const importStmt =
+    alias === undefined ? '(import "m.scm")' : `(import "m.scm" ${alias})`
+  return runProgram(`${importStmt}\n${userSrc}`, { stripRanges: true })
 }
 
 afterEach(() => {

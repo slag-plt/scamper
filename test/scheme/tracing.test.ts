@@ -1,43 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { runProgram } from '../harness.js'
-import * as Scheme from '../../src/scheme/index.js'
-import { Fiber } from '../../src/lpm/fiber.js'
-import { diagnosticToError } from '../../src/scheme/diagnostic'
-import { LoggingChannel } from '../../src/lpm/output/index.js'
-import { Scheduler } from '../../src/lpm/scheduler.js'
-import { makeTraceStepper, traceReductions } from '../../src/scheme/trace.js'
-
-// runProgram (test/harness.ts) steps a fiber directly and has no tracing
-// toggle, so tracing needs the real Scheduler wired up with isTracing and a
-// stepper (as Scamper.execute does) -- that's what emits the reduction trace
-// (see the isTracing branch in src/lpm/scheduler.ts).
-async function runProgramTraced(src: string, isTracing = true): Promise<string[]> {
-  src = src.trim()
-  const out = new LoggingChannel()
-  const env = Scheme.mkInitialEnv()
-  const { prog, diagnostics } = await Scheme.compile(src)
-  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
-  if (out.log.length !== 0) {
-    return out.log as string[]
-  }
-  if (prog === undefined) {
-    throw new Error('compile produced no program and no logged errors')
-  }
-  const fiber = new Fiber(prog, env)
-  const sched = new Scheduler()
-  await new Promise<void>((resolve) => {
-    sched.schedule({
-      id: crypto.randomUUID(),
-      fiber,
-      out,
-      err: out,
-      isTracing,
-      stepper: isTracing ? makeTraceStepper() : undefined,
-      onComplete: resolve,
-    })
-  })
-  return out.log as string[]
-}
+import {
+  reductionTrace,
+  runProgram,
+  runProgramTraced,
+} from '../harness.js'
 
 beforeEach(() => {
   vi.stubGlobal('window', {
@@ -54,7 +20,7 @@ test('traces each define with its defined value', async () => {
       (define x 5)
       (define y 10)
     `),
-  ).toEqual(['--> 5', '--> 10'])
+  ).toEqual(['5', '--> 10'])
 })
 
 test('a builtin import produces no reduction steps', async () => {
@@ -62,17 +28,20 @@ test('a builtin import produces no reduction steps', async () => {
 })
 
 test('a traced expression shows its reduction, ending at the value', async () => {
-  // The scheduler now emits the reduction trace (raise + sugar per step), not
-  // the old coarse `--> lastResult`.
-  expect(await runProgramTraced('(+ 1 2)')).toEqual(['--> (+ 1 2)', '--> 3'])
+  // The scheduler emits the reduction trace (raise + sugar per step), not the
+  // old coarse `--> lastResult`. The opening line is the program as written, so
+  // it carries no marker; `-->` reads as "reduced from the line above".
+  expect(await runProgramTraced('(+ 1 2)')).toEqual(['(+ 1 2)', '--> 3'])
 })
 
-test('a traced program renders every statement as arrow-prefixed reductions', async () => {
+test('a traced program renders every statement as reductions', async () => {
   // In trace mode the output *is* the reduction trace: each statement's steps
-  // (and its value) are arrow-prefixed, rather than raw output plus annotations.
+  // (and its value), rather than raw output plus annotations. Only the opening
+  // line is unmarked -- nothing reduced to it.
   const traced = await runProgramTraced('(define x 5)\n(display "hi")\n(+ x 1)')
-  expect(traced.every((line) => line.startsWith('--> '))).toBe(true)
-  expect(traced).toEqual(['--> 5', '--> "hi"', '--> (+ 5 1)', '--> 6'])
+  expect(traced.slice(1).every((line) => line.startsWith('--> '))).toBe(true)
+  expect(traced[0].startsWith('--> ')).toBe(false)
+  expect(traced).toEqual(['5', '--> "hi"', '--> (+ 5 1)', '--> 6'])
 })
 
 test('tracing disabled never emits arrow-prefixed lines', async () => {
@@ -83,18 +52,6 @@ test('tracing disabled never emits arrow-prefixed lines', async () => {
 
 // ---- Stepwise reduction traces (raise + sugar) -----------------------------
 //
-// The above scheduler traces are coarse (they emit `fiber.lastResult`, which
-// only advances per statement). The *reduction* trace -- the readable
-// program-state-per-step sequence the raise/sugar/provenance machinery was
-// built for -- is produced by traceReductions (src/scheme/trace.ts), a
-// generator that raises + sugars the fiber at each top-level step. Draining it
-// here gives the full sequence; the CLI's --trace drives the same generator.
-async function reductionTrace(src: string): Promise<string[]> {
-  const { prog, diagnostics } = await Scheme.compile(src.trim())
-  expect(diagnostics).toEqual([])
-  return [...traceReductions(new Fiber(prog!, Scheme.mkInitialEnv()))]
-}
-
 describe('stepwise reduction traces, by construct', () => {
   test('a literal does not reduce', async () => {
     expect(await reductionTrace('42')).toEqual(['42'])
@@ -271,7 +228,7 @@ describe('vector and map literals in a reduction trace (#334)', () => {
   // reduction steps in between are surface syntax.
   test('a vector literal reduces as [...], never as (vector ...)', async () => {
     expect(await runProgramTraced('[1 (+ 1 1)]')).toEqual([
-      '--> [1 (+ 1 1)]',
+      '[1 (+ 1 1)]',
       '--> [1 2]',
       '--> (vector 1 2)',
     ])
@@ -279,7 +236,7 @@ describe('vector and map literals in a reduction trace (#334)', () => {
 
   test('a map literal reduces as {...}, never as (##mkObj## ...)', async () => {
     expect(await runProgramTraced('{"a" (+ 1 1)}')).toEqual([
-      '--> {"a" (+ 1 1)}',
+      '{"a" (+ 1 1)}',
       '--> {"a" 2}',
       '--> { "a" : 2 }',
     ])

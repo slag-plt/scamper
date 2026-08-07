@@ -29,10 +29,35 @@ export function makeTestFiber(prog: Prog): Fiber {
   return fiber
 }
 
-/** Run a real fiber to completion (for schedule-invariant tests). */
-export function runFiberToCompletion(fiber: Fiber): void {
+/**
+ * Steps `fiber` directly to completion, with no scheduler.
+ *
+ * LPM-level tests only -- those about the fiber/VM contract itself, plus the
+ * ones that need a done fiber as a precondition. It services neither blocking
+ * primitives (a SuspendSignal escapes as an uncaught throw) nor file imports,
+ * and does no error recovery. Anything about what a *program* does belongs on
+ * runProgram (test/harness.ts), which drives a real Scheduler.
+ */
+export function stepFiberToCompletion(fiber: Fiber): void {
+  stepFiberWith(fiber)
+}
+
+/**
+ * Steps `fiber` directly to completion, calling `onStep` after each step.
+ *
+ * The escape hatch for tests that must observe the fiber *between* steps --
+ * frame depth, or raising/sugaring the machine state at a finer granularity
+ * than the trace policy exposes (it dedups, and hides `stepOver` frames). No
+ * scheduler API surfaces that. Same caveats as stepFiberToCompletion: no
+ * blocking primitives, no file imports, no error recovery.
+ */
+export function stepFiberWith(
+  fiber: Fiber,
+  onStep?: (fiber: Fiber) => void,
+): void {
   while (!fiber.isDone()) {
     fiber.step()
+    onStep?.(fiber)
   }
 }
 

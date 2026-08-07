@@ -8,6 +8,8 @@ import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { anyRange } from './util'
 import { compile, mkInitialEnv } from '../../src/scheme'
 import { Fiber } from '../../src/lpm/fiber'
+import { Scheduler } from '../../src/lpm/scheduler'
+import { makeQueryTask } from '../util'
 
 const testLit = 'test lit'
 const testDispLit = 2
@@ -500,15 +502,18 @@ describe('AST querying', () => {
         return
       }
 
-      const fiber = new Fiber(prog, mkInitialEnv())
-      let caught: unknown
-      try {
-        while (!fiber.isDone()) fiber.step()
-      } catch (e) {
-        caught = e
-      }
-      expect(caught).toBeInstanceOf(L.ReportError)
-      expect((caught as L.ReportError).value).toBe(1)
+      // Scheduled as a query task, the way Scamper.query runs one: the
+      // ReportError is caught by the scheduler and handed to the task's error
+      // channel rather than escaping to the caller.
+      const task = makeQueryTask(new Fiber(prog, mkInitialEnv()))
+      const sched = new Scheduler()
+      await new Promise<void>((resolve) => {
+        sched.schedule({ ...task, onComplete: resolve })
+      })
+      sched.pauseExecution()
+      expect(task.err.errors).toHaveLength(1)
+      expect(task.err.errors[0]).toBeInstanceOf(L.ReportError)
+      expect((task.err.errors[0] as L.ReportError).value).toBe(1)
     })
   })
 })

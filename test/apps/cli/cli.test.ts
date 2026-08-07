@@ -145,4 +145,32 @@ describe('scamper CLI', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  // #339: --trace used to step the fiber by hand, so it could not service the
+  // suspend a blocking primitive raises -- it bailed out with "Blocking
+  // operations ... cannot be traced". It is an ordinary traced run now, so
+  // reading a file traces like anything else.
+  test('--trace traces a program that reads a file (#339)', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'scamper-cli-trace-file-'))
+    try {
+      writeFileSync(path.join(dir, 'greet.txt'), 'hello\n', 'utf-8')
+      writeFileSync(
+        path.join(dir, 'prog.scm'),
+        ['(import file)', '(string-length (file->string "greet.txt"))'].join(
+          '\n',
+        ),
+        'utf-8',
+      )
+
+      const result = runCli(['--trace', path.join(dir, 'prog.scm')])
+
+      expect(result.stderr).not.toContain('cannot be traced')
+      expect(result.stdout).toBe(
+        ['(string-length (file->string "greet.txt"))', '--> 6', ''].join('\n'),
+      )
+      expect(result.status).toBe(0)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })

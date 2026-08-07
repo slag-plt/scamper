@@ -14,7 +14,7 @@ import {
   MockFiber,
   patchSchedulerYieldForTests,
   QUANTUM_WAIT_MS,
-  runFiberToCompletion,
+  stepFiberToCompletion,
   sleep,
   trackFiberSteps,
   withSuppressedRejections,
@@ -110,7 +110,7 @@ describe('Scheduler', () => {
     test('schedule throws when given an already-completed fiber', () => {
       const sched = new Scheduler()
       const done = makeTestFiber([U.mkDisp([U.mkLit(1)])])
-      runFiberToCompletion(done)
+      stepFiberToCompletion(done)
       expect(() => {
         sched.schedule(makeTask(done))
       }).toThrow()
@@ -309,6 +309,49 @@ describe('Scheduler', () => {
         // and execution should not have continued after the throw
         expect(fiber.stepCallCount).toBe(1)
       })
+    })
+
+    // #339: a task's owner waits on onComplete, which a fatal error never
+    // reaches -- the throw escapes the detached execute() loop as an unhandled
+    // rejection, stranding the caller. onFatal is how the failure gets out.
+    test('a fatal error reaches onFatal instead of stranding the caller', async () => {
+      const sched = new Scheduler()
+      const fiber = new MockFiber()
+      const ice = new ICE('test', 'internal')
+      fiber.stepImpl = () => {
+        throw ice
+      }
+      let completed = false
+      const caught = await new Promise<unknown>((resolve) => {
+        sched.schedule({
+          ...makeTask(fiber),
+          onComplete: () => {
+            completed = true
+          },
+          onFatal: resolve,
+        })
+      })
+      sched.pauseExecution()
+      expect(caught).toBe(ice)
+      expect(completed).toBe(false)
+    })
+
+    test('a fatal error drops only its own task, leaving others running', async () => {
+      const sched = new Scheduler()
+      const bad = new MockFiber()
+      bad.stepImpl = () => {
+        throw new ICE('test', 'internal')
+      }
+      const good = new MockFiber()
+      const goodTask = makeTask(good)
+      let fatal = false
+      sched.schedule({ ...makeTask(bad), onFatal: () => (fatal = true) })
+      sched.schedule(goodTask)
+      await sleep(QUANTUM_WAIT_MS)
+      sched.pauseExecution()
+      expect(fatal).toBe(true)
+      expect(good.stepCallCount).toBeGreaterThan(0)
+      expect(goodTask.ch.errLog).toEqual([])
     })
   })
 
@@ -602,7 +645,7 @@ describe('Scheduler', () => {
       test('query throws when given an already-completed fiber', () => {
         const sched = new Scheduler()
         const done = makeTestFiber([U.mkDisp([U.mkLit(1)])])
-        runFiberToCompletion(done)
+        stepFiberToCompletion(done)
         expect(() => {
           sched.schedule(makeQueryTask(done))
         }).toThrow()
