@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import type { FileEntry, FS } from '../../../src/fs/fs'
+import { isHiddenName, type FileEntry, type FS } from '../../../src/fs/fs'
 import { FileSession } from '../../../src/app/web/file-session'
+import { historyFilename, loadHistory } from '../../../src/app/web/file-history'
 
 /** A deferred promise handle used to control when a save "settles". */
 function defer(): { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } {
@@ -26,6 +27,13 @@ class FakeFS implements FS {
   private openSave: { filename: string; deferred: ReturnType<typeof defer> } | null = null
   saveCalls: string[] = []
   deleteCalls: string[] = []
+  /** Writes to internal dotted files, kept apart from the document's own. */
+  internalSaves: string[] = []
+  /**
+   * When set, a save commits at once rather than holding its writable open
+   * until `closeOpenSave()`. For tests that are not about the save race.
+   */
+  autoCommit = false
 
   constructor(private lockOnSave: boolean) {}
 
@@ -57,7 +65,19 @@ class FakeFS implements FS {
   }
 
   async saveFile(filename: string, contents: string): Promise<void> {
+    // The held-open writable models the *document* being edited. A history
+    // file is a different file, and OPFS locks per file, so it commits at once
+    // and leaves these tests about the document alone.
+    if (isHiddenName(filename)) {
+      this.internalSaves.push(filename)
+      this.files.set(filename, contents)
+      return
+    }
     this.saveCalls.push(filename)
+    if (this.autoCommit) {
+      this.files.set(filename, contents)
+      return
+    }
     const deferred = defer()
     this.openSave = { filename, deferred }
     // The write only commits once the "writable" is closed (deferred resolves).
@@ -273,8 +293,13 @@ describe('FileSession switchTo (issue #238)', () => {
 
     await s.switchTo('b.scm')
 
-    // The outgoing save must strictly precede the incoming load.
-    expect(events).toEqual(['save:a.scm', 'load:b.scm'])
+    // The outgoing save must strictly precede the incoming load. Closing out
+    // its history (issue #42) happens in between, still ahead of the load.
+    expect(events).toEqual([
+      'save:a.scm',
+      `save:${historyFilename('a.scm')}`,
+      'load:b.scm',
+    ])
   })
 
   test('does not save when no file is currently open', async () => {
@@ -288,6 +313,123 @@ describe('FileSession switchTo (issue #238)', () => {
     expect(fs.saveCalls).toEqual([])
     expect(src).toBe('b on disk')
     expect(s.getCurrentFile()).toBe('b.scm')
+  })
+})
+
+describe('FileSession save history (issue #42)', () => {
+  /** A session over a lock-free fake, editing `a.scm` with `doc()`. */
+  function mkSession(doc: () => string) {
+    const fs = new FakeFS(false)
+    fs.autoCommit = true
+    fs.files.set('a.scm', 'on disk')
+    const s = new FileSession(fs, { getDoc: doc, isEditorLoaded: () => true })
+    s.setCurrentFile('a.scm')
+    return { fs, s }
+  }
+
+  /** @returns the contents of every snapshot of `filename`, newest first. */
+  async function snapshotsOf(fs: FakeFS, filename: string): Promise<string[]> {
+    return (await loadHistory(fs, filename)).snapshots.map((sn) => sn.contents)
+  }
+
+  test('a save becomes a snapshot', async () => {
+    const { fs, s } = mkSession(() => 'edited')
+
+    await s.save()
+
+    expect(fs.files.get('a.scm')).toBe('edited')
+    expect(await snapshotsOf(fs, 'a.scm')).toEqual(['edited'])
+  })
+
+  test('a save that failed is not recorded', async () => {
+    const { fs, s } = mkSession(() => 'edited')
+    vi.spyOn(fs, 'saveFile').mockRejectedValueOnce(new Error('disk on fire'))
+
+    await s.save()
+
+    expect(fs.files.has(historyFilename('a.scm'))).toBe(false)
+  })
+
+  test('a burst of autosaves leaves one snapshot, not one per save', async () => {
+    // Autosave fires every 3s whether or not the document changed, and edits
+    // inside the merge window fold into the entry already open.
+    let doc = 'first'
+    const { fs, s } = mkSession(() => doc)
+
+    await s.save()
+    await s.save()
+    doc = 'second'
+    await s.save()
+    doc = 'third'
+    await s.save()
+
+    expect(fs.files.get('a.scm')).toBe('third')
+    expect(await snapshotsOf(fs, 'a.scm')).toEqual(['first'])
+  })
+
+  test('an unchanged save after the first touches no storage', async () => {
+    const { fs, s } = mkSession(() => 'same')
+    await s.save()
+    const loadFile = vi.spyOn(fs, 'loadFile')
+
+    await s.save()
+
+    // The cached head answered it: the history was neither read nor rewritten.
+    expect(loadFile).not.toHaveBeenCalled()
+    expect(fs.internalSaves).toEqual([historyFilename('a.scm')])
+  })
+
+  test('switching away closes out the outgoing file with a snapshot', async () => {
+    let doc = 'first'
+    const { fs, s } = mkSession(() => doc)
+    fs.files.set('b.scm', 'b on disk')
+    await s.save()
+    // An edit that would otherwise fold into the open entry.
+    doc = 'second'
+
+    await s.switchTo('b.scm')
+
+    expect(await snapshotsOf(fs, 'a.scm')).toEqual(['second', 'first'])
+  })
+
+  test('deleting keeps the history, marked, so the file can be recovered', async () => {
+    const { fs, s } = mkSession(() => 'edited')
+    await s.save()
+
+    await s.deleteFile('a.scm')
+
+    const history = await loadHistory(fs, 'a.scm')
+    expect(history.deletedAt).toBeTypeOf('string')
+    expect(history.snapshots.map((sn) => sn.contents)).toEqual(['edited'])
+  })
+
+  test('deleting to make way for an overwrite does not mark the history', async () => {
+    // The upload path deletes only to close the writable; the file is back a
+    // moment later, so its history was never of a deleted file.
+    const { fs, s } = mkSession(() => 'edited')
+    await s.save()
+
+    await s.deleteFile('a.scm', { replacing: true })
+
+    expect((await loadHistory(fs, 'a.scm')).deletedAt).toBeUndefined()
+  })
+
+  test('renaming carries the history to the new name', async () => {
+    const { fs, s } = mkSession(() => 'edited')
+    await s.save()
+
+    await s.renameFile('a.scm', 'b.scm')
+
+    expect(await snapshotsOf(fs, 'b.scm')).toEqual(['edited'])
+    expect(fs.files.has(historyFilename('a.scm'))).toBe(false)
+  })
+
+  test('a failure to record never fails the save', async () => {
+    const { fs, s } = mkSession(() => 'edited')
+    vi.spyOn(fs, 'fileExists').mockRejectedValue(new Error('storage gone'))
+
+    await expect(s.save()).resolves.toBeUndefined()
+    expect(fs.files.get('a.scm')).toBe('edited')
   })
 })
 

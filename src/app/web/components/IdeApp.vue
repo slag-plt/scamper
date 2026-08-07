@@ -269,7 +269,7 @@ async function handleUploadFile(file: File) {
     if (!ok) return
     // Serialize the overwrite against any in-flight save so the writable is
     // closed before the file is removed (see file-session.ts).
-    await fileSession.deleteFile(filename)
+    await fileSession.deleteFile(filename, { replacing: true })
   }
   await fs.saveFile(filename, content)
   setCurrentFile(null)
@@ -291,7 +291,7 @@ async function handleFileDrop(droppedFiles: FileList) {
         })
         if (!ok) continue
         // Serialize the overwrite against any in-flight save (see above).
-        await fileSession.deleteFile(filename)
+        await fileSession.deleteFile(filename, { replacing: true })
       }
       await fs.saveFile(filename, content)
       setCurrentFile(null)
