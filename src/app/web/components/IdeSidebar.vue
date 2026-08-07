@@ -112,7 +112,6 @@ async function handleFileInputChange(event: Event) {
       <button
         class="fa-solid fa-clock-rotate-left"
         aria-label="File history"
-        :disabled="!props.currentFile"
         @click="history?.()"
       ></button>
     </div>

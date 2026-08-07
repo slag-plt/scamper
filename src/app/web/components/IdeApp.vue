@@ -29,6 +29,7 @@ import FileHistoryModal from './FileHistoryModal.vue'
 import {
   listHistories,
   loadHistory,
+  recordSnapshot,
   type HistoryFile,
   type Snapshot,
 } from '../file-history'
@@ -315,6 +316,29 @@ async function handleFileDrop(droppedFiles: FileList) {
   }
 }
 
+/**
+ * Asks before a rename destroys the recoverable history of a deleted file that
+ * used to hold `name`.
+ * @returns true if the rename should go ahead
+ */
+async function confirmDiscardingHistory(
+  filesystem: FS.t,
+  name: string,
+): Promise<boolean> {
+  const existing = await loadHistory(filesystem, name)
+  if (existing.deletedAt === undefined || existing.snapshots.length === 0) {
+    return true
+  }
+  return modalConfirm({
+    title: 'Discard saved history',
+    message:
+      `A deleted file named "${name}" still has ${existing.snapshots.length.toString()} ` +
+      'saved versions you could recover. Using that name discards them.',
+    confirmLabel: 'Rename anyway',
+    danger: true,
+  })
+}
+
 async function handleRename() {
   if (!currentFile.value || !fileSession) return
   const from = currentFile.value
@@ -327,6 +351,12 @@ async function handleRename() {
   if (await fs?.fileExists(newName)) {
     await modalAlert({ message: `File ${newName} already exists!` })
   } else {
+    // A deleted file's history is kept under its old name so it can be
+    // recovered (#42), and renaming onto that name overwrites it. Ask first,
+    // the way an upload asks before overwriting a file -- silently discarding
+    // the one thing that made a deleted file recoverable is the worst
+    // outcome here.
+    if (fs && !(await confirmDiscardingHistory(fs, newName))) return
     try {
       // N.B., renaming closes the fs worker's handle to the current file,
       // so we load it fresh afterwards. The session serializes against any
@@ -382,14 +412,25 @@ async function handleDownload() {
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
 async function handleHistory() {
-  if (!fs || !currentFile.value) return
+  if (!fs) return
   const histories = await listHistories(fs)
+  const current = currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
-  historyFiles.value = histories.some((h) => h.filename === currentFile.value)
-    ? histories
-    : [{ filename: currentFile.value }, ...histories]
-  await showHistoryOf(currentFile.value)
+  historyFiles.value =
+    current !== null && !histories.some((h) => h.filename === current)
+      ? [{ filename: current }, ...histories]
+      : histories
+  if (historyFiles.value.length === 0) {
+    await modalAlert({
+      title: 'File history',
+      message: 'No file has a saved history yet.',
+    })
+    return
+  }
+  // Deleting a file leaves nothing open, which is precisely when a student
+  // reaches for the history -- so fall back to the first file that has one.
+  await showHistoryOf(current ?? historyFiles.value[0].filename)
   showHistory.value = true
 }
 
@@ -397,11 +438,18 @@ async function handleHistory() {
 async function showHistoryOf(filename: string) {
   if (!fs) return
   historyFile.value = filename
+  let snapshots: Snapshot[]
   try {
-    historySnapshots.value = (await loadHistory(fs, filename)).snapshots
+    snapshots = (await loadHistory(fs, filename)).snapshots
   } catch {
-    historySnapshots.value = []
+    snapshots = []
   }
+  // The picker may have moved on while this read was in flight -- arrowing
+  // through a <select> fires one change per key. The newest selection wins,
+  // not the read that happens to finish last, or the modal would show one
+  // file's versions under another file's name and restore them onto it.
+  if (historyFile.value !== filename) return
+  historySnapshots.value = snapshots
   // Only the open file has a "current" version to compare against; another
   // file's history is browsed on its own.
   historyContents.value =
@@ -427,6 +475,16 @@ async function handleRestoreSnapshot(snapshot: Snapshot) {
     // Recovering another file, possibly one that was deleted: write it back and
     // open it, so the student lands in what they recovered. Saving marks its
     // history as no longer deleted.
+    //
+    // Pin what the file holds first, exactly as the open-file branch below
+    // does. A save inside the merge window reaches disk without becoming a
+    // snapshot, so without this the overwrite could take those contents off
+    // both disk and timeline. A deleted file has nothing to pin.
+    if (await fs.fileExists(filename)) {
+      await recordSnapshot(fs, filename, await fs.loadFile(filename), new Date(), {
+        force: true,
+      })
+    }
     await fs.saveFile(filename, snapshot.contents)
     await switchToFile(filename)
     await fileSession.save({ force: true })

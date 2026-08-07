@@ -41,11 +41,16 @@ describe('IDE file history', () => {
   })
 
   /** Seeds `filename` with a history of `contents`, oldest last. */
-  async function seedHistory(filename: string, contents: string[]) {
+  async function seedHistory(
+    filename: string,
+    contents: string[],
+    deletedAt?: string,
+  ) {
     await fs.saveFile(
       historyFilename(filename),
       JSON.stringify({
         version: 1,
+        ...(deletedAt === undefined ? {} : { deletedAt }),
         snapshots: contents.map((c, i) => ({
           // Spaced an hour apart so each is its own entry, and dated so the
           // labels are stable regardless of when the suite runs.
@@ -72,7 +77,9 @@ describe('IDE file history', () => {
     }).value
   }
 
-  test('has nothing to show until a file is open', async () => {
+  test('offers the history even with no file open', async () => {
+    // Deliberately not disabled without a current file: deleting one leaves
+    // exactly that state, and it is when recovery matters most.
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await findByRole(document.body, 'button', { name: 'Create file' })
@@ -80,7 +87,7 @@ describe('IDE file history', () => {
 
       expect(
         getByRole(document.body, 'button', { name: 'File history' }),
-      ).toBeDisabled()
+      ).toBeEnabled()
     } finally {
       wrapper.unmount()
     }
@@ -233,6 +240,161 @@ describe('IDE file history', () => {
       expect(
         getByRole(document.body, 'button', { name: 'Open hello.scm' }),
       ).toBeInTheDocument()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('reaches a deleted file\'s history with nothing left open', async () => {
+    // Deleting clears the current file, and the button used to be disabled
+    // without one -- so the recovery UI was unreachable exactly when it was
+    // needed, and unreachable entirely if that file was the only one.
+    await fs.saveFile('hello.scm', '(display 1)')
+
+    const wrapper = await mountIdeWith('hello.scm')
+    try {
+      getByRole(document.body, 'button', { name: 'Delete file' }).click()
+      const confirm = await findByRole(document.body, 'dialog', { name: 'Delete file' })
+      getByRole(confirm, 'button', { name: 'Delete' }).click()
+      await flushPromises()
+
+      const button = getByRole(document.body, 'button', { name: 'File history' })
+      expect(button).toBeEnabled()
+      button.click()
+      const dialog = await findByRole(document.body, 'dialog', { name: 'File history' })
+      expect(
+        [...getByRole<HTMLSelectElement>(dialog, 'combobox').options].map((o) =>
+          o.textContent.trim(),
+        ),
+      ).toEqual(['hello.scm (deleted)'])
+
+      getByRole(dialog, 'button', { name: 'Recover this version' }).click()
+      await flushPromises()
+      expect(await fs.loadFile('hello.scm')).toBe('(display 1)')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('says so when no file has a history yet', async () => {
+    await fs.saveFile('hello.scm', '(display 1)')
+
+    const wrapper = mount(IdeApp, { attachTo: document.body })
+    try {
+      await findByRole(document.body, 'button', { name: 'Create file' })
+      await flushPromises()
+      getByRole(document.body, 'button', { name: 'File history' }).click()
+
+      const dialog = await findByRole(document.body, 'dialog', { name: 'File history' })
+      expect(dialog.textContent).toContain('No file has a saved history yet')
+      // use-modals keeps one module-level queue, so an alert left active would
+      // show up in the next test's ModalHost.
+      getByRole(dialog, 'button', { name: 'OK' }).click()
+      await flushPromises()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('a slow history read does not land under a newer selection', async () => {
+    // Arrowing through the picker fires one change per key. The newest
+    // selection has to win, not whichever read finishes last -- otherwise the
+    // dialog shows one file's versions under another file's name, and
+    // restoring writes them onto that other file.
+    await fs.saveFile('c.scm', '(display 3)')
+    await fs.saveFile('a.scm', 'a now')
+    await seedHistory('a.scm', ['a old 1', 'a old 2'])
+    await fs.saveFile('b.scm', 'b now')
+    await seedHistory('b.scm', ['b old'])
+
+    const wrapper = await mountIdeWith('c.scm')
+    try {
+      getByRole(document.body, 'button', { name: 'File history' }).click()
+      const dialog = await findByRole(document.body, 'dialog', { name: 'File history' })
+      const picker = getByRole<HTMLSelectElement>(dialog, 'combobox')
+
+      // Only now hold a.scm's history read open, so opening the dialog (which
+      // reads every history to build the picker) is unaffected.
+      const realLoad = fs.loadFile.bind(fs)
+      let releaseA: (() => void) | undefined
+      vi.spyOn(fs, 'loadFile').mockImplementation((name: string) => {
+        if (name !== historyFilename('a.scm')) return realLoad(name)
+        return new Promise<string>((resolve, reject) => {
+          releaseA = () => {
+            realLoad(name).then(resolve, reject)
+          }
+        })
+      })
+
+      fireEvent.change(picker, { target: { value: 'a.scm' } })
+      await Promise.resolve()
+      fireEvent.change(picker, { target: { value: 'b.scm' } })
+      await flushPromises()
+      // a.scm's read now finishes, after the selection moved on.
+      releaseA?.()
+      await flushPromises()
+
+      // b.scm has one saved version and is not the open file, so there is no
+      // "current" row: two options would mean a.scm's history landed here.
+      expect(picker.value).toBe('b.scm')
+      expect(dialog.querySelectorAll('[role="option"]').length).toBe(1)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('pins another file\'s contents before restoring over them', async () => {
+    // A save inside the merge window reaches disk without becoming a snapshot.
+    // Restoring over it from the picker must not take those contents off both
+    // disk and timeline -- the footer promises the current version is kept.
+    await fs.saveFile('a.scm', 'saved but never snapshotted')
+    await seedHistory('a.scm', ['old version'])
+    await fs.saveFile('b.scm', '(display 2)')
+
+    const wrapper = await mountIdeWith('b.scm')
+    try {
+      getByRole(document.body, 'button', { name: 'File history' }).click()
+      const dialog = await findByRole(document.body, 'dialog', { name: 'File history' })
+      fireEvent.change(getByRole<HTMLSelectElement>(dialog, 'combobox'), {
+        target: { value: 'a.scm' },
+      })
+      await flushPromises()
+      getByRole(dialog, 'button', { name: 'Restore this version' }).click()
+      await flushPromises()
+
+      expect(await fs.loadFile('a.scm')).toBe('old version')
+      const contents = (await loadHistory(fs, 'a.scm')).snapshots.map((sn) => sn.contents)
+      expect(contents).toContain('saved but never snapshotted')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('asks before a rename discards a deleted file\'s history', async () => {
+    // renameHistory overwrites the destination, so renaming onto the name of a
+    // deleted file would silently destroy the only way back to it.
+    await fs.saveFile('a.scm', 'contents')
+    await seedHistory('gone.scm', ['recoverable'], '2026-08-07T12:00:00.000Z')
+
+    const wrapper = await mountIdeWith('a.scm')
+    try {
+      getByRole(document.body, 'button', { name: 'Rename file' }).click()
+      const prompt = await findByRole(document.body, 'dialog', { name: 'Rename file' })
+      fireEvent.input(getByRole(prompt, 'textbox'), { target: { value: 'gone.scm' } })
+      getByRole(prompt, 'button', { name: 'OK' }).click()
+
+      const warning = await findByRole(document.body, 'dialog', {
+        name: 'Discard saved history',
+      })
+      expect(warning.textContent).toContain('gone.scm')
+      getByRole(warning, 'button', { name: 'Cancel' }).click()
+      await flushPromises()
+
+      // Backing out leaves both the file and the recoverable history alone.
+      expect(await fs.fileExists('a.scm')).toBe(true)
+      expect(
+        (await loadHistory(fs, 'gone.scm')).snapshots.map((sn) => sn.contents),
+      ).toEqual(['recoverable'])
     } finally {
       wrapper.unmount()
     }

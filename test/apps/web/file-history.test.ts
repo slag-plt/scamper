@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   fileOfHistory,
+  formatSnapshotTime,
   historyFilename,
   listHistories,
   loadHistory,
@@ -192,6 +193,34 @@ describe('recordSnapshot', () => {
     )
 
     expect(await contentsOf('hello.scm')).toEqual(['good'])
+  })
+})
+
+describe('formatSnapshotTime', () => {
+  const now = new Date(2026, 7, 7, 15, 0)
+
+  test('shows only the clock for today', () => {
+    expect(formatSnapshotTime(new Date(2026, 7, 7, 14, 4).toISOString(), now)).toBe(
+      '2:04pm',
+    )
+  })
+
+  test('adds the date earlier in the same year', () => {
+    expect(formatSnapshotTime(new Date(2026, 7, 1, 9, 5).toISOString(), now)).toBe(
+      'Aug 1, 9:05am',
+    )
+  })
+
+  test('adds the year for an older one', () => {
+    // Deleted files keep their history indefinitely, so last year's version
+    // must not read as this week's.
+    expect(formatSnapshotTime(new Date(2025, 7, 7, 14, 4).toISOString(), now)).toBe(
+      'Aug 7 2025, 2:04pm',
+    )
+  })
+
+  test('says so for a time it cannot read', () => {
+    expect(formatSnapshotTime('not a date', now)).toBe('unknown')
   })
 })
 

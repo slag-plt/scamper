@@ -46,7 +46,9 @@ const MONTHS = [
 
 /**
  * Renders a snapshot's time for the history list: `2:04pm` for one taken
- * today, `Aug 7, 2:04pm` for an older one. Formatted by hand rather than
+ * today, `Aug 7, 2:04pm` earlier this year, `Aug 7 2025, 2:04pm` before that.
+ * Histories of deleted files are kept indefinitely, so the year has to appear
+ * or last year's version reads as this week's. Formatted by hand rather than
  * through toLocaleString so the result doesn't shift with the host's locale.
  * @param now the day to read `time` as relative to
  */
@@ -57,13 +59,14 @@ export function formatSnapshotTime(time: string, now: Date): string {
   const clock = `${hour.toString()}:${at.getMinutes().toString().padStart(2, '0')}${
     at.getHours() < 12 ? 'am' : 'pm'
   }`
+  const sameYear = at.getFullYear() === now.getFullYear()
   const sameDay =
-    at.getFullYear() === now.getFullYear() &&
-    at.getMonth() === now.getMonth() &&
-    at.getDate() === now.getDate()
-  return sameDay
-    ? clock
-    : `${MONTHS[at.getMonth()]} ${at.getDate().toString()}, ${clock}`
+    sameYear && at.getMonth() === now.getMonth() && at.getDate() === now.getDate()
+  if (sameDay) return clock
+  const day = `${MONTHS[at.getMonth()]} ${at.getDate().toString()}`
+  return sameYear
+    ? `${day}, ${clock}`
+    : `${day} ${at.getFullYear().toString()}, ${clock}`
 }
 
 /** @returns the name of the file holding `filename`'s history. */
@@ -188,7 +191,11 @@ export async function recordSnapshot(
   return { head: skip ? head : snapshot, recorded: !skip }
 }
 
-/** Moves `from`'s history to `to`, if it has one. */
+/**
+ * Moves `from`'s history to `to`, if it has one, overwriting whatever history
+ * `to` already had -- including the retained history of a deleted file of that
+ * name. Callers that can reach that case should confirm first (IdeApp does).
+ */
 export async function renameHistory(
   fs: FS.t,
   from: string,

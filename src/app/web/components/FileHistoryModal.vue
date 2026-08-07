@@ -2,7 +2,12 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
 import AppModal from './AppModal.vue'
-import { mkDiffEditorState } from '../codemirror/codemirror'
+import {
+  editorThemeCompartment,
+  editorThemeExtension,
+  mkDiffEditorState,
+} from '../codemirror/codemirror'
+import { currentTheme } from '../../../theme'
 import {
   formatSnapshotTime,
   type HistoryFile,
@@ -83,6 +88,15 @@ watch(
   },
   { flush: 'post' },
 )
+
+// The diff pane is nearly all of this dialog, so it has to follow a theme
+// toggle rather than sit in the old one until it is rebuilt (as
+// CodeMirrorEditor.vue does for the editor).
+watch(currentTheme, (theme) => {
+  diffView?.dispatch({
+    effects: editorThemeCompartment.reconfigure(editorThemeExtension(theme)),
+  })
+})
 
 onBeforeUnmount(() => {
   diffView?.destroy()
