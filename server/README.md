@@ -63,10 +63,18 @@ Because this is a workspace, npm hoists its dependencies into the root
 server-only package. ESLint is what keeps the split real:
 
 - `src/` may not import from `server/` at all.
-- `server/` may import **types** from `src/` (`import type`), never values.
+- `server/` may import **types** from anywhere in `src/` (`import type`).
   Type-only imports are erased at compile time, so they add no runtime coupling
-  and cannot drag browser code into the server. This is how the server shares
-  `FS` and `FileEntry`.
+  and cannot drag browser code into the server.
+- `server/` may import **values** only from `src/fs/fs.ts`, the contract both
+  halves implement. Sharing it is what keeps this backend and OPFS agreeing on
+  questions like what "hidden" means, rather than each carrying its own copy of
+  the answer.
+
+A second guard covers what lint cannot express: `tsconfig.json` here omits the
+`DOM` lib, so importing a browser module — `src/fs/opfs.ts`, say — fails
+`npm run typecheck:server` with `Cannot find name 'navigator'`. That is an
+error, not a warning, so it blocks `npm run validate` outright.
 
 Note these are ESLint *warnings*, since the repo uses `eslint-plugin-only-warn`
 (see issue #154), so CI will not fail on a violation. Watch for them in review.

@@ -143,6 +143,21 @@ describe('listing', () => {
     })
   })
 
+  test('carries no preview for a dotted name, matching the OPFS backend', () => {
+    // A file's history lives beside it as `.{filename}.history` and holds up
+    // to fifty whole snapshots. Previewing one would put every past version of
+    // every file into a listing that never displays them.
+    fs('PUT', '/files/.hello.scm.history', { contents: 'lots\nand\nlots' })
+    fs('PUT', '/files/hello.scm', { contents: 'shown' })
+
+    expect(fs('GET', '/files').body).toEqual({
+      files: [
+        { name: '.hello.scm.history', preview: null, isDirectory: false },
+        { name: 'hello.scm', preview: 'shown', isDirectory: false },
+      ],
+    })
+  })
+
   test('is sorted by name, matching the OPFS backend', () => {
     for (const name of ['c.scm', 'a.scm', 'b.scm']) {
       fs('PUT', `/files/${name}`, { contents: '' })

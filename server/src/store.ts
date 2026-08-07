@@ -1,6 +1,7 @@
-// Types only -- src/ is browser code, and the ESLint boundary allows exactly
-// this: the FS contract is the shared vocabulary between the two halves.
-import type { FileEntry } from '../../src/fs/fs'
+// src/fs/fs.ts is the contract both halves implement, and the one module in
+// src/ the server may import outright: sharing `isHiddenName` is what keeps
+// this backend and OPFS agreeing on what counts as a user's own file.
+import { isHiddenName, type FileEntry } from '../../src/fs/fs'
 
 /** How many leading lines of a file the listing carries as its preview. */
 const PREVIEW_LINES = 5
@@ -26,7 +27,15 @@ export class FileStore {
       name,
       // Computed here rather than by the client, which is the point of having
       // a server: a listing costs one request instead of one read per file.
-      preview: contents.split('\n').slice(0, PREVIEW_LINES).join('\n'),
+      //
+      // Dotted names carry no preview, matching src/fs/opfs.ts and
+      // src/fs/node.ts. This is not cosmetic: a file's saved history lives
+      // beside it as `.{filename}.history` and holds up to fifty whole
+      // snapshots, so previewing one would put every past version of every
+      // file into a listing nothing displays them in.
+      preview: isHiddenName(name)
+        ? null
+        : contents.split('\n').slice(0, PREVIEW_LINES).join('\n'),
       isDirectory: false,
     }))
 

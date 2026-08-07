@@ -60,7 +60,7 @@ This file provides guidance to LLM agents when working with code in this reposit
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
-+ `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/`, and `server/` may import only *types* from `src/`.
++ `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/`, and `server/` may import *types* from `src/` but *values* only from the shared contract in `src/fs/fs.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline

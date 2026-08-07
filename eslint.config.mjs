@@ -110,13 +110,45 @@ export default defineConfig(
         {
           patterns: [
             {
-              group: ['**/src', '**/src/**'],
               // Type-only imports are erased at compile time, so they create no
               // runtime coupling and cannot drag browser code into the server.
-              // That is exactly how the server shares FS and FileEntry.
+              //
+              // src/fs/fs.ts is excepted outright, values included: it is the
+              // contract both halves implement -- the FS interface, the
+              // FileEntry shape, and the predicates deciding what counts as a
+              // user's own file -- and sharing it is what stops the backends
+              // drifting on questions like what "hidden" means. It is safe
+              // because it is pure: no DOM, no browser API. The server's
+              // tsconfig omits the DOM lib, so if that ever stops being true
+              // the server typecheck fails rather than shipping.
+              // The browser-side areas of src/, named one by one. This rule's
+              // globs have no working negation and their `*` crosses `/`, so
+              // "all of src/ except the shared contract" cannot be written
+              // directly -- hence a list that simply leaves src/fs/ out. Add a
+              // line here when src/ grows a new top-level directory.
+              //
+              // src/fs/ is left off deliberately. src/fs/fs.ts is the contract
+              // both halves implement -- the FS interface, the FileEntry
+              // shape, and the predicates deciding what counts as a user's own
+              // file -- and sharing it is what stops the two backends drifting
+              // on questions like what "hidden" means. Its neighbours
+              // (opfs.ts, node.ts) are not lint-blocked, but importing one
+              // fails the server's typecheck, whose tsconfig omits the DOM lib
+              // that those files depend on. That is an error, not a warning.
+              group: [
+                '**/src/app/*',
+                '**/src/js/*',
+                '**/src/lib/*',
+                '**/src/lpm/*',
+                '**/src/prettier/*',
+                '**/src/scheme/*',
+                '**/src/theme/*',
+                '**/src/scamper',
+                '**/src/utils',
+              ],
               allowTypeImports: true,
               message:
-                'The server may import *types* from src/ (use `import type`), but never values -- src/ is browser code.',
+                'The server may import *types* from src/ (use `import type`), but values only from src/fs/fs.ts -- the rest of src/ is browser code.',
             },
           ],
         },
