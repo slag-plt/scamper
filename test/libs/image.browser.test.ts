@@ -10,6 +10,12 @@
 import { describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
 import {
+  canvas_canvasGetPixel,
+  canvas_canvasSetPixels,
+  canvas_canvasToPixels,
+  canvas_pixelsToCanvas,
+} from '../../src/js/canvas/index.js'
+import {
   color_colorToRgb,
   color_hsv,
   color_hsvAlpha,
@@ -37,12 +43,6 @@ import {
   drawing_text,
   drawing_withDash,
 } from '../../src/js/image/drawing.js'
-import {
-  canvas_canvasSetPixels,
-  canvas_canvasGetPixel,
-  canvas_canvasToPixels,
-  canvas_pixelsToCanvas,
-} from '../../src/js/image/image.js'
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
