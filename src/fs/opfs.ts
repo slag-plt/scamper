@@ -1,5 +1,8 @@
 import { isHiddenName, type FS, type FileEntry } from './fs'
 
+/** The suffix Chromium gives the swap file backing an open writable. */
+const SWAP_SUFFIX = '.crswap'
+
 /** @returns true iff `get` resolves, i.e. an entry of that kind is present. */
 async function entryExists(get: () => Promise<unknown>): Promise<boolean> {
   try {
@@ -40,6 +43,14 @@ export class OPFSFileSystem implements FS {
     }
 
     for await (const [name, handle] of root.entries()) {
+      // Chromium implements createWritable() with a sibling `<name>.crswap`
+      // file, which a listing sees while a write is in flight -- and which a
+      // tab that died mid-save leaves behind for good. It is an artifact of
+      // this backend, not a file anything above should ever be shown: without
+      // this, one turns up in the file drawer and in an export of "all your
+      // files", where reading it can also fail as it vanishes underneath.
+      if (name.endsWith(SWAP_SUFFIX)) continue
+
       const isDirectory = handle.kind === 'directory'
       let preview: string | null = null
 
