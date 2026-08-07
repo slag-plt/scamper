@@ -6,6 +6,37 @@ and follow the user between machines (issue #357).
 Run it with `npm run dev:server` from the repository root. `PORT` overrides the
 default of 3000.
 
+> **Storage is currently a stub.** `src/store.ts` keeps files in memory, in one
+> shared namespace, with no authentication — enough for the client seam in
+> `src/fs/server.ts` to talk to something real. MariaDB-backed per-user storage
+> behind BetterAuth replaces it; the routes are the part meant to survive that
+> swap. Do not deploy this as-is.
+
+## The API
+
+Every route mirrors one method of the `FS` interface, so the two stay in step.
+A filename is a single percent-encoded path segment.
+
+| Method   | Path                    | Meaning                                  |
+| -------- | ----------------------- | ---------------------------------------- |
+| `GET`    | `/api/v1/health`        | liveness, and which API version this is  |
+| `GET`    | `/api/v1/fs/files`      | `{ files: FileEntry[] }`, previews included |
+| `GET`    | `/api/v1/fs/files/{name}` | `{ contents }`, or 404                 |
+| `PUT`    | `/api/v1/fs/files/{name}` | save `{ contents }`, creating if needed |
+| `DELETE` | `/api/v1/fs/files/{name}` | delete, or 404                         |
+| `POST`   | `/api/v1/fs/rename`     | `{ from, to }`, overwriting `to`         |
+
+The listing carries each file's preview because computing them client-side
+costs one request per file. `rename` is one route rather than a copy-then-delete
+pair so an interruption cannot leave a user with two copies or none.
+
+## Cross-origin
+
+`ALLOWED_ORIGIN` names the single origin permitted to call the server with
+credentials. Leave it unset when the server and the static site share an origin,
+which sends no CORS headers at all. It is one origin rather than a list because
+`Access-Control-Allow-Origin` cannot be `*` once the client sends cookies.
+
 ## Why this lives in the Scamper repo
 
 `server/` is an npm workspace of the main repository rather than a separate
@@ -53,5 +84,17 @@ update. Ship a breaking change as `/api/v2` beside `/api/v1`.
 **`fileExists` is a hot path.** `src/fs/opfs.ts` documents it as such: module
 resolution, import steps, and the `file-exists?` primitive a student can call in
 a loop. A naive port that makes one request per call turns a student's loop into
-a network round-trip per iteration. The client-side `FS` implementation needs a
-cached listing rather than six `fetch` calls mirroring six methods.
+a network round-trip per iteration. `src/fs/server.ts` therefore caches file
+names, refreshing them on each listing and updating them on its own writes, so a
+warm `fileExists` makes no request at all.
+
+## Where the client half lives
+
+- `src/fs/config.ts` reads the site-root `/config.json` that names the server.
+  Any failure means "no server, stay on local storage" — the common case, since
+  a `npm run dev` checkout has no config at all.
+- `src/fs/server.ts` is `ServerFileSystem`, the `FS` implementation that talks
+  to these routes.
+- `src/fs/index.ts` already exposes `setFS()`, which is the login/logout seam.
+  Nothing switches automatically yet: a configured server only means one is
+  available to log in to, and the login UI is still to come.

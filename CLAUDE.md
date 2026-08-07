@@ -31,6 +31,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 + `npm run build`: full production build (compilation + bundling)
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
++ `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
 
 ### Validation
 

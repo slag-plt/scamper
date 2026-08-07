@@ -15,6 +15,15 @@ export async function initialize(): Promise<void> {
  * Installs `fs` as the global file system, replacing any existing instance.
  * Used by non-browser hosts (e.g. the CLI) to wire in a file system other than
  * the browser-only OPFS default.
+ *
+ * This is also the seam for logging in and out (issue #357): a logged-in user
+ * gets `setFS(ServerFileSystem.create(url))` from `./server`, where `url` comes
+ * from `loadServerConfig()` in `./config`, and logging out puts OPFS back.
+ * Swapping is safe at any point because every consumer -- the scheduler, scope
+ * checking, the `file-exists?` primitive -- calls `getFS()` afresh rather than
+ * holding onto an instance. The switch is deliberately driven by login state
+ * and not by the mere presence of a config: a configured server only means one
+ * is available to log in to.
  */
 export function setFS(fs: FS): void {
   instance = fs

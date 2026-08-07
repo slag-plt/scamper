@@ -32,7 +32,8 @@
     "lint:fix": "eslint . --fix",
     "validate": "./scripts/validate-build",
     "deploy": "./scripts/deploy $npm_package_version",
-    "deploy:latest": "./scripts/update-latest $npm_package_version"
+    "deploy:latest": "./scripts/update-latest $npm_package_version",
+    "deploy:server-url": "./scripts/set-server-url"
   },
   "type": "module",
   "author": "",
