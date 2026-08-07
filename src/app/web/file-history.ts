@@ -71,6 +71,38 @@ export function historyFilename(filename: string): string {
   return `.${filename}.history`
 }
 
+/** @returns the file a history file belongs to, or null if it isn't one. */
+export function fileOfHistory(historyName: string): string | null {
+  const suffix = '.history'
+  if (!historyName.startsWith('.') || !historyName.endsWith(suffix)) return null
+  const filename = historyName.slice(1, -suffix.length)
+  return filename.length > 0 ? filename : null
+}
+
+/** A file that has a saved history, whether or not the file still exists. */
+export interface HistoryFile {
+  filename: string
+  /** Set when the file itself was deleted; its history is still recoverable. */
+  deletedAt?: string
+}
+
+/**
+ * Lists every file with a saved history, deleted ones included, sorted by name.
+ * Reads each history to find out whether its file is gone, so this belongs
+ * behind an explicit "show me the history" action rather than on a hot path.
+ */
+export async function listHistories(fs: FS.t): Promise<HistoryFile[]> {
+  const histories: HistoryFile[] = []
+  for (const entry of await fs.getFileList()) {
+    if (entry.isDirectory) continue
+    const filename = fileOfHistory(entry.name)
+    if (filename === null) continue
+    const { deletedAt } = await loadHistory(fs, filename)
+    histories.push(deletedAt === undefined ? { filename } : { filename, deletedAt })
+  }
+  return histories.sort((a, b) => a.filename.localeCompare(b.filename))
+}
+
 /**
  * Reads `filename`'s history.
  * @returns the stored history, or an empty one if there is none, it cannot be

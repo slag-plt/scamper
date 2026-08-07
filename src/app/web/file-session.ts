@@ -206,8 +206,28 @@ export class FileSession {
   ): Promise<void> {
     this.stopAutosave()
     await this.settle()
-    if (this.currentFile === filename) this.currentFile = null
+    const wasOpen = this.currentFile === filename
+    if (wasOpen) this.currentFile = null
     this.historyHead = null
+
+    // Pin what is about to disappear. A file deleted before its first autosave
+    // would otherwise have no history at all, and recovering an accidental
+    // delete is half of what the history is for (#42). The editor's contents
+    // are used rather than the file's, since that is what the student sees.
+    if (options.replacing !== true && wasOpen && this.editor.isEditorLoaded()) {
+      try {
+        await recordSnapshot(
+          this.fs,
+          filename,
+          this.editor.getDoc(),
+          new Date(),
+          { force: true },
+        )
+      } catch {
+        // A history is a convenience; never fail the delete over one.
+      }
+    }
+
     await this.fs.deleteFile(filename)
     // The history outlives the file so it can be recovered (#42) -- but only
     // when the file is really going away. An overwrite deletes first purely to

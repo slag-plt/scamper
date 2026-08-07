@@ -94,7 +94,7 @@ describe('IDE file history', () => {
     try {
       getByRole(document.body, 'button', { name: 'File history' }).click()
       const dialog = await findByRole(document.body, 'dialog', {
-        name: 'History of hello.scm',
+        name: 'File history',
       })
 
       const versions = getByRole(dialog, 'listbox', { name: 'Saved versions' })
@@ -120,7 +120,7 @@ describe('IDE file history', () => {
 
       getByRole(document.body, 'button', { name: 'File history' }).click()
       const dialog = await findByRole(document.body, 'dialog', {
-        name: 'History of hello.scm',
+        name: 'File history',
       })
       // The oldest of the three rows: current, newest snapshot, then this one.
       const options = [...dialog.querySelectorAll('[role="option"]')]
@@ -133,7 +133,7 @@ describe('IDE file history', () => {
       expect(await fs.loadFile('hello.scm')).toBe('(display 1)')
       // The dialog closes on restore.
       expect(
-        queryByRole(document.body, 'dialog', { name: 'History of hello.scm' }),
+        queryByRole(document.body, 'dialog', { name: 'File history' }),
       ).toBeNull()
     } finally {
       wrapper.unmount()
@@ -150,7 +150,7 @@ describe('IDE file history', () => {
     try {
       getByRole(document.body, 'button', { name: 'File history' }).click()
       const dialog = await findByRole(document.body, 'dialog', {
-        name: 'History of hello.scm',
+        name: 'File history',
       })
       const options = [...dialog.querySelectorAll('[role="option"]')]
       ;(options[1] as HTMLElement).click()
@@ -176,7 +176,7 @@ describe('IDE file history', () => {
     try {
       getByRole(document.body, 'button', { name: 'File history' }).click()
       const dialog = await findByRole(document.body, 'dialog', {
-        name: 'History of hello.scm',
+        name: 'File history',
       })
 
       expect(dialog.textContent).toContain('no saved versions yet')
@@ -186,6 +186,53 @@ describe('IDE file history', () => {
       ).toBeDisabled()
       // Merely looking at the history recorded nothing.
       expect(await fs.fileExists(historyFilename('hello.scm'))).toBe(false)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('brings back a deleted file from its history', async () => {
+    // The recovery #42 is actually about. The sidebar button needs an open
+    // file, so a deleted one is reached through the modal's picker.
+    await fs.saveFile('hello.scm', '(display 1)')
+    await fs.saveFile('other.scm', '(display 2)')
+
+    const wrapper = await mountIdeWith('hello.scm')
+    try {
+      // Record a snapshot, then delete the file.
+      getByRole(document.body, 'button', { name: 'Delete file' }).click()
+      const confirm = await findByRole(document.body, 'dialog', {
+        name: 'Delete file',
+      })
+      getByRole(confirm, 'button', { name: 'Delete' }).click()
+      await flushPromises()
+      expect(await fs.fileExists('hello.scm')).toBe(false)
+
+      // Open another file so the history button is available again.
+      getByRole(document.body, 'button', { name: 'Open other.scm' }).click()
+      await flushPromises()
+      getByRole(document.body, 'button', { name: 'File history' }).click()
+      const dialog = await findByRole(document.body, 'dialog', {
+        name: 'File history',
+      })
+
+      // The deleted file is listed, marked as such.
+      const picker = getByRole<HTMLSelectElement>(dialog, 'combobox')
+      expect([...picker.options].map((o) => o.textContent.trim())).toContain(
+        'hello.scm (deleted)',
+      )
+
+      fireEvent.change(picker, { target: { value: 'hello.scm' } })
+      await flushPromises()
+      getByRole(dialog, 'button', { name: 'Recover this version' }).click()
+      await flushPromises()
+
+      // The file is back, holding what it held, and open in the editor.
+      expect(await fs.loadFile('hello.scm')).toBe('(display 1)')
+      expect(editorText()).toBe('(display 1)')
+      expect(
+        getByRole(document.body, 'button', { name: 'Open hello.scm' }),
+      ).toBeInTheDocument()
     } finally {
       wrapper.unmount()
     }

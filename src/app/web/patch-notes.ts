@@ -25,6 +25,8 @@ export const patchNotes: PatchNote[] = [
     // in the same block.
     title: 'Library cleanup',
     notes: [
+      'The clock button in the file drawer shows the versions of a file Scamper saved as you worked, and what changed between them. Pick one and restore it to carry on from there — the version you were on is kept too, so restoring by mistake costs nothing.',
+      'Deleting a file no longer throws its history away. The history view lists deleted files, and you can bring one back.',
       'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',
       'The old `color` function has been removed. Use `rgb` instead: (rgb 255 0 0) in place of (color 255 0 0 255).',
       'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',

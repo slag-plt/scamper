@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
+  fileOfHistory,
   historyFilename,
+  listHistories,
   loadHistory,
   markHistoryDeleted,
   MAX_SNAPSHOTS,
@@ -190,6 +192,42 @@ describe('recordSnapshot', () => {
     )
 
     expect(await contentsOf('hello.scm')).toEqual(['good'])
+  })
+})
+
+describe('listHistories', () => {
+  test('lists files with a history, deleted ones included', async () => {
+    await recordSnapshot(fs, 'hello.scm', 'one', START)
+    await recordSnapshot(fs, 'gone.scm', 'two', START)
+    await markHistoryDeleted(fs, 'gone.scm', at(1_000))
+    // A file with no history at all, and an unrelated internal file.
+    await fs.saveFile('untouched.scm', 'three')
+    await fs.saveFile('.scamper.config', '{}')
+
+    expect(await listHistories(fs)).toEqual([
+      { filename: 'gone.scm', deletedAt: at(1_000).toISOString() },
+      { filename: 'hello.scm' },
+    ])
+  })
+
+  test('is empty when nothing has been recorded', async () => {
+    await fs.saveFile('hello.scm', 'one')
+
+    expect(await listHistories(fs)).toEqual([])
+  })
+})
+
+describe('fileOfHistory', () => {
+  test('recovers the file a history belongs to', () => {
+    expect(fileOfHistory(historyFilename('hello.scm'))).toBe('hello.scm')
+    // Names with dots of their own survive the round trip.
+    expect(fileOfHistory(historyFilename('a.b.scm'))).toBe('a.b.scm')
+  })
+
+  test('rejects names that are not histories', () => {
+    expect(fileOfHistory('hello.scm')).toBeNull()
+    expect(fileOfHistory('.scamper.config')).toBeNull()
+    expect(fileOfHistory('.history')).toBeNull()
   })
 })
 

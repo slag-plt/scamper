@@ -403,6 +403,18 @@ describe('FileSession save history (issue #42)', () => {
     expect(history.snapshots.map((sn) => sn.contents)).toEqual(['edited'])
   })
 
+  test('deleting pins the final state of a file with no history yet', async () => {
+    // Deleting within a few seconds of opening, before any autosave has run.
+    // Without this the file would be unrecoverable, which is half the point.
+    const { fs, s } = mkSession(() => 'never saved')
+
+    await s.deleteFile('a.scm')
+
+    const history = await loadHistory(fs, 'a.scm')
+    expect(history.snapshots.map((sn) => sn.contents)).toEqual(['never saved'])
+    expect(history.deletedAt).toBeTypeOf('string')
+  })
+
   test('deleting to make way for an overwrite does not mark the history', async () => {
     // The upload path deletes only to close the writable; the file is back a
     // moment later, so its history was never of a deleted file.

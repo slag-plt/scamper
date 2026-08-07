@@ -26,7 +26,12 @@ import {
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
-import { loadHistory, type Snapshot } from '../file-history'
+import {
+  listHistories,
+  loadHistory,
+  type HistoryFile,
+  type Snapshot,
+} from '../file-history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
@@ -64,8 +69,10 @@ const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
 const patchNotesToShow = ref<PatchNote[]>([])
 const showPatchNotes = ref(false)
 const showHistory = ref(false)
+const historyFiles = ref<HistoryFile[]>([])
+const historyFile = ref('')
 const historySnapshots = ref<Snapshot[]>([])
-const historyContents = ref('')
+const historyContents = ref<string | null>(null)
 
 // ---------- editor context + child component refs ----------
 
@@ -376,17 +383,34 @@ async function handleDownload() {
 // what pins state, since that is when there is something to lose.
 async function handleHistory() {
   if (!fs || !currentFile.value) return
+  const histories = await listHistories(fs)
+  // A file with nothing recorded yet still belongs in the picker: it is the
+  // one the student is looking at.
+  historyFiles.value = histories.some((h) => h.filename === currentFile.value)
+    ? histories
+    : [{ filename: currentFile.value }, ...histories]
+  await showHistoryOf(currentFile.value)
+  showHistory.value = true
+}
+
+/** Loads `filename`'s history into the modal. */
+async function showHistoryOf(filename: string) {
+  if (!fs) return
+  historyFile.value = filename
   try {
-    historySnapshots.value = (await loadHistory(fs, currentFile.value)).snapshots
+    historySnapshots.value = (await loadHistory(fs, filename)).snapshots
   } catch {
     historySnapshots.value = []
   }
-  historyContents.value = isEditorLoaded() ? editor().getDoc() : ''
-  showHistory.value = true
+  // Only the open file has a "current" version to compare against; another
+  // file's history is browsed on its own.
+  historyContents.value =
+    filename === currentFile.value && isEditorLoaded() ? editor().getDoc() : null
 }
 
 function handleHistoryClose() {
   showHistory.value = false
+  historyFiles.value = []
   historySnapshots.value = []
 }
 
@@ -395,9 +419,21 @@ function handleHistoryClose() {
 // one being restored are pinned in the history, so a restore never costs the
 // student the state they were in.
 async function handleRestoreSnapshot(snapshot: Snapshot) {
-  if (!fileSession || !isEditorLoaded()) return
-  showHistory.value = false
-  historySnapshots.value = []
+  if (!fs || !fileSession) return
+  const filename = historyFile.value
+  handleHistoryClose()
+
+  if (filename !== currentFile.value) {
+    // Recovering another file, possibly one that was deleted: write it back and
+    // open it, so the student lands in what they recovered. Saving marks its
+    // history as no longer deleted.
+    await fs.saveFile(filename, snapshot.contents)
+    await switchToFile(filename)
+    await fileSession.save({ force: true })
+    return
+  }
+
+  if (!isEditorLoaded()) return
   await fileSession.save({ force: true })
   editor().replaceDoc(snapshot.contents)
   await fileSession.save({ force: true })
@@ -566,12 +602,14 @@ onUnmounted(() => {
     @close="handlePatchNotesClose"
   />
   <FileHistoryModal
-    v-if="currentFile"
+    v-if="showHistory"
     :open="showHistory"
-    :filename="currentFile"
+    :files="historyFiles"
+    :filename="historyFile"
     :snapshots="historySnapshots"
     :current-contents="historyContents"
     @close="handleHistoryClose"
+    @select="showHistoryOf"
     @restore="handleRestoreSnapshot"
   />
 </template>
