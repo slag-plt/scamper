@@ -224,17 +224,14 @@ export class Env {
   }
 
   extendWithImport(name: string, lib: Module): Env {
-    // A module with private (non-exported) bindings must re-home its exported
-    // closures so they can still reach those private siblings at call time --
-    // the importer's flat scope only holds the exported names (see
-    // rehomeExports). When everything is exported (every builtin library), skip
-    // re-homing: the injected exports already cover every sibling, and closures
-    // resolve dynamically against the fiber env exactly as before.
-    const injected = this.moduleHasPrivates(lib)
-      ? this.rehomeExports(lib, name)
-      : lib
+    // Always re-home: a module's closures must resolve their free names against
+    // the module's own scope, never the importer's. Re-homing used to be
+    // skipped when a module exported everything (every builtin library), on the
+    // reasoning that the injected exports already covered every sibling -- but
+    // lookup consults the importer's top level *before* its imports, so a user
+    // `(define car 5)` captured the prelude's own internal calls to `car`.
     return new Env(
-      this.extendImports(name, injected),
+      this.extendImports(name, this.rehomeExports(lib, name)),
       this.topLevel,
       this.locals,
       this.qualified,
@@ -253,13 +250,6 @@ export class Env {
       this.topLevel,
       this.locals,
       new Map([...this.qualified, [alias, this.rehomeExports(lib, alias)]]),
-    )
-  }
-
-  /** @return whether `lib` binds any name it does not export. */
-  private moduleHasPrivates(lib: Module): boolean {
-    return (
-      lib.allBindings !== undefined && lib.allBindings.size > lib.bindings.size
     )
   }
 
@@ -296,11 +286,12 @@ export class Env {
       )
     }
     // Expose only the exported names (their re-homed versions) to the importer.
+    // N.B., keyed on `has`, not on a non-undefined value: `void` *is*
+    // undefined, so testing the value would silently drop it from the module.
     const exported = new Module()
     for (const name of lib.bindings.keys()) {
-      const value = rehomedAll.bindings.get(name)
-      if (value !== undefined) {
-        exported.registerValue(name, value)
+      if (rehomedAll.bindings.has(name)) {
+        exported.registerValue(name, rehomedAll.bindings.get(name))
       }
     }
     return exported
