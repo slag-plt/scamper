@@ -1,10 +1,10 @@
-import { describe, expect, test, vi } from 'vitest'
-import { localBackend, serverBackend } from '../../src/fs'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { getFS, localBackend, serverBackend, setBackend } from '../../src/fs'
 import { FlatFileHistory } from '../../src/history/flat-file'
 import { ServerHistory } from '../../src/history/server'
 import ServerFileSystem from '../../src/fs/server'
 import { MockFileSystem } from '../stubs/mock-file-system'
-import { useServerBackendInDev } from '../../src/app/web/dev-backend'
+import { initializeBackend, serverSession } from '../../src/app/web/server-session'
 
 describe('backend pairing', () => {
   // A file system and its history travel together because the wrong pairing
@@ -41,22 +41,43 @@ describe('backend pairing', () => {
   })
 })
 
-describe('the development-only server switch', () => {
-  // The property that matters is the negative one: nothing but a dev server
-  // may move a user's files off local storage. Until BetterAuth lands the
-  // server keeps everyone in one unauthorised namespace, so a production build
-  // that switched on the mere presence of /config.json would hand every
-  // student the same pile of files.
-  test('does nothing outside a `--mode server` dev server', async () => {
-    expect(SCAMPER_DEV_SERVER).toBe(false)
-    const fetchMock = vi.fn(() => Promise.resolve(new Response('{}')))
-    vi.stubGlobal('fetch', fetchMock)
-    try {
-      expect(await useServerBackendInDev()).toBe(false)
-      // It does not even look for a config, so there is nothing to go wrong.
-      expect(fetchMock).not.toHaveBeenCalled()
-    } finally {
-      vi.unstubAllGlobals()
-    }
+describe('choosing a backend at startup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('leaves local storage alone where no server is advertised', async () => {
+    const fs = new MockFileSystem()
+    setBackend(localBackend(fs))
+    // No /config.json is the ordinary case: `npm run dev`, and every
+    // deployment until one is configured.
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 404 })))
+
+    await initializeBackend()
+
+    expect(getFS()).toBe(fs)
+    expect(serverSession()).toBeNull()
+  })
+
+  test('uses a server that offers no sign-in, which is the dev stub', async () => {
+    setBackend(localBackend(new MockFileSystem()))
+    vi.stubGlobal('fetch', (input: string | URL) => {
+      const url = input.toString()
+      if (url.endsWith('/config.json')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ serverUrl: '/api/v1' }), { status: 200 }),
+        )
+      }
+      // SCAMPER_STUB=1: in memory, one namespace, and nothing to sign in to.
+      return Promise.resolve(
+        new Response(JSON.stringify({ password: false, microsoft: false }), {
+          status: 200,
+        }),
+      )
+    })
+
+    await initializeBackend()
+
+    expect(getFS()).toBeInstanceOf(ServerFileSystem)
   })
 })

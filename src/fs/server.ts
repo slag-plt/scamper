@@ -1,4 +1,5 @@
 import type { FS, FileEntry } from './fs'
+import { NotSignedInError } from './session'
 
 /**
  * A file system backed by the Scamper file server, for a user who is logged
@@ -59,6 +60,12 @@ export class ServerFileSystem implements FS {
         body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     })
+
+    if (response.status === 401) {
+      // Not a fault: the session lapsed, or was never there. The caller shows
+      // the sign-in prompt rather than an error.
+      throw new NotSignedInError()
+    }
 
     if (!response.ok) {
       throw new Error(

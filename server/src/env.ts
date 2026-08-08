@@ -43,3 +43,38 @@ export function authBaseUrl(): string {
     'It is the origin Scamper is served from, e.g. http://localhost:5173.',
   )
 }
+
+/** What Entra ID needs to accept a sign-in, or null if it is not configured. */
+export interface MicrosoftCredentials {
+  clientId: string
+  clientSecret: string
+  tenantId: string
+}
+
+/**
+ * Reads the Microsoft (Entra ID) app registration, if there is one.
+ *
+ * All three are required together: an id without a secret cannot complete a
+ * sign-in, and a tenant is not optional because `common` would let any
+ * Microsoft account anywhere sign in -- the whole point of this route is that
+ * only the institution's directory can.
+ *
+ * @returns the credentials, or null if none are set
+ */
+export function microsoftCredentials(): MicrosoftCredentials | null {
+  const clientId = process.env.MICROSOFT_CLIENT_ID
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET
+  const tenantId = process.env.MICROSOFT_TENANT_ID
+
+  if (!clientId && !clientSecret && !tenantId) return null
+
+  return {
+    clientId: required('MICROSOFT_CLIENT_ID', SET_ALL_THREE),
+    clientSecret: required('MICROSOFT_CLIENT_SECRET', SET_ALL_THREE),
+    tenantId: required('MICROSOFT_TENANT_ID', SET_ALL_THREE),
+  }
+}
+
+const SET_ALL_THREE =
+  'Microsoft sign-in needs MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, and ' +
+  'MICROSOFT_TENANT_ID together. Leave all three unset to turn it off.'

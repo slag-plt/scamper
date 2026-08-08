@@ -33,6 +33,13 @@ import {
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
+import SignInModal from './SignInModal.vue'
+import { restart, serverSession } from '../server-session'
+import {
+  signInWithMicrosoft,
+  signInWithPassword,
+  signUpWithPassword,
+} from '../auth-client'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
@@ -75,6 +82,21 @@ const historyContents = ref<string | null>(null)
 // The selected version's contents, fetched only when a version is picked. A
 // history may hold fifty versions of a file; the browser needs one at a time.
 const historySelected = ref<string | null>(null)
+
+// ---------- signing in to the file server (#357) ----------
+
+// Null where the deployment advertises no server, which is the common case and
+// the one where none of this appears.
+const fileServer = serverSession()
+const signInMethods = fileServer?.methods ?? {
+  password: false,
+  microsoft: false,
+}
+const canSignIn = signInMethods.password || signInMethods.microsoft
+const signedInAs = ref<string | null>(fileServer?.user?.email ?? null)
+const showSignIn = ref(false)
+const signInBusy = ref(false)
+const signInError = ref<string | null>(null)
 
 // ---------- editor context + child component refs ----------
 
@@ -159,6 +181,46 @@ function showPatchNotesIfNeeded() {
     patchNotesToShow.value = unseen
     showPatchNotes.value = true
   }
+}
+
+function openSignIn() {
+  signInError.value = null
+  showSignIn.value = true
+}
+
+async function handleSignInMicrosoft() {
+  if (fileServer === null) return
+  signInBusy.value = true
+  // Navigates away, so nothing after this runs unless it failed to start.
+  await signInWithMicrosoft(fileServer.client, window.location.href)
+  signInBusy.value = false
+}
+
+async function handleSignInPassword(email: string, password: string) {
+  if (fileServer === null) return
+  signInBusy.value = true
+  signInError.value = await signInWithPassword(
+    fileServer.client,
+    email,
+    password,
+  )
+  signInBusy.value = false
+  // The backend is chosen at startup, so start over rather than swapping the
+  // file system out from under an open file. See server-session.ts.
+  if (signInError.value === null) restart()
+}
+
+async function handleRegister(name: string, email: string, password: string) {
+  if (fileServer === null) return
+  signInBusy.value = true
+  signInError.value = await signUpWithPassword(
+    fileServer.client,
+    name,
+    email,
+    password,
+  )
+  signInBusy.value = false
+  if (signInError.value === null) restart()
 }
 
 function handlePatchNotesClose() {
@@ -756,6 +818,9 @@ onUnmounted(() => {
         :line="cursorStatus.line"
         :column="cursorStatus.column"
         :path="cursorStatus.path"
+        :signed-in-as="signedInAs"
+        :can-sign-in="canSignIn"
+        @sign-in="openSignIn"
       />
     </div>
   </div>
@@ -771,6 +836,16 @@ onUnmounted(() => {
   <ExpandedQueryModal
     v-if="expandedQueryId !== null"
     :query-id="expandedQueryId"
+  />
+  <SignInModal
+    :open="showSignIn"
+    :methods="signInMethods"
+    :busy="signInBusy"
+    :error="signInError"
+    @microsoft="handleSignInMicrosoft"
+    @password="handleSignInPassword"
+    @register="handleRegister"
+    @close="showSignIn = false"
   />
   <ModalHost />
   <PatchNotesModal

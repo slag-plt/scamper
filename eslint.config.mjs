@@ -20,7 +20,6 @@ export default defineConfig(
       globals: {
         ...globals.browser,
         APP_VERSION: 'readonly',
-        SCAMPER_DEV_SERVER: 'readonly',
       },
     },
   },

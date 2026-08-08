@@ -1,4 +1,5 @@
 import { addsNothing } from './policy'
+import { NotSignedInError } from '../fs/session'
 import type {
   History,
   HistoryFile,
@@ -58,6 +59,11 @@ export class ServerHistory implements History {
       body: body === undefined ? undefined : JSON.stringify(body),
     })
 
+    if (response.status === 401) {
+      // Not a fault: the session lapsed, or was never there. The caller shows
+      // the sign-in prompt rather than an error.
+      throw new NotSignedInError()
+    }
     if (!response.ok) {
       throw new Error(
         `File server ${method} ${path} failed: ${response.status.toString()} ${response.statusText}`,
@@ -86,6 +92,7 @@ export class ServerHistory implements History {
     )
     // A snapshot that has aged out from under the browser is an ordinary
     // outcome, not a failure: the list it was chosen from is a moment old.
+    if (response.status === 401) throw new NotSignedInError()
     if (response.status === 404) return null
     if (!response.ok) {
       throw new Error(

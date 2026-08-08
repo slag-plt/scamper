@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
-import { createAuth, type Auth } from './auth'
+import { createAuth, hasMicrosoft, type Auth } from './auth'
 import { applySchema, connect } from './db'
 import { authBaseUrl, authSecret } from './env'
 import { MemoryFileStore } from './store'
@@ -152,6 +152,27 @@ const server = createServer((req, res) => {
       return
     }
 
+    // Which ways in this server offers, so the login form does not show a
+    // button that cannot work. Answered without a session, like health --
+    // it is asked before anyone has signed in. Handled here rather than in
+    // api.ts because it reports how *this process* is configured, which the
+    // route layer deliberately knows nothing about.
+    if (url.pathname === `${API_ROOT}/auth/methods`) {
+      if (method !== 'GET') {
+        res.writeHead(405, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: `Method not allowed: ${method}` }))
+        return
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(
+        JSON.stringify({
+          password: auth !== null,
+          microsoft: auth !== null && hasMicrosoft(),
+        }),
+      )
+      return
+    }
+
     // BetterAuth owns everything under /api/auth: sign-up, sign-in, sign-out,
     // session. It reads the request stream itself, so it has to come before
     // readBody() below consumes it.
@@ -205,4 +226,18 @@ server.listen(PORT, () => {
       ? 'Storage is the in-memory stub: no sign-in, no persistence, one shared namespace.'
       : 'Storage is MariaDB, and requests need a session.',
   )
+  if (auth !== null) {
+    console.log(
+      hasMicrosoft()
+        ? 'Sign-in: Microsoft (single tenant), and email + password.'
+        : 'Sign-in: email + password only (no MICROSOFT_* credentials set).',
+    )
+    // Email sign-up is open to anyone who can reach this server, and nothing
+    // verifies an address. Who may register is still to be decided (see
+    // server/README.md) -- said on every start so it cannot be forgotten.
+    console.warn(
+      'WARNING: anyone who can reach this server can create an account with an ' +
+        'email address. Settle the sign-up gate before exposing it.',
+    )
+  }
 })

@@ -44,7 +44,7 @@ const htmlEntries: Record<string, string> = {
 const API_PREFIX = '/api'
 const devServerPort = process.env.SCAMPER_SERVER_PORT ?? '3000'
 
-export default defineConfig(({ command, mode }) => ({
+export default defineConfig(({ mode }) => ({
   build: {
     rolldownOptions: {
       input: Object.fromEntries(
@@ -87,9 +87,6 @@ export default defineConfig(({ command, mode }) => ({
 
   define: {
     APP_VERSION: JSON.stringify(AppVersion),
-    SCAMPER_DEV_SERVER: JSON.stringify(
-      command === 'serve' && mode === 'server',
-    ),
   },
 
   test: {
