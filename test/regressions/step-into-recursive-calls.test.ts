@@ -1,7 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import * as Scheme from '../../src/scheme/index.js'
-import { Fiber } from '../../src/lpm/fiber.js'
-import { traceReductions } from '../../src/scheme/trace.js'
+import { reductionTrace } from '../harness.js'
 
 // Regression for #319: a reduction trace must step *into* calls to
 // user-defined (module/local) functions -- including recursive calls -- while
@@ -9,13 +7,6 @@ import { traceReductions } from '../../src/scheme/trace.js'
 // stepper only rendered when back at the outermost frame, so any non-tail call
 // (e.g. the recursive `(factorial n)` inside `(* n ...)`) was skipped: the
 // trace jumped straight from `(* 5 (factorial 4))` to `(* 5 24)`.
-
-/** The full reduction trace of `src` (drains the CLI/step-mode generator). */
-async function reductionTrace(src: string): Promise<string[]> {
-  const { prog, diagnostics } = await Scheme.compile(src.trim())
-  expect(diagnostics).toEqual([])
-  return [...traceReductions(new Fiber(prog!, Scheme.mkInitialEnv()))]
-}
 
 const FACT =
   '(define factorial\n' +

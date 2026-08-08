@@ -20,8 +20,10 @@ TextRenderer.registerCustomRenderer(
   (v) => U.isStructKind(v, 'trace-start'),
   (v) => {
     const t = v as TraceStart
-    const output = t.output ? ` ${TextRenderer.render(t.output)}` : ''
-    return `${t.preamble}${output}`
+    const output = t.output ? TextRenderer.render(t.output) : ''
+    // Join only the parts that are there: a trace's opening line carries the
+    // program's initial state under an empty preamble, and must render bare.
+    return [t.preamble, output].filter((s) => s !== '').join(' ')
   },
 )
 

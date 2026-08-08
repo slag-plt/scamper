@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { runProgram, runProgramAsync } from './harness.js'
+import { runProgram } from './harness.js'
 import { getFS, setFS, type t as FS } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 
@@ -2775,8 +2775,7 @@ void
 
 // with-file blocks the fiber to load the file (SuspendSignal / Scheduler
 // `block-on`) and applies the callback in Scheme, so its happy path only runs
-// under the async scheduler -- runProgramAsync, not the synchronous runProgram.
-// The argument contract still fails eagerly.
+// under the scheduler -- which is what runProgram drives.
 //
 // N.B., this happy path went untested for a while -- the CLI was the only thing
 // exercising it -- which is part of why a scheduler bug on the block-on path
@@ -2803,7 +2802,7 @@ describe('with-file', () => {
 
   test('passes the file contents to its callback', async () => {
     expect(
-      await runProgramAsync(`
+      await runProgram(`
 (with-file "greet.txt" (lambda (s) (string-length s)))
 `),
     ).toEqual(['12'])
@@ -2811,7 +2810,7 @@ describe('with-file', () => {
 
   test('returns the callback result, which renders at the top level', async () => {
     expect(
-      await runProgramAsync(`
+      await runProgram(`
 (with-file "greet.txt" (lambda (s) s))
 `),
     ).toEqual(['"hello\nthere\n"'])
@@ -2819,7 +2818,7 @@ describe('with-file', () => {
 
   test('a missing file raises a runtime error', async () => {
     expect(
-      await runProgramAsync(`
+      await runProgram(`
 (with-file "nope.txt" (lambda (s) s))
 `),
     ).toEqual(['Runtime error: File "nope.txt" does not exist'])
@@ -2829,7 +2828,7 @@ describe('with-file', () => {
     // The idiomatic (with-handler h (lambda () (with-file ...))) shape: the
     // rejection routes through fiber.handleError rather than unwinding.
     expect(
-      await runProgramAsync(`
+      await runProgram(`
 (with-handler (lambda (e) "caught") (lambda () (with-file "nope.txt" (lambda (s) s))))
 `),
     ).toEqual(['"caught"'])

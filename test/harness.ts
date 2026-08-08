@@ -2,7 +2,8 @@ import * as Scheme from '../src/scheme'
 import * as LPM from '../src/lpm'
 import { diagnosticToError } from '../src/scheme/diagnostic'
 import { Fiber } from '../src/lpm/fiber'
-import { Scheduler } from '../src/lpm/scheduler'
+import { runFiberOnScheduler } from '../src/lpm/run'
+import { makeTraceStepper } from '../src/scheme/trace'
 import HTMLDisplay from '../src/lpm/output/html'
 
 /** Options controlling how {@link runProgram} reports errors. */
@@ -18,60 +19,6 @@ export interface RunOptions {
   stripRanges?: boolean
 }
 
-/** Reports `e` to `out`, stripping its range first when `stripRanges` is set. */
-function reportError (
-  out: LPM.ErrorChannel,
-  e: LPM.ScamperError,
-  stripRanges: boolean,
-) {
-  out.report(stripRanges ? e.stripRange() : e)
-}
-
-// Runs a fiber to completion, sending displayed values/reported errors to
-// `out` and recovering from runtime errors the way the scheduler does for
-// display tasks: report the error, then move on to the next statement.
-function runFiber (
-  fiber: Fiber,
-  out: LPM.OutputChannel & LPM.ErrorChannel,
-  stripRanges = false,
-) {
-  while (!fiber.isDone()) {
-    try {
-      const res = fiber.step()
-      if (res.tag === 'display') {
-        out.send(fiber.lastResult)
-      }
-    } catch (e) {
-      if (e instanceof LPM.ScamperError) {
-        // Mirror the scheduler: give an installed with-handler a chance to
-        // recover before reporting and unwinding to the next statement.
-        if (!(e instanceof LPM.ReportError) && fiber.handleError(e)) {
-          continue
-        }
-        reportError(out, e, stripRanges)
-        fiber.advanceStmt()
-      } else {
-        throw e
-      }
-    }
-  }
-}
-
-export async function runProgram (src: string, opts: RunOptions = {}): Promise<string[]> {
-    src = src.trim()
-    const out = new LPM.LoggingChannel()
-    const env = Scheme.mkInitialEnv()
-    const { prog, diagnostics } = await Scheme.compile(src)
-    diagnostics.forEach((d) => { reportError(out, diagnosticToError(d), opts.stripRanges ?? false) })
-    if (out.log.length !== 0) { return out.log as string[] }
-    if (prog === undefined) {
-      throw new Error('compile produced no program and no logged errors')
-    }
-    const fiber = new Fiber(prog, env)
-    runFiber(fiber, out, opts.stripRanges)
-    return out.log as string[]
-}
-
 /** A LoggingChannel that drops each reported error's range. See RunOptions. */
 class StrippingChannel extends LPM.LoggingChannel {
   report (e: LPM.ScamperError): void {
@@ -79,56 +26,112 @@ class StrippingChannel extends LPM.LoggingChannel {
   }
 }
 
+function mkChannel (opts: RunOptions, renderOutput = true): LPM.LoggingChannel {
+  return opts.stripRanges
+    ? new StrippingChannel(renderOutput)
+    : new LPM.LoggingChannel(renderOutput)
+}
+
 /**
- * As {@link runProgram}, but drives a real {@link Scheduler} rather than
- * stepping the fiber directly.
+ * Compiles and runs `src` on a real Scheduler.
  *
- * This is what any program using a *blocking* primitive needs: those suspend
- * the fiber mid-expression (SuspendSignal) and are resumed by the scheduler's
- * `block-on` handling, which the synchronous loop in runProgram has no way to
- * service -- it would see the SuspendSignal escape as an uncaught throw. The
- * `file` library, `with-file`, and `with-image-from-url` are all in this class.
+ * Scheduler-driven on purpose: it is the only thing that services blocking
+ * primitives (`with-file`, the `file` library, `with-image-from-url`) and file
+ * imports, so tests exercise the same execution path the IDE and CLI do. Use
+ * this for any test about what a program *does*; drop to
+ * `stepFiberToCompletion` (test/util.ts) only for LPM-level tests of the fiber
+ * itself.
  *
- * Prefer runProgram for everything else: it is synchronous and cheaper.
+ * @returns the program's displayed values and reported errors, in order.
  */
-export async function runProgramAsync (
-  src: string,
-  opts: RunOptions = {},
-): Promise<string[]> {
+export async function runProgram (src: string, opts: RunOptions = {}): Promise<string[]> {
   src = src.trim()
-  const out = opts.stripRanges ? new StrippingChannel() : new LPM.LoggingChannel()
+  const out = mkChannel(opts)
   const { prog, diagnostics } = await Scheme.compile(src)
   diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   if (out.log.length !== 0) { return out.log as string[] }
   if (prog === undefined) {
     throw new Error('compile produced no program and no logged errors')
   }
-  const fiber = new Fiber(prog, Scheme.mkInitialEnv())
-  const sched = new Scheduler()
-  await new Promise<void>((resolve) => {
-    sched.schedule({
-      id: crypto.randomUUID(),
-      fiber,
-      out,
-      err: out,
-      isTracing: false,
-      onComplete: resolve,
-    })
+  await runFiberOnScheduler(new Fiber(prog, Scheme.mkInitialEnv()), {
+    out,
+    err: out,
   })
   return out.log as string[]
 }
 
-export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {
-    src = src.trim()
-    const env = Scheme.mkInitialEnv()
-    const { prog, diagnostics } = await Scheme.compile(src)
-    diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
+/**
+ * As {@link runProgram}, but returns each displayed value *unrendered*, for
+ * tests that assert on the values themselves rather than on their text.
+ * Reported errors still appear as their rendered strings, in order.
+ */
+export async function runProgramValues (
+  src: string,
+  opts: RunOptions = {},
+): Promise<LPM.Value[]> {
+  src = src.trim()
+  const out = mkChannel(opts, false)
+  const { prog, diagnostics } = await Scheme.compile(src)
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
+  if (out.log.length !== 0) { return out.log }
+  if (prog === undefined) {
+    throw new Error('compile produced no program and no logged errors')
+  }
+  await runFiberOnScheduler(new Fiber(prog, Scheme.mkInitialEnv()), {
+    out,
+    err: out,
+  })
+  return out.log
+}
 
-    if (out.levels.length > 1) { return out.levels }
-    if (prog === undefined) {
-      throw new Error('compile produced no program and no logged errors')
-    }
-    const fiber = new Fiber(prog, env)
-    runFiber(fiber, out)
-    return out.levels
+/**
+ * As {@link runProgram}, but emits the program's reduction trace: an opening
+ * line with the program's initial state, then each user-visible reduction
+ * marked `--> `.
+ */
+export async function runProgramTraced (
+  src: string,
+  isTracing = true,
+  opts: RunOptions = {},
+): Promise<string[]> {
+  src = src.trim()
+  const out = mkChannel(opts)
+  const { prog, diagnostics } = await Scheme.compile(src)
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
+  if (out.log.length !== 0) { return out.log as string[] }
+  if (prog === undefined) {
+    throw new Error('compile produced no program and no logged errors')
+  }
+  await runFiberOnScheduler(new Fiber(prog, Scheme.mkInitialEnv()), {
+    out,
+    err: out,
+    isTracing,
+    stepper: isTracing ? makeTraceStepper() : undefined,
+  })
+  return out.log as string[]
+}
+
+/**
+ * The reduction trace of `src` as bare expressions, with the `--> ` reduction
+ * marker stripped -- the shape trace tests assert on.
+ */
+export async function reductionTrace (src: string): Promise<string[]> {
+  const log = await runProgramTraced(src)
+  return log.map((l) => (l.startsWith('--> ') ? l.slice(4) : l))
+}
+
+export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {
+  src = src.trim()
+  const { prog, diagnostics } = await Scheme.compile(src)
+  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
+
+  if (out.levels.length > 1) { return out.levels }
+  if (prog === undefined) {
+    throw new Error('compile produced no program and no logged errors')
+  }
+  await runFiberOnScheduler(new Fiber(prog, Scheme.mkInitialEnv()), {
+    out,
+    err: out,
+  })
+  return out.levels
 }

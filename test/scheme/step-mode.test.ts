@@ -16,9 +16,14 @@ import { makeTestFiber } from '../util.js'
 // scheduler directly with a capturing output channel and asserts the reduction
 // sequence and the pause-per-step behavior.
 
-/** Renders a captured output value: a trace-output's expression, else a raw value. */
+/**
+ * Renders a captured output value: a reduction's expression, else a raw value.
+ * A traced run's opening line arrives as a trace-*start* (the program before it
+ * reduces, rendered without the `-->` marker) and every later reduction as a
+ * trace-output; both carry the same expression.
+ */
 function render(v: Value): string {
-  if (isStructKind(v, 'trace-output')) {
+  if (isStructKind(v, 'trace-output') || isStructKind(v, 'trace-start')) {
     return expToString((v as { output: Value }).output as never)
   }
   return 'RAW:' + expToString(mkLit(v))

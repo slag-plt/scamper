@@ -8,7 +8,9 @@ HTMLRenderer.registerCustomRenderer(
     const container = document.createElement('div')
     container.classList.add('scamper-trace-start')
     const t = v as TraceStart
-    container.appendChild(document.createTextNode(`${t.preamble} `))
+    if (t.preamble !== '') {
+      container.appendChild(document.createTextNode(`${t.preamble} `))
+    }
     if (t.output) {
       container.appendChild(HTMLRenderer.render(t.output))
     }

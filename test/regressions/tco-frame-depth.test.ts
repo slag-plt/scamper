@@ -3,6 +3,7 @@ import * as S from '../../src/scheme/index.js'
 import { Fiber } from '../../src/lpm/fiber.js'
 import { diagnosticToError } from '../../src/scheme/diagnostic'
 import * as L from '../../src/lpm/index.js'
+import { stepFiberWith } from '../util.js'
 
 // https://github.com/slag-plt/scamper/issues/316
 //
@@ -23,10 +24,9 @@ import * as L from '../../src/lpm/index.js'
 function runTracked(prog: L.Prog): { maxFrames: number; result: L.Value } {
   const fiber = new Fiber(prog, S.mkInitialEnv())
   let maxFrames = 0
-  while (!fiber.isDone()) {
-    fiber.step()
-    maxFrames = Math.max(maxFrames, fiber.frames.length)
-  }
+  stepFiberWith(fiber, (f) => {
+    maxFrames = Math.max(maxFrames, f.frames.length)
+  })
   return { maxFrames, result: fiber.lastResult }
 }
 

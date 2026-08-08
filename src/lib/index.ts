@@ -1,5 +1,6 @@
 import * as L from '../lpm'
 import { Fiber } from '../lpm/fiber.js'
+import { runFiberOnScheduler } from '../lpm/run.js'
 import { builtinLibs } from '../lpm/builtin-registry.js'
 import * as A from '../scheme/ast.js'
 import { compile, tokenizeAndParse } from '../scheme/index.js'
@@ -37,8 +38,21 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
     // trace treats library calls atomically (see Closure.stepOver).
     true,
   )
-  while (!fiber.isDone()) {
-    fiber.step()
+  // Run it the way any other program runs. Going through the scheduler is what
+  // lets a builtin library use a blocking primitive at load time; a hand-stepped
+  // fiber cannot service one.
+  //
+  // The scheduler reports a runtime error and continues at the next statement,
+  // which here would install a half-initialized module. A builtin library that
+  // fails to load is a bug in Scamper itself, so fail loudly instead -- as the
+  // compile-failure check above does.
+  const out = new L.LoggingChannel(false, false)
+  await runFiberOnScheduler(fiber, { out, err: out })
+  if (out.errLog.length > 0) {
+    throw new L.ICE(
+      'lib.loadLibrary',
+      `Failed to run builtin library "${name}": ${out.errLog.join('; ')}`,
+    )
   }
   // Every library now declares its exports with `define-export` (see src/lib/*.scm).
   // js-var is injected rather than defined (it's the FFI root, so it can't be
