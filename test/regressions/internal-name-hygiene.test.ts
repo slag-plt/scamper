@@ -63,6 +63,48 @@ describe('internal `##...##` names cannot be bound', () => {
   })
 })
 
+// Reserving the `##...##` shape only helps names that already live in it.
+// `cond`'s fall-through and the contract checks injected the *ordinary* name
+// `error`, which a student may plausibly bind -- so they now inject the
+// internal `##error##` instead.
+describe('the injected error primitive cannot be shadowed', () => {
+  test('a cond fall-through raises even when `error` is bound', async () => {
+    // Regression: this reported "Not a function or closure: 5" from a form the
+    // user never touched.
+    expect(await runProgram('(define error 5)\n(cond [#f 1])')).toEqual([
+      'Runtime error [2:1-2:13]: (error) No matching clause in cond',
+    ])
+    expect(await runProgram('(let ([error 5]) (cond [#f 1]))')).toEqual([
+      'Runtime error [1:18-1:30]: (error) No matching clause in cond',
+    ])
+  })
+
+  test('a contract violation still raises when `error` is bound', async () => {
+    expect(await runProgram('(define error 5)\n(list-ref 1 2)')).toEqual([
+      'Runtime error [2:1-2:14]: (error) expected a list, received number',
+    ])
+    expect(await runProgram('(define error 5)\n(+ 1 "a")')).toEqual([
+      'Runtime error [2:1-2:9]: (error) expected every value of v1 to be a number, but at least one was not',
+    ])
+  })
+
+  test('the raise still reports itself as `error`, not `##error##`', async () => {
+    // ##error## fixes its ScamperError source to "error", so the internal
+    // spelling never surfaces to a student.
+    expect(await runProgram('(cond [#f 1])')).toEqual([
+      'Runtime error [1:1-1:13]: (error) No matching clause in cond',
+    ])
+  })
+
+  test('`error` is still an ordinary, bindable prelude name', async () => {
+    // Only the *injected* use is reserved; the user-facing name is untouched.
+    expect(await runProgram('(define error 5)\nerror')).toEqual(['5'])
+    expect(await runProgram('(error "boom")')).toEqual([
+      'Runtime error [1:1-1:14]: (error) boom',
+    ])
+  })
+})
+
 // The exemption: runtime.scm is the interop layer that *defines* the
 // primitives expansion injects, so it alone may bind the shape.
 describe('the runtime library keeps its internal bindings', () => {
@@ -75,6 +117,7 @@ describe('the runtime library keeps its internal bindings', () => {
       '##mkGetFn##',
       '##typeOf##',
       '##report##',
+      '##error##',
     ]) {
       expect([...(builtinLibs.get('runtime')?.bindings.keys() ?? [])]).toContain(
         name,
