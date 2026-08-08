@@ -1,9 +1,8 @@
-import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError, SuspendSignal } from '.'
+import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError, SuspendSignal, Value } from '.'
 import { blockOnStep, Fiber, StepResult } from './fiber'
 import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
-import { mkTraceOutput } from './trace/index.js'
-import { getFS } from '../fs'
+import { mkTraceOutput, mkTraceStart } from './trace/index.js'
 import * as S from '../scheme'
 import { diagnosticToError } from '../scheme/diagnostic'
 
@@ -22,6 +21,12 @@ interface BaseSchedulerTask {
   fiber: Fiber
   err: ErrorChannel
   onComplete?: () => void
+  // Called when the run dies of a non-Scamper failure -- an ICE, or a genuine
+  // bug in the runtime. The scheduler loop runs detached, so without this such
+  // an error surfaces only as an unhandled rejection and `onComplete` never
+  // fires, leaving the task's owner waiting forever. A task that omits it keeps
+  // the old behavior: the error is rethrown out of the loop.
+  onFatal?: (e: unknown) => void
 }
 
 export interface DisplayTask extends BaseSchedulerTask {
@@ -65,6 +70,9 @@ export class Scheduler {
   private tasks: SchedulerTask[] = []
   // Parked step-mode tasks, keyed by id. A parked task lives here, not in `tasks`.
   private steppingGates: Map<SchedulerId, SteppingGate> = new Map()
+  // Traced tasks that have already emitted their opening line. Cleared when the
+  // task ends.
+  private tracesStarted = new Set<SchedulerId>()
   private isRunning = false
   // allows for resuming execution
   private currTaskIdx = 0
@@ -115,6 +123,7 @@ export class Scheduler {
       this.steppingGates.delete(id)
       gate.resolve() // unblock any pending stepStmt/stepAll awaiter
     }
+    this.tracesStarted.delete(id)
     if (!wasPaused) {
       this.resumeExecution()
     }
@@ -198,6 +207,11 @@ export class Scheduler {
       return false
     }
     if (stepResult.tag === 'import-file') {
+      // Resolved lazily, never at module load: src/fs reaches OPFS, and this
+      // module is pulled in during test setup -- an eager import would capture
+      // the real file system before a test could mock it. Same reason
+      // src/scheme/scope.ts and src/js/file do it this way.
+      const { getFS } = await import('../fs')
       // The existence probe can fail outright -- the FS singleton may be
       // uninitialized, or the host may refuse the name (one that reaches
       // outside the working directory, say -- see #340). Report that to the
@@ -255,6 +269,18 @@ export class Scheduler {
                 id,
                 fiber: moduleFiber,
                 err: task.err,
+                // A fatal error inside the module would otherwise kill the loop
+                // with the importer already dequeued, stranding it forever.
+                onFatal: (e: unknown) => {
+                  task.err.report(
+                    new ScamperError(
+                      'Runtime',
+                      `Attempted to import file "${stepResult.filename}" but it failed to run: ${e instanceof Error ? e.toString() : String(e)}`,
+                    ),
+                  )
+                  fiber.advanceStmt()
+                  this.resumeOrComplete(task)
+                },
                 onComplete: () => {
                   // Only the file's declared exports are visible to the importer.
                   const mod = moduleFiber.getModule()
@@ -349,7 +375,7 @@ export class Scheduler {
       if (task.isTracing && task.stepper && fiber.lastResult !== null) {
         const v = task.stepper.final(fiber.lastResult)
         if (v !== undefined) {
-          out.send(mkTraceOutput(v))
+          out.send(this.mkTraceValue(task, v))
           emittedVisible = true
         }
       } else {
@@ -359,7 +385,7 @@ export class Scheduler {
       // A trace (major) step: render the reduction, if it is user-visible.
       const v = task.stepper.render(fiber)
       if (v !== undefined) {
-        out.send(mkTraceOutput(v))
+        out.send(this.mkTraceValue(task, v))
         emittedVisible = true
       }
     }
@@ -395,6 +421,26 @@ export class Scheduler {
   }
 
   /**
+   * Wraps a traced run's reduction for output. The run's *first* emitted value
+   * renders bare and every later one carries the `-->` reduction marker, which
+   * reads as "reduced from the line above".
+   *
+   * N.B. this is per-*run*, not per-statement: a fresh fiber has no frames to
+   * raise, so the opening line can only be the first thing actually emitted --
+   * for `(define x 5)` that is the defined value, not the source text. Later
+   * statements therefore have their opening state marked `-->` even though
+   * nothing reduced to it. Longstanding CLI behavior, preserved deliberately;
+   * per-statement tracking would change the pinned `--trace` output.
+   */
+  private mkTraceValue(task: DisplayTask, v: Value): Value {
+    if (this.tracesStarted.has(task.id)) {
+      return mkTraceOutput(v)
+    }
+    this.tracesStarted.add(task.id)
+    return mkTraceStart('', v)
+  }
+
+  /**
    * Pulls the current (stepping) task out of the run queue and parks it in its
    * gate, awaiting a step()/resume(). Mirrors the block-on suspend at
    * `processStepResult`: removeTaskFromQueue + return, never touching
@@ -423,6 +469,7 @@ export class Scheduler {
     }
     if (gate.task.fiber.isDone()) {
       this.steppingGates.delete(id)
+      this.tracesStarted.delete(id)
       const resolve = gate.resolve
       gate.task.onComplete?.()
       resolve()
@@ -502,17 +549,58 @@ export class Scheduler {
             `Scheduler attempted to execute task #${this.currTaskIdx.toString()} when there are only ${this.tasks.length.toString()} tasks!`,
           )
         }
-        const stepResult = this.stepTask(task)
-        // A step that suspended the fiber (block-on, import-file) or parked it
-        // has already taken the task out of the run queue and owns re-scheduling
-        // it. Advancing here as well would remove a second task -- or, if the
-        // async action already finished the program during the await above,
-        // trip removeTaskFromQueue's atomicity check on an empty queue.
-        if (!(await this.processStepResult(stepResult, task))) {
-          this.moveNextTask(task.fiber)
+        try {
+          const stepResult = this.stepTask(task)
+          // A step that suspended the fiber (block-on, import-file) or parked it
+          // has already taken the task out of the run queue and owns re-scheduling
+          // it. Advancing here as well would remove a second task -- or, if the
+          // async action already finished the program during the await above,
+          // trip removeTaskFromQueue's atomicity check on an empty queue.
+          if (!(await this.processStepResult(stepResult, task))) {
+            this.moveNextTask(task.fiber)
+          }
+        } catch (e) {
+          // An ICE or a genuine runtime bug (stepTask rethrows anything that is
+          // not a ScamperError). This loop is detached, so rethrowing would
+          // strand the task's owner on a promise that never settles.
+          // Drop the task either way: it is poisoned, and leaving it queued
+          // means the next round dies on it again.
+          this.dropTask(task)
+          if (task.onFatal === undefined) {
+            // Nobody to hand this to, so let it escape as an unhandled
+            // rejection (the old behavior) -- but clear isRunning first, or
+            // resumeExecution() sees a "running" loop that has in fact died and
+            // returns early forever, wedging this scheduler (and, for the
+            // Scamper singleton, every later run) with nothing surfaced.
+            this.isRunning = false
+            throw e
+          }
+          task.onFatal(e)
         }
       }
     }
+  }
+
+  /**
+   * Forgets `task` entirely: out of the run queue (wherever it sits) and out of
+   * both id-keyed maps. Unlike removeTaskFromQueue this is positional-agnostic
+   * and tolerates an already-dequeued task, since a fatal error can strike
+   * either side of a dequeue.
+   */
+  private dropTask(task: SchedulerTask): void {
+    const i = this.tasks.findIndex((t) => t.id === task.id)
+    if (i !== -1) {
+      this.tasks.splice(i, 1)
+    }
+    // Resolve the gate as cancelTask/endCurrFiber do: a step-mode run killed
+    // mid-burst still has a resume() awaiter, and the IDE's step buttons stay
+    // disabled until it settles.
+    const gate = this.steppingGates.get(task.id)
+    if (gate) {
+      this.steppingGates.delete(task.id)
+      gate.resolve()
+    }
+    this.tracesStarted.delete(task.id)
   }
 
   private removeTaskFromQueue(index: number): SchedulerTask | undefined {
@@ -532,6 +620,7 @@ export class Scheduler {
     if (task) {
       // A completed step-mode run: drop its gate and wake any pending
       // stepStmt/stepAll awaiter, then signal completion.
+      this.tracesStarted.delete(task.id)
       const gate = this.steppingGates.get(task.id)
       if (gate) {
         this.steppingGates.delete(task.id)
@@ -553,6 +642,7 @@ export class Scheduler {
    */
   private resumeOrComplete(task: SchedulerTask) {
     if (task.fiber.isDone()) {
+      this.tracesStarted.delete(task.id)
       task.onComplete?.()
     } else {
       this.schedule(task)

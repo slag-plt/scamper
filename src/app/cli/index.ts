@@ -3,12 +3,8 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 
 import type { ScamperDiagnostic } from '../../scheme/diagnostic'
-import { diagnosticToError } from '../../scheme/diagnostic'
 import { ConsoleOutput } from '../../lpm/output'
-import { compile, mkInitialEnv } from '../../scheme'
-import { traceReductions } from '../../scheme/trace'
-import { Fiber } from '../../lpm/fiber'
-import { ScamperError, SuspendSignal } from '../../lpm/error'
+import { compile } from '../../scheme'
 import { localBackend, setBackend } from '../../fs'
 import NodeFileSystem from '../../fs/node'
 import Scamper, { initialize } from '../../scamper'
@@ -81,45 +77,22 @@ if (values.check) {
 }
 
 // --trace: print the program's reduction trace -- each top-level step rendered
-// as a sugared expression -- instead of running it normally. Driven by the
-// traceReductions generator, so this steps one reduction at a time (an
-// interactive step-by-step mode could drive the same generator on demand).
-// Synchronous programs only: file imports and async operations aren't stepped
-// here (see traceReductions).
+// as a sugared expression -- instead of running it normally. This is an
+// ordinary scheduled run with tracing on, so it handles everything a normal run
+// does, blocking primitives and file imports included. The `--> ` marker on
+// each reduction comes from the trace renderers (src/lpm/trace/index.ts).
 if (values.trace) {
   const traceOut = new ConsoleOutput()
-  const { prog, diagnostics } = await compile(src)
-  diagnostics.forEach((d) => {
-    traceOut.report(diagnosticToError(d))
+  const traceReq = await Scamper.getInstance().execute({
+    src,
+    out: traceOut,
+    err: traceOut,
+    isTracing: true,
   })
-  if (prog === undefined) {
+  if (traceReq === null) {
     process.exit(1)
   }
-  const fiber = new Fiber(prog, mkInitialEnv())
-  try {
-    let first = true
-    for (const step of traceReductions(fiber)) {
-      console.log(first ? step : `--> ${step}`)
-      first = false
-    }
-  } catch (e) {
-    if (e instanceof ScamperError) {
-      traceOut.report(e)
-    } else if (e instanceof SuspendSignal) {
-      // A blocking primitive (the `file` library, with-file, images from a URL)
-      // suspended the fiber. Only the scheduler can resume it, and this path
-      // steps the fiber directly -- so report that rather than letting a raw
-      // SuspendSignal abort the process. See issue #339.
-      traceOut.report(
-        new ScamperError(
-          'Runtime',
-          'Blocking operations (reading a file, loading an image) cannot be traced; run the program without --trace',
-        ),
-      )
-    } else {
-      throw e
-    }
-  }
+  await traceReq.done
   process.exit(traceOut.seenError ? 1 : 0)
 }
 

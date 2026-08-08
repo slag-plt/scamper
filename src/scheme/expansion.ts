@@ -149,13 +149,16 @@ export function expandExpr(e: A.Exp): A.Exp {
       // -->
       // (if e11 e12
       //   ...
-      //     (if ek1 ek2 (error "No matching clause in cond"))
+      //     (if ek1 ek2 (##error## "No matching clause in cond"))
+      // ##error## is a runtime primitive (src/js/runtime), *not* the prelude's
+      // `error`: a fall-through must raise whether or not the user happens to
+      // have bound the name `error` (#336).
       const branches = e.branches.map((c) => ({
         test: expandExpr(c.test),
         body: expandExpr(c.body),
       }))
       let ret: A.Exp = A.mkApp(
-        A.mkId('error', e.range),
+        A.mkId('##error##', e.range),
         [A.mkLit('No matching clause in cond', e.range)],
         e.range,
         'cond',

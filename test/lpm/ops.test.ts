@@ -1,23 +1,8 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import {
-  ICE,
-  LoggingChannel,
-  OutputChannel,
-  Value,
-} from '../../src/lpm'
-import { makeTestFiber } from '../util'
-
-function testExecute(fiber: Fiber, out: OutputChannel) {
-  // execute fiber until it's done
-  while (!fiber.isDone()) {
-    const res = fiber.step()
-    if (res.tag === 'display') {
-      out.send(fiber.lastResult)
-    }
-  }
-}
+import { ICE, LoggingChannel, Value } from '../../src/lpm'
+import { makeTestFiber, stepFiberToOutput } from '../util'
 
 describe('basic ops', () => {
   let out: LoggingChannel
@@ -27,7 +12,7 @@ describe('basic ops', () => {
 
   function expectSuccessfulExec(fiber: Fiber) {
     expect(() => {
-      testExecute(fiber, out)
+      stepFiberToOutput(fiber, out)
     }).not.toThrow()
   }
 
@@ -36,7 +21,7 @@ describe('basic ops', () => {
     matcher?: RegExp | (new (...args: never[]) => Error),
   ) {
     expect(() => {
-      testExecute(fiber, out)
+      stepFiberToOutput(fiber, out)
     }).toThrow(matcher)
   }
 
@@ -154,7 +139,7 @@ describe('basic ops', () => {
         },
       ])
       expect(() => {
-        testExecute(fiber, out)
+        stepFiberToOutput(fiber, out)
       }).toThrow(/Unexpected error in Javascript function call/)
     })
   })
@@ -666,13 +651,13 @@ describe('rest parameters', () => {
 
   function expectSuccessfulExec(fiber: Fiber) {
     expect(() => {
-      testExecute(fiber, out)
+      stepFiberToOutput(fiber, out)
     }).not.toThrow()
   }
 
   function expectFailedExec(fiber: Fiber) {
     expect(() => {
-      testExecute(fiber, out)
+      stepFiberToOutput(fiber, out)
     }).toThrow(/Arity mismatch/)
   }
 

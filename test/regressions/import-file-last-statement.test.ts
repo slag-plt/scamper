@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
-import { runProgramAsync } from '../harness.js'
+import { runProgram } from '../harness.js'
 
 // Regression test for #341: a `(import "...")` of a *file* as the last
 // statement of a program aborted with
@@ -43,19 +43,19 @@ function unreadableFS(): FS {
 describe('#341: a file import as the last statement of a program', () => {
   test('completes the program instead of raising a scheduling ICE', async () => {
     await fs.saveFile('mod.scm', '(define-export helper 42)\n')
-    expect(await runProgramAsync('(display 1)\n(import "mod.scm")')).toEqual(['1'])
+    expect(await runProgram('(display 1)\n(import "mod.scm")')).toEqual(['1'])
   })
 
   test('is still the sole statement case', async () => {
     await fs.saveFile('mod.scm', '(define-export helper 42)\n')
-    expect(await runProgramAsync('(import "mod.scm")')).toEqual([])
+    expect(await runProgram('(import "mod.scm")')).toEqual([])
   })
 
   test("binds the module's exports when it is not the last statement", async () => {
     // The pre-#341 behavior that must be preserved: a non-final import resumes
     // the fiber with the module in scope.
     await fs.saveFile('mod.scm', '(define-export helper 42)\n')
-    expect(await runProgramAsync('(import "mod.scm")\n(display helper)')).toEqual([
+    expect(await runProgram('(import "mod.scm")\n(display helper)')).toEqual([
       '42',
     ])
   })
@@ -65,7 +65,7 @@ describe('#341: a file import as the last statement of a program', () => {
     // statement and re-schedules. A file that exists but will not load (a
     // directory, a permission error) as the last statement hit the same ICE.
     setBackend(localBackend(unreadableFS()))
-    const output = await runProgramAsync('(display 1)\n(import "mod.scm")')
+    const output = await runProgram('(display 1)\n(import "mod.scm")')
     expect(output[0]).toBe('1')
     expect(output.join('\n')).toMatch(/failed to load/)
   })

@@ -2,11 +2,11 @@ import { expect, test, describe } from 'vitest'
 
 import * as S from '../../src/scheme'
 import * as L from '../../src/lpm'
-import { diagnosticToError } from '../../src/scheme/diagnostic'
 import { Fiber } from '../../src/lpm/fiber'
 import { raiseFiber } from '../../src/scheme/raise.js'
 import { expToString } from '../../src/scheme/ast.js'
-import { runProgram } from '../harness.js'
+import { runProgram, runProgramValues } from '../harness.js'
+import { stepFiberWith } from '../util.js'
 
 // `stripRanges` drops the `[line:col]` location from error output, for the
 // rare case whose error range points into the .scm library source (contract
@@ -14,31 +14,7 @@ import { runProgram } from '../harness.js'
 // whenever a library file is edited. User-source ranges are stable, so most
 // callers leave it off and assert the range.
 async function checkMachineOutput (src: string, expected: L.Value[], stripRanges = false) {
-  src = src.trim()
-  const out = new L.LoggingChannel(false, false)
-  const { prog, diagnostics } = await S.compile(src)
-  diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
-  expect(out.errLog).toEqual([])
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const fiber = new Fiber(prog!, S.mkInitialEnv())
-  // TODO: this should be refactored once we've re-established a common
-  // entry point for running Scamper programs
-  while (!fiber.isDone()) {
-    try {
-      const res = fiber.step()
-      if (res.tag === 'display') {
-        out.send(fiber.lastResult)
-      }
-    } catch (e) {
-      if (e instanceof L.ScamperError) {
-        out.log.push((stripRanges ? e.stripRange() : e).toString())
-        fiber.advanceStmt()
-      } else {
-        throw e
-      }
-    }
-  }
-  expect(out.log).toEqual(expected)
+  expect(await runProgramValues(src, { stripRanges })).toEqual(expected)
 }
 
 describe('Basic codegen', () => {
@@ -360,12 +336,11 @@ describe('End-to-end cases', () => {
     expect(diagnostics).toEqual([])
     const fiber = new Fiber(prog!, S.mkInitialEnv())
     const trace: string[] = []
-    while (!fiber.isDone()) {
-      fiber.step()
-      if (fiber.frames.length > 0) {
-        trace.push(expToString(raiseFiber(fiber)))
+    stepFiberWith(fiber, (f) => {
+      if (f.frames.length > 0) {
+        trace.push(expToString(raiseFiber(f)))
       }
-    }
+    })
     // x's value has reduced to 2 but is not yet bound (still shown as a binding)
     expect(trace).toContain('(let ([x 2] [y (+ x 1)]) (+ x y))')
     // x is bound (=2) and omitted; it substitutes into y's value and the body

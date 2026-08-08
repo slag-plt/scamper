@@ -6,7 +6,7 @@ import path from 'node:path'
 import { localBackend, setBackend } from '../../src/fs'
 import NodeFileSystem from '../../src/fs/node'
 import { compile } from '../../src/scheme'
-import { runProgramAsync } from '../harness.js'
+import { runProgram } from '../harness.js'
 
 // Regression test for #340: NodeFileSystem resolved names with path.join and no
 // containment check, so a name that climbed out of the root ("../x") or named
@@ -80,7 +80,7 @@ describe('#340: the Node file system contains names to its root', () => {
 
 describe('#340: a program cannot reach outside the working directory', () => {
   test('a write outside the root reports an error and creates nothing', async () => {
-    const output = await runProgramAsync(`
+    const output = await runProgram(`
 (import file)
 (string->file "PWNED" "../escaped.txt")
 `)
@@ -89,7 +89,7 @@ describe('#340: a program cannot reach outside the working directory', () => {
   })
 
   test('a read outside the root reports an error', async () => {
-    const output = await runProgramAsync(`
+    const output = await runProgram(`
 (import file)
 (file->string "../secret.txt")
 `)
@@ -106,7 +106,7 @@ describe('#340: a program cannot reach outside the working directory', () => {
   })
 
   test('an import from outside the root reports an error and the program finishes', async () => {
-    const output = await runProgramAsync('(import "../outside.scm")\n(display 1)')
+    const output = await runProgram('(import "../outside.scm")\n(display 1)')
     expect(output.join('\n')).toMatch(/outside the working directory/)
   })
 })

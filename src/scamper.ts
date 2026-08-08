@@ -11,6 +11,7 @@ import {
   Prog,
   Range,
   rangesEqual,
+  ScamperError,
   setRunSignalProvider,
   setSpawn,
   Value,
@@ -238,6 +239,20 @@ export default class Scamper {
       onComplete: () => {
         resolve()
       },
+      // An ICE or other non-Scamper failure would otherwise escape the
+      // scheduler's detached loop as an unhandled rejection: the run would stop
+      // dead with nothing shown and `done` never settling. Surface it on the
+      // error channel and settle normally -- callers treat `done` as "the run
+      // is over", and rejecting it would just relocate the unhandled rejection.
+      onFatal: (e: unknown) => {
+        err.report(
+          new ScamperError(
+            'Runtime',
+            e instanceof Error ? e.toString() : String(e),
+          ),
+        )
+        resolve()
+      },
     })
     return { id, tracing: traced, done: promise }
   }
@@ -335,6 +350,17 @@ export default class Scamper {
       fiber,
       err,
       onComplete: () => {
+        resolve()
+      },
+      // As in execute(): surface the failure and settle, rather than leaving
+      // `done` pending forever on a run that has already died.
+      onFatal: (e: unknown) => {
+        err.report(
+          new ScamperError(
+            'Runtime',
+            e instanceof Error ? e.toString() : String(e),
+          ),
+        )
         resolve()
       },
     })

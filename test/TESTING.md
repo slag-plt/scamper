@@ -53,5 +53,7 @@ Scamper has a comprehensive test suite whose structure nearly mirrors the struct
 ## Style
 
 + To make tests readable, we use test harnesses to avoid the redundant work of setting up an appropriate execution environment for each test
++ Run programs through `runProgram` (test/harness.ts), never a hand-written `while (!fiber.isDone()) fiber.step()` loop. It drives a real `Scheduler`, which is the only thing that services blocking primitives (`with-file`, the `file` library, `with-image-from-url`) and file imports, so tests exercise the same path the IDE and CLI do. Variants: `runProgramValues` (values rather than rendered text), `runProgramTraced` / `reductionTrace` (reduction traces), `runProgramWithHTML`
++ Stepping a fiber directly is for LPM-level tests only -- those about the fiber/VM contract itself (lpm/{fiber,machine,ops}.test.ts) or that must observe the machine *between* steps (frame depth, per-step raise/sugar). Use `stepFiberToCompletion` / `stepFiberWith` (test/util.ts) so the intent is explicit; neither handles blocking primitives, file imports, or error recovery
 + Library and language-feature tests aim for standard, corner (where meaningful per the function's contract), and failure cases
 + Test descriptions are short and to the point rather than full phrases of sentences

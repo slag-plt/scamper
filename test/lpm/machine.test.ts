@@ -1,32 +1,20 @@
 import { describe, expect, test } from 'vitest'
-import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import { LoggingChannel, OutputChannel, Value } from '../../src/lpm'
-import { makeTestFiber } from '../util'
-import { anyRange } from '../scheme/util'
-
-function testExecute(fiber: Fiber, out: OutputChannel) {
-  // execute fiber until it's done
-  while (!fiber.isDone()) {
-    const res = fiber.step()
-    if (res.tag === 'display') {
-      out.send(fiber.lastResult)
-    }
-  }
-}
+import { LoggingChannel, Value } from '../../src/lpm'
+import { makeTestFiber, stepFiberToOutput } from '../util'
 
 describe('basic ops', () => {
   test('lit', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkDisp([U.mkLit(42)])])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([42])
   })
 
   test('var', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkDisp([U.mkVar('+')])])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([fiber.topLevelEnv.get('+')])
   })
 
@@ -36,7 +24,7 @@ describe('basic ops', () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkCls(['x'], body, 'add-one'), U.mkLit(1), U.mkAp(1)]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     const result = out.log[0]
     expect(result).toBe(2)
   })
@@ -46,7 +34,7 @@ describe('basic ops', () => {
     const fiber = makeTestFiber([
       U.mkDisp([U.mkVar('+'), U.mkLit(3), U.mkLit(4), U.mkAp(2)]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([7])
   })
 
@@ -63,7 +51,7 @@ describe('basic ops', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['matched'])
   })
 
@@ -80,7 +68,7 @@ describe('basic ops', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['not matched'])
   })
 
@@ -97,7 +85,7 @@ describe('basic ops', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([15])
   })
 
@@ -114,14 +102,14 @@ describe('basic ops', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['always matches'])
   })
 
   test('disp', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkDisp([U.mkLit('hello world')])])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['hello world'])
   })
 
@@ -142,7 +130,7 @@ describe('pattern matching', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['matched'])
   })
 
@@ -159,7 +147,7 @@ describe('pattern matching', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['number matched'])
   })
 
@@ -181,7 +169,7 @@ describe('pattern matching', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual(['hello was captured'])
   })
 
@@ -204,7 +192,7 @@ describe('pattern matching', () => {
         ]),
       ]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([3])
   })
 
@@ -238,7 +226,7 @@ describe('pattern matching', () => {
       U.mkDefine('fact', [factorial]),
       U.mkDisp([U.mkVar('fact'), U.mkLit(5), U.mkAp(1)]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([120])
   })
 })
@@ -250,7 +238,7 @@ describe('rest parameters', () => {
     const fiber = makeTestFiber([
       U.mkDisp([cls, U.mkLit(1), U.mkAp(1)]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([null])
   })
 
@@ -260,7 +248,7 @@ describe('rest parameters', () => {
     const fiber = makeTestFiber([
       U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkLit(3), U.mkAp(3)]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([U.mkList(2, 3)])
   })
 
@@ -280,7 +268,7 @@ describe('rest parameters', () => {
       'cons',
       (hd: Value, tl: any) => U.mkCons(hd, tl),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([U.mkCons(1, U.mkList(3, 4))])
   })
 
@@ -288,14 +276,14 @@ describe('rest parameters', () => {
     const out = new LoggingChannel(false, false)
     const cls = U.mkCls(['x', 'y'], [U.mkVar('z')], 'f', undefined, 'z')
     const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
-    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
+    expect(() => { stepFiberToOutput(fiber, out) }).toThrow(/Arity mismatch/)
   })
 
   test('ap - arity mismatch when fewer than required args, no rest param', () => {
     const out = new LoggingChannel(false, false)
     const cls = U.mkCls(['x', 'y'], [U.mkVar('x')], 'f')
     const fiber = makeTestFiber([U.mkDisp([cls, U.mkLit(1), U.mkAp(1)])])
-    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
+    expect(() => { stepFiberToOutput(fiber, out) }).toThrow(/Arity mismatch/)
   })
 
   test('ap - arity mismatch when more args than fixed params, no rest param', () => {
@@ -304,7 +292,7 @@ describe('rest parameters', () => {
     const fiber = makeTestFiber([
       U.mkDisp([cls, U.mkLit(1), U.mkLit(2), U.mkAp(2)]),
     ])
-    expect(() => { testExecute(fiber, out) }).toThrow(/Arity mismatch/)
+    expect(() => { stepFiberToOutput(fiber, out) }).toThrow(/Arity mismatch/)
   })
 })
 
@@ -316,7 +304,7 @@ describe('define statement', () => {
       U.mkDefine('x', [U.mkLit(2)]),
       U.mkDisp([U.mkVar('x')]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toStrictEqual([2])
   })
 
@@ -327,7 +315,7 @@ describe('define statement', () => {
       U.mkDefine('g', [U.mkVar('f')]),
       U.mkDisp([U.mkVar('g')]),
     ])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     // g is the same closure object as f; it keeps the name it first received.
     expect(U.typeOf(out.log.at(0))).toBe('[Function: f]')
   })
@@ -337,20 +325,20 @@ describe('import statement', () => {
   test('a builtin import succeeds and produces no display output', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(out.log).toStrictEqual([])
   })
 
   test('a builtin import binds the module for later variable lookups', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkImport('image', 'builtin')])
-    testExecute(fiber, out)
+    stepFiberToOutput(fiber, out)
     expect(fiber.topLevelEnv.has('circle')).toBe(true)
   })
 
   test('an unknown builtin import throws', () => {
     const out = new LoggingChannel(false, false)
     const fiber = makeTestFiber([U.mkImport('no-such-lib', 'builtin')])
-    expect(() => { testExecute(fiber, out) }).toThrow(/No such built-in library/)
+    expect(() => { stepFiberToOutput(fiber, out) }).toThrow(/No such built-in library/)
   })
 })

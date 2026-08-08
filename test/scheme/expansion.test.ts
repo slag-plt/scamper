@@ -28,7 +28,7 @@ const orIf = (g: A.Exp, t: A.Exp, e: A.Exp) => A.mkIf(g, t, e, undefined, 'or')
 const orBool = (v: boolean) => A.mkLit(v, undefined, 'or')
 const condIf = (g: A.Exp, t: A.Exp, e: A.Exp) => A.mkIf(g, t, e, undefined, 'cond')
 const condSentinel = () =>
-  A.mkApp(A.mkId('error'), [A.mkLit('No matching clause in cond')], undefined, 'cond')
+  A.mkApp(A.mkId('##error##'), [A.mkLit('No matching clause in cond')], undefined, 'cond')
 
 describe('Expanded expressions', () => {
   test('and', () => {

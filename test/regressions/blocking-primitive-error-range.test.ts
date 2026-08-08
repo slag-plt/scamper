@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
-import { runProgramAsync } from '../harness.js'
+import { runProgram } from '../harness.js'
 
 // Regression test for #342: an error raised inside a blocking primitive's async
 // action carried no source range, so the IDE could not underline the call that
@@ -32,14 +32,14 @@ beforeEach(async () => {
 describe("#342: a blocking primitive's error points at its call", () => {
   test('a top-level call to a file procedure', async () => {
     expect(
-      await runProgramAsync('(import file)\n(file->string "missing.txt")'),
+      await runProgram('(import file)\n(file->string "missing.txt")'),
     ).toEqual(['Runtime error [2:1-2:28]: File "missing.txt" does not exist'])
   })
 
   test('the range tracks the statement the call occurs in', async () => {
     await fs.saveFile('here.txt', 'hi')
     expect(
-      await runProgramAsync(
+      await runProgram(
         '(import file)\n(file->string "here.txt")\n(file->string "missing.txt")',
       ),
     ).toEqual([
@@ -52,7 +52,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
     // The same blind spot the contract-error fix had to cover: the failing call
     // sits inside f's body, which is where the underline belongs.
     expect(
-      await runProgramAsync(
+      await runProgram(
         '(import file)\n(define f (lambda (n) (file->string n)))\n(f "missing.txt")',
       ),
     ).toEqual(['Runtime error [2:23-2:38]: File "missing.txt" does not exist'])
@@ -61,7 +61,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
   test('a write that fails reports the call site', async () => {
     setBackend(localBackend(unwritableFS()))
     expect(
-      await runProgramAsync('(import file)\n(string->file "data" "out.txt")'),
+      await runProgram('(import file)\n(string->file "data" "out.txt")'),
     ).toEqual([
       'Runtime error [2:1-2:31]: Could not write to the file "out.txt"',
     ])
@@ -76,7 +76,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
     // the real call site means walking out of that wrapper's frame, which the
     // current call-site recovery cannot do -- see the PR discussion.
     expect(
-      await runProgramAsync('(with-file "missing.txt" (lambda (s) s))'),
+      await runProgram('(with-file "missing.txt" (lambda (s) s))'),
     ).toEqual(['Runtime error: File "missing.txt" does not exist'])
   })
 
@@ -86,7 +86,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
     // That wrapper had no range either.
     setBackend(localBackend(brokenFS()))
     expect(
-      await runProgramAsync('(import file)\n(file-exists? "any.txt")'),
+      await runProgram('(import file)\n(file-exists? "any.txt")'),
     ).toEqual(['Runtime error [2:1-2:24]: host is on fire'])
   })
 })
