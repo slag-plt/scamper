@@ -2,7 +2,9 @@
 import type { FS } from './fs'
 import type { History } from '../history/history'
 import { FlatFileHistory } from '../history/flat-file'
+import { ServerHistory } from '../history/server'
 import OPFSFileSystem from './opfs'
+import ServerFileSystem from './server'
 
 export type { FS as t } from './fs'
 
@@ -30,6 +32,19 @@ let current: Backend | undefined = undefined
  */
 export function localBackend(fs: FS): Backend {
   return { fs, history: new FlatFileHistory(fs) }
+}
+
+/**
+ * @returns a `ServerFileSystem` paired with the history that belongs with it --
+ *          one row per snapshot in the server's database, rather than `.history`
+ *          blobs written back into the storage the server itself provides.
+ * @param baseUrl the API root the deployment advertises, e.g. `/api/v1`
+ */
+export function serverBackend(baseUrl: string): Backend {
+  return {
+    fs: ServerFileSystem.create(baseUrl),
+    history: ServerHistory.create(baseUrl),
+  }
 }
 
 /** Initializes the global backend to browser-local storage. */

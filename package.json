@@ -23,6 +23,7 @@
     "pretypecheck": "npm run generate",
     "typecheck:server": "npm run typecheck --workspace @scamper/server",
     "dev:server": "npm run dev --workspace @scamper/server",
+    "dev:full": "node scripts/dev-full.mjs",
     "start:server": "npm run start --workspace @scamper/server",
     "test": "vitest",
     "coverage": "vitest run --coverage",

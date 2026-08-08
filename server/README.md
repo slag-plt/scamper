@@ -6,6 +6,16 @@ and follow the user between machines (issue #357).
 Run it with `npm run dev:server` from the repository root. `PORT` overrides the
 default of 3000.
 
+Usually you want both halves at once:
+
+```console
+npm run dev:full
+```
+
+That starts this server and a front end wired to it, and the IDE then keeps
+files here instead of in the browser. See **Running the two halves together**
+below for how they are connected, and why it is done that way.
+
 > **Storage is currently a stub.** `src/store.ts` and `src/history-store.ts`
 > keep everything in memory, in one shared namespace, with no authentication —
 > enough for the client seams in `src/fs/server.ts` and `src/history/server.ts`
@@ -43,12 +53,56 @@ a time from `files/{name}/{id}`. A history holds up to fifty copies of a file, s
 shipping them all to draw a column of timestamps would undo the reason snapshots
 are stored as rows. See `schema.sql` for the queries these stand in for.
 
+## Running the two halves together
+
+`npm run dev:full` starts this server and a front end pointed at it. It is
+`scripts/dev-full.mjs`, and it is exactly these two commands, so run them in
+separate terminals instead if you prefer:
+
+```console
+npm run dev:server
+npm run dev -- --mode server
+```
+
+`--mode server` does two things (see `vite.config.ts`):
+
+1. **Proxies `/api` to this server**, so the browser only ever talks to the Vite
+   origin.
+2. **Serves a `/config.json`** naming `/api/v1`, which is how the client learns
+   there is a server at all. A plain `npm run dev` has no such file, gets a 404,
+   and stays on local storage — unchanged from before any of this existed.
+
+The proxy is the part worth understanding. The obvious alternative — point the
+client straight at `localhost:3000` — makes local development *cross-origin*
+while production is *same-origin*, and everything cookie-shaped then differs
+between the two: `SameSite` has to be `none` (which requires HTTPS, painful
+locally), CORS has to be configured and can silently work in dev but not
+production or vice versa, and the credentialed-request path you test is not the
+one you ship. Proxying makes a dev checkout single-origin exactly as production
+is, so there is one behaviour to reason about.
+
+`SCAMPER_SERVER_PORT` moves this server (and the proxy that follows it) off
+3000.
+
+**Nothing here is authenticated yet.** `src/app/web/dev-backend.ts` switches the
+IDE onto the server when `/config.json` is present, and is compiled out of any
+build that is not a `--mode server` dev server. That guard exists because the
+store keeps everyone's files in one namespace: were a production build to switch
+on the mere presence of a config, a single `npm run deploy:server-url` would put
+every student into the same pile of files. Logging in is what will move a user's
+files, once there is a login.
+
 ## Cross-origin
 
-`ALLOWED_ORIGIN` names the single origin permitted to call the server with
-credentials. Leave it unset when the server and the static site share an origin,
-which sends no CORS headers at all. It is one origin rather than a list because
-`Access-Control-Allow-Origin` cannot be `*` once the client sends cookies.
+Scamper is deployed with the static site and this server on **one origin**, so
+`/api/v1` is a path on the same host the IDE is served from. That is the
+arrangement `npm run dev:full` reproduces, and it means no CORS headers are sent
+at all, and session cookies can stay `SameSite=Lax` and same-origin.
+
+`ALLOWED_ORIGIN` exists for a split-origin deployment, and names the single
+origin permitted to call the server with credentials. It is one origin rather
+than a list because `Access-Control-Allow-Origin` cannot be `*` once the client
+sends cookies. Leave it unset for the same-origin deployment above.
 
 ## Why this lives in the Scamper repo
 

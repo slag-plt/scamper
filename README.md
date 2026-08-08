@@ -13,6 +13,17 @@ $> npm run dev    # Spawns a local vite server to serve the application
 
 Follow the terminal instructions to connect to your local Scamper instance.
 
+This runs the front end alone, with your files in the browser's own storage,
+which is what most work on Scamper needs. To work on the file server instead
+(issue #357), run both halves together:
+
+~~~console
+$> npm run dev:full   # Front end + the back end in server/, wired to each other
+~~~
+
+The IDE then keeps files on the server rather than in the browser. See
+[`server/README.md`](server/README.md) for what that involves.
+
 ## Deployment
 
 The deployment script builds Scamper and copies it to `<server>:<root>/<version>` and adds `<server>:<root>/index.html` which redirects to this latest version.

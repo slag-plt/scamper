@@ -20,6 +20,7 @@ export default defineConfig(
       globals: {
         ...globals.browser,
         APP_VERSION: 'readonly',
+        SCAMPER_DEV_SERVER: 'readonly',
       },
     },
   },
@@ -41,16 +42,11 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: [
-            'eslint.config.mjs',
-            'vite.config.ts',
-            'scripts/generate-parser.mjs',
-            'scripts/vite-plugin-scheme-parser.mjs',
-            'scripts/generate-lib-sources.mjs',
-            'scripts/vite-plugin-lib-sources.mjs',
-            'scripts/vite-plugin-flatten-html.mjs',
-            'scripts/vite-plugin-dev-flat-html.mjs',
-          ],
+          // Only the config files at the repository root land here.
+          // Everything in scripts/ is covered by scripts/tsconfig.json --
+          // this list is capped at eight entries, and silently breaks
+          // linting for every file in it once exceeded.
+          allowDefaultProject: ['eslint.config.mjs', 'vite.config.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: ['.vue'],
@@ -66,6 +62,8 @@ export default defineConfig(
       'scripts/vite-plugin-lib-sources.mjs',
       'scripts/vite-plugin-flatten-html.mjs',
       'scripts/vite-plugin-dev-root-redirect.mjs',
+      'scripts/vite-plugin-dev-server-config.mjs',
+      'scripts/dev-full.mjs',
     ],
     languageOptions: {
       globals: {
