@@ -23,14 +23,15 @@ describe('a literal\'s meaning does not depend on user bindings', () => {
     ])
   })
 
-  // N.B., both literals do still expand to a `##...##` primitive, so rebinding
-  // *that* name breaks them -- exactly as rebinding ##mkCtorFn## breaks
-  // `struct`. The `##...##` namespace is reserved for the runtime by
-  // convention, so this is the same boundary every other expansion relies on,
-  // not a property of the literals.
-  test('the internal primitive is what a literal depends on', async () => {
+  // N.B., both literals do still expand to a `##...##` primitive -- but that
+  // namespace is now reserved for the runtime by the parser rather than by
+  // convention (#336), so rebinding one is a parse error instead of a form
+  // that silently changes meaning. See internal-name-hygiene.test.ts.
+  test('the internal primitive a literal depends on cannot be rebound', async () => {
     expect(await runProgram('(define ##mkVec## 5)\n[1 2]')).toEqual([
-      'Runtime error [2:1-2:5]: Not a function or closure: 5',
+      expect.stringContaining(
+        'The identifier "##mkVec##" is reserved for Scamper\'s internal use',
+      ),
     ])
   })
 })

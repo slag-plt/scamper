@@ -91,7 +91,9 @@ describe('cond', () => {
     expect(roundTrip('(cond [a b] [c d] [e f])')).toBe('(cond [a b] [c d] [e f])')
   })
   test('the empty cond expands to the fall-through error and stays that', () => {
-    expect(roundTrip('(cond)')).toBe('(error "No matching clause in cond")')
+    // The sentinel calls the internal ##error##, not the prelude's `error`,
+    // so a user binding named `error` cannot capture it (#336).
+    expect(roundTrip('(cond)')).toBe('(##error## "No matching clause in cond")')
   })
 })
 

@@ -13,6 +13,32 @@ export function runtime_report (value: L.Value): L.Value {
 }
 
 /**
+ * Raises a runtime error carrying `msg`. Bound to the internal `##error##`,
+ * which expansion and contract insertion inject by reference -- a `cond`
+ * fall-through becomes `(##error## "No matching clause in cond")`. It is
+ * internal (rather than the prelude's `error`) so a user binding named `error`
+ * cannot change what those forms do.
+ *
+ * A separate function object from prelude_error, not an alias: Module
+ * .registerValue renames whatever it binds, so sharing one object would
+ * rename the prelude's `error` too. The reported source is fixed to "error"
+ * either way, so a violation still reads `(error) ...` rather than leaking the
+ * internal spelling.
+ */
+export const runtime_error = L.nameFn('error', (msg: L.Value): L.Value => {
+  if (typeof msg !== 'string') {
+    throw new L.ScamperError(
+      'Runtime',
+      `expected a string, received ${L.typeOf(msg)}`,
+      undefined,
+      undefined,
+      'error',
+    )
+  }
+  throw new L.ScamperError('Runtime', msg, undefined, undefined, 'error')
+}) as L.JsFunction
+
+/**
  * @returns a predicate function for struct types t.
  */
 export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {
