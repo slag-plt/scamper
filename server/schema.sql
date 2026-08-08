@@ -1,15 +1,15 @@
--- The MariaDB schema the in-memory stores in server/src/ stand in for.
+-- The MariaDB schema behind the server's storage.
 --
--- Not applied by anything yet: BetterAuth is not wired up, so the `user` table
--- these reference does not exist. This is here so the shape is settled before
--- the stores are replaced, and so the route layer can be reviewed against the
--- queries it is meant to become.
+-- Applied by server/src/db.ts on every start. Every statement is
+-- `IF NOT EXISTS`, so applying it twice does nothing the second time.
 --
 -- BetterAuth owns the authentication tables (user, session, account,
--- verification) and creates them itself. Only the two below are ours.
+-- verification) and its CLI creates them -- `npm run db:migrate --workspace
+-- @scamper/server`. The tables below reference `user`, so that has to have run
+-- first; db.ts says so if it hasn't.
 
 -- A user's files. One row per file, replaced in place on save.
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    VARCHAR(36)  NOT NULL,
   name       VARCHAR(255) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE files (
 -- A file's save history, kept separate from `files` on purpose: a history
 -- outlives the file it belongs to, so a student can recover an accidental
 -- delete (#42). `deleted_at` is that tombstone, not a row-deletion marker.
-CREATE TABLE histories (
+CREATE TABLE IF NOT EXISTS histories (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    VARCHAR(36)  NOT NULL,
   filename   VARCHAR(255) NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE histories (
 --   record  INSERT, then trim past MAX_SNAPSHOTS
 --
 -- Only `read` touches `contents`, and only for the one version being shown.
-CREATE TABLE snapshots (
+CREATE TABLE IF NOT EXISTS snapshots (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   history_id BIGINT UNSIGNED NOT NULL,
   taken_at   DATETIME(3)     NOT NULL,

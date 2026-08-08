@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ServerHistory } from '../../src/history/server'
 import { MERGE_WINDOW_MS, MAX_SNAPSHOTS } from '../../src/history/policy'
 import { route } from '../../server/src/api'
-import { FileStore } from '../../server/src/store'
-import { HistoryStore } from '../../server/src/history-store'
+import { MemoryFileStore } from '../../server/src/store'
+import { MemoryHistoryStore } from '../../server/src/history-store'
 
 // The server-backed history, driven against the real routing layer through a
 // stubbed fetch, so these check the actual contract -- paths, encodings, status
@@ -21,7 +21,10 @@ function at(ms: number): Date {
   return new Date(START.getTime() + ms)
 }
 
-let stores: { files: FileStore; history: HistoryStore }
+let stores: { files: MemoryFileStore; history: MemoryHistoryStore }
+
+/** The signed-in user the fake server attributes every request to. */
+const USER = 'user-1'
 let seen: { method: string; path: string }[]
 /** What the fake server's clock reads; the server stamps snapshots with it. */
 let serverNow: Date
@@ -36,17 +39,18 @@ function installFakeServer(): void {
       typeof init?.body === 'string'
         ? (JSON.parse(init.body) as unknown)
         : undefined
-    const reply = route(
-      { method, path: url.pathname, body, now: serverNow },
+    return route(
+      { method, path: url.pathname, body, now: serverNow, userId: USER },
       stores,
+    ).then(
+      (reply) =>
+        ({
+          ok: reply.status >= 200 && reply.status < 300,
+          status: reply.status,
+          statusText: '',
+          json: () => Promise.resolve(reply.body),
+        }) as Response,
     )
-
-    return Promise.resolve({
-      ok: reply.status >= 200 && reply.status < 300,
-      status: reply.status,
-      statusText: '',
-      json: () => Promise.resolve(reply.body),
-    } as Response)
   })
 }
 
@@ -56,7 +60,10 @@ function requestCount(): number {
 }
 
 beforeEach(() => {
-  stores = { files: new FileStore(), history: new HistoryStore() }
+  stores = {
+    files: new MemoryFileStore(),
+    history: new MemoryHistoryStore(),
+  }
   seen = []
   serverNow = START
   installFakeServer()

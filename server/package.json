@@ -8,6 +8,15 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "better-auth migrate --config src/auth-config.ts"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.26",
+    "kysely": "^0.28.17",
+    "mysql2": "^3.23.2"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "^1.4.21"
   }
 }

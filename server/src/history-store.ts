@@ -9,15 +9,16 @@ import type {
   Snapshot,
   SnapshotRef,
 } from '../../src/history/history'
+import type { HistoryStore, RecordOutcome } from './stores'
 
 /**
- * A stub history store: in memory, no authentication, one shared namespace.
+ * Save history in memory, per user.
  *
- * Its shape is the part meant to survive: `histories` keyed by filename with a
- * deletion mark, each holding rows of snapshots. That is the schema the MariaDB
- * implementation replaces it with (see server/schema.sql), which is why listing
- * and indexing here never touch contents -- the query they stand in for
- * wouldn't either.
+ * Mirrors the row shape `MariaDbHistoryStore` uses -- histories keyed by
+ * filename with a deletion mark, each holding snapshots newest-first -- so the
+ * tests that drive the route layer against it are testing the same behaviour
+ * the database gives. In particular, listing and indexing never touch contents,
+ * because the queries they stand in for do not either.
  */
 
 interface StoredSnapshot {
@@ -32,21 +33,14 @@ interface StoredHistory {
   deletedAt?: string
 }
 
-/** What a record attempt did, mirroring the client's `RecordResult`. */
-export interface RecordOutcome {
-  recorded: boolean
-  head: Snapshot | null
-}
-
-export class HistoryStore {
-  private readonly histories = new Map<string, StoredHistory>()
+export class MemoryHistoryStore implements HistoryStore {
+  private readonly users = new Map<string, Map<string, StoredHistory>>()
 
   /** Stands in for the table's auto-increment column. */
   private nextId = 1
 
-  /** @returns every file with a history, deleted ones included, by name. */
-  list(): HistoryFile[] {
-    const files = [...this.histories.entries()]
+  list(userId: string): Promise<HistoryFile[]> {
+    const files = [...this.historiesOf(userId).entries()]
       .filter(([, history]) => history.snapshots.length > 0)
       .map(([filename, history]) =>
         history.deletedAt === undefined
@@ -54,50 +48,49 @@ export class HistoryStore {
           : { filename, deletedAt: history.deletedAt },
       )
 
-    return files.sort((a, b) => a.filename.localeCompare(b.filename))
+    return Promise.resolve(
+      files.sort((a, b) => a.filename.localeCompare(b.filename)),
+    )
   }
 
-  /** @returns `filename`'s snapshot times, newest first. No contents. */
-  index(filename: string): HistoryIndex {
-    const history = this.histories.get(filename)
-    if (history === undefined) return { snapshots: [] }
+  index(userId: string, filename: string): Promise<HistoryIndex> {
+    const history = this.historiesOf(userId).get(filename)
+    if (history === undefined) return Promise.resolve({ snapshots: [] })
 
     const snapshots: SnapshotRef[] = history.snapshots.map((snapshot) => ({
       id: snapshot.id.toString(),
       time: snapshot.takenAt,
     }))
 
-    return history.deletedAt === undefined
-      ? { snapshots }
-      : { snapshots, deletedAt: history.deletedAt }
+    return Promise.resolve(
+      history.deletedAt === undefined
+        ? { snapshots }
+        : { snapshots, deletedAt: history.deletedAt },
+    )
   }
 
-  /** @returns what `filename` held at `id`, or null if that row is gone. */
-  read(filename: string, id: string): string | null {
-    const found = this.histories
+  read(userId: string, filename: string, id: string): Promise<string | null> {
+    const found = this.historiesOf(userId)
       .get(filename)
       ?.snapshots.find((snapshot) => snapshot.id.toString() === id)
 
-    return found?.contents ?? null
+    return Promise.resolve(found?.contents ?? null)
   }
 
-  /**
-   * Records `contents` unless the save adds nothing, applying the same rule the
-   * client does.
-   * @param now the server's own clock. A history spans a student's machines, so
-   *        two clocks that disagreed would interleave snapshots into an order
-   *        matching neither -- the client's timestamp is deliberately not used.
-   */
   record(
+    userId: string,
     filename: string,
     contents: string,
     now: Date,
     force: boolean,
-  ): RecordOutcome {
+  ): Promise<RecordOutcome> {
     // No history of the IDE's own state, matching the flat-file backend.
-    if (isHiddenName(filename)) return { recorded: false, head: null }
+    if (isHiddenName(filename)) {
+      return Promise.resolve({ recorded: false, head: null })
+    }
 
-    const history = this.histories.get(filename) ?? { snapshots: [] }
+    const histories = this.historiesOf(userId)
+    const history = histories.get(filename) ?? { snapshots: [] }
     const head =
       history.snapshots.length === 0
         ? null
@@ -111,9 +104,9 @@ export class HistoryStore {
       // and nothing else would clear it.
       if (history.deletedAt !== undefined) {
         delete history.deletedAt
-        this.histories.set(filename, history)
+        histories.set(filename, history)
       }
-      return { recorded: false, head: headOf(history) }
+      return Promise.resolve({ recorded: false, head: headOf(history) })
     }
 
     const snapshot: StoredSnapshot = {
@@ -125,35 +118,39 @@ export class HistoryStore {
     // reason a row-per-snapshot store exists.
     history.snapshots = [snapshot, ...history.snapshots].slice(0, MAX_SNAPSHOTS)
     delete history.deletedAt
-    this.histories.set(filename, history)
+    histories.set(filename, history)
 
-    return { recorded: true, head: headOf(history) }
+    return Promise.resolve({ recorded: true, head: headOf(history) })
   }
 
-  /**
-   * Moves `from`'s history onto `to`, overwriting whatever `to` had.
-   * @returns true iff `from` had a history to move
-   */
-  rename(from: string, to: string): boolean {
-    if (isHiddenName(from) || isHiddenName(to)) return false
+  rename(userId: string, from: string, to: string): Promise<boolean> {
+    if (isHiddenName(from) || isHiddenName(to)) return Promise.resolve(false)
 
-    const history = this.histories.get(from)
-    if (history === undefined) return false
+    const histories = this.historiesOf(userId)
+    const history = histories.get(from)
+    if (history === undefined) return Promise.resolve(false)
 
-    this.histories.delete(from)
-    this.histories.set(to, history)
-    return true
+    histories.delete(from)
+    histories.set(to, history)
+    return Promise.resolve(true)
   }
 
-  /**
-   * Marks `filename`'s history deleted, keeping it recoverable. A file with no
-   * history stays without one -- deleting shouldn't leave litter behind.
-   */
-  markDeleted(filename: string, now: Date): void {
-    const history = this.histories.get(filename)
-    if (history === undefined || history.snapshots.length === 0) return
+  markDeleted(userId: string, filename: string, now: Date): Promise<void> {
+    const history = this.historiesOf(userId).get(filename)
+    if (history !== undefined && history.snapshots.length > 0) {
+      history.deletedAt = now.toISOString()
+    }
+    return Promise.resolve()
+  }
 
-    history.deletedAt = now.toISOString()
+  /** @returns `userId`'s histories, creating the namespace on first write. */
+  private historiesOf(userId: string): Map<string, StoredHistory> {
+    let histories = this.users.get(userId)
+    if (histories === undefined) {
+      histories = new Map<string, StoredHistory>()
+      this.users.set(userId, histories)
+    }
+    return histories
   }
 }
 

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ServerFileSystem } from '../../src/fs/server'
 import { route } from '../../server/src/api'
-import { FileStore } from '../../server/src/store'
-import { HistoryStore } from '../../server/src/history-store'
+import { MemoryFileStore } from '../../server/src/store'
+import { MemoryHistoryStore } from '../../server/src/history-store'
 
 const BASE_URL = 'https://files.example/api/v1'
 
@@ -13,8 +13,11 @@ interface Seen {
   credentials: RequestCredentials | undefined
 }
 
-let store: FileStore
-let history: HistoryStore
+let store: MemoryFileStore
+let history: MemoryHistoryStore
+
+/** The signed-in user the fake server attributes every request to. */
+const USER = 'user-1'
 let seen: Seen[]
 
 /**
@@ -32,17 +35,24 @@ function installFakeServer(): void {
       typeof init?.body === 'string'
         ? (JSON.parse(init.body) as unknown)
         : undefined
-    const reply = route(
-      { method, path: url.pathname, body, now: new Date('2026-08-07T14:00:00.000Z') },
+    return route(
+      {
+        method,
+        path: url.pathname,
+        body,
+        now: new Date('2026-08-07T14:00:00.000Z'),
+        userId: USER,
+      },
       { files: store, history },
+    ).then(
+      (reply) =>
+        ({
+          ok: reply.status >= 200 && reply.status < 300,
+          status: reply.status,
+          statusText: '',
+          json: () => Promise.resolve(reply.body),
+        }) as Response,
     )
-
-    return Promise.resolve({
-      ok: reply.status >= 200 && reply.status < 300,
-      status: reply.status,
-      statusText: '',
-      json: () => Promise.resolve(reply.body),
-    } as Response)
   })
 }
 
@@ -52,8 +62,8 @@ function requestCount(): number {
 }
 
 beforeEach(() => {
-  store = new FileStore()
-  history = new HistoryStore()
+  store = new MemoryFileStore()
+  history = new MemoryHistoryStore()
   seen = []
   installFakeServer()
 })
@@ -145,7 +155,7 @@ describe('fileExists stays off the network', () => {
 
   test('concurrent cold lookups collapse into one request', async () => {
     const fs = ServerFileSystem.create(BASE_URL)
-    store.write('a.scm', 'x')
+    await store.write(USER, 'a.scm', 'x')
 
     const answers = await Promise.all([
       fs.fileExists('a.scm'),
@@ -195,7 +205,7 @@ describe('fileExists stays off the network', () => {
     await fs.fileExists('elsewhere.scm')
 
     // Something outside this tab writes a file.
-    store.write('elsewhere.scm', 'x')
+    await store.write(USER, 'elsewhere.scm', 'x')
 
     expect(await fs.fileExists('elsewhere.scm')).toBe(false)
     await fs.getFileList()
@@ -238,7 +248,7 @@ describe('failures surface rather than corrupt', () => {
 
     // Once the network returns, the next lookup must retry rather than answer
     // from a cache that was never filled.
-    store.write('a.scm', 'x')
+    await store.write(USER, 'a.scm', 'x')
     installFakeServer()
     expect(await fs.fileExists('a.scm')).toBe(true)
   })

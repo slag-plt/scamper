@@ -1,72 +1,60 @@
-// src/fs/fs.ts is the contract both halves implement, and the one module in
-// src/ the server may import outright: sharing `isHiddenName` is what keeps
-// this backend and OPFS agreeing on what counts as a user's own file.
-import { isHiddenName, type FileEntry } from '../../src/fs/fs'
-
-/** How many leading lines of a file the listing carries as its preview. */
-const PREVIEW_LINES = 5
+import type { FileEntry } from '../../src/fs/fs'
+import { previewOf, type FileStore } from './stores'
 
 /**
- * A stub file store: in memory, no authentication, one shared namespace.
+ * Files in memory, per user.
  *
- * This exists so the client seam in `src/fs/server.ts` has something real to
- * talk to while the durable half is built. MariaDB-backed, per-user storage
- * behind BetterAuth replaces it (issue #357); the routes in `api.ts` are the
- * part meant to survive that swap.
+ * Used by the tests, which drive the real route layer against it, and by a
+ * checkout with no database configured. `MariaDbFileStore` is the durable one.
+ *
+ * Async like its counterpart even though nothing here waits: the interface is
+ * shaped by the database, and a synchronous variant would only let a caller
+ * forget an `await` that matters in production.
  */
-export class FileStore {
-  private readonly files = new Map<string, string>()
+export class MemoryFileStore implements FileStore {
+  private readonly users = new Map<string, Map<string, string>>()
 
-  /**
-   * @returns every file, ordered the way the file drawer expects: directories
-   *          first, then by name. Nothing here creates directories, but the
-   *          ordering matches `src/fs/opfs.ts` so the two backends agree.
-   */
-  list(): FileEntry[] {
-    const entries = [...this.files.entries()].map(([name, contents]) => ({
+  list(userId: string): Promise<FileEntry[]> {
+    const files = this.users.get(userId) ?? new Map<string, string>()
+    const entries = [...files.entries()].map(([name, contents]) => ({
       name,
-      // Computed here rather than by the client, which is the point of having
-      // a server: a listing costs one request instead of one read per file.
-      //
-      // Dotted names carry no preview, matching src/fs/opfs.ts and
-      // src/fs/node.ts. This is not cosmetic: a file's saved history lives
-      // beside it as `.{filename}.history` and holds up to fifty whole
-      // snapshots, so previewing one would put every past version of every
-      // file into a listing nothing displays them in.
-      preview: isHiddenName(name)
-        ? null
-        : contents.split('\n').slice(0, PREVIEW_LINES).join('\n'),
+      preview: previewOf(name, contents),
       isDirectory: false,
     }))
 
-    return entries.sort((a, b) => a.name.localeCompare(b.name))
+    return Promise.resolve(entries.sort((a, b) => a.name.localeCompare(b.name)))
   }
 
-  /** @returns the contents of `name`, or undefined if it does not exist */
-  read(name: string): string | undefined {
-    return this.files.get(name)
+  read(userId: string, name: string): Promise<string | undefined> {
+    return Promise.resolve(this.users.get(userId)?.get(name))
   }
 
-  /** Saves `contents` to `name`, creating it if it does not already exist. */
-  write(name: string, contents: string): void {
-    this.files.set(name, contents)
+  write(userId: string, name: string, contents: string): Promise<void> {
+    this.filesOf(userId).set(name, contents)
+    return Promise.resolve()
   }
 
-  /** @returns true iff `name` existed and was removed */
-  remove(name: string): boolean {
-    return this.files.delete(name)
+  remove(userId: string, name: string): Promise<boolean> {
+    return Promise.resolve(this.users.get(userId)?.delete(name) ?? false)
   }
 
-  /**
-   * Renames `from` to `to`, overwriting `to` if it exists.
-   * @returns true iff `from` existed
-   */
-  rename(from: string, to: string): boolean {
-    const contents = this.files.get(from)
-    if (contents === undefined) return false
+  rename(userId: string, from: string, to: string): Promise<boolean> {
+    const files = this.filesOf(userId)
+    const contents = files.get(from)
+    if (contents === undefined) return Promise.resolve(false)
 
-    this.files.delete(from)
-    this.files.set(to, contents)
-    return true
+    files.delete(from)
+    files.set(to, contents)
+    return Promise.resolve(true)
+  }
+
+  /** @returns `userId`'s files, creating the namespace on first write. */
+  private filesOf(userId: string): Map<string, string> {
+    let files = this.users.get(userId)
+    if (files === undefined) {
+      files = new Map<string, string>()
+      this.users.set(userId, files)
+    }
+    return files
   }
 }

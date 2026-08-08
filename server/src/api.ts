@@ -1,5 +1,4 @@
-import type { FileStore } from './store'
-import type { HistoryStore } from './history-store'
+import type { FileStore, HistoryStore, Stores } from './stores'
 
 /**
  * The prefix every route lives under.
@@ -36,13 +35,17 @@ export interface ApiRequest {
    * pure function of its inputs and a test can pin the time.
    */
   now: Date
+  /**
+   * Whose files these are, or null if the request carried no session.
+   *
+   * Resolved by the HTTP layer and checked here rather than there, so the rule
+   * that every route but `health` needs a session is stated where the routes
+   * are -- and where a test can pin it.
+   */
+  userId: string | null
 }
 
-/** The stores a request is dispatched against. */
-export interface Stores {
-  files: FileStore
-  history: HistoryStore
-}
+export type { Stores }
 
 /** @returns the string at `key` in `body`, or undefined if it is not one */
 function field(body: unknown, key: string): string | undefined {
@@ -61,21 +64,33 @@ function field(body: unknown, key: string): string | undefined {
  * @returns the reply to send, including the 404 for an unclaimed path and the
  *          405 for a path that exists under a method it does not serve
  */
-export function route(request: ApiRequest, stores: Stores): ApiResponse {
-  const { method, path, body, now } = request
+export async function route(
+  request: ApiRequest,
+  stores: Stores,
+): Promise<ApiResponse> {
+  const { method, path, body, now, userId } = request
   const store = stores.files
 
+  // Answered without a session: it says the server is up and which API this
+  // is, and a client asks it before anyone has logged in.
   if (path === `${API_ROOT}/health`) {
     return { status: 200, body: { status: 'ok', api: API_ROOT } }
   }
 
+  if (userId === null) {
+    return {
+      status: 401,
+      body: { error: 'Not signed in' },
+    }
+  }
+
   if (path.startsWith(`${HISTORY_ROOT}/`)) {
-    return routeHistory(method, path, body, now, stores.history)
+    return routeHistory(method, path, body, now, userId, stores.history)
   }
 
   if (path === `${FS_ROOT}/files`) {
     if (method !== 'GET') return methodNotAllowed(method)
-    return { status: 200, body: { files: store.list() } }
+    return { status: 200, body: { files: await store.list(userId) } }
   }
 
   if (path === `${FS_ROOT}/rename`) {
@@ -87,29 +102,32 @@ export function route(request: ApiRequest, stores: Stores): ApiResponse {
       return badRequest('rename needs string `from` and `to` fields')
     }
 
-    return store.rename(from, to) ? { status: 204 } : notFound(from)
+    return (await store.rename(userId, from, to))
+      ? { status: 204 }
+      : notFound(from)
   }
 
   if (path.startsWith(`${FS_ROOT}/files/`)) {
     // A filename is one percent-encoded path segment, so it round-trips names
     // holding slashes, spaces, or anything else a student types.
     const name = decodeURIComponent(path.slice(`${FS_ROOT}/files/`.length))
-    return routeFile(method, name, body, store)
+    return routeFile(method, name, body, userId, store)
   }
 
   return { status: 404, body: { error: `No such endpoint: ${path}` } }
 }
 
 /** Dispatches the read/write/delete routes for a single named file. */
-function routeFile(
+async function routeFile(
   method: string,
   name: string,
   body: unknown,
+  userId: string,
   store: FileStore,
-): ApiResponse {
+): Promise<ApiResponse> {
   switch (method) {
     case 'GET': {
-      const contents = store.read(name)
+      const contents = await store.read(userId, name)
       return contents === undefined
         ? notFound(name)
         : { status: 200, body: { contents } }
@@ -121,12 +139,14 @@ function routeFile(
         return badRequest('save needs a string `contents` field')
       }
 
-      store.write(name, contents)
+      await store.write(userId, name, contents)
       return { status: 204 }
     }
 
     case 'DELETE':
-      return store.remove(name) ? { status: 204 } : notFound(name)
+      return (await store.remove(userId, name))
+        ? { status: 204 }
+        : notFound(name)
 
     default:
       return methodNotAllowed(method)
@@ -142,13 +162,14 @@ function routeFile(
  * copies of a file, so shipping them all to draw a list of timestamps would
  * undo the reason for keeping snapshots as rows.
  */
-function routeHistory(
+async function routeHistory(
   method: string,
   path: string,
   body: unknown,
   now: Date,
+  userId: string,
   history: HistoryStore,
-): ApiResponse {
+): Promise<ApiResponse> {
   if (path === `${HISTORY_ROOT}/rename`) {
     if (method !== 'POST') return methodNotAllowed(method)
 
@@ -158,7 +179,7 @@ function routeHistory(
       return badRequest('rename needs string `from` and `to` fields')
     }
 
-    history.rename(from, to)
+    await history.rename(userId, from, to)
     // Renaming a file with no history is ordinary, not an error: the file
     // simply had nothing recorded yet.
     return { status: 204 }
@@ -166,7 +187,7 @@ function routeHistory(
 
   if (path === `${HISTORY_ROOT}/files`) {
     if (method !== 'GET') return methodNotAllowed(method)
-    return { status: 200, body: { files: history.list() } }
+    return { status: 200, body: { files: await history.list(userId) } }
   }
 
   if (!path.startsWith(`${HISTORY_ROOT}/files/`)) {
@@ -180,7 +201,11 @@ function routeHistory(
   if (rest.length === 2) {
     if (method !== 'GET') return methodNotAllowed(method)
 
-    const contents = history.read(name, decodeURIComponent(rest[1]))
+    const contents = await history.read(
+      userId,
+      name,
+      decodeURIComponent(rest[1]),
+    )
     return contents === null
       ? { status: 404, body: { error: `No such snapshot: ${rest[1]}` } }
       : { status: 200, body: { contents } }
@@ -192,7 +217,7 @@ function routeHistory(
 
   switch (method) {
     case 'GET':
-      return { status: 200, body: history.index(name) }
+      return { status: 200, body: await history.index(userId, name) }
 
     case 'POST': {
       const contents = field(body, 'contents')
@@ -201,11 +226,14 @@ function routeHistory(
       }
 
       const force = (body as { force?: unknown }).force === true
-      return { status: 200, body: history.record(name, contents, now, force) }
+      return {
+        status: 200,
+        body: await history.record(userId, name, contents, now, force),
+      }
     }
 
     case 'DELETE':
-      history.markDeleted(name, now)
+      await history.markDeleted(userId, name, now)
       return { status: 204 }
 
     default:

@@ -16,17 +16,69 @@ That starts this server and a front end wired to it, and the IDE then keeps
 files here instead of in the browser. See **Running the two halves together**
 below for how they are connected, and why it is done that way.
 
-> **Storage is currently a stub.** `src/store.ts` and `src/history-store.ts`
-> keep everything in memory, in one shared namespace, with no authentication —
-> enough for the client seams in `src/fs/server.ts` and `src/history/server.ts`
-> to talk to something real. MariaDB-backed per-user storage behind BetterAuth
-> replaces them; the routes and the shape in `schema.sql` are the parts meant to
-> survive that swap. Do not deploy this as-is.
+## Configuration
+
+| Variable              | Meaning                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`        | `mysql://user:pass@host:3306/scamper` — where files are kept    |
+| `BETTER_AUTH_SECRET`  | signs sessions; `openssl rand -base64 32`                       |
+| `BETTER_AUTH_URL`     | the origin Scamper is served from                               |
+| `PORT`                | defaults to 3000                                                |
+| `ALLOWED_ORIGIN`      | only for a split-origin deployment (see below)                  |
+| `SCAMPER_STUB`        | `1` to run in memory with no sign-in — development only         |
+
+**A server with no `DATABASE_URL` refuses to start.** It could instead fall back
+to the in-memory store, but that store has no sign-in and one shared namespace,
+so a deployment that lost its configuration would quietly serve every student
+the same pile of files. Failing to start is the safer of the two, and
+`SCAMPER_STUB=1` is how a front-end contributor asks for the in-memory one on
+purpose (`npm run dev:full` sets it).
+
+## Setting up a database
+
+BetterAuth owns the `user`, `session`, `account`, and `verification` tables and
+its CLI creates them; ours reference `user`, so it goes first:
+
+```console
+export DATABASE_URL='mysql://root:secret@127.0.0.1:3306/scamper'
+export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
+export BETTER_AUTH_URL='http://localhost:5173'
+npm run db:migrate --workspace @scamper/server
+```
+
+`files`, `histories`, and `snapshots` are ours, and `src/db.ts` applies
+`schema.sql` at every start. Every statement there is `IF NOT EXISTS`, so that
+is a no-op once done, and a fresh checkout needs no separate step.
+
+A MariaDB to point it at, if you have Docker:
+
+```console
+docker run -d --name scamper-mariadb -e MARIADB_ROOT_PASSWORD=secret \
+  -e MARIADB_DATABASE=scamper -p 3306:3306 mariadb:11
+```
+
+## Sign-in
+
+Email and password, via BetterAuth mounted at `/api/auth/*`. That method needs
+no third-party registration, so a contributor can create an account against a
+local database and exercise the whole flow offline. Adding an identity provider
+later — campus Google, say — is configuration in `src/auth.ts` plus a button in
+the login form; nothing downstream cares, because everything downstream keys off
+`session.user.id`.
+
+Every route but `/api/v1/health` needs a session and answers **401** without
+one. That check lives in `src/api.ts` rather than in the HTTP layer, so the rule
+is stated where the routes are and a test can pin it.
+
+> **Not yet production-ready.** Nothing verifies an email address, so anyone who
+> can reach the server can create an account. That gate — an allowlist, campus
+> SSO, or mail-backed verification — has to be decided before this is exposed.
 
 ## The API
 
 Every route mirrors one method of the `FS` interface, so the two stay in step.
-A filename is a single percent-encoded path segment.
+A filename is a single percent-encoded path segment. Everything below is scoped
+to the signed-in user, and answers 401 without a session (except `health`).
 
 | Method   | Path                              | Meaning                                     |
 | -------- | --------------------------------- | ------------------------------------------- |
@@ -42,6 +94,7 @@ A filename is a single percent-encoded path segment.
 | `POST`   | `/api/v1/history/files/{name}`    | record `{ contents, force }`                |
 | `DELETE` | `/api/v1/history/files/{name}`    | mark deleted, keeping the snapshots         |
 | `POST`   | `/api/v1/history/rename`          | `{ from, to }`                              |
+| *        | `/api/auth/*`                     | BetterAuth: sign-up, sign-in, sign-out, session |
 
 The listing carries each file's preview because computing them client-side
 costs one request per file. `rename` is one route rather than a copy-then-delete
@@ -84,13 +137,18 @@ is, so there is one behaviour to reason about.
 `SCAMPER_SERVER_PORT` moves this server (and the proxy that follows it) off
 3000.
 
-**Nothing here is authenticated yet.** `src/app/web/dev-backend.ts` switches the
-IDE onto the server when `/config.json` is present, and is compiled out of any
-build that is not a `--mode server` dev server. That guard exists because the
-store keeps everyone's files in one namespace: were a production build to switch
-on the mere presence of a config, a single `npm run deploy:server-url` would put
-every student into the same pile of files. Logging in is what will move a user's
-files, once there is a login.
+By default `dev:full` sets `SCAMPER_STUB=1`, so the back end runs in memory with
+no sign-in — which is what someone working on the front end wants. Set
+`DATABASE_URL` (and the two `BETTER_AUTH_*` variables) in the environment you run
+it from and it uses the database and real sessions instead.
+
+`src/app/web/dev-backend.ts` switches the IDE onto the server when
+`/config.json` is present, and is compiled out of any build that is not a
+`--mode server` dev server. That guard is why the stub cannot escape into a
+release: were a production build to switch on the mere presence of a config, a
+single `npm run deploy:server-url` would put every student into the same pile of
+files. Signing in is what will move a user's files — the login UI is still to
+come, so in database mode the IDE currently gets 401s until one exists.
 
 ## Cross-origin
 

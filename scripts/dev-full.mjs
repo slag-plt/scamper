@@ -79,7 +79,13 @@ console.info(
     '[dev:full] The IDE will use the server instead of local storage.',
 )
 
-run('the back end', ['run', 'dev:server'], { PORT: port })
+// With no database configured the back end refuses to start rather than
+// silently serving everyone from one unauthenticated namespace. That namespace
+// is exactly what a front-end contributor wants, though, so ask for it -- and
+// stay out of the way if a real DATABASE_URL is set.
+const stub = process.env.DATABASE_URL ? {} : { SCAMPER_STUB: '1' }
+
+run('the back end', ['run', 'dev:server'], { PORT: port, ...stub })
 run('the front end', ['run', 'dev', '--', '--mode', 'server'], {
   SCAMPER_SERVER_PORT: port,
 })

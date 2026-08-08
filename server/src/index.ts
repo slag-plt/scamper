@@ -1,8 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
-import { FileStore } from './store'
-import { HistoryStore } from './history-store'
+import { createAuth, type Auth } from './auth'
+import { applySchema, connect } from './db'
+import { authBaseUrl, authSecret } from './env'
+import { MemoryFileStore } from './store'
+import { MemoryHistoryStore } from './history-store'
+import { MariaDbFileStore, MariaDbHistoryStore } from './mariadb-stores'
+import type { Stores } from './stores'
 
 /** The port to listen on. PORT overrides it wherever this gets deployed. */
 const PORT = Number(process.env.PORT ?? 3000)
@@ -23,10 +29,59 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN
  */
 const MAX_BODY_BYTES = 5 * 1024 * 1024
 
-const stores = {
-  files: new FileStore(),
-  history: new HistoryStore(),
+/** Where BetterAuth's own routes live. Its handler owns everything below it. */
+const AUTH_ROOT = '/api/auth'
+
+/**
+ * The id every request is attributed to when the server runs without a
+ * database. There is no sign-in then, so there is one user, and saying so
+ * explicitly beats scattering "if unauthenticated" through the stores.
+ */
+const STUB_USER_ID = 'stub-user'
+
+/**
+ * Chooses storage from the environment.
+ *
+ * With `DATABASE_URL` the server is the real thing: MariaDB, and BetterAuth
+ * sessions deciding whose files a request sees. Without it, everything is in
+ * memory and unauthenticated -- convenient for working on the front end, and
+ * ruinous if it ever happened in production by accident. So it is not a silent
+ * fallback: a server with no database refuses to start unless `SCAMPER_STUB=1`
+ * says that is what was wanted.
+ */
+async function configure(): Promise<{ stores: Stores; auth: Auth | null }> {
+  const url = process.env.DATABASE_URL
+
+  if (url === undefined || url === '') {
+    if (process.env.SCAMPER_STUB !== '1') {
+      throw new Error(
+        'DATABASE_URL is not set, so there is nowhere to keep anyone\'s files.\n' +
+          'Set it, or set SCAMPER_STUB=1 to run in memory with no sign-in ' +
+          '(development only -- every request shares one namespace).',
+      )
+    }
+    return {
+      stores: {
+        files: new MemoryFileStore(),
+        history: new MemoryHistoryStore(),
+      },
+      auth: null,
+    }
+  }
+
+  await applySchema(url)
+  const db = connect(url)
+  return {
+    stores: {
+      files: new MariaDbFileStore(db.sql),
+      history: new MariaDbHistoryStore(db.sql),
+    },
+    auth: createAuth(db.pool, authSecret(), authBaseUrl()),
+  }
 }
+
+const { stores, auth } = await configure()
+const authHandler = auth === null ? null : toNodeHandler(auth)
 
 /**
  * Reads and parses a JSON request body.
@@ -64,6 +119,19 @@ function applyCors(res: ServerResponse): void {
   res.setHeader('Vary', 'Origin')
 }
 
+/**
+ * @returns the id of the user this request is for, or null if it carries no
+ *          valid session. Without auth configured there is only one user.
+ */
+async function userOf(req: IncomingMessage): Promise<string | null> {
+  if (auth === null) return STUB_USER_ID
+
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  })
+  return session?.user.id ?? null
+}
+
 const server = createServer((req, res) => {
   void (async () => {
     applyCors(res)
@@ -84,6 +152,19 @@ const server = createServer((req, res) => {
       return
     }
 
+    // BetterAuth owns everything under /api/auth: sign-up, sign-in, sign-out,
+    // session. It reads the request stream itself, so it has to come before
+    // readBody() below consumes it.
+    if (url.pathname.startsWith(`${AUTH_ROOT}/`) || url.pathname === AUTH_ROOT) {
+      if (authHandler === null) {
+        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'This server has no sign-in' }))
+        return
+      }
+      await authHandler(req, res)
+      return
+    }
+
     let body: unknown
     try {
       body = await readBody(req)
@@ -93,8 +174,14 @@ const server = createServer((req, res) => {
       return
     }
 
-    const { status, body: reply } = route(
-      { method, path: url.pathname, body, now: new Date() },
+    const { status, body: reply } = await route(
+      {
+        method,
+        path: url.pathname,
+        body,
+        now: new Date(),
+        userId: await userOf(req),
+      },
       stores,
     )
 
@@ -114,6 +201,8 @@ server.listen(PORT, () => {
     `Scamper server listening on http://localhost:${PORT.toString()}${API_ROOT}`,
   )
   console.log(
-    'Storage is the in-memory stub: no authentication, no persistence.',
+    auth === null
+      ? 'Storage is the in-memory stub: no sign-in, no persistence, one shared namespace.'
+      : 'Storage is MariaDB, and requests need a session.',
   )
 })
