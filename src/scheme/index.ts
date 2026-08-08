@@ -6,7 +6,7 @@ import { ScamperDiagnostic, mkDiagnostic } from './diagnostic.js'
 import { scopeCheckProgram } from './scope.js'
 import { FiberRaiser } from '../lpm/raiser.js'
 import { raiseFiber } from './raise.js'
-import { parseProgramFromSource } from './lezer-bridge.js'
+import { ParseOptions, parseProgramFromSource } from './lezer-bridge.js'
 import { Exp, mkDisp, Prog } from './ast.js'
 import { getQueriedProgram } from './query'
 import { isExampleTag } from './docstring/tags/example-tag'
@@ -43,16 +43,26 @@ export interface QueryParseResult extends ParseResult {
  * definition's example for on-demand evaluation (see the query/example-tag
  * feature) and reports the queried range.
  * @param queryLoc a cursor position to build a query program around, if any
+ * @param opts parse-level knobs; see ParseOptions
  * @returns the program (absent on a fatal parse or query error) and any diagnostics
  */
-export function tokenizeAndParse(src: string): ParseResult
-export function tokenizeAndParse(src: string, queryLoc: Loc): QueryParseResult
+export function tokenizeAndParse(
+  src: string,
+  queryLoc?: undefined,
+  opts?: ParseOptions,
+): ParseResult
+export function tokenizeAndParse(
+  src: string,
+  queryLoc: Loc,
+  opts?: ParseOptions,
+): QueryParseResult
 export function tokenizeAndParse(
   src: string,
   queryLoc?: Loc,
+  opts: ParseOptions = {},
 ): ParseResult | QueryParseResult {
   const diagnostics: ScamperDiagnostic[] = []
-  const program = parseProgramFromSource(diagnostics, src)
+  const program = parseProgramFromSource(diagnostics, src, opts)
   if (diagnostics.length > 0) {
     // A parse error leaves no usable program.
     return { diagnostics }
@@ -123,7 +133,7 @@ export function tokenizeAndParse(
 }
 
 /** Knobs for {@link compile}. */
-export interface CompileOptions {
+export interface CompileOptions extends ParseOptions {
   /** A cursor position for the on-demand query/example feature. */
   queryLoc?: Loc
   /** Whether to wrap documented definitions in runtime contract checks. */
@@ -161,11 +171,16 @@ export async function compile(
   src: string,
   opts: CompileOptions = {},
 ): Promise<CompileResult | QueryCompileResult> {
-  const { queryLoc, insertContracts = false, scopeCheck = false } = opts
+  const {
+    queryLoc,
+    insertContracts = false,
+    scopeCheck = false,
+    allowInternalNames = false,
+  } = opts
 
   const parsed = queryLoc
-    ? tokenizeAndParse(src, queryLoc)
-    : tokenizeAndParse(src)
+    ? tokenizeAndParse(src, queryLoc, { allowInternalNames })
+    : tokenizeAndParse(src, undefined, { allowInternalNames })
   const diagnostics = [...parsed.diagnostics]
   if (parsed.program === undefined) {
     return queryLoc ? { queriedRange: undefined, diagnostics } : { diagnostics }

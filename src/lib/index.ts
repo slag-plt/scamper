@@ -20,8 +20,13 @@ import { librarySources } from './generated/sources.js'
 async function loadLibrary(name: string, src: string): Promise<L.Module> {
   // N.B., insertContracts=true: only the standard library gets its exports
   // wrapped with contract checks derived from their docstrings, not
-  // arbitrary user programs.
-  const { prog, diagnostics } = await compile(src, { insertContracts: true })
+  // arbitrary user programs. allowInternalNames is narrower still: the
+  // `##...##` shape is reserved for the runtime (see ParseOptions), and
+  // runtime.scm is the interop layer that binds those primitives.
+  const { prog, diagnostics } = await compile(src, {
+    insertContracts: true,
+    allowInternalNames: name === 'runtime',
+  })
   if (prog === undefined || diagnostics.length > 0) {
     throw new L.ICE(
       'lib.loadLibrary',
@@ -136,7 +141,9 @@ export async function initializeLibs(): Promise<void> {
     builtinLibs.set(name, mod)
   }
   for (const [name, src] of librarySources) {
-    const { program } = tokenizeAndParse(src)
+    const { program } = tokenizeAndParse(src, undefined, {
+      allowInternalNames: name === 'runtime',
+    })
     docRegistry.set(
       name,
       program ? extractDocs(program) : new Map<string, FunctionDoc>(),

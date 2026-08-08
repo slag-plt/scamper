@@ -53,6 +53,8 @@ class Ctx {
     public src: string,
     public lineStarts: number[],
     public diagnostics: ScamperDiagnostic[],
+    // See ParseOptions.allowInternalNames.
+    public allowInternalNames = false,
   ) {}
 
   // N.B., reader.ts's ranges are inclusive on the end position (it points at
@@ -198,6 +200,13 @@ function isPercentId(name: string): boolean {
   return name === '%' || name === '%&' || /^%[1-9][0-9]*$/.test(name)
 }
 
+// An *internal* name: `##...##`, the shape expansion and contract insertion
+// use for the primitives they inject by reference (`##mkVec##`, `##mkCtorFn##`,
+// ...). Only src/lib/runtime.scm may bind one -- see identifierName.
+function isInternalName(name: string): boolean {
+  return name.length > 4 && name.startsWith('##') && name.endsWith('##')
+}
+
 // Validates a qualified reference `mod.member` (only reached when allowQualified
 // is set -- see identifierName). Each half must be a legal simple name: neither
 // a reserved word nor a `%` identifier (those name a `#(...)` parameter, which
@@ -261,6 +270,22 @@ function identifierName(
       return '<error>'
     }
     return qualifiedName(ctx, node, name)
+  }
+  if (isInternalName(name) && !allowPercent && !ctx.allowInternalNames) {
+    // Rejected everywhere but a variable reference (allowPercent is set only
+    // there -- see above). Binding an internal name captures the primitive a
+    // derived form expands to, silently changing what `[...]`, `struct`, ...
+    // mean, so the shape is reserved and only runtime.scm may bind it.
+    // Referring to one stays legal, as with the `%` parameters below.
+    ctx.diagnostics.push(
+      mkDiagnostic(
+        'Parse',
+        'error',
+        `The identifier "${name}" is reserved for Scamper's internal use and cannot be used as a binding name`,
+        ctx.range(node),
+      ),
+    )
+    return '<error>'
   }
   if (name.startsWith('%')) {
     if (!isPercentId(name)) {
@@ -657,12 +682,28 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 
 ///// Entry point ///////////////////////////////////////////////////////////////
 
+/** Knobs for {@link parseProgramFromSource}. */
+export interface ParseOptions {
+  /**
+   * Whether internal `##...##` names may be bound. Set only for
+   * src/lib/runtime.scm, the interop layer that defines the primitives
+   * expansion injects; every other program is denied the shape.
+   */
+  allowInternalNames?: boolean
+}
+
 export function parseProgramFromSource(
   diagnostics: ScamperDiagnostic[],
   src: string,
+  opts: ParseOptions = {},
 ): A.Prog {
   const tree = parser.parse(src)
-  const ctx = new Ctx(src, computeLineStarts(src), diagnostics)
+  const ctx = new Ctx(
+    src,
+    computeLineStarts(src),
+    diagnostics,
+    opts.allowInternalNames,
+  )
   const prog: A.Prog = []
   for (const node of children(tree.topNode)) {
     // N.B., a stray error node here (e.g. an extra unmatched closing paren)
