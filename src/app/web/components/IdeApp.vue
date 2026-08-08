@@ -3,6 +3,12 @@ import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import * as SingleInstance from '../single-instance'
+import {
+  LEGACY_CONFIG_FILENAME,
+  readStoredConfig,
+  writeStoredConfig,
+  type Config,
+} from '../ide-config'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
@@ -32,14 +38,8 @@ import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes
 
 // ---------- config ----------
 
-const CONFIG_FILENAME = '.scamper.config'
 const OTHER_INSTANCE_MESSAGE =
   'Another instance of Scamper is open. Please close that instance and try again.'
-
-interface Config {
-  lastOpenedFilename: string | null
-  lastVersionAccessed: string
-}
 
 const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
@@ -104,41 +104,57 @@ async function populateFileDrawer() {
 
 // ---------- config persistence ----------
 
-async function saveConfig() {
-  await fs?.saveFile(CONFIG_FILENAME, JSON.stringify(config))
+function saveConfig() {
+  writeStoredConfig(config)
+}
+
+/**
+ * Reads the config an older build kept in the file system, removing it so this
+ * happens once. Without it, every existing user would look brand new.
+ * @returns the stored config, or null if there wasn't one
+ */
+async function takeLegacyConfig(): Promise<Partial<Config> | null> {
+  if (!fs) return null
+  try {
+    if (!(await fs.fileExists(LEGACY_CONFIG_FILENAME))) return null
+    const raw = await fs.loadFile(LEGACY_CONFIG_FILENAME)
+    await fs.deleteFile(LEGACY_CONFIG_FILENAME)
+    return JSON.parse(raw) as Partial<Config>
+  } catch {
+    // A leftover we can't read is one we can do without.
+    return null
+  }
 }
 
 async function loadConfig() {
-  if (!fs) return
-  if (await fs.fileExists(CONFIG_FILENAME)) {
-    // Merge over the defaults so a config written by an older build (missing a
-    // newer field) still loads with sane values.
-    const stored = JSON.parse(await fs.loadFile(CONFIG_FILENAME)) as Partial<Config>
-    config = { ...DEFAULT_CONFIG, ...stored }
-  } else {
-    // A brand-new user starts already "caught up" to the current version, so
-    // they aren't greeted with a backlog of patch notes.
-    config = { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
-    await saveConfig()
-  }
+  const stored = readStoredConfig() ?? (await takeLegacyConfig())
+  config =
+    stored === null
+      ? // A brand-new user starts already "caught up" to the current version,
+        // so they aren't greeted with a backlog of patch notes.
+        { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
+      : // Merge over the defaults so a config written by an older build
+        // (missing a newer field) still loads with sane values.
+        { ...DEFAULT_CONFIG, ...stored }
+  saveConfig()
 }
 
 // Records the current version as seen so its patch notes aren't shown again.
 // Only ever moves forward, so running an older build never rewinds the seen
 // version (which would re-show notes on a later re-upgrade).
-async function markVersionSeen() {
+function markVersionSeen() {
   if (compareVersions(config.lastVersionAccessed, APP_VERSION) < 0) {
     config.lastVersionAccessed = APP_VERSION
-    await saveConfig()
+    saveConfig()
   }
 }
 
 // Shows patch notes for any versions the user hasn't seen yet. The version is
 // recorded as seen as soon as the notes are shown (not on dismissal), so a user
 // who closes the tab without clicking through still isn't shown them again.
-async function showPatchNotesIfNeeded() {
+function showPatchNotesIfNeeded() {
   const unseen = patchNotesSince(config.lastVersionAccessed, APP_VERSION)
-  await markVersionSeen()
+  markVersionSeen()
   if (unseen.length > 0) {
     patchNotesToShow.value = unseen
     showPatchNotes.value = true
@@ -592,13 +608,13 @@ async function handleSelectFile(filename: string) {
 async function handleVisibilityChange() {
   if (document.visibilityState === 'hidden') {
     await saveCurrentFile()
-    await saveConfig()
+    saveConfig()
   }
 }
 
 async function handlePageHide() {
   await saveCurrentFile()
-  await saveConfig()
+  saveConfig()
   // The page may be frozen for the back/forward cache rather than destroyed,
   // so hand the lock back and re-acquire if we are restored. Pairing the two
   // is correct whether or not a frozen page keeps its lock.
@@ -615,7 +631,7 @@ async function handlePageShow(e: PageTransitionEvent) {
 
 async function handleBeforeUnload(e: BeforeUnloadEvent) {
   await saveCurrentFile()
-  await saveConfig()
+  saveConfig()
   if (isDirty.value) {
     e.preventDefault()
   }
@@ -680,7 +696,7 @@ onMounted(async () => {
   isLoading.value = false
   Scamper.getInstance().calibrateScheduler()
 
-  await showPatchNotesIfNeeded()
+  showPatchNotesIfNeeded()
 })
 
 onUnmounted(() => {

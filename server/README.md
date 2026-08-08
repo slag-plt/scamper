@@ -136,6 +136,13 @@ warm `fileExists` makes no request at all.
   to these routes.
 - `src/history/server.ts` is `ServerHistory`, the `History` implementation that
   talks to the history routes. `src/history/flat-file.ts` is the OPFS/CLI one.
+- `src/app/web/ide-config.ts` is the IDE's *own* settings — which file was open,
+  which patch notes have been seen — and is deliberately **not** an `FS` client.
+  It is per-machine state about a browsing session, so it lives in
+  `localStorage`: as a file it would follow the user between machines (opening a
+  laptop would inherit what the lab computer had open) and cost a write to the
+  server on every tab hide. Not to be confused with `src/fs/config.ts`, which is
+  the deployment's `/config.json`.
 - `src/fs/index.ts` exposes `setBackend()`, which is the login/logout seam. It
   takes a file system and a history together so a server file system can never
   end up paired with a flat-file history -- that combination would write

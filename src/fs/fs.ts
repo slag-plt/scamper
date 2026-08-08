@@ -8,8 +8,8 @@ export interface FileEntry {
 /**
  * @returns true iff `name` belongs to a file an app keeps for itself rather
  *          than one of the user's own. By convention a dotted name marks
- *          internal state -- the IDE's config and lock files, a file's saved
- *          history -- and the file drawer hides them.
+ *          internal state -- a file's saved history, a config left behind by an
+ *          older build -- and the file drawer hides them.
  */
 export function isHiddenName(name: string): boolean {
   return name.startsWith('.')

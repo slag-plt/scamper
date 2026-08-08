@@ -94,7 +94,7 @@ describe('IDE zip export', () => {
     await fs.saveFile('hello.scm', '(display "hello")')
     await fs.saveFile('shapes.scm', '(solid-square 100 "red")')
     // Internal state the student never sees in the drawer.
-    await fs.saveFile('.scamper.config', '{}')
+    await fs.saveFile('.hello.scm.history', '{"version":1}')
 
     const wrapper = await mountIde()
     try {
