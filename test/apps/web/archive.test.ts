@@ -31,7 +31,7 @@ describe('buildArchive', () => {
     const fs = new MockFileSystem()
     await fs.saveFile('hello.scm', '(display "hello")')
     await fs.saveFile('.scamper.config', '{}')
-    await fs.saveFile('.scamper.lock', '2026-08-07T00:00:00.000Z')
+    await fs.saveFile('.hello.scm.history', '{"version":1}')
     fs.addDirectory('assets')
 
     expect(Object.keys(await unzip(await buildArchive(fs)))).toEqual(['hello.scm'])

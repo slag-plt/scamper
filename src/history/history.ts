@@ -45,7 +45,7 @@ export interface RecordOptions {
   /**
    * The caller's cached head, letting a save that changes nothing skip storage
    * entirely -- and, on a server-backed history, skip the request as well.
-   * Sound because one instance holds the file lock (lockfile.ts). Leave it out
+   * Sound because one instance holds the file lock (single-instance.ts). Leave it out
    * -- rather than passing null -- when the head isn't known; callers must drop
    * a cached head when the file is deleted or renamed.
    */

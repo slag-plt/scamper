@@ -12,9 +12,10 @@ vi.mock('../../src/fs/opfs', async () => {
   return { default: MockFileSystem }
 })
 
-vi.mock('../../src/app/web/lockfile', () => ({
-  acquireLockFile: vi.fn(() => Promise.resolve(true)),
-  releaseLockFile: vi.fn(() => Promise.resolve()),
+vi.mock('../../src/app/web/single-instance', () => ({
+  acquireLock: vi.fn(() => Promise.resolve(true)),
+  releaseLock: vi.fn(),
+  holdsLock: vi.fn(() => true),
 }))
 
 vi.mock(

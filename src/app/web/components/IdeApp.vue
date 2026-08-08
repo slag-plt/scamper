@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
-import * as Lock from '../lockfile'
+import * as SingleInstance from '../single-instance'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
@@ -33,6 +33,8 @@ import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes
 // ---------- config ----------
 
 const CONFIG_FILENAME = '.scamper.config'
+const OTHER_INSTANCE_MESSAGE =
+  'Another instance of Scamper is open. Please close that instance and try again.'
 
 interface Config {
   lastOpenedFilename: string | null
@@ -591,22 +593,29 @@ async function handleVisibilityChange() {
   if (document.visibilityState === 'hidden') {
     await saveCurrentFile()
     await saveConfig()
-    if (fs) await Lock.releaseLockFile(fs)
-  } else {
-    if (fs) await Lock.acquireLockFile(fs)
   }
 }
 
 async function handlePageHide() {
   await saveCurrentFile()
   await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
+  // The page may be frozen for the back/forward cache rather than destroyed,
+  // so hand the lock back and re-acquire if we are restored. Pairing the two
+  // is correct whether or not a frozen page keeps its lock.
+  SingleInstance.releaseLock()
+}
+
+async function handlePageShow(e: PageTransitionEvent) {
+  // Only a bfcache restore needs this; a fresh load acquires in onMounted.
+  if (!e.persisted) return
+  if (!(await SingleInstance.acquireLock())) {
+    displayError(OTHER_INSTANCE_MESSAGE)
+  }
 }
 
 async function handleBeforeUnload(e: BeforeUnloadEvent) {
   await saveCurrentFile()
   await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
   if (isDirty.value) {
     e.preventDefault()
   }
@@ -618,6 +627,9 @@ const visibilityChangeWrapper = () => {
 }
 const pageHideWrapper = () => {
   void handlePageHide()
+}
+const pageShowWrapper = (e: Event) => {
+  void handlePageShow(e as PageTransitionEvent)
 }
 const beforeUnloadWrapper = (e: Event) => {
   void handleBeforeUnload(e as BeforeUnloadEvent)
@@ -640,15 +652,17 @@ onMounted(async () => {
     },
   )
 
-  const obtainedLock = await Lock.acquireLockFile(fs)
+  const obtainedLock = await SingleInstance.acquireLock()
   if (!obtainedLock) {
-    loadingContent.value =
-      'Another instance of Scamper is open. Please close that instance and try again.'
+    loadingContent.value = OTHER_INSTANCE_MESSAGE
     return
   }
 
+  // visibilitychange is a document event; pagehide/pageshow fire at the window
+  // and never reach a document listener.
   document.addEventListener('visibilitychange', visibilityChangeWrapper)
-  document.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pageshow', pageShowWrapper)
   window.addEventListener('beforeunload', beforeUnloadWrapper)
 
   await loadConfig()
@@ -673,7 +687,9 @@ onUnmounted(() => {
   stopAutosaving()
   session.stopAll()
   document.removeEventListener('visibilitychange', visibilityChangeWrapper)
-  document.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pageshow', pageShowWrapper)
+  SingleInstance.releaseLock()
   window.removeEventListener('beforeunload', beforeUnloadWrapper)
 })
 </script>
