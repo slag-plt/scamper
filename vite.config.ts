@@ -8,6 +8,7 @@ import { schemeParserPlugin } from './scripts/vite-plugin-scheme-parser.mjs'
 import { libSourcesPlugin } from './scripts/vite-plugin-lib-sources.mjs'
 import { flattenHtmlPlugin } from './scripts/vite-plugin-flatten-html.mjs'
 import { devFlatHtmlPlugin } from './scripts/vite-plugin-dev-flat-html.mjs'
+import { devServerConfigPlugin } from './scripts/vite-plugin-dev-server-config.mjs'
 
 // Read the version from package.json directly so it's correct regardless of
 // how the build/test runner was launched. `npm_package_version` is only set by
@@ -31,7 +32,19 @@ const htmlEntries: Record<string, string> = {
   'scamper-search': 'src/app/search/search.html',
 }
 
-export default defineConfig({
+// `vite --mode server` (i.e. `npm run dev:full`) runs the front end against the
+// back end in `server/`. Everything below is off in the default `npm run dev`,
+// which knows nothing of a server and stays on local storage.
+//
+// The dev server proxies the API rather than letting the browser call
+// localhost:3000 directly, so a dev checkout is single-origin exactly as
+// production is -- one host serving the static site and /api alike. That keeps
+// cookies, SameSite, and CORS from behaving one way in dev and another in
+// production, which is the failure this whole arrangement exists to avoid.
+const API_PREFIX = '/api'
+const devServerPort = process.env.SCAMPER_SERVER_PORT ?? '3000'
+
+export default defineConfig(({ command, mode }) => ({
   build: {
     rolldownOptions: {
       input: Object.fromEntries(
@@ -52,12 +65,31 @@ export default defineConfig({
     schemeParserPlugin(),
     libSourcesPlugin(),
     devFlatHtmlPlugin(Object.values(htmlEntries), ideEntry),
+    // Vite drops falsy entries, so this is "only in `--mode server`".
+    mode === 'server' && devServerConfigPlugin(`${API_PREFIX}/v1`),
     vue(),
     flattenHtmlPlugin(),
   ],
 
+  server:
+    mode === 'server'
+      ? {
+          proxy: {
+            [API_PREFIX]: {
+              target: `http://localhost:${devServerPort}`,
+              // Keep the browser's Host header: the back end sees the request
+              // as same-origin, which is what it will be in production.
+              changeOrigin: false,
+            },
+          },
+        }
+      : {},
+
   define: {
     APP_VERSION: JSON.stringify(AppVersion),
+    SCAMPER_DEV_SERVER: JSON.stringify(
+      command === 'serve' && mode === 'server',
+    ),
   },
 
   test: {
@@ -79,4 +111,4 @@ export default defineConfig({
       reporter: ['lcov'],
     },
   },
-})
+}))

@@ -7,9 +7,10 @@ import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
 import { initialize } from '../../../src/scamper'
 
-vi.mock('../../../src/app/web/lockfile', () => ({
-  acquireLockFile: vi.fn(() => Promise.resolve(true)),
-  releaseLockFile: vi.fn(() => Promise.resolve()),
+vi.mock('../../../src/app/web/single-instance', () => ({
+  acquireLock: vi.fn(() => Promise.resolve(true)),
+  releaseLock: vi.fn(),
+  holdsLock: vi.fn(() => true),
 }))
 
 vi.mock(
@@ -38,7 +39,7 @@ describe('IDE zip export', () => {
 
   beforeEach(() => {
     fs = new MockFileSystem()
-    FS.setFS(fs)
+    FS.setBackend(FS.localBackend(fs))
 
     // jsdom implements neither half of the object-URL API.
     blobs = new Map()
@@ -93,7 +94,7 @@ describe('IDE zip export', () => {
     await fs.saveFile('hello.scm', '(display "hello")')
     await fs.saveFile('shapes.scm', '(solid-square 100 "red")')
     // Internal state the student never sees in the drawer.
-    await fs.saveFile('.scamper.config', '{}')
+    await fs.saveFile('.hello.scm.history', '{"version":1}')
 
     const wrapper = await mountIde()
     try {

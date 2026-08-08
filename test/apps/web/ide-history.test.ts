@@ -4,12 +4,38 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
-import { historyFilename, loadHistory } from '../../../src/app/web/file-history'
+import {
+  FlatFileHistory,
+  historyFilename,
+} from '../../../src/history/flat-file'
+
+/**
+ * The whole of `filename`'s flat-file history, snapshots carrying their
+ * contents. `History.index` deliberately answers without them -- a
+ * server-backed history keeps each snapshot in its own row -- so a test that
+ * wants to see what was recorded reads them back through the interface.
+ */
+async function loadHistory(
+  fs: FS.t,
+  filename: string,
+): Promise<{ snapshots: { time: string; contents: string }[]; deletedAt?: string }> {
+  const history = new FlatFileHistory(fs)
+  const index = await history.index(filename)
+  const snapshots = await Promise.all(
+    index.snapshots.map(async (s) => ({
+      time: s.time,
+      contents: (await history.read(filename, s.id)) ?? '<missing>',
+    })),
+  )
+  return { ...index, snapshots }
+}
+
 import { initialize } from '../../../src/scamper'
 
-vi.mock('../../../src/app/web/lockfile', () => ({
-  acquireLockFile: vi.fn(() => Promise.resolve(true)),
-  releaseLockFile: vi.fn(() => Promise.resolve()),
+vi.mock('../../../src/app/web/single-instance', () => ({
+  acquireLock: vi.fn(() => Promise.resolve(true)),
+  releaseLock: vi.fn(),
+  holdsLock: vi.fn(() => true),
 }))
 
 vi.mock(
@@ -32,7 +58,7 @@ describe('IDE file history', () => {
 
   beforeEach(() => {
     fs = new MockFileSystem()
-    FS.setFS(fs)
+    FS.setBackend(FS.localBackend(fs))
   })
 
   afterEach(() => {

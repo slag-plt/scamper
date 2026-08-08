@@ -27,15 +27,18 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 + `npm install`: installs dependencies
 + `npm run dev`: starts development server
++ `npm run dev:server`: starts the `server/` back end, watching for changes (`PORT` overrides its port)
 + `npm run build`: full production build (compilation + bundling)
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
++ `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
 
 ### Validation
 
 + `npm run validate`: runs the full validation process (test, typecheck, lint)
 + `npm run test`: runs the full test suite
 + `npm run typecheck`: runs the typechecker 
++ `npm run typecheck:server`: runs the typechecker over the `server/` workspace
 + `npm run lint`: runs the linter
 + `npm run lint:fix`: automatically fixes simple linter errors
 
@@ -51,12 +54,14 @@ This file provides guidance to LLM agents when working with code in this reposit
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
     - `src/app/search/` — Vue app powering the standalone documentation search page (`search.html`).
     - `src/app/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
-  - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI) used to load and save Scamper source files.
+  - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI, the Scamper server when logged in) used to load and save Scamper source files. `src/fs/index.ts` pairs a file system with its history as one `Backend`, so the two can never be mismatched.
+  - `src/history/` — A file's save history (#42), as an interface with two backings: `flat-file.ts` keeps snapshots in a `.{filename}.history` blob beside the file, `server.ts` keeps one row per snapshot in the database. `policy.ts` decides when a save is worth recording and is shared with `server/`.
   - `src/js/` — The JavaScript "native" package: one folder per library that Scamper's standard library binds to via `js-var`.
   - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
++ `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/src/`, and `server/` may import *types* from `src/` but *values* only from the two shared contracts, `src/fs/fs.ts` and `src/history/policy.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline

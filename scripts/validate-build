@@ -5,6 +5,11 @@ npm run typecheck
 TYPECHECK_STATUS=$?
 
 echo
+echo "==> Typecheck server (tsc)"
+npm run typecheck:server
+SERVER_TYPECHECK_STATUS=$?
+
+echo
 echo "==> Tests (vitest)"
 npm test -- --run
 TEST_STATUS=$?
@@ -16,10 +21,12 @@ LINT_STATUS=$?
 
 echo
 echo "===== Build Validation Summary ====="
-[ $TYPECHECK_STATUS -eq 0 ] && echo "typecheck: PASS" || echo "typecheck: FAIL"
-[ $TEST_STATUS -eq 0 ]      && echo "test:      PASS" || echo "test:      FAIL"
-[ $LINT_STATUS -eq 0 ]      && echo "lint:      PASS" || echo "lint:      FAIL"
+[ $TYPECHECK_STATUS -eq 0 ]        && echo "typecheck:        PASS" || echo "typecheck:        FAIL"
+[ $SERVER_TYPECHECK_STATUS -eq 0 ] && echo "typecheck server: PASS" || echo "typecheck server: FAIL"
+[ $TEST_STATUS -eq 0 ]             && echo "test:             PASS" || echo "test:             FAIL"
+[ $LINT_STATUS -eq 0 ]             && echo "lint:             PASS" || echo "lint:             FAIL"
 
-if [ $TYPECHECK_STATUS -ne 0 ] || [ $TEST_STATUS -ne 0 ] || [ $LINT_STATUS -ne 0 ]; then
+if [ $TYPECHECK_STATUS -ne 0 ] || [ $SERVER_TYPECHECK_STATUS -ne 0 ] || \
+   [ $TEST_STATUS -ne 0 ] || [ $LINT_STATUS -ne 0 ]; then
   exit 1
 fi

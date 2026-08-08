@@ -3,6 +3,9 @@
   "version": "3.5.0",
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
+  "workspaces": [
+    "server"
+  ],
   "scripts": {
     "postinstall": "npm run generate && npm run hooks",
     "generate": "npm run generate-parser && npm run generate-lib-sources",
@@ -18,6 +21,10 @@
     "clean": "rm -rf dist",
     "typecheck": "vue-tsc -noEmit",
     "pretypecheck": "npm run generate",
+    "typecheck:server": "npm run typecheck --workspace @scamper/server",
+    "dev:server": "npm run dev --workspace @scamper/server",
+    "dev:full": "node scripts/dev-full.mjs",
+    "start:server": "npm run start --workspace @scamper/server",
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "test:browser": "vitest run --config test/vitest.browser.config.ts",
@@ -27,7 +34,8 @@
     "lint:fix": "eslint . --fix",
     "validate": "./scripts/validate-build",
     "deploy": "./scripts/deploy $npm_package_version",
-    "deploy:latest": "./scripts/update-latest $npm_package_version"
+    "deploy:latest": "./scripts/update-latest $npm_package_version",
+    "deploy:server-url": "./scripts/set-server-url"
   },
   "type": "module",
   "author": "",

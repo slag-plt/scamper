@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { setFS } from '../../src/fs'
+import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { runProgram } from '../harness.js'
@@ -24,7 +24,7 @@ let fs: MockFileSystem
 
 beforeEach(async () => {
   fs = await MockFileSystem.create()
-  setFS(fs)
+  setBackend(localBackend(fs))
 })
 
 /** An FS whose every file exists but refuses to load, as a directory would. */
@@ -64,7 +64,7 @@ describe('#341: a file import as the last statement of a program', () => {
     // The other unguarded re-schedule: the load-failure path also advances the
     // statement and re-schedules. A file that exists but will not load (a
     // directory, a permission error) as the last statement hit the same ICE.
-    setFS(unreadableFS())
+    setBackend(localBackend(unreadableFS()))
     const output = await runProgram('(display 1)\n(import "mod.scm")')
     expect(output[0]).toBe('1')
     expect(output.join('\n')).toMatch(/failed to load/)

@@ -2,7 +2,13 @@
 import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
-import * as Lock from '../lockfile'
+import * as SingleInstance from '../single-instance'
+import {
+  LEGACY_CONFIG_FILENAME,
+  readStoredConfig,
+  writeStoredConfig,
+  type Config,
+} from '../ide-config'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
@@ -27,23 +33,13 @@ import {
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
-import {
-  listHistories,
-  loadHistory,
-  recordSnapshot,
-  type HistoryFile,
-  type Snapshot,
-} from '../file-history'
+import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
 
-const CONFIG_FILENAME = '.scamper.config'
-
-interface Config {
-  lastOpenedFilename: string | null
-  lastVersionAccessed: string
-}
+const OTHER_INSTANCE_MESSAGE =
+  'Another instance of Scamper is open. Please close that instance and try again.'
 
 const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
@@ -55,6 +51,7 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: FS.t | null = null
+let fileHistory: History | null = null
 let fileSession: FileSession | null = null
 let config: Config = { ...DEFAULT_CONFIG }
 let isLoadingFile = false
@@ -73,8 +70,11 @@ const showPatchNotes = ref(false)
 const showHistory = ref(false)
 const historyFiles = ref<HistoryFile[]>([])
 const historyFile = ref('')
-const historySnapshots = ref<Snapshot[]>([])
+const historySnapshots = ref<SnapshotRef[]>([])
 const historyContents = ref<string | null>(null)
+// The selected version's contents, fetched only when a version is picked. A
+// history may hold fifty versions of a file; the browser needs one at a time.
+const historySelected = ref<string | null>(null)
 
 // ---------- editor context + child component refs ----------
 
@@ -104,41 +104,57 @@ async function populateFileDrawer() {
 
 // ---------- config persistence ----------
 
-async function saveConfig() {
-  await fs?.saveFile(CONFIG_FILENAME, JSON.stringify(config))
+function saveConfig() {
+  writeStoredConfig(config)
+}
+
+/**
+ * Reads the config an older build kept in the file system, removing it so this
+ * happens once. Without it, every existing user would look brand new.
+ * @returns the stored config, or null if there wasn't one
+ */
+async function takeLegacyConfig(): Promise<Partial<Config> | null> {
+  if (!fs) return null
+  try {
+    if (!(await fs.fileExists(LEGACY_CONFIG_FILENAME))) return null
+    const raw = await fs.loadFile(LEGACY_CONFIG_FILENAME)
+    await fs.deleteFile(LEGACY_CONFIG_FILENAME)
+    return JSON.parse(raw) as Partial<Config>
+  } catch {
+    // A leftover we can't read is one we can do without.
+    return null
+  }
 }
 
 async function loadConfig() {
-  if (!fs) return
-  if (await fs.fileExists(CONFIG_FILENAME)) {
-    // Merge over the defaults so a config written by an older build (missing a
-    // newer field) still loads with sane values.
-    const stored = JSON.parse(await fs.loadFile(CONFIG_FILENAME)) as Partial<Config>
-    config = { ...DEFAULT_CONFIG, ...stored }
-  } else {
-    // A brand-new user starts already "caught up" to the current version, so
-    // they aren't greeted with a backlog of patch notes.
-    config = { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
-    await saveConfig()
-  }
+  const stored = readStoredConfig() ?? (await takeLegacyConfig())
+  config =
+    stored === null
+      ? // A brand-new user starts already "caught up" to the current version,
+        // so they aren't greeted with a backlog of patch notes.
+        { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
+      : // Merge over the defaults so a config written by an older build
+        // (missing a newer field) still loads with sane values.
+        { ...DEFAULT_CONFIG, ...stored }
+  saveConfig()
 }
 
 // Records the current version as seen so its patch notes aren't shown again.
 // Only ever moves forward, so running an older build never rewinds the seen
 // version (which would re-show notes on a later re-upgrade).
-async function markVersionSeen() {
+function markVersionSeen() {
   if (compareVersions(config.lastVersionAccessed, APP_VERSION) < 0) {
     config.lastVersionAccessed = APP_VERSION
-    await saveConfig()
+    saveConfig()
   }
 }
 
 // Shows patch notes for any versions the user hasn't seen yet. The version is
 // recorded as seen as soon as the notes are shown (not on dismissal), so a user
 // who closes the tab without clicking through still isn't shown them again.
-async function showPatchNotesIfNeeded() {
+function showPatchNotesIfNeeded() {
   const unseen = patchNotesSince(config.lastVersionAccessed, APP_VERSION)
-  await markVersionSeen()
+  markVersionSeen()
   if (unseen.length > 0) {
     patchNotesToShow.value = unseen
     showPatchNotes.value = true
@@ -320,11 +336,9 @@ async function handleFileDrop(droppedFiles: FileList) {
  * used to hold `name`.
  * @returns true if the rename should go ahead
  */
-async function confirmDiscardingHistory(
-  filesystem: FS.t,
-  name: string,
-): Promise<boolean> {
-  const existing = await loadHistory(filesystem, name)
+async function confirmDiscardingHistory(name: string): Promise<boolean> {
+  if (!fileHistory) return true
+  const existing = await fileHistory.index(name)
   if (existing.deletedAt === undefined || existing.snapshots.length === 0) {
     return true
   }
@@ -355,7 +369,7 @@ async function handleRename() {
     // the way an upload asks before overwriting a file -- silently discarding
     // the one thing that made a deleted file recoverable is the worst
     // outcome here.
-    if (fs && !(await confirmDiscardingHistory(fs, newName))) return
+    if (!(await confirmDiscardingHistory(newName))) return
     try {
       // N.B., renaming closes the fs worker's handle to the current file,
       // so we load it fresh afterwards. The session serializes against any
@@ -464,8 +478,8 @@ async function handleArchive() {
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
 async function handleHistory() {
-  if (!fs) return
-  const histories = await listHistories(fs)
+  if (!fileHistory) return
+  const histories = await fileHistory.list()
   const current = currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
@@ -488,11 +502,12 @@ async function handleHistory() {
 
 /** Loads `filename`'s history into the modal. */
 async function showHistoryOf(filename: string) {
-  if (!fs) return
+  if (!fileHistory) return
   historyFile.value = filename
-  let snapshots: Snapshot[]
+  historySelected.value = null
+  let snapshots: SnapshotRef[]
   try {
-    snapshots = (await loadHistory(fs, filename)).snapshots
+    snapshots = (await fileHistory.index(filename)).snapshots
   } catch {
     snapshots = []
   }
@@ -508,20 +523,55 @@ async function showHistoryOf(filename: string) {
     filename === currentFile.value && isEditorLoaded() ? editor().getDoc() : null
 }
 
+/**
+ * Loads the contents of the version the browser just selected. Guarded the same
+ * way `showHistoryOf` is: arrowing down the list fires one change per key, and
+ * the newest pick has to win rather than whichever read lands last.
+ */
+async function handleSelectSnapshot(snapshot: SnapshotRef | null) {
+  if (!fileHistory || snapshot === null) {
+    historySelected.value = null
+    return
+  }
+  const filename = historyFile.value
+  historySelected.value = null
+  let contents: string | null
+  try {
+    contents = await fileHistory.read(filename, snapshot.id)
+  } catch {
+    contents = null
+  }
+  if (historyFile.value !== filename) return
+  historySelected.value = contents
+}
+
 function handleHistoryClose() {
   showHistory.value = false
   historyFiles.value = []
   historySnapshots.value = []
+  historySelected.value = null
 }
 
 // Restores a snapshot by editing the document rather than reloading it, so the
 // restore is undoable and keeps the cursor. Both the version being left and the
 // one being restored are pinned in the history, so a restore never costs the
 // student the state they were in.
-async function handleRestoreSnapshot(snapshot: Snapshot) {
-  if (!fs || !fileSession) return
+async function handleRestoreSnapshot(snapshot: SnapshotRef) {
+  if (!fs || !fileSession || !fileHistory) return
   const filename = historyFile.value
+
+  // Read before closing rather than trusting the preview to have loaded: the
+  // button is live as soon as a version is picked, and a snapshot can age out
+  // of a long history between listing it and restoring it.
+  const contents = await fileHistory.read(filename, snapshot.id)
   handleHistoryClose()
+  if (contents === null) {
+    await modalAlert({
+      title: 'Restore failed',
+      message: 'That saved version is no longer available.',
+    })
+    return
+  }
 
   if (filename !== currentFile.value) {
     // Recovering another file, possibly one that was deleted: write it back and
@@ -533,11 +583,11 @@ async function handleRestoreSnapshot(snapshot: Snapshot) {
     // snapshot, so without this the overwrite could take those contents off
     // both disk and timeline. A deleted file has nothing to pin.
     if (await fs.fileExists(filename)) {
-      await recordSnapshot(fs, filename, await fs.loadFile(filename), new Date(), {
+      await fileHistory.record(filename, await fs.loadFile(filename), new Date(), {
         force: true,
       })
     }
-    await fs.saveFile(filename, snapshot.contents)
+    await fs.saveFile(filename, contents)
     await switchToFile(filename)
     await fileSession.save({ force: true })
     return
@@ -545,7 +595,7 @@ async function handleRestoreSnapshot(snapshot: Snapshot) {
 
   if (!isEditorLoaded()) return
   await fileSession.save({ force: true })
-  editor().replaceDoc(snapshot.contents)
+  editor().replaceDoc(contents)
   await fileSession.save({ force: true })
 }
 
@@ -558,23 +608,30 @@ async function handleSelectFile(filename: string) {
 async function handleVisibilityChange() {
   if (document.visibilityState === 'hidden') {
     await saveCurrentFile()
-    await saveConfig()
-    if (fs) await Lock.releaseLockFile(fs)
-  } else {
-    if (fs) await Lock.acquireLockFile(fs)
+    saveConfig()
   }
 }
 
 async function handlePageHide() {
   await saveCurrentFile()
-  await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
+  saveConfig()
+  // The page may be frozen for the back/forward cache rather than destroyed,
+  // so hand the lock back and re-acquire if we are restored. Pairing the two
+  // is correct whether or not a frozen page keeps its lock.
+  SingleInstance.releaseLock()
+}
+
+async function handlePageShow(e: PageTransitionEvent) {
+  // Only a bfcache restore needs this; a fresh load acquires in onMounted.
+  if (!e.persisted) return
+  if (!(await SingleInstance.acquireLock())) {
+    displayError(OTHER_INSTANCE_MESSAGE)
+  }
 }
 
 async function handleBeforeUnload(e: BeforeUnloadEvent) {
   await saveCurrentFile()
-  await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
+  saveConfig()
   if (isDirty.value) {
     e.preventDefault()
   }
@@ -587,6 +644,9 @@ const visibilityChangeWrapper = () => {
 const pageHideWrapper = () => {
   void handlePageHide()
 }
+const pageShowWrapper = (e: Event) => {
+  void handlePageShow(e as PageTransitionEvent)
+}
 const beforeUnloadWrapper = (e: Event) => {
   void handleBeforeUnload(e as BeforeUnloadEvent)
 }
@@ -596,8 +656,10 @@ const beforeUnloadWrapper = (e: Event) => {
 onMounted(async () => {
   await FS.initialize()
   fs = FS.getFS()
+  fileHistory = FS.getHistory()
   fileSession = new FileSession(
     fs,
+    fileHistory,
     { getDoc: () => editor().getDoc(), isEditorLoaded },
     {
       onSaveError: (message) => {
@@ -606,15 +668,17 @@ onMounted(async () => {
     },
   )
 
-  const obtainedLock = await Lock.acquireLockFile(fs)
+  const obtainedLock = await SingleInstance.acquireLock()
   if (!obtainedLock) {
-    loadingContent.value =
-      'Another instance of Scamper is open. Please close that instance and try again.'
+    loadingContent.value = OTHER_INSTANCE_MESSAGE
     return
   }
 
+  // visibilitychange is a document event; pagehide/pageshow fire at the window
+  // and never reach a document listener.
   document.addEventListener('visibilitychange', visibilityChangeWrapper)
-  document.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pageshow', pageShowWrapper)
   window.addEventListener('beforeunload', beforeUnloadWrapper)
 
   await loadConfig()
@@ -632,14 +696,16 @@ onMounted(async () => {
   isLoading.value = false
   Scamper.getInstance().calibrateScheduler()
 
-  await showPatchNotesIfNeeded()
+  showPatchNotesIfNeeded()
 })
 
 onUnmounted(() => {
   stopAutosaving()
   session.stopAll()
   document.removeEventListener('visibilitychange', visibilityChangeWrapper)
-  document.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pageshow', pageShowWrapper)
+  SingleInstance.releaseLock()
   window.removeEventListener('beforeunload', beforeUnloadWrapper)
 })
 </script>
@@ -719,8 +785,10 @@ onUnmounted(() => {
     :filename="historyFile"
     :snapshots="historySnapshots"
     :current-contents="historyContents"
+    :selected-contents="historySelected"
     @close="handleHistoryClose"
     @select="showHistoryOf"
+    @select-snapshot="handleSelectSnapshot"
     @restore="handleRestoreSnapshot"
   />
 </template>

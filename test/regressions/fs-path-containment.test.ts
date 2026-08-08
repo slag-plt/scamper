@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { setFS } from '../../src/fs'
+import { localBackend, setBackend } from '../../src/fs'
 import NodeFileSystem from '../../src/fs/node'
 import { compile } from '../../src/scheme'
 import { runProgram } from '../harness.js'
@@ -27,7 +27,7 @@ beforeEach(async () => {
   // A file and a module *outside* the root, both of which must stay unreachable.
   await writeFile(path.join(base, 'secret.txt'), 'classified\n', 'utf-8')
   await writeFile(path.join(base, 'outside.scm'), '(define-export x 1)\n', 'utf-8')
-  setFS(await NodeFileSystem.create(root))
+  setBackend(localBackend(await NodeFileSystem.create(root)))
 })
 
 afterEach(async () => {

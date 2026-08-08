@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Publishes the file server's URL to every deployed version of Scamper at once.
+#
+# The config lives at the site root rather than inside a version's directory on
+# purpose: `deploy` gives each release its own directory and every past release
+# stays live at its URL, so a per-version copy would mean editing one file per
+# release forever. This writes the single file all of them read.
+#
+# Run with no argument to clear it, which puts every version back on OPFS.
+
+SERVER=compsci
+ROOT=scamper.cs.grinnell.edu
+URL=$1
+
+if [ -z "${URL}" ]; then
+  echo "Clearing the server URL: every version falls back to local storage..."
+  ssh ${SERVER} "rm -f ${ROOT}/config.json"
+  exit $?
+fi
+
+echo "Pointing every deployed Scamper version at ${URL}..."
+
+cat << EOF | ssh ${SERVER} "cat > ${ROOT}/config.json"
+{
+  "serverUrl": "${URL}"
+}
+EOF

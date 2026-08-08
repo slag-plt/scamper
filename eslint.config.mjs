@@ -20,6 +20,7 @@ export default defineConfig(
       globals: {
         ...globals.browser,
         APP_VERSION: 'readonly',
+        SCAMPER_DEV_SERVER: 'readonly',
       },
     },
   },
@@ -41,16 +42,11 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: [
-            'eslint.config.mjs',
-            'vite.config.ts',
-            'scripts/generate-parser.mjs',
-            'scripts/vite-plugin-scheme-parser.mjs',
-            'scripts/generate-lib-sources.mjs',
-            'scripts/vite-plugin-lib-sources.mjs',
-            'scripts/vite-plugin-flatten-html.mjs',
-            'scripts/vite-plugin-dev-flat-html.mjs',
-          ],
+          // Only the config files at the repository root land here.
+          // Everything in scripts/ is covered by scripts/tsconfig.json --
+          // this list is capped at eight entries, and silently breaks
+          // linting for every file in it once exceeded.
+          allowDefaultProject: ['eslint.config.mjs', 'vite.config.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: ['.vue'],
@@ -66,11 +62,105 @@ export default defineConfig(
       'scripts/vite-plugin-lib-sources.mjs',
       'scripts/vite-plugin-flatten-html.mjs',
       'scripts/vite-plugin-dev-root-redirect.mjs',
+      'scripts/vite-plugin-dev-server-config.mjs',
+      'scripts/dev-full.mjs',
     ],
     languageOptions: {
       globals: {
         ...globals.node,
       },
+    },
+  },
+  {
+    files: ['server/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  // The client/server boundary. `server/` is a workspace of this repo, so npm
+  // hoists its dependencies into the root node_modules and nothing physically
+  // stops a Vue component from importing `better-auth`. These two rules are
+  // what keep the split real rather than merely conventional.
+  {
+    files: ['src/**/*.ts', 'src/**/*.vue'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              // Anchored on the workspace's source directory, not on the
+              // bare name: these globs match a path segment anywhere (as
+              // .gitignore does), so `**/server` would also catch the client's
+              // own src/fs/server.ts and src/history/server.ts.
+              group: ['**/server/src'],
+              message:
+                'The client must not import server code. The two share only the contracts in src/fs/fs.ts and src/history/policy.ts, which the server imports from here -- not the other way around.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['server/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              // Type-only imports are erased at compile time, so they create no
+              // runtime coupling and cannot drag browser code into the server.
+              // Everything below concerns *value* imports.
+              //
+              // Spelled as a list of what is forbidden rather than "all of src/
+              // except the shared bits", because these globs follow .gitignore
+              // semantics: a pattern matches a path segment anywhere and
+              // everything beneath it, and the `!` negation this rule accepts
+              // does not re-admit a descendant. So the exceptions are expressed
+              // by leaving them off. Add a line when src/ grows a top-level
+              // directory the server should not reach into.
+              //
+              // Two modules are omitted deliberately -- the only ones the
+              // server may take values from:
+              //
+              //   src/fs/fs.ts        the FS interface, the FileEntry shape,
+              //                       and what counts as a user's own file
+              //   src/history/policy  when a save is worth recording
+              //
+              // Sharing them is what stops the two halves drifting on questions
+              // like what "hidden" means or how long the merge window is. Both
+              // are pure: no DOM, no fetch, no storage.
+              //
+              // Their neighbours in src/fs/ are not lint-blocked, but importing
+              // one fails the server's typecheck, whose tsconfig omits the DOM
+              // lib they depend on. That is an error, not a warning.
+              group: [
+                '**/src/app/*',
+                '**/src/js/*',
+                '**/src/lib/*',
+                '**/src/lpm/*',
+                '**/src/prettier/*',
+                '**/src/scheme/*',
+                '**/src/theme/*',
+                '**/src/history/flat-file',
+                '**/src/history/history',
+                '**/src/history/index',
+                '**/src/history/none',
+                '**/src/history/server',
+                '**/src/scamper',
+                '**/src/utils',
+              ],
+              allowTypeImports: true,
+              message:
+                'The server may import *types* from src/ (use `import type`), but values only from src/fs/fs.ts and src/history/policy.ts -- the rest of src/ is browser code.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
