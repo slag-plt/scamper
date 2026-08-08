@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ServerFileSystem } from '../../src/fs/server'
 import { route } from '../../server/src/api'
 import { FileStore } from '../../server/src/store'
+import { HistoryStore } from '../../server/src/history-store'
 
 const BASE_URL = 'https://files.example/api/v1'
 
@@ -13,6 +14,7 @@ interface Seen {
 }
 
 let store: FileStore
+let history: HistoryStore
 let seen: Seen[]
 
 /**
@@ -30,7 +32,10 @@ function installFakeServer(): void {
       typeof init?.body === 'string'
         ? (JSON.parse(init.body) as unknown)
         : undefined
-    const reply = route({ method, path: url.pathname, body }, store)
+    const reply = route(
+      { method, path: url.pathname, body, now: new Date('2026-08-07T14:00:00.000Z') },
+      { files: store, history },
+    )
 
     return Promise.resolve({
       ok: reply.status >= 200 && reply.status < 300,
@@ -48,6 +53,7 @@ function requestCount(): number {
 
 beforeEach(() => {
   store = new FileStore()
+  history = new HistoryStore()
   seen = []
   installFakeServer()
 })

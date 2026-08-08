@@ -6,29 +6,42 @@ and follow the user between machines (issue #357).
 Run it with `npm run dev:server` from the repository root. `PORT` overrides the
 default of 3000.
 
-> **Storage is currently a stub.** `src/store.ts` keeps files in memory, in one
-> shared namespace, with no authentication — enough for the client seam in
-> `src/fs/server.ts` to talk to something real. MariaDB-backed per-user storage
-> behind BetterAuth replaces it; the routes are the part meant to survive that
-> swap. Do not deploy this as-is.
+> **Storage is currently a stub.** `src/store.ts` and `src/history-store.ts`
+> keep everything in memory, in one shared namespace, with no authentication —
+> enough for the client seams in `src/fs/server.ts` and `src/history/server.ts`
+> to talk to something real. MariaDB-backed per-user storage behind BetterAuth
+> replaces them; the routes and the shape in `schema.sql` are the parts meant to
+> survive that swap. Do not deploy this as-is.
 
 ## The API
 
 Every route mirrors one method of the `FS` interface, so the two stay in step.
 A filename is a single percent-encoded path segment.
 
-| Method   | Path                    | Meaning                                  |
-| -------- | ----------------------- | ---------------------------------------- |
-| `GET`    | `/api/v1/health`        | liveness, and which API version this is  |
-| `GET`    | `/api/v1/fs/files`      | `{ files: FileEntry[] }`, previews included |
-| `GET`    | `/api/v1/fs/files/{name}` | `{ contents }`, or 404                 |
-| `PUT`    | `/api/v1/fs/files/{name}` | save `{ contents }`, creating if needed |
-| `DELETE` | `/api/v1/fs/files/{name}` | delete, or 404                         |
-| `POST`   | `/api/v1/fs/rename`     | `{ from, to }`, overwriting `to`         |
+| Method   | Path                              | Meaning                                     |
+| -------- | --------------------------------- | ------------------------------------------- |
+| `GET`    | `/api/v1/health`                  | liveness, and which API version this is     |
+| `GET`    | `/api/v1/fs/files`                | `{ files: FileEntry[] }`, previews included |
+| `GET`    | `/api/v1/fs/files/{name}`         | `{ contents }`, or 404                      |
+| `PUT`    | `/api/v1/fs/files/{name}`         | save `{ contents }`, creating if needed     |
+| `DELETE` | `/api/v1/fs/files/{name}`         | delete, or 404                              |
+| `POST`   | `/api/v1/fs/rename`               | `{ from, to }`, overwriting `to`            |
+| `GET`    | `/api/v1/history/files`           | files with a history, and deletion marks    |
+| `GET`    | `/api/v1/history/files/{name}`    | snapshot **times**, newest first            |
+| `GET`    | `/api/v1/history/files/{name}/{id}` | one version's `{ contents }`, or 404      |
+| `POST`   | `/api/v1/history/files/{name}`    | record `{ contents, force }`                |
+| `DELETE` | `/api/v1/history/files/{name}`    | mark deleted, keeping the snapshots         |
+| `POST`   | `/api/v1/history/rename`          | `{ from, to }`                              |
 
 The listing carries each file's preview because computing them client-side
 costs one request per file. `rename` is one route rather than a copy-then-delete
 pair so an interruption cannot leave a user with two copies or none.
+
+The history routes deliberately do **not** mirror the file routes. Listing and
+indexing answer with times and deletion marks only; contents come one version at
+a time from `files/{name}/{id}`. A history holds up to fifty copies of a file, so
+shipping them all to draw a column of timestamps would undo the reason snapshots
+are stored as rows. See `schema.sql` for the queries these stand in for.
 
 ## Cross-origin
 
@@ -62,14 +75,21 @@ Because this is a workspace, npm hoists its dependencies into the root
 `node_modules` — nothing *physically* stops a Vue component from importing a
 server-only package. ESLint is what keeps the split real:
 
-- `src/` may not import from `server/` at all.
+- `src/` may not import from `server/src/` at all.
 - `server/` may import **types** from anywhere in `src/` (`import type`).
   Type-only imports are erased at compile time, so they add no runtime coupling
   and cannot drag browser code into the server.
-- `server/` may import **values** only from `src/fs/fs.ts`, the contract both
-  halves implement. Sharing it is what keeps this backend and OPFS agreeing on
-  questions like what "hidden" means, rather than each carrying its own copy of
-  the answer.
+- `server/` may import **values** only from the two shared contracts:
+  `src/fs/fs.ts` (the `FS` interface, `FileEntry`, and what counts as a user's
+  own file) and `src/history/policy.ts` (when a save is worth recording).
+  Sharing them is what keeps the backends agreeing on questions like what
+  "hidden" means or how long the merge window is, rather than each carrying its
+  own copy of the answer.
+
+The rule is written as a list of forbidden directories rather than "all of `src/`
+except those two", because these globs follow .gitignore semantics: a pattern
+matches a path segment anywhere plus everything beneath it, and negation does not
+re-admit a descendant. Add a line when `src/` grows a top-level directory.
 
 A second guard covers what lint cannot express: `tsconfig.json` here omits the
 `DOM` lib, so importing a browser module — `src/fs/opfs.ts`, say — fails
@@ -89,6 +109,17 @@ server therefore serves many client versions at once. Being in a monorepo does
 *not* mean both sides change atomically — already-deployed clients never get the
 update. Ship a breaking change as `/api/v2` beside `/api/v1`.
 
+**Recording is decided twice, on purpose.** The client settles the common case
+from its cached head and never sends a request: autosave fires every few seconds
+while a student types, and almost none of those firings deserve an entry. When
+the client cannot rule a save out, the server re-applies the same predicate --
+literally the same module, `src/history/policy.ts` -- against what it actually
+holds, and its answer wins.
+
+**The server stamps snapshot times, not the client.** A history now spans a
+student's machines, and a laptop running ten minutes fast would otherwise sort
+its snapshots above ones taken later elsewhere.
+
 **`fileExists` is a hot path.** `src/fs/opfs.ts` documents it as such: module
 resolution, import steps, and the `file-exists?` primitive a student can call in
 a loop. A naive port that makes one request per call turns a student's loop into
@@ -103,6 +134,12 @@ warm `fileExists` makes no request at all.
   a `npm run dev` checkout has no config at all.
 - `src/fs/server.ts` is `ServerFileSystem`, the `FS` implementation that talks
   to these routes.
-- `src/fs/index.ts` already exposes `setFS()`, which is the login/logout seam.
-  Nothing switches automatically yet: a configured server only means one is
-  available to log in to, and the login UI is still to come.
+- `src/history/server.ts` is `ServerHistory`, the `History` implementation that
+  talks to the history routes. `src/history/flat-file.ts` is the OPFS/CLI one.
+- `src/fs/index.ts` exposes `setBackend()`, which is the login/logout seam. It
+  takes a file system and a history together so a server file system can never
+  end up paired with a flat-file history -- that combination would write
+  `.{filename}.history` blobs into the server's file storage, which is exactly
+  the layout the database replaces. Nothing switches automatically yet: a
+  configured server only means one is available to log in to, and the login UI is
+  still to come.

@@ -11,12 +11,17 @@ import { currentTheme } from '../../../theme'
 import {
   formatSnapshotTime,
   type HistoryFile,
-  type Snapshot,
-} from '../file-history'
+  type SnapshotRef,
+} from '../../../history'
 
 // Browses a file's saved history (issue #42). Purely presentational: the host
 // loads the snapshots and performs the restore, so this component never
 // touches the file system.
+//
+// It is handed the snapshot *times* and asks for one version's contents at a
+// time, via `select-snapshot`. A server-backed history keeps each snapshot as
+// its own row, so drawing this list costs no file contents at all; loading
+// every version up front to render a column of timestamps would undo that.
 
 const props = defineProps<{
   open: boolean
@@ -24,8 +29,13 @@ const props = defineProps<{
   files: HistoryFile[]
   /** Which of them is being shown. */
   filename: string
-  /** The file's snapshots, newest first. */
-  snapshots: Snapshot[]
+  /** The file's snapshots, newest first. Times only -- no contents. */
+  snapshots: SnapshotRef[]
+  /**
+   * The selected snapshot's contents, or null while they are still being
+   * fetched. The host loads them in response to `select-snapshot`.
+   */
+  selectedContents: string | null
   /**
    * What the editor holds right now, shown on top of the timeline and diffed
    * against. Null when the selected file isn't the one open in the editor --
@@ -37,7 +47,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   select: [filename: string]
-  restore: [snapshot: Snapshot]
+  /** Asks the host for this version's contents; null for the current row. */
+  selectSnapshot: [snapshot: SnapshotRef | null]
+  restore: [snapshot: SnapshotRef]
 }>()
 
 const isDeleted = computed(
@@ -49,9 +61,15 @@ const selectedIndex = ref(-1)
 const diffContainer = ref<HTMLDivElement | null>(null)
 let diffView: EditorView | null = null
 
-const selected = computed<Snapshot | null>(() =>
+const selected = computed<SnapshotRef | null>(() =>
   selectedIndex.value < 0 ? null : (props.snapshots[selectedIndex.value] ?? null),
 )
+
+// Whatever is selected, the host has to be asked for its contents -- including
+// the null that means "the current version", which clears a stale fetch.
+watch(selected, (snapshot) => {
+  if (props.open) emit('selectSnapshot', snapshot)
+})
 
 // Opening -- or switching to another file -- should always land on the newest
 // version rather than wherever the last visit left off. Keyed on the snapshots
@@ -65,7 +83,7 @@ watch(
 )
 
 /** @returns the label for a snapshot row. */
-function labelFor(snapshot: Snapshot): string {
+function labelFor(snapshot: SnapshotRef): string {
   return formatSnapshotTime(snapshot.time, new Date())
 }
 
@@ -73,16 +91,19 @@ function labelFor(snapshot: Snapshot): string {
 // recreated rather than reconfigured: a merge view's original document is fixed
 // at construction, and these documents are a couple of KB.
 watch(
-  [selected, () => props.open, diffContainer],
-  ([snapshot, open, container]) => {
+  [selected, () => props.selectedContents, () => props.open, diffContainer],
+  ([snapshot, contents, open, container]) => {
     diffView?.destroy()
     diffView = null
+    // `contents` arrives a moment after the selection does, so this runs twice
+    // per pick: once to tear the old diff down, once to build the new one.
     if (!open || container === null || snapshot === null) return
+    if (contents === null) return
     // With no current version to compare against, the snapshot is diffed with
     // itself, which shows it plainly with no changes marked.
-    const current = props.currentContents ?? snapshot.contents
+    const current = props.currentContents ?? contents
     diffView = new EditorView({
-      state: mkDiffEditorState(current, snapshot.contents),
+      state: mkDiffEditorState(current, contents),
       parent: container,
     })
   },
@@ -135,7 +156,7 @@ function restoreSelected() {
             Current version
           </button>
         </li>
-        <li v-for="(snapshot, index) in props.snapshots" :key="snapshot.time">
+        <li v-for="(snapshot, index) in props.snapshots" :key="snapshot.id">
           <button
             type="button"
             role="option"
@@ -165,7 +186,10 @@ function restoreSelected() {
                 : `Changes since ${labelFor(selected)}:`
             }}
           </p>
-          <div ref="diffContainer" class="diff"></div>
+          <p v-if="props.selectedContents === null" class="empty">
+            Loading this version...
+          </p>
+          <div v-show="props.selectedContents !== null" ref="diffContainer" class="diff"></div>
         </template>
       </div>
     </div>

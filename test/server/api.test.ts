@@ -1,16 +1,22 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { API_ROOT, route, type ApiResponse } from '../../server/src/api'
 import { FileStore } from '../../server/src/store'
+import { HistoryStore } from '../../server/src/history-store'
 
-let store: FileStore
+let stores: { files: FileStore; history: HistoryStore }
 
 beforeEach(() => {
-  store = new FileStore()
+  stores = { files: new FileStore(), history: new HistoryStore() }
 })
 
-/** Issues one request against the current store. */
-function call(method: string, path: string, body?: unknown): ApiResponse {
-  return route({ method, path, body }, store)
+/** Issues one request against the current stores. */
+function call(
+  method: string,
+  path: string,
+  body?: unknown,
+  now = new Date('2026-08-07T14:00:00.000Z'),
+): ApiResponse {
+  return route({ method, path, body, now }, stores)
 }
 
 /** Issues a request against a path below the file-system root. */

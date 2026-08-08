@@ -27,13 +27,7 @@ import {
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
-import {
-  listHistories,
-  loadHistory,
-  recordSnapshot,
-  type HistoryFile,
-  type Snapshot,
-} from '../file-history'
+import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
@@ -55,6 +49,7 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: FS.t | null = null
+let fileHistory: History | null = null
 let fileSession: FileSession | null = null
 let config: Config = { ...DEFAULT_CONFIG }
 let isLoadingFile = false
@@ -73,8 +68,11 @@ const showPatchNotes = ref(false)
 const showHistory = ref(false)
 const historyFiles = ref<HistoryFile[]>([])
 const historyFile = ref('')
-const historySnapshots = ref<Snapshot[]>([])
+const historySnapshots = ref<SnapshotRef[]>([])
 const historyContents = ref<string | null>(null)
+// The selected version's contents, fetched only when a version is picked. A
+// history may hold fifty versions of a file; the browser needs one at a time.
+const historySelected = ref<string | null>(null)
 
 // ---------- editor context + child component refs ----------
 
@@ -320,11 +318,9 @@ async function handleFileDrop(droppedFiles: FileList) {
  * used to hold `name`.
  * @returns true if the rename should go ahead
  */
-async function confirmDiscardingHistory(
-  filesystem: FS.t,
-  name: string,
-): Promise<boolean> {
-  const existing = await loadHistory(filesystem, name)
+async function confirmDiscardingHistory(name: string): Promise<boolean> {
+  if (!fileHistory) return true
+  const existing = await fileHistory.index(name)
   if (existing.deletedAt === undefined || existing.snapshots.length === 0) {
     return true
   }
@@ -355,7 +351,7 @@ async function handleRename() {
     // the way an upload asks before overwriting a file -- silently discarding
     // the one thing that made a deleted file recoverable is the worst
     // outcome here.
-    if (fs && !(await confirmDiscardingHistory(fs, newName))) return
+    if (!(await confirmDiscardingHistory(newName))) return
     try {
       // N.B., renaming closes the fs worker's handle to the current file,
       // so we load it fresh afterwards. The session serializes against any
@@ -464,8 +460,8 @@ async function handleArchive() {
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
 async function handleHistory() {
-  if (!fs) return
-  const histories = await listHistories(fs)
+  if (!fileHistory) return
+  const histories = await fileHistory.list()
   const current = currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
@@ -488,11 +484,12 @@ async function handleHistory() {
 
 /** Loads `filename`'s history into the modal. */
 async function showHistoryOf(filename: string) {
-  if (!fs) return
+  if (!fileHistory) return
   historyFile.value = filename
-  let snapshots: Snapshot[]
+  historySelected.value = null
+  let snapshots: SnapshotRef[]
   try {
-    snapshots = (await loadHistory(fs, filename)).snapshots
+    snapshots = (await fileHistory.index(filename)).snapshots
   } catch {
     snapshots = []
   }
@@ -508,20 +505,55 @@ async function showHistoryOf(filename: string) {
     filename === currentFile.value && isEditorLoaded() ? editor().getDoc() : null
 }
 
+/**
+ * Loads the contents of the version the browser just selected. Guarded the same
+ * way `showHistoryOf` is: arrowing down the list fires one change per key, and
+ * the newest pick has to win rather than whichever read lands last.
+ */
+async function handleSelectSnapshot(snapshot: SnapshotRef | null) {
+  if (!fileHistory || snapshot === null) {
+    historySelected.value = null
+    return
+  }
+  const filename = historyFile.value
+  historySelected.value = null
+  let contents: string | null
+  try {
+    contents = await fileHistory.read(filename, snapshot.id)
+  } catch {
+    contents = null
+  }
+  if (historyFile.value !== filename) return
+  historySelected.value = contents
+}
+
 function handleHistoryClose() {
   showHistory.value = false
   historyFiles.value = []
   historySnapshots.value = []
+  historySelected.value = null
 }
 
 // Restores a snapshot by editing the document rather than reloading it, so the
 // restore is undoable and keeps the cursor. Both the version being left and the
 // one being restored are pinned in the history, so a restore never costs the
 // student the state they were in.
-async function handleRestoreSnapshot(snapshot: Snapshot) {
-  if (!fs || !fileSession) return
+async function handleRestoreSnapshot(snapshot: SnapshotRef) {
+  if (!fs || !fileSession || !fileHistory) return
   const filename = historyFile.value
+
+  // Read before closing rather than trusting the preview to have loaded: the
+  // button is live as soon as a version is picked, and a snapshot can age out
+  // of a long history between listing it and restoring it.
+  const contents = await fileHistory.read(filename, snapshot.id)
   handleHistoryClose()
+  if (contents === null) {
+    await modalAlert({
+      title: 'Restore failed',
+      message: 'That saved version is no longer available.',
+    })
+    return
+  }
 
   if (filename !== currentFile.value) {
     // Recovering another file, possibly one that was deleted: write it back and
@@ -533,11 +565,11 @@ async function handleRestoreSnapshot(snapshot: Snapshot) {
     // snapshot, so without this the overwrite could take those contents off
     // both disk and timeline. A deleted file has nothing to pin.
     if (await fs.fileExists(filename)) {
-      await recordSnapshot(fs, filename, await fs.loadFile(filename), new Date(), {
+      await fileHistory.record(filename, await fs.loadFile(filename), new Date(), {
         force: true,
       })
     }
-    await fs.saveFile(filename, snapshot.contents)
+    await fs.saveFile(filename, contents)
     await switchToFile(filename)
     await fileSession.save({ force: true })
     return
@@ -545,7 +577,7 @@ async function handleRestoreSnapshot(snapshot: Snapshot) {
 
   if (!isEditorLoaded()) return
   await fileSession.save({ force: true })
-  editor().replaceDoc(snapshot.contents)
+  editor().replaceDoc(contents)
   await fileSession.save({ force: true })
 }
 
@@ -596,8 +628,10 @@ const beforeUnloadWrapper = (e: Event) => {
 onMounted(async () => {
   await FS.initialize()
   fs = FS.getFS()
+  fileHistory = FS.getHistory()
   fileSession = new FileSession(
     fs,
+    fileHistory,
     { getDoc: () => editor().getDoc(), isEditorLoaded },
     {
       onSaveError: (message) => {
@@ -719,8 +753,10 @@ onUnmounted(() => {
     :filename="historyFile"
     :snapshots="historySnapshots"
     :current-contents="historyContents"
+    :selected-contents="historySelected"
     @close="handleHistoryClose"
     @select="showHistoryOf"
+    @select-snapshot="handleSelectSnapshot"
     @restore="handleRestoreSnapshot"
   />
 </template>

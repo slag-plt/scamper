@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { compile } from '../../src/scheme'
-import { setFS } from '../../src/fs'
+import { localBackend, setBackend } from '../../src/fs'
 import NodeFileSystem from '../../src/fs/node'
 
 // Regression test for #287: `scamper --check foo.scm` (compile with
@@ -12,7 +12,7 @@ import NodeFileSystem from '../../src/fs/node'
 // never initialized a file system outside the browser, so getFS() threw "File
 // system not initialized" and the check bailed out without running.
 //
-// The fix lets a non-browser host install its own file system (setFS) and wires
+// The fix lets a non-browser host install its own file system (setBackend) and wires
 // a NodeFileSystem into the CLI, rooted at the checked file's directory. This
 // test exercises that path directly: with a Node-backed FS installed, a
 // file-importing program scope-checks like any other.
@@ -24,7 +24,7 @@ describe('#287: scope-checking file imports outside the browser', () => {
     dir = await mkdtemp(path.join(tmpdir(), 'scamper-287-'))
     await writeFile(path.join(dir, 'bar.scm'), '(define-export helper 1)\n', 'utf-8')
     // Mirror the CLI: install a Node-backed FS rooted at the file's directory.
-    setFS(await NodeFileSystem.create(dir))
+    setBackend(localBackend(await NodeFileSystem.create(dir)))
   })
 
   afterAll(async () => {

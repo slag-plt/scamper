@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { setFS } from '../../src/fs'
+import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { runProgramAsync } from '../harness.js'
@@ -26,7 +26,7 @@ let fs: MockFileSystem
 
 beforeEach(async () => {
   fs = await MockFileSystem.create()
-  setFS(fs)
+  setBackend(localBackend(fs))
 })
 
 describe("#342: a blocking primitive's error points at its call", () => {
@@ -59,7 +59,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
   })
 
   test('a write that fails reports the call site', async () => {
-    setFS(unwritableFS())
+    setBackend(localBackend(unwritableFS()))
     expect(
       await runProgramAsync('(import file)\n(string->file "data" "out.txt")'),
     ).toEqual([
@@ -84,7 +84,7 @@ describe("#342: a blocking primitive's error points at its call", () => {
     // file-exists? hands the FS promise to the scheduler unguarded, so a host
     // failure arrives as a plain Error and is wrapped by the block-on handler.
     // That wrapper had no range either.
-    setFS(brokenFS())
+    setBackend(localBackend(brokenFS()))
     expect(
       await runProgramAsync('(import file)\n(file-exists? "any.txt")'),
     ).toEqual(['Runtime error [2:1-2:24]: host is on fire'])

@@ -38,7 +38,7 @@ describe('IDE zip export', () => {
 
   beforeEach(() => {
     fs = new MockFileSystem()
-    FS.setFS(fs)
+    FS.setBackend(FS.localBackend(fs))
 
     // jsdom implements neither half of the object-URL API.
     blobs = new Map()

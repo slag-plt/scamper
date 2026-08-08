@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 
 import { API_ROOT, route } from './api'
 import { FileStore } from './store'
+import { HistoryStore } from './history-store'
 
 /** The port to listen on. PORT overrides it wherever this gets deployed. */
 const PORT = Number(process.env.PORT ?? 3000)
@@ -22,7 +23,10 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN
  */
 const MAX_BODY_BYTES = 5 * 1024 * 1024
 
-const store = new FileStore()
+const stores = {
+  files: new FileStore(),
+  history: new HistoryStore(),
+}
 
 /**
  * Reads and parses a JSON request body.
@@ -90,8 +94,8 @@ const server = createServer((req, res) => {
     }
 
     const { status, body: reply } = route(
-      { method, path: url.pathname, body },
-      store,
+      { method, path: url.pathname, body, now: new Date() },
+      stores,
     )
 
     if (reply === undefined) {

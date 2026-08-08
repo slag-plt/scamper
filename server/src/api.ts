@@ -1,4 +1,5 @@
 import type { FileStore } from './store'
+import type { HistoryStore } from './history-store'
 
 /**
  * The prefix every route lives under.
@@ -14,6 +15,9 @@ export const API_ROOT = '/api/v1'
 /** Where the file-system routes live, mirroring the `FS` interface. */
 const FS_ROOT = `${API_ROOT}/fs`
 
+/** Where the save-history routes live, mirroring the `History` interface. */
+const HISTORY_ROOT = `${API_ROOT}/history`
+
 /** A reply, with the status to send it under. A body of undefined sends none. */
 export interface ApiResponse {
   status: number
@@ -27,6 +31,17 @@ export interface ApiRequest {
   path: string
   /** The parsed JSON body, or undefined if the request carried none. */
   body?: unknown
+  /**
+   * The server's clock, passed in rather than read here so routing stays a
+   * pure function of its inputs and a test can pin the time.
+   */
+  now: Date
+}
+
+/** The stores a request is dispatched against. */
+export interface Stores {
+  files: FileStore
+  history: HistoryStore
 }
 
 /** @returns the string at `key` in `body`, or undefined if it is not one */
@@ -46,11 +61,16 @@ function field(body: unknown, key: string): string | undefined {
  * @returns the reply to send, including the 404 for an unclaimed path and the
  *          405 for a path that exists under a method it does not serve
  */
-export function route(request: ApiRequest, store: FileStore): ApiResponse {
-  const { method, path, body } = request
+export function route(request: ApiRequest, stores: Stores): ApiResponse {
+  const { method, path, body, now } = request
+  const store = stores.files
 
   if (path === `${API_ROOT}/health`) {
     return { status: 200, body: { status: 'ok', api: API_ROOT } }
+  }
+
+  if (path.startsWith(`${HISTORY_ROOT}/`)) {
+    return routeHistory(method, path, body, now, stores.history)
   }
 
   if (path === `${FS_ROOT}/files`) {
@@ -107,6 +127,86 @@ function routeFile(
 
     case 'DELETE':
       return store.remove(name) ? { status: 204 } : notFound(name)
+
+    default:
+      return methodNotAllowed(method)
+  }
+}
+
+/**
+ * Dispatches the save-history routes.
+ *
+ * These deliberately do not mirror the file routes one for one: `files` and
+ * `files/{name}` answer with times and deletion marks only, and contents come
+ * from `files/{name}/{id}` one version at a time. A history holds up to fifty
+ * copies of a file, so shipping them all to draw a list of timestamps would
+ * undo the reason for keeping snapshots as rows.
+ */
+function routeHistory(
+  method: string,
+  path: string,
+  body: unknown,
+  now: Date,
+  history: HistoryStore,
+): ApiResponse {
+  if (path === `${HISTORY_ROOT}/rename`) {
+    if (method !== 'POST') return methodNotAllowed(method)
+
+    const from = field(body, 'from')
+    const to = field(body, 'to')
+    if (from === undefined || to === undefined) {
+      return badRequest('rename needs string `from` and `to` fields')
+    }
+
+    history.rename(from, to)
+    // Renaming a file with no history is ordinary, not an error: the file
+    // simply had nothing recorded yet.
+    return { status: 204 }
+  }
+
+  if (path === `${HISTORY_ROOT}/files`) {
+    if (method !== 'GET') return methodNotAllowed(method)
+    return { status: 200, body: { files: history.list() } }
+  }
+
+  if (!path.startsWith(`${HISTORY_ROOT}/files/`)) {
+    return { status: 404, body: { error: `No such endpoint: ${path}` } }
+  }
+
+  const rest = path.slice(`${HISTORY_ROOT}/files/`.length).split('/')
+  const name = decodeURIComponent(rest[0])
+
+  // `files/{name}/{id}` -- one version's contents.
+  if (rest.length === 2) {
+    if (method !== 'GET') return methodNotAllowed(method)
+
+    const contents = history.read(name, decodeURIComponent(rest[1]))
+    return contents === null
+      ? { status: 404, body: { error: `No such snapshot: ${rest[1]}` } }
+      : { status: 200, body: { contents } }
+  }
+
+  if (rest.length !== 1) {
+    return { status: 404, body: { error: `No such endpoint: ${path}` } }
+  }
+
+  switch (method) {
+    case 'GET':
+      return { status: 200, body: history.index(name) }
+
+    case 'POST': {
+      const contents = field(body, 'contents')
+      if (contents === undefined) {
+        return badRequest('recording needs a string `contents` field')
+      }
+
+      const force = (body as { force?: unknown }).force === true
+      return { status: 200, body: history.record(name, contents, now, force) }
+    }
+
+    case 'DELETE':
+      history.markDeleted(name, now)
+      return { status: 204 }
 
     default:
       return methodNotAllowed(method)

@@ -47,7 +47,7 @@ describe('IDE patch-notes gate', () => {
 
   beforeEach(() => {
     fs = new MockFileSystem()
-    FS.setFS(fs)
+    FS.setBackend(FS.localBackend(fs))
   })
 
   afterEach(() => {
