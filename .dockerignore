@@ -1,0 +1,23 @@
+# The build context is the repository root (see server/Dockerfile), so keep out
+# everything the server image has no use for -- which is most of the repo.
+node_modules
+**/node_modules
+dist
+coverage
+.git
+.github
+.claude
+test
+public
+scripts
+types
+
+# The front end. The Dockerfile copies back the two directories the server is
+# allowed to import from.
+src/app
+src/js
+src/lib
+src/lpm
+src/prettier
+src/scheme
+src/theme

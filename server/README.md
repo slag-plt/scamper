@@ -34,45 +34,77 @@ the same pile of files. Failing to start is the safer of the two, and
 `SCAMPER_STUB=1` is how a front-end contributor asks for the in-memory one on
 purpose (`npm run dev:full` sets it).
 
-## Setting up a database
+## Running it, with its database
 
-BetterAuth owns the `user`, `session`, `account`, and `verification` tables and
-its CLI creates them; ours reference `user`, so it goes first:
-
-```console
-export DATABASE_URL='mysql://root:secret@127.0.0.1:3306/scamper'
-export BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
-export BETTER_AUTH_URL='http://localhost:5173'
-npm run db:migrate --workspace @scamper/server
-```
-
-`files`, `histories`, and `snapshots` are ours, and `src/db.ts` applies
-`schema.sql` at every start. Every statement there is `IF NOT EXISTS`, so that
-is a no-op once done, and a fresh checkout needs no separate step.
-
-A MariaDB to point it at, if you have Docker:
+`docker-compose.yml` in the repository root is how this server is meant to run,
+in development and in production alike:
 
 ```console
-docker run -d --name scamper-mariadb -e MARIADB_ROOT_PASSWORD=secret \
-  -e MARIADB_DATABASE=scamper -p 3306:3306 mariadb:11
+cp .env.example .env      # fill in the passwords and the secret
+docker compose up -d
 ```
+
+That brings up MariaDB, waits for it to be genuinely ready, creates BetterAuth's
+tables, and then starts the server. It is also the upgrade:
+
+```console
+git pull && docker compose up -d --build
+```
+
+There is deliberately no deployment script. A script would have to encode how
+the server is started, restarted after a crash, and pointed at its database --
+which is what the compose file already says, in a form that runs.
+
+### Migrations
+
+Two sets of tables, in this order:
+
+1. **BetterAuth's** (`user`, `session`, `account`, `verification`). It owns them
+   and its CLI creates them. The `migrate` service runs that CLI to completion
+   before the server starts, so `up` does it for you. It is additive and skips
+   what exists, so it is a no-op on every start after the first.
+2. **Ours** (`files`, `histories`, `snapshots`, in `schema.sql`), which reference
+   `user`. `src/db.ts` applies them at every start; every statement is
+   `IF NOT EXISTS`.
+
+The CLI is a separate build stage because it drags in Prisma, Drizzle, and a
+native SQLite binding for databases we do not use. Worth carrying in a container
+that runs for two seconds at deploy time; not in the one serving requests.
+
+### Without Docker
+
+The server is a plain Node process, so it runs directly too — set the variables
+above and `npm run start:server`, having run
+`npm run db:migrate --workspace @scamper/server` once against your database.
 
 ## Sign-in
 
-Email and password, via BetterAuth mounted at `/api/auth/*`. That method needs
-no third-party registration, so a contributor can create an account against a
-local database and exercise the whole flow offline. Adding an identity provider
-later — campus Google, say — is configuration in `src/auth.ts` plus a button in
-the login form; nothing downstream cares, because everything downstream keys off
-`session.user.id`.
+Two ways in, via BetterAuth mounted at `/api/auth/*`:
+
+- **Microsoft (Entra ID)**, which is how students sign in: the institution runs
+  Office 365, so they already have an account and Scamper never holds a
+  password. Set `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and
+  `MICROSOFT_TENANT_ID` from an app registration whose redirect URI is
+  `<BETTER_AUTH_URL>/api/auth/callback/microsoft`. The tenant is required and
+  has no `common` default on purpose: a single tenant is what limits sign-in to
+  your directory, and `common` would accept any Microsoft account anywhere.
+- **Email and password**, which needs no third-party registration, so a
+  contributor can create an account against a local database and exercise the
+  whole flow offline.
+
+Nothing downstream knows which was used — it all keys off `session.user.id`.
+`/api/v1/auth/methods` reports which are configured, so the login form never
+offers a button that cannot work.
 
 Every route but `/api/v1/health` needs a session and answers **401** without
 one. That check lives in `src/api.ts` rather than in the HTTP layer, so the rule
 is stated where the routes are and a test can pin it.
 
-> **Not yet production-ready.** Nothing verifies an email address, so anyone who
-> can reach the server can create an account. That gate — an allowlist, campus
-> SSO, or mail-backed verification — has to be decided before this is exposed.
+> **Release blocker: the email route has no sign-up gate.** Microsoft sign-in is
+> limited to your tenant, but anyone who can reach the server can create an
+> account with an email address, and nothing verifies it. Decide that gate — an
+> allowlist, mail-backed verification, or dropping email sign-in in production —
+> before exposing this. The server says so on every start.
 
 ## The API
 
@@ -149,6 +181,39 @@ release: were a production build to switch on the mere presence of a config, a
 single `npm run deploy:server-url` would put every student into the same pile of
 files. Signing in is what will move a user's files — the login UI is still to
 come, so in database mode the IDE currently gets 401s until one exists.
+
+## Deploying
+
+The front end and the back end deploy separately, because they are different
+kinds of thing: the front end is static files that `scripts/deploy` rsyncs into
+a versioned directory, and this is a long-running process.
+
+1. `npm run deploy` — the front end, as ever.
+2. `docker compose up -d --build` on the server host — this.
+3. `npm run deploy:server-url -- <origin>/api/v1` — once, to tell every
+   deployed front-end release that a server exists.
+
+The one piece that is neither: **the web server has to pass `/api/` through to
+the container**, because the two share an origin. The container publishes to
+loopback only, so this is the only route in. For Apache:
+
+```apache
+ProxyPass        /api/ http://127.0.0.1:3000/api/
+ProxyPassReverse /api/ http://127.0.0.1:3000/api/
+```
+
+or for nginx:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:3000/api/;
+    proxy_set_header Host $host;
+}
+```
+
+Keep the client's `Host` header rather than rewriting it: BetterAuth checks the
+request's origin, and a rewritten host makes a legitimate sign-in look
+cross-site.
 
 ## Cross-origin
 

@@ -1,0 +1,84 @@
+# The Scamper file server and its database (issue #357).
+#
+# This is how the server is meant to be run, in development and in production
+# alike, so there is no separate deployment script to keep in step with how the
+# thing actually starts. Deploying is:
+#
+#   docker compose pull || docker compose build
+#   docker compose up -d
+#
+# and the same two commands are an upgrade. Configuration comes from a `.env`
+# file beside this one -- see .env.example.
+#
+# The front end is *not* here: it is static files that `scripts/deploy` rsyncs
+# to the web server. That web server has to pass `/api/` through to this
+# container, because the two share an origin (see server/README.md).
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-scamper}
+      MARIADB_USER: ${MARIADB_USER:-scamper}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD in .env}
+    volumes:
+      # A named volume, so `docker compose down` does not take a student's
+      # files with it. Removing them takes `down -v`, deliberately.
+      - scamper-db:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published. Only the server needs to reach it, and a database on a
+    # public port is a database someone else will find. Reach it for a migration
+    # or a look with `docker compose exec db mariadb ...`.
+
+  # Creates BetterAuth's tables, then exits. The server's own tables reference
+  # `user`, so this has to finish first -- which is why `up` waits for it rather
+  # than leaving a migration step for whoever is deploying to remember.
+  # Additive and idempotent, so it is a no-op on every start after the first.
+  migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: migrate
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Waits for MariaDB to actually accept connections, not merely to have
+        # started: the server applies its schema at startup and would otherwise
+        # race the database's own first-run initialisation.
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
+      PORT: 3000
+    ports:
+      # Bound to the loopback interface: the web server in front of it proxies
+      # `/api/` here, and nothing else should be able to reach it directly.
+      - '127.0.0.1:${SERVER_PORT:-3000}:3000'
+
+volumes:
+  scamper-db:

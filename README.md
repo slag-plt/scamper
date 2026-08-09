@@ -21,8 +21,18 @@ which is what most work on Scamper needs. To work on the file server instead
 $> npm run dev:full   # Front end + the back end in server/, wired to each other
 ~~~
 
-The IDE then keeps files on the server rather than in the browser. See
-[`server/README.md`](server/README.md) for what that involves.
+The IDE then keeps files on the server rather than in the browser, in memory
+and without sign-in — enough for front-end work. For the real thing, with a
+database and accounts:
+
+~~~console
+$> cp .env.example .env    # fill in the passwords and the session secret
+$> docker compose up -d    # MariaDB, migrations, and the server
+~~~
+
+See [`server/README.md`](server/README.md) for deploying it, and for the one
+piece Docker cannot do for you: the web server has to pass `/api/` through to
+the container, since the front end and the API share an origin.
 
 ## Deployment
 
