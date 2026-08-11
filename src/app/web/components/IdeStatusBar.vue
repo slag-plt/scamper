@@ -12,7 +12,7 @@ defineProps<{
   canSignIn: boolean
 }>()
 
-defineEmits<{ signIn: [] }>()
+defineEmits<{ signIn: []; signOut: [] }>()
 </script>
 
 <template>
@@ -25,7 +25,10 @@ defineEmits<{ signIn: [] }>()
     </template>
     <span v-if="canSignIn" class="account">
       <template v-if="signedInAs !== null">
-        Signed in as {{ signedInAs }}
+        {{ signedInAs }}
+        <button type="button" class="sign-in" @click="$emit('signOut')">
+          Sign out
+        </button>
       </template>
       <button v-else type="button" class="sign-in" @click="$emit('signIn')">
         Sign in to save your files

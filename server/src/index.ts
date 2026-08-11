@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
@@ -111,7 +111,23 @@ async function userOf(req: IncomingMessage): Promise<string | null> {
 }
 
 const server = createServer((req, res) => {
-  void (async () => {
+  // Every failure below lands here. Without it a rejected promise from any
+  // handler -- a dropped database connection, anything BetterAuth throws --
+  // becomes an unhandled rejection, which ends the process and takes every
+  // other in-flight request with it.
+  void handle(req, res).catch((error: unknown) => {
+    console.error('Request failed:', error)
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Internal server error' }))
+    } else {
+      res.end()
+    }
+  })
+})
+
+async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  {
     // For an ordinary request `req.url` is a path plus query rather than an
     // absolute URL, so the parser needs a base it otherwise makes no use of.
     const url = new URL(
@@ -186,8 +202,8 @@ const server = createServer((req, res) => {
 
     res.writeHead(status, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify(reply))
-  })()
-})
+  }
+}
 
 server.listen(PORT, () => {
   console.log(

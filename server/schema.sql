@@ -3,6 +3,10 @@
 -- Applied by server/src/db.ts on every start. Every statement is
 -- `IF NOT EXISTS`, so applying it twice does nothing the second time.
 --
+-- Note that these are `IF NOT EXISTS`: they create a schema, they do not
+-- migrate one. A change here needs an explicit ALTER against any database that
+-- already exists.
+--
 -- BetterAuth owns the authentication tables (user, session, account,
 -- verification) and its CLI creates them -- `npm run db:migrate --workspace
 -- @scamper/server`. The tables below reference `user`, so that has to have run
@@ -12,7 +16,11 @@
 CREATE TABLE IF NOT EXISTS files (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    VARCHAR(36)  NOT NULL,
-  name       VARCHAR(255) NOT NULL,
+  -- Binary collation, because these are filenames. MariaDB's default is
+  -- case- and accent-insensitive, which would make Homework.scm and
+  -- homework.scm one row -- silently keeping one file's contents under the
+  -- other's name -- and neither OPFS nor the Node backend behaves that way.
+  name       VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
   contents   LONGTEXT     NOT NULL,
   updated_at DATETIME(3)  NOT NULL,
 
@@ -29,7 +37,7 @@ CREATE TABLE IF NOT EXISTS files (
 CREATE TABLE IF NOT EXISTS histories (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    VARCHAR(36)  NOT NULL,
-  filename   VARCHAR(255) NOT NULL,
+  filename   VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
   deleted_at DATETIME(3)  NULL,
 
   UNIQUE KEY uniq_user_file (user_id, filename),

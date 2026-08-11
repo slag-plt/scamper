@@ -437,6 +437,5 @@ warm `fileExists` makes no request at all.
   takes a file system and a history together so a server file system can never
   end up paired with a flat-file history -- that combination would write
   `.{filename}.history` blobs into the server's file storage, which is exactly
-  the layout the database replaces. Nothing switches automatically yet: a
-  configured server only means one is available to log in to, and the login UI is
-  still to come.
+  the layout the database replaces. `src/app/web/server-session.ts` chooses
+  which one at startup, and `SignInModal.vue` is the sign-in dialog.

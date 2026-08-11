@@ -67,23 +67,32 @@ export async function currentUser(
 }
 
 /**
- * @returns which sign-in methods the server offers, or none if it cannot say.
- *          A server with no methods is one the IDE will not offer to sign in to.
+ * @returns which sign-in methods the server offers, or **null** if it could not
+ *          be asked -- unreachable, an error status, or a reply that is not a
+ *          list of methods
+ *
+ * The null matters. "No methods" and "no answer" look alike but mean opposite
+ * things: the first is the development stub, which is open and has no accounts,
+ * and the second is a server we know nothing about. Collapsing them would put a
+ * user onto a file system that answers 401 to everything, with no working way
+ * to sign in.
  */
 export async function signInMethods(
   serverUrl: string,
-): Promise<SignInMethods> {
+): Promise<SignInMethods | null> {
   try {
     const response = await fetch(`${serverUrl.replace(/\/+$/, '')}/auth/methods`)
-    if (!response.ok) return { password: false }
+    if (!response.ok) return null
+
     const body: unknown = await response.json()
-    if (typeof body !== 'object' || body === null) {
-      return { password: false }
-    }
+    if (typeof body !== 'object' || body === null) return null
+
     const methods = body as Partial<SignInMethods>
-    return { password: methods.password === true }
+    return typeof methods.password === 'boolean'
+      ? { password: methods.password }
+      : null
   } catch {
-    return { password: false }
+    return null
   }
 }
 

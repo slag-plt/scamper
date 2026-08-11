@@ -14,9 +14,9 @@
 // the same interface rather than the SQL that actually ships.
 
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest'
-import { createPool, type Pool } from 'mysql2'
 import type { Pool as SqlPool } from 'mysql2/promise'
 
+import { connect } from '../../server/src/db'
 import {
   MariaDbFileStore,
   MariaDbHistoryStore,
@@ -28,27 +28,31 @@ const URL = process.env.SCAMPER_TEST_DATABASE_URL
 const ADA = 'user-ada'
 const GRACE = 'user-grace'
 
-let pool: Pool
 let sql: SqlPool
 let files: MariaDbFileStore
 let history: MariaDbHistoryStore
 
 describe.skipIf(URL === undefined)('the MariaDB stores', () => {
   beforeAll(async () => {
-    pool = createPool(URL ?? '')
-    sql = pool.promise()
+    // Through connect(), not a bare pool: its `timezone: 'Z'` is part of what
+    // makes stored times mean what they say, so a test that configured its own
+    // pool would pass while the server shipped a five-hour skew. The CI job
+    // runs these under a non-UTC TZ for the same reason.
+    sql = connect(URL ?? '').sql
 
     // The real schema minus its foreign keys to `user`: BetterAuth owns that
     // table and its CLI makes it, which is more than these tests need. What
     // they exercise is our queries, and those key on user_id either way.
     await sql.query(`CREATE TABLE IF NOT EXISTS files (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      user_id VARCHAR(36) NOT NULL, name VARCHAR(255) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      name VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
       contents LONGTEXT NOT NULL, updated_at DATETIME(3) NOT NULL,
       UNIQUE KEY uniq_user_name (user_id, name))`)
     await sql.query(`CREATE TABLE IF NOT EXISTS histories (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      user_id VARCHAR(36) NOT NULL, filename VARCHAR(255) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      filename VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
       deleted_at DATETIME(3) NULL,
       UNIQUE KEY uniq_user_file (user_id, filename))`)
     await sql.query(`CREATE TABLE IF NOT EXISTS snapshots (
@@ -114,6 +118,45 @@ describe.skipIf(URL === undefined)('the MariaDB stores', () => {
       expect(await files.read(ADA, 'to.scm')).toBe('moving')
     })
 
+    test('renaming a file that is gone leaves the destination alone', async () => {
+      // The rename is delete-then-move in a transaction. If the move finds
+      // nothing, the delete must not stand: a stale name cache on one machine
+      // would otherwise destroy a file another machine had just written.
+      await files.write(ADA, 'homework.scm', 'weeks of work')
+
+      expect(await files.rename(ADA, 'ghost.scm', 'homework.scm')).toBe(false)
+      expect(await files.read(ADA, 'homework.scm')).toBe('weeks of work')
+    })
+
+    test('a refused cross-user rename leaves the destination alone', async () => {
+      await files.write(ADA, 'mine.scm', 'ada')
+      await files.write(GRACE, 'target.scm', 'grace')
+
+      expect(await files.rename(GRACE, 'mine.scm', 'target.scm')).toBe(false)
+      expect(await files.read(GRACE, 'target.scm')).toBe('grace')
+      expect(await files.read(ADA, 'mine.scm')).toBe('ada')
+    })
+
+    test('names differing only by case are different files', async () => {
+      // MariaDB's default collation is case-insensitive, which would fold these
+      // into one row -- keeping one file's contents under the other's name.
+      // Neither OPFS nor the Node backend behaves that way.
+      await files.write(ADA, 'Homework.scm', 'capital')
+      await files.write(ADA, 'homework.scm', 'lowercase')
+
+      expect(await files.read(ADA, 'Homework.scm')).toBe('capital')
+      expect(await files.read(ADA, 'homework.scm')).toBe('lowercase')
+      expect(await files.list(ADA)).toHaveLength(2)
+    })
+
+    test('names differing only by accent are different files', async () => {
+      await files.write(ADA, 'cafe.scm', 'plain')
+      await files.write(ADA, 'café.scm', 'accented')
+
+      expect(await files.read(ADA, 'cafe.scm')).toBe('plain')
+      expect(await files.read(ADA, 'café.scm')).toBe('accented')
+    })
+
     test('lists by name, and previews nothing hidden', async () => {
       await files.write(ADA, 'b.scm', 'second')
       await files.write(ADA, 'a.scm', 'first')
@@ -142,6 +185,15 @@ describe.skipIf(URL === undefined)('the MariaDB stores', () => {
       expect(snapshots[0].time).toBe(T1.toISOString())
       // The index carries times and ids only -- the reason snapshots are rows.
       expect(JSON.stringify(snapshots)).not.toContain('first')
+    })
+
+    test('gives back the time it was given, not the server\'s local reading', async () => {
+      // DATETIME carries no zone. Without `timezone: 'Z'` on the pool this
+      // comes back shifted by the server's offset -- and a head timestamp in
+      // the future makes addsNothing suppress every later snapshot.
+      await history.record(ADA, 'hello.scm', 'first', T1, true)
+      const { snapshots } = await history.index(ADA, 'hello.scm')
+      expect(snapshots[0].time).toBe('2026-08-01T10:00:00.000Z')
     })
 
     test('orders newest first', async () => {
@@ -178,6 +230,16 @@ describe.skipIf(URL === undefined)('the MariaDB stores', () => {
       // is that reading one is scoped to the asking user's history.
       expect(await history.read(GRACE, 'hello.scm', snapshots[0].id)).toBeNull()
       expect(await history.read(ADA, 'hello.scm', snapshots[0].id)).toBe('ada')
+    })
+
+    test('renaming a file with no history keeps the destination\'s', async () => {
+      // A file saved a minute ago has no snapshot yet (the merge window), so
+      // renaming it onto a name carrying weeks of history must not take that
+      // history with it -- which is the recovery path #42 exists for.
+      await history.record(ADA, 'keeper.scm', 'weeks of versions', T1, true)
+
+      expect(await history.rename(ADA, 'brand-new.scm', 'keeper.scm')).toBe(false)
+      expect((await history.index(ADA, 'keeper.scm')).snapshots).toHaveLength(1)
     })
 
     test('marks a deletion and clears it on the next record', async () => {

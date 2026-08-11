@@ -18,9 +18,18 @@ export interface Database {
   sql: SqlPool
 }
 
-/** Opens the connection pool named by a `mysql://user:pass@host/db` URL. */
+/**
+ * Opens the connection pool named by a `mysql://user:pass@host/db` URL.
+ *
+ * `timezone: 'Z'` is not optional. DATETIME carries no zone, and every time
+ * written here is UTC; without this mysql2 reads them back as *local* times, so
+ * on a server whose clock is not UTC every snapshot comes back shifted by the
+ * offset. That is worse than a display bug: a head timestamp in the future
+ * makes `addsNothing` see a negative age, judge every save to be inside the
+ * merge window, and record nothing at all.
+ */
 export function connect(url: string): Database {
-  const pool = createPool(url)
+  const pool = createPool({ uri: url, timezone: 'Z' })
   return { pool, sql: pool.promise() }
 }
 

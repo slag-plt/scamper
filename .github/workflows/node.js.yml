@@ -62,6 +62,10 @@ jobs:
     - run: npx vitest run test/server/mariadb-stores.test.ts
       env:
         SCAMPER_TEST_DATABASE_URL: mysql://root:test@127.0.0.1:3306/scamper_test
+        # Deliberately not UTC. DATETIME carries no zone, so a server whose
+        # clock is not UTC is exactly where stored times go wrong -- and a
+        # runner in UTC would never notice.
+        TZ: America/Chicago
 
   browser-tests:
 

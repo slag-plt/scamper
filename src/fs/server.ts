@@ -53,8 +53,10 @@ export class ServerFileSystem implements FS {
   ): Promise<Response> {
     const response = await fetch(`${this.baseUrl}/${path}`, {
       method,
-      // The session cookie has to ride along, and it is a cross-origin cookie
-      // whenever the server is not also the static host.
+      // The session cookie has to ride along. Same-origin in every deployment
+      // this supports, so this is belt and braces rather than the load-bearing
+      // part -- but omitting it would break the moment anything is proxied
+      // differently, and the failure would look like "not signed in".
       credentials: 'include',
       headers:
         body === undefined ? undefined : { 'Content-Type': 'application/json' },

@@ -90,8 +90,15 @@ export class MariaDbFileStore implements FileStore {
         'UPDATE files SET name = ? WHERE user_id = ? AND name = ?',
         [to, userId, from],
       )
+      if (result.affectedRows === 0) {
+        // There was no `from` to move, so the delete above must not stand --
+        // otherwise renaming a file that is already gone destroys whatever
+        // happened to be sitting at the destination.
+        await connection.rollback()
+        return false
+      }
       await connection.commit()
-      return result.affectedRows > 0
+      return true
     } catch (error) {
       await connection.rollback()
       throw error
@@ -220,8 +227,15 @@ export class MariaDbHistoryStore implements HistoryStore {
         'UPDATE histories SET filename = ? WHERE user_id = ? AND filename = ?',
         [to, userId, from],
       )
+      if (result.affectedRows === 0) {
+        // Nothing to move, so keep `to`'s history: a file whose own history is
+        // still inside the merge window has none of its own yet, and renaming
+        // it would otherwise wipe out weeks of the destination's.
+        await connection.rollback()
+        return false
+      }
       await connection.commit()
-      return result.affectedRows > 0
+      return true
     } catch (error) {
       await connection.rollback()
       throw error

@@ -35,7 +35,7 @@ import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
 import SignInModal from './SignInModal.vue'
 import { restart, serverSession } from '../server-session'
-import { signInWithPassword } from '../auth-client'
+import { signInWithPassword, signOut } from '../auth-client'
 import { isNotSignedIn } from '../../../fs/session'
 import { importLocalFiles, localFileNames } from '../local-import'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
@@ -181,6 +181,20 @@ function showPatchNotesIfNeeded() {
     patchNotesToShow.value = unseen
     showPatchNotes.value = true
   }
+}
+
+/**
+ * Signs out, then restarts onto local storage.
+ *
+ * Matters most on a shared machine: without this a student cannot hand the
+ * browser to the next person without leaving their files reachable. The save
+ * first is deliberate -- signing out is not a reason to lose the last edit.
+ */
+async function handleSignOut() {
+  if (fileServer === null) return
+  await saveCurrentFile()
+  await signOut(fileServer.client)
+  restart()
 }
 
 function openSignIn() {
@@ -894,6 +908,7 @@ onUnmounted(() => {
         :signed-in-as="signedInAs"
         :can-sign-in="canSignIn"
         @sign-in="openSignIn"
+        @sign-out="handleSignOut"
       />
     </div>
   </div>
