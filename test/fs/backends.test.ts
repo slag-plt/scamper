@@ -4,6 +4,7 @@ import { FlatFileHistory } from '../../src/history/flat-file'
 import { ServerHistory } from '../../src/history/server'
 import ServerFileSystem from '../../src/fs/server'
 import { MockFileSystem } from '../stubs/mock-file-system'
+import { NotSignedInError } from '../../src/fs/session'
 import { initializeBackend, serverSession } from '../../src/app/web/server-session'
 
 describe('backend pairing', () => {
@@ -79,5 +80,38 @@ describe('choosing a backend at startup', () => {
     await initializeBackend()
 
     expect(getFS()).toBeInstanceOf(ServerFileSystem)
+  })
+})
+
+describe('a session that has ended', () => {
+  // 401 is not a fault like the others: the files are fine and the request was
+  // well formed. Both clients raise a distinct type so the IDE can offer a
+  // sign-in rather than an error screen (see IdeApp's reportError).
+  function refuse() {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(new Response('{"error":"Not signed in"}', { status: 401 })),
+    )
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('is told apart from a failure by the file system', async () => {
+    refuse()
+    const { fs } = serverBackend('/api/v1')
+    await expect(fs.getFileList()).rejects.toThrow(NotSignedInError)
+    await expect(fs.loadFile('hello.scm')).rejects.toThrow(NotSignedInError)
+    await expect(fs.saveFile('hello.scm', 'x')).rejects.toThrow(NotSignedInError)
+  })
+
+  test('is told apart from a failure by the history', async () => {
+    refuse()
+    const { history } = serverBackend('/api/v1')
+    await expect(history.list()).rejects.toThrow(NotSignedInError)
+    await expect(history.index('hello.scm')).rejects.toThrow(NotSignedInError)
+    // read() treats 404 as "no such snapshot", so it needs its own 401 check
+    // rather than falling through to that.
+    await expect(history.read('hello.scm', '1')).rejects.toThrow(NotSignedInError)
   })
 })

@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { createServer, type IncomingMessage } from 'node:http'
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
@@ -12,16 +12,6 @@ import type { Stores } from './stores'
 
 /** The port to listen on. PORT overrides it wherever this gets deployed. */
 const PORT = Number(process.env.PORT ?? 3000)
-
-/**
- * The single origin allowed to call this server with credentials, if any.
- *
- * Unset means no CORS headers at all, which is right when the server and the
- * static site share an origin. Cross-origin hosting has to opt in explicitly:
- * `Access-Control-Allow-Origin` cannot be `*` once the client sends cookies,
- * so this is a single origin rather than a list of them.
- */
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN
 
 /**
  * The largest request body accepted, so a stray upload cannot exhaust memory.
@@ -107,18 +97,6 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
   }
 }
 
-/** Applies the configured cross-origin headers, if any, to a reply. */
-function applyCors(res: ServerResponse): void {
-  if (ALLOWED_ORIGIN === undefined) return
-
-  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  // Replies vary by origin, so a cache must not serve one origin's to another.
-  res.setHeader('Vary', 'Origin')
-}
-
 /**
  * @returns the id of the user this request is for, or null if it carries no
  *          valid session. Without auth configured there is only one user.
@@ -134,8 +112,6 @@ async function userOf(req: IncomingMessage): Promise<string | null> {
 
 const server = createServer((req, res) => {
   void (async () => {
-    applyCors(res)
-
     // For an ordinary request `req.url` is a path plus query rather than an
     // absolute URL, so the parser needs a base it otherwise makes no use of.
     const url = new URL(
@@ -144,10 +120,11 @@ const server = createServer((req, res) => {
     )
     const method = req.method ?? 'GET'
 
-    // A cross-origin PUT/DELETE carrying JSON is preflighted; answer before
-    // any routing, since the browser sends no credentials with a preflight.
+    // Nothing is served cross-origin -- the static site and this server share a
+    // host (see README) -- so no reply carries CORS headers and a preflight is
+    // never a request this server should be answering.
     if (method === 'OPTIONS') {
-      res.writeHead(ALLOWED_ORIGIN === undefined ? 405 : 204)
+      res.writeHead(405)
       res.end()
       return
     }

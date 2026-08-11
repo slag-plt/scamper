@@ -33,7 +33,7 @@ export interface FileSessionOptions {
   /** Autosave interval in milliseconds. */
   autosaveIntervalMs?: number
   /** Called when a save fails so the host can surface the error. */
-  onSaveError?: (message: string) => void
+  onSaveError?: (error: Error) => void
 }
 
 const DEFAULT_AUTOSAVE_INTERVAL_MS = 3000
@@ -43,7 +43,7 @@ export class FileSession {
   private history: History
   private editor: EditorHooks
   private autosaveIntervalMs: number
-  private onSaveError?: (message: string) => void
+  private onSaveError?: (error: Error) => void
 
   private currentFile: string | null = null
   private autosaveId: ReturnType<typeof setInterval> | null = null
@@ -127,7 +127,7 @@ export class FileSession {
       try {
         await this.fs.saveFile(filename, doc)
       } catch (e) {
-        if (e instanceof Error) this.onSaveError?.(e.message)
+        if (e instanceof Error) this.onSaveError?.(e)
         // A save that failed is not history.
         return
       }

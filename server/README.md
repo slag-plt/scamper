@@ -24,7 +24,6 @@ below for how they are connected, and why it is done that way.
 | `BETTER_AUTH_SECRET`  | signs sessions; `openssl rand -base64 32`                       |
 | `BETTER_AUTH_URL`     | the origin Scamper is served from                               |
 | `PORT`                | defaults to 3000                                                |
-| `ALLOWED_ORIGIN`      | only for a split-origin deployment (see below)                  |
 | `SCAMPER_STUB`        | `1` to run in memory with no sign-in — development only         |
 
 There is nothing to configure for sign-in beyond the secret: accounts are made
@@ -274,15 +273,18 @@ cross-site.
 
 ## Cross-origin
 
-Scamper is deployed with the static site and this server on **one origin**, so
-`/api/v1` is a path on the same host the IDE is served from. That is the
-arrangement `npm run dev:full` reproduces, and it means no CORS headers are sent
-at all, and session cookies can stay `SameSite=Lax` and same-origin.
+There is none, on purpose. Scamper is deployed with the static site and this
+server on **one origin**, so `/api/v1` is a path on the host the IDE is served
+from — the arrangement `npm run dev:full` reproduces with a proxy. No reply
+carries CORS headers, `OPTIONS` is a 405, and session cookies stay
+`SameSite=Lax` and same-origin.
 
-`ALLOWED_ORIGIN` exists for a split-origin deployment, and names the single
-origin permitted to call the server with credentials. It is one origin rather
-than a list because `Access-Control-Allow-Origin` cannot be `*` once the client
-sends cookies. Leave it unset for the same-origin deployment above.
+An `ALLOWED_ORIGIN` setting used to exist for a split-origin deployment. It is
+gone: it was configuration nothing set, on a path nothing exercised, in the one
+area where an untested path is worth least — a credentialed cross-origin reply
+is exactly the thing to get wrong quietly. Serving this from a second origin
+would mean putting it back deliberately, alongside `sameSite: 'none'` on the
+session cookie and `trustedOrigins` in `src/auth.ts`.
 
 ## Why this lives in the Scamper repo
 

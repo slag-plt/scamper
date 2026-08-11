@@ -36,6 +36,7 @@ import FileHistoryModal from './FileHistoryModal.vue'
 import SignInModal from './SignInModal.vue'
 import { restart, serverSession } from '../server-session'
 import { signInWithPassword } from '../auth-client'
+import { isNotSignedIn } from '../../../fs/session'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
@@ -90,6 +91,10 @@ const signedInAs = ref<string | null>(fileServer?.user?.email ?? null)
 const showSignIn = ref(false)
 const signInBusy = ref(false)
 const signInError = ref<string | null>(null)
+// Set when a session ended mid-edit rather than the user asking to sign in.
+// Dismissing then has to restart, because the file system this tab is holding
+// answers 401 to everything and there is no way back to it without a session.
+const sessionLapsed = ref(false)
 
 // ---------- editor context + child component refs ----------
 
@@ -178,7 +183,18 @@ function showPatchNotesIfNeeded() {
 
 function openSignIn() {
   signInError.value = null
+  sessionLapsed.value = false
   showSignIn.value = true
+}
+
+/**
+ * Closes the sign-in dialog. After a lapsed session that means restarting: this
+ * tab holds a file system that answers 401 to everything, and starting over
+ * lands on local storage, which at least works.
+ */
+function closeSignIn() {
+  showSignIn.value = false
+  if (sessionLapsed.value) restart()
 }
 
 async function handleSignInPassword(email: string, password: string) {
@@ -257,7 +273,7 @@ async function switchToFile(filename: string): Promise<void> {
     currentFile.value = filename
     editor().initializeDoc(src)
   } catch (e) {
-    if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ''}`)
+    reportError(e, (message) => `${message}\n\n${e instanceof Error ? (e.stack ?? '') : ''}`)
   }
 
   session.resetOutput()
@@ -265,6 +281,30 @@ async function switchToFile(filename: string): Promise<void> {
   config.lastOpenedFilename = currentFile.value
   startAutosaving()
   isLoadingFile = false
+}
+
+/**
+ * Reports an error to the person, telling a lapsed session apart from a fault.
+ *
+ * A session can end mid-edit -- it expires, or an administrator resets the
+ * password -- and the answer to that is to sign in again, not an error screen
+ * over the editor.
+ *
+ * @returns true iff the error was handled here
+ */
+function reportError(error: unknown, describe: (message: string) => string): boolean {
+  if (isNotSignedIn(error)) {
+    sessionLapsed.value = true
+    signInError.value =
+      'Your session ended, so that save did not reach the server. Sign in to carry on.'
+    showSignIn.value = true
+    return true
+  }
+  if (error instanceof Error) {
+    displayError(describe(error.message))
+    return true
+  }
+  return false
 }
 
 function displayError(error: string) {
@@ -696,8 +736,8 @@ onMounted(async () => {
     fileHistory,
     { getDoc: () => editor().getDoc(), isEditorLoaded },
     {
-      onSaveError: (message) => {
-        displayError(message)
+      onSaveError: (error) => {
+        reportError(error, (message) => message)
       },
     },
   )
@@ -815,7 +855,7 @@ onUnmounted(() => {
     :busy="signInBusy"
     :error="signInError"
     @password="handleSignInPassword"
-    @close="showSignIn = false"
+    @close="closeSignIn"
   />
   <ModalHost />
   <PatchNotesModal
