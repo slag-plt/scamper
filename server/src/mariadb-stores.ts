@@ -231,15 +231,23 @@ export class MariaDbHistoryStore implements HistoryStore {
   }
 
   async markDeleted(userId: string, filename: string, now: Date): Promise<void> {
+    const history = await this.find(userId, filename)
+    if (history === null) return
+
     // Only marks a history that has something in it: deleting a file that was
-    // never recorded shouldn't leave a tombstone behind.
-    await this.sql.query(
-      `UPDATE histories h SET h.deleted_at = ?
-        WHERE h.user_id = ? AND h.filename = ?
-          AND EXISTS (SELECT 1 FROM (SELECT 1 FROM snapshots s
-                       WHERE s.history_id = h.id LIMIT 1) AS any_snapshot)`,
-      [toSql(now), userId, filename],
+    // never recorded shouldn't leave a tombstone behind. Asked as its own
+    // query rather than a correlated subquery inside the UPDATE, because
+    // MariaDB cannot see the updated table's alias from inside a derived one.
+    const [rows] = await this.sql.query<RowDataPacket[]>(
+      'SELECT 1 FROM snapshots WHERE history_id = ? LIMIT 1',
+      [history.id],
     )
+    if (rows.length === 0) return
+
+    await this.sql.query('UPDATE histories SET deleted_at = ? WHERE id = ?', [
+      toSql(now),
+      history.id,
+    ])
   }
 
   /** @returns the history row for `filename`, or null if there is none yet. */

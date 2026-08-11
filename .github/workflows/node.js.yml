@@ -30,6 +30,39 @@ jobs:
     - run: npm run validate
     - run: npm run build
 
+  # The MariaDB stores, against a real MariaDB. `npm run validate` skips these
+  # (no SCAMPER_TEST_DATABASE_URL), because an ordinary checkout should not need
+  # a database to run the tests -- but the SQL that actually ships is worth
+  # exercising somewhere, and per-user scoping is not something the in-memory
+  # stores can vouch for.
+  database-tests:
+
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: test
+          MARIADB_DATABASE: scamper_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+        cache: 'npm'
+    - run: npm ci
+    - run: npx vitest run test/server/mariadb-stores.test.ts
+      env:
+        SCAMPER_TEST_DATABASE_URL: mysql://root:test@127.0.0.1:3306/scamper_test
+
   browser-tests:
 
     runs-on: ubuntu-latest
