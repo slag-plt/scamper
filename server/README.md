@@ -74,6 +74,42 @@ The CLI is a separate build stage because it drags in Prisma, Drizzle, and a
 native SQLite binding for databases we do not use. Worth carrying in a container
 that runs for two seconds at deploy time; not in the one serving requests.
 
+### About the `npm audit` alerts on that CLI
+
+`npm audit` reports a **critical** advisory against `better-auth` and a **high**
+one against `drizzle-orm`, both reachable from `@better-auth/cli`. They are
+known, and the answer is to leave them alone. As of 2026-08-11:
+
+- **The server is not affected.** It runs `better-auth@1.6.26`; the advisory
+  covers `<= 1.6.21`. What is flagged is a *second, older copy* --
+  `better-auth@1.4.21`, nested inside `@better-auth/cli@1.4.21` -- which drags
+  `drizzle-orm@0.41.0` along with it.
+- **Nothing we run reaches the vulnerable code.** Every one of those advisories
+  is in an OAuth, OIDC, magic-link, SCIM, or organization flow. This server has
+  no identity provider and no plugins: email and password, and accounts made by
+  hand.
+- **It is not in the serving image.** The CLI is a devDependency, so
+  `npm ci --omit=dev` leaves it out; it exists only in the `migrate` stage, in a
+  container that runs once at deploy time and exits.
+- **Accounts do not use it.** `admin.ts` goes through BetterAuth's runtime
+  internals -- the 1.6.26 copy -- not the CLI. Creating and resetting accounts
+  never touches the flagged tree.
+
+There is no newer *stable* `@better-auth/cli` to upgrade to: 1.4.21 is latest,
+and the only thing past it is a 1.5.0 beta. **Do not pin that beta to silence
+the alert** -- it would put a pre-release in the deployment path to fix
+something that cannot be reached.
+
+Revisit when a stable CLI past 1.4.21 ships, which is the clean fix and costs
+nothing. Revisit sooner if this server ever gains a social provider or one of
+the plugins named above, because that is the assumption the whole analysis rests
+on.
+
+The alternative, if the alerts become intolerable, is to drop the CLI and write
+BetterAuth's four tables into `schema.sql` beside our three. That removes the
+dependency entirely, at the cost of having to notice when BetterAuth changes its
+own schema -- which is exactly what the CLI is doing for us.
+
 ### Without Docker
 
 The server is a plain Node process, so it runs directly too — set the variables
