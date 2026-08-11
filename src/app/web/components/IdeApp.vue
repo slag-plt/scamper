@@ -37,6 +37,7 @@ import SignInModal from './SignInModal.vue'
 import { restart, serverSession } from '../server-session'
 import { signInWithPassword } from '../auth-client'
 import { isNotSignedIn } from '../../../fs/session'
+import { importLocalFiles, localFileNames } from '../local-import'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
@@ -48,6 +49,7 @@ const OTHER_INSTANCE_MESSAGE =
 const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
   lastVersionAccessed: '0.0.0',
+  localFilesOffered: false,
 }
 
 const appVersion = `(${APP_VERSION})`
@@ -209,6 +211,64 @@ async function handleSignInPassword(email: string, password: string) {
   // The backend is chosen at startup, so start over rather than swapping the
   // file system out from under an open file. See server-session.ts.
   if (signInError.value === null) restart()
+}
+
+/**
+ * Offers to copy this browser's files into the account, once per browser.
+ *
+ * Signing in swaps the file system, so anything saved here before there was an
+ * account stops being listed -- which reads as loss even though nothing was
+ * lost. Asked once and remembered either way: a student who says no should not
+ * be asked again every time they open Scamper.
+ */
+async function offerLocalFiles() {
+  if (fileServer?.user == null || config.localFilesOffered || !fs) return
+
+  const names = await localFileNames()
+  // Nothing to carry across, so nothing to ask about -- but record the offer as
+  // made, since asking later would be about files from some other session.
+  if (names.length === 0) {
+    config.localFilesOffered = true
+    saveConfig()
+    return
+  }
+
+  const count = names.length.toString()
+  const them = names.length === 1 ? 'it' : 'them'
+  const files = names.length === 1 ? 'file' : 'files'
+  const wanted = await modalConfirm({
+    title: 'Copy your files into your account?',
+    message:
+      `You have ${count} ${files} saved in this browser from before you ` +
+      `signed in. Copy ${them} into your account so ${them} follow you ` +
+      `between computers?\n\nThe ${files} in this browser stay where they are.`,
+    confirmLabel: 'Copy',
+    cancelLabel: 'Not now',
+  })
+
+  // Recorded before the copy: if it fails, the answer to a repeated prompt on
+  // every load is no better, and the files are still in the browser either way.
+  config.localFilesOffered = true
+  saveConfig()
+  if (!wanted) return
+
+  try {
+    const result = await importLocalFiles(fs)
+    await populateFileDrawer()
+    if (result.renamed.length > 0) {
+      const renamed = result.renamed
+        .map((entry) => `${entry.from} -> ${entry.to}`)
+        .join('\n')
+      await modalAlert({
+        title: 'Some copies were renamed',
+        message:
+          `Copied ${result.copied.length.toString()} files. Your account ` +
+          `already had these names, so the copies came in as:\n\n${renamed}`,
+      })
+    }
+  } catch (e) {
+    reportError(e, (message) => `Could not copy your browser's files: ${message}`)
+  }
 }
 
 function handlePatchNotesClose() {
@@ -771,6 +831,7 @@ onMounted(async () => {
   Scamper.getInstance().calibrateScheduler()
 
   showPatchNotesIfNeeded()
+  await offerLocalFiles()
 })
 
 onUnmounted(() => {

@@ -21,6 +21,11 @@ export const LEGACY_CONFIG_FILENAME = '.scamper.config'
 export interface Config {
   lastOpenedFilename: string | null
   lastVersionAccessed: string
+  /**
+   * Whether this browser's files have already been offered to an account.
+   * Per-machine because the files are: another computer has its own.
+   */
+  localFilesOffered: boolean
 }
 
 /**
