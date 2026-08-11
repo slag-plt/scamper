@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
-import { createAuth, hasMicrosoft, type Auth } from './auth'
+import { createAuth, type Auth } from './auth'
 import { applySchema, connect } from './db'
 import { authBaseUrl, authSecret } from './env'
 import { MemoryFileStore } from './store'
@@ -164,12 +164,7 @@ const server = createServer((req, res) => {
         return
       }
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(
-        JSON.stringify({
-          password: auth !== null,
-          microsoft: auth !== null && hasMicrosoft(),
-        }),
-      )
+      res.end(JSON.stringify({ password: auth !== null }))
       return
     }
 
@@ -227,17 +222,10 @@ server.listen(PORT, () => {
       : 'Storage is MariaDB, and requests need a session.',
   )
   if (auth !== null) {
+    // No self-service sign-up and no mail, so say how anyone gets in at all.
     console.log(
-      hasMicrosoft()
-        ? 'Sign-in: Microsoft (single tenant), and email + password.'
-        : 'Sign-in: email + password only (no MICROSOFT_* credentials set).',
-    )
-    // Email sign-up is open to anyone who can reach this server, and nothing
-    // verifies an address. Who may register is still to be decided (see
-    // server/README.md) -- said on every start so it cannot be forgotten.
-    console.warn(
-      'WARNING: anyone who can reach this server can create an account with an ' +
-        'email address. Settle the sign-up gate before exposing it.',
+      'Sign-in: email + password. Accounts are made with `npm run account -- ' +
+        'create <email> <name>`.',
     )
   }
 })

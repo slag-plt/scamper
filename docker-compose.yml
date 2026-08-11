@@ -58,6 +58,10 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
+      # Named explicitly: without a target Docker builds the *last* stage in
+      # the file, which is `migrate`, and this service would quietly run
+      # migrations in a restart loop instead of serving anything.
+      target: runtime
     restart: unless-stopped
     depends_on:
       db:
@@ -71,9 +75,6 @@ services:
       DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
-      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
-      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
-      MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
       PORT: 3000
     ports:
       # Bound to the loopback interface: the web server in front of it proxies

@@ -52,7 +52,7 @@ export async function initializeBackend(): Promise<void> {
   const methods = await signInMethods(config.serverUrl)
   const client = createClient(config.serverUrl)
 
-  if (!methods.password && !methods.microsoft) {
+  if (!methods.password) {
     // The development stub: open, and the only thing it can be.
     FS.setBackend(FS.serverBackend(config.serverUrl))
     session = { client, methods, user: null }

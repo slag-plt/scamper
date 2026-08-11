@@ -2,30 +2,28 @@ import { betterAuth } from 'better-auth'
 import { MysqlDialect } from 'kysely'
 import type { Pool } from 'mysql2'
 
-import { microsoftCredentials } from './env'
-
 /**
  * Authentication, and the `user` table everything else is keyed to.
  *
- * Two ways in, deliberately:
+ * Email and password, and nothing else. Two constraints shape this:
  *
- * - **Microsoft (Entra ID)**, which is how students actually sign in: the
- *   institution runs Office 365, so they already have an account and Scamper
- *   never holds a password. Enabled only when its credentials are configured,
- *   so a checkout without them still runs.
- * - **Email and password**, which needs no third-party registration and so
- *   works offline. That keeps development, tests, and anyone without a campus
- *   account from depending on Entra being reachable.
+ * - **No identity provider.** Institutional SSO is out on compliance grounds,
+ *   so Scamper holds the credential itself.
+ * - **No mail server.** Every flow that would normally send mail is therefore
+ *   unavailable, which rules out self-service sign-up, address verification,
+ *   and reset links.
  *
- * Nothing downstream knows which was used -- it all keys off `session.user.id`.
+ * So sign-up is off (`disableSignUp`) and there is no reset route: an
+ * administrator creates each account and passes the password on out of band,
+ * and a forgotten password is another visit to the administrator. See
+ * `accounts.ts` and `admin.ts`. This is not a stopgap -- a reset link is only
+ * as trustworthy as the mailbox it lands in, and there is no mailbox here.
  *
  * The client and this server share an origin, so the session cookie needs no
  * cross-site handling: `SameSite=Lax` and same-origin are the defaults, and
  * they are correct here.
  */
 export function createAuth(pool: Pool, secret: string, baseURL: string) {
-  const microsoft = microsoftCredentials()
-
   return betterAuth({
     // Spelled out as a dialect rather than handed the pool directly. Passing a
     // bare mysql2 pool is accepted but broken in better-auth 1.6: its adapter
@@ -40,32 +38,14 @@ export function createAuth(pool: Pool, secret: string, baseURL: string) {
     baseURL,
     emailAndPassword: {
       enabled: true,
-      // Nothing sends mail yet, so requiring verification would lock out every
-      // account at creation. Turn this on with the mail transport -- and see
-      // the sign-up gate noted in server/README.md before deploying.
+      // Nobody may create their own account. This is the sign-up gate: with it
+      // on, the only way in is an account an administrator made.
+      disableSignUp: true,
+      // Would need mail to satisfy, and an administrator vouched for the
+      // address when creating the account -- `accounts.ts` marks it verified.
       requireEmailVerification: false,
     },
-    socialProviders:
-      microsoft === null
-        ? {}
-        : {
-            microsoft: {
-              clientId: microsoft.clientId,
-              clientSecret: microsoft.clientSecret,
-              // A single tenant means only that directory's accounts can sign
-              // in, which is the sign-up gate for this route: nobody outside
-              // the institution can get an account this way. `common` would
-              // accept any Microsoft account anywhere, so it is not a default
-              // worth having.
-              tenantId: microsoft.tenantId,
-            },
-          },
   })
-}
-
-/** @returns true iff sign-in through Microsoft is configured. */
-export function hasMicrosoft(): boolean {
-  return microsoftCredentials() !== null
 }
 
 export type Auth = ReturnType<typeof createAuth>

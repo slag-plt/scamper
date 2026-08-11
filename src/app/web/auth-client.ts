@@ -7,10 +7,15 @@
 
 import { createAuthClient } from 'better-auth/client'
 
-/** Which ways in a server offers, as `/api/v1/auth/methods` reports them. */
+/**
+ * Which ways in a server offers, as `/api/v1/auth/methods` reports them.
+ *
+ * One field, and it stays an object rather than a bare boolean because what it
+ * answers -- "can anyone sign in to this server, and how?" -- is the kind of
+ * question that grows a second answer later.
+ */
 export interface SignInMethods {
   password: boolean
-  microsoft: boolean
 }
 
 /** The signed-in user, as much of them as the IDE needs. */
@@ -70,18 +75,15 @@ export async function signInMethods(
 ): Promise<SignInMethods> {
   try {
     const response = await fetch(`${serverUrl.replace(/\/+$/, '')}/auth/methods`)
-    if (!response.ok) return { password: false, microsoft: false }
+    if (!response.ok) return { password: false }
     const body: unknown = await response.json()
     if (typeof body !== 'object' || body === null) {
-      return { password: false, microsoft: false }
+      return { password: false }
     }
     const methods = body as Partial<SignInMethods>
-    return {
-      password: methods.password === true,
-      microsoft: methods.microsoft === true,
-    }
+    return { password: methods.password === true }
   } catch {
-    return { password: false, microsoft: false }
+    return { password: false }
   }
 }
 
@@ -93,28 +95,6 @@ export async function signInWithPassword(
 ): Promise<string | null> {
   const { error } = await client.signIn.email({ email, password })
   return error ? (error.message ?? 'Could not sign in.') : null
-}
-
-/** @returns an error message, or null if the account was created */
-export async function signUpWithPassword(
-  client: AuthClient,
-  name: string,
-  email: string,
-  password: string,
-): Promise<string | null> {
-  const { error } = await client.signUp.email({ name, email, password })
-  return error ? (error.message ?? 'Could not create the account.') : null
-}
-
-/**
- * Hands off to Microsoft, which returns the browser to `callbackURL`. Nothing
- * after this call runs in the usual case -- the page navigates away.
- */
-export async function signInWithMicrosoft(
-  client: AuthClient,
-  callbackURL: string,
-): Promise<void> {
-  await client.signIn.social({ provider: 'microsoft', callbackURL })
 }
 
 export async function signOut(client: AuthClient): Promise<void> {

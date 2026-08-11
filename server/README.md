@@ -27,6 +27,9 @@ below for how they are connected, and why it is done that way.
 | `ALLOWED_ORIGIN`      | only for a split-origin deployment (see below)                  |
 | `SCAMPER_STUB`        | `1` to run in memory with no sign-in — development only         |
 
+There is nothing to configure for sign-in beyond the secret: accounts are made
+by hand (see below), and there is no identity provider or mail transport.
+
 **A server with no `DATABASE_URL` refuses to start.** It could instead fall back
 to the in-memory store, but that store has no sign-in and one shared namespace,
 so a deployment that lost its configuration would quietly serve every student
@@ -77,34 +80,52 @@ The server is a plain Node process, so it runs directly too — set the variable
 above and `npm run start:server`, having run
 `npm run db:migrate --workspace @scamper/server` once against your database.
 
-## Sign-in
+## Accounts
 
-Two ways in, via BetterAuth mounted at `/api/auth/*`:
+Email and password, via BetterAuth mounted at `/api/auth/*`. Two constraints
+shape everything about it:
 
-- **Microsoft (Entra ID)**, which is how students sign in: the institution runs
-  Office 365, so they already have an account and Scamper never holds a
-  password. Set `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and
-  `MICROSOFT_TENANT_ID` from an app registration whose redirect URI is
-  `<BETTER_AUTH_URL>/api/auth/callback/microsoft`. The tenant is required and
-  has no `common` default on purpose: a single tenant is what limits sign-in to
-  your directory, and `common` would accept any Microsoft account anywhere.
-- **Email and password**, which needs no third-party registration, so a
-  contributor can create an account against a local database and exercise the
-  whole flow offline.
+- **No identity provider.** Institutional SSO is out on compliance grounds, so
+  Scamper holds the credential itself.
+- **No mail server.** Every flow that would normally send mail is therefore
+  unavailable: no self-service sign-up, no address verification, no reset links.
 
-Nothing downstream knows which was used — it all keys off `session.user.id`.
-`/api/v1/auth/methods` reports which are configured, so the login form never
-offers a button that cannot work.
+So **sign-up is off** and an administrator makes each account, passing the
+password to its owner directly:
+
+```console
+npm run account -- create ada@example.edu "Ada Lovelace"
+npm run account -- reset ada@example.edu     # new password, ends all sessions
+npm run account -- list
+npm run account -- delete ada@example.edu    # and their files, irreversibly
+```
+
+Against the compose stack, the same commands run inside the container:
+
+```console
+docker compose exec server node_modules/.bin/tsx server/src/admin.ts list
+```
+
+The password is generated when not given, from an alphabet with no `0`/`O` or
+`1`/`l`/`I` — these get read aloud and written down by someone who did not
+choose them. **It is shown once.** Passwords are stored hashed, so a lost one is
+replaced rather than recovered, which is what `reset` is for; it also ends that
+person's sessions, since the usual reason to reset is that someone else may know
+the old one.
+
+This runs against the database, not the running server. There is deliberately no
+privileged HTTP route: no account can be made over the network at all.
+
+`accounts.ts` writes through BetterAuth's own internals — its hasher, its
+adapter — so the rows are exactly the ones a sign-up would have written, and
+signing in cannot tell the difference.
+
+`/api/v1/auth/methods` reports what the server offers, so the login form can say
+so rather than assume.
 
 Every route but `/api/v1/health` needs a session and answers **401** without
 one. That check lives in `src/api.ts` rather than in the HTTP layer, so the rule
 is stated where the routes are and a test can pin it.
-
-> **Release blocker: the email route has no sign-up gate.** Microsoft sign-in is
-> limited to your tenant, but anyone who can reach the server can create an
-> account with an email address, and nothing verifies it. Decide that gate — an
-> allowlist, mail-backed verification, or dropping email sign-in in production —
-> before exposing this. The server says so on every start.
 
 ## The API
 

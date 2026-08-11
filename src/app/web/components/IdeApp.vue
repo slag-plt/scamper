@@ -35,11 +35,7 @@ import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
 import SignInModal from './SignInModal.vue'
 import { restart, serverSession } from '../server-session'
-import {
-  signInWithMicrosoft,
-  signInWithPassword,
-  signUpWithPassword,
-} from '../auth-client'
+import { signInWithPassword } from '../auth-client'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
@@ -88,11 +84,8 @@ const historySelected = ref<string | null>(null)
 // Null where the deployment advertises no server, which is the common case and
 // the one where none of this appears.
 const fileServer = serverSession()
-const signInMethods = fileServer?.methods ?? {
-  password: false,
-  microsoft: false,
-}
-const canSignIn = signInMethods.password || signInMethods.microsoft
+const signInMethods = fileServer?.methods ?? { password: false }
+const canSignIn = signInMethods.password
 const signedInAs = ref<string | null>(fileServer?.user?.email ?? null)
 const showSignIn = ref(false)
 const signInBusy = ref(false)
@@ -188,14 +181,6 @@ function openSignIn() {
   showSignIn.value = true
 }
 
-async function handleSignInMicrosoft() {
-  if (fileServer === null) return
-  signInBusy.value = true
-  // Navigates away, so nothing after this runs unless it failed to start.
-  await signInWithMicrosoft(fileServer.client, window.location.href)
-  signInBusy.value = false
-}
-
 async function handleSignInPassword(email: string, password: string) {
   if (fileServer === null) return
   signInBusy.value = true
@@ -207,19 +192,6 @@ async function handleSignInPassword(email: string, password: string) {
   signInBusy.value = false
   // The backend is chosen at startup, so start over rather than swapping the
   // file system out from under an open file. See server-session.ts.
-  if (signInError.value === null) restart()
-}
-
-async function handleRegister(name: string, email: string, password: string) {
-  if (fileServer === null) return
-  signInBusy.value = true
-  signInError.value = await signUpWithPassword(
-    fileServer.client,
-    name,
-    email,
-    password,
-  )
-  signInBusy.value = false
   if (signInError.value === null) restart()
 }
 
@@ -842,9 +814,7 @@ onUnmounted(() => {
     :methods="signInMethods"
     :busy="signInBusy"
     :error="signInError"
-    @microsoft="handleSignInMicrosoft"
     @password="handleSignInPassword"
-    @register="handleRegister"
     @close="showSignIn = false"
   />
   <ModalHost />
