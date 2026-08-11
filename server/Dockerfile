@@ -20,6 +20,25 @@ COPY server/package.json ./server/
 # --ignore-scripts skips the root postinstall, which generates the parser and
 # library sources for the *front end* using devDependencies this image does not
 # have. Nothing the server runs needs them.
+#
+# This image is larger than it looks like it should be: ~209 MB of node_modules,
+# including Playwright, Vite, and Prisma. They arrive because better-auth
+# declares nineteen optional peerDependencies (pg, better-sqlite3, drizzle,
+# vitest, and so on, for the databases and frameworks it can integrate with),
+# npm installs optional peers by default, and the lockfile therefore marks those
+# packages `devOptional` -- reachable as a dev dependency *and* as an optional
+# one. npm keeps such a package unless both are omitted.
+#
+# `--omit=optional` alongside `--omit=dev` does cut it to 57 MB and the server
+# still starts -- but it also drops `@esbuild/linux-x64`, because esbuild ships
+# its platform binaries as optional dependencies, and tsx needs esbuild. So it
+# cannot be used while the runtime is tsx.
+#
+# The way out is to stop shipping tsx: compile to JavaScript in a build stage
+# and run plain `node`, leaving only better-auth, kysely, and mysql2 here. That
+# is a real change -- these are ESM sources whose relative imports carry no file
+# extensions, so it needs a module-resolution decision, not just a `tsc` call --
+# and it is worth doing deliberately rather than as a size tweak.
 RUN npm ci --omit=dev --ignore-scripts --workspace @scamper/server
 
 FROM node:22-alpine AS runtime
