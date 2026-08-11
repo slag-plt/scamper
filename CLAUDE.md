@@ -26,12 +26,21 @@ This file provides guidance to LLM agents when working with code in this reposit
 ### Building
 
 + `npm install`: installs dependencies
-+ `npm run dev`: starts development server
-+ `npm run dev:server`: starts the `server/` back end, watching for changes (`PORT` overrides its port)
++ `npm run dev`: starts development server (front end only; files in the browser)
++ `npm run dev:full`: front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
++ `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
 + `npm run build`: full production build (compilation + bundling)
 + `npm run clean`: cleans the build
-+ `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
++ `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
 + `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
+
+### The file server
+
++ `docker compose up -d`: runs the back end and its MariaDB, applying migrations first. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`)
++ `npm run db:migrate --workspace @scamper/server`: creates BetterAuth's tables. Only needed when running the server *without* Docker — compose does it
++ `npm run account -- create <email> <name>`: makes an account, printing a password. Also `reset`, `list`, `delete`. There is no sign-up, so this is the only way in
++ Against the compose stack the database is not reachable from the host, so use `docker compose exec server node_modules/.bin/tsx server/src/admin.ts <command>` instead
++ `npm run start:server`: runs the back end without watching, as the container does
 
 ### Validation
 

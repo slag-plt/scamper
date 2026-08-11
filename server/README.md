@@ -226,17 +226,43 @@ is, so there is one behaviour to reason about.
 3000.
 
 By default `dev:full` sets `SCAMPER_STUB=1`, so the back end runs in memory with
-no sign-in — which is what someone working on the front end wants. Set
-`DATABASE_URL` (and the two `BETTER_AUTH_*` variables) in the environment you run
-it from and it uses the database and real sessions instead.
+no sign-in — which is what someone working on the front end wants. Everything is
+lost when it stops, and everyone shares one namespace.
 
-`src/app/web/dev-backend.ts` switches the IDE onto the server when
-`/config.json` is present, and is compiled out of any build that is not a
-`--mode server` dev server. That guard is why the stub cannot escape into a
-release: were a production build to switch on the mere presence of a config, a
-single `npm run deploy:server-url` would put every student into the same pile of
-files. Signing in is what will move a user's files — the login UI is still to
-come, so in database mode the IDE currently gets 401s until one exists.
+### Developing against a real database
+
+Let compose run the back end, and run only the front end yourself:
+
+```console
+cp .env.example .env
+docker compose up -d
+docker compose exec server node_modules/.bin/tsx server/src/admin.ts \
+  create you@example.com "Your Name"
+npm run dev -- --mode server
+```
+
+Then sign in with what that printed. The third step is not optional: there is no
+sign-up, so without an account the IDE has nothing to sign in with. `npm run
+account -- create ...` is the same command, but it talks to the database
+directly and the compose database has no published port — from your machine it
+cannot reach it, which is why this goes through `exec`.
+
+Use `npm run dev` here rather than `dev:full`: compose is already running the
+back end, and `dev:full` would start a second one on the same port.
+
+The alternative, if you would rather run the server from your terminal, is to
+publish a database for it and set `DATABASE_URL` plus the two `BETTER_AUTH_*`
+variables in the environment `dev:full` runs in.
+
+### What decides the file system
+
+`src/app/web/server-session.ts` picks it before the app mounts: no
+`/config.json` means local storage, a server the user is not signed in to means
+local storage plus an offer to sign in, and a signed-in user means their files
+on the server. A server reporting no sign-in methods is the stub above, which
+has no accounts, so it is used directly.
+
+Signing in or out reloads rather than swapping the file system mid-session.
 
 ## Deploying
 
@@ -247,7 +273,19 @@ a versioned directory, and this is a long-running process.
 1. `npm run deploy` — the front end, as ever.
 2. `docker compose up -d --build` on the server host — this.
 3. `npm run deploy:server-url -- <origin>/api/v1` — once, to tell every
-   deployed front-end release that a server exists.
+   deployed front-end release that a server exists. Until this is run, students
+   stay on browser storage and nothing changes for them; after it, the sign-in
+   prompt appears. It is the switch to flip last, and the one to clear (run it
+   with no argument) if the server has to come down.
+4. Create the accounts — nobody can sign in until you do, since there is no
+   sign-up:
+
+   ```console
+   docker compose exec server node_modules/.bin/tsx server/src/admin.ts \
+     create ada@example.edu "Ada Lovelace"
+   ```
+
+An upgrade is steps 1 and 2 again. Step 3 only changes when the server moves.
 
 The one piece that is neither: **the web server has to pass `/api/` through to
 the container**, because the two share an origin. The container publishes to
@@ -270,6 +308,22 @@ location /api/ {
 Keep the client's `Host` header rather than rewriting it: BetterAuth checks the
 request's origin, and a rewritten host makes a legitimate sign-in look
 cross-site.
+
+`BETTER_AUTH_URL` in `.env` has to be that same public origin — the one students
+type, not `localhost:3000`. It is what sessions are issued against.
+
+### Backups
+
+`docker compose down` keeps the database; `down -v` destroys it, along with
+every student's files. What is worth backing up is the `scamper-db` volume:
+
+```console
+docker compose exec db mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" \
+  --databases scamper > scamper-$(date +%F).sql
+```
+
+Saved history makes deletion recoverable *within* Scamper (#42), which is a
+different thing from the database surviving the machine.
 
 ## Cross-origin
 

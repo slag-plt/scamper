@@ -13,26 +13,47 @@ $> npm run dev    # Spawns a local vite server to serve the application
 
 Follow the terminal instructions to connect to your local Scamper instance.
 
-This runs the front end alone, with your files in the browser's own storage,
-which is what most work on Scamper needs. To work on the file server instead
-(issue #357), run both halves together:
+That runs the front end alone, with your files in the browser's own storage.
+It is what most work on Scamper needs, and it requires nothing else.
+
+### Working on the file server
+
+The file server (issue #357) keeps files per user instead, so they survive a
+cleared browser and follow a student between machines. Two ways to run it:
+
+**Without a database**, which is enough for front-end work:
 
 ~~~console
-$> npm run dev:full   # Front end + the back end in server/, wired to each other
+$> npm run dev:full   # Front end + the back end in server/, wired together
 ~~~
 
-The IDE then keeps files on the server rather than in the browser, in memory
-and without sign-in — enough for front-end work. For the real thing, with a
-database and accounts:
+The IDE keeps files on the server, in memory, with no sign-in. Everything is
+lost when you stop it, and everyone shares one namespace.
+
+**With a real database and accounts**, for work on storage or sign-in:
 
 ~~~console
-$> cp .env.example .env    # fill in the passwords and the session secret
-$> docker compose up -d    # MariaDB, migrations, and the server
+$> cp .env.example .env               # fill in the passwords and the secret
+$> docker compose up -d               # MariaDB, migrations, and the server
+$> docker compose exec server node_modules/.bin/tsx server/src/admin.ts \
+     create you@example.com "Your Name"      # prints a password — keep it
+$> npm run dev -- --mode server       # the front end, proxying /api to it
 ~~~
 
-See [`server/README.md`](server/README.md) for deploying it, and for the one
-piece Docker cannot do for you: the web server has to pass `/api/` through to
-the container, since the front end and the API share an origin.
+Then open the IDE and sign in with the address and password it printed.
+
+Note the third step. **There is no sign-up**: an administrator creates every
+account, because Scamper has no mail server and so no way to verify an address
+or send a reset link. Without it there is nothing to sign in with, and the IDE
+will sit at its sign-in dialog. `npm run account -- create ...` is the same
+command when the database is reachable from your machine, but with the compose
+stack it is not — the database port is deliberately unpublished.
+
+Use `npm run dev`, not `dev:full`, alongside `docker compose up -d`: compose is
+already running the back end, and `dev:full` would start a second one.
+
+See [`server/README.md`](server/README.md) for the API, the account commands,
+and deployment.
 
 ## Deployment
 
