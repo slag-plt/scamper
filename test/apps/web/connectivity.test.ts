@@ -115,6 +115,29 @@ describe('recovering', () => {
     expect(Connectivity.connection.value).toBe('online')
   })
 
+  // A probe already awaiting `fetch` when `stop()` runs would otherwise record
+  // its answer afterwards, putting a torn-down module back into a state nothing
+  // is watching or clearing.
+  test('a probe in flight when stopped cannot revive the state', async () => {
+    let answer: (value: unknown) => void = () => undefined
+    vi.stubGlobal(
+      'fetch',
+      () =>
+        new Promise((resolve) => {
+          answer = resolve
+        }),
+    )
+    Connectivity.start(SERVER_URL)
+    const probe = Connectivity.checkNow()
+
+    Connectivity.stop()
+    // The server's reply lands after teardown, and is discarded.
+    answer({ ok: false, status: 502 } as Response)
+    await probe
+
+    expect(Connectivity.connection.value).toBe('online')
+  })
+
   test('stopping leaves nothing running', async () => {
     const { calls } = respondWith(true)
     Connectivity.start(SERVER_URL)

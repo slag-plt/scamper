@@ -58,6 +58,7 @@ describe('IDE offline behaviour', () => {
   afterEach(() => {
     Connectivity.stop()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     document.body.innerHTML = ''
   })
 
@@ -217,10 +218,19 @@ describe('IDE offline behaviour', () => {
       await flushPromises()
       expect(saves).not.toHaveBeenCalled()
 
+      // Recovery is driven through the heartbeat because that is the only way
+      // production ever comes back online -- nothing else calls into
+      // connectivity with good news. A test that flipped the state directly
+      // would pass while the real path stayed broken.
+      vi.stubGlobal('fetch', () =>
+        Promise.resolve({ ok: true, status: 200 } as Response),
+      )
+      Connectivity.start('https://files.example/api/v1')
+      await Connectivity.checkNow()
+      await flushPromises()
+
       // Coming back is the moment the editor and the server have drifted
       // furthest apart, so it saves then rather than at the next tick.
-      Connectivity.reportReachable()
-      await flushPromises()
       expect(saves).toHaveBeenCalledWith('hello.scm', expect.any(String))
     } finally {
       wrapper.unmount()

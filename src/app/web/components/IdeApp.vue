@@ -411,8 +411,9 @@ let offlineAnnounced = false
  * Says the server has gone away, once per outage, in a modal that closes.
  *
  * The warning about keeping the tab open is load-bearing: offline edits are
- * held in the editor and nowhere else. Storing them locally and syncing on
- * reconnect is issue #363.
+ * held in the editor and nowhere else. Mirroring a user's files client-side so
+ * file operations keep working is issue #364; storing just the open buffer is
+ * #363.
  */
 async function announceOffline(): Promise<void> {
   if (offlineAnnounced) return
@@ -941,15 +942,30 @@ onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnloadWrapper)
 
   await loadConfig()
-  await populateFileDrawer()
 
-  if (config.lastOpenedFilename !== null) {
-    if (await fs.fileExists(config.lastOpenedFilename)) {
-      // TODO: re-enable once we have a better handle on large-file loading
-      // await switchToFile(config.lastOpenedFilename)
-    } else {
-      config.lastOpenedFilename = null
+  // Everything that reaches for the file system is inside the try, because
+  // startup is the one moment where an unreachable server used to be fatal:
+  // these run before `isLoading` is cleared, so a rejection here left the
+  // loading screen up forever with nothing said -- the exact dead end the
+  // offline state exists to replace. The IDE opens instead, empty and honest.
+  try {
+    await populateFileDrawer()
+
+    if (config.lastOpenedFilename !== null) {
+      if (await fs.fileExists(config.lastOpenedFilename)) {
+        // TODO: re-enable once we have a better handle on large-file loading
+        // await switchToFile(config.lastOpenedFilename)
+      } else {
+        config.lastOpenedFilename = null
+      }
     }
+  } catch (e) {
+    reportError(e, (message) => `Could not list your files: ${message}`)
+    // An unreachable server is not a fault: fall through, open the IDE, and let
+    // the heartbeat pick things up when it returns. Anything else is real, and
+    // `displayError` has put it on the loading screen -- so stop here rather
+    // than clearing that screen on the next line.
+    if (!isUnreachable(e)) return
   }
 
   isLoading.value = false

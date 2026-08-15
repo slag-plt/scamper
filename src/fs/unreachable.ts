@@ -24,16 +24,31 @@ export function isUnreachable(error: unknown): boolean {
 }
 
 /**
- * `fetch`, with the two ways of not getting an answer raised as
- * `ServerUnreachableError`: no reply at all, and a 503.
+ * The statuses that mean "nothing usable answered", as opposed to "the server
+ * answered and it went badly".
  *
- * The 503 belongs here because the server sends it for precisely one thing --
- * its storage is out of reach (see `server/src/api.ts`) -- and from the
- * editor's side that is indistinguishable from the server itself being away.
- * The files cannot be had either way, and the honest thing to say is the same.
+ * - **502** is the proxy in front of the server reporting that the server is
+ *   not there. It is what every deploy looks like from the browser:
+ *   `scripts/server/web-update` and `server-up --build` leave Caddy serving
+ *   while the API container is replaced.
+ * - **503** is the server saying its own storage is out of reach (see
+ *   `server/src/api.ts`).
+ * - **504** is that same proxy giving up waiting.
+ *
+ * These are exactly the ones `connectivity.ts` treats as offline when it
+ * probes, and the two layers have to agree: a heartbeat that says offline while
+ * a save reports a hard error would put an undismissable error screen over an
+ * editor whose sidebar reads "offline".
+ */
+const UNREACHABLE_STATUSES = new Set([502, 503, 504])
+
+/**
+ * `fetch`, with every way of not getting a usable answer raised as
+ * `ServerUnreachableError`: no reply at all, or one of the statuses above.
  *
  * A 500 is deliberately *not* converted. That means the server answered and
- * something is wrong with it, which is a fault worth reporting as one.
+ * something is wrong with it, which is a fault worth reporting as one rather
+ * than dressing up as a network problem.
  */
 export async function fetchServer(
   url: string,
@@ -46,6 +61,8 @@ export async function fetchServer(
     throw new ServerUnreachableError()
   }
 
-  if (response.status === 503) throw new ServerUnreachableError()
+  if (UNREACHABLE_STATUSES.has(response.status)) {
+    throw new ServerUnreachableError()
+  }
   return response
 }

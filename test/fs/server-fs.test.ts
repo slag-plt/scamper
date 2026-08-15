@@ -247,21 +247,43 @@ describe('failures surface rather than corrupt', () => {
     await expect(fs.getFileList()).rejects.toThrow(/malformed/)
   })
 
-  // The server sends 503 for exactly one thing: its storage is out of reach.
-  // From the editor's side that is the same situation as a server that is not
-  // there, and calls for the same answer -- offline, not an error screen.
-  test('a 503 is treated as the server being out of reach', async () => {
+  /** Answers every request with `status`, as a proxy or a sick server would. */
+  function respondWithStatus(status: number): void {
     vi.stubGlobal('fetch', () =>
       Promise.resolve({
         ok: false,
-        status: 503,
-        statusText: 'Service Unavailable',
-        json: () => Promise.resolve({ error: 'Storage is unavailable' }),
+        status,
+        statusText: '',
+        json: () => Promise.resolve({ error: 'nope' }),
       } as Response),
     )
+  }
+
+  // None of these is the server giving an answer about files, and the IDE has
+  // to read them the same way its heartbeat does (src/app/web/connectivity.ts
+  // marks any non-ok probe offline). Two layers disagreeing would put an
+  // undismissable error over an editor whose sidebar reads "offline".
+  //
+  // 502 in particular is what every deploy looks like from the browser: Caddy
+  // keeps serving while the API container is replaced.
+  test.each([502, 503, 504])(
+    'a %i is treated as the server being out of reach',
+    async (status) => {
+      respondWithStatus(status)
+      const fs = ServerFileSystem.create(BASE_URL)
+
+      await expect(fs.getFileList()).rejects.toThrow(ServerUnreachableError)
+    },
+  )
+
+  // Deliberately not converted: the server answered, and something is wrong
+  // with it. Calling that "offline" would hide a real fault behind a message
+  // saying to check your connection.
+  test('a 500 stays a fault rather than becoming an outage', async () => {
+    respondWithStatus(500)
     const fs = ServerFileSystem.create(BASE_URL)
 
-    await expect(fs.getFileList()).rejects.toThrow(ServerUnreachableError)
+    await expect(fs.getFileList()).rejects.toThrow(/500/)
   })
 
   test('a failed cold lookup does not leave the cache poisoned', async () => {

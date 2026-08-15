@@ -6,10 +6,12 @@
 // heartbeat instead: it knows it is offline *before* the student clicks
 // anything, says so, and stops autosaving into a void.
 //
-// What this does *not* do is keep working offline. Edits made while the server
-// is away live in the editor buffer and nowhere else, so a closed tab loses
-// them -- hence the warning in the modal. Persisting them locally and
-// reconciling on reconnect is issue #363.
+// What this does *not* do is keep working offline. Every file operation is
+// refused while the server is away, and edits live in the editor buffer and
+// nowhere else, so a closed tab loses them -- hence the warning in the modal.
+// Mirroring a user's files client-side so those operations keep working is
+// issue #364; persisting just the open buffer, the subset of that worth
+// shipping on its own, is #363.
 //
 // This tracks reachability, not the browser's own idea of connectivity.
 // `navigator.onLine` answers "is there a network interface", which is true on a
@@ -98,11 +100,6 @@ export function reportUnreachable(): void {
   schedule()
 }
 
-/** Marks the server reachable, on the evidence of a request that succeeded. */
-export function reportReachable(): void {
-  setState('online')
-}
-
 /**
  * Asks the server whether it is there.
  *
@@ -113,20 +110,29 @@ export function reportReachable(): void {
  * @returns the state this answer implies
  */
 export async function checkNow(): Promise<Connection> {
-  if (healthUrl === null) return 'online'
+  const url = healthUrl
+  if (url === null) return 'online'
 
+  let answered: boolean
   try {
-    const response = await fetch(healthUrl, {
+    const response = await fetch(url, {
       cache: 'no-store',
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })
     // A 502 from the proxy in front of the server is as offline as a refused
-    // connection: something answered, but it was not the server.
-    setState(response.ok ? 'online' : 'offline')
+    // connection: something answered, but it was not the server. `fetchServer`
+    // draws the same line for real requests, deliberately.
+    answered = response.ok
   } catch {
-    setState('offline')
+    answered = false
   }
 
+  // Checked again rather than trusting the `url` captured above: `stop()` may
+  // have run while this probe was in flight, and recording its answer now would
+  // put a torn-down module back into a state nothing is watching or clearing.
+  if (healthUrl === null) return 'online'
+
+  setState(answered ? 'online' : 'offline')
   return state.value
 }
 
