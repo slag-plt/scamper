@@ -96,16 +96,38 @@ export async function signInMethods(
   }
 }
 
-/** @returns an error message, or null if the sign-in succeeded */
+/**
+ * @returns an error message, or null if the sign-in succeeded
+ *
+ * A server that cannot be reached is reported as a message like any other
+ * refusal: the dialog is already open with the form in it, and it is the right
+ * place to say why nothing happened.
+ */
 export async function signInWithPassword(
   client: AuthClient,
   email: string,
   password: string,
 ): Promise<string | null> {
-  const { error } = await client.signIn.email({ email, password })
-  return error ? (error.message ?? 'Could not sign in.') : null
+  try {
+    const { error } = await client.signIn.email({ email, password })
+    return error ? (error.message ?? 'Could not sign in.') : null
+  } catch {
+    return 'Scamper cannot reach the server. Check your connection and try again.'
+  }
 }
 
+/**
+ * Ends the session, as far as the server is concerned.
+ *
+ * A failure is swallowed on purpose: the caller reloads onto local storage
+ * either way, and someone signing out on a shared machine has to be able to do
+ * it whether or not the network is there. The cookie outliving the request is
+ * the cost, and the session it names expires on its own.
+ */
 export async function signOut(client: AuthClient): Promise<void> {
-  await client.signOut()
+  try {
+    await client.signOut()
+  } catch {
+    // Deliberately ignored; see above.
+  }
 }

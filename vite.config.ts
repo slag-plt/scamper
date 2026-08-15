@@ -32,7 +32,7 @@ const htmlEntries: Record<string, string> = {
   'scamper-search': 'src/app/search/search.html',
 }
 
-// `vite --mode server` (i.e. `npm run dev:full`) runs the front end against the
+// `vite --mode server` (i.e. `npm run dev:memory`) runs the front end against the
 // back end in `server/`. Everything below is off in the default `npm run dev`,
 // which knows nothing of a server and stays on local storage.
 //

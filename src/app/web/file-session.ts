@@ -34,6 +34,15 @@ export interface FileSessionOptions {
   autosaveIntervalMs?: number
   /** Called when a save fails so the host can surface the error. */
   onSaveError?: (error: Error) => void
+  /**
+   * Whether a save can reach its file system at all. Defaults to always.
+   *
+   * This is how the offline state pauses autosave (issue #357): the timer keeps
+   * running and every tick simply declines, so reconnecting resumes saving on
+   * the next tick with no timer to restart. Left as a predicate rather than a
+   * `pause()` call because the reason to decline is not the session's to know.
+   */
+  canSave?: () => boolean
 }
 
 const DEFAULT_AUTOSAVE_INTERVAL_MS = 3000
@@ -44,6 +53,7 @@ export class FileSession {
   private editor: EditorHooks
   private autosaveIntervalMs: number
   private onSaveError?: (error: Error) => void
+  private canSave: () => boolean
 
   private currentFile: string | null = null
   private autosaveId: ReturnType<typeof setInterval> | null = null
@@ -68,6 +78,7 @@ export class FileSession {
     this.autosaveIntervalMs =
       options.autosaveIntervalMs ?? DEFAULT_AUTOSAVE_INTERVAL_MS
     this.onSaveError = options.onSaveError
+    this.canSave = options.canSave ?? (() => true)
   }
 
   /** @returns the name of the currently open file, or null if none. */
@@ -109,7 +120,8 @@ export class FileSession {
 
   /**
    * Saves the current file, coalescing with any in-flight save so at most one
-   * write is outstanding at a time. Resolves once the write has settled.
+   * write is outstanding at a time. Resolves once the write has settled, or at
+   * once if `canSave` says there is nowhere to write to.
    * @param options.force takes a history snapshot even inside the merge window
    *        (see src/history/). A save that coalesces with one already in
    *        flight cannot force, since that save is already past this point.
@@ -121,6 +133,10 @@ export class FileSession {
     }
     const filename = this.currentFile
     if (filename === null || !this.editor.isEditorLoaded()) return
+    // Nowhere to write to, so declining is the whole behaviour: an autosave
+    // that tried anyway would produce one failed request every few seconds and
+    // save nothing for its trouble.
+    if (!this.canSave()) return
 
     const doc = this.editor.getDoc()
     this.inFlightSave = (async () => {

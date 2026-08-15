@@ -263,6 +263,44 @@ describe('FileSession autosave lifecycle', () => {
     vi.advanceTimersByTime(5000)
     expect(fs.saveCalls).toEqual(['a.scm'])
   })
+
+  // Offline the timer keeps running and every tick declines (#357). Pausing
+  // this way rather than stopping the timer is what makes reconnecting
+  // automatic: there is nothing to restart.
+  test('canSave gates autosave, and lifting it resumes saving', async () => {
+    const fs = new FakeFS(true)
+    fs.files.set('a.scm', 'x')
+    let online = false
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor, {
+      autosaveIntervalMs: 1000,
+      canSave: () => online,
+    })
+    s.setCurrentFile('a.scm')
+    s.startAutosave()
+
+    vi.advanceTimersByTime(5000)
+    expect(fs.saveCalls).toEqual([])
+    // Still running, so nothing has to notice the reconnect and restart it.
+    expect(s.isAutosaving()).toBe(true)
+
+    online = true
+    vi.advanceTimersByTime(1000)
+    expect(fs.saveCalls).toEqual(['a.scm'])
+  })
+
+  test('an explicit save is declined too, so a switch cannot half-happen', async () => {
+    const fs = new FakeFS(false)
+    fs.files.set('a.scm', 'on disk')
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor, {
+      canSave: () => false,
+    })
+    s.setCurrentFile('a.scm')
+
+    await s.save({ force: true })
+
+    expect(fs.saveCalls).toEqual([])
+    expect(fs.files.get('a.scm')).toBe('on disk')
+  })
 })
 
 describe('FileSession switchTo (issue #238)', () => {

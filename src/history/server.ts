@@ -1,5 +1,6 @@
 import { addsNothing } from './policy'
 import { NotSignedInError } from '../fs/session'
+import { fetchServer } from '../fs/unreachable'
 import type {
   History,
   HistoryFile,
@@ -51,7 +52,7 @@ export class ServerHistory implements History {
     path: string,
     body?: unknown,
   ): Promise<Response> {
-    const response = await fetch(`${this.baseUrl}/${path}`, {
+    const response = await fetchServer(`${this.baseUrl}/${path}`, {
       method,
       credentials: 'include',
       headers:
@@ -86,7 +87,7 @@ export class ServerHistory implements History {
   }
 
   async read(filename: string, id: string): Promise<string | null> {
-    const response = await fetch(
+    const response = await fetchServer(
       `${this.baseUrl}/history/files/${encode(filename)}/${encode(id)}`,
       { credentials: 'include' },
     )

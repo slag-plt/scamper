@@ -1,13 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
+import { toNodeHandler } from 'better-auth/node'
 
 import { API_ROOT, route } from './api'
 import { createAuth, type Auth } from './auth'
 import { applySchema, connect } from './db'
-import { authBaseUrl, authSecret } from './env'
+import { authBaseUrl, authSecret, extraTrustedOrigins } from './env'
 import { MemoryFileStore } from './store'
 import { MemoryHistoryStore } from './history-store'
-import { MariaDbFileStore, MariaDbHistoryStore } from './mariadb-stores'
+import { MariaDbFileStore, MariaDbHistoryStore, ping } from './mariadb-stores'
+import { sessionUserId } from './session-user'
 import type { Stores } from './stores'
 
 /** The port to listen on. PORT overrides it wherever this gets deployed. */
@@ -65,8 +66,14 @@ async function configure(): Promise<{ stores: Stores; auth: Auth | null }> {
     stores: {
       files: new MariaDbFileStore(db.sql),
       history: new MariaDbHistoryStore(db.sql),
+      reachable: () => ping(db.sql),
     },
-    auth: createAuth(db.pool, authSecret(), authBaseUrl()),
+    auth: createAuth(
+      db.pool,
+      authSecret(),
+      authBaseUrl(),
+      extraTrustedOrigins(),
+    ),
   }
 }
 
@@ -104,10 +111,9 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
 async function userOf(req: IncomingMessage): Promise<string | null> {
   if (auth === null) return STUB_USER_ID
 
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
+  return sessionUserId(auth, req.headers, (error) => {
+    console.error('Could not read the session:', error)
   })
-  return session?.user.id ?? null
 }
 
 const server = createServer((req, res) => {
@@ -183,13 +189,20 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
 
+    // Health is the one route that needs no session, and asking for one would
+    // defeat the purpose: resolving a session is a database query, so with the
+    // database down the probe meant to *detect* that would sit waiting for a
+    // connection until the client gave up on it.
+    const userId =
+      url.pathname === `${API_ROOT}/health` ? null : await userOf(req)
+
     const { status, body: reply } = await route(
       {
         method,
         path: url.pathname,
         body,
         now: new Date(),
-        userId: await userOf(req),
+        userId,
       },
       stores,
     )

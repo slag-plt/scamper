@@ -50,6 +50,46 @@ describe('api routing', () => {
     })
   })
 
+  // A server whose database is down answers every request as though nobody
+  // were signed in, because reading a session is itself a query. Health has to
+  // report that, or the IDE tells a student their session ended and offers a
+  // sign-in that cannot work either.
+  describe('with storage out of reach', () => {
+    let unreachable: typeof stores
+
+    beforeEach(() => {
+      unreachable = { ...stores, reachable: () => Promise.resolve(false) }
+    })
+
+    test('health reports degraded, so the IDE can go offline', async () => {
+      expect(
+        await route(
+          {
+            method: 'GET',
+            path: `${API_ROOT}/health`,
+            now: new Date(),
+            userId: null,
+          },
+          unreachable,
+        ),
+      ).toEqual({ status: 503, body: { status: 'degraded', api: API_ROOT } })
+    })
+
+    test('a request without a session is 503, not "not signed in"', async () => {
+      expect(
+        await route(
+          {
+            method: 'GET',
+            path: `${API_ROOT}/fs/files`,
+            now: new Date(),
+            userId: null,
+          },
+          unreachable,
+        ),
+      ).toEqual({ status: 503, body: { error: 'Storage is unavailable' } })
+    })
+  })
+
   test('an unclaimed path is a 404', async () => {
     expect((await call('GET', `${API_ROOT}/nope`)).status).toBe(404)
   })

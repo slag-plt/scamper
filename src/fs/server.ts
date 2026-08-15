@@ -1,5 +1,6 @@
 import type { FS, FileEntry } from './fs'
 import { NotSignedInError } from './session'
+import { fetchServer } from './unreachable'
 
 /**
  * A file system backed by the Scamper file server, for a user who is logged
@@ -51,7 +52,7 @@ export class ServerFileSystem implements FS {
     path: string,
     body?: unknown,
   ): Promise<Response> {
-    const response = await fetch(`${this.baseUrl}/${path}`, {
+    const response = await fetchServer(`${this.baseUrl}/${path}`, {
       method,
       // The session cookie has to ride along. Same-origin in every deployment
       // this supports, so this is belt and braces rather than the load-bearing

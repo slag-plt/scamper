@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+# Updates the front end alone, leaving the API and the database running.
+#
+# `server-up --build` recreates *every* container, migrations and all, which is
+# right for a real deployment and far too much for a typo in a stylesheet. This
+# rebuilds the front-end image and swaps only that container, so the API keeps
+# its uptime, the database is never touched, and nobody is signed out. The gap
+# is Caddy restarting -- about a second.
+#
+#   scripts/server/web-update
+#
+# With `docker-compose.override.yml` in place (see the .example beside it),
+# Caddy serves `./dist` from this machine instead, and this rebuilds that
+# directory rather than an image -- no container is touched at all.
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 0 ] || usage "$0"
+
+if [ -z "$(compose ps --status running --quiet web 2>/dev/null)" ]; then
+  echo "The web container is not running." >&2
+  echo "Start everything with: scripts/server/server-up" >&2
+  exit 1
+fi
+
+# Asked of the running container rather than of the configuration, because they
+# can disagree: adding the override does nothing until `web` is recreated, and
+# reporting "live" while Caddy is still serving the copy baked into the image
+# would be the most misleading thing this script could say.
+MOUNTED_AT="$(compose ps --quiet web | xargs docker inspect \
+  -f '{{range .Mounts}}{{.Destination}} {{end}}' 2>/dev/null || true)"
+
+if [ -f "${ROOT}/docker-compose.override.yml" ] && \
+   ! printf '%s' "${MOUNTED_AT}" | grep -q '/srv'; then
+  echo "docker-compose.override.yml is present, but the running web container" >&2
+  echo "has no /srv mount -- it predates the override." >&2
+  echo "Apply it with: scripts/server/server-up" >&2
+  exit 1
+fi
+
+# A bind mount at /srv means the front end is being served from this machine, so
+# there is no image to rebuild -- just the files it points at.
+if printf '%s' "${MOUNTED_AT}" | grep -q '/srv'; then
+  echo "Serving ./dist from this machine (docker-compose.override.yml)."
+  if command -v npm >/dev/null 2>&1; then
+    (cd "${ROOT}" && npm run build)
+    echo
+    echo "Live. Caddy reads each file per request, so nothing was restarted."
+  else
+    echo
+    echo "No npm here, so build elsewhere and copy the result into ${ROOT}/dist."
+    echo "Caddy serves whatever is in that directory, immediately."
+  fi
+  exit 0
+fi
+
+echo "Rebuilding the front-end image..."
+compose build web
+
+echo
+echo "Swapping the web container (--no-deps, so the API is left alone)..."
+compose up -d --no-deps web
+
+PORT="$(env_value WEB_PORT 8080)"
+printf 'Waiting for it to answer'
+for _ in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" >/dev/null 2>&1; then
+    echo ' ok'
+    echo
+    compose ps
+    exit 0
+  fi
+  printf '.'
+  sleep 1
+done
+
+echo ' no answer.'
+compose logs --tail 20 web >&2
+exit 1

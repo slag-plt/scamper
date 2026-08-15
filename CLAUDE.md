@@ -23,24 +23,42 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ## Development Commands
 
+### The three arrangements
+
+Scamper runs three ways, differing only in where a user's files live. The IDE
+decides at startup by fetching `/config.json` — absent means browser storage,
+present means the server it names — so one build serves all three and nothing
+is compiled in.
+
+1. **Static** (`npm run dev`, `npm run build`): front end alone, files in OPFS. No server. Most work needs only this.
+2. **In-memory** (`npm run dev:memory`): both halves wired together, back end holding everything in memory with no accounts. For work on the API, `src/fs/`, or history without Docker.
+3. **Full stack** (`scripts/server/server-up`): MariaDB + the API + Caddy serving the built front end and proxying `/api` to it, all one origin. The real deployment; its interface is the bash scripts, which are the *administrator's* tools rather than build steps.
+
 ### Building
 
 + `npm install`: installs dependencies
-+ `npm run dev`: starts development server (front end only; files in the browser)
-+ `npm run dev:full`: front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
++ `npm run dev`: arrangement 1 — front end only, files in the browser
++ `npm run dev:memory`: arrangement 2 — front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
 + `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
-+ `npm run build`: full production build (compilation + bundling)
++ `npm run build`: full production build (compilation + bundling) into `dist/`
++ `npm run preview`: serves the built `dist/` locally, i.e. arrangement 1 as deployed
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
 + `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
 
+**A server on a different origin from the front end is not supported**, deliberately: it would mean CORS, `SameSite=None` cookies, a CSRF check on the file routes to replace what `SameSite=Lax` gives for free, and exposure to browsers restricting third-party cookies. Arrangement 3 serves both from one origin instead.
+
 ### The file server
 
-+ `docker compose up -d`: runs the back end and its MariaDB, applying migrations first. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`)
++ `scripts/server/server-up [--build]`: runs the whole app via `docker compose` — MariaDB, the API, and Caddy serving the built front end while proxying `/api` — applying migrations first, then waits until it answers. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`). `--build` is required after any change to `server/` *or* the front end, since the images hold copies of both
++ `scripts/server/web-update`: rebuilds and swaps *only* the front-end container, leaving the API and database running. Use this for a front-end patch; `server-up --build` recreates everything, migrations included
++ `scripts/server/server-down [--wipe]`: stops it. The database survives; `--wipe` destroys it, after a typed confirmation
++ `scripts/server/server-dump [file]`: dumps the whole database to `dumps/scamper-<timestamp>.sql`
++ `scripts/server/user-{add,list,info,rename,chpwd,delete}`: account management, each running `server/src/admin.ts` inside the container. There is no sign-up, so `user-add` is the only way in. `BETTER_AUTH_URL` in `.env` must match the origin the browser is on, port included, or sign-in fails with `Invalid origin`
 + `npm run db:migrate --workspace @scamper/server`: creates BetterAuth's tables. Only needed when running the server *without* Docker — compose does it
-+ `npm run account -- create <email> <name>`: makes an account, printing a password. Also `reset`, `list`, `delete`. There is no sign-up, so this is the only way in
-+ Against the compose stack the database is not reachable from the host, so use `docker compose exec server node_modules/.bin/tsx server/src/admin.ts <command>` instead
++ `npm run account -- <command>`: the same account commands, for a database reachable from the host (i.e. no Docker). Against the compose stack its port is deliberately unpublished, so use the scripts above
 + `npm run start:server`: runs the back end without watching, as the container does
++ `SCAMPER_TRUSTED_ORIGINS` in `.env`: further origins allowed to sign in, comma-separated. Empty in a real deployment; locally it lets `npm run dev -- --mode server` on :5173 sign in to the compose stack without editing `BETTER_AUTH_URL`
 
 ### Validation
 

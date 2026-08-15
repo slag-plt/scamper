@@ -6,6 +6,16 @@ const props = defineProps<{
   version?: string
   files?: FileEntry[]
   currentFile?: string | null
+  /** Whether this deployment has a file server at all; hides the account block. */
+  hasServer?: boolean
+  /** Whether that server offers a way to sign in (false for the dev stub). */
+  canSignIn?: boolean
+  /** Whose files are being edited, or null when they are this browser's own. */
+  signedInAs?: string | null
+  /** Whether the server is answering. */
+  connection?: 'online' | 'offline'
+  signIn?: () => void
+  signOut?: () => void
   create?: () => void
   rename?: () => void
   deleteFile?: () => void
@@ -66,6 +76,44 @@ async function handleFileInputChange(event: Event) {
   >
     <div class="sidebar-title">
       Scamper <span v-if="version">{{ version }}</span>
+    </div>
+    <!-- Above the file buttons rather than in the status bar: the server is the
+         difference between files that survive this browser and files that do
+         not, which is worth seeing before you start rather than after. -->
+    <div v-if="hasServer" class="sidebar-account">
+      <div class="account-line">
+        <span
+          class="status-dot"
+          :class="connection ?? 'online'"
+          aria-hidden="true"
+        ></span>
+        <span class="account-who" :title="signedInAs ?? undefined">
+          {{ canSignIn ? (signedInAs ?? 'Not signed in') : 'Development server' }}
+        </span>
+      </div>
+      <button
+        v-if="canSignIn && signedInAs"
+        type="button"
+        class="account-action"
+        @click="signOut?.()"
+      >
+        Sign out
+      </button>
+      <button
+        v-else-if="canSignIn"
+        type="button"
+        class="account-action"
+        @click="signIn?.()"
+      >
+        Sign in to save your files
+      </button>
+      <p v-if="connection === 'offline'" class="account-offline" role="status">
+        {{
+          signedInAs
+            ? 'Offline — your changes are not being saved.'
+            : 'Offline — the server cannot be reached.'
+        }}
+      </p>
     </div>
     <div class="sidebar-actions">
       <button
@@ -154,6 +202,58 @@ async function handleFileInputChange(event: Event) {
   font-weight: bold;
   font-style: italic;
   border-bottom: 1pt dotted;
+}
+
+.sidebar-account {
+  padding: 0.4em 0.5em;
+  border-bottom: 1pt dotted;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+.account-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  /* The address can be long and the drawer is narrow; truncate rather than
+     stretch the sidebar or wrap into two lines. */
+  min-width: 0;
+}
+
+.account-who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-dot {
+  flex-shrink: 0;
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.status-dot.offline {
+  background: var(--danger);
+}
+
+.account-action {
+  margin-top: 0.15em;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.account-offline {
+  margin: 0.25em 0 0;
+  font-size: 0.9em;
+  opacity: 0.8;
 }
 
 .sidebar-actions {

@@ -16,6 +16,9 @@
 
 import { randomInt } from 'node:crypto'
 
+import type { RowDataPacket } from 'mysql2'
+import type { Pool as SqlPool } from 'mysql2/promise'
+
 import type { Auth } from './auth'
 
 /** BetterAuth's name for an email-and-password account. */
@@ -38,6 +41,26 @@ export interface AccountSummary {
   email: string
   name: string
   createdAt: Date
+}
+
+/**
+ * Everything an administrator can learn about one account.
+ *
+ * Everything *except* the password, which is not stored and so cannot be shown:
+ * `account` holds a hash, and a hash is not reversible by design. The honest
+ * answer to "what is their password" is to set a new one and hand it over --
+ * `resetPassword`, which is what the `chpwd` script does.
+ */
+export interface AccountDetail extends AccountSummary {
+  id: string
+  emailVerified: boolean
+  updatedAt: Date
+  /** How many sessions are live, i.e. on how many machines they are signed in. */
+  sessions: number
+  files: number
+  /** Files with a recorded history, including deleted ones still recoverable. */
+  histories: number
+  snapshots: number
 }
 
 /**
@@ -123,6 +146,75 @@ export async function resetPassword(
   await ctx.internalAdapter.deleteUserSessions(found.user.id)
 
   return { email, password }
+}
+
+/**
+ * Changes the name shown for an account. The address is the identifier and is
+ * left alone: it is what they sign in with, and what every file they own is
+ * keyed to through `user.id`.
+ *
+ * @throws if there is no account with this address
+ */
+export async function renameAccount(
+  auth: Auth,
+  email: string,
+  name: string,
+): Promise<AccountSummary> {
+  const ctx = await auth.$context
+
+  const found = await ctx.internalAdapter.findUserByEmail(email)
+  if (found === null) {
+    throw new Error(`There is no account for ${email}.`)
+  }
+
+  await ctx.internalAdapter.updateUser(found.user.id, { name })
+  return { email, name, createdAt: found.user.createdAt }
+}
+
+/**
+ * Everything held about one account, for an administrator answering "what is
+ * going on with this student".
+ *
+ * The counts come from our own tables rather than BetterAuth's, which is why
+ * this needs the pool as well: how many files someone has is usually the
+ * question behind the question.
+ *
+ * @returns the account, or null if there is none with this address
+ */
+export async function describeAccount(
+  auth: Auth,
+  sql: SqlPool,
+  email: string,
+): Promise<AccountDetail | null> {
+  const ctx = await auth.$context
+
+  const found = await ctx.internalAdapter.findUserByEmail(email)
+  if (found === null) return null
+  const { user } = found
+
+  const sessions = await ctx.internalAdapter.listSessions(user.id)
+  const [rows] = await sql.query<RowDataPacket[]>(
+    `SELECT
+       (SELECT COUNT(*) FROM files WHERE user_id = ?)      AS files,
+       (SELECT COUNT(*) FROM histories WHERE user_id = ?)  AS histories,
+       (SELECT COUNT(*) FROM snapshots s
+          JOIN histories h ON h.id = s.history_id
+         WHERE h.user_id = ?)                              AS snapshots`,
+    [user.id, user.id, user.id],
+  )
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    sessions: sessions.length,
+    files: Number(rows[0].files),
+    histories: Number(rows[0].histories),
+    snapshots: Number(rows[0].snapshots),
+  }
 }
 
 /** @returns every account, oldest first */

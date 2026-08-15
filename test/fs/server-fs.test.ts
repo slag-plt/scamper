@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ServerFileSystem } from '../../src/fs/server'
+import { ServerUnreachableError } from '../../src/fs/unreachable'
 import { route } from '../../server/src/api'
 import { MemoryFileStore } from '../../server/src/store'
 import { MemoryHistoryStore } from '../../server/src/history-store'
@@ -220,11 +221,16 @@ describe('failures surface rather than corrupt', () => {
     await expect(fs.loadFile('ghost.scm')).rejects.toThrow(/404/)
   })
 
-  test('a network failure propagates', async () => {
-    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')))
+  // Typed rather than propagated raw: `fetch` rejects with a bare TypeError
+  // for an unreachable server, which the IDE cannot tell from a programming
+  // mistake -- and the two call for opposite responses (#357).
+  test('an unreachable server raises ServerUnreachableError', async () => {
+    vi.stubGlobal('fetch', () =>
+      Promise.reject(new TypeError('Failed to fetch')),
+    )
     const fs = ServerFileSystem.create(BASE_URL)
 
-    await expect(fs.getFileList()).rejects.toThrow('offline')
+    await expect(fs.getFileList()).rejects.toThrow(ServerUnreachableError)
   })
 
   test('a malformed listing throws rather than yielding junk entries', async () => {
@@ -241,10 +247,29 @@ describe('failures surface rather than corrupt', () => {
     await expect(fs.getFileList()).rejects.toThrow(/malformed/)
   })
 
+  // The server sends 503 for exactly one thing: its storage is out of reach.
+  // From the editor's side that is the same situation as a server that is not
+  // there, and calls for the same answer -- offline, not an error screen.
+  test('a 503 is treated as the server being out of reach', async () => {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        json: () => Promise.resolve({ error: 'Storage is unavailable' }),
+      } as Response),
+    )
+    const fs = ServerFileSystem.create(BASE_URL)
+
+    await expect(fs.getFileList()).rejects.toThrow(ServerUnreachableError)
+  })
+
   test('a failed cold lookup does not leave the cache poisoned', async () => {
     const fs = ServerFileSystem.create(BASE_URL)
-    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')))
-    await expect(fs.fileExists('a.scm')).rejects.toThrow('offline')
+    vi.stubGlobal('fetch', () =>
+      Promise.reject(new TypeError('Failed to fetch')),
+    )
+    await expect(fs.fileExists('a.scm')).rejects.toThrow(ServerUnreachableError)
 
     // Once the network returns, the next lookup must retry rather than answer
     // from a cache that was never filled.

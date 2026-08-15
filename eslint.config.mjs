@@ -62,7 +62,7 @@ export default defineConfig(
       'scripts/vite-plugin-flatten-html.mjs',
       'scripts/vite-plugin-dev-root-redirect.mjs',
       'scripts/vite-plugin-dev-server-config.mjs',
-      'scripts/dev-full.mjs',
+      'scripts/dev-memory.mjs',
     ],
     languageOptions: {
       globals: {

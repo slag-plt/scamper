@@ -106,4 +106,14 @@ export interface HistoryStore {
 export interface Stores {
   files: FileStore
   history: HistoryStore
+
+  /**
+   * Whether the storage behind these is answering, for the health route.
+   *
+   * Absent for the in-memory stores, which cannot be out of reach: they are
+   * this process. Present for MariaDB, where the server can be perfectly well
+   * while the database it needs is not -- a state that otherwise looks exactly
+   * like "nobody is signed in", because reading a session is itself a query.
+   */
+  reachable?: () => Promise<boolean>
 }

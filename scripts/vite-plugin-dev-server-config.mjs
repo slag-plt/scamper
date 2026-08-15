@@ -4,7 +4,7 @@
  * In production this file is written once, outside any version's directory, by
  * `scripts/set-server-url`; a dev checkout has no such file, which is why
  * `npm run dev` stays on local storage. This plugin supplies one so
- * `npm run dev:full` can exercise the server backend, and is only installed in
+ * `npm run dev:memory` can exercise the server backend, and is only installed in
  * that mode.
  *
  * The URL it advertises is relative on purpose. The dev server proxies `/api`

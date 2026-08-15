@@ -40,6 +40,27 @@ export function authSecret(): string {
 export function authBaseUrl(): string {
   return required(
     'BETTER_AUTH_URL',
-    'It is the origin Scamper is served from, e.g. http://localhost:5173.',
+    'It is the origin Scamper is served from, e.g. http://localhost:8080.',
   )
+}
+
+/**
+ * Further origins allowed to sign in, beyond `BETTER_AUTH_URL`.
+ *
+ * One server is commonly reached two ways while it is being worked on -- the
+ * compose stack on its own port, and `npm run dev -- --mode server` proxying to
+ * it from Vite's -- and BetterAuth refuses any origin it was not told about,
+ * with a bare "Invalid origin". Without this, switching between them means
+ * editing `.env` and recreating the container.
+ *
+ * Comma-separated, and empty in a real deployment: every entry is somewhere a
+ * session may be created from.
+ *
+ * @returns the extra origins, or an empty list if none are configured
+ */
+export function extraTrustedOrigins(): string[] {
+  return (process.env.SCAMPER_TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0)
 }

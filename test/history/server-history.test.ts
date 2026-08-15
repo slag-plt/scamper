@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ServerHistory } from '../../src/history/server'
+import { ServerUnreachableError } from '../../src/fs/unreachable'
 import { MERGE_WINDOW_MS, MAX_SNAPSHOTS } from '../../src/history/policy'
 import { route } from '../../server/src/api'
 import { MemoryFileStore } from '../../server/src/store'
@@ -329,11 +330,15 @@ describe('renaming and deleting', () => {
 })
 
 describe('failures surface rather than corrupt', () => {
-  test('a network failure propagates', async () => {
-    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')))
+  // The same conversion the file system does, for the same reason: the IDE
+  // treats an unreachable server as an offline state, not a fault (#357).
+  test('an unreachable server raises ServerUnreachableError', async () => {
+    vi.stubGlobal('fetch', () =>
+      Promise.reject(new TypeError('Failed to fetch')),
+    )
     const history = ServerHistory.create(BASE_URL)
 
-    await expect(history.list()).rejects.toThrow('offline')
+    await expect(history.list()).rejects.toThrow(ServerUnreachableError)
   })
 
   test('a malformed listing throws rather than yielding junk entries', async () => {

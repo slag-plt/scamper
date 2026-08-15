@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# Changes the name shown for an account.
+#
+# The email address is the identifier -- what they sign in with, and what their
+# files are keyed to -- so it stays as it is.
+#
+#   scripts/server/user-rename ada@example.edu "Ada Lovelace"
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 2 ] || usage "$0 <email> <new name>"
+
+admin rename "$1" "$2"

@@ -1,5 +1,6 @@
 import * as FS from '../../fs'
 import { loadServerConfig } from '../../fs/config'
+import * as Connectivity from './connectivity'
 import {
   createClient,
   currentUser,
@@ -24,10 +25,23 @@ export interface ServerSession {
 }
 
 let session: ServerSession | null = null
+let filesOnServer = false
 
 /** @returns the server this deployment uses, or null if it has none */
 export function serverSession(): ServerSession | null {
   return session
+}
+
+/**
+ * @returns true iff this tab's files live on the server rather than in the
+ *          browser
+ *
+ * Not the same question as "is there a server": a signed-out user on a
+ * server-backed deployment still keeps their files locally, so losing the
+ * server costs them nothing and nothing should be blocked on their behalf.
+ */
+export function usesServerFiles(): boolean {
+  return filesOnServer
 }
 
 /**
@@ -61,10 +75,17 @@ export async function initializeBackend(): Promise<void> {
 
   const client = createClient(config.serverUrl)
 
+  // The server answered once, so it is worth watching from here on: a heartbeat
+  // is how the IDE knows it has gone away without waiting for a save to fail.
+  // Started for a signed-out user too, since signing in needs it as much as
+  // saving does.
+  Connectivity.start(config.serverUrl)
+
   if (!methods.password) {
     // A server offering no way in at all is the development stub, which has no
     // accounts. Reached only on a *successful* reply saying so.
     FS.setBackend(FS.serverBackend(config.serverUrl))
+    filesOnServer = true
     session = { client, methods, user: null }
     return
   }
@@ -72,6 +93,7 @@ export async function initializeBackend(): Promise<void> {
   const user = await currentUser(client)
   if (user !== null) {
     FS.setBackend(FS.serverBackend(config.serverUrl))
+    filesOnServer = true
   }
   session = { client, methods, user }
 }

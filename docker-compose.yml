@@ -10,9 +10,15 @@
 # and the same two commands are an upgrade. Configuration comes from a `.env`
 # file beside this one -- see .env.example.
 #
-# The front end is *not* here: it is static files that `scripts/deploy` rsyncs
-# to the web server. That web server has to pass `/api/` through to this
-# container, because the two share an origin (see server/README.md).
+# The front end *is* here, in the `web` service: it serves the built static
+# files and passes `/api` through to the server, so the two share an origin.
+# That is what keeps the session cookie first-party -- no CORS, no
+# `SameSite=None`, and nothing to break when browsers tighten third-party cookie
+# policy (see server/README.md).
+#
+# A static-only deployment is still supported and unchanged: `scripts/deploy`
+# rsyncs `dist/` to a plain web server, where the absence of a `/config.json`
+# puts the IDE on the browser's own storage. Same build, no server required.
 
 services:
   db:
@@ -75,11 +81,39 @@ services:
       DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+      # Optional, and empty in a real deployment. Lets one server accept
+      # sign-ins from Vite's dev origin as well as its own.
+      SCAMPER_TRUSTED_ORIGINS: ${SCAMPER_TRUSTED_ORIGINS:-}
       PORT: 3000
     ports:
-      # Bound to the loopback interface: the web server in front of it proxies
-      # `/api/` here, and nothing else should be able to reach it directly.
+      # Bound to the loopback interface: `web` reaches it over compose's private
+      # network, and nothing outside this machine should reach it directly. Kept
+      # published at all so `npm run dev -- --mode server` can proxy to it and
+      # so it can be curled while debugging.
       - '127.0.0.1:${SERVER_PORT:-3000}:3000'
+
+  # The front end, and the only thing students' browsers talk to.
+  #
+  # Caddy serves the built `dist/` and reverse-proxies `/api` to `server`, which
+  # is what makes the whole app one origin. Small: the image is Caddy plus
+  # static files, with the Node build tooling left behind in an earlier stage.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      # Only for ordering. Caddy starts fine without it and answers 502 for
+      # `/api` until the server is up, which is exactly what the IDE's offline
+      # state is for.
+      - server
+    ports:
+      # Published on every interface, unlike `server`: this is the public face,
+      # and the platform in front of it (the Reclaim Cloud endpoint, say)
+      # terminates TLS and forwards here. Put a hostname in the Caddyfile
+      # instead if you want Caddy to get its own certificate.
+      - '${WEB_PORT:-8080}:80'
 
 volumes:
   scamper-db:

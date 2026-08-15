@@ -73,11 +73,31 @@ export async function route(
 
   // Answered without a session: it says the server is up and which API this
   // is, and a client asks it before anyone has logged in.
+  //
+  // It reports the *storage* too, not merely this process. A server whose
+  // database is unreachable answers every request as though nobody were signed
+  // in -- reading a session is itself a query, and a query that fails yields no
+  // user -- so a bare "ok" here would leave the IDE telling a student their
+  // session had ended and offering a sign-in that could not work either.
+  // Reporting degraded puts it into the offline state it already handles
+  // properly (src/app/web/connectivity.ts).
   if (path === `${API_ROOT}/health`) {
-    return { status: 200, body: { status: 'ok', api: API_ROOT } }
+    return ((await stores.reachable?.()) ?? true)
+      ? { status: 200, body: { status: 'ok', api: API_ROOT } }
+      : { status: 503, body: { status: 'degraded', api: API_ROOT } }
   }
 
   if (userId === null) {
+    // The same confusion, from the other side: with the storage out of reach
+    // there is no telling "not signed in" from "could not check", and only one
+    // of those is the student's to act on. Asked only when there is no session,
+    // so a signed-in request never pays for it.
+    if (!((await stores.reachable?.()) ?? true)) {
+      return {
+        status: 503,
+        body: { error: 'Storage is unavailable' },
+      }
+    }
     return {
       status: 401,
       body: { error: 'Not signed in' },

@@ -52,13 +52,13 @@ function run(name, args, env) {
     env: { ...process.env, ...env },
   })
   child.on('error', (error) => {
-    console.error(`[dev:full] could not start ${name}: ${error.message}`)
+    console.error(`[dev:memory] could not start ${name}: ${error.message}`)
     shutdown(1)
   })
   child.on('exit', (code, signal) => {
     if (shuttingDown) return
     console.error(
-      `[dev:full] ${name} exited (${String(signal ?? code)}); stopping the other half.`,
+      `[dev:memory] ${name} exited (${String(signal ?? code)}); stopping the other half.`,
     )
     shutdown(code ?? 1)
   })
@@ -75,8 +75,8 @@ process.on('SIGTERM', () => {
 })
 
 console.info(
-  `[dev:full] back end on :${port}, front end proxying /api to it.\n` +
-    '[dev:full] The IDE will use the server instead of local storage.',
+  `[dev:memory] back end on :${port}, front end proxying /api to it.\n` +
+    '[dev:memory] The IDE will use the server instead of local storage.',
 )
 
 // With no database configured the back end refuses to start rather than

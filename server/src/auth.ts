@@ -19,12 +19,27 @@ import type { Pool } from 'mysql2'
  * `accounts.ts` and `admin.ts`. This is not a stopgap -- a reset link is only
  * as trustworthy as the mailbox it lands in, and there is no mailbox here.
  *
- * The client and this server share an origin, so the session cookie needs no
- * cross-site handling: `SameSite=Lax` and same-origin are the defaults, and
- * they are correct here.
+ * The client and this server share an origin -- `web` serves the front end and
+ * proxies `/api` here (see docker-compose.yml) -- so the session cookie needs
+ * no cross-site handling: `SameSite=Lax` and same-origin are the defaults, and
+ * they are correct here. Splitting the two across hosts would mean CORS,
+ * `SameSite=None`, an Origin check on the file routes to replace the CSRF
+ * protection `Lax` provides for free, and exposure to browsers restricting
+ * third-party cookies. Serving both from one origin avoids all of it.
  */
-export function createAuth(pool: Pool, secret: string, baseURL: string) {
+export function createAuth(
+  pool: Pool,
+  secret: string,
+  baseURL: string,
+  extraOrigins: string[] = [],
+) {
   return betterAuth({
+    // Which origins may create a session. BetterAuth defaults this to
+    // `[baseURL]`, and refuses anything else with "Invalid origin" -- correct,
+    // and the first thing to check when sign-in alone fails. `extraOrigins`
+    // exists so a server can be reached both through the compose stack and
+    // through Vite's dev proxy without editing configuration between them.
+    trustedOrigins: [baseURL, ...extraOrigins],
     // Spelled out as a dialect rather than handed the pool directly. Passing a
     // bare mysql2 pool is accepted but broken in better-auth 1.6: its adapter
     // builds `new MysqlDialect(pool)` where Kysely wants

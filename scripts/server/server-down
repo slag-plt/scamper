@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Stops the file server and its database.
+#
+# The database itself survives: it lives in the named volume `scamper-db`, which
+# `down` does not touch, so accounts and files come back on the next
+# server-up. Removing them is a separate, deliberate request:
+#
+#   scripts/server/server-down          # stop
+#   scripts/server/server-down --wipe   # stop AND destroy every account and file
+
+source "$(dirname "$0")/lib.sh"
+
+WIPE=no
+if [ "${1:-}" = "--wipe" ]; then
+  WIPE=yes
+elif [ $# -gt 0 ]; then
+  usage "$0 [--wipe]"
+fi
+
+if [ "${WIPE}" = "no" ]; then
+  compose down
+  echo
+  echo "Stopped. The database is kept; server-up brings it all back."
+  exit 0
+fi
+
+echo "About to delete the database volume."
+echo
+echo "That is every account, every file, and every saved version -- there is no"
+echo "undo, and no backup unless you took one with scripts/server/server-dump."
+echo
+confirm "Accounts have to be created again afterwards." "wipe"
+
+compose down -v
+echo
+echo "Gone. The next server-up starts from an empty database."

@@ -9,7 +9,7 @@ default of 3000.
 Usually you want both halves at once:
 
 ```console
-npm run dev:full
+npm run dev:memory
 ```
 
 That starts this server and a front end wired to it, and the IDE then keeps
@@ -18,13 +18,21 @@ below for how they are connected, and why it is done that way.
 
 ## Configuration
 
-| Variable              | Meaning                                                        |
-| --------------------- | -------------------------------------------------------------- |
-| `DATABASE_URL`        | `mysql://user:pass@host:3306/scamper` — where files are kept    |
-| `BETTER_AUTH_SECRET`  | signs sessions; `openssl rand -base64 32`                       |
-| `BETTER_AUTH_URL`     | the origin Scamper is served from                               |
-| `PORT`                | defaults to 3000                                                |
-| `SCAMPER_STUB`        | `1` to run in memory with no sign-in — development only         |
+| Variable                   | Meaning                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`             | `mysql://user:pass@host:3306/scamper` — where files are kept    |
+| `BETTER_AUTH_SECRET`       | signs sessions; `openssl rand -base64 32`                       |
+| `BETTER_AUTH_URL`          | the origin Scamper is served from, **port included**            |
+| `SCAMPER_TRUSTED_ORIGINS`  | further origins allowed to sign in, comma-separated; empty in a real deployment |
+| `PORT`                     | defaults to 3000                                                |
+| `SCAMPER_STUB`             | `1` to run in memory with no sign-in — development only         |
+
+`BETTER_AUTH_URL` is the one that bites. It is the list of origins a session may
+be created from, so if it does not match the browser's address bar exactly —
+port and all — **sign-in alone** fails with `Invalid origin` while everything
+else works, which makes it look like a password problem. `server-up` prints the
+current value for exactly this reason. `SCAMPER_TRUSTED_ORIGINS` adds more, so
+one stack can serve both its own origin and Vite's dev origin without edits.
 
 There is nothing to configure for sign-in beyond the secret: accounts are made
 by hand (see below), and there is no identity provider or mail transport.
@@ -34,7 +42,7 @@ to the in-memory store, but that store has no sign-in and one shared namespace,
 so a deployment that lost its configuration would quietly serve every student
 the same pile of files. Failing to start is the safer of the two, and
 `SCAMPER_STUB=1` is how a front-end contributor asks for the in-memory one on
-purpose (`npm run dev:full` sets it).
+purpose (`npm run dev:memory` sets it).
 
 ## Running it, with its database
 
@@ -42,16 +50,93 @@ purpose (`npm run dev:full` sets it).
 in development and in production alike:
 
 ```console
-cp .env.example .env      # fill in the passwords and the secret
-docker compose up -d
+cp .env.example .env         # fill in the passwords and the secret
+scripts/server/server-up
 ```
 
 That brings up MariaDB, waits for it to be genuinely ready, creates BetterAuth's
-tables, and then starts the server. It is also the upgrade:
+tables, starts the server, starts Caddy in front of it, and waits until the
+whole chain answers. It is also the upgrade:
 
 ```console
-git pull && docker compose up -d --build
+git pull && scripts/server/server-up --build
 ```
+
+`--build` matters after any change to `server/` *or* the front end: the images
+hold *copies* of both, so editing the source changes nothing until they are
+rebuilt.
+
+### Four containers, one origin
+
+| Service   | What it is                                                     |
+| --------- | -------------------------------------------------------------- |
+| `db`      | MariaDB. Its port is deliberately unpublished                  |
+| `migrate` | BetterAuth's CLI; runs to completion at every start, then exits |
+| `server`  | this API, on loopback only                                      |
+| `web`     | Caddy: serves the built front end, proxies `/api` to `server`   |
+
+`web` is the only one a browser talks to, and that is the design: the app and
+its API share an origin, so the session cookie is first-party. No CORS, no
+`SameSite=None`, no CSRF check to write, and nothing that breaks when browsers
+tighten third-party cookie policy. Splitting the two across hosts costs all of
+that at once — which is why the front end is built into an image here
+(`Dockerfile.web`) rather than deployed somewhere else and pointed at this API.
+
+`web` also answers `/config.json` with `{"serverUrl": "/api/v1"}` — see
+`Caddyfile`. That is how the IDE learns there is a server; a static deployment
+has no such file and stays on browser storage.
+
+### Patching the front end alone
+
+The front end is **baked into the `web` image**, so a change to it needs a
+rebuild. `server-up --build` does that, but it recreates *every* container —
+migrations re-run and the API restarts — which is far more than a stylesheet fix
+deserves. So:
+
+```console
+scripts/server/web-update
+```
+
+That rebuilds only the front-end image and swaps only that container
+(`--no-deps`), leaving the API's uptime, the database, and everyone's session
+untouched. About ten seconds, of which Caddy is down for one.
+
+If even that is too much, `docker-compose.override.yml.example` switches `web`
+to serving a directory on the host:
+
+```console
+cp docker-compose.override.yml.example docker-compose.override.yml
+scripts/server/server-up          # once, to apply the mount
+```
+
+From then on, putting new files in `dist/` — `npm run build`, or an rsync from
+elsewhere — is live immediately, with no container touched at all. `web-update`
+notices the mount and rebuilds `dist/` instead of an image.
+
+The trade is real: what is being served no longer corresponds to any image, so
+`git log` stops describing what students are running, and a half-written `dist/`
+is live the moment it lands. Prefer `web-update` unless you specifically want
+the live directory.
+
+Note that `docker-compose.override.yml` is a file Compose loads **only when no
+`-f` is passed**. The scripts in `scripts/server/` name their compose files
+explicitly, so they list the override too when it exists — otherwise any of them
+would quietly recreate `web` without the mount.
+
+```console
+scripts/server/server-down          # stop; the database is kept
+scripts/server/server-down --wipe   # stop and destroy every account and file
+scripts/server/server-dump          # dumps/scamper-<timestamp>.sql
+```
+
+Each is `docker compose` underneath (`up -d`, `down`, `down -v`, and
+`mariadb-dump` through `exec`) with the guard rails the bare commands lack: a
+`.env` check, a wait for health, and a typed confirmation before anything
+irreversible.
+
+**`down` does not delete data.** The database lives in the named volume
+`scamper-db`, which survives it; only `--wipe` (`down -v`) removes it, and there
+is no undo. Take a `server-dump` first.
 
 There is deliberately no deployment script. A script would have to encode how
 the server is started, restarted after a crash, and pointed at its database --
@@ -126,19 +211,26 @@ shape everything about it:
   unavailable: no self-service sign-up, no address verification, no reset links.
 
 So **sign-up is off** and an administrator makes each account, passing the
-password to its owner directly:
+password to its owner directly. Against the compose stack — which is how this
+normally runs — use the scripts in `scripts/server/`:
+
+```console
+scripts/server/user-add ada@example.edu "Ada Lovelace"   # prints a password
+scripts/server/user-list
+scripts/server/user-info ada@example.edu    # who they are, and how much they have
+scripts/server/user-rename ada@example.edu "Ada Lovelace"   # the shown name
+scripts/server/user-chpwd ada@example.edu   # new password, ends all sessions
+scripts/server/user-delete ada@example.edu  # and their files, irreversibly
+```
+
+Each runs `server/src/admin.ts` inside the container, because that is the only
+place the database is reachable from — compose does not publish its port. Where
+the database *is* reachable (no Docker), the same commands are:
 
 ```console
 npm run account -- create ada@example.edu "Ada Lovelace"
-npm run account -- reset ada@example.edu     # new password, ends all sessions
+npm run account -- chpwd  ada@example.edu
 npm run account -- list
-npm run account -- delete ada@example.edu    # and their files, irreversibly
-```
-
-Against the compose stack, the same commands run inside the container:
-
-```console
-docker compose exec server node_modules/.bin/tsx server/src/admin.ts list
 ```
 
 The password is generated when not given, from an alphabet with no `0`/`O` or
@@ -162,6 +254,13 @@ Every route but `/api/v1/health` needs a session and answers **401** without
 one. That check lives in `src/api.ts` rather than in the HTTP layer, so the rule
 is stated where the routes are and a test can pin it.
 
+One exception, and it matters: when the **database** is unreachable, those
+routes answer **503** rather than 401. Reading a session is itself a query, so a
+database outage makes every request look unauthenticated — and a bare 401 would
+tell a student their session had ended and offer them a sign-in that could not
+work either. `health` reports the database for the same reason, so the IDE's
+heartbeat sees the outage and goes into its offline state instead.
+
 ## The API
 
 Every route mirrors one method of the `FS` interface, so the two stay in step.
@@ -170,7 +269,7 @@ to the signed-in user, and answers 401 without a session (except `health`).
 
 | Method   | Path                              | Meaning                                     |
 | -------- | --------------------------------- | ------------------------------------------- |
-| `GET`    | `/api/v1/health`                  | liveness, and which API version this is     |
+| `GET`    | `/api/v1/health`                  | liveness (**503** if the database is away)  |
 | `GET`    | `/api/v1/fs/files`                | `{ files: FileEntry[] }`, previews included |
 | `GET`    | `/api/v1/fs/files/{name}`         | `{ contents }`, or 404                      |
 | `PUT`    | `/api/v1/fs/files/{name}`         | save `{ contents }`, creating if needed     |
@@ -196,8 +295,8 @@ are stored as rows. See `schema.sql` for the queries these stand in for.
 
 ## Running the two halves together
 
-`npm run dev:full` starts this server and a front end pointed at it. It is
-`scripts/dev-full.mjs`, and it is exactly these two commands, so run them in
+`npm run dev:memory` starts this server and a front end pointed at it. It is
+`scripts/dev-memory.mjs`, and it is exactly these two commands, so run them in
 separate terminals instead if you prefer:
 
 ```console
@@ -225,34 +324,37 @@ is, so there is one behaviour to reason about.
 `SCAMPER_SERVER_PORT` moves this server (and the proxy that follows it) off
 3000.
 
-By default `dev:full` sets `SCAMPER_STUB=1`, so the back end runs in memory with
+By default `dev:memory` sets `SCAMPER_STUB=1`, so the back end runs in memory with
 no sign-in — which is what someone working on the front end wants. Everything is
 lost when it stops, and everyone shares one namespace.
 
 ### Developing against a real database
 
-Let compose run the back end, and run only the front end yourself:
+Let compose run the back end, and run only the front end yourself — worth it
+when you are iterating on the front end, since the compose copy is a build and
+has no hot reload:
 
 ```console
 cp .env.example .env
-docker compose up -d
-docker compose exec server node_modules/.bin/tsx server/src/admin.ts \
-  create you@example.com "Your Name"
+scripts/server/server-up
+scripts/server/user-add you@example.com "Your Name"
 npm run dev -- --mode server
 ```
 
-Then sign in with what that printed. The third step is not optional: there is no
-sign-up, so without an account the IDE has nothing to sign in with. `npm run
-account -- create ...` is the same command, but it talks to the database
-directly and the compose database has no published port — from your machine it
-cannot reach it, which is why this goes through `exec`.
+Then sign in at :5173 with what that printed. The third step is not optional:
+there is no sign-up, so without an account the IDE has nothing to sign in with.
 
-Use `npm run dev` here rather than `dev:full`: compose is already running the
-back end, and `dev:full` would start a second one on the same port.
+For this to work, :5173 has to be an origin the server accepts a session from —
+`.env.example` puts it in `SCAMPER_TRUSTED_ORIGINS` for that reason, alongside
+`BETTER_AUTH_URL` pointing at the stack's own :8080. Without it, sign-in fails
+with `Invalid origin` while every other request succeeds.
+
+Use `npm run dev` here rather than `dev:memory`: compose is already running the
+back end, and `dev:memory` would start a second one on the same port.
 
 The alternative, if you would rather run the server from your terminal, is to
 publish a database for it and set `DATABASE_URL` plus the two `BETTER_AUTH_*`
-variables in the environment `dev:full` runs in.
+variables in the environment `dev:memory` runs in.
 
 ### What decides the file system
 
@@ -329,7 +431,7 @@ different thing from the database surviving the machine.
 
 There is none, on purpose. Scamper is deployed with the static site and this
 server on **one origin**, so `/api/v1` is a path on the host the IDE is served
-from — the arrangement `npm run dev:full` reproduces with a proxy. No reply
+from — the arrangement `npm run dev:memory` reproduces with a proxy. No reply
 carries CORS headers, `OPTIONS` is a 405, and session cookies stay
 `SameSite=Lax` and same-origin.
 

@@ -34,6 +34,23 @@ function fromSql(value: Date | string): string {
     : value.toISOString()
 }
 
+/**
+ * @returns true iff the database answers
+ *
+ * A query rather than a look at the pool's state: a pool holds connections that
+ * were fine when they were opened, and the question here is whether one works
+ * now. Failure is an answer, not an error -- the health route's whole job is to
+ * report it.
+ */
+export async function ping(sql: SqlPool): Promise<boolean> {
+  try {
+    await sql.query('SELECT 1')
+    return true
+  } catch {
+    return false
+  }
+}
+
 export class MariaDbFileStore implements FileStore {
   constructor(private readonly sql: SqlPool) {}
 
