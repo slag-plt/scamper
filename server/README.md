@@ -368,65 +368,98 @@ Signing in or out reloads rather than swapping the file system mid-session.
 
 ## Deploying
 
-The front end and the back end deploy separately, because they are different
-kinds of thing: the front end is static files that `scripts/deploy` rsyncs into
-a versioned directory, and this is a long-running process.
-
-1. `npm run deploy` — the front end, as ever.
-2. `docker compose up -d --build` on the server host — this.
-3. `npm run deploy:server-url -- <origin>/api/v1` — once, to tell every
-   deployed front-end release that a server exists. Until this is run, students
-   stay on browser storage and nothing changes for them; after it, the sign-in
-   prompt appears. It is the switch to flip last, and the one to clear (run it
-   with no argument) if the server has to come down.
-4. Create the accounts — nobody can sign in until you do, since there is no
-   sign-up:
-
-   ```console
-   docker compose exec server node_modules/.bin/tsx server/src/admin.ts \
-     create ada@example.edu "Ada Lovelace"
-   ```
-
-An upgrade is steps 1 and 2 again. Step 3 only changes when the server moves.
-
-The one piece that is neither: **the web server has to pass `/api/` through to
-the container**, because the two share an origin. The container publishes to
-loopback only, so this is the only route in. For Apache:
-
-```apache
-ProxyPass        /api/ http://127.0.0.1:3000/api/
-ProxyPassReverse /api/ http://127.0.0.1:3000/api/
-```
-
-or for nginx:
-
-```nginx
-location /api/ {
-    proxy_pass http://127.0.0.1:3000/api/;
-    proxy_set_header Host $host;
-}
-```
-
-Keep the client's `Host` header rather than rewriting it: BetterAuth checks the
-request's origin, and a rewritten host makes a legitimate sign-in look
-cross-site.
-
-`BETTER_AUTH_URL` in `.env` has to be that same public origin — the one students
-type, not `localhost:3000`. It is what sessions are issued against.
-
-### Backups
-
-`docker compose down` keeps the database; `down -v` destroys it, along with
-every student's files. What is worth backing up is the `scamper-db` volume:
+Everything runs on one host, from one command. The host needs Docker with
+Compose v2 and git, and **nothing else** — no Node, no build tooling: the images
+build the front end themselves.
 
 ```console
-docker compose exec db mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" \
-  --databases scamper > scamper-$(date +%F).sql
+git clone <this repo> scamper && cd scamper
+cp .env.example .env          # then fill it in -- see below
+scripts/server/server-up --build
+scripts/server/user-add ada@example.edu "Ada Lovelace"
 ```
 
-Saved history makes deletion recoverable *within* Scamper (#42), which is a
-different thing from the database surviving the machine.
+That is the whole deployment. It brings up MariaDB, waits for it, runs
+BetterAuth's migrations to completion, starts the API, starts Caddy in front of
+it, and waits until the whole chain answers — then prints the URL.
 
+### Filling in `.env`
+
+Four values matter, and one of them is the usual source of trouble:
+
+| Variable | What it must be |
+| --- | --- |
+| `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD` | letters and digits only — they go into a connection URL as-is |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | **the origin a browser will show**, scheme and port included |
+| `WEB_PORT` | the port the platform forwards public traffic to |
+
+`BETTER_AUTH_URL` is the one. It is the list of origins a session may be created
+from, so if it does not match the address bar exactly, **sign-in alone** fails
+with `Invalid origin` while everything else works — which reads as a password
+problem and is not. If the platform terminates TLS and forwards to the
+container, the browser sees `https://`, so this must say `https://` too, even
+though Caddy itself is serving plain HTTP inside.
+
+`WEB_PORT` is whatever the host forwards public traffic to, usually `80`.
+`SERVER_PORT` stays on loopback and needs nothing.
+
+### TLS
+
+The `Caddyfile` binds `:80` and does not request a certificate, which is right
+when the platform in front terminates TLS — the common case on a managed host.
+
+To have Caddy get its own certificate instead, replace `:80` in the `Caddyfile`
+with the hostname and publish 443 as well. It will handle Let's Encrypt itself,
+provided the name resolves to the host and both ports are reachable.
+
+### Upgrades
+
+```console
+git pull && scripts/server/server-up --build     # everything
+scripts/server/web-update                        # front end only
+```
+
+`--build` is not optional after a code change: the images hold *copies* of
+`server/` and of the built front end. `web-update` is the one to reach for when
+only the front end changed — it swaps that container alone, leaving the API's
+uptime, the database, and everyone's session untouched.
+
+Take a dump first if the change touches storage:
+
+```console
+scripts/server/server-dump          # dumps/scamper-<timestamp>.sql
+```
+
+### If the host cannot build the images
+
+The front-end build (`npm ci` plus Vite) is the memory-hungriest step here, and
+a small managed environment can run out. The way around it is to build
+elsewhere and ship `dist/`:
+
+```console
+cp docker-compose.override.yml.example docker-compose.override.yml
+scripts/server/server-up            # once, to apply the mount
+rsync -a dist/ host:scamper/dist/   # from a machine that can build
+```
+
+Caddy then serves that directory directly. The cost is that what is running no
+longer corresponds to any image — see **Patching the front end alone** above.
+
+### The static deployment is separate, and still works
+
+`npm run deploy` still rsyncs a build to a plain web server, where the absence
+of a `/config.json` keeps the IDE on browser storage: no accounts, no server,
+nothing to run. That deployment and this one are independent, and a site can
+offer both — the static one as the no-account Scamper, this one for students
+with accounts.
+
+**Do not use `npm run deploy:server-url` to point a static deployment at this
+container's API.** It would make the front end and the API different origins,
+which is precisely what this arrangement exists to avoid: it needs CORS,
+`SameSite=None` cookies, a CSRF check the file routes do not have, and it breaks
+as browsers restrict third-party cookies. That script is for a deployment where
+one web server serves both the static files and `/api` on a single origin.
 ## Cross-origin
 
 There is none, on purpose. Scamper is deployed with the static site and this
@@ -435,12 +468,23 @@ from — the arrangement `npm run dev:memory` reproduces with a proxy. No reply
 carries CORS headers, `OPTIONS` is a 405, and session cookies stay
 `SameSite=Lax` and same-origin.
 
+In production the `web` container is what makes that true: Caddy serves the
+built front end and proxies `/api` here, so both halves answer on one hostname.
+
 An `ALLOWED_ORIGIN` setting used to exist for a split-origin deployment. It is
 gone: it was configuration nothing set, on a path nothing exercised, in the one
 area where an untested path is worth least — a credentialed cross-origin reply
 is exactly the thing to get wrong quietly. Serving this from a second origin
 would mean putting it back deliberately, alongside `sameSite: 'none'` on the
 session cookie and `trustedOrigins` in `src/auth.ts`.
+
+And one more thing that is easy to miss: **`SameSite=Lax` is the only CSRF
+protection the file routes have.** Nothing checks `Origin` on `/api/v1/*` —
+it does not have to, because a cross-site request carries no cookie. Set
+`sameSite: 'none'` and any page a student visits could `PUT` or `DELETE` their
+files with their session attached, so an Origin allowlist would have to be added
+in the same change. Two subdomains of one registrable domain are *same-site*
+and avoid all of this; only a genuinely different site needs it.
 
 ## Why this lives in the Scamper repo
 
