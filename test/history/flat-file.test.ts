@@ -1,19 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   fileOfHistory,
-  formatSnapshotTime,
+  FlatFileHistory,
   historyFilename,
-  listHistories,
-  loadHistory,
-  markHistoryDeleted,
-  MAX_SNAPSHOTS,
-  MERGE_WINDOW_MS,
-  recordSnapshot,
-  renameHistory,
-} from '../../../src/app/web/file-history'
-import { MockFileSystem } from '../../stubs/mock-file-system'
+} from '../../src/history/flat-file'
+import { formatSnapshotTime } from '../../src/history/history'
+import { MAX_SNAPSHOTS, MERGE_WINDOW_MS } from '../../src/history/policy'
+import { MockFileSystem } from '../stubs/mock-file-system'
 
-// The save history of a file (issue #42). These cover the recording policy,
+// The flat-file save history (issue #42): one `.{filename}.history` blob per
+// file, which is what OPFS and the CLI use. These cover the recording policy,
 // which is where the feature is correct or not: autosave writes every few
 // seconds whether or not anything changed, so what does *not* become a
 // snapshot matters as much as what does.
@@ -26,29 +22,43 @@ function at(ms: number): Date {
 }
 
 let fs: MockFileSystem
+let history: FlatFileHistory
 
 beforeEach(() => {
   fs = new MockFileSystem()
+  history = new FlatFileHistory(fs)
 })
 
-/** @returns the contents of every snapshot of `filename`, newest first. */
+/**
+ * @returns the contents of every snapshot of `filename`, newest first. Goes
+ *          through the interface's index-then-read pair rather than reaching
+ *          into storage, so it exercises the ids the browser navigates by.
+ */
 async function contentsOf(filename: string): Promise<string[]> {
-  return (await loadHistory(fs, filename)).snapshots.map((s) => s.contents)
+  const { snapshots } = await history.index(filename)
+  const contents = await Promise.all(
+    snapshots.map((s) => history.read(filename, s.id)),
+  )
+  return contents.map((c) => c ?? '<missing>')
 }
 
-describe('recordSnapshot', () => {
+describe('record', () => {
   test('records the first save', async () => {
-    const result = await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
+    const result = await history.record('hello.scm', '(display 1)', START)
 
     expect(result.recorded).toBe(true)
-    expect(result.head).toEqual({ time: START.toISOString(), contents: '(display 1)' })
+    expect(result.head).toEqual({
+      id: START.toISOString(),
+      time: START.toISOString(),
+      contents: '(display 1)',
+    })
     expect(await contentsOf('hello.scm')).toEqual(['(display 1)'])
   })
 
   test('keeps snapshots newest first', async () => {
-    await recordSnapshot(fs, 'hello.scm', 'one', START)
-    await recordSnapshot(fs, 'hello.scm', 'two', at(MERGE_WINDOW_MS))
-    await recordSnapshot(fs, 'hello.scm', 'three', at(2 * MERGE_WINDOW_MS))
+    await history.record('hello.scm', 'one', START)
+    await history.record('hello.scm', 'two', at(MERGE_WINDOW_MS))
+    await history.record('hello.scm', 'three', at(2 * MERGE_WINDOW_MS))
 
     expect(await contentsOf('hello.scm')).toEqual(['three', 'two', 'one'])
   })
@@ -56,10 +66,8 @@ describe('recordSnapshot', () => {
   test('ignores a save that changed nothing', async () => {
     // Autosave rewrites the file every 3s regardless of edits, so without this
     // a history would fill with identical entries.
-    await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
-    const result = await recordSnapshot(
-      fs,
-      'hello.scm',
+    await history.record('hello.scm', '(display 1)', START)
+    const result = await history.record('hello.scm',
       '(display 1)',
       at(10 * MERGE_WINDOW_MS),
     )
@@ -69,16 +77,16 @@ describe('recordSnapshot', () => {
   })
 
   test('folds edits made inside the merge window into the open snapshot', async () => {
-    await recordSnapshot(fs, 'hello.scm', 'first', START)
-    const result = await recordSnapshot(fs, 'hello.scm', 'second', at(MERGE_WINDOW_MS - 1))
+    await history.record('hello.scm', 'first', START)
+    const result = await history.record('hello.scm', 'second', at(MERGE_WINDOW_MS - 1))
 
     expect(result.recorded).toBe(false)
     expect(await contentsOf('hello.scm')).toEqual(['first'])
   })
 
   test('opens a new snapshot once the window has passed', async () => {
-    await recordSnapshot(fs, 'hello.scm', 'first', START)
-    await recordSnapshot(fs, 'hello.scm', 'second', at(MERGE_WINDOW_MS))
+    await history.record('hello.scm', 'first', START)
+    await history.record('hello.scm', 'second', at(MERGE_WINDOW_MS))
 
     expect(await contentsOf('hello.scm')).toEqual(['second', 'first'])
   })
@@ -88,7 +96,7 @@ describe('recordSnapshot', () => {
     // steadily would hold it open forever and the history would stay at one
     // entry. Five minutes of edits every 3s is ~5 entries, not 1 and not 100.
     for (let ms = 0; ms < 5 * MERGE_WINDOW_MS; ms += 3_000) {
-      await recordSnapshot(fs, 'hello.scm', `edit at ${ms.toString()}`, at(ms))
+      await history.record('hello.scm', `edit at ${ms.toString()}`, at(ms))
     }
 
     expect((await contentsOf('hello.scm')).length).toBe(5)
@@ -97,8 +105,8 @@ describe('recordSnapshot', () => {
   test('forces a snapshot inside the window when asked', async () => {
     // What closing or switching away from a file does, so a session always
     // ends on a complete entry.
-    await recordSnapshot(fs, 'hello.scm', 'first', START)
-    const result = await recordSnapshot(fs, 'hello.scm', 'second', at(1_000), {
+    await history.record('hello.scm', 'first', START)
+    const result = await history.record('hello.scm', 'second', at(1_000), {
       force: true,
     })
 
@@ -107,8 +115,8 @@ describe('recordSnapshot', () => {
   })
 
   test('forcing still ignores a save that changed nothing', async () => {
-    await recordSnapshot(fs, 'hello.scm', 'same', START)
-    const result = await recordSnapshot(fs, 'hello.scm', 'same', at(1_000), {
+    await history.record('hello.scm', 'same', START)
+    const result = await history.record('hello.scm', 'same', at(1_000), {
       force: true,
     })
 
@@ -118,7 +126,7 @@ describe('recordSnapshot', () => {
 
   test('drops the oldest snapshots past the cap', async () => {
     for (let i = 0; i <= MAX_SNAPSHOTS; i++) {
-      await recordSnapshot(fs, 'hello.scm', `edit ${i.toString()}`, at(i * MERGE_WINDOW_MS))
+      await history.record('hello.scm', `edit ${i.toString()}`, at(i * MERGE_WINDOW_MS))
     }
 
     const contents = await contentsOf('hello.scm')
@@ -129,18 +137,18 @@ describe('recordSnapshot', () => {
   })
 
   test('keeps no history of internal files', async () => {
-    const result = await recordSnapshot(fs, '.scamper.config', '{}', START)
+    const result = await history.record('.scamper.config', '{}', START)
 
     expect(result.recorded).toBe(false)
     expect(await fs.fileExists(historyFilename('.scamper.config'))).toBe(false)
   })
 
   test('touches no storage when a cached head says the save adds nothing', async () => {
-    const { head } = await recordSnapshot(fs, 'hello.scm', 'same', START)
+    const { head } = await history.record('hello.scm', 'same', START)
     const loadFile = vi.spyOn(fs, 'loadFile')
     const saveFile = vi.spyOn(fs, 'saveFile')
 
-    const result = await recordSnapshot(fs, 'hello.scm', 'same', at(3_000), {
+    const result = await history.record('hello.scm', 'same', at(3_000), {
       knownHead: head,
     })
 
@@ -150,8 +158,8 @@ describe('recordSnapshot', () => {
   })
 
   test('still records when a cached head says the save is new', async () => {
-    const { head } = await recordSnapshot(fs, 'hello.scm', 'first', START)
-    const result = await recordSnapshot(fs, 'hello.scm', 'second', at(MERGE_WINDOW_MS), {
+    const { head } = await history.record('hello.scm', 'first', START)
+    const result = await history.record('hello.scm', 'second', at(MERGE_WINDOW_MS), {
       knownHead: head,
     })
 
@@ -162,7 +170,7 @@ describe('recordSnapshot', () => {
   test('starts over on a history it cannot read', async () => {
     await fs.saveFile(historyFilename('hello.scm'), 'this is not json{')
 
-    const result = await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
+    const result = await history.record('hello.scm', '(display 1)', START)
 
     expect(result.recorded).toBe(true)
     expect(await contentsOf('hello.scm')).toEqual(['(display 1)'])
@@ -177,7 +185,7 @@ describe('recordSnapshot', () => {
       JSON.stringify({ version: 99, entries: ['???'] }),
     )
 
-    const result = await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
+    const result = await history.record('hello.scm', '(display 1)', START)
 
     expect(result.recorded).toBe(true)
     expect(await contentsOf('hello.scm')).toEqual(['(display 1)'])
@@ -224,16 +232,16 @@ describe('formatSnapshotTime', () => {
   })
 })
 
-describe('listHistories', () => {
+describe('list', () => {
   test('lists files with a history, deleted ones included', async () => {
-    await recordSnapshot(fs, 'hello.scm', 'one', START)
-    await recordSnapshot(fs, 'gone.scm', 'two', START)
-    await markHistoryDeleted(fs, 'gone.scm', at(1_000))
+    await history.record('hello.scm', 'one', START)
+    await history.record('gone.scm', 'two', START)
+    await history.markDeleted('gone.scm', at(1_000))
     // A file with no history at all, and an unrelated internal file.
     await fs.saveFile('untouched.scm', 'three')
     await fs.saveFile('.scamper.config', '{}')
 
-    expect(await listHistories(fs)).toEqual([
+    expect(await history.list()).toEqual([
       { filename: 'gone.scm', deletedAt: at(1_000).toISOString() },
       { filename: 'hello.scm' },
     ])
@@ -242,7 +250,7 @@ describe('listHistories', () => {
   test('is empty when nothing has been recorded', async () => {
     await fs.saveFile('hello.scm', 'one')
 
-    expect(await listHistories(fs)).toEqual([])
+    expect(await history.list()).toEqual([])
   })
 })
 
@@ -260,34 +268,34 @@ describe('fileOfHistory', () => {
   })
 })
 
-describe('renameHistory', () => {
+describe('rename', () => {
   test('carries the history across to the new name', async () => {
-    await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
-    await renameHistory(fs, 'hello.scm', 'goodbye.scm')
+    await history.record('hello.scm', '(display 1)', START)
+    await history.rename('hello.scm', 'goodbye.scm')
 
     expect(await contentsOf('goodbye.scm')).toEqual(['(display 1)'])
     expect(await fs.fileExists(historyFilename('hello.scm'))).toBe(false)
   })
 
   test('does nothing for a file with no history', async () => {
-    await renameHistory(fs, 'hello.scm', 'goodbye.scm')
+    await history.rename('hello.scm', 'goodbye.scm')
 
     expect(await fs.fileExists(historyFilename('goodbye.scm'))).toBe(false)
   })
 })
 
-describe('markHistoryDeleted', () => {
+describe('markDeleted', () => {
   test('keeps the history, marked, so the file can be recovered', async () => {
-    await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
-    await markHistoryDeleted(fs, 'hello.scm', at(1_000))
+    await history.record('hello.scm', '(display 1)', START)
+    await history.markDeleted('hello.scm', at(1_000))
 
-    const history = await loadHistory(fs, 'hello.scm')
-    expect(history.deletedAt).toBe(at(1_000).toISOString())
-    expect(history.snapshots.map((s) => s.contents)).toEqual(['(display 1)'])
+    const index = await history.index('hello.scm')
+    expect(index.deletedAt).toBe(at(1_000).toISOString())
+    expect(await contentsOf('hello.scm')).toEqual(['(display 1)'])
   })
 
   test('leaves no history behind for a file that had none', async () => {
-    await markHistoryDeleted(fs, 'hello.scm', START)
+    await history.markDeleted('hello.scm', START)
 
     expect(await fs.fileExists(historyFilename('hello.scm'))).toBe(false)
   })
@@ -295,13 +303,13 @@ describe('markHistoryDeleted', () => {
   test('a later save clears the mark, even when it adds no snapshot', async () => {
     // Recreating a deleted file with its original contents: the save itself
     // adds nothing, but the history is no longer of a deleted file.
-    await recordSnapshot(fs, 'hello.scm', '(display 1)', START)
-    await markHistoryDeleted(fs, 'hello.scm', at(1_000))
+    await history.record('hello.scm', '(display 1)', START)
+    await history.markDeleted('hello.scm', at(1_000))
 
-    const result = await recordSnapshot(fs, 'hello.scm', '(display 1)', at(2_000))
+    const result = await history.record('hello.scm', '(display 1)', at(2_000))
 
     expect(result.recorded).toBe(false)
-    expect((await loadHistory(fs, 'hello.scm')).deletedAt).toBeUndefined()
+    expect((await history.index('hello.scm')).deletedAt).toBeUndefined()
     expect(await contentsOf('hello.scm')).toEqual(['(display 1)'])
   })
 })

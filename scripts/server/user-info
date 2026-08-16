@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# Everything held about one account: who they are, how many machines they are
+# signed in on, and how many files and saved versions they have.
+#
+# Not their password. It is stored as a hash and cannot be recovered -- only
+# replaced, with user-chpwd.
+#
+#   scripts/server/user-info ada@example.edu
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 1 ] || usage "$0 <email>"
+
+admin info "$1"

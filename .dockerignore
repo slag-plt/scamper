@@ -1,0 +1,30 @@
+# The build context is the repository root, shared by both images
+# (server/Dockerfile and Dockerfile.web), so this can only exclude what
+# *neither* needs. The front-end build wants nearly the whole checkout --
+# src/app, public, scripts, and the config files at the root.
+#
+# The server image is kept small by its Dockerfile rather than by this file: it
+# copies `server/`, `src/fs/`, and `src/history/` explicitly and nothing else,
+# which is also what makes the import boundary visible there.
+
+# Secrets, first. `Dockerfile.web` copies the checkout wholesale before
+# building, so anything not excluded here lands in a layer of its build stage --
+# and while the image that ships carries only `dist`, that intermediate one
+# stays in the local build cache. `.env` holds the session secret and the
+# database passwords.
+.env
+.env.*
+!.env.example
+
+node_modules
+**/node_modules
+dist
+coverage
+.git
+.github
+.claude
+__screenshots__
+.vitest-attachments
+
+# Database dumps, which hold student files and password hashes.
+dumps

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# Brings up the file server and its database, and waits until it answers.
+#
+# Compose starts MariaDB, waits for it to be genuinely ready, runs BetterAuth's
+# migrations to completion, and only then starts the server -- so this is the
+# whole deployment, first run included.
+#
+#   scripts/server/server-up            # start, or apply .env changes
+#   scripts/server/server-up --build    # rebuild the image first, after a code change
+#
+# Note the second form. The image holds a *copy* of server/, so editing server
+# code changes nothing until it is rebuilt.
+
+source "$(dirname "$0")/lib.sh"
+
+if [ ! -f "${ROOT}/.env" ]; then
+  echo "There is no .env beside docker-compose.yml." >&2
+  echo "Copy it and fill it in: cp .env.example .env" >&2
+  exit 1
+fi
+
+# `up -d` on its own recreates containers whose configuration changed, which is
+# what picks up an edited .env -- `restart` would not, since environment is
+# baked in when a container is created.
+compose up -d "$@"
+
+echo
+printf 'Waiting for the app to answer'
+
+# Through `web`, not straight at the API: that is the path a browser takes, so
+# it proves the whole chain -- Caddy serving the front end, the proxy, the
+# server, and its database. `/api/v1/health` reports the database too, so a 200
+# here means everything is genuinely up.
+PORT="$(env_value WEB_PORT 8080)"
+for _ in $(seq 1 60); do
+  if curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" >/dev/null 2>&1; then
+    echo ' ok'
+    echo
+    compose ps
+    echo
+    echo "Scamper is at http://127.0.0.1:${PORT}/"
+    echo
+    echo "BETTER_AUTH_URL in .env must match the origin you browse from,"
+    echo "port included, or signing in fails with \"Invalid origin\":"
+    grep -E '^BETTER_AUTH_URL=' "${ROOT}/.env" || echo "  (not set)"
+    exit 0
+  fi
+  printf '.'
+  sleep 1
+done
+
+echo ' no answer.'
+echo
+echo "Scamper did not come up. The last words of each half:" >&2
+compose logs --tail 20 web >&2
+compose logs --tail 30 server >&2
+exit 1

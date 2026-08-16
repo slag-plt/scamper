@@ -1,0 +1,30 @@
+{
+  // The server runs under Node, not a browser. Leaving "DOM" out of `lib` is
+  // deliberate: it makes a stray `window`/`fetch`-shaped browser assumption a
+  // type error here rather than a runtime surprise in production.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+
+    // Matches the root tsconfig so contributors see one resolution story
+    // across the repo. `tsx` (the declared runner) resolves like a bundler,
+    // so extensionless relative imports work the same way they do in src/.
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}

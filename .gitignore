@@ -145,3 +145,11 @@ src/lib/generated/sources.ts
 # Artifacts a failing browser test leaves behind (npm run test:browser)
 __screenshots__/
 .vitest-attachments/
+
+# Database dumps from scripts/server/server-dump. These hold every student's
+# files and BetterAuth's password hashes, so they do not belong in the repo.
+dumps/
+
+# A local choice about how one machine serves the front end, not a property of
+# the project. Copy docker-compose.override.yml.example to create it.
+docker-compose.override.yml

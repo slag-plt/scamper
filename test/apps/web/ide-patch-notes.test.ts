@@ -12,11 +12,16 @@ import {
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
+import {
+  installMemoryStorage,
+  uninstallMemoryStorage,
+} from '../../stubs/memory-storage'
 import { initialize } from '../../../src/scamper'
 
-vi.mock('../../../src/app/web/lockfile', () => ({
-  acquireLockFile: vi.fn(() => Promise.resolve(true)),
-  releaseLockFile: vi.fn(() => Promise.resolve()),
+vi.mock('../../../src/app/web/single-instance', () => ({
+  acquireLock: vi.fn(() => Promise.resolve(true)),
+  releaseLock: vi.fn(),
+  holdsLock: vi.fn(() => true),
 }))
 
 vi.mock(
@@ -31,7 +36,8 @@ vi.mock(
 
 await initialize()
 
-const CONFIG_FILENAME = '.scamper.config'
+const STORAGE_KEY = 'scamper.config'
+const LEGACY_CONFIG_FILENAME = '.scamper.config'
 
 // Patch notes are shown on the first visit to a new version (issue #306). These
 // tests drive IdeApp against a seeded config to exercise the version gate.
@@ -47,25 +53,29 @@ describe('IDE patch-notes gate', () => {
 
   beforeEach(() => {
     fs = new MockFileSystem()
-    FS.setFS(fs)
+    FS.setBackend(FS.localBackend(fs))
+    installMemoryStorage()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    uninstallMemoryStorage()
     document.body.innerHTML = ''
   })
 
-  async function readConfigVersion(): Promise<string> {
-    const raw = await fs.loadFile(CONFIG_FILENAME)
-    return (JSON.parse(raw) as { lastVersionAccessed: string })
-      .lastVersionAccessed
+  function seedConfig(config: Record<string, unknown>): void {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
+  }
+
+  function readConfigVersion(): string | undefined {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    return raw === null
+      ? undefined
+      : (JSON.parse(raw) as { lastVersionAccessed: string }).lastVersionAccessed
   }
 
   test('shows patch notes to a user upgrading from an older version', async () => {
-    await fs.saveFile(
-      CONFIG_FILENAME,
-      JSON.stringify({ lastOpenedFilename: null, lastVersionAccessed: '0.0.1' }),
-    )
+    seedConfig({ lastOpenedFilename: null, lastVersionAccessed: '0.0.1' })
 
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
@@ -76,7 +86,7 @@ describe('IDE patch-notes gate', () => {
 
       // The version is recorded as soon as the notes are shown -- so closing the
       // tab without clicking through would not re-show them.
-      expect(await readConfigVersion()).toBe(APP_VERSION)
+      expect(readConfigVersion()).toBe(APP_VERSION)
 
       getByRole(dialog, 'button', { name: 'Got it' }).click()
       await flushPromises()
@@ -85,7 +95,7 @@ describe('IDE patch-notes gate', () => {
       expect(
         queryByRole(document.body, 'dialog', { name: /what's new/i }),
       ).toBeNull()
-      expect(await readConfigVersion()).toBe(APP_VERSION)
+      expect(readConfigVersion()).toBe(APP_VERSION)
     } finally {
       wrapper.unmount()
     }
@@ -94,22 +104,19 @@ describe('IDE patch-notes gate', () => {
   test('treats a legacy config missing lastVersionAccessed as an upgrade', async () => {
     // Configs written before this feature have no lastVersionAccessed; the
     // default ('0.0.0') should make everything count as unseen.
-    await fs.saveFile(
-      CONFIG_FILENAME,
-      JSON.stringify({ lastOpenedFilename: null }),
-    )
+    seedConfig({ lastOpenedFilename: null })
 
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await findByRole(document.body, 'dialog', { name: /what's new/i })
-      expect(await readConfigVersion()).toBe(APP_VERSION)
+      expect(readConfigVersion()).toBe(APP_VERSION)
     } finally {
       wrapper.unmount()
     }
   })
 
   test('does not show patch notes to a brand-new user', async () => {
-    // No config file exists.
+    // No config in storage, and none left in the file system either.
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {
       await findByRole(document.body, 'button', { name: 'Create file' })
@@ -118,20 +125,35 @@ describe('IDE patch-notes gate', () => {
         queryByRole(document.body, 'dialog', { name: /what's new/i }),
       ).toBeNull()
       // A fresh user is recorded as already caught up to the current version.
-      expect(await readConfigVersion()).toBe(APP_VERSION)
+      expect(readConfigVersion()).toBe(APP_VERSION)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('adopts a config an older build left in the file system', async () => {
+    // Before the config moved to localStorage it was a file. Existing users
+    // must carry their seen version across, or every one of them would look
+    // brand new and silently skip this release's notes.
+    await fs.saveFile(
+      LEGACY_CONFIG_FILENAME,
+      JSON.stringify({ lastOpenedFilename: null, lastVersionAccessed: '0.0.1' }),
+    )
+
+    const wrapper = mount(IdeApp, { attachTo: document.body })
+    try {
+      await findByRole(document.body, 'dialog', { name: /what's new/i })
+      expect(readConfigVersion()).toBe(APP_VERSION)
+      // The leftover is cleared, so it can't be uploaded to a server-backed
+      // file system later.
+      expect(await fs.fileExists(LEGACY_CONFIG_FILENAME)).toBe(false)
     } finally {
       wrapper.unmount()
     }
   })
 
   test('does not show patch notes to a user already on the current version', async () => {
-    await fs.saveFile(
-      CONFIG_FILENAME,
-      JSON.stringify({
-        lastOpenedFilename: null,
-        lastVersionAccessed: APP_VERSION,
-      }),
-    )
+    seedConfig({ lastOpenedFilename: null, lastVersionAccessed: APP_VERSION })
 
     const wrapper = mount(IdeApp, { attachTo: document.body })
     try {

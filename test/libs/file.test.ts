@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { setFS } from '../../src/fs'
+import { localBackend, setBackend } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { runProgram } from './harness.js'
 
@@ -18,7 +18,7 @@ let fs: MockFileSystem
 beforeEach(async () => {
   // A fresh FS per test, so writes can't leak between them.
   fs = await MockFileSystem.create()
-  setFS(fs)
+  setBackend(localBackend(fs))
 })
 
 const read = (name: string) => fs.loadFile(name)

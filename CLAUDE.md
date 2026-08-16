@@ -23,19 +23,49 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ## Development Commands
 
+### The three arrangements
+
+Scamper runs three ways, differing only in where a user's files live. The IDE
+decides at startup by fetching `/config.json` — absent means browser storage,
+present means the server it names — so one build serves all three and nothing
+is compiled in.
+
+1. **Static** (`npm run dev`, `npm run build`): front end alone, files in OPFS. No server. Most work needs only this.
+2. **In-memory** (`npm run dev:memory`): both halves wired together, back end holding everything in memory with no accounts. For work on the API, `src/fs/`, or history without Docker.
+3. **Full stack** (`scripts/server/server-up`): MariaDB + the API + Caddy serving the built front end and proxying `/api` to it, all one origin. The real deployment; its interface is the bash scripts, which are the *administrator's* tools rather than build steps.
+
 ### Building
 
 + `npm install`: installs dependencies
-+ `npm run dev`: starts development server
-+ `npm run build`: full production build (compilation + bundling)
++ `npm run dev`: arrangement 1 — front end only, files in the browser
++ `npm run dev:memory`: arrangement 2 — front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
++ `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
++ `npm run build`: full production build (compilation + bundling) into `dist/`
++ `npm run preview`: serves the built `dist/` locally, i.e. arrangement 1 as deployed
 + `npm run clean`: cleans the build
-+ `npm run deploy`: deploys to the production server (requires Unix and `compsci` host)
++ `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
++ `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
+
+**A server on a different origin from the front end is not supported**, deliberately: it would mean CORS, `SameSite=None` cookies, a CSRF check on the file routes to replace what `SameSite=Lax` gives for free, and exposure to browsers restricting third-party cookies. Arrangement 3 serves both from one origin instead.
+
+### The file server
+
++ `scripts/server/server-up [--build]`: runs the whole app via `docker compose` — MariaDB, the API, and Caddy serving the built front end while proxying `/api` — applying migrations first, then waits until it answers. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`). `--build` is required after any change to `server/` *or* the front end, since the images hold copies of both
++ `scripts/server/web-update`: rebuilds and swaps *only* the front-end container, leaving the API and database running. Use this for a front-end patch; `server-up --build` recreates everything, migrations included
++ `scripts/server/server-down [--wipe]`: stops it. The database survives; `--wipe` destroys it, after a typed confirmation
++ `scripts/server/server-dump [file]`: dumps the whole database to `dumps/scamper-<timestamp>.sql`
++ `scripts/server/user-{add,list,info,rename,chpwd,delete}`: account management, each running `server/src/admin.ts` inside the container. There is no sign-up, so `user-add` is the only way in. `BETTER_AUTH_URL` in `.env` must match the origin the browser is on, port included, or sign-in fails with `Invalid origin`
++ `npm run db:migrate --workspace @scamper/server`: creates BetterAuth's tables. Only needed when running the server *without* Docker — compose does it
++ `npm run account -- <command>`: the same account commands, for a database reachable from the host (i.e. no Docker). Against the compose stack its port is deliberately unpublished, so use the scripts above
++ `npm run start:server`: runs the back end without watching, as the container does
++ `SCAMPER_TRUSTED_ORIGINS` in `.env`: further origins allowed to sign in, comma-separated. Empty in a real deployment; locally it lets `npm run dev -- --mode server` on :5173 sign in to the compose stack without editing `BETTER_AUTH_URL`
 
 ### Validation
 
 + `npm run validate`: runs the full validation process (test, typecheck, lint)
 + `npm run test`: runs the full test suite
 + `npm run typecheck`: runs the typechecker 
++ `npm run typecheck:server`: runs the typechecker over the `server/` workspace
 + `npm run lint`: runs the linter
 + `npm run lint:fix`: automatically fixes simple linter errors
 
@@ -51,12 +81,14 @@ This file provides guidance to LLM agents when working with code in this reposit
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
     - `src/app/search/` — Vue app powering the standalone documentation search page (`search.html`).
     - `src/app/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
-  - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI) used to load and save Scamper source files.
+  - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI, the Scamper server when logged in) used to load and save Scamper source files. `src/fs/index.ts` pairs a file system with its history as one `Backend`, so the two can never be mismatched.
+  - `src/history/` — A file's save history (#42), as an interface with two backings: `flat-file.ts` keeps snapshots in a `.{filename}.history` blob beside the file, `server.ts` keeps one row per snapshot in the database. `policy.ts` decides when a save is worth recording and is shared with `server/`.
   - `src/js/` — The JavaScript "native" package: one folder per library that Scamper's standard library binds to via `js-var`.
   - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/prettier/` — A Prettier plugin that parses and pretty-prints Scamper/Scheme source.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
++ `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/src/`, and `server/` may import *types* from `src/` but *values* only from the two shared contracts, `src/fs/fs.ts` and `src/history/policy.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline

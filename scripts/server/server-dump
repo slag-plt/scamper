@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Writes the whole database to a file, for a backup or a look at what is in it.
+#
+# The dump is plain SQL and includes the CREATE DATABASE, so restoring it is:
+#
+#   docker compose exec -T db sh -c 'mariadb -u root -p"$MARIADB_ROOT_PASSWORD"' < dump.sql
+#
+#   scripts/server/server-dump                 # dumps/scamper-<timestamp>.sql
+#   scripts/server/server-dump somewhere.sql
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -le 1 ] || usage "$0 [output file]"
+
+if [ $# -eq 1 ]; then
+  OUT="$1"
+else
+  mkdir -p "${ROOT}/dumps"
+  OUT="${ROOT}/dumps/scamper-$(date -u +%Y%m%d-%H%M%S).sql"
+fi
+
+if [ -z "$(compose ps --status running --quiet db 2>/dev/null)" ]; then
+  echo "The database is not running." >&2
+  echo "Start it with: scripts/server/server-up" >&2
+  exit 1
+fi
+
+# Run inside the container, which is the only place the database is reachable
+# from -- its port is deliberately unpublished. The credentials come from the
+# container's own environment rather than being passed in, and go through
+# MYSQL_PWD so the password never appears in a process listing.
+#
+# --single-transaction takes a consistent snapshot without locking anyone out,
+# so this is safe to run against a server students are using.
+compose exec -T db sh -c '
+  MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" exec mariadb-dump \
+    -u root \
+    --single-transaction \
+    --databases "${MARIADB_DATABASE:-scamper}"
+' > "${OUT}"
+
+echo "Wrote ${OUT} ($(wc -c < "${OUT}" | tr -d ' ') bytes)"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Removes an account, and with it every file and saved version they own.
+#
+# `files` and `histories` cascade from `user` (server/schema.sql), so this is
+# not recoverable and there is no undo. Hence the confirmation, which the
+# underlying command does not have -- take a dump first if there is any doubt:
+#
+#   scripts/server/server-dump
+#   scripts/server/user-delete ada@example.edu
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 1 ] || usage "$0 <email>"
+
+EMAIL="$1"
+
+echo "About to permanently delete ${EMAIL}, their files, and their history:"
+echo
+admin info "${EMAIL}"
+echo
+confirm "This cannot be undone." "${EMAIL}"
+
+admin delete "${EMAIL}"

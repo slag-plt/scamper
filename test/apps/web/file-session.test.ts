@@ -1,7 +1,32 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { isHiddenName, type FileEntry, type FS } from '../../../src/fs/fs'
 import { FileSession } from '../../../src/app/web/file-session'
-import { historyFilename, loadHistory } from '../../../src/app/web/file-history'
+import {
+  FlatFileHistory,
+  historyFilename,
+} from '../../../src/history/flat-file'
+
+/**
+ * The whole of `filename`'s flat-file history, snapshots carrying their
+ * contents. `History.index` deliberately answers without them -- a
+ * server-backed history keeps each snapshot in its own row -- so a test that
+ * wants to see what was recorded reads them back through the interface.
+ */
+async function loadHistory(
+  fs: FS,
+  filename: string,
+): Promise<{ snapshots: { time: string; contents: string }[]; deletedAt?: string }> {
+  const history = new FlatFileHistory(fs)
+  const index = await history.index(filename)
+  const snapshots = await Promise.all(
+    index.snapshots.map(async (s) => ({
+      time: s.time,
+      contents: (await history.read(filename, s.id)) ?? '<missing>',
+    })),
+  )
+  return { ...index, snapshots }
+}
+
 
 /** A deferred promise handle used to control when a save "settles". */
 function defer(): { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } {
@@ -123,7 +148,7 @@ describe.each([
 
   beforeEach(() => {
     fs = new FakeFS(lockOnSave)
-    s = new FileSession(fs, editor)
+    s = new FileSession(fs, new FlatFileHistory(fs), editor)
   })
 
   test('delete during an in-flight save waits for the save then removes the file', async () => {
@@ -221,7 +246,7 @@ describe('FileSession autosave lifecycle', () => {
   test('start/stop autosave toggles the timer and fires saves', async () => {
     const fs = new FakeFS(true)
     fs.files.set('a.scm', 'x')
-    const s = new FileSession(fs, editor, { autosaveIntervalMs: 1000 })
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor, { autosaveIntervalMs: 1000 })
     s.setCurrentFile('a.scm')
 
     expect(s.isAutosaving()).toBe(false)
@@ -238,6 +263,44 @@ describe('FileSession autosave lifecycle', () => {
     vi.advanceTimersByTime(5000)
     expect(fs.saveCalls).toEqual(['a.scm'])
   })
+
+  // Offline the timer keeps running and every tick declines (#357). Pausing
+  // this way rather than stopping the timer is what makes reconnecting
+  // automatic: there is nothing to restart.
+  test('canSave gates autosave, and lifting it resumes saving', async () => {
+    const fs = new FakeFS(true)
+    fs.files.set('a.scm', 'x')
+    let online = false
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor, {
+      autosaveIntervalMs: 1000,
+      canSave: () => online,
+    })
+    s.setCurrentFile('a.scm')
+    s.startAutosave()
+
+    vi.advanceTimersByTime(5000)
+    expect(fs.saveCalls).toEqual([])
+    // Still running, so nothing has to notice the reconnect and restart it.
+    expect(s.isAutosaving()).toBe(true)
+
+    online = true
+    vi.advanceTimersByTime(1000)
+    expect(fs.saveCalls).toEqual(['a.scm'])
+  })
+
+  test('an explicit save is declined too, so a switch cannot half-happen', async () => {
+    const fs = new FakeFS(false)
+    fs.files.set('a.scm', 'on disk')
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor, {
+      canSave: () => false,
+    })
+    s.setCurrentFile('a.scm')
+
+    await s.save({ force: true })
+
+    expect(fs.saveCalls).toEqual([])
+    expect(fs.files.get('a.scm')).toBe('on disk')
+  })
 })
 
 describe('FileSession switchTo (issue #238)', () => {
@@ -251,7 +314,7 @@ describe('FileSession switchTo (issue #238)', () => {
       getDoc: () => 'a edited',
       isEditorLoaded: () => true,
     }
-    const s = new FileSession(fs, mutableEditor)
+    const s = new FileSession(fs, new FlatFileHistory(fs), mutableEditor)
     s.setCurrentFile('a.scm')
 
     // switchTo awaits the forced outgoing save, whose writable stays open until
@@ -285,7 +348,7 @@ describe('FileSession switchTo (issue #238)', () => {
       return Promise.resolve(fs.files.get(filename) ?? '')
     })
 
-    const s = new FileSession(fs, {
+    const s = new FileSession(fs, new FlatFileHistory(fs), {
       getDoc: () => 'a edited',
       isEditorLoaded: () => true,
     })
@@ -305,7 +368,7 @@ describe('FileSession switchTo (issue #238)', () => {
   test('does not save when no file is currently open', async () => {
     const fs = new FakeFS(false)
     fs.files.set('b.scm', 'b on disk')
-    const s = new FileSession(fs, editor)
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor)
     // No current file (e.g. after a delete): nothing to save on switch.
 
     const src = await s.switchTo('b.scm')
@@ -322,7 +385,7 @@ describe('FileSession save history (issue #42)', () => {
     const fs = new FakeFS(false)
     fs.autoCommit = true
     fs.files.set('a.scm', 'on disk')
-    const s = new FileSession(fs, { getDoc: doc, isEditorLoaded: () => true })
+    const s = new FileSession(fs, new FlatFileHistory(fs), { getDoc: doc, isEditorLoaded: () => true })
     s.setCurrentFile('a.scm')
     return { fs, s }
   }
@@ -449,7 +512,7 @@ describe('FileSession rename', () => {
   test('rename during an in-flight save waits then renames and updates current file', async () => {
     const fs = new FakeFS(true)
     fs.files.set('a.scm', 'old')
-    const s = new FileSession(fs, editor)
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor)
     s.setCurrentFile('a.scm')
 
     const savePromise = s.save()

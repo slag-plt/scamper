@@ -3,6 +3,9 @@
   "version": "3.5.0",
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
+  "workspaces": [
+    "server"
+  ],
   "scripts": {
     "postinstall": "npm run generate && npm run hooks",
     "generate": "npm run generate-parser && npm run generate-lib-sources",
@@ -10,6 +13,7 @@
     "generate-parser": "node scripts/generate-parser.mjs",
     "generate-lib-sources": "node scripts/generate-lib-sources.mjs",
     "dev": "vite",
+    "dev:memory": "node scripts/dev-memory.mjs",
     "cli": "tsx src/app/cli/index.ts",
     "precli": "npm run generate",
     "build": "vue-tsc --noEmit && vite build",
@@ -18,6 +22,13 @@
     "clean": "rm -rf dist",
     "typecheck": "vue-tsc -noEmit",
     "pretypecheck": "npm run generate",
+    "typecheck:server": "npm run typecheck --workspace @scamper/server",
+    "dev:server": "npm run dev --workspace @scamper/server",
+    "start:server": "npm run start --workspace @scamper/server",
+    "account": "tsx server/src/admin.ts",
+    "server:up": "./scripts/server/server-up",
+    "server:down": "./scripts/server/server-down",
+    "server:dump": "./scripts/server/server-dump",
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "test:browser": "vitest run --config test/vitest.browser.config.ts",
@@ -27,7 +38,8 @@
     "lint:fix": "eslint . --fix",
     "validate": "./scripts/validate-build",
     "deploy": "./scripts/deploy $npm_package_version",
-    "deploy:latest": "./scripts/update-latest $npm_package_version"
+    "deploy:latest": "./scripts/update-latest $npm_package_version",
+    "deploy:server-url": "./scripts/set-server-url"
   },
   "type": "module",
   "author": "",

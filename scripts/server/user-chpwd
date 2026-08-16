@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Sets a new password, and signs the account out everywhere.
+#
+# Ending the sessions is the point as much as the new password is: the reason to
+# change one is usually that someone else might know the old one.
+#
+# A password is generated when none is given. It is shown once.
+#
+#   scripts/server/user-chpwd ada@example.edu [password]
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -ge 1 ] || usage "$0 <email> [password]"
+
+admin chpwd "$@"

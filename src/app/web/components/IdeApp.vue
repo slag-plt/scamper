@@ -2,7 +2,13 @@
 import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
-import * as Lock from '../lockfile'
+import * as SingleInstance from '../single-instance'
+import {
+  LEGACY_CONFIG_FILENAME,
+  readStoredConfig,
+  writeStoredConfig,
+  type Config,
+} from '../ide-config'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
@@ -27,27 +33,25 @@ import {
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
-import {
-  listHistories,
-  loadHistory,
-  recordSnapshot,
-  type HistoryFile,
-  type Snapshot,
-} from '../file-history'
+import SignInModal from './SignInModal.vue'
+import { restart, serverSession, usesServerFiles } from '../server-session'
+import { signInWithPassword, signOut } from '../auth-client'
+import * as Connectivity from '../connectivity'
+import { isNotSignedIn } from '../../../fs/session'
+import { isUnreachable } from '../../../fs/unreachable'
+import { importLocalFiles, localFileNames } from '../local-import'
+import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
 
 // ---------- config ----------
 
-const CONFIG_FILENAME = '.scamper.config'
-
-interface Config {
-  lastOpenedFilename: string | null
-  lastVersionAccessed: string
-}
+const OTHER_INSTANCE_MESSAGE =
+  'Another instance of Scamper is open. Please close that instance and try again.'
 
 const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
   lastVersionAccessed: '0.0.0',
+  localFilesOffered: false,
 }
 
 const appVersion = `(${APP_VERSION})`
@@ -55,9 +59,12 @@ const appVersion = `(${APP_VERSION})`
 // ---------- mutable IDE state (non-reactive where not needed in template) ----
 
 let fs: FS.t | null = null
+let fileHistory: History | null = null
 let fileSession: FileSession | null = null
 let config: Config = { ...DEFAULT_CONFIG }
 let isLoadingFile = false
+// Unsubscribes the connection watcher; null until the IDE mounts.
+let stopWatchingConnection: (() => void) | null = null
 
 // ---------- reactive state ----------
 
@@ -73,8 +80,33 @@ const showPatchNotes = ref(false)
 const showHistory = ref(false)
 const historyFiles = ref<HistoryFile[]>([])
 const historyFile = ref('')
-const historySnapshots = ref<Snapshot[]>([])
+const historySnapshots = ref<SnapshotRef[]>([])
 const historyContents = ref<string | null>(null)
+// The selected version's contents, fetched only when a version is picked. A
+// history may hold fifty versions of a file; the browser needs one at a time.
+const historySelected = ref<string | null>(null)
+
+// ---------- signing in to the file server (#357) ----------
+
+// Null where the deployment advertises no server, which is the common case and
+// the one where none of this appears.
+const fileServer = serverSession()
+const signInMethods = fileServer?.methods ?? { password: false }
+const hasServer = fileServer !== null
+const canSignIn = signInMethods.password
+// Whether *this tab's* files are the server's. A signed-out user on a
+// server-backed deployment keeps their files in the browser, so the server
+// going away costs them nothing and must not block anything.
+const filesOnServer = usesServerFiles()
+const connection = Connectivity.connection
+const signedInAs = ref<string | null>(fileServer?.user?.email ?? null)
+const showSignIn = ref(false)
+const signInBusy = ref(false)
+const signInError = ref<string | null>(null)
+// Set when a session ended mid-edit rather than the user asking to sign in.
+// Dismissing then has to restart, because the file system this tab is holding
+// answers 401 to everything and there is no way back to it without a session.
+const sessionLapsed = ref(false)
 
 // ---------- editor context + child component refs ----------
 
@@ -104,44 +136,162 @@ async function populateFileDrawer() {
 
 // ---------- config persistence ----------
 
-async function saveConfig() {
-  await fs?.saveFile(CONFIG_FILENAME, JSON.stringify(config))
+function saveConfig() {
+  writeStoredConfig(config)
+}
+
+/**
+ * Reads the config an older build kept in the file system, removing it so this
+ * happens once. Without it, every existing user would look brand new.
+ * @returns the stored config, or null if there wasn't one
+ */
+async function takeLegacyConfig(): Promise<Partial<Config> | null> {
+  if (!fs) return null
+  try {
+    if (!(await fs.fileExists(LEGACY_CONFIG_FILENAME))) return null
+    const raw = await fs.loadFile(LEGACY_CONFIG_FILENAME)
+    await fs.deleteFile(LEGACY_CONFIG_FILENAME)
+    return JSON.parse(raw) as Partial<Config>
+  } catch {
+    // A leftover we can't read is one we can do without.
+    return null
+  }
 }
 
 async function loadConfig() {
-  if (!fs) return
-  if (await fs.fileExists(CONFIG_FILENAME)) {
-    // Merge over the defaults so a config written by an older build (missing a
-    // newer field) still loads with sane values.
-    const stored = JSON.parse(await fs.loadFile(CONFIG_FILENAME)) as Partial<Config>
-    config = { ...DEFAULT_CONFIG, ...stored }
-  } else {
-    // A brand-new user starts already "caught up" to the current version, so
-    // they aren't greeted with a backlog of patch notes.
-    config = { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
-    await saveConfig()
-  }
+  const stored = readStoredConfig() ?? (await takeLegacyConfig())
+  config =
+    stored === null
+      ? // A brand-new user starts already "caught up" to the current version,
+        // so they aren't greeted with a backlog of patch notes.
+        { ...DEFAULT_CONFIG, lastVersionAccessed: APP_VERSION }
+      : // Merge over the defaults so a config written by an older build
+        // (missing a newer field) still loads with sane values.
+        { ...DEFAULT_CONFIG, ...stored }
+  saveConfig()
 }
 
 // Records the current version as seen so its patch notes aren't shown again.
 // Only ever moves forward, so running an older build never rewinds the seen
 // version (which would re-show notes on a later re-upgrade).
-async function markVersionSeen() {
+function markVersionSeen() {
   if (compareVersions(config.lastVersionAccessed, APP_VERSION) < 0) {
     config.lastVersionAccessed = APP_VERSION
-    await saveConfig()
+    saveConfig()
   }
 }
 
 // Shows patch notes for any versions the user hasn't seen yet. The version is
 // recorded as seen as soon as the notes are shown (not on dismissal), so a user
 // who closes the tab without clicking through still isn't shown them again.
-async function showPatchNotesIfNeeded() {
+function showPatchNotesIfNeeded() {
   const unseen = patchNotesSince(config.lastVersionAccessed, APP_VERSION)
-  await markVersionSeen()
+  markVersionSeen()
   if (unseen.length > 0) {
     patchNotesToShow.value = unseen
     showPatchNotes.value = true
+  }
+}
+
+/**
+ * Signs out, then restarts onto local storage.
+ *
+ * Matters most on a shared machine: without this a student cannot hand the
+ * browser to the next person without leaving their files reachable. The save
+ * first is deliberate -- signing out is not a reason to lose the last edit.
+ */
+async function handleSignOut() {
+  if (fileServer === null) return
+  await saveCurrentFile()
+  await signOut(fileServer.client)
+  restart()
+}
+
+function openSignIn() {
+  signInError.value = null
+  sessionLapsed.value = false
+  showSignIn.value = true
+}
+
+/**
+ * Closes the sign-in dialog. After a lapsed session that means restarting: this
+ * tab holds a file system that answers 401 to everything, and starting over
+ * lands on local storage, which at least works.
+ */
+function closeSignIn() {
+  showSignIn.value = false
+  if (sessionLapsed.value) restart()
+}
+
+async function handleSignInPassword(email: string, password: string) {
+  if (fileServer === null) return
+  signInBusy.value = true
+  signInError.value = await signInWithPassword(
+    fileServer.client,
+    email,
+    password,
+  )
+  signInBusy.value = false
+  // The backend is chosen at startup, so start over rather than swapping the
+  // file system out from under an open file. See server-session.ts.
+  if (signInError.value === null) restart()
+}
+
+/**
+ * Offers to copy this browser's files into the account, once per browser.
+ *
+ * Signing in swaps the file system, so anything saved here before there was an
+ * account stops being listed -- which reads as loss even though nothing was
+ * lost. Asked once and remembered either way: a student who says no should not
+ * be asked again every time they open Scamper.
+ */
+async function offerLocalFiles() {
+  if (fileServer?.user == null || config.localFilesOffered || !fs) return
+
+  const names = await localFileNames()
+  // Nothing to carry across, so nothing to ask about -- but record the offer as
+  // made, since asking later would be about files from some other session.
+  if (names.length === 0) {
+    config.localFilesOffered = true
+    saveConfig()
+    return
+  }
+
+  const count = names.length.toString()
+  const them = names.length === 1 ? 'it' : 'them'
+  const files = names.length === 1 ? 'file' : 'files'
+  const wanted = await modalConfirm({
+    title: 'Copy your files into your account?',
+    message:
+      `You have ${count} ${files} saved in this browser from before you ` +
+      `signed in. Copy ${them} into your account so ${them} follow you ` +
+      `between computers?\n\nThe ${files} in this browser stay where they are.`,
+    confirmLabel: 'Copy',
+    cancelLabel: 'Not now',
+  })
+
+  // Recorded before the copy: if it fails, the answer to a repeated prompt on
+  // every load is no better, and the files are still in the browser either way.
+  config.localFilesOffered = true
+  saveConfig()
+  if (!wanted) return
+
+  try {
+    const result = await importLocalFiles(fs)
+    await populateFileDrawer()
+    if (result.renamed.length > 0) {
+      const renamed = result.renamed
+        .map((entry) => `${entry.from} -> ${entry.to}`)
+        .join('\n')
+      await modalAlert({
+        title: 'Some copies were renamed',
+        message:
+          `Copied ${result.copied.length.toString()} files. Your account ` +
+          `already had these names, so the copies came in as:\n\n${renamed}`,
+      })
+    }
+  } catch (e) {
+    reportError(e, (message) => `Could not copy your browser's files: ${message}`)
   }
 }
 
@@ -207,7 +357,7 @@ async function switchToFile(filename: string): Promise<void> {
     currentFile.value = filename
     editor().initializeDoc(src)
   } catch (e) {
-    if (e instanceof Error) displayError(`${e.message}\n\n${e.stack ?? ''}`)
+    reportError(e, (message) => `${message}\n\n${e instanceof Error ? (e.stack ?? '') : ''}`)
   }
 
   session.resetOutput()
@@ -215,6 +365,91 @@ async function switchToFile(filename: string): Promise<void> {
   config.lastOpenedFilename = currentFile.value
   startAutosaving()
   isLoadingFile = false
+}
+
+/**
+ * Reports an error to the person, telling the two recoverable ones apart from a
+ * fault.
+ *
+ * A session can end mid-edit -- it expires, or an administrator resets the
+ * password -- and the answer to that is to sign in again, not an error screen
+ * over the editor. A server that cannot be reached is the same kind of thing:
+ * wifi drops, laptops sleep, servers restart during a deploy, and none of that
+ * is a reason to take the editor away from someone who is in the middle of
+ * writing a program.
+ *
+ * @returns true iff the error was handled here
+ */
+function reportError(error: unknown, describe: (message: string) => string): boolean {
+  if (isNotSignedIn(error)) {
+    sessionLapsed.value = true
+    signInError.value =
+      'Your session ended, so that save did not reach the server. Sign in to carry on.'
+    showSignIn.value = true
+    return true
+  }
+  if (isUnreachable(error)) {
+    // The request that just failed is better evidence than any heartbeat, so
+    // the indicator flips now rather than up to a beat later.
+    Connectivity.reportUnreachable()
+    void announceOffline()
+    return true
+  }
+  if (error instanceof Error) {
+    displayError(describe(error.message))
+    return true
+  }
+  return false
+}
+
+// Set while the offline notice is on screen, so a burst of failures -- an
+// autosave and a file listing landing together -- produces one dismissable
+// modal rather than a queue of identical ones.
+let offlineAnnounced = false
+
+/**
+ * Says the server has gone away, once per outage, in a modal that closes.
+ *
+ * The warning about keeping the tab open is load-bearing: offline edits are
+ * held in the editor and nowhere else. Mirroring a user's files client-side so
+ * file operations keep working is issue #364; storing just the open buffer is
+ * #363.
+ */
+async function announceOffline(): Promise<void> {
+  if (offlineAnnounced) return
+  offlineAnnounced = true
+  await modalAlert({
+    title: 'Scamper is offline',
+    message:
+      'Scamper cannot reach the server, so your files are out of reach for ' +
+      'the moment.\n\nYou can keep writing and running code, and you can ' +
+      'download the file you have open to keep a copy of it. Saving resumes ' +
+      'on its own once the connection comes back — but until then, keep this ' +
+      'tab open, because changes made while offline are not stored anywhere ' +
+      'else.',
+  })
+}
+
+/**
+ * Refuses an action that needs the file server while it is out of reach.
+ *
+ * Dismissable, and it stops the action rather than letting it half-happen:
+ * offline there is nowhere to write, so a delete that "succeeded" locally would
+ * be a lie the next listing corrects.
+ *
+ * @param action what was being attempted, e.g. "Renaming a file"
+ * @returns true iff the action may go ahead
+ */
+async function requireServer(action: string): Promise<boolean> {
+  if (!filesOnServer || connection.value === 'online') return true
+  await modalAlert({
+    title: 'Scamper is offline',
+    message:
+      `${action} needs the Scamper server, which cannot be reached right ` +
+      'now. Check your connection and try again — your open file is still ' +
+      'here in the editor.',
+  })
+  return false
 }
 
 function displayError(error: string) {
@@ -226,6 +461,9 @@ function displayError(error: string) {
 
 async function handleRunWindow() {
   if (!currentFile.value) return
+  // The runner window loads the file from storage rather than from this
+  // editor, so offline it would open onto nothing.
+  if (!(await requireServer('Opening the run window'))) return
   await saveCurrentFile()
   const params = new URLSearchParams({
     filename: currentFile.value,
@@ -255,6 +493,7 @@ async function handleStepAll() {
 // ---------- sidebar event handlers ----------
 
 async function handleCreate() {
+  if (!(await requireServer('Creating a file'))) return
   const filename = await modalPrompt({
     title: 'New file',
     message: 'Enter a file name for your new program.',
@@ -270,6 +509,7 @@ async function handleCreate() {
 
 async function handleUploadFile(file: File) {
   if (!fs || !fileSession) return
+  if (!(await requireServer('Uploading a file'))) return
   const content = await file.text()
   const filename = file.name
   if (await fs.fileExists(filename)) {
@@ -290,6 +530,7 @@ async function handleUploadFile(file: File) {
 
 async function handleFileDrop(droppedFiles: FileList) {
   if (!fs || !fileSession) return
+  if (!(await requireServer('Uploading files'))) return
   stopAutosaving()
   for (const file of droppedFiles) {
     try {
@@ -320,11 +561,9 @@ async function handleFileDrop(droppedFiles: FileList) {
  * used to hold `name`.
  * @returns true if the rename should go ahead
  */
-async function confirmDiscardingHistory(
-  filesystem: FS.t,
-  name: string,
-): Promise<boolean> {
-  const existing = await loadHistory(filesystem, name)
+async function confirmDiscardingHistory(name: string): Promise<boolean> {
+  if (!fileHistory) return true
+  const existing = await fileHistory.index(name)
   if (existing.deletedAt === undefined || existing.snapshots.length === 0) {
     return true
   }
@@ -340,6 +579,7 @@ async function confirmDiscardingHistory(
 
 async function handleRename() {
   if (!currentFile.value || !fileSession) return
+  if (!(await requireServer('Renaming a file'))) return
   const from = currentFile.value
   const newName = await modalPrompt({
     title: 'Rename file',
@@ -355,7 +595,7 @@ async function handleRename() {
     // the way an upload asks before overwriting a file -- silently discarding
     // the one thing that made a deleted file recoverable is the worst
     // outcome here.
-    if (fs && !(await confirmDiscardingHistory(fs, newName))) return
+    if (!(await confirmDiscardingHistory(newName))) return
     try {
       // N.B., renaming closes the fs worker's handle to the current file,
       // so we load it fresh afterwards. The session serializes against any
@@ -371,6 +611,7 @@ async function handleRename() {
 
 async function handleDelete() {
   if (!currentFile.value || !fileSession) return
+  if (!(await requireServer('Deleting a file'))) return
   const target = currentFile.value
   const ok = await modalConfirm({
     title: 'Delete file',
@@ -410,12 +651,27 @@ function startDownload(filename: string, href: string) {
   a.click()
 }
 
+/**
+ * Downloads the open file, as it appears in the editor.
+ *
+ * From the editor rather than from storage, which differs in two ways and both
+ * are improvements. Online it hands over what the student is looking at instead
+ * of the last version that reached the server -- which is what "download" was
+ * always taken to mean. Offline it works at all: everything else that touches a
+ * file is refused, so this is the only way to get work off a machine that
+ * cannot save. A stopgap until a signed-in user's files are mirrored locally
+ * (#364), and deliberately not extended to the zip export, which has to read
+ * every file and so genuinely needs the server.
+ */
 async function handleDownload() {
-  if (!currentFile.value || !fs) return
-  const contents = await fs.loadFile(currentFile.value)
+  if (!currentFile.value || !isEditorLoaded()) return
+  // Best effort, so the copy kept on the server matches the copy taken away.
+  // It declines by itself while offline -- which is the case this exists for.
+  await saveCurrentFile()
   startDownload(
     currentFile.value,
-    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+    'data:attachment/text;charset=utf-8,' +
+      encodeURIComponent(editor().getDoc()),
   )
 }
 
@@ -426,6 +682,7 @@ let isArchiving = false
 // Downloads every file in the drawer as one zip archive (issue #42).
 async function handleArchive() {
   if (!fs || isArchiving) return
+  if (!(await requireServer('Exporting your files'))) return
   const ok = await modalConfirm({
     title: 'Export files',
     message: 'Download all of your files as a zip archive?',
@@ -464,8 +721,9 @@ async function handleArchive() {
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
 async function handleHistory() {
-  if (!fs) return
-  const histories = await listHistories(fs)
+  if (!fileHistory) return
+  if (!(await requireServer('Browsing file history'))) return
+  const histories = await fileHistory.list()
   const current = currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
@@ -488,11 +746,12 @@ async function handleHistory() {
 
 /** Loads `filename`'s history into the modal. */
 async function showHistoryOf(filename: string) {
-  if (!fs) return
+  if (!fileHistory) return
   historyFile.value = filename
-  let snapshots: Snapshot[]
+  historySelected.value = null
+  let snapshots: SnapshotRef[]
   try {
-    snapshots = (await loadHistory(fs, filename)).snapshots
+    snapshots = (await fileHistory.index(filename)).snapshots
   } catch {
     snapshots = []
   }
@@ -508,49 +767,104 @@ async function showHistoryOf(filename: string) {
     filename === currentFile.value && isEditorLoaded() ? editor().getDoc() : null
 }
 
+/**
+ * Loads the contents of the version the browser just selected. Guarded the same
+ * way `showHistoryOf` is: arrowing down the list fires one change per key, and
+ * the newest pick has to win rather than whichever read lands last.
+ */
+async function handleSelectSnapshot(snapshot: SnapshotRef | null) {
+  if (!fileHistory || snapshot === null) {
+    historySelected.value = null
+    return
+  }
+  const filename = historyFile.value
+  historySelected.value = null
+  let contents: string | null
+  try {
+    contents = await fileHistory.read(filename, snapshot.id)
+  } catch {
+    contents = null
+  }
+  if (historyFile.value !== filename) return
+  historySelected.value = contents
+}
+
 function handleHistoryClose() {
   showHistory.value = false
   historyFiles.value = []
   historySnapshots.value = []
+  historySelected.value = null
 }
 
 // Restores a snapshot by editing the document rather than reloading it, so the
 // restore is undoable and keeps the cursor. Both the version being left and the
 // one being restored are pinned in the history, so a restore never costs the
 // student the state they were in.
-async function handleRestoreSnapshot(snapshot: Snapshot) {
-  if (!fs || !fileSession) return
+async function handleRestoreSnapshot(snapshot: SnapshotRef) {
+  if (!fs || !fileSession || !fileHistory) return
+  // The modal is only opened while the server is reachable, but it stays open
+  // across a drop -- so the click that restores has to check again.
+  if (!(await requireServer('Restoring a saved version'))) return
   const filename = historyFile.value
-  handleHistoryClose()
 
-  if (filename !== currentFile.value) {
-    // Recovering another file, possibly one that was deleted: write it back and
-    // open it, so the student lands in what they recovered. Saving marks its
-    // history as no longer deleted.
-    //
-    // Pin what the file holds first, exactly as the open-file branch below
-    // does. A save inside the merge window reaches disk without becoming a
-    // snapshot, so without this the overwrite could take those contents off
-    // both disk and timeline. A deleted file has nothing to pin.
-    if (await fs.fileExists(filename)) {
-      await recordSnapshot(fs, filename, await fs.loadFile(filename), new Date(), {
-        force: true,
+  try {
+    // Read before closing rather than trusting the preview to have loaded: the
+    // button is live as soon as a version is picked, and a snapshot can age out
+    // of a long history between listing it and restoring it.
+    const contents = await fileHistory.read(filename, snapshot.id)
+    handleHistoryClose()
+    if (contents === null) {
+      await modalAlert({
+        title: 'Restore failed',
+        message: 'That saved version is no longer available.',
       })
+      return
     }
-    await fs.saveFile(filename, snapshot.contents)
-    await switchToFile(filename)
-    await fileSession.save({ force: true })
-    return
-  }
 
-  if (!isEditorLoaded()) return
-  await fileSession.save({ force: true })
-  editor().replaceDoc(snapshot.contents)
-  await fileSession.save({ force: true })
+    if (filename !== currentFile.value) {
+      // Recovering another file, possibly one that was deleted: write it back
+      // and open it, so the student lands in what they recovered. Saving marks
+      // its history as no longer deleted.
+      //
+      // Pin what the file holds first, exactly as the open-file branch below
+      // does. A save inside the merge window reaches disk without becoming a
+      // snapshot, so without this the overwrite could take those contents off
+      // both disk and timeline. A deleted file has nothing to pin.
+      if (await fs.fileExists(filename)) {
+        await fileHistory.record(filename, await fs.loadFile(filename), new Date(), {
+          force: true,
+        })
+      }
+      await fs.saveFile(filename, contents)
+      await switchToFile(filename)
+      await fileSession.save({ force: true })
+      return
+    }
+
+    if (!isEditorLoaded()) return
+    await fileSession.save({ force: true })
+    // That pin is what makes a restore safe to undo, and offline it does not
+    // happen: `save` declines silently when there is nowhere to write (see
+    // file-session.ts). Replacing the document anyway would trade the student's
+    // unsaved work for an old version that cannot be written back either, so
+    // check again in the gap the save just opened.
+    if (!(await requireServer('Restoring a saved version'))) return
+    editor().replaceDoc(contents)
+    await fileSession.save({ force: true })
+  } catch (e) {
+    // Reaches here when the server goes away mid-restore, which reportError
+    // turns into the dismissable offline notice rather than an error screen.
+    reportError(e, (message) => `Could not restore that version: ${message}`)
+  }
 }
 
 async function handleSelectFile(filename: string) {
-  if (!isLoadingFile) await switchToFile(filename)
+  if (isLoadingFile) return
+  // Switching forces a save of the outgoing file first (#238), which offline
+  // cannot happen -- so the edit sitting in the editor would be dropped on the
+  // way to a file that then fails to load. Refuse both halves at once.
+  if (!(await requireServer('Opening another file'))) return
+  await switchToFile(filename)
 }
 
 // ---------- page lifecycle handlers ----------
@@ -558,23 +872,30 @@ async function handleSelectFile(filename: string) {
 async function handleVisibilityChange() {
   if (document.visibilityState === 'hidden') {
     await saveCurrentFile()
-    await saveConfig()
-    if (fs) await Lock.releaseLockFile(fs)
-  } else {
-    if (fs) await Lock.acquireLockFile(fs)
+    saveConfig()
   }
 }
 
 async function handlePageHide() {
   await saveCurrentFile()
-  await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
+  saveConfig()
+  // The page may be frozen for the back/forward cache rather than destroyed,
+  // so hand the lock back and re-acquire if we are restored. Pairing the two
+  // is correct whether or not a frozen page keeps its lock.
+  SingleInstance.releaseLock()
+}
+
+async function handlePageShow(e: PageTransitionEvent) {
+  // Only a bfcache restore needs this; a fresh load acquires in onMounted.
+  if (!e.persisted) return
+  if (!(await SingleInstance.acquireLock())) {
+    displayError(OTHER_INSTANCE_MESSAGE)
+  }
 }
 
 async function handleBeforeUnload(e: BeforeUnloadEvent) {
   await saveCurrentFile()
-  await saveConfig()
-  if (fs) await Lock.releaseLockFile(fs)
+  saveConfig()
   if (isDirty.value) {
     e.preventDefault()
   }
@@ -587,6 +908,9 @@ const visibilityChangeWrapper = () => {
 const pageHideWrapper = () => {
   void handlePageHide()
 }
+const pageShowWrapper = (e: Event) => {
+  void handlePageShow(e as PageTransitionEvent)
+}
 const beforeUnloadWrapper = (e: Event) => {
   void handleBeforeUnload(e as BeforeUnloadEvent)
 }
@@ -596,50 +920,85 @@ const beforeUnloadWrapper = (e: Event) => {
 onMounted(async () => {
   await FS.initialize()
   fs = FS.getFS()
+  fileHistory = FS.getHistory()
   fileSession = new FileSession(
     fs,
+    fileHistory,
     { getDoc: () => editor().getDoc(), isEditorLoaded },
     {
-      onSaveError: (message) => {
-        displayError(message)
+      onSaveError: (error) => {
+        reportError(error, (message) => message)
       },
+      // Offline, autosave declines rather than stopping: the timer keeps
+      // ticking and starts writing again by itself once the server answers.
+      canSave: () => !filesOnServer || connection.value === 'online',
     },
   )
 
-  const obtainedLock = await Lock.acquireLockFile(fs)
+  // A reconnect is the moment the editor's contents and the server's copy
+  // diverge the most, so save at once rather than waiting for the next tick.
+  stopWatchingConnection = Connectivity.onConnectionChange((state) => {
+    if (state !== 'online') return
+    offlineAnnounced = false
+    void saveCurrentFile()
+  })
+
+  const obtainedLock = await SingleInstance.acquireLock()
   if (!obtainedLock) {
-    loadingContent.value =
-      'Another instance of Scamper is open. Please close that instance and try again.'
+    loadingContent.value = OTHER_INSTANCE_MESSAGE
     return
   }
 
+  // visibilitychange is a document event; pagehide/pageshow fire at the window
+  // and never reach a document listener.
   document.addEventListener('visibilitychange', visibilityChangeWrapper)
-  document.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pagehide', pageHideWrapper)
+  window.addEventListener('pageshow', pageShowWrapper)
   window.addEventListener('beforeunload', beforeUnloadWrapper)
 
   await loadConfig()
-  await populateFileDrawer()
 
-  if (config.lastOpenedFilename !== null) {
-    if (await fs.fileExists(config.lastOpenedFilename)) {
-      // TODO: re-enable once we have a better handle on large-file loading
-      // await switchToFile(config.lastOpenedFilename)
-    } else {
-      config.lastOpenedFilename = null
+  // Everything that reaches for the file system is inside the try, because
+  // startup is the one moment where an unreachable server used to be fatal:
+  // these run before `isLoading` is cleared, so a rejection here left the
+  // loading screen up forever with nothing said -- the exact dead end the
+  // offline state exists to replace. The IDE opens instead, empty and honest.
+  try {
+    await populateFileDrawer()
+
+    if (config.lastOpenedFilename !== null) {
+      if (await fs.fileExists(config.lastOpenedFilename)) {
+        // TODO: re-enable once we have a better handle on large-file loading
+        // await switchToFile(config.lastOpenedFilename)
+      } else {
+        config.lastOpenedFilename = null
+      }
     }
+  } catch (e) {
+    reportError(e, (message) => `Could not list your files: ${message}`)
+    // An unreachable server is not a fault: fall through, open the IDE, and let
+    // the heartbeat pick things up when it returns. Anything else is real, and
+    // `displayError` has put it on the loading screen -- so stop here rather
+    // than clearing that screen on the next line.
+    if (!isUnreachable(e)) return
   }
 
   isLoading.value = false
   Scamper.getInstance().calibrateScheduler()
 
-  await showPatchNotesIfNeeded()
+  showPatchNotesIfNeeded()
+  await offerLocalFiles()
 })
 
 onUnmounted(() => {
   stopAutosaving()
+  stopWatchingConnection?.()
+  Connectivity.stop()
   session.stopAll()
   document.removeEventListener('visibilitychange', visibilityChangeWrapper)
-  document.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pagehide', pageHideWrapper)
+  window.removeEventListener('pageshow', pageShowWrapper)
+  SingleInstance.releaseLock()
   window.removeEventListener('beforeunload', beforeUnloadWrapper)
 })
 </script>
@@ -651,6 +1010,12 @@ onUnmounted(() => {
         :version="appVersion"
         :files="files"
         :current-file="currentFile"
+        :has-server="hasServer"
+        :can-sign-in="canSignIn"
+        :signed-in-as="signedInAs"
+        :connection="connection"
+        :sign-in="openSignIn"
+        :sign-out="handleSignOut"
         :create="handleCreate"
         :rename="handleRename"
         :delete-file="handleDelete"
@@ -706,6 +1071,14 @@ onUnmounted(() => {
     v-if="expandedQueryId !== null"
     :query-id="expandedQueryId"
   />
+  <SignInModal
+    :open="showSignIn"
+    :methods="signInMethods"
+    :busy="signInBusy"
+    :error="signInError"
+    @password="handleSignInPassword"
+    @close="closeSignIn"
+  />
   <ModalHost />
   <PatchNotesModal
     :open="showPatchNotes"
@@ -719,8 +1092,10 @@ onUnmounted(() => {
     :filename="historyFile"
     :snapshots="historySnapshots"
     :current-contents="historyContents"
+    :selected-contents="historySelected"
     @close="handleHistoryClose"
     @select="showHistoryOf"
+    @select-snapshot="handleSelectSnapshot"
     @restore="handleRestoreSnapshot"
   />
 </template>

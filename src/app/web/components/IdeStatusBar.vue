@@ -2,7 +2,13 @@
 // Bottom bar showing the cursor's line/column and the breadcrumb of syntactic
 // forms enclosing it, outermost first, e.g.
 // "Ln 4, Col 8: define > lambda > cond > application".
-defineProps<{ line: number; column: number; path: string[] }>()
+// The account and connection controls used to live here; they moved into the
+// file drawer (IdeSidebar.vue), where the files they govern are.
+defineProps<{
+  line: number
+  column: number
+  path: string[]
+}>()
 </script>
 
 <template>
@@ -44,4 +50,5 @@ defineProps<{ line: number; column: number; path: string[] }>()
   opacity: 0.6;
   font-style: italic;
 }
+
 </style>

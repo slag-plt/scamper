@@ -1,0 +1,42 @@
+# The one origin students reach.
+#
+# This serves the built front end and passes `/api` through to the server
+# container, so the app and its API share a host. That is the whole point: a
+# same-origin deployment keeps the session cookie first-party, which means no
+# CORS, no `SameSite=None`, and no exposure to browsers tightening third-party
+# cookie policy. Splitting the two across hosts costs all of that (see
+# server/README.md).
+#
+# `:80` rather than a hostname because TLS is terminated by whatever fronts
+# this -- the Reclaim Cloud environment's endpoint. Give Caddy the hostname
+# instead if you ever want it to obtain its own certificate.
+
+:80 {
+	encode gzip
+
+	# Which file server this deployment uses, read at startup by
+	# src/fs/config.ts. Answered here rather than shipped as a file because in
+	# this deployment it is a constant: one origin, so the API is a relative
+	# path. Its absence is what puts a static-only deployment on local storage,
+	# which is why nothing writes this file into `dist`.
+	handle /config.json {
+		header Content-Type application/json
+		header Cache-Control no-store
+		respond `{"serverUrl":"/api/v1"}`
+	}
+
+	# Everything the server owns: the API and BetterAuth's routes alike. The
+	# browser sees one origin, so the cookie rides along with no configuration.
+	handle /api/* {
+		reverse_proxy server:3000
+	}
+
+	# The built front end. These are real files -- index.html is the IDE, plus
+	# docs, search, and the runner -- so there is deliberately no single-page
+	# fallback: a request for something absent should 404, not silently return
+	# the IDE.
+	handle {
+		root * /srv
+		file_server
+	}
+}

@@ -1,0 +1,28 @@
+# Serves the front end from a directory on this machine instead of from the
+# image (issue #357).
+#
+# Copy this file to `docker-compose.override.yml` -- compose loads that name
+# automatically, with no flag -- and Caddy serves `./dist` directly. Updating
+# the site is then just putting new files there:
+#
+#   npm run build                     # if this machine has Node
+#   rsync -a dist/ vm:scamper/dist/   # or build elsewhere and copy them in
+#
+# Caddy reads each file per request, so the change is live immediately. No image
+# build, no container restart, and nothing whatsoever happens to the API, the
+# database, or anyone's session.
+#
+# What it costs is the property that makes the default worth having: the running
+# site no longer corresponds to any image, so `git log` stops describing what
+# students are looking at, and a half-finished `dist/` is live the moment it is
+# written. `scripts/server/web-update` gets you most of the speed while keeping
+# the image as the source of truth -- prefer it unless you specifically want
+# this.
+#
+# To go back: delete `docker-compose.override.yml` and run
+# `scripts/server/web-update`, which rebuilds the image and serves it again.
+
+services:
+  web:
+    volumes:
+      - ./dist:/srv:ro

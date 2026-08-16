@@ -1,0 +1,119 @@
+# The Scamper file server and its database (issue #357).
+#
+# This is how the server is meant to be run, in development and in production
+# alike, so there is no separate deployment script to keep in step with how the
+# thing actually starts. Deploying is:
+#
+#   docker compose pull || docker compose build
+#   docker compose up -d
+#
+# and the same two commands are an upgrade. Configuration comes from a `.env`
+# file beside this one -- see .env.example.
+#
+# The front end *is* here, in the `web` service: it serves the built static
+# files and passes `/api` through to the server, so the two share an origin.
+# That is what keeps the session cookie first-party -- no CORS, no
+# `SameSite=None`, and nothing to break when browsers tighten third-party cookie
+# policy (see server/README.md).
+#
+# A static-only deployment is still supported and unchanged: `scripts/deploy`
+# rsyncs `dist/` to a plain web server, where the absence of a `/config.json`
+# puts the IDE on the browser's own storage. Same build, no server required.
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-scamper}
+      MARIADB_USER: ${MARIADB_USER:-scamper}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD in .env}
+    volumes:
+      # A named volume, so `docker compose down` does not take a student's
+      # files with it. Removing them takes `down -v`, deliberately.
+      - scamper-db:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published. Only the server needs to reach it, and a database on a
+    # public port is a database someone else will find. Reach it for a migration
+    # or a look with `docker compose exec db mariadb ...`.
+
+  # Creates BetterAuth's tables, then exits. The server's own tables reference
+  # `user`, so this has to finish first -- which is why `up` waits for it rather
+  # than leaving a migration step for whoever is deploying to remember.
+  # Additive and idempotent, so it is a no-op on every start after the first.
+  migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: migrate
+    restart: 'no'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      # Named explicitly: without a target Docker builds the *last* stage in
+      # the file, which is `migrate`, and this service would quietly run
+      # migrations in a restart loop instead of serving anything.
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Waits for MariaDB to actually accept connections, not merely to have
+        # started: the server applies its schema at startup and would otherwise
+        # race the database's own first-run initialisation.
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mysql://${MARIADB_USER:-scamper}:${MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-scamper}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
+      # Optional, and empty in a real deployment. Lets one server accept
+      # sign-ins from Vite's dev origin as well as its own.
+      SCAMPER_TRUSTED_ORIGINS: ${SCAMPER_TRUSTED_ORIGINS:-}
+      PORT: 3000
+    ports:
+      # Bound to the loopback interface: `web` reaches it over compose's private
+      # network, and nothing outside this machine should reach it directly. Kept
+      # published at all so `npm run dev -- --mode server` can proxy to it and
+      # so it can be curled while debugging.
+      - '127.0.0.1:${SERVER_PORT:-3000}:3000'
+
+  # The front end, and the only thing students' browsers talk to.
+  #
+  # Caddy serves the built `dist/` and reverse-proxies `/api` to `server`, which
+  # is what makes the whole app one origin. Small: the image is Caddy plus
+  # static files, with the Node build tooling left behind in an earlier stage.
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      # Only for ordering. Caddy starts fine without it and answers 502 for
+      # `/api` until the server is up, which is exactly what the IDE's offline
+      # state is for.
+      - server
+    ports:
+      # Published on every interface, unlike `server`: this is the public face,
+      # and the platform in front of it (the Reclaim Cloud endpoint, say)
+      # terminates TLS and forwards here. Put a hostname in the Caddyfile
+      # instead if you want Caddy to get its own certificate.
+      - '${WEB_PORT:-8080}:80'
+
+volumes:
+  scamper-db:

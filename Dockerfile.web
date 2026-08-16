@@ -1,0 +1,35 @@
+# The front end, built and then served by Caddy beside the API (issue #357).
+#
+# Built here rather than rsynced in so that `docker compose up -d --build` is
+# the whole deployment, exactly as it already is for the server. There is no
+# separate artifact to copy, and no way for the running front end to drift from
+# the commit that produced it.
+#
+# The build tooling stays in the first stage: the image that actually runs is
+# Caddy plus a directory of static files, and carries no Node at all.
+
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY server/package.json ./server/
+
+# --ignore-scripts matters for size and time, not just hygiene: the root
+# postinstall generates the parser and library sources (which `prebuild` does
+# again anyway) and configures git hooks, and Playwright's install step would
+# otherwise download a browser this image will never run.
+RUN npm ci --ignore-scripts
+
+COPY . .
+
+# `prebuild` regenerates the Lezer parser and the .scm library sources first, so
+# this needs the full checkout above rather than a hand-picked list of paths.
+RUN npm run build
+
+FROM caddy:2-alpine AS runtime
+
+COPY --from=build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
+
+EXPOSE 80

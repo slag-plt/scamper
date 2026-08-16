@@ -1,0 +1,22 @@
+// The build scripts and Vite plugins in this directory, as a real TypeScript
+// project. The root tsconfig.json covers `src` only, so without this these
+// files fall to ESLint's "default project" -- which is capped at eight files,
+// so adding a ninth script broke linting for all of them.
+//
+// `npm run typecheck` does not use this file (it type-checks `src`); it exists
+// so type-aware lint rules have real types here instead of `any`.
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.mjs"]
+}
