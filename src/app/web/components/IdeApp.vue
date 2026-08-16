@@ -422,7 +422,8 @@ async function announceOffline(): Promise<void> {
     title: 'Scamper is offline',
     message:
       'Scamper cannot reach the server, so your files are out of reach for ' +
-      'the moment.\n\nYou can keep writing and running code. Saving resumes ' +
+      'the moment.\n\nYou can keep writing and running code, and you can ' +
+      'download the file you have open to keep a copy of it. Saving resumes ' +
       'on its own once the connection comes back — but until then, keep this ' +
       'tab open, because changes made while offline are not stored anywhere ' +
       'else.',
@@ -650,13 +651,27 @@ function startDownload(filename: string, href: string) {
   a.click()
 }
 
+/**
+ * Downloads the open file, as it appears in the editor.
+ *
+ * From the editor rather than from storage, which differs in two ways and both
+ * are improvements. Online it hands over what the student is looking at instead
+ * of the last version that reached the server -- which is what "download" was
+ * always taken to mean. Offline it works at all: everything else that touches a
+ * file is refused, so this is the only way to get work off a machine that
+ * cannot save. A stopgap until a signed-in user's files are mirrored locally
+ * (#364), and deliberately not extended to the zip export, which has to read
+ * every file and so genuinely needs the server.
+ */
 async function handleDownload() {
-  if (!currentFile.value || !fs) return
-  if (!(await requireServer('Downloading a file'))) return
-  const contents = await fs.loadFile(currentFile.value)
+  if (!currentFile.value || !isEditorLoaded()) return
+  // Best effort, so the copy kept on the server matches the copy taken away.
+  // It declines by itself while offline -- which is the case this exists for.
+  await saveCurrentFile()
   startDownload(
     currentFile.value,
-    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+    'data:attachment/text;charset=utf-8,' +
+      encodeURIComponent(editor().getDoc()),
   )
 }
 

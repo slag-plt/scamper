@@ -202,6 +202,37 @@ describe('IDE offline behaviour', () => {
     }
   })
 
+  // The one file action that still works offline, and the only way to get work
+  // off a machine that cannot save. A stopgap until #364.
+  test('downloading the open file works offline, from the editor', async () => {
+    const downloads: string[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      function (this: HTMLAnchorElement) {
+        downloads.push(this.href)
+      },
+    )
+
+    const wrapper = await mountIde()
+    try {
+      getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
+      await flushPromises()
+
+      Connectivity.reportUnreachable()
+      await flushPromises()
+
+      getByRole(document.body, 'button', { name: 'Download file' }).click()
+      await flushPromises()
+
+      // Not refused, and carrying what the editor holds rather than what the
+      // unreachable server last stored.
+      expect(downloads).toHaveLength(1)
+      expect(decodeURIComponent(downloads[0].split(',')[1])).toBe(editorText())
+      expect(document.body.textContent).not.toContain('Scamper is offline')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('nothing is written while offline, and the reconnect writes at once', async () => {
     const wrapper = await mountIde()
     try {
