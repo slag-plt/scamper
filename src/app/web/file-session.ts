@@ -256,17 +256,19 @@ export class FileSession {
   // ---------- renaming ----------
 
   /**
-   * Renames the current file to `newName`, serializing against any in-flight
-   * save the same way `deleteFile` does (renaming closes the fs handle to the
-   * source file). Updates the current file to the new name on success.
+   * Renames `from` to `to`, serializing against any in-flight save the same way
+   * `deleteFile` does (renaming closes the fs handle to the source file).
+   * Follows the open file to its new name, and leaves it alone when some other
+   * file is the one being renamed.
    */
   async renameFile(from: string, to: string): Promise<void> {
     this.stopAutosave()
     await this.settle()
-    if (this.currentFile === from) this.currentFile = null
+    const wasOpen = this.currentFile === from
+    if (wasOpen) this.currentFile = null
     this.historyHead = null
     await this.fs.renameFile(from, to)
-    this.currentFile = to
+    if (wasOpen) this.currentFile = to
     try {
       await this.history.rename(from, to)
     } catch {

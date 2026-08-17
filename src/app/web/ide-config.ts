@@ -18,6 +18,9 @@ const STORAGE_KEY = 'scamper.config'
 /** The name an older build used when this lived in the file system. */
 export const LEGACY_CONFIG_FILENAME = '.scamper.config'
 
+/** How many recently-opened files the File menu offers. */
+export const MAX_RECENT_FILES = 5
+
 export interface Config {
   lastOpenedFilename: string | null
   lastVersionAccessed: string
@@ -26,6 +29,12 @@ export interface Config {
    * Per-machine because the files are: another computer has its own.
    */
   localFilesOffered: boolean
+  /**
+   * Recently opened files, newest first and at most {@link MAX_RECENT_FILES}.
+   * Per-machine for the same reason as `lastOpenedFilename`: it is about this
+   * browsing session, not about the user's work.
+   */
+  recentFiles: string[]
 }
 
 /**

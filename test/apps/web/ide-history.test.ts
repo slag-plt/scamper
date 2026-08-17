@@ -103,6 +103,16 @@ describe('IDE file history', () => {
     }).value
   }
 
+  /** Picks `action` from `filename`'s ⋯ menu in the file drawer. */
+  async function fileMenu(filename: string, action: string | RegExp) {
+    getByRole(document.body, 'button', {
+      name: `Actions for ${filename}`,
+    }).click()
+    await flushPromises()
+    getByRole(document.body, 'menuitem', { name: action }).click()
+    await flushPromises()
+  }
+
   test('offers the history even with no file open', async () => {
     // Deliberately not disabled without a current file: deleting one leaves
     // exactly that state, and it is when recovery matters most.
@@ -225,15 +235,16 @@ describe('IDE file history', () => {
   })
 
   test('brings back a deleted file from its history', async () => {
-    // The recovery #42 is actually about. The sidebar button needs an open
-    // file, so a deleted one is reached through the modal's picker.
+    // The recovery #42 is actually about. A deleted file has no row in the
+    // drawer and so no menu of its own, so it is reached through the toolbar
+    // button and the modal's picker.
     await fs.saveFile('hello.scm', '(display 1)')
     await fs.saveFile('other.scm', '(display 2)')
 
     const wrapper = await mountIdeWith('hello.scm')
     try {
       // Record a snapshot, then delete the file.
-      getByRole(document.body, 'button', { name: 'Delete file' }).click()
+      await fileMenu('hello.scm', 'Delete')
       const confirm = await findByRole(document.body, 'dialog', {
         name: 'Delete file',
       })
@@ -241,7 +252,6 @@ describe('IDE file history', () => {
       await flushPromises()
       expect(await fs.fileExists('hello.scm')).toBe(false)
 
-      // Open another file so the history button is available again.
       getByRole(document.body, 'button', { name: 'Open other.scm' }).click()
       await flushPromises()
       getByRole(document.body, 'button', { name: 'File history' }).click()
@@ -279,7 +289,7 @@ describe('IDE file history', () => {
 
     const wrapper = await mountIdeWith('hello.scm')
     try {
-      getByRole(document.body, 'button', { name: 'Delete file' }).click()
+      await fileMenu('hello.scm', 'Delete')
       const confirm = await findByRole(document.body, 'dialog', { name: 'Delete file' })
       getByRole(confirm, 'button', { name: 'Delete' }).click()
       await flushPromises()
@@ -404,7 +414,7 @@ describe('IDE file history', () => {
 
     const wrapper = await mountIdeWith('a.scm')
     try {
-      getByRole(document.body, 'button', { name: 'Rename file' }).click()
+      await fileMenu('a.scm', /^Rename/)
       const prompt = await findByRole(document.body, 'dialog', { name: 'Rename file' })
       fireEvent.input(getByRole(prompt, 'textbox'), { target: { value: 'gone.scm' } })
       getByRole(prompt, 'button', { name: 'OK' }).click()

@@ -10,32 +10,45 @@ const editorRegistration = useEditorRegistration()
 const src = ref('')
 const loaded = ref(false)
 
-const adapter = makeMockCodeMirrorEditorAdapter({
-  getDoc() {
-    return src.value
+const adapter = makeMockCodeMirrorEditorAdapter(
+  {
+    getDoc() {
+      return src.value
+    },
+    isLoaded() {
+      return loaded.value
+    },
+    initializeDoc(nextSrc: string) {
+      loaded.value = true
+      src.value = nextSrc
+    },
+    initializeDummyDoc() {
+      loaded.value = false
+      src.value = noLoadedFileText
+    },
+    replaceDoc(nextSrc: string) {
+      // The real adapter applies this as an undoable edit; for the stub the
+      // observable part is that the document changed and the file is dirty.
+      src.value = nextSrc
+      emit('dirty')
+    },
+    status: () => ({
+      // The real editor's no-file state is read-only, and the menus grey
+      // themselves out from this, so the stub keeps that tie.
+      readOnly: !loaded.value,
+      hasSelection: false,
+      canUndo: false,
+      canRedo: false,
+      onIdentifier: false,
+    }),
   },
-  isLoaded() {
-    return loaded.value
-  },
-  initializeDoc(nextSrc: string) {
-    loaded.value = true
-    src.value = nextSrc
-  },
-  initializeDummyDoc() {
-    loaded.value = false
-    src.value = noLoadedFileText
-  },
-  replaceDoc(nextSrc: string) {
-    // The real adapter applies this as an undoable edit; for the stub the
-    // observable part is that the document changed and the file is dirty.
-    src.value = nextSrc
-    emit('dirty')
-  },
-})
+  { calls: mockEditorHandle.commands },
+)
 
 onMounted(() => {
   editorRegistration.register(adapter)
   mockEditorHandle.adapter = adapter
+  mockEditorHandle.commands.length = 0
 })
 
 onUnmounted(() => {

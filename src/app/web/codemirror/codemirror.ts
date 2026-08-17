@@ -25,6 +25,7 @@ import {
 } from '@codemirror/language'
 import { tags as t } from '@lezer/highlight'
 import { currentTheme, type Theme } from '../../../theme'
+import { editorFontSize, editorWordWrap } from '../editor-prefs'
 import {
   defaultKeymap,
   history,
@@ -113,6 +114,26 @@ export function editorThemeExtension(theme: Theme): Extension {
 /** Compartment holding the active editor theme, for live reconfiguration. */
 export const editorThemeCompartment = new Compartment()
 
+/**
+ * Compartments for the display preferences the View menu changes. They are
+ * reconfigured live while a file is open; a file opened afterwards gets the
+ * same values through {@link mkExtensions}, which reads editor-prefs directly.
+ */
+export const fontSizeCompartment = new Compartment()
+export const wordWrapCompartment = new Compartment()
+
+/** The editor's font-size extension for a given size in pixels. */
+export function fontSizeExtension(px: number): Extension {
+  return EditorView.theme({
+    '&': { fontSize: `${String(px)}px` },
+  })
+}
+
+/** The line-wrapping extension, or nothing when lines should scroll instead. */
+export function wordWrapExtension(on: boolean): Extension {
+  return on ? EditorView.lineWrapping : []
+}
+
 export interface EditorStateConfig {
   dirtyAction: () => void
   /** Notified with the cursor's status whenever the cursor moves or edits. */
@@ -141,6 +162,8 @@ function mkExtensions(config: EditorStateConfig): Extension {
     EditorState.allowMultipleSelections.of(true),
     indentOnInput(),
     editorThemeCompartment.of(editorThemeExtension(currentTheme.value)),
+    fontSizeCompartment.of(fontSizeExtension(editorFontSize.value)),
+    wordWrapCompartment.of(wordWrapExtension(editorWordWrap.value)),
     bracketMatching(),
     closeBrackets(),
     autocompletion(),

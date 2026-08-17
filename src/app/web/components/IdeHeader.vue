@@ -35,6 +35,9 @@ function searchOpenWindow(searchTerm: string) {
 </script>
 
 <template>
+  <!-- The actions worth a single click. Everything the IDE can do, including
+       all of these, is in the menu bar above; this row is for the handful
+       reached over and over while writing a program. -->
   <div class="ide-header">
     <div class="header-left">
       <button
@@ -75,40 +78,17 @@ function searchOpenWindow(searchTerm: string) {
         aria-label="Query value"
         @click="session.query()"
       ></button>
-      <!-- TODO: re-enable once AST is migrated to new backend -->
-      <button
-        class="fa-solid fa-tree"
-        aria-label="Display Syntax Tree"
-        disabled
-      ></button>
-      ⋅
-      <a href="docs.html">Docs</a>
-      ⋅
-      <a href="reference.html">Reference</a>
       ⋅
       <input
-        v-model="search"  
-        size = "30"
+        v-model="search"
+        size="30"
+        aria-label="Search function name"
         placeholder="Search function name or press enter..."
         @keyup.enter="searchOpenWindow(search)"
       >
     </div>
     <div class="header-right">
       <ThemeToggle />
-      ⋅
-      <a
-        href="https://github.com/slag-plt/scamper"
-        role="button"
-        aria-label="Scamper Repository"
-        ><i class="fa-brands fa-github"></i
-      ></a>
-      ⋅
-      <em
-        ><a href="https://github.com/slag-plt/scamper/issues"
-          >Report an issue</a
-        ></em
-      >
-      ⋅
       <ShortcutsHelp />
     </div>
   </div>

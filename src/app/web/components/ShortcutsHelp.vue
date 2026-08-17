@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { isMac, mod } from '../edit-commands'
+import { shortcutsHelpOpen as open } from '../shortcuts-help'
 
 // A (?) button that reveals a cheat-sheet of the editor's keyboard shortcuts.
-const open = ref(false)
+// The Help menu opens the same panel, hence the shared `open` above.
 const root = ref<HTMLElement | null>(null)
 
-// Modifier names differ by platform (Cmd on macOS, Ctrl elsewhere). CodeMirror
-// binds "Mod" to that platform key; a few bindings differ per platform too.
-const isMac = /Mac|iPhone|iPad|iPod/i.test(
-  typeof navigator === 'undefined' ? '' : navigator.userAgent,
-)
-const mod = isMac ? 'Cmd' : 'Ctrl'
+// A few bindings differ per platform beyond the "Mod" key itself.
 const foldPrefix = isMac ? ['Cmd', 'Alt'] : ['Ctrl', 'Shift']
 
 interface Shortcut {

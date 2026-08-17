@@ -77,6 +77,16 @@ describe('IDE offline behaviour', () => {
     return wrapper
   }
 
+  /** Picks `action` from `filename`'s ⋯ menu in the file drawer. */
+  async function fileMenu(filename: string, action: string | RegExp) {
+    getByRole(document.body, 'button', {
+      name: `Actions for ${filename}`,
+    }).click()
+    await flushPromises()
+    getByRole(document.body, 'menuitem', { name: action }).click()
+    await flushPromises()
+  }
+
   test('the file drawer says whose files these are, and whether they are reachable', async () => {
     const wrapper = await mountIde()
     try {
@@ -220,8 +230,7 @@ describe('IDE offline behaviour', () => {
       Connectivity.reportUnreachable()
       await flushPromises()
 
-      getByRole(document.body, 'button', { name: 'Download file' }).click()
-      await flushPromises()
+      await fileMenu('hello.scm', 'Download')
 
       // Not refused, and carrying what the editor holds rather than what the
       // unreachable server last stored.

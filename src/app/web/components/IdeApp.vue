@@ -5,11 +5,13 @@ import 'splitpanes/dist/splitpanes.css'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
+  MAX_RECENT_FILES,
   readStoredConfig,
   writeStoredConfig,
   type Config,
 } from '../ide-config'
 import IdeSidebar from './IdeSidebar.vue'
+import IdeMenuBar from './IdeMenuBar.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
@@ -41,7 +43,12 @@ import { isNotSignedIn } from '../../../fs/session'
 import { isUnreachable } from '../../../fs/unreachable'
 import { importLocalFiles, localFileNames } from '../local-import'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
-import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
+import {
+  compareVersions,
+  patchNotes,
+  patchNotesSince,
+  type PatchNote,
+} from '../patch-notes'
 
 // ---------- config ----------
 
@@ -52,6 +59,7 @@ const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
   lastVersionAccessed: '0.0.0',
   localFilesOffered: false,
+  recentFiles: [],
 }
 
 const appVersion = `(${APP_VERSION})`
@@ -71,6 +79,8 @@ let stopWatchingConnection: (() => void) | null = null
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
 const files = ref<FileEntry[]>([])
+// Recently opened files that still exist and aren't the one already open.
+const recentFiles = ref<string[]>([])
 const isSidebarVisible = ref(true)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
@@ -132,6 +142,30 @@ async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
   files.value = allFiles.filter(isUserFile)
+  syncRecentFiles()
+}
+
+/** Moves `filename` to the front of the recent list, trimming it to length. */
+function noteRecentFile(filename: string) {
+  config.recentFiles = [
+    filename,
+    ...config.recentFiles.filter((f) => f !== filename),
+  ].slice(0, MAX_RECENT_FILES)
+  saveConfig()
+  syncRecentFiles()
+}
+
+/**
+ * Republishes the recent list for the File menu, dropping the file already
+ * open and any that no longer exist -- renamed, deleted, or belonging to an
+ * account this browser is now signed out of. A menu item that opens nothing
+ * would be worse than a shorter menu.
+ */
+function syncRecentFiles() {
+  const present = new Set(files.value.map((f) => f.name))
+  recentFiles.value = config.recentFiles.filter(
+    (name) => name !== currentFile.value && present.has(name),
+  )
 }
 
 // ---------- config persistence ----------
@@ -295,6 +329,44 @@ async function offerLocalFiles() {
   }
 }
 
+/**
+ * Shows this release's notes on request (Help > What's New), rather than only
+ * once on first opening a new version. Falls back to the newest release that
+ * has any, so the menu item is never a dead end on a version that shipped
+ * without notes.
+ */
+async function handleWhatsNew() {
+  const forThisVersion = patchNotes.filter((n) => n.version === APP_VERSION)
+  const notes =
+    forThisVersion.length > 0
+      ? forThisVersion
+      : [...patchNotes]
+          .sort((a, b) => compareVersions(b.version, a.version))
+          .slice(0, 1)
+  if (notes.length === 0) {
+    await modalAlert({
+      title: "What's New",
+      message: 'This version of Scamper has no release notes.',
+    })
+    return
+  }
+  patchNotesToShow.value = notes
+  showPatchNotes.value = true
+}
+
+/** Help > About Scamper: what this is and which version is running. */
+async function handleAbout() {
+  await modalAlert({
+    title: 'About Scamper',
+    message:
+      `Scamper ${APP_VERSION}\n\n` +
+      'A mini-Scheme for teaching multimedia programming on the web, ' +
+      'maintained by the Systems, Languages, and Automated Generation lab ' +
+      'at Grinnell College.\n\n' +
+      'github.com/slag-plt/scamper',
+  })
+}
+
 function handlePatchNotesClose() {
   showPatchNotes.value = false
   patchNotesToShow.value = []
@@ -361,8 +433,9 @@ async function switchToFile(filename: string): Promise<void> {
   }
 
   session.resetOutput()
-  await populateFileDrawer()
   config.lastOpenedFilename = currentFile.value
+  if (currentFile.value !== null) noteRecentFile(currentFile.value)
+  await populateFileDrawer()
   startAutosaving()
   isLoadingFile = false
 }
@@ -507,6 +580,21 @@ async function handleCreate() {
   }
 }
 
+/**
+ * Asks for a file and uploads it. The picker is made here rather than kept in
+ * the markup because two places offer an upload -- the drawer and the File
+ * menu -- and one transient input is simpler than a hidden one per caller.
+ */
+function handlePickUpload() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.addEventListener('change', () => {
+    const file = input.files?.[0]
+    if (file) void handleUploadFile(file)
+  })
+  input.click()
+}
+
 async function handleUploadFile(file: File) {
   if (!fs || !fileSession) return
   if (!(await requireServer('Uploading a file'))) return
@@ -557,6 +645,20 @@ async function handleFileDrop(droppedFiles: FileList) {
 }
 
 /**
+ * Saves the open file now, rather than waiting for the next autosave tick.
+ *
+ * Scamper saves on its own, so this exists because File > Save is where a
+ * student will look when they want to be sure -- and because `save` declines
+ * silently when there is nowhere to write, which for an action someone
+ * deliberately picked should say so instead.
+ */
+async function handleSave() {
+  if (!fileSession || currentFile.value === null) return
+  if (!(await requireServer('Saving a file'))) return
+  await fileSession.save({ force: true })
+}
+
+/**
  * Asks before a rename destroys the recoverable history of a deleted file that
  * used to hold `name`.
  * @returns true if the rename should go ahead
@@ -577,10 +679,9 @@ async function confirmDiscardingHistory(name: string): Promise<boolean> {
   })
 }
 
-async function handleRename() {
-  if (!currentFile.value || !fileSession) return
+async function handleRename(from: string) {
+  if (!fileSession) return
   if (!(await requireServer('Renaming a file'))) return
-  const from = currentFile.value
   const newName = await modalPrompt({
     title: 'Rename file',
     message: `Enter a new filename for ${from}`,
@@ -596,23 +697,31 @@ async function handleRename() {
     // the one thing that made a deleted file recoverable is the worst
     // outcome here.
     if (!(await confirmDiscardingHistory(newName))) return
+    const wasOpen = from === currentFile.value
     try {
-      // N.B., renaming closes the fs worker's handle to the current file,
-      // so we load it fresh afterwards. The session serializes against any
+      // N.B., renaming closes the fs worker's handle to the file, so an open
+      // one is loaded fresh afterwards. The session serializes against any
       // in-flight save first.
       await fileSession.renameFile(from, newName)
-      setCurrentFile(null)
-      await switchToFile(newName)
     } catch (e) {
       if (e instanceof Error) displayError(e.message)
+      return
+    }
+    if (wasOpen) {
+      setCurrentFile(null)
+      await switchToFile(newName)
+    } else {
+      await populateFileDrawer()
+      // The rename stopped autosave to serialize against an in-flight save;
+      // nothing about the open file changed, so put it back.
+      startAutosaving()
     }
   }
 }
 
-async function handleDelete() {
-  if (!currentFile.value || !fileSession) return
+async function handleDelete(target: string) {
+  if (!fileSession) return
   if (!(await requireServer('Deleting a file'))) return
-  const target = currentFile.value
   const ok = await modalConfirm({
     title: 'Delete file',
     message: `Are you sure you want to delete ${target}?`,
@@ -620,6 +729,7 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
+  const wasOpen = target === currentFile.value
   try {
     // The session stops autosave and awaits any in-flight save before removing
     // the file, so an open OPFS writable can't block the delete (issue #184).
@@ -628,13 +738,104 @@ async function handleDelete() {
     if (e instanceof Error) displayError(`Failed to delete ${target}: ${e.message}`)
     return
   }
+  // Deleting some other file leaves the editor alone: what is open is still
+  // open, and stopping its run would be a surprise.
+  if (wasOpen) closeOpenFile()
+  await populateFileDrawer()
+  startAutosaving()
+}
+
+/**
+ * Returns the IDE to its no-file state: nothing open, an empty editor, and no
+ * run left over from the file that was. Shared by delete and File > Close File,
+ * which differ only in whether the file itself survives.
+ */
+function closeOpenFile() {
   setCurrentFile(null)
   editor().initializeDummyDoc()
   config.lastOpenedFilename = null
+  saveConfig()
   session.stopAll()
   session.resetOutput()
-  await populateFileDrawer()
-  startAutosaving()
+  isDirty.value = false
+}
+
+/** Closes the open file, saving it first so nothing typed is lost. */
+async function handleCloseFile() {
+  if (currentFile.value === null) return
+  // Best effort, exactly like the download: offline this declines by itself
+  // rather than refusing to close, since the file stays on disk either way.
+  await saveCurrentFile()
+  closeOpenFile()
+}
+
+/**
+ * Copies `source` to a name the user picks.
+ * @param options.open whether to switch to the copy (File > Save As) or leave
+ *        the current file open (the drawer's Duplicate).
+ * @param options.title what the prompt calls itself.
+ */
+async function copyFileTo(
+  source: string,
+  options: { open: boolean; title: string },
+) {
+  if (!fs || !fileSession) return
+  if (!(await requireServer(options.title))) return
+  // The editor holds the newest contents of the open file; any other file is
+  // read from storage.
+  const contents =
+    source === currentFile.value && isEditorLoaded()
+      ? editor().getDoc()
+      : await fs.loadFile(source)
+
+  const newName = await modalPrompt({
+    title: options.title,
+    message: `Enter a name for the copy of ${source}`,
+    defaultValue: suggestCopyName(source),
+  })
+  if (newName === null || newName === source) return
+  if (await fs.fileExists(newName)) {
+    await modalAlert({ message: `File ${newName} already exists!` })
+    return
+  }
+  // Writing over a deleted file's name discards the history that made it
+  // recoverable, the same way a rename onto it would (#42).
+  if (!(await confirmDiscardingHistory(newName))) return
+
+  try {
+    await fs.saveFile(newName, contents)
+  } catch (e) {
+    reportError(e, (message) => `Could not copy ${source}: ${message}`)
+    return
+  }
+  if (options.open) {
+    await switchToFile(newName)
+  } else {
+    await populateFileDrawer()
+  }
+}
+
+/**
+ * Suggests "foo-copy.scm" for "foo.scm", so the prompt opens on a name that is
+ * already free rather than on one that is taken.
+ */
+function suggestCopyName(source: string): string {
+  const dot = source.lastIndexOf('.')
+  return dot <= 0
+    ? `${source}-copy`
+    : `${source.slice(0, dot)}-copy${source.slice(dot)}`
+}
+
+function handleSaveAs() {
+  const file = currentFile.value
+  if (file === null) return
+  // Scamper autosaves, so the original is already up to date on disk and "save
+  // as" is really "make a copy and work on that" -- which is what it does.
+  void copyFileTo(file, { open: true, title: 'Save as' })
+}
+
+function handleDuplicate(target: string) {
+  void copyFileTo(target, { open: false, title: 'Duplicate file' })
 }
 
 // How long a generated object URL is kept alive after its download starts.
@@ -651,28 +852,43 @@ function startDownload(filename: string, href: string) {
   a.click()
 }
 
+/** Hands `contents` to the browser as a download named `filename`. */
+function startTextDownload(filename: string, contents: string) {
+  startDownload(
+    filename,
+    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+  )
+}
+
 /**
- * Downloads the open file, as it appears in the editor.
+ * Downloads `target`: the open file as it appears in the editor, any other file
+ * as it is stored.
  *
- * From the editor rather than from storage, which differs in two ways and both
- * are improvements. Online it hands over what the student is looking at instead
- * of the last version that reached the server -- which is what "download" was
- * always taken to mean. Offline it works at all: everything else that touches a
- * file is refused, so this is the only way to get work off a machine that
- * cannot save. A stopgap until a signed-in user's files are mirrored locally
- * (#364), and deliberately not extended to the zip export, which has to read
- * every file and so genuinely needs the server.
+ * The open file comes from the editor rather than from storage, which differs
+ * in two ways and both are improvements. Online it hands over what the student
+ * is looking at instead of the last version that reached the server -- which is
+ * what "download" was always taken to mean. Offline it works at all: everything
+ * else that touches a file is refused, so this is the only way to get work off a
+ * machine that cannot save. A stopgap until a signed-in user's files are
+ * mirrored locally (#364), and deliberately not extended to the zip export or to
+ * the other files here, both of which have to read storage and so genuinely need
+ * the server.
  */
-async function handleDownload() {
-  if (!currentFile.value || !isEditorLoaded()) return
+async function handleDownload(target: string) {
+  if (target !== currentFile.value || !isEditorLoaded()) {
+    if (!fs) return
+    if (!(await requireServer('Downloading a file'))) return
+    try {
+      startTextDownload(target, await fs.loadFile(target))
+    } catch (e) {
+      reportError(e, (message) => `Could not download ${target}: ${message}`)
+    }
+    return
+  }
   // Best effort, so the copy kept on the server matches the copy taken away.
   // It declines by itself while offline -- which is the case this exists for.
   await saveCurrentFile()
-  startDownload(
-    currentFile.value,
-    'data:attachment/text;charset=utf-8,' +
-      encodeURIComponent(editor().getDoc()),
-  )
+  startTextDownload(target, editor().getDoc())
 }
 
 // An archive can take a moment to build, and the button stays clickable while
@@ -720,16 +936,18 @@ async function handleArchive() {
 // nothing: the editor's contents are shown as their own "current" row, so
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
-async function handleHistory() {
+async function handleHistory(target?: string) {
   if (!fileHistory) return
   if (!(await requireServer('Browsing file history'))) return
   const histories = await fileHistory.list()
-  const current = currentFile.value
+  // A named file is the one whose menu this was opened from; otherwise the
+  // toolbar button opens on whatever is being edited.
+  const focus = target ?? currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
   historyFiles.value =
-    current !== null && !histories.some((h) => h.filename === current)
-      ? [{ filename: current }, ...histories]
+    focus !== null && !histories.some((h) => h.filename === focus)
+      ? [{ filename: focus }, ...histories]
       : histories
   if (historyFiles.value.length === 0) {
     await modalAlert({
@@ -740,7 +958,7 @@ async function handleHistory() {
   }
   // Deleting a file leaves nothing open, which is precisely when a student
   // reaches for the history -- so fall back to the first file that has one.
-  await showHistoryOf(current ?? historyFiles.value[0].filename)
+  await showHistoryOf(focus ?? historyFiles.value[0].filename)
   showHistory.value = true
 }
 
@@ -1018,16 +1236,42 @@ onUnmounted(() => {
         :sign-out="handleSignOut"
         :create="handleCreate"
         :rename="handleRename"
+        :duplicate="handleDuplicate"
         :delete-file="handleDelete"
         :download="handleDownload"
         :archive="handleArchive"
         :history="handleHistory"
         :select-file="handleSelectFile"
-        :upload-file="handleUploadFile"
+        :upload="handlePickUpload"
         :file-drop="handleFileDrop"
       />
     </div>
     <div class="ide-main">
+      <IdeMenuBar
+        :current-file="currentFile"
+        :has-server="hasServer"
+        :can-sign-in="canSignIn"
+        :signed-in-as="signedInAs"
+        :is-sidebar-visible="isSidebarVisible"
+        :recent-files="recentFiles"
+        :create="handleCreate"
+        :upload="handlePickUpload"
+        :save="handleSave"
+        :save-as="handleSaveAs"
+        :close-file="handleCloseFile"
+        :rename="handleRename"
+        :delete-file="handleDelete"
+        :download="handleDownload"
+        :archive="handleArchive"
+        :history="handleHistory"
+        :select-file="handleSelectFile"
+        :sign-in="openSignIn"
+        :sign-out="handleSignOut"
+        :run-window="handleRunWindow"
+        :toggle-sidebar="toggleSidebar"
+        :about="handleAbout"
+        :whats-new="handleWhatsNew"
+      />
       <IdeHeader
         :current-file="currentFile"
         @run-window="handleRunWindow"
