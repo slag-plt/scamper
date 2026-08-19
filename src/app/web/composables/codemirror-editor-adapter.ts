@@ -1,13 +1,25 @@
 import type { EditorView } from '@codemirror/view'
 import { diff } from '@codemirror/merge'
+import {
+  redo,
+  redoDepth,
+  toggleComment,
+  undo,
+  undoDepth,
+} from '@codemirror/commands'
+import { foldAll, unfoldAll } from '@codemirror/language'
+import { gotoLine, openSearchPanel } from '@codemirror/search'
+import { findReferences, jumpToDefinition } from '@codemirror/lsp-client'
 import { Loc } from '../../../lpm'
 import Scamper, { QUERIES_CHANGED } from '../../../scamper'
 import {
   mkFreshEditorState,
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
+import { formatScamperDocument } from '../codemirror/extensions/prettier'
 import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
+import { identifierAt } from '../../../scheme/token'
 
 /** Cursor status reported when no code is under the cursor (top of document). */
 const TOP_LEVEL: CursorStatus = { line: 1, column: 1, path: [] }
@@ -89,6 +101,121 @@ export function createCodeMirrorEditorAdapter(
 
     coordsAtIdx(idx: number) {
       return view.coordsAtPos(idx)
+    },
+
+    // ---------- editing commands ----------
+    //
+    // The editor's own keymap already binds all of these; they are exposed here
+    // so the menu bar and the right-click menu can invoke them by name instead
+    // of each reaching into the EditorView and reimplementing them.
+
+    focus() {
+      view.focus()
+    },
+
+    /** What the menus need to grey the right items out. */
+    status() {
+      const sel = view.state.selection.main
+      return {
+        readOnly: view.state.readOnly,
+        hasSelection: !sel.empty,
+        canUndo: undoDepth(view.state) > 0,
+        canRedo: redoDepth(view.state) > 0,
+        // Go-to-definition and find-references only mean something on a name.
+        onIdentifier:
+          identifierAt(view.state.doc.toString(), sel.head) !== undefined,
+      }
+    },
+
+    undo() {
+      undo(view)
+    },
+    redo() {
+      redo(view)
+    },
+
+    copy() {
+      const { from, to } = view.state.selection.main
+      void navigator.clipboard
+        .writeText(view.state.sliceDoc(from, to))
+        .catch(() => {
+          /* clipboard write unavailable or denied */
+        })
+    },
+
+    async cut() {
+      const { from, to } = view.state.selection.main
+      try {
+        await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
+      } catch {
+        return // don't delete the text if it couldn't be copied to the clipboard
+      }
+      view.dispatch({ changes: { from, to } })
+    },
+
+    paste() {
+      void navigator.clipboard
+        .readText()
+        .then((text) => {
+          const { from, to } = view.state.selection.main
+          view.dispatch({
+            changes: { from, to, insert: text },
+            selection: { anchor: from + text.length },
+          })
+        })
+        .catch(() => {
+          /* clipboard read unavailable or denied */
+        })
+    },
+
+    selectAll() {
+      view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } })
+    },
+
+    find() {
+      openSearchPanel(view)
+    },
+
+    /**
+     * Opens the same panel `find` does -- CodeMirror has one search panel and
+     * it carries the replace fields -- but puts the cursor in the replace box,
+     * which is the whole difference between the two menu items.
+     */
+    replace() {
+      openSearchPanel(view)
+      // The panel is added to the DOM by the dispatch above, so the query has
+      // to wait for it; requestAnimationFrame is enough and needs no timer.
+      requestAnimationFrame(() => {
+        view.dom
+          .querySelector<HTMLInputElement>('.cm-search input[name="replace"]')
+          ?.select()
+      })
+    },
+
+    goToLine() {
+      gotoLine(view)
+    },
+
+    toggleComment() {
+      toggleComment(view)
+    },
+
+    format() {
+      formatScamperDocument(view)
+    },
+
+    foldAll() {
+      foldAll(view)
+    },
+    unfoldAll() {
+      unfoldAll(view)
+    },
+
+    goToDefinition() {
+      jumpToDefinition(view)
+    },
+    findReferences() {
+      findReferences(view)
     },
 
     destroy() {

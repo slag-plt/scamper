@@ -130,7 +130,7 @@ function restoreSelected() {
 </script>
 
 <template>
-  <AppModal :open="props.open" title="File history" @dismiss="emit('close')">
+  <AppModal :open="props.open" title="File history" wide @dismiss="emit('close')">
     <label class="picker">
       File:
       <select
@@ -236,7 +236,7 @@ function restoreSelected() {
 .history {
   display: flex;
   gap: 0.75rem;
-  width: min(70rem, 80vw);
+  width: min(70rem, 78vw);
   height: min(28rem, 60vh);
 }
 

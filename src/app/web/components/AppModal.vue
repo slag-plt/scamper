@@ -16,8 +16,12 @@ const props = withDefaults(
     title?: string
     // When false, Esc and backdrop clicks do not dismiss the dialog.
     dismissable?: boolean
+    // Raises the width cap for dialogs whose content is genuinely wide, e.g. a
+    // side-by-side diff. Without it such content overflows the panel's own
+    // border, since the default cap is narrow enough for prose.
+    wide?: boolean
   }>(),
-  { title: undefined, dismissable: true },
+  { title: undefined, dismissable: true, wide: false },
 )
 
 const emit = defineEmits<{
@@ -95,6 +99,7 @@ function onBackdropClick(e: MouseEvent) {
   <dialog
     ref="dialogRef"
     class="app-modal"
+    :class="{ 'app-modal--wide': wide }"
     aria-modal="true"
     :aria-labelledby="labelledBy"
     :aria-describedby="bodyId"
@@ -118,11 +123,15 @@ function onBackdropClick(e: MouseEvent) {
 .app-modal {
   padding: 0;
   border: 1px solid var(--modal-border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background-color: var(--modal-bg);
   color: var(--fg);
   max-width: min(90vw, 32rem);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-modal--wide {
+  max-width: min(90vw, 76rem);
 }
 
 .app-modal::backdrop {

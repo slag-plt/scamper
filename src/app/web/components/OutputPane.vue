@@ -1,11 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useOutputPane } from '../composables/use-output-pane'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
+import SourceCaption from './SourceCaption.vue'
+import { showSourceWithOutput } from '../output-prefs'
 
 const scrollEl = ref<HTMLDivElement | null>(null)
 const { reset, blocks, virtualizer, display, scrollToBottom } =
   useOutputPane(scrollEl)
+
+// Showing the captions changes the height of every row that has one, and the
+// virtualizer places rows from measurements it has already cached -- so without
+// this the captions keep their hidden height of zero and are drawn underneath
+// the output they belong to.
+//
+// `flush: 'post'` is the whole trick: a default (pre) watcher runs before the
+// DOM updates, so the re-measure would read the heights the rows still have
+// rather than the ones they are about to get, and cache the zeros right back.
+watch(
+  showSourceWithOutput,
+  () => {
+    virtualizer.value.measure()
+  },
+  { flush: 'post' },
+)
 
 defineExpose({ display, reset, scrollToBottom })
 </script>
@@ -34,8 +52,12 @@ defineExpose({ display, reset, scrollToBottom })
           transform: `translateY(${row.start}px)`,
         }"
       >
+        <SourceCaption
+          v-if="blocks[row.index].source !== undefined"
+          :source="blocks[row.index].source!"
+        />
         <ValueRenderer
-          v-if="'value' in blocks[row.index]"
+          v-else-if="'value' in blocks[row.index]"
           :value="blocks[row.index].value"
         />
       </div>

@@ -1,0 +1,81 @@
+import { ref } from 'vue'
+
+/**
+ * How the editor is displayed: font size and line wrapping.
+ *
+ * Module-level and self-persisting, in the manner of src/theme -- and for the
+ * same reason. `mkFreshEditorState` builds a brand-new state every time a file
+ * is opened, so anything held only in a CodeMirror compartment would be lost on
+ * the next switch. Reading it from here means a fresh state starts out matching
+ * what the person chose, and the live compartments only have to handle changing
+ * it while a document is open.
+ *
+ * Kept out of the IDE's `Config` because that is saved by the app on page hide,
+ * whereas these are set from a menu and should survive a crash in between.
+ */
+
+const FONT_SIZE_KEY = 'scamper.editor.fontSize'
+const WORD_WRAP_KEY = 'scamper.editor.wordWrap'
+
+/** Below this the gutter crowds the text; above it, little fits on a line. */
+export const MIN_FONT_SIZE = 8
+export const MAX_FONT_SIZE = 32
+export const DEFAULT_FONT_SIZE = 14
+
+const FONT_SIZE_STEP = 2
+
+function read(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null // private mode, or no storage at all
+  }
+}
+
+function write(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // The preference still applies for this session; remembering it is a bonus.
+  }
+}
+
+function storedFontSize(): number {
+  const raw = Number(read(FONT_SIZE_KEY))
+  return Number.isFinite(raw) && raw >= MIN_FONT_SIZE && raw <= MAX_FONT_SIZE
+    ? raw
+    : DEFAULT_FONT_SIZE
+}
+
+/** The editor's font size in pixels. */
+export const editorFontSize = ref<number>(storedFontSize())
+
+/** Whether long lines wrap rather than scrolling sideways. */
+export const editorWordWrap = ref<boolean>(read(WORD_WRAP_KEY) === 'true')
+
+export function setEditorFontSize(size: number): void {
+  const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size))
+  editorFontSize.value = clamped
+  write(FONT_SIZE_KEY, String(clamped))
+}
+
+export function zoomIn(): void {
+  setEditorFontSize(editorFontSize.value + FONT_SIZE_STEP)
+}
+
+export function zoomOut(): void {
+  setEditorFontSize(editorFontSize.value - FONT_SIZE_STEP)
+}
+
+export function resetZoom(): void {
+  setEditorFontSize(DEFAULT_FONT_SIZE)
+}
+
+export function setEditorWordWrap(on: boolean): void {
+  editorWordWrap.value = on
+  write(WORD_WRAP_KEY, String(on))
+}
+
+export function toggleEditorWordWrap(): void {
+  setEditorWordWrap(!editorWordWrap.value)
+}

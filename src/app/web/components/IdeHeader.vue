@@ -6,11 +6,16 @@ import ShortcutsHelp from './ShortcutsHelp.vue'
 
 defineProps<{
   currentFile?: string | null
+  /** False when the cursor is not inside a statement, so there is none to step. */
+  canStep?: boolean
+  /** True while a trace is being collected, which takes a moment. */
+  isStepping?: boolean
 }>()
 
 const emit = defineEmits<{
   runWindow: []
   toggleSidebar: []
+  stepStatement: []
 }>()
 
 const session = useScamperSession()
@@ -21,12 +26,6 @@ async function handleRun() {
   await session.execute()
 }
 
-function handleTrace() {
-  // Start a stepping run: it pauses at the first reduction; the Results toolbar's
-  // step buttons then drive it (step once / statement / all).
-  void session.execute({ stepping: true })
-}
-
 const search = ref('')
 
 function searchOpenWindow(searchTerm: string) {
@@ -35,80 +34,78 @@ function searchOpenWindow(searchTerm: string) {
 </script>
 
 <template>
+  <!-- The actions worth a single click. Everything the IDE can do, including
+       all of these, is in the menu bar above; this row is for the handful
+       reached over and over while writing a program. -->
   <div class="ide-header">
     <div class="header-left">
       <button
-        class="fa fa-bars"
+        type="button"
+        class="icon-button fa-solid fa-bars"
         aria-label="Toggle sidebar"
         @click="emit('toggleSidebar')"
       ></button>
-      ⋅
+      <span class="toolbar-sep" aria-hidden="true"></span>
       <template v-if="isRunInProgress">
         <button
-          class="fa-solid fa-stop"
+          type="button"
+          class="icon-button fa-solid fa-stop"
           aria-label="Stop"
           @click="session.stopRun()"
         ></button>
-        <i class="fa-solid fa-spinner fa-spin"></i>
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
       </template>
       <button
         v-else
-        class="fa-solid fa-play"
+        type="button"
+        class="icon-button icon-button--accent fa-solid fa-play"
         aria-label="Run"
         accesskey="w"
-        aria-keyshortcuts="w"
         @click="handleRun"
       ></button>
+      <!-- Steps the statement under the cursor in its own window, rather than
+           tracing the whole program in the output pane. -->
       <button
-        class="fa-solid fa-route"
-        aria-label="Trace"
-        @click="handleTrace"
+        type="button"
+        class="icon-button fa-solid fa-shoe-prints"
+        title="Step through the statement under the cursor"
+        aria-label="Step statement"
+        :disabled="!canStep || isStepping"
+        @click="emit('stepStatement')"
       ></button>
+      <i
+        v-if="isStepping"
+        class="fa-solid fa-spinner fa-spin"
+        aria-hidden="true"
+      ></i>
+      <!-- Opens the standalone runner in a new browser tab. Named for what it
+           does, and matching Run > Open Run Window, which is the same command. -->
       <button
-        class="fa-solid fa-window-maximize"
-        aria-label="Maximize Output Window"
+        type="button"
+        class="icon-button fa-solid fa-up-right-from-square"
+        title="Open this program in a separate run window"
+        aria-label="Open Run Window"
         :disabled="!currentFile"
         @click="emit('runWindow')"
       ></button>
       <button
-        class="fa-solid fa-clipboard-question"
+        type="button"
+        class="icon-button fa-solid fa-clipboard-question"
+        title="Show the value of the expression under the cursor"
         aria-label="Query value"
         @click="session.query()"
       ></button>
-      <!-- TODO: re-enable once AST is migrated to new backend -->
-      <button
-        class="fa-solid fa-tree"
-        aria-label="Display Syntax Tree"
-        disabled
-      ></button>
-      ⋅
-      <a href="docs.html">Docs</a>
-      ⋅
-      <a href="reference.html">Reference</a>
-      ⋅
+      <span class="toolbar-sep" aria-hidden="true"></span>
       <input
-        v-model="search"  
-        size = "30"
-        placeholder="Search function name or press enter..."
+        v-model="search"
+        class="text-input header-search"
+        aria-label="Search function name"
+        placeholder="Search functions..."
         @keyup.enter="searchOpenWindow(search)"
-      >
+      />
     </div>
     <div class="header-right">
       <ThemeToggle />
-      ⋅
-      <a
-        href="https://github.com/slag-plt/scamper"
-        role="button"
-        aria-label="Scamper Repository"
-        ><i class="fa-brands fa-github"></i
-      ></a>
-      ⋅
-      <em
-        ><a href="https://github.com/slag-plt/scamper/issues"
-          >Report an issue</a
-        ></em
-      >
-      ⋅
       <ShortcutsHelp />
     </div>
   </div>
@@ -118,19 +115,43 @@ function searchOpenWindow(searchTerm: string) {
 .ide-header {
   background: var(--header-bg);
   color: var(--header-fg);
-  padding: 0.5em;
+  padding: var(--space-xs) var(--space-md);
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  z-index: 2;
+  gap: var(--space-md);
+  z-index: var(--z-header);
 }
 
 .header-left,
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.25em;
+  gap: var(--space-2xs);
+}
+
+/*
+ * The left group is what has to give when the window narrows. It used to be the
+ * whole row that wrapped while neither group did, so the theme and help buttons
+ * dropped to a second line rather than the row reflowing.
+ */
+.header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.header-right {
+  flex-shrink: 0;
+}
+
+/*
+ * Was size="30", i.e. ~250-280px of intrinsic width in a group that could not
+ * shrink -- the single thing that forced the header to wrap. It now takes what
+ * is left and gives it back first.
+ */
+.header-search {
+  flex: 0 1 16rem;
+  min-width: 4rem;
 }
 </style>

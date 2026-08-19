@@ -10,7 +10,8 @@ const label = computed(() =>
 
 <template>
   <button
-    class="fa-solid"
+    type="button"
+    class="icon-button fa-solid"
     :class="isDark ? 'fa-sun' : 'fa-moon'"
     :aria-label="label"
     :title="label"

@@ -2,23 +2,45 @@
  * Syntax highlighting for code rendered directly from the AST (step-by-step
  * traces). LayoutRenderer (src/scheme/ast-components) tags each token's role
  * with these classes as it builds the HTML, so there is no highlight.js
- * tokenizer pass. Colors mirror GitHub's light/dark syntax palette (the light
- * values match the vendored scamper-hljs.css) and follow the active theme via
- * light-dark().
+ * tokenizer pass.
  *
- * Colors live here inline rather than as theme.css tokens on purpose: the embed
- * page (web.html) omits theme.css, and light-dark() still resolves -- to the
- * light value -- when no color-scheme is set, so the embed stays readable.
+ * The colors come from the --syntax-* tokens in theme.css, so the editor, the
+ * trace renderer and the docs all color a program the same way.
+ *
+ * Each one carries an inline fallback, and that is load-bearing rather than
+ * belt-and-braces: the embed page (web.html) deliberately omits theme.css, so
+ * without a fallback these rules would resolve to nothing there. The fallbacks
+ * are the light halves of the same tokens -- light-dark() resolves to its light
+ * value when no color-scheme is set, which is exactly the embed's situation.
  */
 .scamper-hl-keyword {
-  color: light-dark(#d73a49, #ff7b72);
+  color: var(
+    --syntax-keyword,
+    light-dark(oklch(47.5% 0.115 27), oklch(78% 0.105 27))
+  );
 }
 .scamper-hl-number {
-  color: light-dark(#005cc5, #79c0ff);
+  color: var(
+    --syntax-number,
+    light-dark(oklch(47.5% 0.115 255), oklch(78% 0.105 255))
+  );
 }
 .scamper-hl-string {
-  color: light-dark(#032f62, #a5d6ff);
+  color: var(
+    --syntax-string,
+    light-dark(oklch(50.5% 0.078 195), oklch(78% 0.105 195))
+  );
 }
 .scamper-hl-literal {
-  color: light-dark(#005cc5, #79c0ff);
+  color: var(
+    --syntax-number,
+    light-dark(oklch(47.5% 0.115 255), oklch(78% 0.105 255))
+  );
+}
+.scamper-hl-comment {
+  color: var(
+    --syntax-comment,
+    light-dark(oklch(56% 0.018 200), oklch(62% 0.018 200))
+  );
+  font-style: italic;
 }

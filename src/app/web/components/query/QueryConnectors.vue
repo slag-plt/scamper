@@ -48,7 +48,7 @@ watchPostEffect(() => {
 </script>
 
 <template>
-  <svg ref="svgRef" class="connectors">
+  <svg ref="svgRef" class="connectors" aria-hidden="true">
     <line
       v-for="line in lines"
       :key="line.id"
@@ -56,7 +56,7 @@ watchPostEffect(() => {
       y1="100%"
       :x2="line.x2"
       y2="0%"
-      stroke="black"
+      stroke="currentColor"
       stroke-width="2"
     ></line>
   </svg>
@@ -66,5 +66,8 @@ watchPostEffect(() => {
 .connectors {
   width: 100%;
   height: v-bind("connectorHeight");
+  /* The lines are stroked with currentColor, so they follow the theme. Hard
+     black left them invisible against the dark editor. */
+  color: var(--fg);
 }
 </style>

@@ -1,22 +1,26 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
-import { findReferences, jumpToDefinition } from '@codemirror/lsp-client'
 import {
   editorThemeCompartment,
   editorThemeExtension,
+  fontSizeCompartment,
+  fontSizeExtension,
   mkNoFileEditorState,
+  wordWrapCompartment,
+  wordWrapExtension,
 } from '../codemirror/codemirror'
-import { formatScamperDocument } from '../codemirror/extensions/prettier'
 import { currentTheme } from '../../../theme'
+import { editorFontSize, editorWordWrap } from '../editor-prefs'
 import {
   type CodeMirrorEditorAdapter,
   createCodeMirrorEditorAdapter,
 } from '../composables/codemirror-editor-adapter'
 import { useEditorRegistration } from '../composables/editor-context'
 import type { CursorStatus } from '../codemirror/enclosing-form'
-import { identifierAt } from '../../../scheme/token'
-import EditorContextMenu, { type MenuItem } from './EditorContextMenu.vue'
+import { editShortcut } from '../edit-commands'
+import type { MenuItem } from '../menu'
+import PopupMenu from './PopupMenu.vue'
 
 const emit = defineEmits<{ dirty: []; cursorChange: [status: CursorStatus] }>()
 
@@ -25,18 +29,16 @@ const containerRef = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
 let adapter: CodeMirrorEditorAdapter | null = null
 
-// Right-click context menu.
-const isMac = /Mac|iPhone|iPad|iPod/i.test(
-  typeof navigator === 'undefined' ? '' : navigator.userAgent,
-)
-const mod = isMac ? 'Cmd' : 'Ctrl'
+// Right-click context menu. Its commands come off the adapter, which is also
+// what the menu bar drives, so the two menus can't disagree about what "Format
+// file" does.
 const menuOpen = ref(false)
 const menuPos = ref({ x: 0, y: 0 })
 const menuItems = ref<MenuItem[]>([])
 
 function onContextMenu(e: MouseEvent) {
   const view = editorView
-  if (view === null) {
+  if (view === null || adapter === null) {
     return
   }
   const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
@@ -52,22 +54,21 @@ function onContextMenu(e: MouseEvent) {
   if (!inSelection) {
     view.dispatch({ selection: { anchor: pos } })
   }
-  const targetPos = inSelection ? sel.head : pos
-  const onIdentifier =
-    identifierAt(view.state.doc.toString(), targetPos) !== undefined
-  const hasSelection = !view.state.selection.main.empty
-  const readOnly = view.state.readOnly
+  // Read the status after that dispatch, so `onIdentifier` describes where the
+  // cursor now is rather than where it was.
+  const ed = adapter
+  const { readOnly, hasSelection, onIdentifier } = ed.status()
 
   menuItems.value = [
-    { label: 'Go to definition', kbd: 'Alt+.', disabled: !onIdentifier, run: () => { jumpToDefinition(view) } },
-    { label: 'Find references', kbd: 'Shift+Alt+.', disabled: !onIdentifier, run: () => { findReferences(view) } },
+    { label: 'Go to definition', kbd: editShortcut.goToDefinition, disabled: !onIdentifier, run: () => { ed.goToDefinition() } },
+    { label: 'Find references', kbd: editShortcut.findReferences, disabled: !onIdentifier, run: () => { ed.findReferences() } },
     { separator: true },
-    { label: 'Format file', kbd: `${mod}+Shift+I`, disabled: readOnly, run: () => { formatScamperDocument(view) } },
+    { label: 'Format file', kbd: editShortcut.format, disabled: readOnly, run: () => { ed.format() } },
     { separator: true },
-    { label: 'Cut', disabled: readOnly || !hasSelection, run: () => cutSelection(view) },
-    { label: 'Copy', disabled: !hasSelection, run: () => { copySelection(view) } },
-    { label: 'Paste', disabled: readOnly, run: () => { pasteClipboard(view) } },
-    { label: 'Select all', run: () => { selectAllText(view) } },
+    { label: 'Cut', kbd: editShortcut.cut, disabled: readOnly || !hasSelection, run: () => ed.cut() },
+    { label: 'Copy', kbd: editShortcut.copy, disabled: !hasSelection, run: () => { ed.copy() } },
+    { label: 'Paste', kbd: editShortcut.paste, disabled: readOnly, run: () => { ed.paste() } },
+    { label: 'Select all', kbd: editShortcut.selectAll, run: () => { ed.selectAll() } },
   ]
   menuPos.value = { x: e.clientX, y: e.clientY }
   menuOpen.value = true
@@ -76,42 +77,6 @@ function onContextMenu(e: MouseEvent) {
 function closeMenu() {
   menuOpen.value = false
   editorView?.focus()
-}
-
-function copySelection(view: EditorView) {
-  const { from, to } = view.state.selection.main
-  void navigator.clipboard.writeText(view.state.sliceDoc(from, to)).catch(() => {
-    /* clipboard write unavailable or denied */
-  })
-}
-
-async function cutSelection(view: EditorView) {
-  const { from, to } = view.state.selection.main
-  try {
-    await navigator.clipboard.writeText(view.state.sliceDoc(from, to))
-  } catch {
-    return // don't delete the text if it couldn't be copied to the clipboard
-  }
-  view.dispatch({ changes: { from, to } })
-}
-
-function pasteClipboard(view: EditorView) {
-  void navigator.clipboard
-    .readText()
-    .then((text) => {
-      const { from, to } = view.state.selection.main
-      view.dispatch({
-        changes: { from, to, insert: text },
-        selection: { anchor: from + text.length },
-      })
-    })
-    .catch(() => {
-      /* clipboard read unavailable or denied */
-    })
-}
-
-function selectAllText(view: EditorView) {
-  view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } })
 }
 
 onMounted(() => {
@@ -140,6 +105,20 @@ watch(currentTheme, (theme) => {
   })
 })
 
+// Likewise for the View menu's display preferences, on the document already
+// open; a document opened later picks them up when its state is built.
+watch(editorFontSize, (px) => {
+  editorView?.dispatch({
+    effects: fontSizeCompartment.reconfigure(fontSizeExtension(px)),
+  })
+})
+
+watch(editorWordWrap, (on) => {
+  editorView?.dispatch({
+    effects: wordWrapCompartment.reconfigure(wordWrapExtension(on)),
+  })
+})
+
 onUnmounted(() => {
   if (adapter) {
     adapter.destroy()
@@ -157,7 +136,7 @@ onUnmounted(() => {
     class="codemirror-editor"
     @contextmenu="onContextMenu"
   ></div>
-  <EditorContextMenu
+  <PopupMenu
     v-if="menuOpen"
     :x="menuPos.x"
     :y="menuPos.y"

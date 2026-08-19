@@ -6,27 +6,37 @@ export interface DisplayCallbacks {
   StartSectionCallback: (...attrs: string[]) => void
   EndSectionCallback: () => void
   SendCallback: (value: Value) => void
+  /** See OutputChannel.beginStatement. */
+  SourceCallback: (source: string) => void
 }
 
 export interface TraceBlock {
   attrs: string[]
   value?: Value
+  /**
+   * The statement that produced the blocks after this one. A block carries
+   * either this or a `value`, never both: it is a caption, not output.
+   */
+  source?: string
 }
 
 export class VueDisplay implements OutputChannel, ErrorChannel {
   private startSection: DisplayCallbacks['StartSectionCallback']
   private endSection: DisplayCallbacks['EndSectionCallback']
   private _send: DisplayCallbacks['SendCallback']
+  private _source: DisplayCallbacks['SourceCallback']
   private _totalSends = 0
 
   constructor({
     StartSectionCallback,
     EndSectionCallback,
     SendCallback,
+    SourceCallback,
   }: DisplayCallbacks) {
     this.startSection = StartSectionCallback
     this.endSection = EndSectionCallback
     this._send = SendCallback
+    this._source = SourceCallback
   }
 
   send(v: Value) {
@@ -40,6 +50,12 @@ export class VueDisplay implements OutputChannel, ErrorChannel {
 
   popLevel() {
     this.endSection()
+  }
+
+  beginStatement(source: string) {
+    // The index is for channels collecting one statement's output; the pane
+    // shows every statement in order and has no use for it.
+    this._source(source)
   }
 
   report(e: ScamperError) {

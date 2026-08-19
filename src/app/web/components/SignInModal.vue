@@ -5,7 +5,12 @@
 // so an administrator makes each account and passes the password on directly. A
 // forgotten password is a message to them, not a link -- hence the note rather
 // than a "forgot your password?" that could not work.
+//
+// Built on AppModal like every other dialog in the IDE, so it gets showModal()
+// -- and with it the top layer, the ::backdrop, focus trapping, and Esc -- from
+// one place rather than reimplementing them here.
 import { ref } from 'vue'
+import AppModal from './AppModal.vue'
 import type { SignInMethods } from '../auth-client'
 
 const props = defineProps<{
@@ -31,15 +36,13 @@ function submit() {
 </script>
 
 <template>
-  <dialog v-if="open" class="sign-in" open aria-labelledby="sign-in-title">
-    <h2 id="sign-in-title">Sign in to Scamper</h2>
-
+  <AppModal :open="open" title="Sign in to Scamper" @dismiss="emit('close')">
     <p class="explain">
       Your files are kept on the Scamper server, so they survive a cleared
       browser and follow you between computers.
     </p>
 
-    <form v-if="methods.password" @submit.prevent="submit">
+    <form v-if="methods.password" class="sign-in-form" @submit.prevent="submit">
       <label>
         Email
         <input v-model="email" type="email" autocomplete="email" required />
@@ -66,35 +69,25 @@ function submit() {
       if you need one, or if you have forgotten your password.
     </p>
 
-    <button type="button" class="link dismiss" @click="emit('close')">
-      Keep working in this browser instead
-    </button>
-  </dialog>
+    <template #footer>
+      <button type="button" class="link" @click="emit('close')">
+        Keep working in this browser instead
+      </button>
+    </template>
+  </AppModal>
 </template>
 
 <style scoped>
-.sign-in {
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  z-index: 100;
-  width: min(26rem, 92vw);
-  padding: 1.5rem;
-  border: 1px solid var(--border-color, #ccc);
-  border-radius: 0.5rem;
-  background: var(--bg-color, #fff);
-  color: var(--fg-color, #000);
-}
-
-h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.15rem;
-}
-
 .explain {
-  margin: 0 0 1rem;
+  margin: 0;
   font-size: 0.9rem;
+  color: var(--fg);
   opacity: 0.8;
+}
+
+.sign-in-form {
+  display: flex;
+  flex-direction: column;
 }
 
 label {
@@ -109,23 +102,39 @@ input {
   margin-top: 0.25rem;
   padding: 0.4rem;
   font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
 }
 
 button[type='submit'] {
+  align-self: flex-start;
   margin-top: 0.5rem;
   padding: 0.4rem 1rem;
   font: inherit;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .error {
   margin: 0.5rem 0 0;
-  color: var(--error-color, #b00020);
+  color: var(--danger);
   font-size: 0.9rem;
 }
 
 .note {
-  margin: 1.25rem 0 0;
+  margin: 0;
   font-size: 0.85rem;
+  color: var(--fg);
   opacity: 0.75;
 }
 
@@ -133,16 +142,11 @@ button[type='submit'] {
   border: none;
   background: none;
   padding: 0;
-  color: inherit;
+  color: var(--fg);
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
   font-size: 0.85rem;
-}
-
-.dismiss {
-  display: block;
-  margin-top: 0.75rem;
   opacity: 0.75;
 }
 </style>

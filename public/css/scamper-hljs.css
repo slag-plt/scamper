@@ -1,124 +1,105 @@
+/*
+ * Styling for highlight.js output.
+ *
+ * Exactly one thing produces it: WebEmbedWidget, which renders
+ * `<pre class="hljs">` for the source-only embed (src/app/web/web.html).
+ *
+ * This was a 123-line vendored GitHub *light* theme with twelve hardcoded
+ * colors, and it was linked from index/docs/search -- none of which emit an
+ * .hljs class -- while web.html, the only page that does, did not link it at
+ * all. So the embed's highlighting rendered unstyled and three pages carried a
+ * stylesheet they never used. It now lives on the page that needs it and draws
+ * from the same --syntax-* tokens as the editor and the trace renderer.
+ *
+ * Fallbacks are load-bearing: web.html deliberately omits theme.css, so without
+ * them nothing here would resolve. See scamper-highlight.css for the same
+ * arrangement and the reasoning behind it.
+ */
+pre.hljs {
+  color: var(--fg, oklch(27% 0.022 200));
+  background: var(--surface-muted, oklch(96.8% 0.007 200));
+  border: 1px solid var(--border, oklch(89% 0.014 200));
+  border-radius: var(--radius-md, 6px);
+  padding: var(--space-md, 0.5rem);
+  overflow-x: auto;
+}
+
 pre code.hljs {
   display: block;
   overflow-x: auto;
-  padding: 10.5px 0 0 10.5px;
+  padding: 0;
 }
 
-pre.hljs {
-  border: 1px solid var(--border);
-  padding: 0.5em;
-}
-
-/* code.hljs {
-  padding: 3px 5px
-} */
-/*!
-  Theme: GitHub
-  Description: Light theme as seen on github.com
-  Author: github.com
-  Maintainer: @Hirse
-  Updated: 2021-05-15
-
-  Outdated base version: https://github.com/primer/github-syntax-light
-  Current colors taken from GitHub's CSS
-*/
-.hljs {
-  color: var(--fg);
-  background: var(--surface-muted)
-}
-.hljs-doctag,
+/*
+ * Scheme's grammar only reaches a handful of highlight.js token classes.
+ *
+ * These do not line up one-to-one with the editor's. highlight.js tags the head
+ * of every form as .hljs-name, so `define` and `rectangle` come through alike,
+ * where our Lezer grammar separates reserved words from ordinary identifiers.
+ * Hence the operator position gets --syntax-definition, a role the editor never
+ * emits: shared palette, honestly different tokenizers.
+ */
 .hljs-keyword,
-.hljs-meta .hljs-keyword,
-.hljs-template-tag,
-.hljs-template-variable,
-.hljs-type,
-.hljs-variable.language_ {
-  /* prettylights-syntax-keyword */
-  color: #d73a49
-}
-.hljs-title,
-.hljs-title.class_,
-.hljs-title.class_.inherited__,
-.hljs-title.function_ {
-  /* prettylights-syntax-entity */
-  color: #6f42c1
-}
-.hljs-attr,
-.hljs-attribute,
-.hljs-literal,
-.hljs-meta,
-.hljs-number,
-.hljs-operator,
-.hljs-variable,
-.hljs-selector-attr,
-.hljs-selector-class,
-.hljs-selector-id {
-  /* prettylights-syntax-constant */
-  color: #005cc5
-}
-.hljs-regexp,
-.hljs-string,
-.hljs-meta .hljs-string {
-  /* prettylights-syntax-string */
-  color: #032f62
-}
-.hljs-built_in,
-.hljs-symbol {
-  /* prettylights-syntax-variable */
-  color: #e36209
-}
-.hljs-comment,
-.hljs-code,
-.hljs-formula {
-  /* prettylights-syntax-comment */
-  color: #6a737d
-}
-.hljs-name,
-.hljs-quote,
 .hljs-selector-tag,
-.hljs-selector-pseudo {
-  /* prettylights-syntax-entity-tag */
-  color: #22863a
+.hljs-meta-keyword,
+.hljs-doctag {
+  color: var(
+    --syntax-keyword,
+    light-dark(oklch(47.5% 0.115 27), oklch(78% 0.105 27))
+  );
 }
-.hljs-subst {
-  /* prettylights-syntax-storage-modifier-import */
-  color: #24292e
-}
+
+.hljs-name,
+.hljs-built_in,
+.hljs-title,
 .hljs-section {
-  /* prettylights-syntax-markup-heading */
-  color: #005cc5;
-  font-weight: bold
+  color: var(
+    --syntax-definition,
+    light-dark(oklch(47.5% 0.115 305), oklch(78% 0.105 305))
+  );
 }
+
+.hljs-string,
+.hljs-regexp,
+.hljs-quote,
+.hljs-meta-string {
+  color: var(
+    --syntax-string,
+    light-dark(oklch(50.5% 0.078 195), oklch(78% 0.105 195))
+  );
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
 .hljs-bullet {
-  /* prettylights-syntax-markup-list */
-  color: #735c0f
+  color: var(
+    --syntax-number,
+    light-dark(oklch(47.5% 0.115 255), oklch(78% 0.105 255))
+  );
 }
+
+.hljs-comment {
+  color: var(
+    --syntax-comment,
+    light-dark(oklch(56% 0.018 200), oklch(62% 0.018 200))
+  );
+  font-style: italic;
+}
+
+.hljs-variable,
+.hljs-attr,
+.hljs-params {
+  color: var(
+    --syntax-variable,
+    light-dark(oklch(30% 0.02 200), oklch(90% 0.012 200))
+  );
+}
+
 .hljs-emphasis {
-  /* prettylights-syntax-markup-italic */
-  color: #24292e;
-  font-style: italic
+  font-style: italic;
 }
+
 .hljs-strong {
-  /* prettylights-syntax-markup-bold */
-  color: #24292e;
-  font-weight: bold
-}
-.hljs-addition {
-  /* prettylights-syntax-markup-inserted */
-  color: #22863a;
-  background-color: #f0fff4
-}
-.hljs-deletion {
-  /* prettylights-syntax-markup-deleted */
-  color: #b31d28;
-  background-color: #ffeef0
-}
-.hljs-char.escape_,
-.hljs-link,
-.hljs-params,
-.hljs-property,
-.hljs-punctuation,
-.hljs-tag {
-  /* purposely ignored */
-  
+  font-weight: 700;
 }

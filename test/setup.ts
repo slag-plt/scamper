@@ -20,6 +20,25 @@ await initializeLibs()
 // builtin libraries.
 SymbolDB.initialize()
 
+// jsdom implements no layout, and so no ResizeObserver. Components that watch
+// their own box for changes (the floating output window keeping itself inside
+// the pane) only need it not to throw: nothing here ever resizes.
+if (!('ResizeObserver' in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {
+      /* no layout in jsdom, so nothing ever fires */
+    }
+
+    unobserve() {
+      /* as above */
+    }
+
+    disconnect() {
+      /* as above */
+    }
+  }
+}
+
 // use-modals keeps a single module-level queue of pending dialogs, so a test
 // that opens one and never answers it leaves the request active -- and the next
 // test's freshly mounted ModalHost renders that stale dialog instead of the one

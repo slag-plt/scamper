@@ -16,19 +16,3 @@ declare module '*.scm?raw' {
   const src: string
   export default src
 }
-
-declare module 'splitpanes' {
-  import type { DefineComponent } from 'vue'
-  export const Splitpanes: DefineComponent<{
-    horizontal?: boolean
-    pushOtherPanes?: boolean
-    maximizePanes?: boolean
-    rtl?: boolean
-    firstSplitter?: boolean
-  }>
-  export const Pane: DefineComponent<{
-    size?: number
-    minSize?: number
-    maxSize?: number
-  }>
-}

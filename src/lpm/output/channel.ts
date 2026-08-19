@@ -23,6 +23,19 @@ export interface OutputChannel {
    */
   popLevel: () => void
 
+  /**
+   * Announces the source text of the statement whose output follows, so a
+   * channel that can show it alongside the output has it to show.
+   *
+   * Optional because only the IDE's output pane does: a console or a log wants
+   * the values alone. Called once per statement, in program order, whether or
+   * not that statement goes on to send anything.
+   *
+   * @param index the statement's position in the program, so a channel
+   *        collecting the output of one statement can tell which is which.
+   */
+  beginStatement?: (source: string, index: number) => void
+
   readonly totalSends: number
 }
 

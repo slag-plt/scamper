@@ -529,4 +529,20 @@ describe('FileSession rename', () => {
     expect(s.getCurrentFile()).toBe('b.scm')
     expect(s.isAutosaving()).toBe(false)
   })
+
+  test('renaming some other file leaves the open one open', async () => {
+    // The current file used to follow every rename, whichever file was
+    // renamed -- so renaming another file silently pointed the session (and
+    // therefore the next autosave) at a name the editor was not holding.
+    const fs = new FakeFS(true)
+    fs.files.set('open.scm', 'open')
+    fs.files.set('other.scm', 'other')
+    const s = new FileSession(fs, new FlatFileHistory(fs), editor)
+    s.setCurrentFile('open.scm')
+
+    await s.renameFile('other.scm', 'renamed.scm')
+
+    expect(fs.files.has('renamed.scm')).toBe(true)
+    expect(s.getCurrentFile()).toBe('open.scm')
+  })
 })

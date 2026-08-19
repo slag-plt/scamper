@@ -1,9 +1,36 @@
 <script setup lang="ts">
+import { computed, inject } from 'vue'
 import { Highlight, Layout } from '../ast'
+import { ChangedPathKey } from './changed-path'
 import CodeElement from '../../lpm/renderers/vue/components/CodeElement.vue'
 import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
-defineProps<{ layout: Layout }>()
+const props = withDefaults(
+  defineProps<{
+    layout: Layout
+    /** This node's position in the layout, as child indices from the root. */
+    path?: number[]
+    /**
+     * Set on the re-entrant render inside the highlight wrapper, so the node
+     * draws its contents instead of wrapping itself a second time.
+     */
+    inHighlight?: boolean
+  }>(),
+  { path: () => [], inHighlight: false },
+)
+
+// Null everywhere but a trace window; there is nothing to compare against.
+const changedPath = inject(ChangedPathKey, null)
+
+/** Whether this is the sub-expression that changed since the previous step. */
+const isChanged = computed(() => {
+  if (props.inHighlight) return false
+  const target = changedPath?.value
+  return (
+    target?.length === props.path.length &&
+    target.every((i, at) => i === props.path[at])
+  )
+})
 
 const DELIMS = {
   paren: ['(', ')'],
@@ -35,7 +62,15 @@ function valClass(v: unknown): string {
      their text form exactly. `val` leaves defer to ValueRenderer so values
      substituted into a trace (numbers, lists, images, ...) render correctly. -->
 <template>
-  <CodeElement v-if="layout.kind === 'tok' && layout.hl" :class="HL_CLASS[layout.hl]"
+  <!-- The changed node wraps itself once, then renders its own contents on the
+       way back in. Only one node in the tree ever matches, so nothing else in
+       the app gains a wrapper it did not have before. -->
+  <span v-if="isChanged" class="trace-changed"
+    ><LayoutRenderer :layout="layout" :path="path" in-highlight
+  /></span>
+  <CodeElement
+    v-else-if="layout.kind === 'tok' && layout.hl"
+    :class="HL_CLASS[layout.hl]"
     >{{ layout.text }}</CodeElement
   >
   <CodeElement v-else-if="layout.kind === 'tok'">{{ layout.text }}</CodeElement>
@@ -47,16 +82,24 @@ function valClass(v: unknown): string {
   </template>
   <template v-else-if="layout.kind === 'hash'">
     <CodeElement>#</CodeElement>
-    <LayoutRenderer :layout="layout.child" />
+    <LayoutRenderer :layout="layout.child" :path="[...path, 0]" />
   </template>
   <template v-else>
     <CodeElement>{{ DELIMS[layout.delim][0] }}</CodeElement>
     <template v-for="(child, idx) in layout.children" :key="idx">
       <CodeElement v-if="idx > 0">{{ " " }}</CodeElement>
-      <LayoutRenderer :layout="child" />
+      <LayoutRenderer :layout="child" :path="[...path, idx]" />
     </template>
     <CodeElement>{{ DELIMS[layout.delim][1] }}</CodeElement>
   </template>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* The sub-expression that moved since the previous step. Tinted rather than
+   coloured: the tokens inside keep their own syntax highlighting. */
+.trace-changed {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 3px;
+  padding: 0 0.1em;
+}
+</style>

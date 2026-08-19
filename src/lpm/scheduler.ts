@@ -32,6 +32,12 @@ interface BaseSchedulerTask {
 export interface DisplayTask extends BaseSchedulerTask {
   out: OutputChannel
   isTracing: boolean
+  /**
+   * The program's source text, so output can be captioned with the statement
+   * that produced it (statements carry ranges, not the text they span).
+   * Absent for a task whose channel does not want captions.
+   */
+  src?: string
   // Step mode: the run pauses ("parks") after each user-visible reduction,
   // awaiting a step()/resume() call. `stepper` renders each step (set by Scamper
   // whenever tracing) -- see FiberTraceStepper.
@@ -73,6 +79,11 @@ export class Scheduler {
   // Traced tasks that have already emitted their opening line. Cleared when the
   // task ends.
   private tracesStarted = new Set<SchedulerId>()
+  // The next statement index each task has still to caption with its source.
+  // Captions run in program order and each statement gets exactly one, so a
+  // statement emitting ten reductions is captioned once, and one emitting
+  // nothing is captioned all the same. Cleared when the task ends.
+  private nextCaption = new Map<SchedulerId, number>()
   private isRunning = false
   // allows for resuming execution
   private currTaskIdx = 0
@@ -124,6 +135,7 @@ export class Scheduler {
       gate.resolve() // unblock any pending stepStmt/stepAll awaiter
     }
     this.tracesStarted.delete(id)
+    this.nextCaption.delete(id)
     if (!wasPaused) {
       this.resumeExecution()
     }
@@ -372,19 +384,25 @@ export class Scheduler {
     // reduction step (`--> value`) in a traced run, or raw otherwise.
     let emittedVisible = false
     if (stepResult.tag === 'display') {
+      // The statement handler advanced the fiber before returning, so the
+      // statement that produced this value is the one just behind the index.
       if (task.isTracing && task.stepper && fiber.lastResult !== null) {
         const v = task.stepper.final(fiber.lastResult)
         if (v !== undefined) {
+          this.captionUpTo(task, fiber.stmtIndex - 1)
           out.send(this.mkTraceValue(task, v))
           emittedVisible = true
         }
       } else {
+        this.captionUpTo(task, fiber.stmtIndex - 1)
         out.send(fiber.lastResult)
       }
     } else if (!isMinor && task.isTracing && task.stepper) {
       // A trace (major) step: render the reduction, if it is user-visible.
       const v = task.stepper.render(fiber)
       if (v !== undefined) {
+        // Mid-statement, so the index still points at the statement running.
+        this.captionUpTo(task, fiber.stmtIndex)
         out.send(this.mkTraceValue(task, v))
         emittedVisible = true
       }
@@ -441,6 +459,52 @@ export class Scheduler {
   }
 
   /**
+   * Captions every statement through `stmtIdx` that has not been captioned
+   * yet, in program order.
+   *
+   * Statements that produce no output -- an import, a define -- are captioned
+   * too, each in its own caption rather than lumped in with the next one that
+   * does print. They are emitted here, on the way past, because that is where
+   * they belong in the output: after whatever the previous statement printed
+   * and before whatever the next one does.
+   *
+   * @param stmtIdx the last statement to caption. Which one that is depends on
+   *        where the caller sits: a completed statement has already advanced
+   *        the fiber past itself, while a mid-statement reduction has not.
+   */
+  private captionUpTo(task: DisplayTask, stmtIdx: number): void {
+    const src = task.src
+    const beginStatement = task.out.beginStatement
+    if (src === undefined || beginStatement === undefined) return
+
+    let next = this.nextCaption.get(task.id) ?? 0
+    for (; next <= stmtIdx; next++) {
+      const stmt = task.fiber.statementAt(next)
+      if (stmt === undefined) break
+      // Macro expansion can leave a statement pointing into a library rather
+      // than into this source (see the contract-error ranges), so a range that
+      // does not land inside `src` is skipped rather than shown as a slice of
+      // the wrong file.
+      const { begin, end } = stmt.range
+      if (begin.idx < 0 || end.idx < begin.idx || end.idx >= src.length) continue
+      const text = src.slice(begin.idx, end.idx + 1).trim()
+      if (text.length > 0) beginStatement.call(task.out, text, next)
+    }
+    this.nextCaption.set(task.id, next)
+  }
+
+  /**
+   * Captions whatever is left once a task has run to the end -- the trailing
+   * statements that printed nothing, which no output ever came along to caption
+   * on the way past.
+   */
+  private captionRemaining(task: SchedulerTask): void {
+    if (isDisplayTask(task) && task.fiber.isDone()) {
+      this.captionUpTo(task, task.fiber.statementCount - 1)
+    }
+  }
+
+  /**
    * Pulls the current (stepping) task out of the run queue and parks it in its
    * gate, awaiting a step()/resume(). Mirrors the block-on suspend at
    * `processStepResult`: removeTaskFromQueue + return, never touching
@@ -470,6 +534,7 @@ export class Scheduler {
     if (gate.task.fiber.isDone()) {
       this.steppingGates.delete(id)
       this.tracesStarted.delete(id)
+      this.nextCaption.delete(id)
       const resolve = gate.resolve
       gate.task.onComplete?.()
       resolve()
@@ -601,6 +666,7 @@ export class Scheduler {
       gate.resolve()
     }
     this.tracesStarted.delete(task.id)
+    this.nextCaption.delete(task.id)
   }
 
   private removeTaskFromQueue(index: number): SchedulerTask | undefined {
@@ -620,7 +686,9 @@ export class Scheduler {
     if (task) {
       // A completed step-mode run: drop its gate and wake any pending
       // stepStmt/stepAll awaiter, then signal completion.
+      this.captionRemaining(task)
       this.tracesStarted.delete(task.id)
+      this.nextCaption.delete(task.id)
       const gate = this.steppingGates.get(task.id)
       if (gate) {
         this.steppingGates.delete(task.id)
@@ -642,7 +710,9 @@ export class Scheduler {
    */
   private resumeOrComplete(task: SchedulerTask) {
     if (task.fiber.isDone()) {
+      this.captionRemaining(task)
       this.tracesStarted.delete(task.id)
+      this.nextCaption.delete(task.id)
       task.onComplete?.()
     } else {
       this.schedule(task)
@@ -657,9 +727,12 @@ export class Scheduler {
     this.endCurrFiber()
   }
 
-  private reportAndUnwind(e: ScamperError, { err, fiber }: DisplayTask) {
-    err.report(e)
-    fiber.advanceStmt()
+  private reportAndUnwind(e: ScamperError, task: DisplayTask) {
+    // An error is output too, and which statement raised it is the first thing
+    // worth knowing. The fiber has not advanced past the failing statement yet.
+    this.captionUpTo(task, task.fiber.stmtIndex)
+    task.err.report(e)
+    task.fiber.advanceStmt()
   }
 
   private wasPaused(): boolean {

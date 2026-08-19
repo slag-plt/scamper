@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
-import { Pane, Splitpanes } from 'splitpanes'
-import 'splitpanes/dist/splitpanes.css'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
+  MAX_RECENT_FILES,
   readStoredConfig,
   writeStoredConfig,
   type Config,
 } from '../ide-config'
+import PanelDock from './PanelDock.vue'
+import PanelFrame from './PanelFrame.vue'
 import IdeSidebar from './IdeSidebar.vue'
+import IdeMenuBar from './IdeMenuBar.vue'
+import TraceWindow from './TraceWindow.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
@@ -18,7 +21,11 @@ import type { CursorStatus } from '../codemirror/enclosing-form'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
+import { providePanels } from '../composables/use-panels'
+import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
+import type { Value } from '../../../lpm'
+import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
 import { FileEntry, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
@@ -41,7 +48,12 @@ import { isNotSignedIn } from '../../../fs/session'
 import { isUnreachable } from '../../../fs/unreachable'
 import { importLocalFiles, localFileNames } from '../local-import'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
-import { compareVersions, patchNotesSince, type PatchNote } from '../patch-notes'
+import {
+  compareVersions,
+  patchNotes,
+  patchNotesSince,
+  type PatchNote,
+} from '../patch-notes'
 
 // ---------- config ----------
 
@@ -52,6 +64,7 @@ const DEFAULT_CONFIG: Config = {
   lastOpenedFilename: null,
   lastVersionAccessed: '0.0.0',
   localFilesOffered: false,
+  recentFiles: [],
 }
 
 const appVersion = `(${APP_VERSION})`
@@ -71,10 +84,38 @@ let stopWatchingConnection: (() => void) | null = null
 const currentFile = ref<string | null>(null)
 const isDirty = ref(false)
 const files = ref<FileEntry[]>([])
+// Recently opened files that still exist and aren't the one already open.
+const recentFiles = ref<string[]>([])
 const isSidebarVisible = ref(true)
+
+// The trace window: the statement being stepped, its reductions, and where in
+// them the window is. Null until the Step button opens one.
+const trace = ref<{
+  source: string
+  steps: Value[]
+  truncated: boolean
+} | null>(null)
+const traceIndex = ref(0)
+// Collecting a trace runs the program, which takes a moment on a long one.
+const isCollectingTrace = ref(false)
+// A statement that loops forever would otherwise produce steps until the tab
+// dies; past this the trace is cut short and says so.
+const MAX_TRACE_STEPS = 10_000
+
+// Narrower than this and a window floating over the code has nowhere to float,
+// so the two share the pane through tabs instead. Measured on the pane rather
+// than the viewport: opening the file drawer takes 250px off it, and that
+// counts just as much as a smaller screen does.
+const COMPACT_PANE_WIDTH = 700
+const contentAreaRef = ref<HTMLElement | null>(null)
+const isCompact = ref(false)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
 const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
+// Whether there is a statement to step. The status bar already tracks the form
+// the cursor is inside, and an empty path means it is inside none -- a blank
+// line, or the space between two statements.
+const canStep = computed(() => cursorStatus.value.path.length > 0)
 const patchNotesToShow = ref<PatchNote[]>([])
 const showPatchNotes = ref(false)
 const showHistory = ref(false)
@@ -118,12 +159,127 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing, queries, expandedQueryId } = session
+const { queries, expandedQueryId } = session
 
-function abortTraceStep() {
-  // Stop an in-flight statement/all burst, re-pausing the session (vs. stopRun,
-  // which cancels the whole run).
-  session.abortStep()
+/** What each panel is called, wherever it needs a name. */
+const panelLabels: Record<PanelId, string> = {
+  editor: 'Source',
+  output: 'Output',
+  trace: 'Step',
+}
+
+/** The trace only exists once something has been stepped. */
+const presentPanels = computed<PanelId[]>(() =>
+  trace.value === null ? ['editor', 'output'] : ['editor', 'output', 'trace'],
+)
+
+const panels = providePanels({ isCompact, present: presentPanels })
+
+/**
+ * Float/Dock for each panel, for the View menu.
+ *
+ * Every panel has these on its own chrome too -- a floating one on its title
+ * bar, a tabbed one on its slot's strip. A panel docked alone has neither, and
+ * that is the editor in the default arrangement, so the menu is the surface
+ * that can always reach all three.
+ *
+ * Empty while the pane is compact: everything is tabbed there by necessity, and
+ * offering to float something that cannot float would be a lie.
+ */
+const panelPlacement = computed(() =>
+  isCompact.value
+    ? []
+    : presentPanels.value.map((id) => ({
+        label: panelLabels[id],
+        floating: panels.effective.value.placement[id].kind === 'floating',
+        toggle: () => {
+          if (panels.effective.value.placement[id].kind === 'floating') {
+            panels.dock(id)
+          } else {
+            panels.float(id)
+          }
+          panels.focusPanel(id)
+        },
+      })),
+)
+
+// Running with the output tucked away would show the person nothing at all, so
+// starting a run brings the window back. One verb for both layouts: floating,
+// it un-minimizes and raises; tabbed, fronting the panel *is* selecting its
+// tab. This used to have to branch on isCompact.
+watch(
+  () => session.currentRun.value,
+  (run) => {
+    if (run !== null) panels.reveal('output')
+  },
+)
+
+// Arriving at the tabbed layout, start on the code: that is what someone came
+// to write, and unlike the floating window the output would otherwise be
+// covering all of it. Something already running is the exception.
+watch(isCompact, (compact) => {
+  if (compact && session.currentRun.value === null) panels.reveal('editor')
+})
+
+/**
+ * The floating windows currently tucked away, for the taskbar to offer back.
+ * Every minimizable window belongs here -- one that minimizes with nothing
+ * listing it has simply vanished.
+ */
+const minimizedWindows = computed(() =>
+  panels.minimized.value.map((id) => ({ id, label: panelLabels[id] })),
+)
+
+/** Brings a minimized window back, without disturbing the others. */
+function restoreWindow(id: PanelId) {
+  panels.reveal(id)
+  // The taskbar button just clicked is the thing that disappears, so focus has
+  // to be handed to the window it restored.
+  panels.focusPanel(id)
+}
+
+/**
+ * Opens the trace window on the statement the cursor is in.
+ *
+ * The whole program runs to get there -- the statement usually leans on what
+ * the ones before it defined -- but only its own reductions are kept.
+ */
+async function handleStepStatement() {
+  if (isCollectingTrace.value || !isEditorLoaded()) return
+  if (!(await requireServer('Stepping a statement'))) return
+  isCollectingTrace.value = true
+  try {
+    const collected = await Scamper.getInstance().traceStatement({
+      src: editor().getDoc(),
+      cursorLoc: editor().getCursorLoc(),
+      err: new SimpleErrorChannel(),
+      maxSteps: MAX_TRACE_STEPS,
+    })
+    if (collected === null) {
+      await modalAlert({
+        title: 'Nothing to step',
+        message:
+          'Put the cursor inside a statement to step through it. If the ' +
+          'program does not compile, fix that first.',
+      })
+      return
+    }
+    trace.value = collected
+    traceIndex.value = 0
+    panels.reveal('trace')
+  } catch (e) {
+    reportError(e, (message) => `Could not step that statement: ${message}`)
+  } finally {
+    isCollectingTrace.value = false
+  }
+}
+
+function handleTraceClose() {
+  trace.value = null
+  // Closing removes the control that was clicked -- the tab's × or the window's
+  // -- along with the panel itself, so focus has to be handed somewhere. The
+  // editor is where someone closing a trace is going back to.
+  panels.focusPanel('editor')
 }
 
 // ---------- file drawer ----------
@@ -132,6 +288,30 @@ async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
   files.value = allFiles.filter(isUserFile)
+  syncRecentFiles()
+}
+
+/** Moves `filename` to the front of the recent list, trimming it to length. */
+function noteRecentFile(filename: string) {
+  config.recentFiles = [
+    filename,
+    ...config.recentFiles.filter((f) => f !== filename),
+  ].slice(0, MAX_RECENT_FILES)
+  saveConfig()
+  syncRecentFiles()
+}
+
+/**
+ * Republishes the recent list for the File menu, dropping the file already
+ * open and any that no longer exist -- renamed, deleted, or belonging to an
+ * account this browser is now signed out of. A menu item that opens nothing
+ * would be worse than a shorter menu.
+ */
+function syncRecentFiles() {
+  const present = new Set(files.value.map((f) => f.name))
+  recentFiles.value = config.recentFiles.filter(
+    (name) => name !== currentFile.value && present.has(name),
+  )
 }
 
 // ---------- config persistence ----------
@@ -295,6 +475,44 @@ async function offerLocalFiles() {
   }
 }
 
+/**
+ * Shows this release's notes on request (Help > What's New), rather than only
+ * once on first opening a new version. Falls back to the newest release that
+ * has any, so the menu item is never a dead end on a version that shipped
+ * without notes.
+ */
+async function handleWhatsNew() {
+  const forThisVersion = patchNotes.filter((n) => n.version === APP_VERSION)
+  const notes =
+    forThisVersion.length > 0
+      ? forThisVersion
+      : [...patchNotes]
+          .sort((a, b) => compareVersions(b.version, a.version))
+          .slice(0, 1)
+  if (notes.length === 0) {
+    await modalAlert({
+      title: "What's New",
+      message: 'This version of Scamper has no release notes.',
+    })
+    return
+  }
+  patchNotesToShow.value = notes
+  showPatchNotes.value = true
+}
+
+/** Help > About Scamper: what this is and which version is running. */
+async function handleAbout() {
+  await modalAlert({
+    title: 'About Scamper',
+    message:
+      `Scamper ${APP_VERSION}\n\n` +
+      'A mini-Scheme for teaching multimedia programming on the web, ' +
+      'maintained by the Systems, Languages, and Automated Generation lab ' +
+      'at Grinnell College.\n\n' +
+      'github.com/slag-plt/scamper',
+  })
+}
+
 function handlePatchNotesClose() {
   showPatchNotes.value = false
   patchNotesToShow.value = []
@@ -361,8 +579,9 @@ async function switchToFile(filename: string): Promise<void> {
   }
 
   session.resetOutput()
-  await populateFileDrawer()
   config.lastOpenedFilename = currentFile.value
+  if (currentFile.value !== null) noteRecentFile(currentFile.value)
+  await populateFileDrawer()
   startAutosaving()
   isLoadingFile = false
 }
@@ -476,20 +695,6 @@ function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
 }
 
-// ---------- step handlers ----------
-
-function handleStepOnce() {
-  session.step()
-}
-
-async function handleStepStmt() {
-  await session.stepStmt()
-}
-
-async function handleStepAll() {
-  await session.stepAll()
-}
-
 // ---------- sidebar event handlers ----------
 
 async function handleCreate() {
@@ -505,6 +710,21 @@ async function handleCreate() {
     await fs?.saveFile(filename, `; ${filename}`)
     await switchToFile(filename)
   }
+}
+
+/**
+ * Asks for a file and uploads it. The picker is made here rather than kept in
+ * the markup because two places offer an upload -- the drawer and the File
+ * menu -- and one transient input is simpler than a hidden one per caller.
+ */
+function handlePickUpload() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.addEventListener('change', () => {
+    const file = input.files?.[0]
+    if (file) void handleUploadFile(file)
+  })
+  input.click()
 }
 
 async function handleUploadFile(file: File) {
@@ -557,6 +777,20 @@ async function handleFileDrop(droppedFiles: FileList) {
 }
 
 /**
+ * Saves the open file now, rather than waiting for the next autosave tick.
+ *
+ * Scamper saves on its own, so this exists because File > Save is where a
+ * student will look when they want to be sure -- and because `save` declines
+ * silently when there is nowhere to write, which for an action someone
+ * deliberately picked should say so instead.
+ */
+async function handleSave() {
+  if (!fileSession || currentFile.value === null) return
+  if (!(await requireServer('Saving a file'))) return
+  await fileSession.save({ force: true })
+}
+
+/**
  * Asks before a rename destroys the recoverable history of a deleted file that
  * used to hold `name`.
  * @returns true if the rename should go ahead
@@ -577,10 +811,9 @@ async function confirmDiscardingHistory(name: string): Promise<boolean> {
   })
 }
 
-async function handleRename() {
-  if (!currentFile.value || !fileSession) return
+async function handleRename(from: string) {
+  if (!fileSession) return
   if (!(await requireServer('Renaming a file'))) return
-  const from = currentFile.value
   const newName = await modalPrompt({
     title: 'Rename file',
     message: `Enter a new filename for ${from}`,
@@ -596,23 +829,31 @@ async function handleRename() {
     // the one thing that made a deleted file recoverable is the worst
     // outcome here.
     if (!(await confirmDiscardingHistory(newName))) return
+    const wasOpen = from === currentFile.value
     try {
-      // N.B., renaming closes the fs worker's handle to the current file,
-      // so we load it fresh afterwards. The session serializes against any
+      // N.B., renaming closes the fs worker's handle to the file, so an open
+      // one is loaded fresh afterwards. The session serializes against any
       // in-flight save first.
       await fileSession.renameFile(from, newName)
-      setCurrentFile(null)
-      await switchToFile(newName)
     } catch (e) {
       if (e instanceof Error) displayError(e.message)
+      return
+    }
+    if (wasOpen) {
+      setCurrentFile(null)
+      await switchToFile(newName)
+    } else {
+      await populateFileDrawer()
+      // The rename stopped autosave to serialize against an in-flight save;
+      // nothing about the open file changed, so put it back.
+      startAutosaving()
     }
   }
 }
 
-async function handleDelete() {
-  if (!currentFile.value || !fileSession) return
+async function handleDelete(target: string) {
+  if (!fileSession) return
   if (!(await requireServer('Deleting a file'))) return
-  const target = currentFile.value
   const ok = await modalConfirm({
     title: 'Delete file',
     message: `Are you sure you want to delete ${target}?`,
@@ -620,6 +861,7 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
+  const wasOpen = target === currentFile.value
   try {
     // The session stops autosave and awaits any in-flight save before removing
     // the file, so an open OPFS writable can't block the delete (issue #184).
@@ -628,13 +870,104 @@ async function handleDelete() {
     if (e instanceof Error) displayError(`Failed to delete ${target}: ${e.message}`)
     return
   }
+  // Deleting some other file leaves the editor alone: what is open is still
+  // open, and stopping its run would be a surprise.
+  if (wasOpen) closeOpenFile()
+  await populateFileDrawer()
+  startAutosaving()
+}
+
+/**
+ * Returns the IDE to its no-file state: nothing open, an empty editor, and no
+ * run left over from the file that was. Shared by delete and File > Close File,
+ * which differ only in whether the file itself survives.
+ */
+function closeOpenFile() {
   setCurrentFile(null)
   editor().initializeDummyDoc()
   config.lastOpenedFilename = null
+  saveConfig()
   session.stopAll()
   session.resetOutput()
-  await populateFileDrawer()
-  startAutosaving()
+  isDirty.value = false
+}
+
+/** Closes the open file, saving it first so nothing typed is lost. */
+async function handleCloseFile() {
+  if (currentFile.value === null) return
+  // Best effort, exactly like the download: offline this declines by itself
+  // rather than refusing to close, since the file stays on disk either way.
+  await saveCurrentFile()
+  closeOpenFile()
+}
+
+/**
+ * Copies `source` to a name the user picks.
+ * @param options.open whether to switch to the copy (File > Save As) or leave
+ *        the current file open (the drawer's Duplicate).
+ * @param options.title what the prompt calls itself.
+ */
+async function copyFileTo(
+  source: string,
+  options: { open: boolean; title: string },
+) {
+  if (!fs || !fileSession) return
+  if (!(await requireServer(options.title))) return
+  // The editor holds the newest contents of the open file; any other file is
+  // read from storage.
+  const contents =
+    source === currentFile.value && isEditorLoaded()
+      ? editor().getDoc()
+      : await fs.loadFile(source)
+
+  const newName = await modalPrompt({
+    title: options.title,
+    message: `Enter a name for the copy of ${source}`,
+    defaultValue: suggestCopyName(source),
+  })
+  if (newName === null || newName === source) return
+  if (await fs.fileExists(newName)) {
+    await modalAlert({ message: `File ${newName} already exists!` })
+    return
+  }
+  // Writing over a deleted file's name discards the history that made it
+  // recoverable, the same way a rename onto it would (#42).
+  if (!(await confirmDiscardingHistory(newName))) return
+
+  try {
+    await fs.saveFile(newName, contents)
+  } catch (e) {
+    reportError(e, (message) => `Could not copy ${source}: ${message}`)
+    return
+  }
+  if (options.open) {
+    await switchToFile(newName)
+  } else {
+    await populateFileDrawer()
+  }
+}
+
+/**
+ * Suggests "foo-copy.scm" for "foo.scm", so the prompt opens on a name that is
+ * already free rather than on one that is taken.
+ */
+function suggestCopyName(source: string): string {
+  const dot = source.lastIndexOf('.')
+  return dot <= 0
+    ? `${source}-copy`
+    : `${source.slice(0, dot)}-copy${source.slice(dot)}`
+}
+
+function handleSaveAs() {
+  const file = currentFile.value
+  if (file === null) return
+  // Scamper autosaves, so the original is already up to date on disk and "save
+  // as" is really "make a copy and work on that" -- which is what it does.
+  void copyFileTo(file, { open: true, title: 'Save as' })
+}
+
+function handleDuplicate(target: string) {
+  void copyFileTo(target, { open: false, title: 'Duplicate file' })
 }
 
 // How long a generated object URL is kept alive after its download starts.
@@ -651,28 +984,43 @@ function startDownload(filename: string, href: string) {
   a.click()
 }
 
+/** Hands `contents` to the browser as a download named `filename`. */
+function startTextDownload(filename: string, contents: string) {
+  startDownload(
+    filename,
+    'data:attachment/text;charset=utf-8,' + encodeURIComponent(contents),
+  )
+}
+
 /**
- * Downloads the open file, as it appears in the editor.
+ * Downloads `target`: the open file as it appears in the editor, any other file
+ * as it is stored.
  *
- * From the editor rather than from storage, which differs in two ways and both
- * are improvements. Online it hands over what the student is looking at instead
- * of the last version that reached the server -- which is what "download" was
- * always taken to mean. Offline it works at all: everything else that touches a
- * file is refused, so this is the only way to get work off a machine that
- * cannot save. A stopgap until a signed-in user's files are mirrored locally
- * (#364), and deliberately not extended to the zip export, which has to read
- * every file and so genuinely needs the server.
+ * The open file comes from the editor rather than from storage, which differs
+ * in two ways and both are improvements. Online it hands over what the student
+ * is looking at instead of the last version that reached the server -- which is
+ * what "download" was always taken to mean. Offline it works at all: everything
+ * else that touches a file is refused, so this is the only way to get work off a
+ * machine that cannot save. A stopgap until a signed-in user's files are
+ * mirrored locally (#364), and deliberately not extended to the zip export or to
+ * the other files here, both of which have to read storage and so genuinely need
+ * the server.
  */
-async function handleDownload() {
-  if (!currentFile.value || !isEditorLoaded()) return
+async function handleDownload(target: string) {
+  if (target !== currentFile.value || !isEditorLoaded()) {
+    if (!fs) return
+    if (!(await requireServer('Downloading a file'))) return
+    try {
+      startTextDownload(target, await fs.loadFile(target))
+    } catch (e) {
+      reportError(e, (message) => `Could not download ${target}: ${message}`)
+    }
+    return
+  }
   // Best effort, so the copy kept on the server matches the copy taken away.
   // It declines by itself while offline -- which is the case this exists for.
   await saveCurrentFile()
-  startDownload(
-    currentFile.value,
-    'data:attachment/text;charset=utf-8,' +
-      encodeURIComponent(editor().getDoc()),
-  )
+  startTextDownload(target, editor().getDoc())
 }
 
 // An archive can take a moment to build, and the button stays clickable while
@@ -720,16 +1068,18 @@ async function handleArchive() {
 // nothing: the editor's contents are shown as their own "current" row, so
 // recording them here would only add an entry identical to it. Restoring is
 // what pins state, since that is when there is something to lose.
-async function handleHistory() {
+async function handleHistory(target?: string) {
   if (!fileHistory) return
   if (!(await requireServer('Browsing file history'))) return
   const histories = await fileHistory.list()
-  const current = currentFile.value
+  // A named file is the one whose menu this was opened from; otherwise the
+  // toolbar button opens on whatever is being edited.
+  const focus = target ?? currentFile.value
   // A file with nothing recorded yet still belongs in the picker: it is the
   // one the student is looking at.
   historyFiles.value =
-    current !== null && !histories.some((h) => h.filename === current)
-      ? [{ filename: current }, ...histories]
+    focus !== null && !histories.some((h) => h.filename === focus)
+      ? [{ filename: focus }, ...histories]
       : histories
   if (historyFiles.value.length === 0) {
     await modalAlert({
@@ -740,7 +1090,7 @@ async function handleHistory() {
   }
   // Deleting a file leaves nothing open, which is precisely when a student
   // reaches for the history -- so fall back to the first file that has one.
-  await showHistoryOf(current ?? historyFiles.value[0].filename)
+  await showHistoryOf(focus ?? historyFiles.value[0].filename)
   showHistory.value = true
 }
 
@@ -901,6 +1251,38 @@ async function handleBeforeUnload(e: BeforeUnloadEvent) {
   }
 }
 
+/**
+ * The two commands that need a keystroke the editor cannot provide.
+ *
+ * Both are handled at the window in the capture phase, and both preventDefault:
+ *
+ * - Mod+S. Scamper autosaves, but a student's reflex is to press it anyway, and
+ *   unbound it fires the browser's "Save Page As" -- a download dialog for the
+ *   IDE itself. That is the whole reason this exists.
+ * - Mod+Enter. The conventional "run" chord in a web REPL. Capture-phase,
+ *   because CodeMirror's defaultKeymap binds it to insertBlankLine and would
+ *   otherwise get it first when the caret is in the editor.
+ *
+ * Not bound: zoom. Mod+= / Mod+- / Mod+0 are the browser's own, and taking them
+ * for the editor's font size would stop a student zooming the page -- which on
+ * a projector or a small laptop is the thing they actually want. View > Zoom is
+ * there for the editor.
+ */
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+  // Not while a dialog is up. These are captured at the window, so without
+  // this Ctrl+Enter runs the program behind an open prompt and Ctrl+S "saves"
+  // in the middle of typing a filename.
+  if (document.querySelector('dialog[open]') !== null) return
+  if (e.key === 's' && !e.shiftKey) {
+    e.preventDefault()
+    void handleSave()
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    void session.execute()
+  }
+}
+
 // Stable wrapper refs so removeEventListener can match the same function objects.
 const visibilityChangeWrapper = () => {
   void handleVisibilityChange()
@@ -955,6 +1337,7 @@ onMounted(async () => {
   window.addEventListener('pagehide', pageHideWrapper)
   window.addEventListener('pageshow', pageShowWrapper)
   window.addEventListener('beforeunload', beforeUnloadWrapper)
+  window.addEventListener('keydown', handleGlobalKeydown, { capture: true })
 
   await loadConfig()
 
@@ -990,7 +1373,25 @@ onMounted(async () => {
   await offerLocalFiles()
 })
 
+let paneObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  const el = contentAreaRef.value
+  if (el === null) return
+  const measure = () => {
+    // A width of zero means the pane has not been laid out yet, not that it is
+    // narrow -- so hold the wide layout rather than flashing the tabs up and
+    // taking them away again on the next frame.
+    const width = el.clientWidth
+    isCompact.value = width > 0 && width < COMPACT_PANE_WIDTH
+  }
+  paneObserver = new ResizeObserver(measure)
+  paneObserver.observe(el)
+  measure()
+})
+
 onUnmounted(() => {
+  paneObserver?.disconnect()
   stopAutosaving()
   stopWatchingConnection?.()
   Connectivity.stop()
@@ -1000,14 +1401,20 @@ onUnmounted(() => {
   window.removeEventListener('pageshow', pageShowWrapper)
   SingleInstance.releaseLock()
   window.removeEventListener('beforeunload', beforeUnloadWrapper)
+  window.removeEventListener('keydown', handleGlobalKeydown, { capture: true })
 })
 </script>
 
 <template>
   <div class="ide-app">
-    <div v-show="isSidebarVisible" class="sidebar-wrapper">
+    <!-- The first thing Tab reaches: the file drawer and the menu bar sit
+         between the top of the page and the editor, and a keyboard user who
+         came here to write code should not have to walk past them. -->
+    <a class="skip-link" href="#panel-editor" @click="panels.reveal('editor')">
+      Skip to the editor
+    </a>
+    <aside v-show="isSidebarVisible" class="sidebar-wrapper" aria-label="Files">
       <IdeSidebar
-        :version="appVersion"
         :files="files"
         :current-file="currentFile"
         :has-server="hasServer"
@@ -1018,45 +1425,110 @@ onUnmounted(() => {
         :sign-out="handleSignOut"
         :create="handleCreate"
         :rename="handleRename"
+        :duplicate="handleDuplicate"
         :delete-file="handleDelete"
         :download="handleDownload"
         :archive="handleArchive"
         :history="handleHistory"
         :select-file="handleSelectFile"
-        :upload-file="handleUploadFile"
+        :upload="handlePickUpload"
         :file-drop="handleFileDrop"
       />
-    </div>
-    <div class="ide-main">
+    </aside>
+    <main class="ide-main">
+      <IdeMenuBar
+        :version="appVersion"
+        :current-file="currentFile"
+        :has-server="hasServer"
+        :can-sign-in="canSignIn"
+        :signed-in-as="signedInAs"
+        :is-sidebar-visible="isSidebarVisible"
+        :recent-files="recentFiles"
+        :create="handleCreate"
+        :upload="handlePickUpload"
+        :save="handleSave"
+        :save-as="handleSaveAs"
+        :close-file="handleCloseFile"
+        :rename="handleRename"
+        :delete-file="handleDelete"
+        :download="handleDownload"
+        :archive="handleArchive"
+        :history="handleHistory"
+        :select-file="handleSelectFile"
+        :sign-in="openSignIn"
+        :sign-out="handleSignOut"
+        :run-window="handleRunWindow"
+        :panel-placement="panelPlacement"
+        :toggle-sidebar="toggleSidebar"
+        :can-step="canStep"
+        :is-stepping="isCollectingTrace"
+        :step-statement="handleStepStatement"
+        :about="handleAbout"
+        :whats-new="handleWhatsNew"
+      />
       <IdeHeader
         :current-file="currentFile"
+        :can-step="canStep"
+        :is-stepping="isCollectingTrace"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
+        @step-statement="handleStepStatement"
       />
-      <div class="content-area">
-        <Splitpanes>
-          <Pane :size="65" class="editor-pane">
+      <!-- Editor, output and trace are all panels: the editor is docked and
+           the output floats over it by default, and either can be docked,
+           tabbed or floated from there. Too narrow to float anything and the
+           dock tabs them all together instead. -->
+      <div ref="contentAreaRef" class="content-area">
+        <PanelDock
+          :labels="panelLabels"
+          :closeable="['trace']"
+          @close="handleTraceClose"
+        >
+          <PanelFrame id="editor" title="Source">
             <CodeMirrorEditor @dirty="makeDirty" @cursor-change="handleCursorChange" />
-          </Pane>
-          <Pane :size="35" class="results-pane">
-            <ResultsPane
-              ref="resultsRef"
-              :is-dirty="isDirty"
-              :is-tracing="isTracing"
-              :step-once="handleStepOnce"
-              :step-stmt="handleStepStmt"
-              :step-all="handleStepAll"
-              :abort-step="abortTraceStep"
+          </PanelFrame>
+          <PanelFrame id="output" title="Output">
+            <ResultsPane ref="resultsRef" :is-dirty="isDirty" />
+          </PanelFrame>
+          <PanelFrame
+            v-if="trace !== null"
+            id="trace"
+            title="Step"
+            closeable
+            @close="handleTraceClose"
+          >
+            <TraceWindow
+              v-model:index="traceIndex"
+              :source="trace.source"
+              :steps="trace.steps"
+              :truncated="trace.truncated"
             />
-          </Pane>
-        </Splitpanes>
+          </PanelFrame>
+        </PanelDock>
+        <!-- Outside the dock rather than inside it. In the dock it shared a
+             corner and a z-index with the windows it lists, so a window could
+             cover its own way back. Here that is impossible, and the dock
+             shrinks by the strip's height so clamp() keeps windows above it. -->
+        <div v-if="minimizedWindows.length > 0" class="window-taskbar">
+          <button
+            v-for="window in minimizedWindows"
+            :key="window.id"
+            type="button"
+            class="taskbar-button"
+            :data-panel-taskbar="window.id"
+            @click="restoreWindow(window.id)"
+          >
+            <i class="fa-solid fa-window-maximize" aria-hidden="true"></i>
+            {{ window.label }}
+          </button>
+        </div>
       </div>
       <IdeStatusBar
         :line="cursorStatus.line"
         :column="cursorStatus.column"
         :path="cursorStatus.path"
       />
-    </div>
+    </main>
   </div>
   <div v-show="isLoading" class="loading">
     <div class="loading-content">{{ loadingContent }}</div>
@@ -1107,6 +1579,28 @@ onUnmounted(() => {
   height: 100%;
 }
 
+/*
+ * Off-screen until focused, which is the standard shape: it must be the first
+ * tab stop, and it must not be visible chrome the rest of the time.
+ */
+.skip-link {
+  position: absolute;
+  left: var(--space-md);
+  top: var(--space-md);
+  z-index: var(--z-scrim);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
 .sidebar-wrapper {
   width: 250px;
   flex-shrink: 0;
@@ -1123,33 +1617,59 @@ onUnmounted(() => {
 .content-area {
   flex: 1;
   min-height: 0;
-  position: relative;
-}
-
-.editor-pane {
-  background-color: var(--surface);
-  overflow: hidden;
-}
-
-.results-pane {
-  background-color: var(--surface);
   display: flex;
   flex-direction: column;
 }
 
-:deep(.splitpanes__splitter) {
-  background-color: var(--splitter-bg);
-  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
-  background-repeat: no-repeat;
-  background-position: 50%;
-  cursor: col-resize;
-  width: 10px;
+/* The dock takes the space the taskbar strip does not. */
+.content-area > .dock {
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * Where minimized windows wait.
+ *
+ * A strip below the dock rather than an overlay inside it. Inside, it shared
+ * both a corner and a z-index with the windows it lists, so a window could
+ * cover its own way back; out here that cannot happen, it needs no z-index at
+ * all, and the dock shrinks by its height so clamp() keeps windows clear of it.
+ */
+.window-taskbar {
   flex-shrink: 0;
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--surface-muted);
+  border-top: 1px solid var(--border);
+}
+
+.taskbar-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-lg);
+  font: inherit;
+  font-size: var(--text-md);
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.taskbar-button:hover {
+  background: var(--surface-hover);
 }
 
 .loading {
   position: fixed;
-  z-index: 1;
+  /* Above every piece of chrome -- the menu bar (3), the header (2), floating
+     windows and the taskbar (4), and the popup menus (20) -- since none of them
+     create a stacking context, so a lower value would leave them clickable
+     through the scrim. */
+  z-index: var(--z-scrim);
   padding-top: 100px;
   left: 0;
   top: 0;
