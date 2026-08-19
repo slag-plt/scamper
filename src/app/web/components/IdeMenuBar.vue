@@ -62,6 +62,10 @@ const props = defineProps<{
   signOut?: () => void
   runWindow?: () => void
   toggleSidebar?: () => void
+  /** Whether the cursor is inside a statement, and whether one is being traced. */
+  canStep?: boolean
+  isStepping?: boolean
+  stepStatement?: () => void
   about?: () => void
   whatsNew?: () => void
 }>()
@@ -118,7 +122,6 @@ function refreshEditorStatus() {
 }
 
 const isRunning = computed(() => session.currentRun.value !== null)
-const isTracing = session.isTracing
 
 /** Opens `url` in its own tab, the way the toolbar's links do. */
 function openPage(url: string) {
@@ -234,10 +237,13 @@ const runMenu = computed<MenuItem[]>(() => [
     },
   },
   { separator: true },
-  { label: 'Trace', disabled: isRunning.value, run: () => session.execute({ stepping: true }) },
-  { label: 'Step Once', disabled: !isTracing.value, run: () => { session.step() } },
-  { label: 'Step Statement', disabled: !isTracing.value, run: () => session.stepStmt() },
-  { label: 'Step All', disabled: !isTracing.value, run: () => session.stepAll() },
+  // Stepping is per-statement now, in its own window; the old whole-program
+  // trace is what the output pane's own step controls still drive.
+  {
+    label: 'Step Statement at Cursor…',
+    disabled: !props.canStep || props.isStepping,
+    run: () => props.stepStatement?.(),
+  },
   { separator: true },
   { label: 'Query Value at Cursor', run: () => session.query() },
   {

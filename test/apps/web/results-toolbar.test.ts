@@ -8,22 +8,28 @@ import {
   showSourceWithOutput,
 } from '../../../src/app/web/output-prefs'
 
-const NOOP_PROPS = {
-  isTracing: false,
-  isDirty: false,
-  stepOnce: () => {
-    /* not what these tests are about */
-  },
-  stepStmt: () => Promise.resolve(),
-  stepAll: () => Promise.resolve(),
-  abortStep: () => {
-    /* as above */
-  },
-}
+const NOOP_PROPS = { isDirty: false }
 
 describe('ResultsToolbar', () => {
   afterEach(() => {
     setShowSourceWithOutput(false)
+  })
+
+  test('it offers the source switch and nothing else', () => {
+    // Stepping moved to its own window; the buttons that drove the old
+    // in-place trace were left pointing at a mode nothing starts any more.
+    const wrapper = mount(ResultsToolbar, {
+      props: NOOP_PROPS,
+      attachTo: document.body,
+    })
+    try {
+      const buttons = [...document.querySelectorAll('button')].map((b) =>
+        b.getAttribute('aria-label'),
+      )
+      expect(buttons).toEqual(['Show source with output'])
+    } finally {
+      wrapper.unmount()
+    }
   })
 
   test('its source switch is the same preference the View menu sets', async () => {

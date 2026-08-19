@@ -53,6 +53,8 @@ export class VueDisplay implements OutputChannel, ErrorChannel {
   }
 
   beginStatement(source: string) {
+    // The index is for channels collecting one statement's output; the pane
+    // shows every statement in order and has no use for it.
     this._source(source)
   }
 

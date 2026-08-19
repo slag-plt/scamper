@@ -17,6 +17,7 @@ import {
   Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
+import { TraceCollector } from './lpm/output/trace-collector'
 import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
 import { compile } from './scheme'
 import { makeTraceStepper } from './scheme/trace'
@@ -184,6 +185,86 @@ export default class Scamper {
       err,
       onComplete: () => onComplete?.(fiber.lastResult),
     })
+  }
+
+  /**
+   * Collects the reduction trace of the single statement `cursorLoc` sits in.
+   *
+   * The whole program runs -- the traced statement usually leans on what the
+   * ones before it defined -- but only its own reductions are kept. The trace
+   * is gathered in full rather than streamed because what reads it offers a
+   * "step 12 of 35" and a slider, and neither is answerable until the run ends.
+   *
+   * @param maxSteps how many reductions to keep before abandoning the rest, so
+   *        a statement that loops forever cannot hang the page.
+   * @returns the statement's source and its steps, or null when the cursor is
+   *          not inside a statement or the program did not compile.
+   */
+  public async traceStatement({
+    src,
+    cursorLoc,
+    err,
+    maxSteps,
+  }: {
+    src: string
+    cursorLoc: Loc
+    err: ErrorChannel
+    maxSteps: number
+  }): Promise<{ source: string; steps: Value[]; truncated: boolean } | null> {
+    const { prog, diagnostics } = await compile(src)
+    diagnostics.forEach((d) => {
+      err.report(diagnosticToError(d))
+    })
+    if (prog === undefined) return null
+
+    const target = prog.findIndex(
+      (stmt) =>
+        stmt.range.begin.idx >= 0 && stmt.range.contains(cursorLoc),
+    )
+    if (target === -1) return null
+    const { begin, end } = prog[target].range
+    const source = src.slice(begin.idx, end.idx + 1).trim()
+
+    const id = crypto.randomUUID()
+    const { promise, resolve } = deferred()
+    const collector = new TraceCollector(target, maxSteps, () => {
+      // Deferred out of the send that tripped it: this runs from inside the
+      // scheduler's own loop, and cancelling there would splice the task list
+      // out from under the iteration. A microtask lands between steps instead.
+      //
+      // `resolve` here rather than relying on onComplete, because a cancelled
+      // task never reaches it -- cancelTask reports and unschedules, and that
+      // is the end of it.
+      queueMicrotask(() => {
+        this.scheduler.cancelTask(id)
+        resolve()
+      })
+    })
+    const fiber = new Fiber(prog, getDefaultEnv())
+    // Deliberately not this.mainFiber/mainErr: a trace is a side run, and
+    // adopting it would point spawned event handlers at it and leave the
+    // editor's actual program behind.
+    this.scheduler.schedule({
+      id,
+      fiber,
+      out: collector,
+      err: collector,
+      src,
+      isTracing: true,
+      stepper: makeTraceStepper(),
+      onComplete: () => {
+        resolve()
+      },
+      onFatal: () => {
+        resolve()
+      },
+    })
+    await promise
+    return {
+      source,
+      steps: collector.steps,
+      truncated: collector.truncated,
+    }
   }
 
   /**

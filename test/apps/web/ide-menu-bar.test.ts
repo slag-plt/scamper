@@ -231,11 +231,11 @@ describe('IDE menu bar', () => {
     }
   })
 
-  test('Run greys out stepping until a trace is running', async () => {
+  test('Run greys out what needs a running program', async () => {
     const wrapper = await mountIde('hello.scm')
     try {
       const menu = await openMenu('Run')
-      for (const label of ['Step Once', 'Step Statement', 'Step All', 'Stop']) {
+      for (const label of ['Stop', 'Restart']) {
         expect(
           getByRole(menu, 'menuitem', { name: label }),
         ).toHaveAttribute('aria-disabled', 'true')
@@ -244,6 +244,20 @@ describe('IDE menu bar', () => {
         'aria-disabled',
         'true',
       )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('stepping needs the cursor inside a statement', async () => {
+    // The stub editor reports no enclosing form, which is the same state as a
+    // cursor sitting on a blank line.
+    const wrapper = await mountIde('hello.scm')
+    try {
+      const menu = await openMenu('Run')
+      expect(
+        getByRole(menu, 'menuitem', { name: /^Step Statement at Cursor/ }),
+      ).toHaveAttribute('aria-disabled', 'true')
     } finally {
       wrapper.unmount()
     }

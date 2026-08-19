@@ -6,11 +6,16 @@ import ShortcutsHelp from './ShortcutsHelp.vue'
 
 defineProps<{
   currentFile?: string | null
+  /** False when the cursor is not inside a statement, so there is none to step. */
+  canStep?: boolean
+  /** True while a trace is being collected, which takes a moment. */
+  isStepping?: boolean
 }>()
 
 const emit = defineEmits<{
   runWindow: []
   toggleSidebar: []
+  stepStatement: []
 }>()
 
 const session = useScamperSession()
@@ -19,12 +24,6 @@ const isRunInProgress = computed(() => session.currentRun.value !== null)
 
 async function handleRun() {
   await session.execute()
-}
-
-function handleTrace() {
-  // Start a stepping run: it pauses at the first reduction; the Results toolbar's
-  // step buttons then drive it (step once / statement / all).
-  void session.execute({ stepping: true })
 }
 
 const search = ref('')
@@ -62,11 +61,16 @@ function searchOpenWindow(searchTerm: string) {
         aria-keyshortcuts="w"
         @click="handleRun"
       ></button>
+      <!-- Steps the statement under the cursor in its own window, rather than
+           tracing the whole program in the output pane. -->
       <button
-        class="fa-solid fa-route"
-        aria-label="Trace"
-        @click="handleTrace"
+        class="fa-solid fa-shoe-prints"
+        title="Step through the statement under the cursor"
+        aria-label="Step statement"
+        :disabled="!canStep || isStepping"
+        @click="emit('stepStatement')"
       ></button>
+      <i v-if="isStepping" class="fa-solid fa-spinner fa-spin"></i>
       <button
         class="fa-solid fa-window-maximize"
         aria-label="Maximize Output Window"

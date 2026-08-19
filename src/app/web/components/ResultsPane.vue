@@ -5,13 +5,7 @@ import OutputPane from './OutputPane.vue'
 import type { OutputPaneType } from '../composables/use-output-pane'
 
 defineProps<{
-  isTracing: boolean
   isDirty: boolean
-  stepOnce: () => void
-  stepStmt: () => Promise<void>
-  stepAll: () => Promise<void>
-  abortStep: () => void
-  astText?: () => void
 }>()
 
 const outputPaneRef = shallowRef<OutputPaneType | null>(null)
@@ -26,15 +20,7 @@ defineExpose({
 </script>
 
 <template>
-  <ResultsToolbar
-    :is-tracing="isTracing"
-    :is-dirty="isDirty"
-    :step-once="stepOnce"
-    :step-stmt="stepStmt"
-    :step-all="stepAll"
-    :ast-text="astText"
-    :abort-step="abortStep"
-  />
+  <ResultsToolbar :is-dirty="isDirty" />
   <div class="output-container">
     <OutputPane ref="outputPaneRef" />
   </div>

@@ -11,13 +11,25 @@ import { showSourceWithOutput } from '../output-prefs'
  * DOM, so turning the option on captions output already on screen instead of
  * only the next run's.
  */
-const props = defineProps<{ source: string }>()
+const props = withDefaults(
+  defineProps<{
+    source: string
+    /**
+     * Shows the source regardless of the option. The trace window uses this:
+     * the statement being stepped is that window's subject, not a caption on
+     * someone else's output, so hiding it would leave the window unlabelled.
+     */
+    forceVisible?: boolean
+  }>(),
+  { forceVisible: false },
+)
 
 const tokens = computed(() => highlightScamper(props.source))
+const shown = computed(() => props.forceVisible || showSourceWithOutput.value)
 </script>
 
 <template>
-  <div v-show="showSourceWithOutput" class="source-caption">
+  <div v-show="shown" class="source-caption">
     <code
       ><span
         v-for="(token, i) in tokens"

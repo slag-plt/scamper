@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
@@ -11,6 +11,7 @@ import {
 import FloatingWindow from './FloatingWindow.vue'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeMenuBar from './IdeMenuBar.vue'
+import TraceWindow from './TraceWindow.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
@@ -20,6 +21,8 @@ import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
 import Scamper from '../../../scamper'
+import type { Value } from '../../../lpm'
+import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
 import { FileEntry, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
@@ -91,6 +94,21 @@ const isSidebarVisible = ref(true)
  */
 const isOutputMinimized = ref(false)
 
+// The trace window: the statement being stepped, its reductions, and where in
+// them the window is. Null until the Step button opens one.
+const trace = ref<{
+  source: string
+  steps: Value[]
+  truncated: boolean
+} | null>(null)
+const traceIndex = ref(0)
+const isTraceMinimized = ref(false)
+// Collecting a trace runs the program, which takes a moment on a long one.
+const isCollectingTrace = ref(false)
+// A statement that loops forever would otherwise produce steps until the tab
+// dies; past this the trace is cut short and says so.
+const MAX_TRACE_STEPS = 10_000
+
 // Narrower than this and a window floating over the code has nowhere to float,
 // so the two share the pane through tabs instead. Measured on the pane rather
 // than the viewport: opening the file drawer takes 250px off it, and that
@@ -101,6 +119,10 @@ const isCompact = ref(false)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
 const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
+// Whether there is a statement to step. The status bar already tracks the form
+// the cursor is inside, and an empty path means it is inside none -- a blank
+// line, or the space between two statements.
+const canStep = computed(() => cursorStatus.value.path.length > 0)
 const patchNotesToShow = ref<PatchNote[]>([])
 const showPatchNotes = ref(false)
 const showHistory = ref(false)
@@ -144,7 +166,7 @@ const session = provideScamperSession(resultsRef, {
     isDirty.value = false
   },
 })
-const { isTracing, queries, expandedQueryId } = session
+const { queries, expandedQueryId } = session
 
 // Running with the output tucked away would show the person nothing at all, so
 // starting a run brings the window back -- or, on a narrow pane, switches to
@@ -152,7 +174,11 @@ const { isTracing, queries, expandedQueryId } = session
 watch(
   () => session.currentRun.value,
   (run) => {
-    if (run !== null) isOutputMinimized.value = false
+    if (run === null) return
+    // Narrow, the panes take turns, so showing the output means putting the
+    // trace away; floating, they coexist and the trace is left alone.
+    if (isCompact.value) showPane('output')
+    else isOutputMinimized.value = false
   },
 )
 
@@ -161,21 +187,114 @@ watch(
 // covering all of it. Something already running is the exception.
 watch(isCompact, (compact) => {
   if (compact && session.currentRun.value === null) {
-    isOutputMinimized.value = true
+    showPane('source')
   }
 })
 
-/** Left/Right move between the pane tabs, as a tablist is expected to. */
-function onTabKey(event: KeyboardEvent) {
-  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-  event.preventDefault()
-  isOutputMinimized.value = !isOutputMinimized.value
+/**
+ * The panes that can fill the content area, in tab order. The trace only exists
+ * once something has been stepped.
+ */
+type Pane = 'source' | 'output' | 'trace'
+
+const panes = computed<{ id: Pane; label: string; closeable?: boolean }[]>(
+  () => [
+    { id: 'source', label: 'Source' },
+    { id: 'output', label: 'Output' },
+    ...(trace.value === null
+      ? []
+      : [{ id: 'trace' as const, label: 'Step', closeable: true }]),
+  ],
+)
+
+/**
+ * Which pane is showing.
+ *
+ * Floating, each window minimizes on its own and they can all be open at once;
+ * narrow, they take turns, and the one that is up is whichever window is not
+ * minimized. Deriving it rather than storing it keeps the two layouts from
+ * disagreeing about what is visible.
+ */
+const activePane = computed<Pane>(() => {
+  if (trace.value !== null && !isTraceMinimized.value) return 'trace'
+  if (!isOutputMinimized.value) return 'output'
+  return 'source'
+})
+
+/** Brings `pane` up, putting the others away. Only meaningful when compact. */
+function showPane(pane: Pane) {
+  isOutputMinimized.value = pane !== 'output'
+  isTraceMinimized.value = pane !== 'trace'
 }
 
-function abortTraceStep() {
-  // Stop an in-flight statement/all burst, re-pausing the session (vs. stopRun,
-  // which cancels the whole run).
-  session.abortStep()
+/** Left/Right move between the pane tabs, as a tablist is expected to. */
+function onTabKey(event: KeyboardEvent) {
+  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+  if (step === 0) return
+  event.preventDefault()
+  const order = panes.value
+  const at = order.findIndex((p) => p.id === activePane.value)
+  showPane(order[(at + step + order.length) % order.length].id)
+}
+
+/**
+ * The floating windows currently tucked away, for the taskbar to offer back.
+ * Every minimizable window belongs here -- one that minimizes with nothing
+ * listing it has simply vanished.
+ */
+const minimizedWindows = computed(() => {
+  const waiting: { id: Pane; label: string }[] = []
+  if (isOutputMinimized.value) waiting.push({ id: 'output', label: 'Output' })
+  if (trace.value !== null && isTraceMinimized.value) {
+    waiting.push({ id: 'trace', label: 'Step' })
+  }
+  return waiting
+})
+
+/** Brings a minimized window back, without disturbing the others. */
+function restoreWindow(id: Pane) {
+  if (id === 'output') isOutputMinimized.value = false
+  if (id === 'trace') isTraceMinimized.value = false
+}
+
+/**
+ * Opens the trace window on the statement the cursor is in.
+ *
+ * The whole program runs to get there -- the statement usually leans on what
+ * the ones before it defined -- but only its own reductions are kept.
+ */
+async function handleStepStatement() {
+  if (isCollectingTrace.value || !isEditorLoaded()) return
+  if (!(await requireServer('Stepping a statement'))) return
+  isCollectingTrace.value = true
+  try {
+    const collected = await Scamper.getInstance().traceStatement({
+      src: editor().getDoc(),
+      cursorLoc: editor().getCursorLoc(),
+      err: new SimpleErrorChannel(),
+      maxSteps: MAX_TRACE_STEPS,
+    })
+    if (collected === null) {
+      await modalAlert({
+        title: 'Nothing to step',
+        message:
+          'Put the cursor inside a statement to step through it. If the ' +
+          'program does not compile, fix that first.',
+      })
+      return
+    }
+    trace.value = collected
+    traceIndex.value = 0
+    isTraceMinimized.value = false
+  } catch (e) {
+    reportError(e, (message) => `Could not step that statement: ${message}`)
+  } finally {
+    isCollectingTrace.value = false
+  }
+}
+
+function handleTraceClose() {
+  trace.value = null
 }
 
 // ---------- file drawer ----------
@@ -589,20 +708,6 @@ async function handleRunWindow() {
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
-}
-
-// ---------- step handlers ----------
-
-function handleStepOnce() {
-  session.step()
-}
-
-async function handleStepStmt() {
-  await session.stepStmt()
-}
-
-async function handleStepAll() {
-  await session.stepAll()
 }
 
 // ---------- sidebar event handlers ----------
@@ -1329,40 +1434,57 @@ onUnmounted(() => {
         :sign-out="handleSignOut"
         :run-window="handleRunWindow"
         :toggle-sidebar="toggleSidebar"
+        :can-step="canStep"
+        :is-stepping="isCollectingTrace"
+        :step-statement="handleStepStatement"
         :about="handleAbout"
         :whats-new="handleWhatsNew"
       />
       <IdeHeader
         :current-file="currentFile"
+        :can-step="canStep"
+        :is-stepping="isCollectingTrace"
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
+        @step-statement="handleStepStatement"
       />
       <!-- The code fills the pane and the output floats over it, rather than
            the two splitting the width between them. Too narrow for that and
            they take turns instead, behind a pair of tabs. -->
       <div ref="contentAreaRef" class="content-area">
         <div v-if="isCompact" class="pane-tabs" role="tablist" @keydown="onTabKey">
-          <button
-            type="button"
-            role="tab"
-            class="pane-tab"
-            :aria-selected="isOutputMinimized"
-            @click="isOutputMinimized = true"
+          <!-- A closeable pane's tab carries its own close button. Docked,
+               the window has no title bar to put one in, so without this a
+               trace opened on a narrow pane could never be dismissed. The
+               wrapper is presentational so the tablist still sees only tabs. -->
+          <div
+            v-for="pane in panes"
+            :key="pane.id"
+            role="presentation"
+            class="pane-tab-slot"
+            :class="{ selected: activePane === pane.id }"
           >
-            Source
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="pane-tab"
-            :aria-selected="!isOutputMinimized"
-            @click="isOutputMinimized = false"
-          >
-            Output
-          </button>
+            <button
+              type="button"
+              role="tab"
+              class="pane-tab"
+              :aria-selected="activePane === pane.id"
+              @click="showPane(pane.id)"
+            >
+              {{ pane.label }}
+            </button>
+            <button
+              v-if="pane.closeable"
+              type="button"
+              class="pane-tab-close fa-solid fa-xmark"
+              :title="`Close ${pane.label}`"
+              :aria-label="`Close ${pane.label}`"
+              @click="handleTraceClose"
+            ></button>
+          </div>
         </div>
         <div class="pane-stack">
-          <div v-show="!isCompact || isOutputMinimized" class="editor-layer">
+          <div v-show="!isCompact || activePane === 'source'" class="editor-layer">
             <CodeMirrorEditor @dirty="makeDirty" @cursor-change="handleCursorChange" />
           </div>
           <FloatingWindow
@@ -1371,26 +1493,33 @@ onUnmounted(() => {
             title="Output"
             storage-key="scamper.window.output"
           >
-            <ResultsPane
-              ref="resultsRef"
-              :is-dirty="isDirty"
-              :is-tracing="isTracing"
-              :step-once="handleStepOnce"
-              :step-stmt="handleStepStmt"
-              :step-all="handleStepAll"
-              :abort-step="abortTraceStep"
-            />
+            <ResultsPane ref="resultsRef" :is-dirty="isDirty" />
           </FloatingWindow>
+          <TraceWindow
+            v-if="trace !== null"
+            v-model:minimized="isTraceMinimized"
+            v-model:index="traceIndex"
+            :docked="isCompact"
+            :source="trace.source"
+            :steps="trace.steps"
+            :truncated="trace.truncated"
+            @close="handleTraceClose"
+          />
           <!-- Only floating windows need somewhere to wait; the tabs are the
                way back to a docked one. -->
-          <div v-if="!isCompact && isOutputMinimized" class="window-taskbar">
+          <div
+            v-if="!isCompact && minimizedWindows.length > 0"
+            class="window-taskbar"
+          >
             <button
+              v-for="window in minimizedWindows"
+              :key="window.id"
               type="button"
               class="taskbar-button"
-              @click="isOutputMinimized = false"
+              @click="restoreWindow(window.id)"
             >
               <i class="fa-solid fa-window-maximize" aria-hidden="true"></i>
-              Output
+              {{ window.label }}
             </button>
           </div>
         </div>
@@ -1485,10 +1614,25 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border);
 }
 
+.pane-tab-slot {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 2px solid transparent;
+}
+
+.pane-tab-slot.selected {
+  border-bottom-color: var(--accent);
+}
+
+.pane-tab-slot:hover {
+  background: var(--surface-hover);
+}
+
 .pane-tab {
   flex: 1;
+  min-width: 0;
   border: none;
-  border-bottom: 2px solid transparent;
   background: none;
   padding: 0.45em 0.8em;
   font: inherit;
@@ -1497,13 +1641,23 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.pane-tab:hover {
-  background: var(--surface-hover);
+.pane-tab[aria-selected='true'] {
+  font-weight: 600;
 }
 
-.pane-tab[aria-selected='true'] {
-  border-bottom-color: var(--accent);
-  font-weight: 600;
+.pane-tab-close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0 0.6em 0 0;
+  font-size: 0.8em;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.pane-tab-close:hover {
+  opacity: 1;
 }
 
 /* The full pane, with the output window floating above it. */

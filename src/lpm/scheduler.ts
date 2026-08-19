@@ -488,7 +488,7 @@ export class Scheduler {
       const { begin, end } = stmt.range
       if (begin.idx < 0 || end.idx < begin.idx || end.idx >= src.length) continue
       const text = src.slice(begin.idx, end.idx + 1).trim()
-      if (text.length > 0) beginStatement.call(task.out, text)
+      if (text.length > 0) beginStatement.call(task.out, text, next)
     }
     this.nextCaption.set(task.id, next)
   }

@@ -1,90 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import {
   showSourceWithOutput,
   toggleShowSourceWithOutput,
 } from '../output-prefs'
 
-const props = defineProps<{
-  isTracing: boolean
+/**
+ * The output window's own strip of controls.
+ *
+ * Only what is about how the output is *shown* lives here. Stepping used to,
+ * back when a trace ran in place and had to be driven from beside it; it now
+ * has its own window with its own controls, and the buttons here were left
+ * pointing at a mode nothing starts any more.
+ */
+defineProps<{
   isDirty: boolean
-  stepOnce: () => void
-  stepStmt: () => Promise<void>
-  stepAll: () => Promise<void>
-  abortStep: () => void
-  astText?: () => void
 }>()
-
-const isSteppingStmt = ref(false)
-const isSteppingAll = ref(false)
-
-async function handleStepStmt() {
-  isSteppingStmt.value = true
-  try {
-    await props.stepStmt()
-  } finally {
-    isSteppingStmt.value = false
-  }
-}
-
-async function handleStepAll() {
-  isSteppingAll.value = true
-  try {
-    await props.stepAll()
-  } finally {
-    isSteppingAll.value = false
-  }
-}
 </script>
 
 <template>
   <div class="results-toolbar">
     <div>
-      <button
-        class="fa-solid fa-shoe-prints"
-        aria-label="Step once"
-        :disabled="!isTracing || isSteppingStmt || isSteppingAll"
-        @click="stepOnce()"
-      ></button>
-
-      <template v-if="isSteppingStmt">
-        <button
-          class="fa-solid fa-stop"
-          aria-label="Stop"
-          @click="abortStep()"
-        ></button>
-        <i class="fa-solid fa-spinner fa-spin"></i>
-      </template>
-      <button
-        v-else
-        class="fa-solid fa-forward-step"
-        aria-label="Step Statement"
-        :disabled="!isTracing || isSteppingAll"
-        @click="handleStepStmt"
-      ></button>
-
-      <template v-if="isSteppingAll">
-        <button
-          class="fa-solid fa-stop"
-          aria-label="Stop"
-          @click="abortStep()"
-        ></button>
-        <i class="fa-solid fa-spinner fa-spin"></i>
-      </template>
-      <button
-        v-else
-        class="fa-solid fa-forward"
-        aria-label="Step All"
-        :disabled="!isTracing || isSteppingStmt"
-        @click="handleStepAll"
-      ></button>
-
-      <button
-        class="fa-solid fa-tree"
-        aria-label="Show AST"
-        disabled
-        @click="astText?.()"
-      ></button>
       <button
         class="fa-solid fa-code"
         :class="{ active: showSourceWithOutput }"

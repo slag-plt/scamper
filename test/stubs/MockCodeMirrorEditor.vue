@@ -5,7 +5,20 @@ import { noLoadedFileText } from '../../src/app/web/codemirror/codemirror'
 import { makeMockCodeMirrorEditorAdapter } from './mock-code-mirror-editor-adapter'
 import { mockEditorHandle } from './mock-editor-handle'
 
-const emit = defineEmits<{ dirty: [] }>()
+const emit = defineEmits<{
+  dirty: []
+  cursorChange: [status: { line: number; column: number; path: string[] }]
+}>()
+
+/** Reports where the cursor is, as the real editor does on every load and move. */
+function reportCursor() {
+  emit('cursorChange', {
+    line: 1,
+    column: 1,
+    path: [...mockEditorHandle.cursorPath],
+  })
+}
+
 const editorRegistration = useEditorRegistration()
 const src = ref('')
 const loaded = ref(false)
@@ -21,6 +34,7 @@ const adapter = makeMockCodeMirrorEditorAdapter(
     initializeDoc(nextSrc: string) {
       loaded.value = true
       src.value = nextSrc
+      reportCursor()
     },
     initializeDummyDoc() {
       loaded.value = false
@@ -49,6 +63,7 @@ onMounted(() => {
   editorRegistration.register(adapter)
   mockEditorHandle.adapter = adapter
   mockEditorHandle.commands.length = 0
+  reportCursor()
 })
 
 onUnmounted(() => {

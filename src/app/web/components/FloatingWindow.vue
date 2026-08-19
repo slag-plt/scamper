@@ -22,7 +22,11 @@ const props = defineProps<{
    * chrome for moving it would have nowhere to move it to.
    */
   docked?: boolean
+  /** Adds a close button beside minimize, which emits `close`. */
+  closeable?: boolean
 }>()
+
+const emit = defineEmits<{ close: [] }>()
 
 const minimized = defineModel<boolean>('minimized', { default: false })
 
@@ -235,6 +239,15 @@ watch(minimized, (isMin) => {
         :aria-label="`Minimize ${title}`"
         @pointerdown.stop
         @click="minimized = true"
+      ></button>
+      <button
+        v-if="closeable"
+        type="button"
+        class="window-button fa-solid fa-xmark"
+        :title="`Close ${title}`"
+        :aria-label="`Close ${title}`"
+        @pointerdown.stop
+        @click="emit('close')"
       ></button>
     </div>
     <div class="window-body">
