@@ -8,6 +8,7 @@ import { simpleRenderers } from './vue/simple-renderers'
 import StructRenderer from './vue/components/StructRenderer.vue'
 import ObjRenderer from './vue/components/ObjRenderer.vue'
 import DOMElementRenderer from './vue/components/DOMElementRenderer.vue'
+import ErrorRenderer from './vue/components/ErrorRenderer.vue'
 import { Value } from '../lang'
 import { isArray, isList, isObj, isPair, isStruct } from '../util'
 
@@ -80,7 +81,7 @@ const genericStructStrategy: VueStrategy = {
 const errorStrategy: VueStrategy = {
   predicate: (v) => v instanceof Error,
   type: 'vue',
-  renderer: createTextRenderer<Error>((v) => v.toString()),
+  renderer: ErrorRenderer,
 }
 // A map value. Deliberately checked *after* the custom renderers, alongside the
 // struct fallback: a library that registers a renderer for its own plain-object
