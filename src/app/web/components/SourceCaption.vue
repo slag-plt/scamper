@@ -45,19 +45,24 @@ const shown = computed(() => props.forceVisible || showSourceWithOutput.value)
 /* Tinted and ruled down its left edge, so at a glance it reads as the code
    that caused the output rather than as more output. */
 .source-caption {
-  margin: 0.4em 0 0.2em;
-  padding: 0.3em 0.6em;
+  margin: var(--space-md) 0 var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-left: 3px solid var(--brand);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow-x: auto;
 }
 
+/* Each caption heads a result, so the first one needs no gap above it -- and
+   the pane needs no separator before its very first line. */
+.source-caption:first-child {
+  margin-top: 0;
+}
+
 code {
-  font-family:
-    Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
-  font-size: 0.85em;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   white-space: pre;
   /* Nothing here is editable; keep the caret and the edit affordances away. */
   user-select: text;

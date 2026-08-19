@@ -40,56 +40,69 @@ function searchOpenWindow(searchTerm: string) {
   <div class="ide-header">
     <div class="header-left">
       <button
-        class="fa fa-bars"
+        type="button"
+        class="icon-button fa-solid fa-bars"
         aria-label="Toggle sidebar"
         @click="emit('toggleSidebar')"
       ></button>
-      ⋅
+      <span class="toolbar-sep" aria-hidden="true"></span>
       <template v-if="isRunInProgress">
         <button
-          class="fa-solid fa-stop"
+          type="button"
+          class="icon-button fa-solid fa-stop"
           aria-label="Stop"
           @click="session.stopRun()"
         ></button>
-        <i class="fa-solid fa-spinner fa-spin"></i>
+        <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
       </template>
       <button
         v-else
-        class="fa-solid fa-play"
+        type="button"
+        class="icon-button icon-button--accent fa-solid fa-play"
         aria-label="Run"
         accesskey="w"
-        aria-keyshortcuts="w"
         @click="handleRun"
       ></button>
       <!-- Steps the statement under the cursor in its own window, rather than
            tracing the whole program in the output pane. -->
       <button
-        class="fa-solid fa-shoe-prints"
+        type="button"
+        class="icon-button fa-solid fa-shoe-prints"
         title="Step through the statement under the cursor"
         aria-label="Step statement"
         :disabled="!canStep || isStepping"
         @click="emit('stepStatement')"
       ></button>
-      <i v-if="isStepping" class="fa-solid fa-spinner fa-spin"></i>
+      <i
+        v-if="isStepping"
+        class="fa-solid fa-spinner fa-spin"
+        aria-hidden="true"
+      ></i>
+      <!-- Opens the standalone runner in a new browser tab. Named for what it
+           does, and matching Run > Open Run Window, which is the same command. -->
       <button
-        class="fa-solid fa-window-maximize"
-        aria-label="Maximize Output Window"
+        type="button"
+        class="icon-button fa-solid fa-up-right-from-square"
+        title="Open this program in a separate run window"
+        aria-label="Open Run Window"
         :disabled="!currentFile"
         @click="emit('runWindow')"
       ></button>
       <button
-        class="fa-solid fa-clipboard-question"
+        type="button"
+        class="icon-button fa-solid fa-clipboard-question"
+        title="Show the value of the expression under the cursor"
         aria-label="Query value"
         @click="session.query()"
       ></button>
-      ⋅
+      <span class="toolbar-sep" aria-hidden="true"></span>
       <input
         v-model="search"
-        size="30"
+        class="text-input header-search"
         aria-label="Search function name"
-        placeholder="Search function name or press enter..."
+        placeholder="Search functions..."
         @keyup.enter="searchOpenWindow(search)"
-      >
+      />
     </div>
     <div class="header-right">
       <ThemeToggle />
@@ -102,19 +115,43 @@ function searchOpenWindow(searchTerm: string) {
 .ide-header {
   background: var(--header-bg);
   color: var(--header-fg);
-  padding: 0.5em;
+  padding: var(--space-xs) var(--space-md);
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  z-index: 2;
+  gap: var(--space-md);
+  z-index: var(--z-header);
 }
 
 .header-left,
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.25em;
+  gap: var(--space-2xs);
+}
+
+/*
+ * The left group is what has to give when the window narrows. It used to be the
+ * whole row that wrapped while neither group did, so the theme and help buttons
+ * dropped to a second line rather than the row reflowing.
+ */
+.header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.header-right {
+  flex-shrink: 0;
+}
+
+/*
+ * Was size="30", i.e. ~250-280px of intrinsic width in a group that could not
+ * shrink -- the single thing that forced the header to wrap. It now takes what
+ * is left and gives it back first.
+ */
+.header-search {
+  flex: 0 1 16rem;
+  min-width: 4rem;
 }
 </style>

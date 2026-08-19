@@ -29,7 +29,8 @@ vi.mock(
 
 await initialize()
 
-const GEOMETRY_KEY = 'scamper.window.output'
+const LAYOUT_KEY = 'scamper.panels'
+const LEGACY_GEOMETRY_KEY = 'scamper.window.output'
 
 // The output is a window floating over the code rather than a pane beside it.
 // jsdom has no layout, so dragging and resizing cannot be meaningfully checked
@@ -42,7 +43,8 @@ describe('IDE floating output window', () => {
     fs = new MockFileSystem()
     FS.setBackend(FS.localBackend(fs))
     try {
-      localStorage.removeItem(GEOMETRY_KEY)
+      localStorage.removeItem(LAYOUT_KEY)
+      localStorage.removeItem(LEGACY_GEOMETRY_KEY)
     } catch {
       /* no storage here; nothing to clear */
     }
@@ -61,18 +63,23 @@ describe('IDE floating output window', () => {
     return wrapper
   }
 
-  /** The floating window, whether or not it is currently shown. */
-  function outputWindow(): HTMLElement | null {
-    return document.querySelector('.floating-window')
+  /** A panel's frame, whether or not it is currently shown. */
+  function panel(id: 'editor' | 'output' | 'trace'): HTMLElement | null {
+    return document.querySelector(`[data-panel="${id}"]`)
   }
+
+  const outputWindow = () => panel('output')
 
   test('the code fills the pane with the output floating over it', async () => {
     const wrapper = await mountIde()
     try {
-      // The split view is gone: one layer holds the editor, and the window
-      // sits above it rather than beside it.
-      expect(document.querySelector('.splitpanes')).toBeNull()
-      expect(document.querySelector('.editor-layer')).not.toBeNull()
+      // By default the editor is docked and fills the dock, and the output
+      // floats above it rather than sitting beside it.
+      expect(panel('editor')?.dataset.placement).toBe('docked')
+      expect(outputWindow()?.dataset.placement).toBe('floating')
+      // Alone in the dock, the editor gets no tab strip -- no chrome over the
+      // code, exactly as before the dock existed.
+      expect(document.querySelector('[role="tablist"]')).toBeNull()
       expect(
         getByRole(document.body, 'region', { name: 'Output' }),
       ).toBeInTheDocument()
@@ -92,8 +99,6 @@ describe('IDE floating output window', () => {
       // Hidden rather than destroyed, so the output it holds is still there.
       expect(outputWindow()).not.toBeNull()
       expect(outputWindow()?.style.display).toBe('none')
-      // Exactly "Output" -- the toolbar has a "Maximize Output Window" button
-      // that a looser match would pick up instead.
       const restore = getByRole(document.body, 'button', { name: 'Output' })
       expect(restore.closest('.window-taskbar')).not.toBeNull()
 
@@ -161,7 +166,7 @@ describe('IDE floating output window', () => {
     test('the tabs swap which pane is showing', async () => {
       const wrapper = await mountIde()
       try {
-        const editor = document.querySelector<HTMLElement>('.editor-layer')
+        const editor = panel('editor')
         expect(editor?.style.display).not.toBe('none')
         expect(outputWindow()?.style.display).toBe('none')
 
@@ -217,8 +222,22 @@ describe('IDE floating output window', () => {
 
   test('a remembered geometry is read back on the next mount', async () => {
     localStorage.setItem(
-      GEOMETRY_KEY,
-      JSON.stringify({ x: 12, y: 34, w: 400, h: 300 }),
+      LAYOUT_KEY,
+      JSON.stringify({
+        version: 1,
+        placement: {
+          editor: { kind: 'docked', slot: 'a' },
+          output: {
+            kind: 'floating',
+            geometry: { x: 12, y: 34, w: 400, h: 300 },
+            minimized: false,
+          },
+          trace: { kind: 'floating', geometry: null, minimized: false },
+        },
+        recency: ['trace', 'output', 'editor'],
+        axis: 'row',
+        splitPercent: 62,
+      }),
     )
     const wrapper = await mountIde()
     try {
@@ -234,7 +253,7 @@ describe('IDE floating output window', () => {
   })
 
   test('nonsense in storage falls back to the default placement', async () => {
-    localStorage.setItem(GEOMETRY_KEY, '{ not json')
+    localStorage.setItem(LAYOUT_KEY, '{ not json')
     const wrapper = await mountIde()
     try {
       expect(outputWindow()).not.toBeNull()

@@ -10,6 +10,11 @@ const root = ref<HTMLElement | null>(null)
 // A few bindings differ per platform beyond the "Mod" key itself.
 const foldPrefix = isMac ? ['Cmd', 'Alt'] : ['Ctrl', 'Shift']
 
+// Ctrl+Space is macOS's input-source switcher and is usually swallowed before
+// the page ever sees it, so the chord is named with a caveat rather than
+// promised outright.
+const autocompleteNote = isMac ? 'if macOS lets it through' : undefined
+
 interface Shortcut {
   label: string
   keys?: string[]
@@ -24,7 +29,7 @@ const groups: Group[] = [
   {
     title: 'Code',
     items: [
-      { label: 'Autocomplete', keys: ['Ctrl', 'Space'] },
+      { label: 'Autocomplete', keys: ['Ctrl', 'Space'], note: autocompleteNote },
       { label: 'Signature help', keys: [mod, 'Shift', 'Space'], note: 'auto too' },
       { label: 'Go to definition', keys: ['Alt', '.'] },
       { label: 'Find references', keys: ['Shift', 'Alt', '.'] },
@@ -45,8 +50,20 @@ const groups: Group[] = [
     title: 'Find & run',
     items: [
       { label: 'Find in file', keys: [mod, 'F'] },
-      { label: 'Fold / unfold', keys: foldPrefix, note: '[ or ]' },
-      { label: 'Run program', note: '▶ button · access key W' },
+      // One line each, because these are two different commands on two
+      // different chords: the pair above folds the block at the cursor, and
+      // @codemirror/language binds fold-everything the same way everywhere.
+      // The cheatsheet used to show only the first and label it "Fold /
+      // unfold", which read as the View menu's Fold All under another name.
+      { label: 'Fold / unfold block', keys: foldPrefix, note: '[ or ]' },
+      { label: 'Fold / unfold all', keys: ['Ctrl', 'Alt'], note: '[ or ]' },
+    ],
+  },
+  {
+    title: 'File & run',
+    items: [
+      { label: 'Run program', keys: [mod, 'Enter'] },
+      { label: 'Save now', keys: [mod, 'S'], note: 'autosaves anyway' },
     ],
   },
 ]
@@ -76,7 +93,8 @@ onUnmounted(() => {
 <template>
   <span ref="root" class="shortcuts-help">
     <button
-      class="fa-solid fa-circle-question"
+      type="button"
+      class="icon-button fa-solid fa-circle-question"
       aria-label="Keyboard shortcuts"
       aria-haspopup="dialog"
       :aria-expanded="open"
@@ -111,15 +129,15 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 10;
+  z-index: var(--z-popover);
   min-width: 250px;
   max-width: 320px;
   padding: 0.6em 0.75em 0.75em;
   background: var(--surface);
   color: var(--fg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   font-size: 0.85rem;
   text-align: left;
   cursor: default;
@@ -164,7 +182,7 @@ kbd {
   font-size: 0.75rem;
   background: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 

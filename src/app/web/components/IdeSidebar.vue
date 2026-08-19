@@ -5,7 +5,6 @@ import PopupMenu from './PopupMenu.vue'
 import type { MenuItem } from '../menu'
 
 const props = defineProps<{
-  version?: string
   files?: FileEntry[]
   currentFile?: string | null
   /** Whether this deployment has a file server at all; hides the account block. */
@@ -89,7 +88,6 @@ async function handleDrop(event: DragEvent) {
     await props.fileDrop?.(droppedFiles)
   }
 }
-
 </script>
 
 <template>
@@ -100,9 +98,6 @@ async function handleDrop(event: DragEvent) {
     @dragleave="handleDragLeave"
     @drop="handleDrop"
   >
-    <div class="sidebar-title">
-      Scamper <span v-if="version">{{ version }}</span>
-    </div>
     <!-- Above the file buttons rather than in the status bar: the server is the
          difference between files that survive this browser and files that do
          not, which is worth seeing before you start rather than after. -->
@@ -114,7 +109,9 @@ async function handleDrop(event: DragEvent) {
           aria-hidden="true"
         ></span>
         <span class="account-who" :title="signedInAs ?? undefined">
-          {{ canSignIn ? (signedInAs ?? 'Not signed in') : 'Development server' }}
+          {{
+            canSignIn ? (signedInAs ?? 'Not signed in') : 'Development server'
+          }}
         </span>
       </div>
       <button
@@ -145,19 +142,22 @@ async function handleDrop(event: DragEvent) {
          about one file lives in that file's own menu, below. -->
     <div class="sidebar-actions">
       <button
-        class="fa-solid fa-file"
+        type="button"
+        class="icon-button fa-solid fa-file"
         title="Create file"
         aria-label="Create file"
         @click="create?.()"
       ></button>
       <button
-        class="fa-solid fa-upload"
+        type="button"
+        class="icon-button fa-solid fa-upload"
         title="Upload file"
         aria-label="Upload file"
         @click="upload?.()"
       ></button>
       <button
-        class="fa-solid fa-file-zipper"
+        type="button"
+        class="icon-button fa-solid fa-file-zipper"
         title="Download all files as a zip archive"
         aria-label="Download all files as a zip archive"
         :disabled="!props.files?.length"
@@ -166,7 +166,8 @@ async function handleDrop(event: DragEvent) {
       <!-- Stays here as well as in each file's menu: a deleted file has no row
            to open a menu on, and recovering one is what this is for. -->
       <button
-        class="fa-solid fa-clock-rotate-left"
+        type="button"
+        class="icon-button fa-solid fa-clock-rotate-left"
         title="File history"
         aria-label="File history"
         @click="history?.()"
@@ -231,18 +232,10 @@ async function handleDrop(event: DragEvent) {
     background 0.2s ease;
 }
 
-.sidebar-title {
-  padding: 0.5em;
-  text-align: center;
-  font-weight: bold;
-  font-style: italic;
-  border-bottom: 1pt dotted;
-}
-
 .sidebar-account {
-  padding: 0.4em 0.5em;
-  border-bottom: 1pt dotted;
-  font-size: 0.85em;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
   text-align: center;
 }
 
@@ -275,6 +268,7 @@ async function handleDrop(event: DragEvent) {
 }
 
 .account-action {
+  border-radius: var(--radius-sm);
   margin-top: 0.15em;
   border: none;
   background: none;
@@ -292,30 +286,43 @@ async function handleDrop(event: DragEvent) {
 }
 
 .sidebar-actions {
-  padding: 0.25em;
+  padding: var(--space-xs) var(--space-md);
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 0.25em;
+  gap: var(--space-2xs);
+  border-bottom: 1px solid var(--border);
 }
 
 .file-drawer {
   display: flex;
   flex-direction: column;
-  padding: 0.5em;
+  gap: 1px;
+  padding: var(--space-xs);
   flex: 1;
   overflow-x: hidden;
-  overflow-y: scroll;
+  /* `auto`, not `scroll`: a permanent gutter is a real cost in a narrow
+     column that is usually short enough not to need one. */
+  overflow-y: auto;
 }
 
 .file {
   display: flex;
   align-items: center;
+  border-radius: var(--radius-md);
+  /* Reserved so the selected row's rule does not shift the name sideways. */
+  box-shadow: inset 2px 0 0 transparent;
 }
 
+.file:hover:not(.selected) {
+  background: var(--surface-hover);
+}
+
+/* A tint and a rule rather than a saturated fill. The full-bleed --accent bar
+   made the open file the loudest thing on the screen and read as a banner. */
 .file.selected {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 2px 0 0 var(--brand);
 }
 
 /* Takes the whole row bar the ⋯, so clicking a file still means clicking
@@ -325,14 +332,20 @@ async function handleDrop(event: DragEvent) {
   min-width: 0;
   border: none;
   background: none;
-  padding: 0.25em;
+  padding: var(--space-xs) var(--space-md);
   font: inherit;
+  font-size: var(--text-md);
   color: inherit;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.file.selected .file-name {
+  font-weight: 600;
 }
 
 /* Only the open file carries one, the way Overleaf does it: a column of ⋯ down
@@ -346,12 +359,12 @@ async function handleDrop(event: DragEvent) {
   visibility: hidden;
   border: none;
   background: none;
-  padding: 0.25em 0.4em;
-  font-size: 0.9em;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-md);
   line-height: 1;
   color: inherit;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .file.selected .file-menu-button {
@@ -359,9 +372,9 @@ async function handleDrop(event: DragEvent) {
 }
 
 /* Tinted with the row's own text colour, since the row it sits on is the
-   accent-coloured one rather than the plain sidebar. */
+   selected one rather than the plain sidebar. */
 .file-menu-button:hover,
 .file-menu-button.open {
-  background: color-mix(in srgb, currentColor 22%, transparent);
+  background: color-mix(in srgb, currentColor 18%, transparent);
 }
 </style>

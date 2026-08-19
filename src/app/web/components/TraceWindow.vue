@@ -5,7 +5,6 @@ import * as U from '../../../lpm/util'
 import { expToLayout, isExp, type Layout } from '../../../scheme/ast'
 import { changedLayoutPath } from '../../../scheme/layout-diff'
 import { ChangedPathKey } from '../../../scheme/ast-components/changed-path'
-import FloatingWindow from './FloatingWindow.vue'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 import SourceCaption from './SourceCaption.vue'
 
@@ -24,13 +23,7 @@ const props = defineProps<{
   steps: Value[]
   /** True when the trace hit its step limit and the rest was dropped. */
   truncated?: boolean
-  /** Fills the pane rather than floating in it; see FloatingWindow. */
-  docked?: boolean
 }>()
-
-const emit = defineEmits<{ close: [] }>()
-
-const minimized = defineModel<boolean>('minimized', { default: false })
 
 /** Which step is showing, zero-based. */
 const index = defineModel<number>('index', { default: 0 })
@@ -85,14 +78,9 @@ function onSeek(event: Event) {
 </script>
 
 <template>
-  <FloatingWindow
-    v-model:minimized="minimized"
-    title="Step"
-    storage-key="scamper.window.trace"
-    closeable
-    :docked="docked"
-    @close="emit('close')"
-  >
+  <!-- Contents only: the window chrome, and whether there is any, is
+       PanelFrame's business now. -->
+  <div class="trace-contents">
     <div class="trace-body">
       <SourceCaption class="trace-source" :source="source" force-visible />
       <div class="trace-step">
@@ -160,10 +148,17 @@ function onSeek(event: Event) {
         ></button>
       </div>
     </div>
-  </FloatingWindow>
+  </div>
 </template>
 
 <style scoped>
+.trace-contents {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .trace-body {
   flex: 1;
   min-height: 0;

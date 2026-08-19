@@ -41,26 +41,28 @@ describe('highlightScamper', () => {
 
 describe('SourceCaption', () => {
   afterEach(() => {
-    setShowSourceWithOutput(false)
+    setShowSourceWithOutput(true)
   })
 
-  test('is rendered but hidden until the option is on', async () => {
+  test('is rendered either way, and hidden when the option is off', async () => {
     const wrapper = mount(SourceCaption, {
       props: { source: '(display 1)' },
       attachTo: document.body,
     })
     try {
+      // Captions are on by default: a column of bare values with nothing tying
+      // each to its statement is hard to read past a couple of results.
       const box = wrapper.find('.source-caption')
-      // In the DOM either way -- that is what makes the toggle retroactive.
       expect(box.exists()).toBe(true)
-      expect(box.attributes('style')).toContain('display: none')
+      expect(box.attributes('style') ?? '').not.toContain('display: none')
       expect(box.text()).toContain('(display 1)')
 
-      setShowSourceWithOutput(true)
+      setShowSourceWithOutput(false)
       await nextTick()
-      expect(wrapper.find('.source-caption').attributes('style') ?? '').not.toContain(
-        'display: none',
-      )
+      // Still in the DOM -- that is what makes the toggle retroactive.
+      const hidden = wrapper.find('.source-caption')
+      expect(hidden.exists()).toBe(true)
+      expect(hidden.attributes('style')).toContain('display: none')
     } finally {
       wrapper.unmount()
     }
@@ -84,8 +86,8 @@ describe('SourceCaption', () => {
   })
 
   test('the preference survives a remount', () => {
-    setShowSourceWithOutput(true)
-    expect(showSourceWithOutput.value).toBe(true)
-    expect(localStorage.getItem('scamper.output.showSource')).toBe('true')
+    setShowSourceWithOutput(false)
+    expect(showSourceWithOutput.value).toBe(false)
+    expect(localStorage.getItem('scamper.output.showSource')).toBe('false')
   })
 })

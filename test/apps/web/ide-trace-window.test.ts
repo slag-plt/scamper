@@ -60,7 +60,7 @@ describe('IDE trace window', () => {
 
   function traceWindow(): HTMLElement | null {
     return document.querySelector<HTMLElement>(
-      '[aria-label="Step"].floating-window',
+      '[data-panel="trace"]',
     )
   }
 
@@ -169,7 +169,7 @@ describe('IDE trace window', () => {
       const wrapper = await mountIde()
       try {
         await step()
-        const editor = document.querySelector<HTMLElement>('.editor-layer')
+        const editor = document.querySelector<HTMLElement>('[data-panel="editor"]')
         expect(editor?.style.display).toBe('none')
 
         getByRole(document.body, 'tab', { name: 'Source' }).click()

@@ -21,9 +21,13 @@ const SHOW_SOURCE_KEY = 'scamper.output.showSource'
 export const showSourceWithOutput = ref<boolean>(
   (() => {
     try {
-      return localStorage.getItem(SHOW_SOURCE_KEY) === 'true'
+      // On unless turned off. A column of bare values with nothing tying each
+      // one to the statement that produced it is hard to read the moment a
+      // program prints more than a couple of things, and the captions are also
+      // what separate one result from the next.
+      return localStorage.getItem(SHOW_SOURCE_KEY) !== 'false'
     } catch {
-      return false // no storage; default to off
+      return true // no storage; default to on
     }
   })(),
 )

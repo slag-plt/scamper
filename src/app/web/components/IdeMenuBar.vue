@@ -5,7 +5,7 @@ import type { MenuItem } from '../menu'
 import { useScamperSession } from '../composables/use-scamper-session'
 import { useEditor } from '../composables/editor-context'
 import type { CodeMirrorEditorAdapter } from '../composables/codemirror-editor-adapter'
-import { editShortcut, isMac } from '../edit-commands'
+import { appShortcut, editShortcut, isMac } from '../edit-commands'
 import { shortcutsHelpOpen } from '../shortcuts-help'
 import {
   showSourceWithOutput,
@@ -61,6 +61,10 @@ const props = defineProps<{
   signIn?: () => void
   signOut?: () => void
   runWindow?: () => void
+  /** One entry per panel that exists, for the View menu's placement section. */
+  panelPlacement?: { label: string; floating: boolean; toggle: () => void }[]
+  /** Shown at the left end of the bar, e.g. "(3.5.0)". */
+  version?: string
   toggleSidebar?: () => void
   /** Whether the cursor is inside a statement, and whether one is being traced. */
   canStep?: boolean
@@ -134,7 +138,7 @@ const fileMenu = computed<MenuItem[]>(() => {
     { label: 'New File…', run: () => props.create?.() },
     { label: 'Upload File…', run: () => props.upload?.() },
     { separator: true },
-    { label: 'Save', disabled: file === null, run: () => props.save?.() },
+    { label: 'Save', kbd: appShortcut.save, disabled: file === null, run: () => props.save?.() },
     { label: 'Save As…', disabled: file === null, run: () => props.saveAs?.() },
     {
       label: 'Rename…',
@@ -221,10 +225,10 @@ const goMenu = computed<MenuItem[]>(() => {
 })
 
 const runMenu = computed<MenuItem[]>(() => [
-  // No shortcut hint: running is bound to an access key, which every browser
-  // and platform invokes with a different chord, so naming one would be wrong
-  // for most people looking at it.
-  { label: 'Run', disabled: isRunning.value, run: () => session.execute() },
+  // The access key is still there, but it is not what gets named: every browser
+  // and platform invokes one with a different chord, so a hint for it would be
+  // wrong for most people reading it. Mod+Enter is the same on all of them.
+  { label: 'Run', kbd: appShortcut.run, disabled: isRunning.value, run: () => session.execute() },
   { label: 'Stop', disabled: !isRunning.value, run: () => { session.stopRun() } },
   // Stop-then-run: what a student means by "restart" is a clean run of the
   // code as it stands, not a resumption of the one in flight.
@@ -288,8 +292,17 @@ const viewMenu = computed<MenuItem[]>(() => {
       checked: showSourceWithOutput.value,
       run: () => { toggleShowSourceWithOutput() },
     },
+    { separator: true },
     { label: 'Fold All', kbd: editShortcut.foldAll, disabled: !s.loaded, run: inEditor((ed) => { ed.foldAll() }) },
     { label: 'Unfold All', kbd: editShortcut.unfoldAll, disabled: !s.loaded, run: inEditor((ed) => { ed.unfoldAll() }) },
+    { separator: true },
+    // Float/Dock for each panel. The tab strips and title bars carry the same
+    // commands, but a panel docked alone has neither -- the editor, by
+    // default -- so this is the one surface that can always reach all of them.
+    ...(props.panelPlacement ?? []).map((panel) => ({
+      label: `${panel.floating ? 'Dock' : 'Float'} ${panel.label}`,
+      run: () => { panel.toggle() },
+    })),
     { separator: true },
     {
       label: 'Dark Theme',
@@ -325,12 +338,15 @@ const menus = computed(() => [
 // The open menu's title, and where to draw its panel.
 const barRef = ref<HTMLElement | null>(null)
 const openTitle = ref<string | null>(null)
+/** Set when the open came from the keyboard; see PopupMenu's autoActivate. */
+const openedByKeyboard = ref(false)
 const menuPos = ref({ x: 0, y: 0 })
 const openItems = computed(
   () => menus.value.find((m) => m.title === openTitle.value)?.items ?? [],
 )
 
 function openMenu(title: string, event: MouseEvent) {
+  openedByKeyboard.value = false
   refreshEditorStatus()
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
   menuPos.value = { x: rect.left, y: rect.bottom }
@@ -368,19 +384,73 @@ function openMenuByTitle(title: string, focusButton: boolean) {
   openTitle.value = title
 }
 
-/** Left/Right walk between menus while one is open. */
+/**
+ * Which title the bar's single tab stop is on.
+ *
+ * A menubar is one stop, not six: Tab moves past the whole bar and the arrow
+ * keys move within it. Before this every title was its own stop, so tabbing
+ * from the sidebar to the editor went through all six.
+ */
+const focusedTitle = ref<string | null>(null)
+
+const tabStop = computed(
+  () => focusedTitle.value ?? openTitle.value ?? menus.value[0]?.title ?? null,
+)
+
+/** Moves the bar's focus to `title`, opening its menu if one is already open. */
+function goToTitle(title: string) {
+  focusedTitle.value = title
+  if (openTitle.value !== null) {
+    openMenuByTitle(title, true)
+  } else {
+    barRef.value?.querySelector<HTMLElement>(`[data-menu="${title}"]`)?.focus()
+  }
+}
+
+/**
+ * The menubar keyboard pattern: Left/Right along the bar, Home/End to its ends,
+ * and Down to open the focused menu. Only the first of these existed, and only
+ * once a menu was already open -- so from the keyboard there was no way in.
+ */
 function onTitleKey(event: KeyboardEvent) {
-  if (openTitle.value === null) return
-  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-  if (step === 0) return
-  event.preventDefault()
   const titles = menus.value.map((m) => m.title)
-  openMenuByTitle(
-    titles[
-      (titles.indexOf(openTitle.value) + step + titles.length) % titles.length
-    ],
-    true,
-  )
+  if (titles.length === 0) return
+  const at = Math.max(0, titles.indexOf(tabStop.value ?? titles[0]))
+
+  switch (event.key) {
+    case 'ArrowRight':
+      event.preventDefault()
+      goToTitle(titles[(at + 1) % titles.length])
+      return
+    case 'ArrowLeft':
+      event.preventDefault()
+      goToTitle(titles[(at - 1 + titles.length) % titles.length])
+      return
+    case 'Home':
+      event.preventDefault()
+      goToTitle(titles[0])
+      return
+    case 'End':
+      event.preventDefault()
+      goToTitle(titles[titles.length - 1])
+      return
+    case 'ArrowDown':
+    case 'Enter':
+    case ' ':
+      if (openTitle.value === null) {
+        event.preventDefault()
+        // Stopped here rather than allowed to bubble on: the menu mounts at the
+        // microtask checkpoint between this listener and the one on document,
+        // so the very same keypress would otherwise reach the fresh menu and
+        // step it a second time. autoActivate does that job explicitly.
+        event.stopPropagation()
+        openedByKeyboard.value = true
+        openMenuByTitle(titles[at], false)
+      }
+      return
+    default:
+      return
+  }
 }
 
 /**
@@ -434,7 +504,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="barRef" class="ide-menu-bar" role="menubar" @keydown="onTitleKey">
+  <div ref="barRef" class="ide-menu-bar" @keydown="onTitleKey">
+    <!-- Outside the menubar role: it is a wordmark, not a command, and a
+         menubar's children have to be menuitems. It used to head the file
+         drawer, where it cost a whole row of a narrow column to say something
+         that never changes. -->
+    <span class="brand">
+      Scamper<span v-if="version" class="brand-version">{{ version }}</span>
+    </span>
+    <div class="menu-titles" role="menubar">
     <button
       v-for="menu in menus"
       :key="menu.title"
@@ -445,16 +523,20 @@ onUnmounted(() => {
       :data-menu="menu.title"
       aria-haspopup="menu"
       :aria-expanded="openTitle === menu.title"
+      :tabindex="tabStop === menu.title ? 0 : -1"
       @mousedown.stop
+      @focus="focusedTitle = menu.title"
       @click="toggleMenu(menu.title, $event)"
       @mouseenter="onTitleEnter(menu.title, $event)"
     ><span :class="{ accelerator: altHeld }">{{ menu.title[0] }}</span
       >{{ menu.title.slice(1) }}</button>
+    </div>
     <PopupMenu
       v-if="openTitle !== null"
       :x="menuPos.x"
       :y="menuPos.y"
       :items="openItems"
+      :auto-activate="openedByKeyboard"
       @close="openTitle = null"
     />
   </div>
@@ -464,24 +546,49 @@ onUnmounted(() => {
 .ide-menu-bar {
   display: flex;
   align-items: center;
-  gap: 0.1em;
-  padding: 0 0.4em;
+  gap: var(--space-sm);
+  padding: 0 var(--space-sm);
   background: var(--header-bg);
   color: var(--header-fg);
   border-bottom: 1px solid var(--border);
   /* Above the editor, so an open menu is not clipped by it. */
-  z-index: 3;
+  z-index: var(--z-menubar);
   user-select: none;
+}
+
+.menu-titles {
+  display: flex;
+  align-items: center;
+  gap: 0.1em;
+}
+
+.brand {
+  flex-shrink: 0;
+  padding-inline: var(--space-xs);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.brand-version {
+  /* A margin rather than a literal space: Vue's compiler condenses whitespace
+     between the text and the span away. */
+  margin-inline-start: 0.35em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
 }
 
 .menu-title {
   border: none;
   background: none;
-  padding: 0.3em 0.6em;
+  padding: var(--space-xs) var(--space-lg);
   font: inherit;
-  font-size: 0.9em;
+  font-size: var(--text-md);
   color: inherit;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useId } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import type { MenuItem } from '../menu'
 
 /**
@@ -8,16 +8,51 @@ import type { MenuItem } from '../menu'
  * on Escape or on a click anywhere outside it, and can be walked with the arrow
  * keys.
  */
-const props = defineProps<{ x: number; y: number; items: MenuItem[] }>()
+const props = withDefaults(
+  defineProps<{
+    x: number
+    y: number
+    items: MenuItem[]
+    /**
+     * Starts with the first item highlighted, for a menu opened from the
+     * keyboard -- where landing on nothing would mean a second Down just to
+     * begin. A menu opened by pointer starts with nothing highlighted.
+     */
+    autoActivate?: boolean
+  }>(),
+  { autoActivate: false },
+)
 const emit = defineEmits<{ close: [] }>()
 
 const menuId = useId()
 
-// Keep the menu inside the viewport (rough clamp; the panel is ~210px wide).
+const root = ref<HTMLUListElement | null>(null)
+
+/**
+ * Where the menu sits.
+ *
+ * Seeded from the click and corrected once the menu has been measured. The
+ * guess used to be the whole of it, against a hardcoded 220px width and 24px
+ * rows -- neither of which the CSS guarantees -- so a long File menu in a short
+ * window was given a negative `top` and lost its first items off the screen.
+ */
+const MARGIN = 8
+const pos = ref({ left: props.x, top: props.y })
+
 const style = computed(() => ({
-  left: `${String(Math.min(props.x, window.innerWidth - 220))}px`,
-  top: `${String(Math.min(props.y, window.innerHeight - 24 * props.items.length - 16))}px`,
+  left: `${String(pos.value.left)}px`,
+  top: `${String(pos.value.top)}px`,
 }))
+
+function reposition() {
+  const el = root.value
+  if (el === null) return
+  const { width, height } = el.getBoundingClientRect()
+  pos.value = {
+    left: Math.max(MARGIN, Math.min(props.x, window.innerWidth - width - MARGIN)),
+    top: Math.max(MARGIN, Math.min(props.y, window.innerHeight - height - MARGIN)),
+  }
+}
 
 const hasChecks = computed(() =>
   props.items.some((item) => item.checked !== undefined),
@@ -94,24 +129,58 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
+/**
+ * Re-place and re-seed whenever the menu is asked to show something else.
+ *
+ * IdeMenuBar keeps one PopupMenu instance and swaps its props as you slide
+ * along the bar, so "the menu changed" is not the same event as "the menu
+ * mounted". Without this the panel stays under the title it first opened
+ * beneath while showing another one's items, and -- worse -- activeIndex
+ * survives into a shorter menu, where Enter reads past the end of the array
+ * and throws.
+ */
+watch(
+  () => [props.x, props.y, props.items] as const,
+  () => {
+    activeIndex.value = props.autoActivate ? nextSelectable(-1, 1) : -1
+    void nextTick(reposition)
+  },
+)
+
+/** Whatever had focus when the menu opened, to hand it back to on close. */
+let opener: HTMLElement | null = null
+
 onMounted(() => {
+  opener = document.activeElement as HTMLElement | null
+  if (props.autoActivate) activeIndex.value = nextSelectable(-1, 1)
+  void nextTick(reposition)
+  // Focus the menu itself. Without this aria-activedescendant names an element
+  // inside something that never holds focus, which assistive tech ignores --
+  // so the arrow keys moved the highlight visibly and silently.
+  root.value?.focus()
   // Defer so the opening right-click's own mouseup/down doesn't immediately close it.
   setTimeout(() => {
     document.addEventListener('mousedown', onDocMouseDown)
   }, 0)
   document.addEventListener('keydown', onKeyDown)
 })
+
 onUnmounted(() => {
   document.removeEventListener('mousedown', onDocMouseDown)
   document.removeEventListener('keydown', onKeyDown)
+  // Back where it came from, rather than falling to <body> and stranding a
+  // keyboard user at the top of the page.
+  if (opener !== null && document.contains(opener)) opener.focus()
 })
 </script>
 
 <template>
   <ul
+    ref="root"
     class="popup-menu"
     :style="style"
     role="menu"
+    tabindex="-1"
     :aria-activedescendant="
       activeIndex >= 0 ? `${menuId}-${String(activeIndex)}` : undefined
     "
@@ -150,7 +219,7 @@ onUnmounted(() => {
 <style scoped>
 .popup-menu {
   position: fixed;
-  z-index: 20;
+  z-index: var(--z-menu);
   min-width: 200px;
   margin: 0;
   padding: 0.25em 0;
@@ -158,10 +227,19 @@ onUnmounted(() => {
   background: var(--surface);
   color: var(--fg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  font-size: 0.85rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-md);
   user-select: none;
+  /* A menu taller than the window scrolls rather than running off it. */
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+
+/* The menu takes focus so its active item can be announced; the ring around
+   the whole panel would just be noise on top of the highlighted row. */
+.popup-menu:focus {
+  outline: none;
 }
 
 li:not(.separator) {

@@ -28,8 +28,6 @@ const handleClick = (e: MouseEvent) => {
   if (el.contains(e.target as Node)) {
     return
   }
-  // close popover
-  console.log('closing')
   collapseQuery()
 }
 

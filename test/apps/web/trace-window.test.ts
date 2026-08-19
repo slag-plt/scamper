@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { getByRole, queryByRole } from '@testing-library/dom'
+import { getByRole } from '@testing-library/dom'
 import { afterEach, describe, expect, test } from 'vitest'
 import { nextTick } from 'vue'
 import TraceWindow from '../../../src/app/web/components/TraceWindow.vue'
@@ -228,17 +228,6 @@ describe('TraceWindow', () => {
     })
   })
 
-  test('it can be closed, unlike the output window', async () => {
-    const wrapper = open()
-    try {
-      expect(
-        queryByRole(document.body, 'button', { name: 'Close Step' }),
-      ).toBeInTheDocument()
-      getByRole(document.body, 'button', { name: 'Close Step' }).click()
-      await nextTick()
-      expect(wrapper.emitted('close')).toHaveLength(1)
-    } finally {
-      wrapper.unmount()
-    }
-  })
+  // The close button used to live here. It is PanelFrame's now, along with the
+  // rest of the window chrome -- see panel-frame.test.ts.
 })

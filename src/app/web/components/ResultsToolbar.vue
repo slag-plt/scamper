@@ -21,7 +21,8 @@ defineProps<{
   <div class="results-toolbar">
     <div>
       <button
-        class="fa-solid fa-code"
+        type="button"
+        class="icon-button fa-solid fa-code"
         :class="{ active: showSourceWithOutput }"
         :title="
           showSourceWithOutput
@@ -41,10 +42,32 @@ defineProps<{
 </template>
 
 <style scoped>
+/* A strip, like the trace window's controls: it has to hold its height in the
+   window's flex column and read as chrome rather than as the first result. */
+.results-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  padding: 0.25em 0.5em;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+}
+
 .results-toolbar > div {
   display: flex;
   align-items: center;
   gap: 0.25em;
+}
+
+.results-status {
+  min-width: 0;
+  font-size: 0.85em;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A toggle rather than a command, so it has to look pressed while it is on. */

@@ -86,7 +86,6 @@ function createScamperSession(
   }
 
   function expandQuery(id: SchedulerId) {
-    console.log('expanding', id)
     scamper.expandQuery(id)
   }
 

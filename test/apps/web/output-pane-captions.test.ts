@@ -167,6 +167,12 @@ describe('output pane source captions', () => {
     }
   })
 
+  // Deliberate, and worth stating plainly because it looks like noise: the
+  // interleaved view exists to show students which part of their code produced
+  // which output, and a faithful interleaving is what does that. A `define`
+  // with an empty box under it is information -- that statement ran and
+  // produced nothing. Folding silent statements away would make the output a
+  // list of results rather than a transcript of the program.
   test('a statement that prints nothing gets its own box', async () => {
     setShowSourceWithOutput(true)
     const wrapper = await runInPane('(define x 5)\n(define y 6)\n(display x)')

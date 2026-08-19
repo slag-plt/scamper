@@ -15,6 +15,16 @@ export const isMac = /Mac|iPhone|iPad|iPod/i.test(
 /** The platform's primary modifier, which CodeMirror's keymaps call "Mod". */
 export const mod = isMac ? 'Cmd' : 'Ctrl'
 
+/**
+ * Shortcuts the *app* binds, rather than the editor -- see IdeApp's
+ * handleGlobalKeydown. Separate from editShortcut below so it stays obvious
+ * which of the two owns a chord.
+ */
+export const appShortcut = {
+  save: `${mod}+S`,
+  run: `${mod}+Enter`,
+} as const
+
 export const editShortcut = {
   undo: `${mod}+Z`,
   redo: `${mod}+Shift+Z`,

@@ -63,6 +63,11 @@ export function useOutputPane(scrollEl: Ref<HTMLDivElement | null>) {
       // Its own block, ahead of the statement's output, rather than an
       // attribute of the first value: a statement can produce many blocks (a
       // traced run emits one per reduction) and they share the one caption.
+      //
+      // Emitted for every statement, including ones that print nothing. That
+      // is the point of the interleaved view -- it shows which code produced
+      // which output, and a `define` with nothing under it says that statement
+      // ran and produced nothing. See output-pane-captions.test.ts.
       buffer.push({ attrs: ['source-caption'], source })
       scheduleFlush()
     },

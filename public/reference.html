@@ -4,7 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Language Reference &middot; Scamper</title>
+  <!-- Apply the persisted theme before first paint to avoid a flash. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('scamper-theme')
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t)
+        }
+      } catch (e) {}
+    })()
+  </script>
   <link href="css/normalize.css" rel="stylesheet">
+  <link href="css/theme.css" rel="stylesheet">
   <!-- Fontawesome (brands + solid) -->
   <link href="css/fontawesome.css" rel="stylesheet">
   <link href="css/brands.css" rel="stylesheet">
@@ -12,25 +25,27 @@
   <style>
     html, body { height: 100%; margin: 0px; padding: 0px; }
 
+    /* Colors and fonts come from theme.css, so this page follows the light/dark
+       choice like every other one. It used to hardcode White on Black and its
+       own copies of the font stacks, which left it permanently light. */
     #content {
-      background-color: White;
-      color: Black;
-      font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
       width: 100%;
       height: 100vh;
       margin: 1em;
-      content: 1em;
     }
-    
+
     #content code {
-      font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+      font-family: var(--font-mono);
       font-size: 1em;
     }
 
     #content pre {
-      font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+      font-family: var(--font-mono);
       font-size: 1em;
-      overflow: scroll;
+      overflow: auto;
     }
   </style>
 </head>

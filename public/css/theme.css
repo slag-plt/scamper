@@ -1,5 +1,9 @@
 /*
- * Scamper theme tokens (light / dark).
+ * Scamper design tokens.
+ *
+ * Two halves. The first is everything that is not a color -- space, type,
+ * radius, elevation, stacking -- and does not vary by theme. The second is the
+ * color palette, which does.
  *
  * Every UI color is a CSS custom property resolved with light-dark(), so a
  * single declaration carries both themes. Which one applies is driven by the
@@ -14,62 +18,199 @@
  * these same tokens via readColorToken() in src/theme/index.ts, keeping one
  * source of truth.
  */
+
+/*
+ * Scale tokens.
+ *
+ * The values are the ones already most common in the components, rounded onto
+ * a scale, so adopting a token is usually a rename rather than a redesign.
+ *
+ * Space and type are in `rem` on purpose: `em` compounds, so the same token
+ * inside a 0.85em toolbar and a 1em dialog produces two different gaps, which
+ * is how the codebase ended up with 41 distinct padding values in the first
+ * place.
+ */
+:root {
+  /* Space. Steps are 2/4/6/8/12/16/24/32px at a 16px root. */
+  --space-2xs: 0.125rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.375rem;
+  --space-md: 0.5rem;
+  --space-lg: 0.75rem;
+  --space-xl: 1rem;
+  --space-2xl: 1.5rem;
+  --space-3xl: 2rem;
+
+  /* Type. 12/13/14/16/18px. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /*
+   * Font stacks, defined once. Multi-word families are quoted: unquoted, they
+   * are invalid CSS identifiers and browsers drop them silently, which is what
+   * had been happening to "Liberation Mono" and "Segoe UI".
+   */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Avenir Next', Avenir, 'Segoe UI',
+    'Helvetica Neue', Helvetica, Cantarell, Ubuntu, Roboto, Noto, Arial,
+    sans-serif;
+  --font-mono:
+    Menlo, Consolas, Monaco, 'Liberation Mono', 'Lucida Console', monospace;
+
+  /* Radius. sm: inline chips. md: buttons, menu items. lg: panels, dialogs. */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /*
+   * Stacking. Named because none of these elements creates a stacking context,
+   * so they all compete in the root one and the numbers only mean anything
+   * relative to each other.
+   */
+  --z-header: 2;
+  --z-menubar: 3;
+  /* Floating panels start here and stack upward by recency. The number is
+     computed in TS (floatingZ, panel-layout.ts) rather than read from CSS, so
+     this is the declaration of intent the two have to agree on. */
+  --z-panel: 4;
+  --z-popover: 10;
+  --z-menu: 20;
+  --z-scrim: 30;
+}
+
 :root {
   color-scheme: light dark;
 
+  /*
+   * Elevation. light-dark() takes colors only, not whole shadow values, so the
+   * tint is the token that switches and the geometry is shared. Dark needs a
+   * far heavier tint: the light theme's near-transparent black is invisible
+   * against a near-black surface.
+   */
+  --shadow-tint: light-dark(rgba(16, 24, 32, 0.1), rgba(0, 0, 0, 0.5));
+  --shadow-tint-strong: light-dark(rgba(16, 24, 32, 0.18), rgba(0, 0, 0, 0.65));
+  --shadow-sm: 0 1px 2px var(--shadow-tint);
+  --shadow-md: 0 4px 12px var(--shadow-tint), 0 1px 3px var(--shadow-tint);
+  --shadow-lg: 0 8px 28px var(--shadow-tint-strong);
+
+  /*
+   * Palette.
+   *
+   * Every color is an oklch(L C H) pair whose two halves share a hue and,
+   * mostly, a chroma -- only the lightness moves between themes. That is what
+   * makes the dark theme read as the same design rather than an inversion, and
+   * it means retuning a role is one number in one place.
+   *
+   * The neutrals all sit on hue 200 with a trace of chroma, so greys lean
+   * fractionally toward the brand teal instead of being flat.
+   *
+   * Contrast was computed rather than eyeballed (oklch -> sRGB -> WCAG). Every
+   * text pairing below clears AA in both themes; the tightest is
+   * --syntax-comment at 4.60:1, which is deliberate -- comments should recede.
+   */
+
   /* Surfaces */
-  --bg: light-dark(#ffffff, #0d1117);
-  --fg: light-dark(#333333, #e6edf3);
-  --surface: light-dark(#ffffff, #161b22);
-  --surface-muted: light-dark(#f6f8fa, #0d1117);
-  --surface-sidebar: light-dark(#f6f6f6, #161b22);
-  --surface-hover: light-dark(#e0e0e0, #21262d);
+  --bg: light-dark(oklch(98.8% 0.004 200), oklch(17.8% 0.013 200));
+  --fg: light-dark(oklch(27% 0.022 200), oklch(93% 0.012 200));
+  --surface: light-dark(oklch(100% 0 200), oklch(21.8% 0.014 200));
+  --surface-muted: light-dark(oklch(96.8% 0.007 200), oklch(17.8% 0.013 200));
+  --surface-sidebar: light-dark(oklch(96.8% 0.007 200), oklch(21.8% 0.014 200));
+  --surface-hover: light-dark(oklch(93.5% 0.012 200), oklch(31% 0.018 200));
 
   /* Borders */
-  --border: light-dark(#d0d7de, #30363d);
-  --border-muted: light-dark(#dddddd, #30363d);
+  --border: light-dark(oklch(89% 0.014 200), oklch(36% 0.02 200));
+  --border-muted: light-dark(oklch(92% 0.01 200), oklch(31% 0.018 200));
 
   /* Header / toolbar */
-  --header-bg: light-dark(#eeeeee, #161b22);
-  --header-fg: light-dark(#333333, #e6edf3);
+  --header-bg: light-dark(oklch(96.8% 0.007 200), oklch(21.8% 0.014 200));
+  --header-fg: light-dark(oklch(27% 0.022 200), oklch(93% 0.012 200));
 
-  /* Accent (active items, run badge). Dark value darkened so white text meets
-   * WCAG AA contrast (#2ea043 was ~3.4:1). */
-  --accent: light-dark(#008000, #238636);
+  /* Accent (active items, run badge). Both halves stay mid-lightness because
+   * this is a fill behind --accent-fg: white on it is 5.22:1 / 5.03:1. */
+  --accent: light-dark(oklch(52% 0.105 150), oklch(53% 0.11 150));
   --accent-fg: light-dark(#ffffff, #ffffff);
 
-  /* Danger (destructive actions, e.g. a delete confirm button). Reds chosen so
-   * white text clears WCAG AA (4.5:1): #c9352b is ~4.7:1, #b62a20 ~5.6:1. */
-  --danger: light-dark(#c9352b, #b62a20);
+  /* Danger (destructive actions). A fill too: white on it is 5.70:1 / 5.00:1. */
+  --danger: light-dark(oklch(53% 0.15 27), oklch(56% 0.145 27));
   --danger-fg: light-dark(#ffffff, #ffffff);
 
   /* Modals */
-  --modal-bg: light-dark(#fefefe, #161b22);
-  --modal-border: light-dark(#888888, #30363d);
+  --modal-bg: light-dark(oklch(100% 0 200), oklch(21.8% 0.014 200));
+  --modal-border: light-dark(oklch(80% 0.018 200), oklch(36% 0.02 200));
   --overlay: light-dark(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6));
 
   /* Test results */
-  --test-ok-bg: light-dark(#e5ffe5, #10251b);
-  --test-error-bg: light-dark(#ffe5e5, #2d1517);
-  --test-border: light-dark(#000000, #30363d);
+  --test-ok-bg: light-dark(oklch(96% 0.03 150), oklch(25% 0.045 150));
+  --test-error-bg: light-dark(oklch(95.5% 0.018 27), oklch(25% 0.05 27));
+  --test-border: light-dark(oklch(80% 0.018 200), oklch(36% 0.02 200));
 
-  /* Links */
-  --link: light-dark(#0969da, #58a6ff);
+  /* Links. Text rather than a fill, so the dark half is light. */
+  --link: light-dark(oklch(52% 0.14 250), oklch(75% 0.115 250));
 
-  /* Error accent (docs/search) */
-  --error-accent: light-dark(#ffacac, #f85149);
+  /* Brand accent (docs/search headers & titles, source-caption rule). */
+  --brand: light-dark(oklch(52% 0.085 195), oklch(72% 0.085 195));
 
-  /* Brand accent (docs/search headers & titles) */
-  --brand: light-dark(#4badac, #4dbdbc);
+  /*
+   * Selection (the open file in the drawer). A tint plus a rule rather than a
+   * saturated fill: filling the row with --accent made the open file the
+   * loudest element on the screen, reading as a success banner.
+   */
+  --selected-bg: light-dark(oklch(90% 0.042 195), oklch(32% 0.048 195));
+  --selected-fg: light-dark(oklch(38% 0.058 195), oklch(88% 0.055 195));
 
-  /* Splitpanes splitter */
-  --splitter-bg: light-dark(#eeeeee, #30363d);
+  /* Keyboard focus. 5.06:1 / 7.84:1 against the chrome it is drawn on. */
+  --focus: light-dark(oklch(52% 0.14 250), oklch(75% 0.115 250));
+
+  /* Dock splitter */
+  --splitter-bg: light-dark(oklch(93.5% 0.012 200), oklch(31% 0.018 200));
+
+  /*
+   * Syntax. One palette for all three consumers -- the CodeMirror editor, the
+   * step-trace renderer (scamper-highlight.css) and the embed's highlight.js
+   * output (scamper-hljs.css) -- which previously carried three unrelated sets
+   * of hardcoded colors.
+   *
+   * Shared palette, not identical output: highlight.js has its own Scheme
+   * grammar and does not split reserved words out of the operator position the
+   * way our Lezer grammar does, so the embed colors some tokens differently
+   * from the editor. The roles agree; the tokenizers do not.
+   *
+   * Four hues at one chroma per theme, plus a near-neutral comment. Strings
+   * take the brand hue: they used to share hue 250 with numbers, differing
+   * only in lightness, which is the hardest pair to tell apart.
+   *
+   * --syntax-definition is used only by the embed, for the head of a form;
+   * the editor's grammar tags every identifier the same way.
+   */
+  --syntax-keyword: light-dark(oklch(47.5% 0.115 27), oklch(78% 0.105 27));
+  --syntax-definition: light-dark(oklch(47.5% 0.115 305), oklch(78% 0.105 305));
+  --syntax-string: light-dark(oklch(50.5% 0.078 195), oklch(78% 0.105 195));
+  --syntax-number: light-dark(oklch(47.5% 0.115 255), oklch(78% 0.105 255));
+  --syntax-comment: light-dark(oklch(56% 0.018 200), oklch(62% 0.018 200));
+  --syntax-punctuation: light-dark(oklch(47% 0.014 200), oklch(80% 0.014 200));
+  --syntax-variable: light-dark(oklch(30% 0.02 200), oklch(90% 0.012 200));
+
+  /* Editor chrome, so CodeMirror matches the app rather than shipping its own
+   * defaults (the light theme previously had no custom theme at all). */
+  --editor-gutter-fg: light-dark(oklch(55% 0.016 200), oklch(64.5% 0.016 200));
+  --editor-selection: light-dark(oklch(88% 0.045 250), oklch(40% 0.06 250));
+  --editor-active-line: light-dark(
+    oklch(97.5% 0.01 200),
+    oklch(25.5% 0.016 200)
+  );
 
   /* Canvas / chart surfaces (read from JS via readColorToken) */
-  --canvas-surface: light-dark(#ffffff, #161b22);
-  --canvas-ink: light-dark(#000000, #e6edf3);
+  --canvas-surface: light-dark(oklch(100% 0 200), oklch(21.8% 0.014 200));
+  --canvas-ink: light-dark(oklch(27% 0.022 200), oklch(93% 0.012 200));
   --audio-wave: light-dark(rgb(200, 200, 200), rgb(80, 80, 80));
-  --chart-fg: light-dark(#666666, #adbac7);
+  --chart-fg: light-dark(oklch(54.5% 0.02 200), oklch(70% 0.02 200));
   --chart-grid: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.12));
 }
 
@@ -89,4 +230,92 @@ body {
 
 a {
   color: var(--link);
+}
+
+/*
+ * Controls.
+ *
+ * A small shared layer so an icon button looks the same wherever it appears.
+ * Without it each component either restyled one from scratch or left the
+ * browser's beveled default, which is why the toolbar had two visual languages
+ * in a single strip.
+ *
+ * Kept low-specificity (:where, single classes) so a component can still
+ * override any of it locally.
+ */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 28px: clears WCAG 2.2 SC 2.5.8's 24x24 target minimum. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: var(--space-xs) var(--space-sm);
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled),
+.icon-button.open {
+  background: var(--surface-hover);
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* The one button worth picking out of the row. */
+.icon-button--accent:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.icon-button--accent:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
+/* A rule between groups of controls, in place of a middot glyph. */
+.toolbar-sep {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 1px;
+  margin: var(--space-2xs) var(--space-xs);
+  background: var(--border);
+}
+
+.text-input {
+  min-width: 0;
+  padding: var(--space-xs) var(--space-md);
+  font: inherit;
+  font-size: var(--text-md);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/*
+ * Keyboard focus, everywhere. There was no focus styling in the app at all, and
+ * many controls are border:none;background:none, so the only indication was the
+ * browser's own ring -- invisible on a selected row.
+ *
+ * :where() keeps specificity at zero so any component can opt out.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* CodeMirror indicates focus with its own caret and selection; a ring around
+   the whole editor on every click is noise. */
+:where(.cm-editor, .cm-content, .cm-scroller):focus-visible {
+  outline: none;
 }
