@@ -273,7 +273,10 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       return [ctor, pred, ...accessors]
     }
     case 'stmtexp':
-      return [A.mkStmtExp(expandExpr(s.expr))]
+      // The range matters: every other case here carries it through, and
+      // without it a bare top-level expression -- which is most of what a
+      // student writes -- ends up with no source location at all.
+      return [A.mkStmtExp(expandExpr(s.expr), s.range)]
   }
 }
 
