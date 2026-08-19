@@ -10,6 +10,11 @@ export interface RunFiberOptions {
   /** Emit each user-visible reduction as a trace step. Requires `stepper`. */
   isTracing?: boolean
   stepper?: FiberTraceStepper
+  /**
+   * The program's source, so output can be captioned with the statement that
+   * produced it. Only channels implementing `beginStatement` receive them.
+   */
+  src?: string
 }
 
 /**
@@ -50,6 +55,7 @@ export function runFiberOnScheduler(
       err: opts.err,
       isTracing: opts.isTracing ?? false,
       stepper: opts.stepper,
+      src: opts.src,
       onComplete: resolve,
       onFatal: reject,
     })

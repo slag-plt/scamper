@@ -22,3 +22,7 @@
 .scamper-hl-literal {
   color: light-dark(#005cc5, #79c0ff);
 }
+.scamper-hl-comment {
+  color: light-dark(#6a737d, #8b949e);
+  font-style: italic;
+}

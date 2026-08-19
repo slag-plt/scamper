@@ -233,6 +233,9 @@ export default class Scamper {
       fiber,
       out,
       err,
+      // Statements carry ranges into this text, so the scheduler needs it to
+      // caption output with the statement that produced it.
+      src,
       isTracing: traced,
       stepping: isStepping,
       stepper: traced ? makeTraceStepper() : undefined,

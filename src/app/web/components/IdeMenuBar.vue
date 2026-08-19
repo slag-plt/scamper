@@ -8,6 +8,10 @@ import type { CodeMirrorEditorAdapter } from '../composables/codemirror-editor-a
 import { editShortcut, isMac } from '../edit-commands'
 import { shortcutsHelpOpen } from '../shortcuts-help'
 import {
+  showSourceWithOutput,
+  toggleShowSourceWithOutput,
+} from '../output-prefs'
+import {
   DEFAULT_FONT_SIZE,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
@@ -272,6 +276,11 @@ const viewMenu = computed<MenuItem[]>(() => {
       label: 'Word Wrap',
       checked: editorWordWrap.value,
       run: () => { toggleEditorWordWrap() },
+    },
+    {
+      label: 'Source with Output',
+      checked: showSourceWithOutput.value,
+      run: () => { toggleShowSourceWithOutput() },
     },
     { label: 'Fold All', kbd: editShortcut.foldAll, disabled: !s.loaded, run: inEditor((ed) => { ed.foldAll() }) },
     { label: 'Unfold All', kbd: editShortcut.unfoldAll, disabled: !s.loaded, run: inEditor((ed) => { ed.unfoldAll() }) },

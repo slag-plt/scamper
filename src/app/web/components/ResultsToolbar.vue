@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import {
+  showSourceWithOutput,
+  toggleShowSourceWithOutput,
+} from '../output-prefs'
 
 const props = defineProps<{
   isTracing: boolean
@@ -81,6 +85,19 @@ async function handleStepAll() {
         disabled
         @click="astText?.()"
       ></button>
+      <button
+        class="fa-solid fa-code"
+        :class="{ active: showSourceWithOutput }"
+        :title="
+          showSourceWithOutput
+            ? 'Hide the source of each result'
+            : 'Show the source of each result'
+        "
+        aria-label="Show source with output"
+        role="switch"
+        :aria-checked="showSourceWithOutput"
+        @click="toggleShowSourceWithOutput()"
+      ></button>
     </div>
     <div v-if="isDirty" class="results-status">
       <em>(Warning: results out of sync with updated code)</em>
@@ -93,5 +110,12 @@ async function handleStepAll() {
   display: flex;
   align-items: center;
   gap: 0.25em;
+}
+
+/* A toggle rather than a command, so it has to look pressed while it is on. */
+.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: 3px;
 }
 </style>

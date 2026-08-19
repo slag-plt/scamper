@@ -13,6 +13,10 @@ import {
   resetZoom,
   setEditorWordWrap,
 } from '../../../src/app/web/editor-prefs'
+import {
+  setShowSourceWithOutput,
+  showSourceWithOutput,
+} from '../../../src/app/web/output-prefs'
 import { initialize } from '../../../src/scamper'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
@@ -47,6 +51,7 @@ describe('IDE menu bar', () => {
     setTheme('light')
     resetZoom()
     setEditorWordWrap(false)
+    setShowSourceWithOutput(false)
   })
 
   afterEach(() => {
@@ -333,6 +338,25 @@ describe('IDE menu bar', () => {
       ).toHaveAttribute('aria-checked', 'true')
     } finally {
       setEditorWordWrap(false)
+      wrapper.unmount()
+    }
+  })
+
+  test('View toggles the source captions', async () => {
+    // The output window's toolbar carries the same switch; that half is
+    // checked in results-toolbar.test.ts, where the real toolbar is mounted.
+    const wrapper = await mountIde('hello.scm')
+    try {
+      expect(showSourceWithOutput.value).toBe(false)
+      await pick('View', 'Source with Output')
+      expect(showSourceWithOutput.value).toBe(true)
+
+      const menu = await openMenu('View')
+      expect(
+        getByRole(menu, 'menuitemcheckbox', { name: 'Source with Output' }),
+      ).toHaveAttribute('aria-checked', 'true')
+    } finally {
+      setShowSourceWithOutput(false)
       wrapper.unmount()
     }
   })

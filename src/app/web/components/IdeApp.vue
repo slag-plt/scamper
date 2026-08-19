@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from 'vue'
-import { Pane, Splitpanes } from 'splitpanes'
-import 'splitpanes/dist/splitpanes.css'
+import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
@@ -10,6 +8,7 @@ import {
   writeStoredConfig,
   type Config,
 } from '../ide-config'
+import FloatingWindow from './FloatingWindow.vue'
 import IdeSidebar from './IdeSidebar.vue'
 import IdeMenuBar from './IdeMenuBar.vue'
 import IdeHeader from './IdeHeader.vue'
@@ -82,6 +81,23 @@ const files = ref<FileEntry[]>([])
 // Recently opened files that still exist and aren't the one already open.
 const recentFiles = ref<string[]>([])
 const isSidebarVisible = ref(true)
+/**
+ * Whether the output is put away.
+ *
+ * One flag covers both layouts, because they are the same question asked twice:
+ * floating, it means the window sits in the taskbar; docked, it means the
+ * Source tab is the one showing. Keeping them as one piece of state is what
+ * makes crossing the breakpoint mid-session land somewhere sensible.
+ */
+const isOutputMinimized = ref(false)
+
+// Narrower than this and a window floating over the code has nowhere to float,
+// so the two share the pane through tabs instead. Measured on the pane rather
+// than the viewport: opening the file drawer takes 250px off it, and that
+// counts just as much as a smaller screen does.
+const COMPACT_PANE_WIDTH = 700
+const contentAreaRef = ref<HTMLElement | null>(null)
+const isCompact = ref(false)
 const isLoading = ref(true)
 const loadingContent = ref('Loading Scamper...')
 const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
@@ -129,6 +145,32 @@ const session = provideScamperSession(resultsRef, {
   },
 })
 const { isTracing, queries, expandedQueryId } = session
+
+// Running with the output tucked away would show the person nothing at all, so
+// starting a run brings the window back -- or, on a narrow pane, switches to
+// the Output tab, which is the same thing.
+watch(
+  () => session.currentRun.value,
+  (run) => {
+    if (run !== null) isOutputMinimized.value = false
+  },
+)
+
+// Arriving at the tabbed layout, start on the code: that is what someone came
+// to write, and unlike the floating window the output would otherwise be
+// covering all of it. Something already running is the exception.
+watch(isCompact, (compact) => {
+  if (compact && session.currentRun.value === null) {
+    isOutputMinimized.value = true
+  }
+})
+
+/** Left/Right move between the pane tabs, as a tablist is expected to. */
+function onTabKey(event: KeyboardEvent) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+  event.preventDefault()
+  isOutputMinimized.value = !isOutputMinimized.value
+}
 
 function abortTraceStep() {
   // Stop an in-flight statement/all burst, re-pausing the session (vs. stopRun,
@@ -1208,7 +1250,25 @@ onMounted(async () => {
   await offerLocalFiles()
 })
 
+let paneObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  const el = contentAreaRef.value
+  if (el === null) return
+  const measure = () => {
+    // A width of zero means the pane has not been laid out yet, not that it is
+    // narrow -- so hold the wide layout rather than flashing the tabs up and
+    // taking them away again on the next frame.
+    const width = el.clientWidth
+    isCompact.value = width > 0 && width < COMPACT_PANE_WIDTH
+  }
+  paneObserver = new ResizeObserver(measure)
+  paneObserver.observe(el)
+  measure()
+})
+
 onUnmounted(() => {
+  paneObserver?.disconnect()
   stopAutosaving()
   stopWatchingConnection?.()
   Connectivity.stop()
@@ -1277,12 +1337,40 @@ onUnmounted(() => {
         @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
       />
-      <div class="content-area">
-        <Splitpanes>
-          <Pane :size="65" class="editor-pane">
+      <!-- The code fills the pane and the output floats over it, rather than
+           the two splitting the width between them. Too narrow for that and
+           they take turns instead, behind a pair of tabs. -->
+      <div ref="contentAreaRef" class="content-area">
+        <div v-if="isCompact" class="pane-tabs" role="tablist" @keydown="onTabKey">
+          <button
+            type="button"
+            role="tab"
+            class="pane-tab"
+            :aria-selected="isOutputMinimized"
+            @click="isOutputMinimized = true"
+          >
+            Source
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="pane-tab"
+            :aria-selected="!isOutputMinimized"
+            @click="isOutputMinimized = false"
+          >
+            Output
+          </button>
+        </div>
+        <div class="pane-stack">
+          <div v-show="!isCompact || isOutputMinimized" class="editor-layer">
             <CodeMirrorEditor @dirty="makeDirty" @cursor-change="handleCursorChange" />
-          </Pane>
-          <Pane :size="35" class="results-pane">
+          </div>
+          <FloatingWindow
+            v-model:minimized="isOutputMinimized"
+            :docked="isCompact"
+            title="Output"
+            storage-key="scamper.window.output"
+          >
             <ResultsPane
               ref="resultsRef"
               :is-dirty="isDirty"
@@ -1292,8 +1380,20 @@ onUnmounted(() => {
               :step-all="handleStepAll"
               :abort-step="abortTraceStep"
             />
-          </Pane>
-        </Splitpanes>
+          </FloatingWindow>
+          <!-- Only floating windows need somewhere to wait; the tabs are the
+               way back to a docked one. -->
+          <div v-if="!isCompact && isOutputMinimized" class="window-taskbar">
+            <button
+              type="button"
+              class="taskbar-button"
+              @click="isOutputMinimized = false"
+            >
+              <i class="fa-solid fa-window-maximize" aria-hidden="true"></i>
+              Output
+            </button>
+          </div>
+        </div>
       </div>
       <IdeStatusBar
         :line="cursorStatus.line"
@@ -1367,28 +1467,82 @@ onUnmounted(() => {
 .content-area {
   flex: 1;
   min-height: 0;
-  position: relative;
-}
-
-.editor-pane {
-  background-color: var(--surface);
-  overflow: hidden;
-}
-
-.results-pane {
-  background-color: var(--surface);
   display: flex;
   flex-direction: column;
 }
 
-:deep(.splitpanes__splitter) {
-  background-color: var(--splitter-bg);
-  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==");
-  background-repeat: no-repeat;
-  background-position: 50%;
-  cursor: col-resize;
-  width: 10px;
+/* The box the editor and the output window are positioned inside. */
+.pane-stack {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.pane-tabs {
+  display: flex;
   flex-shrink: 0;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.pane-tab {
+  flex: 1;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  padding: 0.45em 0.8em;
+  font: inherit;
+  font-size: 0.9em;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pane-tab:hover {
+  background: var(--surface-hover);
+}
+
+.pane-tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* The full pane, with the output window floating above it. */
+.editor-layer {
+  position: absolute;
+  inset: 0;
+  background-color: var(--surface);
+  overflow: hidden;
+}
+
+/* Where minimized windows wait: the bottom-right corner, out of the way of
+   code, which is ragged-right and so leaves that corner emptiest. */
+.window-taskbar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  gap: 0.25em;
+  padding: 0.3em;
+}
+
+.taskbar-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.7em;
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.taskbar-button:hover {
+  background: var(--surface-hover);
 }
 
 .loading {

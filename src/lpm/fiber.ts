@@ -186,6 +186,20 @@ export class Fiber {
     return this.currStmtIdx
   }
 
+  /** @returns how many statements this fiber's program has. */
+  get statementCount(): number {
+    return this.prog.length
+  }
+
+  /**
+   * @returns the statement at `index`, or undefined if there is none there.
+   *   Unlike `lastStatement` this never throws: callers asking about a
+   *   statement by index are reporting on one, not executing it.
+   */
+  statementAt(index: number): Stmt | undefined {
+    return this.prog.at(index)
+  }
+
   // TODO: this may be unnecessary later
   get lastStatement(): Stmt {
     const stmt = this.prog.at(this.currStmtIdx - 1)
