@@ -51,6 +51,7 @@ is compiled in.
 ### The file server
 
 + `scripts/server/server-up [--build]`: runs the whole app via `docker compose` — MariaDB, the API, and Caddy serving the built front end while proxying `/api` — applying migrations first, then waits until it answers. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`). `--build` is required after any change to `server/` *or* the front end, since the images hold copies of both. Flags pass through to `compose up`, which is what a deployment uses: `--pull always --no-build` runs the images CI published instead of building on the host
++ `scripts/server/server-sync`: the same thing under cron — pulls the repository and the images, and deploys only when one of them moved, so a merge to main reaches the server on its own. Silent when there is nothing to do; `SCAMPER_TAG` pinned to a commit turns it off
 + `scripts/server/web-update`: rebuilds and swaps *only* the front-end container, leaving the API and database running. Use this for a front-end patch on a machine that can build; a host that pulls does `docker compose pull web && docker compose up -d --no-deps web` instead. `server-up --build` recreates everything, migrations included
 + `scripts/server/server-down [--wipe]`: stops it. The database survives; `--wipe` destroys it, after a typed confirmation
 + `scripts/server/server-dump [file]`: dumps the whole database to `dumps/scamper-<timestamp>.sql`

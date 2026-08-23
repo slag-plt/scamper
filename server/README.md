@@ -487,6 +487,50 @@ Take a dump first if the change touches storage:
 scripts/server/server-dump          # dumps/scamper-<timestamp>.sql
 ```
 
+### Keeping up with main
+
+`scripts/server/server-sync` is the upgrade above run by cron rather than by
+hand, which is what carries a merge to main onto the server without anyone
+logging in:
+
+```console
+crontab -e
+```
+
+```crontab
+PATH=/usr/local/bin:/usr/bin:/bin
+*/5 * * * * /root/scamper/scripts/server/server-sync >> /var/log/scamper-sync.log 2>&1
+```
+
+It pulls what the host reads for itself, pulls the images, and deploys **only if
+one of them actually moved** — comparing the image IDs behind the tags across
+the pull, since the tag is `latest` either way. A run with nothing to do exits
+without a word, so that log holds one entry per deployment rather than one every
+five minutes. When there is something to do it dumps the database first, keeps
+the last twenty dumps, and hands over to `server-up --no-build`.
+
+Compose does the rest of the deciding: a container whose image ID has not
+changed is left alone, so a run that merely looked restarts nothing.
+
+Four things to get right on the host:
+
+- **An HTTPS remote.** Cron has no ssh-agent: `git remote set-url origin
+  https://github.com/slag-plt/scamper.git`. The repository and the packages are
+  public, so nothing here needs credentials.
+- **`PATH` in the crontab.** Cron's is short, and `docker` is usually not on it.
+- **A checkout with no local edits.** `git pull --ff-only` refuses to run over
+  them. `.env` and `docker-compose.override.yml` are gitignored and so are safe;
+  a hand-patched `Caddyfile` is not, and the failure is loud in the log.
+- **`SCAMPER_TAG=latest`.** Pinning a commit is the off switch — the pull then
+  fetches the same digest every time and nothing is ever deployed. That is what
+  to reach for when a bad main lands.
+
+There is deliberately nothing pushing from CI. A deploy key in GitHub's secrets
+is a shell on the server, and polling needs nothing inbound at all: no key, no
+open port, no webhook. What it costs is up to five minutes of latency. If that
+ever matters, the shape to add is an Actions job that ssh's in against a key
+restricted to `command="…/server-sync"`, so a leaked secret can only deploy.
+
 ### If the host cannot build the images
 
 It does not have to — that is what the published images are for, and the

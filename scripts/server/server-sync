@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+# Brings this host up to date with main, and says nothing when it already is.
+#
+# Meant for cron, which is what carries a merge to main onto the server without
+# anyone logging in:
+#
+#   */5 * * * * /root/scamper/scripts/server/server-sync >> /var/log/scamper-sync.log 2>&1
+#
+# Nearly every run finds nothing to do and exits silently, so that log holds one
+# entry per deployment rather than one every five minutes.
+#
+# Pinning `SCAMPER_TAG` to a commit is the off switch: the pull then fetches the
+# same digest every time, nothing differs, and nothing is deployed until it is
+# `latest` again. That is the thing to reach for when a bad main lands.
+#
+# Linux only, for `flock`.
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 0 ] || usage "$0"
+
+if [ ! -f "${ROOT}/.env" ]; then
+  echo "There is no .env beside docker-compose.yml." >&2
+  echo "This host has never been deployed to; see server/README.md." >&2
+  exit 1
+fi
+
+# One at a time. Cron does not care that the last run is still going, and two
+# deployments at once is how a half-migrated database happens. `-n` rather than
+# waiting, because a run that waits its turn is a run that deploys what the
+# previous one just deployed.
+exec 9>"${ROOT}/.sync.lock"
+flock -n 9 || exit 0
+
+# The image *identities* behind the tags the compose file names. Comparing these
+# across the pull is what tells a new image from the same one again -- `docker
+# compose pull` reports neither, and the tag is `latest` in both cases.
+image_ids() {
+  local id
+  compose config --images | sort -u | while read -r image; do
+    id="$(docker image inspect -f '{{.Id}}' "${image}" 2>/dev/null || true)"
+    printf '%s %s\n' "${image}" "${id:-absent}"
+  done
+}
+
+BEFORE_HEAD="$(git -C "${ROOT}" rev-parse HEAD)"
+BEFORE_IMAGES="$(image_ids)"
+
+# `git pull` is for the files this host reads for itself -- the compose file,
+# the Caddyfile, these scripts. Not the code: that arrives in the images, which
+# is what the second line fetches.
+git -C "${ROOT}" pull --ff-only --quiet
+compose pull --quiet
+
+AFTER_HEAD="$(git -C "${ROOT}" rev-parse HEAD)"
+AFTER_IMAGES="$(image_ids)"
+
+if [ "${BEFORE_HEAD}" = "${AFTER_HEAD}" ] && [ "${BEFORE_IMAGES}" = "${AFTER_IMAGES}" ]; then
+  exit 0
+fi
+
+echo "=== $(date -u '+%Y-%m-%d %H:%M:%S')Z deploying ${AFTER_HEAD:0:8}"
+
+# Only when there is something to dump. The first run has no database yet and
+# `server-dump` rightly refuses, which under `set -e` would abort this script
+# before it ever deployed anything.
+if [ -n "$(compose ps --status running --quiet db 2>/dev/null)" ]; then
+  "${ROOT}/scripts/server/server-dump"
+  # Keep the last twenty. They hold every student's files, so they are worth
+  # having -- and worth not keeping forever on a small disk.
+  ls -t "${ROOT}"/dumps/*.sql 2>/dev/null | tail -n +21 | while read -r old; do
+    rm -f "${old}"
+  done
+fi
+
+# `--no-build` for the reason the deployment uses it: a missing image should say
+# so rather than start the front-end build this host cannot finish. `server-up`
+# waits for the whole chain to answer and prints both halves' last words when it
+# does not, so a failed deployment leaves something readable in the log.
+"${ROOT}/scripts/server/server-up" --no-build
