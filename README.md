@@ -121,12 +121,13 @@ the full-stack deployment below, which serves both from one origin.
 ### Full stack, with Docker
 
 ~~~console
-$> git pull && scripts/server/server-up --build
+$> git pull && scripts/server/server-up --pull always --no-build
 ~~~
 
-Builds both images and starts MariaDB, the API, and Caddy. This is the whole
-deployment — there is no separate script, because the compose file already says
-how everything starts, in a form that runs. See
+Pulls the images CI publishes from every green main and starts MariaDB, the API,
+and Caddy. This is the whole deployment — there is no separate script, because
+the compose file already says how everything starts, in a form that runs. A host
+with the memory to build can use `--build` instead and skip the registry. See
 [`server/README.md`](server/README.md).
 
 ## Information about the AST

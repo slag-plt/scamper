@@ -4,11 +4,20 @@
 # alike, so there is no separate deployment script to keep in step with how the
 # thing actually starts. Deploying is:
 #
-#   docker compose pull || docker compose build
+#   docker compose pull
 #   docker compose up -d
 #
 # and the same two commands are an upgrade. Configuration comes from a `.env`
 # file beside this one -- see .env.example.
+#
+# Every service below names a published image *and* how to build one. CI pushes
+# all three to ghcr.io on each green main (.github/workflows/node.js.yml), so a
+# deployment pulls rather than builds: the front-end build is the
+# memory-hungriest step here, and a small managed host runs out of memory part
+# way through it. Development is unchanged -- Compose builds a service carrying
+# a `build:` section whenever its tag is missing locally, so `server-up --build`
+# still builds the working tree. `SCAMPER_TAG` in `.env` chooses which published
+# version runs.
 #
 # The front end *is* here, in the `web` service: it serves the built static
 # files and passes `/api` through to the server, so the two share an origin.
@@ -47,6 +56,7 @@ services:
   # than leaving a migration step for whoever is deploying to remember.
   # Additive and idempotent, so it is a no-op on every start after the first.
   migrate:
+    image: ghcr.io/slag-plt/scamper-migrate:${SCAMPER_TAG:-latest}
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -61,6 +71,7 @@ services:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env}
 
   server:
+    image: ghcr.io/slag-plt/scamper-server:${SCAMPER_TAG:-latest}
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -98,6 +109,7 @@ services:
   # is what makes the whole app one origin. Small: the image is Caddy plus
   # static files, with the Node build tooling left behind in an earlier stage.
   web:
+    image: ghcr.io/slag-plt/scamper-web:${SCAMPER_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile.web

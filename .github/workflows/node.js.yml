@@ -81,3 +81,62 @@ jobs:
     - run: npm ci
     - run: npx playwright install --with-deps chromium
     - run: npm run test:browser
+
+  # The three images a deployment runs, pushed to ghcr.io. A server pulls these
+  # rather than building its own: the front-end build (`npm ci` plus Vite) is
+  # the memory-hungriest step in this repository, and a small managed host runs
+  # out of memory part way through it -- while a runner has memory to spare and
+  # builds x86 natively.
+  #
+  # `needs` is the point as much as the build is. What this pushes is what a
+  # server pulls, so it only publishes from a main whose tests passed.
+  publish:
+
+    if: github.event_name == 'push'
+    needs: [build, database-tests, browser-tests]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          # `target` matters: server/Dockerfile's *last* stage is `migrate`, so
+          # an untargeted build would publish the migration CLI as the server.
+          - image: web
+            dockerfile: Dockerfile.web
+            target: runtime
+          - image: server
+            dockerfile: server/Dockerfile
+            target: runtime
+          - image: migrate
+            dockerfile: server/Dockerfile
+            target: migrate
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: docker/setup-buildx-action@v3
+    - uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    # Two tags each: `latest` for a deployment that follows main, and the commit
+    # for one that pins -- which is also what a rollback sets SCAMPER_TAG to.
+    # `github.repository` is lowercase here, as ghcr.io requires.
+    - uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ${{ matrix.dockerfile }}
+        target: ${{ matrix.target }}
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}-${{ matrix.image }}:latest
+          ghcr.io/${{ github.repository }}-${{ matrix.image }}:${{ github.sha }}
+        # Scoped per image: they share no layers worth confusing, and one cache
+        # for all three would evict itself on every run.
+        cache-from: type=gha,scope=${{ matrix.image }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.image }}

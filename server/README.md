@@ -64,7 +64,9 @@ git pull && scripts/server/server-up --build
 
 `--build` matters after any change to `server/` *or* the front end: the images
 hold *copies* of both, so editing the source changes nothing until they are
-rebuilt.
+rebuilt. That is the development story, where the working tree is the point. A
+deployment builds nothing at all -- it runs what CI published; see
+**Deploying**.
 
 ### Four containers, one origin
 
@@ -100,6 +102,14 @@ scripts/server/web-update
 That rebuilds only the front-end image and swaps only that container
 (`--no-deps`), leaving the API's uptime, the database, and everyone's session
 untouched. About ten seconds, of which Caddy is down for one.
+
+`web-update` *builds*, so it belongs on a machine that can. On a host running
+published images the same swap is two commands, and it pulls rather than builds:
+
+```console
+docker compose pull web
+docker compose up -d --no-deps web
+```
 
 If even that is too much, `docker-compose.override.yml.example` switches `web`
 to serving a directory on the host:
@@ -369,23 +379,60 @@ Signing in or out reloads rather than swapping the file system mid-session.
 ## Deploying
 
 Everything runs on one host, from one command. The host needs Docker with
-Compose v2 and git, and **nothing else** — no Node, no build tooling: the images
-build the front end themselves.
+Compose v2 and git, and **nothing else** — no Node, no build tooling, and not
+even the memory to build: it runs the images CI published.
 
 ```console
 git clone <this repo> scamper && cd scamper
 cp .env.example .env          # then fill it in -- see below
-scripts/server/server-up --build
+scripts/server/server-up --pull always --no-build
 scripts/server/user-add ada@example.edu "Ada Lovelace"
 ```
 
-That is the whole deployment. It brings up MariaDB, waits for it, runs
-BetterAuth's migrations to completion, starts the API, starts Caddy in front of
-it, and waits until the whole chain answers — then prints the URL.
+That is the whole deployment. It pulls the three images, brings up MariaDB,
+waits for it, runs BetterAuth's migrations to completion, starts the API, starts
+Caddy in front of it, and waits until the whole chain answers — then prints the
+URL.
+
+`server-up` passes flags straight through to `compose up`, and both of these are
+worth understanding. `--pull always` takes the published image rather than
+whatever copy the host already has. `--no-build` turns a missing image into an
+error instead of a build — Compose builds a service carrying a `build:` section
+whenever its tag is absent, and the front-end build is exactly what a small host
+runs out of memory doing. A host with memory to spare can ignore both and
+`server-up --build` from the checkout instead.
+
+### Where the images come from
+
+`.github/workflows/node.js.yml` builds three images and pushes them to ghcr.io
+on every push to main whose tests pass:
+
+| Image | What it is |
+| --- | --- |
+| `ghcr.io/slag-plt/scamper-web` | Caddy and the built front end |
+| `ghcr.io/slag-plt/scamper-server` | this API |
+| `ghcr.io/slag-plt/scamper-migrate` | BetterAuth's migration CLI |
+
+Each is tagged twice: `latest`, and the commit it was built from. `SCAMPER_TAG`
+in `.env` chooses between them — `latest` follows main, a SHA holds one version,
+and putting the previous SHA back is the rollback.
+
+The packages are public, so a host pulls without credentials. If they are ever
+made private, the host needs one `docker login ghcr.io` with a token carrying
+`read:packages`.
+
+`latest` is a shared name, which is worth remembering on a development machine:
+a `docker compose pull` there overwrites whatever `server-up --build` last
+built, and a later `server-up` would then start main's image rather than the
+working tree, silently. `SCAMPER_TAG=dev` in a local `.env` keeps the two apart.
+
+Runners are x86 and so is the usual host, so the published images are
+`linux/amd64` only. That matters on an ARM Mac: pulling them there works but
+runs emulated, and `server-up --build` is the better local move anyway.
 
 ### Filling in `.env`
 
-Four values matter, and one of them is the usual source of trouble:
+Five values matter, and one of them is the usual source of trouble:
 
 | Variable | What it must be |
 | --- | --- |
@@ -393,6 +440,7 @@ Four values matter, and one of them is the usual source of trouble:
 | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
 | `BETTER_AUTH_URL` | **the origin a browser will show**, scheme and port included |
 | `WEB_PORT` | the port the platform forwards public traffic to |
+| `SCAMPER_TAG` | which published images to run — `latest`, or a commit to pin |
 
 `BETTER_AUTH_URL` is the one. It is the list of origins a session may be created
 from, so if it does not match the address bar exactly, **sign-in alone** fails
@@ -416,14 +464,22 @@ provided the name resolves to the host and both ports are reachable.
 ### Upgrades
 
 ```console
-git pull && scripts/server/server-up --build     # everything
-scripts/server/web-update                        # front end only
+git pull                                            # what lives on the host
+scripts/server/server-up --pull always --no-build   # everything
+docker compose pull web                             # front end only
+docker compose up -d --no-deps web
 ```
 
-`--build` is not optional after a code change: the images hold *copies* of
-`server/` and of the built front end. `web-update` is the one to reach for when
-only the front end changed — it swaps that container alone, leaving the API's
-uptime, the database, and everyone's session untouched.
+`git pull` is for the files the host itself reads — the compose file, the
+`Caddyfile`, the scripts. The code is not among them: it arrives in the images,
+which is why the second line, not the first, is the upgrade.
+
+The last two are the pulled-image version of `web-update`: they swap Caddy alone
+and leave the API's uptime, the database, and everyone's session untouched. Use
+`web-update` itself only where the host can build.
+
+Pinned rather than following main? Put the new commit in `SCAMPER_TAG` and run
+the same `server-up`; rolling back is putting the old one back.
 
 Take a dump first if the change touches storage:
 
@@ -433,18 +489,41 @@ scripts/server/server-dump          # dumps/scamper-<timestamp>.sql
 
 ### If the host cannot build the images
 
-The front-end build (`npm ci` plus Vite) is the memory-hungriest step here, and
-a small managed environment can run out. The way around it is to build
-elsewhere and ship `dist/`:
+It does not have to — that is what the published images are for, and the
+front-end build (`npm ci` plus Vite) is the memory-hungriest step in this
+repository. What follows is for running something CI has *not* published: an
+unmerged branch, or a change that is not going to main.
+
+Build it elsewhere, under the name the compose file expects, and ship it:
+
+```console
+docker buildx build --platform linux/amd64 \
+  -f Dockerfile.web --target runtime \
+  -t ghcr.io/slag-plt/scamper-web:local --load .
+docker save ghcr.io/slag-plt/scamper-web:local | gzip > web.tar.gz
+scp web.tar.gz host:                       # then, on the host:
+#   gunzip -c web.tar.gz | docker load
+#   SCAMPER_TAG=local in .env, and server-up --no-build
+```
+
+`--platform` is not optional from an ARM Mac: an arm64 image will not start on
+an x86 host, and the failure is an exec-format error at run time rather than
+anything at build time.
+
+The other way is to leave the front end out of an image entirely and serve a
+directory on the host:
 
 ```console
 cp docker-compose.override.yml.example docker-compose.override.yml
-scripts/server/server-up            # once, to apply the mount
-rsync -a dist/ host:scamper/dist/   # from a machine that can build
+scripts/server/server-up --pull always --no-build   # once, to apply the mount
+rsync -a --delete --delay-updates dist/ host:scamper/dist/
 ```
 
-Caddy then serves that directory directly. The cost is that what is running no
-longer corresponds to any image — see **Patching the front end alone** above.
+Caddy then serves that directory directly, and putting new files there is the
+whole update. `--delay-updates` matters: Caddy reads each file per request, so a
+half-transferred `dist/` is live while it transfers. The cost is that what is
+running no longer corresponds to any image — see **Patching the front end
+alone** above.
 
 ### The static deployment is separate, and still works
 
