@@ -1,6 +1,11 @@
 import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
-import { SampleNode, AudioPipeline, audio_getCtx } from '../index.js'
+import {
+  SampleNode,
+  AudioPipeline,
+  audio_getCtx,
+  sampleSourceNode,
+} from '../index.js'
 import { onThemeChange, readColorToken } from '../../../theme'
 
 function throwError(msg: string): never {
@@ -77,15 +82,10 @@ export function sampleRenderer(sample: SampleNode): HTMLElement {
   const dataArray = new Uint8Array(bufferLength)
   analyser.getByteTimeDomainData(dataArray)
 
-  const data = sample.data
-  // N.B., for now, make the audio sample stereo (2 channels)
-  const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
-  buffer.copyToChannel(data, 0)
-  buffer.copyToChannel(data, 1)
   let source: AudioBufferSourceNode | undefined
   playButton.onclick = () => {
-    source = ctx.createBufferSource()
-    source.buffer = buffer
+    // A fresh source per press: one can only be started once.
+    source = sampleSourceNode(ctx, sample)
     source.connect(ctx.destination)
     source.connect(analyser)
     source.start()
