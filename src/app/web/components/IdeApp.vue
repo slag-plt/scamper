@@ -678,19 +678,6 @@ function displayError(error: string) {
 
 // ---------- header event handlers ----------
 
-async function handleRunWindow() {
-  if (!currentFile.value) return
-  // The runner window loads the file from storage rather than from this
-  // editor, so offline it would open onto nothing.
-  if (!(await requireServer('Opening the run window'))) return
-  await saveCurrentFile()
-  const params = new URLSearchParams({
-    filename: currentFile.value,
-    isTree: 'false',
-  })
-  window.open(`runner.html?${params.toString()}`)
-}
-
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
 }
@@ -1457,7 +1444,6 @@ onUnmounted(() => {
         :select-file="handleSelectFile"
         :sign-in="openSignIn"
         :sign-out="handleSignOut"
-        :run-window="handleRunWindow"
         :panel-placement="panelPlacement"
         :toggle-sidebar="toggleSidebar"
         :can-step="canStep"
@@ -1467,10 +1453,8 @@ onUnmounted(() => {
         :whats-new="handleWhatsNew"
       />
       <IdeHeader
-        :current-file="currentFile"
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
-        @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />

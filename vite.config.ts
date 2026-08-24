@@ -27,7 +27,6 @@ const ideEntry = 'src/app/web/index.html'
 const htmlEntries: Record<string, string> = {
   'scamper-docs': 'src/app/docs/docs.html',
   'scamper-ide': ideEntry,
-  'scamper-runner': 'src/app/web/runner.html',
   'scamper-web': 'src/app/web/web.html',
   'scamper-search': 'src/app/search/search.html',
 }
