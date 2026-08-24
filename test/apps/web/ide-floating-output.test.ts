@@ -70,11 +70,34 @@ describe('IDE floating output window', () => {
 
   const outputWindow = () => panel('output')
 
-  test('the code fills the pane with the output floating over it', async () => {
-    const wrapper = await mountIde()
+  /**
+   * Stores an arrangement with the output floating, then mounts. The output
+   * docks by default since #371, but everything below is about how the window
+   * behaves once it *is* a window.
+   */
+  async function mountWithFloatingOutput() {
+    localStorage.setItem(
+      LAYOUT_KEY,
+      JSON.stringify({
+        version: 1,
+        placement: {
+          editor: { kind: 'docked', slot: 'a' },
+          output: { kind: 'floating', minimized: false },
+          trace: { kind: 'floating', minimized: false },
+        },
+        geometry: { editor: null, output: null, trace: null },
+        recency: ['trace', 'output', 'editor'],
+        axis: 'row',
+        splitPercent: 62,
+      }),
+    )
+    return mountIde()
+  }
+
+  test('floated, the output sits over the code instead of beside it', async () => {
+    // The docked default is covered in test/regressions/default-output-placement.
+    const wrapper = await mountWithFloatingOutput()
     try {
-      // By default the editor is docked and fills the dock, and the output
-      // floats above it rather than sitting beside it.
       expect(panel('editor')?.dataset.placement).toBe('docked')
       expect(outputWindow()?.dataset.placement).toBe('floating')
       // Alone in the dock, the editor gets no tab strip -- no chrome over the
@@ -89,7 +112,7 @@ describe('IDE floating output window', () => {
   })
 
   test('minimizing tucks it into the taskbar, and the taskbar brings it back', async () => {
-    const wrapper = await mountIde()
+    const wrapper = await mountWithFloatingOutput()
     try {
       expect(document.querySelector('.window-taskbar')).toBeNull()
 
@@ -114,7 +137,7 @@ describe('IDE floating output window', () => {
   test('running brings a minimized window back', async () => {
     // Otherwise pressing Run with the output put away produces nothing the
     // person can see, which reads as Scamper being broken.
-    const wrapper = await mountIde()
+    const wrapper = await mountWithFloatingOutput()
     try {
       getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
       await flushPromises()
@@ -257,7 +280,9 @@ describe('IDE floating output window', () => {
     const wrapper = await mountIde()
     try {
       expect(outputWindow()).not.toBeNull()
-      expect(outputWindow()?.style.width).toBe('240px')
+      // The default docks the output (#371), so it is a pane with no box of
+      // its own rather than a window at the default corner.
+      expect(outputWindow()?.dataset.placement).toBe('docked')
     } finally {
       wrapper.unmount()
     }

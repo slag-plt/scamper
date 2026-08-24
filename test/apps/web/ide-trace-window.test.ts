@@ -108,6 +108,10 @@ describe('IDE trace window', () => {
     const wrapper = await mountIde()
     try {
       await step()
+      // The output docks by default (#371), and only a floating window can be
+      // put away, so float it from its tab strip first.
+      getByRole(document.body, 'button', { name: 'Float Output' }).click()
+      await flushPromises()
       getByRole(document.body, 'button', { name: 'Minimize Output' }).click()
       getByRole(document.body, 'button', { name: 'Minimize Step' }).click()
       await flushPromises()

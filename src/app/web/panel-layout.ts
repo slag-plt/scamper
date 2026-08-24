@@ -71,7 +71,13 @@ const MIN_SPLIT = 15
 const MAX_SPLIT = 85
 
 /**
- * The arrangement a new user gets: code docked, output floating over it.
+ * The arrangement a new user gets: code and output docked side by side, with
+ * the trace floating over them.
+ *
+ * The output starts docked rather than floating (#371). A window volunteering
+ * itself over the code reads as something gone wrong to a beginner, where a
+ * pane beside it reads as part of the editor -- which is also where the IDE
+ * put it before the dock existed.
  *
  * The recency order is trace, output, editor -- the reverse of the canonical
  * one. Nothing has been fronted yet at startup, so this is the tie-break, and
@@ -81,7 +87,7 @@ const MAX_SPLIT = 85
 export const DEFAULT_LAYOUT: PanelLayout = {
   placement: {
     editor: { kind: 'docked', slot: 'a' },
-    output: { kind: 'floating', minimized: false },
+    output: { kind: 'docked', slot: 'b' },
     trace: { kind: 'floating', minimized: false },
   },
   geometry: { editor: null, output: null, trace: null },

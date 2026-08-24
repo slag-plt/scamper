@@ -27,6 +27,12 @@ import {
 const ALL = PANEL_IDS
 /** Before anything is stepped, the trace does not exist. */
 const NO_TRACE: PanelId[] = ['editor', 'output']
+/**
+ * The editor docked alone, with the output floating over it. The cases below
+ * that are about a one-panel dock, or about putting the output away, need it
+ * floating; that stopped being the default arrangement in #371.
+ */
+const OUTPUT_FLOATING: PanelLayout = float(DEFAULT_LAYOUT, 'output')
 
 /** Every panel is in exactly one place, and recency lists each exactly once. */
 function checkInvariants(l: PanelLayout) {
@@ -143,13 +149,13 @@ describe('docking', () => {
   test('moving the only docked panel is a no-op, not an empty dock', () => {
     // It would land in B, and normalize pulls it straight back to A: there is
     // nothing for it to sit beside.
-    const moved = moveToOtherSlot(DEFAULT_LAYOUT, 'editor')
+    const moved = moveToOtherSlot(OUTPUT_FLOATING, 'editor')
     expect(tabsIn(moved, 'a', ALL)).toEqual(['editor'])
     expect(occupiedSlots(moved, ALL)).toEqual(['a'])
   })
 
   test('floating the last docked panel leaves the dock empty, which is allowed', () => {
-    const l = float(DEFAULT_LAYOUT, 'editor')
+    const l = float(OUTPUT_FLOATING, 'editor')
     checkInvariants(l)
     expect(occupiedSlots(l, ALL)).toEqual([])
   })
@@ -168,16 +174,16 @@ describe('docking', () => {
   })
 
   test('dock and float are each a no-op when already there', () => {
-    expect(dock(dock(DEFAULT_LAYOUT, 'output'), 'output')).toEqual(
-      dock(DEFAULT_LAYOUT, 'output'),
+    expect(dock(dock(OUTPUT_FLOATING, 'output'), 'output')).toEqual(
+      dock(OUTPUT_FLOATING, 'output'),
     )
-    expect(float(DEFAULT_LAYOUT, 'output')).toEqual(DEFAULT_LAYOUT)
+    expect(float(OUTPUT_FLOATING, 'output')).toEqual(OUTPUT_FLOATING)
   })
 })
 
 describe('recency', () => {
   test('reveal fronts a panel and un-minimizes it', () => {
-    const away = minimize(DEFAULT_LAYOUT, 'output')
+    const away = minimize(OUTPUT_FLOATING, 'output')
     expect(isVisible(away, 'output')).toBe(false)
     const back = reveal(away, 'output')
     expect(isVisible(back, 'output')).toBe(true)
@@ -185,7 +191,7 @@ describe('recency', () => {
   })
 
   test('minimize sends a panel to the back', () => {
-    const l = minimize(reveal(DEFAULT_LAYOUT, 'output'), 'output')
+    const l = minimize(reveal(OUTPUT_FLOATING, 'output'), 'output')
     expect(l.recency[l.recency.length - 1]).toBe('output')
   })
 
@@ -201,7 +207,7 @@ describe('recency', () => {
   })
 
   test('a slot with nothing present has no active tab', () => {
-    expect(activeIn(DEFAULT_LAYOUT, 'b', ALL)).toBeNull()
+    expect(activeIn(OUTPUT_FLOATING, 'b', ALL)).toBeNull()
   })
 
   test('floating panels stack by recency, based at 4', () => {
@@ -244,7 +250,7 @@ describe('compact', () => {
   // hardcoded as trace > output > source, and this has to reproduce it.
   test('it opens on the same panel the old activePane would have picked', () => {
     // Trace present and not put away -> trace.
-    const withTrace = reveal(DEFAULT_LAYOUT, 'trace')
+    const withTrace = reveal(OUTPUT_FLOATING, 'trace')
     expect(activeIn(compact(withTrace), 'a', ALL)).toBe('trace')
 
     // Trace put away, output not -> output.
@@ -256,11 +262,11 @@ describe('compact', () => {
     expect(activeIn(compact(bothAway), 'a', ALL)).toBe('editor')
 
     // No trace at all, output showing -> output.
-    expect(activeIn(compact(DEFAULT_LAYOUT), 'a', NO_TRACE)).toBe('output')
+    expect(activeIn(compact(OUTPUT_FLOATING), 'a', NO_TRACE)).toBe('output')
   })
 
   test('a minimized panel stays put away rather than jumping to the front', () => {
-    const away = minimize(DEFAULT_LAYOUT, 'output')
+    const away = minimize(OUTPUT_FLOATING, 'output')
     const tabbed = compact(away)
     expect(tabbed.recency[tabbed.recency.length - 1]).toBe('output')
     expect(activeIn(tabbed, 'a', NO_TRACE)).toBe('editor')

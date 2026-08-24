@@ -73,6 +73,9 @@ describe('persistence', () => {
 
   test('a window that was put away comes back on reload', async () => {
     await withPanels(({ panels }) => {
+      // The output docks by default (#371); float it first, since only a
+      // floating window can be put away.
+      panels.float('output')
       panels.minimize('output')
       panels.dock('trace')
     })
@@ -161,6 +164,7 @@ describe('the narrow-pane projection', () => {
 
   test('nothing is in the taskbar while compact', async () => {
     await withPanels(({ panels, isCompact }) => {
+      panels.float('output')
       panels.minimize('output')
       expect(panels.minimized.value).toEqual(['output'])
       isCompact.value = true

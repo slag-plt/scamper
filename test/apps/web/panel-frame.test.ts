@@ -76,6 +76,18 @@ function frame(id: PanelId): HTMLElement | null {
   return document.querySelector(`[data-panel="${id}"]`)
 }
 
+/**
+ * Mounts with the output floating over a dock that holds only the editor --
+ * the default arrangement until #371 docked the output. The cases about window
+ * chrome, minimizing, and stacking all need a floating panel to act on.
+ */
+async function mountFloatingOutput() {
+  const mounted = mountDock()
+  panels.float('output')
+  await nextTick()
+  return mounted
+}
+
 beforeEach(() => {
   localStorage.clear()
   mountCount = 0
@@ -86,8 +98,8 @@ afterEach(() => {
 })
 
 describe('chrome', () => {
-  test('a floating panel gets a title bar, a docked one does not', () => {
-    const { wrapper } = mountDock()
+  test('a floating panel gets a title bar, a docked one does not', async () => {
+    const { wrapper } = await mountFloatingOutput()
     try {
       expect(frame('output')?.dataset.placement).toBe('floating')
       expect(frame('editor')?.dataset.placement).toBe('docked')
@@ -154,7 +166,7 @@ describe('chrome', () => {
   })
 
   test('minimizing hides the frame but keeps it mounted', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
       const before = mountCount
       getByRole(document.body, 'button', { name: 'Minimize Output' }).click()
@@ -171,8 +183,8 @@ describe('chrome', () => {
 })
 
 describe('the dock', () => {
-  test('one panel alone gets no tab strip', () => {
-    const { wrapper } = mountDock()
+  test('one panel alone gets no tab strip', async () => {
+    const { wrapper } = await mountFloatingOutput()
     try {
       expect(document.querySelector('[role="tablist"]')).toBeNull()
     } finally {
@@ -222,9 +234,12 @@ describe('the dock', () => {
 
 describe('stacking', () => {
   test('clicking a floating panel brings it to the front', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
-      // Both float by default, with the trace on top of the output.
+      // Floating the output fronted it, so put the trace back on top -- the
+      // starting order this case is about.
+      panels.reveal('trace')
+      await nextTick()
       const z = (id: PanelId) => Number(frame(id)?.style.zIndex)
       expect(z('trace')).toBeGreaterThan(z('output'))
 
@@ -268,7 +283,7 @@ describe('focus after a panel moves', () => {
   }
 
   test('minimizing hands focus to the taskbar button that replaces it', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
       parkFocus()
       getByRole(document.body, 'button', { name: 'Minimize Output' }).click()
@@ -285,7 +300,7 @@ describe('focus after a panel moves', () => {
   })
 
   test('docking hands focus to the panel it becomes', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
       parkFocus()
       getByRole(document.body, 'button', { name: 'Dock Output' }).click()
