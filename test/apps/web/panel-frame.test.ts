@@ -230,8 +230,9 @@ describe('the dock', () => {
       await nextTick()
       expect(frame('editor')?.dataset.slot).toBe('a')
       expect(frame('output')?.dataset.slot).toBe('b')
-      // Two occupied slots, so both get a strip to hang their controls on.
-      expect(document.querySelectorAll('[role="tablist"]').length).toBe(2)
+      // One panel each, so neither draws a strip: a strip exists to choose
+      // between tabs, and there is nothing to choose.
+      expect(document.querySelectorAll('[role="tablist"]').length).toBe(0)
     } finally {
       wrapper.unmount()
     }
@@ -314,8 +315,8 @@ describe('focus after a panel moves', () => {
       await nextTick()
 
       expect(document.activeElement).not.toBe(document.body)
-      // Two slots now, so both have strips: output is announced by its tab.
-      expect(document.activeElement?.id).toBe('tab-output')
+      // Alone in its slot it has no tab, so focus lands on the frame itself.
+      expect(document.activeElement?.id).toBe('panel-output')
     } finally {
       wrapper.unmount()
     }
@@ -324,10 +325,9 @@ describe('focus after a panel moves', () => {
   test('floating from a tab hands focus to the new title bar', async () => {
     const { wrapper } = mountDock()
     try {
-      // Float first: the output docks by default (#371), so dock() alone
-      // would be a no-op and prove nothing.
-      panels.float('output')
-      panels.dock('output')
+      // Share a slot with the editor: only a slot holding more than one panel
+      // draws the strip this case floats from.
+      panels.moveToOtherSlot('output')
       await nextTick()
       getByRole(document.body, 'button', { name: 'Float Output' }).click()
       await nextTick()

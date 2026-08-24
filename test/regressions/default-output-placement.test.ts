@@ -5,6 +5,7 @@ import IdeApp from '../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { DEFAULT_LAYOUT } from '../../src/app/web/panel-layout'
+import { VERSION } from '../../src/app/web/composables/use-panels'
 import { initialize } from '../../src/scamper'
 
 vi.mock('../../src/app/web/single-instance', () => ({
@@ -118,12 +119,35 @@ describe('#371: the output starts docked beside the code', () => {
     }
   })
 
-  test('a stored arrangement still wins, so nobody is rearranged', async () => {
-    // Someone who floated the output before this change keeps it floating.
+  test('neither pane carries chrome over it', async () => {
+    const wrapper = await mountIde()
+    try {
+      // A strip exists to choose between tabs, and with one panel per slot
+      // there is nothing to choose. Docking the output must not put window
+      // furniture over the code, which is the thing #371 set out to remove.
+      expect(document.querySelectorAll('[role="tablist"]')).toHaveLength(0)
+      expect(
+        queryByRole(document.body, 'button', { name: 'Float Output' }),
+      ).toBeNull()
+      // Float and Dock still reach every panel, from the View menu.
+      getByRole(document.body, 'menuitem', { name: 'View' }).click()
+      await flushPromises()
+      expect(
+        queryByRole(getByRole(document.body, 'menu'), 'menuitem', {
+          name: 'Float Output',
+        }),
+      ).not.toBeNull()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  /** A layout blob with the output floating, stamped `version`. */
+  function storeFloatingOutput(version: number) {
     localStorage.setItem(
       'scamper.panels',
       JSON.stringify({
-        version: 1,
+        version,
         placement: {
           editor: { kind: 'docked', slot: 'a' },
           output: { kind: 'floating', minimized: false },
@@ -135,9 +159,32 @@ describe('#371: the output starts docked beside the code', () => {
         splitPercent: 62,
       }),
     )
+  }
+
+  test('an arrangement from this build still wins', async () => {
+    // Someone who floats the output from here on keeps it floating; the new
+    // default is a starting point, not something reapplied on every load.
+    storeFloatingOutput(VERSION)
     const wrapper = await mountIde()
     try {
       expect(panel('output')?.dataset.placement).toBe('floating')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('an arrangement from the previous build is retired, not honoured', async () => {
+    // A blob is written on the first visit, so without the VERSION bump every
+    // existing profile would keep the floating output and only a brand-new one
+    // would ever see this change. Retiring those blobs is the point.
+    //
+    // Literal 1, not VERSION - 1: this has to pin that VERSION *moved off* the
+    // number the previous build wrote. Anything relative to VERSION still
+    // passes if the bump is reverted.
+    storeFloatingOutput(1)
+    const wrapper = await mountIde()
+    try {
+      expect(panel('output')?.dataset.placement).toBe('docked')
     } finally {
       wrapper.unmount()
     }

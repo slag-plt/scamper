@@ -10,6 +10,7 @@ import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
 import { initialize } from '../../../src/scamper'
+import { VERSION } from '../../../src/app/web/composables/use-panels'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -82,7 +83,7 @@ describe('IDE floating output window', () => {
     localStorage.setItem(
       LAYOUT_KEY,
       JSON.stringify({
-        version: 1,
+        version: VERSION,
         placement: {
           editor: { kind: 'docked', slot: 'a' },
           output: { kind: 'floating', minimized: false },
@@ -250,7 +251,7 @@ describe('IDE floating output window', () => {
     localStorage.setItem(
       LAYOUT_KEY,
       JSON.stringify({
-        version: 1,
+        version: VERSION,
         placement: {
           editor: { kind: 'docked', slot: 'a' },
           output: {

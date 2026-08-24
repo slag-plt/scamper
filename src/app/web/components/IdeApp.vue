@@ -179,8 +179,9 @@ const panels = providePanels({ isCompact, present: presentPanels })
  * Float/Dock for each panel, for the View menu.
  *
  * Every panel has these on its own chrome too -- a floating one on its title
- * bar, a tabbed one on its slot's strip. A panel docked alone in the dock has
- * neither, so the menu is the surface that can always reach all three.
+ * bar, a tabbed one on its slot's strip. A panel alone in its slot has
+ * neither, which in the default arrangement is both the code and the output,
+ * so the menu is the surface that can always reach all three.
  *
  * Empty while the pane is compact: everything is tabbed there by necessity, and
  * offering to float something that cannot float would be a lie.
@@ -1473,10 +1474,11 @@ onUnmounted(() => {
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />
-      <!-- Editor, output and trace are all panels: the editor is docked and
-           the output floats over it by default, and either can be docked,
-           tabbed or floated from there. Too narrow to float anything and the
-           dock tabs them all together instead. -->
+      <!-- Editor, output and trace are all panels: the editor and the output
+           are docked side by side by default with the trace floating over
+           them, and any of them can be docked, tabbed or floated from there.
+           Too narrow to float anything and the dock tabs them all together
+           instead. -->
       <div ref="contentAreaRef" class="content-area">
         <PanelDock
           :labels="panelLabels"

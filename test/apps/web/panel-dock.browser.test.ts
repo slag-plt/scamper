@@ -4,7 +4,7 @@ import { defineComponent, h, nextTick, ref, type Ref } from 'vue'
 import PanelDock from '../../../src/app/web/components/PanelDock.vue'
 import PanelFrame from '../../../src/app/web/components/PanelFrame.vue'
 import CodeMirrorEditor from '../../../src/app/web/components/CodeMirrorEditor.vue'
-import { providePanels, type Panels } from '../../../src/app/web/composables/use-panels'
+import { providePanels, VERSION, type Panels } from '../../../src/app/web/composables/use-panels'
 import { provideEditor } from '../../../src/app/web/composables/editor-context'
 import { initialize } from '../../../src/scamper'
 import type { PanelId } from '../../../src/app/web/panel-layout'
@@ -279,7 +279,7 @@ describe('a floating panel', () => {
     localStorage.setItem(
       LAYOUT_KEY,
       JSON.stringify({
-        version: 1,
+        version: VERSION,
         placement: {
           editor: { kind: 'docked', slot: 'a' },
           output: { kind: 'floating', minimized: false },
