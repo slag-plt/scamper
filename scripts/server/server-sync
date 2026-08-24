@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 
-# Brings this host up to date with main, and says nothing when it already is.
+# Brings this host up to date, and says nothing when it already is.
 #
-# Meant for cron, which is what carries a merge to main onto the server without
-# anyone logging in:
+# Meant for cron, which is what carries a release onto the server without anyone
+# logging in:
 #
 #   */5 * * * * /root/scamper/scripts/server/server-sync >> /var/log/scamper-sync.log 2>&1
 #
 # Nearly every run finds nothing to do and exits silently, so that log holds one
 # entry per deployment rather than one every five minutes.
 #
-# Pinning `SCAMPER_TAG` to a commit is the off switch: the pull then fetches the
-# same digest every time, nothing differs, and nothing is deployed until it is
-# `latest` again. That is the thing to reach for when a bad main lands.
+# `SCAMPER_TAG` in `.env` decides what this deploys and so how often. `release`
+# -- the default -- follows the version tag CI moves when `package.json`'s
+# version changes, so an ordinary merge deploys nothing and a version bump
+# deploys. A version or a commit there pins, which is both the off switch and
+# the rollback. See .env.example.
 #
 # Linux only, for `flock`.
 
@@ -49,9 +51,18 @@ BEFORE_IMAGES="$(image_ids)"
 
 # `git pull` is for the files this host reads for itself -- the compose file,
 # the Caddyfile, these scripts. Not the code: that arrives in the images, which
-# is what the second line fetches.
+# is what the pull below fetches. So configuration follows main and code follows
+# the release, which is a seam worth knowing about: a compose change lands as
+# soon as it is merged, against whatever release is running.
 git -C "${ROOT}" pull --ff-only --quiet
-compose pull --quiet
+
+# A tag that is not there yet is not an error worth waking anyone for: the
+# usual cause is a release whose images CI is still building. Leave it for the
+# next run, five minutes from now.
+if ! compose pull --quiet; then
+  echo "=== $(date -u '+%Y-%m-%d %H:%M:%S')Z images are not published yet; leaving it"
+  exit 0
+fi
 
 AFTER_HEAD="$(git -C "${ROOT}" rev-parse HEAD)"
 AFTER_IMAGES="$(image_ids)"
