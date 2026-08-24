@@ -90,6 +90,9 @@ See [`server/README.md`](server/README.md) for the API, accounts, and deployment
 Two targets, matching the first and third arrangements above. They are
 independent: a site can be deployed either way, or both at once.
 
+What *triggers* a deployment is a release — a version bump on main, not every
+merge. See [`RELEASING.md`](RELEASING.md).
+
 ### Static, to a plain web server
 
 Builds Scamper and copies it to `<server>:<root>/<version>`, then writes

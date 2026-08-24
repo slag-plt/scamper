@@ -7,6 +7,12 @@
 // version (package.json). Keep `notes` short and user-facing -- these are what
 // students read, not a full changelog. Order does not matter; entries are
 // sorted newest-first when displayed.
+//
+// Write the entry as the work lands, not at release time: the version here may
+// name a release that has not happened yet, which is how notes accumulate for
+// the next one. CI requires an entry for a minor or major release and lets a
+// patch release go without one, since a bug fix does not deserve a modal in
+// front of every student. See RELEASING.md.
 
 export interface PatchNote {
   /** The release version these notes describe, e.g. '3.5.0'. */
