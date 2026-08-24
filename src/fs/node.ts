@@ -55,8 +55,10 @@ export class NodeFileSystem implements FS {
       const isDirectory = entry.isDirectory()
       let preview: string | null = null
 
-      // A preview costs a full read of the file, and only the file drawer
-      // displays one -- which never shows dotted names (see isHiddenName).
+      // A preview costs a full read of the file, and an internal one is not
+      // worth it: a per-file history holds every saved version of its file.
+      // (The drawer can now show dotted names -- see #178 -- it just does not
+      // preview them.)
       if (!isDirectory && !isHiddenName(entry.name)) {
         try {
           preview = await this.getFilePreview(entry.name)

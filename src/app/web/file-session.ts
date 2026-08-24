@@ -1,4 +1,5 @@
 import type * as FS from '../../fs'
+import { isHiddenName } from '../../fs/fs'
 import type { History, Snapshot } from '../../history'
 
 /**
@@ -137,6 +138,11 @@ export class FileSession {
     // that tried anyway would produce one failed request every few seconds and
     // save nothing for its trouble.
     if (!this.canSave()) return
+    // An internal file is viewable but never written back (#178). These hold
+    // Scamper's own state -- a file's saved history above all -- and autosave
+    // would put the editor's buffer over one a few seconds after it was opened
+    // to look at, silently destroying every saved version of the real file.
+    if (isHiddenName(filename)) return
 
     const doc = this.editor.getDoc()
     this.inFlightSave = (async () => {

@@ -54,10 +54,11 @@ export class OPFSFileSystem implements FS {
       const isDirectory = handle.kind === 'directory'
       let preview: string | null = null
 
-      // A preview costs a full read of the file, and only the file drawer
-      // displays one -- which never shows dotted names. Skipping them keeps
-      // internal files (the config, the lock, per-file histories) off the
-      // listing's cost.
+      // A preview costs a full read of the file. Internal files are not worth
+      // that: a per-file history holds every saved version of its file, so
+      // previewing one would drag the lot into a listing that shows a line of
+      // it at most. (The drawer can now show dotted names -- see #178 -- it
+      // just does not preview them.)
       if (!isDirectory && !isHiddenName(name)) {
         try {
           preview = await this.getFilePreview(handle as FileSystemFileHandle)

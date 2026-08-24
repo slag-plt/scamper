@@ -47,13 +47,20 @@ export function createCodeMirrorEditorAdapter(
       return loaded
     },
 
-    initializeDoc(src: string) {
+    /**
+     * Loads `src` into the editor.
+     *
+     * @param readOnly opens it for looking at rather than editing -- what an
+     *        internal file gets (#178), since writing one back would destroy
+     *        Scamper's own state.
+     */
+    initializeDoc(src: string, readOnly = false) {
       loaded = true
       view.setState(
         mkFreshEditorState(src, {
           dirtyAction,
           onCursorChange,
-          isReadOnly: false,
+          isReadOnly: readOnly,
         }),
       )
       // setState doesn't fire update listeners; the cursor resets to the top of

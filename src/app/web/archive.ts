@@ -2,9 +2,10 @@ import type * as FS from '../../fs'
 import { isUserFile } from '../../fs/fs'
 
 // Bundles the user's files into a single zip so a student can take their work
-// with them (issue #42). Internal dotfiles are left out, so the archive holds
-// exactly what the file drawer shows. Directories are skipped as well: the FS
-// interface only lists the root, so there is no way to read their contents.
+// with them (issue #42). Internal dotfiles are left out regardless of whether
+// the drawer is currently showing them (#178) -- they are Scamper's state, not
+// the student's work. Directories are skipped as well: the FS interface only
+// lists the root, so there is no way to read their contents.
 //
 // The DOM work of handing the zip to the browser lives at the call site
 // (IdeApp.vue); this module stays framework-free and unit-testable.

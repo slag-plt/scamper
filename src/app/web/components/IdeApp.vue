@@ -11,6 +11,7 @@ import {
 import PanelDock from './PanelDock.vue'
 import PanelFrame from './PanelFrame.vue'
 import IdeSidebar from './IdeSidebar.vue'
+import { showHiddenFiles } from '../file-prefs'
 import IdeMenuBar from './IdeMenuBar.vue'
 import TraceWindow from './TraceWindow.vue'
 import IdeHeader from './IdeHeader.vue'
@@ -27,7 +28,7 @@ import Scamper from '../../../scamper'
 import type { Value } from '../../../lpm'
 import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
-import { FileEntry, isUserFile } from '../../../fs/fs'
+import { FileEntry, isHiddenName, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
 import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
@@ -287,12 +288,34 @@ function handleTraceClose() {
 async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
-  files.value = allFiles.filter(isUserFile)
+  // Directories are never listed either way; "hidden" is only about the dotted
+  // names an app keeps for itself (#178).
+  files.value = showHiddenFiles.value
+    ? allFiles.filter((entry) => !entry.isDirectory)
+    : allFiles.filter(isUserFile)
   syncRecentFiles()
 }
 
+// Turning it on has to reveal what is already there, rather than waiting for
+// the next thing that happens to repopulate the drawer.
+watch(showHiddenFiles, () => {
+  void populateFileDrawer()
+})
+
+/**
+ * Whether the open file is one Scamper keeps for itself, and so is shown
+ * rather than edited (#178).
+ */
+const isCurrentFileReadOnly = computed(
+  () => currentFile.value !== null && isHiddenName(currentFile.value),
+)
+
 /** Moves `filename` to the front of the recent list, trimming it to length. */
 function noteRecentFile(filename: string) {
+  // An internal file is something to look at, not part of the student's work
+  // (#178); it should not spend one of the five remembered slots, nor become
+  // what a later build reopens on startup.
+  if (isHiddenName(filename)) return
   config.recentFiles = [
     filename,
     ...config.recentFiles.filter((f) => f !== filename),
@@ -573,7 +596,7 @@ async function switchToFile(filename: string): Promise<void> {
     // would no-op here because isLoadingFile is already set.
     const src = await fileSession.switchTo(filename)
     currentFile.value = filename
-    editor().initializeDoc(src)
+    editor().initializeDoc(src, isHiddenName(filename))
   } catch (e) {
     reportError(e, (message) => `${message}\n\n${e instanceof Error ? (e.stack ?? '') : ''}`)
   }
@@ -1512,6 +1535,7 @@ onUnmounted(() => {
         :line="cursorStatus.line"
         :column="cursorStatus.column"
         :path="cursorStatus.path"
+        :read-only="isCurrentFileReadOnly"
       />
     </main>
   </div>
