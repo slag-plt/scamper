@@ -40,14 +40,19 @@ bug fix does not deserve a modal in front of every student. Merge it, watch
 Put the previous version in `SCAMPER_TAG` on the host. The next sync deploys it
 — no commands, no revert commit — and the fix goes out as a patch release.
 
-## Making the check binding
+## What makes the check binding
 
-Actions can only report. A rule is what stops a merge, and main has no
-protection at all today, so this is a new rule rather than an edit to one:
+Actions can only report; a ruleset is what stops a merge. Two of them cover
+`main` (**Settings → Rules**):
 
-**Settings → Rules → New branch ruleset**, targeting `main`, with *Require
-status checks to pass* and `build (22.x)`, `database-tests`, `browser-tests`,
-and `version` selected.
+- **Main** — pull requests required, no force-pushes, no deleting the branch.
+- **Release criteria** — `build (22.x)`, `database-tests`, `browser-tests`, and
+  `version` all have to pass.
+
+One consequence is worth knowing before it puzzles someone: a required check has
+to *exist* on a pull request to pass, and the job that produces it comes from
+that branch's own copy of the workflow. So a branch opened before a check was
+added sits blocked, showing nothing missing, until main is merged into it.
 
 ## What is not automated
 
