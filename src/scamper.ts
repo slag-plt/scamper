@@ -308,6 +308,13 @@ export default class Scamper {
     // Stepping implies tracing (each step renders a reduction); a stepper is
     // needed by any traced run.
     const traced = (isTracing ?? false) || isStepping
+    // A program with no statements is born done, and `schedule` rejects a
+    // completed fiber (#366). Running nothing is a legitimate no-op, so report
+    // the run as already over rather than relaxing the scheduler's invariant.
+    // Mirrors the same guard in runFiberOnScheduler.
+    if (fiber.isDone()) {
+      return { id, tracing: traced, done: Promise.resolve() }
+    }
     const { promise, resolve } = deferred()
     this.scheduler.schedule({
       id,
