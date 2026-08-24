@@ -25,35 +25,15 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
-    version: '3.6.0',
-    // N.B., one entry per *release*, not per change: the colors work (#344) and
-    // the argument-order work (#345) both ship in 3.6.0, so their notes belong
-    // in the same block.
-    title: 'Library cleanup',
+    title: 'AY 2026–2027 release'
+    version: '4.0.0',
     notes: [
-      'The zip button in the file drawer downloads all of your files at once, so you can keep a copy of your work.',
-      'The clock button in the file drawer shows the versions of a file Scamper saved as you worked, and what changed between them. Pick one and restore it to carry on from there — the version you were on is kept too, so restoring by mistake costs nothing.',
-      'Deleting a file no longer throws its history away. The history view lists deleted files, and you can bring one back.',
-      'Every function that takes a color now accepts a color name, an rgb value, or an hsv value — so (solid-square 100 (rgb 255 0 0)) works, where before only "red" did.',
-      'The old `color` function has been removed. Use `rgb` instead: (rgb 255 0 0) in place of (color 255 0 0 255).',
-      'index-of now takes the value first: (index-of "b" lst), matching how member and assoc read.',
-      'for-range now takes its function first: (for-range f 0 10), like map, filter, and for-each.',
-      'Maps built with { ... } now have functions to work with them: hash-ref, hash-set, hash-set!, hash-keys, and more.',
-      'Pictures built from shapes are now called drawings: image? is drawing?, image-width is drawing-width, and so on. shape? has been removed — use drawing?.',
-      'The pixel functions now say canvas, since that is what they work on: canvas->pixels, pixels->canvas, canvas-get-pixel, and drawing->canvas.',
-      'A shape\'s fill must now be "solid" or "outline". Anything else used to be accepted and then quietly drew nothing.',
-    ],
-  },
-  {
-    version: '3.5.0',
-    title: 'Editor upgrades',
-    notes: [
-      'Hover a function name in the editor to read its documentation, jump to its definition, or find where it is used.',
-      'A status bar now shows the syntactic form enclosing your cursor.',
-      "In-app dialogs replace the browser's built-in pop-ups and follow the light/dark theme.",
-      'Inline comments inside an expression no longer cause spurious parse errors.',
-    ],
-  },
+      'Major updates to Scamper for the 26–27 academic year!',
+      'Scamper is now backed by a server for cloud-based file sharing. See the current CSC 151 instructor for an account.',
+      'The UI has been overhauled to better reflect the feature set of a modern IDE.',
+      'Both the language and libraries have been revised heavily. See the documentation for relevant updates.'
+    ]
+  }
 ]
 
 /**
