@@ -1,11 +1,51 @@
 # Formatting and indentation: target style and implementation plan
 
 A scoping document for the DrRacket-style formatting request. It records the
-target style, measures the gap against what Scamper does today, scopes the two
+target style, measures the gap that existed before the work, scopes the two
 candidate implementations, and recommends one.
 
-Nothing here is implemented yet. See [Open questions](#open-questions) for the
-five points that need an answer before coding starts.
+**Plan B is now implemented** -- all three stages. What shipped is summarised in
+[As built](#as-built); the sections after it are the reasoning that led there,
+kept because the trade-offs still explain why the code is shaped as it is.
+[Open questions](#open-questions) records what is still unanswered, and the
+assumption each is running on.
+
+## As built
+
+| | Delivered by | Where |
+|---|---|---|
+| **(a)** Enter indents the next line | Per-form Lezer strategies; Enter was already wired to `insertNewlineAndIndent` | `src/app/web/codemirror/extensions/indentation.ts` |
+| **(b)** Ctrl-I re-indents the buffer | `indentRange` over the whole document -- DrRacket semantics, line breaks untouched | same file |
+| **(c)** Output and step panes | A column-aware printer producing a plan both backends render from | `src/scheme/pretty.ts`, `LayoutRenderer.vue` |
+| The rules themselves | One table, read by all three | `src/scheme/style.ts` |
+
+Also in: typing a closing bracket snaps the line into place (`indentOnInput`,
+previously installed but inert); Tab re-indents the selection rather than adding
+an indent unit; and the reformat command on Ctrl-Shift-I now reads the same rule
+table, so it no longer disagrees with Ctrl-I about `if`, `let`, `cond`, or
+applications.
+
+The anti-drift invariant of §7 is real and enforced:
+`test/apps/web/format-indent-agreement.test.ts` asserts
+`indentRange(format(p)) === format(p)` over seventeen programs, for both the
+printer and the reformat command.
+
+Two things worth knowing:
+
+- **The grammar's clause rules are now named.** `binding`, `condBranch`,
+  `branch` and `arglist` were lowercase, so Lezer emitted no nodes for them --
+  which is why `language.ts`'s `binding:` indent entry had never done anything.
+  They are now `Binding`, `CondClause`, `MatchClause`, `Bindings`, `ArgList` and
+  `FieldList`. The accepted language is unchanged; `lezer-bridge.ts` descends
+  through them instead of relying on positional flattening.
+- **The reformat command has a known limit**, and the invariant test records it
+  rather than hiding it. Prettier tracks indentation as a virtual stack, not an
+  output column, so where a form begins part-way through a line -- the `(f ...)`
+  inside `[(< x 0) (f ...` -- it aligns from the enclosing line's indent instead
+  of the form's real column. Two of the seventeen programs hit this and are held
+  to the weaker property that reformatting is stable. Retiring the Prettier
+  printer in favour of `pretty.ts`, which measures real columns, needs comments
+  modelled in `Layout` first (issue #304); see §9, stage 3.
 
 ## 1. What was asked
 
@@ -62,7 +102,7 @@ all on separate lines — never packed greedily.
 Both families break when the form exceeds 80 columns or when any subexpression
 is itself multi-line.
 
-## 3. Where we are today
+## 3. Where things stood before
 
 | Area | File | Size | Today |
 |---|---|---|---|
@@ -73,7 +113,7 @@ is itself multi-line.
 
 ### Measured gap
 
-Running today's formatter on the request's own examples:
+Running the formatter as it was on the request's own examples:
 
 | Rule | Target | Today's output | |
 |---|---|---|---|
@@ -347,12 +387,21 @@ Ship in three independent stages, each of which is useful alone:
 3. **Stage 3 — repoint the Prettier printer at `pretty.ts`,** then decide whether
    to keep Prettier in the web bundle at all.
 
+*As built, stage 3 went half-way.* `printer.ts` now reads `style.ts`, so there is
+one rule table rather than two sets of rules -- but it still builds Prettier docs
+rather than delegating to `pretty.ts`, because `Layout` does not model comments
+and delegating would drop them (issue #304, whose comment-preservation tests are
+thorough). Finishing the stage means adding comments to `Layout`, at which point
+the Prettier dependency can go and the ~35 kB gzip with it. The invariant test
+already marks the two shapes that would then start agreeing.
+
 If Q1 answers "re-indent, not reflow", Stage 1 alone satisfies both (a) and (b),
 and Stage 2 is needed only for the panes.
 
 ## Open questions
 
-These need an answer before Stage 2; Stage 1 can start without them.
+Each is running on the stated assumption, which is what the code does today.
+Answering one is a small change to `src/scheme/style.ts` and its tests.
 
 1. **Does Ctrl-I re-indent or reflow?** The request says "re-indented", which in
    DrRacket means leading whitespace only — existing line breaks are preserved.

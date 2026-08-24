@@ -1,10 +1,90 @@
 import { AstPath, doc, Doc, Printer } from 'prettier'
 import * as A from '../../scheme/ast'
 import TextRenderer from '../../lpm/renderers/text'
+import { styleOf } from '../../scheme/style'
 
 const {
-  builders: { group, indent, join, line, hardline, lineSuffix, breakParent },
+  builders: {
+    align,
+    group,
+    indent,
+    join,
+    line,
+    hardline,
+    lineSuffix,
+    breakParent,
+  },
 } = doc
+
+// ---- Layout (see src/scheme/style.ts and FORMATTING.md) ---------------------
+// The two helpers below lay every form out from the same rule table the
+// editor's indenter reads, so `Ctrl-Shift-I` (reformat) and `Ctrl-I`
+// (re-indent) agree about where things belong.
+//
+// One caveat is structural, and is why FORMATTING.md recommends eventually
+// retiring this printer: Prettier tracks indentation as a virtual stack rather
+// than an output column. The two coincide while a form begins at the start of
+// its own line, which is what the rules below assume, but not when a form
+// begins part-way through one -- `(map (lambda (x) ...) xs)` indents the lambda
+// body from the `(map` rather than from the `(lambda`. src/scheme/pretty.ts,
+// which measures real columns, has no such limitation.
+
+/**
+ * A parenthesized form, laid out by its entry in the style table.
+ *
+ * @param headDoc the printed head, which may carry its own comments
+ * @param headText the head as text, for measuring; `''` when the head is a
+ *   compound expression, whose width cannot be known here -- such a form falls
+ *   back to the default rule.
+ */
+function formDoc(headDoc: Doc, headText: string, rest: Doc[]): Doc {
+  if (rest.length === 0) return group(['(', headDoc, ')'])
+  const style = styleOf(headText)
+  // Where the first argument sits, measured from the opening bracket:
+  // "(" + head + " ".
+  const firstArgOffset = headText.length + 2
+
+  if (style.kind === 'align') {
+    // Rule 7: the head and first argument share a line, the rest line up under
+    // that argument. `if` is a plain instance -- its branches land at column 4.
+    const [first, ...tail] = rest
+    return group([
+      '(',
+      headDoc,
+      ' ',
+      first,
+      tail.length === 0 ? '' : align(firstArgOffset, [line, join(line, tail)]),
+      ')',
+    ])
+  }
+
+  // Rules 1, 2, 4, 5: the arguments the rule holds back stay on the opening
+  // line and the remainder is a body indented one unit. A held argument is
+  // aligned to where it actually sits, so a binding list that breaks lines its
+  // bindings up under the first one rather than under the `let`.
+  const held = rest.slice(0, style.head).map((d) => align(firstArgOffset, d))
+  const body = rest.slice(style.head)
+  return group([
+    '(',
+    headDoc,
+    ...held.flatMap((d) => [' ', d] as Doc[]),
+    body.length === 0 ? '' : indent([line, join(line, body)]),
+    ')',
+  ])
+}
+
+/** A bracketed list -- a vector, a clause, a binding or parameter list --
+ * whose items line up under the first one. */
+function itemsDoc(open: string, close: string, items: Doc[]): Doc {
+  if (items.length === 0) return open + close
+  const [first, ...tail] = items
+  return group([
+    open,
+    first,
+    tail.length === 0 ? '' : align(1, [line, join(line, tail)]),
+    close,
+  ])
+}
 
 // ---- Type predicates -------------------------------------------------------
 
@@ -62,44 +142,38 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
     ///// Statements ////////////////////////////////////////////////////////////
 
     case 'import': {
-      const mod = node.kind === 'file' ? JSON.stringify(node.module) : node.module
+      const mod =
+        node.kind === 'file' ? JSON.stringify(node.module) : node.module
       return `(import ${mod}${node.alias !== undefined ? ` ${node.alias}` : ''})`
     }
 
     case 'define':
-      return group([
-        '(define ',
+      return formDoc('define', 'define', [
         path.call(print, 'name'),
-        indent([line, path.call(print, 'value')]),
-        ')',
+        path.call(print, 'value'),
       ])
 
     case 'export':
       return node.names.length === 0
         ? '(export)'
-        : group(['(export ', join(' ', path.map(print, 'names')), ')'])
+        : formDoc('export', 'export', path.map(print, 'names'))
 
     case 'defexport':
-      return group([
-        '(define-export ',
+      return formDoc('define-export', 'define-export', [
         path.call(print, 'name'),
-        indent([line, path.call(print, 'value')]),
-        ')',
+        path.call(print, 'value'),
       ])
 
     case 'display':
-      return group(['(display', indent([line, path.call(print, 'value')]), ')'])
+      return formDoc('display', 'display', [path.call(print, 'value')])
 
     case 'stmtexp':
       return path.call(print, 'expr')
 
     case 'struct':
-      return group([
-        '(struct ',
+      return formDoc('struct', 'struct', [
         path.call(print, 'name'),
-        ' (',
-        join(' ', path.map(print, 'fields')),
-        '))',
+        itemsDoc('(', ')', path.map(print, 'fields')),
       ])
 
     ///// Expressions ///////////////////////////////////////////////////////////
@@ -113,27 +187,22 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
       return node.name
 
     case 'app':
-      if (node.args.length === 0) {
-        return group(['(', path.call(print, 'head'), ')'])
-      }
-      return group([
-        '(',
+      // A head that is a plain name can be measured, so rule 7's alignment
+      // applies; a compound head cannot be, and takes the default.
+      return formDoc(
         path.call(print, 'head'),
-        indent([line, join(line, path.map(print, 'args'))]),
-        ')',
-      ])
+        node.head.tag === 'id' ? node.head.name : '',
+        path.map(print, 'args'),
+      )
 
     case 'lam': {
       // Rest parameters use Clojure-style "&", e.g. (lambda (x & xs) ...) or
       // the rest-only (lambda (& xs) ...).
       const paramDocs: Doc[] = path.map(print, 'params')
       if (node.restParam) paramDocs.push('&', path.call(print, 'restParam'))
-      return group([
-        '(lambda (',
-        join(' ', paramDocs),
-        ')',
-        indent([line, path.call(print, 'body')]),
-        ')',
+      return formDoc('lambda', 'lambda', [
+        itemsDoc('(', ')', paramDocs),
+        path.call(print, 'body'),
       ])
     }
 
@@ -148,27 +217,20 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
           ']',
         ])
       }, 'bindings')
-      return group([
-        '(let',
-        indent([line, group(['(', join(line, bindingDocs), ')'])]),
-        indent([line, path.call(print, 'body')]),
-        ')',
+      return formDoc('let', 'let', [
+        itemsDoc('(', ')', bindingDocs),
+        path.call(print, 'body'),
       ])
     }
 
     case 'begin':
-      return group([
-        '(begin',
-        indent([line, join(line, path.map(print, 'exps'))]),
-        ')',
-      ])
+      return formDoc('begin', 'begin', path.map(print, 'exps'))
 
     case 'if':
-      return group([
-        '(if ',
+      return formDoc('if', 'if', [
         path.call(print, 'guard'),
-        indent([line, path.call(print, 'ifB'), line, path.call(print, 'elseB')]),
-        ')',
+        path.call(print, 'ifB'),
+        path.call(print, 'elseB'),
       ])
 
     case 'match': {
@@ -182,27 +244,17 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
           ']',
         ])
       }, 'branches')
-      return group([
-        '(match ',
+      return formDoc('match', 'match', [
         path.call(print, 'scrutinee'),
-        indent([line, join(line, branchDocs)]),
-        ')',
+        ...branchDocs,
       ])
     }
 
     case 'and':
-      return group([
-        '(and',
-        indent([line, join(line, path.map(print, 'exps'))]),
-        ')',
-      ])
+      return formDoc('and', 'and', path.map(print, 'exps'))
 
     case 'or':
-      return group([
-        '(or',
-        indent([line, join(line, path.map(print, 'exps'))]),
-        ')',
-      ])
+      return formDoc('or', 'or', path.map(print, 'exps'))
 
     case 'cond': {
       const branchDocs: Doc[] = path.map((branchPath: AstPath) => {
@@ -215,7 +267,7 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
           ']',
         ])
       }, 'branches')
-      return group(['(cond', indent([line, join(line, branchDocs)]), ')'])
+      return formDoc('cond', 'cond', branchDocs)
     }
 
     case 'anonfn':
@@ -226,14 +278,7 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
         : ['#', path.call(print, 'body')]
 
     case 'vec':
-      if (node.exps.length === 0) {
-        return '[]'
-      }
-      return group([
-        '[',
-        indent(join(line, path.map(print, 'exps'))),
-        ']',
-      ])
+      return itemsDoc('[', ']', path.map(print, 'exps'))
 
     case 'obj': {
       // {k1 v1 ... kn vn}: each pair prints as an unbreakable "key value" unit,
@@ -249,7 +294,7 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
           pairPath.call(print, 'value'),
         ])
       }, 'pairs')
-      return group(['{', indent(join(line, pairDocs)), '}'])
+      return itemsDoc('{', '}', pairDocs)
     }
 
     ///// Patterns //////////////////////////////////////////////////////////////
@@ -261,21 +306,14 @@ function renderNode(path: AstPath, print: (p: AstPath) => Doc): Doc {
       return TextRenderer.render(node.value)
 
     case 'pctor':
-      if (node.args.length === 0) {
-        return group(['(', path.call(print, 'name'), ')'])
-      }
-      return group([
-        '(',
+      return formDoc(
         path.call(print, 'name'),
-        indent([line, join(line, path.map(print, 'args'))]),
-        ')',
-      ])
+        node.name.name,
+        path.map(print, 'args'),
+      )
 
     case 'pvec':
-      if (node.args.length === 0) {
-        return '[]'
-      }
-      return group(['[', indent(join(line, path.map(print, 'args'))), ']'])
+      return itemsDoc('[', ']', path.map(print, 'args'))
   }
   return ''
 }
@@ -293,7 +331,10 @@ export const SchemePrinter: Printer = {
     if (node.dangling && node.dangling.length > 0) {
       const isEmpty =
         rendered === '' || (Array.isArray(rendered) && rendered.length === 0)
-      const dcs = join(hardline, node.dangling.map((c) => c.line))
+      const dcs = join(
+        hardline,
+        node.dangling.map((c) => c.line),
+      )
       parts.push(isEmpty ? [dcs, hardline] : [hardline, dcs, hardline])
     }
     parts.push(trailingDoc(node))

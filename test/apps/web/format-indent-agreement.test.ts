@@ -4,6 +4,8 @@ import { ensureSyntaxTree, indentRange } from '@codemirror/language'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
 import { tokenizeAndParse } from '../../../src/scheme'
 import { layoutToString, stmtToLayout } from '../../../src/scheme/ast'
+import * as prettier from 'prettier'
+import ScamperPlugin from '../../../src/prettier/prettier-plugin-scamper'
 
 /**
  * The anti-drift invariant (FORMATTING.md):
@@ -104,5 +106,44 @@ describe('the printer and the indenter agree', () => {
       const once = format(src)
       expect(format(once)).toBe(once)
     }
+  })
+})
+
+// ---- the reformat command (Ctrl-Shift-I) ------------------------------------
+
+/**
+ * Shapes the Prettier-backed reformat command cannot reproduce.
+ *
+ * Prettier tracks indentation as a virtual stack rather than an output column.
+ * The two agree while a form begins at the start of its own line, and diverge
+ * when one begins part-way through a line -- as the `(f ...)` does inside
+ * `[(< x 0) (f ...` -- because the alignment is then measured from the
+ * enclosing line's indent rather than from the form's real column.
+ *
+ * This is the structural limit recorded in FORMATTING.md, and the reason the
+ * plan there ends by retiring this printer in favour of src/scheme/pretty.ts,
+ * which measures real columns and has no such problem. Doing so needs comments
+ * modelled in Layout first (issue #304), so until then these two are held to
+ * the weaker property that reformatting is at least stable.
+ */
+const PRETTIER_MISALIGNS = new Set([
+  'a cond whose clause must split',
+  'a match with wide clauses',
+])
+
+function reformat(src: string): Promise<string> {
+  return prettier
+    .format(src, { parser: 'scamper-scheme', plugins: [ScamperPlugin] })
+    .then((out) => out.trimEnd())
+}
+
+describe('the reformat command and the indenter agree', () => {
+  test.each(PROGRAMS)('%s', async (name, src) => {
+    const formatted = await reformat(src)
+    if (PRETTIER_MISALIGNS.has(name)) {
+      expect(await reformat(formatted)).toBe(formatted)
+      return
+    }
+    expect(reindent(formatted)).toBe(formatted)
   })
 })
