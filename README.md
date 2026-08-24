@@ -130,7 +130,12 @@ $> git pull && scripts/server/server-up --pull always --no-build
 Pulls the images CI publishes from every green main and starts MariaDB, the API,
 and Caddy. This is the whole deployment — there is no separate script, because
 the compose file already says how everything starts, in a form that runs. A host
-with the memory to build can use `--build` instead and skip the registry. See
+with the memory to build can use `--build` instead and skip the registry.
+
+A server that should keep itself current runs that command under cron, as
+`scripts/server/server-sync`. By default it follows *releases* — a version bump
+in `package.json`, not every merge — so the version students see in the IDE, the
+patch notes it shows them, and the code they are running agree. See
 [`server/README.md`](server/README.md).
 
 ## Information about the AST

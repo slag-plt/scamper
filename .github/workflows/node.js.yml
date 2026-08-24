@@ -118,24 +118,62 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # HEAD^ has to be here. Whether this commit is a release is whether it
+        # changed the version, and that is a question about its parent.
+        fetch-depth: 2
     - uses: docker/setup-buildx-action@v3
     - uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    # Two tags each: `latest` for a deployment that follows main, and the commit
-    # for one that pins -- which is also what a rollback sets SCAMPER_TAG to.
-    # `github.repository` is lowercase here, as ghcr.io requires.
+
+    # What this build is called. Every commit gets `latest` and its own SHA; a
+    # commit that changes the version in package.json also gets that version and
+    # moves `release`.
+    #
+    # `release` is the one a server follows, and that is the whole point: an
+    # ordinary merge reaches nobody, and a version bump is what students get --
+    # so the version in the IDE, the patch notes it shows, and the code behind
+    # them agree. See .env.example.
+    #
+    # `github.repository` is lowercase, as ghcr.io requires.
+    - id: meta
+      run: |
+        image="ghcr.io/${{ github.repository }}-${{ matrix.image }}"
+        version="$(jq -r .version package.json)"
+        previous="$(git show HEAD^:package.json 2>/dev/null | jq -r .version || echo none)"
+        {
+          echo "tags<<EOF"
+          echo "${image}:latest"
+          echo "${image}:${GITHUB_SHA}"
+          if [ "${version}" != "${previous}" ]; then
+            echo "${image}:${version}"
+            echo "${image}:release"
+          fi
+          echo "EOF"
+          echo "version=${version}"
+        } >> "${GITHUB_OUTPUT}"
+        if [ "${version}" != "${previous}" ]; then
+          echo "Releasing ${version} (was ${previous})." >> "${GITHUB_STEP_SUMMARY}"
+        fi
+
     - uses: docker/build-push-action@v6
       with:
         context: .
         file: ${{ matrix.dockerfile }}
         target: ${{ matrix.target }}
         push: true
-        tags: |
-          ghcr.io/${{ github.repository }}-${{ matrix.image }}:latest
-          ghcr.io/${{ github.repository }}-${{ matrix.image }}:${{ github.sha }}
+        tags: ${{ steps.meta.outputs.tags }}
+        # So `docker image inspect` can say which version a floating tag is
+        # currently pointing at:
+        #
+        #   docker image inspect ghcr.io/slag-plt/scamper-web:release \
+        #     -f '{{index .Config.Labels "org.opencontainers.image.version"}}'
+        labels: |
+          org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          org.opencontainers.image.revision=${{ github.sha }}
         # Scoped per image: they share no layers worth confusing, and one cache
         # for all three would evict itself on every run.
         cache-from: type=gha,scope=${{ matrix.image }}

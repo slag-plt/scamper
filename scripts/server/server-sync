@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+# Brings this host up to date, and says nothing when it already is.
+#
+# Meant for cron, which is what carries a release onto the server without anyone
+# logging in:
+#
+#   */5 * * * * /root/scamper/scripts/server/server-sync >> /var/log/scamper-sync.log 2>&1
+#
+# Nearly every run finds nothing to do and exits silently, so that log holds one
+# entry per deployment rather than one every five minutes.
+#
+# `SCAMPER_TAG` in `.env` decides what this deploys and so how often. `release`
+# -- the default -- follows the version tag CI moves when `package.json`'s
+# version changes, so an ordinary merge deploys nothing and a version bump
+# deploys. A version or a commit there pins, which is both the off switch and
+# the rollback. See .env.example.
+#
+# Linux only, for `flock`.
+
+source "$(dirname "$0")/lib.sh"
+
+[ $# -eq 0 ] || usage "$0"
+
+if [ ! -f "${ROOT}/.env" ]; then
+  echo "There is no .env beside docker-compose.yml." >&2
+  echo "This host has never been deployed to; see server/README.md." >&2
+  exit 1
+fi
+
+# One at a time. Cron does not care that the last run is still going, and two
+# deployments at once is how a half-migrated database happens. `-n` rather than
+# waiting, because a run that waits its turn is a run that deploys what the
+# previous one just deployed.
+exec 9>"${ROOT}/.sync.lock"
+flock -n 9 || exit 0
+
+# The image *identities* behind the tags the compose file names. Comparing these
+# across the pull is what tells a new image from the same one again -- `docker
+# compose pull` reports neither, and the tag is `latest` in both cases.
+image_ids() {
+  local id
+  compose config --images | sort -u | while read -r image; do
+    id="$(docker image inspect -f '{{.Id}}' "${image}" 2>/dev/null || true)"
+    printf '%s %s\n' "${image}" "${id:-absent}"
+  done
+}
+
+BEFORE_HEAD="$(git -C "${ROOT}" rev-parse HEAD)"
+BEFORE_IMAGES="$(image_ids)"
+
+# `git pull` is for the files this host reads for itself -- the compose file,
+# the Caddyfile, these scripts. Not the code: that arrives in the images, which
+# is what the pull below fetches. So configuration follows main and code follows
+# the release, which is a seam worth knowing about: a compose change lands as
+# soon as it is merged, against whatever release is running.
+git -C "${ROOT}" pull --ff-only --quiet
+
+# A tag that is not there yet is not an error worth waking anyone for: the
+# usual cause is a release whose images CI is still building. Leave it for the
+# next run, five minutes from now.
+if ! compose pull --quiet; then
+  echo "=== $(date -u '+%Y-%m-%d %H:%M:%S')Z images are not published yet; leaving it"
+  exit 0
+fi
+
+AFTER_HEAD="$(git -C "${ROOT}" rev-parse HEAD)"
+AFTER_IMAGES="$(image_ids)"
+
+if [ "${BEFORE_HEAD}" = "${AFTER_HEAD}" ] && [ "${BEFORE_IMAGES}" = "${AFTER_IMAGES}" ]; then
+  exit 0
+fi
+
+echo "=== $(date -u '+%Y-%m-%d %H:%M:%S')Z deploying ${AFTER_HEAD:0:8}"
+
+# Only when there is something to dump. The first run has no database yet and
+# `server-dump` rightly refuses, which under `set -e` would abort this script
+# before it ever deployed anything.
+if [ -n "$(compose ps --status running --quiet db 2>/dev/null)" ]; then
+  "${ROOT}/scripts/server/server-dump"
+  # Keep the last twenty. They hold every student's files, so they are worth
+  # having -- and worth not keeping forever on a small disk.
+  ls -t "${ROOT}"/dumps/*.sql 2>/dev/null | tail -n +21 | while read -r old; do
+    rm -f "${old}"
+  done
+fi
+
+# `--no-build` for the reason the deployment uses it: a missing image should say
+# so rather than start the front-end build this host cannot finish. `server-up`
+# waits for the whole chain to answer and prints both halves' last words when it
+# does not, so a failed deployment leaves something readable in the log.
+"${ROOT}/scripts/server/server-up" --no-build

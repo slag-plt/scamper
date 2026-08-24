@@ -51,6 +51,7 @@ is compiled in.
 ### The file server
 
 + `scripts/server/server-up [--build]`: runs the whole app via `docker compose` — MariaDB, the API, and Caddy serving the built front end while proxying `/api` — applying migrations first, then waits until it answers. This is also how it is deployed; there is no deploy script for it. Needs a `.env` (see `.env.example`). `--build` is required after any change to `server/` *or* the front end, since the images hold copies of both. Flags pass through to `compose up`, which is what a deployment uses: `--pull always --no-build` runs the images CI published instead of building on the host
++ `scripts/server/server-sync`: the same thing under cron — pulls the repository and the images, and deploys only when one of them moved, so a release reaches the server on its own. Silent when there is nothing to do; a pinned `SCAMPER_TAG` turns it off and is also the rollback
 + `scripts/server/web-update`: rebuilds and swaps *only* the front-end container, leaving the API and database running. Use this for a front-end patch on a machine that can build; a host that pulls does `docker compose pull web && docker compose up -d --no-deps web` instead. `server-up --build` recreates everything, migrations included
 + `scripts/server/server-down [--wipe]`: stops it. The database survives; `--wipe` destroys it, after a typed confirmation
 + `scripts/server/server-dump [file]`: dumps the whole database to `dumps/scamper-<timestamp>.sql`
@@ -58,7 +59,7 @@ is compiled in.
 + `npm run db:migrate --workspace @scamper/server`: creates BetterAuth's tables. Only needed when running the server *without* Docker — compose does it
 + `npm run account -- <command>`: the same account commands, for a database reachable from the host (i.e. no Docker). Against the compose stack its port is deliberately unpublished, so use the scripts above
 + `npm run start:server`: runs the back end without watching, as the container does
-+ CI (`.github/workflows/node.js.yml`) builds `scamper-{web,server,migrate}` and pushes them to ghcr.io from every green main, tagged `latest` and by commit. `SCAMPER_TAG` in `.env` chooses which a deployment runs — that is also the rollback. Compose still builds any service whose tag is missing locally, so development is unaffected
++ CI (`.github/workflows/node.js.yml`) builds `scamper-{web,server,migrate}` and pushes them to ghcr.io from every green main, tagged `latest` and by commit; a commit that changes `package.json`'s version is also tagged with it and moves `release`. `SCAMPER_TAG` in `.env` chooses which a host follows — `release` (the default) deploys on version bumps only, `latest` on every merge, a version pins. Compose still builds any service whose tag is missing locally, so development is unaffected
 + `SCAMPER_TRUSTED_ORIGINS` in `.env`: further origins allowed to sign in, comma-separated. Empty in a real deployment; locally it lets `npm run dev -- --mode server` on :5173 sign in to the compose stack without editing `BETTER_AUTH_URL`
 
 ### Validation

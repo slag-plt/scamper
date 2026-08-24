@@ -394,6 +394,10 @@ waits for it, runs BetterAuth's migrations to completion, starts the API, starts
 Caddy in front of it, and waits until the whole chain answers — then prints the
 URL.
 
+On a host that has never run a release — `release` only starts existing at the
+first version bump after this landed — put `latest` in `SCAMPER_TAG` for the
+first deployment, and move it to `release` once there is one.
+
 `server-up` passes flags straight through to `compose up`, and both of these are
 worth understanding. `--pull always` takes the published image rather than
 whatever copy the host already has. `--no-build` turns a missing image into an
@@ -413,9 +417,33 @@ on every push to main whose tests pass:
 | `ghcr.io/slag-plt/scamper-server` | this API |
 | `ghcr.io/slag-plt/scamper-migrate` | BetterAuth's migration CLI |
 
-Each is tagged twice: `latest`, and the commit it was built from. `SCAMPER_TAG`
-in `.env` chooses between them — `latest` follows main, a SHA holds one version,
-and putting the previous SHA back is the rollback.
+Every build is tagged `latest` and with its own commit. A build whose commit
+changed the version in `package.json` — a release — is tagged with that version
+as well, and moves `release`. `SCAMPER_TAG` in `.env` chooses which of them a
+host follows, and so how often it deploys at all:
+
+| `SCAMPER_TAG` | What the host runs | When it deploys |
+| --- | --- | --- |
+| `release` | the last version bump | when the version changes |
+| `latest` | the head of main | every merge |
+| `3.6.0`, or a commit | that build and no other | never, until the line changes |
+
+`release` is the default, and the reason is the version number students see.
+`APP_VERSION` comes from `package.json`, and the IDE shows the patch notes
+between the version a student last opened and the one they are opening now. A
+host on `latest` would hand them 3.6.0's breaking changes days before calling
+itself 3.6.0 and telling them what changed — a program breaking mid-assignment
+with no announcement attached to it. On `release` the three agree.
+
+`latest` is still worth having: it is what a staging host follows, and what a
+server with no students on it can follow.
+
+What a floating tag currently points at:
+
+```console
+docker image inspect ghcr.io/slag-plt/scamper-web:release \
+  -f '{{index .Config.Labels "org.opencontainers.image.version"}}'
+```
 
 The packages are public, so a host pulls without credentials. If they are ever
 made private, the host needs one `docker login ghcr.io` with a token carrying
@@ -440,7 +468,7 @@ Five values matter, and one of them is the usual source of trouble:
 | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
 | `BETTER_AUTH_URL` | **the origin a browser will show**, scheme and port included |
 | `WEB_PORT` | the port the platform forwards public traffic to |
-| `SCAMPER_TAG` | which published images to run — `latest`, or a commit to pin |
+| `SCAMPER_TAG` | which images to follow — `release`, `latest`, or a version to pin |
 
 `BETTER_AUTH_URL` is the one. It is the list of origins a session may be created
 from, so if it does not match the address bar exactly, **sign-in alone** fails
@@ -478,14 +506,72 @@ The last two are the pulled-image version of `web-update`: they swap Caddy alone
 and leave the API's uptime, the database, and everyone's session untouched. Use
 `web-update` itself only where the host can build.
 
-Pinned rather than following main? Put the new commit in `SCAMPER_TAG` and run
-the same `server-up`; rolling back is putting the old one back.
+Pinned rather than following releases? Put the new version in `SCAMPER_TAG` and
+run the same `server-up`; rolling back is putting the old one back.
 
 Take a dump first if the change touches storage:
 
 ```console
 scripts/server/server-dump          # dumps/scamper-<timestamp>.sql
 ```
+
+### Keeping up with main
+
+`scripts/server/server-sync` is the upgrade above run by cron rather than by
+hand, which is what carries a release onto the server without anyone logging in:
+
+```console
+crontab -e
+```
+
+```crontab
+PATH=/usr/local/bin:/usr/bin:/bin
+*/5 * * * * /root/scamper/scripts/server/server-sync >> /var/log/scamper-sync.log 2>&1
+```
+
+It pulls what the host reads for itself, pulls the images, and deploys **only if
+one of them actually moved** — comparing the image IDs behind the tags across
+the pull, since the tag reads the same either way. On the default `release` that
+means merges accumulate quietly and a version bump is what ships. A run with
+nothing to do exits without a word, so that log holds one entry per deployment
+rather than one every five minutes. When there is something to do it dumps the
+database first, keeps the last twenty dumps, and hands over to
+`server-up --no-build`.
+
+A release whose images CI has not finished building yet is not an error: the
+pull fails, the run says so and stops, and the next one five minutes later finds
+them.
+
+One seam to know about: the host follows **main** for the files it reads itself
+and the **release** for the code. A `Caddyfile` or compose change therefore
+lands as soon as it is merged, against whatever release is running. That is
+usually right — those files are about the host, not the program — but a change
+that only makes sense alongside the code it ships with should go out with that
+release. The tighter version, once releases carry a git tag, is to check out the
+release's commit rather than main's head.
+
+Compose does the rest of the deciding: a container whose image ID has not
+changed is left alone, so a run that merely looked restarts nothing.
+
+Four things to get right on the host:
+
+- **An HTTPS remote.** Cron has no ssh-agent: `git remote set-url origin
+  https://github.com/slag-plt/scamper.git`. The repository and the packages are
+  public, so nothing here needs credentials.
+- **`PATH` in the crontab.** Cron's is short, and `docker` is usually not on it.
+- **A checkout with no local edits.** `git pull --ff-only` refuses to run over
+  them. `.env` and `docker-compose.override.yml` are gitignored and so are safe;
+  a hand-patched `Caddyfile` is not, and the failure is loud in the log.
+- **`SCAMPER_TAG=release`.** Pinning a version instead is the off switch — the
+  pull then fetches the same digest every time and nothing is ever deployed.
+  That, and putting the *previous* version there, is the rollback when a release
+  turns out to be bad: no commands, no revert commit, live within five minutes.
+
+There is deliberately nothing pushing from CI. A deploy key in GitHub's secrets
+is a shell on the server, and polling needs nothing inbound at all: no key, no
+open port, no webhook. What it costs is up to five minutes of latency. If that
+ever matters, the shape to add is an Actions job that ssh's in against a key
+restricted to `command="…/server-sync"`, so a leaked secret can only deploy.
 
 ### If the host cannot build the images
 
