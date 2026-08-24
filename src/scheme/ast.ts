@@ -1,5 +1,7 @@
 import * as L from '../lpm'
 import TextRenderer from '../lpm/renderers/text.js'
+import { renderToString } from './pretty.js'
+import { PRINT_WIDTH } from './style.js'
 
 export interface Tagged {
   tag: string
@@ -620,8 +622,17 @@ export type Layout =
   // TextRenderer for text, ValueRenderer for the web (so images, lists, etc.
   // substituted into a trace render correctly). Highlighted by runtime type.
   | { kind: 'val'; value: L.Value }
-  // A delimited group whose children are space-separated.
-  | { kind: 'group'; delim: 'paren' | 'bracket' | 'brace'; children: Layout[] }
+  // A delimited group whose children are space-separated. `form` names the
+  // special form when the group is one, so pretty.ts can look its layout up in
+  // style.ts. `alignItems` marks a group whose children are peers rather than a
+  // head and its arguments -- parameter lists and binding lists.
+  | {
+      kind: 'group'
+      delim: 'paren' | 'bracket' | 'brace'
+      children: Layout[]
+      form?: string
+      alignItems?: boolean
+    }
   // A "#" written immediately (no space) before its child -- the anonymous
   // function `#(body)`, whose child is the parenthesized body layout.
   | { kind: 'hash'; child: Layout }
@@ -643,6 +654,26 @@ const braces = (children: Layout[]): Layout => ({
   kind: 'group',
   delim: 'brace',
   children,
+})
+/**
+ * A special form: the keyword, tagged both for highlighting and -- via `form`
+ * -- for layout, followed by the rest of the form.
+ */
+const special = (name: string, rest: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  form: name,
+  children: [kw(name), ...rest],
+})
+/**
+ * A parenthesized list of peers -- a lambda's parameters, a let's bindings --
+ * which line up under the first item rather than under a head.
+ */
+const itemList = (items: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  children: items,
+  alignItems: true,
 })
 const hash = (child: Layout): Layout => ({ kind: 'hash', child })
 
@@ -672,12 +703,11 @@ export function expToLayout(e: Exp): Layout {
     case 'lam': {
       const params = e.params.map((p) => tok(p.name))
       if (e.restParam) params.push(tok('&'), tok(e.restParam.name))
-      return parens([kw('lambda'), parens(params), expToLayout(e.body)])
+      return special('lambda', [itemList(params), expToLayout(e.body)])
     }
     case 'let':
-      return parens([
-        kw('let'),
-        parens(
+      return special('let', [
+        itemList(
           e.bindings.map(({ pat, value }) =>
             brackets([patToLayout(pat), expToLayout(value)]),
           ),
@@ -685,33 +715,31 @@ export function expToLayout(e: Exp): Layout {
         expToLayout(e.body),
       ])
     case 'begin':
-      return parens([kw('begin'), ...e.exps.map(expToLayout)])
+      return special('begin', e.exps.map(expToLayout))
     case 'if':
-      return parens([
-        kw('if'),
+      return special('if', [
         expToLayout(e.guard),
         expToLayout(e.ifB),
         expToLayout(e.elseB),
       ])
     case 'match':
-      return parens([
-        kw('match'),
+      return special('match', [
         expToLayout(e.scrutinee),
         ...e.branches.map(({ pat, body }) =>
           brackets([patToLayout(pat), expToLayout(body)]),
         ),
       ])
     case 'and':
-      return parens([kw('and'), ...e.exps.map(expToLayout)])
+      return special('and', e.exps.map(expToLayout))
     case 'or':
-      return parens([kw('or'), ...e.exps.map(expToLayout)])
+      return special('or', e.exps.map(expToLayout))
     case 'cond':
-      return parens([
-        kw('cond'),
-        ...e.branches.map(({ test, body }) =>
+      return special(
+        'cond',
+        e.branches.map(({ test, body }) =>
           brackets([expToLayout(test), expToLayout(body)]),
         ),
-      ])
+      )
     case 'anonfn':
       // #(body): "#" then the body's own parenthesized layout. An empty #()
       // (whose body parsed to the `null` literal) is rendered literally.
@@ -734,56 +762,48 @@ export function expToLayout(e: Exp): Layout {
 export function stmtToLayout(s: Stmt): Layout {
   switch (s.tag) {
     case 'import':
-      return parens([
-        kw('import'),
+      return special('import', [
         tok(s.kind === 'file' ? JSON.stringify(s.module) : s.module),
         ...(s.alias !== undefined ? [tok(s.alias)] : []),
       ])
     case 'define':
-      return parens([kw('define'), tok(s.name.name), expToLayout(s.value)])
+      return special('define', [tok(s.name.name), expToLayout(s.value)])
     case 'export':
-      return parens([kw('export'), ...s.names.map((n) => tok(n.name))])
+      return special('export', s.names.map((n) => tok(n.name)))
     case 'defexport':
-      return parens([
-        kw('define-export'),
+      return special('define-export', [
         tok(s.name.name),
         expToLayout(s.value),
       ])
     case 'display':
-      return parens([kw('display'), expToLayout(s.value)])
+      return special('display', [expToLayout(s.value)])
     case 'stmtexp':
       return expToLayout(s.expr)
     case 'struct':
-      return parens([
-        kw('struct'),
+      return special('struct', [
         tok(s.name.name),
-        parens(s.fields.map((f) => tok(f.name))),
+        itemList(s.fields.map((f) => tok(f.name))),
       ])
   }
 }
 
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
-const DELIMS = {
-  paren: ['(', ')'],
-  bracket: ['[', ']'],
-  brace: ['{', '}'],
-} as const
+/**
+ * Render a {@link Layout} to text, breaking lines past `width` columns: the
+ * text backend of the surface syntax. LayoutRenderer.vue is the web backend and
+ * works from the same plan, so the two cannot drift apart.
+ */
+export function layoutToString(l: Layout, width = PRINT_WIDTH): string {
+  return renderToString(l, width)
+}
 
-/** Render a {@link Layout} to text: the text backend of the surface syntax. */
-export function layoutToString(l: Layout): string {
-  switch (l.kind) {
-    case 'tok':
-      return l.text
-    case 'val':
-      return TextRenderer.render(l.value)
-    case 'group': {
-      const [open, close] = DELIMS[l.delim]
-      return `${open}${l.children.map(layoutToString).join(' ')}${close}`
-    }
-    case 'hash':
-      return `#${layoutToString(l.child)}`
-  }
+/**
+ * Render a {@link Layout} to a single line, however long. Used to compare two
+ * layouts for equality, where line breaks are noise.
+ */
+export function layoutToFlatString(l: Layout): string {
+  return renderToString(l, Infinity)
 }
 
 export const patToString = (pat: Pat): string => layoutToString(patToLayout(pat))

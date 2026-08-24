@@ -58,5 +58,7 @@ export const FORM_STYLES: Record<string, FormStyle> = {
 
 /** The layout for `keyword`, falling back to {@link DEFAULT_STYLE}. */
 export function styleOf(keyword: string | undefined): FormStyle {
-  return (keyword && FORM_STYLES[keyword]) || DEFAULT_STYLE
+  return keyword === undefined
+    ? DEFAULT_STYLE
+    : (FORM_STYLES[keyword] ?? DEFAULT_STYLE)
 }

@@ -1,4 +1,8 @@
-import { indentNodeProp, indentRange, TreeIndentContext } from '@codemirror/language'
+import {
+  indentNodeProp,
+  indentRange,
+  TreeIndentContext,
+} from '@codemirror/language'
 import { Extension } from '@codemirror/state'
 import { Command, keymap } from '@codemirror/view'
 import type { SyntaxNode } from '@lezer/common'
@@ -40,21 +44,34 @@ function isClosingLine(cx: TreeIndentContext): boolean {
 }
 
 /**
+ * The column of this form's own opening bracket.
+ *
+ * Deliberately not `cx.baseIndent`, which is the indentation of the *line* the
+ * form starts on. Those differ whenever a form begins part-way through a line,
+ * as in `(f (lambda (x)` -- and there the body belongs two columns past the
+ * `(lambda`, not two past the `(f`. Reading the real column is also what keeps
+ * this in step with the pretty-printer, which measures the same way.
+ */
+function formColumn(cx: TreeIndentContext): number {
+  return cx.column(cx.node.from)
+}
+
+/**
  * Family 2 (rule 7): continuation lines sit under the *first argument*, so
  * `(fun arg1` puts `arg2` at `1 + len("fun") + 1`. `if` is a plain instance of
  * this rule rather than a special case -- its branches land at column 4.
  */
 function alignToFirstArg(cx: TreeIndentContext): number {
-  if (isClosingLine(cx)) return cx.baseIndent
+  if (isClosingLine(cx)) return formColumn(cx)
   const arg = cx.node.firstChild?.nextSibling
   return arg && startsOnOpeningLine(cx, arg)
     ? cx.column(arg.from)
-    : cx.baseIndent + INDENT_UNIT
+    : formColumn(cx) + INDENT_UNIT
 }
 
 /** Family 1 (rules 1, 2, 4, 5): a body indented one unit past the form. */
 function alignBody(cx: TreeIndentContext): number {
-  return isClosingLine(cx) ? cx.baseIndent : cx.baseIndent + INDENT_UNIT
+  return isClosingLine(cx) ? formColumn(cx) : formColumn(cx) + INDENT_UNIT
 }
 
 /**
@@ -64,11 +81,11 @@ function alignBody(cx: TreeIndentContext): number {
  * the first item is going to land anyway.
  */
 function alignToFirstItem(cx: TreeIndentContext): number {
-  if (isClosingLine(cx)) return cx.column(cx.node.from)
+  if (isClosingLine(cx)) return formColumn(cx)
   const first = cx.node.firstChild
   return first && startsOnOpeningLine(cx, first)
     ? cx.column(first.from)
-    : cx.column(cx.node.from) + 1
+    : formColumn(cx) + 1
 }
 
 /**

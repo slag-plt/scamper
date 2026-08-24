@@ -1,4 +1,4 @@
-import { Layout, layoutToString } from './ast'
+import { Layout, layoutToFlatString } from './ast'
 
 /**
  * Locating the one sub-expression that changed between two steps of a trace.
@@ -28,7 +28,7 @@ function childrenOf(l: Layout): Layout[] | null {
 
 /** Whether two layouts draw the same thing. */
 function same(a: Layout, b: Layout): boolean {
-  return layoutToString(a) === layoutToString(b)
+  return layoutToFlatString(a) === layoutToFlatString(b)
 }
 
 /**
