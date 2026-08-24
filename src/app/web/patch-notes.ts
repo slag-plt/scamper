@@ -25,6 +25,16 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '4.1.0',
+    notes: [
+      'The output now opens in a pane beside your code rather than in a window floating over it.',
+      'The separate run window has been removed.',
+      'The View menu can now show the internal files Scamper keeps, such as saved file histories, which open read-only.',
+      'Pressing Run on a file with no code in it no longer fails silently.',
+      'Audio pipelines now accept a sample, so a sample-node can drive one.'
+    ]
+  },
+  {
     title: 'AY 2026–2027 release',
     version: '4.0.0',
     notes: [
