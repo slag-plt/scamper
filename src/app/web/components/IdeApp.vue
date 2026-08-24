@@ -28,7 +28,7 @@ import Scamper from '../../../scamper'
 import type { Value } from '../../../lpm'
 import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
-import { FileEntry, isUserFile } from '../../../fs/fs'
+import { FileEntry, isHiddenName, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
 import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
@@ -304,6 +304,10 @@ watch(showHiddenFiles, () => {
 
 /** Moves `filename` to the front of the recent list, trimming it to length. */
 function noteRecentFile(filename: string) {
+  // An internal file is something to look at, not part of the student's work
+  // (#178); it should not spend one of the five remembered slots, nor become
+  // what a later build reopens on startup.
+  if (isHiddenName(filename)) return
   config.recentFiles = [
     filename,
     ...config.recentFiles.filter((f) => f !== filename),

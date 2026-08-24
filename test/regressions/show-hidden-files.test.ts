@@ -5,6 +5,8 @@ import IdeApp from '../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { setShowHiddenFiles } from '../../src/app/web/file-prefs'
+import { FileSession } from '../../src/app/web/file-session'
+import { FlatFileHistory } from '../../src/history/flat-file'
 import { initialize } from '../../src/scamper'
 
 vi.mock('../../src/app/web/single-instance', () => ({
@@ -122,7 +124,7 @@ describe('#178: showing hidden files', () => {
     }
   })
 
-  test('the choice is remembered', async () => {
+  test('the choice is written down', async () => {
     const wrapper = await mountIde()
     try {
       setShowHiddenFiles(true)
@@ -131,12 +133,55 @@ describe('#178: showing hidden files', () => {
       wrapper.unmount()
     }
     expect(localStorage.getItem('scamper.files.showHidden')).toBe('true')
+  })
 
-    const again = await mountIde()
+  test('and read back on a fresh load', async () => {
+    // Fresh modules, or this reads the same module-level ref that was just
+    // set and proves nothing about the initializer.
+    localStorage.setItem('scamper.files.showHidden', 'true')
+    vi.resetModules()
+    const fresh = await import('../../src/app/web/file-prefs')
+    expect(fresh.showHiddenFiles.value).toBe(true)
+
+    localStorage.setItem('scamper.files.showHidden', 'false')
+    vi.resetModules()
+    const off = await import('../../src/app/web/file-prefs')
+    expect(off.showHiddenFiles.value).toBe(false)
+  })
+
+  test('an internal file is viewable but never written back', async () => {
+    // Autosave would put the editor's buffer over a history blob seconds after
+    // it was opened to look at, destroying every saved version of the real
+    // file -- silently, since a corrupt history reads as an empty one. Driven
+    // at the session rather than through the IDE, since the session is where
+    // both autosave and an explicit save go.
+    const session = new FileSession(fs, new FlatFileHistory(fs), {
+      getDoc: () => 'clobbered',
+      isEditorLoaded: () => true,
+    })
+
+    session.setCurrentFile('.hidden-notes')
+    await session.save()
+    expect(await fs.loadFile('.hidden-notes')).toBe('internal')
+
+    // And an ordinary file still saves, so this is a guard rather than a break.
+    session.setCurrentFile('hello.scm')
+    await session.save()
+    expect(await fs.loadFile('hello.scm')).toBe('clobbered')
+  })
+
+  test('opening one does not spend a remembered-file slot', async () => {
+    setShowHiddenFiles(true)
+    const wrapper = await mountIde()
     try {
-      expect(drawerHas('.hidden-notes')).toBe(true)
+      getByRole(document.body, 'button', { name: 'Open .hidden-notes' }).click()
+      await flushPromises()
+      const stored = localStorage.getItem('scamper.config') ?? '{}'
+      expect(JSON.parse(stored).recentFiles ?? []).not.toContain(
+        '.hidden-notes',
+      )
     } finally {
-      again.unmount()
+      wrapper.unmount()
     }
   })
 })
