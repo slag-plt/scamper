@@ -34,11 +34,12 @@
 
 ;;; (audio-pipeline ctx pipeline & n1) -> pipeline?
 ;;;  ctx : context?
-;;;  pipeline : audio-node? or sample?
-;;;  n1 : audio-node?
+;;;  pipeline : (or/p audio-node? sample?)
+;;;  n1 : (or/p audio-node? sample?)
 ;;; Creates an audio pipeline from the given audio nodes, connecting the nodes in sequence.
-;;; The first argument is what the pipeline plays, and may be a sample; the rest are
-;;; what it plays through, and must be audio nodes.
+;;; The first argument is what the pipeline plays and may be a sample; the rest are what
+;;; it plays through, and must be audio nodes. A sample is played at `ctx`'s sample rate,
+;;; one frame per element, so the context decides its pitch and duration.
 ;;; @category audio, sound
 (define-export audio-pipeline (js-var "audio_audioPipeline"))
 

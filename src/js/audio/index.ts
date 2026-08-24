@@ -39,15 +39,25 @@ export function audio_sampleQ(v: any): boolean {
  *
  * `sample-node` yields data rather than a node: it has no context to bind to
  * at the point it is called. Anything that wants to play a sample therefore
- * converts it first, against the context it is playing into.
+ * converts it first, against the context it is playing into -- which is also
+ * what decides its pitch and duration, one frame per element.
+ *
+ * A fresh node each call, since a source node can only be started once.
  *
  * N.B., the sample is duplicated into both channels, so it plays as stereo.
  */
-function sampleSourceNode(
+export function sampleSourceNode(
   ctx: BaseAudioContext,
   sample: SampleNode,
 ): AudioBufferSourceNode {
   const data = sample.data
+  if (data.length === 0) {
+    // createBuffer rejects a zero-length buffer, as a bare DOMException.
+    throw new L.ScamperError(
+      'Runtime',
+      'expected a sample with at least one value, received an empty one',
+    )
+  }
   const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
   buffer.copyToChannel(data, 0)
   buffer.copyToChannel(data, 1)
@@ -79,7 +89,10 @@ export interface AudioPipeline extends L.Struct {
  * here; a node passes through. Anything else is reported as a Scamper error
  * rather than left to fail as a bare `connect is not a function`.
  */
-function toSourceNode(ctx: AudioContext, v: AudioNode | SampleNode): AudioNode {
+function toSourceNode(
+  ctx: BaseAudioContext,
+  v: AudioNode | SampleNode,
+): AudioNode {
   if (audio_sampleQ(v)) {
     return sampleSourceNode(ctx, v as SampleNode)
   }
@@ -103,7 +116,7 @@ function toEffectNode(v: AudioNode | SampleNode): AudioNode {
   if (audio_sampleQ(v)) {
     throw new L.ScamperError(
       'Runtime',
-      'a sample can only be the first argument of audio-pipeline, since it is what the pipeline plays rather than something it plays through',
+      'a sample can only be the first argument: it is what the pipeline plays, not something it plays through',
     )
   }
   if (v instanceof AudioNode) {
