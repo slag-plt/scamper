@@ -34,6 +34,28 @@ export function audio_sampleQ(v: any): boolean {
   return L.isStructKind(v, 'sample')
 }
 
+/**
+ * Wraps a sample's data in a source node bound to `ctx`.
+ *
+ * `sample-node` yields data rather than a node: it has no context to bind to
+ * at the point it is called. Anything that wants to play a sample therefore
+ * converts it first, against the context it is playing into.
+ *
+ * N.B., the sample is duplicated into both channels, so it plays as stereo.
+ */
+function sampleSourceNode(
+  ctx: BaseAudioContext,
+  sample: SampleNode,
+): AudioBufferSourceNode {
+  const data = sample.data
+  const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
+  buffer.copyToChannel(data, 0)
+  buffer.copyToChannel(data, 1)
+  const source = ctx.createBufferSource()
+  source.buffer = buffer
+  return source
+}
+
 export function audio_audioContext(sampleRate: number): AudioContext {
   const AudioContext = window.AudioContext
   return new AudioContext({ sampleRate })
@@ -50,12 +72,56 @@ export interface AudioPipeline extends L.Struct {
   onOffNode: GainNode;
 }
 
+/**
+ * Resolves `audio-pipeline`'s first argument, which is what the chain plays.
+ *
+ * A sample is data rather than a node (#181), so it becomes a source node
+ * here; a node passes through. Anything else is reported as a Scamper error
+ * rather than left to fail as a bare `connect is not a function`.
+ */
+function toSourceNode(ctx: AudioContext, v: AudioNode | SampleNode): AudioNode {
+  if (audio_sampleQ(v)) {
+    return sampleSourceNode(ctx, v as SampleNode)
+  }
+  if (v instanceof AudioNode) {
+    return v
+  }
+  throw new L.ScamperError(
+    'Runtime',
+    `expected an audio node or a sample, received ${L.typeOf(v)}`,
+  )
+}
+
+/**
+ * Resolves one of the nodes the source is piped *through*.
+ *
+ * A sample cannot go here: it becomes a source node, and a source node has no
+ * inputs, so connecting into it fails deep inside Web Audio with an
+ * `IndexSizeError` naming neither the sample nor the pipeline. Say so instead.
+ */
+function toEffectNode(v: AudioNode | SampleNode): AudioNode {
+  if (audio_sampleQ(v)) {
+    throw new L.ScamperError(
+      'Runtime',
+      'a sample can only be the first argument of audio-pipeline, since it is what the pipeline plays rather than something it plays through',
+    )
+  }
+  if (v instanceof AudioNode) {
+    return v
+  }
+  throw new L.ScamperError(
+    'Runtime',
+    `expected an audio node, received ${L.typeOf(v)}`,
+  )
+}
+
 export function audio_audioPipeline(
   ctx: AudioContext,
-  pipeline: AudioNode,
-  ...nodes: AudioNode[]
+  source: AudioNode | SampleNode,
+  ...rest: (AudioNode | SampleNode)[]
 ) {
-  // TODO: need to check types on the anys... but they're JS types!
+  const pipeline = toSourceNode(ctx, source)
+  const nodes = rest.map(toEffectNode)
   for (let i = 0; i < nodes.length - 1; i++) {
     nodes[i].connect(nodes[i + 1])
   }
@@ -121,23 +187,9 @@ export function audio_delayNode(ctx: AudioContext, delayTime: number): DelayNode
   return new DelayNode(ctx, { delayTime })
 }
 
-export function audio_playSample(pipeline: SampleNode): void {
-  // TODO: this should never happen, when does it happen?
-  // if (!L.isStructKind(pipeline, "sample")) {
-  //   throw new L.ScamperError(
-  //     "Runtime",
-  //     `expected a sample node, received ${pipeline}`,
-  //   );
-  // }
+export function audio_playSample(sample: SampleNode): void {
   const ctx = audio_getCtx()
-  // TODO: error message function should be in some util file instead of inlined
-  const data = pipeline.data
-  // N.B., for now, make the audio sample stereo (2 channels)
-  const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
-  buffer.copyToChannel(data, 0)
-  buffer.copyToChannel(data, 1)
-  const source = ctx.createBufferSource()
-  source.buffer = buffer
+  const source = sampleSourceNode(ctx, sample)
   source.connect(ctx.destination)
   source.start()
 }
