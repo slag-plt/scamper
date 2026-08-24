@@ -32,9 +32,9 @@
 	}
 
 	# The built front end. These are real files -- index.html is the IDE, plus
-	# docs, search, and the runner -- so there is deliberately no single-page
-	# fallback: a request for something absent should 404, not silently return
-	# the IDE.
+	# docs, search, and the embeddable widget -- so there is deliberately no
+	# single-page fallback: a request for something absent should 404, not
+	# silently return the IDE.
 	handle {
 		root * /srv
 		file_server
