@@ -11,6 +11,7 @@ import {
   showSourceWithOutput,
   toggleShowSourceWithOutput,
 } from '../output-prefs'
+import { showHiddenFiles, toggleShowHiddenFiles } from '../file-prefs'
 import {
   DEFAULT_FONT_SIZE,
   MAX_FONT_SIZE,
@@ -264,6 +265,11 @@ const viewMenu = computed<MenuItem[]>(() => {
       label: 'File Drawer',
       checked: props.isSidebarVisible,
       run: () => props.toggleSidebar?.(),
+    },
+    {
+      label: 'Show Hidden Files',
+      checked: showHiddenFiles.value,
+      run: () => { toggleShowHiddenFiles() },
     },
     { separator: true },
     {

@@ -11,6 +11,7 @@ import {
 import PanelDock from './PanelDock.vue'
 import PanelFrame from './PanelFrame.vue'
 import IdeSidebar from './IdeSidebar.vue'
+import { showHiddenFiles } from '../file-prefs'
 import IdeMenuBar from './IdeMenuBar.vue'
 import TraceWindow from './TraceWindow.vue'
 import IdeHeader from './IdeHeader.vue'
@@ -287,9 +288,19 @@ function handleTraceClose() {
 async function populateFileDrawer() {
   if (!fs) throw new Error('FileSystem not initialized')
   const allFiles = await fs.getFileList()
-  files.value = allFiles.filter(isUserFile)
+  // Directories are never listed either way; "hidden" is only about the dotted
+  // names an app keeps for itself (#178).
+  files.value = showHiddenFiles.value
+    ? allFiles.filter((entry) => !entry.isDirectory)
+    : allFiles.filter(isUserFile)
   syncRecentFiles()
 }
+
+// Turning it on has to reveal what is already there, rather than waiting for
+// the next thing that happens to repopulate the drawer.
+watch(showHiddenFiles, () => {
+  void populateFileDrawer()
+})
 
 /** Moves `filename` to the front of the recent list, trimming it to length. */
 function noteRecentFile(filename: string) {
