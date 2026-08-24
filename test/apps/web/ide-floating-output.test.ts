@@ -32,7 +32,10 @@ await initialize()
 const LAYOUT_KEY = 'scamper.panels'
 const LEGACY_GEOMETRY_KEY = 'scamper.window.output'
 
-// The output is a window floating over the code rather than a pane beside it.
+// How the output behaves once it *is* a floating window. Since #371 it docks
+// by default, so these seed a floating arrangement first; the docked default is
+// covered in test/regressions/default-output-placement.
+//
 // jsdom has no layout, so dragging and resizing cannot be meaningfully checked
 // here -- every box measures zero. What these cover is the part that is logic
 // rather than pixels: where the window is, and how it comes and goes.

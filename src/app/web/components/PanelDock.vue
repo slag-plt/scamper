@@ -32,9 +32,11 @@ const slots = computed(() => panels.slots.value)
  * Whether `slot` draws its tab strip.
  *
  * One sentence: a slot shows its tabs unless it is the only thing in the dock
- * and holds a single panel. That exception is what keeps the default
- * arrangement -- the editor docked alone, output floating over it -- looking
- * exactly as it did before any of this existed, with no chrome over the code.
+ * and holds a single panel. That exception keeps a lone docked editor free of
+ * chrome, as it was before the dock existed.
+ *
+ * N.B. since #371 the default is two occupied slots, so both draw a strip and
+ * the exception no longer applies to a first run.
  */
 function hasStrip(slot: SlotId): boolean {
   const tabs = panels.tabs(slot)

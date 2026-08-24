@@ -79,6 +79,10 @@ const MAX_SPLIT = 85
  * pane beside it reads as part of the editor -- which is also where the IDE
  * put it before the dock existed.
  *
+ * The trace still floats: it is transient and opened on demand, so it arrives
+ * as the answer to something the person just asked for, and taking a third of
+ * the dock permanently for it would not pay.
+ *
  * The recency order is trace, output, editor -- the reverse of the canonical
  * one. Nothing has been fronted yet at startup, so this is the tie-break, and
  * it is chosen to reproduce the precedence the IDE has always used on a narrow

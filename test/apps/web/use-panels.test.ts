@@ -60,6 +60,9 @@ describe('persistence', () => {
 
   test('an arrangement survives a reload', async () => {
     await withPanels(({ panels }) => {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       panels.setSplitPercent(40)
     })
@@ -148,6 +151,9 @@ describe('migrating the old per-window geometry', () => {
 describe('the narrow-pane projection', () => {
   test('it tabs everything without touching what was arranged', async () => {
     await withPanels(({ panels, isCompact }) => {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       const arranged = snapshot(panels.layout.value)
 

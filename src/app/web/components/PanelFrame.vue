@@ -92,8 +92,7 @@ const style = computed(() =>
  * Whether this panel draws its own title bar.
  *
  * Only when floating. A docked panel is labelled by its tab, or -- when it is
- * the only thing in the dock -- needs no label at all, which is what keeps the
- * default arrangement looking exactly as it did before the dock existed.
+ * the only thing in the dock -- needs no label at all.
  */
 const hasBar = computed(() => isFloating.value)
 

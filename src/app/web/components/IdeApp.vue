@@ -179,9 +179,8 @@ const panels = providePanels({ isCompact, present: presentPanels })
  * Float/Dock for each panel, for the View menu.
  *
  * Every panel has these on its own chrome too -- a floating one on its title
- * bar, a tabbed one on its slot's strip. A panel docked alone has neither, and
- * that is the editor in the default arrangement, so the menu is the surface
- * that can always reach all three.
+ * bar, a tabbed one on its slot's strip. A panel docked alone in the dock has
+ * neither, so the menu is the surface that can always reach all three.
  *
  * Empty while the pane is compact: everything is tabbed there by necessity, and
  * offering to float something that cannot float would be a lie.

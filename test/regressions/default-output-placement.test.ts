@@ -102,13 +102,11 @@ describe('#371: the output starts docked beside the code', () => {
     const wrapper = await mountIde()
     try {
       // Sharing a slot would stack them as tabs, showing one at a time --
-      // which is the confusion this change is meant to remove. Separate slots
-      // give each its own single-tab strip, naming the pane.
-      const strips = document.querySelectorAll('[role="tablist"]')
-      expect(strips).toHaveLength(2)
-      strips.forEach((strip) => {
-        expect(strip.querySelectorAll('[role="tab"]')).toHaveLength(1)
-      })
+      // the confusion this change is meant to remove.
+      expect(panel('editor')?.dataset.slot).toBe('a')
+      expect(panel('output')?.dataset.slot).toBe('b')
+      // Both reachable at once: a panel tabbed behind another is a tabpanel,
+      // and a hidden one leaves the accessibility tree entirely.
       expect(
         getByRole(document.body, 'region', { name: 'Source' }),
       ).toBeInTheDocument()

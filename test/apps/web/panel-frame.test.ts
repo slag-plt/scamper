@@ -195,6 +195,9 @@ describe('the dock', () => {
   test('panels sharing a slot get one, and only the active one is drawn', async () => {
     const { wrapper } = mountDock()
     try {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       panels.moveToOtherSlot('output')
       await nextTick()
@@ -204,7 +207,7 @@ describe('the dock', () => {
         [...tabs.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
       ).toEqual(['Source', 'Output'])
 
-      // Fronting output docked it, so it is the one showing.
+      // moveToOtherSlot fronted the output, so it is the one showing.
       expect(frame('output')?.style.display).not.toBe('none')
       expect(frame('editor')?.style.display).toBe('none')
 
@@ -220,6 +223,9 @@ describe('the dock', () => {
   test('a docked panel carries its slot, for the grid to place it by', async () => {
     const { wrapper } = mountDock()
     try {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       await nextTick()
       expect(frame('editor')?.dataset.slot).toBe('a')
@@ -318,6 +324,9 @@ describe('focus after a panel moves', () => {
   test('floating from a tab hands focus to the new title bar', async () => {
     const { wrapper } = mountDock()
     try {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       await nextTick()
       getByRole(document.body, 'button', { name: 'Float Output' }).click()
@@ -360,6 +369,9 @@ describe('contents survive being moved', () => {
       const before = mountCount
       expect(before).toBe(3)
 
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       await nextTick()
       panels.moveToOtherSlot('output')
