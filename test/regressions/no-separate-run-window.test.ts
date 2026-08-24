@@ -5,6 +5,10 @@ import IdeApp from '../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
 import { initialize } from '../../src/scamper'
+import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 vi.mock('../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -62,6 +66,11 @@ describe('#372: the separate run window is gone', () => {
       expect(
         queryByRole(document.body, 'button', { name: 'Open Run Window' }),
       ).toBeNull()
+      // A sibling from the same toolbar, so this cannot pass merely because
+      // the header failed to render at all.
+      expect(
+        queryByRole(document.body, 'button', { name: 'Query value' }),
+      ).not.toBeNull()
     } finally {
       wrapper.unmount()
     }
@@ -97,6 +106,25 @@ describe('#372: the separate run window is gone', () => {
       expect(open).not.toHaveBeenCalled()
     } finally {
       wrapper.unmount()
+    }
+  })
+})
+
+// The DOM cannot see the other half of the removal: the runner was its own
+// Vite entry, and a page left in the build would still ship even with every
+// affordance gone.
+describe('#372: the runner app is out of the build', () => {
+  test('no runner entry, and no runner sources', async () => {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const root = resolve(here, '../..')
+    const config = await readFile(resolve(root, 'vite.config.ts'), 'utf8')
+    expect(config).not.toContain('runner.html')
+    for (const orphan of [
+      'src/app/web/runner.html',
+      'src/app/web/runner.ts',
+      'src/app/web/components/RunnerApp.vue',
+    ]) {
+      expect(existsSync(resolve(root, orphan))).toBe(false)
     }
   })
 })

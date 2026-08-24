@@ -1453,7 +1453,6 @@ onUnmounted(() => {
         :whats-new="handleWhatsNew"
       />
       <IdeHeader
-        :current-file="currentFile"
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
         @toggle-sidebar="toggleSidebar"

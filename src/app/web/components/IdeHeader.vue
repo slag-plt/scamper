@@ -5,7 +5,6 @@ import ThemeToggle from '../../shared/ThemeToggle.vue'
 import ShortcutsHelp from './ShortcutsHelp.vue'
 
 defineProps<{
-  currentFile?: string | null
   /** False when the cursor is not inside a statement, so there is none to step. */
   canStep?: boolean
   /** True while a trace is being collected, which takes a moment. */
