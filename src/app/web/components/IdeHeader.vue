@@ -13,7 +13,6 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  runWindow: []
   toggleSidebar: []
   stepStatement: []
 }>()
@@ -78,16 +77,6 @@ function searchOpenWindow(searchTerm: string) {
         class="fa-solid fa-spinner fa-spin"
         aria-hidden="true"
       ></i>
-      <!-- Opens the standalone runner in a new browser tab. Named for what it
-           does, and matching Run > Open Run Window, which is the same command. -->
-      <button
-        type="button"
-        class="icon-button fa-solid fa-up-right-from-square"
-        title="Open this program in a separate run window"
-        aria-label="Open Run Window"
-        :disabled="!currentFile"
-        @click="emit('runWindow')"
-      ></button>
       <button
         type="button"
         class="icon-button fa-solid fa-clipboard-question"
