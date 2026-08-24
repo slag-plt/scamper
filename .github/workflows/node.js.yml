@@ -140,3 +140,66 @@ jobs:
         # for all three would evict itself on every run.
         cache-from: type=gha,scope=${{ matrix.image }}
         cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # A version bump is a release: it decides what a server deploys, what students
+  # see in the corner of the IDE, and which patch notes they are shown. So a
+  # pull request that changes it has to change everything a release needs --
+  # which is easy to half-do and hard to notice afterwards.
+  #
+  # Silent on the pull requests that are not releases, which is nearly all of
+  # them. Make it a required status check on main to make it binding; see
+  # RELEASING.md.
+  version:
+
+    if: github.event_name == 'pull_request'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: A version bump must be a whole one
+      run: |
+        base="$(git show ${{ github.event.pull_request.base.sha }}:package.json | jq -r .version)"
+        head="$(jq -r .version package.json)"
+
+        if [ "${base}" = "${head}" ]; then
+          echo "No version change here; nothing to check."
+          exit 0
+        fi
+
+        echo "This pull request releases ${base} -> ${head}."
+        failed=0
+
+        workspace="$(jq -r .version server/package.json)"
+        if [ "${workspace}" != "${head}" ]; then
+          echo "::error file=server/package.json::still ${workspace}, not ${head}"
+          failed=1
+        fi
+
+        # `npm version` writes the lockfile too, in two places. A version
+        # changed by hand leaves them behind, and `npm ci` would then install a
+        # tree that disagrees with the manifest it came from.
+        for lock in $(jq -r '.version, .packages[""].version' package-lock.json); do
+          if [ "${lock}" != "${head}" ]; then
+            echo "::error file=package-lock.json::still ${lock}, not ${head} -- run npm version rather than editing by hand"
+            failed=1
+          fi
+        done
+
+        if [ "$(printf '%s\n%s\n' "${base}" "${head}" | sort -V | tail -1)" != "${head}" ]; then
+          echo "::error file=package.json::${head} is not newer than ${base}"
+          failed=1
+        fi
+
+        # A patch release may pass without notes -- a bug fix does not deserve a
+        # modal in front of every student. A minor or major one changes what
+        # Scamper does, which is what patch notes are for.
+        if [ "$(echo "${head}" | cut -d. -f3)" = "0" ] &&
+           ! grep -q "version: '${head}'" src/app/web/patch-notes.ts; then
+          echo "::error file=src/app/web/patch-notes.ts::no patch notes for ${head}, so students would be given ${head} with nothing said about it"
+          failed=1
+        fi
+
+        exit "${failed}"

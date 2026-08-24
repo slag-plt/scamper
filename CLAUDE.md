@@ -70,6 +70,11 @@ is compiled in.
 + `npm run lint`: runs the linter
 + `npm run lint:fix`: automatically fixes simple linter errors
 
+### Releases
+
++ A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `RELEASING.md`
++ Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `src/app/web/patch-notes.ts`
+
 ## Architecture Overview
 
 ### Source Tree Layout
