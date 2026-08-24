@@ -31,15 +31,17 @@ const slots = computed(() => panels.slots.value)
 /**
  * Whether `slot` draws its tab strip.
  *
- * One sentence: a slot shows its tabs unless it is the only thing in the dock
- * and holds a single panel. That exception is what keeps the default
- * arrangement -- the editor docked alone, output floating over it -- looking
- * exactly as it did before any of this existed, with no chrome over the code.
+ * One sentence: a slot shows its tabs only when it holds more than one, since
+ * a strip exists to choose between them.
+ *
+ * A lone panel is therefore bare in either slot, which is what keeps the
+ * default arrangement -- code and output side by side (#371) -- looking as it
+ * did before the dock existed, with no chrome over the code. Float and Dock
+ * for a bare panel live in the View menu, which is the surface that can always
+ * reach every panel.
  */
 function hasStrip(slot: SlotId): boolean {
-  const tabs = panels.tabs(slot)
-  if (tabs.length === 0) return false
-  return tabs.length > 1 || slots.value.length > 1
+  return panels.tabs(slot).length > 1
 }
 
 const isSplit = computed(() => slots.value.length > 1)

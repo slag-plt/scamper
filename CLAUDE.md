@@ -4,7 +4,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ## Project Overview
 
-**Scamper** is a mini-Scheme implementation designed for teaching multimedia programming on the web. It provides a complete web-based programming environment with IDE, documentation viewer, and various runner interfaces.
+**Scamper** is a mini-Scheme implementation designed for teaching multimedia programming on the web. It provides a complete web-based programming environment with IDE, documentation viewer, command-line runner, and an embeddable widget.
 
 ## Tech Stack
 + Host language: Typescript
@@ -87,7 +87,7 @@ is compiled in.
     - `src/app/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
     - `src/app/search/` — Vue app powering the standalone documentation search page (`search.html`).
-    - `src/app/web/` — Browser-facing UI: the IDE, runner, and embeddable-widget entry points and their Vue components.
+    - `src/app/web/` — Browser-facing UI: the IDE and embeddable-widget entry points and their Vue components.
   - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI, the Scamper server when logged in) used to load and save Scamper source files. `src/fs/index.ts` pairs a file system with its history as one `Backend`, so the two can never be mismatched.
   - `src/history/` — A file's save history (#42), as an interface with two backings: `flat-file.ts` keeps snapshots in a `.{filename}.history` blob beside the file, `server.ts` keeps one row per snapshot in the database. `policy.ts` decides when a save is worth recording and is shared with `server/`.
   - `src/js/` — The JavaScript "native" package: one folder per library that Scamper's standard library binds to via `js-var`.

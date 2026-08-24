@@ -4,7 +4,7 @@ import { defineComponent, h, nextTick, ref, type Ref } from 'vue'
 import PanelDock from '../../../src/app/web/components/PanelDock.vue'
 import PanelFrame from '../../../src/app/web/components/PanelFrame.vue'
 import CodeMirrorEditor from '../../../src/app/web/components/CodeMirrorEditor.vue'
-import { providePanels, type Panels } from '../../../src/app/web/composables/use-panels'
+import { providePanels, VERSION, type Panels } from '../../../src/app/web/composables/use-panels'
 import { provideEditor } from '../../../src/app/web/composables/editor-context'
 import { initialize } from '../../../src/scamper'
 import type { PanelId } from '../../../src/app/web/panel-layout'
@@ -34,6 +34,8 @@ const LABELS: Record<PanelId, string> = {
 
 const DOCK_W = 900
 const DOCK_H = 500
+
+const LAYOUT_KEY = 'scamper.panels'
 
 let panels: Panels
 let host: HTMLDivElement
@@ -128,7 +130,7 @@ describe('the splitter', () => {
   test('dragging it resizes both slots', async () => {
     const { wrapper } = mountDock()
     try {
-      panels.dock('output')
+      // The default docks editor and output into the two slots (#371).
       await settle()
 
       const before = rect(frame('editor'))?.width ?? 0
@@ -158,7 +160,7 @@ describe('the splitter', () => {
   test('a slot cannot be dragged shut', async () => {
     const { wrapper } = mountDock()
     try {
-      panels.dock('output')
+      // The default docks editor and output into the two slots (#371).
       await settle()
 
       const sp = host.querySelector<HTMLElement>('[role="separator"]')
@@ -181,10 +183,21 @@ describe('the splitter', () => {
 })
 
 describe('a floating panel', () => {
+  /**
+   * Mounts with the output floating. It docks by default since #371, so these
+   * cases -- which need a title bar and resize handles to grab -- say so.
+   */
+  async function mountFloatingOutput() {
+    const mounted = mountDock()
+    await settle()
+    panels.float('output')
+    await settle()
+    return mounted
+  }
+
   test('the title bar drags it', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
-      await settle()
       const win = frame('output')
       const before = rect(win)
       const bar = win?.querySelector<HTMLElement>('.window-bar')
@@ -207,9 +220,8 @@ describe('a floating panel', () => {
   })
 
   test('an edge handle resizes it', async () => {
-    const { wrapper } = mountDock()
+    const { wrapper } = await mountFloatingOutput()
     try {
-      await settle()
       const win = frame('output')
       const before = rect(win)
       const handle = win?.querySelector<HTMLElement>('.resize-w')
@@ -238,6 +250,10 @@ describe('a floating panel', () => {
     const { wrapper, size } = mountDock()
     try {
       await settle()
+      // A docked output is laid out by the grid and cannot hang off the edge,
+      // so it would pass this vacuously (#371).
+      panels.float('output')
+      await settle()
       const dockBefore = rect(dock())
       expect(rect(frame('output'))?.right).toBeLessThanOrEqual(dockBefore.right + 1)
 
@@ -256,6 +272,25 @@ describe('a floating panel', () => {
   })
 
   test('two windows with no remembered position do not land on each other', async () => {
+    // Both must be windows *from the start*: the cascade is applied as each
+    // frame mounts without a remembered box, so floating the output afterwards
+    // would let the trace take the first slot and store it. The output docks by
+    // default since #371, so seed the arrangement rather than mount into it.
+    localStorage.setItem(
+      LAYOUT_KEY,
+      JSON.stringify({
+        version: VERSION,
+        placement: {
+          editor: { kind: 'docked', slot: 'a' },
+          output: { kind: 'floating', minimized: false },
+          trace: { kind: 'floating', minimized: false },
+        },
+        geometry: { editor: null, output: null, trace: null },
+        recency: ['trace', 'output', 'editor'],
+        axis: 'row',
+        splitPercent: 62,
+      }),
+    )
     const { wrapper } = mountDock()
     try {
       await settle()

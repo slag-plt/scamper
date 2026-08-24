@@ -180,9 +180,9 @@ const panels = providePanels({ isCompact, present: presentPanels })
  * Float/Dock for each panel, for the View menu.
  *
  * Every panel has these on its own chrome too -- a floating one on its title
- * bar, a tabbed one on its slot's strip. A panel docked alone has neither, and
- * that is the editor in the default arrangement, so the menu is the surface
- * that can always reach all three.
+ * bar, a tabbed one on its slot's strip. A panel alone in its slot has
+ * neither, which in the default arrangement is both the code and the output,
+ * so the menu is the surface that can always reach all three.
  *
  * Empty while the pane is compact: everything is tabbed there by necessity, and
  * offering to float something that cannot float would be a lie.
@@ -700,19 +700,6 @@ function displayError(error: string) {
 }
 
 // ---------- header event handlers ----------
-
-async function handleRunWindow() {
-  if (!currentFile.value) return
-  // The runner window loads the file from storage rather than from this
-  // editor, so offline it would open onto nothing.
-  if (!(await requireServer('Opening the run window'))) return
-  await saveCurrentFile()
-  const params = new URLSearchParams({
-    filename: currentFile.value,
-    isTree: 'false',
-  })
-  window.open(`runner.html?${params.toString()}`)
-}
 
 function toggleSidebar() {
   isSidebarVisible.value = !isSidebarVisible.value
@@ -1480,7 +1467,6 @@ onUnmounted(() => {
         :select-file="handleSelectFile"
         :sign-in="openSignIn"
         :sign-out="handleSignOut"
-        :run-window="handleRunWindow"
         :panel-placement="panelPlacement"
         :toggle-sidebar="toggleSidebar"
         :can-step="canStep"
@@ -1490,17 +1476,16 @@ onUnmounted(() => {
         :whats-new="handleWhatsNew"
       />
       <IdeHeader
-        :current-file="currentFile"
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
-        @run-window="handleRunWindow"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />
-      <!-- Editor, output and trace are all panels: the editor is docked and
-           the output floats over it by default, and either can be docked,
-           tabbed or floated from there. Too narrow to float anything and the
-           dock tabs them all together instead. -->
+      <!-- Editor, output and trace are all panels: the editor and the output
+           are docked side by side by default with the trace floating over
+           them, and any of them can be docked, tabbed or floated from there.
+           Too narrow to float anything and the dock tabs them all together
+           instead. -->
       <div ref="contentAreaRef" class="content-area">
         <PanelDock
           :labels="panelLabels"

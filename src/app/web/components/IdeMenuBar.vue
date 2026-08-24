@@ -61,7 +61,6 @@ const props = defineProps<{
   selectFile?: (filename: string) => void
   signIn?: () => void
   signOut?: () => void
-  runWindow?: () => void
   /** One entry per panel that exists, for the View menu's placement section. */
   panelPlacement?: { label: string; floating: boolean; toggle: () => void }[]
   /** Shown at the left end of the bar, e.g. "(3.5.0)". */
@@ -251,11 +250,6 @@ const runMenu = computed<MenuItem[]>(() => [
   },
   { separator: true },
   { label: 'Query Value at Cursor', run: () => session.query() },
-  {
-    label: 'Open Run Window',
-    disabled: (props.currentFile ?? null) === null,
-    run: () => props.runWindow?.(),
-  },
 ])
 
 const viewMenu = computed<MenuItem[]>(() => {
@@ -303,8 +297,9 @@ const viewMenu = computed<MenuItem[]>(() => {
     { label: 'Unfold All', kbd: editShortcut.unfoldAll, disabled: !s.loaded, run: inEditor((ed) => { ed.unfoldAll() }) },
     { separator: true },
     // Float/Dock for each panel. The tab strips and title bars carry the same
-    // commands, but a panel docked alone has neither -- the editor, by
-    // default -- so this is the one surface that can always reach all of them.
+    // commands, but a panel alone in its slot has neither -- both of them, in
+    // the default arrangement -- so this is the one surface that can always
+    // reach all of them.
     ...(props.panelPlacement ?? []).map((panel) => ({
       label: `${panel.floating ? 'Dock' : 'Float'} ${panel.label}`,
       run: () => { panel.toggle() },

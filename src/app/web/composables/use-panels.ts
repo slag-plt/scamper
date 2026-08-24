@@ -53,8 +53,19 @@ const LEGACY_GEOMETRY_KEYS: Partial<Record<PanelId, string>> = {
   trace: 'scamper.window.trace',
 }
 
-/** Bumped only for a change this build cannot read forwards. */
-const VERSION = 1
+/**
+ * Bumped for a change this build cannot read forwards, and to retire a stored
+ * arrangement whose default has moved out from under it.
+ *
+ * 2 -- the output docks by default (#371). A blob is written on the first
+ * visit, so without this every existing profile would keep the floating output
+ * and only a brand-new one would see the change.
+ *
+ * Exported so a test writing a stored arrangement stays on the current
+ * version: a fixture pinned to an old number is discarded rather than read,
+ * which makes the test pass for the wrong reason instead of failing.
+ */
+export const VERSION = 2
 
 function readLegacyGeometry(key: string): Geometry | null {
   try {

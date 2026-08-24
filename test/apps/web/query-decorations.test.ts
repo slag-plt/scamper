@@ -10,6 +10,11 @@ import {
 } from '../../../src/app/web/codemirror/extensions/query'
 
 await initialize()
+// Importing scamper.ts kicks off its renderer registration as a fire-and-forget
+// module-load side effect. This file can finish before that resolves, and a
+// dynamic import landing after teardown is reported as an unhandled error that
+// fails the run. Settle it here.
+await import('../../../src/app/web/renderers.js')
 
 describe('query decorations', () => {
   afterEach(() => {
