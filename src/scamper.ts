@@ -268,7 +268,11 @@ export default class Scamper {
   }
 
   /**
-   * @returns ID of task
+   * Compiles and runs `src` as this Scamper instance's main program.
+   *
+   * @returns the scheduled run, or null when a fatal parse error left no
+   *          program (its diagnostics go to `err`). A program with no
+   *          statements is a no-op, and comes back already finished.
    */
   public async execute({
     src,

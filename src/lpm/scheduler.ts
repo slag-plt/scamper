@@ -277,6 +277,35 @@ export class Scheduler {
               // traces, like the builtin libraries (see Closure.stepOver).
               const moduleFiber = new Fiber(prog, S.mkInitialEnv(), true)
               const id = crypto.randomUUID()
+              // Binds the module's exports into the importer and resumes it.
+              const finishImport = () => {
+                // Only the file's declared exports are visible to the importer.
+                const mod = moduleFiber.getModule()
+                // A qualified file import (alias set) is reachable only as
+                // `alias.member`; an unqualified one injects into scope.
+                fiber.topLevelEnv =
+                  stepResult.alias !== undefined
+                    ? fiber.topLevelEnv.extendWithQualifiedImport(
+                        stepResult.alias,
+                        mod,
+                      )
+                    : fiber.topLevelEnv.extendWithImport(
+                        stepResult.filename,
+                        mod,
+                      )
+                fiber.advanceStmt()
+                this.resumeOrComplete(task)
+              }
+              // An empty (or comment-only) module compiles to zero statements,
+              // so its fiber is born done and `schedule` would reject it
+              // (#366). Here that throw lands in this detached promise with the
+              // importer already dequeued, so the run would hang rather than
+              // merely do nothing. There is nothing to run: bind its (empty)
+              // exports and carry on.
+              if (moduleFiber.isDone()) {
+                finishImport()
+                return
+              }
               this.schedule({
                 id,
                 fiber: moduleFiber,
@@ -293,24 +322,7 @@ export class Scheduler {
                   fiber.advanceStmt()
                   this.resumeOrComplete(task)
                 },
-                onComplete: () => {
-                  // Only the file's declared exports are visible to the importer.
-                  const mod = moduleFiber.getModule()
-                  // A qualified file import (alias set) is reachable only as
-                  // `alias.member`; an unqualified one injects into scope.
-                  fiber.topLevelEnv =
-                    stepResult.alias !== undefined
-                      ? fiber.topLevelEnv.extendWithQualifiedImport(
-                          stepResult.alias,
-                          mod,
-                        )
-                      : fiber.topLevelEnv.extendWithImport(
-                          stepResult.filename,
-                          mod,
-                        )
-                  fiber.advanceStmt()
-                  this.resumeOrComplete(task)
-                },
+                onComplete: finishImport,
               })
             },
             (_err: unknown) => {
