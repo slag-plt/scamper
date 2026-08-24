@@ -25,7 +25,7 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
-    title: 'AY 2026–2027 release'
+    title: 'AY 2026–2027 release',
     version: '4.0.0',
     notes: [
       'Major updates to Scamper for the 26–27 academic year!',
