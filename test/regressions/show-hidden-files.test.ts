@@ -170,6 +170,39 @@ describe('#178: showing hidden files', () => {
     expect(await fs.loadFile('hello.scm')).toBe('clobbered')
   })
 
+  test('one opens read-only, and says so in the status bar', async () => {
+    // Silently declining to save left the unsaved indicator stuck on and the
+    // reason invisible. The editor refuses the edit instead, and the bar says
+    // why.
+    setShowHiddenFiles(true)
+    const wrapper = await mountIde()
+    try {
+      getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
+      await flushPromises()
+      expect(document.querySelector('.ide-statusbar')?.textContent).not.toContain(
+        'Read-only',
+      )
+
+      getByRole(document.body, 'button', { name: 'Open .hidden-notes' }).click()
+      await flushPromises()
+      expect(document.querySelector('.ide-statusbar')?.textContent).toContain(
+        'Read-only',
+      )
+
+      // And it is really read-only, not just labelled: the editing commands
+      // gate on the editor's own state.
+      getByRole(document.body, 'menuitem', { name: 'Edit' }).click()
+      await flushPromises()
+      expect(
+        getByRole(getByRole(document.body, 'menu'), 'menuitem', {
+          name: 'Paste',
+        }),
+      ).toHaveAttribute('aria-disabled', 'true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('opening one does not spend a remembered-file slot', async () => {
     setShowHiddenFiles(true)
     const wrapper = await mountIde()

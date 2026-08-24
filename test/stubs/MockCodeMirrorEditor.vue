@@ -22,6 +22,7 @@ function reportCursor() {
 const editorRegistration = useEditorRegistration()
 const src = ref('')
 const loaded = ref(false)
+const readOnly = ref(false)
 
 const adapter = makeMockCodeMirrorEditorAdapter(
   {
@@ -31,9 +32,10 @@ const adapter = makeMockCodeMirrorEditorAdapter(
     isLoaded() {
       return loaded.value
     },
-    initializeDoc(nextSrc: string) {
+    initializeDoc(nextSrc: string, isReadOnly = false) {
       loaded.value = true
       src.value = nextSrc
+      readOnly.value = isReadOnly
       reportCursor()
     },
     initializeDummyDoc() {
@@ -48,8 +50,9 @@ const adapter = makeMockCodeMirrorEditorAdapter(
     },
     status: () => ({
       // The real editor's no-file state is read-only, and the menus grey
-      // themselves out from this, so the stub keeps that tie.
-      readOnly: !loaded.value,
+      // themselves out from this, so the stub keeps that tie. An internal file
+      // opened for looking at is read-only too (#178).
+      readOnly: !loaded.value || readOnly.value,
       hasSelection: false,
       canUndo: false,
       canRedo: false,

@@ -8,11 +8,14 @@ defineProps<{
   line: number
   column: number
   path: string[]
+  /** True for a file shown rather than edited -- see isHiddenName (#178). */
+  readOnly?: boolean
 }>()
 </script>
 
 <template>
   <div class="ide-statusbar">
+    <span v-if="readOnly" class="read-only">Read-only</span>
     <span class="pos">Ln {{ line }}, Col {{ column }}:</span>
     <span v-if="path.length === 0" class="muted">top level</span>
     <template v-for="(form, i) in path" :key="i">
@@ -39,6 +42,22 @@ defineProps<{
 
 .pos {
   margin-right: 0.5em;
+}
+
+/*
+ * Says why typing does nothing, rather than leaving it to be discovered. An
+ * internal file (a saved history, a config) is shown for looking at; writing
+ * one back would destroy the state it holds.
+ */
+.read-only {
+  margin-right: 0.6em;
+  padding: 0 0.4em;
+  border: 1px solid var(--border-muted);
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
 }
 
 .sep {

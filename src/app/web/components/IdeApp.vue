@@ -302,6 +302,14 @@ watch(showHiddenFiles, () => {
   void populateFileDrawer()
 })
 
+/**
+ * Whether the open file is one Scamper keeps for itself, and so is shown
+ * rather than edited (#178).
+ */
+const isCurrentFileReadOnly = computed(
+  () => currentFile.value !== null && isHiddenName(currentFile.value),
+)
+
 /** Moves `filename` to the front of the recent list, trimming it to length. */
 function noteRecentFile(filename: string) {
   // An internal file is something to look at, not part of the student's work
@@ -588,7 +596,7 @@ async function switchToFile(filename: string): Promise<void> {
     // would no-op here because isLoadingFile is already set.
     const src = await fileSession.switchTo(filename)
     currentFile.value = filename
-    editor().initializeDoc(src)
+    editor().initializeDoc(src, isHiddenName(filename))
   } catch (e) {
     reportError(e, (message) => `${message}\n\n${e instanceof Error ? (e.stack ?? '') : ''}`)
   }
@@ -1542,6 +1550,7 @@ onUnmounted(() => {
         :line="cursorStatus.line"
         :column="cursorStatus.column"
         :path="cursorStatus.path"
+        :read-only="isCurrentFileReadOnly"
       />
     </main>
   </div>
