@@ -69,6 +69,19 @@ const isTabbed = computed(() => {
   return p.kind === 'docked' && panels.tabs(p.slot).length > 1
 })
 
+/**
+ * 0 in a tab group, where the panel is part of the roving tab order.
+ *
+ * A bare docked panel takes -1 instead: it has no tab and no title bar, so it
+ * is its own focus target when a Dock command moves it here, and without this
+ * that focus silently goes nowhere. -1 rather than 0 keeps it out of the tab
+ * order, where a plain pane does not belong. A floating panel is announced by
+ * its title bar, which carries its own -1.
+ */
+const panelTabIndex = computed(() =>
+  isTabbed.value ? 0 : isFloating.value ? undefined : -1,
+)
+
 /*
  * Derived ids rather than useId(): there is exactly one dock on the page (the
  * IDE holds a single-instance lock), so they cannot collide, and a tab in
@@ -92,8 +105,8 @@ const style = computed(() =>
  * Whether this panel draws its own title bar.
  *
  * Only when floating. A docked panel is labelled by its tab, or -- when it is
- * the only thing in the dock -- needs no label at all, which is what keeps the
- * default arrangement looking exactly as it did before the dock existed.
+ * alone in its slot -- needs no label at all, which is what keeps the default
+ * arrangement free of chrome over the code.
  */
 const hasBar = computed(() => isFloating.value)
 
@@ -315,7 +328,7 @@ watch(isShown, (shown) => {
     :role="isTabbed ? 'tabpanel' : undefined"
     :aria-labelledby="isTabbed ? `tab-${id}` : undefined"
     :aria-label="isTabbed ? undefined : title"
-    :tabindex="isTabbed ? 0 : undefined"
+    :tabindex="panelTabIndex"
     @pointerdown="isFloating && panels.reveal(id)"
   >
     <div

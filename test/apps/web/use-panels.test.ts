@@ -60,6 +60,9 @@ describe('persistence', () => {
 
   test('an arrangement survives a reload', async () => {
     await withPanels(({ panels }) => {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       panels.setSplitPercent(40)
     })
@@ -73,6 +76,9 @@ describe('persistence', () => {
 
   test('a window that was put away comes back on reload', async () => {
     await withPanels(({ panels }) => {
+      // The output docks by default (#371); float it first, since only a
+      // floating window can be put away.
+      panels.float('output')
       panels.minimize('output')
       panels.dock('trace')
     })
@@ -145,6 +151,9 @@ describe('migrating the old per-window geometry', () => {
 describe('the narrow-pane projection', () => {
   test('it tabs everything without touching what was arranged', async () => {
     await withPanels(({ panels, isCompact }) => {
+      // Float first: the output docks by default (#371), so dock() alone
+      // would be a no-op and prove nothing.
+      panels.float('output')
       panels.dock('output')
       const arranged = snapshot(panels.layout.value)
 
@@ -161,6 +170,7 @@ describe('the narrow-pane projection', () => {
 
   test('nothing is in the taskbar while compact', async () => {
     await withPanels(({ panels, isCompact }) => {
+      panels.float('output')
       panels.minimize('output')
       expect(panels.minimized.value).toEqual(['output'])
       isCompact.value = true

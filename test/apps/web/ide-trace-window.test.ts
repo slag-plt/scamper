@@ -108,6 +108,15 @@ describe('IDE trace window', () => {
     const wrapper = await mountIde()
     try {
       await step()
+      // The output docks by default (#371) and, alone in its slot, draws no
+      // tab strip -- so the View menu is where Float lives for it. Only a
+      // floating window can be put away.
+      getByRole(document.body, 'menuitem', { name: 'View' }).click()
+      await flushPromises()
+      getByRole(getByRole(document.body, 'menu'), 'menuitem', {
+        name: 'Float Output',
+      }).click()
+      await flushPromises()
       getByRole(document.body, 'button', { name: 'Minimize Output' }).click()
       getByRole(document.body, 'button', { name: 'Minimize Step' }).click()
       await flushPromises()

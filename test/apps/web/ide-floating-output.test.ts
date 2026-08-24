@@ -10,6 +10,7 @@ import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
 import { initialize } from '../../../src/scamper'
+import { VERSION } from '../../../src/app/web/composables/use-panels'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -32,7 +33,10 @@ await initialize()
 const LAYOUT_KEY = 'scamper.panels'
 const LEGACY_GEOMETRY_KEY = 'scamper.window.output'
 
-// The output is a window floating over the code rather than a pane beside it.
+// How the output behaves once it *is* a floating window. Since #371 it docks
+// by default, so these seed a floating arrangement first; the docked default is
+// covered in test/regressions/default-output-placement.
+//
 // jsdom has no layout, so dragging and resizing cannot be meaningfully checked
 // here -- every box measures zero. What these cover is the part that is logic
 // rather than pixels: where the window is, and how it comes and goes.
@@ -70,11 +74,34 @@ describe('IDE floating output window', () => {
 
   const outputWindow = () => panel('output')
 
-  test('the code fills the pane with the output floating over it', async () => {
-    const wrapper = await mountIde()
+  /**
+   * Stores an arrangement with the output floating, then mounts. The output
+   * docks by default since #371, but everything below is about how the window
+   * behaves once it *is* a window.
+   */
+  async function mountWithFloatingOutput() {
+    localStorage.setItem(
+      LAYOUT_KEY,
+      JSON.stringify({
+        version: VERSION,
+        placement: {
+          editor: { kind: 'docked', slot: 'a' },
+          output: { kind: 'floating', minimized: false },
+          trace: { kind: 'floating', minimized: false },
+        },
+        geometry: { editor: null, output: null, trace: null },
+        recency: ['trace', 'output', 'editor'],
+        axis: 'row',
+        splitPercent: 62,
+      }),
+    )
+    return mountIde()
+  }
+
+  test('floated, the output sits over the code instead of beside it', async () => {
+    // The docked default is covered in test/regressions/default-output-placement.
+    const wrapper = await mountWithFloatingOutput()
     try {
-      // By default the editor is docked and fills the dock, and the output
-      // floats above it rather than sitting beside it.
       expect(panel('editor')?.dataset.placement).toBe('docked')
       expect(outputWindow()?.dataset.placement).toBe('floating')
       // Alone in the dock, the editor gets no tab strip -- no chrome over the
@@ -89,7 +116,7 @@ describe('IDE floating output window', () => {
   })
 
   test('minimizing tucks it into the taskbar, and the taskbar brings it back', async () => {
-    const wrapper = await mountIde()
+    const wrapper = await mountWithFloatingOutput()
     try {
       expect(document.querySelector('.window-taskbar')).toBeNull()
 
@@ -114,7 +141,7 @@ describe('IDE floating output window', () => {
   test('running brings a minimized window back', async () => {
     // Otherwise pressing Run with the output put away produces nothing the
     // person can see, which reads as Scamper being broken.
-    const wrapper = await mountIde()
+    const wrapper = await mountWithFloatingOutput()
     try {
       getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
       await flushPromises()
@@ -224,7 +251,7 @@ describe('IDE floating output window', () => {
     localStorage.setItem(
       LAYOUT_KEY,
       JSON.stringify({
-        version: 1,
+        version: VERSION,
         placement: {
           editor: { kind: 'docked', slot: 'a' },
           output: {
@@ -257,7 +284,9 @@ describe('IDE floating output window', () => {
     const wrapper = await mountIde()
     try {
       expect(outputWindow()).not.toBeNull()
-      expect(outputWindow()?.style.width).toBe('240px')
+      // The default docks the output (#371), so it is a pane with no box of
+      // its own rather than a window at the default corner.
+      expect(outputWindow()?.dataset.placement).toBe('docked')
     } finally {
       wrapper.unmount()
     }
