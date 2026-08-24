@@ -97,7 +97,7 @@ serve only one of them.
 | | What it actually needs | Prettier? |
 |---|---|---|
 | **(a)** Enter | A **synchronous**, incremental, **error-tolerant** indent query for one position, on a document that is usually *unparseable* mid-typing (unbalanced parens) | **No.** Prettier is async (`format` returns a Promise) and throws on a parse failure — today's call site swallows it with `.catch(() => {})`. CodeMirror's indent hooks are synchronous and must work on broken input. This is Lezer/`indentNodeProp` work. |
-| **(b)** Ctrl-I | Either a pure re-indent (leading whitespace only — DrRacket's actual semantics) or a full reflow | **Yes**, for the reflow reading. For the re-indent reading, `indentRange(state, 0, doc.length)` gives it for free once (a) exists — about ten lines. |
+| **(b)** Ctrl-I | Either a pure re-indent (leading whitespace only — DrRacket's actual semantics) or a full reflow | **Yes**, for the reflow reading. For the re-indent reading, `indentRange(state, 0, doc.length)` — or the ready-made `indentSelection` command — gives it for free once (a) exists. About six lines; see §6. |
 | **(c)** Panes | Line-broken rendering into **DOM**, keeping `ValueRenderer` at `val` leaves (images, lists, and pairs are components, not text), the `scamper-hl-*` classes per token, and the `trace-changed` wrapper that `changedLayoutPath` locates | **No.** Prettier's printer emits a string; a string loses all three. |
 
 **Prettier addresses at most one of the three asks.** The other two are greenfield
@@ -132,7 +132,7 @@ Two caveats, both real:
 `Mod-Shift-i` → `Ctrl-i` in `extensions/prettier.ts`; add it to `ShortcutsHelp.vue`.
 No conflict with `indentWithTab` (Tab) or browser defaults.
 
-### A3. Write the Lezer indenter for (a) — *no reuse from A1* (~150 lines)
+### A3. Write the Lezer indenter for (a) — *no reuse from A1* (~110 lines)
 
 Replace the eleven `continuedIndent` entries in `language.ts` with per-form
 strategies, using `TreeIndentContext.column(pos)` for the aligned family.
@@ -160,7 +160,81 @@ Lezer indent props, and the `Layout` breaker.
   building `dist/` with the extension stubbed (`scamper-ide` chunk: 398.89 kB →
   302.12 kB, gzip 134.31 → 99.16 kB).
 
-## 6. Plan B — one style spec, one engine, two backends
+## 6. What CodeMirror already does
+
+This applies to **both** plans — the indenter for (a) is the same work either way,
+so none of it shifts the A-vs-B decision. What it does do is make Stage 1 of §9
+much smaller and mostly *configuration of well-tested machinery*, which is why it
+should ship first.
+
+CodeMirror draws a sharp line, and it is exactly the line Plan B draws:
+
+> **CodeMirror answers "how far in does this line start?"**
+> **A printer answers "where do the line breaks go?"**
+
+Those are the two halves of formatting. CodeMirror implements the first one
+completely, and has **nothing whatsoever** for the second — no `printWidth`, no
+reflow, no formatter of any kind in core. Which is why (c) is ours regardless.
+
+### What we get for free
+
+| Concern | Provided by |
+|---|---|
+| Enter inserts a break *and* indents | `insertNewlineAndIndent`, **already bound** in `defaultKeymap` |
+| "What would the indent be if a break were here?" | `IndentContext({ simulateBreak, simulateDoubleBreak })` |
+| Error tolerance on half-typed, unbalanced input | Lezer's incremental error-tolerant tree; a strategy just walks it |
+| Re-indent a range, **cascading** — line *n* sees line *n−1*'s **new** indent | `indentRange` + its `overrideIndentation` option |
+| Re-indent the selection | `indentSelection` command |
+| Minimal `ChangeSet` — only lines whose indent actually moved | both of the above |
+| Blank lines normalized to column 0 | both of the above |
+| Tabs vs. spaces, column arithmetic | `indentString`, `IndentContext.column`, `countColumn`, the `indentUnit` facet (2 spaces by default — already our target) |
+| Falling back to the enclosing form | `TreeIndentContext.continue()` |
+
+So **(b) is a keymap entry pointing at a command that already exists** — about six
+lines, not the ten estimated earlier. And **(a) needs no command and no keybinding
+at all**: Enter is already wired to `insertNewlineAndIndent`, which already asks
+the language for an indent. Getting (a) right is *entirely* a matter of replacing
+the eleven `continuedIndent` entries with real per-form strategies.
+
+That drops the indenter from ~150 lines to **~110** — we write the strategies, not
+the traversal, the change computation, the whitespace generation, or the
+error handling.
+
+### Two wins available almost for free
+
+1. **`indentOnInput()` is installed but inert.** It is in the extension list in
+   `codemirror.ts`, but it bails immediately unless the language supplies an
+   `indentOnInput` regex — and `ScamperLanguage.languageData` has only
+   `commentTokens`. Adding `indentOnInput: /^\s*[)\]}]$/` makes a line snap to its
+   correct indent the moment you type the closing bracket. **One line**, and it is
+   DrRacket behaviour we are currently shipping the machinery for and not using.
+2. **Tab is bound to `indentMore`, which is the wrong verb.** `indentMore` adds an
+   indent unit. In DrRacket, Tab *re-indents the current line* — that is the muscle
+   memory this request is really about. Rebinding Tab to `indentSelection` gives
+   exactly that, in **one line**, and makes Ctrl-I simply "the whole-buffer version
+   of Tab" rather than an unrelated command.
+
+### One thing that does *not* work off the shelf
+
+`delimitedIndent({ align: true })` looks like it should give us Family 2, and does
+not. Its helper `bracketedAligned` aligns to just past the **opening bracket**, so
+for `(f a b)` continuation lines land under `f` — the Common Lisp convention —
+where the request wants them under `a`. We need a custom strategy:
+
+```ts
+const alignToFirstArg = (cx: TreeIndentContext) => {
+  const arg = firstArgumentOf(cx.node)          // skip "(" and the head
+  return arg && arg.from < lineEndOrBreak(cx)   // …and it's on the opening line
+    ? cx.column(arg.from)                       // Family 2
+    : cx.baseIndent + cx.unit                   // nothing to align to yet
+}
+```
+
+About fifteen lines, and `bracketedAligned` is a readable model to copy — including
+its handling of the case where the first argument is *past* the simulated break,
+which is what happens when you press Enter directly after `(f`.
+
+## 7. Plan B — one style spec, one engine, two backends
 
 ### B1. `src/scheme/style.ts` — the rule table, single source of truth (~40 lines)
 
@@ -206,9 +280,10 @@ Keep the plugin shell; replace the printer body with `renderToString`. All 56
 existing tests keep running against the same public `format()` API, so this is a
 refactor with a regression suite already in place.
 
-### B6. `scamper-indent.ts` — the Lezer indenter, driven by `style.ts` (~150 lines)
+### B6. `scamper-indent.ts` — the Lezer indenter, driven by `style.ts` (~110 lines)
 
-Then **(b) is ten lines**: `view.dispatch({ changes: indentRange(state, 0, doc.length) })`.
+Then **(b) is six lines**: a keymap entry on `indentSelection` (§6), or
+`view.dispatch({ changes: indentRange(state, 0, doc.length) })`.
 That is DrRacket's Ctrl-I semantics exactly.
 
 ### B7. The anti-drift invariant (~30 lines)
@@ -237,13 +312,13 @@ the table and cross-checked against the first.
   interactions.
 - Two backends over one doc is more indirection than `layoutToString` has today.
 
-## 7. Comparison
+## 8. Comparison
 
 | | Plan A (Prettier) | Plan B (own printer) |
 |---|---|---|
 | Rule engines to maintain | **3** | **2**, from 1 shared table |
-| Total new/changed code | ~555 lines | ~580 lines |
-| Effort | ~5 days | ~5.5 days |
+| Total new/changed code | ~515 lines | ~535 lines |
+| Effort | ~4.5 days | ~5 days |
 | Accuracy | Virtual indent ≈ column; non-atomic heads unsupported | Real columns; no exceptions |
 | Adding a form | Edit 3 places, no cross-check | 1 table entry + 1 Lezer node name, cross-checked by B7 |
 | Extension (e.g. per-user width, `let*`, user macros) | Per-engine | Table-level |
@@ -254,16 +329,19 @@ the table and cross-checked against the first.
 The costs are within noise of each other. **The difference is not what it costs to
 build — it is what you own afterwards.**
 
-## 8. Recommendation
+## 9. Recommendation
 
 **Plan B, staged.** Prettier can serve at most one of the three asks, so choosing
 it means writing the style rules three times instead of once, for the same effort.
 
 Ship in three independent stages, each of which is useful alone:
 
-1. **Stage 1 — `style.ts` + the Lezer indenter + `indentRange`.** Delivers **(a)**
-   and **(b)**. Touches nothing else in the codebase, and is the highest-value,
-   lowest-risk piece: it is what a student notices every time they press Enter.
+1. **Stage 1 — `style.ts` + the Lezer indenter + `indentSelection`.** Delivers
+   **(a)** and **(b)**. CodeMirror hosts essentially all of it (§6), so this is
+   mostly configuration of well-tested machinery: no new commands for (a), one
+   keymap entry for (b), and the two free wins — a live `indentOnInput` regex and
+   Tab re-indenting the line the way DrRacket's does. Touches nothing else in the
+   codebase, and it is what a student notices every time they press Enter.
 2. **Stage 2 — `pretty.ts` + the two backends.** Delivers **(c)**, and the reflow
    reading of (b) if that is what is wanted (Q1).
 3. **Stage 3 — repoint the Prettier printer at `pretty.ts`,** then decide whether
