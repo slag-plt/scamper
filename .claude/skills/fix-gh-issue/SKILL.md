@@ -14,5 +14,9 @@ Given a Github issue number:
 7. Investigate, diagnose, plan a fix, and implement your fix for the issue.
     + If your proposed fix requires substantial design changes, e.g., a new data structure, a restructuring of an API, prompt the user for approval and/or suggestions.
     + All fixes for issues must not cause any regressions in validation (`npm run validate`). If a regression occurs that cannot be resolved, prompt the user about how they would like to proceed.
-8. Spawn a new agent to perform an independent code review of your fix, make relevant changes, and validate your build (`npm run validate`) once you are done. Prompt the user if any changes as a result of the code review result in significant changes to code that you did not implement.
-9. If you implement a fully validated fix for the issue, file a pull request on Github for review. At this point, you are done and can move on to other tasks.
+8. Add one line to the patch notes (`src/app/web/patch-notes.ts`) describing the fix, under the entry for the next version -- creating that entry if it is not there yet. See the Patch notes section of `CLAUDE.md`.
+    + One sentence, summarising the fix, written for a student in terms of what they will notice rather than how it was built.
+    + File it under the version `RELEASING.md` calls for: `patch` for a fix, `minor` for behaviour that is new or changed, `major` for a breaking change.
+    + Do not bump `package.json`; naming the release before it happens is how notes accumulate for it.
+9. Spawn a new agent to perform an independent code review of your fix, make relevant changes, and validate your build (`npm run validate`) once you are done. Prompt the user if any changes as a result of the code review result in significant changes to code that you did not implement.
+10. If you implement a fully validated fix for the issue, file a pull request on Github for review. At this point, you are done and can move on to other tasks.

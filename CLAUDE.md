@@ -76,6 +76,18 @@ is compiled in.
 + A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `RELEASING.md`
 + Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `src/app/web/patch-notes.ts`
 
+### Patch notes
+
+**Every pull request adds exactly one line to the patch notes** in
+`src/app/web/patch-notes.ts`, under the entry for the next version. Notes are
+written as the work lands rather than gathered at release time, so that entry
+usually names a release that has not happened yet; create it if it is not there.
+
++ One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
++ Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
++ Which version to file under follows `RELEASING.md`: `patch` for a fix, `minor` for behaviour that is new or changed, `major` for a breaking change. A `minor` line lands under the next minor, and so on
++ **Do not bump `package.json`.** Naming the release early is the point; the `version` job exits early while the version is unchanged, so the line simply pre-satisfies the check for whoever cuts that release. Nothing reaches a student until the bump, since `patchNotesSince` never returns an entry newer than the running version
+
 ## Architecture Overview
 
 ### Source Tree Layout
