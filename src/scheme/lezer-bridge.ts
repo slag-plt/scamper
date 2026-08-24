@@ -92,6 +92,32 @@ function children(node: SyntaxNode): SyntaxNode[] {
   return result
 }
 
+// Node types that exist only to group a form's parts -- see the note in
+// syntax.grammar. They carry their own brackets, which is what the indenter
+// needs, but they are transparent to this module: every case below descends
+// through them.
+const GROUPING_NODES = new Set([
+  'ArgList',
+  'FieldList',
+  'Bindings',
+  'Binding',
+  'CondClause',
+  'MatchClause',
+])
+
+/**
+ * `cs` with every grouping node followed by its own children, recursively.
+ * Error recovery puts the "⚠" *inside* the group, so flattening is what keeps
+ * {@link errorOr} able to see it.
+ */
+function withGroupedChildren(cs: SyntaxNode[]): SyntaxNode[] {
+  return cs.flatMap((c) =>
+    GROUPING_NODES.has(c.type.name)
+      ? [c, ...withGroupedChildren(children(c))]
+      : [c],
+  )
+}
+
 ///// Error recovery ///////////////////////////////////////////////////////////
 
 // Lezer always produces a tree, marking unparseable spans with an anonymous
@@ -424,7 +450,12 @@ function patFromNode(ctx: Ctx, node: SyntaxNode): A.Pat {
 function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
   const range = ctx.range(node)
   const cs = children(node)
-  const err = errorOr(ctx, node, cs, A.mkLit(undefined, range))
+  const err = errorOr(
+    ctx,
+    node,
+    withGroupedChildren(cs),
+    A.mkLit(undefined, range),
+  )
   if (err) {
     return err
   }
@@ -477,9 +508,9 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     }
 
     case 'Lambda': {
-      const rest = cs.slice(1)
-      const body = expFromNode(ctx, rest[rest.length - 1])
-      const argNodes = rest.slice(0, -1)
+      const [argList, bodyNode] = cs.slice(1)
+      const body = expFromNode(ctx, bodyNode)
+      const argNodes = children(argList)
       const ampIndex = argNodes.findIndex((c) => c.type.name === 'Amp')
       if (ampIndex === -1) {
         const params = argNodes.map((c) => identifier(ctx, c))
@@ -550,30 +581,30 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     }
 
     case 'Let': {
-      const rest = cs.slice(1)
-      const body = expFromNode(ctx, rest[rest.length - 1])
-      const bindings = pairs(rest.slice(0, -1)).map(([n, v]) => ({
-        pat: patFromNode(ctx, n),
-        value: expFromNode(ctx, v),
-      }))
+      const [bindingsNode, bodyNode] = cs.slice(1)
+      const body = expFromNode(ctx, bodyNode)
+      const bindings = children(bindingsNode).map((b) => {
+        const [pat, value] = children(b)
+        return { pat: patFromNode(ctx, pat), value: expFromNode(ctx, value) }
+      })
       return A.mkLet(bindings, body, range)
     }
 
     case 'Cond': {
-      const branches = pairs(cs.slice(1)).map(([test, body]) => ({
-        test: expFromNode(ctx, test),
-        body: expFromNode(ctx, body),
-      }))
+      const branches = cs.slice(1).map((c) => {
+        const [test, body] = children(c)
+        return { test: expFromNode(ctx, test), body: expFromNode(ctx, body) }
+      })
       return A.mkCond(branches, range)
     }
 
     case 'Match': {
       const rest = cs.slice(1)
       const scrutinee = expFromNode(ctx, rest[0])
-      const branches = pairs(rest.slice(1)).map(([pat, body]) => ({
-        pat: patFromNode(ctx, pat),
-        body: expFromNode(ctx, body),
-      }))
+      const branches = rest.slice(1).map((c) => {
+        const [pat, body] = children(c)
+        return { pat: patFromNode(ctx, pat), body: expFromNode(ctx, body) }
+      })
       return A.mkMatch(scrutinee, branches, range)
     }
 
@@ -663,9 +694,9 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
     }
 
     case 'Struct': {
-      const rest = cs.slice(1)
-      const name = identifier(ctx, rest[0])
-      const fields = rest.slice(1).map((c) => identifier(ctx, c))
+      const [nameNode, fieldList] = cs.slice(1)
+      const name = identifier(ctx, nameNode)
+      const fields = children(fieldList).map((c) => identifier(ctx, c))
       return A.mkStruct(name, fields, range)
     }
 
