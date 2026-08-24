@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { SampleNode, audio_getCtx } from '../index'
+import { SampleNode, audio_getCtx, sampleSourceNode } from '../index'
 import { drawOscilloscope } from './html'
 
 const props = defineProps<{ value: SampleNode }>()
@@ -16,13 +16,8 @@ function play() {
   const dataArray = new Uint8Array(bufferLength)
   analyser.getByteTimeDomainData(dataArray)
 
-  const data = props.value.data
-  const buffer = ctx.createBuffer(2, data.length, ctx.sampleRate)
-  buffer.copyToChannel(data, 0)
-  buffer.copyToChannel(data, 1)
-
-  source = ctx.createBufferSource()
-  source.buffer = buffer
+  // A fresh source per press: one can only be started once.
+  source = sampleSourceNode(ctx, props.value)
   source.connect(ctx.destination)
   source.connect(analyser)
   source.start()

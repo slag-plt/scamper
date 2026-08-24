@@ -60,7 +60,6 @@ const props = defineProps<{
   selectFile?: (filename: string) => void
   signIn?: () => void
   signOut?: () => void
-  runWindow?: () => void
   /** One entry per panel that exists, for the View menu's placement section. */
   panelPlacement?: { label: string; floating: boolean; toggle: () => void }[]
   /** Shown at the left end of the bar, e.g. "(3.5.0)". */
@@ -250,11 +249,6 @@ const runMenu = computed<MenuItem[]>(() => [
   },
   { separator: true },
   { label: 'Query Value at Cursor', run: () => session.query() },
-  {
-    label: 'Open Run Window',
-    disabled: (props.currentFile ?? null) === null,
-    run: () => props.runWindow?.(),
-  },
 ])
 
 const viewMenu = computed<MenuItem[]>(() => {
