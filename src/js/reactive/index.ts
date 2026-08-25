@@ -31,6 +31,12 @@ export function reactive_subscriptionQ(v: any): boolean {
  * A ReactiveCanvas is a canvas that acts as a view over a model of type T.
  */
 class ReactiveCanvas<T> implements ReactiveElement {
+  // The run this component belongs to, captured at construction -- which
+  // happens while the program is stepping. Its draw loop and its updates fire
+  // long afterwards, when a lookup would find the foreground program instead
+  // (#375).
+  private readonly run: L.RunHandle = L.currentRun()
+
   canvas: HTMLCanvasElement
   state: T
   /* (state: T, canvas: HTMLCanvasElement) => void */
@@ -64,7 +70,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.finished = false
     // Stop the draw loop (and short-circuit updates) when the program is
     // re-run/stopped, so this component doesn't leak into the next run.
-    L.currentRunSignal()?.addEventListener('abort', () => {
+    this.run.signal?.addEventListener('abort', () => {
       this.finished = true
     })
 
@@ -89,7 +95,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     this.drawing = true
     this.isDirty = false
     this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
-    L.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
+    this.run.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
       this.drawing = false
       // A view error is reported to the output pane (result === null); stop.
       if (result === null) {
@@ -112,7 +118,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     }
     this.updating = true
     const msg = this.queue.shift()!
-    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+    this.run.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
       if (newState === null) {
         this.finished = true // an update error was reported to the output pane
       } else {
@@ -144,6 +150,12 @@ export function reactive_reactiveCanvas<T> (
  * type T.
  */
 class ReactiveContainer<T> implements ReactiveElement {
+  // The run this component belongs to, captured at construction -- which
+  // happens while the program is stepping. Its draw loop and its updates fire
+  // long afterwards, when a lookup would find the foreground program instead
+  // (#375).
+  private readonly run: L.RunHandle = L.currentRun()
+
   container: HTMLDivElement
   state: T
   /* (state: T) => HTMLElement */
@@ -165,7 +177,7 @@ class ReactiveContainer<T> implements ReactiveElement {
     this.finished = false
     // Stop processing messages when the program is re-run/stopped, so this
     // component doesn't leak into the next run.
-    L.currentRunSignal()?.addEventListener('abort', () => {
+    this.run.signal?.addEventListener('abort', () => {
       this.finished = true
     })
   }
@@ -174,7 +186,7 @@ class ReactiveContainer<T> implements ReactiveElement {
   // result into the container. N.B., a virtual-DOM diff would be more efficient
   // than the full re-render here.
   private renderView(onDone?: () => void) {
-    L.spawn(this.viewFunc, [this.state as L.Value], (result) => {
+    this.run.spawn(this.viewFunc, [this.state as L.Value], (result) => {
       if (result instanceof HTMLElement) {
         this.container.innerHTML = ''
         this.container.appendChild(result)
@@ -203,7 +215,7 @@ class ReactiveContainer<T> implements ReactiveElement {
     }
     this.processing = true
     const msg = this.queue.shift()!
-    L.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
+    this.run.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
       if (newState === null) {
         this.finished = true // an update error was reported to the output pane
         this.processing = false
@@ -281,17 +293,23 @@ function subscription(sub: (react: ReactiveElement) => void): Subscription {
 // currentRunSignal); otherwise a previous run's events would keep updating.
 
 export function reactive_onButtonClick(button: HTMLButtonElement): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     button.addEventListener('click', () => {
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-button-click',
         id: button.id
       })
-    }, { signal: L.currentRunSignal() })
+    }, { signal: run.signal })
   })
 }
 
 export function reactive_onMouseClick(): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     react.getElement().addEventListener('click', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -299,11 +317,14 @@ export function reactive_onMouseClick(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-click',
         button: event.button, x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    }, { signal: L.currentRunSignal() })
+    }, { signal: run.signal })
   })
 }
 
 export function reactive_onMouseHover(): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     react.getElement().addEventListener('mousemove', (event) => {
       const rect = react.getElement().getBoundingClientRect()
@@ -311,36 +332,45 @@ export function reactive_onMouseHover(): Subscription {
         [L.scamperTag]: 'struct', [L.structKind]: 'event-mouse-hover',
         x: event.clientX - rect.left, y: event.clientY - rect.top
       })
-    }, { signal: L.currentRunSignal() })
+    }, { signal: run.signal })
   })
 }
 
 export function reactive_onKeyDown(): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     document.addEventListener('keydown', (event) => {
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-down',
         key: event.key
       })
-    }, { signal: L.currentRunSignal() })
+    }, { signal: run.signal })
   })
 }
 
 export function reactive_onKeyUp(): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     document.addEventListener('keyup', (event) => {
       react.update({
         [L.scamperTag]: 'struct', [L.structKind]: 'event-key-up',
         key: event.key
       })
-    }, { signal: L.currentRunSignal() })
+    }, { signal: run.signal })
   })
 }
 
 export function reactive_onTimer(interval: number): Subscription {
+  // Captured here rather than inside the callback below, which may run
+  // after the step that registered it (#375).
+  const run = L.currentRun()
   return subscription((react) => {
     let time = performance.now()
-    const signal = L.currentRunSignal()
+    const signal = run.signal
     const id = setInterval(() => {
       const now = performance.now()
       react.update({
@@ -354,6 +384,8 @@ export function reactive_onTimer(interval: number): Subscription {
 }
 
 export function reactive_onNote(handlers: NoteHandlers): Subscription {
+  // No run captured: this registers no listener and no timer, so there is
+  // nothing to tear down and nothing to spawn.
   return subscription((react) => {
     handlers.push((msg) => { react.update(msg) })
   })

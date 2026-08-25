@@ -37,7 +37,7 @@ Scamper has a comprehensive test suite whose structure nearly mirrors the struct
     - canvas.test.ts and image.test.ts each have a sibling canvas.browser.test.ts/image.browser.test.ts covering functions that need a real browser to test meaningfully -- see "Browser-mode tests" below
     - generated-sources-freshness.test.ts checks the checked-in generated library sources match src/lib/*.scm
 + apps/ contains end-to-end tests for Scamper applications
-    - web/ tests the IDE end-to-end
+    - web/ tests the IDE end-to-end, and embed-widget.test.ts the reading widget (#375) -- several programs on one page, chained environments, and that each widget's callbacks stay its own
     - cli/ tests the command-line runner end-to-end against fixture programs
     - docs/ and search/ are not yet covered
 + fs/ contains tests for the file-system layer

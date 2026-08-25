@@ -37,7 +37,8 @@ export const patchNotes: PatchNote[] = [
       'An @example line in a docstring now gets a checkmark when your code agrees with it and a cross when it does not; Run > Check Examples turns this off.',
       'Files that are not Scamper programs now open properly: plain text without the Scheme squiggles, Markdown and CSV with their own colouring, images as a picture, and other files with a note instead of gibberish.',
       'A string containing a newline or a tab now prints as "a\\nb" on one line instead of breaking across two.',
-      'Reformatting your file now keeps the blank lines you left between paragraphs of comments.'
+      'Reformatting your file now keeps the blank lines you left between paragraphs of comments.',
+      'Scamper examples can now be embedded in a web page as a live transcript, so a reading can show code beside what it produces.'
     ]
   },
   {

@@ -5,6 +5,9 @@ import { ReactiveFileChooser } from '../files.js'
 ///// Reactive file chooser ////////////////////////////////////////////////////
 
 function renderReactiveFileChooser (v: any): HTMLElement {
+  // Captured while the program is stepping (rendering happens as its output is
+  // emitted); the callback below fires from a FileReader afterwards (#375).
+  const run = L.currentRun()
   const rf = v as ReactiveFileChooser
   const ret = document.createElement('div')
   const inp = document.createElement('input')
@@ -17,7 +20,7 @@ function renderReactiveFileChooser (v: any): HTMLElement {
         outp.innerHTML = ''
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result; a callback error surfaces in the output pane.
-        L.spawn(rf.callback, [e.target.result as string], (r) => {
+        run.spawn(rf.callback, [e.target.result as string], (r) => {
           if (r !== null) {
             outp.appendChild(HTMLRenderer.render(r))
           }

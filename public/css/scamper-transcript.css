@@ -1,0 +1,43 @@
+/*
+ * The reading widget (#375): a block of Scamper code in a page, shown as a
+ * transcript of the code interleaved with what it produced.
+ *
+ * Deliberately small and unopinionated. A reading has its own typography, and a
+ * widget should sit inside it rather than fight it -- so this sets the layout
+ * the transcript needs and inherits everything else. Colours come from
+ * scamper-highlight.css, which the editor and traces use too.
+ */
+
+.scamper-transcript {
+  /* Fills its container, per #375. */
+  width: 100%;
+  box-sizing: border-box;
+  margin: 1em 0;
+  border: 1px solid rgb(0 0 0 / 15%);
+  border-radius: 4px;
+  /* Sized to its contents unless the author sets data-height, which adds an
+     explicit height and overflow-y. */
+  overflow-x: auto;
+}
+
+.scamper-transcript-body {
+  padding: 0.5em 0.75em;
+}
+
+/* One statement's source, above the output it produced. */
+.scamper-transcript-source {
+  font-family: Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+  margin: 0.25em 0;
+}
+
+.scamper-transcript-source + .scamper-output {
+  margin-bottom: 0.5em;
+}
+
+/* A statement's source after the first gets a rule above it, so a reader can
+   see where one example ends and the next begins. */
+.scamper-transcript-source:not(:first-child) {
+  border-top: 1px solid rgb(0 0 0 / 8%);
+  padding-top: 0.5em;
+}

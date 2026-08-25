@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Scamper transcripts</title>
+  <link href="/css/normalize.css" rel="stylesheet">
+  <link href="/css/scamper-highlight.css" rel="stylesheet">
+  <link href="/css/scamper-transcript.css" rel="stylesheet">
+</head>
+<body>
+  <!-- A demonstration page, and what the browser test drives. A reading does
+       the same thing: one stylesheet, one module, and a div per example. -->
+  <h1>Scamper transcripts</h1>
+
+  <div class="scamper-transcript" id="factorial">
+    <script type="text/scamper">
+(define factorial
+  (lambda (n)
+    (if (zero? n) 1 (* n (factorial (- n 1))))))
+
+(factorial 5)
+    </script>
+  </div>
+
+  <div class="scamper-transcript" data-continues>
+(map factorial (range 6))
+  </div>
+
+  <div class="scamper-transcript" data-height="8em">
+    <script type="text/scamper-preamble">(import image)</script>
+    <script type="text/scamper">
+(rectangle 60 30 "solid" "teal")
+    </script>
+  </div>
+
+  <script type="module" src="/src/app/web/embed/embed-entry.ts"></script>
+</body>
+</html>
