@@ -7,8 +7,8 @@ candidate implementations, and recommends one.
 **Plan B is now implemented** -- all three stages, in full. What shipped is
 summarised in [As built](#as-built); the sections after it are the reasoning
 that led there, kept because the trade-offs still explain why the code is
-shaped as it is. Four of the five [open questions](#open-questions) have since
-been answered; the last records the assumption it runs on.
+shaped as it is. All five [open questions](#open-questions) have since been
+answered, and the answers are what the code does.
 
 ## As built
 
@@ -406,9 +406,8 @@ and Stage 2 is needed only for the panes.
 
 ## Open questions
 
-Four are answered, and the answers are what the code does. The fifth is still
-open and running on the assumption noted; settling it is a small change to
-`src/scheme/style.ts` and its tests.
+All five are answered. The answers are what the code does; revisiting one is a
+small change to `src/scheme/style.ts` and its tests.
 
 1. **Does Ctrl-I re-indent or reflow?** *Re-indent* — DrRacket's semantics:
    leading whitespace only, the author's line breaks left alone. Reflowing is a
@@ -419,20 +418,23 @@ open and running on the assumption noted; settling it is a small change to
    needed?** *Only fix the indent.* Nothing forces a break; a form breaks on the
    80-column or multi-line trigger and not otherwise, so `(lambda (x) x)` and
    `(if a b c)` stay on one line.
-4. **Which family do Scamper's non-Racket forms belong to?** *Still open.*
-   The set is closed — the grammar names every special form, and there is no
-   `let*`, `letrec`, `when` or `unless` to worry about. `FORM_STYLES` lists the
-   body forms; everything else takes rule 7. Where that leaves each of them:
+4. **Which family do Scamper's non-Racket forms belong to?** *Rule 7 — every
+   form `FORM_STYLES` does not name.* The set is closed: the grammar names each
+   special form, and there is no `let*`, `letrec`, `when` or `unless` to worry
+   about, so this is a decision over a fixed list.
    - `and`, `or`, `struct`, `import`, `export`: rule 7, and they hardly ever
-     break. No practical difference either way.
-   - `display`: the live choice. It takes exactly one argument, so it breaks
-     only when that argument is multi-line, and rule 7 then aligns it at
-     column 9. A body form at +2 would keep a deeply nested argument from
-     drifting right.
+     break, so there is no practical difference either way.
+   - `display` was the one real choice, and it stays on rule 7 too. It takes
+     exactly one argument, so it breaks only when that argument is multi-line,
+     and rule 7 then aligns it at column 9. A body form at +2 was weighed: it
+     keeps an argument whole where starting at column 2 lets it fit, but costs
+     a line whenever the argument would have broken anyway, and DrRacket has no
+     special rule for `display` — it is a plain application there, which is the
+     point of following DrRacket at all. `test/scheme/pretty.test.ts` pins it.
    - `{...}`: pairs lay out as units, so a break falls between them and never
      between a key and its value; the pairs align under the first, per rule 7.
    - `[...]` and `#(...)`: rule 7 over the elements, and over the inner form
-     past the `#`. Ordinary data-list behaviour; no reason to change it.
+     past the `#`. Ordinary data-list behaviour.
 5. **Should the output pane's source captions be formatted?** *No, they stay
    verbatim.* `SourceCaption.vue` shows the statement's source exactly as the
    student wrote it: a caption is a citation of their code, not our rendering

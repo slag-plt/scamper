@@ -135,6 +135,13 @@ describe('breaking past the width', () => {
     expect(fmt('(struct s (x y z))', 17)).toBe('(struct s\n        (x y z))')
   })
 
+  // display is a statement, but DrRacket has no special rule for it, so it is
+  // laid out as the plain one-argument application it is: the argument stays on
+  // the `(display` line rather than dropping to a body at +2.
+  test('display has no entry in the table either, so it aligns', () => {
+    expect(fmt('(display (f aa bb))', 14)).toBe('(display (f aa\n            bb))')
+  })
+
   // The "#" is a column of its own, so the body aligns one past where the same
   // application would have without it.
   test('an anonymous function aligns past its hash', () => {
