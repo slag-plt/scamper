@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
+import { mockEditorHandle } from '../../stubs/mock-editor-handle'
 import Scamper, { initialize, type DisplayRequest } from '../../../src/scamper'
 import {
   DEFAULT_IDLE_MS,
@@ -200,6 +201,46 @@ describe('IDE live evaluation', () => {
       await flushPromises()
       expect(execute).not.toHaveBeenCalled()
     } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('an edit made while a trace collects gets its run once it is done', async () => {
+    // Stepping is only offered with the cursor inside a statement.
+    mockEditorHandle.cursorPath = ['display']
+    const wrapper = await mountIde()
+    const scamper = Scamper.getInstance()
+    const execute = vi.spyOn(scamper, 'execute').mockResolvedValue(null)
+    // A trace the test holds open, so an edit can land while it collects.
+    let finishTrace = () => undefined as void
+    vi.spyOn(scamper, 'traceStatement').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishTrace = () => {
+            resolve({ source: '(display "hi")', steps: [], truncated: false })
+          }
+        }),
+    )
+    try {
+      getByRole(document.body, 'button', { name: 'Step statement' }).click()
+      await flushPromises()
+
+      vi.useFakeTimers()
+      await type('(+ 1 2)')
+      // A run of its own would tear down the one the trace is collecting, so
+      // the gate is shut and this edit schedules nothing.
+      await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS * 2)
+      expect(execute).not.toHaveBeenCalled()
+
+      finishTrace()
+      await flushPromises()
+      // The gate is open again, and the edit that was refused still deserves
+      // its run -- otherwise the output sits stale until the next keystroke.
+      await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS)
+      expect(execute).toHaveBeenCalledTimes(1)
+      expect(execute.mock.calls[0][0].src).toBe('(+ 1 2)')
+    } finally {
+      mockEditorHandle.cursorPath = []
       wrapper.unmount()
     }
   })

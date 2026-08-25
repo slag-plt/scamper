@@ -232,6 +232,14 @@ watch(liveEvaluation, (on) => {
   }
 })
 
+// An edit made while a trace was being collected found the gate shut, and
+// nothing schedules a run twice: the trace finishing is the moment that edit
+// can have the run it never got. Treated as an edit landing now rather than run
+// outright, so it still coalesces with typing that is still going on.
+watch(isCollectingTrace, (collecting) => {
+  if (!collecting && isDirty.value) live.noteEdit()
+})
+
 /**
  * What the header's Run control shows about live evaluation.
  *
