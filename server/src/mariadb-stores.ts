@@ -44,6 +44,18 @@ function fromSql(value: Date | string): string {
 const PREVIEW_BYTES = 1000
 
 /**
+ * @returns `bytes` as a Buffer, for binding as a query parameter.
+ *
+ * Not optional. mysql2 binds a Buffer as binary but has no case for a plain
+ * `Uint8Array`, so it falls through to array handling and stores the *decimal
+ * digits* -- `(+ 1 2)` arrives in the column as "40,43,32,49,32,50,41". A view
+ * rather than a copy, since the bytes are not modified.
+ */
+function toBuffer(bytes: Uint8Array): Buffer {
+  return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+}
+
+/**
  * @returns `value` as bytes.
  *
  * `files.contents` is a LONGBLOB, which mysql2 hands back as a Buffer. The
@@ -107,7 +119,7 @@ export class MariaDbFileStore implements FileStore {
     await this.sql.query(
       `INSERT INTO files (user_id, name, contents, updated_at) VALUES (?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE contents = VALUES(contents), updated_at = VALUES(updated_at)`,
-      [userId, name, contents, toSql(new Date())],
+      [userId, name, toBuffer(contents), toSql(new Date())],
     )
   }
 
