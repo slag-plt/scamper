@@ -78,11 +78,13 @@ is compiled in.
 
 ### Patch notes
 
-**Every pull request adds exactly one line to the patch notes** in
-`src/app/web/patch-notes.ts`, under the entry for the next version. Notes are
-written as the work lands rather than gathered at release time, so that entry
-usually names a release that has not happened yet; create it if it is not there.
+**Every pull request that changes user-facing functionality adds exactly one
+line to the patch notes** in `src/app/web/patch-notes.ts`, under the entry for
+the next version. Notes are written as the work lands rather than gathered at
+release time, so that entry usually names a release that has not happened yet;
+create it if it is not there.
 
++ Work a student cannot see adds no line -- a refactor, a test, a CI or tooling change, contributor documentation. Say so in the pull request instead, so the omission reads as a decision rather than an oversight
 + One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
 + Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
 + Which version to file under follows `RELEASING.md`: `patch` for a fix, `minor` for behaviour that is new or changed, `major` for a breaking change. A `minor` line lands under the next minor, and so on
