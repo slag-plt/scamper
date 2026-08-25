@@ -1,4 +1,4 @@
-import { getCurrentScope, onScopeDispose } from 'vue'
+import { getCurrentScope, onScopeDispose, ref, type Ref } from 'vue'
 import { liveEvaluation } from '../run-prefs'
 
 /**
@@ -22,6 +22,10 @@ import { liveEvaluation } from '../run-prefs'
  * The time limit is deliberately confined to *live* runs. Pressing Run is how a
  * genuinely long program is run in full, and the watchdog's message says so.
  *
+ * What it is doing is reported as {@link LiveEvaluation.pending} and
+ * {@link LiveEvaluation.liveRunId}, which is what the header's Run control
+ * animates from: a run coming, a live run in flight, or neither.
+ *
  * Framework-light on purpose -- it takes plain callbacks rather than the
  * session, so its timing can be tested with fake timers and no mounted
  * component.
@@ -32,6 +36,16 @@ export const DEFAULT_IDLE_MS = 750
 
 /** How long a live run may take before the watchdog stops it. */
 export const DEFAULT_RUN_LIMIT_MS = 5000
+
+/**
+ * What the header's Run control says live evaluation is doing.
+ *
+ * - `off` -- turned off; the control is an ordinary Run button.
+ * - `idle` -- on, with nothing scheduled and no live run going.
+ * - `pending` -- a run is coming, once the typing stops.
+ * - `running` -- a live run is in flight.
+ */
+export type LiveStatus = 'off' | 'idle' | 'pending' | 'running'
 
 export interface LiveEvaluationHooks {
   /** Starts a run of the current file. Resolves once it has been scheduled. */
@@ -64,7 +78,22 @@ export function useLiveEvaluation(
   let idleId: ReturnType<typeof setTimeout> | null = null
   let watchdogId: ReturnType<typeof setTimeout> | null = null
 
+  /** True while a run is scheduled and has not started yet. */
+  const pending: Ref<boolean> = ref(false)
+
+  /**
+   * The id of the most recent run started by live evaluation, or null.
+   *
+   * Left set once the run ends -- nothing tells the composable that it has --
+   * so a reader wanting "a live run is in flight" compares this against the
+   * run actually in flight, as IdeApp does. That comparison is also what keeps
+   * a manual run, which has no time limit and should not be animated as a live
+   * one, from being mistaken for this.
+   */
+  const liveRunId: Ref<string | null> = ref(null)
+
   function clearIdle() {
+    pending.value = false
     if (idleId !== null) {
       clearTimeout(idleId)
       idleId = null
@@ -94,11 +123,13 @@ export function useLiveEvaluation(
 
   async function runNow() {
     idleId = null
+    pending.value = false
     // Re-checked here, not just when scheduling: the delay is long enough for
     // the file to have been closed, or a step to have started, in between.
     if (!liveEvaluation.value || !hooks.canRun()) return
     await hooks.run()
     const id = hooks.currentRunId()
+    liveRunId.value = id
     // Nothing to watch: the program did not compile, or it finished as it was
     // scheduled (a file of nothing but `define`s usually has).
     if (id === null) return
@@ -115,6 +146,7 @@ export function useLiveEvaluation(
   function noteEdit(): void {
     clearIdle()
     if (!liveEvaluation.value || !hooks.canRun()) return
+    pending.value = true
     idleId = setTimeout(() => {
       void runNow()
     }, idleMs)
@@ -128,11 +160,9 @@ export function useLiveEvaluation(
   function cancel(): void {
     clearIdle()
     clearWatchdog()
-  }
-
-  /** @returns true iff a live run is scheduled and has not started yet. */
-  function isPending(): boolean {
-    return idleId !== null
+    // The run it named is no longer live evaluation's to manage, whether or
+    // not it is still going, so the control should stop presenting it as one.
+    liveRunId.value = null
   }
 
   // Guarded so the composable can be exercised without a component around it;
@@ -141,7 +171,7 @@ export function useLiveEvaluation(
     onScopeDispose(cancel)
   }
 
-  return { noteEdit, cancel, isPending }
+  return { noteEdit, cancel, pending, liveRunId }
 }
 
 export type LiveEvaluation = ReturnType<typeof useLiveEvaluation>

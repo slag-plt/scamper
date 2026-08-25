@@ -73,11 +73,11 @@ describe('live evaluation', () => {
     live.noteEdit()
     await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS - 1)
     expect(state.runs).toBe(0)
-    expect(live.isPending()).toBe(true)
+    expect(live.pending.value).toBe(true)
 
     await vi.advanceTimersByTimeAsync(1)
     expect(state.runs).toBe(1)
-    expect(live.isPending()).toBe(false)
+    expect(live.pending.value).toBe(false)
   })
 
   test('coalesces a burst of typing into a single run', async () => {
@@ -112,7 +112,7 @@ describe('live evaluation', () => {
     setLiveEvaluation(false)
 
     live.noteEdit()
-    expect(live.isPending()).toBe(false)
+    expect(live.pending.value).toBe(false)
     await idle()
     expect(state.runs).toBe(0)
   })
@@ -145,7 +145,7 @@ describe('live evaluation', () => {
 
     live.noteEdit()
     live.cancel()
-    expect(live.isPending()).toBe(false)
+    expect(live.pending.value).toBe(false)
     await idle()
     expect(state.runs).toBe(0)
   })

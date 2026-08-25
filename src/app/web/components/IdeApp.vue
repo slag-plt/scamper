@@ -22,7 +22,10 @@ import type { CursorStatus } from '../codemirror/enclosing-form'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
-import { useLiveEvaluation } from '../composables/use-live-evaluation'
+import {
+  useLiveEvaluation,
+  type LiveStatus,
+} from '../composables/use-live-evaluation'
 import { liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
@@ -198,6 +201,21 @@ watch(liveEvaluation, (on) => {
   } else {
     live.cancel()
   }
+})
+
+/**
+ * What the header's Run control shows about live evaluation.
+ *
+ * "Running" is the live run's id still being the run in flight, rather than
+ * anything the composable is told: a live run that ends on its own tells it
+ * nothing, and a *manual* run started in between must not be animated as a
+ * live one.
+ */
+const liveStatus = computed<LiveStatus>(() => {
+  if (!liveEvaluation.value) return 'off'
+  const liveRun = live.liveRunId.value
+  if (liveRun !== null && session.currentRun.value === liveRun) return 'running'
+  return live.pending.value ? 'pending' : 'idle'
 })
 
 /** What each panel is called, wherever it needs a name. */
@@ -1520,6 +1538,7 @@ onUnmounted(() => {
       <IdeHeader
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
+        :live-status="liveStatus"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />
