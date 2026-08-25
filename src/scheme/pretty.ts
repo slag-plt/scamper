@@ -357,13 +357,30 @@ export function separatorBefore(
  * Trailing comments go in `pending` and are written just before the line ends,
  * wherever that turns out to be -- a line comment swallows the rest of its
  * line, so nothing may be printed after one.
+ *
+ * `indent` is the column the current line owes, held until something is written
+ * on it: see {@link write}.
  */
 interface Out {
   parts: string[]
   pending: string[]
+  indent: number | null
 }
 
+/**
+ * Write `text` on the current line, indenting it first if nothing is there yet.
+ *
+ * Indentation is paid this late so that a line nothing is written on stays
+ * *empty* -- a blank line between comment paragraphs (#333) would otherwise be
+ * padded with spaces, and the editor's indenter empties such a line, so
+ * formatting would stop being a fixed point of it (FORMATTING.md).
+ */
 function write(out: Out, text: string): void {
+  if (text === '') return
+  if (out.indent !== null) {
+    out.parts.push(' '.repeat(out.indent))
+    out.indent = null
+  }
   out.parts.push(text)
 }
 
@@ -378,10 +395,11 @@ function flushHeld(out: Out): void {
   out.pending.length = 0
 }
 
-/** End the current line, writing anything held back, and indent to `col`. */
+/** End the current line, writing anything held back; the next line owes `col`. */
 function endLine(out: Out, col: number): void {
   flushHeld(out)
-  out.parts.push('\n' + ' '.repeat(col))
+  out.parts.push('\n')
+  out.indent = col
 }
 
 /**
@@ -459,7 +477,7 @@ export function renderToString(
   mode: FormatMode = DEFAULT_FORMAT_MODE,
   col = 0,
 ): string {
-  const out: Out = { parts: [], pending: [] }
+  const out: Out = { parts: [], pending: [], indent: null }
   emit(root, col, planLayout(root, width, mode, col), out)
   flushHeld(out)
   return out.parts.join('')

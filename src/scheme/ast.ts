@@ -624,6 +624,9 @@ export type Highlight = 'keyword'
  * The three placements are the AST's (see Node), carried across unchanged:
  * `leading` sits on its own line(s) above the node, `trailing` at the end of
  * the node's line, and `dangling` inside a form that has no child after it.
+ *
+ * An empty entry is not a comment but a blank line the author left between two
+ * paragraphs of them (see {@link commentLines}).
  */
 export interface LayoutComments {
   leading?: string[]
@@ -733,6 +736,24 @@ const hash = (child: Layout): Layout => ({ kind: 'hash', child })
 const unit = (children: Layout[]): Layout => ({ kind: 'unit', children })
 
 /**
+ * `cs`'s text, one entry per line, with an empty entry marking a blank line the
+ * author left between two comment paragraphs (#333).
+ *
+ * A wider gap collapses to one, as format.ts does between statements: the gap
+ * records that the author separated two thoughts, not how far apart they put
+ * them. Only comments on separate lines can have a gap, so a trailing comment
+ * -- of which a node has at most one, a line comment owning the rest of its
+ * line -- is never affected.
+ */
+export function commentLines(cs: Comment[]): string[] {
+  return cs.flatMap((c, i) =>
+    i > 0 && c.range.begin.line - cs[i - 1].range.end.line > 1
+      ? ['', c.line]
+      : [c.line],
+  )
+}
+
+/**
  * `l` carrying `node`'s source comments, or `l` itself when it has none --
  * which is every node unless a caller asked for them (see comments.ts).
  */
@@ -745,7 +766,7 @@ function withComments<T extends Layout>(node: Node, l: T): T {
     return l
   }
   const lines = (cs: Comment[] | undefined): string[] | undefined =>
-    cs === undefined || cs.length === 0 ? undefined : cs.map((c) => c.line)
+    cs === undefined || cs.length === 0 ? undefined : commentLines(cs)
   return {
     ...l,
     leading: lines(node.leading),
