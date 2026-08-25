@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { tokenizeAndParse } from '../../src/scheme'
 import { layoutToString, stmtToLayout, type Prog } from '../../src/scheme/ast'
-import { PRINT_WIDTH } from '../../src/scheme/style'
+import { PRINT_WIDTH, type UserFormatMode } from '../../src/scheme/style'
 
 // Line breaking for the surface syntax (see FORMATTING.md). The editor's
 // indenter and this printer read the same rule table, so the shapes asserted
@@ -18,31 +18,97 @@ function parse(src: string): Prog {
 }
 
 /** Lay `src` out at `width` columns, the way a pane does. */
-function fmt(src: string, width = PRINT_WIDTH): string {
+function fmt(
+  src: string,
+  width = PRINT_WIDTH,
+  mode: UserFormatMode = 'strict',
+): string {
   return parse(src)
-    .map((s) => layoutToString(stmtToLayout(s), width))
+    .map((s) => layoutToString(stmtToLayout(s), width, mode))
     .join('\n')
 }
 
 describe('what fits is left alone', () => {
-  test.each([
-    '(define x 42)',
-    '(lambda (x y) (+ x y))',
-    '(if (> x 0) x (- 0 x))',
-    '(let ([a 1] [b 2]) (+ a b))',
-    '(cond [(< x 0) -1] [else 1])',
-    '(match l [null 0] [(cons x xs) 1])',
-    '(f a b c)',
-    '[1 2 3]',
-    '{"a" 1 "b" 2}',
-  ])('%s', (src) => {
-    expect(fmt(src)).toBe(src)
-  })
+  // Rules 2 and 7 are the two that spell out a one-line alternative, so these
+  // are the forms entitled to keep it. The five that do not are below.
+  test.each(['(define x 42)', '(f a b c)', '[1 2 3]', '{"a" 1 "b" 2}'])(
+    '%s',
+    (src) => {
+      expect(fmt(src)).toBe(src)
+    },
+  )
 
   test('the default width is eighty columns', () => {
     const wide = `(f ${'a'.repeat(40)} ${'b'.repeat(40)})`
     expect(wide.length).toBeGreaterThan(PRINT_WIDTH)
     expect(fmt(wide)).toContain('\n')
+  })
+})
+
+describe('the mandated shapes break however short', () => {
+  // Rules 1, 3, 4, 5 and 6 each draw one shape and offer no alternative, so
+  // width never enters into it. Every source below fits in eighty columns.
+  test.each([
+    ['rule 1 lambda', '(lambda (x y) (+ x y))', '(lambda (x y)\n  (+ x y))'],
+    ['rule 3 if', '(if (> x 0) x (- 0 x))', '(if (> x 0)\n    x\n    (- 0 x))'],
+    [
+      'rule 4 let',
+      '(let ([a 1] [b 2]) (+ a b))',
+      '(let ([a 1]\n      [b 2])\n  (+ a b))',
+    ],
+    [
+      'rule 5 cond',
+      '(cond [(< x 0) -1] [else 1])',
+      '(cond\n  [(< x 0)\n   -1]\n  [else\n   1])',
+    ],
+    [
+      'rule 6 match',
+      '(match l [null 0] [(cons x xs) 1])',
+      '(match l\n  [null\n   0]\n  [(cons x xs)\n   1])',
+    ],
+  ])('%s', (_name, src, expected) => {
+    expect(fmt(src)).toBe(expected)
+  })
+
+  // A form broken by a rule is no wider than one that is not, so the enclosing
+  // form cannot infer it from a width -- the printer propagates it outwards
+  // (containsForcedBreak). These two are what that propagation is for.
+  test('rule 2b follows: a define around a broken form splits too', () => {
+    expect(fmt('(define f (lambda (x) x))')).toBe(
+      '(define f\n  (lambda (x)\n    x))',
+    )
+  })
+
+  test('rule 7 follows too: an application around one breaks', () => {
+    expect(fmt('(g (lambda (x) x) 3)')).toBe('(g (lambda (x)\n     x)\n   3)')
+  })
+})
+
+describe('relaxed formatting keeps a clause whole', () => {
+  const relaxed = (src: string, width = PRINT_WIDTH): string =>
+    fmt(src, width, 'relaxed')
+
+  test('a cond clause stays on one line while it fits', () => {
+    expect(relaxed('(cond [(< x 0) -1] [else 1])')).toBe(
+      '(cond\n  [(< x 0) -1]\n  [else 1])',
+    )
+  })
+
+  test('a match clause stays on one line while it fits', () => {
+    expect(relaxed('(match l [null 0] [(cons x xs) 1])')).toBe(
+      '(match l\n  [null 0]\n  [(cons x xs) 1])',
+    )
+  })
+
+  test('a clause too wide still splits, consequent at three', () => {
+    expect(relaxed('(cond [(< x 0) (neg x)])', 14)).toBe(
+      '(cond\n  [(< x 0)\n   (neg x)])',
+    )
+  })
+
+  test('the forms themselves still break -- only the clause differs', () => {
+    expect(relaxed('(lambda (x y) (+ x y))')).toBe('(lambda (x y)\n  (+ x y))')
+    expect(relaxed('(if a b c)')).toBe('(if a\n    b\n    c)')
   })
 })
 
@@ -69,15 +135,26 @@ describe('breaking past the width', () => {
     )
   })
 
-  test('rule 4: a binding list that still fits stays on the let line', () => {
-    expect(fmt('(let ([a 1] [b 2]) (+ a b))', 20)).toBe(
-      '(let ([a 1] [b 2])\n  (+ a b))',
+  test('rule 4: bindings stack even where they would fit on one line', () => {
+    // Rule 4 draws them stacked, so width does not enter into it.
+    expect(fmt('(let ([a 1] [b 2]) (+ a b))', 80)).toBe(
+      '(let ([a 1]\n      [b 2])\n  (+ a b))',
     )
   })
 
-  test('rule 5: cond clauses sit at two', () => {
+  test('rule 4: a lone binding shows no break -- nothing follows it', () => {
+    expect(fmt('(let ([a 1]) a)')).toBe('(let ([a 1])\n  a)')
+  })
+
+  test('rule 4: a binding itself stays whole, unlike a cond clause', () => {
+    expect(fmt('(let ([a (f 1)] [b 2]) a)')).toBe(
+      '(let ([a (f 1)]\n      [b 2])\n  a)',
+    )
+  })
+
+  test('rule 5: cond clauses sit at two, consequents at three', () => {
     expect(fmt('(cond [(< x 0) -1] [else 1])', 20)).toBe(
-      '(cond\n  [(< x 0) -1]\n  [else 1])',
+      '(cond\n  [(< x 0)\n   -1]\n  [else\n   1])',
     )
   })
 
@@ -89,7 +166,7 @@ describe('breaking past the width', () => {
 
   test('rule 6: match keeps its scrutinee, clauses at two', () => {
     expect(fmt('(match l [null 0] [(cons x xs) 1])', 20)).toBe(
-      '(match l\n  [null 0]\n  [(cons x xs) 1])',
+      '(match l\n  [null\n   0]\n  [(cons x xs)\n   1])',
     )
   })
 
@@ -167,7 +244,7 @@ describe('a form is measured where it sits', () => {
       '(define go\n' +
         '  (lambda (n)\n' +
         '    (cond\n' +
-        '      [(zero? n) 1]\n' +
+        '      [(zero? n)\n       1]\n' +
         '      [else\n       (* n a b)])))',
     )
   })

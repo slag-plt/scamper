@@ -3,6 +3,8 @@ import { computed, inject } from 'vue'
 import { Highlight, Layout } from '../ast'
 import { type LayoutPlan, planLayout, separatorBefore } from '../pretty'
 import { ChangedPathKey } from './changed-path'
+import { FormatModeKey } from './format-mode'
+import { DEFAULT_FORMAT_MODE, PRINT_WIDTH } from '../style'
 import CodeElement from '../../lpm/renderers/vue/components/CodeElement.vue'
 import ValueRenderer from '../../lpm/renderers/vue/ValueRenderer.vue'
 
@@ -39,7 +41,18 @@ const isChanged = computed(() => {
   )
 })
 
-const plan = computed(() => props.plan ?? planLayout(props.layout))
+// Null outside the IDE -- the widget, a test -- where the default applies.
+const formatMode = inject(FormatModeKey, null)
+
+const plan = computed(
+  () =>
+    props.plan ??
+    planLayout(
+      props.layout,
+      PRINT_WIDTH,
+      formatMode?.value ?? DEFAULT_FORMAT_MODE,
+    ),
+)
 
 /**
  * What goes before each child: a single space, or a line break and the

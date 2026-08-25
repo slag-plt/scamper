@@ -236,6 +236,69 @@ describe('idempotence', () => {
   })
 })
 
+// ---- blank lines between statements ----------------------------------------
+
+describe('blank lines between statements', () => {
+  test('a run of one-liners the author packed stays packed', () => {
+    const src = '(import image)\n(import music)\n(define radius 10)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('a blank line the author wrote survives', () => {
+    expect(format('(define a 1)\n\n(define b 2)')).toBe(
+      '(define a 1)\n\n(define b 2)',
+    )
+  })
+
+  test('a wider gap collapses to one', () => {
+    expect(format('(define a 1)\n\n\n\n(define b 2)')).toBe(
+      '(define a 1)\n\n(define b 2)',
+    )
+  })
+
+  test('a statement spread over several lines is always separated', () => {
+    // Packed one-liners read as one thought; a form with a body does not. The
+    // lambda breaks by rule 1 however short it is, so the define takes 2b.
+    const out = format('(define a 1)\n(define f (lambda (x) x))\n(define b 2)')
+    expect(out).toBe(
+      '(define a 1)\n\n(define f\n  (lambda (x)\n    x))\n\n(define b 2)',
+    )
+  })
+
+  test('a docstring keeps its define but gains a line above', () => {
+    const out = format('(define a 1)\n;;; adds one\n(define add1 #(+ % 1))')
+    expect(out).toBe('(define a 1)\n\n;;; adds one\n(define add1 #(+ % 1))')
+  })
+
+  test('a trailing comment does not break up a packed run', () => {
+    const src = '(define a 1) ; note\n(define b 2)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('comments below the last statement stay together', () => {
+    // They are one block, so a run of them is not spaced apart line by line.
+    expect(format('(define a 1)\n; one\n; two')).toBe(
+      '(define a 1)\n\n; one\n; two',
+    )
+  })
+
+  test('a lone statement gains nothing', () => {
+    expect(format('(define x 1)')).toBe('(define x 1)')
+    expect(format('')).toBe('')
+  })
+
+  test('spacing is a fixed point, packed or separated', () => {
+    for (const src of [
+      '(import image)\n(import music)\n(define r 10)',
+      '(define a 1)\n\n(define b 2)\n; note\n(define c 3)',
+      '(define f (lambda (x) (if (> x 0) (big-call-name x) (other-name x))))',
+    ]) {
+      const once = format(src)
+      expect(format(once)).toBe(once)
+    }
+  })
+})
+
 // ---- comments are preserved (#304) -----------------------------------------
 
 describe('comment preservation', () => {
@@ -258,7 +321,8 @@ describe('comment preservation', () => {
 
   test('a standalone comment between statements is kept on its own line', () => {
     const out = format('(define a 1)\n; a note\n(define b 2)')
-    expect(out).toBe('(define a 1)\n; a note\n(define b 2)')
+    // The blank line goes above the comment, which belongs to the define below.
+    expect(out).toBe('(define a 1)\n\n; a note\n(define b 2)')
   })
 
   test('a trailing comment stays on the same line as its code', () => {

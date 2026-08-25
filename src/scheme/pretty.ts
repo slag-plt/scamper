@@ -1,5 +1,11 @@
 import type { Layout } from './ast.js'
-import { INDENT_UNIT, PRINT_WIDTH, styleOf } from './style.js'
+import {
+  DEFAULT_FORMAT_MODE,
+  INDENT_UNIT,
+  PRINT_WIDTH,
+  styleOf,
+  type FormatMode,
+} from './style.js'
 import TextRenderer from '../lpm/renderers/text.js'
 
 /**
@@ -17,9 +23,12 @@ import TextRenderer from '../lpm/renderers/text.js'
  *
  * The algorithm is the usual one: a group fits on one line or it does not, and
  * when it does not, every child past the opening line goes on a line of its own
- * (never packed greedily). Because a group's flat width includes its whole
- * subtree, a form that has to break because a subexpression is long breaks for
- * free -- no separate "contains a hard break" propagation is needed.
+ * (never packed greedily). A group's flat width includes its whole subtree, so a
+ * form that must break because a subexpression is *long* breaks for free.
+ * A subexpression that breaks because a *rule* says so is not visible in any
+ * width, though, so that case is propagated explicitly -- see
+ * {@link containsForcedBreak}. Both are rule 2b and rule 7's "if any of the
+ * subexpressions require multiple lines".
  *
  * Comments are the one thing that breaks a line regardless of width: a line
  * comment runs to the end of its line, so nothing may follow one. A layout only
@@ -78,19 +87,63 @@ function commented(node: Layout, cache: Map<Layout, boolean>): boolean {
 interface Ctx {
   /** The page width to lay out for. */
   width: number
+  /** How much of the rules' mandated breaking to apply. */
+  mode: FormatMode
   widths: Map<Layout, number>
   commented: Map<Layout, boolean>
+  forced: Map<Layout, boolean>
   plan: LayoutPlan
 }
 
 /**
- * Whether a comment forces `node` to break, whatever its width: a comment
- * anywhere inside runs to the end of its line, so the children cannot then
- * share one. A comment *after* the group is the enclosing group's problem, not
- * this one's, which is why the node's own `trailing` is not consulted here.
+ * Whether the rules mandate a break here, whatever the width.
+ *
+ * The *form* breaks under both `strict` and `relaxed` -- rules 1, 3, 4, 5 and 6
+ * each draw one shape and offer no alternative -- as does a `let`'s binding
+ * list, which rule 4 stacks. A `cond`/`match` clause splits its guard from its
+ * consequent only under `strict`, which is rule 5 read to the letter; `relaxed`
+ * keeps the two together while they fit, which is how the request's own worked
+ * example writes them. `flat` mandates nothing.
+ */
+function forcedBreak(
+  node: Layout & { kind: 'group' },
+  mode: FormatMode,
+): boolean {
+  if (mode === 'flat') return false
+  // A group either says so itself -- a clause, a binding list, neither of which
+  // the keyword-keyed style table can speak for -- or is a named form.
+  const breaks = node.breaks ?? styleOf(node.form).breaks
+  return breaks === 'always' || (breaks === 'strict' && mode === 'strict')
+}
+
+/**
+ * Whether `node`, or anything beneath it, breaks because a rule says so.
+ *
+ * A form broken by a rule is no wider than one that is not, so -- unlike the
+ * 80-column trigger -- an enclosing form cannot infer it from a width. Without
+ * this, `(define f (lambda (x) x))` would keep its one-line shape around a
+ * lambda that had already split, which is exactly what rule 2b forbids.
+ */
+function containsForcedBreak(node: Layout, cx: Ctx): boolean {
+  const hit = cx.forced.get(node)
+  if (hit !== undefined) return hit
+  const result =
+    (node.kind === 'group' && forcedBreak(node, cx.mode)) ||
+    childrenOf(node).some((c) => containsForcedBreak(c, cx))
+  cx.forced.set(node, result)
+  return result
+}
+
+/**
+ * Whether `node` must break regardless of its width: either a rule mandates the
+ * shape somewhere inside, or a comment runs to the end of its line so the
+ * children cannot share one. A comment *after* the group is the enclosing
+ * group's problem, not this one's, which is why the node's own `trailing` is not
+ * consulted here.
  */
 function mustBreak(node: Layout & { kind: 'group' }, cx: Ctx): boolean {
   return (
+    containsForcedBreak(node, cx) ||
     node.dangling !== undefined ||
     node.children.some((c) => commented(c, cx.commented))
   )
@@ -257,12 +310,18 @@ function place(node: Layout, col: number, tail: number, cx: Ctx): number {
 }
 
 /** Decide where every group in `root` breaks, for a page `width` columns wide. */
-export function planLayout(root: Layout, width = PRINT_WIDTH): LayoutPlan {
+export function planLayout(
+  root: Layout,
+  width = PRINT_WIDTH,
+  mode: FormatMode = DEFAULT_FORMAT_MODE,
+): LayoutPlan {
   const plan: LayoutPlan = new Map()
   place(root, 0, 0, {
     width,
+    mode,
     widths: new Map(),
     commented: new Map(),
+    forced: new Map(),
     plan,
   })
   return plan
@@ -374,9 +433,13 @@ function emitBody(node: Layout, col: number, plan: LayoutPlan, out: Out): void {
 }
 
 /** Render `root` to text, breaking lines at `width` columns. */
-export function renderToString(root: Layout, width = PRINT_WIDTH): string {
+export function renderToString(
+  root: Layout,
+  width = PRINT_WIDTH,
+  mode: FormatMode = DEFAULT_FORMAT_MODE,
+): string {
   const out: Out = { parts: [], pending: [] }
-  emit(root, 0, planLayout(root, width), out)
+  emit(root, 0, planLayout(root, width, mode), out)
   flushHeld(out)
   return out.parts.join('')
 }

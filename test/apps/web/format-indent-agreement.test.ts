@@ -5,6 +5,7 @@ import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/langu
 import { tokenizeAndParse } from '../../../src/scheme'
 import { layoutToString, stmtToLayout } from '../../../src/scheme/ast'
 import { formatSource } from '../../../src/scheme/format'
+import { PRINT_WIDTH, type UserFormatMode } from '../../../src/scheme/style'
 
 /**
  * The anti-drift invariant (FORMATTING.md):
@@ -19,12 +20,24 @@ import { formatSource } from '../../../src/scheme/format'
  * program here and the test fails.
  */
 
-/** What the output and step panes draw. */
-function format(src: string): string {
+/** What the output and step panes draw, one string per statement. */
+function paneStatements(src: string, mode: UserFormatMode): string[] {
   const { program, diagnostics } = tokenizeAndParse(src)
   if (!program) throw new Error(diagnostics.map((d) => d.message).join('; '))
-  return program.map((s) => layoutToString(stmtToLayout(s))).join('\n')
+  return program.map((s) => layoutToString(stmtToLayout(s), PRINT_WIDTH, mode))
 }
+
+/** Those statements as a document, which is what the indenter is handed. */
+function format(src: string, mode: UserFormatMode): string {
+  return paneStatements(src, mode).join('\n\n')
+}
+
+/**
+ * Both modes have to hold the invariant, and strict is the harder of the two:
+ * it splits every `cond`/`match` clause, putting the consequent at +3 -- a
+ * column the indenter only ever reaches through `CondClause`/`MatchClause`.
+ */
+const MODES: UserFormatMode[] = ['strict', 'relaxed']
 
 /** What Ctrl-I leaves behind. */
 function reindent(doc: string): string {
@@ -92,18 +105,27 @@ const PROGRAMS: [string, string][] = [
     `(define a (f ${long} ${long} ${long}))\n` +
       `(define b (g ${long} ${long} ${long}))`,
   ],
+  // These fit in eighty columns and so never broke at all until rules 1, 3, 5
+  // and 6 became mandatory. They are the cases the invariant had never seen.
+  ['a short lambda', '(lambda (x) x)'],
+  ['a short if', '(if a b c)'],
+  ['a short cond', '(cond [(< x 0) -1] [else 1])'],
+  ['a short match', '(match l [null 0] [(cons x xs) x])'],
+  ['a short let', '(let ([a 1]) a)'],
+  ['a define around a short lambda', '(define f (lambda (x) x))'],
+  ['a nested short form', '(g (lambda (x) (if x 1 2)) 3)'],
 ]
 
-describe('the printer and the indenter agree', () => {
+describe.each(MODES)('the printer and the indenter agree (%s)', (mode) => {
   test.each(PROGRAMS)('%s', (_name, src) => {
-    const formatted = format(src)
+    const formatted = format(src, mode)
     expect(reindent(formatted)).toBe(formatted)
   })
 
   test('and formatting is itself stable', () => {
     for (const [, src] of PROGRAMS) {
-      const once = format(src)
-      expect(format(once)).toBe(once)
+      const once = format(src, mode)
+      expect(format(once, mode)).toBe(once)
     }
   })
 })
@@ -122,15 +144,24 @@ describe('the printer and the indenter agree', () => {
  * property that reformatting is merely stable. Retiring that printer is what
  * closed the gap (FORMATTING.md, stage 3).
  */
-describe('the reformat command and the indenter agree', () => {
-  test.each(PROGRAMS)('%s', (_name, src) => {
-    const formatted = formatSource(src)
-    expect(reindent(formatted)).toBe(formatted)
-  })
+describe.each(MODES)(
+  'the reformat command and the indenter agree (%s)',
+  (mode) => {
+    test.each(PROGRAMS)('%s', (_name, src) => {
+      const formatted = formatSource(src, PRINT_WIDTH, mode)
+      expect(reindent(formatted)).toBe(formatted)
+    })
 
-  test('and the reformat command agrees with the panes', () => {
-    for (const [, src] of PROGRAMS) {
-      expect(formatSource(src)).toBe(format(src))
-    }
-  })
-})
+    test('and the reformat command lays statements out the same way', () => {
+      // Per statement, not per file: the blank lines between statements are
+      // format.ts's own business -- it keeps the author's grouping (see
+      // `packs`) -- while the panes only ever draw one statement at a time.
+      for (const [, src] of PROGRAMS) {
+        const out = formatSource(src, PRINT_WIDTH, mode)
+        for (const stmt of paneStatements(src, mode)) {
+          expect(out).toContain(stmt)
+        }
+      }
+    })
+  },
+)

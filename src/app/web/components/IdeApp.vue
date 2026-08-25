@@ -4,6 +4,7 @@ import {
   nextTick,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   shallowRef,
   watch,
@@ -20,6 +21,8 @@ import PanelDock from './PanelDock.vue'
 import PanelFrame from './PanelFrame.vue'
 import IdeSidebar from './IdeSidebar.vue'
 import { showHiddenFiles } from '../file-prefs'
+import { formatMode } from '../editor-prefs'
+import { FormatModeKey } from '../../../scheme/ast-components/format-mode'
 import IdeMenuBar from './IdeMenuBar.vue'
 import TraceWindow from './TraceWindow.vue'
 import IdeHeader from './IdeHeader.vue'
@@ -165,6 +168,10 @@ const signInError = ref<string | null>(null)
 const sessionLapsed = ref(false)
 
 // ---------- editor context + child component refs ----------
+
+// The output and step panes lay a trace out with the setting the reformat
+// command uses, so a file and a trace can never disagree (see format-mode.ts).
+provide(FormatModeKey, formatMode)
 
 const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)

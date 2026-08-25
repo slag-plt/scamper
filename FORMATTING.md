@@ -51,6 +51,71 @@ Two things worth knowing:
 - **A map literal's pairs are one `unit` each**, a layout that never breaks
   apart, so a wrapped map never ends a line with a key whose value is on the
   next one. The panes used to; only the Prettier printer got this right.
+- **The mandated shapes break however short they are.** Rules 1, 3, 4, 5 and 6
+  draw one shape each and offer no one-line alternative, so `lambda`, `if`,
+  `let`, `cond` and `match` -- and a `let`'s binding list, which rule 4 stacks
+  -- break on the rule rather than on a width. See
+  [Two modes](#two-modes) and question 3. A form broken this way is no wider
+  than one that is not, so the enclosing form cannot infer it from a width:
+  `pretty.ts` propagates it outwards (`containsForcedBreak`), which is what
+  carries `(define f (lambda (x) x))` into rule 2b and satisfies rule 7's "if
+  any of the subexpressions require multiple lines".
+- **Blank lines between statements are `format.ts`'s business, not the
+  printer's.** They are the one piece of spacing the style rules cannot derive,
+  because they record how the author grouped their file. A run of one-line
+  statements written together -- a block of imports, a few short defines --
+  stays as it was left; everything else is separated by one blank line: a
+  statement the printer spread over several lines, one with a comment above it,
+  or one the author had already set apart. A wider gap collapses to one. Both
+  tests are on the formatted text and the original line numbers, so the spacing
+  is a fixed point however often a file is reformatted.
+
+## Two modes
+
+Rule 5 says "each guard and the corresponding consequent should be on separate
+lines", and the request's own worked example writes `[null 0]` on one line. Both
+readings are defensible, so both are available and the choice is the person's,
+under **Edit > Relaxed Formatting**:
+
+| | `strict` (the default) | `relaxed` |
+|---|---|---|
+| `lambda`, `if`, `let`, `cond`, `match` | break | break |
+| a `let`'s binding list | stacks, one per line | stacks, one per line |
+| a `cond`/`match` clause | `[guard` / ` consequent]`, always | one line while it fits |
+
+```scheme
+;; strict                        ;; relaxed
+(match l                         (match l
+  [null                            [null 0]
+   0]                              [(cons _ tail) (+ 1 (f tail))])
+  [(cons _ tail)
+   (+ 1 (f tail))])
+```
+
+One setting, read in three places, so a file and a trace can never disagree: the
+reformat command reads it, and the output and step panes read it through
+`FormatModeKey` (`src/scheme/ast-components/format-mode.ts`). The editor's
+indenter is untouched by it -- Ctrl-I decides where a line *starts*, never where
+a break *goes*, so the two modes indent identically. `test/apps/web/format-indent-agreement.test.ts`
+runs the anti-drift invariant over both.
+
+A binding list is the counterpart of a clause *list*, not of a clause: rule 4
+draws each `[name exp]` whole and stacks them, so the list breaks and the
+binding does not. A lone binding therefore shows no break, having nothing to put
+on a second line.
+
+```scheme
+(let ([a 1]                      ; the list stacks, however short
+      [b (f 2)])                 ; each binding stays whole
+  body)
+```
+
+One thing the modes deliberately do *not* cover:
+
+- **`expToString` and friends stay flat in both.** They are the canonical
+  one-line form -- what goes into an error message, what the trace dedups on,
+  and what the printer measures a value's width with. What the panes draw is
+  `layoutToString` over the same layout.
 
 ## 1. What was asked
 
@@ -123,7 +188,7 @@ Running the formatter as it was on the request's own examples:
 | Rule | Target | Today's output | |
 |---|---|---|---|
 | 2 `define` | `(define id\n  expr)` | `(define id\n  expr)` | ✅ |
-| 1 `lambda` | body at +2 | body at +2 when it breaks | ✅ modulo Q3 |
+| 1 `lambda` | body at +2 | body at +2 *when it breaks* | ✗ never forces |
 | 3 `if` | consequent/alternate at **+4** | `(if test\n  cons\n  alt)` — at +2 | ✗ width |
 | 4 `let` | `(let ([b1]\n      [b2])\n  body)` | `(let\n  ([b1] [b2])\n  body)` | ✗ shape |
 | 5 `cond` | `[guard\n consequent]`, +2 / +3 | `[guard consequent]` kept inline at +2 | ✗ never splits |
@@ -415,9 +480,18 @@ small change to `src/scheme/style.ts` and its tests.
 2. **Rule 6 (`match`), truncated in the request.** *Like `cond`, with the
    scrutinee on the `match` line* — `(match e\n  [p1\n   b1]\n  …)`.
 3. **Do rules 1, 3 and 5 force breaks, or only fix the indent when a break is
-   needed?** *Only fix the indent.* Nothing forces a break; a form breaks on the
-   80-column or multi-line trigger and not otherwise, so `(lambda (x) x)` and
-   `(if a b c)` stay on one line.
+   needed?** *They force breaks* -- rules 1, 3, 4, 5 and 6 each draw exactly one
+   shape and give no alternative, where rules 2 and 7 spell out a one-line form
+   and the condition for it. So `(lambda (x) x)` and `(if a b c)` do break,
+   however short they are, and `(define f (lambda (x) x))` follows them into
+   rule 2b.
+
+   This was first answered the other way, and shipped that way. What overturned
+   it: the rules' own wording, the fact that §3's gap table had already graded
+   rule 5 `✗ never splits`, and a report that a hand-formatted `list-length` was
+   being flattened. Rule 5 read to the letter also splits `[guard consequent]`
+   for every clause, which the request's own worked example does *not* do -- so
+   that half is a setting. See [Two modes](#two-modes).
 4. **Which family do Scamper's non-Racket forms belong to?** *Rule 7 — every
    form `FORM_STYLES` does not name.* The set is closed: the grammar names each
    special form, and there is no `let*`, `letrec`, `when` or `unless` to worry

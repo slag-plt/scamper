@@ -1,7 +1,7 @@
 import * as L from '../lpm'
 import TextRenderer from '../lpm/renderers/text.js'
 import { renderToString } from './pretty.js'
-import { PRINT_WIDTH } from './style.js'
+import { DEFAULT_FORMAT_MODE, PRINT_WIDTH, type FormatMode } from './style.js'
 
 export interface Tagged {
   tag: string
@@ -650,6 +650,7 @@ export type Layout = LayoutComments &
         children: Layout[]
         form?: string
         alignItems?: boolean
+        breaks?: 'always' | 'strict'
       }
     // A "#" written immediately (no space) before its child -- the anonymous
     // function `#(body)`, whose child is the parenthesized body layout.
@@ -688,14 +689,44 @@ const special = (name: string, rest: Layout[]): Layout => ({
   children: [kw(name), ...rest],
 })
 /**
- * A parenthesized list of peers -- a lambda's parameters, a let's bindings --
- * which line up under the first item rather than under a head.
+ * A parenthesized list of peers -- a lambda's parameters, a struct's fields --
+ * which line up under the first item rather than under a head. Breaks only when
+ * it must: rule 1 keeps `(lambda (x y)` on one line.
  */
 const itemList = (items: Layout[]): Layout => ({
   kind: 'group',
   delim: 'paren',
   children: items,
   alignItems: true,
+})
+/**
+ * A `let`'s binding list, which stacks one binding per line however short they
+ * are -- rule 4 draws it that way, and a stack is what makes a long binding
+ * list readable. A lone binding still shows no break: there is nothing after it
+ * to put on a second line.
+ */
+const bindingList = (items: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  children: items,
+  alignItems: true,
+  breaks: 'always',
+})
+/**
+ * A `cond` or `match` clause -- `[guard consequent]`. Rule 5 puts the two on
+ * separate lines, which strict formatting does however short they are, so the
+ * split is marked here rather than looked up: the style table is keyed by
+ * keyword and a clause has none.
+ *
+ * A `let` binding is written the same way but is *not* one. Rule 4 draws each
+ * `[name exp]` whole, on its own line; it is the binding *list* that stacks,
+ * which is {@link bindingList}.
+ */
+const clause = (children: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'bracket',
+  children,
+  breaks: 'strict',
 })
 const hash = (child: Layout): Layout => ({ kind: 'hash', child })
 /** A key and its value, which a breaking map literal keeps on one line. */
@@ -766,7 +797,7 @@ function expLayout(e: Exp): Layout {
     }
     case 'let':
       return special('let', [
-        itemList(
+        bindingList(
           e.bindings.map(({ pat, value }) =>
             brackets([patToLayout(pat), expToLayout(value)]),
           ),
@@ -785,7 +816,7 @@ function expLayout(e: Exp): Layout {
       return special('match', [
         expToLayout(e.scrutinee),
         ...e.branches.map(({ pat, body }) =>
-          brackets([patToLayout(pat), expToLayout(body)]),
+          clause([patToLayout(pat), expToLayout(body)]),
         ),
       ])
     case 'and':
@@ -796,7 +827,7 @@ function expLayout(e: Exp): Layout {
       return special(
         'cond',
         e.branches.map(({ test, body }) =>
-          brackets([expToLayout(test), expToLayout(body)]),
+          clause([expToLayout(test), expToLayout(body)]),
         ),
       )
     case 'anonfn':
@@ -863,21 +894,36 @@ function stmtLayout(s: Stmt): Layout {
  * text backend of the surface syntax. LayoutRenderer.vue is the web backend and
  * works from the same plan, so the two cannot drift apart.
  */
-export function layoutToString(l: Layout, width = PRINT_WIDTH): string {
-  return renderToString(l, width)
+export function layoutToString(
+  l: Layout,
+  width = PRINT_WIDTH,
+  mode: FormatMode = DEFAULT_FORMAT_MODE,
+): string {
+  return renderToString(l, width, mode)
 }
 
 /**
- * Render a {@link Layout} to a single line, however long. Used to compare two
- * layouts for equality, where line breaks are noise.
+ * Render a {@link Layout} to a single line, however long: no width breaking and
+ * no rule-mandated breaking either. Used wherever line breaks would be noise --
+ * comparing two layouts, and embedding a form in a one-line message.
  */
 export function layoutToFlatString(l: Layout): string {
-  return renderToString(l, Infinity)
+  return renderToString(l, Infinity, 'flat')
 }
 
-export const patToString = (pat: Pat): string => layoutToString(patToLayout(pat))
-export const expToString = (e: Exp): string => layoutToString(expToLayout(e))
-export const stmtToString = (s: Stmt): string => layoutToString(stmtToLayout(s))
+/**
+ * The canonical one-line text of a form.
+ *
+ * Deliberately flat rather than laid out: these feed error messages, the
+ * trace's dedup key, and the width measurement inside the printer itself --
+ * none of which wants a newline, and the last of which would recur if it got
+ * one. What the panes draw is {@link layoutToString} over the same layout.
+ */
+export const patToString = (pat: Pat): string =>
+  layoutToFlatString(patToLayout(pat))
+export const expToString = (e: Exp): string => layoutToFlatString(expToLayout(e))
+export const stmtToString = (s: Stmt): string =>
+  layoutToFlatString(stmtToLayout(s))
 
 export function progToString(p: Prog): string {
   return p.map(stmtToString).join('\n')

@@ -33,7 +33,7 @@ export const patchNotes: PatchNote[] = [
       'Pressing Run on a file with no code in it no longer fails silently.',
       'Audio pipelines now accept a sample, so a sample-node can drive one.',
       'Your file now runs by itself when you open it and a moment after you stop typing; the Run button says "Autorun" while it does, and Run > Live Evaluation turns it off.',
-      'Scamper now indents your code as you type, re-indents a whole file with Ctrl-I, and wraps long expressions in the output instead of running them off the edge.'
+      'Scamper now indents your code as you type, re-indents or reformats a whole file to the standard style, and wraps long expressions in the output instead of running them off the edge.'
     ]
   },
   {

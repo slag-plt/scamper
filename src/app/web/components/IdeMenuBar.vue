@@ -19,8 +19,10 @@ import {
   MIN_FONT_SIZE,
   editorFontSize,
   editorWordWrap,
+  isRelaxedFormatting,
   resetZoom,
   toggleEditorWordWrap,
+  toggleRelaxedFormatting,
   zoomIn,
   zoomOut,
 } from '../editor-prefs'
@@ -212,6 +214,13 @@ const editMenu = computed<MenuItem[]>(() => {
     { separator: true },
     { label: 'Toggle Comment', kbd: editShortcut.toggleComment, disabled: s.readOnly, run: inEditor((ed) => { ed.toggleComment() }) },
     { label: 'Format File', kbd: editShortcut.format, disabled: s.readOnly, run: inEditor((ed) => { ed.format() }) },
+    // Sits under Format File because that is the command it changes -- though
+    // it governs the output and step panes too, so a file and a trace agree.
+    {
+      label: 'Relaxed Formatting',
+      checked: isRelaxedFormatting(),
+      run: () => { toggleRelaxedFormatting() },
+    },
   ]
 })
 
