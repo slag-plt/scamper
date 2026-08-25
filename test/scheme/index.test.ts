@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { compile, fiberRaiser, tokenizeAndParse } from '../../src/scheme'
+import {
+  compile,
+  compileExamples,
+  fiberRaiser,
+  tokenizeAndParse,
+} from '../../src/scheme'
 import { expToString } from '../../src/scheme/ast.js'
 import { Loc } from '../../src/lpm'
 import * as LPM from '../../src/lpm/'
@@ -91,5 +96,38 @@ describe('compile with a query location', () => {
     })
     expect(prog).toBeUndefined()
     expect(diagnostics).toHaveLength(1)
+  })
+})
+
+describe('compileExamples', () => {
+  const documented = (examples: string) =>
+    [
+      ';;; (fact n) -> number?',
+      ';;;   n : number?',
+      ';;; Returns n factorial.',
+      examples,
+      '(define fact (lambda (n) (if (zero? n) 1 (* n (fact (- n 1))))))',
+    ].join('\n')
+
+  test('lowers one program per example, tagged with its line', () => {
+    const src = documented(
+      [';;; @example (fact 0) -> 1', ';;; @example (fact 5) -> 120'].join('\n'),
+    )
+    const { examples, diagnostics } = compileExamples(src)
+    expect(diagnostics).toStrictEqual([])
+    expect(examples.map((e) => e.range.begin.line)).toStrictEqual([4, 5])
+    // Each program is the whole file *plus* the report that ends it, so it is
+    // strictly longer than the file's own single statement.
+    expect(examples.every((e) => e.prog.length > 1)).toBe(true)
+  })
+
+  test('returns nothing for a file with no examples', () => {
+    expect(compileExamples('(define x 1)').examples).toStrictEqual([])
+  })
+
+  test('returns nothing but the diagnostics when the file does not parse', () => {
+    const { examples, diagnostics } = compileExamples('(define x')
+    expect(examples).toStrictEqual([])
+    expect(diagnostics.length).toBeGreaterThan(0)
   })
 })

@@ -45,6 +45,10 @@ import { ScamperSupport } from './extensions/language'
 import { IndentationExtension } from './extensions/indentation'
 import { ReformatExtension } from './extensions/reformat'
 import { QueryExtension } from './extensions/query'
+import {
+  ExampleExtension,
+  ExampleMarkTheme,
+} from './extensions/examples'
 import { scamperLspExtensions } from './lsp'
 import {
   cursorStatus,
@@ -238,6 +242,8 @@ function mkExtensions(config: EditorStateConfig): Extension {
       }
     }),
     QueryExtension,
+    ExampleExtension,
+    ExampleMarkTheme,
   ]
 }
 

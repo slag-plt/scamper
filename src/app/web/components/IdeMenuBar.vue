@@ -12,7 +12,12 @@ import {
   toggleShowSourceWithOutput,
 } from '../output-prefs'
 import { showHiddenFiles, toggleShowHiddenFiles } from '../file-prefs'
-import { liveEvaluation, toggleLiveEvaluation } from '../run-prefs'
+import {
+  checkExamples,
+  liveEvaluation,
+  toggleCheckExamples,
+  toggleLiveEvaluation,
+} from '../run-prefs'
 import {
   DEFAULT_FONT_SIZE,
   MAX_FONT_SIZE,
@@ -257,6 +262,14 @@ const runMenu = computed<MenuItem[]>(() => [
     label: 'Live Evaluation',
     checked: liveEvaluation.value,
     run: () => { toggleLiveEvaluation() },
+  },
+  // Its own toggle rather than part of Live Evaluation: checking examples
+  // re-runs the file once per example, which is a cost worth being able to
+  // decline on its own (issue #374).
+  {
+    label: 'Check Examples',
+    checked: checkExamples.value,
+    run: () => { toggleCheckExamples() },
   },
   { separator: true },
   // Stepping is per-statement now, in its own window; the old whole-program

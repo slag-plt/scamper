@@ -24,12 +24,19 @@ import { throwNull } from '../../../utils'
 export interface ScamperSessionOptions {
   editor: EditorAccessor
   onRunScheduled?: () => void
+  /**
+   * Called with the source that was run, once a run has finished on its own.
+   * A run that was superseded or stopped never reaches this. What checks the
+   * file's `@example` lines hangs off it (issue #374).
+   */
+  onRunSettled?: (src: string) => void
 }
 
 function createScamperSession(
   pane: ShallowRef<ResultsPaneType | null>,
   editor: EditorAccessor,
   onRunScheduled?: () => void,
+  onRunSettled?: (src: string) => void,
 ) {
   const activeRun = ref<DisplayRequest | null>(null)
   const scamper = Scamper.getInstance()
@@ -127,15 +134,20 @@ function createScamperSession(
     if (!run) {
       activeRun.value = null
       onRunScheduled?.()
+      // The program did not compile, so there is nothing left of the last run
+      // to keep on screen.
+      onRunSettled?.(src)
       return
     }
 
     activeRun.value = run
     const runId = run.id
     void run.done.finally(() => {
-      if (activeRun.value?.id === runId) {
-        activeRun.value = null
-      }
+      // Guarded so a run that a newer one superseded says nothing: what
+      // listens is about the file as it is now.
+      if (activeRun.value?.id !== runId) return
+      activeRun.value = null
+      onRunSettled?.(src)
     })
     onRunScheduled?.()
   }
@@ -204,6 +216,7 @@ export function provideScamperSession(
     pane,
     options.editor,
     options.onRunScheduled,
+    options.onRunSettled,
   )
   provide(ScamperSessionKey, session)
   return session

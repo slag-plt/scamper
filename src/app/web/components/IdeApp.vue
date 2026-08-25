@@ -37,7 +37,8 @@ import {
   useLiveEvaluation,
   type LiveStatus,
 } from '../composables/use-live-evaluation'
-import { liveEvaluation } from '../run-prefs'
+import { useExampleChecks } from '../composables/use-example-checks'
+import { checkExamples, liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
@@ -175,13 +176,41 @@ provide(FormatModeKey, formatMode)
 
 const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
+
+// ---------- example checks (#374) ----------
+
+const examples = useExampleChecks()
+
 const session = provideScamperSession(resultsRef, {
   editor,
   onRunScheduled: () => {
     isDirty.value = false
   },
+  // Examples are checked once the run they are about is over (issue #374), so
+  // they inherit live evaluation's "a moment after you stop typing" rather
+  // than adding a timer of their own.
+  onRunSettled: (src) => {
+    void examples.runChecks(src)
+  },
 })
 const { queries, expandedQueryId } = session
+
+// The marks are drawn from whatever the last sweep found; an empty list is how
+// they are cleared.
+watch(examples.outcomes, (outcomes) => {
+  if (!isEditorLoaded()) return
+  editor().setExampleMarks(outcomes)
+})
+
+// Turning it off should take the marks away rather than leave the last sweep's
+// on screen; turning it on checks the file as it stands.
+watch(checkExamples, (on) => {
+  if (on) {
+    void examples.runChecks(editor().getDoc())
+  } else {
+    examples.cancel()
+  }
+})
 
 // ---------- live evaluation (#378) ----------
 
@@ -692,8 +721,10 @@ async function switchToFile(filename: string): Promise<void> {
   isLoadingFile = true
   stopAutosaving()
   session.stopAll()
-  // A run scheduled by the last keystroke is about the file being left.
+  // A run scheduled by the last keystroke, and any example marks, are about
+  // the file being left.
   live.cancel()
+  examples.cancel()
 
   try {
     // Forces a save of the outgoing file before loading the new one so a quick
@@ -1008,6 +1039,7 @@ function closeOpenFile() {
   saveConfig()
   session.stopAll()
   live.cancel()
+  examples.cancel()
   session.resetOutput()
   isDirty.value = false
 }

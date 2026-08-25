@@ -40,3 +40,35 @@ export function setLiveEvaluation(on: boolean): void {
 export function toggleLiveEvaluation(): void {
   setLiveEvaluation(!liveEvaluation.value)
 }
+
+const CHECK_EXAMPLES_KEY = 'scamper.run.examples'
+
+/**
+ * Whether each `;;; @example ...` line is checked once the file has run
+ * (issue #374), marking it with whether the code agrees with it.
+ *
+ * On unless turned off. Checking re-runs the file once per example, so the off
+ * switch is for a program whose every run is expensive.
+ */
+export const checkExamples = ref<boolean>(
+  (() => {
+    try {
+      return localStorage.getItem(CHECK_EXAMPLES_KEY) !== 'false'
+    } catch {
+      return true // no storage; default to on
+    }
+  })(),
+)
+
+export function setCheckExamples(on: boolean): void {
+  checkExamples.value = on
+  try {
+    localStorage.setItem(CHECK_EXAMPLES_KEY, String(on))
+  } catch {
+    // Applies for this session regardless; remembering it is a bonus.
+  }
+}
+
+export function toggleCheckExamples(): void {
+  setCheckExamples(!checkExamples.value)
+}
