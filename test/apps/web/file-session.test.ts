@@ -89,6 +89,21 @@ class FakeFS implements FS {
     return contents
   }
 
+  // Bytes are part of the FS contract (#385), but nothing a file session does
+  // reaches them: it saves the editor's text, and a binary file never loads
+  // into the editor. Present so this is a whole FS, and loud if that changes.
+  loadBytes(filename: string): Promise<Uint8Array<ArrayBuffer>> {
+    return Promise.reject(
+      new Error(`FakeFS: a file session should not read bytes (${filename})`),
+    )
+  }
+
+  saveBytes(filename: string): Promise<void> {
+    return Promise.reject(
+      new Error(`FakeFS: a file session should not write bytes (${filename})`),
+    )
+  }
+
   async saveFile(filename: string, contents: string): Promise<void> {
     // The held-open writable models the *document* being edited. A history
     // file is a different file, and OPFS locks per file, so it commits at once

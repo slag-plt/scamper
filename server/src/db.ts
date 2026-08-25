@@ -78,7 +78,7 @@ export async function applySchema(url: string): Promise<void> {
  * something to change. Converting utf8mb4 text to bytes is lossless, and the
  * table is one row per file, so the one-time rewrite is quick.
  */
-async function widenFileContents(sql: {
+export async function widenFileContents(sql: {
   query: (text: string) => Promise<unknown>
 }): Promise<void> {
   const [rows] = (await sql.query(
