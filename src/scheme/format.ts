@@ -1,4 +1,10 @@
-import { layoutToString, progToNode, stmtToLayout, type Stmt } from './ast.js'
+import {
+  commentLines,
+  layoutToString,
+  progToNode,
+  stmtToLayout,
+  type Stmt,
+} from './ast.js'
 import { attachComments, collectComments } from './comments.js'
 import { tokenizeAndParse } from './index.js'
 import {
@@ -85,7 +91,7 @@ export function formatSource(
   const dangling = root.dangling ?? []
   if (dangling.length > 0) {
     blocks.push({
-      text: dangling.map((c) => c.line).join('\n'),
+      text: commentLines(dangling).join('\n'),
       begin: dangling[0].range.begin.line,
       end: dangling[dangling.length - 1].range.end.line,
     })

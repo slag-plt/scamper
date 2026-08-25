@@ -304,6 +304,83 @@ describe('blank lines between statements', () => {
   })
 })
 
+// ---- blank lines between comment paragraphs (#333) --------------------------
+
+describe('blank lines between comment paragraphs', () => {
+  test('a gap between two paragraphs survives', () => {
+    const src = '; section one\n\n; section two\n(define a 1)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('three paragraphs keep both gaps', () => {
+    const src = '; one\n\n; two\n\n; three\n(define a 1)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('a wider gap collapses to one', () => {
+    expect(format('; one\n\n\n\n; two\n(define a 1)')).toBe(
+      '; one\n\n; two\n(define a 1)',
+    )
+  })
+
+  test('a block written without gaps gains none', () => {
+    const src = [
+      ';;; (add1 n) -> number?',
+      ';;;   n: number?',
+      ';;; Adds one to n.',
+      '(define add1 #(+ % 1))',
+    ].join('\n')
+    expect(format(src)).toBe(src)
+  })
+
+  test('a gap at the top of a file survives', () => {
+    const src = ';;; a title\n\n;;; and a note\n(define a 1)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('a paragraph gap and a statement gap coexist', () => {
+    // The gap above the block is `packs`'s business, the one inside it the
+    // comment block's; both are kept.
+    const src = '(define a 1)\n\n; one\n\n; two\n(define b 2)'
+    expect(format(src)).toBe(src)
+  })
+
+  test('comments below the last statement keep their paragraphs', () => {
+    expect(format('(define a 1)\n; one\n\n; two')).toBe(
+      '(define a 1)\n\n; one\n\n; two',
+    )
+  })
+
+  test('a gap inside a form survives', () => {
+    const src = [
+      '(define f',
+      '  (lambda (x)',
+      '    ; what it does',
+      '',
+      '    ; and how',
+      '    (+ x 1)))',
+    ].join('\n')
+    expect(format(src)).toBe(src)
+  })
+
+  test('a blank line is bare, and spacing is a fixed point', () => {
+    // An indented blank line would be trailing whitespace, which the editor's
+    // indenter strips -- and formatting would stop being a fixed point of it.
+    for (const src of [
+      '; section one\n\n; section two\n(define a 1)',
+      '; one\n\n\n\n; two\n(define a 1)',
+      '(define a 1)\n\n; one\n\n; two\n(define b 2)',
+      '(define a 1)\n; one\n\n; two',
+      '(define f\n  (lambda (x)\n    ; head\n\n    ; body\n    (+ x 1)))',
+      '(begin\n  ; first\n\n  ; second\n  (f 1)\n  (g 2))',
+    ]) {
+      const once = format(src)
+      expect(once).not.toMatch(/[ \t]+$/m)
+      expect(format(once)).toBe(once)
+    }
+  })
+})
+
 // ---- comments are preserved (#304) -----------------------------------------
 
 describe('comment preservation', () => {

@@ -152,6 +152,22 @@ describe.each(MODES)(
       expect(reindent(formatted)).toBe(formatted)
     })
 
+    test('a comment paragraph gap is indentable too', () => {
+      // Only the reformat command carries comments (the panes lay out runtime
+      // values, which have none), so these live here rather than in PROGRAMS.
+      // The blank line between two paragraphs (#333) is the interesting part:
+      // the indenter empties a line padded with spaces, so a padded blank line
+      // shows up here as a disagreement.
+      for (const src of [
+        '; section one\n\n; section two\n(define a 1)',
+        '(define f\n  (lambda (x)\n    ; head\n\n    ; body\n    (+ x 1)))',
+        '(define a 1)\n\n; one\n\n; two',
+      ]) {
+        const formatted = formatSource(src, PRINT_WIDTH, mode)
+        expect(reindent(formatted)).toBe(formatted)
+      }
+    })
+
     test('and the reformat command lays statements out the same way', () => {
       // Ignoring blank lines, not merely containing each statement: the spacing
       // between statements is format.ts's own business (it keeps the author's

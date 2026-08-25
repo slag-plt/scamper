@@ -68,7 +68,13 @@ Two things worth knowing:
   statement the printer spread over several lines, one with a comment above it,
   or one the author had already set apart. A wider gap collapses to one. Both
   tests are on the formatted text and the original line numbers, so the spacing
-  is a fixed point however often a file is reformatted.
+  is a fixed point however often a file is reformatted. A *comment block* keeps
+  its own gaps the same way (#333): `commentLines` (`ast.ts`) reads them off
+  each `Comment`'s range and marks one with an empty entry in the layout's
+  comment list. `pretty.ts` pays a line's indentation only when something is
+  written on it, so such a line comes out *bare* -- a padded blank line is
+  trailing whitespace, which the indenter strips, and the invariant below would
+  fail.
 
 ## Two modes
 
@@ -532,5 +538,37 @@ small change to `src/scheme/style.ts` and its tests.
    verbatim.* `SourceCaption.vue` shows the statement's source exactly as the
    student wrote it: a caption is a citation of their code, not our rendering
    of it.
+
+## What #333 asked for
+
+Issue #333 ("improve auto-formatting quality") was filed against the Prettier
+plugin this work deleted. Its `let`/`if` header shapes are what §2 draws, and
+the forms it found unable to break -- `import`, `export`, `struct` -- are rule 7
+forms now. What is left was settled deliberately rather than left open:
+
+- **Blank lines are kept between comment paragraphs**, as they already were
+  between statements. See the last bullet of [As built](#as-built).
+- **Arguments are never packed greedily**, so no `fill`. §2's Family 2 is
+  all-on-one-line or all-on-separate-lines, which is what makes an argument list
+  scannable; `test/scheme/pretty.test.ts` pins it. The cost is real -- `(list 1
+  2 ... 30)` becomes thirty lines -- but the alternative is a second break
+  policy beside the one table, keyed on which heads are "data-like". That is the
+  special-casing the one-table design exists to avoid. Reopen it with a student
+  file that reads badly, not before.
+- **No width or indent preference.** `PRINT_WIDTH` and `INDENT_UNIT` stay
+  constants in `style.ts`; the formatting setting people wanted is Edit >
+  Relaxed Formatting. `INDENT_UNIT` is also CodeMirror's `indentUnit` facet, so
+  a preference would have to reach the indenter too and the anti-drift invariant
+  would want running at every width. `formatSource` and `planLayout` already
+  take a `width`, so the plumbing survives if it is ever asked for.
+- **Numeric spelling is not preserved -- deferred.** A `lit` renders from its
+  runtime value, so `1.50` reformats to `1.5` and `1e3` to `1000`. No meaning
+  changes (Scamper numbers are plain JS numbers, with no exact/inexact
+  distinction) and every spelling re-reads, so this is lost intent rather than a
+  bug. Fixing it means an optional `source` on `Lit`/`PLit`, threaded from the
+  reader -- a clean follow-up for a student contributor.
+- **One place formatting adds vertical space**, worth knowing: two adjacent
+  multi-line statements written with no blank line between them *gain* one,
+  since `packs` keeps only a run of one-liners together. Deliberate, and pinned.
 
 _(Co-created with Claude Code)_
