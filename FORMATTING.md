@@ -561,12 +561,15 @@ forms now. What is left was settled deliberately rather than left open:
   a preference would have to reach the indenter too and the anti-drift invariant
   would want running at every width. `formatSource` and `planLayout` already
   take a `width`, so the plumbing survives if it is ever asked for.
-- **Numeric spelling is not preserved -- deferred.** A `lit` renders from its
+- **Numeric spelling is not preserved -- won't fix.** A `lit` renders from its
   runtime value, so `1.50` reformats to `1.5` and `1e3` to `1000`. No meaning
   changes (Scamper numbers are plain JS numbers, with no exact/inexact
   distinction) and every spelling re-reads, so this is lost intent rather than a
-  bug. Fixing it means an optional `source` on `Lit`/`PLit`, threaded from the
-  reader -- a clean follow-up for a student contributor.
+  bug. Preserving it means an optional `source` on `Lit`/`PLit` threaded from
+  the reader, which puts a field on the AST that only the printer reads and that
+  every later pass has to carry -- more than the normalisation costs anyone.
+  Decided, not merely postponed: reopen it with a student file that reads badly,
+  the same bar as the fill rule above.
 - **One place formatting adds vertical space**, worth knowing: two adjacent
   multi-line statements written with no blank line between them *gain* one,
   since `packs` keeps only a run of one-liners together. Deliberate, and pinned.
