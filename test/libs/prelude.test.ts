@@ -2813,7 +2813,9 @@ describe('with-file', () => {
       await runProgram(`
 (with-file "greet.txt" (lambda (s) s))
 `),
-    ).toEqual(['"hello\nthere\n"'])
+      // N.B., the newlines render as `\n` escapes, not as real line breaks: a
+      // rendered string literal is now always a single flat line.
+    ).toEqual(['"hello\\nthere\\n"'])
   })
 
   test('a missing file raises a runtime error', async () => {

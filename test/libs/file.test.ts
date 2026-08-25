@@ -67,8 +67,10 @@ describe('file-exists?', () => {
 describe('file->string', () => {
   test('reads a file back as a string', async () => {
     await write('greet.txt', 'hello\nworld\n')
+    // N.B., the newlines render as `\n` escapes, not as real line breaks: a
+    // rendered string literal is now always a single flat line.
     expect(await runProgram('(import file)\n(file->string "greet.txt")')).toEqual([
-      '"hello\nworld\n"',
+      '"hello\\nworld\\n"',
     ])
   })
 

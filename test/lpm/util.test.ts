@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { ICE, ScamperError, Value } from '../../src/lpm'
 import * as U from '../../src/lpm/util'
+import { parseStringLiteral } from '../../src/scheme/literals'
+import { anyRange } from '../scheme/util'
 
 describe('listNth', () => {
   test('returns the element at a valid index', () => {
@@ -184,5 +186,77 @@ describe('toString', () => {
       foo = 1
     })()
     expect(U.toString(v)).toBe(`[Blob: ${JSON.stringify(v)}]`)
+  })
+})
+
+describe('escapeStringLiteral', () => {
+  // Every escape `parseStringLiteral` reads, as (character, escape) pairs.
+  const escapes: [string, string, string][] = [
+    ['backslash', '\\', '\\\\'],
+    ['double quote', '"', '\\"'],
+    ['alarm', '\x07', '\\a'],
+    ['backspace', '\b', '\\b'],
+    ['tab', '\t', '\\t'],
+    ['newline', '\n', '\\n'],
+    ['vertical tab', '\v', '\\v'],
+    ['form feed', '\f', '\\f'],
+    ['carriage return', '\r', '\\r'],
+    ['escape', '\x1b', '\\e'],
+  ]
+
+  test.for(escapes)('escapes a string containing one %s', ([, c, esc]) => {
+    expect(U.escapeStringLiteral(`a${c}b`)).toBe(`a${esc}b`)
+  })
+
+  test('leaves the empty string alone', () => {
+    expect(U.escapeStringLiteral('')).toBe('')
+  })
+
+  test('leaves an ordinary string alone', () => {
+    expect(U.escapeStringLiteral('hello world')).toBe('hello world')
+  })
+
+  test('escapes a string of nothing but escapable characters', () => {
+    const chars = escapes.map(([, c]) => c).join('')
+    const expected = escapes.map(([, , esc]) => esc).join('')
+    expect(U.escapeStringLiteral(chars)).toBe(expected)
+  })
+
+  test('escapes several escapable characters in one string', () => {
+    expect(U.escapeStringLiteral('a\nb\tc"d\\e')).toBe('a\\nb\\tc\\"d\\\\e')
+  })
+
+  test('never renders a line break, so a literal stays on one line', () => {
+    expect(U.escapeStringLiteral('a\nb\r\nc')).not.toMatch(/[\n\r]/)
+  })
+})
+
+describe('escapeStringLiteral round-trips through parseStringLiteral', () => {
+  const roundTrip = (s: string): string =>
+    parseStringLiteral(`"${U.escapeStringLiteral(s)}"`, anyRange)
+
+  const escapable = ['\\', '"', '\x07', '\b', '\t', '\n', '\v', '\f', '\r', '\x1b']
+
+  const cases: [string, string][] = [
+    ['the empty string', ''],
+    ['a plain string', 'hello world'],
+    ['a string of only escapable characters', escapable.join('')],
+    ['a string mixing escapes and text', 'a\nb\tc"d\\e'],
+    ['a quote-heavy string', '"" \\" ""'],
+  ]
+
+  test.for(cases)('%s', ([, s]) => {
+    expect(roundTrip(s)).toBe(s)
+  })
+
+  // Property: escaping then parsing is the identity, checked over each
+  // escapable character alone and over every ordered pair of them.
+  test('holds for each escapable character and every pair of them', () => {
+    for (const c of escapable) {
+      expect(roundTrip(`x${c}y`)).toBe(`x${c}y`)
+      for (const d of escapable) {
+        expect(roundTrip(`x${c}y${d}z`)).toBe(`x${c}y${d}z`)
+      }
+    }
   })
 })
