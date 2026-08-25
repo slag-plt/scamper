@@ -9,24 +9,33 @@
 // was given up so the map literal could have it (issue #334).
 paren<content> { "(" content ")" }
 
-simplearglist {
-  paren<Identifier*>
-}
+// N.B., these five are named (capitalized) rules rather than inlined ones so
+// that Lezer emits a node for each. The indenter needs their extents: a node
+// carries its own brackets, so "align the next binding under the first" is just
+// a column read off the node, with no re-deriving of clause boundaries from
+// sibling positions. lezer-bridge.ts descends into them rather than relying on
+// the flattened child list.
 
-arglist {
-  simplearglist |
+// A lambda's parameter list, which may end in a "&" rest parameter.
+ArgList {
+  paren<Identifier*> |
   paren<Identifier* Amp Identifier>
 }
 
-binding {
+// A struct's field list. Deliberately not an ArgList: fields never take "&".
+FieldList {
+  paren<Identifier*>
+}
+
+Binding {
   "[" pattern expression "]"
 }
 
-branch {
+MatchClause {
   "[" pattern expression "]"
 }
 
-condBranch {
+CondClause {
   "[" expression expression "]"
 }
 
@@ -52,20 +61,20 @@ expression {
   // is an ordinary sub-expression (the even-length check lives in
   // lezer-bridge.ts, which the grammar cannot express).
   Obj { "{" expression* "}" } |
-  Lambda { paren<kw<"lambda"> arglist expression> } |
+  Lambda { paren<kw<"lambda"> ArgList expression> } |
   If { paren<kw<"if"> expression expression expression> } |
   And { paren<kw<"and"> expression*> } |
   Or { paren<kw<"or"> expression*> } |
   Begin { paren<kw<"begin"> expression expression*> } |
-  Cond { paren<kw<"cond"> condBranch*> } |
+  Cond { paren<kw<"cond"> CondClause*> } |
   // A Clojure-style anonymous function: the "#" marker followed by an ordinary
   // parenthesized expression, e.g. #(+ %1 1) or #(let ([x 1]) (+ x %)). Because
   // the body is a normal expression, any parenthesized form (application, let,
   // if, ...) can appear -- expansion wraps it verbatim in a lambda.
   AnonFn { AnonHash expression } |
   Application { paren<expression*> } |
-  Let { paren<kw<"let"> paren<binding*> expression> } |
-  Match { paren<kw<"match"> expression branch*> }
+  Let { paren<kw<"let"> Bindings { paren<Binding*> } expression> } |
+  Match { paren<kw<"match"> expression MatchClause*> }
 }
 
 statement {
@@ -80,7 +89,7 @@ statement {
   // (define-export x e) is sugar for (define x e) (export x); see expansion.ts.
   DefineExport { paren<kw<"define-export"> Identifier expression> } |
   Display { paren<kw<"display"> expression> } |
-  Struct { paren<kw<"struct"> Identifier simplearglist> } |
+  Struct { paren<kw<"struct"> Identifier FieldList> } |
   SExpr { expression }
 }
 

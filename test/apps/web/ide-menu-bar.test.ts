@@ -10,8 +10,10 @@ import {
   DEFAULT_FONT_SIZE,
   editorFontSize,
   editorWordWrap,
+  formatMode,
   resetZoom,
   setEditorWordWrap,
+  setFormatMode,
 } from '../../../src/app/web/editor-prefs'
 import {
   setShowSourceWithOutput,
@@ -352,6 +354,24 @@ describe('IDE menu bar', () => {
       ).toHaveAttribute('aria-checked', 'true')
     } finally {
       setEditorWordWrap(false)
+      wrapper.unmount()
+    }
+  })
+
+  test('Edit toggles relaxed formatting', async () => {
+    const wrapper = await mountIde('hello.scm')
+    try {
+      // Strict is the default: the rules' shapes are what a file gets.
+      expect(formatMode.value).toBe('strict')
+      await pick('Edit', 'Relaxed Formatting')
+      expect(formatMode.value).toBe('relaxed')
+
+      const menu = await openMenu('Edit')
+      expect(
+        getByRole(menu, 'menuitemcheckbox', { name: 'Relaxed Formatting' }),
+      ).toHaveAttribute('aria-checked', 'true')
+    } finally {
+      setFormatMode('strict')
       wrapper.unmount()
     }
   })

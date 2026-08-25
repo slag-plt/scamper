@@ -39,9 +39,11 @@ const groups: Group[] = [
   {
     title: 'Edit',
     items: [
-      { label: 'Format file', keys: [mod, 'Shift', 'I'] },
+      { label: 'Reindent file', keys: ['Ctrl', 'I'] },
+      { label: 'Reindent selection', keys: ['Tab'] },
+      { label: 'Outdent', keys: ['Shift', 'Tab'] },
+      { label: 'Reformat file', keys: [mod, 'Shift', 'I'] },
       { label: 'Toggle comment', keys: [mod, '/'] },
-      { label: 'Indent', keys: ['Tab'] },
       { label: 'Undo', keys: [mod, 'Z'] },
       { label: 'Redo', keys: [mod, 'Shift', 'Z'] },
     ],

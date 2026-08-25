@@ -4,6 +4,7 @@ import { diagnosticToError } from '../src/scheme/diagnostic'
 import { Fiber } from '../src/lpm/fiber'
 import { runFiberOnScheduler } from '../src/lpm/run'
 import { makeTraceStepper } from '../src/scheme/trace'
+import { TRACE_MARKER } from '../src/lpm/trace'
 import HTMLDisplay from '../src/lpm/output/html'
 
 /** Options controlling how {@link runProgram} reports errors. */
@@ -112,12 +113,22 @@ export async function runProgramTraced (
 }
 
 /**
- * The reduction trace of `src` as bare expressions, with the `--> ` reduction
- * marker stripped -- the shape trace tests assert on.
+ * The reduction trace of `src` as one bare expression per step: the `--> `
+ * marker stripped and the layout flattened back to a single line.
+ *
+ * Flattened because these tests assert *which* expression each step is, not how
+ * it is drawn -- a break the printer puts where a space would go carries no
+ * information about the reduction. What the console actually prints, layout and
+ * all, is pinned in test/apps/cli/cli.test.ts.
  */
 export async function reductionTrace (src: string): Promise<string[]> {
   const log = await runProgramTraced(src)
-  return log.map((l) => (l.startsWith('--> ') ? l.slice(4) : l))
+  return log.map((l) =>
+    (l.startsWith(TRACE_MARKER) ? l.slice(TRACE_MARKER.length) : l).replace(
+      /\n\s*/g,
+      ' ',
+    ),
+  )
 }
 
 export async function runProgramWithHTML (src: string, out: HTMLDisplay): Promise<HTMLElement[]> {

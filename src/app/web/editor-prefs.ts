@@ -1,7 +1,12 @@
 import { ref } from 'vue'
+import {
+  DEFAULT_FORMAT_MODE,
+  type UserFormatMode,
+} from '../../scheme/style'
 
 /**
- * How the editor is displayed: font size and line wrapping.
+ * How the editor is displayed: font size, line wrapping, and how closely
+ * formatting follows the rules.
  *
  * Module-level and self-persisting, in the manner of src/theme -- and for the
  * same reason. `mkFreshEditorState` builds a brand-new state every time a file
@@ -16,6 +21,7 @@ import { ref } from 'vue'
 
 const FONT_SIZE_KEY = 'scamper.editor.fontSize'
 const WORD_WRAP_KEY = 'scamper.editor.wordWrap'
+const FORMAT_MODE_KEY = 'scamper.editor.formatMode'
 
 /** Below this the gutter crowds the text; above it, little fits on a line. */
 export const MIN_FONT_SIZE = 8
@@ -52,6 +58,30 @@ export const editorFontSize = ref<number>(storedFontSize())
 
 /** Whether long lines wrap rather than scrolling sideways. */
 export const editorWordWrap = ref<boolean>(read(WORD_WRAP_KEY) === 'true')
+
+/**
+ * How closely formatting follows the rules in FORMATTING.md: `strict` lays
+ * every form out the way its rule draws it, `relaxed` keeps a `cond`/`match`
+ * clause on one line while it fits. Read by the reformat command and, through
+ * FormatModeKey, by the output and step panes, so a file and a trace agree.
+ */
+export const formatMode = ref<UserFormatMode>(
+  read(FORMAT_MODE_KEY) === 'relaxed' ? 'relaxed' : DEFAULT_FORMAT_MODE,
+)
+
+/** Whether formatting is in its relaxed mode -- what the menu item shows. */
+export function isRelaxedFormatting(): boolean {
+  return formatMode.value === 'relaxed'
+}
+
+export function setFormatMode(mode: UserFormatMode): void {
+  formatMode.value = mode
+  write(FORMAT_MODE_KEY, mode)
+}
+
+export function toggleRelaxedFormatting(): void {
+  setFormatMode(formatMode.value === 'relaxed' ? 'strict' : 'relaxed')
+}
 
 export function setEditorFontSize(size: number): void {
   const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size))

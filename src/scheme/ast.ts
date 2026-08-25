@@ -1,5 +1,7 @@
 import * as L from '../lpm'
 import TextRenderer from '../lpm/renderers/text.js'
+import { renderToString } from './pretty.js'
+import { DEFAULT_FORMAT_MODE, PRINT_WIDTH, type FormatMode } from './style.js'
 
 export interface Tagged {
   tag: string
@@ -322,7 +324,7 @@ export interface ProgNode extends Node {
   body: Prog
 }
 
-/** Union of every AST node type — the Prettier plugin's canonical node type. */
+/** Union of every AST node type -- what comments.ts walks and ornaments. */
 export type SchemeNode = ProgNode | Stmt | Exp | Pat
 
 ///// Helper functions /////////////////////////////////////////////////////////
@@ -612,19 +614,51 @@ export const isLit = (e: Exp): e is Lit => isTagged(e) && e.tag === 'lit'
 // left untagged (default color). Extend as finer highlighting is wanted.
 export type Highlight = 'keyword'
 
-export type Layout =
-  // A literal token: a keyword, an identifier, "&", "_". `hl` tags its
-  // highlight role (see Highlight); absent = default, unhighlighted text.
-  | { kind: 'tok'; text: string; hl?: Highlight }
-  // A runtime value (a lit/quote/plit payload) rendered by the value renderer --
-  // TextRenderer for text, ValueRenderer for the web (so images, lists, etc.
-  // substituted into a trace render correctly). Highlighted by runtime type.
-  | { kind: 'val'; value: L.Value }
-  // A delimited group whose children are space-separated.
-  | { kind: 'group'; delim: 'paren' | 'bracket' | 'brace'; children: Layout[] }
-  // A "#" written immediately (no space) before its child -- the anonymous
-  // function `#(body)`, whose child is the parenthesized body layout.
-  | { kind: 'hash'; child: Layout }
+/**
+ * The source comments a layout node carries, verbatim, the ";" included.
+ *
+ * Set only when the layout was built from a parse that asked for comments (see
+ * comments.ts); one built from a runtime value never has any, so a trace pays
+ * nothing for them. pretty.ts emits them and forces the breaks they need.
+ *
+ * The three placements are the AST's (see Node), carried across unchanged:
+ * `leading` sits on its own line(s) above the node, `trailing` at the end of
+ * the node's line, and `dangling` inside a form that has no child after it.
+ */
+export interface LayoutComments {
+  leading?: string[]
+  trailing?: string[]
+  dangling?: string[]
+}
+
+export type Layout = LayoutComments &
+  (
+    // A literal token: a keyword, an identifier, "&", "_". `hl` tags its
+    // highlight role (see Highlight); absent = default, unhighlighted text.
+    | { kind: 'tok'; text: string; hl?: Highlight }
+    // A runtime value (a lit/quote/plit payload) rendered by the value renderer
+    // -- TextRenderer for text, ValueRenderer for the web (so images, lists,
+    // etc. substituted into a trace render correctly). Highlighted by type.
+    | { kind: 'val'; value: L.Value }
+    // A delimited group whose children are space-separated. `form` names the
+    // special form when the group is one, so pretty.ts can look its layout up
+    // in style.ts. `alignItems` marks a group whose children are peers rather
+    // than a head and its arguments -- parameter lists and binding lists.
+    | {
+        kind: 'group'
+        delim: 'paren' | 'bracket' | 'brace'
+        children: Layout[]
+        form?: string
+        alignItems?: boolean
+        breaks?: 'always' | 'strict'
+      }
+    // A "#" written immediately (no space) before its child -- the anonymous
+    // function `#(body)`, whose child is the parenthesized body layout.
+    | { kind: 'hash'; child: Layout }
+    // Children laid out as one space-separated run with no delimiters of its
+    // own, which never breaks apart: a map literal's key and its value.
+    | { kind: 'unit'; children: Layout[] }
+  )
 
 const tok = (text: string): Layout => ({ kind: 'tok', text })
 const kw = (text: string): Layout => ({ kind: 'tok', text, hl: 'keyword' })
@@ -644,9 +678,87 @@ const braces = (children: Layout[]): Layout => ({
   delim: 'brace',
   children,
 })
+/**
+ * A special form: the keyword, tagged both for highlighting and -- via `form`
+ * -- for layout, followed by the rest of the form.
+ */
+const special = (name: string, rest: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  form: name,
+  children: [kw(name), ...rest],
+})
+/**
+ * A parenthesized list of peers -- a lambda's parameters, a struct's fields --
+ * which line up under the first item rather than under a head. Breaks only when
+ * it must: rule 1 keeps `(lambda (x y)` on one line.
+ */
+const itemList = (items: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  children: items,
+  alignItems: true,
+})
+/**
+ * A `let`'s binding list, which stacks one binding per line however short they
+ * are -- rule 4 draws it that way, and a stack is what makes a long binding
+ * list readable. A lone binding still shows no break: there is nothing after it
+ * to put on a second line.
+ */
+const bindingList = (items: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'paren',
+  children: items,
+  alignItems: true,
+  breaks: 'always',
+})
+/**
+ * A `cond` or `match` clause -- `[guard consequent]`. Rule 5 puts the two on
+ * separate lines, which strict formatting does however short they are, so the
+ * split is marked here rather than looked up: the style table is keyed by
+ * keyword and a clause has none.
+ *
+ * A `let` binding is written the same way but is *not* one. Rule 4 draws each
+ * `[name exp]` whole, on its own line; it is the binding *list* that stacks,
+ * which is {@link bindingList}.
+ */
+const clause = (children: Layout[]): Layout => ({
+  kind: 'group',
+  delim: 'bracket',
+  children,
+  breaks: 'strict',
+})
 const hash = (child: Layout): Layout => ({ kind: 'hash', child })
+/** A key and its value, which a breaking map literal keeps on one line. */
+const unit = (children: Layout[]): Layout => ({ kind: 'unit', children })
+
+/**
+ * `l` carrying `node`'s source comments, or `l` itself when it has none --
+ * which is every node unless a caller asked for them (see comments.ts).
+ */
+function withComments<T extends Layout>(node: Node, l: T): T {
+  if (
+    node.leading === undefined &&
+    node.trailing === undefined &&
+    node.dangling === undefined
+  ) {
+    return l
+  }
+  const lines = (cs: Comment[] | undefined): string[] | undefined =>
+    cs === undefined || cs.length === 0 ? undefined : cs.map((c) => c.line)
+  return {
+    ...l,
+    leading: lines(node.leading),
+    trailing: lines(node.trailing),
+    dangling: lines(node.dangling),
+  }
+}
 
 export function patToLayout(pat: Pat): Layout {
+  return withComments(pat, patLayout(pat))
+}
+
+function patLayout(pat: Pat): Layout {
   switch (pat.tag) {
     case 'pwild':
       return tok('_')
@@ -655,13 +767,20 @@ export function patToLayout(pat: Pat): Layout {
     case 'plit':
       return val(pat.value)
     case 'pctor':
-      return parens([tok(pat.name.name), ...pat.args.map(patToLayout)])
+      return parens([
+        withComments(pat.name, tok(pat.name.name)),
+        ...pat.args.map(patToLayout),
+      ])
     case 'pvec':
       return brackets(pat.args.map(patToLayout))
   }
 }
 
 export function expToLayout(e: Exp): Layout {
+  return withComments(e, expLayout(e))
+}
+
+function expLayout(e: Exp): Layout {
   switch (e.tag) {
     case 'lit':
       return val(e.value)
@@ -670,14 +789,15 @@ export function expToLayout(e: Exp): Layout {
     case 'app':
       return parens([expToLayout(e.head), ...e.args.map(expToLayout)])
     case 'lam': {
-      const params = e.params.map((p) => tok(p.name))
-      if (e.restParam) params.push(tok('&'), tok(e.restParam.name))
-      return parens([kw('lambda'), parens(params), expToLayout(e.body)])
+      const params = e.params.map((p) => withComments(p, tok(p.name)))
+      if (e.restParam) {
+        params.push(tok('&'), withComments(e.restParam, tok(e.restParam.name)))
+      }
+      return special('lambda', [itemList(params), expToLayout(e.body)])
     }
     case 'let':
-      return parens([
-        kw('let'),
-        parens(
+      return special('let', [
+        bindingList(
           e.bindings.map(({ pat, value }) =>
             brackets([patToLayout(pat), expToLayout(value)]),
           ),
@@ -685,33 +805,31 @@ export function expToLayout(e: Exp): Layout {
         expToLayout(e.body),
       ])
     case 'begin':
-      return parens([kw('begin'), ...e.exps.map(expToLayout)])
+      return special('begin', e.exps.map(expToLayout))
     case 'if':
-      return parens([
-        kw('if'),
+      return special('if', [
         expToLayout(e.guard),
         expToLayout(e.ifB),
         expToLayout(e.elseB),
       ])
     case 'match':
-      return parens([
-        kw('match'),
+      return special('match', [
         expToLayout(e.scrutinee),
         ...e.branches.map(({ pat, body }) =>
-          brackets([patToLayout(pat), expToLayout(body)]),
+          clause([patToLayout(pat), expToLayout(body)]),
         ),
       ])
     case 'and':
-      return parens([kw('and'), ...e.exps.map(expToLayout)])
+      return special('and', e.exps.map(expToLayout))
     case 'or':
-      return parens([kw('or'), ...e.exps.map(expToLayout)])
+      return special('or', e.exps.map(expToLayout))
     case 'cond':
-      return parens([
-        kw('cond'),
-        ...e.branches.map(({ test, body }) =>
-          brackets([expToLayout(test), expToLayout(body)]),
+      return special(
+        'cond',
+        e.branches.map(({ test, body }) =>
+          clause([expToLayout(test), expToLayout(body)]),
         ),
-      ])
+      )
     case 'anonfn':
       // #(body): "#" then the body's own parenthesized layout. An empty #()
       // (whose body parsed to the `null` literal) is rendered literally.
@@ -721,82 +839,114 @@ export function expToLayout(e: Exp): Layout {
     case 'vec':
       return brackets(e.exps.map(expToLayout))
     case 'obj':
-      // {k1 v1 ... kn vn}: the pairs are flattened back out, exactly as written.
+      // {k1 v1 ... kn vn}: each pair is one unit, so a map that has to break
+      // does so between pairs and never between a key and its value.
       return braces(
-        e.pairs.flatMap(({ key, value }) => [
-          expToLayout(key),
-          expToLayout(value),
-        ]),
+        e.pairs.map(({ key, value }) =>
+          unit([expToLayout(key), expToLayout(value)]),
+        ),
       )
   }
 }
 
 export function stmtToLayout(s: Stmt): Layout {
+  return withComments(s, stmtLayout(s))
+}
+
+function stmtLayout(s: Stmt): Layout {
   switch (s.tag) {
     case 'import':
-      return parens([
-        kw('import'),
+      return special('import', [
         tok(s.kind === 'file' ? JSON.stringify(s.module) : s.module),
         ...(s.alias !== undefined ? [tok(s.alias)] : []),
       ])
     case 'define':
-      return parens([kw('define'), tok(s.name.name), expToLayout(s.value)])
+      return special('define', [
+        withComments(s.name, tok(s.name.name)),
+        expToLayout(s.value),
+      ])
     case 'export':
-      return parens([kw('export'), ...s.names.map((n) => tok(n.name))])
+      return special(
+        'export',
+        s.names.map((n) => withComments(n, tok(n.name))),
+      )
     case 'defexport':
-      return parens([
-        kw('define-export'),
-        tok(s.name.name),
+      return special('define-export', [
+        withComments(s.name, tok(s.name.name)),
         expToLayout(s.value),
       ])
     case 'display':
-      return parens([kw('display'), expToLayout(s.value)])
+      return special('display', [expToLayout(s.value)])
     case 'stmtexp':
       return expToLayout(s.expr)
     case 'struct':
-      return parens([
-        kw('struct'),
-        tok(s.name.name),
-        parens(s.fields.map((f) => tok(f.name))),
+      return special('struct', [
+        withComments(s.name, tok(s.name.name)),
+        itemList(s.fields.map((f) => withComments(f, tok(f.name)))),
       ])
   }
 }
 
 ///// Stringifying Functions ///////////////////////////////////////////////////
 
-const DELIMS = {
-  paren: ['(', ')'],
-  bracket: ['[', ']'],
-  brace: ['{', '}'],
-} as const
-
-/** Render a {@link Layout} to text: the text backend of the surface syntax. */
-export function layoutToString(l: Layout): string {
-  switch (l.kind) {
-    case 'tok':
-      return l.text
-    case 'val':
-      return TextRenderer.render(l.value)
-    case 'group': {
-      const [open, close] = DELIMS[l.delim]
-      return `${open}${l.children.map(layoutToString).join(' ')}${close}`
-    }
-    case 'hash':
-      return `#${layoutToString(l.child)}`
-  }
+/**
+ * Render a {@link Layout} to text, breaking lines past `width` columns: the
+ * text backend of the surface syntax. LayoutRenderer.vue is the web backend and
+ * works from the same plan, so the two cannot drift apart.
+ */
+export function layoutToString(
+  l: Layout,
+  width = PRINT_WIDTH,
+  mode: FormatMode = DEFAULT_FORMAT_MODE,
+  col = 0,
+): string {
+  return renderToString(l, width, mode, col)
 }
 
-export const patToString = (pat: Pat): string => layoutToString(patToLayout(pat))
-export const expToString = (e: Exp): string => layoutToString(expToLayout(e))
-export const stmtToString = (s: Stmt): string => layoutToString(stmtToLayout(s))
+/**
+ * Render a {@link Layout} to a single line, however long: no width breaking and
+ * no rule-mandated breaking either. Used wherever line breaks would be noise --
+ * comparing two layouts, and embedding a form in a one-line message.
+ */
+export function layoutToFlatString(l: Layout): string {
+  return renderToString(l, Infinity, 'flat')
+}
+
+/**
+ * The canonical one-line text of a form.
+ *
+ * Deliberately flat rather than laid out: these feed error messages, the
+ * trace's dedup key, and the width measurement inside the printer itself --
+ * none of which wants a newline, and the last of which would recur if it got
+ * one. What the panes draw is {@link layoutToString} over the same layout.
+ */
+export const patToString = (pat: Pat): string =>
+  layoutToFlatString(patToLayout(pat))
+export const expToString = (e: Exp): string => layoutToFlatString(expToLayout(e))
+export const stmtToString = (s: Stmt): string =>
+  layoutToFlatString(stmtToLayout(s))
 
 export function progToString(p: Prog): string {
   return p.map(stmtToString).join('\n')
 }
 
-TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
-TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
-TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
+// Displaying a form -- a trace step on the console, say -- lays it out by the
+// same rules as the panes, so the console and the IDE break a form alike.
+//
+// `col` is what makes that work where something has already been written on the
+// line: the trace writes each step behind a "--> " marker and passes its width,
+// so continuation lines sit under the form rather than under the margin, and
+// eighty columns still means the finished line. Deliberately not the *ToString
+// helpers above -- those answer a different question and never break.
+TextRenderer.registerCustomRenderer(isPat, (v, col) =>
+  layoutToString(patToLayout(v as Pat), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
+TextRenderer.registerCustomRenderer(isExp, (v, col) =>
+  layoutToString(expToLayout(v as Exp), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
+TextRenderer.registerCustomRenderer(isStmt, (v, col) =>
+  layoutToString(stmtToLayout(v as Stmt), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 

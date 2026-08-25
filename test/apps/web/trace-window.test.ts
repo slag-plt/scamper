@@ -11,6 +11,8 @@ import * as Scheme from '../../../src/scheme'
 // reaches the layout renderer that does the highlighting.
 import '../../../src/app/web/renderers'
 import { mkTraceOutput } from '../../../src/lpm/trace'
+import TextRenderer from '../../../src/lpm/renderers/text'
+import TraceOutputRenderer from '../../../src/lpm/trace/renderers/TraceOutputRenderer.vue'
 import type { Exp } from '../../../src/scheme/ast'
 import type { Value } from '../../../src/lpm'
 
@@ -29,6 +31,27 @@ function expressionIn(src: string): Exp {
 function steps(n: number): number[] {
   return Array.from({ length: n }, (_, i) => i)
 }
+
+describe('the reduction marker', () => {
+  // The web trace is paginated, so a step is already presented on its own and
+  // the "-->" says nothing the view does not. The console trace has only
+  // consecutive lines, so it keeps the marker. Two renderers, one value.
+  const step = mkTraceOutput(42 as unknown as Value)
+
+  test('the web renderer draws no arrow', () => {
+    const wrapper = mount(TraceOutputRenderer, { props: { value: step } })
+    try {
+      expect(wrapper.text()).not.toContain('-->')
+      expect(wrapper.text()).toContain('42')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('the console renderer still does', () => {
+    expect(TextRenderer.render(step)).toBe('--> 42')
+  })
+})
 
 describe('TraceWindow', () => {
   afterEach(() => {

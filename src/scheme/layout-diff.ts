@@ -1,4 +1,4 @@
-import { Layout, layoutToString } from './ast'
+import { Layout, layoutToFlatString } from './ast'
 
 /**
  * Locating the one sub-expression that changed between two steps of a trace.
@@ -18,6 +18,7 @@ import { Layout, layoutToString } from './ast'
 function childrenOf(l: Layout): Layout[] | null {
   switch (l.kind) {
     case 'group':
+    case 'unit':
       return l.children
     case 'hash':
       return [l.child]
@@ -28,7 +29,7 @@ function childrenOf(l: Layout): Layout[] | null {
 
 /** Whether two layouts draw the same thing. */
 function same(a: Layout, b: Layout): boolean {
-  return layoutToString(a) === layoutToString(b)
+  return layoutToFlatString(a) === layoutToFlatString(b)
 }
 
 /**

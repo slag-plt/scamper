@@ -4,6 +4,7 @@ import { useOutputPane } from '../composables/use-output-pane'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 import SourceCaption from './SourceCaption.vue'
 import { showSourceWithOutput } from '../output-prefs'
+import { formatMode } from '../editor-prefs'
 
 const scrollEl = ref<HTMLDivElement | null>(null)
 const { reset, blocks, virtualizer, display, scrollToBottom } =
@@ -17,8 +18,11 @@ const { reset, blocks, virtualizer, display, scrollToBottom } =
 // `flush: 'post'` is the whole trick: a default (pre) watcher runs before the
 // DOM updates, so the re-measure would read the heights the rows still have
 // rather than the ones they are about to get, and cache the zeros right back.
+// Relaxed formatting does the same thing by a different route: it re-plans
+// every layout in the pane, so a cond clause that drew on one line now draws on
+// two. Same stale-measurement problem, same fix.
 watch(
-  showSourceWithOutput,
+  [showSourceWithOutput, formatMode],
   () => {
     virtualizer.value.measure()
   },

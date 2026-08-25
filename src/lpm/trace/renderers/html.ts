@@ -24,11 +24,7 @@ HTMLRenderer.registerCustomRenderer(
     const trace = v as TraceOutput
     const container = document.createElement('div')
     container.classList.add('scamper-trace')
-
-    const prompt = document.createElement('code')
-    prompt.textContent = '--> '
-    container.appendChild(prompt)
-
+    // No "--> " marker here either -- see TraceOutputRenderer.vue.
     container.appendChild(HTMLRenderer.render(trace.output))
     return container
   },

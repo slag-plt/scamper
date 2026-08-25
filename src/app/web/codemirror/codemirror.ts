@@ -29,7 +29,8 @@ import {
   defaultKeymap,
   history,
   historyKeymap,
-  indentWithTab,
+  indentLess,
+  indentSelection,
 } from '@codemirror/commands'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
@@ -41,7 +42,8 @@ import {
 import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { unifiedMergeView } from '@codemirror/merge'
 import { ScamperSupport } from './extensions/language'
-import { PrettierExtension } from './extensions/prettier'
+import { IndentationExtension } from './extensions/indentation'
+import { ReformatExtension } from './extensions/reformat'
 import { QueryExtension } from './extensions/query'
 import { scamperLspExtensions } from './lsp'
 import {
@@ -202,10 +204,15 @@ function mkExtensions(config: EditorStateConfig): Extension {
     ]),
     // Scamper-specific extensions,
     EditorState.readOnly.of(config.isReadOnly),
-    PrettierExtension,
+    ReformatExtension,
+    // Ctrl-I re-indents the whole document.
+    IndentationExtension,
     // TODO: probably extend this out into a separate extension file
     keymap.of([
-      indentWithTab,
+      // Tab re-indents the selected lines rather than adding an indent unit,
+      // matching DrRacket. Shift-Tab still outdents, for the rare line the
+      // indenter cannot place.
+      { key: 'Tab', run: indentSelection, shift: indentLess },
       {
         key: "'",
         run: (view) => {

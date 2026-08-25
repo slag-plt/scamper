@@ -16,7 +16,7 @@ import {
   mkFreshEditorState,
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
-import { formatScamperDocument } from '../codemirror/extensions/prettier'
+import { formatScamperDocument } from '../codemirror/extensions/reformat'
 import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
 import { identifierAt } from '../../../scheme/token'

@@ -2,7 +2,8 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, test } from 'vitest'
 import {
   Exp,
-  expToString,
+  expToLayout,
+  layoutToString,
   mkApp,
   mkCond,
   mkId,
@@ -18,17 +19,38 @@ import ExpRenderer from '../../src/scheme/ast-components/ExpRenderer.vue'
 import '../../src/scheme/renderers/vue.js'
 
 // Regression for #318 and the follow-on renderer unification: the web trace and
-// the canonical text form (expToString) must render every surface form
-// identically. Both now derive from a single Layout (src/scheme/ast.ts) -- text
-// via layoutToString, web via LayoutRenderer -- so parity holds by construction
-// rather than by hand-syncing two components. (#318 originally: a `let` rendered
-// via the old HljsBindingForm dropped its binding-list parens and doubled the
-// space after `let`, e.g. `(let  [next (- 5 1)] body)`.) These tests pin that
-// the web rendering's text equals expToString for the forms with sub-structure.
+// the text form must render every surface form identically. Both derive from a
+// single Layout (src/scheme/ast.ts) and lay it out from a single plan
+// (src/scheme/pretty.ts) -- text via layoutToString, web via LayoutRenderer --
+// so parity holds by construction rather than by hand-syncing two components.
+// (#318 originally: a `let` rendered via the old HljsBindingForm dropped its
+// binding-list parens and doubled the space after `let`, e.g.
+// `(let  [next (- 5 1)] body)`.)
+//
+// The comparison is against `layoutToString`, not `expToString`: the latter is
+// deliberately flat, being what goes into an error message (see ast.ts).
 
-/** The exact text the web renderer paints for expression `e`. */
+/** What the text backend draws for `e`, at the default format mode. */
+function laidOut(e: Exp): string {
+  return layoutToString(expToLayout(e))
+}
+
+/**
+ * `node`'s text, counting a `<br>` as the line break it draws.
+ *
+ * `textContent` alone would not do: the web backend draws a break as a `<br>`,
+ * which contributes no text of its own, so every break would silently vanish
+ * and the comparison would pass on output that does not match.
+ */
+function textOf(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
+  if (node instanceof HTMLBRElement) return '\n'
+  return Array.from(node.childNodes).map(textOf).join('')
+}
+
+/** The exact text the web renderer paints for `e`. */
 function renderedText(e: Exp): string {
-  return mount(ExpRenderer, { props: { value: e } }).element.textContent ?? ''
+  return textOf(mount(ExpRenderer, { props: { value: e } }).element as Node)
 }
 
 describe('binding forms render (web) identically to their text form (#318)', () => {
@@ -38,8 +60,10 @@ describe('binding forms render (web) identically to their text form (#318)', () 
       [{ pat: mkId('next'), value: mkApp(mkId('-'), [mkLit(5), mkLit(1)]) }],
       mkApp(mkId('*'), [mkLit(5), mkApp(mkId('factorial'), [mkId('next')])]),
     )
-    expect(renderedText(e)).toBe(expToString(e))
-    expect(renderedText(e)).toBe('(let ([next (- 5 1)]) (* 5 (factorial next)))')
+    expect(renderedText(e)).toBe(laidOut(e))
+    expect(renderedText(e)).toBe(
+      '(let ([next (- 5 1)])\n  (* 5 (factorial next)))',
+    )
   })
 
   test('let with multiple bindings keeps them inside one paren group', () => {
@@ -50,8 +74,8 @@ describe('binding forms render (web) identically to their text form (#318)', () 
       ],
       mkApp(mkId('+'), [mkId('x'), mkId('y')]),
     )
-    expect(renderedText(e)).toBe(expToString(e))
-    expect(renderedText(e)).toBe('(let ([x 2] [y 3]) (+ x y))')
+    expect(renderedText(e)).toBe(laidOut(e))
+    expect(renderedText(e)).toBe('(let ([x 2]\n      [y 3])\n  (+ x y))')
   })
 
   test('match still renders identically to its text form', () => {
@@ -59,7 +83,7 @@ describe('binding forms render (web) identically to their text form (#318)', () 
       { pat: mkPLit(0), body: mkLit(1) },
       { pat: mkId('k'), body: mkApp(mkId('*'), [mkId('k'), mkId('k')]) },
     ])
-    expect(renderedText(e)).toBe(expToString(e))
+    expect(renderedText(e)).toBe(laidOut(e))
   })
 
   test('cond still renders identically to its text form', () => {
@@ -67,14 +91,14 @@ describe('binding forms render (web) identically to their text form (#318)', () 
       { test: mkApp(mkId('<'), [mkId('x'), mkLit(0)]), body: mkLit(-1) },
       { test: mkLit(true), body: mkLit(1) },
     ])
-    expect(renderedText(e)).toBe(expToString(e))
+    expect(renderedText(e)).toBe(laidOut(e))
   })
 
   test('lambda parenthesizes its parameter list (web matches text)', () => {
     // The old web renderer dropped the param parens, e.g. `(lambda x y ...)`.
     const e = mkLam([mkId('x'), mkId('y')], mkApp(mkId('+'), [mkId('x'), mkId('y')]))
-    expect(renderedText(e)).toBe(expToString(e))
-    expect(renderedText(e)).toBe('(lambda (x y) (+ x y))')
+    expect(renderedText(e)).toBe(laidOut(e))
+    expect(renderedText(e)).toBe('(lambda (x y)\n  (+ x y))')
   })
 
   test('null renders as null, not () (web matches text)', () => {
@@ -82,7 +106,7 @@ describe('binding forms render (web) identically to their text form (#318)', () 
     // same token the text renderer uses -- not `()`, which the web value
     // renderer used to emit.
     const e = mkLit(null)
-    expect(renderedText(e)).toBe(expToString(e))
+    expect(renderedText(e)).toBe(laidOut(e))
     expect(renderedText(e)).toBe('null')
   })
 })
@@ -100,7 +124,7 @@ describe('syntax highlighting is emitted directly on the AST HTML', () => {
     const el = mountExp(e)
     expect(el.querySelector('.scamper-hl-keyword')?.textContent).toBe('let')
     // Classes only -- the text is untouched.
-    expect(el.textContent).toBe(expToString(e))
+    expect(renderedText(e)).toBe(laidOut(e))
   })
 
   test('numeric literals get the number class', () => {
