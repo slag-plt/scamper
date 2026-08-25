@@ -77,7 +77,7 @@ describe('consecutive runs replace results pane', () => {
       })
       await flushPromises()
 
-      const run = getByRole(document.body, 'button', { name: 'Run' })
+      const run = getByRole(document.body, 'button', { name: 'Autorun' })
       fireEvent.click(run)
       await sleep(QUANTUM_WAIT_MS)
       await flushPromises()

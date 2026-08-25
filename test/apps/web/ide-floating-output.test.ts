@@ -11,6 +11,7 @@ import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
 import { initialize } from '../../../src/scamper'
 import { VERSION } from '../../../src/app/web/composables/use-panels'
+import { DEFAULT_IDLE_MS } from '../../../src/app/web/composables/use-live-evaluation'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -149,7 +150,7 @@ describe('IDE floating output window', () => {
       await flushPromises()
       expect(outputWindow()?.style.display).toBe('none')
 
-      getByRole(document.body, 'button', { name: 'Run' }).click()
+      getByRole(document.body, 'button', { name: 'Autorun' }).click()
       await flushPromises()
 
       expect(outputWindow()?.style.display).not.toBe('none')
@@ -226,6 +227,33 @@ describe('IDE floating output window', () => {
       }
     })
 
+    test('a run started by typing leaves the person on the code', async () => {
+      const wrapper = await mountIde()
+      try {
+        getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
+        await flushPromises()
+
+        vi.useFakeTimers()
+        const area = getByRole(document.body, 'textbox', {
+          name: 'Source code',
+        }) as HTMLTextAreaElement
+        area.value = '(+ 1 2)'
+        area.dispatchEvent(new Event('input'))
+        await flushPromises()
+        await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS)
+        await flushPromises()
+
+        // The output pane fills behind the tab; being taken to it mid-keystroke
+        // would put the person somewhere they did not ask to be.
+        expect(
+          getByRole(document.body, 'tab', { name: 'Source' }),
+        ).toHaveAttribute('aria-selected', 'true')
+      } finally {
+        vi.useRealTimers()
+        wrapper.unmount()
+      }
+    })
+
     test('running switches to the output tab', async () => {
       const wrapper = await mountIde()
       try {
@@ -235,7 +263,7 @@ describe('IDE floating output window', () => {
           getByRole(document.body, 'tab', { name: 'Source' }),
         ).toHaveAttribute('aria-selected', 'true')
 
-        getByRole(document.body, 'button', { name: 'Run' }).click()
+        getByRole(document.body, 'button', { name: 'Autorun' }).click()
         await flushPromises()
 
         expect(

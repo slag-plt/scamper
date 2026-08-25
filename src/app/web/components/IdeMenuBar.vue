@@ -12,6 +12,7 @@ import {
   toggleShowSourceWithOutput,
 } from '../output-prefs'
 import { showHiddenFiles, toggleShowHiddenFiles } from '../file-prefs'
+import { liveEvaluation, toggleLiveEvaluation } from '../run-prefs'
 import {
   DEFAULT_FONT_SIZE,
   MAX_FONT_SIZE,
@@ -239,6 +240,14 @@ const runMenu = computed<MenuItem[]>(() => [
       session.stopRun()
       return session.execute()
     },
+  },
+  { separator: true },
+  // A toggle rather than a command, and it belongs here rather than in View:
+  // it decides *when* the program runs, not how anything is displayed.
+  {
+    label: 'Live Evaluation',
+    checked: liveEvaluation.value,
+    run: () => { toggleLiveEvaluation() },
   },
   { separator: true },
   // Stepping is per-statement now, in its own window; the old whole-program

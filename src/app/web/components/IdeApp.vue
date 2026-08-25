@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
@@ -22,14 +30,20 @@ import type { CursorStatus } from '../codemirror/enclosing-form'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
+import {
+  useLiveEvaluation,
+  type LiveStatus,
+} from '../composables/use-live-evaluation'
+import { liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
-import type { Value } from '../../../lpm'
+import { ScamperError, type Value } from '../../../lpm'
 import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
 import { FileEntry, isHiddenName, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
+import { appShortcut } from '../edit-commands'
 import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
@@ -162,6 +176,85 @@ const session = provideScamperSession(resultsRef, {
 })
 const { queries, expandedQueryId } = session
 
+// ---------- live evaluation (#378) ----------
+
+/**
+ * True while a run that live evaluation started is being scheduled (#378).
+ *
+ * A run nobody asked for fills the output pane without bringing it forward: on
+ * the tabbed layout that would take the person off the code they are in the
+ * middle of writing, and a window they minimized should stay minimized. A run
+ * they *did* ask for still reveals it, which is the watcher further down.
+ */
+let isLiveRunStarting = false
+
+const live = useLiveEvaluation({
+  run: async () => {
+    isLiveRunStarting = true
+    try {
+      await session.execute()
+      // Held until the reveal watcher has seen this run, since that is what
+      // the flag is there to tell it.
+      await nextTick()
+    } finally {
+      isLiveRunStarting = false
+    }
+  },
+  stopRun: () => { session.stopRun() },
+  currentRunId: () => session.currentRun.value,
+  // A run of its own would tear down the one the trace is collecting, and
+  // there is nothing to run before a file is open or while one is loading.
+  canRun: () =>
+    currentFile.value !== null &&
+    !isLoadingFile &&
+    !isCollectingTrace.value &&
+    isEditorLoaded(),
+  reportTimeout: (limitMs) => {
+    resultsRef.value?.display?.report(
+      new ScamperError(
+        'Runtime',
+        `This program was still running after ${(limitMs / 1000).toString()} seconds, so live evaluation stopped it. ` +
+          `Press ${appShortcut.run} to run it without a time limit.`,
+      ),
+    )
+  },
+})
+
+// Turning it on should show something rather than waiting for the next
+// keystroke, so the file runs at once; turning it off drops a run the last
+// keystroke had scheduled. `runNow` refuses by itself where a run cannot
+// happen, so there is nothing to check here.
+watch(liveEvaluation, (on) => {
+  if (on) {
+    void live.runNow()
+  } else {
+    live.cancel()
+  }
+})
+
+// An edit made while a trace was being collected found the gate shut, and
+// nothing schedules a run twice: the trace finishing is the moment that edit
+// can have the run it never got. Treated as an edit landing now rather than run
+// outright, so it still coalesces with typing that is still going on.
+watch(isCollectingTrace, (collecting) => {
+  if (!collecting && isDirty.value) live.noteEdit()
+})
+
+/**
+ * What the header's Run control shows about live evaluation.
+ *
+ * "Running" is the live run's id still being the run in flight, rather than
+ * anything the composable is told: a live run that ends on its own tells it
+ * nothing, and a *manual* run started in between must not be animated as a
+ * live one.
+ */
+const liveStatus = computed<LiveStatus>(() => {
+  if (!liveEvaluation.value) return 'off'
+  const liveRun = live.liveRunId.value
+  if (liveRun !== null && session.currentRun.value === liveRun) return 'running'
+  return live.pending.value ? 'pending' : 'idle'
+})
+
 /** What each panel is called, wherever it needs a name. */
 const panelLabels: Record<PanelId, string> = {
   editor: 'Source',
@@ -208,10 +301,12 @@ const panelPlacement = computed(() =>
 // starting a run brings the window back. One verb for both layouts: floating,
 // it un-minimizes and raises; tabbed, fronting the panel *is* selecting its
 // tab. This used to have to branch on isCompact.
+//
+// A live run is the exception -- see `isLiveRunStarting`.
 watch(
   () => session.currentRun.value,
   (run) => {
-    if (run !== null) panels.reveal('output')
+    if (run !== null && !isLiveRunStarting) panels.reveal('output')
   },
 )
 
@@ -556,6 +651,7 @@ function stopAutosaving() {
 function makeDirty() {
   isDirty.value = true
   session.invalidateAllQueries()
+  live.noteEdit()
 }
 
 function handleCursorChange(status: CursorStatus) {
@@ -589,6 +685,8 @@ async function switchToFile(filename: string): Promise<void> {
   isLoadingFile = true
   stopAutosaving()
   session.stopAll()
+  // A run scheduled by the last keystroke is about the file being left.
+  live.cancel()
 
   try {
     // Forces a save of the outgoing file before loading the new one so a quick
@@ -607,6 +705,10 @@ async function switchToFile(filename: string): Promise<void> {
   await populateFileDrawer()
   startAutosaving()
   isLoadingFile = false
+  // With live evaluation on, the file that has just been opened shows its
+  // output at once rather than an empty pane waiting for a keystroke. Last of
+  // all, because this checks `canRun`, which refuses while a file is loading.
+  await live.runNow()
 }
 
 /**
@@ -898,6 +1000,7 @@ function closeOpenFile() {
   config.lastOpenedFilename = null
   saveConfig()
   session.stopAll()
+  live.cancel()
   session.resetOutput()
   isDirty.value = false
 }
@@ -1478,6 +1581,7 @@ onUnmounted(() => {
       <IdeHeader
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
+        :live-status="liveStatus"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />
