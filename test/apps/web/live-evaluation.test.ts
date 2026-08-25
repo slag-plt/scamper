@@ -161,6 +161,37 @@ describe('live evaluation', () => {
     expect(state.runs).toBe(1)
   })
 
+  test('runNow() stands down if cancel() lands while it is starting', async () => {
+    const { state, hooks } = mockHooks()
+    // A run the test holds open, so cancel() can land mid-flight.
+    let finishStarting = () => undefined as void
+    const live = useLiveEvaluation({
+      ...hooks,
+      run: () =>
+        new Promise<void>((resolve) => {
+          finishStarting = () => {
+            state.runs += 1
+            state.runId = `run-${state.runs.toString()}`
+            resolve()
+          }
+        }),
+    })
+
+    const starting = live.runNow()
+    live.cancel() // the file was switched away in the meantime
+    finishStarting()
+    await starting
+
+    // The run went ahead, but it is no longer live evaluation's to watch:
+    // claiming it would undo the cancel, and the watchdog would later stop it
+    // and blame live evaluation for it.
+    expect(state.runs).toBe(1)
+    expect(live.liveRunId.value).toBe(null)
+    await vi.advanceTimersByTimeAsync(DEFAULT_RUN_LIMIT_MS * 2)
+    expect(state.stops).toBe(0)
+    expect(state.timeouts).toEqual([])
+  })
+
   test('runNow() respects the preference and the gate', async () => {
     const { state, hooks } = mockHooks()
     const live = useLiveEvaluation(hooks)

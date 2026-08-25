@@ -79,6 +79,12 @@ export function useLiveEvaluation(
   let idleId: ReturnType<typeof setTimeout> | null = null
   let watchdogId: ReturnType<typeof setTimeout> | null = null
 
+  /**
+   * Bumped by {@link cancel}, so a run caught in the middle of starting can
+   * tell that it is no longer live evaluation's to watch.
+   */
+  let generation = 0
+
   /** True while a run is scheduled and has not started yet. */
   const pending: Ref<boolean> = ref(false)
 
@@ -136,7 +142,12 @@ export function useLiveEvaluation(
     // Re-checked here, not just when scheduling: the delay is long enough for
     // the file to have been closed, or a step to have started, in between.
     if (!liveEvaluation.value || !hooks.canRun()) return
+    const started = generation
     await hooks.run()
+    // Cancelled while the run was being scheduled -- the file was switched, or
+    // the feature turned off. Claiming it now would undo that, and the
+    // watchdog would later stop it in live evaluation's name.
+    if (started !== generation) return
     const id = hooks.currentRunId()
     liveRunId.value = id
     // Nothing to watch: the program did not compile, or it finished as it was
@@ -167,6 +178,7 @@ export function useLiveEvaluation(
    * scheduled run is about the document that is going away.
    */
   function cancel(): void {
+    generation += 1
     clearIdle()
     clearWatchdog()
     // The run it named is no longer live evaluation's to manage, whether or

@@ -178,8 +178,28 @@ const { queries, expandedQueryId } = session
 
 // ---------- live evaluation (#378) ----------
 
+/**
+ * True while a run that live evaluation started is being scheduled (#378).
+ *
+ * A run nobody asked for fills the output pane without bringing it forward: on
+ * the tabbed layout that would take the person off the code they are in the
+ * middle of writing, and a window they minimized should stay minimized. A run
+ * they *did* ask for still reveals it, which is the watcher further down.
+ */
+let isLiveRunStarting = false
+
 const live = useLiveEvaluation({
-  run: () => session.execute(),
+  run: async () => {
+    isLiveRunStarting = true
+    try {
+      await session.execute()
+      // Held until the reveal watcher has seen this run, since that is what
+      // the flag is there to tell it.
+      await nextTick()
+    } finally {
+      isLiveRunStarting = false
+    }
+  },
   stopRun: () => { session.stopRun() },
   currentRunId: () => session.currentRun.value,
   // A run of its own would tear down the one the trace is collecting, and
@@ -201,11 +221,12 @@ const live = useLiveEvaluation({
 })
 
 // Turning it on should show something rather than waiting for the next
-// keystroke, so a file whose output is already out of date runs at once;
-// turning it off drops a run the last keystroke had scheduled.
+// keystroke, so the file runs at once; turning it off drops a run the last
+// keystroke had scheduled. `runNow` refuses by itself where a run cannot
+// happen, so there is nothing to check here.
 watch(liveEvaluation, (on) => {
   if (on) {
-    if (isDirty.value) live.noteEdit()
+    void live.runNow()
   } else {
     live.cancel()
   }
@@ -268,23 +289,16 @@ const panelPlacement = computed(() =>
       })),
 )
 
-/**
- * True while the run that opening a file starts is under way (#378).
- *
- * That run is there to fill the output pane, not to be looked at: bringing the
- * pane forward would put the person on the Output tab instead of the file they
- * just asked for.
- */
-let isOpeningFileRun = false
-
 // Running with the output tucked away would show the person nothing at all, so
 // starting a run brings the window back. One verb for both layouts: floating,
 // it un-minimizes and raises; tabbed, fronting the panel *is* selecting its
 // tab. This used to have to branch on isCompact.
+//
+// A live run is the exception -- see `isLiveRunStarting`.
 watch(
   () => session.currentRun.value,
   (run) => {
-    if (run !== null && !isOpeningFileRun) panels.reveal('output')
+    if (run !== null && !isLiveRunStarting) panels.reveal('output')
   },
 )
 
@@ -686,15 +700,7 @@ async function switchToFile(filename: string): Promise<void> {
   // With live evaluation on, the file that has just been opened shows its
   // output at once rather than an empty pane waiting for a keystroke. Last of
   // all, because this checks `canRun`, which refuses while a file is loading.
-  isOpeningFileRun = true
-  try {
-    await live.runNow()
-    // Held until the watcher above has seen this run, since it is what the
-    // flag is there to tell.
-    await nextTick()
-  } finally {
-    isOpeningFileRun = false
-  }
+  await live.runNow()
 }
 
 /**

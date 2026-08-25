@@ -56,22 +56,20 @@ const isLive = computed(() => props.liveStatus !== 'off')
 const runLabel = computed(() => (isLive.value ? 'Autorun' : 'Run'))
 
 /**
- * True while a live run is coming or in flight, i.e. what animates.
+ * True when the run in flight is live evaluation's own.
  *
- * A *manual* run is deliberately not included: it swaps the left half for a
- * Stop button, which is indication enough, and animating it would say that
- * Scamper had started something the user did not.
+ * Only `running` counts. `pending` says a run is *coming*, which an edit sets
+ * even while a manual run is still going -- and that run keeps its Stop button
+ * and its spinner, since the user started it and is owed a way to stop it.
  */
-const isLiveWorking = computed(
-  () => props.liveStatus === 'pending' || props.liveStatus === 'running',
-)
+const isLiveRunInFlight = computed(() => props.liveStatus === 'running')
 
 /**
  * True while the IDE is working on something the student asked for: a manual
  * run or a step. A live run is excluded -- the control animates for that.
  */
 const isBusy = computed(
-  () => (isRunInProgress.value && !isLiveWorking.value) || props.isStepping === true,
+  () => (isRunInProgress.value && !isLiveRunInFlight.value) || props.isStepping === true,
 )
 
 /** What the control is doing, for the tooltip over the whole of it. */
@@ -146,7 +144,7 @@ function searchOpenWindow(searchTerm: string) {
         <!-- One half swaps between Run and Stop; the pill around it does not,
              so the toolbar keeps its shape while a program runs. -->
         <button
-          v-if="isRunInProgress && !isLiveWorking"
+          v-if="isRunInProgress && !isLiveRunInFlight"
           type="button"
           class="icon-button run-main"
           aria-label="Stop"

@@ -212,6 +212,25 @@ describe('IDE run control', () => {
     }
   })
 
+  test('keeps Stop while the user types during a manual run', async () => {
+    const wrapper = await mountIde()
+    vi.spyOn(Scamper.getInstance(), 'execute').mockImplementation(() =>
+      Promise.resolve(neverEndingRun('manual-run')),
+    )
+    try {
+      getByRole(document.body, 'button', { name: 'Autorun' }).click()
+      await flushPromises()
+      expect(getByRole(document.body, 'button', { name: 'Stop' })).toBeTruthy()
+
+      // An edit schedules a live run, which is not a reason to take away the
+      // only way to stop the one already going.
+      await type('(+ 1 2)')
+      expect(getByRole(document.body, 'button', { name: 'Stop' })).toBeTruthy()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('its menu can stop a live run, which the Autorun half no longer does', async () => {
     const wrapper = await mountIde()
     const scamper = Scamper.getInstance()
