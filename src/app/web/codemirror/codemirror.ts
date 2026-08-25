@@ -43,7 +43,7 @@ import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { unifiedMergeView } from '@codemirror/merge'
 import { ScamperSupport } from './extensions/language'
 import { IndentationExtension } from './extensions/indentation'
-import { PrettierExtension } from './extensions/prettier'
+import { ReformatExtension } from './extensions/reformat'
 import { QueryExtension } from './extensions/query'
 import { scamperLspExtensions } from './lsp'
 import {
@@ -204,7 +204,7 @@ function mkExtensions(config: EditorStateConfig): Extension {
     ]),
     // Scamper-specific extensions,
     EditorState.readOnly.of(config.isReadOnly),
-    PrettierExtension,
+    ReformatExtension,
     // Ctrl-I re-indents the whole document.
     IndentationExtension,
     // TODO: probably extend this out into a separate extension file

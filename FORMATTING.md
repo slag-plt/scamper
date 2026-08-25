@@ -4,11 +4,11 @@ A scoping document for the DrRacket-style formatting request. It records the
 target style, measures the gap that existed before the work, scopes the two
 candidate implementations, and recommends one.
 
-**Plan B is now implemented** -- all three stages. What shipped is summarised in
-[As built](#as-built); the sections after it are the reasoning that led there,
-kept because the trade-offs still explain why the code is shaped as it is.
-[Open questions](#open-questions) records what is still unanswered, and the
-assumption each is running on.
+**Plan B is now implemented** -- all three stages, in full. What shipped is
+summarised in [As built](#as-built); the sections after it are the reasoning
+that led there, kept because the trade-offs still explain why the code is
+shaped as it is. Four of the five [open questions](#open-questions) have since
+been answered; the last records the assumption it runs on.
 
 ## As built
 
@@ -17,18 +17,18 @@ assumption each is running on.
 | **(a)** Enter indents the next line | Per-form Lezer strategies; Enter was already wired to `insertNewlineAndIndent` | `src/app/web/codemirror/extensions/indentation.ts` |
 | **(b)** Ctrl-I re-indents the buffer | `indentRange` over the whole document -- DrRacket semantics, line breaks untouched | same file |
 | **(c)** Output and step panes | A column-aware printer producing a plan both backends render from | `src/scheme/pretty.ts`, `LayoutRenderer.vue` |
+| Reformat (Ctrl-Shift-I) | The same printer, over a program parsed from the buffer | `src/scheme/format.ts` |
 | The rules themselves | One table, read by all three | `src/scheme/style.ts` |
 
 Also in: typing a closing bracket snaps the line into place (`indentOnInput`,
-previously installed but inert); Tab re-indents the selection rather than adding
-an indent unit; and the reformat command on Ctrl-Shift-I now reads the same rule
-table, so it no longer disagrees with Ctrl-I about `if`, `let`, `cond`, or
-applications.
+previously installed but inert), and Tab re-indents the selection rather than
+adding an indent unit.
 
 The anti-drift invariant of §7 is real and enforced:
 `test/apps/web/format-indent-agreement.test.ts` asserts
 `indentRange(format(p)) === format(p)` over seventeen programs, for both the
-printer and the reformat command.
+printer and the reformat command, with no exceptions -- the two now produce
+byte-identical output, which the same test also checks.
 
 Two things worth knowing:
 
@@ -38,14 +38,19 @@ Two things worth knowing:
   They are now `Binding`, `CondClause`, `MatchClause`, `Bindings`, `ArgList` and
   `FieldList`. The accepted language is unchanged; `lezer-bridge.ts` descends
   through them instead of relying on positional flattening.
-- **The reformat command has a known limit**, and the invariant test records it
-  rather than hiding it. Prettier tracks indentation as a virtual stack, not an
-  output column, so where a form begins part-way through a line -- the `(f ...)`
-  inside `[(< x 0) (f ...` -- it aligns from the enclosing line's indent instead
-  of the form's real column. Two of the seventeen programs hit this and are held
-  to the weaker property that reformatting is stable. Retiring the Prettier
-  printer in favour of `pretty.ts`, which measures real columns, needs comments
-  modelled in `Layout` first (issue #304); see §9, stage 3.
+- **`Layout` carries comments, and the Prettier printer is gone.** The AST has
+  held leading/trailing/dangling comments since #304; `expToLayout` and its
+  siblings now copy them onto the layout, and `pretty.ts` emits them. A comment
+  forces its enclosing form to break, since a line comment runs to the end of
+  its line; a trailing comment is held back and written just before its line
+  ends, wherever that turns out to be. That removed the last reason to keep
+  `src/prettier/`, and with it the runtime Prettier dependency: the IDE bundle
+  drops from 399.10 kB to 304.83 kB, or 134.47 to 100.11 kB gzipped. Prettier
+  stays a *devDependency*, which is a separate job -- it formats this
+  repository's own TypeScript.
+- **A map literal's pairs are one `unit` each**, a layout that never breaks
+  apart, so a wrapped map never ends a line with a key whose value is on the
+  next one. The panes used to; only the Prettier printer got this right.
 
 ## 1. What was asked
 
@@ -104,7 +109,7 @@ is itself multi-line.
 
 ## 3. Where things stood before
 
-| Area | File | Size | Today |
+| Area | File | Size | Before |
 |---|---|---|---|
 | Formatter | `src/prettier/` (3 files) | ~355 lines | Prettier plugin, bound to `Mod-Shift-i`, 56 tests in `test/prettier/printer.test.ts` |
 | Enter-indent | `src/app/web/codemirror/extensions/language.ts` | 54 lines | `continuedIndent({units: 1})` on 11 node types — a flat 2 spaces for everything |
@@ -387,43 +392,50 @@ Ship in three independent stages, each of which is useful alone:
 3. **Stage 3 — repoint the Prettier printer at `pretty.ts`,** then decide whether
    to keep Prettier in the web bundle at all.
 
-*As built, stage 3 went half-way.* `printer.ts` now reads `style.ts`, so there is
-one rule table rather than two sets of rules -- but it still builds Prettier docs
-rather than delegating to `pretty.ts`, because `Layout` does not model comments
-and delegating would drop them (issue #304, whose comment-preservation tests are
-thorough). Finishing the stage means adding comments to `Layout`, at which point
-the Prettier dependency can go and the ~35 kB gzip with it. The invariant test
-already marks the two shapes that would then start agreeing.
+*As built, stage 3 is complete.* It went half-way first -- the Prettier printer
+was repointed at `style.ts`, so there was one rule table rather than two sets of
+rules, but it still built Prettier docs. Modelling comments in `Layout` is what
+finished it: `src/scheme/format.ts` parses the buffer, ornaments the AST with
+its comments, and hands the result to `pretty.ts`, so the reformat command and
+the panes are now the same printer. `src/prettier/` is deleted, the estimated
+~35 kB gzip came off the bundle (34.4 kB, measured), and the two shapes the
+invariant test had excused now agree exactly.
 
 If Q1 answers "re-indent, not reflow", Stage 1 alone satisfies both (a) and (b),
 and Stage 2 is needed only for the panes.
 
 ## Open questions
 
-Each is running on the stated assumption, which is what the code does today.
-Answering one is a small change to `src/scheme/style.ts` and its tests.
+Four are answered, and the answers are what the code does. The fifth is still
+open and running on the assumption noted; settling it is a small change to
+`src/scheme/style.ts` and its tests.
 
-1. **Does Ctrl-I re-indent or reflow?** The request says "re-indented", which in
-   DrRacket means leading whitespace only — existing line breaks are preserved.
-   But rules 2 and 7 say "use the broken form if the expression is more than one
-   line", which presupposes the user's line breaks are respected, and so points
-   the same way. *Assumption: re-indent.* This decides whether `pretty.ts` is on
-   the critical path for (b) at all.
-2. **Rule 6 (`match`) is truncated in the request.** *Assumption: like `cond`, but
-   with the scrutinee on the `match` line* — `(match e\n  [p1\n   b1]\n  …)`.
+1. **Does Ctrl-I re-indent or reflow?** *Re-indent* — DrRacket's semantics:
+   leading whitespace only, the author's line breaks left alone. Reflowing is a
+   separate verb, on Ctrl-Shift-I.
+2. **Rule 6 (`match`), truncated in the request.** *Like `cond`, with the
+   scrutinee on the `match` line* — `(match e\n  [p1\n   b1]\n  …)`.
 3. **Do rules 1, 3 and 5 force breaks, or only fix the indent when a break is
-   needed?** DrRacket's indenter never forces a break. Read literally, the rules
-   say `(lambda (x) x)` and `(if a b c)` must always be three lines, which would
-   make short helper code much taller. *Assumption: never force; break only on
-   the 80-column/multi-line trigger.*
-4. **Which family do Scamper's non-Racket forms belong to?** Scamper has `[...]`
-   vectors, `{...}` map literals, `#(...)` anonymous functions, and
-   `begin`/`and`/`or`/`struct`/`import`/`display`/`export`. *Assumption:
-   everything unlisted follows rule 7.* `begin` is the debatable one — DrRacket
-   treats it as a body form at +2, which is probably what we want too.
-5. **Should the output pane's source captions be formatted?** `SourceCaption.vue`
-   currently shows the statement's source text verbatim, exactly as the student
-   wrote it. *Assumption: leave it verbatim* — it is a citation of their code, not
-   our rendering of it.
+   needed?** *Only fix the indent.* Nothing forces a break; a form breaks on the
+   80-column or multi-line trigger and not otherwise, so `(lambda (x) x)` and
+   `(if a b c)` stay on one line.
+4. **Which family do Scamper's non-Racket forms belong to?** *Still open.*
+   The set is closed — the grammar names every special form, and there is no
+   `let*`, `letrec`, `when` or `unless` to worry about. `FORM_STYLES` lists the
+   body forms; everything else takes rule 7. Where that leaves each of them:
+   - `and`, `or`, `struct`, `import`, `export`: rule 7, and they hardly ever
+     break. No practical difference either way.
+   - `display`: the live choice. It takes exactly one argument, so it breaks
+     only when that argument is multi-line, and rule 7 then aligns it at
+     column 9. A body form at +2 would keep a deeply nested argument from
+     drifting right.
+   - `{...}`: pairs lay out as units, so a break falls between them and never
+     between a key and its value; the pairs align under the first, per rule 7.
+   - `[...]` and `#(...)`: rule 7 over the elements, and over the inner form
+     past the `#`. Ordinary data-list behaviour; no reason to change it.
+5. **Should the output pane's source captions be formatted?** *No, they stay
+   verbatim.* `SourceCaption.vue` shows the statement's source exactly as the
+   student wrote it: a caption is a citation of their code, not our rendering
+   of it.
 
 _(Co-created with Claude Code)_

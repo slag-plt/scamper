@@ -120,11 +120,27 @@ describe('breaking past the width', () => {
   })
 
   test('a map literal aligns under its first key', () => {
-    expect(fmt('{"a" 1 "b" 2}', 9)).toBe('{"a"\n 1\n "b"\n 2}')
+    expect(fmt('{"a" 1 "b" 2}', 9)).toBe('{"a" 1\n "b" 2}')
+  })
+
+  // A pair is one `unit` in the layout, so the break can only fall between
+  // pairs -- a line never ends with a key whose value is on the next one.
+  test('a map that must break never splits a key from its value', () => {
+    const out = fmt('{"a" 1 "b" 2 "c" 3}', 8)
+    expect(out).toBe('{"a" 1\n "b" 2\n "c" 3}')
+    for (const line of out.split('\n')) expect(line).not.toMatch(/"\s*$/)
   })
 
   test('struct has no entry in the table, so it aligns', () => {
     expect(fmt('(struct s (x y z))', 17)).toBe('(struct s\n        (x y z))')
+  })
+
+  // The "#" is a column of its own, so the body aligns one past where the same
+  // application would have without it.
+  test('an anonymous function aligns past its hash', () => {
+    expect(fmt('#(+ % 1)', 7)).toBe('#(+ %\n    1)')
+    // the same shape without the hash lines up one column to the left
+    expect(fmt('(+ a 1)', 6)).toBe('(+ a\n   1)')
   })
 })
 

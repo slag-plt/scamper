@@ -18,6 +18,7 @@ import { Layout, layoutToFlatString } from './ast'
 function childrenOf(l: Layout): Layout[] | null {
   switch (l.kind) {
     case 'group':
+    case 'unit':
       return l.children
     case 'hash':
       return [l.child]

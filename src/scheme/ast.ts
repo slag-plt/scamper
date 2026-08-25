@@ -324,7 +324,7 @@ export interface ProgNode extends Node {
   body: Prog
 }
 
-/** Union of every AST node type — the Prettier plugin's canonical node type. */
+/** Union of every AST node type -- what comments.ts walks and ornaments. */
 export type SchemeNode = ProgNode | Stmt | Exp | Pat
 
 ///// Helper functions /////////////////////////////////////////////////////////
@@ -614,28 +614,50 @@ export const isLit = (e: Exp): e is Lit => isTagged(e) && e.tag === 'lit'
 // left untagged (default color). Extend as finer highlighting is wanted.
 export type Highlight = 'keyword'
 
-export type Layout =
-  // A literal token: a keyword, an identifier, "&", "_". `hl` tags its
-  // highlight role (see Highlight); absent = default, unhighlighted text.
-  | { kind: 'tok'; text: string; hl?: Highlight }
-  // A runtime value (a lit/quote/plit payload) rendered by the value renderer --
-  // TextRenderer for text, ValueRenderer for the web (so images, lists, etc.
-  // substituted into a trace render correctly). Highlighted by runtime type.
-  | { kind: 'val'; value: L.Value }
-  // A delimited group whose children are space-separated. `form` names the
-  // special form when the group is one, so pretty.ts can look its layout up in
-  // style.ts. `alignItems` marks a group whose children are peers rather than a
-  // head and its arguments -- parameter lists and binding lists.
-  | {
-      kind: 'group'
-      delim: 'paren' | 'bracket' | 'brace'
-      children: Layout[]
-      form?: string
-      alignItems?: boolean
-    }
-  // A "#" written immediately (no space) before its child -- the anonymous
-  // function `#(body)`, whose child is the parenthesized body layout.
-  | { kind: 'hash'; child: Layout }
+/**
+ * The source comments a layout node carries, verbatim, the ";" included.
+ *
+ * Set only when the layout was built from a parse that asked for comments (see
+ * comments.ts); one built from a runtime value never has any, so a trace pays
+ * nothing for them. pretty.ts emits them and forces the breaks they need.
+ *
+ * The three placements are the AST's (see Node), carried across unchanged:
+ * `leading` sits on its own line(s) above the node, `trailing` at the end of
+ * the node's line, and `dangling` inside a form that has no child after it.
+ */
+export interface LayoutComments {
+  leading?: string[]
+  trailing?: string[]
+  dangling?: string[]
+}
+
+export type Layout = LayoutComments &
+  (
+    // A literal token: a keyword, an identifier, "&", "_". `hl` tags its
+    // highlight role (see Highlight); absent = default, unhighlighted text.
+    | { kind: 'tok'; text: string; hl?: Highlight }
+    // A runtime value (a lit/quote/plit payload) rendered by the value renderer
+    // -- TextRenderer for text, ValueRenderer for the web (so images, lists,
+    // etc. substituted into a trace render correctly). Highlighted by type.
+    | { kind: 'val'; value: L.Value }
+    // A delimited group whose children are space-separated. `form` names the
+    // special form when the group is one, so pretty.ts can look its layout up
+    // in style.ts. `alignItems` marks a group whose children are peers rather
+    // than a head and its arguments -- parameter lists and binding lists.
+    | {
+        kind: 'group'
+        delim: 'paren' | 'bracket' | 'brace'
+        children: Layout[]
+        form?: string
+        alignItems?: boolean
+      }
+    // A "#" written immediately (no space) before its child -- the anonymous
+    // function `#(body)`, whose child is the parenthesized body layout.
+    | { kind: 'hash'; child: Layout }
+    // Children laid out as one space-separated run with no delimiters of its
+    // own, which never breaks apart: a map literal's key and its value.
+    | { kind: 'unit'; children: Layout[] }
+  )
 
 const tok = (text: string): Layout => ({ kind: 'tok', text })
 const kw = (text: string): Layout => ({ kind: 'tok', text, hl: 'keyword' })
@@ -676,8 +698,36 @@ const itemList = (items: Layout[]): Layout => ({
   alignItems: true,
 })
 const hash = (child: Layout): Layout => ({ kind: 'hash', child })
+/** A key and its value, which a breaking map literal keeps on one line. */
+const unit = (children: Layout[]): Layout => ({ kind: 'unit', children })
+
+/**
+ * `l` carrying `node`'s source comments, or `l` itself when it has none --
+ * which is every node unless a caller asked for them (see comments.ts).
+ */
+function withComments<T extends Layout>(node: Node, l: T): T {
+  if (
+    node.leading === undefined &&
+    node.trailing === undefined &&
+    node.dangling === undefined
+  ) {
+    return l
+  }
+  const lines = (cs: Comment[] | undefined): string[] | undefined =>
+    cs === undefined || cs.length === 0 ? undefined : cs.map((c) => c.line)
+  return {
+    ...l,
+    leading: lines(node.leading),
+    trailing: lines(node.trailing),
+    dangling: lines(node.dangling),
+  }
+}
 
 export function patToLayout(pat: Pat): Layout {
+  return withComments(pat, patLayout(pat))
+}
+
+function patLayout(pat: Pat): Layout {
   switch (pat.tag) {
     case 'pwild':
       return tok('_')
@@ -686,13 +736,20 @@ export function patToLayout(pat: Pat): Layout {
     case 'plit':
       return val(pat.value)
     case 'pctor':
-      return parens([tok(pat.name.name), ...pat.args.map(patToLayout)])
+      return parens([
+        withComments(pat.name, tok(pat.name.name)),
+        ...pat.args.map(patToLayout),
+      ])
     case 'pvec':
       return brackets(pat.args.map(patToLayout))
   }
 }
 
 export function expToLayout(e: Exp): Layout {
+  return withComments(e, expLayout(e))
+}
+
+function expLayout(e: Exp): Layout {
   switch (e.tag) {
     case 'lit':
       return val(e.value)
@@ -701,8 +758,10 @@ export function expToLayout(e: Exp): Layout {
     case 'app':
       return parens([expToLayout(e.head), ...e.args.map(expToLayout)])
     case 'lam': {
-      const params = e.params.map((p) => tok(p.name))
-      if (e.restParam) params.push(tok('&'), tok(e.restParam.name))
+      const params = e.params.map((p) => withComments(p, tok(p.name)))
+      if (e.restParam) {
+        params.push(tok('&'), withComments(e.restParam, tok(e.restParam.name)))
+      }
       return special('lambda', [itemList(params), expToLayout(e.body)])
     }
     case 'let':
@@ -749,17 +808,21 @@ export function expToLayout(e: Exp): Layout {
     case 'vec':
       return brackets(e.exps.map(expToLayout))
     case 'obj':
-      // {k1 v1 ... kn vn}: the pairs are flattened back out, exactly as written.
+      // {k1 v1 ... kn vn}: each pair is one unit, so a map that has to break
+      // does so between pairs and never between a key and its value.
       return braces(
-        e.pairs.flatMap(({ key, value }) => [
-          expToLayout(key),
-          expToLayout(value),
-        ]),
+        e.pairs.map(({ key, value }) =>
+          unit([expToLayout(key), expToLayout(value)]),
+        ),
       )
   }
 }
 
 export function stmtToLayout(s: Stmt): Layout {
+  return withComments(s, stmtLayout(s))
+}
+
+function stmtLayout(s: Stmt): Layout {
   switch (s.tag) {
     case 'import':
       return special('import', [
@@ -767,12 +830,18 @@ export function stmtToLayout(s: Stmt): Layout {
         ...(s.alias !== undefined ? [tok(s.alias)] : []),
       ])
     case 'define':
-      return special('define', [tok(s.name.name), expToLayout(s.value)])
+      return special('define', [
+        withComments(s.name, tok(s.name.name)),
+        expToLayout(s.value),
+      ])
     case 'export':
-      return special('export', s.names.map((n) => tok(n.name)))
+      return special(
+        'export',
+        s.names.map((n) => withComments(n, tok(n.name))),
+      )
     case 'defexport':
       return special('define-export', [
-        tok(s.name.name),
+        withComments(s.name, tok(s.name.name)),
         expToLayout(s.value),
       ])
     case 'display':
@@ -781,8 +850,8 @@ export function stmtToLayout(s: Stmt): Layout {
       return expToLayout(s.expr)
     case 'struct':
       return special('struct', [
-        tok(s.name.name),
-        itemList(s.fields.map((f) => tok(f.name))),
+        withComments(s.name, tok(s.name.name)),
+        itemList(s.fields.map((f) => withComments(f, tok(f.name)))),
       ])
   }
 }

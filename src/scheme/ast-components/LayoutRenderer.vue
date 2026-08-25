@@ -85,7 +85,11 @@ function valClass(v: unknown): string {
      both backends lay out from the same plan (src/scheme/pretty.ts), so a trace
      drawn here breaks in exactly the places the text form does. `val` leaves
      defer to ValueRenderer so values substituted into a trace (numbers, lists,
-     images, ...) render correctly. -->
+     images, ...) render correctly.
+
+     A layout's comments (LayoutComments) are not drawn: they are attached only
+     when a caller asks for them (scheme/comments.ts), which the formatter does
+     and a trace never does, so a layout reaching this component has none. -->
 <template>
   <!-- The changed node wraps itself once, then renders its own contents on the
        way back in. Only one node in the tree ever matches, so nothing else in
@@ -108,6 +112,14 @@ function valClass(v: unknown): string {
   <template v-else-if="layout.kind === 'hash'">
     <CodeElement>#</CodeElement>
     <LayoutRenderer :layout="layout.child" :path="[...path, 0]" :plan="plan" />
+  </template>
+  <!-- A unit is one space-separated run that never breaks, so it needs no
+       separators from the plan: a map literal's key and its value. -->
+  <template v-else-if="layout.kind === 'unit'">
+    <template v-for="(child, idx) in layout.children" :key="idx">
+      <CodeElement v-if="idx > 0" class="layout-pad">{{ ' ' }}</CodeElement>
+      <LayoutRenderer :layout="child" :path="[...path, idx]" :plan="plan" />
+    </template>
   </template>
   <template v-else>
     <CodeElement>{{ DELIMS[layout.delim][0] }}</CodeElement>

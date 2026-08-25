@@ -142,7 +142,6 @@ export default defineConfig(
                 '**/src/js/*',
                 '**/src/lib/*',
                 '**/src/lpm/*',
-                '**/src/prettier/*',
                 '**/src/scheme/*',
                 '**/src/theme/*',
                 '**/src/history/flat-file',

@@ -141,7 +141,7 @@ export const scamperIndentation = indentNodeProp.add({
  * Re-indents every line of the document, leaving the text otherwise untouched.
  * This is DrRacket's Ctrl-I: it fixes indentation without re-flowing anything,
  * so the author's line breaks survive. (Reflowing the document is a different
- * verb -- see `extensions/prettier.ts`.)
+ * verb -- see `extensions/reformat.ts`.)
  */
 export const reindentScamperDocument: Command = (view) => {
   if (view.state.readOnly) return false
