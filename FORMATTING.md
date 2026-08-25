@@ -45,7 +45,7 @@ Two things worth knowing:
   its line; a trailing comment is held back and written just before its line
   ends, wherever that turns out to be. That removed the last reason to keep
   `src/prettier/`, and with it the runtime Prettier dependency: the IDE bundle
-  drops from 399.10 kB to 304.83 kB, or 134.47 to 100.11 kB gzipped. Prettier
+  drops from 399.82 kB to 305.94 kB, or 134.70 to 100.60 kB gzipped. Prettier
   stays a *devDependency*, which is a separate job -- it formats this
   repository's own TypeScript.
 - **A map literal's pairs are one `unit` each**, a layout that never breaks
@@ -398,7 +398,7 @@ rules, but it still built Prettier docs. Modelling comments in `Layout` is what
 finished it: `src/scheme/format.ts` parses the buffer, ornaments the AST with
 its comments, and hands the result to `pretty.ts`, so the reformat command and
 the panes are now the same printer. `src/prettier/` is deleted, the estimated
-~35 kB gzip came off the bundle (34.4 kB, measured), and the two shapes the
+~35 kB gzip came off the bundle (34.1 kB, measured), and the two shapes the
 invariant test had excused now agree exactly.
 
 If Q1 answers "re-indent, not reflow", Stage 1 alone satisfies both (a) and (b),
