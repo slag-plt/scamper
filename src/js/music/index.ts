@@ -398,7 +398,10 @@ export function music_playComposition (composition: Composition): number {
   // Set up a timer to discharge triggers and events
   let idx = 0
   // Stop discharging triggers/events when the program is re-run/stopped.
-  const signal = L.currentRunSignal()
+  // Captured here, not inside the timer: by the time a trigger fires nothing is
+  // stepping, and a lookup then would find the foreground program (#375).
+  const run = L.currentRun()
+  const signal = run.signal
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const id = window.setInterval(async () => {
     if (signal?.aborted) {
@@ -414,7 +417,7 @@ export function music_playComposition (composition: Composition): number {
           if (ev.tag === 'trigger') {
             // Fire the trigger's callback as a fiber at its scheduled time; a
             // JS timer callback can no longer call the closure directly.
-            L.spawn(ev.callback, [])
+            run.spawn(ev.callback, [])
           } else {
             ev.handlers.forEach(handler => {
               handler({ [L.scamperTag]: 'struct', [L.structKind]: 'event-note', id: ev.id })

@@ -12,8 +12,8 @@ import {
   Range,
   rangesEqual,
   ScamperError,
-  setRunSignalProvider,
-  setSpawn,
+  setRunResolver,
+  type RunHandle,
   Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
@@ -38,6 +38,16 @@ interface DisplayExecutionConfig extends ExecutionConfig {
   stepping?: boolean
 }
 
+/**
+ * How an embedded run is wired (#375). `env` seeds the top level, which is what
+ * lets one reading widget continue another's program.
+ */
+export interface EmbeddedExecutionConfig extends ExecutionConfig {
+  out: OutputChannel
+  err: ErrorChannel
+  env?: Env
+}
+
 interface QueryExecutionConfig extends ExecutionConfig {
   err: ErrorChannel
   queryLoc: Loc
@@ -51,6 +61,20 @@ export interface DisplayRequest extends RunRequest {
   tracing: boolean
 }
 export type QueryRequest = RunRequest
+
+// Re-exported because `EmbeddedExecutionConfig` and `EmbeddedRequest` are
+// written in terms of it: an embedder should not have to reach into src/lpm to
+// name the type this module hands it.
+export type { Env }
+
+/**
+ * A handle on an embedded run. `done` resolves to the program's final top-level
+ * environment, which is what a widget hands to the next one it feeds (#375).
+ */
+export interface EmbeddedRequest {
+  id: SchedulerId
+  done: Promise<Env>
+}
 
 // TODO: this and all query-related code should
 //  honestly be moved out into a separate singleton
@@ -113,11 +137,28 @@ if (typeof window !== 'undefined') {
 }
 
 /** Unreachable once getInstance() has gated on `initialized`. */
+/** Ids for embedded runs; see executeEmbedded on why this is not a UUID. */
+let nextEmbedId = 0
+
 function getDefaultEnv(): Env {
   if (!defaultEnv) {
     throw new Error("Scamper's default environment used before initialize()")
   }
   return defaultEnv
+}
+
+/**
+ * One running program: its fiber, where its errors go, and the signal that
+ * tears down what it left behind.
+ *
+ * Kept per run rather than in one set of slots because a page can hold several
+ * programs at once (#375). With slots, each new run aborted the one before it
+ * and a callback resolved its environment from whichever ran last.
+ */
+interface RunContext {
+  fiber: Fiber
+  err: ErrorChannel
+  controller: AbortController
 }
 
 export default class Scamper {
@@ -138,23 +179,69 @@ export default class Scamper {
   private _queries = new Map<number, QueryEntry[]>()
   private _expandedQueryId: SchedulerId | null = null
   private queryBus = new EventTarget()
-  // The most recent top-level program's fiber and error channel, so spawned
-  // event-handler fibers (see spawnClosure) run in the user's environment and
-  // report errors to the same place.
-  private mainFiber?: Fiber
-  private mainErr?: ErrorChannel
-  // Aborted when the current program is re-run or stopped, so the previous run's
-  // background handlers (DOM listeners, timers, animation loops) tear themselves
-  // down instead of leaking into the next run (see currentRunSignal).
-  private currentRunController?: AbortController
-  private currentRunId?: SchedulerId
+  // Every program currently running on this instance, by scheduler id.
+  //
+  // A page can hold several at once -- the reading widgets are the reason
+  // (#375) -- so a run's fiber, error channel and AbortController live together
+  // here rather than in one set of slots holding whichever program started
+  // last. With slots, N programs each tore down the one before it, and a
+  // callback resolved its environment from the wrong one.
+  private runs = new Map<SchedulerId, RunContext>()
+  // The foreground program, i.e. the one the IDE's Run button drives. Only this
+  // one supersedes, and only this one is what a callback falls back to when it
+  // fires from outside any step.
+  private mainRunId?: SchedulerId
 
   private constructor() {
     this.scheduler = new Scheduler()
-    // Let library event handlers run Scamper closures as fibers (spawn()) and
-    // find the current run's AbortSignal, without importing this singleton.
-    setSpawn((fn, args, onComplete) => this.spawnClosure(fn, args, onComplete))
-    setRunSignalProvider(() => this.currentRunController?.signal)
+    // Let library event handlers reach their own run -- to spawn a fiber, or to
+    // find the AbortSignal that tears their handler down -- without importing
+    // this singleton.
+    setRunResolver(() => this.resolveRun())
+  }
+
+  /**
+   * @returns a handle on the run a library call belongs to: the one whose fiber
+   *          is stepping, or the foreground program if the call came from
+   *          outside a step.
+   *
+   * The fallback is what a callback gets when it fires with nothing running and
+   * no handle captured. That is the old behaviour, and wrong as soon as a page
+   * holds more than one program -- which is why `currentRun()` is documented to
+   * be captured at registration rather than called from inside a callback.
+   */
+  private resolveRun(): RunHandle | undefined {
+    const id = this.scheduler.currentTaskId() ?? this.mainRunId
+    if (id === undefined) return undefined
+    const run = this.runs.get(id)
+    if (run === undefined) return undefined
+    return {
+      spawn: (fn, args, onComplete) => {
+        this.spawnClosure(run, fn, args, onComplete)
+      },
+      signal: run.controller.signal,
+    }
+  }
+
+  /** Registers a run and returns its context. */
+  private beginRun(id: SchedulerId, fiber: Fiber, err: ErrorChannel): RunContext {
+    const run = { fiber, err, controller: new AbortController() }
+    this.runs.set(id, run)
+    return run
+  }
+
+  /**
+   * Forgets a finished run, and tears down whatever it left behind.
+   *
+   * Without this the map grows by one entry per widget run and per re-run, and
+   * a handler registered by a program that has ended keeps firing.
+   */
+  private endRun(id: SchedulerId): void {
+    const run = this.runs.get(id)
+    if (run === undefined) return
+    run.controller.abort()
+    this.runs.delete(id)
+    if (this.mainRunId === id) this.mainRunId = undefined
   }
 
   /**
@@ -165,16 +252,15 @@ export default class Scamper {
    * receives the closure's result (or null).
    */
   private spawnClosure(
+    run: RunContext,
     fn: Value,
     args: Value[],
     onComplete?: (result: Value | null) => void,
   ): void {
-    const env = this.mainFiber?.topLevelEnv
-    const err = this.mainErr
-    if (env === undefined || err === undefined) {
-      // No active program to run the callback in; drop it.
-      return
-    }
+    // The run's *evolving* top level, read now rather than captured when the
+    // handler was registered, so a callback sees definitions made since.
+    const env = run.fiber.topLevelEnv
+    const err = run.err
     const prog: Prog = [
       mkStmtExp([mkLit(fn), ...args.map((a) => mkLit(a)), mkAp(args.length)]),
     ]
@@ -242,7 +328,7 @@ export default class Scamper {
       })
     })
     const fiber = new Fiber(prog, getDefaultEnv())
-    // Deliberately not this.mainFiber/mainErr: a trace is a side run, and
+    // Deliberately not registered as a run: a trace is a side run, and
     // adopting it would point spawned event handlers at it and leave the
     // editor's actual program behind.
     this.scheduler.schedule({
@@ -294,21 +380,18 @@ export default class Scamper {
 
     // make new fiber with prelude as initial environment
     const fiber = new Fiber(prog, getDefaultEnv())
-    // Remember this run's fiber/error channel so spawned event-handler fibers
-    // (spawnClosure) run in its evolving top-level env and report to the same
-    // error channel.
-    this.mainFiber = fiber
-    this.mainErr = err
-    // Supersede the previous run: abort its background handlers (timers, DOM
-    // listeners, animation loops) so they don't leak into this run.
-    this.currentRunController?.abort()
-    this.currentRunController = new AbortController()
+    // Supersede the previous foreground run: abort its background handlers
+    // (timers, DOM listeners, animation loops) so they don't leak into this
+    // one. Embedded runs are left alone -- they are other programs on the page,
+    // not earlier versions of this one (#375).
+    if (this.mainRunId !== undefined) this.endRun(this.mainRunId)
 
     // schedule task
     // note: crypto is only available on HTTPS/localhost.
     // should never be a problem but just noting for future
     const id = crypto.randomUUID()
-    this.currentRunId = id
+    this.mainRunId = id
+    this.beginRun(id, fiber, err)
     const isStepping = stepping ?? false
     // Stepping implies tracing (each step renders a reduction); a stepper is
     // needed by any traced run.
@@ -318,6 +401,7 @@ export default class Scamper {
     // the run as already over rather than relaxing the scheduler's invariant.
     // Mirrors the same guard in runFiberOnScheduler.
     if (fiber.isDone()) {
+      this.endRun(id)
       return { id, tracing: traced, done: Promise.resolve() }
     }
     const { promise, resolve } = deferred()
@@ -360,7 +444,7 @@ export default class Scamper {
    * report task: the `(##report## ...)` the program ends with stops the fiber
    * and lands on the channel, and the student's own `display`s go nowhere.
    *
-   * Deliberately not this instance's mainFiber/mainErr, as in
+   * Deliberately not registered as a run, as in
    * {@link traceStatement}: a check is a side run, and adopting it would point
    * spawned event handlers at it and leave the editor's own program behind.
    *
@@ -402,12 +486,84 @@ export default class Scamper {
     return { id, done: promise.then(() => err.errors) }
   }
 
+  /**
+   * Runs `src` on the shared scheduler as a program of its own (#375).
+   *
+   * Unlike {@link execute}, this does not supersede: it leaves the foreground
+   * run alone and registers a run of its own, so a page holding many programs
+   * -- the reading widgets -- does not have each one tear down the one before
+   * it. Callbacks a widget registers fire against its own environment and
+   * report to its own output.
+   *
+   * @param env seeds the top level, so one widget's program can continue
+   *        another's. Omitted means the standard library alone.
+   * @returns the scheduled run, or null when a fatal parse error left no
+   *          program (its diagnostics go to `err`).
+   */
+  public async executeEmbedded({
+    src,
+    out,
+    err,
+    env,
+  }: EmbeddedExecutionConfig): Promise<EmbeddedRequest | null> {
+    const { prog, diagnostics } = await compile(src)
+    diagnostics.forEach((d) => {
+      err.report(diagnosticToError(d))
+    })
+    if (prog === undefined) {
+      return null
+    }
+
+    const fiber = new Fiber(prog, env ?? getDefaultEnv())
+    // A counter rather than crypto.randomUUID(), which needs a secure context:
+    // a reading served over plain http:// still has to run. Same reasoning as
+    // runFiberOnScheduler.
+    const id = `embed-${(nextEmbedId++).toString()}`
+    this.beginRun(id, fiber, err)
+
+    // A program with no statements is born done, and `schedule` rejects a
+    // completed fiber (#366). Its environment is still the one to hand on.
+    if (fiber.isDone()) {
+      return { id, done: Promise.resolve(fiber.topLevelEnv) }
+    }
+
+    const { promise, resolve } = deferred()
+    this.scheduler.schedule({
+      id,
+      fiber,
+      out,
+      err,
+      // Statements carry ranges into this text, so the scheduler needs it to
+      // caption output with the statement that produced it -- which is the
+      // whole point of a transcript widget.
+      src,
+      isTracing: false,
+      onComplete: () => {
+        resolve()
+      },
+      // As in execute: settle normally so a widget that dies of an ICE still
+      // hands its environment on rather than stranding the widgets after it.
+      onFatal: (e: unknown) => {
+        err.report(
+          new ScamperError(
+            'Runtime',
+            e instanceof Error ? e.toString() : String(e),
+          ),
+        )
+        resolve()
+      },
+    })
+    // The run is NOT ended here: a widget's handlers -- an animation loop, a
+    // button -- have to keep working after its program finishes, exactly as the
+    // IDE's do. It ends when the page does, or when `cancel` is called.
+    return { id, done: promise.then(() => fiber.topLevelEnv) }
+  }
+
   /*  =====  scheduler  =====  */
   public cancel(id: SchedulerId) {
-    // Stopping the main run also tears down its background handlers.
-    if (id === this.currentRunId) {
-      this.currentRunController?.abort()
-    }
+    // Stopping a run also tears down its background handlers -- whichever run
+    // it is, since an embedded one has handlers of its own (#375).
+    this.endRun(id)
     this.scheduler.cancelTask(id)
   }
 

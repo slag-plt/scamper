@@ -85,10 +85,26 @@ export class Scheduler {
   // nothing is captioned all the same. Cleared when the task ends.
   private nextCaption = new Map<SchedulerId, number>()
   private isRunning = false
+  // The task whose fiber is stepping right now, or undefined between steps.
+  // A library function running inside a step uses this to find out which run it
+  // belongs to, so a callback it registers is tied to that run rather than to
+  // whichever program happened to start last (#375).
+  private steppingTaskId: SchedulerId | undefined
   // allows for resuming execution
   private currTaskIdx = 0
   private timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
   private controller = new AbortController()
+
+  /**
+   * @returns the id of the run whose fiber is stepping, or undefined if called
+   *          from outside a step -- a DOM callback or timer, say.
+   *
+   * What lets a library function registering a long-lived handler capture the
+   * run it belongs to (#375). See `currentRun` in src/lpm/spawn.ts.
+   */
+  currentTaskId(): SchedulerId | undefined {
+    return this.steppingTaskId
+  }
 
   schedule(task: SchedulerTask): void {
     if (task.fiber.isDone()) {
@@ -627,7 +643,15 @@ export class Scheduler {
           )
         }
         try {
-          const stepResult = this.stepTask(task)
+          this.steppingTaskId = task.id
+          let stepResult: StepResult | undefined
+          try {
+            stepResult = this.stepTask(task)
+          } finally {
+            // Only across the step itself: `processStepResult` awaits, and
+            // anything running during that await belongs to no task.
+            this.steppingTaskId = undefined
+          }
           // A step that suspended the fiber (block-on, import-file) or parked it
           // has already taken the task out of the run queue and owns re-scheduling
           // it. Advancing here as well would remove a second task -- or, if the

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { setRunSignalProvider, setSpawn, Value } from '../../src/lpm'
+import { setRunResolver, Value } from '../../src/lpm'
 import { html_button, html_onKeydown } from '../../src/js/html/index.js'
 import { canvas_animateWith, canvas_canvasOnclick, canvas_makeCanvas } from '../../src/js/canvas/index.js'
 import { reactive_onTimer } from '../../src/js/reactive/index.js'
@@ -18,13 +18,16 @@ let spawned: Value[][]
 
 beforeEach(() => {
   controller = new AbortController()
-  setRunSignalProvider(() => controller.signal)
   spawned = []
-  // Record spawns; drive the frame loop by reporting #t from each callback.
-  setSpawn((_fn, args, onComplete) => {
-    spawned.push(args)
-    onComplete?.(true)
-  })
+  // One fake run. Record spawns; drive the frame loop by reporting #t from
+  // each callback.
+  setRunResolver(() => ({
+    spawn: (_fn, args, onComplete) => {
+      spawned.push(args)
+      onComplete?.(true)
+    },
+    signal: controller.signal,
+  }))
 })
 
 afterEach(() => {

@@ -130,13 +130,18 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
   // pile-up of frame fibers. The loop continues only while the callback returns
   // #t; #f, a non-boolean, or an error (result === null) lets the animation die.
   // The run's AbortSignal also stops the loop when the program is re-run/stopped.
-  const signal = L.currentRunSignal()
+  //
+  // The run is captured here, at registration, not looked up inside the frame
+  // callback: by the time a frame fires nothing is stepping, so a later lookup
+  // would find the foreground program rather than this one -- wrong as soon as
+  // a page holds several (#375).
+  const run = L.currentRun()
   function callback(time: number) {
-    if (signal?.aborted) {
+    if (run.signal?.aborted) {
       return
     }
-    L.spawn(fn, [time], (result) => {
-      if (result === true && !signal?.aborted) {
+    run.spawn(fn, [time], (result) => {
+      if (result === true && !run.signal?.aborted) {
         window.requestAnimationFrame(callback)
       }
     })
@@ -148,10 +153,11 @@ export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn)
   // Each click runs `(fn x y)` (the click offset) as a fresh fiber; errors
   // surface in the output pane. The run's AbortSignal removes the listener when
   // the program is re-run/stopped.
+  const run = L.currentRun()
   canvas.addEventListener(
     'click',
-    (ev: MouseEvent) => L.spawn(fn, [ev.offsetX, ev.offsetY]),
-    { signal: L.currentRunSignal() },
+    (ev: MouseEvent) => { run.spawn(fn, [ev.offsetX, ev.offsetY]) },
+    { signal: run.signal },
   )
 }
 
