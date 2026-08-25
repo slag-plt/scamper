@@ -56,6 +56,9 @@ export function makeMockCodeMirrorEditorAdapter(
     format: record('format'),
     foldAll: record('foldAll'),
     unfoldAll: record('unfoldAll'),
+    setExampleMarks: () => {
+      /* noop; a test that cares overrides this */
+    },
     goToDefinition: record('goToDefinition'),
     findReferences: record('findReferences'),
     destroy: () => {

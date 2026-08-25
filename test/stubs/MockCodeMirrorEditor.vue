@@ -48,6 +48,9 @@ const adapter = makeMockCodeMirrorEditorAdapter(
       src.value = nextSrc
       emit('dirty')
     },
+    setExampleMarks(outcomes) {
+      mockEditorHandle.exampleMarks = [...outcomes]
+    },
     status: () => ({
       // The real editor's no-file state is read-only, and the menus grey
       // themselves out from this, so the stub keeps that tie. An internal file
@@ -66,6 +69,7 @@ onMounted(() => {
   editorRegistration.register(adapter)
   mockEditorHandle.adapter = adapter
   mockEditorHandle.commands.length = 0
+  mockEditorHandle.exampleMarks = []
   reportCursor()
 })
 

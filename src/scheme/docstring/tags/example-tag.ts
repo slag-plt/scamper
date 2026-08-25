@@ -1,12 +1,20 @@
 import { tokenizeAndParse } from '../..'
-import { Range, Value } from '../../../lpm'
-import { App, isApp, isLit, isStmtExp, Stmt } from '../../ast'
+import { Range } from '../../../lpm'
+import { App, Exp, isApp, isStmtExp, Stmt } from '../../ast'
 import { mkDocError } from '../error'
 import { DocTag, registerDocTagParser } from './tag'
 
+/**
+ * An `@example (f 5) -> 120` line: a call and what it should produce.
+ *
+ * The expected side is an *expression*, not a literal value: `-> (list 1 2 3)`
+ * is what a student writing their first recursive function wants to say, and
+ * it cannot be read off the page. It is evaluated alongside the call (see
+ * src/scheme/examples.ts) rather than at parse time.
+ */
 interface Example {
   functionCall: App
-  result: Value
+  result: Exp
 }
 export type ExampleTag = DocTag<Example>
 
@@ -77,10 +85,7 @@ registerDocTagParser('@example', (contents, range): ExampleTag => {
   if (!isStmtExp(parsedResult)) {
     exampleTagError('result should be an expression', range)
   }
-  if (!isLit(parsedResult.expr)) {
-    exampleTagError('result should be a literal value', range)
-  }
-  const result = parsedResult.expr.value
+  const result = parsedResult.expr
 
   // TODO: semantic validation against the documented function happens in scopeCheckFunctionDoc
 

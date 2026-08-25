@@ -1,4 +1,5 @@
 import type { CodeMirrorEditorAdapter } from '../../src/app/web/composables/codemirror-editor-adapter'
+import type { ExampleOutcome } from '../../src/scheme/examples'
 
 export const mockEditorHandle: {
   adapter: CodeMirrorEditorAdapter | null
@@ -16,8 +17,11 @@ export const mockEditorHandle: {
    * Set it before mounting, and put it back afterwards.
    */
   cursorPath: string[]
+  /** The `@example` marks the IDE last asked the editor to draw (issue #374). */
+  exampleMarks: ExampleOutcome[]
 } = {
   adapter: null,
   commands: [],
   cursorPath: [],
+  exampleMarks: [],
 }

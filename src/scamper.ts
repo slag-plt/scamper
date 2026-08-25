@@ -17,6 +17,7 @@ import {
   Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
+import { SimpleErrorChannel } from './lpm/output/simple-error'
 import { TraceCollector } from './lpm/output/trace-collector'
 import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
 import { compile } from './scheme'
@@ -350,6 +351,55 @@ export default class Scamper {
       },
     })
     return { id, tracing: traced, done: promise }
+  }
+
+  /**
+   * Runs one `@example` checking program (issue #374) as a side run.
+   *
+   * Scheduled with an error channel and no output channel, which makes it a
+   * report task: the `(##report## ...)` the program ends with stops the fiber
+   * and lands on the channel, and the student's own `display`s go nowhere.
+   *
+   * Deliberately not this instance's mainFiber/mainErr, as in
+   * {@link traceStatement}: a check is a side run, and adopting it would point
+   * spawned event handlers at it and leave the editor's own program behind.
+   *
+   * @returns the run's id, so a caller that gets bored can {@link cancel} it,
+   *          and what it reported once it is over -- which, for a cancelled
+   *          run, is never.
+   */
+  public checkExample(prog: Prog): {
+    id: SchedulerId
+    done: Promise<readonly ScamperError[]>
+  } {
+    const err = new SimpleErrorChannel()
+    const id = crypto.randomUUID()
+    const fiber = new Fiber(prog, getDefaultEnv())
+    // A completed fiber is rejected by `schedule` (#366); nothing to report.
+    if (fiber.isDone()) {
+      return { id, done: Promise.resolve(err.errors) }
+    }
+    const { promise, resolve } = deferred()
+    this.scheduler.schedule({
+      id,
+      fiber,
+      err,
+      onComplete: () => {
+        resolve()
+      },
+      // As in execute(): surface the failure and settle, rather than leaving
+      // the caller waiting on a run that has already died.
+      onFatal: (e: unknown) => {
+        err.report(
+          new ScamperError(
+            'Runtime',
+            e instanceof Error ? e.toString() : String(e),
+          ),
+        )
+        resolve()
+      },
+    })
+    return { id, done: promise.then(() => err.errors) }
   }
 
   /*  =====  scheduler  =====  */

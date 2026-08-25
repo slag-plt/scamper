@@ -11,6 +11,7 @@ import { Exp, mkDisp, Prog } from './ast.js'
 import { getQueriedProgram } from './query'
 import { isExampleTag } from './docstring/tags/example-tag'
 import { parseFunctionDocFromComments } from './docstring/docstring.js'
+import { collectExamples, mkCheckProgram } from './examples.js'
 import { contractProgram } from './contract.js'
 // N.B., src/lib/index.ts compiles and runs its own Scamper source (the
 // builtin libraries) through this module's `compile()` at load time, which
@@ -200,6 +201,38 @@ export async function compile(
   return queryLoc
     ? { prog, queriedRange: (parsed as QueryParseResult).queriedRange, diagnostics }
     : { prog, diagnostics }
+}
+
+/** One `@example` line, lowered to a program that checks it. */
+export interface CompiledExample {
+  /** The comment line the example is on -- where its mark is drawn. */
+  range: Range
+  /** The file, followed by a report of what the call and the example produce. */
+  prog: S.Prog
+}
+
+/**
+ * Compiles one checking program per `@example` line in `src` (issue #374).
+ *
+ * Separate from {@link compile} rather than an option on it: compiling gives
+ * one program back and this gives N. Contracts are deliberately not inserted,
+ * so an example is checked against the same code the Run button runs.
+ * @returns a program per example (none if `src` does not parse) and the parse
+ *          diagnostics
+ */
+export function compileExamples(src: string): {
+  examples: CompiledExample[]
+  diagnostics: ScamperDiagnostic[]
+} {
+  const { program, diagnostics } = tokenizeAndParse(src)
+  if (program === undefined) {
+    return { examples: [], diagnostics }
+  }
+  const examples = collectExamples(program).map((check) => ({
+    range: check.range,
+    prog: lowerProgram(expandProgram(mkCheckProgram(program, check))),
+  }))
+  return { examples, diagnostics }
 }
 
 export function mkInitialEnv(): S.Env {

@@ -19,6 +19,8 @@ import {
 import { formatScamperDocument } from '../codemirror/extensions/reformat'
 import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
+import { setExampleDecorations } from '../codemirror/extensions/examples'
+import type { ExampleOutcome } from '../../../scheme/examples'
 import { identifierAt } from '../../../scheme/token'
 
 /** Cursor status reported when no code is under the cursor (top of document). */
@@ -216,6 +218,14 @@ export function createCodeMirrorEditorAdapter(
     },
     unfoldAll() {
       unfoldAll(view)
+    },
+
+    /**
+     * Draws the pass/fail marks for the file's `@example` lines (issue #374).
+     * An empty list clears them.
+     */
+    setExampleMarks(outcomes: readonly ExampleOutcome[]) {
+      setExampleDecorations(view, outcomes)
     },
 
     goToDefinition() {
