@@ -85,8 +85,8 @@ all work, and each widget's handlers belong to that widget: one widget's button
 sees its own definitions and reports its own errors, and starting a later widget
 does not tear down an earlier one's animation.
 
-**One known gap.** A reactive *file chooser* rendered inside a widget will not
-fire its callback. Those renderers are driven by the IDE's Vue layer, which
+**One known gap (#397).** A reactive *file chooser* rendered inside a widget will
+not fire its callback. Those renderers are driven by the IDE's Vue layer, which
 resolves a callback's run after the fact rather than capturing it, and on a
 reading page there is no foreground program to fall back to. Everything else in
 the libraries captures its run at registration.
