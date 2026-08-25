@@ -113,6 +113,7 @@ const editorStatus = ref({
   loaded: false,
   readOnly: true,
   hasSelection: false,
+  isScamper: false,
   canUndo: false,
   canRedo: false,
   onIdentifier: false,
@@ -126,6 +127,7 @@ function refreshEditorStatus() {
           loaded: false,
           readOnly: true,
           hasSelection: false,
+          isScamper: false,
           canUndo: false,
           canRedo: false,
           onIdentifier: false,
@@ -217,8 +219,8 @@ const editMenu = computed<MenuItem[]>(() => {
     { label: 'Find…', kbd: editShortcut.find, disabled: !s.loaded, run: inEditor((ed) => { ed.find() }) },
     { label: 'Replace…', disabled: s.readOnly, run: inEditor((ed) => { ed.replace() }) },
     { separator: true },
-    { label: 'Toggle Comment', kbd: editShortcut.toggleComment, disabled: s.readOnly, run: inEditor((ed) => { ed.toggleComment() }) },
-    { label: 'Format File', kbd: editShortcut.format, disabled: s.readOnly, run: inEditor((ed) => { ed.format() }) },
+    { label: 'Toggle Comment', kbd: editShortcut.toggleComment, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.toggleComment() }) },
+    { label: 'Format File', kbd: editShortcut.format, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.format() }) },
     // Sits under Format File because that is the command it changes -- though
     // it governs the output and step panes too, so a file and a trace agree.
     {
@@ -234,8 +236,8 @@ const goMenu = computed<MenuItem[]>(() => {
   return [
     { label: 'Go to Line…', kbd: editShortcut.goToLine, disabled: !s.loaded, run: inEditor((ed) => { ed.goToLine() }) },
     { separator: true },
-    { label: 'Go to Definition', kbd: editShortcut.goToDefinition, disabled: !s.onIdentifier, run: inEditor((ed) => { ed.goToDefinition() }) },
-    { label: 'Find References', kbd: editShortcut.findReferences, disabled: !s.onIdentifier, run: inEditor((ed) => { ed.findReferences() }) },
+    { label: 'Go to Definition', kbd: editShortcut.goToDefinition, disabled: !s.onIdentifier || !s.isScamper, run: inEditor((ed) => { ed.goToDefinition() }) },
+    { label: 'Find References', kbd: editShortcut.findReferences, disabled: !s.onIdentifier || !s.isScamper, run: inEditor((ed) => { ed.findReferences() }) },
   ]
 })
 

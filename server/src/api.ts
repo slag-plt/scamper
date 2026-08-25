@@ -21,6 +21,15 @@ const HISTORY_ROOT = `${API_ROOT}/history`
 export interface ApiResponse {
   status: number
   body?: unknown
+  /**
+   * Raw bytes to send as `application/octet-stream` instead of a JSON body.
+   *
+   * How a file's contents travel (#385). A user's files are not all text, and
+   * wrapping bytes in JSON would mean base64 -- a third more traffic, four
+   * copies of a multi-megabyte payload per request, and an encoding no layer
+   * could tell from the filename without guessing.
+   */
+  bytes?: Uint8Array
 }
 
 /** A parsed request, independent of how it arrived over HTTP. */
@@ -28,7 +37,11 @@ export interface ApiRequest {
   method: string
   /** The request's pathname, still percent-encoded. */
   path: string
-  /** The parsed JSON body, or undefined if the request carried none. */
+  /**
+   * The request body: a `Uint8Array` when it arrived as
+   * `application/octet-stream`, the parsed JSON otherwise, and undefined if the
+   * request carried no body at all.
+   */
   body?: unknown
   /**
    * The server's clock, passed in rather than read here so routing stays a
@@ -150,16 +163,27 @@ async function routeFile(
       const contents = await store.read(userId, name)
       return contents === undefined
         ? notFound(name)
-        : { status: 200, body: { contents } }
+        : { status: 200, bytes: contents }
     }
 
     case 'PUT': {
-      const contents = field(body, 'contents')
-      if (contents === undefined) {
-        return badRequest('save needs a string `contents` field')
+      // A file is bytes, so its contents are the body itself rather than a
+      // field in an envelope. An empty body is an empty file -- a real thing a
+      // student can save -- so it is only the *shape* that is rejected here.
+      //
+      // `ArrayBuffer.isView` rather than `instanceof Uint8Array`: the latter
+      // compares prototypes, so it answers false for a view made in another
+      // realm -- which is exactly what a jsdom `TextEncoder` hands back. The
+      // brand check holds wherever the bytes were made.
+      if (!ArrayBuffer.isView(body)) {
+        return badRequest('save needs an application/octet-stream body')
       }
 
-      await store.write(userId, name, contents)
+      await store.write(
+        userId,
+        name,
+        new Uint8Array(body.buffer, body.byteOffset, body.byteLength),
+      )
       return { status: 204 }
     }
 

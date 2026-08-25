@@ -203,13 +203,25 @@ export class FileSession {
    * caller loads the returned source into the editor afterwards.
    * @returns the contents of the newly-opened file.
    */
-  async switchTo(filename: string): Promise<string> {
+  /**
+   * Saves and closes out the open file without opening another.
+   *
+   * The half of {@link switchTo} that does not read: a binary file is opened
+   * without ever loading its text (#385), but the file being left still has to
+   * be saved and have its history closed out.
+   */
+  async leaveCurrentFile(): Promise<void> {
     // Forced, so leaving a file always closes out its history with what is
     // actually on disk rather than leaving the last minute of edits unrecorded.
     if (this.currentFile !== null) await this.save({ force: true })
+    this.currentFile = null
+    this.historyHead = null
+  }
+
+  async switchTo(filename: string): Promise<string> {
+    await this.leaveCurrentFile()
     const src = await this.fs.loadFile(filename)
     this.currentFile = filename
-    this.historyHead = null
     return src
   }
 

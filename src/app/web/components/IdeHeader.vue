@@ -17,8 +17,17 @@ const props = withDefaults(
     isStepping?: boolean
     /** What live evaluation is doing, which the Run control shows (#378). */
     liveStatus?: LiveStatus
+    /**
+     * False when the open file is not a Scamper program, so there is nothing
+     * to run (#385): a text file is not a program, and a binary one never
+     * reaches the editor at all.
+     */
+    canRun?: boolean
   }>(),
-  { liveStatus: 'off' },
+  // `canRun` defaults true rather than being left absent: Vue casts a missing
+  // boolean prop to false, which would disable Run for every caller that does
+  // not pass it.
+  { liveStatus: 'off', canRun: true },
 )
 
 const emit = defineEmits<{
@@ -161,6 +170,7 @@ function searchOpenWindow(searchTerm: string) {
           type="button"
           class="icon-button run-main"
           accesskey="w"
+          :disabled="!props.canRun"
           @click="handleRun"
         >
           <span class="run-label">{{ runLabel }}</span>

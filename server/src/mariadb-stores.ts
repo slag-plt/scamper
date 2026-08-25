@@ -35,6 +35,28 @@ function fromSql(value: Date | string): string {
 }
 
 /**
+ * How many leading bytes of a file a listing reads to build its preview.
+ *
+ * Generous next to the five lines `previewOf` keeps, so a file with long lines
+ * still has something to show, and small enough that a listing of fifty files
+ * is kilobytes rather than megabytes.
+ */
+const PREVIEW_BYTES = 1000
+
+/**
+ * @returns `value` as bytes.
+ *
+ * `files.contents` is a LONGBLOB, which mysql2 hands back as a Buffer. The
+ * string branch is for a row written before the column was widened, and for
+ * the schema-less paths in tests.
+ */
+function toBytes(value: unknown): Uint8Array {
+  return typeof value === 'string'
+    ? new TextEncoder().encode(value)
+    : new Uint8Array(value as Buffer)
+}
+
+/**
  * @returns true iff the database answers
  *
  * A query rather than a look at the pool's state: a pool holds connections that
@@ -55,26 +77,31 @@ export class MariaDbFileStore implements FileStore {
   constructor(private readonly sql: SqlPool) {}
 
   async list(userId: string): Promise<FileEntry[]> {
+    // Only the opening bytes, not the whole file. A listing runs on every file
+    // switch, and previews are five lines: pulling megabytes of image out of
+    // the database to throw away was already wasteful for text and became
+    // untenable once files could be binary (#385).
     const [rows] = await this.sql.query<RowDataPacket[]>(
-      'SELECT name, contents FROM files WHERE user_id = ? ORDER BY name',
+      `SELECT name, LEFT(contents, ${PREVIEW_BYTES.toString()}) AS contents
+         FROM files WHERE user_id = ? ORDER BY name`,
       [userId],
     )
     return rows.map((row) => ({
       name: row.name as string,
-      preview: previewOf(row.name as string, row.contents as string),
+      preview: previewOf(row.name as string, toBytes(row.contents)),
       isDirectory: false,
     }))
   }
 
-  async read(userId: string, name: string): Promise<string | undefined> {
+  async read(userId: string, name: string): Promise<Uint8Array | undefined> {
     const [rows] = await this.sql.query<RowDataPacket[]>(
       'SELECT contents FROM files WHERE user_id = ? AND name = ?',
       [userId, name],
     )
-    return rows.length === 0 ? undefined : (rows[0].contents as string)
+    return rows.length === 0 ? undefined : toBytes(rows[0].contents)
   }
 
-  async write(userId: string, name: string, contents: string): Promise<void> {
+  async write(userId: string, name: string, contents: Uint8Array): Promise<void> {
     // One statement, so a save cannot half-happen: the unique key on
     // (user_id, name) is what turns this into "create or replace".
     await this.sql.query(

@@ -20,6 +20,9 @@ const PORT = Number(process.env.PORT ?? 3000)
  */
 const MAX_BODY_BYTES = 5 * 1024 * 1024
 
+/** The content type a file's contents travel under, in both directions. */
+const OCTET_STREAM = 'application/octet-stream'
+
 /** Where BetterAuth's own routes live. Its handler owns everything below it. */
 const AUTH_ROOT = '/api/auth'
 
@@ -81,9 +84,15 @@ const { stores, auth } = await configure()
 const authHandler = auth === null ? null : toNodeHandler(auth)
 
 /**
- * Reads and parses a JSON request body.
- * @returns the parsed body, or undefined if there was none or it was malformed
- *          -- either way the route reports the field it wanted as missing
+ * Reads a request body.
+ *
+ * @returns the raw bytes when the request is `application/octet-stream` -- how
+ *          a file's contents arrive (#385) -- and otherwise the parsed JSON, or
+ *          undefined if there was none or it was malformed, either way leaving
+ *          the route to report the field it wanted as missing.
+ *
+ * N.B., a byte body is returned even when it is empty, because an empty file is
+ * a real thing to save. Only a JSON request treats "no bytes" as "no body".
  */
 async function readBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []
@@ -95,10 +104,16 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
     chunks.push(chunk)
   }
 
-  if (chunks.length === 0) return undefined
+  const raw = Buffer.concat(chunks)
+
+  if ((req.headers['content-type'] ?? '').startsWith(OCTET_STREAM)) {
+    return new Uint8Array(raw)
+  }
+
+  if (raw.length === 0) return undefined
 
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf-8'))
+    return JSON.parse(raw.toString('utf-8'))
   } catch {
     return undefined
   }
@@ -196,7 +211,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const userId =
       url.pathname === `${API_ROOT}/health` ? null : await userOf(req)
 
-    const { status, body: reply } = await route(
+    const { status, body: reply, bytes } = await route(
       {
         method,
         path: url.pathname,
@@ -206,6 +221,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       },
       stores,
     )
+
+    if (bytes !== undefined) {
+      res.writeHead(status, { 'Content-Type': OCTET_STREAM })
+      res.end(Buffer.from(bytes))
+      return
+    }
 
     if (reply === undefined) {
       res.writeHead(status)

@@ -16,6 +16,7 @@ import {
   mkFreshEditorState,
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
+import { modeFor, scamperMode, type EditorMode } from '../codemirror/modes'
 import { formatScamperDocument } from '../codemirror/extensions/reformat'
 import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
@@ -32,6 +33,10 @@ export function createCodeMirrorEditorAdapter(
   onCursorChange?: (status: CursorStatus) => void,
 ) {
   let loaded = false
+  // How the open file is edited. Kept here rather than read back off the
+  // EditorState because the menus ask for it (`status()`) and an extension
+  // list cannot be interrogated for what it left out.
+  let mode: EditorMode = scamperMode
   const scamper = Scamper.getInstance()
   const onQueriesChanged = () => {
     syncQueryDecorations(view)
@@ -52,17 +57,27 @@ export function createCodeMirrorEditorAdapter(
     /**
      * Loads `src` into the editor.
      *
-     * @param readOnly opens it for looking at rather than editing -- what an
-     *        internal file gets (#178), since writing one back would destroy
-     *        Scamper's own state.
+     * @param opts.readOnly opens it for looking at rather than editing -- what
+     *        an internal file gets (#178), since writing one back would
+     *        destroy Scamper's own state.
+     * @param opts.filename the name the contents came from, which decides how
+     *        the file is edited (#385): a `.scm` file gets the language, the
+     *        LSP and the formatter, anything else gets a plain editor. Omitted
+     *        means a Scamper program.
      */
-    initializeDoc(src: string, readOnly = false) {
+    initializeDoc(
+      src: string,
+      opts: { readOnly?: boolean; filename?: string } = {},
+    ) {
       loaded = true
+      mode =
+        opts.filename === undefined ? scamperMode : modeFor(opts.filename)
       view.setState(
         mkFreshEditorState(src, {
           dirtyAction,
           onCursorChange,
-          isReadOnly: readOnly,
+          isReadOnly: opts.readOnly ?? false,
+          mode,
         }),
       )
       // setState doesn't fire update listeners; the cursor resets to the top of
@@ -72,6 +87,7 @@ export function createCodeMirrorEditorAdapter(
 
     initializeDummyDoc() {
       loaded = false
+      mode = scamperMode
       view.setState(mkNoFileEditorState(onCursorChange))
       onCursorChange?.(TOP_LEVEL)
     },
@@ -130,6 +146,9 @@ export function createCodeMirrorEditorAdapter(
         hasSelection: !sel.empty,
         canUndo: undoDepth(view.state) > 0,
         canRedo: redoDepth(view.state) > 0,
+        // Formatting, go-to-definition and find-references are all about a
+        // Scamper program; on any other file the menus grey them out (#385).
+        isScamper: mode.isScamper,
         // Go-to-definition and find-references only mean something on a name.
         onIdentifier:
           identifierAt(view.state.doc.toString(), sel.head) !== undefined,

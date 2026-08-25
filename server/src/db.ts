@@ -55,6 +55,7 @@ export async function applySchema(url: string): Promise<void> {
   const connection = createConnection({ uri: url, multipleStatements: true })
   try {
     await connection.promise().query(schema)
+    await widenFileContents(connection.promise())
   } catch (error) {
     throw new Error(
       `Could not apply ${path}: ${error instanceof Error ? error.message : String(error)}\n` +
@@ -65,4 +66,29 @@ export async function applySchema(url: string): Promise<void> {
   } finally {
     connection.destroy()
   }
+}
+
+/**
+ * Widens `files.contents` from LONGTEXT to LONGBLOB, once (#385).
+ *
+ * `schema.sql` is `CREATE TABLE IF NOT EXISTS` throughout, which creates a
+ * schema but cannot migrate one, and MariaDB has no guarded form of `MODIFY`.
+ * Running a bare `ALTER` on every start would rebuild the table every time, so
+ * the column is inspected first and the statement runs only while there is
+ * something to change. Converting utf8mb4 text to bytes is lossless, and the
+ * table is one row per file, so the one-time rewrite is quick.
+ */
+async function widenFileContents(sql: {
+  query: (text: string) => Promise<unknown>
+}): Promise<void> {
+  const [rows] = (await sql.query(
+    `SELECT DATA_TYPE FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'files' AND COLUMN_NAME = 'contents'`,
+  )) as [{ DATA_TYPE: string }[], unknown]
+
+  if (rows[0]?.DATA_TYPE.toLowerCase() !== 'longtext') return
+
+  console.log('Migrating files.contents from LONGTEXT to LONGBLOB (#385)...')
+  await sql.query('ALTER TABLE files MODIFY contents LONGBLOB NOT NULL')
 }

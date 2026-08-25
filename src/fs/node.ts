@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ScamperError } from '../lpm/error'
-import { isHiddenName, type FS, type FileEntry } from './fs'
+import { isBinaryName, isHiddenName, refuseBinary, type Bytes, type FS, type FileEntry } from './fs'
 
 /**
  * An implementation of FS backed by Node's `fs` module, rooted at a
@@ -59,7 +59,7 @@ export class NodeFileSystem implements FS {
       // worth it: a per-file history holds every saved version of its file.
       // (The drawer can now show dotted names -- see #178 -- it just does not
       // preview them.)
-      if (!isDirectory && !isHiddenName(entry.name)) {
+      if (!isDirectory && !isHiddenName(entry.name) && !isBinaryName(entry.name)) {
         try {
           preview = await this.getFilePreview(entry.name)
         } catch {
@@ -106,12 +106,28 @@ export class NodeFileSystem implements FS {
 
   /** @return the contents of the given file, assumed to exist */
   async loadFile(filename: string): Promise<string> {
+    refuseBinary(filename)
     return await fs.readFile(this.resolve(filename), 'utf-8')
   }
 
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile(filename: string, contents: string): Promise<void> {
+    refuseBinary(filename)
     await fs.writeFile(this.resolve(filename), contents, 'utf-8')
+  }
+
+  /** @return the bytes of the given file, assumed to exist */
+  async loadBytes(filename: string): Promise<Bytes> {
+    // Node hands back a Buffer, which *is* a Uint8Array but over a pooled
+    // buffer that may be larger than the file. Copying its bytes out keeps the
+    // promise the return type makes.
+    const buffer = await fs.readFile(this.resolve(filename))
+    return new Uint8Array(buffer)
+  }
+
+  /** Saves `bytes` to the given file, creating it if it doesn't already exist */
+  async saveBytes(filename: string, bytes: Bytes): Promise<void> {
+    await fs.writeFile(this.resolve(filename), bytes)
   }
 
   async deleteFile(filename: string): Promise<void> {

@@ -50,6 +50,19 @@ describe('buildArchive', () => {
     )
   })
 
+  test('archives a binary file byte for byte', async () => {
+    // Reading an image as text would put a broken copy in the archive, which
+    // is what a student would find when they unzipped it (#385).
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0xfe])
+    const fs = new MockFileSystem()
+    await fs.saveFile('hw.scm', '(display 1)')
+    await fs.saveBytes('cat.png', png)
+
+    const zip = await JSZip.loadAsync(await (await buildArchive(fs)).arrayBuffer())
+    expect(await zip.files['cat.png'].async('uint8array')).toEqual(png)
+    expect(await zip.files['hw.scm'].async('string')).toBe('(display 1)')
+  })
+
   test('names the unreadable file when a read fails', async () => {
     const fs = new MockFileSystem()
     await fs.saveFile('gone.scm', '(display 1)')

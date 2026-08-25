@@ -1,4 +1,4 @@
-import { isHiddenName, type FS, type FileEntry } from './fs'
+import { isBinaryName, isHiddenName, refuseBinary, type Bytes, type FS, type FileEntry } from './fs'
 
 /** The suffix Chromium gives the swap file backing an open writable. */
 const SWAP_SUFFIX = '.crswap'
@@ -59,7 +59,7 @@ export class OPFSFileSystem implements FS {
       // previewing one would drag the lot into a listing that shows a line of
       // it at most. (The drawer can now show dotted names -- see #178 -- it
       // just does not preview them.)
-      if (!isDirectory && !isHiddenName(name)) {
+      if (!isDirectory && !isHiddenName(name) && !isBinaryName(name)) {
         try {
           preview = await this.getFilePreview(handle as FileSystemFileHandle)
         } catch {
@@ -106,6 +106,7 @@ export class OPFSFileSystem implements FS {
 
   /** @return the contents of the given file, assumed to exist */
   async loadFile (filename: string): Promise<string> {
+    refuseBinary(filename)
     const handle = await this.root!.getFileHandle(filename)
     const file = await handle.getFile()
     return await file.text()
@@ -113,9 +114,27 @@ export class OPFSFileSystem implements FS {
 
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile (filename: string, contents: string): Promise<void> {
+    refuseBinary(filename)
     const handle = await this.root!.getFileHandle(filename, { create: true })
     const stream = await handle.createWritable()
     await stream.write(contents)
+    await stream.close()
+  }
+
+  /** @return the bytes of the given file, assumed to exist */
+  async loadBytes (filename: string): Promise<Bytes> {
+    const handle = await this.root!.getFileHandle(filename)
+    const file = await handle.getFile()
+    return new Uint8Array(await file.arrayBuffer())
+  }
+
+  /** Saves `bytes` to the given file, creating it if it doesn't already exist */
+  async saveBytes (filename: string, bytes: Bytes): Promise<void> {
+    const handle = await this.root!.getFileHandle(filename, { create: true })
+    const stream = await handle.createWritable()
+    // Wrapped in a Blob because the stream only accepts a view over a
+    // non-shared ArrayBuffer, which a plain Uint8Array is not guaranteed to be.
+    await stream.write(new Blob([bytes]))
     await stream.close()
   }
 
@@ -123,13 +142,19 @@ export class OPFSFileSystem implements FS {
     await this.root!.removeEntry(filename)
   }
 
-  /** Renames the `from` file to the `to`. */
+  /**
+   * Renames the `from` file to the `to`.
+   *
+   * Copies bytes rather than text: OPFS has no rename, so this is a copy and a
+   * delete, and routing it through `loadFile` would have destroyed any file
+   * that is not UTF-8 (#385).
+   */
   async renameFile (from: string, to: string): Promise<void> {
-    const contents = await this.loadFile(from)
+    const bytes = await this.loadBytes(from)
     if (await this.fileExists(to)) {
       await this.deleteFile(to)
     }
-    await this.saveFile(to, contents)
+    await this.saveBytes(to, bytes)
     await this.deleteFile(from)
   }
 }

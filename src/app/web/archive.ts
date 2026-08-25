@@ -1,5 +1,5 @@
 import type * as FS from '../../fs'
-import { isUserFile } from '../../fs/fs'
+import { isBinaryName, isUserFile } from '../../fs/fs'
 
 // Bundles the user's files into a single zip so a student can take their work
 // with them (issue #42). Internal dotfiles are left out regardless of whether
@@ -32,7 +32,15 @@ export async function buildArchive(fs: FS.t): Promise<Blob> {
   const entries = (await fs.getFileList()).filter(isUserFile)
   for (const entry of entries) {
     try {
-      zip.file(entry.name, await fs.loadFile(entry.name))
+      // Bytes for a binary file, text for everything else. JSZip takes either,
+      // and reading an image as text would put a broken copy in the archive
+      // (#385).
+      zip.file(
+        entry.name,
+        isBinaryName(entry.name)
+          ? await fs.loadBytes(entry.name)
+          : await fs.loadFile(entry.name),
+      )
     } catch (e) {
       // A file can vanish between the listing and the read. Name it, since the
       // underlying error usually doesn't.

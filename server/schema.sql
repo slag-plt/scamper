@@ -21,7 +21,12 @@ CREATE TABLE IF NOT EXISTS files (
   -- homework.scm one row -- silently keeping one file's contents under the
   -- other's name -- and neither OPFS nor the Node backend behaves that way.
   name       VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
-  contents   LONGTEXT     NOT NULL,
+  -- Bytes, not text: a user's files include images and other things that are
+  -- not UTF-8, and a text column would reject or mangle them (#385). Text
+  -- files are simply their UTF-8 bytes. A database made before this change is
+  -- widened by the guarded ALTER in db.ts, since a CREATE ... IF NOT EXISTS
+  -- cannot migrate an existing column.
+  contents   LONGBLOB     NOT NULL,
   updated_at DATETIME(3)  NOT NULL,
 
   -- Every file operation is scoped to one user and one name, which is exactly
@@ -62,6 +67,11 @@ CREATE TABLE IF NOT EXISTS snapshots (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   history_id BIGINT UNSIGNED NOT NULL,
   taken_at   DATETIME(3)     NOT NULL,
+  -- Text, unlike `files.contents` above, and deliberately so: history is only
+  -- ever recorded from the editor buffer, and a binary file never loads into
+  -- the editor, so a blob cannot reach this table. Keeping it TEXT documents
+  -- that, has MariaDB validate UTF-8 on insert, and leaves FULLTEXT indexing
+  -- available if searching a history is ever wanted.
   contents   LONGTEXT        NOT NULL,
 
   CONSTRAINT fk_snap_hist FOREIGN KEY (history_id) REFERENCES histories (id)

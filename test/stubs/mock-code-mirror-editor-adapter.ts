@@ -39,6 +39,7 @@ export function makeMockCodeMirrorEditorAdapter(
       canUndo: false,
       canRedo: false,
       onIdentifier: false,
+      isScamper: true,
     }),
     undo: record('undo'),
     redo: record('redo'),

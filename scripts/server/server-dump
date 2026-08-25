@@ -33,10 +33,16 @@ fi
 #
 # --single-transaction takes a consistent snapshot without locking anyone out,
 # so this is safe to run against a server students are using.
+#
+# --hex-blob is not optional: files.contents is a LONGBLOB holding whatever a
+# student uploaded (#385), and without it binary is written as escaped string
+# literals that do not survive a restore. Blob rows dump larger as hex, which
+# is the price of a dump that restores.
 compose exec -T db sh -c '
   MYSQL_PWD="${MARIADB_ROOT_PASSWORD}" exec mariadb-dump \
     -u root \
     --single-transaction \
+    --hex-blob \
     --databases "${MARIADB_DATABASE:-scamper}"
 ' > "${OUT}"
 

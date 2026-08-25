@@ -78,6 +78,56 @@ describe('NodeFileSystem.fileExists', () => {
 
 })
 
+describe('NodeFileSystem bytes (#385)', () => {
+  /** A PNG signature: bytes that are not valid UTF-8. */
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff])
+
+  test('round-trips bytes unchanged', async () => {
+    const fs = await NodeFileSystem.create(root)
+    await fs.saveBytes('cat.png', png)
+
+    expect(await fs.loadBytes('cat.png')).toEqual(png)
+  })
+
+  test('reads a text file as bytes too, since text is UTF-8 bytes', async () => {
+    const fs = await NodeFileSystem.create(root)
+    await fs.saveFile('hello.scm', '(+ 1 2)')
+
+    expect(new TextDecoder().decode(await fs.loadBytes('hello.scm'))).toBe('(+ 1 2)')
+  })
+
+  test('refuses to read or write a binary file as text', async () => {
+    // The guard that makes the file-destroying bug unwritable: decoding a PNG
+    // as UTF-8 and saving the result back is how a file was lost.
+    const fs = await NodeFileSystem.create(root)
+    await fs.saveBytes('cat.png', png)
+
+    await expect(fs.loadFile('cat.png')).rejects.toThrow(/cat\.png/)
+    await expect(fs.saveFile('cat.png', 'oops')).rejects.toThrow(/cat\.png/)
+    // And the file is untouched by the attempt.
+    expect(await fs.loadBytes('cat.png')).toEqual(png)
+  })
+
+  test('a rename keeps a binary file intact', async () => {
+    const fs = await NodeFileSystem.create(root)
+    await fs.saveBytes('cat.png', png)
+    await fs.renameFile('cat.png', 'kitten.png')
+
+    expect(await fs.loadBytes('kitten.png')).toEqual(png)
+    expect(await fs.fileExists('cat.png')).toBe(false)
+  })
+
+  test('a binary file carries no preview, so it is never read to build one', async () => {
+    const fs = await NodeFileSystem.create(root)
+    await fs.saveBytes('cat.png', png)
+    await fs.saveFile('hello.scm', 'one\ntwo')
+
+    const entries = await fs.getFileList()
+    expect(entries.find((e) => e.name === 'cat.png')?.preview).toBeNull()
+    expect(entries.find((e) => e.name === 'hello.scm')?.preview).toBe('one\ntwo')
+  })
+})
+
 describe('isHiddenName', () => {
   test('marks dotted names as internal', () => {
     expect(isHiddenName('.scamper.config')).toBe(true)
