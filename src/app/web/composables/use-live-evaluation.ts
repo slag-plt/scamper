@@ -1,0 +1,147 @@
+import { getCurrentScope, onScopeDispose } from 'vue'
+import { liveEvaluation } from '../run-prefs'
+
+/**
+ * Live evaluation (issue #378): the file re-runs by itself shortly after the
+ * user stops typing, so the output tracks the code without anyone pressing Run.
+ *
+ * Two timers make up the whole policy:
+ *
+ * - An *idle* timer, restarted on every edit, so a burst of typing costs one
+ *   run rather than one per keystroke.
+ * - A *watchdog*, armed on each live run, that stops a program still going
+ *   after {@link DEFAULT_RUN_LIMIT_MS}. An infinite loop is an ordinary thing
+ *   for a student to write, and without this the first one would leave the IDE
+ *   running it forever with no obvious cause.
+ *
+ * Runs cannot queue up behind each other: at most one idle timer is pending,
+ * and starting a run supersedes the one in flight (see `execute` in
+ * use-scamper-session.ts), so a program slower than the idle delay is replaced
+ * rather than joined.
+ *
+ * The time limit is deliberately confined to *live* runs. Pressing Run is how a
+ * genuinely long program is run in full, and the watchdog's message says so.
+ *
+ * Framework-light on purpose -- it takes plain callbacks rather than the
+ * session, so its timing can be tested with fake timers and no mounted
+ * component.
+ */
+
+/** How long the user must stop typing before a live run starts. */
+export const DEFAULT_IDLE_MS = 750
+
+/** How long a live run may take before the watchdog stops it. */
+export const DEFAULT_RUN_LIMIT_MS = 5000
+
+export interface LiveEvaluationHooks {
+  /** Starts a run of the current file. Resolves once it has been scheduled. */
+  run: () => Promise<void> | void
+  /** Stops the run in flight, if any. */
+  stopRun: () => void
+  /** The id of the run in flight, or null if nothing is running. */
+  currentRunId: () => string | null
+  /**
+   * Whether a live run is allowed right now -- as opposed to whether the user
+   * wants them at all, which is {@link liveEvaluation} and checked here.
+   */
+  canRun: () => boolean
+  /** Says that a live run was stopped for taking longer than `limitMs`. */
+  reportTimeout: (limitMs: number) => void
+}
+
+export interface LiveEvaluationOptions {
+  idleMs?: number
+  runLimitMs?: number
+}
+
+export function useLiveEvaluation(
+  hooks: LiveEvaluationHooks,
+  options: LiveEvaluationOptions = {},
+) {
+  const idleMs = options.idleMs ?? DEFAULT_IDLE_MS
+  const runLimitMs = options.runLimitMs ?? DEFAULT_RUN_LIMIT_MS
+
+  let idleId: ReturnType<typeof setTimeout> | null = null
+  let watchdogId: ReturnType<typeof setTimeout> | null = null
+
+  function clearIdle() {
+    if (idleId !== null) {
+      clearTimeout(idleId)
+      idleId = null
+    }
+  }
+
+  function clearWatchdog() {
+    if (watchdogId !== null) {
+      clearTimeout(watchdogId)
+      watchdogId = null
+    }
+  }
+
+  /**
+   * Stops the live run identified by `id`, if it is still the one running.
+   *
+   * Checking the id is what keeps the watchdog from reaching past its own run:
+   * by the time it fires the live run may be long over and a manual one --
+   * which has no time limit -- may be in flight in its place.
+   */
+  function watchdogFired(id: string) {
+    watchdogId = null
+    if (hooks.currentRunId() !== id) return
+    hooks.stopRun()
+    hooks.reportTimeout(runLimitMs)
+  }
+
+  async function runNow() {
+    idleId = null
+    // Re-checked here, not just when scheduling: the delay is long enough for
+    // the file to have been closed, or a step to have started, in between.
+    if (!liveEvaluation.value || !hooks.canRun()) return
+    await hooks.run()
+    const id = hooks.currentRunId()
+    // Nothing to watch: the program did not compile, or it finished as it was
+    // scheduled (a file of nothing but `define`s usually has).
+    if (id === null) return
+    clearWatchdog()
+    watchdogId = setTimeout(() => {
+      watchdogFired(id)
+    }, runLimitMs)
+  }
+
+  /**
+   * Notes that the document changed. Restarts the idle timer, or cancels a
+   * pending run where live evaluation is off or not currently allowed.
+   */
+  function noteEdit(): void {
+    clearIdle()
+    if (!liveEvaluation.value || !hooks.canRun()) return
+    idleId = setTimeout(() => {
+      void runNow()
+    }, idleMs)
+  }
+
+  /**
+   * Drops a pending run and disarms the watchdog, without touching whatever is
+   * running. For a file switch, a close, or the feature being turned off: the
+   * scheduled run is about the document that is going away.
+   */
+  function cancel(): void {
+    clearIdle()
+    clearWatchdog()
+  }
+
+  /** @returns true iff a live run is scheduled and has not started yet. */
+  function isPending(): boolean {
+    return idleId !== null
+  }
+
+  // Guarded so the composable can be exercised without a component around it;
+  // in the IDE this is what stops a timer outliving the page.
+  if (getCurrentScope()) {
+    onScopeDispose(cancel)
+  }
+
+  return { noteEdit, cancel, isPending }
+}
+
+export type LiveEvaluation = ReturnType<typeof useLiveEvaluation>

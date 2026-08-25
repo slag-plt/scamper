@@ -22,14 +22,17 @@ import type { CursorStatus } from '../codemirror/enclosing-form'
 import { provideEditor } from '../composables/editor-context'
 import type { ResultsPaneType } from '../composables/use-results-pane'
 import { provideScamperSession } from '../composables/use-scamper-session'
+import { useLiveEvaluation } from '../composables/use-live-evaluation'
+import { liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
-import type { Value } from '../../../lpm'
+import { ScamperError, type Value } from '../../../lpm'
 import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
 import { FileEntry, isHiddenName, isUserFile } from '../../../fs/fs'
 import { FileSession } from '../file-session'
+import { appShortcut } from '../edit-commands'
 import { archiveFilename, buildArchive } from '../archive'
 import QueryGhostLine from './query/QueryGhostLine.vue'
 import ExpandedQueryModal from './query/ExpandedQueryModal.vue'
@@ -161,6 +164,41 @@ const session = provideScamperSession(resultsRef, {
   },
 })
 const { queries, expandedQueryId } = session
+
+// ---------- live evaluation (#378) ----------
+
+const live = useLiveEvaluation({
+  run: () => session.execute(),
+  stopRun: () => { session.stopRun() },
+  currentRunId: () => session.currentRun.value,
+  // A run of its own would tear down the one the trace is collecting, and
+  // there is nothing to run before a file is open or while one is loading.
+  canRun: () =>
+    currentFile.value !== null &&
+    !isLoadingFile &&
+    !isCollectingTrace.value &&
+    isEditorLoaded(),
+  reportTimeout: (limitMs) => {
+    resultsRef.value?.display?.report(
+      new ScamperError(
+        'Runtime',
+        `This program was still running after ${(limitMs / 1000).toString()} seconds, so live evaluation stopped it. ` +
+          `Press ${appShortcut.run} to run it without a time limit.`,
+      ),
+    )
+  },
+})
+
+// Turning it on should show something rather than waiting for the next
+// keystroke, so a file whose output is already out of date runs at once;
+// turning it off drops a run the last keystroke had scheduled.
+watch(liveEvaluation, (on) => {
+  if (on) {
+    if (isDirty.value) live.noteEdit()
+  } else {
+    live.cancel()
+  }
+})
 
 /** What each panel is called, wherever it needs a name. */
 const panelLabels: Record<PanelId, string> = {
@@ -556,6 +594,7 @@ function stopAutosaving() {
 function makeDirty() {
   isDirty.value = true
   session.invalidateAllQueries()
+  live.noteEdit()
 }
 
 function handleCursorChange(status: CursorStatus) {
@@ -589,6 +628,8 @@ async function switchToFile(filename: string): Promise<void> {
   isLoadingFile = true
   stopAutosaving()
   session.stopAll()
+  // A run scheduled by the last keystroke is about the file being left.
+  live.cancel()
 
   try {
     // Forces a save of the outgoing file before loading the new one so a quick
@@ -898,6 +939,7 @@ function closeOpenFile() {
   config.lastOpenedFilename = null
   saveConfig()
   session.stopAll()
+  live.cancel()
   session.resetOutput()
   isDirty.value = false
 }
