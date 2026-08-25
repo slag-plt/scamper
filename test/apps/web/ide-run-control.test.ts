@@ -33,8 +33,8 @@ await initialize()
  * The header's Run control (issue #378).
  *
  * Live evaluation replaces the output as the student types, and until this the
- * only sign of it was the output changing. So the control says "Auto" while it
- * is on and animates while a run is coming or going -- and, because the
+ * only sign of it was the output changing. So the control says "Autorun" while
+ * it is on and animates while a run is coming or going -- and, because the
  * animation is the whole indication, these check the state it is driven from
  * rather than trusting the CSS.
  */
@@ -80,7 +80,7 @@ describe('IDE run control', () => {
 
   /** The half holding the caret, which opens the menu. */
   function caret(): HTMLElement {
-    const name = liveEvaluation.value ? 'Auto run options' : 'Run options'
+    const name = liveEvaluation.value ? 'Autorun options' : 'Run options'
     return getByRole(document.body, 'button', { name })
   }
 
@@ -115,14 +115,15 @@ describe('IDE run control', () => {
     return { id, tracing: false, done: new Promise(() => undefined) }
   }
 
-  test('says "Auto" while live evaluation is on, and not while it is off', async () => {
+  test('says "Autorun" while live evaluation is on, and "Run" while it is off', async () => {
     const wrapper = await mountIde()
     try {
-      expect(control().textContent).toContain('Auto')
+      expect(control().textContent).toContain('Autorun')
 
       setLiveEvaluation(false)
       await flushPromises()
-      expect(control().textContent).not.toContain('Auto')
+      expect(control().textContent).not.toContain('Autorun')
+      expect(control().textContent).toContain('Run')
     } finally {
       wrapper.unmount()
     }
@@ -139,13 +140,13 @@ describe('IDE run control', () => {
       getByRole(menu, 'menuitemcheckbox', { name: 'Live Evaluation' }).click()
       await flushPromises()
       expect(liveEvaluation.value).toBe(false)
-      expect(control().textContent).not.toContain('Auto')
+      expect(control().textContent).not.toContain('Autorun')
 
       menu = await openControlMenu()
       getByRole(menu, 'menuitemcheckbox', { name: 'Live Evaluation' }).click()
       await flushPromises()
       expect(liveEvaluation.value).toBe(true)
-      expect(control().textContent).toContain('Auto')
+      expect(control().textContent).toContain('Autorun')
     } finally {
       wrapper.unmount()
     }
@@ -171,7 +172,7 @@ describe('IDE run control', () => {
     }
   })
 
-  test('animates a live run that is still going, and leaves Run in place', async () => {
+  test('animates a live run that is still going, and leaves Autorun in place', async () => {
     const wrapper = await mountIde()
     vi.spyOn(Scamper.getInstance(), 'execute').mockImplementation(() =>
       Promise.resolve(neverEndingRun('live-run')),
@@ -185,7 +186,9 @@ describe('IDE run control', () => {
       expect(control().className).toContain('run-group--running')
       // Swapping in Stop on every pause in typing would make the toolbar
       // flicker; the stripe is what says a live run is going.
-      expect(queryByRole(document.body, 'button', { name: 'Run' })).not.toBe(null)
+      expect(queryByRole(document.body, 'button', { name: 'Autorun' })).not.toBe(
+        null,
+      )
       expect(queryByRole(document.body, 'button', { name: 'Stop' })).toBe(null)
     } finally {
       wrapper.unmount()
@@ -198,7 +201,7 @@ describe('IDE run control', () => {
       Promise.resolve(neverEndingRun('manual-run')),
     )
     try {
-      getByRole(document.body, 'button', { name: 'Run' }).click()
+      getByRole(document.body, 'button', { name: 'Autorun' }).click()
       await flushPromises()
 
       expect(getByRole(document.body, 'button', { name: 'Stop' })).toBeTruthy()
@@ -209,7 +212,7 @@ describe('IDE run control', () => {
     }
   })
 
-  test('its menu can stop a live run, which the Run half no longer does', async () => {
+  test('its menu can stop a live run, which the Autorun half no longer does', async () => {
     const wrapper = await mountIde()
     const scamper = Scamper.getInstance()
     vi.spyOn(scamper, 'execute').mockImplementation(() =>

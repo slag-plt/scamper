@@ -32,8 +32,7 @@ export const patchNotes: PatchNote[] = [
       'The View menu can now show the internal files Scamper keeps, such as saved file histories, which open read-only.',
       'Pressing Run on a file with no code in it no longer fails silently.',
       'Audio pipelines now accept a sample, so a sample-node can drive one.',
-      'Your file now runs by itself a moment after you stop typing; turn that off under Run > Live Evaluation.',
-      'The Run button now says "Auto" when your file is running itself, and lights up each time it does.'
+      'Your file now runs by itself when you open it and a moment after you stop typing; the Run button says "Autorun" while it does, and Run > Live Evaluation turns it off.'
     ]
   },
   {

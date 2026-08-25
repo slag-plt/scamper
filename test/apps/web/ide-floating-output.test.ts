@@ -149,7 +149,7 @@ describe('IDE floating output window', () => {
       await flushPromises()
       expect(outputWindow()?.style.display).toBe('none')
 
-      getByRole(document.body, 'button', { name: 'Run' }).click()
+      getByRole(document.body, 'button', { name: 'Autorun' }).click()
       await flushPromises()
 
       expect(outputWindow()?.style.display).not.toBe('none')
@@ -235,7 +235,7 @@ describe('IDE floating output window', () => {
           getByRole(document.body, 'tab', { name: 'Source' }),
         ).toHaveAttribute('aria-selected', 'true')
 
-        getByRole(document.body, 'button', { name: 'Run' }).click()
+        getByRole(document.body, 'button', { name: 'Autorun' }).click()
         await flushPromises()
 
         expect(

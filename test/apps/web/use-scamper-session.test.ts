@@ -382,12 +382,17 @@ describe('useScamperSession', () => {
     })
 
     const wrapper = mount(Host)
-    expect(wrapper.find('[aria-label="Run"]').exists()).toBe(true)
+    // The word on the main half follows live evaluation ("Autorun" while it is
+    // on), so the class is the stable handle; Stop is the one that is labelled.
+    const showsRun = () =>
+      wrapper.find('.run-main:not([aria-label="Stop"])').exists()
+
+    expect(showsRun()).toBe(true)
     expect(wrapper.find('[aria-label="Stop"]').exists()).toBe(false)
 
-    await wrapper.find('[aria-label="Run"]').trigger('click')
+    await wrapper.find('.run-main').trigger('click')
     expect(wrapper.find('[aria-label="Stop"]').exists()).toBe(true)
-    expect(wrapper.find('[aria-label="Run"]').exists()).toBe(false)
+    expect(showsRun()).toBe(false)
   })
 
   test('IdeHeader shows Run after display task completes', async () => {
@@ -409,7 +414,10 @@ describe('useScamperSession', () => {
     })
 
     const wrapper = mount(Host)
-    await wrapper.find('[aria-label="Run"]').trigger('click')
+    const showsRun = () =>
+      wrapper.find('.run-main:not([aria-label="Stop"])').exists()
+
+    await wrapper.find('.run-main').trigger('click')
     expect(wrapper.find('[aria-label="Stop"]').exists()).toBe(true)
     expect(lastRun).toBeDefined()
 
@@ -420,7 +428,7 @@ describe('useScamperSession', () => {
     await flushPromises()
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('[aria-label="Run"]').exists()).toBe(true)
+    expect(showsRun()).toBe(true)
     expect(wrapper.find('[aria-label="Stop"]').exists()).toBe(false)
   })
 })

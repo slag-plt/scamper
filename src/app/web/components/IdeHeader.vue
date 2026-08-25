@@ -40,13 +40,20 @@ async function handleRun() {
  * The Run button is a split control: pressing the left half runs the file, and
  * the right half opens the run menu and is where live evaluation shows itself.
  *
- * The word "Auto" is on it whenever live evaluation is on, and the control
- * animates while a run is coming or going -- which is the only sign a student
- * gets that the output they are watching is about to be replaced.
+ * The word on it is "Autorun" whenever live evaluation is on and "Run"
+ * otherwise, and the control animates while a run is coming or going -- which
+ * is the only sign a student gets that the output they are watching is about
+ * to be replaced.
  */
 
 /** True when live evaluation is on, whatever it happens to be doing. */
 const isLive = computed(() => props.liveStatus !== 'off')
+
+/**
+ * The word on the pill: the action it performs, or -- while live evaluation is
+ * on -- the fact that it is being performed without being asked.
+ */
+const runLabel = computed(() => (isLive.value ? 'Autorun' : 'Run'))
 
 /**
  * True while a live run is coming or in flight, i.e. what animates.
@@ -57,6 +64,14 @@ const isLive = computed(() => props.liveStatus !== 'off')
  */
 const isLiveWorking = computed(
   () => props.liveStatus === 'pending' || props.liveStatus === 'running',
+)
+
+/**
+ * True while the IDE is working on something the student asked for: a manual
+ * run or a step. A live run is excluded -- the control animates for that.
+ */
+const isBusy = computed(
+  () => (isRunInProgress.value && !isLiveWorking.value) || props.isStepping === true,
 )
 
 /** What the control is doing, for the tooltip over the whole of it. */
@@ -118,8 +133,8 @@ function searchOpenWindow(searchTerm: string) {
         @click="emit('toggleSidebar')"
       ></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
-      <!-- Run, with live evaluation's state on it: "Auto" while it is on, and
-           a stripe crossing the control while a run is coming or going. -->
+      <!-- Run, with live evaluation's state on it: "Autorun" while it is on,
+           and a stripe crossing the control while a run is coming or going. -->
       <div
         class="run-group"
         :class="{
@@ -133,31 +148,35 @@ function searchOpenWindow(searchTerm: string) {
         <button
           v-if="isRunInProgress && !isLiveWorking"
           type="button"
-          class="icon-button run-main fa-solid fa-stop"
+          class="icon-button run-main"
           aria-label="Stop"
           @click="session.stopRun()"
-        ></button>
+        >
+          <span class="run-label">
+            <i class="fa-solid fa-stop" aria-hidden="true"></i>
+          </span>
+        </button>
+        <!-- The word is the label and the indicator both: nothing else in the
+             IDE says that the file is running itself. -->
         <button
           v-else
           type="button"
-          class="icon-button run-main fa-solid fa-play"
-          aria-label="Run"
+          class="icon-button run-main"
           accesskey="w"
           @click="handleRun"
-        ></button>
+        >
+          <span class="run-label">{{ runLabel }}</span>
+        </button>
         <button
           type="button"
           class="icon-button run-caret"
           :class="{ open: runMenuAt !== null }"
-          :aria-label="isLive ? 'Auto run options' : 'Run options'"
+          :aria-label="`${runLabel} options`"
           aria-haspopup="menu"
           :aria-expanded="runMenuAt !== null"
           @mousedown.stop
           @click="toggleRunMenu"
         >
-          <!-- The label is the indicator: no other part of the IDE says that
-               the file is running itself. -->
-          <span v-if="isLive" class="run-auto">Auto</span>
           <i class="fa-solid fa-caret-down" aria-hidden="true"></i>
         </button>
       </div>
@@ -168,13 +187,12 @@ function searchOpenWindow(searchTerm: string) {
         :items="runMenuItems"
         @close="runMenuAt = null"
       />
-      <!-- A manual run says so here; a live one says so on the control itself,
-           which would otherwise put a spinner in the toolbar as you type. -->
-      <i
-        v-if="isRunInProgress && !isLiveWorking"
-        class="fa-solid fa-spinner fa-spin"
-        aria-hidden="true"
-      ></i>
+      <!-- One spinner for whichever of the two is going, since they would look
+           the same anyway. A *live* run is left out: it says so on the control
+           itself, and would otherwise put a spinner here as you type. -->
+      <span class="spinner-slot" aria-hidden="true">
+        <i v-if="isBusy" class="fa-solid fa-spinner fa-spin"></i>
+      </span>
       <!-- Steps the statement under the cursor in its own window, rather than
            tracing the whole program in the output pane. -->
       <button
@@ -185,11 +203,6 @@ function searchOpenWindow(searchTerm: string) {
         :disabled="!canStep || isStepping"
         @click="emit('stepStatement')"
       ></button>
-      <i
-        v-if="isStepping"
-        class="fa-solid fa-spinner fa-spin"
-        aria-hidden="true"
-      ></i>
       <button
         type="button"
         class="icon-button fa-solid fa-clipboard-question"
@@ -285,12 +298,36 @@ function searchOpenWindow(searchTerm: string) {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/*
+ * The half that runs the file, which carries the word.
+ *
+ * The pill must not change size as that word does, or the toolbar would reflow
+ * every time live evaluation was toggled. So the button always reserves the
+ * width of the longer of the two with a hidden copy of it, and the real label
+ * -- "Run", "Autorun", or the Stop icon -- is laid over the top.
+ */
 .run-main {
+  position: relative;
+  padding-inline: var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
 }
 
+.run-main::after {
+  content: 'Autorun';
+  visibility: hidden;
+}
+
+.run-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .run-caret {
-  gap: var(--space-2xs);
   padding-inline: var(--space-sm);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   /* A hairline rather than a gap: the two halves must not drift apart. */
@@ -302,13 +339,16 @@ function searchOpenWindow(searchTerm: string) {
 }
 
 /*
- * The word that says the file is running itself. Small and quiet: it is a
- * status, and the student's attention belongs in the editor.
+ * The spinner's place in the row, kept whether or not it is in it: appearing
+ * and disappearing, it would otherwise shove the rest of the toolbar sideways
+ * every time a program ran. Sized in em so it follows the icons around it.
  */
-.run-auto {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1;
+.spinner-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25em;
 }
 
 /*

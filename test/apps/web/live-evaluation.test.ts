@@ -139,6 +139,42 @@ describe('live evaluation', () => {
     expect(state.runs).toBe(0)
   })
 
+  test('runNow() runs at once, without waiting out the idle delay', async () => {
+    const { state, hooks } = mockHooks()
+    const live = useLiveEvaluation(hooks)
+
+    await live.runNow()
+    expect(state.runs).toBe(1)
+  })
+
+  test('runNow() supersedes a run the last keystroke had scheduled', async () => {
+    const { state, hooks } = mockHooks()
+    const live = useLiveEvaluation(hooks)
+
+    live.noteEdit()
+    await live.runNow()
+    expect(state.runs).toBe(1)
+    expect(live.pending.value).toBe(false)
+
+    // The timer it replaced must not fire a second run behind it.
+    await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS * 2)
+    expect(state.runs).toBe(1)
+  })
+
+  test('runNow() respects the preference and the gate', async () => {
+    const { state, hooks } = mockHooks()
+    const live = useLiveEvaluation(hooks)
+
+    setLiveEvaluation(false)
+    await live.runNow()
+    expect(state.runs).toBe(0)
+
+    setLiveEvaluation(true)
+    state.allowed = false
+    await live.runNow()
+    expect(state.runs).toBe(0)
+  })
+
   test('cancel() drops a pending run', async () => {
     const { state, hooks } = mockHooks()
     const live = useLiveEvaluation(hooks)

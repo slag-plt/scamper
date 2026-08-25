@@ -101,7 +101,7 @@ describe('#372: the separate run window is gone', () => {
       // Open the file first: running an empty editor is a different bug (#366).
       getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
       await flushPromises()
-      getByRole(document.body, 'button', { name: 'Run' }).click()
+      getByRole(document.body, 'button', { name: 'Autorun' }).click()
       await flushPromises()
       expect(open).not.toHaveBeenCalled()
     } finally {

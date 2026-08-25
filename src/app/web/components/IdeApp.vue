@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 import * as SingleInstance from '../single-instance'
 import {
   LEGACY_CONFIG_FILENAME,
@@ -260,6 +268,15 @@ const panelPlacement = computed(() =>
       })),
 )
 
+/**
+ * True while the run that opening a file starts is under way (#378).
+ *
+ * That run is there to fill the output pane, not to be looked at: bringing the
+ * pane forward would put the person on the Output tab instead of the file they
+ * just asked for.
+ */
+let isOpeningFileRun = false
+
 // Running with the output tucked away would show the person nothing at all, so
 // starting a run brings the window back. One verb for both layouts: floating,
 // it un-minimizes and raises; tabbed, fronting the panel *is* selecting its
@@ -267,7 +284,7 @@ const panelPlacement = computed(() =>
 watch(
   () => session.currentRun.value,
   (run) => {
-    if (run !== null) panels.reveal('output')
+    if (run !== null && !isOpeningFileRun) panels.reveal('output')
   },
 )
 
@@ -666,6 +683,18 @@ async function switchToFile(filename: string): Promise<void> {
   await populateFileDrawer()
   startAutosaving()
   isLoadingFile = false
+  // With live evaluation on, the file that has just been opened shows its
+  // output at once rather than an empty pane waiting for a keystroke. Last of
+  // all, because this checks `canRun`, which refuses while a file is loading.
+  isOpeningFileRun = true
+  try {
+    await live.runNow()
+    // Held until the watcher above has seen this run, since it is what the
+    // flag is there to tell.
+    await nextTick()
+  } finally {
+    isOpeningFileRun = false
+  }
 }
 
 /**

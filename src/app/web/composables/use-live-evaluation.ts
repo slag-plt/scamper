@@ -5,7 +5,8 @@ import { liveEvaluation } from '../run-prefs'
  * Live evaluation (issue #378): the file re-runs by itself shortly after the
  * user stops typing, so the output tracks the code without anyone pressing Run.
  *
- * Two timers make up the whole policy:
+ * A file runs when it is opened, so its output is there to read rather than
+ * waiting on a keystroke. After that, two timers make up the whole policy:
  *
  * - An *idle* timer, restarted on every edit, so a burst of typing costs one
  *   run rather than one per keystroke.
@@ -121,9 +122,17 @@ export function useLiveEvaluation(
     hooks.reportTimeout(runLimitMs)
   }
 
+  /**
+   * Runs the file now rather than waiting out the idle delay: for a file that
+   * has just been opened, whose output would otherwise sit empty until the
+   * first keystroke.
+   *
+   * Self-guarding -- it does nothing where a scheduled run would not have
+   * happened either -- and it drops any run already pending, since this one
+   * supersedes it.
+   */
   async function runNow() {
-    idleId = null
-    pending.value = false
+    clearIdle()
     // Re-checked here, not just when scheduling: the delay is long enough for
     // the file to have been closed, or a step to have started, in between.
     if (!liveEvaluation.value || !hooks.canRun()) return
@@ -171,7 +180,7 @@ export function useLiveEvaluation(
     onScopeDispose(cancel)
   }
 
-  return { noteEdit, cancel, pending, liveRunId }
+  return { noteEdit, runNow, cancel, pending, liveRunId }
 }
 
 export type LiveEvaluation = ReturnType<typeof useLiveEvaluation>

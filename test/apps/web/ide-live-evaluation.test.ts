@@ -159,6 +159,45 @@ describe('IDE live evaluation', () => {
       await flushPromises()
 
       await vi.advanceTimersByTimeAsync(DEFAULT_IDLE_MS * 4)
+      // The file arrived at runs, since opening one runs it; the edit to the
+      // file left behind never does.
+      expect(execute.mock.calls.map((c) => c[0].src)).toEqual([
+        '(display "other")',
+      ])
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('runs a file as it is opened, so its output is there to read', async () => {
+    const wrapper = await mountIde()
+    const execute = vi
+      .spyOn(Scamper.getInstance(), 'execute')
+      .mockResolvedValue(null)
+    try {
+      getByRole(document.body, 'button', { name: 'Open other.scm' }).click()
+      await flushPromises()
+
+      // At once: waiting out the idle delay would leave the output pane empty
+      // for as long as the person took to read the code.
+      expect(execute).toHaveBeenCalledTimes(1)
+      expect(execute.mock.calls[0][0].src).toBe('(display "other")')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('does not run a file it opens while live evaluation is off', async () => {
+    const wrapper = await mountIde()
+    const execute = vi
+      .spyOn(Scamper.getInstance(), 'execute')
+      .mockResolvedValue(null)
+    try {
+      setLiveEvaluation(false)
+      await flushPromises()
+
+      getByRole(document.body, 'button', { name: 'Open other.scm' }).click()
+      await flushPromises()
       expect(execute).not.toHaveBeenCalled()
     } finally {
       wrapper.unmount()
