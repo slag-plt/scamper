@@ -352,14 +352,31 @@ export function charToName(c: string): string {
   }
 }
 
-/** @return `s` with the characters special to string-literal syntax (the
- *  backslash and the double-quote) escaped, so that wrapping the result in
- *  quotes yields a valid, re-readable literal. Inverse of the reader's
- *  `parseStringLiteral`. Backslashes must be escaped first to avoid
- *  double-escaping the backslash introduced for each quote. */
+/** Each character a string literal cannot hold verbatim, paired with the
+ *  escape sequence `parseStringLiteral` reads back as that character. The
+ *  backslash and the quote would end or reopen the literal; the rest are the
+ *  control characters the reader names, which would otherwise print raw. */
+const stringLiteralEscapes = new Map([
+  ['\\', '\\\\'],
+  ['"', '\\"'],
+  ['\x07', '\\a'],
+  ['\b', '\\b'],
+  ['\t', '\\t'],
+  ['\n', '\\n'],
+  ['\v', '\\v'],
+  ['\f', '\\f'],
+  ['\r', '\\r'],
+  ['\x1b', '\\e'],
+])
+
+/** @return `s` with every character that string-literal syntax cannot hold
+ *  verbatim replaced by its escape sequence, so that wrapping the result in
+ *  quotes yields a literal the reader reads back as `s`. Inverse of the
+ *  reader's `parseStringLiteral`. */
 export function escapeStringLiteral(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return [...s].map((c) => stringLiteralEscapes.get(c) ?? c).join('')
 }
+
 /** @return a vector (array) representation of the input list. */
 export function listToVector(l: L.List): L.Value[] {
   const ret: L.Value[] = []

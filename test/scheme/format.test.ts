@@ -54,6 +54,11 @@ describe('roundtrip', () => {
     roundtrip('(define g (lambda (& xs) xs))')
   })
 
+  test('a string literal with escapes stays on one line', () => {
+    roundtrip('(display "a\\nb")')
+    expect(format('(display "a\\nb")')).toBe('(display "a\\nb")')
+  })
+
   test('rest parameters are printed with "&" (#272)', () => {
     expect(format('(define f (lambda (x & xs) xs))')).toContain('(x & xs)')
     expect(format('(define g (lambda (& xs) xs))')).toContain('(& xs)')
