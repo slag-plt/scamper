@@ -24,6 +24,16 @@ import PopupMenu from './PopupMenu.vue'
 
 const emit = defineEmits<{ dirty: []; cursorChange: [status: CursorStatus] }>()
 
+const props = defineProps<{
+  /**
+   * The open file when it holds bytes rather than text (#385), with the object
+   * URL of its picture if it is an image. Covers the editor while set: the
+   * editor itself stays mounted underneath, since unmounting it would tear
+   * down the adapter the whole IDE talks through.
+   */
+  binaryFile?: { name: string; url: string | null } | null
+}>()
+
 const editorRegistration = useEditorRegistration()
 const containerRef = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
@@ -57,13 +67,13 @@ function onContextMenu(e: MouseEvent) {
   // Read the status after that dispatch, so `onIdentifier` describes where the
   // cursor now is rather than where it was.
   const ed = adapter
-  const { readOnly, hasSelection, onIdentifier } = ed.status()
+  const { readOnly, hasSelection, onIdentifier, isScamper } = ed.status()
 
   menuItems.value = [
-    { label: 'Go to definition', kbd: editShortcut.goToDefinition, disabled: !onIdentifier, run: () => { ed.goToDefinition() } },
-    { label: 'Find references', kbd: editShortcut.findReferences, disabled: !onIdentifier, run: () => { ed.findReferences() } },
+    { label: 'Go to definition', kbd: editShortcut.goToDefinition, disabled: !onIdentifier || !isScamper, run: () => { ed.goToDefinition() } },
+    { label: 'Find references', kbd: editShortcut.findReferences, disabled: !onIdentifier || !isScamper, run: () => { ed.findReferences() } },
     { separator: true },
-    { label: 'Format file', kbd: editShortcut.format, disabled: readOnly, run: () => { ed.format() } },
+    { label: 'Format file', kbd: editShortcut.format, disabled: readOnly || !isScamper, run: () => { ed.format() } },
     { separator: true },
     { label: 'Cut', kbd: editShortcut.cut, disabled: readOnly || !hasSelection, run: () => ed.cut() },
     { label: 'Copy', kbd: editShortcut.copy, disabled: !hasSelection, run: () => { ed.copy() } },
@@ -136,6 +146,23 @@ onUnmounted(() => {
     class="codemirror-editor"
     @contextmenu="onContextMenu"
   ></div>
+  <div v-if="props.binaryFile" class="binary-notice" role="note">
+    <img
+      v-if="props.binaryFile.url"
+      :src="props.binaryFile.url"
+      :alt="props.binaryFile.name"
+      class="binary-preview"
+    />
+    <template v-else>
+      <p class="binary-headline">
+        {{ props.binaryFile.name }} is a binary file and can't be opened in the
+        editor.
+      </p>
+      <p class="binary-detail">
+        You can still download or delete it from the file drawer.
+      </p>
+    </template>
+  </div>
   <PopupMenu
     v-if="menuOpen"
     :x="menuPos.x"
@@ -146,6 +173,42 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/*
+ * Covers the editor rather than replacing it: the CodeMirror instance is a
+ * singleton the rest of the IDE holds a handle on, so it stays mounted while a
+ * binary file is on screen (#385).
+ */
+.binary-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 2em;
+  overflow: auto;
+  text-align: center;
+  background: var(--background-color, #fff);
+  color: var(--text-color, #000);
+}
+
+.binary-preview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.binary-headline {
+  margin: 0;
+  font-weight: 600;
+}
+
+.binary-detail {
+  margin: 0;
+  opacity: 0.75;
+}
+
 .codemirror-editor {
   font-family:
     Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;

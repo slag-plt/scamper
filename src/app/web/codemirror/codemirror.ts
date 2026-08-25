@@ -42,6 +42,7 @@ import {
 import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { unifiedMergeView } from '@codemirror/merge'
 import { ScamperSupport } from './extensions/language'
+import { scamperMode, type EditorMode } from './modes'
 import { IndentationExtension } from './extensions/indentation'
 import { ReformatExtension } from './extensions/reformat'
 import { QueryExtension } from './extensions/query'
@@ -165,6 +166,8 @@ export interface EditorStateConfig {
   /** Notified with the cursor's status whenever the cursor moves or edits. */
   onCursorChange?: (status: CursorStatus) => void
   isReadOnly: boolean
+  /** How this file is edited -- see {@link modeFor}. */
+  mode: EditorMode
 }
 
 function mkExtensions(config: EditorStateConfig): Extension {
@@ -173,6 +176,7 @@ function mkExtensions(config: EditorStateConfig): Extension {
   const notifyCursor = config.onCursorChange
     ? dedupeCursorStatus(config.onCursorChange)
     : undefined
+  const { isScamper } = config.mode
   return [
     // basicSetup
     lineNumbers(),
@@ -180,9 +184,6 @@ function mkExtensions(config: EditorStateConfig): Extension {
     highlightSpecialChars(),
     history(),
     foldGutter(),
-    // Gutter markers for lint diagnostics -- easier to spot than the inline
-    // squiggles alone. Colored by severity and shows the messages on hover.
-    lintGutter(),
     drawSelection(),
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
@@ -190,9 +191,6 @@ function mkExtensions(config: EditorStateConfig): Extension {
     editorThemeCompartment.of(editorThemeExtension(currentTheme.value)),
     fontSizeCompartment.of(fontSizeExtension(editorFontSize.value)),
     wordWrapCompartment.of(wordWrapExtension(editorWordWrap.value)),
-    bracketMatching(),
-    closeBrackets(),
-    autocompletion(),
     rectangularSelection(),
     crosshairCursor(),
     highlightActiveLine(),
@@ -206,33 +204,10 @@ function mkExtensions(config: EditorStateConfig): Extension {
       ...completionKeymap,
       ...lintKeymap,
     ]),
-    // Scamper-specific extensions,
     EditorState.readOnly.of(config.isReadOnly),
-    ReformatExtension,
-    // Ctrl-I re-indents the whole document.
-    IndentationExtension,
-    // TODO: probably extend this out into a separate extension file
-    keymap.of([
-      // Tab re-indents the selected lines rather than adding an indent unit,
-      // matching DrRacket. Shift-Tab still outdents, for the rare line the
-      // indenter cannot place.
-      { key: 'Tab', run: indentSelection, shift: indentLess },
-      {
-        key: "'",
-        run: (view) => {
-          const { from, to } = view.state.selection.main
-          view.dispatch({
-            changes: { from, to, insert: "'" },
-            selection: { anchor: from + 1 },
-          })
-          return true
-        },
-      },
-    ]),
-    ScamperSupport(),
-    // In-process LSP features: hover, completion, signature help, and
-    // diagnostics (which feed the lintGutter above). See codemirror/lsp.
-    scamperLspExtensions(),
+    // Highlighting for whatever this file is -- Scheme, Markdown, CSV, or
+    // nothing at all for a text file we have no grammar for (#385).
+    config.mode.language,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         config.dirtyAction()
@@ -241,9 +216,49 @@ function mkExtensions(config: EditorStateConfig): Extension {
         notifyCursor(cursorStatus(update.state))
       }
     }),
-    QueryExtension,
-    ExampleExtension,
-    ExampleMarkTheme,
+    // Everything below is about editing a *Scamper program*, so a file that is
+    // not one gets none of it: no diagnostics from a language it is not
+    // written in, no formatter that would rewrite it as Scheme, and no
+    // bracket matching where brackets mean nothing (#385).
+    isScamper
+      ? [
+          // Gutter markers for lint diagnostics -- easier to spot than the
+          // inline squiggles alone. Colored by severity, messages on hover.
+          lintGutter(),
+          bracketMatching(),
+          closeBrackets(),
+          autocompletion(),
+          ReformatExtension,
+          // Ctrl-I re-indents the whole document.
+          IndentationExtension,
+          // TODO: probably extend this out into a separate extension file
+          keymap.of([
+            // Tab re-indents the selected lines rather than adding an indent
+            // unit, matching DrRacket. Shift-Tab still outdents, for the rare
+            // line the indenter cannot place.
+            { key: 'Tab', run: indentSelection, shift: indentLess },
+            {
+              key: "'",
+              run: (view) => {
+                const { from, to } = view.state.selection.main
+                view.dispatch({
+                  changes: { from, to, insert: "'" },
+                  selection: { anchor: from + 1 },
+                })
+                return true
+              },
+            },
+          ]),
+          // In-process LSP features: hover, completion, signature help, and
+          // diagnostics (which feed the lintGutter above). See codemirror/lsp.
+          scamperLspExtensions(),
+          QueryExtension,
+          // Checking an @example against the code it documents (#374) is
+          // likewise only meaningful in a program.
+          ExampleExtension,
+          ExampleMarkTheme,
+        ]
+      : [],
   ]
 }
 
@@ -291,6 +306,7 @@ export function mkNoFileEditorState(
       },
       onCursorChange,
       isReadOnly: true,
+      mode: scamperMode,
     }),
   })
 }

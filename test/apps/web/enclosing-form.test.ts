@@ -5,6 +5,7 @@ import { ensureSyntaxTree } from '@codemirror/language'
 import { parser } from '../../../src/scheme/generated/parser.js'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
 import { mkFreshEditorState } from '../../../src/app/web/codemirror/codemirror'
+import { scamperMode } from '../../../src/app/web/codemirror/modes'
 import { initialize } from '../../../src/scamper'
 import {
   cursorStatus,
@@ -168,6 +169,7 @@ describe('onCursorChange wiring (codemirror.ts)', () => {
         },
         onCursorChange: (s) => calls.push(s),
         isReadOnly: false,
+        mode: scamperMode,
       }),
       parent: document.createElement('div'),
     })

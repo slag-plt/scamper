@@ -78,6 +78,7 @@
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
     "@codemirror/commands": "^6.10.2",
+    "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.9.0",
     "@codemirror/lint": "^6.9.4",
     "@codemirror/lsp-client": "^6.2.5",

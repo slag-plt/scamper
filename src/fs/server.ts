@@ -1,4 +1,4 @@
-import type { FS, FileEntry } from './fs'
+import { refuseBinary, type Bytes, type FS, type FileEntry } from './fs'
 import { NotSignedInError } from './session'
 import { fetchServer } from './unreachable'
 
@@ -45,13 +45,22 @@ export class ServerFileSystem implements FS {
    * Performs a request against the file server, failing loudly on any non-2xx
    * reply so a caller never mistakes an error page for file contents.
    * @param path the path below the API root, e.g. `fs/files`
-   * @param body a value to send as a JSON request body, if any
+   * @param body a value to send as a request body, if any. Bytes are sent as
+   *             they are; anything else is sent as JSON.
    */
   private async request(
     method: string,
     path: string,
     body?: unknown,
   ): Promise<Response> {
+    // A file's contents travel as bytes and everything else as JSON. Text is
+    // bytes that happen to be UTF-8, so the file routes need no second shape
+    // and nothing here has to know which kind of file it is carrying (#385).
+    //
+    // `ArrayBuffer.isView` rather than `instanceof Uint8Array`, which compares
+    // prototypes and so answers false for a view made in another realm -- what
+    // a jsdom `TextEncoder` hands back. The brand check holds either way.
+    const isBytes = ArrayBuffer.isView(body)
     const response = await fetchServer(`${this.baseUrl}/${path}`, {
       method,
       // The session cookie has to ride along. Same-origin in every deployment
@@ -60,8 +69,19 @@ export class ServerFileSystem implements FS {
       // differently, and the failure would look like "not signed in".
       credentials: 'include',
       headers:
-        body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+        body === undefined
+          ? undefined
+          : {
+              'Content-Type': isBytes
+                ? 'application/octet-stream'
+                : 'application/json',
+            },
+      body:
+        body === undefined
+          ? undefined
+          : isBytes
+            ? (body as BodyInit)
+            : JSON.stringify(body),
     })
 
     if (response.status === 401) {
@@ -115,23 +135,25 @@ export class ServerFileSystem implements FS {
 
   /** @returns the contents of the given file, assumed to exist */
   async loadFile(filename: string): Promise<string> {
-    const response = await this.request('GET', `fs/files/${encode(filename)}`)
-    const body: unknown = await response.json()
-
-    if (
-      typeof body !== 'object' ||
-      body === null ||
-      typeof (body as { contents: unknown }).contents !== 'string'
-    ) {
-      throw new Error(`File server returned no contents for ${filename}`)
-    }
-
-    return (body as { contents: string }).contents
+    refuseBinary(filename)
+    return new TextDecoder().decode(await this.loadBytes(filename))
   }
 
   /** Saves `contents` to the given file, creating it if it does not exist */
   async saveFile(filename: string, contents: string): Promise<void> {
-    await this.request('PUT', `fs/files/${encode(filename)}`, { contents })
+    refuseBinary(filename)
+    await this.saveBytes(filename, new TextEncoder().encode(contents))
+  }
+
+  /** @returns the bytes of the given file, assumed to exist */
+  async loadBytes(filename: string): Promise<Bytes> {
+    const response = await this.request('GET', `fs/files/${encode(filename)}`)
+    return new Uint8Array(await response.arrayBuffer())
+  }
+
+  /** Saves `bytes` to the given file, creating it if it does not exist */
+  async saveBytes(filename: string, bytes: Bytes): Promise<void> {
+    await this.request('PUT', `fs/files/${encode(filename)}`, bytes)
     // Keep the cache consistent with our own writes, so a program that creates
     // a file and immediately asks whether it exists gets the right answer.
     this.names?.add(filename)

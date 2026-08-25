@@ -7,7 +7,7 @@
 // rule that must never be forgotten: a query that omits it returns somebody
 // else's work. Passing it explicitly means the type checker asks for it.
 
-import { isHiddenName, type FileEntry } from '../../src/fs/fs'
+import { isBinaryName, isHiddenName, type FileEntry } from '../../src/fs/fs'
 import type {
   HistoryFile,
   HistoryIndex,
@@ -18,6 +18,22 @@ import type {
 export const PREVIEW_LINES = 5
 
 /**
+ * Decodes file bytes as UTF-8, tolerating a cut mid-character.
+ *
+ * Non-fatal on purpose: a preview reads only the first bytes of a file, so the
+ * last one can land in the middle of a multi-byte character. That yields one
+ * replacement character at the very end, past the lines a preview keeps.
+ */
+export function decodeText(bytes: Uint8Array): string {
+  return new TextDecoder('utf-8', { fatal: false }).decode(bytes)
+}
+
+/** Encodes text as the bytes a file holds. */
+export function encodeText(contents: string): Uint8Array {
+  return new TextEncoder().encode(contents)
+}
+
+/**
  * @returns the preview the file drawer shows for `name`, or null for a file it
  *          never displays.
  *
@@ -26,11 +42,13 @@ export const PREVIEW_LINES = 5
  * matching src/fs/opfs.ts and src/fs/node.ts -- not cosmetic, since a file's
  * saved history can hold fifty whole versions and previewing one would put
  * every past version of every file into a listing that displays none of them.
+ * Binary names carry none either: a preview is text, and an image has no
+ * opening lines to show (#385).
  */
-export function previewOf(name: string, contents: string): string | null {
-  return isHiddenName(name)
+export function previewOf(name: string, contents: Uint8Array): string | null {
+  return isHiddenName(name) || isBinaryName(name)
     ? null
-    : contents.split('\n').slice(0, PREVIEW_LINES).join('\n')
+    : decodeText(contents).split('\n').slice(0, PREVIEW_LINES).join('\n')
 }
 
 /** What a record attempt did, mirroring the client's `RecordResult`. */
@@ -47,11 +65,17 @@ export interface FileStore {
    */
   list(userId: string): Promise<FileEntry[]>
 
-  /** @returns the contents of `name`, or undefined if it does not exist */
-  read(userId: string, name: string): Promise<string | undefined>
+  /**
+   * @returns the bytes of `name`, or undefined if it does not exist
+   *
+   * Bytes rather than a string because a user's files are not all text (#385):
+   * an image has to survive a round trip through here unchanged, and text is
+   * bytes that happen to be UTF-8.
+   */
+  read(userId: string, name: string): Promise<Uint8Array | undefined>
 
-  /** Saves `contents` to `name`, creating it if it does not already exist. */
-  write(userId: string, name: string, contents: string): Promise<void>
+  /** Saves `bytes` to `name`, creating it if it does not already exist. */
+  write(userId: string, name: string, bytes: Uint8Array): Promise<void>
 
   /** @returns true iff `name` existed and was removed */
   remove(userId: string, name: string): Promise<boolean>

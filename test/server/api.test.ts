@@ -35,6 +35,21 @@ function fs(
   return call(method, `${API_ROOT}/fs${suffix}`, body)
 }
 
+/**
+ * A file's contents as they travel: bytes, in both directions (#385). Text is
+ * bytes that happen to be UTF-8, so the file routes need no second shape.
+ */
+function bytes(contents: string): Uint8Array {
+  return new TextEncoder().encode(contents)
+}
+
+/** @returns the text of a byte reply, or undefined if it carried no bytes. */
+function textOf(response: ApiResponse): string | undefined {
+  return response.bytes === undefined
+    ? undefined
+    : new TextDecoder().decode(response.bytes)
+}
+
 describe('api routing', () => {
   test('every route is namespaced by API version', () => {
     // Old front-end releases stay live at their versioned URLs indefinitely
@@ -111,23 +126,41 @@ describe('file routes', () => {
   })
 
   test('a saved file round-trips', async () => {
-    expect((await fs('PUT', '/files/hello.scm', { contents: '(+ 1 2)' })).status).toBe(204)
-    expect(await fs('GET', '/files/hello.scm')).toEqual({
-      status: 200,
-      body: { contents: '(+ 1 2)' },
-    })
+    expect((await fs('PUT', '/files/hello.scm', bytes('(+ 1 2)'))).status).toBe(204)
+    const response = await fs('GET', '/files/hello.scm')
+    expect(response.status).toBe(200)
+    expect(textOf(response)).toBe('(+ 1 2)')
+  })
+
+  test('bytes survive a round trip unchanged, not just text', async () => {
+    // The point of the byte routes (#385): a PNG's header is not valid UTF-8,
+    // and anything that decoded it on the way through would corrupt it.
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff])
+    await fs('PUT', '/files/cat.png', png)
+
+    expect((await fs('GET', '/files/cat.png')).bytes).toEqual(png)
   })
 
   test('saving over a file replaces its contents', async () => {
-    await fs('PUT', '/files/a.scm', { contents: 'first' })
-    await fs('PUT', '/files/a.scm', { contents: 'second' })
-    expect((await fs('GET', '/files/a.scm')).body).toEqual({ contents: 'second' })
+    await fs('PUT', '/files/a.scm', bytes('first'))
+    await fs('PUT', '/files/a.scm', bytes('second'))
+    expect(textOf(await fs('GET', '/files/a.scm'))).toBe('second')
   })
 
-  test('a save without contents is a 400, not a silent empty file', async () => {
-    expect((await fs('PUT', '/files/a.scm', {})).status).toBe(400)
+  test('a save whose body is not bytes is a 400, not a silent empty file', async () => {
+    expect((await fs('PUT', '/files/a.scm', { contents: 'x' })).status).toBe(400)
     expect((await fs('PUT', '/files/a.scm', undefined)).status).toBe(400)
     expect((await fs('GET', '/files/a.scm')).status).toBe(404)
+  })
+
+  test('an empty body is an empty file, not a 400', async () => {
+    // A student can save an empty file, and with the contents *being* the body
+    // there is no field left to call missing. Only the body's shape is
+    // rejected above; emptiness is a legitimate value (#385).
+    expect((await fs('PUT', '/files/empty.scm', bytes(''))).status).toBe(204)
+    const response = await fs('GET', '/files/empty.scm')
+    expect(response.status).toBe(200)
+    expect(textOf(response)).toBe('')
   })
 
   test('reading a missing file is a 404', async () => {
@@ -135,7 +168,7 @@ describe('file routes', () => {
   })
 
   test('deleting removes the file', async () => {
-    await fs('PUT', '/files/a.scm', { contents: 'x' })
+    await fs('PUT', '/files/a.scm', bytes('x'))
     expect((await fs('DELETE', '/files/a.scm')).status).toBe(204)
     expect((await fs('GET', '/files/a.scm')).status).toBe(404)
   })
@@ -146,11 +179,9 @@ describe('file routes', () => {
 
   test('a filename is one encoded segment, so odd names survive', async () => {
     const name = 'my program (v2).scm'
-    await fs('PUT', `/files/${encodeURIComponent(name)}`, { contents: 'x' })
+    await fs('PUT', `/files/${encodeURIComponent(name)}`, bytes('x'))
 
-    expect((await fs('GET', `/files/${encodeURIComponent(name)}`)).body).toEqual({
-      contents: 'x',
-    })
+    expect(textOf(await fs('GET', `/files/${encodeURIComponent(name)}`))).toBe('x')
     expect((await fs('GET', '/files')).body).toEqual({
       files: [{ name, preview: 'x', isDirectory: false }],
     })
@@ -159,19 +190,19 @@ describe('file routes', () => {
 
 describe('rename', () => {
   test('moves contents and frees the old name', async () => {
-    await fs('PUT', '/files/old.scm', { contents: 'x' })
+    await fs('PUT', '/files/old.scm', bytes('x'))
 
     expect((await fs('POST', '/rename', { from: 'old.scm', to: 'new.scm' })).status).toBe(204)
     expect((await fs('GET', '/files/old.scm')).status).toBe(404)
-    expect((await fs('GET', '/files/new.scm')).body).toEqual({ contents: 'x' })
+    expect(textOf(await fs('GET', '/files/new.scm'))).toBe('x')
   })
 
   test('overwrites the destination when it already exists', async () => {
-    await fs('PUT', '/files/old.scm', { contents: 'keep' })
-    await fs('PUT', '/files/new.scm', { contents: 'clobber' })
+    await fs('PUT', '/files/old.scm', bytes('keep'))
+    await fs('PUT', '/files/new.scm', bytes('clobber'))
 
     expect((await fs('POST', '/rename', { from: 'old.scm', to: 'new.scm' })).status).toBe(204)
-    expect((await fs('GET', '/files/new.scm')).body).toEqual({ contents: 'keep' })
+    expect(textOf(await fs('GET', '/files/new.scm'))).toBe('keep')
   })
 
   test('renaming a missing file is a 404', async () => {
@@ -187,7 +218,7 @@ describe('listing', () => {
   test('carries a preview so the client need not read every file', async () => {
     // The client computing previews would cost one request per file; this is
     // the whole reason the listing is a single round trip.
-    await fs('PUT', '/files/a.scm', { contents: 'one\ntwo\nthree\nfour\nfive\nsix' })
+    await fs('PUT', '/files/a.scm', bytes('one\ntwo\nthree\nfour\nfive\nsix'))
 
     expect((await fs('GET', '/files')).body).toEqual({
       files: [
@@ -204,8 +235,8 @@ describe('listing', () => {
     // A file's history lives beside it as `.{filename}.history` and holds up
     // to fifty whole snapshots. Previewing one would put every past version of
     // every file into a listing that never displays them.
-    await fs('PUT', '/files/.hello.scm.history', { contents: 'lots\nand\nlots' })
-    await fs('PUT', '/files/hello.scm', { contents: 'shown' })
+    await fs('PUT', '/files/.hello.scm.history', bytes('lots\nand\nlots'))
+    await fs('PUT', '/files/hello.scm', bytes('shown'))
 
     expect((await fs('GET', '/files')).body).toEqual({
       files: [
@@ -215,9 +246,23 @@ describe('listing', () => {
     })
   })
 
+  test('carries no preview for a binary name', async () => {
+    // A preview is text, and an image has no opening lines to show. Reading
+    // one to build a preview it cannot display is the worst of both (#385).
+    await fs('PUT', '/files/cat.png', new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
+    await fs('PUT', '/files/hello.scm', bytes('shown'))
+
+    expect((await fs('GET', '/files')).body).toEqual({
+      files: [
+        { name: 'cat.png', preview: null, isDirectory: false },
+        { name: 'hello.scm', preview: 'shown', isDirectory: false },
+      ],
+    })
+  })
+
   test('is sorted by name, matching the OPFS backend', async () => {
     for (const name of ['c.scm', 'a.scm', 'b.scm']) {
-      await fs('PUT', `/files/${name}`, { contents: '' })
+      await fs('PUT', `/files/${name}`, bytes(''))
     }
 
     const { files } = (await fs('GET', '/files')).body as { files: { name: string }[] }

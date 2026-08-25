@@ -12,10 +12,10 @@ import { previewOf, type FileStore } from './stores'
  * forget an `await` that matters in production.
  */
 export class MemoryFileStore implements FileStore {
-  private readonly users = new Map<string, Map<string, string>>()
+  private readonly users = new Map<string, Map<string, Uint8Array>>()
 
   list(userId: string): Promise<FileEntry[]> {
-    const files = this.users.get(userId) ?? new Map<string, string>()
+    const files = this.users.get(userId) ?? new Map<string, Uint8Array>()
     const entries = [...files.entries()].map(([name, contents]) => ({
       name,
       preview: previewOf(name, contents),
@@ -25,12 +25,12 @@ export class MemoryFileStore implements FileStore {
     return Promise.resolve(entries.sort((a, b) => a.name.localeCompare(b.name)))
   }
 
-  read(userId: string, name: string): Promise<string | undefined> {
+  read(userId: string, name: string): Promise<Uint8Array | undefined> {
     return Promise.resolve(this.users.get(userId)?.get(name))
   }
 
-  write(userId: string, name: string, contents: string): Promise<void> {
-    this.filesOf(userId).set(name, contents)
+  write(userId: string, name: string, bytes: Uint8Array): Promise<void> {
+    this.filesOf(userId).set(name, bytes)
     return Promise.resolve()
   }
 
@@ -49,10 +49,10 @@ export class MemoryFileStore implements FileStore {
   }
 
   /** @returns `userId`'s files, creating the namespace on first write. */
-  private filesOf(userId: string): Map<string, string> {
+  private filesOf(userId: string): Map<string, Uint8Array> {
     let files = this.users.get(userId)
     if (files === undefined) {
-      files = new Map<string, string>()
+      files = new Map<string, Uint8Array>()
       this.users.set(userId, files)
     }
     return files

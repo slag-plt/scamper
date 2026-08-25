@@ -45,7 +45,14 @@ import Scamper from '../../../scamper'
 import { ScamperError, type Value } from '../../../lpm'
 import { SimpleErrorChannel } from '../../../lpm/output/simple-error'
 import * as FS from '../../../fs'
-import { FileEntry, isHiddenName, isUserFile } from '../../../fs/fs'
+import {
+  FileEntry,
+  fileKindOf,
+  isBinaryName,
+  isHiddenName,
+  isImageName,
+  isUserFile,
+} from '../../../fs/fs'
 import { FileSession } from '../file-session'
 import { appShortcut } from '../edit-commands'
 import { archiveFilename, buildArchive } from '../archive'
@@ -242,6 +249,9 @@ const live = useLiveEvaluation({
   // there is nothing to run before a file is open or while one is loading.
   canRun: () =>
     currentFile.value !== null &&
+    // Only a Scamper program runs: a text file is not a program, and a binary
+    // one never reaches the editor at all (#385).
+    fileKindOf(currentFile.value) === 'scamper' &&
     !isLoadingFile &&
     !isCollectingTrace.value &&
     isEditorLoaded(),
@@ -716,6 +726,60 @@ function setCurrentFile(filename: string | null) {
   fileSession?.setCurrentFile(filename)
 }
 
+/**
+ * Whether the open file is something Run can actually run (#385): a Scamper
+ * program, rather than a text file or an image.
+ */
+const isRunnableFile = computed(
+  () =>
+    currentFile.value !== null && fileKindOf(currentFile.value) === 'scamper',
+)
+
+/**
+ * The open file when it holds bytes rather than text, and the object URL its
+ * picture is drawn from if it is an image (#385).
+ *
+ * Null whenever the editor holds the open file, which is the ordinary case.
+ */
+const binaryFile = ref<{ name: string; url: string | null } | null>(null)
+
+/** Releases the object URL backing the shown picture, if there is one. */
+function releaseBinaryFile() {
+  if (binaryFile.value?.url != null) URL.revokeObjectURL(binaryFile.value.url)
+  binaryFile.value = null
+}
+
+/**
+ * Opens a binary file: selected in the drawer and shown, but never loaded into
+ * the editor (#385).
+ *
+ * `initializeDummyDoc` leaves the editor reporting itself unloaded, and that is
+ * already the guard everything needs -- `FileSession.save` bails on it, so
+ * autosave cannot write a decoded image back over the original, and `canRun`
+ * checks it too. No new guards, and no way to forget one.
+ */
+async function openBinaryFile(filename: string) {
+  if (!fs || !fileSession) return
+  // Saves and closes whatever was open, exactly as a switch to a text file
+  // does -- but without loading this one, which has no text to load.
+  await fileSession.leaveCurrentFile()
+  editor().initializeDummyDoc()
+  releaseBinaryFile()
+  setCurrentFile(filename)
+  isDirty.value = false
+
+  let url: string | null = null
+  if (isImageName(filename)) {
+    try {
+      const bytes = await fs.loadBytes(filename)
+      url = URL.createObjectURL(new Blob([bytes]))
+    } catch (e) {
+      reportError(e, (message) => `Could not open ${filename}: ${message}`)
+    }
+  }
+  binaryFile.value = { name: filename, url }
+}
+
 async function switchToFile(filename: string): Promise<void> {
   if (!fs || !fileSession) return
   isLoadingFile = true
@@ -727,12 +791,20 @@ async function switchToFile(filename: string): Promise<void> {
   examples.cancel()
 
   try {
-    // Forces a save of the outgoing file before loading the new one so a quick
-    // edit is never lost on switch (issue #238). The guarded saveCurrentFile()
-    // would no-op here because isLoadingFile is already set.
-    const src = await fileSession.switchTo(filename)
-    currentFile.value = filename
-    editor().initializeDoc(src, isHiddenName(filename))
+    if (isBinaryName(filename)) {
+      await openBinaryFile(filename)
+    } else {
+      releaseBinaryFile()
+      // Forces a save of the outgoing file before loading the new one so a
+      // quick edit is never lost on switch (issue #238). The guarded
+      // saveCurrentFile() would no-op here because isLoadingFile is already set.
+      const src = await fileSession.switchTo(filename)
+      currentFile.value = filename
+      editor().initializeDoc(src, {
+        readOnly: isHiddenName(filename),
+        filename,
+      })
+    }
   } catch (e) {
     reportError(e, (message) => `${message}\n\n${e instanceof Error ? (e.stack ?? '') : ''}`)
   }
@@ -856,9 +928,35 @@ async function handleCreate() {
   if (filename === null) return
   if (await fs?.fileExists(filename)) {
     await modalAlert({ message: `File ${filename} already exists!` })
+  } else if (isBinaryName(filename)) {
+    // There is nothing sensible to put in an empty PNG, and the editor could
+    // not open it afterwards. Uploading one is the way to get one (#385).
+    await modalAlert({
+      message: `Scamper cannot create ${filename}: files of that kind have to be uploaded.`,
+    })
   } else {
-    await fs?.saveFile(filename, `; ${filename}`)
+    // A Scheme comment only makes sense in a Scheme file; anything else starts
+    // empty rather than with a stray semicolon (#385).
+    await fs?.saveFile(
+      filename,
+      fileKindOf(filename) === 'scamper' ? `; ${filename}` : '',
+    )
     await switchToFile(filename)
+  }
+}
+
+/**
+ * Writes an uploaded file to storage, as bytes or as text according to its name.
+ *
+ * Both upload paths -- the picker and the drop target -- go through here, so
+ * neither can be the one that still decodes an image as UTF-8. That is what
+ * upload did before #385, which quietly destroyed every binary file it took.
+ */
+async function writeUpload(target: FS.t, filename: string, file: File) {
+  if (isBinaryName(filename)) {
+    await target.saveBytes(filename, new Uint8Array(await file.arrayBuffer()))
+  } else {
+    await target.saveFile(filename, await file.text())
   }
 }
 
@@ -880,7 +978,6 @@ function handlePickUpload() {
 async function handleUploadFile(file: File) {
   if (!fs || !fileSession) return
   if (!(await requireServer('Uploading a file'))) return
-  const content = await file.text()
   const filename = file.name
   if (await fs.fileExists(filename)) {
     const ok = await modalConfirm({
@@ -893,7 +990,7 @@ async function handleUploadFile(file: File) {
     // closed before the file is removed (see file-session.ts).
     await fileSession.deleteFile(filename, { replacing: true })
   }
-  await fs.saveFile(filename, content)
+  await writeUpload(fs, filename, file)
   setCurrentFile(null)
   await switchToFile(filename)
 }
@@ -904,7 +1001,6 @@ async function handleFileDrop(droppedFiles: FileList) {
   stopAutosaving()
   for (const file of droppedFiles) {
     try {
-      const content = await file.text()
       const filename = file.name
       if (await fs.fileExists(filename)) {
         const ok = await modalConfirm({
@@ -916,7 +1012,7 @@ async function handleFileDrop(droppedFiles: FileList) {
         // Serialize the overwrite against any in-flight save (see above).
         await fileSession.deleteFile(filename, { replacing: true })
       }
-      await fs.saveFile(filename, content)
+      await writeUpload(fs, filename, file)
       setCurrentFile(null)
       await switchToFile(filename)
     } catch (e) {
@@ -1034,6 +1130,7 @@ async function handleDelete(target: string) {
  */
 function closeOpenFile() {
   setCurrentFile(null)
+  releaseBinaryFile()
   editor().initializeDummyDoc()
   config.lastOpenedFilename = null
   saveConfig()
@@ -1066,9 +1163,11 @@ async function copyFileTo(
   if (!fs || !fileSession) return
   if (!(await requireServer(options.title))) return
   // The editor holds the newest contents of the open file; any other file is
-  // read from storage.
-  const contents =
-    source === currentFile.value && isEditorLoaded()
+  // read from storage. A binary file is never in the editor, so it is always
+  // copied byte for byte (#385).
+  const contents = isBinaryName(source)
+    ? await fs.loadBytes(source)
+    : source === currentFile.value && isEditorLoaded()
       ? editor().getDoc()
       : await fs.loadFile(source)
 
@@ -1087,7 +1186,11 @@ async function copyFileTo(
   if (!(await confirmDiscardingHistory(newName))) return
 
   try {
-    await fs.saveFile(newName, contents)
+    if (typeof contents === 'string') {
+      await fs.saveFile(newName, contents)
+    } else {
+      await fs.saveBytes(newName, contents)
+    }
   } catch (e) {
     reportError(e, (message) => `Could not copy ${source}: ${message}`)
     return
@@ -1159,6 +1262,24 @@ function startTextDownload(filename: string, contents: string) {
  * the server.
  */
 async function handleDownload(target: string) {
+  // A binary file is never in the editor, so it always comes from storage --
+  // and as bytes, since encoding one into a text data: URL would hand over a
+  // broken file (#385).
+  if (isBinaryName(target)) {
+    if (!fs) return
+    if (!(await requireServer('Downloading a file'))) return
+    try {
+      const url = URL.createObjectURL(new Blob([await fs.loadBytes(target)]))
+      startDownload(target, url)
+      // Freed on the next turn of the loop: revoking it before the synthetic
+      // click has been serviced would cancel the download it names.
+      setTimeout(() => { URL.revokeObjectURL(url) }, 0)
+    } catch (e) {
+      reportError(e, (message) => `Could not download ${target}: ${message}`)
+    }
+    return
+  }
+
   if (target !== currentFile.value || !isEditorLoaded()) {
     if (!fs) return
     if (!(await requireServer('Downloading a file'))) return
@@ -1621,6 +1742,7 @@ onUnmounted(() => {
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
         :live-status="liveStatus"
+        :can-run="isRunnableFile"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
       />
@@ -1636,7 +1758,11 @@ onUnmounted(() => {
           @close="handleTraceClose"
         >
           <PanelFrame id="editor" title="Source">
-            <CodeMirrorEditor @dirty="makeDirty" @cursor-change="handleCursorChange" />
+            <CodeMirrorEditor
+              :binary-file="binaryFile"
+              @dirty="makeDirty"
+              @cursor-change="handleCursorChange"
+            />
           </PanelFrame>
           <PanelFrame id="output" title="Output">
             <ResultsPane ref="resultsRef" :is-dirty="isDirty" />

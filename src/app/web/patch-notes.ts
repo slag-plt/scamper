@@ -34,7 +34,8 @@ export const patchNotes: PatchNote[] = [
       'Audio pipelines now accept a sample, so a sample-node can drive one.',
       'Your file now runs by itself when you open it and a moment after you stop typing; the Run button says "Autorun" while it does, and Run > Live Evaluation turns it off.',
       'Scamper now indents your code as you type, re-indents or reformats a whole file to the standard style, and wraps long expressions in the output instead of running them off the edge.',
-      'An @example line in a docstring now gets a checkmark when your code agrees with it and a cross when it does not; Run > Check Examples turns this off.'
+      'An @example line in a docstring now gets a checkmark when your code agrees with it and a cross when it does not; Run > Check Examples turns this off.',
+      'Files that are not Scamper programs now open properly: plain text without the Scheme squiggles, Markdown and CSV with their own colouring, images as a picture, and other files with a note instead of gibberish.'
     ]
   },
   {

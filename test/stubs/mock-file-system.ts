@@ -1,7 +1,9 @@
-import { FS } from '../../src/fs/fs'
+import { isBinaryName, isHiddenName, refuseBinary, Bytes, FS } from '../../src/fs/fs'
 
 export class MockFileSystem implements FS {
-  private files = new Map<string, string>()
+  // Bytes, like the real backends, so a test that writes an image and reads it
+  // back exercises the same invariant production does (#385).
+  private files = new Map<string, Bytes>()
   private directories = new Set<string>()
 
   static create(): Promise<MockFileSystem> {
@@ -18,9 +20,14 @@ export class MockFileSystem implements FS {
 
   getFileList() {
     return Promise.resolve([
-      ...[...this.files.entries()].map(([name, preview]) => ({
+      ...[...this.files.entries()].map(([name, bytes]) => ({
         name,
-        preview,
+        // A preview is text, so a binary file has none -- matching opfs.ts and
+        // node.ts, which do not read one to build a preview they cannot show.
+        preview:
+          isHiddenName(name) || isBinaryName(name)
+            ? null
+            : new TextDecoder().decode(bytes),
         isDirectory: false,
       })),
       ...[...this.directories].map((name) => ({
@@ -36,22 +43,42 @@ export class MockFileSystem implements FS {
   }
 
   loadFile(filename: string) {
+    try {
+      refuseBinary(filename)
+    } catch (e) {
+      return Promise.reject(e as Error)
+    }
+    return this.loadBytes(filename).then((bytes) =>
+      new TextDecoder().decode(bytes),
+    )
+  }
+
+  saveFile(filename: string, contents: string) {
+    try {
+      refuseBinary(filename)
+    } catch (e) {
+      return Promise.reject(e as Error)
+    }
+    return this.saveBytes(filename, new TextEncoder().encode(contents))
+  }
+
+  loadBytes(filename: string) {
     // N.B., rejects for a file that isn't here, like both real implementations
     // (NodeFileSystem's readFile throws ENOENT, OPFS's getFileHandle throws
     // NotFoundError). Returning '' instead would make a *missing* file
     // indistinguishable from an *empty* one, which silently voids any test
     // asserting that something wrote an empty file.
-    const contents = this.files.get(filename)
-    if (contents === undefined) {
+    const bytes = this.files.get(filename)
+    if (bytes === undefined) {
       return Promise.reject(
         new Error(`MockFileSystem: file "${filename}" does not exist`),
       )
     }
-    return Promise.resolve(contents)
+    return Promise.resolve(bytes)
   }
 
-  saveFile(filename: string, contents: string) {
-    this.files.set(filename, contents)
+  saveBytes(filename: string, bytes: Bytes) {
+    this.files.set(filename, bytes)
     return Promise.resolve()
   }
 

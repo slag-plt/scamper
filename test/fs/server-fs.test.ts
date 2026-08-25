@@ -32,10 +32,14 @@ function installFakeServer(): void {
     const method = init?.method ?? 'GET'
     seen.push({ method, path: url.pathname, credentials: init?.credentials })
 
+    // A file's contents travel as bytes and everything else as JSON (#385),
+    // so the fake server has to carry both shapes the real one does.
     const body =
       typeof init?.body === 'string'
         ? (JSON.parse(init.body) as unknown)
-        : undefined
+        : ArrayBuffer.isView(init?.body)
+          ? init.body
+          : undefined
     return route(
       {
         method,
@@ -52,9 +56,16 @@ function installFakeServer(): void {
           status: reply.status,
           statusText: '',
           json: () => Promise.resolve(reply.body),
+          arrayBuffer: () =>
+            Promise.resolve((reply.bytes ?? new Uint8Array()).slice().buffer),
         }) as Response,
     )
   })
+}
+
+/** A file's contents as the store holds them: bytes, not text (#385). */
+function bytes(contents: string): Uint8Array {
+  return new TextEncoder().encode(contents)
 }
 
 /** @returns how many requests the client has made so far */
@@ -156,7 +167,7 @@ describe('fileExists stays off the network', () => {
 
   test('concurrent cold lookups collapse into one request', async () => {
     const fs = ServerFileSystem.create(BASE_URL)
-    await store.write(USER, 'a.scm', 'x')
+    await store.write(USER, 'a.scm', bytes('x'))
 
     const answers = await Promise.all([
       fs.fileExists('a.scm'),
@@ -206,7 +217,7 @@ describe('fileExists stays off the network', () => {
     await fs.fileExists('elsewhere.scm')
 
     // Something outside this tab writes a file.
-    await store.write(USER, 'elsewhere.scm', 'x')
+    await store.write(USER, 'elsewhere.scm', bytes('x'))
 
     expect(await fs.fileExists('elsewhere.scm')).toBe(false)
     await fs.getFileList()
@@ -295,7 +306,7 @@ describe('failures surface rather than corrupt', () => {
 
     // Once the network returns, the next lookup must retry rather than answer
     // from a cache that was never filled.
-    await store.write(USER, 'a.scm', 'x')
+    await store.write(USER, 'a.scm', bytes('x'))
     installFakeServer()
     expect(await fs.fileExists('a.scm')).toBe(true)
   })

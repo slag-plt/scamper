@@ -40,7 +40,12 @@ Scamper has a comprehensive test suite whose structure nearly mirrors the struct
     - web/ tests the IDE end-to-end
     - cli/ tests the command-line runner end-to-end against fixture programs
     - docs/ and search/ are not yet covered
-+ prettier/ contains tests for prettier (pretty-printing functionality)
++ fs/ contains tests for the file-system layer
+    - opfs.test.ts, node-fs.test.ts, server-fs.test.ts test each backend against the shared FS contract, including the text/bytes split (#385)
+    - file-kind.test.ts tests the extension table deciding how a file is read and edited
+    - backends.test.ts tests the fs/history pairing invariant; config.test.ts tests how a deployment names its server
++ history/ contains tests for a file's save history (#42), one per backing
++ server/ contains tests for the file server: its route layer, accounts, and the MariaDB stores
 + regressions/ contains regression tests for fixed issues
 
 ## Browser-mode tests
