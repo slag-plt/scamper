@@ -929,6 +929,14 @@ export function progToString(p: Prog): string {
   return p.map(stmtToString).join('\n')
 }
 
+// Flat, which means a long trace step runs off the edge of a terminal rather
+// than wrapping. Laying it out here does not work as it stands: the console
+// writes a step behind a "--> " prefix (src/lpm/trace/index.ts) that the
+// printer knows nothing about, so continuation lines come out four columns
+// short of where they belong and the width is measured against the wrong
+// margin. Wrapping the console trace needs the prefix threaded into the
+// layout, and a decision about whether a console trace should take the rules'
+// mandated breaks at all -- an `(if ...)` step is three lines if it does.
 TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
 TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
 TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))

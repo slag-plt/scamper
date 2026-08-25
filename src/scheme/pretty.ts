@@ -174,9 +174,15 @@ function flatWidth(node: Layout, cache: Map<Layout, number>): number {
     case 'tok':
       width = node.text.length
       break
-    case 'val':
-      width = TextRenderer.render(node.value).length
+    case 'val': {
+      // A value renders through TextRenderer, which for a form lays it out --
+      // so the text may itself span lines. Measure the widest of them: this is
+      // the width the value needs, and taking the whole length would count
+      // every line as though they ran end to end.
+      const text = TextRenderer.render(node.value)
+      width = text.split('\n').reduce((m, l) => Math.max(m, l.length), 0)
       break
+    }
     case 'hash':
       width = 1 + flatWidth(node.child, cache)
       break

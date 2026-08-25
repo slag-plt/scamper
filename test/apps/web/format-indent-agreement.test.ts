@@ -153,14 +153,21 @@ describe.each(MODES)(
     })
 
     test('and the reformat command lays statements out the same way', () => {
-      // Per statement, not per file: the blank lines between statements are
-      // format.ts's own business -- it keeps the author's grouping (see
-      // `packs`) -- while the panes only ever draw one statement at a time.
+      // Ignoring blank lines, not merely containing each statement: the spacing
+      // between statements is format.ts's own business (it keeps the author's
+      // grouping -- see `packs`, tested in format.test.ts), but everything else
+      // must match exactly, order and indentation included. Containment alone
+      // would pass a reformatter that duplicated or reordered a statement.
+      const withoutBlanks = (text: string): string =>
+        text
+          .split('\n')
+          .filter((line) => line !== '')
+          .join('\n')
       for (const [, src] of PROGRAMS) {
         const out = formatSource(src, PRINT_WIDTH, mode)
-        for (const stmt of paneStatements(src, mode)) {
-          expect(out).toContain(stmt)
-        }
+        expect(withoutBlanks(out)).toBe(
+          withoutBlanks(paneStatements(src, mode).join('\n')),
+        )
       }
     })
   },
