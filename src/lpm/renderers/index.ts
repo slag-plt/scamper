@@ -1,7 +1,15 @@
 import * as LPM from '../lang.js'
 
 export type TypeTest    = (v: LPM.Value) => boolean
-export type RenderFn<T> = (v: LPM.Value) => T
+
+/**
+ * Renders a value. `col` is the column the rendering begins at, for the
+ * renderers that lay their output out over several lines and must indent the
+ * continuation ones to match. Only the text renderer supplies it -- the DOM
+ * backends position their output themselves -- so it is optional, and a
+ * renderer with no use for it simply takes one argument.
+ */
+export type RenderFn<T> = (v: LPM.Value, col?: number) => T
 
 /**
  * A `Renderer<T>` pretty-prints values to type `T`. It also supports custom

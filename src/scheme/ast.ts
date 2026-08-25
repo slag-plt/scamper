@@ -898,8 +898,9 @@ export function layoutToString(
   l: Layout,
   width = PRINT_WIDTH,
   mode: FormatMode = DEFAULT_FORMAT_MODE,
+  col = 0,
 ): string {
-  return renderToString(l, width, mode)
+  return renderToString(l, width, mode, col)
 }
 
 /**
@@ -929,17 +930,23 @@ export function progToString(p: Prog): string {
   return p.map(stmtToString).join('\n')
 }
 
-// Flat, which means a long trace step runs off the edge of a terminal rather
-// than wrapping. Laying it out here does not work as it stands: the console
-// writes a step behind a "--> " prefix (src/lpm/trace/index.ts) that the
-// printer knows nothing about, so continuation lines come out four columns
-// short of where they belong and the width is measured against the wrong
-// margin. Wrapping the console trace needs the prefix threaded into the
-// layout, and a decision about whether a console trace should take the rules'
-// mandated breaks at all -- an `(if ...)` step is three lines if it does.
-TextRenderer.registerCustomRenderer(isPat, (v) => patToString(v as Pat))
-TextRenderer.registerCustomRenderer(isExp, (v) => expToString(v as Exp))
-TextRenderer.registerCustomRenderer(isStmt, (v) => stmtToString(v as Stmt))
+// Displaying a form -- a trace step on the console, say -- lays it out by the
+// same rules as the panes, so the console and the IDE break a form alike.
+//
+// `col` is what makes that work where something has already been written on the
+// line: the trace writes each step behind a "--> " marker and passes its width,
+// so continuation lines sit under the form rather than under the margin, and
+// eighty columns still means the finished line. Deliberately not the *ToString
+// helpers above -- those answer a different question and never break.
+TextRenderer.registerCustomRenderer(isPat, (v, col) =>
+  layoutToString(patToLayout(v as Pat), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
+TextRenderer.registerCustomRenderer(isExp, (v, col) =>
+  layoutToString(expToLayout(v as Exp), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
+TextRenderer.registerCustomRenderer(isStmt, (v, col) =>
+  layoutToString(stmtToLayout(v as Stmt), PRINT_WIDTH, DEFAULT_FORMAT_MODE, col),
+)
 
 ///// Equality /////////////////////////////////////////////////////////////////
 

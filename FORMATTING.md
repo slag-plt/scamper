@@ -114,8 +114,27 @@ One thing the modes deliberately do *not* cover:
 
 - **`expToString` and friends stay flat in both.** They are the canonical
   one-line form -- what goes into an error message, what the trace dedups on,
-  and what the printer measures a value's width with. What the panes draw is
-  `layoutToString` over the same layout.
+  and what the printer measures a value's width with. What gets *displayed* is
+  `layoutToString` over the same layout, in the panes and on the console alike.
+
+### The console lays a form out too
+
+`scamper --trace` breaks a step by these same rules, which needs one extra
+thing: the console writes each step behind a `--> ` marker, so the step is laid
+out as *beginning after it*. `renderToString` takes the starting column, every
+planned column is absolute, and the marker's width reaches the printer through
+an optional `col` on `TextRenderer.render`. So an `if`'s branches sit under its
+test rather than under the marker, and eighty columns still means the finished
+line.
+
+```
+--> (if (= 3 0)
+        1                      <- column 8, under "(= 3 0)"
+        (* 3 (fact (- 3 1))))
+```
+
+The web trace needs none of this: it draws from a plan rather than a string, and
+gives each step a container of its own -- which is also why it carries no marker.
 
 ## 1. What was asked
 

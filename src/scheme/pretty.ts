@@ -315,14 +315,22 @@ function place(node: Layout, col: number, tail: number, cx: Ctx): number {
   }
 }
 
-/** Decide where every group in `root` breaks, for a page `width` columns wide. */
+/**
+ * Decide where every group in `root` breaks, for a page `width` columns wide.
+ *
+ * @param col the column `root` begins at, when something has already been
+ *   written on its first line -- the trace's "--> " marker, say. Every planned
+ *   column is absolute, so continuation lines land under the form rather than
+ *   under the margin, and `width` still means the finished line.
+ */
 export function planLayout(
   root: Layout,
   width = PRINT_WIDTH,
   mode: FormatMode = DEFAULT_FORMAT_MODE,
+  col = 0,
 ): LayoutPlan {
   const plan: LayoutPlan = new Map()
-  place(root, 0, 0, {
+  place(root, col, 0, {
     width,
     mode,
     widths: new Map(),
@@ -438,14 +446,21 @@ function emitBody(node: Layout, col: number, plan: LayoutPlan, out: Out): void {
   }
 }
 
-/** Render `root` to text, breaking lines at `width` columns. */
+/**
+ * Render `root` to text, breaking lines at `width` columns.
+ *
+ * @param col the column `root` begins at (see {@link planLayout}). The first
+ *   line is *not* indented to it -- whatever put the cursor there has already
+ *   written that much -- but every line after it is.
+ */
 export function renderToString(
   root: Layout,
   width = PRINT_WIDTH,
   mode: FormatMode = DEFAULT_FORMAT_MODE,
+  col = 0,
 ): string {
   const out: Out = { parts: [], pending: [] }
-  emit(root, 0, planLayout(root, width, mode), out)
+  emit(root, col, planLayout(root, width, mode, col), out)
   flushHeld(out)
   return out.parts.join('')
 }
