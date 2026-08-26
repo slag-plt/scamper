@@ -24,14 +24,14 @@ await import('../../src/app/web/renderers.js')
 //
 // N.B., the page is run in two passes rather than one, and the second pass runs
 // the song widget before the ball rather than in page order. That is to keep
-// this spec off a defect it would otherwise trip over at random: when the
-// machine is contended, a widget holding a live `on-timer` subscription can
-// starve the widgets after it on the same page *permanently* -- observed
-// stalling past four minutes with the stall landing on a different widget each
-// time, while the same page finishes in ~200ms on an idle machine. Under `npm
-// test` the other workers are exactly that contention. So no pass here runs a
-// widget after a live timer: the first pass has no timer in it at all, and the
-// second ends with one. Every widget on the page still runs.
+// this spec off #415: when the machine is contended, a widget holding a live
+// `on-timer` subscription can starve the widgets after it on the same page
+// *permanently* -- observed stalling past four minutes with the stall landing on
+// a different widget each time, while the same page finishes in ~200ms on an
+// idle machine. Under `npm test` the other workers are exactly that contention.
+// So no pass here runs a widget after a live timer: the first pass has no timer
+// in it at all, and the second ends with one. Every widget on the page still
+// runs. When #415 is fixed this can go back to one pass in page order.
 
 const SAMPLES = path.resolve(import.meta.dirname, '../../samples')
 
