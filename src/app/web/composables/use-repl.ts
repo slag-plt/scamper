@@ -30,6 +30,14 @@ export interface Repl {
   /** True while an entry is running, so the prompt can wait and offer Stop. */
   readonly isBusy: Ref<boolean>
   /**
+   * True once the file has been edited since the session was seeded.
+   *
+   * The session is deliberately not reconciled with the file -- that is what
+   * makes it scratch work -- so the most that can be done is to say so, as the
+   * output pane says its results are out of date.
+   */
+  readonly isStale: Ref<boolean>
+  /**
    * Opens a session seeded from `src`, replacing one already open -- which is
    * also how the window restarts.
    */
@@ -38,6 +46,8 @@ export interface Repl {
   submit: (text: string) => Promise<void>
   /** Abandons the entry in flight. */
   interrupt: () => void
+  /** Told when the file changes, which is what makes a session stale. */
+  noteEdit: () => void
   /** Closes the session and everything it left running. */
   close: () => void
 }
@@ -51,6 +61,7 @@ export function useRepl(): Repl {
   const entries = shallowRef<ReplEntry[]>([])
   const banner = ref('')
   const isBusy = ref(false)
+  const isStale = ref(false)
   let nextId = 0
 
   /**
@@ -104,6 +115,9 @@ export function useRepl(): Repl {
     }
     entries.value = [seedEntry]
     isBusy.value = true
+    // Seeded from the file as it is right now, so whatever it was before does
+    // not count against this session.
+    isStale.value = false
     try {
       const seeded = await repl.seed(src)
       banner.value =
@@ -146,6 +160,7 @@ export function useRepl(): Repl {
     entries.value = []
     banner.value = ''
     isBusy.value = false
+    isStale.value = false
   }
 
   return {
@@ -153,10 +168,16 @@ export function useRepl(): Repl {
     entries,
     banner,
     isBusy,
+    isStale,
     open,
     submit,
     interrupt: () => {
       session.value?.interrupt()
+    },
+    noteEdit: () => {
+      // Only with a session open: an edit made before one is opened is part of
+      // the file it will be seeded from, not a change to it.
+      if (session.value !== null) isStale.value = true
     },
     close,
   }

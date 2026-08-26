@@ -89,6 +89,24 @@ describe('IDE REPL window', () => {
     }
   })
 
+  test('typing in the editor warns that the REPL is out of sync', async () => {
+    // The same courtesy the output pane pays: nothing is re-seeded, but the
+    // window says what it started from has moved on.
+    const wrapper = await mountIde()
+    try {
+      await openRepl()
+      expect(replWindow()?.textContent).not.toContain('has changed')
+
+      const editor = getByRole(document.body, 'textbox', { name: 'Source code' })
+      ;(editor as HTMLTextAreaElement).value = '(define sq 5)'
+      editor.dispatchEvent(new Event('input', { bubbles: true }))
+      await flushPromises()
+      expect(replWindow()?.textContent).toContain('has changed since this REPL')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('closing it takes it away, taskbar included', async () => {
     const wrapper = await mountIde()
     try {

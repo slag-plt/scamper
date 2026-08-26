@@ -125,6 +125,23 @@ describe('the REPL window', () => {
     }
   })
 
+  test('it warns when the file has moved on, and not before', async () => {
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [], banner: '', isBusy: false, isStale: false },
+    })
+    try {
+      expect(document.body.textContent).not.toContain('has changed')
+      await wrapper.setProps({ isStale: true })
+      const warning = getByRole(document.body, 'status')
+      expect(warning.textContent).toContain('has changed since this REPL')
+      // Above the transcript, not inside it: the transcript scrolls away.
+      expect(warning.nextElementSibling?.classList).toContain('repl-scroll')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('Restart asks for a fresh session', () => {
     const wrapper = mount(ReplWindow, {
       attachTo: document.body,

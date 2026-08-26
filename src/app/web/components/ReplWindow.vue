@@ -19,6 +19,8 @@ const props = defineProps<{
   banner: string
   /** True while an entry is running: the prompt waits and Stop appears. */
   isBusy: boolean
+  /** True once the file has been edited since this session was seeded. */
+  isStale?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -90,6 +92,16 @@ defineExpose({
   <!-- Contents only: the window chrome is PanelFrame's business, as it is for
        the trace window. -->
   <div class="repl-contents">
+    <!-- Pinned above the transcript rather than written into it, as the output
+         pane's warning is: the transcript scrolls, and a notice that scrolls
+         away is a notice nobody reads. -->
+    <p v-if="isStale" class="repl-stale" role="status">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <em>
+        Warning: the file has changed since this REPL started. Restart to pick
+        up the changes.
+      </em>
+    </p>
     <!-- A log, so a screen reader announces what an entry produced rather than
          leaving it to be hunted for. -->
     <div ref="scrollEl" class="repl-scroll" role="log">
@@ -150,6 +162,21 @@ defineExpose({
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* The same strip the output pane uses for the same message, so the two read as
+   one warning rather than two designs. */
+.repl-stale {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin: 0;
+  padding: 0.25em 0.5em;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85em;
+  color: var(--fg);
 }
 
 .repl-scroll {

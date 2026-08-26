@@ -756,6 +756,9 @@ function makeDirty() {
   isDirty.value = true
   session.invalidateAllQueries()
   live.noteEdit()
+  // The REPL is not re-seeded by an edit -- it is scratch work, not a view of
+  // the file -- so all it can do is say that what it started from has moved on.
+  repl.noteEdit()
 }
 
 function handleCursorChange(status: CursorStatus) {
@@ -1855,6 +1858,7 @@ onUnmounted(() => {
               :entries="repl.entries.value"
               :banner="repl.banner.value"
               :is-busy="repl.isBusy.value"
+              :is-stale="repl.isStale.value"
               @submit="(text: string) => void repl.submit(text)"
               @interrupt="repl.interrupt"
               @restart="() => void handleReplRestart()"

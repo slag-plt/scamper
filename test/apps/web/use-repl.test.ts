@@ -123,6 +123,48 @@ describe('the REPL transcript', () => {
     }
   })
 
+  test('an edit to the file marks the session stale', async () => {
+    // Nothing is reconciled -- that is what makes it scratch work -- so saying
+    // so is all the window can do.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      expect(repl.isStale.value).toBe(false)
+      repl.noteEdit()
+      expect(repl.isStale.value).toBe(true)
+      // What it already knows is unaffected: the session runs on regardless.
+      await repl.submit('x')
+      expect(shown(repl.entries.value.at(-1)!)).toBe('1')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('restarting clears the warning', async () => {
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      repl.noteEdit()
+      await repl.open('lab.scm', '(define x 2)')
+      expect(repl.isStale.value).toBe(false)
+      await repl.submit('x')
+      expect(shown(repl.entries.value.at(-1)!)).toBe('2')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an edit before a session is opened does not count', async () => {
+    const repl = useRepl()
+    repl.noteEdit()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      expect(repl.isStale.value).toBe(false)
+    } finally {
+      repl.close()
+    }
+  })
+
   test('closing ends the session', async () => {
     const repl = useRepl()
     await repl.open(null, '')
