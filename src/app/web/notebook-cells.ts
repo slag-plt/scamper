@@ -213,10 +213,14 @@ export function proseToMarkdown(text: string): string {
 /**
  * The inverse: Markdown written back as comment lines.
  *
+ * Nothing written is nothing to write: a text cell left empty puts no bare `;`
+ * into the file, so opening one and changing your mind costs nothing.
+ *
  * @param indent the whitespace the cell started at, so a comment nested inside
  *        a file's indentation stays where it was.
  */
 export function markdownToProse(markdown: string, indent = ''): string {
+  if (markdown.trim().length === 0) return ''
   return markdown
     .split('\n')
     .map((line) => (line.length === 0 ? `${indent};` : `${indent}; ${line}`))

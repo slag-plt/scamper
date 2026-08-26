@@ -291,6 +291,126 @@ describe('IDE notebook view', () => {
     }
   })
 
+  // Adding a cell in the middle is where this went wrong: the mounted cells
+  // are collected in the order they mount, so the one just added was last in
+  // the list however far up the notebook it appeared -- and the caret went to
+  // whichever cell happened to hold that position, which is where the next
+  // thing typed went too.
+  describe('adding a cell in the middle', () => {
+    const FILE = '(define a 1)\n\n(define b 2)\n\n(define c 3)'
+
+    /** Presses one of the buttons in the seam below cell `index`. */
+    function addBelow(index: number, kind: 'Code' | 'Text') {
+      const gap = document.querySelectorAll('.notebook-gap')[index]
+      const button = [...gap.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes(kind),
+      )
+      button?.click()
+    }
+
+    test('the caret goes to the new cell, and so does what is typed', async () => {
+      const wrapper = await mountIde(FILE)
+      try {
+        await showNotebook()
+        addBelow(0, 'Code')
+        await flushPromises()
+        await flushPromises()
+
+        const views = cellViews()
+        expect(views).toHaveLength(4)
+        expect(views.findIndex((v) => v.hasFocus)).toBe(1)
+
+        views[1].dispatch({ changes: { from: 0, insert: '(display 9)' } })
+        await flushPromises()
+        expect(docText()).toBe(
+          '(define a 1)\n\n(display 9)\n\n(define b 2)\n\n(define c 3)',
+        )
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('a text cell opens ready to be written in', async () => {
+      const wrapper = await mountIde(FILE)
+      try {
+        await showNotebook()
+        addBelow(0, 'Text')
+        await flushPromises()
+        await flushPromises()
+
+        const cell = document.querySelectorAll('.notebook-cell')[1]
+        expect(cell.className).toContain('notebook-cell-prose')
+        // Its editor, not its rendering: there is nothing to read yet.
+        expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('what is written in a text cell reaches the file as comments', async () => {
+      const wrapper = await mountIde(FILE)
+      try {
+        await showNotebook()
+        addBelow(0, 'Text')
+        await flushPromises()
+        await flushPromises()
+
+        // As it is typed, not when the caret leaves: the file is what gets
+        // saved and run, so text that is only in a cell is nowhere yet.
+        cellViews()[1].dispatch({ changes: { from: 0, insert: '## A heading' } })
+        await flushPromises()
+        expect(docText()).toBe(
+          '(define a 1)\n\n; ## A heading\n\n(define b 2)\n\n(define c 3)',
+        )
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('the arrows still find the cell below', async () => {
+      const wrapper = await mountIde(FILE)
+      try {
+        await showNotebook()
+        addBelow(0, 'Code')
+        await flushPromises()
+        await flushPromises()
+
+        const views = cellViews()
+        views[0].focus()
+        views[0].dispatch({ selection: { anchor: views[0].state.doc.length } })
+        views[0].contentDOM.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+        )
+        await flushPromises()
+        expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('a text cell left empty puts nothing in the file', async () => {
+      const wrapper = await mountIde(FILE)
+      try {
+        await showNotebook()
+        addBelow(0, 'Text')
+        await flushPromises()
+        await flushPromises()
+        // Typed into and emptied again: still no stray comment marker, only
+        // the blank line the cell was opened with.
+        const prose = cellViews()[1]
+        prose.dispatch({ changes: { from: 0, insert: 'oops' } })
+        await flushPromises()
+        prose.dispatch({ changes: { from: 0, to: 4, insert: '' } })
+        await flushPromises()
+        expect(docText()).toBe(
+          '(define a 1)\n\n\n\n(define b 2)\n\n(define c 3)',
+        )
+      } finally {
+        wrapper.unmount()
+      }
+    })
+  })
+
   test('a file that is not a program cannot be shown as one', async () => {
     const wrapper = await mountIde('plain text', 'notes.txt')
     try {

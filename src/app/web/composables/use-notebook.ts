@@ -214,11 +214,15 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       cells.value = moved
       shifted += change.insert.length - (change.to - change.from)
     }
-    // It holds something now, so the file has somewhere to find it.
+    // A cell holding nothing is one the file has nothing to find it by, so it
+    // has to be carried across re-splits by hand -- whether it has not been
+    // written into yet or has just been emptied out. Both directions, so a cell
+    // does not vanish from under the caret that emptied it.
     const written = cellAt(index)
-    if (cell.isDraft === true && written !== undefined && written.to > written.from) {
+    const isEmpty = written !== undefined && written.to <= written.from
+    if (written !== undefined && isEmpty !== (cell.isDraft === true)) {
       cells.value = cells.value.map((c, i) =>
-        i === index ? { ...c, isDraft: undefined } : c,
+        i === index ? { ...c, isDraft: isEmpty ? true : undefined } : c,
       )
     }
     scheduleLint()
@@ -290,6 +294,13 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       while (to < src.length && /\s/.test(src[to])) to++
     }
     editor().replaceRange(from, to, '')
+    // A cell the file does not hold yet lives only in this list, so taking it
+    // out of the list is the whole of removing it. Before the re-split, which
+    // would otherwise carry it forward as a draft still waiting to be written
+    // into.
+    if (cell.isDraft === true) {
+      cells.value = cells.value.filter((_, i) => i !== index)
+    }
     refresh()
   }
 

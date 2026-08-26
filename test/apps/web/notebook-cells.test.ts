@@ -219,6 +219,12 @@ describe('prose as Markdown', () => {
     expect(markdownToProse('One.\n\nTwo.')).toBe('; One.\n;\n; Two.')
   })
 
+  // A text cell opened and then left alone should cost the file nothing.
+  test('nothing written is nothing to write', () => {
+    expect(markdownToProse('')).toBe('')
+    expect(markdownToProse('\n\n')).toBe('')
+  })
+
   test('markers survive the round trip', () => {
     const prose = '; One.\n;\n; Two.'
     expect(markdownToProse(proseToMarkdown(prose))).toBe(prose)

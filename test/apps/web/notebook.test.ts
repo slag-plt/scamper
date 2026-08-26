@@ -163,6 +163,33 @@ describe('adding and removing cells', () => {
     expect(notebook.cells.value).toHaveLength(2)
   })
 
+  // Emptying a cell leaves the file holding nothing for it, which is the same
+  // position a cell that has never been written into is in. It has to stay
+  // rather than vanish from under the caret that emptied it.
+  test('a cell emptied out stays where it is', () => {
+    const file = documentHolding('; a note\n\n(+ 1 2)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    notebook.replaceCell(0, '')
+    expect(notebook.cells.value[0].isDraft).toBe(true)
+    notebook.refresh()
+    expect(notebook.cells.value).toHaveLength(2)
+    expect(notebook.cells.value[0].kind).toBe('prose')
+  })
+
+  // A cell the file does not hold yet is only in the list, so the re-split
+  // that follows would otherwise carry it straight back in.
+  test('removing an empty cell takes it away', () => {
+    const file = documentHolding('(define x 5)\n\n(+ x 1)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    const at = notebook.insertCell(0, 'code')
+    expect(notebook.cells.value).toHaveLength(3)
+    notebook.removeCell(at)
+    expect(notebook.cells.value).toHaveLength(2)
+    expect(file.text()).toBe('(define x 5)\n\n(+ x 1)')
+  })
+
   test('removing the first cell leaves no gap at the top', () => {
     const file = documentHolding('(define x 5)\n\n(+ 1 2)')
     const notebook = useNotebook(file.editor)

@@ -48,8 +48,14 @@ const emit = defineEmits<{
 
 const editorRef = ref<CellEditorHandle | null>(null)
 const proseRef = ref<HTMLDivElement | null>(null)
-/** True while a prose cell is being written rather than read. */
-const isEditing = ref(false)
+/**
+ * True while a prose cell is being written rather than read.
+ *
+ * A cell someone has just asked for starts open: it holds nothing, so there is
+ * nothing to read, and being asked to click an empty cell to write in the empty
+ * cell you asked for is a step with no purpose.
+ */
+const isEditing = ref(props.cell.kind === 'prose' && props.cell.isDraft === true)
 const isFocused = ref(false)
 
 /** One document each, so the language server can hold them all at once. */
@@ -72,11 +78,26 @@ watch(
   () => {
     if (props.cell.kind !== 'prose' || isEditing.value) return
     void nextTick(() => {
-      proseRef.value?.replaceChildren(renderMarkdown(proseToMarkdown(props.cell.text)))
+      const el = proseRef.value
+      if (el === null) return
+      const markdown = proseToMarkdown(props.cell.text)
+      // A cell with nothing in it renders to nothing, which would leave no
+      // sign that it is there and nothing to click to write in it. It says so
+      // instead.
+      el.replaceChildren(
+        markdown.trim().length === 0 ? placeholder() : renderMarkdown(markdown),
+      )
     })
   },
   { immediate: true },
 )
+
+function placeholder(): HTMLElement {
+  const hint = document.createElement('span')
+  hint.className = 'prose-placeholder'
+  hint.textContent = 'Empty text cell. Click to write something.'
+  return hint
+}
 
 // The document changed underneath: a file was opened, an edit was undone, the
 // file was reformatted. Never while the caret is here, since then the text in
@@ -106,10 +127,17 @@ function onFocusChange(focused: boolean) {
 }
 
 function onChange(changes: CellChange[]) {
-  // A prose cell is written back whole when it is finished with: its Markdown
-  // and the file's comment lines are not the same text, so an edit in one is
-  // not an edit in the other.
-  if (props.cell.kind === 'prose') return
+  // A prose cell is written back whole rather than by the edit that changed
+  // it: its Markdown and the file's comment lines are not the same text, so an
+  // edit in one is not an edit in the other.
+  //
+  // As it is typed, though, not when the caret leaves. The file is what gets
+  // saved, run and kept in the history, so text that is only in a cell is text
+  // that is not really anywhere yet.
+  if (props.cell.kind === 'prose') {
+    emit('replace', markdownToProse(editorRef.value?.text() ?? ''))
+    return
+  }
   emit('change', changes)
 }
 
@@ -120,11 +148,14 @@ function editProse() {
   })
 }
 
+/**
+ * Goes back to showing the prose rather than the Markdown behind it.
+ *
+ * Nothing is written here: what was typed reached the file as it was typed
+ * (see `onChange`).
+ */
 function stopEditingProse() {
-  if (!isEditing.value) return
-  const markdown = editorRef.value?.text() ?? ''
   isEditing.value = false
-  emit('replace', markdownToProse(markdown))
 }
 
 /** Up and down at the edges of a cell move to the next one, as a caret does. */
@@ -249,8 +280,16 @@ defineExpose({
   white-space: pre-wrap;
 }
 
+/* A line's worth of height whatever is in it, so a cell holding nothing --
+   or a comment that renders to nothing -- is still there to be clicked. */
 .notebook-prose {
   cursor: text;
+  min-height: 1.5em;
+}
+
+.prose-placeholder {
+  opacity: 0.55;
+  font-style: italic;
 }
 
 .notebook-prose:focus-visible {

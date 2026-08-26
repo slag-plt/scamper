@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  ref,
+  type ComponentPublicInstance,
+} from 'vue'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 import NotebookCell from './NotebookCell.vue'
 import type { Notebook } from '../composables/use-notebook'
@@ -17,7 +22,35 @@ import type { CellChange } from '../codemirror/cell-editor'
 const props = defineProps<{ notebook: Notebook }>()
 
 /** What each cell exposes: enough to put the caret in it. */
-const cellRefs = ref<{ focus: (at?: 'start' | 'end') => void }[]>([])
+interface CellHandle {
+  focus: (at?: 'start' | 'end') => void
+}
+
+/**
+ * The mounted cells, by cell id.
+ *
+ * By id rather than by position, because a `ref` inside a `v-for` collects its
+ * entries in the order they *mount*, which is not the order they are in: a cell
+ * added in the middle mounts last and lands at the end of the array. Indexing
+ * that array meant the caret went to a cell one further down than the one that
+ * had just been opened, and the next thing typed was typed into that one.
+ */
+const cellRefs = new Map<number, CellHandle>()
+
+function setCellRef(id: number, el: Element | ComponentPublicInstance | null) {
+  if (el === null) {
+    cellRefs.delete(id)
+  } else {
+    cellRefs.set(id, el as unknown as CellHandle)
+  }
+}
+
+/** The mounted cell at `index`, found by the identity it was given. */
+function handleAt(index: number): CellHandle | undefined {
+  const cell = cells.value[index]
+  return cell === undefined ? undefined : cellRefs.get(cell.id)
+}
+
 /** Which cell the caret is in, or -1. Only that one gets an LSP context. */
 const focused = ref(-1)
 
@@ -57,13 +90,15 @@ function onFocusChange(index: number, isFocused: boolean) {
 function onMove(index: number, direction: -1 | 1) {
   const to = index + direction
   if (to < 0 || to >= cells.value.length) return
-  cellRefs.value[to]?.focus(direction === -1 ? 'end' : 'start')
+  handleAt(to)?.focus(direction === -1 ? 'end' : 'start')
 }
 
+/** Opens a cell and puts the caret in it, which is the point of adding one. */
 async function addCell(index: number, kind: 'code' | 'prose') {
   const position = props.notebook.insertCell(index, kind)
+  // After the render that mounts it: until then there is nothing to focus.
   await nextTick()
-  cellRefs.value[position]?.focus('end')
+  handleAt(position)?.focus('end')
 }
 
 function removeCell(index: number) {
@@ -92,7 +127,7 @@ function removeCell(index: number) {
 
       <template v-for="(cell, index) in cells" :key="cell.id">
         <NotebookCell
-          ref="cellRefs"
+          :ref="(el) => { setCellRef(cell.id, el) }"
           :cell="cell"
           :index="index"
           :output="notebook.outputOf(index)"
