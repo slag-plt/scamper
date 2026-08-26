@@ -16,6 +16,19 @@ describe('expansion keeps source ranges', () => {
     expect(expanded.range).toEqual(range)
   })
 
+  test('every statement a struct expands into keeps its range', () => {
+    // Regression: the predicate alone was built without one, so an error raised
+    // inside `point?` had nowhere to point and the output pane skipped it when
+    // captioning.
+    const expanded = expandStmt(
+      A.mkStruct(A.mkId('point', range), [A.mkId('x', range)], range),
+    )
+    expect(expanded.length).toBeGreaterThan(1)
+    for (const stmt of expanded) {
+      expect(stmt.range).toEqual(range)
+    }
+  })
+
   test('so do the statements around it', () => {
     const cases: A.Stmt[] = [
       A.mkDisp(A.mkLit(1, range), range),

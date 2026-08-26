@@ -28,11 +28,13 @@ export interface OutputChannel {
    * channel that can show it alongside the output has it to show.
    *
    * Optional because only the IDE's output pane does: a console or a log wants
-   * the values alone. Called once per statement, in program order, whether or
-   * not that statement goes on to send anything.
+   * the values alone. Called once per *source form*, in program order, whether
+   * or not that form goes on to send anything -- once for a `struct`, not once
+   * per define it expands into.
    *
-   * @param index the statement's position in the program, so a channel
-   *        collecting the output of one statement can tell which is which.
+   * @param index the position in the program of the first statement the form
+   *        expanded into, so a channel collecting the output of one form can
+   *        tell which is which.
    */
   beginStatement?: (source: string, index: number) => void
 
