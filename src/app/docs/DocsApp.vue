@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-
-const appVersion = APP_VERSION
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import ModuleList from './ModuleList.vue'
 import ApiEntries from './ApiEntries.vue'
+import SearchResults from './SearchResults.vue'
 import ThemeToggle from '../shared/ThemeToggle.vue'
 import { docRegistry } from '../../lib'
+import { moduleOrder } from './modules'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
 
-// N.B., order matches the old hand-maintained api/*.ts file list (prelude
-// first as the default/most common module); "runtime" is LPM-internal
-// plumbing, not user-facing, so it's deliberately excluded here.
-const moduleOrder = [
-  'prelude', 'image', 'lab', 'music', 'test',
-  'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
-]
+const appVersion = APP_VERSION
+
 const libs: [string, Map<string, FunctionDoc>][] = moduleOrder.map(
   (name) => [name, docRegistry.get(name) ?? new Map<string, FunctionDoc>()],
 )
@@ -27,29 +22,75 @@ const selectedLib = computed(
     new Map<string, FunctionDoc>(),
 )
 
-const search = ref('')
-
-function searchForFunction(searchTerm: string) {
-  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_self')
+/*
+ * Which view is showing lives in the URL rather than in a toggle, because
+ * search used to be its own page and links to it are still out there (#403).
+ * `?search=` present, empty or not, means search; absent means the modules.
+ */
+function termFromUrl(): string | null {
+  return new URLSearchParams(window.location.search).get('search')
 }
+
+const searchTerm = ref(termFromUrl())
+const search = ref(searchTerm.value ?? '')
+const searching = computed(() => searchTerm.value !== null)
+
+/**
+ * Shows the search view for `term`, or the module browser for null. Switching
+ * is a history entry, so Back still leaves search the way it always did.
+ */
+function show(term: string | null) {
+  if (term === searchTerm.value) {
+    return
+  }
+  searchTerm.value = term
+  search.value = term ?? ''
+  const url = new URL(window.location.href)
+  if (term === null) {
+    url.searchParams.delete('search')
+  } else {
+    url.searchParams.set('search', term)
+  }
+  window.history.pushState({}, '', url)
+}
+
+function syncFromUrl() {
+  const term = termFromUrl()
+  searchTerm.value = term
+  search.value = term ?? ''
+}
+
+onMounted(() => {
+  window.addEventListener('popstate', syncFromUrl)
+})
+onUnmounted(() => {
+  window.removeEventListener('popstate', syncFromUrl)
+})
 </script>
 
 <template>
   <div class="docs-root">
     <div class="header">
-      <div>
+      <div class="header-left">
         <a href="index.html">Scamper</a> <span>({{ appVersion }})</span> ⋅
         <a href="docs.html">Docs</a> ⋅
         <a href="reference.html">Reference</a> ⋅
-        <a href="search.html">Search</a> ⋅ 
-
         <input
-      v-model="search"  
-      size = "30"
-      placeholder="Search function name or press enter..."
-      @keyup.enter="searchForFunction(search)"
+          v-model="search"
+          class="text-input"
+          size="30"
+          aria-label="Search function name"
+          placeholder="Search function name or press enter..."
+          @keyup.enter="show(search)"
+        />
+        <button
+          v-if="searching"
+          type="button"
+          class="back"
+          @click="show(null)"
         >
-
+          Back to modules
+        </button>
       </div>
       <div class="header-right">
         <ThemeToggle />
@@ -66,12 +107,15 @@ function searchForFunction(searchTerm: string) {
       </div>
     </div>
     <div class="docs">
-      <ModuleList
-        :libs="libs"
-        :selected-module="selectedModule"
-        @select="selectedModule = $event"
-      />
-      <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
+      <SearchResults v-if="searching" :term="searchTerm ?? ''" />
+      <template v-else>
+        <ModuleList
+          :libs="libs"
+          :selected-module="selectedModule"
+          @select="selectedModule = $event"
+        />
+        <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
+      </template>
     </div>
   </div>
 </template>
@@ -84,20 +128,7 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    avenir next,
-    avenir,
-    segoe ui,
-    helvetica neue,
-    helvetica,
-    Cantarell,
-    Ubuntu,
-    roboto,
-    noto,
-    arial,
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 1em;
 }
 </style>
@@ -112,19 +143,36 @@ body,
 .header {
   background: var(--header-bg);
   color: var(--header-fg);
-  padding: 0.5em;
+  padding: var(--space-md);
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
+  gap: var(--space-md);
 }
 
+.header-left,
 .header-right {
   color: var(--header-fg);
   display: flex;
   align-items: center;
-  gap: 0.25em;
+  gap: var(--space-xs);
+}
+
+.back {
+  padding: var(--space-xs) var(--space-md);
+  font: inherit;
+  font-size: var(--text-md);
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.back:hover {
+  background: var(--surface-hover);
 }
 
 .docs {

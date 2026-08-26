@@ -124,7 +124,7 @@ function toggleRunMenu(e: MouseEvent) {
 const search = ref('')
 
 function searchOpenWindow(searchTerm: string) {
-  window.open('search.html?search=' + encodeURIComponent(searchTerm), '_blank')
+  window.open('docs.html?search=' + encodeURIComponent(searchTerm), '_blank')
 }
 </script>
 
