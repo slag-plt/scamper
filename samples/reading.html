@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Scamper in a reading</title>
+  <link href="/css/normalize.css" rel="stylesheet">
+  <link href="/css/scamper-highlight.css" rel="stylesheet">
+  <link href="/css/scamper-transcript.css" rel="stylesheet">
+  <style>
+    /* Just enough to read by: a column, a readable measure, and listings that
+       are visibly distinct from the transcripts around them. The reading site
+       has its own stylesheet; this is a stand-in for it. */
+    body {
+      margin: 0 auto;
+      padding: 2rem 1.5rem 6rem;
+      max-width: 46rem;
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+    }
+
+    h1, h2, h3, h4 { font-family: system-ui, sans-serif; line-height: 1.25; }
+    h1 { margin-top: 2.5rem; }
+
+    blockquote {
+      margin: 1rem 0;
+      padding: 0.25rem 1rem;
+      border-left: 4px solid #ddd;
+      color: #444;
+    }
+
+    pre {
+      overflow-x: auto;
+      padding: 0.75rem 1rem;
+      background: #f4f4f4;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    code { font-size: 0.95em; }
+
+    hr {
+      margin: 5rem 0;
+      border: none;
+      border-top: 3px double #bbb;
+    }
+
+    .sample-note {
+      margin-bottom: 3rem;
+      padding: 1rem 1.25rem;
+      background: #eef4fb;
+      border-radius: 6px;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<p class="sample-note">
+  <strong>This page is a sample, not a reading.</strong> It reproduces two of the
+  <a href="https://osera.cs.grinnell.edu/csc151/">CSC 151</a> readings —
+  <em>Recursion Over Lists</em> and <em>Interactivity, Events, and Reactivity</em> —
+  on one page, so the transcript widget can be seen doing the two things a real
+  reading asks of it. The first reading is entirely non-interactive: its programs
+  run once and print. The second is interactive throughout: its programs draw to a
+  canvas, respond to the mouse and keyboard, and play music. Having both here is
+  the point — a page mixing the two kinds is the case worth checking. A short
+  section at the end, marked as such, is not from either reading; it exercises the
+  widget features the readings themselves happen not to use.
+</p>
+
+<!-- ===================================================================== -->
+<!-- Reading one: non-interactive. Every widget below runs to completion    -->
+<!-- and prints; nothing waits on the reader.                              -->
+<!-- ===================================================================== -->
+
+<article id="recursion-over-lists">
+
+<h1>Recursion Over Lists</h1>
+
+<p>As a first example of recursion, we designed a function that computes the sum
+of the elements of an input list.</p>
+
+<div class="scamper-transcript" id="sum">
+  <script type="text/scamper">
+(define sum
+  (lambda (numbers)
+    (if (null? numbers)
+        0
+        (+ (car numbers) (sum (cdr numbers))))))
+
+(sum (list 91 85 96 82 89))
+(sum (list -17 17 12 -4))
+(sum (list 9.3))
+(sum null)
+  </script>
+</div>
+
+<p>This program embodies the following decomposition of the <code>sum</code>
+problem:</p>
+
+<blockquote>
+  <p><code>numbers</code> is either an empty list or a non-empty list.</p>
+  <ul>
+    <li>The sum of an empty list is <code>0</code>.</li>
+    <li>The sum of a non-empty list is the head of the list added to the sum of
+    the tail.</li>
+  </ul>
+</blockquote>
+
+<p>And we derive this recursive decomposition from our recursive definition of a
+list:</p>
+
+<blockquote>
+  <p>A list is either:</p>
+  <ul>
+    <li>Empty or</li>
+    <li>Non-empty with a head element and a sublist, its tail.</li>
+  </ul>
+</blockquote>
+
+<p>In this sense, the recursive decomposition serves as a <em>basic skeleton</em>
+for how to design recursive functions over lists! In this reading, we'll the
+practical considerations of applying this skeleton to decompose problems.</p>
+
+<h1>A Second Example: List Length</h1>
+
+<p>Next, let's take a look at another list problem—computing the length of a
+list—and see how we can systematically decompose the problem using our
+skeleton.</p>
+
+<h2>Case Analysis</h2>
+
+<p>Because our recursive definition of list is in terms of case, we expect that
+our decomposition of the problem should follow these cases. Thus, to compute the
+length of the list, we must consider what the length of a list is when:</p>
+
+<ul>
+  <li>The list is empty and</li>
+  <li>The list is non-empty.</li>
+</ul>
+
+<p>We'll call the empty case the <em>base case</em> of our recursive
+decomposition because we expect this is where execution of our eventual
+recursive function will "bottom out" or end. We'll call non-empty case the
+<em>recursive case</em> of our recursive decomposition as it contains the
+recursive occurrence of the structure we're performing recursion over, a
+sublist.</p>
+
+<p>Importantly, we can solve these sub-problems <em>independently</em>,
+<em>i.e.</em>, we don't need to think about the non-empty case when solving the
+empty case or vice versa. Because the base case is over a concrete list, namely
+<code>null</code>, it is usually easier to solve, so we'll start there.</p>
+
+<blockquote>
+  <p>What is the length of an empty list?</p>
+</blockquote>
+
+<p>Don't overthink this case! You may feel like that the question is some sort of
+trick, however, its simplicity comes from the fact that an empty list is very
+simple. The length of an empty list is <code>0</code>—that's it! This gives us
+the first part of our recursive decomposition:</p>
+
+<blockquote>
+  <p>The length of the list is defined as follows:</p>
+  <ul>
+    <li>If the list is empty, then its length is 0.</li>
+    <li>If the list is non-empty, ... .</li>
+  </ul>
+</blockquote>
+
+<h2>The Recursive Case and the Recursive Assumption</h2>
+
+<p>Now, let's tackle the non-empty case. Whereas the base case is simple because
+it is a concrete, simple list, the recursive case is seemingly more complex
+because it concerns an arbitrary list! To wrangle this complexity, we force
+ourselves in our recursive decomposition to utilize only what the recursive
+definition of a list tells us exists:</p>
+
+<blockquote>
+  <ul>
+    <li>A non-empty list is composed of a head element and a sublist, its
+    tail.</li>
+  </ul>
+</blockquote>
+
+<p>This non-empty list may have 20 elements, five elements, or just one element;
+we don't care what the precise number is! We only care about the fact that it has
+an element on the front, the <code>head</code>, and the remainder of its
+elements, its <code>tail</code>. Pictorally, we can view the situation as
+follows:</p>
+
+<pre><code>[ head ][ --------tail-------- ]
+</code></pre>
+
+<p>Our goal now is to <em>express the length of the list in terms of its
+<code>head</code> and <code>tail</code></em>. This gives us two sub-goals to
+consider:</p>
+
+<ul>
+  <li>What is length of the <code>tail</code>?</li>
+  <li>How does the <code>head</code> contribute to the overall length?</li>
+</ul>
+
+<p>Let's tackle each of these questions in turn. First, what is the length of the
+<code>tail</code>? This is immediately problematic to compute directly because
+the only thing that we know about <code>tail</code> is that it is a list—we don't
+know whether it is empty or non-empty. However, we recognize that computing the
+length of the <code>tail</code> is precisely the problem we are trying to solve
+in the first place, but for a smaller part of the overall list. Consequently, for
+the purposes of our decomposition, we make the following assumption:</p>
+
+<blockquote>
+  <p>We know how to compute the length of the <code>tail</code> of the list.</p>
+</blockquote>
+
+<p>This assumption—we can solve our problem for a smaller list—is called our
+<em>recursive assumption</em>. It is the backbone of our recursive design!
+Whenever we decompose a problem recursively over lists, we assume that we can
+solve our problem for the tail of the list in question.</p>
+
+<p>Now, we tackle the second question: how does the <code>head</code> contribute
+to the overall length? Again, this question is easy to overthink, so resist the
+temptation to do so! The <code>head</code> contributes <code>1</code> unit to the
+overall length!</p>
+
+<p>Finally, once we solve these two sub-goals, our final task is
+<em>combining</em> these two answers into an answer for the overall list. In
+other words:</p>
+
+<blockquote>
+  <p>Provided that we know the length of the <code>tail</code> and we know how
+  <code>head</code> contributes to the overall length, how can we express the
+  length of the overall list?</p>
+</blockquote>
+
+<p>Pictorally, we have:</p>
+
+<pre><code>[ head ][ --------tail-------- ]
+    1  ???   (length tail)
+</code></pre>
+
+<p>In other words, how do we combine <code>1</code> and the length of the
+<code>tail</code> to obtain the overall length of the list? In this case, we do
+so with addition!</p>
+
+<pre><code>[ head ][ --------tail-------- ]
+    1   +   (length tail)
+</code></pre>
+
+<p>This gives us a final recursive decomposition for the length of a list:</p>
+
+<blockquote>
+  <p>The length of the list is defined as follows:</p>
+  <ul>
+    <li>If the list is empty, then its length is 0.</li>
+    <li>If the list is non-empty, then its length is one plus the length of the
+    tail of the list.</li>
+  </ul>
+</blockquote>
+
+<h2>Translating the Recursive Decomposition Into Code</h2>
+
+<p>With our complete decomposition in-hand, we can now translate our
+<code>length</code> function into code. We spent much of our discussion
+explicating all the little bits of reasoning that go into designing a recursive
+decomposition to a problem. This is because, once we have the decomposition
+in-hand, translating it into code is, more or less, a mechanical process!</p>
+
+<p>With the pattern matching facilities of Scamper, we can express the
+decomposition as follows:</p>
+
+<ul>
+  <li>The case analysis becomes a <code>match</code> on the input list.</li>
+  <li>Each case's solution is translated into an expression that computes that
+  solution.</li>
+  <li>In the recursive case, our recursive assumption becomes a <em>recursive
+  call</em> to the function we are writing!</li>
+</ul>
+
+<p>Just like with <code>sum</code>, observe how the definition of
+<code>length</code> mirrors the decomposition we designed:</p>
+
+<div class="scamper-transcript" id="list-length">
+  <script type="text/scamper">
+(import test)
+(define list-length
+  (lambda (l)
+    (match l
+      [null 0]
+      [(cons _ tail) (+ 1 (list-length tail))])))
+
+(test-case "empty list length"
+  equal? 0
+  (lambda ()
+    (list-length null)))
+
+(test-case "non-empty list length"
+  equal? 15
+  (lambda ()
+    (list-length (make-list 15 "q" ))))
+  </script>
+</div>
+
+<h2>Low-level Mechanics Versus High-level Design</h2>
+
+<p>Our function seems work with the limited testing we have done. However, it is
+instructive to trace its execution so that we can appreciate how our design
+mechanical executes in Scamper. Let's trace expression of the following
+expression, <code>(list-length (list "c" "a" "t"))</code>. We'll also take the
+shortcuts of evaluating a call to <code>list-length</code> directly to the
+<code>match</code> branch that is selected as well as carrying out the eventual
+multi-step addition in a single step.</p>
+
+<pre><code>    (list-length (list "c" "a" "t"))
+--&gt; (+ 1 (list-length (list "a" "t")))
+--&gt; (+ 1 (+ 1 (list-length (list "t"))))
+--&gt; (+ 1 (+ 1 (+ 1 (list-length null))))
+--&gt; (+ 1 (+ 1 (+ 1 0)))
+--&gt; 3
+</code></pre>
+
+<p>We can physically how the base case "bottoms out" our recursive function
+calls, <em>i.e.</em>, it ends the chain of calls. If we never reached the base
+case, we would have never stopped!</p>
+
+<p>In this sense, our <em>low-level mechanics</em>—substitutive evaluation of
+code—allows us to <em>check</em> that our implementation is correct. However, in
+designing our recursive decomposition, we employed <em>high-level design
+tactics</em>—the recursive skeleton for lists—to systematize the process.
+Consequently, both tools, low-level mechanics and high-level design tactics, are
+necessary components to succeed at recursive program design. If you are lacking
+in tactics, you will not be able to design recursive functions quickly and
+effectively. If you are lacking in mechanics, you will not be able to debug your
+implementations. Make sure that you practice and hone both skills in the coming
+weeks!</p>
+
+<h2>Summary: How to Apply the Recursive Skeleton</h2>
+
+<p>When recursively decomposing a problem involving lists, we employ the
+recursive definition of lists as a skeleton:</p>
+
+<ul>
+  <li>To solve the problem for an arbitrary list, we identify a solution to the
+  problem when:
+    <ul>
+      <li>The list is empty, the base case.</li>
+      <li>The list is non-empty, the recursive case. In this case, we know that
+      the list has a head and a tail.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Importantly, in the recursive case, we express the solution in terms of the
+following sub-goals:</p>
+
+<ul>
+  <li>How do I solve the problem for the tail of the list? To do so we invoke our
+  recursive assumption and simply assume that we can solve the problem for the
+  tail recursively.</li>
+  <li>How do I integrate the head of the list into the solution to the
+  problem?</li>
+</ul>
+
+<p>Finally, we then combine these two solutions into a solution for the overall
+list.</p>
+
+<h1>A Third Example: List Append</h1>
+
+<p>Now that we have seen how to recursively decompose problems in terms of our
+recursive skeleton, let's try another example. We'll write a function that
+<em>appends two lists together</em>. The prelude provides this function as
+<code>append</code>:</p>
+
+<div class="scamper-transcript" id="append">
+  <script type="text/scamper">
+(append (list 1 2) (list 3 4 5))
+  </script>
+</div>
+
+<p>We'll write an version of this function, <code>list-append</code>, using
+recursion. <code>(list-append l1 l2)</code> takes two lists and returns a single
+list that is the result of appending <code>l1</code> onto the front of
+<code>l2</code>.</p>
+
+<p>To do this, we must come up with a recursive decomposition of the problem and
+then translate it into a recursive function. An immediate concern here is that
+<code>list-append</code> takes <em>two</em> lists as input. Which one do we
+perform recursion over?</p>
+
+<p>It is not immediately obvious which list to choose, so we would simply have to
+try one list versus the others. Ultimately, because of how we decompose a list
+(as a head <em>followed</em> by its tail), we will find success by choosing the
+first list. So for the sake of clear exposition, let's make that choice. In our
+self-checks for this reading, you will explore what happens when you choose the
+second list instead.</p>
+
+<p>Now that we have identified the first list <code>l1</code> as the subject of
+our recursion, we will now solve the list append problem in the case where
+<code>l1</code> is empty and <code>l1</code> is non-empty. In the base case, we
+are left with the question:</p>
+
+<blockquote>
+  <p>In the case where <code>l1</code> is empty, how do we append it onto the
+  front of list <code>l2</code>?</p>
+</blockquote>
+
+<p>This is a little bit of a brain teaser. What does it mean to append an empty
+list onto the front of another list? Because the empty list is just
+that—empty—we expect not to add any elements onto the front of <code>l2</code>!
+Thus, the result in this case is just <code>l2</code>!</p>
+
+<blockquote>
+  <p>In the case where <code>l1</code> is empty, appending the empty list onto
+  <code>l2</code> results in <code>l2</code> itself.</p>
+</blockquote>
+
+<p>Now we tackle the recursive case:</p>
+
+<blockquote>
+  <p>In the case where <code>l1</code> is non-empty with a head and a tail, how
+  do we append it onto the front of <code>l2</code>?</p>
+</blockquote>
+
+<p>Let's visualize this situation:</p>
+
+<pre><code>        l1                         l2
+[head][ ----tail---- ]   [ ------------------ ]
+</code></pre>
+
+<p>In this case we know <code>l1</code> is composed of a head element and a
+sublist, its tail. In contrast, we don't know <em>anything</em> about
+<code>l2</code>. It could be empty or non-empty; we don't care!</p>
+
+<p>We first invoke our recursive assumption to solve the list append problem with
+<code>tail</code>. We know from this assumption that we can recursively append
+<code>tail</code> onto the front of <code>l2</code>. This leads to the following
+updated diagram:</p>
+
+<pre><code>[head]   [ ----tail----------------l2---------]
+                  (append tail l2)
+</code></pre>
+
+<p>Next, how do we integrate the <code>head</code> into this result?
+<code>head</code> is a single element that should go onto the front of the list
+resulting from appending <code>tail</code> onto <code>l2</code>. We simply attach
+the <code>head</code> onto the front of this list and we're done!</p>
+
+<pre><code>[head-------tail-----------------l2--------]
+</code></pre>
+
+<p>Putting together these two cases yields our recursive decomposition:</p>
+
+<blockquote>
+  <p>To append list <code>l1</code> onto the front of <code>l2</code>:</p>
+  <ul>
+    <li>When <code>l1</code> is empty, we simply produce <code>l2</code>.</li>
+    <li>When <code>l1</code> is non-empty with a <code>head</code> and
+    <code>tail</code>, we attach <code>head</code> onto the front of the list
+    resulting from recursively appending <code>tail</code> onto
+    <code>l2</code>.</li>
+  </ul>
+</blockquote>
+
+<p>Translating this decomposition into code, we use <code>cons</code> to attach
+the <code>head</code> to the front of the desired list:</p>
+
+<div class="scamper-transcript" id="list-append">
+  <script type="text/scamper">
+(import test)
+
+(define list-append
+  (lambda (l1 l2)
+    (match l1
+      [null l2]
+      [(cons head tail) (cons head (list-append tail l2))])))
+
+(test-case "append empty"
+  equal? (list 1 2 3)
+  (lambda ()
+    (list-append null (list 1 2 3))))
+
+(test-case "append empty"
+  equal? (list 1 2 3 4 5)
+  (lambda ()
+    (list-append (list 1 2) (list 3 4 5))))
+  </script>
+</div>
+
+<h1>Self-check</h1>
+
+<h2>Problem: The Other Direction (‡)</h2>
+
+<p>We designed <code>(list-append l1)</code> recursively on the first argument
+<code>l1</code>. What happens instead if we choose the second argument
+<code>l2</code> instead? To explore why this approach will not work, try to fill
+out the recursive decomposition for this situation:</p>
+
+<blockquote>
+  <p>To append a list <code>l1</code> onto the front of <code>l2</code>:</p>
+  <ul>
+    <li>If <code>l2</code> is empty, then...</li>
+    <li>If <code>l2</code> is non-empty with a <code>head</code> and
+    <code>tail</code>, then...</li>
+  </ul>
+</blockquote>
+
+<p>You should be able to successful fill out the base case of the recursive
+decomposition. However, you should find that you can't come up with an easy
+solution for the recursion case! In particular, for the recursive case of this
+decomposition explain in a sentence or two:</p>
+
+<ol>
+  <li>What is the recursive assumption that we get to make in solving the
+  recursive case?</li>
+  <li>What about the nature of <code>cons</code> and your recursive assumption
+  make it so that you can't simply <code>cons</code> the <code>head</code> onto
+  the result of the recursive assumption?</li>
+</ol>
+
+</article>
+
+<hr>
+
+<!-- ===================================================================== -->
+<!-- Reading two: interactive. Its widgets draw to a canvas, subscribe to   -->
+<!-- the mouse, the keyboard and a timer, and play a composition. Each      -->
+<!-- keeps its own handlers, so the ball above keeps moving while the song  -->
+<!-- below plays.                                                          -->
+<!-- ===================================================================== -->
+
+<article id="interactivity-events-and-reactivity">
+
+<h1>Interactivity, Events, and Reactivity</h1>
+
+<p>In any interactive scenario, our program must <em>react</em> to a variety of
+<em>events</em>, for example:</p>
+
+<ul>
+  <li>When the user clicks on the screen, we might change the color of an object
+  on the screen.</li>
+  <li>When the user presses the space bar, we might change the shape of the
+  object.</li>
+  <li>We might move an object on the screen periodically according to a
+  timer.</li>
+</ul>
+
+<p>To capture this pattern of programming, we take inspiration from <em>reactive
+programming frameworks</em> such as the <a href="https://elm-lang.org">Elm
+programming language</a> and the <a href="https://react.dev">React library</a>
+for user interface development in Javascript. We provide the
+<code>reactive</code> library for building components that can subscribe and
+react to events generated by many sources, including timers, user input, and
+musical compositions. Ultimately, we can use the <code>reactive</code> library to
+build interactive, multimedia applications in Scamper such as visualizations,
+user interfaces, or games!</p>
+
+<h2>The Architecture of a Reactive Application</h2>
+
+<p>A common way to decompose an interactive program is to break it up into three
+parts:</p>
+
+<ul>
+  <li>A <em>model</em> that is the data that the program manipulates. The goal of
+  the program is to (a) handle events by updating the model and (b) periodically
+  render the model to the screen.</li>
+  <li>A <em>view</em> function that takes the model and periodically renders it
+  to the screen.</li>
+  <li>An <em>update</em> function that takes an event message and model as input
+  and produces an updated model based on the processed event.</li>
+</ul>
+
+<p>Event messages are the data created by sources of events. For example, a mouse
+click event might record the position of the cursor where the click
+occurred.</p>
+
+<p>This particular decomposition is a <em>reactive</em> program architecture.
+Specifically, our decomposition allows our model to react to events by way of the
+<code>update</code> function. The <code>view</code> function allows us to turn our
+continually evolving model into a component, <em>e.g.</em>, a canvas, viewable by
+the user.</p>
+
+<h2>An Example: A Reactive Ball</h2>
+
+<p>To demonstrate this reactive architecture in practice using the
+<code>reactive</code> library, we'll walk through the following implementation of
+a simple interactive application.</p>
+
+<div class="scamper-transcript" id="reactive-ball" data-height="34em">
+  <script type="text/scamper">
+(import canvas)
+(import image)
+(import reactive)
+
+(struct state (
+  shape     ; string?, "circle" or "square"
+  color     ; string?, "red" or "blue"
+  x         ; number?
+  y         ; number?
+  direction ; string?, "left" or "right"
+))
+
+; The width of the canvas
+(define width 300)
+
+; The height of the canvas
+(define height 50)
+
+; The length of the shape
+(define len 50)
+
+; The velocity of the shape
+(define velocity 5)
+
+; The timer interval for updating our simulation (in milliseconds)
+(define interval 25)
+
+(define view
+  (lambda (st canv)
+    (match st
+      [(state shape color x y dir)
+        (begin
+          (canvas-rectangle! canv 0 0
+            width height
+            "outline" "black")
+          (cond
+            [(equal? shape "circle")
+            ; N.B., canvas-circle! places the shape at the origin
+            ; instead of the upper-level corner.
+            (let ([rad (/ len 2)])
+              (canvas-circle! canv (+ x rad) (+ y rad) rad "solid" color))]
+            [(equal? shape "square")
+            (canvas-rectangle! canv x y len len "solid" color)]))])))
+
+(define move-shape
+  (lambda (st)
+    (match st
+      [(state shape color x y dir)
+       (if (equal? dir "right")
+           (if (> (+ velocity x len) width)
+               (state shape color (- width len) y "left")
+               (state shape color (+ velocity x) y dir))
+           (if (< (- x velocity) 0)
+               (state shape color 0 y "right")
+               (state shape color (- x velocity) y dir)))])))
+
+(define update
+  (lambda (msg st)
+    (match st
+      [(state shape color x y dir)
+       (match msg
+         [(event-timer time elapsed)
+          (move-shape st)]
+         [(event-mouse-click btn cx cy)
+          (if (equal? color "red")
+              (state shape "blue" x y dir)
+              (state shape "red" x y dir))]
+         [(event-key-up key)
+          (cond
+            [(and (equal? key "c") (equal? shape "circle"))
+             (state "square" color x y dir)]
+            [(equal? shape "square")
+             (state "circle" color x y dir)]
+            [else st])])])))
+
+(display
+  (reactive-canvas
+    width height
+    ; The initial model
+    (state "circle" "blue" (/ width 2) 0 "right")
+    ; The view function
+    view
+    ; The update function
+    update
+    ; Event subscriptions
+    (on-timer interval)
+    (on-mouse-click)
+    (on-key-up)))
+  </script>
+</div>
+
+<p>The program uses a timer to simulate a ball moving back and forth in a box.
+You can click on the canvas to change the color of the ball. You can also press
+<code>c</code> to change the shape of the ball to a square and back.</p>
+
+<h3>The Model</h3>
+
+<pre><code>(import canvas)
+(import image)
+(import reactive)
+
+(struct state (
+  shape     ; string?, "circle" or "square"
+  color     ; string?, "red" or "blue"
+  x         ; number?
+  y         ; number?
+  direction ; string?, "left" or "right"
+))
+
+; The width of the canvas
+(define width 300)
+
+; The height of the canvas
+(define height 50)
+
+; The length of the shape
+(define len 50)
+
+; The velocity of the shape
+(define velocity 5)
+
+; The timer interval for updating our simulation (in milliseconds)
+(define interval 25)
+</code></pre>
+
+<p>First, we define the model that we will render to the canvas and update based
+on the events we receive. We use a <code>struct</code> to define this model,
+calling it <code>state</code> to represent the <em>state of our program</em>. The
+state of the program captures salient characteristics of the shape. Notably, in
+order to simulate the shape's movement, we record the <code>x</code> and
+<code>y</code> position of the shape and the direction it is moving in.</p>
+
+<p>For simplicity's sake, we have the ball move at a constant velocity relative
+to the rate at which we update the simulation. These, along with other constant
+values, are defined as top-level identifiers used throughout the program.</p>
+
+<h3>The Reactive Canvas</h3>
+
+<pre><code>(display
+  (reactive-canvas
+    width height
+    ; The initial model
+    (state "circle" "blue" (/ width 2) 0 "right")
+    ; The view function
+    view
+    ; The update function
+    update
+    ; Event subscriptions
+    (on-timer interval)
+    (on-mouse-click)
+    (on-key-up)))
+</code></pre>
+
+<p>Next, let's look at the function, <code>reactive-canvas</code> which puts
+together the different parts of our reactive program together. The function takes
+the following required parameters as input:</p>
+
+<ul>
+  <li>The <code>width</code> of the canvas.</li>
+  <li>The <code>height</code> of the canvas.</li>
+  <li>A <code>initial</code> value for our model.</li>
+  <li>A <code>view</code> function that renders our model to the canvas.</li>
+  <li>A <code>update</code> function that updates the model in response to
+  events.</li>
+</ul>
+
+<p><code>reactive-canvas</code> also takes a number of <em>subscriptions</em>
+which allow our model to respond to events. In our particular call to
+<code>reactive-canvas</code>, we subscribe to three events:</p>
+
+<ul>
+  <li><code>(on-timer interval)</code> subscribes to timer events. An event is
+  generated by the timer every <code>interval</code> milliseconds.</li>
+  <li><code>(on-mouse-click)</code> subscribes to mouse click events that are
+  generated when the user clicks on the canvas.</li>
+  <li><code>(on-key-up)</code> subscribes to keyboard events when a key is
+  depressed.</li>
+</ul>
+
+<p>We can subscribe to other events as well. All of these subscription functions
+are named with the prefix <code>on-</code> and can be passed to
+<code>reactive-canvas</code>. See the <code>reactive</code> library documentation
+for a complete list of these possible subscriptions.</p>
+
+<p><code>view</code> and <code>update</code> are functions that capture the other
+parts of our reactive component that we define below.</p>
+
+<h3>View: Rendering Our Model</h3>
+
+<pre><code>(define view
+  (lambda (st canv)
+    (match st
+      [(state shape color x y dir)
+        (begin
+          (canvas-rectangle! canv 0 0
+            width height
+            "outline" "black")
+          (cond
+            [(equal? shape "circle")
+            ; N.B., canvas-circle! places the shape at the origin
+            ; instead of the upper-level corner.
+            (let ([rad (/ len 2)])
+              (canvas-circle! canv (+ x rad) (+ y rad) rad "solid" color))]
+            [(equal? shape "square")
+            (canvas-rectangle! canv x y len len "solid" color)]))])))
+</code></pre>
+
+<p>The <code>view</code> argument to <code>reactive-canvas</code> must be a
+function that takes two arguments:</p>
+
+<ul>
+  <li>The current <code>state</code> of our model.</li>
+  <li>The <code>canvas</code> we should draw our model to.</li>
+</ul>
+
+<p>The purpose of the function is to take this snapshot of the model and render
+it to our canvas. Observe how this function works <em>independently</em> of how
+the model changes through events! By separating rendering (<code>view</code>)
+from the program's logic (<code>update</code>), we greatly simplify our program
+design!</p>
+
+<p>To render our model, we use the canvas-drawing function found in the
+<code>canvas</code> library. These functions operate similarly to the shape
+functions found in the <code>image</code> library but allows for precise
+placement of shapes. The functions are also effectful—they draw to a canvas a
+side effect—and, thus, must be sequenced together using <code>begin</code>.</p>
+
+<h3>Update: Responding to Events</h3>
+
+<pre><code>(define update
+  (lambda (msg st)
+    (match st
+      [(state shape color x y dir)
+       (match msg
+         [(event-timer time elapsed)
+          (move-shape st)]
+         [(event-mouse-click btn cx cy)
+          (if (equal? color "red")
+              (state shape "blue" x y dir)
+              (state shape "red" x y dir))]
+         [(event-key-up key)
+          (cond
+            [(and (equal? key "c") (equal? shape "circle"))
+             (state "square" color x y dir)]
+            [(equal? shape "square")
+             (state "circle" color x y dir)]
+            [else st])])])))
+</code></pre>
+
+<p>The core of our simulation logic rests in the <code>update</code> function.
+The <code>update</code> function receives one of the events we subscribed to in
+our <code>reactive-canvas</code> call and updates the model based on the event.
+For each subscription we pass to <code>reactive-canvas</code>, the <em>event
+message</em> takes on a different form, carrying different values depending on
+the event. Each of the event messages is a <code>struct</code> that we can break
+apart and analyze with pattern matching:</p>
+
+<ul>
+  <li><code>(on-timer interval)</code> creates <code>(event-timer time
+  elapsed)</code> messages which contain the <code>time</code> that the event
+  fired and the time <code>elapsed</code> since the last
+  <code>event-timer</code> message was sent.</li>
+  <li><code>(on-mouse-click)</code> creates <code>(event-mouse-click btn cx
+  cy)</code> messages which contain the mouse button pressed and the location of
+  the click.</li>
+  <li><code>(on-key-up)</code> creates <code>(event-key-up key)</code> messages
+  which contain the key that was released.</li>
+</ul>
+
+<p>The documentation captures, for each subscription, the event message
+<code>struct</code> that <code>update</code> will receive to handle that
+event.</p>
+
+<p>In the cases of mouse clicks (<code>event-mouse-click</code>) and key presses
+(<code>event-key-up</code>), we toggle the <code>color</code> and
+<code>shape</code> fields of our <code>state</code> struct, respectively. Observe
+how, in each case, <code>update</code> returns a new <code>state</code> that
+consists of the updated fields. The reactive runtime will then use this updated
+<code>state</code> in future calls of <code>view</code>, whenever they are
+scheduled to occur.</p>
+
+<p>The logic for moving the shape based on our timer event <code>(event-timer
+time elapsed)</code> is a bit more complex, so we factor out the code to a
+separate function.</p>
+
+<pre><code>(define move-shape
+  (lambda (st)
+    (match st
+      [(state shape color x y dir)
+       (if (equal? dir "right")
+           (if (&gt; (+ velocity x len) width)
+               (state shape color (- width len) y "left")
+               (state shape color (+ velocity x) y dir))
+           (if (&lt; (- x velocity) 0)
+               (state shape color 0 y "right")
+               (state shape color (- x velocity) y dir)))])))
+</code></pre>
+
+<p><code>move-shape</code> updates our model's <code>x</code> position based on
+the velocity. Every timer event moves the shape by 5 pixels (the current value of
+<code>velocity</code>). Since our timer interval is <code>25</code> milliseconds,
+that means the shape effectively moves at 5/25 pixels/millisecond or 1 pixel
+every 5 milliseconds. One way we can improve this simple code is to use the
+<code>elapsed</code> value of our time event to move the shape in terms of time
+elapsed rather than a fixed amount per update. In addition to moving the shape,
+we also perform rudimentary <em>collision detection</em>, switching the direction
+of the shape if the shape runs over either side of the canvas.</p>
+
+<h3>Reacting to Musical Compositions</h3>
+
+<p>The events we've considered so far are managed by the Scamper runtime and the
+browser. However, sometimes our program may generate events that we wish to
+respond to. An example of this is reacting to musical compositions we write in
+Scamper. In the application below, we create a musical composition that
+programmatically controls the color of the shape.</p>
+
+<div class="scamper-transcript" id="animated-song" data-height="30em">
+  <script type="text/scamper">
+(import canvas)
+(import image)
+(import music)
+(import reactive)
+
+(define mary-had-a-little-lamb
+  (seq
+    (par (note 58 qn) (note-event "blue"))
+    (note 56 qn)
+    (note 54 qn)
+    (note 56 qn)
+    (par (note 58 qn) (note-event "green"))
+    (note 58 qn)
+    (note 58 hn)
+    (par (note 56 qn) (note-event "purple"))
+    (note 56 qn)
+    (note 56 hn)
+    (par (note 58 qn) (note-event "red"))
+    (note 58 qn)
+    (note 58 hn)
+
+    (par (note 58 qn) (note-event "blue"))
+    (note 56 qn)
+    (note 54 qn)
+    (note 56 qn)
+    (par (note 58 qn) (note-event "green"))
+    (note 58 qn)
+    (note 58 hn)
+    (par (note 56 qn) (note-event "purple"))
+    (note 56 qn)
+    (par (note 58 qn) (note-event "red"))
+    (par (note 56 qn) (note-event "green"))
+    (par (note 54 hn) (note-event "blue"))))
+
+(define handlers (make-note-handlers))
+
+(reactive-canvas 100 100
+  "blue"
+  (lambda (st canv)
+    (begin
+      (canvas-rectangle! canv 0 0 100 100 "outline" "black")
+      (canvas-rectangle! canv 10 10 80 80 "solid" st)))
+  (lambda (msg st)
+    (match msg
+      [(event-note color) color]))
+  (on-note handlers))
+
+(display
+  (mod (note-handlers handlers)
+    (mod (tempo qn 240)
+        mary-had-a-little-lamb)))
+  </script>
+</div>
+
+<p>We trigger events in a composition with the <code>note-event</code> function.
+<code>(note-event v)</code> will generate a <code>(event-note v)</code> event
+message that we can capture in our <code>update</code> function. Observe that we
+play a <code>note-event</code> in parallel with the triggering note using
+<code>par</code> to ensure that the event is played alongside the given note.</p>
+
+<pre><code>(define mary-had-a-little-lamb
+  (seq
+    (par (note 58 qn) (note-event "blue"))
+    (note 56 qn)
+    (note 54 qn)
+    (note 56 qn)
+    (par (note 58 qn) (note-event "green"))
+    ; ...))
+</code></pre>
+
+<p>In our example, the value <code>v</code> carried by each event message will be
+the color of the shape we track as the state of our reactive program.</p>
+
+<p>We then need to hook up handlers to this composition and then register those
+handlers with our reactive canvas. The zero-argument function
+<code>make-note-handlers</code> creates an initially empty set of handlers.</p>
+
+<pre><code>(define handlers (make-note-handlers))
+</code></pre>
+
+<p>When creating our reactive canvas, we subscribe to these note events with the
+<code>on-note</code> function, passing these <code>handlers</code> along.</p>
+
+<pre><code>(reactive-canvas 100 100
+  "blue"
+  (lambda (st canv)
+    (begin
+      (canvas-rectangle! canv 0 0 100 100 "outline" "black")
+      (canvas-rectangle! canv 10 10 80 80 "solid" st)))
+  (lambda (msg st)
+    (match msg
+      [(event-note color) color]))
+  (on-note handlers))
+</code></pre>
+
+<p>As a side effect, <code>on-note</code> will add this new
+<code>reactive-canvas</code> to <code>handlers</code>.</p>
+
+<p>Finally, we play our composition <em>modded to utilize
+<code>handlers</code></em> to handle any events that the composition
+creates.</p>
+
+<pre><code>(display
+  (mod (note-handlers handlers)
+    (mod (tempo qn 240)
+        mary-had-a-little-lamb)))
+</code></pre>
+
+</article>
+
+<hr>
+
+<!-- ===================================================================== -->
+<!-- Not from either reading: the widget features the readings happen not   -->
+<!-- to use. See samples/README.md and EMBEDDING.md.                        -->
+<!-- ===================================================================== -->
+
+<article id="widget-features">
+
+<h1>Appendix: The Rest of the Widget</h1>
+
+<p>This last section is not from either reading. The two above cover most of what
+the transcript widget does — many programs on one page, some interactive and some
+not — but not everything, so what is left is collected here.</p>
+
+<h2>Hiding setup</h2>
+
+<p>Code in a <code>text/scamper-preamble</code> script runs first and is not
+shown, which keeps an import or a long definition out of a reader's way:</p>
+
+<div class="scamper-transcript" id="preamble-example">
+  <script type="text/scamper-preamble">(import image)</script>
+  <script type="text/scamper">
+(beside (circle 20 "solid" "red") (circle 20 "solid" "gold"))
+  </script>
+</div>
+
+<h2>Building on an earlier widget</h2>
+
+<p>Each widget is its own program by default, so a definition in one cannot leak
+into the next. <code>data-continues</code> says otherwise: the widget picks up
+where the named one left off, and the chain can run as long as it needs to.</p>
+
+<div class="scamper-transcript" id="defs">
+  <script type="text/scamper">
+(define twice (lambda (f x) (f (f x))))
+(define increment (lambda (n) (+ n 1)))
+  </script>
+</div>
+
+<div class="scamper-transcript" data-continues>
+  <script type="text/scamper">
+(twice increment 40)
+  </script>
+</div>
+
+<div class="scamper-transcript" data-continues="defs">
+  <script type="text/scamper">
+(twice #(* % 2) 5)
+  </script>
+</div>
+
+<h2>Buttons and keys outside a reactive component</h2>
+
+<p>The <code>html</code> library's own interactivity works here too, and each
+widget's handlers belong to that widget.</p>
+
+<div class="scamper-transcript" id="button-example">
+  <script type="text/scamper">
+(import canvas)
+(import html)
+
+(define scratch (make-canvas 120 60))
+scratch
+(button "draw a circle"
+        (lambda () (canvas-circle! scratch 30 30 25 "solid" "orchid")))
+  </script>
+</div>
+
+<h2>Fixing the height</h2>
+
+<p>A widget grows to fit its contents. <code>data-height</code> fixes the height
+and gives the widget a scrollbar instead, which is what the two long programs
+above use.</p>
+
+<div class="scamper-transcript" id="height-example" data-height="6em">
+  <script type="text/scamper">
+(map #(* % %) (range 25))
+  </script>
+</div>
+
+</article>
+
+<script type="module" src="/src/app/web/embed/embed-entry.ts"></script>
+</body>
+</html>

@@ -46,6 +46,7 @@ Scamper has a comprehensive test suite whose structure nearly mirrors the struct
     - backends.test.ts tests the fs/history pairing invariant; config.test.ts tests how a deployment names its server
 + history/ contains tests for a file's save history (#42), one per backing
 + server/ contains tests for the file server: its route layer, accounts, and the MariaDB stores
++ samples/ runs the samples in samples/ (#405) and insists they report no errors -- scm-samples.test.ts for showcase.scm and libs.scm, reading-page.test.ts for the embedded-reading page. Nothing else would notice a sample going stale, since they are not compiled, imported, or linted. Deliberately two files: `runProgram` gives each program its own Scheduler while a page runs on the Scamper singleton's, and a harness program that registers a DOM handler wedges a singleton run later in the same environment
 + regressions/ contains regression tests for fixed issues
 
 ## Browser-mode tests

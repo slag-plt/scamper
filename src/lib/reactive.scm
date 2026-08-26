@@ -14,7 +14,7 @@
 ;;; @category reactive, html?, canvas?
 (define-export subscription? (js-var "reactive_subscriptionQ"))
 
-;;; (reactive-canvas width height initial view update sub1) -> html?
+;;; (reactive-canvas width height initial view update & sub1) -> html?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  initial : any
@@ -27,7 +27,7 @@
 ;;; @category reactive, canvas, html, html?, reactive-container
 (define-export reactive-canvas (js-var "reactive_reactiveCanvas"))
 
-;;; (reactive-container initial view update sub1) -> html?
+;;; (reactive-container initial view update & sub1) -> html?
 ;;;  initial : any
 ;;;  view : any
 ;;;   function? takes a state as input and outputs an HTML element as output.
