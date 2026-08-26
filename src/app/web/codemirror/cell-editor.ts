@@ -1,8 +1,11 @@
 import {
   drawSelection,
   EditorView,
+  gutter,
+  GutterMarker,
   highlightSpecialChars,
   keymap,
+  placeholder,
   type KeyBinding,
 } from '@codemirror/view'
 import { EditorState, type Extension } from '@codemirror/state'
@@ -181,6 +184,33 @@ function historyKeys(onHistory: (direction: -1 | 1) => boolean): KeyBinding[] {
   ]
 }
 
+/**
+ * The `;` shown against every line of a prose cell (#410).
+ *
+ * A prose cell is a run of comments out of the file, edited as the Markdown
+ * inside them. The markers are what the file actually holds, so they are shown
+ * -- in a gutter, where they can be read but not typed over, since they are a
+ * fact about the cell rather than part of what is being written.
+ */
+class CommentMarker extends GutterMarker {
+  toDOM(): Text {
+    return document.createTextNode(';')
+  }
+}
+
+const commentMarker = new CommentMarker()
+
+const proseGutter = gutter({
+  class: 'cm-comment-gutter',
+  lineMarker: () => commentMarker,
+  // Gives the gutter its width before a line is drawn, so the text does not
+  // shift sideways as the cell is opened.
+  initialSpacer: () => commentMarker,
+})
+
+/** What an empty prose cell says, so it does not read as a blank box. */
+const PROSE_PLACEHOLDER = 'Write some text…'
+
 /** Reports edits, focus and the caret, for a cell that is a view of a document. */
 function reporters(config: CellEditorConfig): Extension {
   const { onChange, onFocusChange, onCursor } = config
@@ -246,7 +276,9 @@ function cellExtensions(config: CellEditorConfig): Extension {
     // can be selected and copied but not walked through with a caret.
     EditorView.editable.of(!isReadOnly),
     reporters(config),
-    language === 'markdown' ? markdown() : ScamperSupport(),
+    language === 'markdown'
+      ? [markdown(), proseGutter, placeholder(PROSE_PLACEHOLDER)]
+      : ScamperSupport(),
     // The same language services the file editor gets, minus the diagnostics:
     // the server does not lint a document that has a context, since a cell is
     // unclosed for most of the time it is being typed.

@@ -225,6 +225,16 @@ describe('prose as Markdown', () => {
     expect(markdownToProse('\n\n')).toBe('')
   })
 
+  // Enter pressed and thought better of, or a line a paste left behind: a
+  // blank line at the end says nothing in Markdown and should not become a
+  // comment marker on its own.
+  test('a blank line at the end is not written', () => {
+    expect(markdownToProse('One.\n')).toBe('; One.')
+    expect(markdownToProse('One.\n\n\n')).toBe('; One.')
+    // One in the middle still separates two paragraphs.
+    expect(markdownToProse('One.\n\nTwo.\n')).toBe('; One.\n;\n; Two.')
+  })
+
   test('markers survive the round trip', () => {
     const prose = '; One.\n;\n; Two.'
     expect(markdownToProse(proseToMarkdown(prose))).toBe(prose)

@@ -287,9 +287,12 @@ defineExpose({
   min-height: 1.5em;
 }
 
+/* The same treatment the editor's own placeholder gets, so the cell reads as
+   a prompt in both states rather than as something someone wrote. */
 .prose-placeholder {
-  opacity: 0.55;
+  color: var(--syntax-comment);
   font-style: italic;
+  opacity: 0.75;
 }
 
 .notebook-prose:focus-visible {

@@ -199,4 +199,36 @@ defineExpose<CellEditorHandle>({
 .cell-editor :deep(.cm-editor:not(.cm-focused) .cm-cursor) {
   display: none;
 }
+
+/*
+ * The `;` against every line of a prose cell (#410).
+ *
+ * Coloured as a comment and set apart from the text, because that is what it
+ * is: the marker the file holds, shown so that writing a paragraph in a
+ * notebook still reads as writing a comment in a Scheme file. It lives in the
+ * gutter, so it can be read and copied but never typed over.
+ */
+.cell-editor :deep(.cm-comment-gutter) {
+  background: transparent;
+  color: var(--syntax-comment);
+  font-family: var(--font-mono, monospace);
+  user-select: none;
+}
+
+.cell-editor :deep(.cm-comment-gutter .cm-gutterElement) {
+  padding: 0 0.6em 0 0;
+}
+
+/* The gutter is the only thing between the cell's edge and its text. */
+.cell-editor :deep(.cm-gutters) {
+  background: transparent;
+  border: none;
+}
+
+/* What an empty cell says: plainly a prompt rather than something written. */
+.cell-editor :deep(.cm-placeholder) {
+  color: var(--syntax-comment);
+  font-style: italic;
+  opacity: 0.75;
+}
 </style>

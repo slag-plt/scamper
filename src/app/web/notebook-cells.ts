@@ -221,8 +221,14 @@ export function proseToMarkdown(text: string): string {
  */
 export function markdownToProse(markdown: string, indent = ''): string {
   if (markdown.trim().length === 0) return ''
-  return markdown
-    .split('\n')
+  const lines = markdown.split('\n')
+  // A blank line at the end says nothing in Markdown, and would be a bare `;`
+  // in the file: one for every time someone pressed Enter and thought better
+  // of it, and one more each time a multi-line paste left a line behind.
+  while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
+    lines.pop()
+  }
+  return lines
     .map((line) => (line.length === 0 ? `${indent};` : `${indent}; ${line}`))
     .join('\n')
 }
