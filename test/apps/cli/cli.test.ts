@@ -224,4 +224,58 @@ describe('scamper CLI', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+  // #404: a Gradescope autograder is exactly this -- a harness run by the CLI
+  // whose stdout is piped to results.json -- so nothing else may reach stdout.
+  // In particular an imported file's own output is discarded, which is what
+  // lets a student's stray top-level expressions be harmless.
+  test('a gradescope harness prints only its results JSON', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'scamper-cli-gradescope-'))
+    try {
+      writeFileSync(
+        path.join(dir, 'hw01.scm'),
+        [
+          '(define double (lambda (n) (* 2 n)))',
+          '(export double)',
+          '"a stray expression a student left behind"',
+        ].join('\n'),
+        'utf-8',
+      )
+      writeFileSync(
+        path.join(dir, 'autograder.scm'),
+        [
+          '(import test)',
+          '(import gradescope)',
+          '(import "hw01.scm")',
+          '(gradescope-test-suite',
+          '  (list (test-case "double 4" equal? 8 (lambda () (double 4)))',
+          '        (test-case "double 5" equal? 11 (lambda () (double 5)))))',
+        ].join('\n'),
+        'utf-8',
+      )
+
+      const result = runCli([path.join(dir, 'autograder.scm')])
+
+      expect(result.status).toBe(0)
+      expect(JSON.parse(result.stdout)).toEqual({
+        tests: [
+          {
+            name: 'double 4',
+            status: 'passed',
+            score: 1,
+            max_score: 1,
+            output: 'Test "double 4"\n\u2705 Passed!',
+          },
+          {
+            name: 'double 5',
+            status: 'failed',
+            score: 0,
+            max_score: 1,
+            output: 'Test "double 5"\n\u274c Failed! Expected 11, received 10',
+          },
+        ],
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })

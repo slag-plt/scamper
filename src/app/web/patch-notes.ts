@@ -45,7 +45,8 @@ export const patchNotes: PatchNote[] = [
       'Searching for a function now happens on the documentation page itself, which looks like the rest of Scamper rather than a separate page of its own.',
       'A comment block at the top of your file no longer runs into the documentation on the first function below it, so that function keeps its checked examples and argument checks.',
       'A reactive canvas or container can subscribe to more than one event again, so a program can react to a timer, the mouse, and the keyboard at the same time.',
-      'Pictures, charts, and compositions in an embedded reading now appear as themselves rather than as the text of the expression that made them.'
+      'Pictures, charts, and compositions in an embedded reading now appear as themselves rather than as the text of the expression that made them.',
+      'A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.'
     ]
   },
   {

@@ -8,7 +8,7 @@ import { functionDocName } from '../../scheme/docstring/render'
  * user-facing, so it is deliberately excluded.
  */
 export const moduleOrder = [
-  'prelude', 'image', 'lab', 'music', 'test',
+  'prelude', 'image', 'lab', 'music', 'test', 'gradescope',
   'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
 ]
 
