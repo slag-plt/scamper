@@ -373,20 +373,50 @@ function identifier(
 
 ///// Comments / docstrings ////////////////////////////////////////////////////
 
-// N.B., this only captures the raw comment text/ranges -- it can't fail.
-// Actually parsing this into a FunctionDoc (which can fail on a malformed
-// docstring) is deferred to whoever needs it (see ast.ts's Define.docComments
-// and docstring.ts's parseFunctionDocFromComments), so a malformed docstring
-// never blocks parsing/compiling otherwise-valid code.
+/**
+ * The block of comment lines directly above `node`, in source order.
+ *
+ * "Directly above" is literal: the run stops at the first blank line, and at a
+ * comment trailing a line of code. Without that, a run walked back over blank
+ * lines and swallowed anything above -- a file header, or the comments on an
+ * entirely separate definition -- and since the docstring parser drops every
+ * line that is not `;;;` and joins the rest, a `;;;` header ran straight into
+ * the first definition's docstring. The result parsed as malformed, so the
+ * definition silently lost both its documentation and the contract derived
+ * from it.
+ *
+ * N.B., this only captures the raw comment text/ranges -- it can't fail.
+ * Actually parsing this into a FunctionDoc (which can fail on a malformed
+ * docstring) is deferred to whoever needs it (see ast.ts's Define.docComments
+ * and docstring.ts's parseFunctionDocFromComments), so a malformed docstring
+ * never blocks parsing/compiling otherwise-valid code.
+ *
+ * @returns the comments, or undefined if `node` has none directly above it.
+ */
 function precedingComments(
   ctx: Ctx,
   node: SyntaxNode,
 ): A.Comment[] | undefined {
   const comments: A.Comment[] = []
+  // The line a comment must sit on to continue the run: the one directly above
+  // whatever the run has reached so far.
+  let wantedLine = ctx.range(node).begin.line - 1
   let sib = node.prevSibling
   while (sib?.type.name === 'LineComment') {
-    comments.unshift({ line: ctx.text(sib), range: ctx.range(sib) })
-    sib = sib.prevSibling
+    const range = ctx.range(sib)
+    if (range.begin.line !== wantedLine) {
+      // A blank line: the comment belongs to whatever is above it, not here.
+      break
+    }
+    const prev = sib.prevSibling
+    if (prev !== null && ctx.range(prev).end.line === range.begin.line) {
+      // A comment trailing code -- `(define a 1) ; note` -- annotates that
+      // line, not the definition below it.
+      break
+    }
+    comments.unshift({ line: ctx.text(sib), range })
+    wantedLine = range.begin.line - 1
+    sib = prev
   }
   return comments.length > 0 ? comments : undefined
 }

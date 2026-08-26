@@ -20,9 +20,9 @@
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a fill mode: the string `"solid"` or `"outline"`.
 ;;; @category canvas, shapes, typecheck, predicates
-;;; N.B., re-exported here (like color? and drawing?) because this module's own
-;;; contracts name it, and a contract predicate must resolve in the module that
-;;; uses it -- see the cross-module predicate test in test/libs/canvas.test.ts.
+;; N.B., re-exported here (like color? and drawing?) because this module's own
+;; contracts name it, and a contract predicate must resolve in the module that
+;; uses it -- see the cross-module predicate test in test/libs/canvas.test.ts.
 (define-export fill-mode? (js-var "drawing_fillModeQ"))
 
 ;;; (make-canvas width height) -> canvas?

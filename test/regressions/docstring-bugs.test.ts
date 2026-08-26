@@ -8,10 +8,15 @@ import { anyRange } from '../scheme/util'
 
 describe('docstring bugs', () => {
   // `;` comments are not docstrings (`;;;`); they must not be treated as one.
+  //
+  // N.B., the comment sits directly above the define. It used to be written
+  // with a blank line between them, back when a comment run walked back over
+  // one; a docstring now attaches only to the definition directly below it (see
+  // test/regressions/docstring-attachment.test.ts), which is what stops a file
+  // header from being swallowed by the first definition in the file.
   test('should not attempt to parse a block of non-doc comments', () => {
     const { program: prog, diagnostics } = tokenizeAndParse(`
 ; test
-
 (define x 1)
 `)
     expect(diagnostics).toEqual([])
