@@ -108,8 +108,12 @@ export interface ReplSession {
    *
    * More than one statement is refused rather than half-run: an entry is a
    * statement, and a file pasted into one is a mistake worth naming.
+   *
+   * @returns whether it ran. False for an entry that was refused or did not
+   *          compile -- one that never became part of the program, and so must
+   *          not be treated as part of it.
    */
-  evaluate: (src: string) => Promise<void>
+  evaluate: (src: string) => Promise<boolean>
   /** Abandons the entry in flight, if any, leaving the session usable. */
   interrupt: () => void
   /** Ends the session: whatever is running, and every handler it registered. */
@@ -629,6 +633,14 @@ export default class Scamper {
     // The entry in flight, so interrupting one can settle the promise its
     // caller is waiting on: a cancelled task never reaches `onComplete`.
     let settle: (() => void) | null = null
+    // True once the session has ended.
+    //
+    // Checked after every await: compiling is asynchronous, so a session can be
+    // ended while an entry is still on its way to running. Without this the
+    // program would be scheduled on a run that has already been torn down --
+    // running work that was abandoned, and leaving its caller waiting on a
+    // promise that `end` had already been past to settle.
+    let ended = false
 
     /**
      * Runs `prog` as the session's next fiber, in the environment the last one
@@ -638,6 +650,7 @@ export default class Scamper {
       prog: Prog,
       out: OutputChannel,
     ): Promise<void> => {
+      if (ended) return
       const fiber = new Fiber(prog, run.fiber.topLevelEnv)
       // Before the run, not after: a handler registered *by this entry* has to
       // see this fiber's top level, and so does one registered by an earlier
@@ -683,6 +696,7 @@ export default class Scamper {
       id,
       seed: async (src: string) => {
         const { prog, diagnostics } = await compile(src)
+        if (ended) return false
         diagnostics.forEach((d) => {
           err.report(diagnosticToError(d))
         })
@@ -695,6 +709,7 @@ export default class Scamper {
         return true
       },
       evaluate: async (src: string) => {
+        if (ended) return false
         // Counted before expansion, not after: `(struct point (x y))` is one
         // statement to write and four to run, and refusing it would be absurd.
         const parsed = tokenizeAndParse(src)
@@ -706,14 +721,16 @@ export default class Scamper {
                 'Enter them one by one.',
             ),
           )
-          return
+          return false
         }
         const { prog, diagnostics } = await compile(src)
+        if (ended) return false
         diagnostics.forEach((d) => {
           err.report(diagnosticToError(d))
         })
-        if (prog === undefined) return
+        if (prog === undefined) return false
         await runProgram(prog, out)
+        return true
       },
       interrupt: () => {
         this.scheduler.cancelTask(id)
@@ -724,6 +741,7 @@ export default class Scamper {
         settle = null
       },
       end: () => {
+        ended = true
         this.cancel(id)
         settle?.()
         settle = null

@@ -126,6 +126,23 @@ describe('IDE REPL window', () => {
     }
   })
 
+  test('asking for a REPL when one is open brings it forward', async () => {
+    // Regression: it used to seed a fresh session, throwing away a transcript
+    // nobody asked to lose. Restart is how that is done deliberately.
+    const wrapper = await mountIde()
+    try {
+      await openRepl()
+      getByRole(document.body, 'button', { name: 'Minimize REPL' }).click()
+      await flushPromises()
+
+      await openRepl()
+      expect(replWindow()?.style.display).not.toBe('none')
+      expect(replWindow()?.textContent).toContain('a.scm')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('it can be closed and opened again', async () => {
     // The prompt is a document the language server holds, and the workspace
     // refuses two views on one URI -- so reopening has to have closed the

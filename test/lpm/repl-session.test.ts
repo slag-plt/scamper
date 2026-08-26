@@ -102,7 +102,7 @@ describe('a REPL session', () => {
 
   test('refuses an entry holding more than one statement', async () => {
     const { session, out } = open()
-    await session.evaluate('(define x 1)\n(define y 2)')
+    expect(await session.evaluate('(define x 1)\n(define y 2)')).toBe(false)
     expect(out.text).toContain('one statement at a time')
     // Refused outright rather than half-run: neither definition took.
     await session.evaluate('x')
@@ -131,7 +131,9 @@ describe('a REPL session', () => {
 
   test('reports a syntax error without ending the session', async () => {
     const { session, out } = open()
-    await session.evaluate('(+ 1')
+    // Reported as not having run, so a caller can tell what became part of the
+    // program from what did not.
+    expect(await session.evaluate('(+ 1')).toBe(false)
     expect(out.lines.length).toBeGreaterThan(0)
     await session.evaluate('(+ 1 2)')
     expect(out.lines.at(-1)).toBe('3')
@@ -165,6 +167,26 @@ describe('interrupting a REPL entry', () => {
     await session.evaluate('x')
     expect(out.lines).toEqual(['1'])
     session.end()
+  })
+
+  test('a session ended mid-compile abandons what it was about to run', async () => {
+    // Regression: compiling is asynchronous, so `end` could be past before the
+    // program reached the scheduler. It was then scheduled on a run that had
+    // been torn down -- running work that was abandoned, and leaving the caller
+    // waiting on a promise nothing would ever settle.
+    const { session, out } = open()
+    const seeding = session.seed('(display "should not run")')
+    session.end()
+    expect(await seeding).toBe(false)
+    expect(out.lines).toEqual([])
+  })
+
+  test('an entry submitted to an ended session does nothing', async () => {
+    const { session, out } = open()
+    await session.evaluate('(define x 1)')
+    session.end()
+    expect(await session.evaluate('(display 1)')).toBe(false)
+    expect(out.lines).toEqual([])
   })
 
   test('ending a session twice is safe', async () => {

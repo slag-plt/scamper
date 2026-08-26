@@ -152,6 +152,47 @@ describe('diagnostics', () => {
     expect(published).toEqual([])
   })
 
+  test('a cell whose context is empty is not linted either', async () => {
+    // Regression: the guard read the context's *length*, so a REPL opened on an
+    // empty file -- nothing in front of the prompt -- was linted like a file,
+    // squiggling every half-typed form.
+    const server = new ScamperLanguageServer()
+    const published = watch(server)
+    server.setContext(URI, '')
+    server.handle(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'textDocument/didOpen',
+        params: {
+          textDocument: { uri: URI, languageId: 'scheme', version: 1, text: '(+ 1' },
+        },
+      }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(published).toEqual([])
+  })
+
+  test('becoming a cell clears whatever was already published', async () => {
+    // Otherwise the last squiggle sticks to the document with nothing left to
+    // clear it, since a cell is never linted again.
+    const server = new ScamperLanguageServer()
+    const published = watch(server) as { diagnostics: unknown[] }[]
+    server.handle(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'textDocument/didOpen',
+        params: {
+          textDocument: { uri: URI, languageId: 'scheme', version: 1, text: '(+ 1' },
+        },
+      }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(published.at(-1)?.diagnostics.length).toBeGreaterThan(0)
+
+    server.setContext(URI, '(define x 1)')
+    expect(published.at(-1)?.diagnostics).toEqual([])
+  })
+
   test('a document without one still is', async () => {
     const server = new ScamperLanguageServer()
     const published = watch(server)

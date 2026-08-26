@@ -19,6 +19,11 @@ export interface ReplEntry {
   /** What it printed, errors included, in the order it arrived. */
   values: Value[]
   isRunning: boolean
+  /**
+   * Whether it ran, and so counts as part of the program the next entry
+   * continues. False for one that was refused or did not compile.
+   */
+  ran: boolean
 }
 
 export interface Repl {
@@ -74,11 +79,27 @@ export function useRepl(): Repl {
   // What the session was seeded from, kept for the context above.
   const seedSource = ref('')
   const context = computed(() =>
-    [seedSource.value, ...entries.value.map((entry) => entry.source)]
+    [
+      seedSource.value,
+      // Only what ran. An entry that was refused or did not compile is not part
+      // of the program, and one that does not parse would take the whole
+      // context down with it -- leaving the analysis with nothing but the
+      // standard library for the rest of the session.
+      ...entries.value.filter((entry) => entry.ran).map((entry) => entry.source),
+    ]
       .filter((src) => src.trim().length > 0)
       .join('\n'),
   )
   let nextId = 0
+  /**
+   * Which session the transcript belongs to.
+   *
+   * Opening twice in quick succession -- a double-clicked button, Restart while
+   * a seed is still running -- would otherwise have the first call's `finally`
+   * land on the second call's session: clearing its busy flag mid-seed and
+   * replacing its entries with the ones it had itself.
+   */
+  let generation = 0
 
   /**
    * Where output goes: the entry being run.
@@ -110,14 +131,24 @@ export function useRepl(): Repl {
   }
 
   function record(v: Value): void {
-    const entry = entries.value.at(-1)
-    if (entry === undefined) return
+    // A closed session's handlers are torn down, but a value already on its way
+    // must not resurrect a transcript that is gone.
+    if (session.value === null) return
+    let entry = entries.value.at(-1)
+    if (entry === undefined) {
+      // Nothing has been typed yet, so this came from something the seeded file
+      // left running -- a timer, a key handler. It still has to be seen, so it
+      // gets an entry of its own rather than being dropped on the floor.
+      entry = { id: nextId++, source: '', values: [], isRunning: false, ran: false }
+      entries.value = [...entries.value, entry]
+    }
     entry.values.push(v)
     triggerRef(entries)
   }
 
   async function open(fileName: string | null, src: string): Promise<void> {
     close()
+    const mine = ++generation
     const repl = Scamper.getInstance().startRepl({ out: channel, err: channel })
     session.value = repl
     seedSource.value = src
@@ -129,6 +160,7 @@ export function useRepl(): Repl {
       source: '',
       values: [],
       isRunning: true,
+      ran: false,
     }
     entries.value = [seedEntry]
     isBusy.value = true
@@ -137,6 +169,9 @@ export function useRepl(): Repl {
     isStale.value = false
     try {
       const seeded = await repl.seed(src)
+      // Superseded while the file was running: everything below is about a
+      // session that has already been closed and replaced.
+      if (mine !== generation) return
       banner.value =
         fileName === null
           ? 'Starting from the standard library.'
@@ -144,10 +179,17 @@ export function useRepl(): Repl {
             ? `Definitions from ${fileName} are available here. Nothing you type changes the file.`
             : `${fileName} did not run, so only the standard library is available here.`
     } finally {
-      isBusy.value = false
-      seedEntry.isRunning = false
-      entries.value =
-        seedEntry.values.length === 0 ? [] : [...entries.value]
+      if (mine === generation) {
+        isBusy.value = false
+        seedEntry.isRunning = false
+        // Nothing to show: drop it rather than leave a blank entry above the
+        // banner. Anything that arrived after it -- from a handler the file
+        // left running -- is kept.
+        entries.value =
+          seedEntry.values.length === 0
+            ? entries.value.filter((entry) => entry !== seedEntry)
+            : [...entries.value]
+      }
     }
   }
 
@@ -159,11 +201,12 @@ export function useRepl(): Repl {
       source: text,
       values: [],
       isRunning: true,
+      ran: false,
     }
     entries.value = [...entries.value, entry]
     isBusy.value = true
     try {
-      await repl.evaluate(text)
+      entry.ran = await repl.evaluate(text)
     } finally {
       entry.isRunning = false
       isBusy.value = false

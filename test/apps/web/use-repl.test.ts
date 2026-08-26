@@ -181,6 +181,84 @@ describe('the REPL transcript', () => {
     }
   })
 
+  test('an entry that was refused is not part of the context', async () => {
+    // It never ran, so its definitions are not in the environment -- and were
+    // it counted, the analysis would think they were.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('(define a 1) (define b 2)')
+      expect(repl.context.value).toBe('(define x 1)')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry that does not compile is not part of the context', async () => {
+    // Regression: one unparseable entry used to poison the context for the rest
+    // of the session, silently costing completion every name the file and the
+    // earlier entries had defined.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('(+ 1 2))')
+      await repl.submit('(define y 2)')
+      expect(repl.context.value).toBe('(define x 1)\n(define y 2)')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry that fails at run time still counts', async () => {
+    // It parsed and it ran; what it did is the environment's business.
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(car 5)')
+      expect(repl.context.value).toBe('(car 5)')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('opening twice at once leaves the second session alone', async () => {
+    // Regression: the first call's cleanup used to land on the second call's
+    // session, clearing its busy flag mid-seed and replacing its entries.
+    const repl = useRepl()
+    const first = repl.open('one.scm', '(define x 1)')
+    const second = repl.open('two.scm', '(define y 2)')
+    await Promise.all([first, second])
+    try {
+      expect(repl.banner.value).toContain('two.scm')
+      expect(repl.isBusy.value).toBe(false)
+      await repl.submit('y')
+      expect(shown(repl.entries.value.at(-1)!)).toBe('2')
+      // And the session that was superseded took its definitions with it.
+      await repl.submit('x')
+      expect(shown(repl.entries.value.at(-1)!)).toContain('not found')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('output with nothing typed yet is still shown', async () => {
+    // What a handler the seeded file left running produces -- a timer, a key
+    // handler -- reaches the session's channel without going through an entry.
+    // Regression: it used to be dropped on the floor.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      expect(repl.entries.value).toEqual([])
+      await repl.session.value?.evaluate('(display "from a handler")')
+      expect(repl.entries.value.length).toBe(1)
+      expect(shown(repl.entries.value[0])).toContain('from a handler')
+      // It is not an entry anyone typed, so it does not join the context.
+      expect(repl.context.value).toBe('(define x 1)')
+    } finally {
+      repl.close()
+    }
+  })
+
   test('closing clears the context with everything else', async () => {
     const repl = useRepl()
     await repl.open('lab.scm', '(define x 1)')

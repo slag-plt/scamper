@@ -439,6 +439,14 @@ async function handleStepStatement() {
   */
 async function handleOpenRepl() {
   if (!isEditorLoaded()) return
+  // A REPL is already open: bring it forward rather than seeding a new one.
+  // Asking for a REPL when there is one means "show me it", and the transcript
+  // is the person's work -- Restart is how it is deliberately thrown away.
+  if (repl.session.value !== null) {
+    panels.reveal('repl')
+    panels.focusPanel('repl')
+    return
+  }
   // Running the file can reach the file system -- a local import, the file
   // library -- which is the server's when the files are.
   if (!(await requireServer('Opening a REPL'))) return
@@ -454,6 +462,9 @@ async function handleOpenRepl() {
 /** Throws the transcript away and re-seeds from the file as it is now. */
 async function handleReplRestart() {
   if (!isEditorLoaded()) return
+  // Re-seeding runs the file again, so it reaches the file system exactly as
+  // opening one does.
+  if (!(await requireServer('Restarting a REPL'))) return
   try {
     await repl.open(currentFile.value, editor().getDoc())
   } catch (e) {

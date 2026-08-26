@@ -82,9 +82,22 @@ export class ScamperLanguageServer {
   setContext(uri: string, context: string): void {
     const framed =
       context.length === 0 || context.endsWith('\n') ? context : `${context}\n`
+    const first = !this.contexts.has(uri)
     this.contexts.set(uri, framed)
     const doc = this.docs.get(uri)
-    if (doc !== undefined) doc.context = framed
+    if (doc !== undefined) {
+      doc.context = framed
+      // A document that is only now becoming a cell may already be showing
+      // diagnostics from before, and nothing will publish for it again --
+      // leaving the last squiggle stuck to it. Clear them on the way past.
+      if (first) {
+        this.notify('textDocument/publishDiagnostics', {
+          uri,
+          version: doc.version,
+          diagnostics: [],
+        })
+      }
+    }
   }
 
   /** Registers the callback used to deliver responses/notifications to the client. */
@@ -306,12 +319,16 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return
     }
-    // A document analysed inside a context is a cell being typed (#399), and a
-    // cell is unclosed for most of the time it is being written: squiggles
-    // under every keystroke would say nothing except "you are not finished".
-    // What it is worth being told is what running it says, which is what the
-    // REPL shows under the entry.
-    if (doc.context.length > 0) {
+    // A document with a context is a cell being typed (#399), and a cell is
+    // unclosed for most of the time it is being written: squiggles under every
+    // keystroke would say nothing except "you are not finished". What it is
+    // worth being told is what running it says, which is what the REPL shows
+    // under the entry.
+    //
+    // Keyed off having a context at all, not off the context being non-empty:
+    // a REPL opened on an empty file starts with nothing in front of it, and is
+    // no more worth linting for that.
+    if (this.contexts.has(uri)) {
       return
     }
     const { text, lineStarts, version } = doc
