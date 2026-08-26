@@ -5,13 +5,13 @@ import { Result, test_isResult } from '../index.js'
 TextRenderer.registerCustomRenderer(test_isResult, (v: any) => {
   const result = v as Result
   switch (result[L.structKind]) {
-    case 'ok':
+    case 'test-result-ok':
       return `Test "${result.desc}"\n✅ Passed!`
-    case 'exp':
+    case 'test-result-error-expected':
       return `Test "${result.desc}"\n❌ Failed! Expected ${TextRenderer.render(result.expected)}, received ${TextRenderer.render(result.actual)}`
-    case 'exn':
+    case 'test-result-error-exn':
       return `Test "${result.desc}"\n❌ Failed! Exception thrown: ${TextRenderer.render(result.exn)}`
-    case 'gen':
+    case 'test-result-error-gen':
       return `Test "${result.desc}"\n❌ Failed! ${result.reason}`
   }
 })

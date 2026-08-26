@@ -7,12 +7,12 @@ HtmlRenderer.registerCustomRenderer(test_isResult, (v: any) => {
   const ret = document.createElement('div')
   ret.classList.add('test-result')
   switch (result[L.structKind]) {
-    case 'ok': {
+    case 'test-result-ok': {
       ret.classList.add('ok')
       ret.innerText = `Test "${result.desc}": Passed! ✅`
       break
     }
-    case 'exp': {
+    case 'test-result-error-expected': {
       ret.classList.add('error')
       ret.innerText = `Test "${result.desc}": Failed! ❌`
       ret.appendChild(document.createElement('hr'))
@@ -24,7 +24,7 @@ HtmlRenderer.registerCustomRenderer(test_isResult, (v: any) => {
       ret.appendChild(reason)
       break
     }
-    case 'exn': {
+    case 'test-result-error-exn': {
       ret.classList.add('error')
       ret.innerText = `Test "${result.desc}": Failed! ❌`
       ret.appendChild(document.createElement('hr'))
@@ -34,7 +34,7 @@ HtmlRenderer.registerCustomRenderer(test_isResult, (v: any) => {
       ret.appendChild(reason)
       break
     }
-    case 'gen': {
+    case 'test-result-error-gen': {
       ret.classList.add('error')
       ret.innerText = `Test "${result.desc}": Failed! ❌`
       ret.appendChild(document.createElement('hr'))
