@@ -96,6 +96,10 @@ the libraries captures its run at registration.
 + The entry point is `src/app/web/embed/embed-entry.ts`; the scan and the run
   loop are `embed.ts`, and `embed-display.ts` is the output channel that
   captions each statement with its source.
++ The entry **awaits** `renderers.js` before running anything. `scamper.ts`
+  starts that import fire-and-forget, which is fine for the IDE — someone has to
+  press Run first — but a page of widgets starts immediately and loses the race,
+  and every drawing renders as its `(rectangle …)` text instead of a picture.
 + Widgets run **sequentially**, because one may continue another and so cannot
   start until that one's environment exists.
 + Each widget is a `Scamper.executeEmbedded` call. Unlike `execute`, that does
@@ -107,3 +111,7 @@ the libraries captures its run at registration.
   context: a reading served over plain `http://` still has to run.
 + `src/app/web/embed/embed.html` is a demonstration page and what the browser
   test drives. `npm run dev` serves it at `/embed.html`.
++ `samples/reading.html` is the same thing at full size: two real readings on
+  one page, one non-interactive and one not, which is the mixed case a course
+  site actually produces. `npm run dev` serves it at `/samples/reading.html`,
+  and `test/samples/reading-page.test.ts` runs every widget on it.
