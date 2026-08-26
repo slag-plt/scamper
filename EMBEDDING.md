@@ -7,8 +7,8 @@ CSC 151 readings are the reason it exists (#375).
 ## The smallest page that works
 
 ```html
-<link href="/css/scamper-transcript.css" rel="stylesheet">
-<script type="module" src="/assets/scamper-embed-<version>.js"></script>
+<script type="module"
+        src="https://scamper.cs.grinnell.edu/<version>/scamper-embed.js"></script>
 
 <div class="scamper-transcript">
 ;;; (factorial n) -> number?
@@ -24,6 +24,13 @@ CSC 151 readings are the reason it exists (#375).
 
 Every `.scamper-transcript` on the page is found and run, in the order it
 appears. Each widget fills its container's width.
+
+That script is the whole of it: `scamper-embed.js` carries its own styles and
+refers to nothing outside itself, so a reading need not link a stylesheet, and
+the file works as well copied into a reading's own site as loaded from a Scamper
+deployment. A version is a directory there, so `<version>` above picks one — a
+reading pinning the version it was written against will not change under its
+author.
 
 ## Writing the code
 
@@ -107,8 +114,17 @@ left the rest of the page blank (#415).
   after its program has finished — exactly as the IDE's do.
 + Ids are a counter rather than `crypto.randomUUID()`, which needs a secure
   context: a reading served over plain `http://` still has to run.
++ `dist/scamper-embed.js` is a **second** build of that entry point
+  (`vite.config.embed.ts`, run after the site build by `scripts/build`): one
+  chunk, with the dynamic imports and every stylesheet folded in. The site build
+  emits the same entry as `assets/scamper-embed-<version>.js`, but as chunks
+  shared with the IDE and with the CSS left to the page — which suits
+  `embed.html`, sitting in the deployment beside them, and is unusable from a
+  reading on another site.
 + `src/app/web/embed/embed.html` is a demonstration page and what the browser
-  test drives. `npm run dev` serves it at `/embed.html`.
+  test drives. `npm run dev` serves it at `/embed.html`. It links the
+  stylesheets and loads the entry point directly, so it exercises the widget
+  rather than the bundle.
 + `samples/reading.html` is the same thing at full size: two real readings on
   one page, one non-interactive and one not, which is the mixed case a course
   site actually produces. `npm run dev` serves it at `/samples/reading.html`,

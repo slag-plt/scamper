@@ -16,7 +16,7 @@
     "dev:memory": "node scripts/dev-memory.mjs",
     "cli": "tsx src/app/cli/index.ts",
     "precli": "npm run generate",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "./scripts/build",
     "prebuild": "npm run generate",
     "preview": "vite preview",
     "clean": "rm -rf dist",

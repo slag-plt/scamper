@@ -50,7 +50,11 @@ export default defineConfig(
           // Everything in scripts/ is covered by scripts/tsconfig.json --
           // this list is capped at eight entries, and silently breaks
           // linting for every file in it once exceeded.
-          allowDefaultProject: ['eslint.config.mjs', 'vite.config.ts'],
+          allowDefaultProject: [
+            'eslint.config.mjs',
+            'vite.config.ts',
+            'vite.config.embed.ts',
+          ],
           // Which tsconfig those files are typed against. Without this they
           // fall to an inferred project with no `allowJs`, so every `.mjs`
           // plugin import resolved to nothing and each plugin call read as an
@@ -65,7 +69,9 @@ export default defineConfig(
   {
     files: [
       'vite.config.ts',
+      'vite.config.embed.ts',
       'scripts/generate-parser.mjs',
+      'scripts/vite-plugin-inline-css.mjs',
       'scripts/vite-plugin-scheme-parser.mjs',
       'scripts/generate-lib-sources.mjs',
       'scripts/vite-plugin-lib-sources.mjs',

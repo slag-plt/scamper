@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# `npm run build`: the site, and then the reading-widget bundle.
+#
+# Two Vite builds because they want incompatible outputs -- the site is four
+# HTML entries sharing chunks, the bundle is one self-contained file (see
+# vite.config.embed.ts). A script rather than `a && b` in package.json so that
+# `npm run build -- --base=/4.0.0/`, which is how scripts/deploy builds a
+# versioned deployment, reaches both: npm appends its extra arguments to the
+# end of the command, i.e. to the last build only.
+#
+# Plain `sh` rather than bash: Dockerfile.web runs this inside node:22-alpine,
+# which has no bash.
+
+set -e
+
+vue-tsc --noEmit
+vite build "$@"
+vite build --config vite.config.embed.ts "$@"

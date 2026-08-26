@@ -17,7 +17,20 @@ import { devServerConfigPlugin } from './scripts/vite-plugin-dev-server-config.m
 const pkg = JSON.parse(
   readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
 ) as { version?: string }
-const AppVersion = process.env.npm_package_version ?? pkg.version ?? 'unknown'
+
+/** Exported for vite.config.embed.ts, so both builds stamp the same version. */
+export const AppVersion =
+  process.env.npm_package_version ?? pkg.version ?? 'unknown'
+
+/**
+ * The plugins that make Scamper's own sources compile -- the generated Lezer
+ * parser, the `.scm` standard library, and Vue's single-file components.
+ * Shared with vite.config.embed.ts, which builds the same sources a second
+ * time as the reading-widget bundle and must not drift from this one.
+ */
+export function sourcePlugins() {
+  return [schemeParserPlugin(), libSourcesPlugin(), vue()]
+}
 
 // The single source of truth for the HTML entry points, so the build input,
 // the production flattening (flattenHtmlPlugin), and the dev server's flat
@@ -61,12 +74,10 @@ export default defineConfig(({ mode }) => ({
   },
 
   plugins: [
-    schemeParserPlugin(),
-    libSourcesPlugin(),
+    ...sourcePlugins(),
     devFlatHtmlPlugin(Object.values(htmlEntries), ideEntry),
     // Vite drops falsy entries, so this is "only in `--mode server`".
     mode === 'server' && devServerConfigPlugin(`${API_PREFIX}/v1`),
-    vue(),
     flattenHtmlPlugin(),
   ],
 
