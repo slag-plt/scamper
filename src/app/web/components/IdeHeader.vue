@@ -33,6 +33,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   toggleSidebar: []
   stepStatement: []
+  openRepl: []
 }>()
 
 const session = useScamperSession()
@@ -210,6 +211,16 @@ function searchOpenWindow(searchTerm: string) {
         aria-label="Step statement"
         :disabled="!canStep || isStepping"
         @click="emit('stepStatement')"
+      ></button>
+      <!-- Opens a REPL on the file as it stands: the same code, somewhere to
+           try things against it that the file does not have to keep (#399). -->
+      <button
+        type="button"
+        class="icon-button fa-solid fa-terminal"
+        title="Open a REPL on this file"
+        aria-label="Open a REPL"
+        :disabled="!canRun"
+        @click="emit('openRepl')"
       ></button>
       <button
         type="button"

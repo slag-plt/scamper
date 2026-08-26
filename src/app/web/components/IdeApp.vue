@@ -25,6 +25,7 @@ import { formatMode } from '../editor-prefs'
 import { FormatModeKey } from '../../../scheme/ast-components/format-mode'
 import IdeMenuBar from './IdeMenuBar.vue'
 import TraceWindow from './TraceWindow.vue'
+import ReplWindow from './ReplWindow.vue'
 import IdeHeader from './IdeHeader.vue'
 import ResultsPane from './ResultsPane.vue'
 import CodeMirrorEditor from './CodeMirrorEditor.vue'
@@ -38,6 +39,7 @@ import {
   type LiveStatus,
 } from '../composables/use-live-evaluation'
 import { useExampleChecks } from '../composables/use-example-checks'
+import { useRepl } from '../composables/use-repl'
 import { checkExamples, liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
@@ -188,6 +190,13 @@ const resultsRef = shallowRef<ResultsPaneType | null>(null)
 
 const examples = useExampleChecks()
 
+// ---------- the REPL (#399) ----------
+
+// Scratch work beside the file: seeded from it once, its own program after
+// that. Declared here, above the panels, because whether the REPL panel exists
+// at all is whether a session is open.
+const repl = useRepl()
+
 const session = provideScamperSession(resultsRef, {
   editor,
   onRunScheduled: () => {
@@ -306,12 +315,16 @@ const panelLabels: Record<PanelId, string> = {
   editor: 'Source',
   output: 'Output',
   trace: 'Step',
+  repl: 'REPL',
 }
 
-/** The trace only exists once something has been stepped. */
-const presentPanels = computed<PanelId[]>(() =>
-  trace.value === null ? ['editor', 'output'] : ['editor', 'output', 'trace'],
-)
+/** Neither the trace nor the REPL exists until it has been asked for. */
+const presentPanels = computed<PanelId[]>(() => [
+  'editor',
+  'output',
+  ...(trace.value === null ? [] : (['trace'] as const)),
+  ...(repl.session.value === null ? [] : (['repl'] as const)),
+])
 
 const panels = providePanels({ isCompact, present: presentPanels })
 
@@ -414,6 +427,51 @@ async function handleStepStatement() {
   } finally {
     isCollectingTrace.value = false
   }
+}
+
+/**
+  * Opens the REPL on the file as it stands (#399).
+  *
+  * The file runs first, for what it defines rather than what it prints, and the
+  * session carries on from there. It is scratch work from that moment on: the
+  * file can be edited, re-run, or closed without the REPL noticing, and nothing
+  * typed into the REPL reaches the file.
+  */
+async function handleOpenRepl() {
+  if (!isEditorLoaded()) return
+  // Running the file can reach the file system -- a local import, the file
+  // library -- which is the server's when the files are.
+  if (!(await requireServer('Opening a REPL'))) return
+  panels.reveal('repl')
+  try {
+    await repl.open(currentFile.value, editor().getDoc())
+  } catch (e) {
+    reportError(e, (message) => `Could not open a REPL: ${message}`)
+    repl.close()
+  }
+}
+
+/** Throws the transcript away and re-seeds from the file as it is now. */
+async function handleReplRestart() {
+  if (!isEditorLoaded()) return
+  try {
+    await repl.open(currentFile.value, editor().getDoc())
+  } catch (e) {
+    reportError(e, (message) => `Could not restart the REPL: ${message}`)
+    repl.close()
+  }
+}
+
+function handleReplClose() {
+  repl.close()
+  // As with the trace: the control that was clicked goes away with the panel.
+  panels.focusPanel('editor')
+}
+
+/** The dock's tab strip closes by id, since two of the panels can be closed. */
+function handlePanelClose(id: PanelId) {
+  if (id === 'trace') handleTraceClose()
+  if (id === 'repl') handleReplClose()
 }
 
 function handleTraceClose() {
@@ -1669,6 +1727,9 @@ onUnmounted(() => {
   stopWatchingConnection?.()
   Connectivity.stop()
   session.stopAll()
+  // The REPL's handlers outlive its entries by design -- a timer an entry
+  // started keeps firing -- so the window going away has to be what ends them.
+  repl.close()
   document.removeEventListener('visibilitychange', visibilityChangeWrapper)
   window.removeEventListener('pagehide', pageHideWrapper)
   window.removeEventListener('pageshow', pageShowWrapper)
@@ -1735,6 +1796,7 @@ onUnmounted(() => {
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
         :step-statement="handleStepStatement"
+        :open-repl="handleOpenRepl"
         :about="handleAbout"
         :whats-new="handleWhatsNew"
       />
@@ -1745,17 +1807,18 @@ onUnmounted(() => {
         :can-run="isRunnableFile"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
+        @open-repl="handleOpenRepl"
       />
-      <!-- Editor, output and trace are all panels: the editor and the output
-           are docked side by side by default with the trace floating over
-           them, and any of them can be docked, tabbed or floated from there.
-           Too narrow to float anything and the dock tabs them all together
-           instead. -->
+      <!-- Editor, output, trace and REPL are all panels: the editor and the
+           output are docked side by side by default with the other two
+           floating over them, and any of them can be docked, tabbed or floated
+           from there. Too narrow to float anything and the dock tabs them all
+           together instead. -->
       <div ref="contentAreaRef" class="content-area">
         <PanelDock
           :labels="panelLabels"
-          :closeable="['trace']"
-          @close="handleTraceClose"
+          :closeable="['trace', 'repl']"
+          @close="handlePanelClose"
         >
           <PanelFrame id="editor" title="Source">
             <CodeMirrorEditor
@@ -1779,6 +1842,22 @@ onUnmounted(() => {
               :source="trace.source"
               :steps="trace.steps"
               :truncated="trace.truncated"
+            />
+          </PanelFrame>
+          <PanelFrame
+            v-if="repl.session.value !== null"
+            id="repl"
+            title="REPL"
+            closeable
+            @close="handleReplClose"
+          >
+            <ReplWindow
+              :entries="repl.entries.value"
+              :banner="repl.banner.value"
+              :is-busy="repl.isBusy.value"
+              @submit="(text: string) => void repl.submit(text)"
+              @interrupt="repl.interrupt"
+              @restart="() => void handleReplRestart()"
             />
           </PanelFrame>
         </PanelDock>
