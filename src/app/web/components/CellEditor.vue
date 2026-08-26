@@ -44,6 +44,16 @@ const props = defineProps<{
   context?: string
   /** What the cell is written in; Scamper unless it is a notebook's prose. */
   language?: 'scamper' | 'markdown'
+  /**
+   * Whether Enter runs the cell rather than adding a line to it.
+   *
+   * True for the REPL's prompt, where an entry is one form and Enter is how it
+   * is run (#399). False everywhere else: a notebook cell is never run on its
+   * own -- the whole program is -- so Enter there is an ordinary newline, and
+   * binding it to a `submit` nobody listens for would swallow it instead
+   * (#410).
+   */
+  runOnEnter?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -79,9 +89,15 @@ onMounted(() => {
       isReadOnly: props.isReadOnly,
       lspUri: props.lspUri,
       language: props.language,
-      onSubmit: (text) => {
-        emit('submit', text)
-      },
+      // Left unset unless Enter is meant to run the cell: the binding swallows
+      // Enter for anything that already parses, which in a cell nobody submits
+      // means no newline at all.
+      onSubmit:
+        props.runOnEnter === true
+          ? (text) => {
+              emit('submit', text)
+            }
+          : undefined,
       onChange: (changes) => {
         if (!applying) emit('change', changes)
       },

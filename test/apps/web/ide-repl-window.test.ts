@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { findByRole, getByRole } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { EditorView } from '@codemirror/view'
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
@@ -84,6 +85,36 @@ describe('IDE REPL window', () => {
     try {
       await openRepl()
       expect(replWindow()?.textContent).not.toContain('hello')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  // The whole of how an entry is run. Worth a test of the window rather than
+  // of the cell alone: the binding is wired here, and a cell that does not ask
+  // for it gets an ordinary newline instead (#410).
+  test('Enter at the prompt runs what was typed', async () => {
+    const wrapper = await mountIde()
+    try {
+      await openRepl()
+      const prompt = EditorView.findFromDOM(
+        replWindow()?.querySelector<HTMLElement>(
+          '.repl-prompt .cm-editor',
+        ) as HTMLElement,
+      )
+      expect(prompt).not.toBeNull()
+      prompt?.dispatch({ changes: { from: 0, insert: '(sq 7)' } })
+      await flushPromises()
+      prompt?.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+      await flushPromises()
+      await flushPromises()
+      // The entry, and what it produced, are in the transcript.
+      expect(replWindow()?.textContent).toContain('(sq 7)')
+      expect(replWindow()?.textContent).toContain('49')
+      // And the prompt is empty again, rather than holding a new line.
+      expect(prompt?.state.doc.toString()).toBe('')
     } finally {
       wrapper.unmount()
     }

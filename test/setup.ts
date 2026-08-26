@@ -20,6 +20,21 @@ await initializeLibs()
 // builtin libraries.
 SymbolDB.initialize()
 
+// jsdom implements no layout, and so a Range cannot be measured. CodeMirror
+// measures one to find its character size, and does it from a frame of its
+// own -- where a throw escapes as an unhandled error and fails the run rather
+// than being caught and logged as the ones inside a dispatch are. No
+// rectangles is the honest answer here: nothing on this page has a size.
+if (typeof Range !== 'undefined') {
+  if (!('getClientRects' in Range.prototype)) {
+    Range.prototype.getClientRects = () =>
+      Object.assign([], { item: () => null }) as unknown as DOMRectList
+  }
+  if (!('getBoundingClientRect' in Range.prototype)) {
+    Range.prototype.getBoundingClientRect = () => new DOMRect()
+  }
+}
+
 // jsdom implements no layout, and so no ResizeObserver. Components that watch
 // their own box for changes (the floating output window keeping itself inside
 // the pane) only need it not to throw: nothing here ever resizes.

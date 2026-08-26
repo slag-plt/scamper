@@ -411,6 +411,78 @@ describe('IDE notebook view', () => {
     })
   })
 
+  // A cell is never run on its own -- the whole program is -- so Enter adds a
+  // line to it, whatever it happens to hold. The REPL's Enter *runs* the
+  // entry, and while a cell was being built with that binding it swallowed
+  // every Enter pressed in anything that already parsed: a finished form, and
+  // any sentence of prose, since English parses as a run of atoms.
+  describe('Enter in a cell', () => {
+    /** Presses Enter at the end of the cell at `index`. */
+    async function pressEnter(index: number) {
+      const view = cellViews()[index]
+      view.focus()
+      view.dispatch({ selection: { anchor: view.state.doc.length } })
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+      await flushPromises()
+      return view
+    }
+
+    test('adds a line to a finished form', async () => {
+      const wrapper = await mountIde('(define x 5)')
+      try {
+        await showNotebook()
+        const view = await pressEnter(0)
+        expect(view.state.doc.toString()).toContain('\n')
+        expect(docText()).toContain('(define x 5)\n')
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('adds a line to a form still being written', async () => {
+      const wrapper = await mountIde('(define x 5)')
+      try {
+        await showNotebook()
+        const view = cellViews()[0]
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '(+ 1' } })
+        await flushPromises()
+        await pressEnter(0)
+        expect(view.state.doc.toString()).toContain('\n')
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('adds a line to a sentence of prose', async () => {
+      const wrapper = await mountIde('; Here we build a square\n\n(define x 5)')
+      try {
+        await showNotebook()
+        document.querySelector<HTMLElement>('.notebook-prose')?.click()
+        await flushPromises()
+        const view = await pressEnter(0)
+        expect(view.state.doc.toString()).toBe('Here we build a square\n')
+      } finally {
+        wrapper.unmount()
+      }
+    })
+
+    test('adds a line to a cell with nothing in it', async () => {
+      const wrapper = await mountIde('(define x 5)')
+      try {
+        await showNotebook()
+        const view = cellViews()[0]
+        view.dispatch({ changes: { from: 0, to: view.state.doc.length } })
+        await flushPromises()
+        await pressEnter(0)
+        expect(view.state.doc.toString()).toBe('\n')
+      } finally {
+        wrapper.unmount()
+      }
+    })
+  })
+
   test('a file that is not a program cannot be shown as one', async () => {
     const wrapper = await mountIde('plain text', 'notes.txt')
     try {
