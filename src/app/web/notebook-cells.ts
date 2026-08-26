@@ -228,18 +228,32 @@ export function shiftCells<C extends Cell>(
   insertedLength: number,
   src: string,
 ): C[] | null {
-  if (!cells.some((c) => from >= c.from && to <= c.to)) return null
+  const edited = cells.findIndex((c) => from >= c.from && to <= c.to)
+  if (edited === -1) return null
   const delta = insertedLength - (to - from)
-  // CodeMirror's own position mapping: what is above the edit stays put, what
-  // is below it moves, and what was inside it collapses to where it began.
-  const map = (pos: number) =>
+
+  // Where a position inside the edited cell goes. A start stays put when
+  // something is typed at it and an end moves, so the cell *grows* around what
+  // was typed at its edge rather than leaving it outside -- which is the whole
+  // of what an empty cell being typed into for the first time is.
+  const start = (pos: number) =>
     pos <= from ? pos : pos >= to ? pos + delta : from
-  return cells.map((cell) => {
-    const moved: C = { ...cell, from: map(cell.from), to: map(cell.to) }
+  const end = (pos: number) =>
+    pos < from ? pos : pos >= to ? pos + delta : from + insertedLength
+
+  return cells.map((cell, i) => {
+    // Cells are in source order and do not overlap, so one above the edit is
+    // wholly above it and one below is wholly below.
+    const moved: C =
+      i < edited
+        ? { ...cell }
+        : i > edited
+          ? { ...cell, from: cell.from + delta, to: cell.to + delta }
+          : { ...cell, from: start(cell.from), to: end(cell.to) }
     moved.text = src.slice(moved.from, moved.to)
-    if (moved.kind === 'code') {
-      moved.stmtFrom = map(moved.stmtFrom)
-      moved.stmtTo = map(moved.stmtTo)
+    if (moved.kind === 'code' && i >= edited) {
+      moved.stmtFrom = i > edited ? moved.stmtFrom + delta : start(moved.stmtFrom)
+      moved.stmtTo = i > edited ? moved.stmtTo + delta : end(moved.stmtTo)
     }
     return moved
   })

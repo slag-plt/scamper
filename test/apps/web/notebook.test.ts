@@ -127,6 +127,23 @@ describe('adding and removing cells', () => {
     expect(file.text()).toBe('(import image)\n\n(define x 5)')
   })
 
+  // A file made by "Create file" starts as one comment line, so this is the
+  // first thing anyone does in a notebook.
+  test('typing into a new cell makes it a cell of the file', () => {
+    const file = documentHolding('; empty.scm')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    const at = notebook.insertCell(0, 'code')
+    notebook.applyChanges(at, [{ from: 0, to: 0, insert: '(display "hi")' }])
+    expect(file.text()).toBe('; empty.scm\n\n(display "hi")')
+    // And the re-split finds the cell it has become rather than adding a
+    // second one beside the empty one it was.
+    notebook.refresh()
+    expect(notebook.cells.value).toHaveLength(2)
+    expect(notebook.cells.value[1].text).toBe('(display "hi")')
+    expect(notebook.cells.value[1].isDraft).toBeUndefined()
+  })
+
   test('a draft survives a re-split', () => {
     const file = documentHolding('(define x 5)')
     const notebook = useNotebook(file.editor)

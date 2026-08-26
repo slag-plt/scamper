@@ -172,6 +172,25 @@ describe('shifting cells past an edit', () => {
     expect(captionOf(cell, edited)).toBe('(define xyz 5)')
   })
 
+  // An empty cell is a start and an end at the same place, so which way that
+  // position moves decides whether the cell grows around what was typed into
+  // it or the text lands outside it.
+  test('an empty cell grows around what is typed into it', () => {
+    const empty: Cell[] = [
+      { kind: 'code', from: 0, to: 0, text: '', stmtFrom: 0, stmtTo: 0 },
+    ]
+    const cells = shiftCells(empty, 0, 0, 7, '(+ 1 2)')
+    expect(cells?.[0].from).toBe(0)
+    expect(cells?.[0].to).toBe(7)
+    expect(cells?.[0].text).toBe('(+ 1 2)')
+  })
+
+  test('a cell grows when something is typed at its end', () => {
+    const cells = shiftCells(split(src), 12, 12, 2, '(define x 5)!!\n\n(+ x 1)')
+    expect(cells?.[0].text).toBe('(define x 5)!!')
+    expect(cells?.[1].text).toBe('(+ x 1)')
+  })
+
   // A paste across several cells, or an undo: only a re-split can say what the
   // notebook now holds.
   test('an edit crossing a cell boundary cannot be shifted', () => {
