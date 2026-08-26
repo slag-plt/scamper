@@ -6,9 +6,9 @@ import { highlightScamper } from '../source-highlight'
  * itself, so a reading widget reads as a transcript: code, then what it
  * produced, then the next piece of code (#375).
  *
- * The scheduler calls `beginStatement` once per statement of a captioned run --
- * once even for a statement that produces no output, and once however many
- * values it produces -- which is exactly the interleaving a transcript wants.
+ * The scheduler calls `beginStatement` once per source form of a captioned run
+ * -- once even for a form that produces no output, and once however many values
+ * it produces -- which is exactly the interleaving a transcript wants.
  */
 export class EmbedDisplay extends HTMLDisplay {
   /** Appends `source` as a highlighted code block at the current level. */

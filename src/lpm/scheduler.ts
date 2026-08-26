@@ -1,4 +1,4 @@
-import { ErrorChannel, ICE, OutputChannel, ReportError, ScamperError, SuspendSignal, Value } from '.'
+import { ErrorChannel, ICE, OutputChannel, rangesEqual, ReportError, ScamperError, SuspendSignal, Value } from '.'
 import { blockOnStep, Fiber, StepResult } from './fiber'
 import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
@@ -496,6 +496,12 @@ export class Scheduler {
    * they belong in the output: after whatever the previous statement printed
    * and before whatever the next one does.
    *
+   * One caption per *source form*, not per statement: expansion turns
+   * `(struct point (x y))` into a define per field and `(define-export x e)`
+   * into a define and an export, all carrying the range of the form they came
+   * from. Captioning each of them repeated one line of the student's code
+   * three or four times over.
+   *
    * @param stmtIdx the last statement to caption. Which one that is depends on
    *        where the caller sits: a completed statement has already advanced
    *        the fiber past itself, while a mid-statement reduction has not.
@@ -506,6 +512,14 @@ export class Scheduler {
     if (src === undefined || beginStatement === undefined) return
 
     let next = this.nextCaption.get(task.id) ?? 0
+    // Where the last caption was cut from, so the statements one source form
+    // expanded into share it. Seeded from the statement before this batch,
+    // because a form's statements can straddle two calls: output arriving
+    // part-way through one caption up to there and no further. Guarded on
+    // `next > 0` -- `statementAt(-1)` is the *last* statement of the program,
+    // which for a one-statement program would suppress its only caption.
+    let captioned =
+      next > 0 ? task.fiber.statementAt(next - 1)?.range : undefined
     for (; next <= stmtIdx; next++) {
       const stmt = task.fiber.statementAt(next)
       if (stmt === undefined) break
@@ -515,8 +529,14 @@ export class Scheduler {
       // the wrong file.
       const { begin, end } = stmt.range
       if (begin.idx < 0 || end.idx < begin.idx || end.idx >= src.length) continue
+      // Same range as the caption before it: the same piece of source, which
+      // the student wrote once and should see once.
+      if (captioned !== undefined && rangesEqual(captioned, stmt.range)) continue
       const text = src.slice(begin.idx, end.idx + 1).trim()
-      if (text.length > 0) beginStatement.call(task.out, text, next)
+      if (text.length > 0) {
+        beginStatement.call(task.out, text, next)
+        captioned = stmt.range
+      }
     }
     this.nextCaption.set(task.id, next)
   }

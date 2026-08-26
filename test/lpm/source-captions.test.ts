@@ -11,7 +11,10 @@ import type { OutputChannel, ErrorChannel, Value } from '../../src/lpm'
  * so a test can see which statement each value was attributed to.
  */
 class CaptioningChannel implements OutputChannel, ErrorChannel {
-  readonly log: ({ kind: 'value' } | { kind: 'source'; text: string })[] = []
+  readonly log: (
+    | { kind: 'value' }
+    | { kind: 'source'; text: string; index: number }
+  )[] = []
   totalSends = 0
 
   send(_v: Value) {
@@ -27,8 +30,8 @@ class CaptioningChannel implements OutputChannel, ErrorChannel {
     /* as above */
   }
 
-  beginStatement(source: string) {
-    this.log.push({ kind: 'source', text: source })
+  beginStatement(source: string, index: number) {
+    this.log.push({ kind: 'source', text: source, index })
   }
 
   report(_e: ScamperError) {
@@ -133,6 +136,42 @@ describe('source captions', () => {
   test('an error is captioned with the statement that raised it', async () => {
     const log = await runCaptioned('(display 1)\n(display (car 5))')
     expect(captions(log)).toEqual(['(display 1)', '(display (car 5))'])
+  })
+
+  test('a struct is captioned once, not once per definition it expands to', async () => {
+    // (struct point (x y)) expands to a constructor, a predicate and a getter
+    // per field -- four statements, all cut from the one line the student
+    // wrote, which they should see once rather than four times.
+    const log = await runCaptioned('(struct point (x y))\n(display (point 1 2))')
+    expect(captions(log)).toEqual(['(struct point (x y))', '(display (point 1 2))'])
+  })
+
+  test('the caption of an expanded form names its first statement', async () => {
+    // What a channel collecting one form's output keys on; the statements after
+    // it in the group send under the same index.
+    const log = await runCaptioned('(struct point (x y))\n(display 1)')
+    const sources = log.flatMap((e) => (e.kind === 'source' ? [e.index] : []))
+    expect(sources).toEqual([0, 4])
+  })
+
+  test('a define-export is captioned once, not once for its export', async () => {
+    const log = await runCaptioned('(define-export z 5)\n(display z)')
+    expect(captions(log)).toEqual(['(define-export z 5)', '(display z)'])
+  })
+
+  test('two statements with the same text are captioned separately', async () => {
+    // Grouping is by range, not by text: these are two pieces of source that
+    // happen to read alike, and collapsing them would lose one.
+    const log = await runCaptioned('(display 1)\n(display 1)')
+    expect(captions(log)).toEqual(['(display 1)', '(display 1)'])
+  })
+
+  test('a struct is captioned when nothing follows it', async () => {
+    // The end-of-run flush captions the group too, and from the same seed: a
+    // program that is nothing but a struct still says so.
+    expect(captions(await runCaptioned('(struct point (x y))'))).toEqual([
+      '(struct point (x y))',
+    ])
   })
 
   test('a run given no source emits no captions', async () => {

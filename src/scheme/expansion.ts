@@ -262,6 +262,7 @@ export function expandStmt(s: A.Stmt): A.Stmt[] {
       const pred = A.mkDefine(
         A.mkId(`${s.name.name}?`, s.range),
         A.mkApp(A.mkId('##mkPredFn##'), [A.mkLit(s.name.name)], s.range),
+        s.range,
       )
       const accessors = s.fields.map((f) =>
         A.mkDefine(

@@ -38,7 +38,8 @@ export const patchNotes: PatchNote[] = [
       'Files that are not Scamper programs now open properly: plain text without the Scheme squiggles, Markdown and CSV with their own colouring, images as a picture, and other files with a note instead of gibberish.',
       'A string containing a newline or a tab now prints as "a\\nb" on one line instead of breaking across two.',
       'Reformatting your file now keeps the blank lines you left between paragraphs of comments.',
-      'Scamper examples can now be embedded in a web page as a live transcript, so a reading can show code beside what it produces.'
+      'Scamper examples can now be embedded in a web page as a live transcript, so a reading can show code beside what it produces.',
+      'A struct or define-export now appears once above its output instead of being repeated for every definition it stands for.'
     ]
   },
   {
