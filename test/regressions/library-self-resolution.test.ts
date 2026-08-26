@@ -2,6 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import * as fs from '../../src/fs'
 import { runProgram } from '../harness.js'
 
+/** Backs {@link runProgram}'s file imports with `files`, by name. */
 function mockFS(files: Record<string, string>): void {
   vi.spyOn(fs, 'getFS').mockReturnValue({
     fileExists: (f: string) => Promise.resolve(f in files),
@@ -14,9 +15,9 @@ afterEach(() => {
 })
 
 // Regression tests for the re-homing hole found while adding the `gradescope`
-// library (#404), which is the first builtin written in Scamper rather than as
-// a wrapper around JS -- so it is the first whose functions call names of their
-// own module.
+// library (#404). Its work is done in Scamper rather than in JS, so it is the
+// first builtin whose functions call names of their own module -- its private
+// helper, and the struct constructors its docstrings name as contracts.
 //
 // Env.rehomeExports re-homes a module's bindings so their free names resolve
 // against the module rather than against whoever imported it. It only ever

@@ -17,6 +17,12 @@ interface Layout {
   submission: Record<string, string>
 }
 
+/**
+ * Runs gradescope/run_autograder over `layout` in a throwaway directory, with
+ * Gradescope's paths pointed at it.
+ *
+ * @returns the results file it wrote, parsed, and the script's exit status.
+ */
 function runHarness(layout: Layout): { results: unknown; status: number | null } {
   const dir = mkdtempSync(path.join(tmpdir(), 'scamper-gradescope-'))
   try {

@@ -279,25 +279,27 @@ export class Env {
       this.locals,
       this.qualified,
     )
-    // Re-homing reaches into a closure's *captured* scopes as well as the
-    // module's bindings, because a closure the module never bound by name can
-    // still need the module's scope: a contract-wrapped export is a wrapper
-    // that closes over the original function (see scheme/contract.ts), and it
-    // is the original -- reachable only through the wrapper's locals -- whose
-    // body holds the module's calls to its siblings and to the standard
-    // library. Without this, every documented library function resolved those
-    // against whatever env happened to be running instead.
-    //
-    // Both maps are memo tables keyed on the original object, so a scope shared
-    // between closures stays shared afterwards (letrec relies on that -- see
-    // ClsHandler) and a closure reachable from its own locals terminates.
+    // Memo tables for the walk below, keyed on the original object: a scope
+    // shared between two closures stays shared afterwards (letrec relies on
+    // that -- see ClsHandler), and a closure reachable from its own captured
+    // locals terminates rather than recurring forever.
     const rehomedClosures = new Map<Closure, Closure>()
     const rehomedScopes = new Map<Scope, Scope>()
+
+    /**
+     * Re-homes every closure a scope holds, leaving other values alone.
+     *
+     * @returns a copy of `scope`, or the copy already made for it. HOLEs are
+     *   carried across as-is -- an unassigned binding has no closure to re-home
+     *   and must stay unassigned.
+     */
     const rehomeScope = (scope: Scope): Scope => {
       const seen = rehomedScopes.get(scope)
       if (seen !== undefined) {
         return seen
       }
+      // Registered before its contents are filled in, so a scope that reaches
+      // itself resolves to this copy instead of recurring.
       const copy: Scope = new Map()
       rehomedScopes.set(scope, copy)
       for (const [name, slot] of scope) {
@@ -305,6 +307,22 @@ export class Env {
       }
       return copy
     }
+
+    /**
+     * Gives `value` the module's `home` if it is a closure that has none, and
+     * does the same to every closure reachable through its captured scopes.
+     *
+     * That reach is the point: a closure the module never bound by name can
+     * still need the module's scope. A contract-wrapped export is a wrapper
+     * closing over the original function (see scheme/contract.ts), and it is
+     * the original -- reachable only through the wrapper's locals -- whose body
+     * holds the module's calls to its siblings and to the standard library.
+     * Without this, every documented library function resolved those against
+     * whatever env happened to be running instead.
+     *
+     * @returns `value` unchanged if it is not a closure, else a re-homed copy
+     *   (or the copy already made for it).
+     */
     const rehomeValue = (value: Value): Value => {
       if (!isClosureValue(value)) {
         return value
@@ -324,6 +342,7 @@ export class Env {
       copy.locals = value.locals.map(rehomeScope)
       return copy
     }
+
     for (const [name, value] of all) {
       rehomedAll.registerValue(name, rehomeValue(value))
     }

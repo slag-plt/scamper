@@ -7,8 +7,8 @@ import TextRenderer from '../../../lpm/renderers/text.js'
  * is piped straight to it), and the browser ones show the same thing so an
  * instructor writing a harness in the IDE sees what will be submitted.
  *
- * The library itself is plain Scamper (src/lib/gradescope.scm) and binds no JS
- * values -- rendering is the only part of it that could not be, since turning a
+ * This is the library's only hand-written JavaScript: src/lib/gradescope.scm
+ * does the rest in Scamper, and rendering is what it could not, since turning a
  * Scamper value into text is a renderer's job.
  */
 
@@ -28,9 +28,11 @@ interface SuiteOutput extends L.Struct {
   tests: L.List
 }
 
+/** @returns true iff `v` is a `gradescope-test-result`. */
 export const isTestResult = (v: L.Value) =>
   L.isStructKind(v, 'gradescope-test-result')
 
+/** @returns true iff `v` is a `gradescope-test-suite-output`. */
 export const isSuiteOutput = (v: L.Value) =>
   L.isStructKind(v, 'gradescope-test-suite-output')
 
@@ -43,7 +45,10 @@ function asText(v: L.Value): string {
   return typeof v === 'string' ? v : TextRenderer.render(v)
 }
 
-/** One test case, under the field names Gradescope's API uses. */
+/**
+ * @returns the case `v` as a plain object under the field names Gradescope's
+ *   API uses (`max_score`, not the struct's `max-score`).
+ */
 function testResultToJson(v: TestResult): object {
   return {
     name: v.name,
@@ -54,7 +59,14 @@ function testResultToJson(v: TestResult): object {
   }
 }
 
-/** A `gradescope-test-result` or `gradescope-test-suite-output` as JSON text. */
+/**
+ * @param v a `gradescope-test-result` or a `gradescope-test-suite-output`
+ * @returns it as the JSON text Gradescope reads, indented two spaces
+ *
+ * Both are only ever built by the library itself (gradescope-test-suite is the
+ * only exported way to make a suite), so the fields are read without
+ * re-checking their types.
+ */
 export function toJsonText(v: L.Value): string {
   const json = isSuiteOutput(v)
     ? {

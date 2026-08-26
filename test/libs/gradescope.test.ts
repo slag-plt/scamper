@@ -10,7 +10,10 @@ interface Case {
   output: string
 }
 
-/** Runs `src` and parses its single output line as JSON. */
+/**
+ * Runs `src`, which must produce exactly one value, and parses that value's
+ * rendering as JSON -- which is what the gradescope renderers emit.
+ */
 async function runJson<T>(src: string): Promise<T> {
   const lines = await runProgram(src)
   expect(lines).toHaveLength(1)

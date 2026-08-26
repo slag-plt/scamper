@@ -12,6 +12,7 @@ import { runProgram } from '../harness.js'
 // A missing file and a module that fails at run time were both already handled;
 // this branch now does what they do, carrying on at the next statement.
 
+/** Backs {@link runProgram}'s file imports with `files`, by name. */
 function mockFS(files: Record<string, string>): void {
   vi.spyOn(fs, 'getFS').mockReturnValue({
     fileExists: (f: string) => Promise.resolve(f in files),
