@@ -355,7 +355,7 @@ const viewMenu = computed<MenuItem[]>(() => {
 const helpMenu = computed<MenuItem[]>(() => [
   { label: 'Documentation', run: () => { openPage('docs.html') } },
   { label: 'Language Reference', run: () => { openPage('reference.html') } },
-  { label: 'Search Functions', run: () => { openPage('search.html') } },
+  { label: 'Search Functions', run: () => { openPage('docs.html?search=') } },
   { separator: true },
   { label: 'Keyboard Shortcuts', run: () => { shortcutsHelpOpen.value = true } },
   { separator: true },

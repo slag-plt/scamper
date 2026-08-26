@@ -33,14 +33,12 @@ const descSpans = computed<TextSpan[]>(() => {
   border: 1px solid var(--border);
   padding: 1em;
   margin: 1em;
-  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui,
-    helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial,
-    sans-serif;
+  font-family: var(--font-sans);
 }
 
 .sig {
   margin: 1em 0;
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family: var(--font-mono);
   font-size: 1em;
   white-space: pre-wrap;
 }
@@ -54,6 +52,6 @@ const descSpans = computed<TextSpan[]>(() => {
 }
 
 .desc code {
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family: var(--font-mono);
 }
 </style>

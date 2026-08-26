@@ -5,26 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-store" />
   <title>Search Functions &middot; Scamper</title>
-  <!-- Apply the persisted theme before first paint to avoid a flash. -->
+  <!--
+    Search is part of the docs page now (#403). This stays as a redirect because
+    search.html is linked from older builds, course materials and bookmarks.
+  -->
   <script>
-    (function () {
-      try {
-        var t = localStorage.getItem('scamper-theme')
-        if (t === 'light' || t === 'dark') {
-          document.documentElement.setAttribute('data-theme', t)
-        }
-      } catch (e) {}
-    })()
+    location.replace('docs.html' + (location.search || '?search='))
   </script>
-  <link href="/css/normalize.css" rel="stylesheet">
-  <link href="/css/theme.css" rel="stylesheet">
-  <!-- Fontawesome (brands + solid) -->
-  <link href="/css/fontawesome.css" rel="stylesheet">
-  <link href="/css/brands.css" rel="stylesheet">
-  <link href="/css/solid.css" rel="stylesheet">
 </head>
 <body>
-  <div id="app"></div>
-  <script type="module" src="/src/app/search/index.ts"></script>
+  <p>Redirecting to the <a href="docs.html?search=">documentation search</a>.</p>
 </body>
 </html>
