@@ -78,6 +78,8 @@ const props = defineProps<{
   canStep?: boolean
   isStepping?: boolean
   stepStatement?: () => void
+  /** Opens a REPL seeded from the open file (#399). */
+  openRepl?: () => void
   about?: () => void
   whatsNew?: () => void
 }>()
@@ -280,6 +282,10 @@ const runMenu = computed<MenuItem[]>(() => [
     label: 'Step Statement at Cursor…',
     disabled: !props.canStep || props.isStepping,
     run: () => props.stepStatement?.(),
+  },
+  {
+    label: 'Open REPL…',
+    run: () => props.openRepl?.(),
   },
   { separator: true },
   { label: 'Query Value at Cursor', run: () => session.query() },

@@ -27,6 +27,8 @@ import {
 const ALL = PANEL_IDS
 /** Before anything is stepped, the trace does not exist. */
 const NO_TRACE: PanelId[] = ['editor', 'output']
+/** Nor does the REPL until it is opened, which is the usual case (#399). */
+const NO_REPL: PanelId[] = ['editor', 'output', 'trace']
 /**
  * The editor docked alone, with the output floating over it -- the default
  * arrangement until #371 docked the output. The cases below about a one-panel
@@ -69,7 +71,7 @@ describe('normalize', () => {
     checkInvariants(l)
     // The duplicate is collapsed, and the absent ones are appended in the
     // default's priority order rather than the canonical one.
-    expect(l.recency).toEqual(['output', 'trace', 'editor'])
+    expect(l.recency).toEqual(['output', 'repl', 'trace', 'editor'])
   })
 
   test('a nonsense placement falls back to that panel default', () => {
@@ -229,7 +231,12 @@ describe('presence', () => {
   test('a trace that has not been opened is not a tab', () => {
     const tabbed = compact(DEFAULT_LAYOUT)
     expect(tabsIn(tabbed, 'a', NO_TRACE)).toEqual(['editor', 'output'])
-    expect(tabsIn(tabbed, 'a', ALL)).toEqual(['editor', 'output', 'trace'])
+    expect(tabsIn(tabbed, 'a', ALL)).toEqual([
+      'editor',
+      'output',
+      'trace',
+      'repl',
+    ])
   })
 
   test('an absent panel is never the active tab', () => {
@@ -257,17 +264,18 @@ describe('compact', () => {
   // The regression test for the whole compact story: activePane used to be
   // hardcoded as trace > output > source, and this has to reproduce it.
   test('it opens on the same panel the old activePane would have picked', () => {
-    // Trace present and not put away -> trace.
+    // Trace present and not put away -> trace. Told the REPL is not open, as
+    // it is not in the story this reproduces.
     const withTrace = reveal(OUTPUT_FLOATING, 'trace')
-    expect(activeIn(compact(withTrace), 'a', ALL)).toBe('trace')
+    expect(activeIn(compact(withTrace), 'a', NO_REPL)).toBe('trace')
 
     // Trace put away, output not -> output.
     const traceAway = minimize(withTrace, 'trace')
-    expect(activeIn(compact(traceAway), 'a', ALL)).toBe('output')
+    expect(activeIn(compact(traceAway), 'a', NO_REPL)).toBe('output')
 
     // Both put away -> the editor, which can never be put away.
     const bothAway = minimize(traceAway, 'output')
-    expect(activeIn(compact(bothAway), 'a', ALL)).toBe('editor')
+    expect(activeIn(compact(bothAway), 'a', NO_REPL)).toBe('editor')
 
     // No trace at all, output showing -> output.
     expect(activeIn(compact(OUTPUT_FLOATING), 'a', NO_TRACE)).toBe('output')

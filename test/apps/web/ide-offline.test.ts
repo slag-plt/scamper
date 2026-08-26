@@ -242,6 +242,37 @@ describe('IDE offline behaviour', () => {
     }
   })
 
+  // Opening a REPL runs the file, which reaches the file system -- a local
+  // import, the file library -- so it is refused offline like any other
+  // operation that needs the server (#399). Restarting one runs it again.
+  test('restarting a REPL while offline is refused', async () => {
+    const wrapper = await mountIde()
+    try {
+      getByRole(document.body, 'button', { name: 'Open hello.scm' }).click()
+      await flushPromises()
+      getByRole(document.body, 'button', { name: 'Open a REPL' }).click()
+      await flushPromises()
+      await flushPromises()
+
+      Connectivity.reportUnreachable()
+      await flushPromises()
+
+      getByRole(document.body, 'button', { name: /Restart/ }).click()
+      await flushPromises()
+
+      const dialog = getByRole(document.body, 'dialog')
+      expect(dialog.textContent).toContain('Scamper is offline')
+      // And the transcript it would have replaced is still there.
+      getByRole(dialog, 'button', { name: 'OK' }).click()
+      await flushPromises()
+      expect(
+        document.querySelector('[data-panel="repl"]')?.textContent,
+      ).toContain('hello.scm')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('nothing is written while offline, and the reconnect writes at once', async () => {
     const wrapper = await mountIde()
     try {

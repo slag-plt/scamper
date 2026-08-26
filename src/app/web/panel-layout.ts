@@ -1,9 +1,9 @@
 /**
  * Where the IDE's panels are.
  *
- * The editor, the output and the step trace are the same kind of thing: a
- * panel, which is either floating over the pane or docked into one of two
- * slots. "Tabbed" is not a third case -- a panel is tabbed when it shares a
+ * The editor, the output, the step trace and the REPL are the same kind of
+ * thing: a panel, which is either floating over the pane or docked into one of
+ * two slots. "Tabbed" is not a third case -- a panel is tabbed when it shares a
  * slot with another, which is a fact about the slot. Making it its own case
  * would let the two disagree.
  *
@@ -13,11 +13,11 @@
  * jsdom -- a place with no layout at all.
  */
 
-/** The surfaces the IDE can show. Closed on purpose: there are these three. */
-export type PanelId = 'editor' | 'output' | 'trace'
+/** The surfaces the IDE can show. Closed on purpose: there are these four. */
+export type PanelId = 'editor' | 'output' | 'trace' | 'repl'
 
 /** Canonical order. It decides the order tabs appear in, and nothing else. */
-export const PANEL_IDS = ['editor', 'output', 'trace'] as const
+export const PANEL_IDS = ['editor', 'output', 'trace', 'repl'] as const
 
 /** The dock's two slots, in reading order. */
 export type SlotId = 'a' | 'b'
@@ -79,23 +79,24 @@ const MAX_SPLIT = 85
  * pane beside it reads as part of the editor -- which is also where the IDE
  * put it before the dock existed.
  *
- * The trace still floats: it is transient and opened on demand, so it arrives
- * as the answer to something the person just asked for, and taking a third of
- * the dock permanently for it would not pay.
+ * The trace and the REPL still float: both are transient and opened on demand,
+ * so they arrive as the answer to something the person just asked for, and
+ * taking a third of the dock permanently for either would not pay.
  *
- * The recency order is trace, output, editor -- the reverse of the canonical
- * one. Nothing has been fronted yet at startup, so this is the tie-break, and
- * it is chosen to reproduce the precedence the IDE has always used on a narrow
- * pane: the trace if it is open, otherwise the output, otherwise the code.
+ * The recency order is repl, trace, output, editor -- the reverse of the
+ * canonical one. Nothing has been fronted yet at startup, so this is the
+ * tie-break, and it is chosen to reproduce the precedence the IDE has always
+ * used on a narrow pane: the panel most recently asked for, down to the code.
  */
 export const DEFAULT_LAYOUT: PanelLayout = {
   placement: {
     editor: { kind: 'docked', slot: 'a' },
     output: { kind: 'docked', slot: 'b' },
     trace: { kind: 'floating', minimized: false },
+    repl: { kind: 'floating', minimized: false },
   },
-  geometry: { editor: null, output: null, trace: null },
-  recency: ['trace', 'output', 'editor'],
+  geometry: { editor: null, output: null, trace: null, repl: null },
+  recency: ['repl', 'trace', 'output', 'editor'],
   axis: 'row',
   splitPercent: DEFAULT_SPLIT,
 }
@@ -385,6 +386,7 @@ export function compact(l: PanelLayout): PanelLayout {
       editor: { kind: 'docked', slot: 'a' },
       output: { kind: 'docked', slot: 'a' },
       trace: { kind: 'docked', slot: 'a' },
+      repl: { kind: 'docked', slot: 'a' },
     },
     recency: [...shown, ...hidden],
   }

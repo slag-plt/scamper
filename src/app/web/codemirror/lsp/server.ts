@@ -35,6 +35,15 @@ interface TrackedDoc {
   version: number
   text: string
   lineStarts: number[]
+  /**
+   * Source this document is analysed *inside*, or '' for a document that
+   * stands alone.
+   *
+   * A REPL cell is one form typed against a program it cannot see: the file it
+   * was seeded from and the entries before it (#399). Without that in front of
+   * it, `(sq 5)` is an unbound name rather than a call.
+   */
+  context: string
 }
 
 /** JSON-RPC error codes. */
@@ -52,6 +61,43 @@ export class ScamperLanguageServer {
   private readonly docs = new Map<string, TrackedDoc>()
   private send: (message: string) => void = () => {
     /* replaced by the transport via setSend */
+  }
+
+  /**
+   * The source each document is analysed inside, by URI.
+   *
+   * Kept apart from `docs` because it is set by the application rather than by
+   * the protocol, and can arrive before the client opens the document.
+   */
+  private readonly contexts = new Map<string, string>()
+
+  /**
+   * Sets the source `uri` is analysed inside: what precedes it, as though the
+   * two were one program. Called in process rather than over the protocol,
+   * which has no notion of it.
+   *
+   * A trailing newline is added where one is missing, so the document always
+   * starts on a line of its own.
+   */
+  setContext(uri: string, context: string): void {
+    const framed =
+      context.length === 0 || context.endsWith('\n') ? context : `${context}\n`
+    const first = !this.contexts.has(uri)
+    this.contexts.set(uri, framed)
+    const doc = this.docs.get(uri)
+    if (doc !== undefined) {
+      doc.context = framed
+      // A document that is only now becoming a cell may already be showing
+      // diagnostics from before, and nothing will publish for it again --
+      // leaving the last squiggle stuck to it. Clear them on the way past.
+      if (first) {
+        this.notify('textDocument/publishDiagnostics', {
+          uri,
+          version: doc.version,
+          diagnostics: [],
+        })
+      }
+    }
   }
 
   /** Registers the callback used to deliver responses/notifications to the client. */
@@ -159,14 +205,15 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return null
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    const result = hoverAt(doc.text, offset)
+    const result = hoverAt(f.src, f.in(offset))
     if (result === null) {
       return null
     }
     return {
       contents: result.contents,
-      range: rangeFromOffsets(result.from, result.to, doc.lineStarts),
+      range: f.range(result.from, result.to),
     }
   }
 
@@ -175,8 +222,9 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return []
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    return completionsFor(doc.text, offset)
+    return completionsFor(f.src, f.in(offset), f.range)
   }
 
   private signatureHelp(params: SignatureHelpParams): SignatureHelp | null {
@@ -184,8 +232,9 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return null
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    return signatureHelpAt(doc.text, offset)
+    return signatureHelpAt(f.src, f.in(offset))
   }
 
   private async definition(params: DefinitionParams): Promise<Location | null> {
@@ -193,14 +242,17 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return null
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    const span = await definitionAt(doc.text, offset)
-    if (span === null) {
+    const span = await definitionAt(f.src, f.in(offset))
+    // A definition in the context is real but unreachable: it lives in a
+    // document the client does not have open, so there is nowhere to jump to.
+    if (span === null || f.inContext(span.from)) {
       return null
     }
     return {
       uri: params.textDocument.uri,
-      range: rangeFromOffsets(span.from, span.to, doc.lineStarts),
+      range: f.range(span.from, span.to),
     }
   }
 
@@ -209,12 +261,15 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return []
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    const spans = await referencesAt(doc.text, offset)
-    return spans.map((span) => ({
-      uri: params.textDocument.uri,
-      range: rangeFromOffsets(span.from, span.to, doc.lineStarts),
-    }))
+    const spans = await referencesAt(f.src, f.in(offset))
+    return spans
+      .filter((span) => !f.inContext(span.from))
+      .map((span) => ({
+        uri: params.textDocument.uri,
+        range: f.range(span.from, span.to),
+      }))
   }
 
   private async documentHighlight(
@@ -224,18 +279,21 @@ export class ScamperLanguageServer {
     if (doc === undefined) {
       return []
     }
+    const f = frame(doc)
     const offset = positionToOffset(params.position, doc.lineStarts, doc.text.length)
-    const highlights = await documentHighlightsAt(doc.text, offset)
-    return highlights.map((h) => ({
-      range: rangeFromOffsets(h.from, h.to, doc.lineStarts),
-      // DocumentHighlightKind: Write (3) = the binder, Read (2) = a use.
-      kind: h.write ? 3 : 2,
-    }))
+    const highlights = await documentHighlightsAt(f.src, f.in(offset))
+    return highlights
+      .filter((h) => !f.inContext(h.from))
+      .map((h) => ({
+        range: f.range(h.from, h.to),
+        // DocumentHighlightKind: Write (3) = the binder, Read (2) = a use.
+        kind: h.write ? 3 : 2,
+      }))
   }
 
   private didOpen(params: DidOpenTextDocumentParams): void {
     const { uri, text, version } = params.textDocument
-    this.docs.set(uri, track(text, version))
+    this.docs.set(uri, track(text, version, this.contexts.get(uri) ?? ''))
     this.publishDiagnostics(uri)
   }
 
@@ -250,7 +308,7 @@ export class ScamperLanguageServer {
     }
     this.docs.set(
       params.textDocument.uri,
-      track(text, params.textDocument.version),
+      track(text, params.textDocument.version, existing.context),
     )
     this.publishDiagnostics(params.textDocument.uri)
   }
@@ -259,6 +317,18 @@ export class ScamperLanguageServer {
   private publishDiagnostics(uri: string): void {
     const doc = this.docs.get(uri)
     if (doc === undefined) {
+      return
+    }
+    // A document with a context is a cell being typed (#399), and a cell is
+    // unclosed for most of the time it is being written: squiggles under every
+    // keystroke would say nothing except "you are not finished". What it is
+    // worth being told is what running it says, which is what the REPL shows
+    // under the entry.
+    //
+    // Keyed off having a context at all, not off the context being non-empty:
+    // a REPL opened on an empty file starts with nothing in front of it, and is
+    // no more worth linting for that.
+    if (this.contexts.has(uri)) {
       return
     }
     const { text, lineStarts, version } = doc
@@ -300,8 +370,31 @@ export class ScamperLanguageServer {
   }
 }
 
-function track(text: string, version: number): TrackedDoc {
-  return { version, text, lineStarts: computeLineStarts(text) }
+function track(text: string, version: number, context: string): TrackedDoc {
+  return { version, text, lineStarts: computeLineStarts(text), context }
+}
+
+/**
+ * How a document's own offsets relate to the source it is analysed inside.
+ *
+ * The context goes in front, so the two coordinate systems differ by a single
+ * shift: every offset the analysis hands back has to come home again, and
+ * anything that lands short of the document belongs to the context and is not
+ * this document's to report.
+ */
+function frame(doc: TrackedDoc) {
+  const shift = doc.context.length
+  return {
+    /** What the analysis sees: the context, then the document. */
+    src: doc.context + doc.text,
+    /** A document offset, as the analysis sees it. */
+    in: (offset: number) => offset + shift,
+    /** Whether an analysed offset lands in the context rather than here. */
+    inContext: (offset: number) => offset < shift,
+    /** An analysed span, as a range in the document. */
+    range: (from: number, to: number) =>
+      rangeFromOffsets(from - shift, to - shift, doc.lineStarts),
+  }
 }
 
 /**

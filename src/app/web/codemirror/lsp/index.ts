@@ -28,6 +28,7 @@ const SCAMPER_DOC_URI = 'inmemory://main.scm'
 const SCAMPER_LANGUAGE_ID = 'scheme'
 
 let client: LSPClient | undefined
+let server: ScamperLanguageServer | undefined
 
 /**
  * The shared LSP client, created and connected to the in-process Scamper
@@ -36,7 +37,7 @@ let client: LSPClient | undefined
  */
 function getClient(): LSPClient {
   if (client === undefined) {
-    const server = new ScamperLanguageServer()
+    server = new ScamperLanguageServer()
     client = new LSPClient({
       // Editor features; each stays dormant until the server advertises the
       // matching capability (see ScamperLanguageServer). client.plugin() below
@@ -55,11 +56,29 @@ function getClient(): LSPClient {
 }
 
 /**
- * CodeMirror extension connecting the editor to the in-process Scamper
- * language server: hover docs, completion, signature help, diagnostics,
- * occurrence highlighting, goto-definition (Alt-.), and find-references
- * (Shift-Alt-.).
+ * CodeMirror extension connecting an editor to the in-process Scamper language
+ * server: hover docs, completion, signature help, diagnostics, occurrence
+ * highlighting, goto-definition (Alt-.), and find-references (Shift-Alt-.).
+ *
+ * @param uri which document this editor holds. One per editor: the default
+ *        workspace refuses two views on one URI, and two editors sharing a URI
+ *        would be two editors overwriting one document's contents. Defaults to
+ *        the file the IDE is editing.
  */
-export function scamperLspExtensions(): Extension {
-  return getClient().plugin(SCAMPER_DOC_URI, SCAMPER_LANGUAGE_ID)
+export function scamperLspExtensions(uri = SCAMPER_DOC_URI): Extension {
+  return getClient().plugin(uri, SCAMPER_LANGUAGE_ID)
+}
+
+/**
+ * Sets the source `uri` is analysed inside: the program it is a continuation
+ * of. For a REPL cell that is the file the session was seeded from and the
+ * entries before it, which is what makes a name defined out there resolve in
+ * here (#399).
+ *
+ * A document with a context is not linted -- see the server's
+ * publishDiagnostics.
+ */
+export function setLspContext(uri: string, context: string): void {
+  getClient()
+  server?.setContext(uri, context)
 }

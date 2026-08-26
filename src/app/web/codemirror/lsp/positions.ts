@@ -45,6 +45,13 @@ export function positionToOffset(
   return Math.min(lineStarts[pos.line] + pos.character, textLength)
 }
 
+/**
+ * Turns a half-open `[from, to)` span of the *analysed* source into a range in
+ * the document the client holds. The two differ when a document is analysed
+ * inside a context that precedes it -- see the server's `frame`.
+ */
+export type RangeMapper = (from: number, to: number) => Range
+
 /** Builds an LSP range from a half-open `[from, to)` offset span. */
 export function rangeFromOffsets(
   from: number,

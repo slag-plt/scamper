@@ -17,10 +17,11 @@ import {
   Value,
 } from './lpm'
 import { Fiber } from './lpm/fiber'
+import { DiscardOutput } from './lpm/output/discard'
 import { SimpleErrorChannel } from './lpm/output/simple-error'
 import { TraceCollector } from './lpm/output/trace-collector'
 import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
-import { compile } from './scheme'
+import { compile, tokenizeAndParse } from './scheme'
 import { makeTraceStepper } from './scheme/trace'
 import { diagnosticToError } from './scheme/diagnostic'
 import * as SymbolDB from './scheme/symbol-db'
@@ -74,6 +75,49 @@ export type { Env }
 export interface EmbeddedRequest {
   id: SchedulerId
   done: Promise<Env>
+}
+
+/**
+ * A REPL: a program written one statement at a time (#399).
+ *
+ * One run rather than one per entry. Every entry is evaluated in the
+ * environment the last one left, and a handler any of them registered -- a
+ * timer, a key listener -- sees the definitions made since, exactly as one
+ * registered by a program's own top level does. Ending the session tears all of
+ * them down together.
+ */
+export interface ReplSession {
+  /** The run every entry is evaluated as. */
+  readonly id: SchedulerId
+  /**
+   * Runs the whole of `src` for what it defines, discarding its output, and
+   * makes the environment it leaves behind the one entries start from.
+   *
+   * The output is discarded because this is the file the REPL was opened on,
+   * which the person has already run; what they want is its definitions.
+   *
+   * @returns whether it compiled. Diagnostics and runtime errors reach the
+   *          session's error channel either way, and a session that could not
+   *          be seeded is still usable -- it just starts from the standard
+   *          library.
+   */
+  seed: (src: string) => Promise<boolean>
+  /**
+   * Evaluates one statement, sending what it produces to the session's output
+   * channel and carrying what it defines forward to the next entry.
+   *
+   * More than one statement is refused rather than half-run: an entry is a
+   * statement, and a file pasted into one is a mistake worth naming.
+   *
+   * @returns whether it ran. False for an entry that was refused or did not
+   *          compile -- one that never became part of the program, and so must
+   *          not be treated as part of it.
+   */
+  evaluate: (src: string) => Promise<boolean>
+  /** Abandons the entry in flight, if any, leaving the session usable. */
+  interrupt: () => void
+  /** Ends the session: whatever is running, and every handler it registered. */
+  end: () => void
 }
 
 // TODO: this and all query-related code should
@@ -557,6 +601,152 @@ export default class Scamper {
     // button -- have to keep working after its program finishes, exactly as the
     // IDE's do. It ends when the page does, or when `cancel` is called.
     return { id, done: promise.then(() => fiber.topLevelEnv) }
+  }
+
+  /**
+   * Opens a REPL: a program built up an entry at a time, in an environment that
+   * carries forward from one to the next (#399).
+   *
+   * The session *is* a run, registered like any other, so a handler an entry
+   * registers reaches the right program and dies with it. Its fiber is replaced
+   * per entry and holds the environment between them -- the top level a REPL
+   * builds up is exactly the top level of whatever it last evaluated.
+   *
+   * Deliberately independent of the foreground run: a REPL is scratch work
+   * beside the file rather than a version of it, so pressing Run does not
+   * disturb it and it does not supersede what Run started.
+   */
+  public startRepl({
+    out,
+    err,
+  }: {
+    out: OutputChannel
+    err: ErrorChannel
+  }): ReplSession {
+    const id = crypto.randomUUID()
+    // An empty program: born done, so it never runs, and its only job is to
+    // hold the environment until the first entry replaces it. Without it the
+    // run would have no fiber, and a handler registered by a library call
+    // during seeding would have no top level to resolve against.
+    const run = this.beginRun(id, new Fiber([], getDefaultEnv()), err)
+
+    // The entry in flight, so interrupting one can settle the promise its
+    // caller is waiting on: a cancelled task never reaches `onComplete`.
+    let settle: (() => void) | null = null
+    // True once the session has ended.
+    //
+    // Checked after every await: compiling is asynchronous, so a session can be
+    // ended while an entry is still on its way to running. Without this the
+    // program would be scheduled on a run that has already been torn down --
+    // running work that was abandoned, and leaving its caller waiting on a
+    // promise that `end` had already been past to settle.
+    let ended = false
+
+    /**
+     * Runs `prog` as the session's next fiber, in the environment the last one
+     * left.
+     */
+    const runProgram = async (
+      prog: Prog,
+      out: OutputChannel,
+    ): Promise<void> => {
+      if (ended) return
+      const fiber = new Fiber(prog, run.fiber.topLevelEnv)
+      // Before the run, not after: a handler registered *by this entry* has to
+      // see this fiber's top level, and so does one registered by an earlier
+      // entry that fires while this one is running.
+      run.fiber = fiber
+      // A program of no statements -- a blank entry, a comment -- is born done,
+      // and `schedule` rejects a completed fiber (#366).
+      if (fiber.isDone()) return
+      const { promise, resolve } = deferred()
+      settle = resolve
+      this.scheduler.schedule({
+        id,
+        fiber,
+        out,
+        err,
+        // Present and false rather than absent: a task is a display task only
+        // if it carries both `out` and `isTracing`, and a report task's output
+        // goes nowhere. A REPL does not trace -- an entry shows its value, not
+        // the reductions that reached it, which is what Step is for.
+        isTracing: false,
+        // No `src`: an entry is shown above its own output by the REPL itself,
+        // and a caption would print it a second time.
+        onComplete: () => {
+          resolve()
+        },
+        // As in execute(): surface it and settle, rather than leaving the REPL
+        // waiting forever on an entry that has already died.
+        onFatal: (e: unknown) => {
+          err.report(
+            new ScamperError(
+              'Runtime',
+              e instanceof Error ? e.toString() : String(e),
+            ),
+          )
+          resolve()
+        },
+      })
+      await promise
+      settle = null
+    }
+
+    return {
+      id,
+      seed: async (src: string) => {
+        const { prog, diagnostics } = await compile(src)
+        if (ended) return false
+        diagnostics.forEach((d) => {
+          err.report(diagnosticToError(d))
+        })
+        if (prog === undefined) return false
+        // Into a channel that drops what it is given, so the file's own output
+        // goes nowhere. Errors still land: a file that fails half way through
+        // leaves a half-built environment, and saying so beats the definitions
+        // after the failure quietly not being there.
+        await runProgram(prog, new DiscardOutput())
+        return true
+      },
+      evaluate: async (src: string) => {
+        if (ended) return false
+        // Counted before expansion, not after: `(struct point (x y))` is one
+        // statement to write and four to run, and refusing it would be absurd.
+        const parsed = tokenizeAndParse(src)
+        if (parsed.program !== undefined && parsed.program.length > 1) {
+          err.report(
+            new ScamperError(
+              'Parser',
+              `A REPL entry is one statement at a time, and this is ${parsed.program.length.toString()}. ` +
+                'Enter them one by one.',
+            ),
+          )
+          return false
+        }
+        const { prog, diagnostics } = await compile(src)
+        if (ended) return false
+        diagnostics.forEach((d) => {
+          err.report(diagnosticToError(d))
+        })
+        if (prog === undefined) return false
+        await runProgram(prog, out)
+        return true
+      },
+      interrupt: () => {
+        this.scheduler.cancelTask(id)
+        // cancelTask reports and unschedules, and that is the end of it: the
+        // task never reaches onComplete, so the entry's promise is settled
+        // here or not at all.
+        settle?.()
+        settle = null
+      },
+      end: () => {
+        ended = true
+        this.cancel(id)
+        settle?.()
+        settle = null
+      },
+    }
   }
 
   /*  =====  scheduler  =====  */
