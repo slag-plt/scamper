@@ -40,7 +40,8 @@ export const patchNotes: PatchNote[] = [
       'Reformatting your file now keeps the blank lines you left between paragraphs of comments.',
       'Scamper examples can now be embedded in a web page as a live transcript, so a reading can show code beside what it produces.',
       'A struct or define-export now appears once above its output instead of being repeated for every definition it stands for.',
-      'A REPL window opens on your file so you can try things against its definitions one line at a time, without changing the file; it offers the same completions and documentation as the editor, including the names your file and your earlier lines defined.'
+      'A REPL window opens on your file so you can try things against its definitions one line at a time, without changing the file; it offers the same completions and documentation as the editor, including the names your file and your earlier lines defined.',
+      'A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.'
     ]
   },
   {

@@ -16,7 +16,7 @@ const props = defineProps<{
 // N.B., same module list/order as src/docs/DocsApp.vue; "runtime" is
 // LPM-internal plumbing, not user-facing, so it's deliberately excluded.
 const moduleOrder = [
-  'prelude', 'image', 'lab', 'music', 'test',
+  'prelude', 'image', 'lab', 'music', 'test', 'gradescope',
   'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
 ]
 

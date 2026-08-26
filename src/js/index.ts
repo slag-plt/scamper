@@ -13,6 +13,10 @@ import * as Reactive from './reactive/index.js'
 import * as Rex from './rex/index.js'
 import * as Runtime from './runtime/index.js'
 import * as Test from './test/index.js'
+// The `gradescope` library is plain Scamper (src/lib/gradescope.scm) and binds
+// no JS values, so it has no entry in `internals` below -- only a renderer,
+// which registers itself when this module is imported.
+import './gradescope/renderers/text.js'
 
 // N.B., prelude/index.ts groups a handful of dynamically-named functions
 // (char/string comparators) into plain records -- keyed by their

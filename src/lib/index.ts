@@ -17,7 +17,11 @@ import { librarySources } from './generated/sources.js'
  * sequence of `(define name (js-var "..."))` forms -- see src/lib/*.scm) and
  * snapshots the resulting top-level bindings as a Module.
  */
-async function loadLibrary(name: string, src: string): Promise<L.Module> {
+async function loadLibrary(
+  name: string,
+  src: string,
+  runtime?: L.Module,
+): Promise<L.Module> {
   // N.B., insertContracts=true: only the standard library gets its exports
   // wrapped with contract checks derived from their docstrings, not
   // arbitrary user programs. allowInternalNames is narrower still: the
@@ -36,9 +40,20 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   // js-var is the FFI root primitive -- it can't be bound via itself, so it's
   // injected directly into every library's load environment (and exported
   // explicitly below, since it carries no export statement).
+  //
+  // `runtime` joins it for every library but runtime.scm itself, which is what
+  // lets a library be written in plain Scamper rather than as a wrapper around
+  // JS: `struct` expands to calls to `##mkCtorFn##` and friends, and those are
+  // runtime.scm's bindings. They are needed at *load* time -- a struct's
+  // constructor is built when the define runs -- so an importer's env, which is
+  // what a library closure's free names otherwise resolve against (see
+  // Env.rehomeExports), is too late.
+  const baseEnv = L.Env.empty.extendWithTopLevel(['js-var', jsVar])
   const fiber = new Fiber(
     prog,
-    L.Env.empty.extendWithTopLevel(['js-var', jsVar]),
+    runtime === undefined
+      ? baseEnv
+      : baseEnv.extendWithImport('runtime', runtime),
     // Mark every closure this library defines as step-over, so a reduction
     // trace treats library calls atomically (see Closure.stepOver).
     true,
@@ -130,13 +145,24 @@ export async function initializeLibs(): Promise<void> {
   if (initialized) {
     return
   }
+  // runtime.scm goes first and alone: it binds the `##...##` primitives that
+  // `struct` (and any other form that lowers to them) expands into, so every
+  // other library loads with it already in scope.
+  const runtimeSrc = librarySources.find(([name]) => name === 'runtime')
+  if (runtimeSrc === undefined) {
+    throw new L.ICE('lib.initializeLibs', 'The runtime library is missing!')
+  }
+  const runtime = await loadLibrary('runtime', runtimeSrc[1])
+  builtinLibs.set('runtime', runtime)
   for (const [name, mod] of await Promise.all(
-    librarySources.map(
-      async ([name, src]): Promise<[string, L.Module]> => [
-        name,
-        await loadLibrary(name, src),
-      ],
-    ),
+    librarySources
+      .filter(([name]) => name !== 'runtime')
+      .map(
+        async ([name, src]): Promise<[string, L.Module]> => [
+          name,
+          await loadLibrary(name, src, runtime),
+        ],
+      ),
   )) {
     builtinLibs.set(name, mod)
   }

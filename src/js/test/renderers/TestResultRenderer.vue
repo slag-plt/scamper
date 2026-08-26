@@ -7,24 +7,24 @@ defineProps<{ value: Result }>()
 </script>
 
 <template>
-  <div v-if="value[structKind] === 'ok'" class="test-result ok">
+  <div v-if="value[structKind] === 'test-result-ok'" class="test-result ok">
     Test "{{ value.desc }}": Passed! ✅
   </div>
-  <div v-else-if="value[structKind] === 'exp'" class="test-result error">
+  <div v-else-if="value[structKind] === 'test-result-error-expected'" class="test-result error">
     Test "{{ value.desc }}": Failed! ❌
     <hr />
     <span>
       Expected <ValueRenderer :value="value.expected" />, received <ValueRenderer :value="value.actual" />
     </span>
   </div>
-  <div v-else-if="value[structKind] === 'exn'" class="test-result error">
+  <div v-else-if="value[structKind] === 'test-result-error-exn'" class="test-result error">
     Test "{{ value.desc }}": Failed! ❌
     <hr />
     <span>
       Test case threw an exception: <ValueRenderer :value="value.exn" />
     </span>
   </div>
-  <div v-else-if="value[structKind] === 'gen'" class="test-result error">
+  <div v-else-if="value[structKind] === 'test-result-error-gen'" class="test-result error">
     Test "{{ value.desc }}": Failed! ❌
     <hr />
     {{ value.reason }}

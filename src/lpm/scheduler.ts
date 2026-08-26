@@ -279,9 +279,13 @@ export class Scheduler {
                 task.err.report(diagnosticToError(d))
               })
               if (prog === undefined) {
-                // TODO: error channel receives the compilation errors as a side-effect,
-                // but it would be good to signal to the continuation that importing has
-                // failed at this step...
+                // The diagnostics above are the report; there is no module to
+                // bind. Carry on at the next statement, exactly as the
+                // failed-to-run and failed-to-load branches below do -- the
+                // importer was dequeued before the load, so simply returning
+                // would strand it and hang the run.
+                fiber.advanceStmt()
+                this.resumeOrComplete(task)
                 return
               }
               // A module loads with the standard library in scope, exactly as a

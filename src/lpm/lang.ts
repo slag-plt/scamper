@@ -279,11 +279,47 @@ export class Env {
       this.locals,
       this.qualified,
     )
+    // Re-homing reaches into a closure's *captured* scopes as well as the
+    // module's bindings, because a closure the module never bound by name can
+    // still need the module's scope: a contract-wrapped export is a wrapper
+    // that closes over the original function (see scheme/contract.ts), and it
+    // is the original -- reachable only through the wrapper's locals -- whose
+    // body holds the module's calls to its siblings and to the standard
+    // library. Without this, every documented library function resolved those
+    // against whatever env happened to be running instead.
+    //
+    // Both maps are memo tables keyed on the original object, so a scope shared
+    // between closures stays shared afterwards (letrec relies on that -- see
+    // ClsHandler) and a closure reachable from its own locals terminates.
+    const rehomedClosures = new Map<Closure, Closure>()
+    const rehomedScopes = new Map<Scope, Scope>()
+    const rehomeScope = (scope: Scope): Scope => {
+      const seen = rehomedScopes.get(scope)
+      if (seen !== undefined) {
+        return seen
+      }
+      const copy: Scope = new Map()
+      rehomedScopes.set(scope, copy)
+      for (const [name, slot] of scope) {
+        copy.set(name, slot === HOLE ? slot : rehomeValue(slot))
+      }
+      return copy
+    }
+    const rehomeValue = (value: Value): Value => {
+      if (!isClosureValue(value)) {
+        return value
+      }
+      const seen = rehomedClosures.get(value)
+      if (seen !== undefined) {
+        return seen
+      }
+      const copy: Closure = { ...value, home }
+      rehomedClosures.set(value, copy)
+      copy.locals = value.locals.map(rehomeScope)
+      return copy
+    }
     for (const [name, value] of all) {
-      rehomedAll.registerValue(
-        name,
-        isClosureValue(value) ? { ...value, home } : value,
-      )
+      rehomedAll.registerValue(name, rehomeValue(value))
     }
     // Expose only the exported names (their re-homed versions) to the importer.
     // N.B., keyed on `has`, not on a non-undefined value: `void` *is*

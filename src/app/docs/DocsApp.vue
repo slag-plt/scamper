@@ -12,7 +12,7 @@ import type { FunctionDoc } from '../../scheme/docstring/docstring'
 // first as the default/most common module); "runtime" is LPM-internal
 // plumbing, not user-facing, so it's deliberately excluded here.
 const moduleOrder = [
-  'prelude', 'image', 'lab', 'music', 'test',
+  'prelude', 'image', 'lab', 'music', 'test', 'gradescope',
   'audio', 'canvas', 'html', 'reactive', 'data', 'rex', 'file',
 ]
 const libs: [string, Map<string, FunctionDoc>][] = moduleOrder.map(
