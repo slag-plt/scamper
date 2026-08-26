@@ -216,6 +216,49 @@ describe('what is wrong in a cell', () => {
     expect(first.to).toBeLessThanOrEqual('(+ x nope)'.length)
   })
 
+  // A cell is one statement, the same rule the REPL's prompt follows.
+  test('a cell holding two statements says so', async () => {
+    const file = documentHolding('(define x 5)\n\n(+ x 1)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    notebook.applyChanges(0, [{ from: 12, to: 12, insert: '\n(define y 6)' }])
+    await settled()
+    expect(notebook.diagnostics.value[0].map((d) => d.message)).toContain(
+      'A cell holds one statement, and this holds 2.',
+    )
+  })
+
+  test('a cell left holding no statement says so', async () => {
+    const file = documentHolding(';;; Doc.\n(define x 5)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    // The form deleted out from under its own docstring.
+    notebook.applyChanges(0, [{ from: 9, to: 21, insert: '' }])
+    await settled()
+    expect(notebook.diagnostics.value[0].map((d) => d.message)).toContain(
+      'A cell holds one statement, and there is none here: only comments.',
+    )
+  })
+
+  test('a cell holding one statement says nothing', async () => {
+    // Including a form that expands into several: a struct is one statement to
+    // write and four to run.
+    const file = documentHolding('(struct point (x y))\n\n(point-x (point 1 2))')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    await settled()
+    expect(notebook.diagnostics.value.flat()).toEqual([])
+  })
+
+  test('a cell nobody has written in yet is not a mistake', async () => {
+    const file = documentHolding('(define x 5)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    notebook.insertCell(0, 'code')
+    await settled()
+    expect(notebook.diagnostics.value.flat()).toEqual([])
+  })
+
   test('a name defined in another cell is not a problem', async () => {
     const file = documentHolding('(define x 5)\n\n(+ x 1)')
     const notebook = useNotebook(file.editor)

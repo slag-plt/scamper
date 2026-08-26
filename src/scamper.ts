@@ -21,7 +21,7 @@ import { DiscardOutput } from './lpm/output/discard'
 import { SimpleErrorChannel } from './lpm/output/simple-error'
 import { TraceCollector } from './lpm/output/trace-collector'
 import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
-import { compile, tokenizeAndParse } from './scheme'
+import { compile, countStatements } from './scheme'
 import { makeTraceStepper } from './scheme/trace'
 import { diagnosticToError } from './scheme/diagnostic'
 import * as SymbolDB from './scheme/symbol-db'
@@ -106,8 +106,9 @@ export interface ReplSession {
    * Evaluates one statement, sending what it produces to the session's output
    * channel and carrying what it defines forward to the next entry.
    *
-   * More than one statement is refused rather than half-run: an entry is a
-   * statement, and a file pasted into one is a mistake worth naming.
+   * An entry is one statement. More than that is refused rather than half-run
+   * -- a file pasted into the prompt is a mistake worth naming -- and so is
+   * none at all, which would otherwise run an empty program and print nothing.
    *
    * @returns whether it ran. False for an entry that was refused or did not
    *          compile -- one that never became part of the program, and so must
@@ -710,15 +711,19 @@ export default class Scamper {
       },
       evaluate: async (src: string) => {
         if (ended) return false
-        // Counted before expansion, not after: `(struct point (x y))` is one
-        // statement to write and four to run, and refusing it would be absurd.
-        const parsed = tokenizeAndParse(src)
-        if (parsed.program !== undefined && parsed.program.length > 1) {
+        // An entry is one statement. Anything else is refused rather than
+        // half-run: a file pasted into the prompt is a mistake worth naming,
+        // and an entry that is only a comment would otherwise run an empty
+        // program and print nothing, which reads as the REPL ignoring it.
+        const statements = countStatements(src)
+        if (statements !== undefined && statements !== 1) {
           err.report(
             new ScamperError(
               'Parser',
-              `A REPL entry is one statement at a time, and this is ${parsed.program.length.toString()}. ` +
-                'Enter them one by one.',
+              statements === 0
+                ? 'A REPL entry is one statement, and there is none here to run.'
+                : `A REPL entry is one statement at a time, and this is ${statements.toString()}. ` +
+                  'Enter them one by one.',
             ),
           )
           return false

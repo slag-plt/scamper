@@ -16,6 +16,7 @@ import {
   type Cell,
 } from '../notebook-cells'
 import { analyzeSource } from '../codemirror/lsp/diagnostics'
+import { countStatements } from '../../../scheme'
 import type { CellChange } from '../codemirror/cell-editor'
 
 /**
@@ -78,6 +79,30 @@ export interface Notebook {
 
 /** How long the typing must stop before the cells are marked up again. */
 const LINT_IDLE_MS = 300
+
+/**
+ * What is wrong with how much a cell holds, if anything.
+ *
+ * A code cell is one statement, the same rule the REPL's prompt follows: it is
+ * what makes a cell something whose output can be shown under it, and what
+ * keeps the notebook and the file the same list of forms. A cell that holds
+ * two is on its way to being two cells, and one that holds none has been
+ * emptied out or written past.
+ *
+ * @returns the message to show, or undefined if the cell is as it should be.
+ */
+function countProblem(cell: NotebookCell): string | undefined {
+  // Prose is not statements, and a cell nobody has written in yet is not a
+  // mistake -- it is a cell somebody just asked for.
+  if (cell.kind !== 'code' || cell.text.trim().length === 0) return undefined
+  const statements = countStatements(cell.text)
+  // It does not parse at all, which the analysis of the file reports in its
+  // own terms and with a range to point at.
+  if (statements === undefined || statements === 1) return undefined
+  return statements === 0
+    ? 'A cell holds one statement, and there is none here: only comments.'
+    : `A cell holds one statement, and this holds ${statements.toString()}.`
+}
 
 export function useNotebook(editor: EditorAccessor): Notebook {
   const cells = shallowRef<NotebookCell[]>([])
@@ -367,6 +392,18 @@ export function useNotebook(editor: EditorAccessor): Notebook {
         message: d.message,
       })
     }
+    cells.value.forEach((cell, index) => {
+      const problem = countProblem(cell)
+      if (problem !== undefined) {
+        perCell[index].push({
+          from: 0,
+          to: cell.to - cell.from,
+          severity: 'error',
+          source: 'scamper',
+          message: problem,
+        })
+      }
+    })
     diagnostics.value = perCell
   }
 

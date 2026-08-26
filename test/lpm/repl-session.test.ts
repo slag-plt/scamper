@@ -92,11 +92,14 @@ describe('a REPL session', () => {
     session.end()
   })
 
-  test('an entry that defines nothing prints nothing', async () => {
+  // An entry is one statement, so none is refused as surely as two: running an
+  // empty program and printing nothing reads as the REPL ignoring what was
+  // typed.
+  test('refuses an entry holding no statement at all', async () => {
     const { session, out } = open()
-    await session.evaluate('; just a comment')
-    await session.evaluate('')
-    expect(out.lines).toEqual([])
+    expect(await session.evaluate('; just a comment')).toBe(false)
+    expect(out.text).toContain('there is none here to run')
+    expect(await session.evaluate('')).toBe(false)
     session.end()
   })
 
