@@ -42,6 +42,9 @@ export const patchNotes: PatchNote[] = [
       'A struct or define-export now appears once above its output instead of being repeated for every definition it stands for.',
       'A REPL window opens on your file so you can try things against its definitions one line at a time, without changing the file; it offers the same completions and documentation as the editor, including the names your file and your earlier lines defined.',
       'Searching for a function now happens on the documentation page itself, which looks like the rest of Scamper rather than a separate page of its own.',
+      'A comment block at the top of your file no longer runs into the documentation on the first function below it, so that function keeps its checked examples and argument checks.',
+      'A reactive canvas or container can subscribe to more than one event again, so a program can react to a timer, the mouse, and the keyboard at the same time.',
+      'Pictures, charts, and compositions in an embedded reading now appear as themselves rather than as the text of the expression that made them.',
       'A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.'
     ]
   },
