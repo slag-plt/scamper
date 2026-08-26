@@ -154,7 +154,7 @@
   /* Links. Text rather than a fill, so the dark half is light. */
   --link: light-dark(oklch(52% 0.14 250), oklch(75% 0.115 250));
 
-  /* Brand accent (docs/search headers & titles, source-caption rule). */
+  /* Brand accent (panel tabs, sidebar, splitter, source-caption rule). */
   --brand: light-dark(oklch(52% 0.085 195), oklch(72% 0.085 195));
 
   /*

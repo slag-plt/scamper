@@ -97,10 +97,10 @@ create it if it is not there.
 + `scripts/` — Standalone Node/bash scripts for parser generation, deployment, and build validation that live outside the Vite pipeline.
 + `public/` — Static assets (CSS, fonts, images) copied as-is into every build output.
 + `src/` — All application and language-implementation source code.
-  - `src/app/` — The four end-user apps, one folder each:
+  - `src/app/` — The end-user apps, one folder each:
     - `src/app/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
-    - `src/app/search/` — Vue app powering the standalone documentation search page (`search.html`).
+    - `src/app/search/` — Only `search.html`, a redirect. Search was its own app until #403 folded it into the docs page; the URL stays so older links keep working.
     - `src/app/web/` — Browser-facing UI: the IDE and its Vue components.
       - `src/app/web/embed/` — The transcript widget a reading embeds (#375): a `.scamper-transcript` block becomes its code interleaved with its output. See `EMBEDDING.md`.
   - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI, the Scamper server when logged in) used to load and save Scamper source files. `src/fs/index.ts` pairs a file system with its history as one `Backend`, so the two can never be mismatched.

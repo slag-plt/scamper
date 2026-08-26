@@ -61,7 +61,7 @@ const entries = computed<Entry[]>(() => {
   margin: 1em;
   padding: 1em;
   background-color: var(--surface-muted);
-  font-family: Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+  font-family: var(--font-mono);
   width: 17em;
   flex-shrink: 0;
   min-height: 0;
