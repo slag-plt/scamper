@@ -143,6 +143,7 @@ defineExpose({
           ref="promptRef"
           :lsp-uri="PROMPT_URI"
           :context="context"
+          run-on-enter
           @submit="onSubmit"
           @history="onHistory"
         />

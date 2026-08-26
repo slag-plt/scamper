@@ -235,6 +235,23 @@ export function compileExamples(src: string): {
   return { examples, diagnostics }
 }
 
+/**
+ * How many statements `src` holds.
+ *
+ * Counted before expansion, not after: `(struct point (x y))` is one statement
+ * to write and four to run, and a place that allows one statement has to mean
+ * the one that was written.
+ *
+ * What the REPL's prompt and a notebook's cells are checked against -- each
+ * holds one statement, and both say so in their own words (#399, #410).
+ *
+ * @returns the count, or undefined if `src` does not parse at all, which is
+ *          somebody else's error to report.
+ */
+export function countStatements(src: string): number | undefined {
+  return tokenizeAndParse(src).program?.length
+}
+
 export function mkInitialEnv(): S.Env {
   return S.Env.empty.
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

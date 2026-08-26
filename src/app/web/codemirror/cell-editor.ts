@@ -1,8 +1,11 @@
 import {
   drawSelection,
   EditorView,
+  gutter,
+  GutterMarker,
   highlightSpecialChars,
   keymap,
+  placeholder,
   type KeyBinding,
 } from '@codemirror/view'
 import { EditorState, type Extension } from '@codemirror/state'
@@ -14,6 +17,8 @@ import {
   insertNewlineAndIndent,
 } from '@codemirror/commands'
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
+import { markdown } from '@codemirror/lang-markdown'
+import type { Diagnostic } from '@codemirror/lint'
 import { currentTheme } from '../../../theme'
 import { editorFontSize } from '../editor-prefs'
 import {
@@ -74,8 +79,21 @@ export interface CellEditorHandle {
   /** Replaces the contents, leaving the caret at the end. */
   setText: (text: string) => void
   clear: () => void
-  focus: () => void
+  /**
+   * @param at where the caret goes: an end of the cell, or an offset into it.
+   *        The end of the cell by default.
+   */
+  focus: (at?: 'start' | 'end' | number) => void
   text: () => string
+  /** Underlines what is wrong in this cell, in the cell's own coordinates. */
+  setDiagnostics: (diagnostics: Diagnostic[]) => void
+}
+
+/** One edit made in a cell, in the cell's own coordinates. */
+export interface CellChange {
+  from: number
+  to: number
+  insert: string
 }
 
 export interface CellEditorConfig {
@@ -83,6 +101,24 @@ export interface CellEditorConfig {
   isReadOnly?: boolean
   /** Runs the cell. Called with its text, which the caller usually clears. */
   onSubmit?: (text: string) => void
+  /**
+   * Told what changed, so a notebook can write the same edit through to the
+   * file the cell is a view of (#410).
+   *
+   * The changes themselves rather than the new text: a cell is a stretch of a
+   * document, and replacing the stretch on every keystroke would throw away
+   * what the rest of the editor knows about it.
+   */
+  onChange?: (changes: CellChange[]) => void
+  /** Told when the caret enters or leaves, so a notebook can follow it. */
+  onFocusChange?: (focused: boolean) => void
+  /** Told where the caret is, so a notebook can put the file's there too. */
+  onCursor?: (pos: number) => void
+  /**
+   * What the cell is written in. Scamper unless it is a prose cell, which is
+   * Markdown and gets none of the Scheme editing behaviour.
+   */
+  language?: 'scamper' | 'markdown'
   /**
    * Asked for the previous (-1) or next (1) entry when the caret is on the
    * first or last line and would otherwise leave the cell.
@@ -151,8 +187,74 @@ function historyKeys(onHistory: (direction: -1 | 1) => boolean): KeyBinding[] {
   ]
 }
 
+/**
+ * The `;` shown against every line of a prose cell (#410).
+ *
+ * A prose cell is a run of comments out of the file, edited as the Markdown
+ * inside them. The markers are what the file actually holds, so they are shown
+ * -- in a gutter, where they can be read but not typed over, since they are a
+ * fact about the cell rather than part of what is being written.
+ */
+class CommentMarker extends GutterMarker {
+  toDOM(): Text {
+    return document.createTextNode(';')
+  }
+}
+
+const commentMarker = new CommentMarker()
+
+const proseGutter = gutter({
+  class: 'cm-comment-gutter',
+  lineMarker: () => commentMarker,
+  // Gives the gutter its width before a line is drawn, so the text does not
+  // shift sideways as the cell is opened.
+  initialSpacer: () => commentMarker,
+})
+
+/** What an empty prose cell says, so it does not read as a blank box. */
+const PROSE_PLACEHOLDER = 'Write some text…'
+
+/** Reports edits, focus and the caret, for a cell that is a view of a document. */
+function reporters(config: CellEditorConfig): Extension {
+  const { onChange, onFocusChange, onCursor } = config
+  if (
+    onChange === undefined &&
+    onFocusChange === undefined &&
+    onCursor === undefined
+  ) {
+    return []
+  }
+  return EditorView.updateListener.of((update) => {
+    if (onChange !== undefined && update.docChanged) {
+      const changes: CellChange[] = []
+      update.changes.iterChanges((from, to, _fromB, _toB, inserted) => {
+        changes.push({ from, to, insert: inserted.toString() })
+      })
+      onChange(changes)
+    }
+    if (onFocusChange !== undefined && update.focusChanged) {
+      onFocusChange(update.view.hasFocus)
+    }
+    // Only while the caret is in here: a selection that moves in a cell nobody
+    // is typing in is the editor's own doing, not a person's.
+    if (
+      onCursor !== undefined &&
+      update.view.hasFocus &&
+      (update.selectionSet || update.focusChanged)
+    ) {
+      onCursor(update.state.selection.main.head)
+    }
+  })
+}
+
 function cellExtensions(config: CellEditorConfig): Extension {
-  const { isReadOnly = false, onSubmit, onHistory, lspUri } = config
+  const {
+    isReadOnly = false,
+    onSubmit,
+    onHistory,
+    lspUri,
+    language = 'scamper',
+  } = config
   return [
     highlightSpecialChars(),
     history(),
@@ -176,11 +278,16 @@ function cellExtensions(config: CellEditorConfig): Extension {
     // A cell that has been run is a record of what was typed, not a box: it
     // can be selected and copied but not walked through with a caret.
     EditorView.editable.of(!isReadOnly),
-    ScamperSupport(),
+    reporters(config),
+    language === 'markdown'
+      ? [markdown(), proseGutter, placeholder(PROSE_PLACEHOLDER)]
+      : ScamperSupport(),
     // The same language services the file editor gets, minus the diagnostics:
     // the server does not lint a document that has a context, since a cell is
     // unclosed for most of the time it is being typed.
-    lspUri === undefined ? [] : scamperLspExtensions(lspUri),
+    lspUri === undefined || language === 'markdown'
+      ? []
+      : scamperLspExtensions(lspUri),
   ]
 }
 

@@ -40,6 +40,9 @@ import {
 } from '../composables/use-live-evaluation'
 import { useExampleChecks } from '../composables/use-example-checks'
 import { useRepl } from '../composables/use-repl'
+import { useNotebook } from '../composables/use-notebook'
+import NotebookView from './NotebookView.vue'
+import { fileView } from '../view-prefs'
 import { checkExamples, liveEvaluation } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
@@ -186,6 +189,31 @@ provide(FormatModeKey, formatMode)
 const editor = provideEditor()
 const resultsRef = shallowRef<ResultsPaneType | null>(null)
 
+// ---------- the notebook view (#410) ----------
+
+// A second view of the file the editor holds, not a second copy of it: its
+// cells are stretches of that document. See composables/use-notebook.ts.
+const notebook = useNotebook(editor)
+
+/** True when the file is being shown as a notebook rather than as source. */
+const isNotebook = computed(
+  () =>
+    fileView.value === 'notebook' &&
+    currentFile.value !== null &&
+    // A notebook is a program's forms, so only a program has one. Anything
+    // else -- a text file, a CSV, an image -- is shown as itself (#385).
+    fileKindOf(currentFile.value) === 'scamper',
+)
+
+/**
+ * Where a run's output goes: the output pane, or the notebook, which shows it
+ * under the cell that produced it instead.
+ */
+const runTarget = computed<ResultsPaneType | null>(() =>
+  isNotebook.value ? notebook : resultsRef.value,
+)
+
+
 // ---------- example checks (#374) ----------
 
 const examples = useExampleChecks()
@@ -197,7 +225,7 @@ const examples = useExampleChecks()
 // at all is whether a session is open.
 const repl = useRepl()
 
-const session = provideScamperSession(resultsRef, {
+const session = provideScamperSession(runTarget, {
   editor,
   onRunScheduled: () => {
     isDirty.value = false
@@ -265,7 +293,10 @@ const live = useLiveEvaluation({
     !isCollectingTrace.value &&
     isEditorLoaded(),
   reportTimeout: (limitMs) => {
-    resultsRef.value?.display?.report(
+    // Wherever this run's output was going: in the notebook there is no output
+    // pane to say it in, and a program stopped with nothing said is a program
+    // that looks like it did nothing.
+    runTarget.value?.display?.report(
       new ScamperError(
         'Runtime',
         `This program was still running after ${(limitMs / 1000).toString()} seconds, so live evaluation stopped it. ` +
@@ -274,6 +305,28 @@ const live = useLiveEvaluation({
     )
   },
 })
+
+/**
+ * The cells are of a particular file: opening another, or turning the view on,
+ * is the moment to take the split. After that the notebook keeps up with the
+ * document by itself, since it re-splits at the start of every run.
+ *
+ * Turning the view on also runs the file, for the same reason opening one does
+ * (#378): a notebook of empty cells says nothing about the program, and the
+ * output it wants is under the cells rather than in the pane the last run went
+ * to. `runNow` refuses by itself where a run cannot happen -- with live
+ * evaluation off it does nothing, and the cells fill when Run is pressed.
+ */
+watch(
+  [isNotebook, currentFile],
+  ([showing], [wasShowing]) => {
+    if (!showing || !isEditorLoaded()) return
+    notebook.refresh()
+    // Only on the way in. A file switch runs the new file by itself.
+    if (wasShowing !== true) void live.runNow()
+  },
+  { immediate: true },
+)
 
 // Turning it on should show something rather than waiting for the next
 // keystroke, so the file runs at once; turning it off drops a run the last
@@ -311,17 +364,21 @@ const liveStatus = computed<LiveStatus>(() => {
 })
 
 /** What each panel is called, wherever it needs a name. */
-const panelLabels: Record<PanelId, string> = {
-  editor: 'Source',
+const panelLabels = computed<Record<PanelId, string>>(() => ({
+  editor: isNotebook.value ? 'Notebook' : 'Source',
   output: 'Output',
   trace: 'Step',
   repl: 'REPL',
-}
+}))
 
-/** Neither the trace nor the REPL exists until it has been asked for. */
+/**
+ * Neither the trace nor the REPL exists until it has been asked for, and the
+ * output pane does not exist in the notebook: there the output is under the
+ * cell that produced it, and a pane beside it would be the same run twice.
+ */
 const presentPanels = computed<PanelId[]>(() => [
   'editor',
-  'output',
+  ...(isNotebook.value ? [] : (['output'] as const)),
   ...(trace.value === null ? [] : (['trace'] as const)),
   ...(repl.session.value === null ? [] : (['repl'] as const)),
 ])
@@ -343,7 +400,7 @@ const panelPlacement = computed(() =>
   isCompact.value
     ? []
     : presentPanels.value.map((id) => ({
-        label: panelLabels[id],
+        label: panelLabels.value[id],
         floating: panels.effective.value.placement[id].kind === 'floating',
         toggle: () => {
           if (panels.effective.value.placement[id].kind === 'floating') {
@@ -382,7 +439,7 @@ watch(isCompact, (compact) => {
  * listing it has simply vanished.
  */
 const minimizedWindows = computed(() =>
-  panels.minimized.value.map((id) => ({ id, label: panelLabels[id] })),
+  panels.minimized.value.map((id) => ({ id, label: panelLabels.value[id] })),
 )
 
 /** Brings a minimized window back, without disturbing the others. */
@@ -770,6 +827,11 @@ function makeDirty() {
   // The REPL is not re-seeded by an edit -- it is scratch work, not a view of
   // the file -- so all it can do is say that what it started from has moved on.
   repl.noteEdit()
+  // The notebook *is* a view of the file, so an edit is something it has to
+  // mark up. Its cells are re-taken at the start of the run this edit
+  // schedules, not here: cells coming and going under the caret while someone
+  // is typing is nobody's idea of an editor.
+  notebook.noteEdit()
 }
 
 function handleCursorChange(status: CursorStatus) {
@@ -1791,6 +1853,7 @@ onUnmounted(() => {
         :can-sign-in="canSignIn"
         :signed-in-as="signedInAs"
         :is-sidebar-visible="isSidebarVisible"
+        :is-notebook="isNotebook"
         :recent-files="recentFiles"
         :create="handleCreate"
         :upload="handlePickUpload"
@@ -1819,6 +1882,7 @@ onUnmounted(() => {
         :is-stepping="isCollectingTrace"
         :live-status="liveStatus"
         :can-run="isRunnableFile"
+        :is-notebook="isNotebook"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
         @open-repl="handleOpenRepl"
@@ -1834,14 +1898,20 @@ onUnmounted(() => {
           :closeable="['trace', 'repl']"
           @close="handlePanelClose"
         >
-          <PanelFrame id="editor" title="Source">
-            <CodeMirrorEditor
-              :binary-file="binaryFile"
-              @dirty="makeDirty"
-              @cursor-change="handleCursorChange"
-            />
+          <PanelFrame id="editor" :title="panelLabels.editor">
+            <!-- The editor is not unmounted for the notebook: it holds the
+                 document the notebook is a view of, and everything else in the
+                 IDE reaches the open file through it. -->
+            <div v-show="!isNotebook" class="view-holder">
+              <CodeMirrorEditor
+                :binary-file="binaryFile"
+                @dirty="makeDirty"
+                @cursor-change="handleCursorChange"
+              />
+            </div>
+            <NotebookView v-if="isNotebook" :notebook="notebook" />
           </PanelFrame>
-          <PanelFrame id="output" title="Output">
+          <PanelFrame v-if="!isNotebook" id="output" title="Output">
             <ResultsPane ref="resultsRef" :is-dirty="isDirty" />
           </PanelFrame>
           <PanelFrame
@@ -1996,6 +2066,27 @@ onUnmounted(() => {
 
 /* The dock takes the space the taskbar strip does not. */
 .content-area > .dock {
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * Holds the editor while the notebook is on screen instead of it.
+ *
+ * `v-show` rather than `v-if`, so the editor keeps the document, its undo
+ * history and its place in the file while someone works in the notebook -- and
+ * so the adapter the rest of the IDE talks through never goes away. The
+ * wrapper is what `v-show` needs: the editor component has more than one root
+ * node.
+ */
+.view-holder {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.view-holder > :deep(.codemirror-editor) {
   flex: 1;
   min-height: 0;
 }

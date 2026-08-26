@@ -4,6 +4,7 @@ import { useScamperSession } from '../composables/use-scamper-session'
 import type { MenuItem } from '../menu'
 import type { LiveStatus } from '../composables/use-live-evaluation'
 import { toggleLiveEvaluation } from '../run-prefs'
+import { toggleFileView } from '../view-prefs'
 import { appShortcut } from '../edit-commands'
 import ThemeToggle from '../../shared/ThemeToggle.vue'
 import PopupMenu from './PopupMenu.vue'
@@ -23,6 +24,8 @@ const props = withDefaults(
      * reaches the editor at all.
      */
     canRun?: boolean
+    /** Whether the file is being shown as a notebook rather than as source. */
+    isNotebook?: boolean
   }>(),
   // `canRun` defaults true rather than being left absent: Vue casts a missing
   // boolean prop to false, which would disable Run for every caller that does
@@ -222,12 +225,36 @@ function searchOpenWindow(searchTerm: string) {
         :disabled="!canRun"
         @click="emit('openRepl')"
       ></button>
+      <!-- A query is shown inline in the source, which the notebook is not
+           showing, so there is nowhere to put one there (#410). -->
       <button
         type="button"
         class="icon-button fa-solid fa-clipboard-question"
-        title="Show the value of the expression under the cursor"
+        :title="
+          isNotebook
+            ? 'Querying a value needs the source view'
+            : 'Show the value of the expression under the cursor'
+        "
         aria-label="Query value"
+        :disabled="isNotebook"
         @click="session.query()"
+      ></button>
+      <!-- The two ways of looking at the file (#410): as source with its
+           output beside it, or as a notebook with the output under each form.
+           Held down while the notebook is the one on screen. -->
+      <button
+        type="button"
+        class="icon-button fa-solid fa-book-open"
+        :class="{ open: isNotebook }"
+        :title="
+          isNotebook
+            ? 'Show this file as source, with its output beside it'
+            : 'Show this file as a notebook'
+        "
+        aria-label="Notebook view"
+        :aria-pressed="isNotebook"
+        :disabled="!canRun"
+        @click="toggleFileView()"
       ></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <input

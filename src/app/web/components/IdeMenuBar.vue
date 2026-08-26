@@ -12,6 +12,7 @@ import {
   toggleShowSourceWithOutput,
 } from '../output-prefs'
 import { showHiddenFiles, toggleShowHiddenFiles } from '../file-prefs'
+import { fileView, toggleFileView } from '../view-prefs'
 import {
   checkExamples,
   liveEvaluation,
@@ -54,6 +55,8 @@ const props = defineProps<{
   signedInAs?: string | null
   /** Required, unlike the callbacks: the View menu ticks the item from it. */
   isSidebarVisible: boolean
+  /** Whether the file is being shown as a notebook rather than as source. */
+  isNotebook?: boolean
   /** Files to offer under "Recent", newest first, already filtered. */
   recentFiles?: string[]
   create?: () => void
@@ -288,12 +291,30 @@ const runMenu = computed<MenuItem[]>(() => [
     run: () => props.openRepl?.(),
   },
   { separator: true },
-  { label: 'Query Value at Cursor', run: () => session.query() },
+  // A query is shown inline in the source, which the notebook is not showing,
+  // so there is nowhere to put one there (#410).
+  {
+    label: 'Query Value at Cursor',
+    disabled: props.isNotebook === true,
+    run: () => session.query(),
+  },
 ])
 
 const viewMenu = computed<MenuItem[]>(() => {
   const s = editorStatus.value
   return [
+    // Which of the two views of the file is on screen (#410). First in the
+    // menu because it is the largest thing in it: everything below is a detail
+    // of whichever view is showing.
+    {
+      label: 'Notebook',
+      checked: fileView.value === 'notebook',
+      // A notebook is a program's forms; a file that is not a program has
+      // none (#385).
+      disabled: !s.loaded || !s.isScamper,
+      run: () => { toggleFileView() },
+    },
+    { separator: true },
     {
       label: 'File Drawer',
       checked: props.isSidebarVisible,
