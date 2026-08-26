@@ -16,7 +16,6 @@ import {
   type Cell,
 } from '../notebook-cells'
 import { analyzeSource } from '../codemirror/lsp/diagnostics'
-import { countStatements } from '../../../scheme'
 import type { CellChange } from '../codemirror/cell-editor'
 
 /**
@@ -28,11 +27,13 @@ import type { CellChange } from '../codemirror/cell-editor'
  * the `@example` checks all keep working without knowing this exists, and the
  * file's own spacing survives being looked at as a notebook.
  *
- * The split is re-taken when the document changes from outside and at the
- * start of every run -- `reset` is what the session calls before running, so a
- * run is always against cells that match the file. It is deliberately *not*
- * re-taken on every keystroke: cells appearing and disappearing under the caret
- * is not something anyone wants while they are typing.
+ * The split is re-taken once the typing stops, when the document changes from
+ * outside, and at the start of every run -- `reset` is what the session calls
+ * before running, so a run is always against cells that match the file. Not
+ * on every keystroke: cells coming and going between one letter and the next
+ * is nobody's idea of an editor. When they do come and go the caret goes with
+ * them, which is what makes a cell written past into two statements simply
+ * become two cells rather than a mistake to be told about.
  */
 
 /**
@@ -71,47 +72,40 @@ export interface Notebook {
   removeCell: (index: number) => void
   /** Puts the file's caret where the caret in a cell is. */
   noteCursor: (index: number, pos: number) => void
+  /** Told when a cell gains or loses the caret. */
+  noteFocus: (index: number, focused: boolean) => void
+  /**
+   * The cell the caret should be put back into, and where in it, after a
+   * re-split moved the text out from under it. Null once it has been.
+   */
+  readonly pendingCaret: Readonly<Ref<{ id: number; pos: number } | null>>
+  /** Says the caret has been put back, so it is not put back twice. */
+  caretRestored: () => void
   /** Notes that the document changed, so the squiggles can catch up. */
   noteEdit: () => void
   /** Drops the timers this holds. */
   cancel: () => void
 }
 
-/** How long the typing must stop before the cells are marked up again. */
-const LINT_IDLE_MS = 300
-
-/**
- * What is wrong with how much a cell holds, if anything.
- *
- * A code cell is one statement, the same rule the REPL's prompt follows: it is
- * what makes a cell something whose output can be shown under it, and what
- * keeps the notebook and the file the same list of forms. A cell that holds
- * two is on its way to being two cells, and one that holds none has been
- * emptied out or written past.
- *
- * @returns the message to show, or undefined if the cell is as it should be.
- */
-function countProblem(cell: NotebookCell): string | undefined {
-  // Prose is not statements, and a cell nobody has written in yet is not a
-  // mistake -- it is a cell somebody just asked for.
-  if (cell.kind !== 'code' || cell.text.trim().length === 0) return undefined
-  const statements = countStatements(cell.text)
-  // It does not parse at all, which the analysis of the file reports in its
-  // own terms and with a range to point at.
-  if (statements === undefined || statements === 1) return undefined
-  return statements === 0
-    ? 'A cell holds one statement, and there is none here: only comments.'
-    : `A cell holds one statement, and this holds ${statements.toString()}.`
-}
+/** How long the typing must stop before the cells are re-split and marked up. */
+const SETTLE_IDLE_MS = 300
 
 export function useNotebook(editor: EditorAccessor): Notebook {
   const cells = shallowRef<NotebookCell[]>([])
   const version = shallowRef(0)
   const diagnostics = shallowRef<Diagnostic[][]>([])
+  const pendingCaret = shallowRef<{ id: number; pos: number } | null>(null)
   let nextId = 0
-  let lintTimer: ReturnType<typeof setTimeout> | null = null
+  let settleTimer: ReturnType<typeof setTimeout> | null = null
   /** Bumped by each analysis, so a slower one cannot overwrite a newer one. */
   let lintGeneration = 0
+  /**
+   * Where the caret is, as an offset into the document rather than into a cell.
+   *
+   * Null when it is somewhere other than a cell. Offsets survive a re-split;
+   * cells and positions within them do not.
+   */
+  let caret: { id: number; offset: number } | null = null
 
   // Batched the way the output pane batches its blocks: a program printing in
   // a loop should cost one redraw per frame, not one per value.
@@ -157,16 +151,45 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     }
   }
 
-  /** Re-takes the split, keeping the identity of cells that are still there. */
+  /** Re-takes the split, and marks the cells up once the typing stops. */
   function refresh(): void {
+    resplit()
+    scheduleSettle()
+  }
+
+  /**
+   * Re-takes the split, keeping the identity of cells that are still there and
+   * bringing the caret with it.
+   *
+   * The caret is followed by document offset rather than by cell: a cell
+   * written past into two statements becomes two cells, and the caret belongs
+   * in whichever of them holds the text it was in -- usually the second, since
+   * that is the statement being written.
+   */
+  function resplit(): void {
     const src = doc()
     if (src === null) return
     const fresh = splitIntoCells(src)
     // A file mid-edit usually does not parse. Keeping the split we have is the
     // whole reason the offsets are maintained by hand between splits.
     if (fresh === null) return
+    const was = caret
     cells.value = reconcile(cells.value, fresh)
-    scheduleLint()
+    if (was === null) return
+    const cell = cells.value.find(
+      (c) => was.offset >= c.from && was.offset <= c.to,
+    )
+    // Nowhere to put it: the text it was in is gone. Leaving the caret where
+    // the browser leaves it beats moving it somewhere arbitrary.
+    if (cell === undefined) return
+    caret = { id: cell.id, offset: was.offset }
+    // Prose is Markdown in the cell and comment lines in the file, so an
+    // offset into one is not an offset into the other: the best that can be
+    // said is which cell it is in.
+    pendingCaret.value = {
+      id: cell.id,
+      pos: cell.kind === 'code' ? was.offset - cell.from : 0,
+    }
   }
 
   /**
@@ -250,7 +273,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
         i === index ? { ...c, isDraft: isEmpty ? true : undefined } : c,
       )
     }
-    scheduleLint()
+    scheduleSettle()
   }
 
   /** Replaces a cell outright, which is how a prose cell is written back. */
@@ -342,23 +365,54 @@ export function useNotebook(editor: EditorAccessor): Notebook {
   function noteCursor(index: number, pos: number): void {
     const cell = cellAt(index)
     if (cell === undefined) return
+    const offset = cell.kind === 'code' ? cell.from + pos : cell.from
+    // Kept here as well as pushed to the editor, because a re-split has to put
+    // it back afterwards, and by then the cells it was measured against are
+    // gone (see `resplit`).
+    caret = { id: cell.id, offset }
     try {
-      editor().setCursor(cell.kind === 'code' ? cell.from + pos : cell.from)
+      editor().setCursor(offset)
     } catch {
       // No editor to move; there is nothing to keep in step with.
     }
   }
 
-  function noteEdit(): void {
-    scheduleLint()
+  /**
+   * Told when a cell gains or loses the caret.
+   *
+   * Losing it is what says the notebook is not where the person is any more,
+   * so a re-split should leave the caret alone rather than pulling it back
+   * into a cell. Only the cell that holds it can give it up: the two cells
+   * either side of a click report themselves in whichever order the editor
+   * gets round to.
+   */
+  function noteFocus(index: number, focused: boolean): void {
+    if (focused) return
+    const cell = cellAt(index)
+    if (cell !== undefined && caret?.id === cell.id) caret = null
   }
 
-  function scheduleLint(): void {
-    if (lintTimer !== null) clearTimeout(lintTimer)
-    lintTimer = setTimeout(() => {
-      lintTimer = null
+  function noteEdit(): void {
+    scheduleSettle()
+  }
+
+  /**
+   * Re-takes the split and marks the cells up, once the typing has stopped.
+   *
+   * Both on one timer, and on a timer rather than at the start of each run:
+   * with live evaluation turned off there is no run to hang it on, and a cell
+   * written past into two statements would stay that way until Run was
+   * pressed. Waiting for a pause is what keeps cells from appearing and
+   * disappearing between keystrokes -- and the caret comes with them when they
+   * do (see `resplit`).
+   */
+  function scheduleSettle(): void {
+    if (settleTimer !== null) clearTimeout(settleTimer)
+    settleTimer = setTimeout(() => {
+      settleTimer = null
+      resplit()
       void lint()
-    }, LINT_IDLE_MS)
+    }, SETTLE_IDLE_MS)
   }
 
   /**
@@ -392,24 +446,12 @@ export function useNotebook(editor: EditorAccessor): Notebook {
         message: d.message,
       })
     }
-    cells.value.forEach((cell, index) => {
-      const problem = countProblem(cell)
-      if (problem !== undefined) {
-        perCell[index].push({
-          from: 0,
-          to: cell.to - cell.from,
-          severity: 'error',
-          source: 'scamper',
-          message: problem,
-        })
-      }
-    })
     diagnostics.value = perCell
   }
 
   function cancel(): void {
-    if (lintTimer !== null) clearTimeout(lintTimer)
-    lintTimer = null
+    if (settleTimer !== null) clearTimeout(settleTimer)
+    settleTimer = null
     // Anything still in flight is about a file that is going away.
     lintGeneration++
   }
@@ -443,6 +485,11 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     insertCell,
     removeCell,
     noteCursor,
+    noteFocus,
+    pendingCaret,
+    caretRestored: () => {
+      pendingCaret.value = null
+    },
     noteEdit,
     cancel,
   }

@@ -216,38 +216,44 @@ describe('what is wrong in a cell', () => {
     expect(first.to).toBeLessThanOrEqual('(+ x nope)'.length)
   })
 
-  // A cell is one statement, the same rule the REPL's prompt follows.
-  test('a cell holding two statements says so', async () => {
+  // A cell written past into two statements becomes two cells at the next
+  // re-split, so there is nothing to tell anyone off about.
+  test('a cell holding two statements is split, not scolded', async () => {
     const file = documentHolding('(define x 5)\n\n(+ x 1)')
     const notebook = useNotebook(file.editor)
     notebook.refresh()
     notebook.applyChanges(0, [{ from: 12, to: 12, insert: '\n(define y 6)' }])
     await settled()
-    expect(notebook.diagnostics.value[0].map((d) => d.message)).toContain(
-      'A cell holds one statement, and this holds 2.',
-    )
+    expect(notebook.diagnostics.value.flat()).toEqual([])
+    expect(notebook.cells.value.map((c) => c.text)).toEqual([
+      '(define x 5)',
+      '(define y 6)',
+      '(+ x 1)',
+    ])
   })
 
-  test('a cell left holding no statement says so', async () => {
+  // The other way a cell stops being one statement, and the same answer: the
+  // comment left behind is prose, so that is what it becomes.
+  test('a cell whose form is deleted becomes the comment it is left as', async () => {
     const file = documentHolding(';;; Doc.\n(define x 5)')
     const notebook = useNotebook(file.editor)
     notebook.refresh()
-    // The form deleted out from under its own docstring.
+    expect(notebook.cells.value.map((c) => c.kind)).toEqual(['code'])
     notebook.applyChanges(0, [{ from: 9, to: 21, insert: '' }])
     await settled()
-    expect(notebook.diagnostics.value[0].map((d) => d.message)).toContain(
-      'A cell holds one statement, and there is none here: only comments.',
-    )
+    expect(notebook.diagnostics.value.flat()).toEqual([])
+    expect(notebook.cells.value.map((c) => c.kind)).toEqual(['prose'])
   })
 
-  test('a cell holding one statement says nothing', async () => {
-    // Including a form that expands into several: a struct is one statement to
-    // write and four to run.
+  test('a form that expands into several is still one cell', async () => {
+    // A struct is one statement to write and four to run, so a split counting
+    // after expansion would break it into four cells.
     const file = documentHolding('(struct point (x y))\n\n(point-x (point 1 2))')
     const notebook = useNotebook(file.editor)
     notebook.refresh()
     await settled()
     expect(notebook.diagnostics.value.flat()).toEqual([])
+    expect(notebook.cells.value).toHaveLength(2)
   })
 
   test('a cell nobody has written in yet is not a mistake', async () => {
@@ -257,6 +263,36 @@ describe('what is wrong in a cell', () => {
     notebook.insertCell(0, 'code')
     await settled()
     expect(notebook.diagnostics.value.flat()).toEqual([])
+  })
+
+  // The caret is what makes the split something that happens *around* someone
+  // rather than *to* them: it belongs in whichever cell now holds the text it
+  // was in, which for someone writing a second statement is the new one.
+  test('the caret follows its statement into the cell it becomes', async () => {
+    const file = documentHolding('(define x 5)\n\n(+ x 1)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    notebook.applyChanges(0, [{ from: 12, to: 12, insert: '\n(define y 6)' }])
+    // The caret at the end of what was just typed, in the cell holding both.
+    notebook.noteCursor(0, 25)
+    await settled()
+    const second = notebook.cells.value[1]
+    expect(second.text).toBe('(define y 6)')
+    expect(notebook.pendingCaret.value).toEqual({
+      id: second.id,
+      pos: second.text.length,
+    })
+  })
+
+  test('the caret is left alone when it is not in the notebook', async () => {
+    const file = documentHolding('(define x 5)\n\n(+ x 1)')
+    const notebook = useNotebook(file.editor)
+    notebook.refresh()
+    notebook.applyChanges(0, [{ from: 12, to: 12, insert: '\n(define y 6)' }])
+    notebook.noteCursor(0, 25)
+    notebook.noteFocus(0, false)
+    await settled()
+    expect(notebook.pendingCaret.value).toBeNull()
   })
 
   test('a name defined in another cell is not a problem', async () => {

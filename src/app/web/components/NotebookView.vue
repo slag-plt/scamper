@@ -3,6 +3,7 @@ import {
   computed,
   nextTick,
   ref,
+  watch,
   type ComponentPublicInstance,
 } from 'vue'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
@@ -23,7 +24,7 @@ const props = defineProps<{ notebook: Notebook }>()
 
 /** What each cell exposes: enough to put the caret in it. */
 interface CellHandle {
-  focus: (at?: 'start' | 'end') => void
+  focus: (at?: 'start' | 'end' | number) => void
 }
 
 /**
@@ -79,12 +80,31 @@ function onReplace(index: number, text: string) {
 }
 
 function onFocusChange(index: number, isFocused: boolean) {
+  props.notebook.noteFocus(index, isFocused)
   if (isFocused) {
     focused.value = index
   } else if (focused.value === index) {
     focused.value = -1
   }
 }
+
+/**
+ * Puts the caret back where it was after a re-split moved the text out from
+ * under it -- into whichever cell the statement it was in has become.
+ *
+ * After the render that re-splits, so the cell it names exists and has been
+ * given its new text.
+ */
+watch(
+  () => props.notebook.pendingCaret.value,
+  (target) => {
+    if (target === null) return
+    void nextTick(() => {
+      cellRefs.get(target.id)?.focus(target.pos)
+      props.notebook.caretRestored()
+    })
+  },
+)
 
 /** Moves the caret to the next cell up or down, as it moves between lines. */
 function onMove(index: number, direction: -1 | 1) {

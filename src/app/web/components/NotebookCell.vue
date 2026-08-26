@@ -100,12 +100,17 @@ function placeholder(): HTMLElement {
 }
 
 // The document changed underneath: a file was opened, an edit was undone, the
-// file was reformatted. Never while the caret is here, since then the text in
-// the cell is what the person is in the middle of typing.
+// file was reformatted, or a re-split moved this cell's text somewhere else.
+//
+// Applied even while the caret is here. Skipping it left a cell written past
+// into two statements showing both of them for good, beside the new cell
+// holding the second -- the same statement twice. The caret is put back
+// afterwards, by the notebook, which knows where in the file it was (see
+// use-notebook's `resplit`).
 watch(
   () => props.cell.text,
   (text) => {
-    if (props.cell.kind !== 'code' || isFocused.value) return
+    if (props.cell.kind !== 'code') return
     if (editorRef.value !== null && editorRef.value.text() !== text) {
       editorRef.value.setText(text)
     }
@@ -165,7 +170,7 @@ function onHistory(direction: -1 | 1, handled: { value: boolean }) {
 }
 
 defineExpose({
-  focus: (at?: 'start' | 'end') => {
+  focus: (at?: 'start' | 'end' | number) => {
     if (props.cell.kind === 'prose' && !isEditing.value) {
       editProse()
       return

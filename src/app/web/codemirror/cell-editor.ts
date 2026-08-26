@@ -79,8 +79,11 @@ export interface CellEditorHandle {
   /** Replaces the contents, leaving the caret at the end. */
   setText: (text: string) => void
   clear: () => void
-  /** @param at which end the caret goes to; the end of the cell by default. */
-  focus: (at?: 'start' | 'end') => void
+  /**
+   * @param at where the caret goes: an end of the cell, or an offset into it.
+   *        The end of the cell by default.
+   */
+  focus: (at?: 'start' | 'end' | number) => void
   text: () => string
   /** Underlines what is wrong in this cell, in the cell's own coordinates. */
   setDiagnostics: (diagnostics: Diagnostic[]) => void

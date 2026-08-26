@@ -165,11 +165,22 @@ defineExpose<CellEditorHandle>({
   clear: () => {
     setText('')
   },
-  focus: (at?: 'start' | 'end') => {
+  focus: (at?: 'start' | 'end' | number) => {
     if (view === null) return
     if (at !== undefined) {
+      const end = view.state.doc.length
       view.dispatch({
-        selection: { anchor: at === 'start' ? 0 : view.state.doc.length },
+        selection: {
+          anchor:
+            at === 'start'
+              ? 0
+              : at === 'end'
+                ? end
+                : // An offset, from a notebook putting the caret back where a
+                  // re-split moved it from. Clamped: the cell it lands in may
+                  // be shorter than the one it left.
+                  Math.max(0, Math.min(at, end)),
+        },
       })
     }
     view.focus()
