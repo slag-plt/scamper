@@ -91,6 +91,14 @@ resolves a callback's run after the fact rather than capturing it, and on a
 reading page there is no foreground program to fall back to. Everything else in
 the libraries captures its run at registration.
 
+**A second (#415).** On a busy machine an interactive widget can render
+everything it is going to render and still never be signalled complete. Since
+widgets run one after another, the rest of the page then never starts — the
+reader is left with blank space below. Measured on two saturated cores: a widget
+rendered at 144ms and had not completed 90 seconds later, while the same program
+on a private scheduler finished in 69ms. Idle, the same page runs in well under
+a second.
+
 ## Notes for whoever maintains this
 
 + The entry point is `src/app/web/embed/embed-entry.ts`; the scan and the run

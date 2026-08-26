@@ -55,9 +55,10 @@ preamble, `data-continues` chains, a plain `html` button, `data-height`. A
 reactive *file chooser* is deliberately absent: its callback does not fire inside
 a widget, the one known gap (#397).
 
-One caveat worth knowing before demonstrating this page: on a busy machine the
-animated ball can stall the widgets below it, sometimes for good (#415). Idle, it
-runs start to finish in well under a second.
+One caveat worth knowing before demonstrating this page: on a busy machine an
+interactive widget can render everything it is going to render and still never
+finish, and because the widgets run one after another the ones below it then
+never start (#415). Idle, the whole page runs in well under a second.
 
 ## The tests
 
