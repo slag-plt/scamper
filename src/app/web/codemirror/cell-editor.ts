@@ -23,6 +23,7 @@ import {
   fontSizeExtension,
 } from './codemirror'
 import { ScamperLanguage, ScamperSupport } from './extensions/language'
+import { scamperLspExtensions } from './lsp'
 
 /**
  * A one-form editor: the box a REPL entry is typed into (#399), and the box a
@@ -30,11 +31,12 @@ import { ScamperLanguage, ScamperSupport } from './extensions/language'
  *
  * Far smaller than {@link mkFreshEditorState}. There are no line numbers, no
  * fold gutter and no lint gutter, because a cell is a few lines rather than a
- * file, and none of the machinery that is about a *program* -- the LSP, inline
- * queries, `@example` checks -- because a cell is not one. What it keeps is
- * what makes Scheme bearable to type: highlighting, bracket matching and
- * closing, and DrRacket indentation, all from the same language support the
- * main editor uses.
+ * file, and none of the machinery that is about the file as an artifact --
+ * inline queries, `@example` checks, the formatter. What it keeps is what makes
+ * Scheme bearable to type: highlighting, bracket matching and closing, and
+ * DrRacket indentation, all from the same language support the main editor
+ * uses, plus -- for a cell given a `lspUri` -- hover docs, completion and
+ * signature help from the same language server.
  */
 
 /**
@@ -88,6 +90,17 @@ export interface CellEditorConfig {
    *          CodeMirror's own cursor motion.
    */
   onHistory?: (direction: -1 | 1) => boolean
+  /**
+   * The document URI this cell holds, which turns the language server on for
+   * it: hover docs, completion and signature help, against the context the
+   * cell is set in (see `setLspContext`).
+   *
+   * One per live cell -- two editors on one URI are two editors overwriting one
+   * document. Omitted for a cell nobody is typing in, which is every entry
+   * already run: a record does not need completion, and each one would be
+   * another document for the server to hold.
+   */
+  lspUri?: string
 }
 
 /**
@@ -139,7 +152,7 @@ function historyKeys(onHistory: (direction: -1 | 1) => boolean): KeyBinding[] {
 }
 
 function cellExtensions(config: CellEditorConfig): Extension {
-  const { isReadOnly = false, onSubmit, onHistory } = config
+  const { isReadOnly = false, onSubmit, onHistory, lspUri } = config
   return [
     highlightSpecialChars(),
     history(),
@@ -164,6 +177,10 @@ function cellExtensions(config: CellEditorConfig): Extension {
     // can be selected and copied but not walked through with a caret.
     EditorView.editable.of(!isReadOnly),
     ScamperSupport(),
+    // The same language services the file editor gets, minus the diagnostics:
+    // the server does not lint a document that has a context, since a cell is
+    // unclosed for most of the time it is being typed.
+    lspUri === undefined ? [] : scamperLspExtensions(lspUri),
   ]
 }
 

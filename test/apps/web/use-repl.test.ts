@@ -165,6 +165,30 @@ describe('the REPL transcript', () => {
     }
   })
 
+  test('the context is the file followed by the entries so far', async () => {
+    // What the language server analyses the prompt inside, so a name from the
+    // file or from an earlier entry is in scope while it is being typed.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define sq (lambda (n) (* n n)))')
+    try {
+      expect(repl.context.value).toBe('(define sq (lambda (n) (* n n)))')
+      await repl.submit('(define x 41)')
+      expect(repl.context.value).toBe(
+        '(define sq (lambda (n) (* n n)))\n(define x 41)',
+      )
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('closing clears the context with everything else', async () => {
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    await repl.submit('(define y 2)')
+    repl.close()
+    expect(repl.context.value).toBe('')
+  })
+
   test('closing ends the session', async () => {
     const repl = useRepl()
     await repl.open(null, '')

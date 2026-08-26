@@ -126,6 +126,25 @@ describe('IDE REPL window', () => {
     }
   })
 
+  test('it can be closed and opened again', async () => {
+    // The prompt is a document the language server holds, and the workspace
+    // refuses two views on one URI -- so reopening has to have closed the
+    // first one properly.
+    const wrapper = await mountIde()
+    try {
+      await openRepl()
+      getByRole(document.body, 'button', { name: 'Close REPL' }).click()
+      await flushPromises()
+      expect(replWindow()).toBeNull()
+
+      await openRepl()
+      expect(replWindow()).not.toBeNull()
+      expect(replWindow()?.textContent).toContain('a.scm')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('it opens as a tab where a window has nowhere to float', async () => {
     vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(500)
     const wrapper = await mountIde()

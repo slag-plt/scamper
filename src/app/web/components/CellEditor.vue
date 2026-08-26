@@ -5,6 +5,7 @@ import {
   mkCellEditorState,
   type CellEditorHandle,
 } from '../codemirror/cell-editor'
+import { setLspContext } from '../codemirror/lsp'
 import {
   editorThemeCompartment,
   editorThemeExtension,
@@ -27,6 +28,17 @@ const props = defineProps<{
   /** The cell's initial text. A live cell is cleared through `clear`. */
   source?: string
   isReadOnly?: boolean
+  /**
+   * The document URI this cell holds, which turns the language server on for
+   * it. One per live cell; omitted for a cell that is only a record.
+   */
+  lspUri?: string
+  /**
+   * The source this cell continues, for the language server to analyse it
+   * inside: a name defined out there is in scope in here. Ignored without
+   * `lspUri`.
+   */
+  context?: string
 }>()
 
 const emit = defineEmits<{
@@ -40,9 +52,15 @@ let view: EditorView | null = null
 
 onMounted(() => {
   if (containerRef.value === null) return
+  // Before the editor exists, so the first analysis -- which the client asks
+  // for as it opens the document -- already knows what this cell continues.
+  if (props.lspUri !== undefined) {
+    setLspContext(props.lspUri, props.context ?? '')
+  }
   view = new EditorView({
     state: mkCellEditorState(props.source ?? '', {
       isReadOnly: props.isReadOnly,
+      lspUri: props.lspUri,
       onSubmit: (text) => {
         emit('submit', text)
       },
@@ -62,6 +80,14 @@ onUnmounted(() => {
   view?.destroy()
   view = null
 })
+
+// Each entry that runs adds to what the next one continues.
+watch(
+  () => props.context,
+  (context) => {
+    if (props.lspUri !== undefined) setLspContext(props.lspUri, context ?? '')
+  },
+)
 
 // As the main editor does, so a cell is not left in last session's colours or
 // last minute's font size.

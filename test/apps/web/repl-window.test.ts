@@ -142,6 +142,29 @@ describe('the REPL window', () => {
     }
   })
 
+  test('only the prompt is a document the language server holds', () => {
+    // One document per live cell: the entries above are a record, and one each
+    // would be a document per line ever typed.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries: [entry(0, '(+ 1 2)', [3])],
+        banner: '',
+        isBusy: false,
+        context: '(define x 1)',
+      },
+    })
+    try {
+      // The prompt is the last editor, and the only one with completion wired
+      // to it; a read-only entry has no such plugin.
+      const editors = document.querySelectorAll('.cm-editor')
+      expect(editors.length).toBe(2)
+      expect(promptView().state.doc.toString()).toBe('')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('Restart asks for a fresh session', () => {
     const wrapper = mount(ReplWindow, {
       attachTo: document.body,

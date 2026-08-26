@@ -13,7 +13,11 @@ import { parseProgramFromSource } from '../../../../scheme/lezer-bridge'
 import { ScamperDiagnostic } from '../../../../scheme/diagnostic'
 import { findBuiltinDoc, functionDocMarkdown } from './docs'
 import { rangeAtOffset } from './scope'
-import { computeLineStarts, rangeFromOffsets } from './positions'
+import {
+  computeLineStarts,
+  rangeFromOffsets,
+  type RangeMapper,
+} from './positions'
 
 // CompletionItemKind values (vscode-languageserver-protocol).
 const KIND_FUNCTION = 3
@@ -32,10 +36,16 @@ const TRAILING_TOKEN = /[^\s()[\]{}'";&]*$/
  * Inner bindings shadow outer ones. Documented names carry their signature and
  * docs. On a buffer that doesn't parse, falls back to prelude so completion
  * still works mid-edit. The editor filters this list by the typed prefix.
+ *
+ * @param toRange maps an offset span in `src` to a range in the document, for
+ *        the edits a completion carries. Defaults to treating `src` as the
+ *        document, which it is unless the caller is analysing inside a context.
  */
 export async function completionsFor(
   src: string,
   offset: number,
+  toRange: RangeMapper = (from, to) =>
+    rangeFromOffsets(from, to, computeLineStarts(src)),
 ): Promise<CompletionItem[]> {
   // Parse tolerantly (not tokenizeAndParse, which yields no program on any
   // error): a half-typed qualified name like `img.` doesn't parse, but the
@@ -49,7 +59,7 @@ export async function completionsFor(
 
   // Typing `alias.` (a qualified name) offers that module's members instead of
   // the flat scope -- nothing else is in scope after the dot.
-  const qualified = qualifiedMemberCompletions(src, offset, program)
+  const qualified = qualifiedMemberCompletions(src, offset, program, toRange)
   if (qualified !== undefined) {
     return qualified
   }
@@ -97,6 +107,7 @@ function qualifiedMemberCompletions(
   src: string,
   offset: number,
   program: Prog,
+  toRange: RangeMapper,
 ): CompletionItem[] | undefined {
   const token = TRAILING_TOKEN.exec(src.slice(0, offset))?.[0] ?? ''
   if (!A.isQualifiedName(token)) {
@@ -107,7 +118,9 @@ function qualifiedMemberCompletions(
   if (imp === undefined) {
     return undefined
   }
-  const range = rangeFromOffsets(offset - token.length, offset, computeLineStarts(src))
+  // Through the caller's mapper: where an edit lands is a fact about the
+  // document, which is not always the source being analysed.
+  const range = toRange(offset - token.length, offset)
   const docs = docRegistry.get(imp.module)
   const items: CompletionItem[] = []
   const seen = new Set<string>()

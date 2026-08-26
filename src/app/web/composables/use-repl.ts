@@ -1,4 +1,4 @@
-import { ref, shallowRef, triggerRef, type Ref } from 'vue'
+import { computed, ref, shallowRef, triggerRef, type Ref } from 'vue'
 import Scamper, { type ReplSession } from '../../../scamper'
 import type { ErrorChannel, OutputChannel, Value } from '../../../lpm'
 import type { ScamperError } from '../../../lpm/error'
@@ -38,6 +38,15 @@ export interface Repl {
    */
   readonly isStale: Ref<boolean>
   /**
+   * The program the next entry continues: the file the session was seeded from
+   * followed by the entries so far.
+   *
+   * Not used to run anything -- the session's fiber is the environment. It is
+   * what the language server analyses a cell inside, so that a name from the
+   * file or from an earlier entry is in scope while it is being typed.
+   */
+  readonly context: Ref<string>
+  /**
    * Opens a session seeded from `src`, replacing one already open -- which is
    * also how the window restarts.
    */
@@ -62,6 +71,13 @@ export function useRepl(): Repl {
   const banner = ref('')
   const isBusy = ref(false)
   const isStale = ref(false)
+  // What the session was seeded from, kept for the context above.
+  const seedSource = ref('')
+  const context = computed(() =>
+    [seedSource.value, ...entries.value.map((entry) => entry.source)]
+      .filter((src) => src.trim().length > 0)
+      .join('\n'),
+  )
   let nextId = 0
 
   /**
@@ -104,6 +120,7 @@ export function useRepl(): Repl {
     close()
     const repl = Scamper.getInstance().startRepl({ out: channel, err: channel })
     session.value = repl
+    seedSource.value = src
     // An entry for whatever seeding reports -- a file that does not compile, or
     // one that fails half way -- so it has somewhere to land. Dropped again
     // below if it stays empty, which is the usual case.
@@ -161,6 +178,7 @@ export function useRepl(): Repl {
     banner.value = ''
     isBusy.value = false
     isStale.value = false
+    seedSource.value = ''
   }
 
   return {
@@ -169,6 +187,7 @@ export function useRepl(): Repl {
     banner,
     isBusy,
     isStale,
+    context,
     open,
     submit,
     interrupt: () => {

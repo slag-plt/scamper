@@ -1859,6 +1859,7 @@ onUnmounted(() => {
               :banner="repl.banner.value"
               :is-busy="repl.isBusy.value"
               :is-stale="repl.isStale.value"
+              :context="repl.context.value"
               @submit="(text: string) => void repl.submit(text)"
               @interrupt="repl.interrupt"
               @restart="() => void handleReplRestart()"

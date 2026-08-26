@@ -21,6 +21,11 @@ const props = defineProps<{
   isBusy: boolean
   /** True once the file has been edited since this session was seeded. */
   isStale?: boolean
+  /**
+   * The program the prompt continues -- the file and the entries so far -- for
+   * the language server to analyse it inside.
+   */
+  context?: string
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +33,14 @@ const emit = defineEmits<{
   interrupt: []
   restart: []
 }>()
+
+/**
+ * The document the prompt is, as far as the language server is concerned.
+ *
+ * One window, so one URI: it is opened when the window mounts and closed when
+ * it goes, and a second window would need a second one.
+ */
+const PROMPT_URI = 'inmemory://repl-prompt.scm'
 
 const scrollEl = ref<HTMLDivElement | null>(null)
 const promptRef = ref<CellEditorHandle | null>(null)
@@ -123,8 +136,13 @@ defineExpose({
 
       <div class="repl-entry repl-prompt">
         <span class="repl-marker" aria-hidden="true">&gt;</span>
+        <!-- The prompt is the only cell the language server holds: the entries
+             above it are a record, and one document each would be a document
+             per line ever typed. -->
         <CellEditor
           ref="promptRef"
+          :lsp-uri="PROMPT_URI"
+          :context="context"
           @submit="onSubmit"
           @history="onHistory"
         />
