@@ -303,7 +303,10 @@ const live = useLiveEvaluation({
     !isCollectingTrace.value &&
     isEditorLoaded(),
   reportTimeout: (limitMs) => {
-    resultsRef.value?.display?.report(
+    // Wherever this run's output was going: in the notebook there is no output
+    // pane to say it in, and a program stopped with nothing said is a program
+    // that looks like it did nothing.
+    runTarget.value?.display?.report(
       new ScamperError(
         'Runtime',
         `This program was still running after ${(limitMs / 1000).toString()} seconds, so live evaluation stopped it. ` +
@@ -1838,6 +1841,7 @@ onUnmounted(() => {
         :can-sign-in="canSignIn"
         :signed-in-as="signedInAs"
         :is-sidebar-visible="isSidebarVisible"
+        :is-notebook="isNotebook"
         :recent-files="recentFiles"
         :create="handleCreate"
         :upload="handlePickUpload"
@@ -1866,6 +1870,7 @@ onUnmounted(() => {
         :is-stepping="isCollectingTrace"
         :live-status="liveStatus"
         :can-run="isRunnableFile"
+        :is-notebook="isNotebook"
         @toggle-sidebar="toggleSidebar"
         @step-statement="handleStepStatement"
         @open-repl="handleOpenRepl"

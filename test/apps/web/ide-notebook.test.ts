@@ -238,6 +238,41 @@ describe('IDE notebook view', () => {
     }
   })
 
+  // A query is shown inline in the source, which the notebook is not showing.
+  // Greyed out rather than left to do nothing when pressed.
+  test('querying a value is unavailable in the notebook', async () => {
+    const wrapper = await mountIde('(define x 5)')
+    try {
+      expect(
+        getByRole(document.body, 'button', { name: 'Query value' }),
+      ).not.toBeDisabled()
+      await showNotebook()
+      expect(
+        getByRole(document.body, 'button', { name: 'Query value' }),
+      ).toBeDisabled()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('the arrows move between cells at their edges', async () => {
+    const wrapper = await mountIde('(define x 5)\n\n(define y 6)')
+    try {
+      await showNotebook()
+      const [first, second] = cellViews()
+      first.focus()
+      first.dispatch({ selection: { anchor: first.state.doc.length } })
+      await flushPromises()
+      first.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+      )
+      await flushPromises()
+      expect(second.hasFocus).toBe(true)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('a file that is not a program cannot be shown as one', async () => {
     const wrapper = await mountIde('plain text', 'notes.txt')
     try {

@@ -1,4 +1,10 @@
-import { getCurrentScope, onScopeDispose, shallowRef, type Ref } from 'vue'
+import {
+  computed,
+  getCurrentScope,
+  onScopeDispose,
+  shallowRef,
+  type Ref,
+} from 'vue'
 import type { Diagnostic } from '@codemirror/lint'
 import type { Value } from '../../../lpm'
 import type { EditorAccessor } from './editor-context'
@@ -44,7 +50,7 @@ export interface Notebook {
   /** What the cell at `index` produced. */
   outputOf: (index: number) => Value[]
   /** Output that belongs to no cell: an error with nowhere to point. */
-  readonly unplaced: Ref<Value[]>
+  readonly unplaced: Readonly<Ref<Value[]>>
   /** What is wrong in each cell, in that cell's own coordinates. */
   readonly diagnostics: Ref<Diagnostic[][]>
   /** Where a run's output goes. Handed to the session in place of the pane. */
@@ -76,7 +82,6 @@ const LINT_IDLE_MS = 300
 export function useNotebook(editor: EditorAccessor): Notebook {
   const cells = shallowRef<NotebookCell[]>([])
   const version = shallowRef(0)
-  const unplaced = shallowRef<Value[]>([])
   const diagnostics = shallowRef<Diagnostic[][]>([])
   let nextId = 0
   let lintTimer: ReturnType<typeof setTimeout> | null = null
@@ -93,6 +98,13 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       redrawQueued = false
       version.value++
     })
+  })
+
+  // Read through `version`, so a view showing it redraws when something lands
+  // in it: the array itself is filled in place as a run proceeds.
+  const unplaced = computed(() => {
+    void version.value
+    return display.unplaced
   })
 
   /**
@@ -171,7 +183,6 @@ export function useNotebook(editor: EditorAccessor): Notebook {
   function reset(): void {
     refresh()
     display.setSlots(slots())
-    unplaced.value = display.unplaced
     version.value++
   }
 
