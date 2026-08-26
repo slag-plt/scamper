@@ -21,6 +21,11 @@ is worth one point, awarded only if it passed.
 the student's file by name, so a submission named anything else fails to import
 and scores zero.
 
+A student uploading their own `autograder.scm` does not displace yours —
+`run_autograder` copies the submission first and your harness over it — but a
+submission may still shadow any *other* file your harness imports, so import
+only the files the assignment asks for.
+
 ## Writing the harness
 
 `gradescope-test-suite` takes a list of the test results the `test` library
@@ -36,6 +41,15 @@ Gradescope's results JSON:
 Each test becomes one Gradescope test case, named by its description, and its
 output is the same message Scamper would have shown in the IDE — so a student
 reads "Expected 8, received 16" rather than just a cross.
+
+For a case that is not simply one point — a bonus mark, or something you scored
+by hand — build it yourself and put it in the same list:
+
+```scheme
+(gradescope-test-suite
+  (list (test-case "double 4 is 8" equal? 8 (lambda () (double 4)))
+        (gradescope-test-result "style" "passed" 2 3 "Nicely done.")))
+```
 
 Two things to watch:
 

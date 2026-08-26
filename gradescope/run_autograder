@@ -7,6 +7,12 @@
 # program may only import files beside it, and the CLI roots its file system at
 # the directory of the program it is given.
 #
+# That directory is filled with the *submission* first and the harness second,
+# and it is wiped before each run. Nothing stops a student from uploading a file
+# called autograder.scm, and in the other order it would replace the harness --
+# whereupon the CLI would run the student's program and its output would become
+# their results file, letting them award themselves any score they liked.
+#
 # The four directories below are Gradescope's; they are overridable only so that
 # an instructor can rehearse a harness on their own machine:
 #
@@ -26,17 +32,24 @@ WORK_DIR="${WORK_DIR:-/autograder/work}"
 TIMEOUT="${SCAMPER_TIMEOUT:-120}"
 
 RESULTS_FILE="${RESULTS_DIR}/results.json"
+# The harness's stdout and stderr, kept apart from WORK_DIR so a submitted file
+# cannot sit where they are about to be written.
+RAW_DIR="${WORK_DIR}-raw"
 
-mkdir -p "${RESULTS_DIR}" "${WORK_DIR}"
-cp "${SOURCE_DIR}/autograder.scm" "${WORK_DIR}/"
+rm -rf "${WORK_DIR}"
+mkdir -p "${RESULTS_DIR}" "${WORK_DIR}" "${RAW_DIR}"
+
+# Submission first, harness second -- see the note above; the harness must win.
 cp -r "${SUBMISSION_DIR}/." "${WORK_DIR}/"
+rm -rf "${WORK_DIR}/autograder.scm"
+cp "${SOURCE_DIR}/autograder.scm" "${WORK_DIR}/"
 
 # `npx tsx`, not `npm run cli`: npm prints its own banner to stdout, and stdout
 # here is the results file. Errors go to stderr, which is kept for the fallback
-# below.
+# below. Both land outside the work directory, which the student can write to.
 timeout "${TIMEOUT}" npx --prefix "${SCAMPER_DIR}" tsx \
   "${SCAMPER_DIR}/src/app/cli/index.ts" "${WORK_DIR}/autograder.scm" \
-  > "${WORK_DIR}/results.json" 2> "${WORK_DIR}/stderr.txt"
+  > "${RAW_DIR}/results.json" 2> "${RAW_DIR}/stderr.txt"
 status=$?
 
 # A submission that does not compile, imports the wrong file name, or loops
@@ -45,7 +58,7 @@ status=$?
 # with no idea why.
 if [ "${status}" -ne 0 ] ||
    ! node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' \
-     "${WORK_DIR}/results.json" 2>/dev/null; then
+     "${RAW_DIR}/results.json" 2>/dev/null; then
   if [ "${status}" -eq 124 ]; then
     reason="Your submission took longer than ${TIMEOUT} seconds to run, so it was stopped. Check for an expression that never finishes."
   else
@@ -59,8 +72,8 @@ if [ "${status}" -ne 0 ] ||
       score: 0,
       output: err === "" ? reason : `${reason}\n\n${err}`,
     }, null, 2) + "\n")
-  ' "${RESULTS_FILE}" "${reason}" "${WORK_DIR}/stderr.txt"
+  ' "${RESULTS_FILE}" "${reason}" "${RAW_DIR}/stderr.txt"
   exit 0
 fi
 
-cp "${WORK_DIR}/results.json" "${RESULTS_FILE}"
+cp "${RAW_DIR}/results.json" "${RESULTS_FILE}"

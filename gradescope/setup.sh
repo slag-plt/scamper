@@ -18,8 +18,11 @@ apt-get update
 apt-get install -y --no-install-recommends ca-certificates curl git
 
 # The base image is Ubuntu 22.04, whose packaged Node is far too old for
-# Scamper's toolchain; take Node 20 from NodeSource instead.
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# Scamper's toolchain; take Node from NodeSource instead. Keep this matching the
+# version CI builds with (.github/workflows/node.js.yml) -- nothing else checks
+# that an autograder image can still build, so a dependency that raises its
+# engine requirement would break every course's build with no warning.
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y --no-install-recommends nodejs
 
 git clone --depth 1 --branch "${SCAMPER_REF}" "${SCAMPER_REPO}" "${SCAMPER_DIR}"

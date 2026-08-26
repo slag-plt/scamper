@@ -19,35 +19,45 @@
         gradescope-test-result-output)
 
 ;; A whole suite: the `tests` array Gradescope reads.
+;;
+;; N.B., the constructor is deliberately *not* exported. gradescope-test-suite
+;; is the only way to build one, so every case a suite holds has been checked to
+;; be one -- the renderer (src/js/gradescope/renderers/json.ts) reads their
+;; fields without re-checking, and a suite built by hand from the wrong values
+;; would otherwise print JSON missing the fields Gradescope needs, which it
+;; accepts without complaint.
 (struct gradescope-test-suite-output (tests))
-(export gradescope-test-suite-output
-        gradescope-test-suite-output?
+(export gradescope-test-suite-output?
         gradescope-test-suite-output-tests)
+
+;; A test result as the Gradescope test case it becomes: worth one point,
+;; awarded only when it passed, with the result itself as the case's output so
+;; the student reads the same message the IDE would have shown them. A case
+;; built by hand -- for a bonus mark, or one worth more than a point -- is
+;; already in its final form and passes straight through.
+(define test-result->case
+  (lambda (r)
+    (match r
+      [(gradescope-test-result _ _ _ _ _) r]
+      [(test-result-ok desc)
+       (gradescope-test-result desc "passed" 1 1 r)]
+      [(test-result-error-expected desc _ _)
+       (gradescope-test-result desc "failed" 0 1 r)]
+      [(test-result-error-exn desc _)
+       (gradescope-test-result desc "failed" 0 1 r)]
+      [(test-result-error-gen desc _)
+       (gradescope-test-result desc "failed" 0 1 r)]
+      [_ (error "gradescope-test-suite: expected a list of test results")])))
 
 ;;; (gradescope-test-suite tests) -> gradescope-test-suite-output?
 ;;;  tests : list?
-;;;   a list of test-result? values
+;;;   a list of test-result? values, and any gradescope-test-result? cases
+;;;   built by hand
 ;;; Collects `tests` into the results Gradescope expects of an autograder: each
-;;; test is worth one point, awarded only if it passed, and carries its usual
-;;; message as its output. The result prints as the JSON blob to write to
-;;; `results/results.json`.
+;;; test result is worth one point, awarded only if it passed, and carries its
+;;; usual message as its output; a hand-built case is kept as it is. The result
+;;; prints as the JSON blob to write to `results/results.json`.
 ;;; @category testing
 (define-export gradescope-test-suite
   (lambda (tests)
-    ;; N.B., a local rather than a private top-level define: a library function
-    ;; whose docstring gives it a contract cannot reach its module's private
-    ;; bindings (the contract wrapper closes over the original, and that inner
-    ;; closure is not re-homed with the module -- see Env.rehomeExports).
-    (let ([test-result->case
-           (lambda (r)
-             (match r
-               [(test-result-ok desc)
-                (gradescope-test-result desc "passed" 1 1 r)]
-               [(test-result-error-expected desc _ _)
-                (gradescope-test-result desc "failed" 0 1 r)]
-               [(test-result-error-exn desc _)
-                (gradescope-test-result desc "failed" 0 1 r)]
-               [(test-result-error-gen desc _)
-                (gradescope-test-result desc "failed" 0 1 r)]
-               [_ (error "gradescope-test-suite: expected a list of test results")]))])
-      (gradescope-test-suite-output (map test-result->case tests)))))
+    (gradescope-test-suite-output (map test-result->case tests))))

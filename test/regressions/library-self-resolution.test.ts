@@ -1,5 +1,17 @@
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
+import * as fs from '../../src/fs'
 import { runProgram } from '../harness.js'
+
+function mockFS(files: Record<string, string>): void {
+  vi.spyOn(fs, 'getFS').mockReturnValue({
+    fileExists: (f: string) => Promise.resolve(f in files),
+    loadFile: (f: string) => Promise.resolve(files[f]),
+  } as unknown as ReturnType<typeof fs.getFS>)
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 // Regression tests for the re-homing hole found while adding the `gradescope`
 // library (#404), which is the first builtin written in Scamper rather than as
@@ -46,4 +58,28 @@ test('a library function reaches its own module through a qualified import', asy
       },
     ],
   })
+})
+
+// The walk must not *steal* a closure that already has a home: a module can
+// capture a closure from a module it imported, and that closure has to keep
+// resolving against its own module, not the capturing one.
+test('a closure captured from another module keeps its own module', async () => {
+  mockFS({
+    'b.scm': [
+      '(define secret 42)',
+      '(define get-secret (lambda () secret))',
+      '(export get-secret)',
+    ].join('\n'),
+    'a.scm': [
+      '(import "b.scm" b)',
+      '(define wrapper (let ([g b.get-secret]) (lambda () (g))))',
+      '(export wrapper)',
+    ].join('\n'),
+  })
+  expect(
+    await runProgram(`
+    (import "a.scm")
+    (wrapper)
+    `),
+  ).toEqual(['42'])
 })

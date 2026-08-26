@@ -94,6 +94,50 @@ test('a hand-built test result renders on its own, with a string output verbatim
   })
 })
 
+// The hand-built constructor is exported precisely so a bonus mark or a case
+// worth more than a point can join a suite; it is already in final form.
+test('a hand-built case passes through a suite unchanged', async () => {
+  expect(
+    await runJson(`
+    (import test)
+    (import gradescope)
+    (gradescope-test-suite
+      (list (test-result-ok "a")
+            (gradescope-test-result "style" "passed" 2 3 "Nicely done.")))
+    `),
+  ).toEqual({
+    tests: [
+      {
+        name: 'a',
+        status: 'passed',
+        score: 1,
+        max_score: 1,
+        output: 'Test "a"\n\u2705 Passed!',
+      },
+      {
+        name: 'style',
+        status: 'passed',
+        score: 2,
+        max_score: 3,
+        output: 'Nicely done.',
+      },
+    ],
+  })
+})
+
+// gradescope-test-suite is the only way to build a suite, so its check on every
+// element is the only check the renderer needs. See src/lib/gradescope.scm.
+test('the raw suite constructor is not exported', async () => {
+  expect(
+    await runProgram(`
+    (import gradescope)
+    (gradescope-test-suite-output (list 1 2))
+    `),
+  ).toEqual([
+    'Runtime error: Variable not found: gradescope-test-suite-output',
+  ])
+})
+
 test('the suite accessors reach the cases it built', async () => {
   expect(
     await runProgram(`

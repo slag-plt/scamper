@@ -313,7 +313,13 @@ export class Env {
       if (seen !== undefined) {
         return seen
       }
-      const copy: Closure = { ...value, home }
+      // `value.home ?? home`, not `home`: a closure that already carries one
+      // belongs to another module -- a module can capture a closure from a
+      // module it imported, and that closure must keep resolving against its
+      // own. Only a closure with no home yet is claimed, which is exactly the
+      // case this walk exists for (the contract wrapper's inner closure, born
+      // at library load with no home at all).
+      const copy: Closure = { ...value, home: value.home ?? home }
       rehomedClosures.set(value, copy)
       copy.locals = value.locals.map(rehomeScope)
       return copy
