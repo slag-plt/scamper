@@ -213,16 +213,6 @@ const runTarget = computed<ResultsPaneType | null>(() =>
   isNotebook.value ? notebook : resultsRef.value,
 )
 
-// The cells are of a particular file: opening another, or turning the view on,
-// is the moment to take the split. After that the notebook keeps up with the
-// document by itself -- it re-splits at the start of every run.
-watch(
-  [isNotebook, currentFile],
-  () => {
-    if (isNotebook.value && isEditorLoaded()) notebook.refresh()
-  },
-  { immediate: true },
-)
 
 // ---------- example checks (#374) ----------
 
@@ -315,6 +305,28 @@ const live = useLiveEvaluation({
     )
   },
 })
+
+/**
+ * The cells are of a particular file: opening another, or turning the view on,
+ * is the moment to take the split. After that the notebook keeps up with the
+ * document by itself, since it re-splits at the start of every run.
+ *
+ * Turning the view on also runs the file, for the same reason opening one does
+ * (#378): a notebook of empty cells says nothing about the program, and the
+ * output it wants is under the cells rather than in the pane the last run went
+ * to. `runNow` refuses by itself where a run cannot happen -- with live
+ * evaluation off it does nothing, and the cells fill when Run is pressed.
+ */
+watch(
+  [isNotebook, currentFile],
+  ([showing], [wasShowing]) => {
+    if (!showing || !isEditorLoaded()) return
+    notebook.refresh()
+    // Only on the way in. A file switch runs the new file by itself.
+    if (wasShowing !== true) void live.runNow()
+  },
+  { immediate: true },
+)
 
 // Turning it on should show something rather than waiting for the next
 // keystroke, so the file runs at once; turning it off drops a run the last

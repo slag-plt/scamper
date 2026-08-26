@@ -8,6 +8,7 @@ import {
   type Cell,
   type CodeCell,
 } from '../../../src/app/web/notebook-cells'
+import { tokenizeAndParse } from '../../../src/scheme'
 
 /** The cells of `src`, or a failure if it did not parse. */
 function split(src: string): Cell[] {
@@ -69,8 +70,33 @@ describe('splitting a file into cells', () => {
     expect(shape(src)).toEqual([['code', src]])
   })
 
-  test('prose above a docstring is still prose', () => {
-    const src = '; Here is a function.\n;;; (f x) -> number?\n;;; Squares x.\n(define f (lambda (x) (* x x)))'
+  // The same rule the compiler follows (#413): a run of comments belongs to the
+  // form directly below it, and a blank line is how you set one apart.
+  test('a docstring set apart by a blank line is a header, and reads as prose', () => {
+    const src = ';;; A lab about squares.\n\n(define x 5)'
+    expect(shape(src)).toEqual([
+      ['prose', ';;; A lab about squares.'],
+      ['code', '(define x 5)'],
+    ])
+  })
+
+  test('a blank line inside a docstring ends it', () => {
+    const src = ';;; A header.\n\n;;; (f x) -> number?\n;;; Squares x.\n(define f (lambda (x) (* x x)))'
+    expect(shape(src)).toEqual([
+      ['prose', ';;; A header.'],
+      ['code', ';;; (f x) -> number?\n;;; Squares x.\n(define f (lambda (x) (* x x)))'],
+    ])
+  })
+
+  // A contiguous block is one block, as it is for the compiler: an ordinary
+  // comment line among the `;;;` ones does not split the docstring in half.
+  test('a comment written into a docstring stays with it', () => {
+    const src = ';;; (f x) -> number?\n; still working on this\n;;; Squares x.\n(define f (lambda (x) (* x x)))'
+    expect(shape(src)).toEqual([['code', src]])
+  })
+
+  test('prose set apart from a docstring is prose', () => {
+    const src = '; Here is a function.\n\n;;; (f x) -> number?\n;;; Squares x.\n(define f (lambda (x) (* x x)))'
     expect(shape(src)).toEqual([
       ['prose', '; Here is a function.'],
       ['code', ';;; (f x) -> number?\n;;; Squares x.\n(define f (lambda (x) (* x x)))'],
@@ -118,6 +144,50 @@ describe('splitting a file into cells', () => {
     const src = '(define x 5)\n\n\n; A note.\n\n(+ x 1)'
     for (const cell of split(src)) {
       expect(src.slice(cell.from, cell.to)).toBe(cell.text)
+    }
+  })
+
+  // The notebook decides for itself which comments belong to a form, and the
+  // compiler decides which lines are its docstring. If those two rules drift
+  // apart a student is shown a docstring in one cell that documents the form in
+  // another -- so a form's cell must always cover its `;;;` lines.
+  //
+  // Only those lines. An ordinary comment the compiler happens to collect along
+  // with them contributes nothing to the docstring (the parser drops every line
+  // that is not `;;;`), and reading better as prose is the whole point here.
+  test('a code cell holds every docstring line the compiler reads', () => {
+    const sources = [
+      ';;; Doc.\n(define x 5)',
+      ';;; Header.\n\n(define x 5)',
+      '; note\n;;; Doc.\n(define x 5)',
+      '(define a 1) ; note\n(define b 2)',
+      ';;; One.\n(define a 1)\n\n;;; Two.\n(define b 2)',
+      '; a paragraph\n\n;;; Doc.\n(define x 5)',
+      ';;; Doc.\n;; an aside\n;;; More doc.\n(define x 5)',
+    ]
+    for (const src of sources) {
+      const { program } = tokenizeAndParse(src)
+      expect(program).toBeDefined()
+      const cells = split(src)
+      for (const stmt of program ?? []) {
+        const attached = 'docComments' in stmt ? (stmt.docComments ?? []) : []
+        const docLines = attached.filter((c) =>
+          c.line.trimStart().startsWith(';;;'),
+        )
+        if (docLines.length === 0) continue
+        const cell = cells.find(
+          (c): c is CodeCell =>
+            c.kind === 'code' && c.stmtFrom === stmt.range.begin.idx,
+        )
+        expect(cell, `no cell for a form in ${JSON.stringify(src)}`).toBeDefined()
+        for (const comment of docLines) {
+          expect(
+            comment.range.begin.idx,
+            `${comment.line} in ${JSON.stringify(src)}`,
+          ).toBeGreaterThanOrEqual(cell?.from ?? -1)
+          expect(comment.range.end.idx).toBeLessThan(cell?.to ?? -1)
+        }
+      }
     }
   })
 

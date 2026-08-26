@@ -58,6 +58,10 @@ describe('IDE notebook view', () => {
     toggle().click()
     await flushPromises()
     await flushPromises()
+    // Turning the view on runs the file, and output is published a frame at a
+    // time, as the output pane's is.
+    await nextFrame()
+    await flushPromises()
   }
 
   function notebook(): HTMLElement | null {
@@ -173,6 +177,20 @@ describe('IDE notebook view', () => {
         cell.querySelector('.cell-output')?.textContent?.trim() ?? '',
       )
       expect(output).toEqual(['1', '2'])
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  // A notebook of empty cells says nothing about the program, and the output
+  // the last run produced went to a pane this view does not put up.
+  test('turning the view on runs the file', async () => {
+    const wrapper = await mountIde('(display "hello")')
+    try {
+      await showNotebook()
+      expect(cells()[0].querySelector('.cell-output')?.textContent).toContain(
+        'hello',
+      )
     } finally {
       wrapper.unmount()
     }

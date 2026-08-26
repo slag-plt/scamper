@@ -68,6 +68,7 @@ export function splitIntoCells(src: string): Cell[] | null {
   const stmts = program.map((s) => ({
     from: s.range.begin.idx,
     to: s.range.end.idx + 1,
+    line: s.range.begin.line,
   }))
   // Comments inside a form -- one on a `cond` clause, say -- are part of that
   // form's text and are not cells of their own.
@@ -90,7 +91,7 @@ export function splitIntoCells(src: string): Cell[] | null {
     // form's cell rather than becoming prose: it is what the docs, the
     // contracts and the `@example` checks read, and a student editing it is
     // editing the function.
-    const doc = trailingDocRun(pending)
+    const doc = docBlockFor(pending, stmt.line)
     for (const run of runs(pending.slice(0, pending.length - doc.length))) {
       cells.push(proseCell(run, src))
     }
@@ -147,13 +148,27 @@ function isDocLine(c: Comment): boolean {
 }
 
 /**
- * @returns the docstring lines at the end of `pending`, which belong to the
- *          form below rather than to the prose above.
+ * @returns the comments at the end of `pending` that are the docstring of the
+ *          form on `statementLine`, and so belong in its cell.
+ *
+ * The rule is the compiler's, so that the two cannot disagree about what
+ * documents what (#413): the block directly above a form is the one with no
+ * blank line between it and the form, and a contiguous block is one block --
+ * an ordinary comment line between two `;;;` lines does not split it, because
+ * nothing in the source says it should. A blank line is how a block is set
+ * apart, and then it is a header rather than a docstring, and the notebook
+ * shows it as the prose it reads as.
  */
-function trailingDocRun(pending: Comment[]): Comment[] {
+function docBlockFor(pending: Comment[], statementLine: number): Comment[] {
   let i = pending.length
-  while (i > 0 && isDocLine(pending[i - 1])) i--
-  return pending.slice(i)
+  let wanted = statementLine - 1
+  while (i > 0 && pending[i - 1].range.begin.line === wanted) {
+    wanted--
+    i--
+  }
+  const block = pending.slice(i)
+  // Prose, if nothing in it is documentation.
+  return block.some(isDocLine) ? block : []
 }
 
 /**
