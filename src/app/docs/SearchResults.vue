@@ -12,9 +12,12 @@ import {
   typeList,
   type Combinator,
   type Filters,
+  type SearchRequest,
 } from './search'
 
-const props = defineProps<{ term: string }>()
+const props = defineProps<{ request: SearchRequest }>()
+
+const term = computed(() => props.request.term)
 
 /*
  * A search runs against a name or against the filters, never both -- the
@@ -25,17 +28,18 @@ const props = defineProps<{ term: string }>()
 const draft = ref<Filters>(noFilters())
 const committed = ref<Filters | null>(null)
 
-// A new term from the header box (or from Back) is a name search, and takes
-// over from whatever the filter panel last committed.
+// Every request from the header box (or from Back) is a name search, and takes
+// over from whatever the filter panel last committed -- including a repeat of
+// the term already in the box, which is the way back from a filter query.
 watch(
-  () => props.term,
+  () => props.request,
   () => {
     committed.value = null
   },
 )
 
 const named = computed(() =>
-  props.term === '' ? null : searchByName(props.term),
+  term.value === '' ? null : searchByName(term.value),
 )
 
 const results = computed<LibEntry[]>(() => {
@@ -63,9 +67,9 @@ const emptyMessage = computed(() => {
   if (committed.value !== null) {
     return 'No results for the selected filters.'
   }
-  return props.term === ''
+  return term.value === ''
     ? 'Type a function name in the search box, or pick filters below.'
-    : `No results for “${props.term}”.`
+    : `No results for “${term.value}”.`
 })
 
 function summarize(selected: string[]): string {

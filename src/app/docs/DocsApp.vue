@@ -6,6 +6,7 @@ import SearchResults from './SearchResults.vue'
 import ThemeToggle from '../shared/ThemeToggle.vue'
 import { docRegistry } from '../../lib'
 import { moduleOrder } from './modules'
+import type { SearchRequest } from './search'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
 
 const appVersion = APP_VERSION
@@ -32,19 +33,25 @@ function termFromUrl(): string | null {
 }
 
 const searchTerm = ref(termFromUrl())
+const request = ref<SearchRequest>({ term: searchTerm.value ?? '' })
 const search = ref(searchTerm.value ?? '')
 const searching = computed(() => searchTerm.value !== null)
 
 /**
- * Shows the search view for `term`, or the module browser for null. Switching
- * is a history entry, so Back still leaves search the way it always did.
+ * Shows the search view for `term`, or the module browser for null. A change
+ * of view is a history entry, so Back still leaves search the way it always
+ * did; repeating the search already showing is not.
  */
 function show(term: string | null) {
-  if (term === searchTerm.value) {
-    return
-  }
+  const changed = term !== searchTerm.value
   searchTerm.value = term
   search.value = term ?? ''
+  if (term !== null) {
+    request.value = { term }
+  }
+  if (!changed) {
+    return
+  }
   const url = new URL(window.location.href)
   if (term === null) {
     url.searchParams.delete('search')
@@ -58,6 +65,7 @@ function syncFromUrl() {
   const term = termFromUrl()
   searchTerm.value = term
   search.value = term ?? ''
+  request.value = { term: term ?? '' }
 }
 
 onMounted(() => {
@@ -107,7 +115,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="docs">
-      <SearchResults v-if="searching" :term="searchTerm ?? ''" />
+      <SearchResults v-if="searching" :request="request" />
       <template v-else>
         <ModuleList
           :libs="libs"

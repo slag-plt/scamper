@@ -9,7 +9,7 @@ import {
   functionDocName,
   predTypeName,
 } from '../../scheme/docstring/render'
-import { allEntries, type LibEntry } from './modules'
+import { allEntries, entryId, type LibEntry } from './modules'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
 
 /** Every documented param's predicate, including the rest param if any. */
@@ -175,10 +175,35 @@ export interface NameResults {
   relatives: LibEntry[]
 }
 
-/** A name search. Only an exact name matches; the rest are cross-references. */
+/**
+ * A name search. Only an exact name matches; the rest are cross-references.
+ *
+ * A docstring may list its own function among its `@category` entries -- five
+ * do, `string-length` among them -- so the relatives are deduplicated against
+ * the matches, and against each other when two matches point at the same
+ * function. Left in, the same entry rendered twice under one id.
+ */
 export function searchByName(name: string): NameResults {
   const matches = allEntries().filter((e) => functionDocName(e.doc) === name)
-  return { matches, relatives: matches.flatMap((e) => relativesOf(e.doc)) }
+  const seen = new Set(matches.map(entryId))
+  const relatives: LibEntry[] = []
+  for (const entry of matches.flatMap((e) => relativesOf(e.doc))) {
+    const id = entryId(entry)
+    if (!seen.has(id)) {
+      seen.add(id)
+      relatives.push(entry)
+    }
+  }
+  return { matches, relatives }
+}
+
+/**
+ * One press of Enter in the search box. The docs page makes a fresh object
+ * every time, including for a term the box already holds, so that repeating a
+ * search still counts as a new request and clears any committed filters.
+ */
+export interface SearchRequest {
+  term: string
 }
 
 /** How a filter combines the values selected within it. */

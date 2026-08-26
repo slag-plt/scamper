@@ -102,6 +102,24 @@ describe('#403: search is part of the docs app', () => {
     expect(wrapper.text()).not.toContain('(sin v)')
   })
 
+  test('pressing enter on the same term returns from a filter search', async () => {
+    // The way back from a filter query is the term already in the box, so a
+    // repeat of it has to count as a new request rather than a no-op.
+    const wrapper = mountDocs('?search=map')
+    const tag = wrapper
+      .findAll('input[type="checkbox"]')
+      .find((i) => i.element.getAttribute('value') === 'trigonometry')
+    await tag?.setValue(true)
+    await wrapper.get('button.apply').trigger('click')
+    expect(wrapper.text()).toContain('(sin v)')
+
+    const box = wrapper.get('input.text-input')
+    expect((box.element as HTMLInputElement).value).toBe('map')
+    await box.trigger('keyup.enter')
+    expect(wrapper.text()).toContain('(map f')
+    expect(wrapper.text()).not.toContain('(sin v)')
+  })
+
   test('results carry unique ids even across modules', () => {
     // `square`, `html?` and four others are exported by more than one module,
     // so a bare function name is not a usable key or anchor.
@@ -155,6 +173,23 @@ describe('#403: the search rules survived the move', () => {
     })
     expect(takesChars.length).toBeGreaterThan(0)
     expect(takesChars.map((e) => functionDocName(e.doc))).not.toContain('sin')
+  })
+
+  test('a function that cross-references itself is listed once', () => {
+    // Five docstrings name their own function among their @category entries,
+    // which rendered the entry twice under one id.
+    for (const name of [
+      'string-length',
+      'list->vector',
+      'rgb-lighter',
+      'pickup',
+      'rex-empty',
+    ]) {
+      const { matches, relatives } = searchByName(name)
+      const ids = [...matches, ...relatives].map(entryId)
+      expect(new Set(ids).size, name).toBe(ids.length)
+      expect(matches.length, name).toBeGreaterThan(0)
+    }
   })
 
   test('the filter vocabularies came across whole', () => {
