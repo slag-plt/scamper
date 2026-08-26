@@ -4,6 +4,7 @@ import { useScamperSession } from '../composables/use-scamper-session'
 import type { MenuItem } from '../menu'
 import type { LiveStatus } from '../composables/use-live-evaluation'
 import { toggleLiveEvaluation } from '../run-prefs'
+import { fileView, toggleFileView } from '../view-prefs'
 import { appShortcut } from '../edit-commands'
 import ThemeToggle from '../../shared/ThemeToggle.vue'
 import PopupMenu from './PopupMenu.vue'
@@ -228,6 +229,23 @@ function searchOpenWindow(searchTerm: string) {
         title="Show the value of the expression under the cursor"
         aria-label="Query value"
         @click="session.query()"
+      ></button>
+      <!-- The two ways of looking at the file (#410): as source with its
+           output beside it, or as a notebook with the output under each form.
+           Held down while the notebook is the one on screen. -->
+      <button
+        type="button"
+        class="icon-button fa-solid fa-book-open"
+        :class="{ open: fileView === 'notebook' }"
+        :title="
+          fileView === 'notebook'
+            ? 'Show this file as source, with its output beside it'
+            : 'Show this file as a notebook'
+        "
+        aria-label="Notebook view"
+        :aria-pressed="fileView === 'notebook'"
+        :disabled="!canRun"
+        @click="toggleFileView()"
       ></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <input

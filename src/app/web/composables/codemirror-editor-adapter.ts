@@ -118,6 +118,18 @@ export function createCodeMirrorEditorAdapter(
       })
     },
 
+    /**
+     * Replaces `[from, to)` with `text`, as an ordinary edit.
+     *
+     * What the notebook writes its cells through (#410): a cell is a stretch
+     * of this document, so an edit in one is an edit here -- which is what
+     * makes it dirty, undoable, and something live evaluation notices, without
+     * the notebook having to arrange any of that for itself.
+     */
+    replaceRange(from: number, to: number, text: string) {
+      view.dispatch({ changes: { from, to, insert: text } })
+    },
+
     getCursorLoc() {
       const idx = view.state.selection.main.from
       const { line, columnOffset } = lineColumnAt(view.state.doc, idx)

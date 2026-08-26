@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
+import { setDiagnostics } from '@codemirror/lint'
+import type { Diagnostic } from '@codemirror/lint'
 import {
   mkCellEditorState,
+  type CellChange,
   type CellEditorHandle,
 } from '../codemirror/cell-editor'
 import { setLspContext } from '../codemirror/lsp'
@@ -39,13 +42,25 @@ const props = defineProps<{
    * `lspUri`.
    */
   context?: string
+  /** What the cell is written in; Scamper unless it is a notebook's prose. */
+  language?: 'scamper' | 'markdown'
 }>()
 
 const emit = defineEmits<{
   submit: [text: string]
   /** The caret tried to leave the top (-1) or bottom (1) of the cell. */
   history: [direction: -1 | 1, handled: { value: boolean }]
+  /** What the person changed, for a cell that is a view of a document. */
+  change: [changes: CellChange[]]
+  focusChange: [focused: boolean]
 }>()
+
+/**
+ * True while the cell is being written into from outside, so the edit that
+ * puts it there is not reported back as one the person made -- which for a
+ * notebook would be an edit chasing its own tail.
+ */
+let applying = false
 
 const containerRef = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
@@ -61,8 +76,15 @@ onMounted(() => {
     state: mkCellEditorState(props.source ?? '', {
       isReadOnly: props.isReadOnly,
       lspUri: props.lspUri,
+      language: props.language,
       onSubmit: (text) => {
         emit('submit', text)
+      },
+      onChange: (changes) => {
+        if (!applying) emit('change', changes)
+      },
+      onFocusChange: (focused) => {
+        emit('focusChange', focused)
       },
       // Vue events cannot return a value, so the listener reports through the
       // box: unhandled means CodeMirror moves the caret as it normally would.
@@ -106,10 +128,15 @@ watch(editorFontSize, (px) => {
 /** Replaces the cell's contents, leaving the caret at the end. */
 function setText(text: string): void {
   if (view === null) return
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: text },
-    selection: { anchor: text.length },
-  })
+  applying = true
+  try {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: text },
+      selection: { anchor: text.length },
+    })
+  } finally {
+    applying = false
+  }
 }
 
 defineExpose<CellEditorHandle>({
@@ -117,10 +144,21 @@ defineExpose<CellEditorHandle>({
   clear: () => {
     setText('')
   },
-  focus: () => {
-    view?.focus()
+  focus: (at?: 'start' | 'end') => {
+    if (view === null) return
+    if (at !== undefined) {
+      view.dispatch({
+        selection: { anchor: at === 'start' ? 0 : view.state.doc.length },
+      })
+    }
+    view.focus()
   },
   text: () => view?.state.doc.toString() ?? '',
+  // The lint extension comes with the effect, so a cell that has never had a
+  // diagnostic needs nothing configured for its first one.
+  setDiagnostics: (diagnostics: Diagnostic[]) => {
+    if (view !== null) view.dispatch(setDiagnostics(view.state, diagnostics))
+  },
 })
 </script>
 

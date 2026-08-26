@@ -14,6 +14,8 @@ import {
   insertNewlineAndIndent,
 } from '@codemirror/commands'
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
+import { markdown } from '@codemirror/lang-markdown'
+import type { Diagnostic } from '@codemirror/lint'
 import { currentTheme } from '../../../theme'
 import { editorFontSize } from '../editor-prefs'
 import {
@@ -74,8 +76,18 @@ export interface CellEditorHandle {
   /** Replaces the contents, leaving the caret at the end. */
   setText: (text: string) => void
   clear: () => void
-  focus: () => void
+  /** @param at which end the caret goes to; the end of the cell by default. */
+  focus: (at?: 'start' | 'end') => void
   text: () => string
+  /** Underlines what is wrong in this cell, in the cell's own coordinates. */
+  setDiagnostics: (diagnostics: Diagnostic[]) => void
+}
+
+/** One edit made in a cell, in the cell's own coordinates. */
+export interface CellChange {
+  from: number
+  to: number
+  insert: string
 }
 
 export interface CellEditorConfig {
@@ -83,6 +95,22 @@ export interface CellEditorConfig {
   isReadOnly?: boolean
   /** Runs the cell. Called with its text, which the caller usually clears. */
   onSubmit?: (text: string) => void
+  /**
+   * Told what changed, so a notebook can write the same edit through to the
+   * file the cell is a view of (#410).
+   *
+   * The changes themselves rather than the new text: a cell is a stretch of a
+   * document, and replacing the stretch on every keystroke would throw away
+   * what the rest of the editor knows about it.
+   */
+  onChange?: (changes: CellChange[]) => void
+  /** Told when the caret enters or leaves, so a notebook can follow it. */
+  onFocusChange?: (focused: boolean) => void
+  /**
+   * What the cell is written in. Scamper unless it is a prose cell, which is
+   * Markdown and gets none of the Scheme editing behaviour.
+   */
+  language?: 'scamper' | 'markdown'
   /**
    * Asked for the previous (-1) or next (1) entry when the caret is on the
    * first or last line and would otherwise leave the cell.
@@ -151,8 +179,32 @@ function historyKeys(onHistory: (direction: -1 | 1) => boolean): KeyBinding[] {
   ]
 }
 
+/** Reports edits and focus, for a cell that is a view of a document. */
+function reporters(config: CellEditorConfig): Extension {
+  const { onChange, onFocusChange } = config
+  if (onChange === undefined && onFocusChange === undefined) return []
+  return EditorView.updateListener.of((update) => {
+    if (onChange !== undefined && update.docChanged) {
+      const changes: CellChange[] = []
+      update.changes.iterChanges((from, to, _fromB, _toB, inserted) => {
+        changes.push({ from, to, insert: inserted.toString() })
+      })
+      onChange(changes)
+    }
+    if (onFocusChange !== undefined && update.focusChanged) {
+      onFocusChange(update.view.hasFocus)
+    }
+  })
+}
+
 function cellExtensions(config: CellEditorConfig): Extension {
-  const { isReadOnly = false, onSubmit, onHistory, lspUri } = config
+  const {
+    isReadOnly = false,
+    onSubmit,
+    onHistory,
+    lspUri,
+    language = 'scamper',
+  } = config
   return [
     highlightSpecialChars(),
     history(),
@@ -176,11 +228,14 @@ function cellExtensions(config: CellEditorConfig): Extension {
     // A cell that has been run is a record of what was typed, not a box: it
     // can be selected and copied but not walked through with a caret.
     EditorView.editable.of(!isReadOnly),
-    ScamperSupport(),
+    reporters(config),
+    language === 'markdown' ? markdown() : ScamperSupport(),
     // The same language services the file editor gets, minus the diagnostics:
     // the server does not lint a document that has a context, since a cell is
     // unclosed for most of the time it is being typed.
-    lspUri === undefined ? [] : scamperLspExtensions(lspUri),
+    lspUri === undefined || language === 'markdown'
+      ? []
+      : scamperLspExtensions(lspUri),
   ]
 }
 

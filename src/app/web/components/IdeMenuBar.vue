@@ -12,6 +12,7 @@ import {
   toggleShowSourceWithOutput,
 } from '../output-prefs'
 import { showHiddenFiles, toggleShowHiddenFiles } from '../file-prefs'
+import { fileView, toggleFileView } from '../view-prefs'
 import {
   checkExamples,
   liveEvaluation,
@@ -294,6 +295,18 @@ const runMenu = computed<MenuItem[]>(() => [
 const viewMenu = computed<MenuItem[]>(() => {
   const s = editorStatus.value
   return [
+    // Which of the two views of the file is on screen (#410). First in the
+    // menu because it is the largest thing in it: everything below is a detail
+    // of whichever view is showing.
+    {
+      label: 'Notebook',
+      checked: fileView.value === 'notebook',
+      // A notebook is a program's forms; a file that is not a program has
+      // none (#385).
+      disabled: !s.loaded || !s.isScamper,
+      run: () => { toggleFileView() },
+    },
+    { separator: true },
     {
       label: 'File Drawer',
       checked: props.isSidebarVisible,

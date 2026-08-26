@@ -14,7 +14,7 @@ import { parser } from '@lezer/markdown'
 import type { SyntaxNode } from '@lezer/common'
 
 /** Block nodes, whose children are laid out rather than run together. */
-const BLOCKS: Record<string, string> = {
+const BLOCKS: Record<string, string | undefined> = {
   Paragraph: 'p',
   ATXHeading1: 'h1',
   ATXHeading2: 'h2',
@@ -31,7 +31,7 @@ const BLOCKS: Record<string, string> = {
 }
 
 /** Inline nodes, whose text between children is text of their own. */
-const INLINES: Record<string, string> = {
+const INLINES: Record<string, string | undefined> = {
   Emphasis: 'em',
   StrongEmphasis: 'strong',
 }

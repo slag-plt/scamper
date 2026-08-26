@@ -11,14 +11,16 @@ const SEVERITY_ERROR = 1
 const SEVERITY_WARNING = 2
 
 /**
- * Runs the standard analysis (parse -> expand -> scope-check) and returns the
- * results as LSP diagnostics, pushed to the editor via publishDiagnostics.
- * This is the sole diagnostics source (it replaced the CodeMirror linter).
+ * Runs the standard analysis (parse -> expand -> scope-check) over `src`.
+ *
+ * The ranges are source offsets, which is what a caller placing a diagnostic
+ * back into the document needs -- the notebook, whose cells are stretches of
+ * the file, uses this directly (#410). {@link computeDiagnostics} is the same
+ * thing in the protocol's coordinates.
  */
-export async function computeDiagnostics(
+export async function analyzeSource(
   src: string,
-  lineStarts: number[],
-): Promise<Diagnostic[]> {
+): Promise<ScamperDiagnostic[]> {
   const diagnostics: ScamperDiagnostic[] = []
   try {
     const { program, diagnostics: parseDiagnostics } = tokenizeAndParse(src)
@@ -36,6 +38,19 @@ export async function computeDiagnostics(
       )
     }
   }
+  return diagnostics
+}
+
+/**
+ * The analysis as LSP diagnostics, pushed to the editor via
+ * publishDiagnostics. This is the sole diagnostics source (it replaced the
+ * CodeMirror linter).
+ */
+export async function computeDiagnostics(
+  src: string,
+  lineStarts: number[],
+): Promise<Diagnostic[]> {
+  const diagnostics = await analyzeSource(src)
   return diagnostics.map((d) => toLspDiagnostic(d, lineStarts))
 }
 

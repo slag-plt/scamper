@@ -221,13 +221,13 @@ export function markdownToProse(markdown: string, indent = ''): string {
  *          a paste over several cells, an undo -- which only a re-split can
  *          make sense of.
  */
-export function shiftCells(
-  cells: Cell[],
+export function shiftCells<C extends Cell>(
+  cells: C[],
   from: number,
   to: number,
   insertedLength: number,
   src: string,
-): Cell[] | null {
+): C[] | null {
   if (!cells.some((c) => from >= c.from && to <= c.to)) return null
   const delta = insertedLength - (to - from)
   // CodeMirror's own position mapping: what is above the edit stays put, what
@@ -235,10 +235,12 @@ export function shiftCells(
   const map = (pos: number) =>
     pos <= from ? pos : pos >= to ? pos + delta : from
   return cells.map((cell) => {
-    const moved = { ...cell, from: map(cell.from), to: map(cell.to) }
+    const moved: C = { ...cell, from: map(cell.from), to: map(cell.to) }
     moved.text = src.slice(moved.from, moved.to)
-    return moved.kind === 'code'
-      ? { ...moved, stmtFrom: map(moved.stmtFrom), stmtTo: map(moved.stmtTo) }
-      : moved
+    if (moved.kind === 'code') {
+      moved.stmtFrom = map(moved.stmtFrom)
+      moved.stmtTo = map(moved.stmtTo)
+    }
+    return moved
   })
 }

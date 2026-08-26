@@ -6,8 +6,8 @@ import {
   provide,
   reactive,
   ref,
+  type Ref,
   shallowRef,
-  type ShallowRef,
 } from 'vue'
 import Scamper, {
   type DisplayRequest,
@@ -32,8 +32,14 @@ export interface ScamperSessionOptions {
   onRunSettled?: (src: string) => void
 }
 
+/**
+ * @param pane where a run's output goes. Not always the output pane: in the
+ *        notebook view it is the notebook, which takes the same three
+ *        operations (#410). A ref rather than a value, since the person can
+ *        change their mind between one run and the next.
+ */
 function createScamperSession(
-  pane: ShallowRef<ResultsPaneType | null>,
+  pane: Readonly<Ref<ResultsPaneType | null>>,
   editor: EditorAccessor,
   onRunScheduled?: () => void,
   onRunSettled?: (src: string) => void,
@@ -209,7 +215,7 @@ export type ScamperSession = ReturnType<typeof createScamperSession>
 const ScamperSessionKey: InjectionKey<ScamperSession> = Symbol('ScamperSession')
 
 export function provideScamperSession(
-  pane: ShallowRef<ResultsPaneType | null>,
+  pane: Readonly<Ref<ResultsPaneType | null>>,
   options: ScamperSessionOptions,
 ): ScamperSession {
   const session = createScamperSession(
