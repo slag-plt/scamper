@@ -62,6 +62,13 @@ const adapter = makeMockCodeMirrorEditorAdapter(
       src.value = nextSrc
       emit('dirty')
     },
+    replaceRange(from: number, to: number, text: string) {
+      // Really applied, not recorded: this is how the notebook writes its
+      // cells through (#410), so a test of one is a test of what the document
+      // ends up holding.
+      src.value = src.value.slice(0, from) + text + src.value.slice(to)
+      emit('dirty')
+    },
     setExampleMarks(outcomes) {
       mockEditorHandle.exampleMarks = [...outcomes]
     },

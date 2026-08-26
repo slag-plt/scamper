@@ -53,6 +53,8 @@ const emit = defineEmits<{
   /** What the person changed, for a cell that is a view of a document. */
   change: [changes: CellChange[]]
   focusChange: [focused: boolean]
+  /** Where the caret is in this cell, so a notebook can follow it. */
+  cursor: [pos: number]
 }>()
 
 /**
@@ -85,6 +87,9 @@ onMounted(() => {
       },
       onFocusChange: (focused) => {
         emit('focusChange', focused)
+      },
+      onCursor: (pos) => {
+        emit('cursor', pos)
       },
       // Vue events cannot return a value, so the listener reports through the
       // box: unhandled means CodeMirror moves the caret as it normally would.

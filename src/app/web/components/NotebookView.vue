@@ -101,6 +101,7 @@ function removeCell(index: number) {
           @change="(changes) => { onChange(index, changes) }"
           @replace="(text) => { onReplace(index, text) }"
           @focus-change="(isFocused) => { onFocusChange(index, isFocused) }"
+          @cursor="(pos) => { notebook.noteCursor(index, pos) }"
           @move="(direction) => { onMove(index, direction) }"
           @remove="() => { removeCell(index) }"
         />

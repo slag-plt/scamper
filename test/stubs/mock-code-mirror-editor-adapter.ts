@@ -30,7 +30,13 @@ export function makeMockCodeMirrorEditorAdapter(
     replaceDoc: () => {
       /* noop */
     },
+    replaceRange: () => {
+      /* noop; a test that cares overrides this */
+    },
     getCursorLoc: () => new Loc(0, 0, 0),
+    setCursor: () => {
+      /* noop; a test that cares overrides this */
+    },
     coordsAtIdx: () => null,
     focus: record('focus'),
     status: () => ({

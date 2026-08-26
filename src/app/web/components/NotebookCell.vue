@@ -39,6 +39,8 @@ const emit = defineEmits<{
   /** A prose cell, rewritten whole: its Markdown is not the file's text. */
   replace: [text: string]
   focusChange: [focused: boolean]
+  /** Where the caret is in this cell, in the cell's own coordinates. */
+  cursor: [pos: number]
   /** The caret left the top (-1) or the bottom (1) of the cell. */
   move: [direction: -1 | 1]
   remove: []
@@ -166,6 +168,7 @@ defineExpose({
         :context="context"
         @change="onChange"
         @focus-change="onFocusChange"
+        @cursor="(pos) => { emit('cursor', pos) }"
         @history="onHistory"
       />
       <button

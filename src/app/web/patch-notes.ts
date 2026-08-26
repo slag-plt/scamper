@@ -27,6 +27,7 @@ export const patchNotes: PatchNote[] = [
   {
     version: '4.1.0',
     notes: [
+      'Your file can now be shown as a notebook: each definition or expression in its own box, with what it printed underneath, and the comments between them as formatted text.',
       'The output now opens in a pane beside your code rather than in a window floating over it.',
       'The separate run window has been removed.',
       'The View menu can now show the internal files Scamper keeps, such as saved file histories, which open read-only.',

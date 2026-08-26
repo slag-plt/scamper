@@ -62,6 +62,8 @@ export interface Notebook {
   insertCell: (index: number, kind: 'code' | 'prose') => number
   /** Takes a cell out of the file. */
   removeCell: (index: number) => void
+  /** Puts the file's caret where the caret in a cell is. */
+  noteCursor: (index: number, pos: number) => void
   /** Notes that the document changed, so the squiggles can catch up. */
   noteEdit: () => void
   /** Drops the timers this holds. */
@@ -92,6 +94,16 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       version.value++
     })
   })
+
+  /**
+   * The cell at `index`, if there is one.
+   *
+   * Not `cells.value.at`, whose negative indices count from the end: -1 here
+   * means "above the first cell", which is a position rather than a cell.
+   */
+  function cellAt(index: number): NotebookCell | undefined {
+    return index < 0 ? undefined : cells.value[index]
+  }
 
   /**
    * The document, or null when there is no editor to ask.
@@ -172,7 +184,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
    * before it did.
    */
   function applyChanges(index: number, changes: CellChange[]): void {
-    const cell = cells.value.at(index)
+    const cell = cellAt(index)
     if (cell === undefined) return
     const start = cell.from
     let shifted = 0
@@ -192,7 +204,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       shifted += change.insert.length - (change.to - change.from)
     }
     // It holds something now, so the file has somewhere to find it.
-    const written = cells.value.at(index)
+    const written = cellAt(index)
     if (cell.isDraft === true && written !== undefined && written.to > written.from) {
       cells.value = cells.value.map((c, i) =>
         i === index ? { ...c, isDraft: undefined } : c,
@@ -203,7 +215,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
 
   /** Replaces a cell outright, which is how a prose cell is written back. */
   function replaceCell(index: number, text: string): void {
-    const cell = cells.value.at(index)
+    const cell = cellAt(index)
     if (cell === undefined || cell.text === text) return
     applyChanges(index, [{ from: 0, to: cell.to - cell.from, insert: text }])
   }
@@ -217,8 +229,8 @@ export function useNotebook(editor: EditorAccessor): Notebook {
    * is already there alone.
    */
   function insertCell(index: number, kind: 'code' | 'prose'): number {
-    const above = cells.value.at(index)
-    const below = cells.value.at(index + 1)
+    const above = cellAt(index)
+    const below = cellAt(index + 1)
     const at = above?.to ?? below?.from ?? (doc() ?? '').length
     const separator = cells.value.length === 0 ? '' : '\n\n'
     if (separator.length > 0) editor().replaceRange(at, at, separator)
@@ -254,7 +266,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
 
   /** Removes a cell, and the blank line that separated it from the one above. */
   function removeCell(index: number): void {
-    const cell = cells.value.at(index)
+    const cell = cellAt(index)
     const src = doc()
     if (cell === undefined || src === null) return
     // Back up over the whitespace above it, so removing a cell does not leave
@@ -268,6 +280,26 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     }
     editor().replaceRange(from, to, '')
     refresh()
+  }
+
+  /**
+   * Follows the caret in a cell with the caret in the file.
+   *
+   * So the commands that work from where the cursor is -- stepping the
+   * statement it is in, querying the value under it, the line and column in
+   * the status bar -- mean the same thing in the notebook as in the source
+   * view. A prose cell reports its own start: its Markdown and the file's
+   * comment lines are not the same text, so a position in one is not a
+   * position in the other.
+   */
+  function noteCursor(index: number, pos: number): void {
+    const cell = cellAt(index)
+    if (cell === undefined) return
+    try {
+      editor().setCursor(cell.kind === 'code' ? cell.from + pos : cell.from)
+    } catch {
+      // No editor to move; there is nothing to keep in step with.
+    }
   }
 
   function noteEdit(): void {
@@ -303,7 +335,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
       const index = cells.value.findIndex(
         (cell) => at >= cell.from && at < cell.to,
       )
-      const cell = cells.value.at(index)
+      const cell = cellAt(index)
       if (index === -1 || cell === undefined) continue
       perCell[index].push({
         from: Math.max(0, at - cell.from),
@@ -351,6 +383,7 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     replaceCell,
     insertCell,
     removeCell,
+    noteCursor,
     noteEdit,
     cancel,
   }

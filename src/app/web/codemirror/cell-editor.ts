@@ -106,6 +106,8 @@ export interface CellEditorConfig {
   onChange?: (changes: CellChange[]) => void
   /** Told when the caret enters or leaves, so a notebook can follow it. */
   onFocusChange?: (focused: boolean) => void
+  /** Told where the caret is, so a notebook can put the file's there too. */
+  onCursor?: (pos: number) => void
   /**
    * What the cell is written in. Scamper unless it is a prose cell, which is
    * Markdown and gets none of the Scheme editing behaviour.
@@ -179,10 +181,16 @@ function historyKeys(onHistory: (direction: -1 | 1) => boolean): KeyBinding[] {
   ]
 }
 
-/** Reports edits and focus, for a cell that is a view of a document. */
+/** Reports edits, focus and the caret, for a cell that is a view of a document. */
 function reporters(config: CellEditorConfig): Extension {
-  const { onChange, onFocusChange } = config
-  if (onChange === undefined && onFocusChange === undefined) return []
+  const { onChange, onFocusChange, onCursor } = config
+  if (
+    onChange === undefined &&
+    onFocusChange === undefined &&
+    onCursor === undefined
+  ) {
+    return []
+  }
   return EditorView.updateListener.of((update) => {
     if (onChange !== undefined && update.docChanged) {
       const changes: CellChange[] = []
@@ -193,6 +201,15 @@ function reporters(config: CellEditorConfig): Extension {
     }
     if (onFocusChange !== undefined && update.focusChanged) {
       onFocusChange(update.view.hasFocus)
+    }
+    // Only while the caret is in here: a selection that moves in a cell nobody
+    // is typing in is the editor's own doing, not a person's.
+    if (
+      onCursor !== undefined &&
+      update.view.hasFocus &&
+      (update.selectionSet || update.focusChanged)
+    ) {
+      onCursor(update.state.selection.main.head)
     }
   })
 }
