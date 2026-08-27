@@ -1,6 +1,7 @@
 import * as L from '../../lpm'
 import { Rgb, color_rgb, color_colorToRgb, color_rgbAverage, color_rgbToString } from './color.js'
 import { Font, font_font, font_fontQ, font_fontToFontString } from './font.js'
+import { context2d } from './context.js'
 
 /***** Core Functions *********************************************************/
 
@@ -339,7 +340,7 @@ export function drawing_text(text: string, size: number, color: Rgb, ...rest: an
   // N.B., to calculate the width and height of text, we need to make a
   // temporary canvas to measure the text's dimensions.
   const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   ctx.font = font_fontToFontString(f, size)
   console.log(font_fontToFontString(f, size))
   const met = ctx.measureText(text)
@@ -476,7 +477,7 @@ export function drawing_drawingRecolor(drawing: Drawing, color: any): Drawing {
 
 export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
   const canvas = drawing_renderer(drawing) as HTMLCanvasElement
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
@@ -503,7 +504,7 @@ function badMode(mode: unknown): L.ScamperError {
 }
 
 export function drawing_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   switch (drawing[L.structKind]) {
     case 'ellipse': {
       ctx.fillStyle = color_rgbToString(drawing.color)
@@ -672,8 +673,8 @@ export function drawing_render (x: number, y: number, drawing: Drawing, canvas: 
  *   *display* pass a themed color (see DrawingRenderer.vue); the default keeps
  *   off-screen/data uses (drawing->pixels, drawing->image) deterministic.
  */
-export function drawing_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
-  const ctx = canvas.getContext('2d')!
+export function drawing_clearDrawing (canvas: HTMLCanvasElement, background = 'white') {
+  const ctx = context2d(canvas)
   ctx.fillStyle = background
   ctx.strokeStyle = 'black'
   ctx.fillRect(0, 0, Math.ceil(canvas.width), Math.ceil(canvas.height))

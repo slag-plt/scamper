@@ -8,6 +8,7 @@ import { Fiber } from '../../src/lpm/fiber'
 import { raiseFiber } from '../../src/scheme/raise'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { stepFiberWith } from '../util'
+import { required } from '../dom'
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -383,7 +384,7 @@ describe('provenance survives the whole AST -> op -> AST round trip', () => {
   async function trace(src: string): Promise<string[]> {
     const { prog, diagnostics } = await S.compile(src)
     expect(diagnostics).toEqual([])
-    const fiber = new Fiber(prog!, S.mkInitialEnv())
+    const fiber = new Fiber(required(prog, 'a compiled program'), S.mkInitialEnv())
     const out: string[] = []
     stepFiberWith(fiber, (f) => {
       if (f.frames.length > 0) {

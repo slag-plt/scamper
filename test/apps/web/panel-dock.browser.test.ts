@@ -8,6 +8,7 @@ import { providePanels, VERSION, type Panels } from '../../../src/app/web/compos
 import { provideEditor } from '../../../src/app/web/composables/editor-context'
 import { initialize } from '../../../src/scamper'
 import type { PanelId } from '../../../src/app/web/panel-layout'
+import { query, required } from '../../dom'
 
 // CodeMirror's query extension reaches for the Scamper singleton as it builds
 // its initial state, so the language has to be up before any editor mounts.
@@ -136,12 +137,12 @@ describe('the splitter', () => {
       const before = rect(frame('editor'))?.width ?? 0
       expect(before).toBeGreaterThan(0)
 
-      const sp = host.querySelector<HTMLElement>('[role="separator"]')
+      const sp = query(host, '[role="separator"]')
       const box = rect(sp)
       expect(box).toBeDefined()
 
       drag(
-        sp as HTMLElement,
+        sp,
         { x: box.x + box.width / 2, y: box.y + box.height / 2 },
         { x: box.x - 200, y: box.y + box.height / 2 },
       )
@@ -163,11 +164,11 @@ describe('the splitter', () => {
       // The default docks editor and output into the two slots (#371).
       await settle()
 
-      const sp = host.querySelector<HTMLElement>('[role="separator"]')
+      const sp = query(host, '[role="separator"]')
       const box = rect(sp)
       // Well past the left edge of the dock.
       drag(
-        sp as HTMLElement,
+        sp,
         { x: box.x, y: box.y + 10 },
         { x: box.x - 2000, y: box.y + 10 },
       )
@@ -200,10 +201,10 @@ describe('a floating panel', () => {
     try {
       const win = frame('output')
       const before = rect(win)
-      const bar = win?.querySelector<HTMLElement>('.window-bar')
+      const bar = query(required(win, 'the floating window'), '.window-bar')
 
       drag(
-        bar as HTMLElement,
+        bar,
         { x: before.x + 40, y: before.y + 6 },
         { x: before.x - 60, y: before.y - 40 },
       )
@@ -224,10 +225,10 @@ describe('a floating panel', () => {
     try {
       const win = frame('output')
       const before = rect(win)
-      const handle = win?.querySelector<HTMLElement>('.resize-w')
+      const handle = query(required(win, 'the floating window'), '.resize-w')
 
       drag(
-        handle as HTMLElement,
+        handle,
         { x: before.x, y: before.y + before.height / 2 },
         { x: before.x - 80, y: before.y + before.height / 2 },
       )

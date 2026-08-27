@@ -95,11 +95,17 @@ describe('run cancellation', () => {
       pending.push(cb)
       return pending.length
     })
+    /** The next queued frame callback; both loops below guard on length. */
+    const nextPending = (): FrameRequestCallback => {
+      const next = pending.shift()
+      if (next === undefined) throw new Error('no frame callback is pending')
+      return next
+    }
 
     canvas_animateWith(() => undefined)
     // Drain a few frames; each spawns (fake reports #t) and re-arms the loop.
     for (let i = 0; i < 3 && pending.length > 0; i++) {
-      pending.shift()!(i)
+      nextPending()(i)
     }
     const before = spawned.length
     expect(before).toBe(3)
@@ -107,7 +113,7 @@ describe('run cancellation', () => {
     controller.abort()
     // Any already-queued frame callback must early-return: no spawn, no re-arm.
     while (pending.length > 0) {
-      pending.shift()!(99)
+      nextPending()(99)
     }
     expect(spawned.length).toBe(before)
   })

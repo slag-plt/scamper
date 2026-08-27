@@ -22,7 +22,9 @@ class FakeRoot {
       name,
       getFile: () => {
         this.reads.push(name)
-        return Promise.resolve({ text: () => Promise.resolve(this.files.get(name)!) })
+        return Promise.resolve({
+        text: () => Promise.resolve(this.files.get(name) ?? ''),
+      })
       },
     }
   }

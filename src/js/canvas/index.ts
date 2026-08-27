@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 import { Drawing, drawing_render } from '../image/drawing.js'
 import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/color.js'
 import { Font, font_font, font_fontQ, font_fontToFontString } from '../image/font.js'
+import { context2d } from '../image/context.js'
 
 export function canvas_canvasQ(v: any): boolean {
   return v instanceof HTMLCanvasElement
@@ -26,7 +27,7 @@ export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElem
 }
 
 export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   if (mode === 'solid') {
@@ -39,7 +40,7 @@ export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: 
 }
 
 export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.beginPath()
@@ -54,7 +55,7 @@ export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: nu
 }
 
 export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: number, radius: number, mode: string, color: string): void {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.beginPath()
@@ -80,7 +81,7 @@ export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: numbe
     }
   }
 
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
   ctx.font = font_fontToFontString(f, size)
@@ -98,7 +99,7 @@ export function canvas_canvasDrawing(canvas: HTMLCanvasElement, x: number, y: nu
 }
 
 export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
-  const ctx: CanvasRenderingContext2D = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   const pairs = L.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
     throw new L.ScamperError('Runtime', `canvas-path!: expected "solid" or "outline", but got ${mode}`)
@@ -136,6 +137,7 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
   // would find the foreground program rather than this one -- wrong as soon as
   // a page holds several (#375).
   const run = L.currentRun()
+
   function callback(time: number) {
     if (run.signal?.aborted) {
       return
@@ -146,6 +148,7 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
       }
     })
   }
+
   window.requestAnimationFrame(callback)
 }
 
@@ -168,7 +171,7 @@ export function canvas_canvasOnclick(canvas: HTMLCanvasElement, fn: L.ScamperFn)
 // per-pixel Scamper function (callScamperFn is disabled).
 
 export function canvas_canvasGetPixel(canvas: HTMLCanvasElement, x: number, y: number): L.Struct {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   const img = ctx.getImageData(x, y, 1, 1)
   const data = img.data
   return color_rgb(data[0], data[1], data[2], data[3])
@@ -186,7 +189,7 @@ export function canvas_pixelsQ(v: L.Value): boolean {
 }
 
 export function canvas_canvasToPixels(canvas: HTMLCanvasElement): L.Struct[] {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
   for (let i = 0; i < src.length; i += 4) {
@@ -199,7 +202,7 @@ export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height:
   const ret = document.createElement('canvas')
   ret.width = width
   ret.height = height
-  const ctx = ret.getContext('2d')!
+  const ctx = context2d(ret)
   const outImg = ctx.createImageData(width, height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
@@ -214,7 +217,7 @@ export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height:
 }
 
 export function canvas_canvasSetPixels(canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
-  const ctx = canvas.getContext('2d')!
+  const ctx = context2d(canvas)
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {

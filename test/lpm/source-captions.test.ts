@@ -15,6 +15,7 @@ class CaptioningChannel implements OutputChannel, ErrorChannel {
     | { kind: 'value' }
     | { kind: 'source'; text: string; index: number }
   )[] = []
+
   totalSends = 0
 
   send(_v: Value) {

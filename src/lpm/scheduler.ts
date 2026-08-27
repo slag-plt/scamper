@@ -75,7 +75,7 @@ export class Scheduler {
   // - execute should remove tasks that complete during the loop.
   private tasks: SchedulerTask[] = []
   // Parked step-mode tasks, keyed by id. A parked task lives here, not in `tasks`.
-  private steppingGates: Map<SchedulerId, SteppingGate> = new Map()
+  private steppingGates = new Map<SchedulerId, SteppingGate>()
   // Traced tasks that have already emitted their opening line. Cleared when the
   // task ends.
   private tracesStarted = new Set<SchedulerId>()
@@ -119,7 +119,10 @@ export class Scheduler {
       this.steppingGates.set(task.id, {
         task,
         mode: 'step',
-        resolve: () => {},
+        // Nothing is waiting yet; resume() installs the real one.
+        resolve: () => {
+          /* no awaiter */
+        },
         lastStmtIdx: task.fiber.stmtIndex,
         parked: false,
       })
@@ -569,7 +572,9 @@ export class Scheduler {
     if (gate) {
       gate.parked = true
       const resolve = gate.resolve
-      gate.resolve = () => {}
+      gate.resolve = () => {
+        /* this awaiter has been settled */
+      }
       resolve()
     }
   }
@@ -581,7 +586,7 @@ export class Scheduler {
     // Only wake a *parked* task. A running task, or one suspended mid-block-on
     // (removed from the queue but not parked), must not be re-scheduled -- doing
     // so would run the fiber twice / double-queue it.
-    if (!gate || !gate.parked) {
+    if (!gate?.parked) {
       return
     }
     if (gate.task.fiber.isDone()) {
@@ -620,7 +625,9 @@ export class Scheduler {
     // Settle any previously-pending resume awaiter before taking over its slot,
     // so its promise can't be lost (which would hang it forever).
     const prev = gate.resolve
-    gate.resolve = () => {}
+    gate.resolve = () => {
+      /* this awaiter has been settled */
+    }
     prev()
     return new Promise<void>((resolve) => {
       gate.mode = mode

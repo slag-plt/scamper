@@ -83,10 +83,10 @@ function onKey(event: KeyboardEvent) {
       :class="{ selected: active === id }"
     >
       <button
+        :id="`tab-${id}`"
         type="button"
         role="tab"
         class="pane-tab"
-        :id="`tab-${id}`"
         :aria-selected="active === id"
         :aria-controls="`panel-${id}`"
         :tabindex="active === id ? 0 : -1"

@@ -32,7 +32,12 @@ export default defineConfig(
       // Agent worktrees (git worktrees created under .claude/) are separate
       // checkouts; never lint into them.
       '.claude/**',
-      'src/js/webaudiofont/*',
+      // Vendored WebAudioFont, carried as-is and opening with `@ts-nocheck`.
+      // The pattern used to read `src/js/webaudiofont/*` and so matched
+      // nothing: the file moved under `music/` in fe89945 and the ignore did
+      // not follow, leaving 622 warnings from code we do not maintain. The
+      // wrapper beside it, `webaudiofont.ts`, is ours and stays linted.
+      'src/js/music/webaudiofont/WebAudioFontPlayer.ts',
       'src/scheme/generated/*',
       'src/lib/generated/*',
     ]),

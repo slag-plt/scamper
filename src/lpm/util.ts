@@ -309,6 +309,40 @@ export function isHiddenField(fld: string): boolean {
   return fld.startsWith('##') && fld.endsWith('##')
 }
 
+/**
+ * Removes and returns the top of `stack`, raising an ICE if there is none.
+ *
+ * Codegen guarantees the operand is there, so an empty stack means the runtime
+ * has gone wrong rather than the program -- worth saying loudly rather than
+ * carrying an `undefined` forward to fail somewhere unrelated.
+ *
+ * N.B. the length is what is checked, not the popped value: `undefined` is a
+ * perfectly good Scamper value (it is `void`), so a stack really can hold one.
+ *
+ * @param what names the stack, for the message.
+ */
+export function popRequired<T>(stack: T[], what: string): T {
+  if (stack.length === 0) {
+    throw new ICE('popRequired', `${what} was empty`)
+  }
+  const top = stack[stack.length - 1]
+  stack.length -= 1
+  return top
+}
+
+/**
+ * Removes and returns the *front* of `queue`, raising an ICE if there is none.
+ * The companion to {@link popRequired}, and empty for the same reason.
+ */
+export function shiftRequired<T>(queue: T[], what: string): T {
+  if (queue.length === 0) {
+    throw new ICE('shiftRequired', `${what} was empty`)
+  }
+  const front = queue[0]
+  queue.splice(0, 1)
+  return front
+}
+
 /** @return a list of the fields of the given struct. */
 export function getFieldsOfStruct(s: L.Struct): string[] {
   const ret: string[] = []
@@ -345,11 +379,7 @@ export const charNamedValues = new Map(
 )
 
 export function charToName(c: string): string {
-  if (charNamedValues.has(c)) {
-    return charNamedValues.get(c)!
-  } else {
-    return c
-  }
+  return charNamedValues.get(c) ?? c
 }
 
 /** Each character a string literal cannot hold verbatim, paired with the

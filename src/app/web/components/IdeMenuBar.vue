@@ -295,7 +295,7 @@ const runMenu = computed<MenuItem[]>(() => [
   // so there is nowhere to put one there (#410).
   {
     label: 'Query Value at Cursor',
-    disabled: props.isNotebook === true,
+    disabled: props.isNotebook,
     run: () => session.query(),
   },
 ])

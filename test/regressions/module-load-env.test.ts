@@ -84,7 +84,7 @@ describe('#329: a file module loads with the standard library available', () => 
     expect(out).toEqual(['4'])
   })
 
-  test("the standard library is not re-exported by the module it loaded", async () => {
+  test('the standard library is not re-exported by the module it loaded', async () => {
     // The module's env imports prelude/runtime; those bindings live in the
     // env's *imports*, not its top level, so they must not leak into what the
     // module exports.

@@ -313,6 +313,7 @@ watch(isShown, (shown) => {
        reader and collide with the app's real modals. -->
   <section
     v-show="isShown"
+    :id="panelElementId"
     ref="root"
     class="panel-frame"
     :class="[
@@ -324,7 +325,6 @@ watch(isShown, (shown) => {
     :data-panel="id"
     :data-placement="isFloating ? 'floating' : 'docked'"
     :data-slot="slot ?? undefined"
-    :id="panelElementId"
     :role="isTabbed ? 'tabpanel' : undefined"
     :aria-labelledby="isTabbed ? `tab-${id}` : undefined"
     :aria-label="isTabbed ? undefined : title"

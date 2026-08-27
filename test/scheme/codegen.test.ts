@@ -7,6 +7,7 @@ import { raiseFiber } from '../../src/scheme/raise.js'
 import { expToString } from '../../src/scheme/ast.js'
 import { runProgram, runProgramValues } from '../harness.js'
 import { stepFiberWith } from '../util.js'
+import { required } from '../dom'
 
 // `stripRanges` drops the `[line:col]` location from error output, for the
 // rare case whose error range points into the .scm library source (contract
@@ -334,7 +335,7 @@ describe('End-to-end cases', () => {
       '(let ([x (+ 1 1)] [y (+ x 1)]) (+ x y))',
     )
     expect(diagnostics).toEqual([])
-    const fiber = new Fiber(prog!, S.mkInitialEnv())
+    const fiber = new Fiber(required(prog, 'a compiled program'), S.mkInitialEnv())
     const trace: string[] = []
     stepFiberWith(fiber, (f) => {
       if (f.frames.length > 0) {

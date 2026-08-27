@@ -7,6 +7,7 @@ import { MockFileSystem } from '../stubs/mock-file-system'
 import { DEFAULT_LAYOUT } from '../../src/app/web/panel-layout'
 import { VERSION } from '../../src/app/web/composables/use-panels'
 import { initialize } from '../../src/scamper'
+import { required } from '../dom'
 
 vi.mock('../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -89,10 +90,9 @@ describe('#371: the output starts docked beside the code', () => {
     try {
       // Chrome belongs to a floating frame; a docked one is a pane, so there
       // is no window furniture over the code for a beginner to get lost in.
-      const output = panel('output')
-      expect(output).not.toBeNull()
+      const output = required(panel('output'), 'the output panel')
       expect(
-        queryByRole(output as HTMLElement, 'button', { name: /minimi/i }),
+        queryByRole(output, 'button', { name: /minimi/i }),
       ).toBeNull()
     } finally {
       wrapper.unmount()

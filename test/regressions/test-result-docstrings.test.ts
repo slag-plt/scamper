@@ -6,6 +6,7 @@ import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import { parseFunctionDocFromComments } from '../../src/scheme/docstring/docstring'
 import { isCategoryTag } from '../../src/scheme/docstring/tags/category-tag'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
+import { required } from '../dom'
 
 // Regression test for #77: "test-error doesn't work as documented". The `test`
 // library's result constructors (test-result-ok / -error-expected /
@@ -46,7 +47,8 @@ describe('#77: test result constructors are documented', () => {
       expect(def, `expected a define for ${name}`).toBeDefined()
       expect(def?.docComments, `${name} should have a docstring`).toBeTruthy()
 
-      const { doc, diagnostics } = parseFunctionDocFromComments(def!.docComments!)
+      const comments = required(def?.docComments, `a docstring on ${name}`)
+      const { doc, diagnostics } = parseFunctionDocFromComments(comments)
       expect(diagnostics.map((d) => d.message)).toEqual([])
       expect(doc).toBeDefined()
       expect(doc?.signature.function.head.name).toBe(name)

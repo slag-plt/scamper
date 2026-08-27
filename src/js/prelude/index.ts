@@ -468,7 +468,7 @@ export function prelude_reverse(l: L.List): L.List {
   queue.reverse()
   let ret = null
   while (queue.length > 0) {
-    const next = queue.pop()!
+    const next = L.popRequired(queue, 'the list being built')
     ret = L.mkCons(next.head, ret)
   }
   return ret
@@ -680,7 +680,13 @@ export function prelude_digitalValue(c: L.Char): number {
 }
 
 export function prelude_charToInteger(c: L.Char): number {
-  return c.value.codePointAt(0)!
+  // A Char always holds exactly one code point, so index 0 is always there;
+  // `codePointAt` is nullable for the general case of an out-of-range index.
+  const code = c.value.codePointAt(0)
+  if (code === undefined) {
+    throw new L.ICE('prelude_charToInteger', 'a character with no code point')
+  }
+  return code
 }
 
 export function prelude_integerToChar(n: number): L.Char {

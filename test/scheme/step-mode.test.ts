@@ -10,6 +10,7 @@ import { isStructKind } from '../../src/lpm/util.js'
 import { SuspendSignal } from '../../src/lpm/index.js'
 import type { Value } from '../../src/lpm/lang.js'
 import { makeTestFiber } from '../util.js'
+import { required } from '../dom'
 
 // End-to-end tests for the scheduler's step mode: a run pauses ("parks") after
 // each user-visible reduction and advances only on step()/resume(). Drives the
@@ -31,14 +32,18 @@ function render(v: Value): string {
 
 async function startStepping(src: string) {
   const { prog } = await Scheme.compile(src.trim())
-  const fiber = new Fiber(prog!, Scheme.mkInitialEnv())
+  const fiber = new Fiber(required(prog, 'a compiled program'), Scheme.mkInitialEnv())
   const sched = new Scheduler()
   const steps: string[] = []
   const ch = {
     send: (v: Value) => steps.push(render(v)),
     report: (e: { message: string }) => steps.push('ERR:' + e.message),
-    pushLevel: () => {},
-    popLevel: () => {},
+    pushLevel: () => {
+      /* nesting is not what these specs look at */
+    },
+    popLevel: () => {
+      /* nesting is not what these specs look at */
+    },
   }
   const id = 'test-run'
   let finished = false
@@ -217,8 +222,12 @@ describe('robustness regressions', () => {
     const ch = {
       send: (v: Value) => steps.push(render(v)),
       report: (e: { message: string }) => errs.push(e.message),
-      pushLevel: () => {},
-      popLevel: () => {},
+      pushLevel: () => {
+        /* nesting is not what these specs look at */
+      },
+      popLevel: () => {
+        /* nesting is not what these specs look at */
+      },
     }
     let finished = false
     sched.schedule({

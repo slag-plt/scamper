@@ -8,6 +8,7 @@ import { MockFileSystem } from '../../stubs/mock-file-system'
 import { mockEditorHandle } from '../../stubs/mock-editor-handle'
 import { initialize } from '../../../src/scamper'
 import '../../../src/app/web/renderers'
+import { query, required } from '../../dom'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -98,9 +99,10 @@ describe('IDE REPL window', () => {
     try {
       await openRepl()
       const prompt = EditorView.findFromDOM(
-        replWindow()?.querySelector<HTMLElement>(
+        query(
+          required(replWindow(), 'the REPL window'),
           '.repl-prompt .cm-editor',
-        ) as HTMLElement,
+        ),
       )
       expect(prompt).not.toBeNull()
       prompt?.dispatch({ changes: { from: 0, insert: '(sq 7)' } })

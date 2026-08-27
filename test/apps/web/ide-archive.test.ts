@@ -6,6 +6,7 @@ import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
 import { initialize } from '../../../src/scamper'
+import { required } from '../../dom'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
   acquireLock: vi.fn(() => Promise.resolve(true)),
@@ -87,7 +88,8 @@ describe('IDE zip export', () => {
     await waitFor(() => {
       expect(downloads).toHaveLength(1)
     })
-    return JSZip.loadAsync(await blobs.get(downloads[0].url)!.arrayBuffer())
+    const blob = required(blobs.get(downloads[0].url), 'the downloaded archive')
+    return JSZip.loadAsync(await blob.arrayBuffer())
   }
 
   test('downloads the drawer as a date-stamped zip once confirmed', async () => {
@@ -103,7 +105,7 @@ describe('IDE zip export', () => {
       const zip = await downloadedArchive()
       expect(downloads[0].name).toMatch(/^scamper-files-\d{4}-\d{2}-\d{2}\.zip$/)
       expect(Object.keys(zip.files).sort()).toEqual(['hello.scm', 'shapes.scm'])
-      expect(await zip.file('hello.scm')!.async('string')).toBe('(display "hello")')
+      expect(await required(zip.file('hello.scm'), 'hello.scm in the archive').async('string')).toBe('(display "hello")')
     } finally {
       wrapper.unmount()
     }
@@ -125,7 +127,7 @@ describe('IDE zip export', () => {
       await exportFiles()
 
       const zip = await downloadedArchive()
-      expect(await zip.file('hello.scm')!.async('string')).toBe('(display "edited")')
+      expect(await required(zip.file('hello.scm'), 'hello.scm in the archive').async('string')).toBe('(display "edited")')
     } finally {
       wrapper.unmount()
     }

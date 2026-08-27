@@ -114,7 +114,7 @@ describe('Env letrec scopes (declareScope / assign / holes)', () => {
   })
 
   test('assigning an undeclared name is an ICE', () => {
-    expect(() => Env.empty.assign('nope', 1)).toThrow(ICE)
+    expect(() => { Env.empty.assign('nope', 1) }).toThrow(ICE)
   })
 
   test('getLocals omits holes', () => {

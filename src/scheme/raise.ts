@@ -101,7 +101,7 @@ export function raiseFrame(
       }
 
       case 'match': {
-        const scrutinee = values.pop()!
+        const scrutinee = LPM.popRequired(values, 'the raise stack')
         const matches = op.branches.map(([pat, body]) => {
           const bodyExp = raiseFrame(
             [],
@@ -138,7 +138,7 @@ export function raiseFrame(
             ),
           )
         } else {
-          const currentValue = values.pop()!
+          const currentValue = LPM.popRequired(values, 'the raise stack')
           const remaining = op.bindings.slice(op.idx - 1)
           const excl = env.withoutLocals(
             ...remaining.flatMap((b) => LPM.patVars(b.pat)),
@@ -161,7 +161,7 @@ export function raiseFrame(
       }
 
       case 'if': {
-        const guard = values.pop()!
+        const guard = LPM.popRequired(values, 'the raise stack')
         const thenExp = raiseFrame([], env, op.thenB.toReversed())
         const elseExp = raiseFrame([], env, op.elseB.toReversed())
         values.push(A.mkIf(guard, thenExp, elseExp, op.range, op.provenance))
@@ -189,7 +189,7 @@ export function raiseFrame(
         // with-handler is now an ordinary procedure, reconstructed at its call
         // site, so these bracketing ops are transparent to reconstruction: drop
         // the (peeked) handler value, leaving the guarded result.
-        const result = values.pop()!
+        const result = LPM.popRequired(values, 'the raise stack')
         values.pop()
         values.push(result)
         break
@@ -197,7 +197,7 @@ export function raiseFrame(
 
     }
   }
-  return values.pop()!
+  return LPM.popRequired(values, 'the raise stack')
 }
 
 export function raiseFrames(frames: Frame[]): A.Exp {

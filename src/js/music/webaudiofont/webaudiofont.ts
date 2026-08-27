@@ -1,3 +1,4 @@
+import * as L from '../../../lpm'
 import { WebAudioFontPlayer } from './WebAudioFontPlayer.js'
 
 function mkToneIndex(instrument: number): string {
@@ -65,6 +66,25 @@ class Player {
       isPercussion ? mkPercId(id, this.fontName) : mkToneId(id, this.fontName)
     ]
   }
+}
+
+/**
+ * The player, or a runtime error saying why there is not one.
+ *
+ * `waf` answers undefined only outside a browser -- the CLI has no Web Audio --
+ * and every music primitive needs it, so this is what they call. Before, each
+ * asserted the answer away and a program run outside a browser died on "cannot
+ * read properties of undefined" from inside the player.
+ */
+export function requireWaf(): Player {
+  const player = waf()
+  if (player === undefined) {
+    throw new L.ScamperError(
+      'Runtime',
+      'The music library needs a browser: there is no audio here',
+    )
+  }
+  return player
 }
 
 export function waf(): Player | undefined {
