@@ -27,7 +27,8 @@ export const patchNotes: PatchNote[] = [
   {
     version: '4.1.1',
     notes: [
-      'The Run button no longer shows square corners poking out of it when you hover over it.'
+      'The Run button no longer shows square corners poking out of it when you hover over it.',
+      'A reading page no longer stops at an example that animates or plays a sound: the examples below it now run as they should.'
     ]
   },
   {

@@ -729,6 +729,16 @@ export class Scheduler {
     this.nextCaption.delete(task.id)
   }
 
+  /**
+   * Takes the task at `index` out of the run queue, by moving the last one into
+   * its slot rather than shifting everything down.
+   *
+   * @returns the task that was at `index` -- the one removed. N.B. that is not
+   *          what `pop()` hands back, which is the task that was *moved*: the
+   *          two coincide only when `index` is the last slot. Returning the
+   *          moved one instead meant a finished run signalled someone else's
+   *          completion and never its own (#415).
+   */
   private removeTaskFromQueue(index: number): SchedulerTask | undefined {
     const lastFiber = this.tasks.at(this.tasks.length - 1)
     if (!lastFiber) {
@@ -737,8 +747,10 @@ export class Scheduler {
         "Loop iteration atomicity error: somehow scheduler's tasks changed mid-iteration!",
       )
     }
+    const removed = this.tasks.at(index)
     this.tasks[index] = lastFiber
-    return this.tasks.pop()
+    this.tasks.pop()
+    return removed
   }
 
   private endCurrFiber() {
