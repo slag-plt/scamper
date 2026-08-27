@@ -83,7 +83,7 @@ export class ReportError extends ScamperError {
  * control flow, NOT an error -- it is caught by the scheduler before any error
  * handling and is never surfaced to the user.
  */
-export class SuspendSignal {
+export class SuspendSignal extends Error {
   /**
    * Where the suspending call was written. A primitive throws this signal with
    * no range -- it has no idea -- and `applyFn` fills it in on the way out,
@@ -93,5 +93,11 @@ export class SuspendSignal {
    */
   range?: Range
 
-  constructor(public action: () => Promise<Value>) {}
+  constructor(public action: () => Promise<Value>) {
+    // Extends Error only so that `throw` of it is a throw of an error, which is
+    // what every linter and every reader expects; it is still control flow, and
+    // both catch sites (Scheduler.stepTask, applyFn) test for it before they
+    // test for anything else, so nothing that handles errors ever sees one.
+    super('a blocking primitive suspended the fiber')
+  }
 }

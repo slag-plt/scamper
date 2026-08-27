@@ -119,7 +119,10 @@ export class Scheduler {
       this.steppingGates.set(task.id, {
         task,
         mode: 'step',
-        resolve: () => {},
+        // Nothing is waiting yet; resume() installs the real one.
+        resolve: () => {
+          /* no awaiter */
+        },
         lastStmtIdx: task.fiber.stmtIndex,
         parked: false,
       })
@@ -569,7 +572,9 @@ export class Scheduler {
     if (gate) {
       gate.parked = true
       const resolve = gate.resolve
-      gate.resolve = () => {}
+      gate.resolve = () => {
+        /* this awaiter has been settled */
+      }
       resolve()
     }
   }
@@ -620,7 +625,9 @@ export class Scheduler {
     // Settle any previously-pending resume awaiter before taking over its slot,
     // so its promise can't be lost (which would hang it forever).
     const prev = gate.resolve
-    gate.resolve = () => {}
+    gate.resolve = () => {
+      /* this awaiter has been settled */
+    }
     prev()
     return new Promise<void>((resolve) => {
       gate.mode = mode

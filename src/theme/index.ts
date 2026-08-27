@@ -93,7 +93,9 @@ export function readColorToken(name: string): string {
  */
 export function onThemeChange(cb: (theme: Theme) => void): () => void {
   if (!hasWindow) {
-    return () => {}
+    return () => {
+      /* nothing was subscribed */
+    }
   }
   const handler = (e: Event) => { cb((e as CustomEvent<Theme>).detail) }
   window.addEventListener('themechange', handler)

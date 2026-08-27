@@ -37,8 +37,12 @@ async function startStepping(src: string) {
   const ch = {
     send: (v: Value) => steps.push(render(v)),
     report: (e: { message: string }) => steps.push('ERR:' + e.message),
-    pushLevel: () => {},
-    popLevel: () => {},
+    pushLevel: () => {
+      /* nesting is not what these specs look at */
+    },
+    popLevel: () => {
+      /* nesting is not what these specs look at */
+    },
   }
   const id = 'test-run'
   let finished = false
@@ -217,8 +221,12 @@ describe('robustness regressions', () => {
     const ch = {
       send: (v: Value) => steps.push(render(v)),
       report: (e: { message: string }) => errs.push(e.message),
-      pushLevel: () => {},
-      popLevel: () => {},
+      pushLevel: () => {
+        /* nesting is not what these specs look at */
+      },
+      popLevel: () => {
+        /* nesting is not what these specs look at */
+      },
     }
     let finished = false
     sched.schedule({
