@@ -26,5 +26,5 @@ function fontPrim (face: string, system: string, isBold: boolean, isItalic: bool
 
 export function font_font (name: string, system?: string,
     isBold?: boolean, isItalic?: boolean): Font {
-  return fontPrim(name, system || 'sans-serif', isBold || false, isItalic || false)
+  return fontPrim(name, system ?? 'sans-serif', isBold ?? false, isItalic ?? false)
 }

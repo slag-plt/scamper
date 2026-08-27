@@ -27,9 +27,9 @@ export function schemeParserPlugin() {
         try {
           generateParser()
           server.ws.send({ type: 'full-reload' })
-        } catch (err) {
+        } catch (/** @type {unknown} */ err) {
           server.config.logger.error(
-            `[scheme-parser-generator] failed to regenerate parser from syntax.grammar:\n${err.message}`,
+            `[scheme-parser-generator] failed to regenerate parser from syntax.grammar:\n${err instanceof Error ? err.message : String(err)}`,
             { error: err },
           )
         }

@@ -17,11 +17,9 @@ function throwError(msg: string): never {
 let waveColors: { bg: string; ink: string } | null = null
 
 function getWaveColors() {
-  if (waveColors === null) {
-    waveColors = {
-      bg: readColorToken('--audio-wave'),
-      ink: readColorToken('--canvas-ink'),
-    }
+  waveColors ??= {
+    bg: readColorToken('--audio-wave'),
+    ink: readColorToken('--canvas-ink'),
   }
   return waveColors
 }

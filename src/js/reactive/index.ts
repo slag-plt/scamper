@@ -75,11 +75,9 @@ class ReactiveCanvas<T> implements ReactiveElement {
       this.finished = true
     })
 
-    const blob = this
-
-    function doFrame(_time: number) {
-      blob.draw()
-      if (!blob.finished) {
+    const doFrame = (_time: number) => {
+      this.draw()
+      if (!this.finished) {
         requestAnimationFrame(doFrame)
       }
     }
@@ -134,10 +132,10 @@ class ReactiveCanvas<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.canvas }
 }
 
-export function reactive_reactiveCanvas<T> (
+export function reactive_reactiveCanvas (
     width: number,
     height: number,
-    init: T,
+    init: L.Value,
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLCanvasElement {
@@ -233,8 +231,8 @@ class ReactiveContainer<T> implements ReactiveElement {
   getElement (): HTMLElement { return this.container }
 }
 
-export function reactive_reactiveContainer<T>(
-    init: T,
+export function reactive_reactiveContainer(
+    init: L.Value,
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLDivElement {
