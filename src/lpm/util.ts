@@ -82,7 +82,12 @@ export const mkPair = (fst: L.Value, snd: L.Value): L.Pair => ({
   snd,
 })
 
-export const mkCons = (head: L.Value, tail: L.List): L.Cons => {
+/**
+ * @param tail is taken as a `Value` rather than a `List` because this checks it
+ *        itself: the check is what enforces the invariant, so demanding the
+ *        narrower type from callers only pushed a cast onto each of them.
+ */
+export const mkCons = (head: L.Value, tail: L.Value): L.Cons => {
   if (!isList(tail)) {
     throw new ScamperError(
       'Runtime',

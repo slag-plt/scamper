@@ -73,21 +73,21 @@ export const prelude_withHandler: L.Value = L.mkClosure(
 // Since we don't have effects beside vectors. Therefore, value vs. reference
 // equality is not an issue!
 
-export function prelude_equalQ(x: any, y: any): boolean {
+export function prelude_equalQ(x: L.Value, y: L.Value): boolean {
   return L.equals(x, y)
 }
 
 // Numbers (6.2)
 
-export function prelude_numberQ(x: any): boolean {
+export function prelude_numberQ(x: L.Value): boolean {
   return typeof x === 'number'
 }
 
-export function prelude_realQ(x: any): boolean {
+export function prelude_realQ(x: L.Value): boolean {
   return typeof x === 'number' && Number.isFinite(x)
 }
 
-export function prelude_integerQ(x: any): boolean {
+export function prelude_integerQ(x: L.Value): boolean {
   return typeof x === 'number' && Number.isInteger(x)
 }
 
@@ -103,7 +103,7 @@ export function prelude_integerQ(x: any): boolean {
 // Because we only implement the subset of numbers corresponding to the
 // Javascript numeric stack: number -> real -> integer
 
-export function prelude_nanQ(x: any): boolean {
+export function prelude_nanQ(x: L.Value): boolean {
   return Number.isNaN(x)
 }
 
@@ -335,7 +335,7 @@ export function prelude_not(x: boolean): boolean {
   return !x
 }
 
-export function prelude_booleanQ(x: any): boolean {
+export function prelude_booleanQ(x: L.Value): boolean {
   return typeof x === 'boolean'
 }
 
@@ -361,31 +361,38 @@ export function prelude_xor(x: boolean, y: boolean): boolean {
 
 // NOTE: like Clojure, we distinguish between pairs and lists (cons).
 
-export function prelude_pairQ(x: any): boolean {
+export function prelude_pairQ(x: L.Value): boolean {
   return L.isPair(x)
 }
 
-export function prelude_cons(x: any, y: any): L.Value {
+export function prelude_cons(x: L.Value, y: L.Value): L.Value {
   return L.mkCons(x, y)
 }
 
-export function prelude_pair(x: any, y: any): L.Value {
+export function prelude_pair(x: L.Value, y: L.Value): L.Value {
   return L.mkPair(x, y)
 }
 
 export function prelude_car(x: L.Value): L.Value {
+  // The contract is `(or/p pair? nonempty-list?)`, so what arrives is one or
+  // the other and these guards narrow it. The casts this replaces reached for
+  // `.fst`/`.head` on an `any`, which typed the answer as `any` in turn.
   if (L.isPair(x)) {
-    return (x as any).fst
+    return x.fst
+  } else if (L.isStructKind<L.Cons>(x, 'cons')) {
+    return x.head
   } else {
-    return (x as any).head
+    throw new L.ScamperError('Runtime', 'car: expected a pair or a non-empty list')
   }
 }
 
 export function prelude_cdr(x: L.Value): L.Value {
   if (L.isPair(x)) {
-    return (x as any).snd
+    return x.snd
+  } else if (L.isStructKind<L.Cons>(x, 'cons')) {
+    return x.tail
   } else {
-    return (x as any).tail
+    throw new L.ScamperError('Runtime', 'cdr: expected a pair or a non-empty list')
   }
 }
 
@@ -397,11 +404,11 @@ export function prelude_cdr(x: L.Value): L.Value {
 // N.B., set-car! and set-cdr! are unimplemented since we only implement the
 // pure, functional subset of Scheme.
 
-export function prelude_nullQ(x: any): boolean {
+export function prelude_nullQ(x: L.Value): boolean {
   return x === null
 }
 
-export function prelude_listQ(x: any): boolean {
+export function prelude_listQ(x: L.Value): boolean {
   return L.isList(x)
 }
 
@@ -607,7 +614,7 @@ export function prelude_assocSet(k: L.Value, v: L.Value, l: L.List): L.List {
 
 // Characters (6.6)
 
-export function prelude_charQ(x: any): boolean {
+export function prelude_charQ(x: L.Value): boolean {
   return L.isChar(x)
 }
 
@@ -712,7 +719,7 @@ export function prelude_charFoldcase(c: L.Char): L.Char {
 
 // Strings (6.7)
 
-export function prelude_stringQ(x: any): boolean {
+export function prelude_stringQ(x: L.Value): boolean {
   return typeof x === 'string'
 }
 
@@ -851,7 +858,7 @@ export function prelude_stringSplitVector(s: string, sep: string): string[] {
 
 // Vectors (6.8)
 
-export function prelude_vectorQ(x: any): boolean {
+export function prelude_vectorQ(x: L.Value): boolean {
   return L.isArray(x)
 }
 
@@ -953,7 +960,7 @@ export function prelude_vectorAppend(...vecs: L.Value[][]): L.Value[] {
 
 // Control features (6.10)
 
-export function prelude_procedureQ(x: any): boolean {
+export function prelude_procedureQ(x: L.Value): boolean {
   return L.isClosure(x) || L.isJsFunction(x)
 }
 
@@ -972,7 +979,7 @@ export function prelude_procedureQ(x: any): boolean {
 
 // TODO: implement fold/reduce variants for vectors
 
-export function prelude_voidQ(x: any): boolean {
+export function prelude_voidQ(x: L.Value): boolean {
   return x === undefined
 }
 
