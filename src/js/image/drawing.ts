@@ -9,11 +9,11 @@ type Mode = 'solid' | 'outline'
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
 /** A fill mode: the string "solid" or "outline". */
-export function drawing_fillModeQ (v: any): boolean {
+export function drawing_fillModeQ (v: L.Value): boolean {
   return v === 'solid' || v === 'outline'
 }
 
-export function drawing_drawingQ (v: any): boolean {
+export function drawing_drawingQ (v: L.Value): boolean {
   return L.isStructKind(v, 'ellipse') || L.isStructKind(v, 'rectangle') ||
          L.isStructKind(v, 'triangle') || L.isStructKind(v, 'path') ||
          L.isStructKind(v, 'beside') || L.isStructKind(v, 'above') ||
@@ -34,16 +34,16 @@ interface Ellipse extends L.Struct {
   color: Rgb
 }
 
-const ellipsePrim = (width: number, height: number, mode: Mode, color: any): Ellipse => ({
+const ellipsePrim = (width: number, height: number, mode: Mode, color: L.Value): Ellipse => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'ellipse',
   width, height, mode, color: color_colorToRgb(color)
 })
 
-export function drawing_ellipse(width: number, height: number, mode: Mode, color: any): Ellipse {
+export function drawing_ellipse(width: number, height: number, mode: Mode, color: L.Value): Ellipse {
   return ellipsePrim(width, height, mode, color)
 }
 
-export function drawing_circle(radius: number, mode: Mode, color: any): Ellipse {
+export function drawing_circle(radius: number, mode: Mode, color: L.Value): Ellipse {
   return ellipsePrim(radius * 2, radius * 2, mode, color)
 }
 
@@ -55,16 +55,16 @@ interface Rectangle extends L.Struct {
   color: Rgb
 }
 
-const rectanglePrim = (width: number, height: number, mode: Mode, color: any): Rectangle => ({
+const rectanglePrim = (width: number, height: number, mode: Mode, color: L.Value): Rectangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'rectangle',
   width, height, mode, color: color_colorToRgb(color)
 })
 
-export function drawing_rectangle(width: number, height: number, mode: Mode, color: any): Rectangle {
+export function drawing_rectangle(width: number, height: number, mode: Mode, color: L.Value): Rectangle {
   return rectanglePrim(width, height, mode, color)
 }
 
-export function drawing_square(length: number, mode: Mode, color: any): Rectangle {
+export function drawing_square(length: number, mode: Mode, color: L.Value): Rectangle {
   return rectanglePrim(length, length, mode, color)
 }
 
@@ -76,16 +76,16 @@ interface Triangle extends L.Struct {
   color: Rgb
 }
 
-const trianglePrim = (width: number, height: number, mode: Mode, color: any): Triangle => ({
+const trianglePrim = (width: number, height: number, mode: Mode, color: L.Value): Triangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'triangle',
   width, height, mode, color: color_colorToRgb(color)
 })
 
-export function drawing_triangle(length: number, mode: Mode, color: any): Triangle {
+export function drawing_triangle(length: number, mode: Mode, color: L.Value): Triangle {
   return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
 }
 
-export function drawing_isoscelesTriangle(width: number, height: number, mode: Mode, color: any): Triangle {
+export function drawing_isoscelesTriangle(width: number, height: number, mode: Mode, color: L.Value): Triangle {
   return trianglePrim(width, height, mode, color)
 }
 
@@ -98,12 +98,12 @@ interface Path extends L.Struct {
   color: Rgb
 }
 
-const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: any): Path => ({
+const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: L.Value): Path => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'path',
   width, height, points, mode, color: color_colorToRgb(color)
 })
 
-export function drawing_path(width: number, height: number, points: L.List, mode: Mode, color: any): Path {
+export function drawing_path(width: number, height: number, points: L.List, mode: Mode, color: L.Value): Path {
   return pathPrim(width, height,
     L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
     mode, color)
@@ -318,14 +318,14 @@ interface DText extends L.Struct {
 }
 
 function textPrim (width: number, height: number, text: string,
-    font: Font, size: number, color: any): DText {
+    font: Font, size: number, color: L.Value): DText {
   return {
     [L.scamperTag]: 'struct', [L.structKind]: 'text',
     width, height, text, size, color: color_colorToRgb(color), font
   }
 }
 
-export function drawing_text(text: string, size: number, color: Rgb, ...rest: any[]): DText {
+export function drawing_text(text: string, size: number, color: Rgb, ...rest: L.Value[]): DText {
   let f: Font = font_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
@@ -352,51 +352,51 @@ export function drawing_text(text: string, size: number, color: Rgb, ...rest: an
 
 /***** Extended Functions *****************************************************/
 
-export function drawing_solidSquare(length: number, color: any): Rectangle {
+export function drawing_solidSquare(length: number, color: L.Value): Rectangle {
   return drawing_square(length, 'solid', color)
 }
 
-export function drawing_outlinedSquare(length: number, color: any): Rectangle {
+export function drawing_outlinedSquare(length: number, color: L.Value): Rectangle {
   return drawing_square(length, 'outline', color)
 }
 
-export function drawing_solidRectangle(width: number, height: number, color: any): Rectangle {
+export function drawing_solidRectangle(width: number, height: number, color: L.Value): Rectangle {
   return drawing_rectangle(width, height, 'solid', color)
 }
 
-export function drawing_outlinedRectangle(width: number, height: number, color: any): Rectangle {
+export function drawing_outlinedRectangle(width: number, height: number, color: L.Value): Rectangle {
   return drawing_rectangle(width, height, 'outline', color)
 }
 
-export function drawing_solidCircle(radius: number, color: any): Ellipse {
+export function drawing_solidCircle(radius: number, color: L.Value): Ellipse {
   return drawing_circle(radius, 'solid', color)
 }
 
-export function drawing_outlinedCircle(radius: number, color: any): Ellipse {
+export function drawing_outlinedCircle(radius: number, color: L.Value): Ellipse {
   return drawing_circle(radius, 'outline', color)
 }
 
-export function drawing_solidEllipse(width: number, height: number, color: any): Ellipse {
+export function drawing_solidEllipse(width: number, height: number, color: L.Value): Ellipse {
   return drawing_ellipse(width, height, 'solid', color)
 }
 
-export function drawing_outlinedEllipse(width: number, height: number, color: any): Ellipse {
+export function drawing_outlinedEllipse(width: number, height: number, color: L.Value): Ellipse {
   return drawing_ellipse(width, height, 'outline', color)
 }
 
-export function drawing_solidTriangle(length: number, color: any): Triangle {
+export function drawing_solidTriangle(length: number, color: L.Value): Triangle {
   return drawing_triangle(length, 'solid', color)
 }
 
-export function drawing_outlinedTriangle(length: number, color: any): Triangle {
+export function drawing_outlinedTriangle(length: number, color: L.Value): Triangle {
   return drawing_triangle(length, 'outline', color)
 }
 
-export function drawing_solidIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+export function drawing_solidIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
   return drawing_isoscelesTriangle(width, height, 'solid', color)
 }
 
-export function drawing_outlinedIsoscelesTriangle(width: number, height: number, color: any): Triangle {
+export function drawing_outlinedIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
   return drawing_isoscelesTriangle(width, height, 'outline', color)
 }
 
@@ -447,7 +447,7 @@ export function drawing_drawingColor(drawing: Drawing): Rgb {
   }
 }
 
-export function drawing_drawingRecolor(drawing: Drawing, color: any): Drawing {
+export function drawing_drawingRecolor(drawing: Drawing, color: L.Value): Drawing {
   switch(drawing[L.structKind]) {
     case 'ellipse':
       return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)

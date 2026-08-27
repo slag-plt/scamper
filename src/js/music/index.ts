@@ -41,7 +41,7 @@ export function music_isValidMidiNote(n: number): boolean {
   return n >= 0 && n <= 127
 }
 
-export function music_durQ(v: any): boolean {
+export function music_durQ(v: L.Value): boolean {
   return L.isStructKind(v, 'dur')
 }
 
@@ -99,7 +99,7 @@ export function music_pickup(pickup: Composition, notes: Composition): Compositi
 
 type ModKind = Percussion | Tempo | Dynamics | Instrument | NoteHandlersMod
 
-export function music_modQ(v: any): boolean {
+export function music_modQ(v: L.Value): boolean {
   return L.isStructKind(v, 'percussion') ||
     //R.isStructKind(v, 'pitchBend') ||
     L.isStructKind(v, 'tempo') ||
@@ -151,7 +151,7 @@ export function music_noteEvent(id: string): NoteEvent {
 
 export type Composition = Empty | Note | NoteFreq | Rest | Trigger | Par | Seq | Pickup | Mod | NoteEvent
 
-export function music_compositionQ (v: any): boolean {
+export function music_compositionQ (v: L.Value): boolean {
   return L.isStructKind(v, 'empty') ||
     L.isStructKind(v, 'note') ||
     L.isStructKind(v, 'note-freq') ||

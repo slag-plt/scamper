@@ -16,20 +16,27 @@ import colorsys from 'colorsys'
 // declared a `string?` return while returning an rgb, and capped alpha at 1.
 // Rgb remains the stored color type for shapes; use `rgb` to build one.
 
+/**
+ * What a library function takes where it wants a colour: a CSS colour name, an
+ * `rgb`, or an `hsv`. `color_colorToRgb` is what turns one into the `Rgb` that
+ * shapes actually store.
+ */
+export type Color = string | Rgb | Hsv
+
 /** Converts between various representations of color in Scamper. */
-export function color_colorToRgb (v: any): Rgb {
-  if (L.isStructKind(v, 'rgba')) {
-    return v as Rgb
+export function color_colorToRgb (v: L.Value): Rgb {
+  if (L.isStructKind<Rgb>(v, 'rgba')) {
+    return v
   } else if (typeof v === 'string') {
     return color_colorNameToRgb(v)
-  } else if (L.isStructKind(v, 'hsv')) {
-    return color_hsvToRgb(v as Hsv)
+  } else if (L.isStructKind<Hsv>(v, 'hsv')) {
+    return color_hsvToRgb(v)
   } else {
     throw new L.ScamperError('Runtime', `Shapes expect a valid color, received a: ${L.typeOf(v)}`)
   }
 }
 
-export function color_colorQ (v: any): boolean {
+export function color_colorQ (v: L.Value): boolean {
   return (typeof v === 'string' && color_isColorName(v)) ||
     L.isStructKind(v, 'rgba') ||
     L.isStructKind(v, 'hsv')
@@ -49,7 +56,7 @@ export function color_isRgbComponent(n: number): boolean {
   return n >= 0 && n <= 255
 }
 
-export function color_isRgb (v: any): boolean {
+export function color_isRgb (v: L.Value): boolean {
   return L.isStructKind(v, 'rgba')
 }
 
@@ -288,7 +295,7 @@ export interface Hsv extends L.Struct {
   alpha: number
 }
 
-export function color_isHsv(v: any): boolean {
+export function color_isHsv(v: L.Value): boolean {
   return L.isStructKind(v, 'hsv')
 }
 

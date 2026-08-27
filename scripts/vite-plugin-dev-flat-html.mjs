@@ -12,6 +12,11 @@ import { basename } from 'path'
 // The rewrite is internal (req.url is changed, not redirected), so the browser
 // stays on the flat URL. `entryPaths`/`idePath` come from vite.config.ts's
 // single entry map, so this can't drift from the build's own input mapping.
+/**
+ * @param {string[]} entryPaths every HTML entry, at its source location
+ * @param {string} idePath the entry `/` should serve
+ * @returns {import('vite').Plugin}
+ */
 export function devFlatHtmlPlugin(entryPaths, idePath) {
   const rewrites = new Map()
   for (const path of entryPaths) {

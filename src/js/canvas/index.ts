@@ -4,7 +4,7 @@ import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/co
 import { Font, font_font, font_fontQ, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
 
-export function canvas_canvasQ(v: any): boolean {
+export function canvas_canvasQ(v: L.Value): boolean {
   return v instanceof HTMLCanvasElement
 }
 
@@ -26,7 +26,7 @@ export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElem
   return canvas
 }
 
-export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: any): void {
+export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: number, width: number, height: number, mode: string, color: L.Value): void {
   const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
@@ -39,7 +39,7 @@ export function canvas_canvasRectangle(canvas: HTMLCanvasElement, x: number, y: 
   }
 }
 
-export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: any): void {
+export function canvas_canvasEllipse(canvas: HTMLCanvasElement, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, mode: string, color: L.Value): void {
   const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
   ctx.strokeStyle = color_rgbToString(color_colorToRgb(color))
@@ -69,7 +69,7 @@ export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: num
   }
 }
 
-export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: any, ...rest: any[]): void {
+export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: L.Value, ...rest: L.Value[]): void {
   let f: Font = font_font('Arial')
   if (rest.length > 1) {
     throw new L.ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
@@ -98,7 +98,7 @@ export function canvas_canvasDrawing(canvas: HTMLCanvasElement, x: number, y: nu
   drawing_render(x, y, drawing, canvas)
 }
 
-export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: any): void {
+export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: L.Value): void {
   const ctx = context2d(canvas)
   const pairs = L.listToVector(lst)
   if (mode !== 'solid' && mode !== 'outline') {
