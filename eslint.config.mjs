@@ -176,6 +176,19 @@ export default defineConfig(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      // A number in a template string is ordinary JavaScript, and reads far
+      // better than `${n.toString()}` -- `rgb(${r} ${g} ${b})` being the case
+      // that settled it. This is typescript-eslint's own default for the rule;
+      // strictTypeChecked is what turns it off (#154).
+      //
+      // N.B. `allowAny` is restated because naming the rule again resets every
+      // option it does not mention, and strictTypeChecked's `allowAny: false`
+      // is worth keeping: an `any` in a template is a hole, where a number is
+      // just a number.
+      '@typescript-eslint/restrict-template-expressions': [
+        'warn',
+        { allowNumber: true, allowAny: false },
+      ],
       quotes: ['warn', 'single', { avoidEscape: true }],
       semi: ['warn', 'never'],
       'lines-between-class-members': [
