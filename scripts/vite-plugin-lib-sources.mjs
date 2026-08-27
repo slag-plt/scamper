@@ -9,6 +9,7 @@ import { generateLibSources, libDir } from './generate-lib-sources.mjs'
 // Skipped for `vite build`: `npm run build`'s `prebuild` hook (see
 // package.json) already regenerates the sources before `vue-tsc`/`vite build`
 // run, so regenerating again here would just redo the same work.
+/** @returns {import('vite').Plugin} */
 export function libSourcesPlugin() {
   let command
   return {

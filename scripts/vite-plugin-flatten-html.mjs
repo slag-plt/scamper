@@ -13,6 +13,7 @@ import { basename } from 'path'
 // src/app/<newapp>/index.html) would otherwise flatten to the same dist
 // path and silently overwrite another app's output, so we check for and
 // reject that instead of letting it happen quietly.
+/** @returns {import('vite').Plugin} */
 export function flattenHtmlPlugin() {
   return {
     name: 'flatten-html-output',

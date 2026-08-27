@@ -9,6 +9,7 @@ import { generateParser, grammarPath } from './generate-parser.mjs'
 // Skipped for `vite build`: `npm run build`'s `prebuild` hook (see
 // package.json) already regenerates the parser before `vue-tsc`/`vite build`
 // run, so regenerating again here would just redo the same work.
+/** @returns {import('vite').Plugin} */
 export function schemeParserPlugin() {
   let command
   return {

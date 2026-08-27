@@ -17,6 +17,10 @@
  * @param {string} serverUrl the API root to advertise, e.g. `/api/v1`
  * @returns {import('vite').Plugin}
  */
+/**
+ * @param {string | undefined} serverUrl
+ * @returns {import('vite').Plugin}
+ */
 export function devServerConfigPlugin(serverUrl) {
   return {
     name: 'scamper-dev-server-config',
