@@ -22,6 +22,9 @@ const hasWindow = typeof window !== 'undefined'
 const hasDocument = typeof document !== 'undefined'
 
 function systemPrefersDark(): boolean {
+  // jsdom does not implement matchMedia, so this is not the dead check the
+  // DOM lib makes it look like -- the specs run without one (#154).
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!hasWindow || !window.matchMedia) {
     return false
   }
@@ -105,6 +108,8 @@ export function onThemeChange(cb: (theme: Theme) => void): () => void {
 // Track OS changes while running: when the user hasn't set an explicit override,
 // follow the system preference live (CSS updates via color-scheme; this keeps
 // the Vue mirror and canvas renderers in sync).
+// As in systemPrefersDark: jsdom has no matchMedia.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 if (hasWindow && window.matchMedia) {
   window
     .matchMedia('(prefers-color-scheme: dark)')

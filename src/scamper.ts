@@ -729,6 +729,9 @@ export default class Scamper {
           return false
         }
         const { prog, diagnostics } = await compile(src)
+        // `end()` can run while this awaits, which TypeScript's narrowing does
+        // not follow across the boundary (#154).
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (ended) return false
         diagnostics.forEach((d) => {
           err.report(diagnosticToError(d))

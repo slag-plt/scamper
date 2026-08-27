@@ -75,7 +75,7 @@ describe('binary files in the IDE', () => {
   function selectedFile(): string | undefined {
     return document
       .querySelector('.file.selected .file-name')
-      ?.textContent?.trim()
+      ?.textContent.trim()
   }
 
   test('a binary file that is not an image shows a notice', async () => {

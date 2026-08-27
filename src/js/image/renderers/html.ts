@@ -55,7 +55,7 @@ function render (rif: ReactiveImageFile): HTMLElement {
   inp.addEventListener('change', () => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         const img = new Image()
         img.onload = () => {
           const canvas = document.createElement('canvas')

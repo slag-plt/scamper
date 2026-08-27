@@ -15,7 +15,7 @@ function onFileChange(event: Event) {
     isLoading.value = true
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result in the widget; a callback error surfaces in the
         // output pane instead. Through the run the *value* carries, since this

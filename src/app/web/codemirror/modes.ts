@@ -82,7 +82,10 @@ export function modeFor(filename: string): EditorMode {
     return { language: ScamperSupport(), isScamper: true }
   }
 
+  // A lookup by an arbitrary extension misses far more often than it hits; it
+  // reads as always-present only because `noUncheckedIndexedAccess` is off.
   const language = LANGUAGES[extensionOf(filename)]
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return { language: language === undefined ? [] : language(), isScamper: false }
 }
 

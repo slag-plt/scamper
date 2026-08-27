@@ -17,7 +17,7 @@ function renderReactiveFileChooser (v: L.Value): HTMLElement {
   inp.addEventListener('change', () => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         outp.innerHTML = ''
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result; a callback error surfaces in the output pane.

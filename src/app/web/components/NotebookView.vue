@@ -48,7 +48,10 @@ function setCellRef(id: number, el: Element | ComponentPublicInstance | null) {
 
 /** The mounted cell at `index`, found by the identity it was given. */
 function handleAt(index: number): CellHandle | undefined {
+  // An index into an array reads as always-present only because
+  // `noUncheckedIndexedAccess` is off; at runtime it is not (#154).
   const cell = cells.value[index]
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return cell === undefined ? undefined : cellRefs.get(cell.id)
 }
 

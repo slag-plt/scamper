@@ -174,7 +174,7 @@ describe('IDE notebook view', () => {
       await showNotebook()
       await run()
       const output = cells().map((cell) =>
-        cell.querySelector('.cell-output')?.textContent?.trim() ?? '',
+        cell.querySelector('.cell-output')?.textContent.trim() ?? '',
       )
       expect(output).toEqual(['1', '2'])
     } finally {
@@ -303,7 +303,7 @@ describe('IDE notebook view', () => {
     function addBelow(index: number, kind: 'Code' | 'Text') {
       const gap = document.querySelectorAll('.notebook-gap')[index]
       const button = [...gap.querySelectorAll('button')].find((b) =>
-        b.textContent?.includes(kind),
+        b.textContent.includes(kind),
       )
       button?.click()
     }
