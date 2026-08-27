@@ -402,8 +402,7 @@ export function music_playComposition (composition: Composition): number {
   // stepping, and a lookup then would find the foreground program (#375).
   const run = L.currentRun()
   const signal = run.signal
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  const id = window.setInterval(async () => {
+  const id = window.setInterval(() => {
     if (signal?.aborted) {
       clearInterval(id)
       return

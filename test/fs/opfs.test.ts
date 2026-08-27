@@ -43,6 +43,9 @@ class FakeRoot {
     return Promise.resolve({ kind: 'directory', name })
   }
 
+  // An async generator is what the real OPFS directory handle hands back, and
+  // this stands in for one; there is simply nothing here to await.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async *entries() {
     this.entriesCalls++
     for (const name of this.files.keys()) {

@@ -71,22 +71,24 @@ class FakeFS implements FS {
     return this.openSave !== null
   }
 
-  async getFileList(): Promise<FileEntry[]> {
-    return [...this.files.keys()].map((name) => ({
-      name,
-      preview: null,
-      isDirectory: false,
-    }))
+  getFileList(): Promise<FileEntry[]> {
+    return Promise.resolve(
+      [...this.files.keys()].map((name) => ({
+        name,
+        preview: null,
+        isDirectory: false,
+      })),
+    )
   }
 
-  async fileExists(filename: string): Promise<boolean> {
-    return this.files.has(filename)
+  fileExists(filename: string): Promise<boolean> {
+    return Promise.resolve(this.files.has(filename))
   }
 
-  async loadFile(filename: string): Promise<string> {
+  loadFile(filename: string): Promise<string> {
     const contents = this.files.get(filename)
     if (contents === undefined) throw new Error(`No such file: ${filename}`)
-    return contents
+    return Promise.resolve(contents)
   }
 
   // Bytes are part of the FS contract (#385), but nothing a file session does
@@ -126,7 +128,7 @@ class FakeFS implements FS {
     this.openSave = null
   }
 
-  async deleteFile(filename: string): Promise<void> {
+  deleteFile(filename: string): Promise<void> {
     this.deleteCalls.push(filename)
     if (this.lockOnSave && this.openSave?.filename === filename) {
       const err = new Error('The file is locked.')
@@ -134,9 +136,10 @@ class FakeFS implements FS {
       throw err
     }
     this.files.delete(filename)
+    return Promise.resolve()
   }
 
-  async renameFile(from: string, to: string): Promise<void> {
+  renameFile(from: string, to: string): Promise<void> {
     if (this.lockOnSave && this.openSave?.filename === from) {
       const err = new Error('The file is locked.')
       err.name = 'NoModificationAllowedError'
@@ -146,6 +149,7 @@ class FakeFS implements FS {
     if (contents === undefined) throw new Error(`No such file: ${from}`)
     this.files.set(to, contents)
     this.files.delete(from)
+    return Promise.resolve()
   }
 }
 
@@ -258,7 +262,7 @@ describe('FileSession autosave lifecycle', () => {
     vi.useRealTimers()
   })
 
-  test('start/stop autosave toggles the timer and fires saves', async () => {
+  test('start/stop autosave toggles the timer and fires saves', () => {
     const fs = new FakeFS(true)
     fs.files.set('a.scm', 'x')
     const s = new FileSession(fs, new FlatFileHistory(fs), editor, { autosaveIntervalMs: 1000 })
@@ -282,7 +286,7 @@ describe('FileSession autosave lifecycle', () => {
   // Offline the timer keeps running and every tick declines (#357). Pausing
   // this way rather than stopping the timer is what makes reconnecting
   // automatic: there is nothing to restart.
-  test('canSave gates autosave, and lifting it resumes saving', async () => {
+  test('canSave gates autosave, and lifting it resumes saving', () => {
     const fs = new FakeFS(true)
     fs.files.set('a.scm', 'x')
     let online = false
@@ -353,9 +357,10 @@ describe('FileSession switchTo (issue #238)', () => {
     fs.files.set('a.scm', 'a on disk')
     fs.files.set('b.scm', 'b on disk')
     const saveSpy = vi.spyOn(fs, 'saveFile')
-    saveSpy.mockImplementation(async (filename: string, contents: string) => {
+    saveSpy.mockImplementation((filename: string, contents: string) => {
       events.push(`save:${filename}`)
       fs.files.set(filename, contents)
+      return Promise.resolve()
     })
     const loadSpy = vi.spyOn(fs, 'loadFile')
     loadSpy.mockImplementation((filename: string) => {
