@@ -994,7 +994,7 @@
 ;;; @category predicates, typecheck, pair?, list?, null?, procedure?, ref?, vector?
 (define-export void? (js-var "prelude_voidQ"))
 
-;;; (??) -> any
+;;; ??: any
 ;;; A placeholder for an expression that is not yet implemented.
 ;;; @category constants, other
 (define-export ?? (js-var "prelude_qq"))
@@ -1178,27 +1178,27 @@
 ;;; @category hashmap, hash->list, hash-set, hash-keys
 (define-export list->hash (js-var "prelude_listToHash"))
 
-;;; (else) -> boolean?
+;;; else: boolean?
 ;;; A synonym for `#t` appropriate for use as the final guard of a `cond` expression.
 ;;; @category boolean/logic, constants
 (define-export else (js-var "prelude_elseConst"))
 
-;;; (null) -> list?
+;;; null: list?
 ;;; The empty list.
 ;;; @category list, list creation, association list, constants
 (define-export null (js-var "prelude_nullConst"))
 
-;;; (pi) -> number?
+;;; pi: number?
 ;;; The constant π.
 ;;; @category math, algebra, constants, acos, asin, atan, cos, sin, tan, π  
 (define-export pi (js-var "prelude_piConst"))
 
-;;; (π) -> number?
+;;; π: number?
 ;;; The constant π.
 ;;; @category math, algebra, constants, acos, asin, atan, cos, sin, tan, pi  
 (define-export π (js-var "prelude_piConst"))
 
-;;; (void) -> void?
+;;; void: void?
 ;;; The void value.
 ;;; @category constants, list, pair, vector
 (define-export void (js-var "prelude_voidConst"))

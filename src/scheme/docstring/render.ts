@@ -32,14 +32,21 @@ export function predTypeName(pred: Pred): string {
  *   (cons v1 v2) -> pair?
  *     v1: any
  *     v2: any
- * or, for a documented constant (no params, no rest param):
- *   pi : number?
+ * or, for a documented constant:
+ *   pi: number?
+ *
+ * A constant is told from a function by the docstring, not by having no
+ * parameters: a nullary function still renders as `(rex-empty) -> rex?`, so a
+ * reader can see that it has to be called (#412).
  */
 export function functionDocSignature(doc: FunctionDoc): string {
   const name = functionDocName(doc)
   const returnStr = predToString(doc.signature.predicate)
+  if (doc.signature.isConstant) {
+    return `${name}: ${returnStr}`
+  }
   if (doc.params.length === 0 && !doc.restParam) {
-    return `${name} : ${returnStr}`
+    return `(${name}) -> ${returnStr}`
   }
   const argNames = [
     ...doc.params.map((p) => p.name),

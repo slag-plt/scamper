@@ -9,10 +9,27 @@ import { Range } from '../../lpm'
 // originally authored by @bacracm, refactored to new file
 
 export interface Signature {
+  /**
+   * The documented name, and its parameters when it has any. A constant's is
+   * its name alone -- see {@link isConstant}.
+   */
   function: VarApp
   predicate: Pred
   range: Range
+  /**
+   * True when the docstring documents a *constant* -- `null: list?` -- rather
+   * than a function. The distinction is what a reader needs: `pi` is written
+   * bare, while a nullary function like `rex-empty` has to be called (#412).
+   */
+  isConstant: boolean
 }
+
+/**
+ * Names that read as a *literal* in Scamper source, and so are not identifiers,
+ * but that the standard library nonetheless binds -- so they can be documented.
+ * `null` is the only one: `#t` and `#f` are literals and nothing more (#412).
+ */
+const literalShapedBindings = ['null']
 
 /**
  * Validates a single signature-line token as a legal Scamper identifier,
@@ -21,9 +38,19 @@ export interface Signature {
  * expressions, so this is deliberately simple token validation rather than
  * a full grammar parse (which also has no notation for a rest parameter --
  * see the N.B. below).
+ *
+ * @param allowLiteralShaped admits a literal-shaped *bound* name, which only a
+ *        constant's own name may be.
  */
-function validateIdentifierToken(token: string, range: Range): void {
-  if (!looksLikeIdentifier(token)) {
+function validateIdentifierToken(
+  token: string,
+  range: Range,
+  allowLiteralShaped = false,
+): void {
+  if (
+    !looksLikeIdentifier(token) &&
+    !(allowLiteralShaped && literalShapedBindings.includes(token))
+  ) {
     throw mkDocError('Expected an identifier', range)
   }
   if (token.startsWith('_')) {
@@ -132,13 +159,25 @@ function parseContractSignature({ line, range }: DocComment): Pred {
   return predicate
 }
 
+/**
+ * Parses the first line of a docstring, which is either
+ *
+ * + a function: `(name arg ...) -> pred`, or
+ * + a constant: `name: pred`.
+ *
+ * The opening paren is what tells them apart, so each form gets the error
+ * belonging to it rather than a shared "this did not parse" (#412).
+ */
 export function parseSignature({
   line: docLine,
   range,
 }: DocComment): Signature {
-  // Check form function name, space, parameter. (separate function and call it)
-  // Check contract.
+  return docLine.trimStart().startsWith('(')
+    ? parseFunctionForm(docLine, range)
+    : parseConstantForm(docLine, range)
+}
 
+function parseFunctionForm(docLine: string, range: Range): Signature {
   // verify no split (?)
   const separator = ' -> '
   const [functStr, ...rest] = docLine.split(separator)
@@ -162,5 +201,36 @@ export function parseSignature({
     function: funct,
     predicate,
     range,
+    isConstant: false,
+  }
+}
+
+/**
+ * A constant: `name: pred`, e.g. `null: list?`. The name may be literal-shaped
+ * where a parameter's may not, since it is being declared rather than read.
+ */
+function parseConstantForm(docLine: string, range: Range): Signature {
+  const at = docLine.indexOf(':')
+  if (at === -1) {
+    throw mkDocError('Missing separator in doc string signature: expected "(name ...) -> predicate" or "name: predicate"',
+      range,
+    )
+  }
+  const nameTok = docLine.slice(0, at).trim()
+  if (nameTok.includes(' ')) {
+    throw mkDocError('A constant signature names one binding and takes no parameters',
+      range,
+    )
+  }
+  validateIdentifierToken(nameTok, range, true)
+
+  const predComment: DocComment = { line: docLine.slice(at + 1), range }
+  const predicate = parseContractSignature(predComment)
+
+  return {
+    function: { tag: 'app', head: mkId(nameTok, range), args: [], range },
+    predicate,
+    range,
+    isConstant: true,
   }
 }
