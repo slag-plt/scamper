@@ -464,9 +464,10 @@ export class Scheduler {
       }
     }
 
-    if (isMinor) {
-      this.currTaskIdx++
-    }
+    // No advance here: the caller advances for every step that reaches this
+    // return, and doing it again moved the cursor two places on a minor step --
+    // which is almost every step -- so the task behind this one was never
+    // reached at all (#415).
     return false
   }
 
@@ -729,6 +730,16 @@ export class Scheduler {
     this.nextCaption.delete(task.id)
   }
 
+  /**
+   * Takes the task at `index` out of the run queue, by moving the last one into
+   * its slot rather than shifting everything down.
+   *
+   * @returns the task that was at `index` -- the one removed. N.B. that is not
+   *          what `pop()` hands back, which is the task that was *moved*: the
+   *          two coincide only when `index` is the last slot. Returning the
+   *          moved one instead meant a finished run signalled someone else's
+   *          completion and never its own (#415).
+   */
   private removeTaskFromQueue(index: number): SchedulerTask | undefined {
     const lastFiber = this.tasks.at(this.tasks.length - 1)
     if (!lastFiber) {
@@ -737,8 +748,20 @@ export class Scheduler {
         "Loop iteration atomicity error: somehow scheduler's tasks changed mid-iteration!",
       )
     }
+    // Past the end there is nothing to return, and assigning would leave a hole
+    // for the next round to trip over. Raise rather than drop it silently: a
+    // caller that loses its task here waits on a completion that never comes,
+    // which is the failure #415 was.
+    if (index >= this.tasks.length) {
+      throw new ICE(
+        'Scheduler.removeTaskFromQueue',
+        `Loop iteration atomicity error: asked to remove task #${index.toString()} of ${this.tasks.length.toString()}!`,
+      )
+    }
+    const removed = this.tasks[index]
     this.tasks[index] = lastFiber
-    return this.tasks.pop()
+    this.tasks.pop()
+    return removed
   }
 
   private endCurrFiber() {
