@@ -351,8 +351,11 @@ function searchOpenWindow(searchTerm: string) {
  * every time live evaluation was toggled. So the button always reserves the
  * width of the longer of the two with a hidden copy of it, and the real label
  * -- "Run", "Autorun", or the Stop icon -- is laid over the top.
+ *
+ * Both halves are addressed through the group so that the radius reset above
+ * cannot outweigh the corners they set (#390).
  */
-.run-main {
+.run-group .run-main {
   position: relative;
   padding-inline: var(--space-md);
   font-size: var(--text-sm);
@@ -373,7 +376,7 @@ function searchOpenWindow(searchTerm: string) {
   justify-content: center;
 }
 
-.run-caret {
+.run-group .run-caret {
   padding-inline: var(--space-sm);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   /* A hairline rather than a gap: the two halves must not drift apart. */
