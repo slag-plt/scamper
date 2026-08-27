@@ -1,3 +1,9 @@
+// A hand-written description of the `colorsys` package, which ships no types.
+// Where upstream genuinely takes or returns anything, that is written
+// `unknown` rather than `any`: it says the same thing and keeps the file from
+// leaking an implicit `any` into anything that calls it. Only `rgbToHsv` and
+// `hsvToRgb` are used today (src/js/image/color.ts); the rest is here so the
+// package is described rather than half-described.
 declare module 'colorsys' {
   export interface RGB {
       r: number;
@@ -129,8 +135,8 @@ declare module 'colorsys' {
 
 
   //others
-  export function parseCss(cssString: string): any;
-  export function parse_css(cssString: string): any;
+  export function parseCss(cssString: string): unknown;
+  export function parse_css(cssString: string): unknown;
   export function stringify(obj: RGB | HSV | HSL | CMYK): string;
   export function hex_to_decimal(hexColor: string): number;
   export function hexToDecimal(hexColor: string): number;
@@ -140,10 +146,10 @@ declare module 'colorsys' {
   export function decimal2Hex(decimalColor: number | string): string;
   export function random(): string;
   export function rotateHue<T extends number | HSL | HSV>(hue: T, amount: number): T;
-  export function getColorEncoding(color: any): 'unknown' | 'hex' | 'rgb' | 'hsv' | 'hsl' | 'cmyk';
-  export function any2Hsl(color: any): HSL | 'unknown';
-  export function any_to_hsl(color: any): HSL | 'unknown';
-  export function anyToHsl(color: any): HSL | 'unknown';
-  export function getTransformEncodingFunction(color: any, desiredEncoding: any): any;
-  export function darken(color: any, percentage: any): any;
+  export function getColorEncoding(color: unknown): 'unknown' | 'hex' | 'rgb' | 'hsv' | 'hsl' | 'cmyk';
+  export function any2Hsl(color: unknown): HSL | 'unknown';
+  export function any_to_hsl(color: unknown): HSL | 'unknown';
+  export function anyToHsl(color: unknown): HSL | 'unknown';
+  export function getTransformEncodingFunction(color: unknown, desiredEncoding: unknown): unknown;
+  export function darken(color: unknown, percentage: unknown): unknown;
 }
