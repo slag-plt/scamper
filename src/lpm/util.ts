@@ -11,7 +11,9 @@ export const isNull = (v: L.Value): v is null => v === null
 export const isVoid = (v: L.Value): v is undefined => v === undefined
 export const isArray = (v: L.Value): v is L.Value[] => Array.isArray(v)
 export const isTaggedObject = (v: L.Value): v is L.TaggedObject =>
-  v !== null && typeof v === 'object' && v.hasOwnProperty(L.scamperTag)
+  v !== null &&
+  typeof v === 'object' &&
+  Object.prototype.hasOwnProperty.call(v, L.scamperTag)
 export const isJsFunction = (v: L.Value): v is L.JsFunction =>
   typeof v === 'function'
 export const isClosure = (v: L.Value): v is L.Closure =>
@@ -33,6 +35,11 @@ export const isObj = (v: L.Value): v is Record<string, L.Value> =>
   !isTaggedObject(v)
 export const isStruct = (v: L.Value): v is L.Struct =>
   isTaggedObject(v) && v[L.scamperTag] === 'struct'
+// N.B., `T` appears only in the return type on purpose: it is how a caller
+// says which struct it is testing for -- `isStructKind<Cons>(v, 'cons')` -- so
+// that the narrowed value has that struct's fields. The kind string is what
+// actually does the checking.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export const isStructKind = <T extends L.Struct>(
   v: L.Value,
   k: string,
@@ -50,7 +57,7 @@ export const mkClosure = (
   params: L.Id[],
   code: L.Blk,
   env: L.Scope[],
-  call: (...args: any) => any,
+  call: (...args: L.Value[]) => L.Value,
   name?: L.Id,
   restParam?: string,
   stepOver = false,
@@ -360,8 +367,10 @@ export function getFieldsOfStruct(s: L.Struct): string[] {
 }
 
 /** Mutates a Javascript function to contain a `name` field with that function's name. */
-export const nameFn = (name: string, fn: Function): Function =>
-  Object.defineProperty(fn, 'name', { value: name })
+export const nameFn = <T extends (...args: never[]) => unknown>(
+  name: string,
+  fn: T,
+): T => Object.defineProperty(fn, 'name', { value: name })
 
 // N.B., the char-value conversions are actually language specific,
 // so there's probably a need to refactor this and all dependent
@@ -409,6 +418,10 @@ const stringLiteralEscapes = new Map([
  *  quotes yields a literal the reader reads back as `s`. Inverse of the
  *  reader's `parseStringLiteral`. */
 export function escapeStringLiteral(s: string): string {
+  // Spreading walks the string by code point, which is what is wanted here: an
+  // astral character stays one piece and passes through the table untouched,
+  // where indexing would split it into surrogates.
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread
   return [...s].map((c) => stringLiteralEscapes.get(c) ?? c).join('')
 }
 
@@ -533,7 +546,7 @@ export function typeOf(v: L.Value): string {
   } else if (isArray(v)) {
     return 'vector'
   } else if (isJsFunction(v)) {
-    return `[Function: ${(v as any).name}]`
+    return `[Function: ${v.name}]`
   } else if (isClosure(v)) {
     return `[Function: ${v.name ?? '##anonymous##'}]`
   } else if (isChar(v)) {

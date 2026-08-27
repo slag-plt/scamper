@@ -114,7 +114,7 @@ export function applyFn(
       } else {
         throw new ScamperError(
           'Runtime',
-          `Unexpected error in Javascript function call: ${(e as any).toString()}`,
+          `Unexpected error in Javascript function call: ${e instanceof Error ? e.toString() : String(e)}`,
           undefined,
           range,
           undefined
