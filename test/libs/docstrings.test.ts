@@ -12,19 +12,15 @@ import { parseFunctionDocFromComments } from '../../src/scheme/docstring/docstri
 //
 // It found two when it was written. `canvas`'s `fill-mode?` had an N.B. note
 // written with `;;;` after its @category line, which made it a docstring line
-// the parser could not place; that is fixed. `null`'s remains, and is tracked
-// below.
+// the parser could not place; `null` could not say what it was, having no
+// notation for a constant. Both are fixed, and the list below is empty.
 
 /**
  * Bindings whose docstring is known not to parse, and why. A new entry needs a
  * reason and an issue -- it means a documented binding is missing from the
  * docs page.
  */
-const KNOWN_BAD = new Map([
-  // #412: `(null) -> list?` cannot parse, because `null` is a literal rather
-  // than an identifier and the signature parser validates the head as one.
-  ['prelude:null', 'Expected an identifier'],
-])
+const KNOWN_BAD = new Map<string, string>([])
 
 /** Every `<module>:<name>` in the standard library whose docstring won't parse. */
 function malformedDocstrings(): Map<string, string> {

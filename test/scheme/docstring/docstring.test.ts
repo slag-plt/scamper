@@ -367,6 +367,7 @@ function makeTestDocstring(): {
       function: funcApp,
       predicate: predicate1,
       range: anyRange,
+      isConstant: false,
     },
     params: [
       {
