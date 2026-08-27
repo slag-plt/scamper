@@ -1,3 +1,8 @@
+import type {
+  CompletionItem,
+  InitializeResult,
+  SignatureHelp,
+} from 'vscode-languageserver-protocol'
 import { describe, expect, test } from 'vitest'
 import { completionsFor } from '../../../src/app/web/codemirror/lsp/completion'
 import { signatureHelpAt } from '../../../src/app/web/codemirror/lsp/signature'
@@ -111,7 +116,7 @@ describe('signatureHelpAt', () => {
 describe('ScamperLanguageServer: completion & signature help', () => {
   function serve(text: string) {
     const server = new ScamperLanguageServer()
-    const sent: { id?: number; result: unknown }[] = []
+    const sent: { id?: number; result?: unknown }[] = []
     server.setSend((m) => {
       sent.push(JSON.parse(m) as { id?: number; result: unknown })
     })
@@ -133,15 +138,23 @@ describe('ScamperLanguageServer: completion & signature help', () => {
         },
       }),
     )
-    const reply = (id: number) =>
-      sent.find((m) => m.id === id) as { result: any }
+    /**
+     * The `result` of the reply to request `id`, as `unknown`: a JSON-RPC
+     * response really is untyped until someone says what it should be, which
+     * each assertion below does.
+     */
+    const reply = (id: number): unknown => {
+      const found = sent.find((m) => m.id === id)
+      if (found === undefined) throw new Error(`no reply to request ${id}`)
+      return found.result
+    }
     const flush = () => new Promise((resolve) => setTimeout(resolve, 20))
     return { request, reply, flush }
   }
 
   test('advertises completion and signature-help capabilities', () => {
     const { reply } = serve('')
-    const caps = reply(1).result.capabilities
+    const caps = (reply(1) as InitializeResult).capabilities
     expect(caps.completionProvider).toBeDefined()
     expect(caps.signatureHelpProvider).toBeDefined()
   })
@@ -153,7 +166,7 @@ describe('ScamperLanguageServer: completion & signature help', () => {
       position: { line: 0, character: 3 },
     })
     await flush()
-    const labels = (reply(2).result as { label: string }[]).map((i) => i.label)
+    const labels = (reply(2) as CompletionItem[]).map((i) => i.label)
     expect(labels).toContain('car')
   })
 
@@ -163,6 +176,6 @@ describe('ScamperLanguageServer: completion & signature help', () => {
       textDocument: { uri: 'inmemory://main.scm' },
       position: { line: 0, character: 5 },
     })
-    expect(reply(3).result.signatures[0].label).toContain('car')
+    expect((reply(3) as SignatureHelp).signatures[0].label).toContain('car')
   })
 })

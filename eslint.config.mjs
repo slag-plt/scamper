@@ -51,6 +51,11 @@ export default defineConfig(
           // this list is capped at eight entries, and silently breaks
           // linting for every file in it once exceeded.
           allowDefaultProject: ['eslint.config.mjs', 'vite.config.ts'],
+          // Which tsconfig those files are typed against. Without this they
+          // fall to an inferred project with no `allowJs`, so every `.mjs`
+          // plugin import resolved to nothing and each plugin call read as an
+          // unsafe call of an unresolved type (#154).
+          defaultProject: 'scripts/tsconfig.json',
         },
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: ['.vue'],

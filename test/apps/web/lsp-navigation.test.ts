@@ -1,3 +1,8 @@
+import type {
+  DocumentHighlight,
+  InitializeResult,
+  Location,
+} from 'vscode-languageserver-protocol'
 import { describe, expect, test } from 'vitest'
 import { definitionAt } from '../../../src/app/web/codemirror/lsp/definition'
 import { referencesAt } from '../../../src/app/web/codemirror/lsp/references'
@@ -65,7 +70,7 @@ describe('documentHighlightsAt', () => {
 describe('ScamperLanguageServer: navigation', () => {
   function serve(text: string) {
     const server = new ScamperLanguageServer()
-    const sent: { id?: number; result?: any }[] = []
+    const sent: { id?: number; result?: unknown }[] = []
     server.setSend((m) => {
       sent.push(JSON.parse(m) as { id?: number; result?: unknown })
     })
@@ -87,14 +92,23 @@ describe('ScamperLanguageServer: navigation', () => {
         },
       }),
     )
-    const reply = (id: number) => sent.find((m) => m.id === id) as { result: any }
+    /**
+     * The `result` of the reply to request `id`, as `unknown`: a JSON-RPC
+     * response really is untyped until someone says what it should be, which
+     * each assertion below does.
+     */
+    const reply = (id: number): unknown => {
+      const found = sent.find((m) => m.id === id)
+      if (found === undefined) throw new Error(`no reply to request ${id}`)
+      return found.result
+    }
     const flush = () => new Promise((resolve) => setTimeout(resolve, 20))
     return { request, reply, flush }
   }
 
   test('advertises definition, references, and document-highlight capabilities', () => {
     const { reply } = serve('')
-    const caps = reply(1).result.capabilities
+    const caps = (reply(1) as InitializeResult).capabilities
     expect(caps.definitionProvider).toBe(true)
     expect(caps.referencesProvider).toBe(true)
     expect(caps.documentHighlightProvider).toBe(true)
@@ -107,7 +121,7 @@ describe('ScamperLanguageServer: navigation', () => {
       position: { line: 0, character: 12 },
     })
     await flush()
-    expect(reply(2).result.range.start.character).toBe(9)
+    expect((reply(2) as Location).range.start.character).toBe(9)
   })
 
   test('answers a references request with all sites', async () => {
@@ -118,7 +132,7 @@ describe('ScamperLanguageServer: navigation', () => {
       context: { includeDeclaration: true },
     })
     await flush()
-    expect(reply(3).result.length).toBe(3)
+    expect((reply(3) as Location[]).length).toBe(3)
   })
 
   test('answers a document-highlight request with kinds', async () => {
@@ -128,7 +142,7 @@ describe('ScamperLanguageServer: navigation', () => {
       position: { line: 0, character: 15 },
     })
     await flush()
-    const kinds = (reply(4).result as { kind: number }[]).map((h) => h.kind)
+    const kinds = (reply(4) as DocumentHighlight[]).map((h) => h.kind)
     expect(kinds.length).toBe(3)
     expect(kinds.filter((k) => k === 3).length).toBe(1) // one Write (the binder)
     expect(kinds.filter((k) => k === 2).length).toBe(2) // two Read (uses)
