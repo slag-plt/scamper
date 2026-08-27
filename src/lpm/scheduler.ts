@@ -464,9 +464,9 @@ export class Scheduler {
       }
     }
 
-    if (isMinor) {
-      this.currTaskIdx++
-    }
+    // No advance here: the caller's moveNextTask does it for every step, and
+    // doing it again moved the cursor two places on a minor step -- which is
+    // almost every step -- so the task behind this one was never reached (#415).
     return false
   }
 
