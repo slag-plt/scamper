@@ -24,7 +24,11 @@ patchSchedulerYieldForTests()
  * widget below it stays blank.
  */
 describe('every queued task is stepped (#415)', () => {
-  /** Runs `n` never-ending tasks for a quantum. @returns each one's step count. */
+  /**
+   * Queues one never-ending task per entry in `make` and runs them for a
+   * quantum.
+   * @returns each fiber's step count, in the order given.
+   */
   const stepsTaken = async (
     make: ((fiber: MockFiber) => SchedulerTask)[],
   ): Promise<number[]> => {

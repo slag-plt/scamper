@@ -26,7 +26,7 @@ patchSchedulerYieldForTests()
  * what else is queued at that instant, which is why it came and went with load.
  */
 describe('a finished task is the one signalled complete (#415)', () => {
-  /** A task that never finishes, to sit behind the one that does. */
+  /** A fiber that never finishes, for a task to sit behind the one that does. */
   const filler = () => {
     const fiber = new MockFiber()
     fiber.stepImpl = () => minorStep

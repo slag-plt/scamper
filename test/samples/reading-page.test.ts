@@ -105,5 +105,5 @@ describe('reading.html', () => {
     expect(chained).toHaveLength(2)
     expect(transcript(chained[0])).toContain('42')
     expect(transcript(chained[1])).toContain('20')
-  }, 60000)
+  }, 30000)
 })

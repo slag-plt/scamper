@@ -28,7 +28,7 @@ export const patchNotes: PatchNote[] = [
     version: '4.1.1',
     notes: [
       'The Run button no longer shows square corners poking out of it when you hover over it.',
-      'A reading page no longer stops at an example that animates or plays a sound: the examples below it now run as they should.'
+      'A program that has finished is no longer sometimes treated as still running, which could leave the Run button stuck on Stop or stop the rest of a reading page from running.'
     ]
   },
   {

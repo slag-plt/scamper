@@ -464,9 +464,10 @@ export class Scheduler {
       }
     }
 
-    // No advance here: the caller's moveNextTask does it for every step, and
-    // doing it again moved the cursor two places on a minor step -- which is
-    // almost every step -- so the task behind this one was never reached (#415).
+    // No advance here: the caller advances for every step that reaches this
+    // return, and doing it again moved the cursor two places on a minor step --
+    // which is almost every step -- so the task behind this one was never
+    // reached at all (#415).
     return false
   }
 
@@ -747,7 +748,17 @@ export class Scheduler {
         "Loop iteration atomicity error: somehow scheduler's tasks changed mid-iteration!",
       )
     }
-    const removed = this.tasks.at(index)
+    // Past the end there is nothing to return, and assigning would leave a hole
+    // for the next round to trip over. Raise rather than drop it silently: a
+    // caller that loses its task here waits on a completion that never comes,
+    // which is the failure #415 was.
+    if (index >= this.tasks.length) {
+      throw new ICE(
+        'Scheduler.removeTaskFromQueue',
+        `Loop iteration atomicity error: asked to remove task #${index.toString()} of ${this.tasks.length.toString()}!`,
+      )
+    }
+    const removed = this.tasks[index]
     this.tasks[index] = lastFiber
     this.tasks.pop()
     return removed
