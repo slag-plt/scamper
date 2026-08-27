@@ -8,6 +8,8 @@ import {
   parseFunctionDocFromComments,
 } from '../../src/scheme/docstring/docstring'
 import { functionDocSignature } from '../../src/scheme/docstring/render'
+import { parseSignature } from '../../src/scheme/docstring/signature'
+import { Range } from '../../src/lpm'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 
 // #412: `null` was missing from the documentation entirely. Its docstring said
@@ -66,6 +68,37 @@ describe('a constant can say that it is one (#412)', () => {
     expect(doc.signature.function.head.name).toBe(name)
     expect(doc.signature.function.args).toEqual([])
     expect(functionDocSignature(doc)).toBe(`${name}: ${pred}`)
+  })
+
+  describe('the notation itself', () => {
+    const parse = (line: string) => parseSignature({ line, range: Range.none })
+
+    test('a constant is a name, a colon, and a predicate', () => {
+      const sig = parse('pi: number?')
+      expect(sig.isConstant).toBe(true)
+      expect(sig.function.head.name).toBe('pi')
+    })
+
+    test('spacing around the colon is not load-bearing', () => {
+      expect(parse('pi : number?').function.head.name).toBe('pi')
+    })
+
+    test('a complex predicate works too', () => {
+      expect(parse('empty: (list-of number?)').isConstant).toBe(true)
+    })
+
+    test('a constant takes no parameters', () => {
+      expect(() => parse('pi x: number?')).toThrow(/takes no parameters/)
+    })
+
+    test('a line that is neither form says what it expected', () => {
+      expect(() => parse('pi number?')).toThrow(/name: predicate/)
+    })
+
+    test('a function still needs its arrow, and its head an identifier', () => {
+      expect(() => parse('(pi) number?')).toThrow(/Missing separator/)
+      expect(() => parse('(null) -> list?')).toThrow(/Expected an identifier/)
+    })
   })
 
   test('a nullary function still shows that it must be called', () => {
