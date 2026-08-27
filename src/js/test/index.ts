@@ -27,7 +27,7 @@ export function test_testResultErrorGeneric(desc: string, reason: string): ErrGe
 // special form). A js-var procedure can no longer call the caller-supplied
 // test/equality functions, since callScamperFn is disabled.
 
-export function test_isResult (v: any): boolean {
+export function test_isResult (v: L.Value): boolean {
   return L.isStructKind(v, 'test-result-ok') || L.isStructKind(v, 'test-result-error-expected')
       || L.isStructKind(v, 'test-result-error-exn') || L.isStructKind(v, 'test-result-error-gen')
 }

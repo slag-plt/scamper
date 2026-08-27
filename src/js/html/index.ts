@@ -1,14 +1,14 @@
 import * as L from '../../lpm'
 
-export function html_isElement(v: any): boolean {
+export function html_isElement(v: L.Value): boolean {
   return v instanceof HTMLElement
 }
 
-export function html_textAreaQ(v: any): boolean {
+export function html_textAreaQ(v: L.Value): boolean {
   return v instanceof HTMLTextAreaElement
 }
 
-export function html_buttonQ(v: any): boolean {
+export function html_buttonQ(v: L.Value): boolean {
   return v instanceof HTMLButtonElement
 }
 

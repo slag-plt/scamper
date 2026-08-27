@@ -8,7 +8,7 @@ export interface Font extends L.Struct {
   isItalic: boolean
 }
 
-export function font_fontQ(v: any): boolean {
+export function font_fontQ(v: L.Value): boolean {
   return L.isStructKind(v, 'font')
 }
 

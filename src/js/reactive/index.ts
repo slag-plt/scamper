@@ -24,7 +24,7 @@ interface Subscription extends L.Struct {
   register: (react: ReactiveElement) => void
 }
 
-export function reactive_subscriptionQ(v: any): boolean {
+export function reactive_subscriptionQ(v: L.Value): boolean {
   return L.isStructKind(v, 'subscription')
 }
 

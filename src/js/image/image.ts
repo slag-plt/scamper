@@ -20,7 +20,7 @@ export function image_withImageFile(callback: L.ScamperFn): ReactiveImageFile {
   }
 }
 
-export function image_isReactiveImageFile (v: any): boolean {
+export function image_isReactiveImageFile (v: L.Value): boolean {
   return L.isStructKind(v, 'reactive-image-file')
 }
 
