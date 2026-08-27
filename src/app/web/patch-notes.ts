@@ -31,7 +31,8 @@ export const patchNotes: PatchNote[] = [
       'A program that has finished is no longer sometimes treated as still running, which could leave the Run button stuck on Stop or stop the rest of a reading page from running.',
       'The documentation now lists `null`, which was missing from it, and shows a constant such as `pi` as a value rather than as a function you would call.',
       'On the documentation page, setting a filter to "and" without ticking anything in it no longer wipes out your search results.',
-      'Choosing a file in a reading page\'s example now runs the code that was waiting for it, instead of doing nothing.'
+      'Choosing a file in a reading page\'s example now runs the code that was waiting for it, instead of doing nothing.',
+      'A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.'
     ]
   },
   {
