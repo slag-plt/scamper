@@ -27,13 +27,19 @@ export function prelude_blockOnReadFile(filename: string): L.Value {
 
 export interface ReactiveFileChooser extends L.Struct {
   [L.structKind]: 'reactive-file-chooser',
-  callback: L.ScamperFn
+  callback: L.ScamperFn,
+  [L.runField]: L.RunHandle
 }
 
 export function prelude_withFileChooser(callback: L.ScamperFn): ReactiveFileChooser {
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-file-chooser',
-    callback
+    callback,
+    // Captured here, where it can be: this runs during a step, whereas Vue
+    // mounts the renderer afterwards, when there is no current run left to
+    // resolve and the free `spawn` falls back to the foreground one. In a
+    // reading there is no foreground run, so the callback was dropped (#397).
+    [L.runField]: L.currentRun()
   }
 }

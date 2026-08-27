@@ -4,14 +4,18 @@ import * as L from '../../lpm'
 
 export interface ReactiveImageFile extends L.Struct {
   [L.structKind]: 'reactive-image-file',
-  callback: L.ScamperFn
+  callback: L.ScamperFn,
+  [L.runField]: L.RunHandle
 }
 
 export function image_withImageFile(callback: L.ScamperFn): ReactiveImageFile {
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'reactive-image-file',
-    callback
+    callback,
+    // See prelude_withFileChooser: the run is captured while the program is
+    // stepping, because the renderer mounts too late to resolve it (#397).
+    [L.runField]: L.currentRun()
   }
 }
 

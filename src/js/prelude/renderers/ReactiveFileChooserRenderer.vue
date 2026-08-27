@@ -18,8 +18,11 @@ function onFileChange(event: Event) {
       if (e !== null && e.target !== null) {
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result in the widget; a callback error surfaces in the
-        // output pane instead.
-        L.spawn(props.value.callback, [e.target.result as string], (r) => {
+        // output pane instead. Through the run the *value* carries, since this
+        // fires long after the step that made it and Vue mounts us later still
+        // -- resolving a run here would find the foreground one, or none at
+        // all on a reading page (#397).
+        props.value[L.runField].spawn(props.value.callback, [e.target.result as string], (r) => {
           result.value = r
           isLoading.value = false
         })

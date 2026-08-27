@@ -80,24 +80,14 @@ scrollbar instead:
 
 ## What is interactive
 
-Buttons, `on-keydown!`, `animate-with`, the reactive library and music playback
-all work, and each widget's handlers belong to that widget: one widget's button
-sees its own definitions and reports its own errors, and starting a later widget
-does not tear down an earlier one's animation.
+Buttons, `on-keydown!`, `animate-with`, the reactive library, music playback and
+the file choosers all work, and each widget's handlers belong to that widget: one
+widget's button sees its own definitions and reports its own errors, and starting
+a later widget does not tear down an earlier one's animation.
 
-**One known gap (#397).** A reactive *file chooser* rendered inside a widget will
-not fire its callback. Those renderers are driven by the IDE's Vue layer, which
-resolves a callback's run after the fact rather than capturing it, and on a
-reading page there is no foreground program to fall back to. Everything else in
-the libraries captures its run at registration.
-
-**A second (#415).** On a busy machine an interactive widget can render
-everything it is going to render and still never be signalled complete. Since
-widgets run one after another, the rest of the page then never starts — the
-reader is left with blank space below. Measured on two saturated cores: a widget
-rendered at 144ms and had not completed 90 seconds later, while the same program
-on a private scheduler finished in 69ms. Idle, the same page runs in well under
-a second.
+Two gaps that used to be listed here are fixed: a file chooser's callback never
+firing (#397), and a widget rendering everything and never completing, which
+left the rest of the page blank (#415).
 
 ## Notes for whoever maintains this
 
