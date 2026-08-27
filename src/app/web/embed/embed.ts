@@ -40,7 +40,7 @@ function scriptText(el: HTMLElement, suffix: string): string | null {
   const script = el.querySelector<HTMLScriptElement>(
     `script[type="text/scamper${suffix}"]`,
   )
-  return script === null ? null : script.textContent ?? ''
+  return script === null ? null : script.textContent
 }
 
 /**
@@ -55,7 +55,7 @@ export function readSpec(el: HTMLElement): EmbedSpec {
   const continues = el.getAttribute('data-continues')
   return {
     el,
-    code: (scripted ?? el.textContent ?? '').trim(),
+    code: (scripted ?? el.textContent).trim(),
     preamble: (scriptText(el, '-preamble') ?? '').trim(),
     continues,
     height: el.getAttribute('data-height'),

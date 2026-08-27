@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ChartConfiguration } from 'chart.js'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
 import { Plot } from '../viz'
@@ -22,7 +23,9 @@ function renderChart() {
     if (chart) {
       chart.destroy()
     }
-    chart = new Chart(canvas.value, props.value.opts as any)
+    // As in the HTML renderer: built from Scamper options, checked by
+    // Chart.js rather than by us.
+    chart = new Chart(canvas.value, props.value.opts as unknown as ChartConfiguration)
   }
 }
 

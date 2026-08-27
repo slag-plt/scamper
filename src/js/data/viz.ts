@@ -27,7 +27,7 @@ export function data_plotQ (v: L.Value): boolean {
  * `updateObject` creates the levels it walks through, so every step really is
  * one of these.
  */
-type ChartConfig = Record<string, unknown>
+export type ChartConfig = Record<string, unknown>
 
 function updateObject (path: string[], value: L.Value, obj: ChartConfig): void {
   let cur = obj
@@ -71,7 +71,7 @@ function updatePlotOption (key: string, value: L.Value, opts: ChartConfig): void
 
 export function data_withPlotOptions (options: L.List, plot: Plot): Plot {
   const newOpts = { ...plot.opts }
-  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+  const optionPairs: [string, L.Value][] = L.listToVector(options).map((v) => {
     const p = v as L.Pair
     return [p.fst as string, p.snd]
   })
@@ -100,7 +100,7 @@ function updateDatasetOption (key: string, value: L.Value, opts: ChartConfig): v
 
 export function data_withDatasetOptions (options: L.List, dataset: Dataset): Dataset {
   const newOpts = { ...dataset.opts }
-  const optionPairs: [string, any][] = L.listToVector(options).map(v => {
+  const optionPairs: [string, L.Value][] = L.listToVector(options).map((v) => {
     const p = v as L.Pair
     return [p.fst as string, p.snd]
   })

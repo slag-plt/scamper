@@ -30,7 +30,7 @@ export function audio_sampleNode(data: number[]): SampleNode {
   }
 }
 
-export function audio_sampleQ(v: any): boolean {
+export function audio_sampleQ(v: L.Value): boolean {
   return L.isStructKind(v, 'sample')
 }
 
@@ -71,7 +71,7 @@ export function audio_audioContext(sampleRate: number): AudioContext {
   return new AudioContext({ sampleRate })
 }
 
-export function audio_contextQ(v: any): boolean {
+export function audio_contextQ(v: L.Value): boolean {
   return v instanceof AudioContext
 }
 
@@ -157,11 +157,11 @@ export function audio_audioPipeline(
   }
 }
 
-export function audio_pipelineQ(v: any): boolean {
+export function audio_pipelineQ(v: L.Value): boolean {
   return L.isStructKind(v, 'audio-pipeline')
 }
 
-export function audio_audioNodeQ(v: any): boolean {
+export function audio_audioNodeQ(v: L.Value): boolean {
   return v instanceof AudioNode
 }
 

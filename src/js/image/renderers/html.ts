@@ -18,7 +18,7 @@ function renderRgb (rgb: Rgb): HTMLElement {
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(color_isRgb, (v: any) => renderRgb(v as Rgb))
+HtmlRenderer.registerCustomRenderer(color_isRgb, (v: L.Value) => renderRgb(v as Rgb))
 
 function renderHsv (hsv: Hsv): HTMLElement {
   const div = document.createElement('div')
@@ -33,11 +33,11 @@ function renderHsv (hsv: Hsv): HTMLElement {
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(color_isHsv, (v: any) => renderHsv(v as Hsv))
+HtmlRenderer.registerCustomRenderer(color_isHsv, (v: L.Value) => renderHsv(v as Hsv))
 
 /***** Drawings ****************************************************************/
 
-HtmlRenderer.registerCustomRenderer(drawing_drawingQ, (v: any) => drawing_renderer(v as Drawing))
+HtmlRenderer.registerCustomRenderer(drawing_drawingQ, (v: L.Value) => drawing_renderer(v as Drawing))
 
 /***** Reactive image files *****************************************************/
 
@@ -55,7 +55,7 @@ function render (rif: ReactiveImageFile): HTMLElement {
   inp.addEventListener('change', () => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         const img = new Image()
         img.onload = () => {
           const canvas = document.createElement('canvas')
@@ -89,4 +89,4 @@ function render (rif: ReactiveImageFile): HTMLElement {
   return ret
 }
 
-HtmlRenderer.registerCustomRenderer(image_isReactiveImageFile, (v: any) => render(v as ReactiveImageFile))
+HtmlRenderer.registerCustomRenderer(image_isReactiveImageFile, (v: L.Value) => render(v as ReactiveImageFile))

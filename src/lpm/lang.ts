@@ -101,7 +101,7 @@ export class Env {
     if (dot >= 0) {
       const module = this.qualified.get(name.slice(0, dot))
       const member = name.slice(dot + 1)
-      if (module !== undefined && module.bindings.has(member)) {
+      if (module?.bindings.has(member)) {
         return { found: true, slot: module.bindings.get(member) }
       }
       return { found: false }

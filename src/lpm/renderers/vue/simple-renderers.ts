@@ -8,6 +8,10 @@ import {
 } from '../../util'
 import { createTextRenderer, Strategy, VueStrategyProps } from '../vue'
 
+// `T` is what the caller's `formatFn` takes, and it is carried into the
+// component's `value` prop so the two cannot drift. The rule counts only
+// its appearances in the signature, where it shows up once.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function createSimpleVueRenderer<T>(
   formatFn: (val: T) => string,
 ): VueStrategyProps {

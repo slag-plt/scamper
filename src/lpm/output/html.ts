@@ -22,7 +22,7 @@ import { OutputChannel, ErrorChannel } from './channel.js'
 //   return ret
 // }
 
-export function renderToOutput(output: HTMLElement, v: any) {
+export function renderToOutput(output: HTMLElement, v: LPM.Value) {
   const div = document.createElement('div')
   div.classList.add('scamper-output')
   div.appendChild(HtmlRenderer.render(v))

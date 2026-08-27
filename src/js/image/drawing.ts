@@ -496,13 +496,6 @@ export function drawing_drawingToCanvas(drawing: Drawing): HTMLCanvasElement {
 // branch and draw *nothing*, silently -- which is what (ellipse w h #t color)
 // did, the very call ellipse's own (wrong) `boolean?` contract demanded. The
 // fill-mode? contract now stops that at construction; this is the backstop.
-function badMode(mode: unknown): L.ScamperError {
-  return new L.ScamperError(
-    'Runtime',
-    `Cannot draw a shape whose fill is ${JSON.stringify(mode)}: expected "solid" or "outline"`,
-  )
-}
-
 export function drawing_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = context2d(canvas)
   switch (drawing[L.structKind]) {
@@ -517,10 +510,8 @@ export function drawing_render (x: number, y: number, drawing: Drawing, canvas: 
       ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI)
       if (drawing.mode === 'solid') {
         ctx.fill()
-      } else if (drawing.mode === 'outline') {
-        ctx.stroke()
       } else {
-        throw badMode(drawing.mode)
+        ctx.stroke()
       }
       break
     }
@@ -529,10 +520,8 @@ export function drawing_render (x: number, y: number, drawing: Drawing, canvas: 
       ctx.strokeStyle = color_rgbToString(drawing.color)
       if (drawing.mode === 'solid') {
         ctx.fillRect(x, y, drawing.width, drawing.height)
-      } else if (drawing.mode === 'outline') {
-        ctx.strokeRect(x, y, drawing.width, drawing.height)
       } else {
-        throw badMode(drawing.mode)
+        ctx.strokeRect(x, y, drawing.width, drawing.height)
       }
       break
     }
@@ -550,10 +539,8 @@ export function drawing_render (x: number, y: number, drawing: Drawing, canvas: 
       ctx.lineTo(x, y + drawing.height)
       if (drawing.mode === 'solid') {
         ctx.fill()
-      } else if (drawing.mode === 'outline') {
-        ctx.stroke()
       } else {
-        throw badMode(drawing.mode)
+        ctx.stroke()
       }
       break
     }

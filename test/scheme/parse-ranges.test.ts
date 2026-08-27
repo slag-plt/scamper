@@ -220,7 +220,7 @@ describe('let', () => {
     const src = '(let ([x 1] [y 2]) x)'
     const let_ = asExp(parseExp(src), 'let')
     assertSpan(let_.range, src, '(let ([x 1] [y 2]) x)')
-    expect(let_.bindings.map((b) => b.pat.name)).toEqual(['x', 'y'])
+    expect(let_.bindings.map((b) => (b.pat as A.Identifier).name)).toEqual(['x', 'y'])
     assertSpan(let_.bindings[0].pat.range, src, 'x', 0)
     assertSpan(let_.bindings[0].value.range, src, '1')
     assertSpan(let_.bindings[1].pat.range, src, 'y', 0)

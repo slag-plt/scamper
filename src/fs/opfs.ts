@@ -101,7 +101,7 @@ export class OPFSFileSystem implements FS {
       const text = await file.text()
       return text.split('\n').slice(0, 5).join('\n')
     } catch (e) {
-      throw new Error(`Failed to get file preview: ${e}`)
+      throw new Error('Failed to get file preview', { cause: e })
     }
   }
 

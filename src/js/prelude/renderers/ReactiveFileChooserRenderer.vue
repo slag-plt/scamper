@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import * as L from '../../../lpm'
 import { ReactiveFileChooser } from '../files'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 
 const props = defineProps<{ value: ReactiveFileChooser }>()
 
-const result = ref<any>(null)
+// `shallowRef` rather than `ref`: a Scamper `Value` is a deeply recursive
+// union, and Vue's reactive unwrapping cannot instantiate it. Nothing here
+// mutates the value in place, so shallow is also what is wanted.
+const result = shallowRef<L.Value>(null)
 const isLoading = ref(false)
 
 function onFileChange(event: Event) {
@@ -15,7 +18,7 @@ function onFileChange(event: Event) {
     isLoading.value = true
     const reader = new FileReader()
     reader.onload = (e) => {
-      if (e !== null && e.target !== null) {
+      if (e.target !== null) {
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result in the widget; a callback error surfaces in the
         // output pane instead. Through the run the *value* carries, since this

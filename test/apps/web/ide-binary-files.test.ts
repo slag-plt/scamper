@@ -35,6 +35,9 @@ const PNG = new Uint8Array([
 describe('binary files in the IDE', () => {
   let fs: MockFileSystem
 
+  let createObjectURL: ReturnType<typeof vi.fn>
+  let revokeObjectURL: ReturnType<typeof vi.fn>
+
   beforeEach(() => {
     fs = new MockFileSystem()
     FS.setBackend(FS.localBackend(fs))
@@ -43,12 +46,12 @@ describe('binary files in the IDE', () => {
     } catch {
       /* no storage in this environment; nothing to clear */
     }
-    // jsdom has no object URLs, and the image preview makes one.
-    vi.stubGlobal('URL', {
-      ...URL,
-      createObjectURL: vi.fn(() => 'blob:mock'),
-      revokeObjectURL: vi.fn(),
-    })
+    // jsdom has no object URLs, and the image preview makes one. The two mocks
+    // are held here so the assertions can name them, rather than reaching back
+    // through the stubbed global -- which `unbound-method` rightly objects to.
+    createObjectURL = vi.fn(() => 'blob:mock')
+    revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
   })
 
   afterEach(() => {
@@ -75,7 +78,7 @@ describe('binary files in the IDE', () => {
   function selectedFile(): string | undefined {
     return document
       .querySelector('.file.selected .file-name')
-      ?.textContent?.trim()
+      ?.textContent.trim()
   }
 
   test('a binary file that is not an image shows a notice', async () => {
@@ -101,7 +104,7 @@ describe('binary files in the IDE', () => {
       expect(image.getAttribute('src')).toBe('blob:mock')
       // Drawn from the file's bytes, which is the whole point: reading it as
       // text would have produced a broken image.
-      expect(URL.createObjectURL).toHaveBeenCalled()
+      expect(createObjectURL).toHaveBeenCalled()
     } finally {
       wrapper.unmount()
     }
@@ -163,7 +166,7 @@ describe('binary files in the IDE', () => {
         }).value,
       ).toBe('(display 1)')
       // The picture's object URL is released rather than leaked.
-      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock')
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock')
     } finally {
       wrapper.unmount()
     }

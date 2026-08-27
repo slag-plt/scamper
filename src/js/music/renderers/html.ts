@@ -1,8 +1,9 @@
+import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
 import { Composition, music_compositionQ, music_playComposition } from '../index.js'
 import { requireWaf } from '../webaudiofont/webaudiofont.js'
 
-function render (v: any): HTMLElement {
+function render (v: L.Value): HTMLElement {
   const composition: Composition = v as Composition
   const ret = document.createElement('span')
   const playButton = document.createElement('button')

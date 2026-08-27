@@ -58,7 +58,7 @@ function onKey(event: KeyboardEvent) {
   const order = tabs.value
   if (order.length === 0) return
   const at = order.indexOf(active.value ?? order[0])
-  let to = at
+  let to: number
   if (event.key === 'ArrowRight') to = (at + 1) % order.length
   else if (event.key === 'ArrowLeft') to = (at - 1 + order.length) % order.length
   else if (event.key === 'Home') to = 0

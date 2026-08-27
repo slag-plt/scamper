@@ -17,13 +17,13 @@ function widget(html: string): HTMLElement {
 
 /** The transcript's rendered text, whitespace squashed so assertions read. */
 function transcript(el: HTMLElement): string {
-  return (el.textContent ?? '').replace(/\s+/g, ' ').trim()
+  return el.textContent.replace(/\s+/g, ' ').trim()
 }
 
 /** The source captions a widget rendered, in order. */
 function captions(el: HTMLElement): string[] {
   return [...el.querySelectorAll('.scamper-transcript-source')].map((node) =>
-    (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    node.textContent.replace(/\s+/g, ' ').trim(),
   )
 }
 

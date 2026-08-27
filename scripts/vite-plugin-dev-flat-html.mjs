@@ -18,6 +18,7 @@ import { basename } from 'path'
  * @returns {import('vite').Plugin}
  */
 export function devFlatHtmlPlugin(entryPaths, idePath) {
+  /** @type {Map<string, string>} flat URL -> the source path serving it */
   const rewrites = new Map()
   for (const path of entryPaths) {
     rewrites.set(`/${basename(path)}`, `/${path}`)

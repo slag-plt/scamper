@@ -27,9 +27,9 @@ export function libSourcesPlugin() {
         try {
           generateLibSources()
           server.ws.send({ type: 'full-reload' })
-        } catch (err) {
+        } catch (/** @type {unknown} */ err) {
           server.config.logger.error(
-            `[lib-sources-generator] failed to regenerate sources from src/lib/*.scm:\n${err.message}`,
+            `[lib-sources-generator] failed to regenerate sources from src/lib/*.scm:\n${err instanceof Error ? err.message : String(err)}`,
             { error: err },
           )
         }

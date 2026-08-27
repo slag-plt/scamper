@@ -21,6 +21,16 @@
 
     /* Linting */
     "strict": true,
+    /* N.B., `noUncheckedIndexedAccess` is deliberately NOT set. It was raised
+       by #391 and settled under #154, by measuring rather than arguing: turning
+       it on costs 268 typecheck errors and 110 further lint warnings, and buys
+       3 guards that `no-unnecessary-condition` would otherwise call dead. The
+       errors land almost entirely in src/scheme (lezer-bridge, ast) and
+       src/js/prelude -- bounded loops and codegen-guaranteed offsets, where
+       several hundred added guards would catch approximately nothing and cost
+       the readability that matters most to the students who maintain this.
+       The handful of index lookups that genuinely can miss are guarded, with
+       the reason on the line. Revisit if that ratio ever changes. */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,

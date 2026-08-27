@@ -2,7 +2,7 @@ import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
 import { Result, test_isResult } from '../index.js'
 
-HtmlRenderer.registerCustomRenderer(test_isResult, (v: any) => {
+HtmlRenderer.registerCustomRenderer(test_isResult, (v: L.Value) => {
   const result = v as Result
   const ret = document.createElement('div')
   ret.classList.add('test-result')

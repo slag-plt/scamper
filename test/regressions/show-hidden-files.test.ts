@@ -210,9 +210,8 @@ describe('#178: showing hidden files', () => {
       getByRole(document.body, 'button', { name: 'Open .hidden-notes' }).click()
       await flushPromises()
       const stored = localStorage.getItem('scamper.config') ?? '{}'
-      expect(JSON.parse(stored).recentFiles ?? []).not.toContain(
-        '.hidden-notes',
-      )
+      const config = JSON.parse(stored) as { recentFiles?: string[] }
+      expect(config.recentFiles ?? []).not.toContain('.hidden-notes')
     } finally {
       wrapper.unmount()
     }

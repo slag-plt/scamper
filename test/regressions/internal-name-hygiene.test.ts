@@ -11,7 +11,7 @@ import type { ScamperDiagnostic } from '../../src/scheme/diagnostic.js'
 // rewrote what the form meant (#336). The `##...##` shape is now reserved: no
 // program may bind one, so no form's meaning depends on its surroundings.
 describe('internal `##...##` names cannot be bound', () => {
-  const reserved = (name: string) =>
+  const reserved = (name: string): unknown =>
     expect.stringContaining(
       `The identifier "${name}" is reserved for Scamper's internal use`,
     )

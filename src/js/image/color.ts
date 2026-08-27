@@ -321,6 +321,10 @@ export function color_hsv(...args: number[]): Hsv {
   }
   const value = args[2]
 
+  // `hsv` takes 3 arguments or 4, so args[3] really can be absent -- the rule
+  // only calls this dead because `noUncheckedIndexedAccess` is off and the
+  // element type therefore reads as `number` (#154).
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (args[3] !== undefined && (args[3] < 0 || args[3] > 255)) {
     throw new L.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${args[3]}`)
   }

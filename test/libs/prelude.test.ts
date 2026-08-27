@@ -2256,12 +2256,15 @@ test('list-drop-out-of-range', async () => {
 })
 
 test('assoc-ref-missing-key', async () => {
+  // The key is rendered as Scamper would show it, so a string reads as one --
+  // and a key that is not a primitive says what it is rather than
+  // "[object Object]", which is what plain interpolation gave (#154).
   expect(
     await runProgram(`
 (assoc-ref "z" (list (pair "a" 1) (pair "b" 2)))
 `),
   ).toEqual([
-    'Runtime error: (assoc-ref) assoc-ref: key z not found in association list',
+    'Runtime error: (assoc-ref) assoc-ref: key "z" not found in association list',
   ])
 })
 

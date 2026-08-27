@@ -212,7 +212,9 @@ describe('IDE live evaluation', () => {
     const scamper = Scamper.getInstance()
     const execute = vi.spyOn(scamper, 'execute').mockResolvedValue(null)
     // A trace the test holds open, so an edit can land while it collects.
-    let finishTrace = () => undefined as void
+    let finishTrace: () => void = () => {
+      /* replaced by the mock below */
+    }
     vi.spyOn(scamper, 'traceStatement').mockImplementation(
       () =>
         new Promise((resolve) => {

@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, test } from 'vitest'
+import TextRenderer from '../../src/lpm/renderers/text'
 import Scamper, { initialize } from '../../src/scamper'
 import * as LPM from '../../src/lpm'
 import { Loc } from '../../src/lpm/range'
@@ -136,7 +137,9 @@ describe('#366: the sibling entry points on an empty program', () => {
     // diagnostic. The point is only that it never reaches the scheduler, so
     // assert that rather than pinning an unrelated parser message.
     expect(ch.log).toHaveLength(1)
-    expect(ch.log.join()).not.toContain('Scheduling invariant')
+    expect(ch.log.map((v) => TextRenderer.render(v)).join()).not.toContain(
+      'Scheduling invariant',
+    )
   })
 })
 

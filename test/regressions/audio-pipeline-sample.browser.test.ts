@@ -130,7 +130,7 @@ describe('#181: a sample can drive an audio pipeline', () => {
     expect(peak).toBeGreaterThan(0.5)
   })
 
-  test('the conversion keeps the data, in both channels, at the context rate', async () => {
+  test('the conversion keeps the data, in both channels, at the context rate', () => {
     const ctx = new OfflineAudioContext(2, 4000, 4000)
     const data = ramp(64)
     const source = sampleSourceNode(ctx, audio_sampleNode(data))

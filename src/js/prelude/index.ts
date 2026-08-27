@@ -1,4 +1,5 @@
 import * as L from '../../lpm'
+import TextRenderer from '../../lpm/renderers/text.js'
 
 export * from './files.js'
 
@@ -460,8 +461,8 @@ function appendOne_(l1: L.List, l2: L.List): L.List {
 
 export function prelude_append(l: L.List, ...ls: L.List[]): L.List {
   let ret = l
-  for (let i = 0; i < ls.length; i++) {
-    ret = appendOne_(ret, ls[i])
+  for (const rest of ls) {
+    ret = appendOne_(ret, rest)
   }
   return ret
 }
@@ -578,7 +579,7 @@ export function prelude_assocRef(v: L.Value, l: L.List): L.Value {
   }
   throw new L.ScamperError(
     'Runtime',
-    `assoc-ref: key ${v} not found in association list`,
+    `assoc-ref: key ${TextRenderer.render(v)} not found in association list`,
   )
 }
 
@@ -814,6 +815,10 @@ export function prelude_listToString(l: L.List): string {
 
 export function prelude_stringToVector(s: string): L.Char[] {
   const ret = []
+  // N.B., indexed rather than `for..of`: iterating a string walks it by code
+  // point, and a Scamper char is a UTF-16 unit, which is what `string-ref` and
+  // `string-length` also count.
+  // eslint-disable-next-line @typescript-eslint/prefer-for-of
   for (let i = 0; i < s.length; i++) {
     ret.push(L.mkChar(s[i]))
   }
@@ -822,8 +827,8 @@ export function prelude_stringToVector(s: string): L.Char[] {
 
 export function prelude_vectorToString(v: L.Char[]): string {
   let ret = ''
-  for (let i = 0; i < v.length; i++) {
-    ret += v[i].value
+  for (const c of v) {
+    ret += c.value
   }
   return ret
 }
@@ -946,9 +951,9 @@ export function prelude_vectorRange(...args: number[]): number[] {
 
 export function prelude_vectorAppend(...vecs: L.Value[][]): L.Value[] {
   const arr = []
-  for (let i = 0; i < vecs.length; i++) {
-    for (let j = 0; j < vecs[i].length; j++) {
-      arr.push(vecs[i][j])
+  for (const vec of vecs) {
+    for (const v of vec) {
+      arr.push(v)
     }
   }
   return arr
@@ -1043,7 +1048,7 @@ export function prelude_ignore(_v: L.Value): HTMLElement {
   return ret
 }
 
-export function prelude_setMaximumRecursionDepth(n: number): any {
+export function prelude_setMaximumRecursionDepth(n: number): L.Value {
   return {
     [L.scamperTag]: 'set-maximum-recursion-depth',
     value: n,

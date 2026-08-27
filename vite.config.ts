@@ -16,7 +16,7 @@ import { devServerConfigPlugin } from './scripts/vite-plugin-dev-server-config.m
 // `vitest`, so relying on it alone leaves APP_VERSION as 'unknown' there.
 const pkg = JSON.parse(
   readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
-)
+) as { version?: string }
 const AppVersion = process.env.npm_package_version ?? pkg.version ?? 'unknown'
 
 // The single source of truth for the HTML entry points, so the build input,

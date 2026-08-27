@@ -266,7 +266,7 @@ describe('rest parameters', () => {
     ])
     fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
       'cons',
-      (hd: Value, tl: any) => U.mkCons(hd, tl),
+      (hd: Value, tl: Value) => U.mkCons(hd, tl),
     ])
     stepFiberToOutput(fiber, out)
     expect(out.log).toEqual([U.mkCons(1, U.mkList(3, 4))])

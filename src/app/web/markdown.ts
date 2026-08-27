@@ -210,7 +210,7 @@ function link(node: SyntaxNode, md: string): Node {
   if (node.name === 'Image') {
     const img = document.createElement('img')
     img.src = safeUrl(url)
-    img.alt = label.textContent ?? ''
+    img.alt = label.textContent
     return img
   }
   const a = anchor(url, '')
