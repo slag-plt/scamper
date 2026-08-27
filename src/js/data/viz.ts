@@ -4,7 +4,7 @@ import * as L from '../../lpm'
 
 interface Dataset extends L.Struct {
   [L.structKind]: 'dataset'
-  opts: object
+  opts: ChartConfig
 }
 
 export function data_datasetQ (v: L.Value): boolean {
@@ -13,7 +13,7 @@ export function data_datasetQ (v: L.Value): boolean {
 
 export interface Plot extends L.Struct {
   [L.structKind]: 'plot'
-  opts: object
+  opts: ChartConfig
 }
 
 export function data_plotQ (v: L.Value): boolean {
@@ -22,19 +22,23 @@ export function data_plotQ (v: L.Value): boolean {
 
 ///// Options Management ///////////////////////////////////////////////////////
 
-function updateObject (path: string[], value: any, obj: any): void {
+/**
+ * A Chart.js config as we build it: nested plain objects, not Scamper values.
+ * `updateObject` creates the levels it walks through, so every step really is
+ * one of these.
+ */
+type ChartConfig = Record<string, unknown>
+
+function updateObject (path: string[], value: L.Value, obj: ChartConfig): void {
   let cur = obj
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i]
-    if (!(key in cur)) {
-      cur[key] = {}
-    }
-    cur = cur[key]
+  for (const key of path.slice(0, -1)) {
+    cur[key] ??= {}
+    cur = cur[key] as ChartConfig
   }
   cur[path[path.length - 1]] = value
 }
 
-function updatePlotOption (key: string, value: any, opts: object): void {
+function updatePlotOption (key: string, value: L.Value, opts: ChartConfig): void {
   switch (key) {
     case 'x-min':
       updateObject(['options', 'scales', 'x', 'min'], value, opts)
@@ -81,7 +85,7 @@ export function data_withPlotOptions (options: L.List, plot: Plot): Plot {
   }
 }
 
-function updateDatasetOption (key: string, value: any, opts: object): void {
+function updateDatasetOption (key: string, value: L.Value, opts: ChartConfig): void {
   switch (key) {
     case 'background-color':
       updateObject(['backgroundColor'], value, opts)
@@ -162,7 +166,7 @@ export function data_plotRadial(labels: L.List, ...datasets: Dataset[]): Plot {
 
 ///// Dataset Functions ////////////////////////////////////////////////////////
 
-function makeDataset (type: string, label: string, data: any[]): Dataset {
+function makeDataset (type: string, label: string, data: L.Value[]): Dataset {
   return {
     [L.scamperTag]: 'struct',
     [L.structKind]: 'dataset',
