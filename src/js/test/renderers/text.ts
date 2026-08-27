@@ -2,7 +2,7 @@ import * as L from '../../../lpm'
 import TextRenderer from '../../../lpm/renderers/text.js'
 import { Result, test_isResult } from '../index.js'
 
-TextRenderer.registerCustomRenderer(test_isResult, (v: any) => {
+TextRenderer.registerCustomRenderer(test_isResult, (v: L.Value) => {
   const result = v as Result
   switch (result[L.structKind]) {
     case 'test-result-ok':

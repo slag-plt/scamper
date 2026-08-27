@@ -1,9 +1,10 @@
+import * as L from '../../../lpm'
 import HTMLRenderer from '../../../lpm/renderers/html.js'
 import { Plot, data_plotQ } from '../viz.js'
 
 import Chart from 'chart.js/auto'
 
-HTMLRenderer.registerCustomRenderer(data_plotQ, (v: any): HTMLElement => {
+HTMLRenderer.registerCustomRenderer(data_plotQ, (v: L.Value): HTMLElement => {
   const canvas = document.createElement('canvas')
   canvas.width = 800
   const plot = v as Plot

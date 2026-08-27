@@ -4,7 +4,7 @@ import { ReactiveFileChooser } from '../files.js'
 
 ///// Reactive file chooser ////////////////////////////////////////////////////
 
-function renderReactiveFileChooser (v: any): HTMLElement {
+function renderReactiveFileChooser (v: L.Value): HTMLElement {
   const rf = v as ReactiveFileChooser
   // Taken from the value rather than resolved here. Rendering looks like it
   // happens during a step, but the scheduler clears `steppingTaskId` before it
