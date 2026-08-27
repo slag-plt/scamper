@@ -155,11 +155,47 @@ describe('#403: the search rules survived the move', () => {
     expect(searchByFilters(noFilters()).length).toBeGreaterThan(400)
   })
 
-  test('an unset filter matches nothing in "and" mode', () => {
-    // Carried over verbatim: "all of nothing" is false, not true.
+  test('an unset filter constrains nothing in "and" mode either (#408)', () => {
+    // It used to match *nothing* -- "all of nothing" was false -- so switching
+    // an empty section to "and" emptied the results.
     const filters = noFilters()
-    expect(searchByFilters({ ...filters, argumentMode: 'and' })).toHaveLength(0)
-    expect(searchByFilters({ ...filters, tagMode: 'and' })).toHaveLength(0)
+    expect(
+      searchByFilters({ ...filters, argumentMode: 'and' }).length,
+    ).toBeGreaterThan(400)
+    expect(searchByFilters({ ...filters, tagMode: 'and' }).length).toBeGreaterThan(
+      400,
+    )
+  })
+
+  test('an empty "and" section does not cancel another section (#408)', () => {
+    // The issue's own steps: Arguments switched to "and" with nothing ticked,
+    // Tags ticked with `trigonometry`. The answer is the trigonometry
+    // functions, as if the Arguments filter were not set at all.
+    const expected = searchByFilters({ ...noFilters(), tags: ['trigonometry'] })
+    expect(expected.length).toBeGreaterThan(0)
+    const withEmptyAnd = searchByFilters({
+      ...noFilters(),
+      tags: ['trigonometry'],
+      argumentMode: 'and',
+    })
+    expect(withEmptyAnd.map((e) => functionDocName(e.doc))).toEqual(
+      expected.map((e) => functionDocName(e.doc)),
+    )
+  })
+
+  test('a ticked "and" section still requires every one of its ticks', () => {
+    // The fix must not turn "and" into "or" for a section that *is* set.
+    const both = searchByFilters({
+      ...noFilters(),
+      argumentTypes: ['number', 'string'],
+      argumentMode: 'and',
+    })
+    const either = searchByFilters({
+      ...noFilters(),
+      argumentTypes: ['number', 'string'],
+      argumentMode: 'or',
+    })
+    expect(both.length).toBeLessThan(either.length)
   })
 
   test('tag and type filters still select what they used to', () => {
