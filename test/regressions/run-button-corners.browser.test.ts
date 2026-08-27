@@ -68,6 +68,16 @@ describe('the Run control keeps its rounded corners (#390)', () => {
         bottomRight: pill,
         bottomLeft: '0px',
       })
+
+      // Rounding the halves is only worth anything while something still
+      // paints on them: the corners were invisible until one did. The caret's
+      // open state is the half of that reachable without a synthetic hover.
+      const caret = document.querySelector<HTMLElement>('.run-caret')
+      if (caret === null) throw new Error('no .run-caret in the header')
+      caret.click()
+      await flushPromises()
+      expect(caret.classList.contains('open')).toBe(true)
+      expect(getComputedStyle(caret).backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
     } finally {
       wrapper.unmount()
     }
