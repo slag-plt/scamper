@@ -454,8 +454,10 @@ function openMenuByTitle(title: string, focusButton: boolean) {
  */
 const focusedTitle = ref<string | null>(null)
 
+// `menus` is a fixed six-entry literal, so there is always a first title to
+// fall back on and this never has to answer "none" (#391).
 const tabStop = computed(
-  () => focusedTitle.value ?? openTitle.value ?? menus.value[0]?.title ?? null,
+  () => focusedTitle.value ?? openTitle.value ?? menus.value[0].title,
 )
 
 /** Moves the bar's focus to `title`, opening its menu if one is already open. */
@@ -475,8 +477,7 @@ function goToTitle(title: string) {
  */
 function onTitleKey(event: KeyboardEvent) {
   const titles = menus.value.map((m) => m.title)
-  if (titles.length === 0) return
-  const at = Math.max(0, titles.indexOf(tabStop.value ?? titles[0]))
+  const at = Math.max(0, titles.indexOf(tabStop.value))
 
   switch (event.key) {
     case 'ArrowRight':
