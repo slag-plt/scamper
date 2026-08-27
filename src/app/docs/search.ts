@@ -243,9 +243,11 @@ function matchesAny(selected: string[], has: (t: string) => boolean): boolean {
 }
 
 function matchesAll(selected: string[], has: (t: string) => boolean): boolean {
-  // "all of nothing" is false rather than true: an "and" filter with nothing
-  // ticked matches nothing, which is how the original page behaved.
-  return selected.length !== 0 && selected.every(has)
+  // A section with nothing ticked is unset, whichever mode its dropdown is on.
+  // "All of nothing" was false here, so opening a section, switching it to
+  // "and", and ticking nothing in it quietly emptied the whole result set --
+  // including whatever a *different* section had selected (#408).
+  return selected.length === 0 || selected.every(has)
 }
 
 /** The functions passing every filter in `filters`. */
