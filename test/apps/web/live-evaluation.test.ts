@@ -164,7 +164,9 @@ describe('live evaluation', () => {
   test('runNow() stands down if cancel() lands while it is starting', async () => {
     const { state, hooks } = mockHooks()
     // A run the test holds open, so cancel() can land mid-flight.
-    let finishStarting = () => undefined as void
+    let finishStarting: () => void = () => {
+      /* replaced by the mock below */
+    }
     const live = useLiveEvaluation({
       ...hooks,
       run: () =>

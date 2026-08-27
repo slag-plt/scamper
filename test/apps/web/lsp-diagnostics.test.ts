@@ -1,3 +1,4 @@
+import type { Diagnostic } from 'vscode-languageserver-protocol'
 import { describe, expect, test } from 'vitest'
 import { computeDiagnostics } from '../../../src/app/web/codemirror/lsp/diagnostics'
 import { ScamperLanguageServer } from '../../../src/app/web/codemirror/lsp/server'
@@ -8,9 +9,12 @@ import { computeLineStarts } from '../../../src/app/web/codemirror/lsp/positions
 describe('computeDiagnostics', () => {
   test('reports an undefined variable', async () => {
     const src = '(+ zzz 1)'
-    const diags = await computeDiagnostics(src, computeLineStarts(src))
+    const diags: Diagnostic[] = await computeDiagnostics(
+      src,
+      computeLineStarts(src),
+    )
     expect(diags.length).toBeGreaterThan(0)
-    expect(diags[0].message.toLowerCase()).toContain('zzz')
+    expect(diags[0].message).toMatch(/zzz/i)
   })
 
   test('reports nothing for a well-formed program', async () => {

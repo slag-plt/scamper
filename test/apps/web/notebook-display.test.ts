@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import TextRenderer from '../../../src/lpm/renderers/text'
 import * as Scheme from '../../../src/scheme'
 import { Fiber } from '../../../src/lpm/fiber'
 import { runFiberOnScheduler } from '../../../src/lpm/run'
@@ -15,7 +16,7 @@ import {
 
 /** A value as a test can compare it. */
 function shown(v: Value): string {
-  return v instanceof ScamperError ? `error: ${v.message}` : String(v)
+  return v instanceof ScamperError ? `error: ${v.message}` : TextRenderer.render(v)
 }
 
 /**

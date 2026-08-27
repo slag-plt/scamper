@@ -1,3 +1,6 @@
+/* eslint-disable vue/one-component-per-file -- the hosts below are scaffolding
+   for these specs, not components the app ships; each exists to give a
+   PanelFrame something to sit in. */
 import { mount } from '@vue/test-utils'
 import { getByRole, queryByRole } from '@testing-library/dom'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'

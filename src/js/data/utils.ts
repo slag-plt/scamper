@@ -37,9 +37,9 @@ class TallyList {
   }
 
   update (key: L.Value, updater: (value: number) => number, def: number): void {
-    for (let i = 0; i < this.data.length; i++) {
-      if (L.equals(this.data[i].key, key)) {
-        this.data[i].value = updater(this.data[i].value)
+    for (const entry of this.data) {
+      if (L.equals(entry.key, key)) {
+        entry.value = updater(entry.value)
         return
       }
     }

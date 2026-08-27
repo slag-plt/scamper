@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import type { ReactiveElement } from '../../src/js/reactive'
 import { setRunResolver, Value } from '../../src/lpm'
 import { html_button, html_onKeydown } from '../../src/js/html/index.js'
 import { canvas_animateWith, canvas_canvasOnclick, canvas_makeCanvas } from '../../src/js/canvas/index.js'
@@ -10,8 +11,8 @@ import { reactive_onTimer } from '../../src/js/reactive/index.js'
 // Scamper program is needed) and a controllable signal, then abort and check the
 // handler no longer fires -- i.e. the previous run's callbacks don't leak.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FakeElement = any
+/** The little of a ReactiveElement that a subscription touches. */
+type FakeElement = Pick<ReactiveElement, 'update' | 'draw' | 'getElement'>
 
 let controller: AbortController
 let spawned: Value[][]
@@ -76,7 +77,7 @@ describe('run cancellation', () => {
       draw: () => undefined,
       getElement: () => document.createElement('div'),
     }
-    reactive_onTimer(50).register(react)
+    reactive_onTimer(50).register(react as ReactiveElement)
 
     vi.advanceTimersByTime(120) // ~2 ticks
     const before = updates.length

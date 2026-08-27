@@ -28,6 +28,10 @@ export type Strategy = VueStrategy | DOMStrategy
 /**
  * helper functions
  */
+// `T` is what the caller's `formatFn` takes, and it is carried into the
+// component's `value` prop so the two cannot drift. The rule counts only
+// its appearances in the signature, where it shows up once.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function createTextRenderer<T>(formatFn: (val: T) => string): Component {
   return defineComponent({
     props: { value: { type: null as unknown as PropType<T>, required: true } },

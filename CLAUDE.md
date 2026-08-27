@@ -68,7 +68,7 @@ is compiled in.
 + `npm run test`: runs the full test suite
 + `npm run typecheck`: runs the typechecker 
 + `npm run typecheck:server`: runs the typechecker over the `server/` workspace
-+ `npm run lint`: runs the linter
++ `npm run lint`: runs the linter. **It fails on a single warning** (`--max-warnings 0`): every rule here is a warning by design, since `eslint-plugin-only-warn` is what the config loads, so this is what makes any of them binding. A warning that is genuinely wanted -- a guard the types cannot see, a deliberate `any` at a boundary -- is disabled on the line with the reason beside it, never left to accumulate
 + `npm run lint:fix`: automatically fixes simple linter errors
 
 ### Releases

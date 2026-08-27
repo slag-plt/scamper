@@ -14,7 +14,7 @@ function play() {
 
   if (
     'start' in pipeline &&
-    typeof (pipeline as any).start === 'function' &&
+    typeof pipeline.start === 'function' &&
     !started.value
   ) {
     ;(pipeline as AudioScheduledSourceNode).start()

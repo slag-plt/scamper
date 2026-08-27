@@ -2,13 +2,18 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    // The freshness spec imports scripts/generate-lib-sources.mjs directly, to
+    // compare what it would write against what is checked in. Without allowJs
+    // that import resolves to nothing and the call reads as untyped.
+    "allowJs": true,
     "types": ["@testing-library/jest-dom/vitest", "node"]
   },
   "include": [
     "./**/*",
     "./setup.ts",
     "../src/env.d.ts",
-    "../src/js/image/colorsys.d.ts"
+    "../src/js/image/colorsys.d.ts",
+    "../scripts/generate-lib-sources.mjs"
   ],
   // empty exclude needed to override base tsconfig
   "exclude": []

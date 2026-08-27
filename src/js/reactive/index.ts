@@ -8,7 +8,7 @@ import { context2d } from '../image/context.js'
 /**
  * A ReactiveElement is an element that reacts to messages.
  */
-interface ReactiveElement {
+export interface ReactiveElement {
   draw (): void
   update (msg: Msg): void
   getElement (): HTMLElement

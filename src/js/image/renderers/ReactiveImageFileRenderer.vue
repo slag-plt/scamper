@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 import * as L from '../../../lpm'
 import { ReactiveImageFile } from '../image'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 
 const props = defineProps<{ value: ReactiveImageFile }>()
 
-const result = ref<any>(null)
+// `shallowRef` rather than `ref`: a Scamper `Value` is a deeply recursive
+// union, and Vue's reactive unwrapping cannot instantiate it. Nothing here
+// mutates the value in place, so shallow is also what is wanted.
+const result = shallowRef<L.Value>(null)
 const isLoading = ref(false)
 
 function onFileChange(event: Event) {
