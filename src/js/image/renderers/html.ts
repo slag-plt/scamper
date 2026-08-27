@@ -42,10 +42,10 @@ HtmlRenderer.registerCustomRenderer(drawing_drawingQ, (v: any) => drawing_render
 /***** Reactive image files *****************************************************/
 
 function render (rif: ReactiveImageFile): HTMLElement {
-  // Rendering happens as the program's output is emitted, i.e. while it is
-  // stepping, so this captures the run that produced the value. The callback
-  // below fires from a FileReader long afterwards (#375).
-  const run = L.currentRun()
+  // The run comes from the value. Rendering looks like it happens during a
+  // step, but the scheduler clears `steppingTaskId` before emitting output, so
+  // resolving one here finds the foreground run -- and a reading page has none
+  // (#397).
   const ret = document.createElement('div')
   const inp = document.createElement('input')
   const outp = document.createElement('div')
@@ -67,7 +67,7 @@ function render (rif: ReactiveImageFile): HTMLElement {
           }
           // Run the callback as a fiber (JS can no longer call the closure) and
           // render its result; a callback error surfaces in the output pane.
-          run.spawn(rif.callback, [canvas], (r) => {
+          rif[L.runField].spawn(rif.callback, [canvas], (r) => {
             outp.innerHTML = ''
             if (r !== null) {
               outp.appendChild(HtmlRenderer.render(r))

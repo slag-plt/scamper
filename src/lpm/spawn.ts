@@ -16,6 +16,14 @@ import { ScamperError } from './error'
  * element.addEventListener('click', () => run.spawn(fn, []), { signal: run.signal })
  * ```
  */
+/**
+ * The field a *value* carries its run in, when it has to outlive the step that
+ * made it (#397). Hidden -- `##...##` -- so it is not a field of the value:
+ * `getFieldsOfStruct` filters it out, and so equality, pattern matching and
+ * every renderer are blind to it.
+ */
+export const runField = '##run##'
+
 export interface RunHandle {
   /**
    * Runs `(fn ...args)` as a new fiber in this run's top-level environment, so

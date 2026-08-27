@@ -5,10 +5,11 @@ import { ReactiveFileChooser } from '../files.js'
 ///// Reactive file chooser ////////////////////////////////////////////////////
 
 function renderReactiveFileChooser (v: any): HTMLElement {
-  // Captured while the program is stepping (rendering happens as its output is
-  // emitted); the callback below fires from a FileReader afterwards (#375).
-  const run = L.currentRun()
   const rf = v as ReactiveFileChooser
+  // Taken from the value rather than resolved here. Rendering looks like it
+  // happens during a step, but the scheduler clears `steppingTaskId` before it
+  // emits output, so `currentRun()` here falls back to the foreground run --
+  // and a reading page has none, so the callback was dropped (#397).
   const ret = document.createElement('div')
   const inp = document.createElement('input')
   const outp = document.createElement('div')
@@ -20,7 +21,7 @@ function renderReactiveFileChooser (v: any): HTMLElement {
         outp.innerHTML = ''
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result; a callback error surfaces in the output pane.
-        run.spawn(rf.callback, [e.target.result as string], (r) => {
+        rf[L.runField].spawn(rf.callback, [e.target.result as string], (r) => {
           if (r !== null) {
             outp.appendChild(HTMLRenderer.render(r))
           }
