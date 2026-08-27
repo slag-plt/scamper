@@ -1,4 +1,5 @@
 import * as L from '../../lpm'
+import { context2d } from './context.js'
 
 /***** Image loading **********************************************************/
 
@@ -37,7 +38,7 @@ export function image_blockOnFetchImage(url: string): L.Value {
           const canvas = document.createElement('canvas')
           canvas.width = img.width
           canvas.height = img.height
-          const ctx = canvas.getContext('2d')!
+          const ctx = context2d(canvas)
           ctx.drawImage(img, 0, 0)
           // Trigger the cross-origin taint check now, so it surfaces as a clean
           // runtime error rather than deep inside a later pixel operation.

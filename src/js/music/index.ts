@@ -1,5 +1,5 @@
 import * as L from '../../lpm'
-import { waf } from './webaudiofont/webaudiofont.js'
+import { requireWaf, waf } from './webaudiofont/webaudiofont.js'
 
 export type PitchClass = string
 export type Octave = number
@@ -165,18 +165,18 @@ export function music_compositionQ (v: any): boolean {
 }
 
 export function music_loadInstrument(n: number): void {
-  waf()!.loadInstrument(n)
+  requireWaf().loadInstrument(n)
 }
 
 export function music_loadPercussion(n: number): void {
-  waf()!.loadInstrument(n, true)
+  requireWaf().loadInstrument(n, true)
 }
 
 export function music_useHighQualityInstruments(enable: boolean): void {
   if (enable) {
-    waf()!.fontName = 'FluidR3_GM'
+    requireWaf().fontName = 'FluidR3_GM'
   } else {
-    waf()!.fontName = 'Chaos'
+    requireWaf().fontName = 'Chaos'
   }
 }
 
@@ -377,7 +377,7 @@ function compositionToMsgs (
 export function music_playComposition (composition: Composition): number {
   const msgs = compositionToMsgs(music_dur(1, 4), 120, 64, 0, 0, [], composition).msgs
   const events = msgs.filter(msg => msg.tag === 'trigger' || msg.tag === 'event')
-  const startTime = waf()!.audioContext.currentTime
+  const startTime = requireWaf().audioContext.currentTime
 
   // Enqueue notes
   for (const msg of msgs) {
@@ -385,9 +385,9 @@ export function music_playComposition (composition: Composition): number {
     if (msg.tag === 'midi') {
       const isPercussion = msg.instrument === 128
       const instr = isPercussion ? msg.note : msg.instrument
-      waf()!.player.queueWaveTable(waf()!.audioContext,
-        waf()!.audioContext.destination,
-        waf()!.getInstrument(instr, isPercussion),
+      requireWaf().player.queueWaveTable(requireWaf().audioContext,
+        requireWaf().audioContext.destination,
+        requireWaf().getInstrument(instr, isPercussion),
         startTime + msg.time / 1000,
         msg.note,
         msg.duration / 1000,
@@ -409,7 +409,7 @@ export function music_playComposition (composition: Composition): number {
       return
     }
     // N.B., in milliseconds
-    const now = waf()!.audioContext.currentTime
+    const now = requireWaf().audioContext.currentTime
     while (idx < events.length) {
       const ev = events[idx]
       if (ev.time / 1000 + startTime <= now) {

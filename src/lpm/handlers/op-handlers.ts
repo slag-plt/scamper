@@ -3,7 +3,7 @@ import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, patVars, pMatch, typeOf, vectorToList } from '../util'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, patVars, pMatch, popRequired, typeOf, vectorToList } from '../util'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -311,7 +311,9 @@ export const PushHandlerHandler: OpHandler<'push-handler'> = (_op, currFrame, fi
   fiber.handlerStack.push({
     frameDepth: fiber.frames.length,
     baseDepth: currFrame.values.length - 2,
-    handler: currFrame.values.at(-2)!,
+    // The length check above is what makes this safe; `at` would only be
+    // narrowed by an assertion saying the same thing less clearly.
+    handler: currFrame.values[currFrame.values.length - 2],
   })
   return minorStep
 }
@@ -326,7 +328,7 @@ export const PopHandlerHandler: OpHandler<'pop-handler'> = (_op, currFrame, fibe
       'Expected a handler and a result on the stack',
     )
   }
-  const result = currFrame.values.pop()!
+  const result = popRequired(currFrame.values, "the frame's value stack")
   currFrame.values.pop() // drop the (unused) handler value
   currFrame.values.push(result)
   fiber.handlerStack.pop()

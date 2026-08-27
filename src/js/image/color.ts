@@ -400,10 +400,14 @@ export function color_hsvToString(hsv: Hsv): string {
 /***** Color conversion *******************************************************/
 
 export function color_colorNameToRgb(name: string): Rgb {
-  if (!color_isColorName(name)) {
+  // Lower-cased, as `color_isColorName` lower-cases what it checks. It did not
+  // before, so the guard accepted "RED", the lookup then missed it, and the
+  // non-null assertion handed back an undefined typed as an Rgb (#154).
+  const rgb = namedCssColors.get(name.toLowerCase())
+  if (rgb === undefined) {
     throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
   }
-  return namedCssColors.get(name)!
+  return rgb
 }
 
 // rgb->color-name

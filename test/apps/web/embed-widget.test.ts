@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { EMBED_CLASS, readSpec, runEmbeds } from '../../../src/app/web/embed/embed'
 import { initialize } from '../../../src/scamper'
+import { byId, query } from '../../dom'
 
 await initialize()
 
@@ -11,7 +12,7 @@ await initialize()
 /** Builds a widget from markup and returns it. */
 function widget(html: string): HTMLElement {
   document.body.innerHTML = html
-  return document.body.querySelector<HTMLElement>(`.${EMBED_CLASS}`)!
+  return query(document.body, `.${EMBED_CLASS}`)
 }
 
 /** The transcript's rendered text, whitespace squashed so assertions read. */
@@ -108,10 +109,10 @@ describe('running a widget', () => {
       <div class="${EMBED_CLASS}" id="auto">2</div>`
     await runEmbeds()
 
-    const tall = document.getElementById('tall')!
+    const tall = byId('tall')
     expect(tall.style.height).toBe('8em')
     expect(tall.style.overflowY).toBe('auto')
-    expect(document.getElementById('auto')!.style.height).toBe('')
+    expect(byId('auto').style.height).toBe('')
   })
 
   test('reports an error in the transcript rather than throwing', async () => {
@@ -128,7 +129,7 @@ describe('running a widget', () => {
     await runEmbeds()
 
     // The later widget still ran, which is what matters on a page of examples.
-    expect(transcript(document.getElementById('fine')!)).toContain('42')
+    expect(transcript(byId('fine'))).toContain('42')
   })
 })
 
@@ -141,7 +142,7 @@ describe('several widgets on one page', () => {
       <div class="${EMBED_CLASS}" id="b">x</div>`
     await runEmbeds()
 
-    expect(transcript(document.getElementById('b')!).toLowerCase()).toContain(
+    expect(transcript(byId('b')).toLowerCase()).toContain(
       'error',
     )
   })
@@ -152,7 +153,7 @@ describe('several widgets on one page', () => {
       <div class="${EMBED_CLASS}" id="b" data-continues>(+ x 1)</div>`
     await runEmbeds()
 
-    expect(transcript(document.getElementById('b')!)).toContain('42')
+    expect(transcript(byId('b'))).toContain('42')
   })
 
   test('data-continues can name a widget other than the one before', async () => {
@@ -163,7 +164,7 @@ describe('several widgets on one page', () => {
     await runEmbeds()
 
     // Named, so it continues `defs` rather than the `other` immediately above.
-    expect(transcript(document.getElementById('uses')!)).toContain('42')
+    expect(transcript(byId('uses'))).toContain('42')
   })
 
   test('a chain continues through several widgets', async () => {
@@ -173,7 +174,7 @@ describe('several widgets on one page', () => {
       <div class="${EMBED_CLASS}" id="c" data-continues>(+ x y)</div>`
     await runEmbeds()
 
-    expect(transcript(document.getElementById('c')!)).toContain('3')
+    expect(transcript(byId('c'))).toContain('3')
   })
 
   test('a widget continuing one that failed to compile still runs', async () => {
@@ -183,7 +184,7 @@ describe('several widgets on one page', () => {
     await runEmbeds()
 
     // It gets the standard library rather than a broken environment.
-    expect(transcript(document.getElementById('b')!)).toContain('42')
+    expect(transcript(byId('b'))).toContain('42')
   })
 })
 
@@ -199,7 +200,7 @@ describe('several widgets on one page', () => {
 describe('interactivity survives across widgets', () => {
   /** Clicks the button a widget rendered. */
   function clickButton(el: HTMLElement): void {
-    el.querySelector('button')!.dispatchEvent(new MouseEvent('click'))
+    query(el, 'button').dispatchEvent(new MouseEvent('click'))
   }
 
   /** Lets the spawned callback fiber run to completion. */
@@ -214,7 +215,7 @@ describe('interactivity survives across widgets', () => {
       <div class="${EMBED_CLASS}" id="second">(+ 1 2)</div>`
     await runEmbeds()
 
-    const first = document.getElementById('first')!
+    const first = byId('first')
     expect(transcript(first).toLowerCase()).not.toContain('error')
 
     // The click still reaches the handler even though another program has
@@ -231,11 +232,11 @@ describe('interactivity survives across widgets', () => {
       <div class="${EMBED_CLASS}" id="second">(+ 1 2)</div>`
     await runEmbeds()
 
-    clickButton(document.getElementById('first')!)
+    clickButton(byId('first'))
     await settle()
 
-    expect(transcript(document.getElementById('first')!).toLowerCase()).toContain('error')
-    expect(transcript(document.getElementById('second')!).toLowerCase()).not.toContain('error')
+    expect(transcript(byId('first')).toLowerCase()).toContain('error')
+    expect(transcript(byId('second')).toLowerCase()).not.toContain('error')
   })
 
   test("a callback sees its own widget's definitions", async () => {
@@ -251,8 +252,8 @@ describe('interactivity survives across widgets', () => {
 (button "b" (lambda () (car only-in-a)))</div>`
     await runEmbeds()
 
-    const a = document.getElementById('a')!
-    const b = document.getElementById('b')!
+    const a = byId('a')
+    const b = byId('b')
     clickButton(a)
     clickButton(b)
     await settle()
@@ -272,7 +273,7 @@ describe('interactivity survives across widgets', () => {
     await runEmbeds()
 
     for (const id of ['a', 'b', 'c']) {
-      const el = document.getElementById(id)!
+      const el = byId(id)
       clickButton(el)
       await settle()
       expect(transcript(el).toLowerCase()).toContain('error')

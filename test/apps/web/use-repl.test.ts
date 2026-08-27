@@ -4,6 +4,14 @@ import { initialize } from '../../../src/scamper'
 import TextRenderer from '../../../src/lpm/renderers/text'
 import type { ReplEntry } from '../../../src/app/web/composables/use-repl'
 
+/** The REPL's most recent entry, or a failure saying there is none. */
+function lastEntry(repl: { entries: { value: unknown[] } }) {
+  const last = repl.entries.value.at(-1)
+  if (last === undefined) throw new Error('the REPL has no entries')
+  return last
+}
+
+
 await initialize()
 
 /** What an entry printed, as the text a person would have read. */
@@ -88,7 +96,7 @@ describe('the REPL transcript', () => {
       expect(repl.entries.value.length).toBe(1)
       expect(shown(repl.entries.value[0])).not.toBe('')
       await repl.submit('(+ 1 2)')
-      expect(shown(repl.entries.value.at(-1)!)).toBe('3')
+      expect(shown(lastEntry(repl))).toBe('3')
     } finally {
       repl.close()
     }
@@ -134,7 +142,7 @@ describe('the REPL transcript', () => {
       expect(repl.isStale.value).toBe(true)
       // What it already knows is unaffected: the session runs on regardless.
       await repl.submit('x')
-      expect(shown(repl.entries.value.at(-1)!)).toBe('1')
+      expect(shown(lastEntry(repl))).toBe('1')
     } finally {
       repl.close()
     }
@@ -148,7 +156,7 @@ describe('the REPL transcript', () => {
       await repl.open('lab.scm', '(define x 2)')
       expect(repl.isStale.value).toBe(false)
       await repl.submit('x')
-      expect(shown(repl.entries.value.at(-1)!)).toBe('2')
+      expect(shown(lastEntry(repl))).toBe('2')
     } finally {
       repl.close()
     }
@@ -232,10 +240,10 @@ describe('the REPL transcript', () => {
       expect(repl.banner.value).toContain('two.scm')
       expect(repl.isBusy.value).toBe(false)
       await repl.submit('y')
-      expect(shown(repl.entries.value.at(-1)!)).toBe('2')
+      expect(shown(lastEntry(repl))).toBe('2')
       // And the session that was superseded took its definitions with it.
       await repl.submit('x')
-      expect(shown(repl.entries.value.at(-1)!)).toContain('not found')
+      expect(shown(lastEntry(repl))).toContain('not found')
     } finally {
       repl.close()
     }

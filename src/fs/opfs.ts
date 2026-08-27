@@ -20,8 +20,25 @@ async function entryExists(get: () => Promise<unknown>): Promise<boolean> {
 export class OPFSFileSystem implements FS {
   private root?: FileSystemDirectoryHandle
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private constructor() { }
+  private constructor() {
+    /* `create` is the only way in, and it is what sets `root` */
+  }
+
+  /**
+   * The OPFS root.
+   *
+   * `root` is optional only because the constructor cannot await, so `create`
+   * fills it in immediately afterwards and it is set for the whole of an
+   * instance's life. Every method reached for it with a `!`; this says the
+   * invariant once instead of eighteen times, and fails with a sentence rather
+   * than a TypeError if it is ever broken.
+   */
+  private get dir(): FileSystemDirectoryHandle {
+    if (this.root === undefined) {
+      throw new Error('the OPFS file system was used before create() finished')
+    }
+    return this.root
+  }
 
   /** @returns a new file system instance for accessing the OPFS */
   static async create(): Promise<OPFSFileSystem> {
@@ -98,8 +115,8 @@ export class OPFSFileSystem implements FS {
     // A directory counts as existing: `file-exists?` is documented to say #t
     // for one, so a missed file lookup falls back to a directory lookup.
     return (
-      (await entryExists(() => this.root!.getFileHandle(filename))) ||
-      (await entryExists(() => this.root!.getDirectoryHandle(filename)))
+      (await entryExists(() => this.dir.getFileHandle(filename))) ||
+      (await entryExists(() => this.dir.getDirectoryHandle(filename)))
     )
   }
 
@@ -107,7 +124,7 @@ export class OPFSFileSystem implements FS {
   /** @return the contents of the given file, assumed to exist */
   async loadFile (filename: string): Promise<string> {
     refuseBinary(filename)
-    const handle = await this.root!.getFileHandle(filename)
+    const handle = await this.dir.getFileHandle(filename)
     const file = await handle.getFile()
     return await file.text()
   }
@@ -115,7 +132,7 @@ export class OPFSFileSystem implements FS {
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile (filename: string, contents: string): Promise<void> {
     refuseBinary(filename)
-    const handle = await this.root!.getFileHandle(filename, { create: true })
+    const handle = await this.dir.getFileHandle(filename, { create: true })
     const stream = await handle.createWritable()
     await stream.write(contents)
     await stream.close()
@@ -123,14 +140,14 @@ export class OPFSFileSystem implements FS {
 
   /** @return the bytes of the given file, assumed to exist */
   async loadBytes (filename: string): Promise<Bytes> {
-    const handle = await this.root!.getFileHandle(filename)
+    const handle = await this.dir.getFileHandle(filename)
     const file = await handle.getFile()
     return new Uint8Array(await file.arrayBuffer())
   }
 
   /** Saves `bytes` to the given file, creating it if it doesn't already exist */
   async saveBytes (filename: string, bytes: Bytes): Promise<void> {
-    const handle = await this.root!.getFileHandle(filename, { create: true })
+    const handle = await this.dir.getFileHandle(filename, { create: true })
     const stream = await handle.createWritable()
     // Wrapped in a Blob because the stream only accepts a view over a
     // non-shared ArrayBuffer, which a plain Uint8Array is not guaranteed to be.
@@ -139,7 +156,7 @@ export class OPFSFileSystem implements FS {
   }
 
   async deleteFile (filename: string): Promise<void> {
-    await this.root!.removeEntry(filename)
+    await this.dir.removeEntry(filename)
   }
 
   /**

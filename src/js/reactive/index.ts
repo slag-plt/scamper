@@ -1,6 +1,7 @@
 import * as L from '../../lpm'
 
 import { NoteHandlers, NoteMsg } from '../music/index.js'
+import { context2d } from '../image/context.js'
 
 /***** Reactive Components ****************************************************/
 
@@ -94,7 +95,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
     }
     this.drawing = true
     this.isDirty = false
-    this.canvas.getContext('2d')!.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    context2d(this.canvas).clearRect(0, 0, this.canvas.width, this.canvas.height)
     this.run.spawn(this.viewFunc, [this.state as L.Value, this.canvas], (result) => {
       this.drawing = false
       // A view error is reported to the output pane (result === null); stop.
@@ -117,7 +118,7 @@ class ReactiveCanvas<T> implements ReactiveElement {
       return
     }
     this.updating = true
-    const msg = this.queue.shift()!
+    const msg = L.shiftRequired(this.queue, 'the message queue')
     this.run.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
       if (newState === null) {
         this.finished = true // an update error was reported to the output pane
@@ -214,7 +215,7 @@ class ReactiveContainer<T> implements ReactiveElement {
       return
     }
     this.processing = true
-    const msg = this.queue.shift()!
+    const msg = L.shiftRequired(this.queue, 'the message queue')
     this.run.spawn(this.updateFunc, [msg, this.state as L.Value], (newState) => {
       if (newState === null) {
         this.finished = true // an update error was reported to the output pane

@@ -36,12 +36,14 @@ const ERROR = /^(Parser|Runtime|Docstring) error/m
 /** The page's body, which is what a reading would paste into its own. */
 function pageBody(): string {
   const html = readFileSync(path.join(SAMPLES, 'reading.html'), 'utf-8')
-  return /<body[^>]*>([\s\S]*)<\/body>/.exec(html)![1]
+  const body = /<body[^>]*>([\s\S]*)<\/body>/.exec(html)
+  if (body === null) throw new Error('samples/reading.html has no <body>')
+  return body[1]
 }
 
 /** A widget's rendered text, whitespace squashed so assertions read. */
 function transcript(el: HTMLElement): string {
-  return (el.textContent ?? '').replace(/\s+/g, ' ').trim()
+  return el.textContent.replace(/\s+/g, ' ').trim()
 }
 
 /** Every widget currently on the page. */
