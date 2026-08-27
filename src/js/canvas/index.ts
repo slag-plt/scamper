@@ -136,6 +136,7 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
   // would find the foreground program rather than this one -- wrong as soon as
   // a page holds several (#375).
   const run = L.currentRun()
+
   function callback(time: number) {
     if (run.signal?.aborted) {
       return
@@ -146,6 +147,7 @@ export function canvas_animateWith(fn: L.ScamperFn): void {
       }
     })
   }
+
   window.requestAnimationFrame(callback)
 }
 

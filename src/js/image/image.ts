@@ -60,10 +60,11 @@ export function image_blockOnFetchImage(url: string): L.Value {
           }
           resolve(canvas)
         }
-        img.onerror = () =>
+        img.onerror = () => {
           reject(
             new L.ScamperError('Runtime', `Failed to load image from "${url}"`),
           )
+        }
         img.src = url
       }),
   )

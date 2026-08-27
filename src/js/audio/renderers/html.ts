@@ -15,6 +15,7 @@ function throwError(msg: string): never {
 // Oscilloscope colors, resolved from theme tokens. Cached (the draw loop runs at
 // ~60fps) and invalidated on theme change so the waveform follows the theme live.
 let waveColors: { bg: string; ink: string } | null = null
+
 function getWaveColors() {
   if (waveColors === null) {
     waveColors = {
@@ -24,6 +25,7 @@ function getWaveColors() {
   }
   return waveColors
 }
+
 onThemeChange(() => {
   waveColors = null
 })

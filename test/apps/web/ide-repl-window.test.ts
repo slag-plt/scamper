@@ -100,7 +100,7 @@ describe('IDE REPL window', () => {
       const prompt = EditorView.findFromDOM(
         replWindow()?.querySelector<HTMLElement>(
           '.repl-prompt .cm-editor',
-        ) as HTMLElement,
+        )!,
       )
       expect(prompt).not.toBeNull()
       prompt?.dispatch({ changes: { from: 0, insert: '(sq 7)' } })

@@ -93,7 +93,7 @@ onMounted(() => {
       // Enter for anything that already parses, which in a cell nobody submits
       // means no newline at all.
       onSubmit:
-        props.runOnEnter === true
+        props.runOnEnter
           ? (text) => {
               emit('submit', text)
             }

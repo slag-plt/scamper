@@ -141,7 +141,7 @@ describe('the splitter', () => {
       expect(box).toBeDefined()
 
       drag(
-        sp as HTMLElement,
+        sp!,
         { x: box.x + box.width / 2, y: box.y + box.height / 2 },
         { x: box.x - 200, y: box.y + box.height / 2 },
       )
@@ -167,7 +167,7 @@ describe('the splitter', () => {
       const box = rect(sp)
       // Well past the left edge of the dock.
       drag(
-        sp as HTMLElement,
+        sp!,
         { x: box.x, y: box.y + 10 },
         { x: box.x - 2000, y: box.y + 10 },
       )
@@ -203,7 +203,7 @@ describe('a floating panel', () => {
       const bar = win?.querySelector<HTMLElement>('.window-bar')
 
       drag(
-        bar as HTMLElement,
+        bar!,
         { x: before.x + 40, y: before.y + 6 },
         { x: before.x - 60, y: before.y - 40 },
       )
@@ -227,7 +227,7 @@ describe('a floating panel', () => {
       const handle = win?.querySelector<HTMLElement>('.resize-w')
 
       drag(
-        handle as HTMLElement,
+        handle!,
         { x: before.x, y: before.y + before.height / 2 },
         { x: before.x - 80, y: before.y + before.height / 2 },
       )

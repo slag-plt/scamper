@@ -92,7 +92,7 @@ describe('#371: the output starts docked beside the code', () => {
       const output = panel('output')
       expect(output).not.toBeNull()
       expect(
-        queryByRole(output as HTMLElement, 'button', { name: /minimi/i }),
+        queryByRole(output!, 'button', { name: /minimi/i }),
       ).toBeNull()
     } finally {
       wrapper.unmount()

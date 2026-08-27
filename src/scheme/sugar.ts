@@ -224,8 +224,7 @@ function collectDefineExport(
   if (
     s.tag === 'define' &&
     s.provenance === 'define-export' &&
-    next !== undefined &&
-    next.tag === 'export' &&
+    next?.tag === 'export' &&
     next.provenance === 'define-export' &&
     next.names.length === 1 &&
     next.names[0].name === s.name.name

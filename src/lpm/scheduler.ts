@@ -75,7 +75,7 @@ export class Scheduler {
   // - execute should remove tasks that complete during the loop.
   private tasks: SchedulerTask[] = []
   // Parked step-mode tasks, keyed by id. A parked task lives here, not in `tasks`.
-  private steppingGates: Map<SchedulerId, SteppingGate> = new Map()
+  private steppingGates = new Map<SchedulerId, SteppingGate>()
   // Traced tasks that have already emitted their opening line. Cleared when the
   // task ends.
   private tracesStarted = new Set<SchedulerId>()
@@ -581,7 +581,7 @@ export class Scheduler {
     // Only wake a *parked* task. A running task, or one suspended mid-block-on
     // (removed from the queue but not parked), must not be re-scheduled -- doing
     // so would run the fiber twice / double-queue it.
-    if (!gate || !gate.parked) {
+    if (!gate?.parked) {
       return
     }
     if (gate.task.fiber.isDone()) {

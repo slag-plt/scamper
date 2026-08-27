@@ -82,7 +82,7 @@ const isLiveRunInFlight = computed(() => props.liveStatus === 'running')
  * run or a step. A live run is excluded -- the control animates for that.
  */
 const isBusy = computed(
-  () => (isRunInProgress.value && !isLiveRunInFlight.value) || props.isStepping === true,
+  () => (isRunInProgress.value && !isLiveRunInFlight.value) || props.isStepping,
 )
 
 /** What the control is doing, for the tooltip over the whole of it. */

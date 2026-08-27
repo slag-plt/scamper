@@ -69,8 +69,9 @@ describe('ScamperLanguageServer: navigation', () => {
     server.setSend((m) => {
       sent.push(JSON.parse(m) as { id?: number; result?: unknown })
     })
-    const request = (id: number, method: string, params: unknown) =>
+    const request = (id: number, method: string, params: unknown) => {
       server.handle(JSON.stringify({ jsonrpc: '2.0', id, method, params }))
+    }
     request(1, 'initialize', { capabilities: {} })
     server.handle(
       JSON.stringify({

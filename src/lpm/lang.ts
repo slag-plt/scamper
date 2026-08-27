@@ -69,7 +69,7 @@ export class Env {
     imports: Map<string, Module>,
     topLevel: Map<string, Value>,
     locals: Scope[],
-    qualified: Map<string, Module> = new Map(),
+    qualified = new Map<string, Module>(),
   ) {
     this.imports = imports
     this.topLevel = topLevel

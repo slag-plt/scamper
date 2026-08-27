@@ -274,7 +274,6 @@ describe('interactivity survives across widgets', () => {
     for (const id of ['a', 'b', 'c']) {
       const el = document.getElementById(id)!
       clickButton(el)
-      // eslint-disable-next-line no-await-in-loop
       await settle()
       expect(transcript(el).toLowerCase()).toContain('error')
     }

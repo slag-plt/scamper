@@ -236,7 +236,7 @@ describe('IDE floating output window', () => {
         vi.useFakeTimers()
         const area = getByRole(document.body, 'textbox', {
           name: 'Source code',
-        }) as HTMLTextAreaElement
+        })
         area.value = '(+ 1 2)'
         area.dispatchEvent(new Event('input'))
         await flushPromises()

@@ -95,9 +95,9 @@ export function onThemeChange(cb: (theme: Theme) => void): () => void {
   if (!hasWindow) {
     return () => {}
   }
-  const handler = (e: Event) => cb((e as CustomEvent<Theme>).detail)
+  const handler = (e: Event) => { cb((e as CustomEvent<Theme>).detail) }
   window.addEventListener('themechange', handler)
-  return () => window.removeEventListener('themechange', handler)
+  return () => { window.removeEventListener('themechange', handler) }
 }
 
 // Track OS changes while running: when the user hasn't set an explicit override,

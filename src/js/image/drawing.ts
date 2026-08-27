@@ -672,7 +672,7 @@ export function drawing_render (x: number, y: number, drawing: Drawing, canvas: 
  *   *display* pass a themed color (see DrawingRenderer.vue); the default keeps
  *   off-screen/data uses (drawing->pixels, drawing->image) deterministic.
  */
-export function drawing_clearDrawing (canvas: HTMLCanvasElement, background: string = 'white') {
+export function drawing_clearDrawing (canvas: HTMLCanvasElement, background = 'white') {
   const ctx = canvas.getContext('2d')!
   ctx.fillStyle = background
   ctx.strokeStyle = 'black'
