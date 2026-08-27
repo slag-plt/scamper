@@ -333,7 +333,13 @@ function searchOpenWindow(searchTerm: string) {
   border-radius: var(--radius-md);
 }
 
-/* The pill draws the fill; its halves are transparent windows onto it. */
+/*
+ * The pill draws the fill; its halves are transparent windows onto it, square
+ * by default so that only the two ends round off. Each end therefore has to
+ * beat this rule outright, which is why both are addressed by two classes
+ * below rather than one: at equal specificity they lost to it, and every half
+ * computed 0px (#390).
+ */
 .run-group .icon-button {
   color: inherit;
   background: transparent;
@@ -352,7 +358,7 @@ function searchOpenWindow(searchTerm: string) {
  * width of the longer of the two with a hidden copy of it, and the real label
  * -- "Run", "Autorun", or the Stop icon -- is laid over the top.
  */
-.run-main {
+.run-group .icon-button.run-main {
   position: relative;
   padding-inline: var(--space-md);
   font-size: var(--text-sm);
@@ -373,7 +379,7 @@ function searchOpenWindow(searchTerm: string) {
   justify-content: center;
 }
 
-.run-caret {
+.run-group .icon-button.run-caret {
   padding-inline: var(--space-sm);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   /* A hairline rather than a gap: the two halves must not drift apart. */

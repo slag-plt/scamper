@@ -25,6 +25,12 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '4.1.1',
+    notes: [
+      'The Run button no longer shows square corners poking out of it when you hover over it.'
+    ]
+  },
+  {
     version: '4.1.0',
     notes: [
       'Your file can now be shown as a notebook: each definition or expression in its own box, with what it printed underneath, and the comments between them as formatted text.',
