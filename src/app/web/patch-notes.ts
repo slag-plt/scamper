@@ -32,7 +32,8 @@ export const patchNotes: PatchNote[] = [
       'The documentation now lists `null`, which was missing from it, and shows a constant such as `pi` as a value rather than as a function you would call.',
       'On the documentation page, setting a filter to "and" without ticking anything in it no longer wipes out your search results.',
       'Choosing a file in a reading page\'s example now runs the code that was waiting for it, instead of doing nothing.',
-      'A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.'
+      'A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.',
+      'When assoc-ref cannot find a key, it now shows you the key it looked for rather than a piece of jargon.'
     ]
   },
   {
