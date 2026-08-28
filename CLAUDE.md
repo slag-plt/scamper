@@ -40,7 +40,7 @@ is compiled in.
 + `npm run dev`: arrangement 1 — front end only, files in the browser
 + `npm run dev:memory`: arrangement 2 — front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
 + `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
-+ `npm run build`: full production build (compilation + bundling) into `dist/`
++ `npm run build`: full production build (compilation + bundling) into `dist/`, via `scripts/build`. Two Vite builds: the site, and then `dist/scamper-embed.js` — the reading widget as a single self-contained file (`vite.config.embed.ts`), which is what a reading on another site includes. See `EMBEDDING.md`
 + `npm run preview`: serves the built `dist/` locally, i.e. arrangement 1 as deployed
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
