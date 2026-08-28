@@ -12,7 +12,10 @@ import { join } from 'path'
 // chunk means the output is no longer self-contained, and that is a build error
 // rather than a page that half-works once it is deployed.
 
-/** @param css the stylesheet text to append on load */
+/**
+ * @param {string} css the stylesheet text to append on load
+ * @returns {string} the IIFE that appends it
+ */
 function injector(css) {
   return `(function(){
   if (typeof document === 'undefined') { return }
@@ -24,7 +27,10 @@ function injector(css) {
 `
 }
 
-/** @returns `asset`'s contents as text, whether it was emitted as a string or bytes. */
+/**
+ * @param {{ source: string | Uint8Array }} asset
+ * @returns {string} its contents as text, emitted as a string or as bytes.
+ */
 function assetText(asset) {
   return typeof asset.source === 'string'
     ? asset.source
@@ -34,8 +40,10 @@ function assetText(asset) {
 /**
  * Inlines the build's CSS into its single JS chunk.
  *
- * @param baseStyles paths of stylesheets a page would otherwise `<link>` for
- *        itself, prepended in order ahead of the CSS the build emitted.
+ * @param {{ baseStyles?: string[] }} [opts] `baseStyles` are paths of
+ *        stylesheets a page would otherwise `<link>` for itself, prepended in
+ *        order ahead of the CSS the build emitted.
+ * @returns {import('vite').Plugin}
  */
 export function inlineCssPlugin({ baseStyles = [] } = {}) {
   return {
