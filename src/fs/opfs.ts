@@ -1,4 +1,5 @@
 import { isBinaryName, isHiddenName, refuseBinary, type Bytes, type FS, type FileEntry } from './fs'
+import { opfsWriter } from './opfs-writer'
 
 /** The suffix Chromium gives the swap file backing an open writable. */
 const SWAP_SUFFIX = '.crswap'
@@ -132,10 +133,7 @@ export class OPFSFileSystem implements FS {
   /** Saves `contents` to the given file, creating it if it doesn't already exist */
   async saveFile (filename: string, contents: string): Promise<void> {
     refuseBinary(filename)
-    const handle = await this.dir.getFileHandle(filename, { create: true })
-    const stream = await handle.createWritable()
-    await stream.write(contents)
-    await stream.close()
+    await this.write(filename, new TextEncoder().encode(contents))
   }
 
   /** @return the bytes of the given file, assumed to exist */
@@ -147,7 +145,25 @@ export class OPFSFileSystem implements FS {
 
   /** Saves `bytes` to the given file, creating it if it doesn't already exist */
   async saveBytes (filename: string, bytes: Bytes): Promise<void> {
+    await this.write(filename, bytes)
+  }
+
+  /**
+   * Writes `bytes` to `filename`, creating the file if it doesn't exist.
+   *
+   * Two ways, because Safari has no `createWritable` before version 26 (#429)
+   * and every save died on it: the writable stream where there is one, and
+   * otherwise a worker holding a sync access handle, which is the only write
+   * those browsers offer. The feature test is on the handle rather than the
+   * user agent, so a Safari that has caught up takes the ordinary path.
+   */
+  private async write (filename: string, bytes: Bytes): Promise<void> {
     const handle = await this.dir.getFileHandle(filename, { create: true })
+    // The types describe a browser that has createWritable; the browsers this
+    // fallback exists for do not, so the question is a real one.
+    if (typeof handle.createWritable !== 'function') {
+      return opfsWriter.write(filename, bytes)
+    }
     const stream = await handle.createWritable()
     // Wrapped in a Blob because the stream only accepts a view over a
     // non-shared ArrayBuffer, which a plain Uint8Array is not guaranteed to be.
