@@ -9,51 +9,60 @@ import OPFSFileSystem from '../../src/fs/opfs'
 // duration and ask for the same writes, exercising the path a Safari user is
 // left with: a dedicated worker holding a sync access handle.
 
-/** Empties the origin's storage, which persists between tests in one browser. */
-async function clearStorage() {
-  const root = await navigator.storage.getDirectory()
-  for await (const name of (root as unknown as { keys: () => AsyncIterable<string> }).keys()) {
-    try {
-      await root.removeEntry(name, { recursive: true })
-    } catch {
-      // A swap file for a write that has since closed may already be gone.
-    }
-  }
-}
-
-/** The prototype, seen as something `createWritable` can be deleted from. */
+/** The prototype, seen as something `createWritable` can be taken off. */
 const handleProto = FileSystemFileHandle.prototype as unknown as {
   createWritable?: unknown
 }
-const realCreateWritable = handleProto.createWritable
+const realCreateWritable = Object.getOwnPropertyDescriptor(
+  handleProto,
+  'createWritable',
+)
 
-beforeEach(async () => {
-  await clearStorage()
+/**
+ * Names are unique per test rather than cleared between them: every browser
+ * test file shares one origin's storage, so clearing it is a file's way of
+ * stepping on its neighbours. (test/fs/opfs.browser.test.ts does clear it,
+ * which is why these files run one at a time -- see the browser config.)
+ */
+let id = 0
+
+function scratch(name: string): string {
+  return `safari-${id}-${name}`
+}
+
+beforeEach(() => {
+  id += 1
   // Guard the premise: without this the tests pass on the Chromium path and
   // say nothing about the bug.
-  expect(typeof realCreateWritable).toBe('function')
+  expect(realCreateWritable).toBeDefined()
   delete handleProto.createWritable
 })
 
 afterEach(() => {
-  handleProto.createWritable = realCreateWritable
+  // Restored as it was -- a plain assignment would leave it enumerable, which
+  // the real one is not. (`beforeEach` has already insisted it is there.)
+  if (realCreateWritable !== undefined) {
+    Object.defineProperty(handleProto, 'createWritable', realCreateWritable)
+  }
 })
 
 describe('OPFS writes in a browser without createWritable', () => {
   test('saves and reads back a file', async () => {
     const fs = await OPFSFileSystem.create()
-    await fs.saveFile('hello.scm', '(display "hello")')
+    const file = scratch('hello.scm')
+    await fs.saveFile(file, '(display "hello")')
 
-    expect(await fs.loadFile('hello.scm')).toBe('(display "hello")')
-    expect(await fs.fileExists('hello.scm')).toBe(true)
+    expect(await fs.loadFile(file)).toBe('(display "hello")')
+    expect(await fs.fileExists(file)).toBe(true)
   })
 
   test('leaves nothing of a longer previous version behind', async () => {
     const fs = await OPFSFileSystem.create()
-    await fs.saveFile('hello.scm', '(display "a long first version")')
-    await fs.saveFile('hello.scm', '(+ 1 2)')
+    const file = scratch('hello.scm')
+    await fs.saveFile(file, '(display "a long first version")')
+    await fs.saveFile(file, '(+ 1 2)')
 
-    expect(await fs.loadFile('hello.scm')).toBe('(+ 1 2)')
+    expect(await fs.loadFile(file)).toBe('(+ 1 2)')
   })
 
   test('keeps overlapping saves of one file from colliding', async () => {
@@ -61,32 +70,36 @@ describe('OPFS writes in a browser without createWritable', () => {
     // flight at once would fail with NoModificationAllowedError if they were
     // not serialised. Autosave plus a history snapshot is exactly this shape.
     const fs = await OPFSFileSystem.create()
+    const file = scratch('hello.scm')
+    const other = scratch('other.scm')
     await Promise.all([
-      fs.saveFile('hello.scm', '(display 1)'),
-      fs.saveFile('hello.scm', '(display 2)'),
-      fs.saveFile('other.scm', '(display 3)'),
+      fs.saveFile(file, '(display 1)'),
+      fs.saveFile(file, '(display 2)'),
+      fs.saveFile(other, '(display 3)'),
     ])
 
-    expect(await fs.loadFile('hello.scm')).toMatch(/\(display [12]\)/)
-    expect(await fs.loadFile('other.scm')).toBe('(display 3)')
+    expect(await fs.loadFile(file)).toMatch(/\(display [12]\)/)
+    expect(await fs.loadFile(other)).toBe('(display 3)')
   })
 
   test('round-trips bytes, so a rename cannot corrupt a file', async () => {
     const fs = await OPFSFileSystem.create()
+    const from = scratch('image.png')
+    const to = scratch('copy.png')
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff])
-    await fs.saveBytes('image.png', bytes)
+    await fs.saveBytes(from, bytes)
 
-    await fs.renameFile('image.png', 'copy.png')
-    expect(Array.from(await fs.loadBytes('copy.png'))).toEqual(Array.from(bytes))
-    expect(await fs.fileExists('image.png')).toBe(false)
+    await fs.renameFile(from, to)
+    expect(Array.from(await fs.loadBytes(to))).toEqual(Array.from(bytes))
+    expect(await fs.fileExists(from)).toBe(false)
   })
 
-  test('lists what it wrote, with previews', async () => {
+  test('lists what it wrote, with a preview', async () => {
     const fs = await OPFSFileSystem.create()
-    await fs.saveFile('hello.scm', '(display "hello")\nmore\n')
+    const file = scratch('hello.scm')
+    await fs.saveFile(file, '(display "hello")\nmore\n')
 
-    const entries = await fs.getFileList()
-    expect(entries.map((e) => e.name)).toEqual(['hello.scm'])
-    expect(entries[0].preview).toBe('(display "hello")\nmore\n')
+    const entry = (await fs.getFileList()).find((e) => e.name === file)
+    expect(entry?.preview).toBe('(display "hello")\nmore\n')
   })
 })

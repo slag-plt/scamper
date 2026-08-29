@@ -160,7 +160,11 @@ export class OPFSFileSystem implements FS {
   private async write (filename: string, bytes: Bytes): Promise<void> {
     const handle = await this.dir.getFileHandle(filename, { create: true })
     // The types describe a browser that has createWritable; the browsers this
-    // fallback exists for do not, so the question is a real one.
+    // fallback exists for do not, so the question is a real one. Asked of the
+    // handle rather than of `FileSystemFileHandle.prototype` so that a test
+    // double is taken at its word: the cost is the handle opened just above,
+    // which the worker opens again -- the same file, and creating it is what
+    // both were going to do anyway.
     if (typeof handle.createWritable !== 'function') {
       return opfsWriter.write(filename, bytes)
     }

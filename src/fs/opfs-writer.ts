@@ -28,9 +28,11 @@ interface Pending {
  * only inside a dedicated worker, its methods being blocking ones. So this
  * hands the write to a worker and waits for the answer.
  *
- * One worker for the whole origin, started by the first write that needs one.
- * A browser with `createWritable` never starts one, and neither does the CLI,
- * which shares this module's import graph but runs under Node.
+ * One worker per open page, started by the first write that needs one. A
+ * browser with `createWritable` never starts one, and neither does the CLI,
+ * which shares this module's import graph but runs under Node. Two pages would
+ * mean two workers and two queues; what keeps them off each other's files is
+ * `src/app/web/single-instance.ts`, as it is for the ordinary path.
  */
 class OPFSWriter {
   private worker?: Promise<Worker>
@@ -46,12 +48,14 @@ class OPFSWriter {
     return new Promise<void>((resolve, reject) => {
       this.pending.set(id, { filename, resolve, reject })
       const request: WriteRequest = { id, filename, bytes }
-      this.channel().then(
-        (worker) => { worker.postMessage(request) },
-        // A worker that will not start is the end of every write, so say so
-        // here rather than leaving the caller waiting on it.
-        (e: unknown) => { this.settle(id, `the file writer could not start (${String(e)})`) },
-      )
+      void this.channel()
+        .then((worker) => { worker.postMessage(request) })
+        // Nothing will answer a request that was never posted -- a worker that
+        // would not start, a message it would not take -- so fail it here
+        // rather than leaving the save waiting on a reply that cannot come.
+        .catch((e: unknown) => {
+          this.settle(id, `the file writer could not be reached (${String(e)})`)
+        })
     })
   }
 
@@ -61,7 +65,13 @@ class OPFSWriter {
    *          one promise.
    */
   private channel(): Promise<Worker> {
-    this.worker ??= this.start()
+    // Forgotten again if it fails: `??=` would otherwise keep the rejected
+    // promise, and every later save on this page would fail with it rather
+    // than trying afresh.
+    this.worker ??= this.start().catch((e: unknown) => {
+      this.worker = undefined
+      throw e
+    })
     return this.worker
   }
 
@@ -79,9 +89,10 @@ class OPFSWriter {
       const { id, error } = event.data
       this.settle(id, error)
     }
-    // A worker that dies takes every write in flight with it, so say so rather
-    // than leaving those callers waiting forever. The next write starts a
-    // fresh one.
+    // Little reaches these -- the worker answers its own failures below, and
+    // no event fires for one the browser simply reclaims -- but a write that
+    // will never be answered has to fail rather than hang, so what does reach
+    // them is passed on.
     worker.onerror = () => { this.fail('the file writer stopped unexpectedly') }
     worker.onmessageerror = () => { this.fail('the file writer sent a reply that could not be read') }
     return worker
@@ -99,9 +110,16 @@ class OPFSWriter {
     }
   }
 
-  /** Fails every write in flight and discards the worker they were sent to. */
+  /**
+   * Fails every write in flight and discards the worker they were sent to; the
+   * next write starts a fresh one.
+   *
+   * The old worker is dropped rather than terminated. Its write is not atomic
+   * (see opfs-writer.worker.ts), so killing it mid-write is how a file ends up
+   * empty; left alone it finishes, and its replies land on writes that have
+   * already been settled, where they are ignored.
+   */
   private fail(error: string): void {
-    void this.worker?.then((worker) => { worker.terminate() })
     this.worker = undefined
     for (const id of [...this.pending.keys()]) {
       this.settle(id, error)
@@ -109,5 +127,5 @@ class OPFSWriter {
   }
 }
 
-/** The origin's writer; see {@link OPFSWriter}. */
+/** This page's writer; see {@link OPFSWriter}. */
 export const opfsWriter = new OPFSWriter()
