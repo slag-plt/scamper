@@ -35,6 +35,12 @@ export default defineConfig({
   },
   test: {
     include: ['test/**/*.browser.test.ts'],
+    // One browser, and so one origin: every file here shares the same OPFS.
+    // Run in parallel, a file that clears storage empties another's fixtures
+    // halfway through it -- test/fs/opfs.browser.test.ts does exactly that,
+    // and the #429 regression writes real files beside it. The suite is small
+    // enough that serialising it costs seconds.
+    fileParallelism: false,
     browser: {
       enabled: true,
       provider: playwright(),

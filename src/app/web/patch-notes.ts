@@ -33,7 +33,8 @@ export const patchNotes: PatchNote[] = [
       'On the documentation page, setting a filter to "and" without ticking anything in it no longer wipes out your search results.',
       'Choosing a file in a reading page\'s example now runs the code that was waiting for it, instead of doing nothing.',
       'A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.',
-      'When assoc-ref cannot find a key, it now shows you the key it looked for rather than a piece of jargon.'
+      'When assoc-ref cannot find a key, it now shows you the key it looked for rather than a piece of jargon.',
+      'Saving a file in Safari now works instead of failing with a message about createWritable, so you can use Scamper there without signing in.'
     ]
   },
   {
