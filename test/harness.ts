@@ -18,6 +18,13 @@ export interface RunOptions {
    * itself is covered directly in test/lpm/range.test.ts.
    */
   stripRanges?: boolean
+  /**
+   * Wrap documented definitions in their docstrings' contract checks, as
+   * src/lib/index.ts does for the standard library. Off by default, matching
+   * the IDE and CLI: only the library is contracted, never a user program.
+   * Tests about contract generation itself set this.
+   */
+  insertContracts?: boolean
 }
 
 /** A LoggingChannel that drops each reported error's range. See RunOptions. */
@@ -48,7 +55,9 @@ function mkChannel (opts: RunOptions, renderOutput = true): LPM.LoggingChannel {
 export async function runProgram (src: string, opts: RunOptions = {}): Promise<string[]> {
   src = src.trim()
   const out = mkChannel(opts)
-  const { prog, diagnostics } = await Scheme.compile(src)
+  const { prog, diagnostics } = await Scheme.compile(src, {
+    insertContracts: opts.insertContracts,
+  })
   diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   if (out.log.length !== 0) { return out.log as string[] }
   if (prog === undefined) {
@@ -97,7 +106,9 @@ export async function runProgramTraced (
 ): Promise<string[]> {
   src = src.trim()
   const out = mkChannel(opts)
-  const { prog, diagnostics } = await Scheme.compile(src)
+  const { prog, diagnostics } = await Scheme.compile(src, {
+    insertContracts: opts.insertContracts,
+  })
   diagnostics.forEach((d) => { out.report(diagnosticToError(d)) })
   if (out.log.length !== 0) { return out.log as string[] }
   if (prog === undefined) {

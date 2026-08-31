@@ -14,6 +14,9 @@ type Tags = DocTag[]
 export interface FunctionDoc {
   signature: Signature
   params: Params
+  /** The documented optional parameters, e.g. `end` in `(substring s start
+   * [end])` -- see VarApp.optArgs. They follow `params` positionally. */
+  optParams: Params
   /** The documented rest parameter, e.g. `xs` in `(+ . xs)`, if the
    * signature declares one -- see VarApp.restParam. */
   restParam?: Param
@@ -50,6 +53,10 @@ export type ParseStage = (typeof ParseStage)[keyof typeof ParseStage]
 export interface VarApp extends App {
   head: Identifier
   args: Identifier[]
+  /** The signature's optional parameters, e.g. `end` in `(substring s start
+   * [end])`. They come after every required parameter and before the rest
+   * parameter, so a call site's arguments still line up positionally. */
+  optArgs: Identifier[]
   /** The signature's rest parameter, e.g. `xs` in `(+ . xs)` or
    * `(map f . xs)`, mirroring the lambda arglist's dotted-pair rest-param
    * syntax. undefined for a fixed-arity signature. */
@@ -79,6 +86,8 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
 
   const signature = parseSignature(firstDocComment)
   const params: Params = []
+  const optParams: Params = []
+  const optNames = new Set(signature.function.optArgs.map((a) => a.name))
   let restParam: Param | undefined
   let description = ''
   const tags: Tags = []
@@ -91,8 +100,11 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
         if (hasTag(result, ParseStageTag)) {
           const expectedParamLines =
             signature.function.args.length +
+            signature.function.optArgs.length +
             (signature.function.restParam ? 1 : 0)
-          if (params.length + (restParam ? 1 : 0) !== expectedParamLines) {
+          const documented =
+            params.length + optParams.length + (restParam ? 1 : 0)
+          if (documented !== expectedParamLines) {
             // TODO: should do more granular range
             throw mkDocError(signature.function.restParam && !restParam
                 ? `Rest parameter "${signature.function.restParam.name}" was declared in the signature but not documented`
@@ -100,11 +112,19 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
               firstRange,
             )
           }
+          // The counts agreeing is not enough: a misspelled optional's name
+          // would fall out of `optNames` and be counted as a required
+          // parameter instead, quietly costing the function its optional. The
+          // names have to be the signature's, in the signature's order.
+          checkNamesMatch(params, signature.function.args, firstRange)
+          checkNamesMatch(optParams, signature.function.optArgs, firstRange)
           stage = result
         } else if (
           result.name === signature.function.restParam?.name
         ) {
           restParam = result
+        } else if (optNames.has(result.name)) {
+          optParams.push(result)
         } else {
           params.push(result)
         }
@@ -134,11 +154,35 @@ export function parseDocString(docComments: DocComment[]): FunctionDoc {
   return {
     signature,
     params,
+    optParams,
     restParam,
     description,
     tags,
     range: new Range(firstRange.begin, lastRange.end),
   }
+}
+
+/**
+ * Checks that the documented parameters are the signature's, in its order.
+ * @throws DocstringError naming the first line that does not match.
+ */
+function checkNamesMatch(
+  documented: Param[],
+  declared: Identifier[],
+  range: Range,
+): void {
+  const wrong = documented.findIndex(
+    (p, i) => i >= declared.length || p.name !== declared[i].name,
+  )
+  if (wrong === -1) {
+    return
+  }
+  const name = documented[wrong].name
+  throw mkDocError(wrong >= declared.length
+      ? `Parameter "${name}" is not declared in the signature`
+      : `Parameter "${name}" does not match the signature, which declares "${declared[wrong].name}" in that position`,
+    range,
+  )
 }
 
 const docLinePrefix = ';;; '
