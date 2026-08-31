@@ -116,6 +116,11 @@ $> npm run deploy:server-url          # no argument: back to local storage
 That writes one `config.json` at the site root, which every deployed version
 reads at startup — including releases shipped long before the server existed.
 
+This is also what publishes the reading widget: the build's
+`dist/scamper-embed.js` lands at `<root>/<version>/scamper-embed.js`, which is
+the one file a reading on another site includes. See
+[`docs/embedding.md`](docs/embedding.md).
+
 **A server on a different origin from the front end is not supported**, and that
 is deliberate: it would mean CORS, `SameSite=None` cookies, a new CSRF check on
 the file routes, and exposure to browsers restricting third-party cookies. Use

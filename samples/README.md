@@ -21,9 +21,13 @@ These are development artifacts, not part of any build. Nothing here ships to
   reach for `document`, so it runs in the IDE but not under the CLI. Open it
   with `npm run dev` to see the drawings, charts and widgets rendered.
 + `reading.html` is served by `npm run dev` at
-  [`/samples/reading.html`](http://localhost:5173/samples/reading.html). It
-  loads the embed entry point from source, the way `src/app/web/embed/embed.html`
-  does, so it needs the dev server rather than a bare `file://` open.
+  [`/samples/reading.html`](http://localhost:5173/samples/reading.html). Unlike
+  `src/app/web/embed/embed.html`, which loads the entry point from source, it
+  includes the *built* bundle `dist/scamper-embed.js` -- the one file a course
+  site would take from a deployment -- so `npm run build` has to have run, and
+  a change to the widget only shows up here after another one. That is the
+  point of the difference: `embed.html` exercises the widget, this exercises
+  what is deployed. It needs the dev server rather than a bare `file://` open.
 
 ## What is in them, and what is not
 
