@@ -1820,7 +1820,9 @@ test('string-split-append', async () => {
     '(list "HelloWorld")',
     '(list "Hello " "o" "" " World")',
     'null',
-    '(list "00" "" "00" "" "")',
+    // The trailing "1" is a separator at the end of the string, so it is
+    // trimmed rather than left behind as an empty piece (#437).
+    '(list "00" "" "00" "")',
     '(list "1234" "67")',
     '"HelloWorldHello woww World"',
     '" 001100111234567"',
