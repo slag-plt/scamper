@@ -128,4 +128,8 @@ left the rest of the page blank (#415).
 + `samples/reading.html` is the same thing at full size: two real readings on
   one page, one non-interactive and one not, which is the mixed case a course
   site actually produces. `npm run dev` serves it at `/samples/reading.html`,
-  and `test/samples/reading-page.test.ts` runs every widget on it.
+  and `test/samples/reading-page.test.ts` runs every widget on it. It differs
+  from `embed.html` in what it loads: the built `dist/scamper-embed.js` rather
+  than the source entry, and none of Scamper's stylesheets -- so it is the one
+  place the deployed artifact's "add a single script tag" claim is actually
+  put to the test. Build before serving it.

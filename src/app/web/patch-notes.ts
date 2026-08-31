@@ -25,8 +25,9 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
-    version: '5.0.0',
+    version: '4.2.0',
     notes: [
+      'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.',
       'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.'
     ]
   },
