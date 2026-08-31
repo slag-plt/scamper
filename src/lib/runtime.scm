@@ -25,4 +25,18 @@
 ; (##report## <expr>).
 (define-export ##report## (js-var "runtime_report"))
 
+; Internal: the pieces a contract wrapper needs to take a signature's optional
+; parameters off its own rest parameter -- the i'th optional (or void), what
+; follows the optionals, the too-many-arguments check, and the void test the
+; predicate checks skip on. They are internal (rather than the prelude's `car`,
+; `list-tail`, and `void?`) so that a documented parameter named after one of
+; those cannot change what every call to its own function does.
+(define-export ##optArg## (js-var "runtime_optArg"))
+
+(define-export ##optRest## (js-var "runtime_optRest"))
+
+(define-export ##checkArity## (js-var "runtime_checkArity"))
+
+(define-export ##voidQ## (js-var "runtime_voidQ"))
+
 (define-export any (js-var "runtime_any"))

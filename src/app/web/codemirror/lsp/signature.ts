@@ -37,7 +37,7 @@ export function signatureHelpAt(src: string, offset: number): SignatureHelp | nu
 }
 
 /**
- * Renders a signature label (`(name a b & rest) -> ret`, matching
+ * Renders a signature label (`(name a [b] & rest) -> ret`, matching
  * functionDocSignature) together with each parameter's `[start, end]` offset
  * range into that label, so the client can highlight the active argument.
  */
@@ -46,17 +46,23 @@ function buildSignature(
   doc: FunctionDoc,
 ): { label: string; parameters: ParameterInformation[] } {
   const ret = predToString(doc.signature.predicate)
-  const params = [...doc.params, ...(doc.restParam ? [doc.restParam] : [])]
+  const params = [
+    ...doc.params,
+    ...doc.optParams,
+    ...(doc.restParam ? [doc.restParam] : []),
+  ]
   if (params.length === 0) {
     return { label: `(${name}) -> ${ret}`, parameters: [] }
   }
   let label = `(${name}`
   const parameters: ParameterInformation[] = []
+  const firstOpt = doc.params.length
   params.forEach((p, i) => {
     const isRest = doc.restParam !== undefined && i === params.length - 1
+    const isOpt = !isRest && i >= firstOpt
     label += isRest ? ' & ' : ' '
     const start = label.length
-    label += p.name
+    label += isOpt ? `[${p.name}]` : p.name
     const desc = p.description === undefined ? '' : ` — ${p.description}`
     parameters.push({
       label: [start, label.length],

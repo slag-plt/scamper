@@ -688,11 +688,12 @@
 ;;; @category string, string-downcase, string-upcase, substring, string-split, string-split-vector
 (define-export string-foldcase (js-var "prelude_stringFoldcase"))
 
-;;; (substring s start end) -> string?
+;;; (substring s start [end]) -> string?
 ;;;  s : string?
 ;;;  start : integer?
 ;;;  end : integer?
-;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive).
+;;;   where the substring ends; defaults to the end of `s`
+;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive), or to the end of `s` when `end` is left out.
 ;;; @category string, string-downcase, string-upcase, string-foldcase, string-split, string-split-vector
 (define-export substring (js-var "prelude_substring"))
 
@@ -737,6 +738,9 @@
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a list of strings obtained by splitting `s` at occurrences of `sep`.
+;;; One `sep` at each end of `s` is ignored, so it does not produce an empty
+;;; string in the result; a string that is nothing but `sep` splits into
+;;; nothing at all.
 ;;; @category string, string-downcase, string-upcase, string-foldcase, substring, string-split-vector
 (define-export string-split (js-var "prelude_stringSplit"))
 
@@ -744,6 +748,9 @@
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a vector of strings obtained by splitting `s` at occurrences of `sep`.
+;;; One `sep` at each end of `s` is ignored, so it does not produce an empty
+;;; string in the result; a string that is nothing but `sep` splits into
+;;; nothing at all.
 ;;; @category string, vectors, string-downcase, string-upcase, string-foldcase, substring, string-split 
 (define-export string-split-vector (js-var "prelude_stringSplitVector"))
 

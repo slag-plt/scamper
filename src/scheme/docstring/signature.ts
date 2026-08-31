@@ -116,13 +116,32 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
     )
   }
 
-  argToks.forEach((t) => {
-    validateIdentifierToken(t, range)
-  })
-  const args: Identifier[] = argToks.map((t) => mkId(t, range))
+  // As in Javascript, the optional parameters are a contiguous run that comes
+  // after every required parameter and before the rest parameter, so the
+  // arguments at a call site still line up with the names positionally.
+  const firstOpt = argToks.findIndex(isOptionalToken)
+  const optToks = firstOpt === -1 ? [] : argToks.slice(firstOpt)
+  const reqToks = firstOpt === -1 ? argToks : argToks.slice(0, firstOpt)
+  if (!optToks.every(isOptionalToken)) {
+    throw mkDocError('Malformed function signature: a required parameter cannot follow an optional one',
+      range,
+    )
+  }
+
+  const validated = (toks: string[]): Identifier[] =>
+    toks.map((t) => {
+      validateBracketFreeToken(t, range)
+      validateIdentifierToken(t, range)
+      return mkId(t, range)
+    })
+  const args = validated(reqToks)
+  const optArgs = validated(optToks.map((t) => t.slice(1, -1)))
 
   let restParam: Identifier | undefined
   if (restTok !== undefined) {
+    // A rest parameter is never optional -- it already stands for "however
+    // many are left" -- so `(f & [xs])` is a mistake rather than a spelling.
+    validateBracketFreeToken(restTok, range)
     validateIdentifierToken(restTok, range)
     restParam = mkId(restTok, range)
   }
@@ -131,8 +150,27 @@ function parseFunctionSignature({ line, range }: DocComment): VarApp {
     tag: 'app',
     head: mkId(nameTok, range),
     args,
+    optArgs,
     restParam,
     range,
+  }
+}
+
+/** An optional parameter is written bracketed, e.g. `[end]`. */
+function isOptionalToken(token: string): boolean {
+  return token.length > 2 && token.startsWith('[') && token.endsWith(']')
+}
+
+/**
+ * Rejects a leftover bracket, which `looksLikeIdentifier` would admit: one
+ * pair is the optional marker and is stripped before this runs, so a bracket
+ * still here means `[[x]]`, `& [x]`, or a half-written `[x`.
+ */
+function validateBracketFreeToken(token: string, range: Range): void {
+  if (token === '&' || token.includes('[') || token.includes(']')) {
+    throw mkDocError(`Malformed parameter "${token}": an optional parameter is written as a name in one pair of brackets, e.g. "[end]"`,
+      range,
+    )
   }
 }
 
@@ -228,7 +266,7 @@ function parseConstantForm(docLine: string, range: Range): Signature {
   const predicate = parseContractSignature(predComment)
 
   return {
-    function: { tag: 'app', head: mkId(nameTok, range), args: [], range },
+    function: { tag: 'app', head: mkId(nameTok, range), args: [], optArgs: [], range },
     predicate,
     range,
     isConstant: true,

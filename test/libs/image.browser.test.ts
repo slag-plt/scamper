@@ -166,23 +166,24 @@ describe('render per-shape branches', () => {
 
   test('ellipse outline strokes its boundary', () => {
     const canvas = drawing_drawingToCanvas(drawing_ellipse(10, 10, 'outline', 'red'))
-    expect(canvas.width).toBe(10)
-    expect(canvas.height).toBe(10)
+    // An outlined shape's box is its size plus its line width (#431).
+    expect(canvas.width).toBe(11)
+    expect(canvas.height).toBe(11)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
   test('triangle outline strokes its edges', () => {
     const canvas = drawing_drawingToCanvas(drawing_isoscelesTriangle(10, 10, 'outline', 'blue'))
-    expect(canvas.width).toBe(10)
-    expect(canvas.height).toBe(10)
+    expect(canvas.width).toBe(11)
+    expect(canvas.height).toBe(11)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
   test('path outline strokes the polyline it traces', () => {
     const points = L.mkList(L.mkPair(1, 1), L.mkPair(8, 1), L.mkPair(4, 8))
     const canvas = drawing_drawingToCanvas(drawing_path(10, 10, points, 'outline', 'green'))
-    expect(canvas.width).toBe(10)
-    expect(canvas.height).toBe(10)
+    expect(canvas.width).toBe(11)
+    expect(canvas.height).toBe(11)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 
@@ -229,8 +230,8 @@ describe('render per-shape branches', () => {
 
   test('with-dash strokes a dashed outline', () => {
     const canvas = drawing_drawingToCanvas(drawing_withDash([4, 4], drawing_rectangle(20, 20, 'outline', 'red')))
-    expect(canvas.width).toBe(20)
-    expect(canvas.height).toBe(20)
+    expect(canvas.width).toBe(21)
+    expect(canvas.height).toBe(21)
     expect(hasColoredPixel(canvas)).toBe(true)
   })
 

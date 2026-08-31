@@ -39,6 +39,73 @@ export const runtime_error = L.nameFn('error', (msg: L.Value): L.Value => {
 }) as L.JsFunction
 
 /**
+ * The optional arguments a contract wrapper was called with, as a list: what
+ * the wrapper's own rest parameter collected, minus any it has already bound.
+ * See scheme/contract.ts.
+ */
+type OptArgs = L.List
+
+/** @returns `opts` less its first `n` elements, or null if it is shorter. */
+function dropOpts (opts: OptArgs, n: number): L.List {
+  let curr = opts
+  for (let i = 0; i < n && curr !== null; i++) {
+    curr = curr.tail
+  }
+  return curr
+}
+
+/**
+ * The `i`th optional argument, or void when the caller stopped short of it.
+ * Bound to the internal `##optArg##`.
+ */
+export function runtime_optArg (opts: OptArgs, i: number): L.Value {
+  const at = dropOpts(opts, i)
+  return at === null ? undefined : at.head
+}
+
+/**
+ * Whatever follows the first `n` optional arguments -- the value of a
+ * signature's rest parameter, since the wrapper's own rest parameter collected
+ * the optionals and the rest together. Bound to the internal `##optRest##`.
+ */
+export function runtime_optRest (opts: OptArgs, n: number): L.List {
+  return dropOpts(opts, n)
+}
+
+/**
+ * Raises the arity error a fixed-arity function would have raised, for a
+ * signature whose optional parameters are its last: anything beyond the first
+ * `numOpts` optional arguments is one argument too many. Bound to the internal
+ * `##checkArity##`.
+ * @param numRequired how many parameters the wrapper's own lambda takes, which
+ *        the caller supplied before `opts` begins.
+ */
+export function runtime_checkArity (
+  opts: OptArgs, numOpts: number, numRequired: number
+): undefined {
+  let extra = dropOpts(opts, numOpts)
+  if (extra === null) { return undefined }
+  let given = numRequired + numOpts
+  while (extra !== null) {
+    given += 1
+    extra = extra.tail
+  }
+  throw new L.ScamperError(
+    'Runtime',
+    `Arity mismatch in function call: expected at most ${numRequired + numOpts} arguments, got ${given}`)
+}
+
+/**
+ * Whether `v` is void, i.e. an optional argument the caller left out. Bound to
+ * the internal `##voidQ##`, and a separate binding from the prelude's `void?`
+ * so a library parameter of that name cannot change what a contract check
+ * means.
+ */
+export function runtime_voidQ (v: L.Value): boolean {
+  return v === undefined
+}
+
+/**
  * @returns a predicate function for struct types t.
  */
 export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {

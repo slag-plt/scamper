@@ -780,7 +780,8 @@ export function prelude_stringFoldcase(s: string): string {
   return s.toLowerCase()
 }
 
-export function prelude_substring(s: string, start: number, end: number): string {
+/** @param end where the substring ends; the end of `s` when left out. */
+export function prelude_substring(s: string, start: number, end?: number): string {
   return s.substring(start, end)
 }
 
@@ -848,8 +849,29 @@ export function prelude_stringContains(s: string, sub: string): boolean {
   return s.includes(sub)
 }
 
+/**
+ * Splits `s` on `sep`, trimming one occurrence of `sep` from each end of `s`
+ * first, as Racket's `string-split` does: a separator that begins or ends the
+ * string does not contribute an empty piece, and a string that is nothing but
+ * the separator splits into no pieces at all. Only one occurrence goes from
+ * each end, so "00110011" split on "1" still ends in an empty piece. An empty
+ * `sep` is trimmed from neither end and left to `String.prototype.split`.
+ * @returns the pieces of `s`, in order.
+ */
+function splitString(s: string, sep: string): string[] {
+  if (sep === '') {
+    return s.split(sep)
+  }
+  // Both ends are measured against `s`, so that a separator overlapping itself
+  // -- "aa" in "aaa" -- cannot be trimmed twice out of the same characters.
+  const start = s.startsWith(sep) ? sep.length : 0
+  const end = s.endsWith(sep) ? Math.max(start, s.length - sep.length) : s.length
+  const trimmed = s.slice(start, end)
+  return trimmed === '' ? [] : trimmed.split(sep)
+}
+
 export function prelude_stringSplit(s: string, sep: string): L.List {
-  const splits = s.split(sep)
+  const splits = splitString(s, sep)
   let ret = null
   for (let i = splits.length - 1; i >= 0; i--) {
     ret = L.mkCons(splits[i], ret)
@@ -858,7 +880,7 @@ export function prelude_stringSplit(s: string, sep: string): L.List {
 }
 
 export function prelude_stringSplitVector(s: string, sep: string): string[] {
-  return s.split(sep)
+  return splitString(s, sep)
 }
 
 // Vectors (6.8)
