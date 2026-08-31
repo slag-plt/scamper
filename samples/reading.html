@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-store" />
   <title>Scamper in a reading</title>
+  <!-- The page's own reset. Scamper's widget styles are *not* linked: the
+       bundle below carries them, which is the whole claim this sample checks. -->
   <link href="/css/normalize.css" rel="stylesheet">
-  <link href="/css/scamper-highlight.css" rel="stylesheet">
-  <link href="/css/scamper-transcript.css" rel="stylesheet">
   <style>
     /* Just enough to read by: a column, a readable measure, and listings that
        are visibly distinct from the transcripts around them. The reading site
@@ -1105,6 +1105,9 @@ above use.</p>
 
 </article>
 
-<script type="module" src="/src/app/web/embed/embed-entry.ts"></script>
+<!-- The one tag a reading adds. This is the built bundle, not the source
+     entry point, so the page exercises exactly what a course site would load
+     from a deployment; run `npm run build` before serving it. -->
+<script type="module" src="/dist/scamper-embed.js"></script>
 </body>
 </html>
