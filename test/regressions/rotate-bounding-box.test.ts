@@ -39,7 +39,7 @@ describe('rotate bounding box (#102)', () => {
   // Bug A: a rotate-0 circle is exactly its diameter, not the 99.90 that
   // perimeter sampling produced.
   test('rotate 0 gives a circle its exact 100x100 box', async () => {
-    expect(await dims('(rotate 0 (solid-circle 50 "red"))')).toEqual(['100', '100'])
+    expect(await dims('(rotate 0 (solid-circle 100 "red"))')).toEqual(['100', '100'])
   })
 
   // Control: rectangles were always correct and must stay correct.

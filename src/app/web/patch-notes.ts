@@ -25,6 +25,12 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '5.0.0',
+    notes: [
+      'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.'
+    ]
+  },
+  {
     version: '4.1.1',
     notes: [
       'The Run button no longer shows square corners poking out of it when you hover over it.',
