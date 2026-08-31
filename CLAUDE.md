@@ -40,7 +40,7 @@ is compiled in.
 + `npm run dev`: arrangement 1 — front end only, files in the browser
 + `npm run dev:memory`: arrangement 2 — front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
 + `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
-+ `npm run build`: full production build (compilation + bundling) into `dist/`, via `scripts/build`. Two Vite builds: the site, and then `dist/scamper-embed.js` — the reading widget as a single self-contained file (`vite.config.embed.ts`), which is what a reading on another site includes. See `EMBEDDING.md`
++ `npm run build`: full production build (compilation + bundling) into `dist/`, via `scripts/build`. Two Vite builds: the site, and then `dist/scamper-embed.js` — the reading widget as a single self-contained file (`vite.config.embed.ts`), which is what a reading on another site includes. See `docs/embedding.md`
 + `npm run preview`: serves the built `dist/` locally, i.e. arrangement 1 as deployed
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
@@ -102,7 +102,7 @@ create it if it is not there.
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
     - `src/app/search/` — Only `search.html`, a redirect. Search was its own app until #403 folded it into the docs page; the URL stays so older links keep working.
     - `src/app/web/` — Browser-facing UI: the IDE and its Vue components.
-      - `src/app/web/embed/` — The transcript widget a reading embeds (#375): a `.scamper-transcript` block becomes its code interleaved with its output. See `EMBEDDING.md`.
+      - `src/app/web/embed/` — The transcript widget a reading embeds (#375): a `.scamper-transcript` block becomes its code interleaved with its output. See `docs/embedding.md`.
       - The notebook view (#410) is the open file shown as its forms, each with what it printed underneath. It is a *view* of the document the editor holds, never a second copy: `notebook-cells.ts` splits the file by the parser's own statement ranges, `composables/use-notebook.ts` keeps those cells and the document in step and writes every edit through, and `notebook-display.ts` files a run's output under the cell that produced it. Nothing is stored in a `.scm` file to make one, so the file's own spacing survives. `view-prefs.ts` decides which of the two views is on screen.
   - `src/fs/` — File system abstraction (browser OPFS, Node on the CLI, the Scamper server when logged in) used to load and save Scamper source files. `src/fs/index.ts` pairs a file system with its history as one `Backend`, so the two can never be mismatched.
   - `src/history/` — A file's save history (#42), as an interface with two backings: `flat-file.ts` keeps snapshots in a `.{filename}.history` blob beside the file, `server.ts` keeps one row per snapshot in the database. `policy.ts` decides when a save is worth recording and is shared with `server/`.
