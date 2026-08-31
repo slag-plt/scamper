@@ -6,6 +6,43 @@ import { context2d } from './context.js'
 /***** Core Functions *********************************************************/
 
 type Mode = 'solid' | 'outline'
+
+/** How wide an outlined shape is stroked when it is not told (#431). */
+const defaultLineWidth = 1
+
+/**
+ * The width an outlined shape strokes with; undefined for a solid one, which
+ * has no stroke and so carries no `lineWidth` field at all.
+ * @throws ScamperError if the width is not positive: the canvas ignores a
+ *         width of zero or less, leaving whatever the last shape stroked with,
+ *         and a negative one would shrink the box below the size asked for.
+ */
+function strokeWidth(mode: Mode, lineWidth?: number): number | undefined {
+  if (mode !== 'outline') { return undefined }
+  const width = lineWidth ?? defaultLineWidth
+  if (width <= 0) {
+    throw new L.ScamperError('Runtime', `expected a positive line width, received ${width.toString()}`)
+  }
+  return width
+}
+
+/**
+ * The fields every stroke-able shape shares: its box, which is the size it was
+ * given plus its line width, since the stroke is centred on that size and so
+ * half of it falls outside (#431); and the stroke itself, present only when
+ * there is one.
+ */
+function shapeFields(width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number) {
+  const stroke = strokeWidth(mode, lineWidth)
+  return {
+    width: width + (stroke ?? 0),
+    height: height + (stroke ?? 0),
+    mode,
+    color: color_colorToRgb(color),
+    ...(stroke !== undefined ? { lineWidth: stroke } : {})
+  }
+}
+
 export type Drawing = Ellipse | Rectangle | Triangle | Path | Beside | Above | Overlay | OverlayOffset | Rotate | WithDash | DText
 
 /** A fill mode: the string "solid" or "outline". */
@@ -31,24 +68,25 @@ interface Ellipse extends L.Struct {
   width: number,
   height: number,
   mode: Mode,
-  color: Rgb
+  color: Rgb,
+  lineWidth?: number
 }
 
-const ellipsePrim = (width: number, height: number, mode: Mode, color: L.Value): Ellipse => ({
+const ellipsePrim = (width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Ellipse => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'ellipse',
-  width, height, mode, color: color_colorToRgb(color)
+  ...shapeFields(width, height, mode, color, lineWidth)
 })
 
-export function drawing_ellipse(width: number, height: number, mode: Mode, color: L.Value): Ellipse {
-  return ellipsePrim(width, height, mode, color)
+export function drawing_ellipse(width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Ellipse {
+  return ellipsePrim(width, height, mode, color, lineWidth)
 }
 
 /**
  * A circle is sized by its diameter, not its radius, so that the one number it
  * takes means what `square`'s does: `(circle d ...)` is `d` across (#433).
  */
-export function drawing_circle(diameter: number, mode: Mode, color: L.Value): Ellipse {
-  return ellipsePrim(diameter, diameter, mode, color)
+export function drawing_circle(diameter: number, mode: Mode, color: L.Value, lineWidth?: number): Ellipse {
+  return ellipsePrim(diameter, diameter, mode, color, lineWidth)
 }
 
 interface Rectangle extends L.Struct {
@@ -56,20 +94,21 @@ interface Rectangle extends L.Struct {
   width: number,
   height: number,
   mode: Mode,
-  color: Rgb
+  color: Rgb,
+  lineWidth?: number
 }
 
-const rectanglePrim = (width: number, height: number, mode: Mode, color: L.Value): Rectangle => ({
+const rectanglePrim = (width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Rectangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'rectangle',
-  width, height, mode, color: color_colorToRgb(color)
+  ...shapeFields(width, height, mode, color, lineWidth)
 })
 
-export function drawing_rectangle(width: number, height: number, mode: Mode, color: L.Value): Rectangle {
-  return rectanglePrim(width, height, mode, color)
+export function drawing_rectangle(width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Rectangle {
+  return rectanglePrim(width, height, mode, color, lineWidth)
 }
 
-export function drawing_square(length: number, mode: Mode, color: L.Value): Rectangle {
-  return rectanglePrim(length, length, mode, color)
+export function drawing_square(length: number, mode: Mode, color: L.Value, lineWidth?: number): Rectangle {
+  return rectanglePrim(length, length, mode, color, lineWidth)
 }
 
 interface Triangle extends L.Struct {
@@ -77,20 +116,21 @@ interface Triangle extends L.Struct {
   width: number,
   height: number,
   mode: Mode,
-  color: Rgb
+  color: Rgb,
+  lineWidth?: number
 }
 
-const trianglePrim = (width: number, height: number, mode: Mode, color: L.Value): Triangle => ({
+const trianglePrim = (width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Triangle => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'triangle',
-  width, height, mode, color: color_colorToRgb(color)
+  ...shapeFields(width, height, mode, color, lineWidth)
 })
 
-export function drawing_triangle(length: number, mode: Mode, color: L.Value): Triangle {
-  return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color)
+export function drawing_triangle(length: number, mode: Mode, color: L.Value, lineWidth?: number): Triangle {
+  return trianglePrim(length, length * Math.sqrt(3) / 2, mode, color, lineWidth)
 }
 
-export function drawing_isoscelesTriangle(width: number, height: number, mode: Mode, color: L.Value): Triangle {
-  return trianglePrim(width, height, mode, color)
+export function drawing_isoscelesTriangle(width: number, height: number, mode: Mode, color: L.Value, lineWidth?: number): Triangle {
+  return trianglePrim(width, height, mode, color, lineWidth)
 }
 
 interface Path extends L.Struct {
@@ -99,18 +139,25 @@ interface Path extends L.Struct {
   height: number,
   points: [number, number][],
   mode: Mode,
-  color: Rgb
+  color: Rgb,
+  lineWidth?: number
 }
 
-const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: L.Value): Path => ({
-  [L.scamperTag]: 'struct', [L.structKind]: 'path',
-  width, height, points, mode, color: color_colorToRgb(color)
-})
+// N.B., `points` sits between the box and the mode, matching the argument
+// order of `path` itself, so the fields shapeFields supplies are spread on
+// either side of it rather than all at the end.
+const pathPrim = (width: number, height: number, points: [number, number][], mode: Mode, color: L.Value, lineWidth?: number): Path => {
+  const { width: w, height: h, ...rest } = shapeFields(width, height, mode, color, lineWidth)
+  return {
+    [L.scamperTag]: 'struct', [L.structKind]: 'path',
+    width: w, height: h, points, ...rest
+  }
+}
 
-export function drawing_path(width: number, height: number, points: L.List, mode: Mode, color: L.Value): Path {
+export function drawing_path(width: number, height: number, points: L.List, mode: Mode, color: L.Value, lineWidth?: number): Path {
   return pathPrim(width, height,
     L.listToVector(points).map((p: L.Value) => [(p as L.Pair).fst, (p as L.Pair).snd]) as [number, number][],
-    mode, color)
+    mode, color, lineWidth)
 }
 
 interface Beside extends L.Struct {
@@ -360,48 +407,48 @@ export function drawing_solidSquare(length: number, color: L.Value): Rectangle {
   return drawing_square(length, 'solid', color)
 }
 
-export function drawing_outlinedSquare(length: number, color: L.Value): Rectangle {
-  return drawing_square(length, 'outline', color)
+export function drawing_outlinedSquare(length: number, color: L.Value, lineWidth?: number): Rectangle {
+  return drawing_square(length, 'outline', color, lineWidth)
 }
 
 export function drawing_solidRectangle(width: number, height: number, color: L.Value): Rectangle {
   return drawing_rectangle(width, height, 'solid', color)
 }
 
-export function drawing_outlinedRectangle(width: number, height: number, color: L.Value): Rectangle {
-  return drawing_rectangle(width, height, 'outline', color)
+export function drawing_outlinedRectangle(width: number, height: number, color: L.Value, lineWidth?: number): Rectangle {
+  return drawing_rectangle(width, height, 'outline', color, lineWidth)
 }
 
 export function drawing_solidCircle(diameter: number, color: L.Value): Ellipse {
   return drawing_circle(diameter, 'solid', color)
 }
 
-export function drawing_outlinedCircle(diameter: number, color: L.Value): Ellipse {
-  return drawing_circle(diameter, 'outline', color)
+export function drawing_outlinedCircle(diameter: number, color: L.Value, lineWidth: number): Ellipse {
+  return drawing_circle(diameter, 'outline', color, lineWidth)
 }
 
 export function drawing_solidEllipse(width: number, height: number, color: L.Value): Ellipse {
   return drawing_ellipse(width, height, 'solid', color)
 }
 
-export function drawing_outlinedEllipse(width: number, height: number, color: L.Value): Ellipse {
-  return drawing_ellipse(width, height, 'outline', color)
+export function drawing_outlinedEllipse(width: number, height: number, color: L.Value, lineWidth?: number): Ellipse {
+  return drawing_ellipse(width, height, 'outline', color, lineWidth)
 }
 
 export function drawing_solidTriangle(length: number, color: L.Value): Triangle {
   return drawing_triangle(length, 'solid', color)
 }
 
-export function drawing_outlinedTriangle(length: number, color: L.Value): Triangle {
-  return drawing_triangle(length, 'outline', color)
+export function drawing_outlinedTriangle(length: number, color: L.Value, lineWidth?: number): Triangle {
+  return drawing_triangle(length, 'outline', color, lineWidth)
 }
 
 export function drawing_solidIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
   return drawing_isoscelesTriangle(width, height, 'solid', color)
 }
 
-export function drawing_outlinedIsoscelesTriangle(width: number, height: number, color: L.Value): Triangle {
-  return drawing_isoscelesTriangle(width, height, 'outline', color)
+export function drawing_outlinedIsoscelesTriangle(width: number, height: number, color: L.Value, lineWidth?: number): Triangle {
+  return drawing_isoscelesTriangle(width, height, 'outline', color, lineWidth)
 }
 
 // TODO: this need to be factored out to a general image lib that handles both
@@ -451,16 +498,28 @@ export function drawing_drawingColor(drawing: Drawing): Rgb {
   }
 }
 
+/**
+ * The size a shape was built from: its box less the line width the box was
+ * grown by, so that rebuilding it (recolor) neither grows it again nor loses
+ * the stroke it was drawn with.
+ */
+function shapeSize(drawing: Strokeable & { width: number, height: number }): [number, number] {
+  const lineWidth = drawing.lineWidth ?? 0
+  return [drawing.width - lineWidth, drawing.height - lineWidth]
+}
+
 export function drawing_drawingRecolor(drawing: Drawing, color: L.Value): Drawing {
   switch(drawing[L.structKind]) {
     case 'ellipse':
-      return ellipsePrim(drawing.width, drawing.height, drawing.mode, color)
+      return ellipsePrim(...shapeSize(drawing), drawing.mode, color, drawing.lineWidth)
     case 'rectangle':
-      return rectanglePrim(drawing.width, drawing.height, drawing.mode, color)
+      return rectanglePrim(...shapeSize(drawing), drawing.mode, color, drawing.lineWidth)
     case 'triangle':
-      return trianglePrim(drawing.width, drawing.height, drawing.mode, color)
-    case 'path':
-      return pathPrim(drawing.width, drawing.height, drawing.points, drawing.mode, color)
+      return trianglePrim(...shapeSize(drawing), drawing.mode, color, drawing.lineWidth)
+    case 'path': {
+      const [width, height] = shapeSize(drawing)
+      return pathPrim(width, height, drawing.points, drawing.mode, color, drawing.lineWidth)
+    }
     case 'beside':
       return besideAlignPrim(drawing.align, ...drawing.drawings.map(d => drawing_drawingRecolor(d, color)))
     case 'above':
@@ -496,72 +555,117 @@ export function drawing_drawingToCanvas(drawing: Drawing): HTMLCanvasElement {
 
 /***** Rendering **************************************************************/
 
-// N.B., a mode that is neither 'solid' nor 'outline' used to fall through every
-// branch and draw *nothing*, silently -- which is what (ellipse w h #t color)
-// did, the very call ellipse's own (wrong) `boolean?` contract demanded. The
-// fill-mode? contract now stops that at construction; this is the backstop.
+/** A shape carrying a stroke: everything drawn by fillOrStroke below. */
+interface Strokeable {
+  mode: Mode,
+  color: Rgb,
+  lineWidth?: number
+}
+
+/**
+ * Sets the colours and the stroke for one shape.
+ * @param join how the stroke turns a corner. A right angle's miter reaches
+ *        exactly the box's corner, so a rectangle keeps its square corners;
+ *        an angle as sharp as a triangle's apex would spike far past the box,
+ *        so those round instead. Caps are left square (the default), since a
+ *        round one would lengthen every dash `with-dash` draws.
+ * @returns how far inside its box the shape's path lies: half the line width,
+ *          since the stroke is centred on the path and the box was grown by
+ *          the whole of it (#431). Zero for a solid shape.
+ */
+function beginShape (
+  ctx: CanvasRenderingContext2D, drawing: Strokeable, join: CanvasLineJoin = 'round'
+): number {
+  ctx.fillStyle = color_rgbToString(drawing.color)
+  ctx.strokeStyle = color_rgbToString(drawing.color)
+  const lineWidth = drawing.lineWidth ?? 0
+  if (drawing.mode === 'outline') {
+    ctx.lineWidth = lineWidth
+    ctx.lineJoin = join
+  }
+  return lineWidth / 2
+}
+
+/**
+ * Paints the current path as the shape's fill mode calls for.
+ *
+ * N.B., a mode that is neither 'solid' nor 'outline' used to fall through every
+ * branch and draw *nothing*, silently -- which is what (ellipse w h #t color)
+ * did, the very call ellipse's own (wrong) `boolean?` contract demanded. The
+ * fill-mode? contract now stops that at construction; this is the backstop.
+ */
+function fillOrStroke (ctx: CanvasRenderingContext2D, drawing: Strokeable): void {
+  if (drawing.mode === 'solid') {
+    ctx.fill()
+  } else {
+    ctx.stroke()
+  }
+}
+
 export function drawing_render (x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement) {
   const ctx = context2d(canvas)
+  // The canvas may be the user's own (`canvas-drawing!`), so the stroke
+  // settings a shape needs are put back before returning rather than left
+  // behind for whatever they draw next.
+  ctx.save()
+  try {
+    renderShape(x, y, drawing, canvas, ctx)
+  } finally {
+    ctx.restore()
+  }
+}
+
+function renderShape (
+  x: number, y: number, drawing: Drawing, canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D
+) {
   switch (drawing[L.structKind]) {
     case 'ellipse': {
-      ctx.fillStyle = color_rgbToString(drawing.color)
-      ctx.strokeStyle = color_rgbToString(drawing.color)
-      const radiusX = drawing.width / 2
-      const radiusY = drawing.height / 2
-      const centerX = x + radiusX
-      const centerY = y + radiusY
+      const inset = beginShape(ctx, drawing)
+      const radiusX = (drawing.width - 2 * inset) / 2
+      const radiusY = (drawing.height - 2 * inset) / 2
       ctx.beginPath()
-      ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI)
-      if (drawing.mode === 'solid') {
-        ctx.fill()
-      } else {
-        ctx.stroke()
-      }
+      ctx.ellipse(x + drawing.width / 2, y + drawing.height / 2, radiusX, radiusY, 0, 0, 2 * Math.PI)
+      fillOrStroke(ctx, drawing)
       break
     }
     case 'rectangle': {
-      ctx.fillStyle = color_rgbToString(drawing.color)
-      ctx.strokeStyle = color_rgbToString(drawing.color)
+      const inset = beginShape(ctx, drawing, 'miter')
       if (drawing.mode === 'solid') {
         ctx.fillRect(x, y, drawing.width, drawing.height)
       } else {
-        ctx.strokeRect(x, y, drawing.width, drawing.height)
+        ctx.strokeRect(x + inset, y + inset,
+          drawing.width - 2 * inset, drawing.height - 2 * inset)
       }
       break
     }
     case 'triangle': {
-      ctx.fillStyle = color_rgbToString(drawing.color)
-      ctx.strokeStyle = color_rgbToString(drawing.color)
+      const inset = beginShape(ctx, drawing)
+      const left = x + inset
+      const right = x + drawing.width - inset
+      const top = y + inset
+      const bottom = y + drawing.height - inset
       ctx.beginPath()
       // Start in the bottom-left corner of the triangle...
-      ctx.moveTo(x, y + drawing.height)
+      ctx.moveTo(left, bottom)
       // Then go to the top corner...
-      ctx.lineTo(x + drawing.width / 2, y)
+      ctx.lineTo((left + right) / 2, top)
       // And then the bottom-right corner...
-      ctx.lineTo(x + drawing.width, y + drawing.height)
+      ctx.lineTo(right, bottom)
       // And back!
-      ctx.lineTo(x, y + drawing.height)
-      if (drawing.mode === 'solid') {
-        ctx.fill()
-      } else {
-        ctx.stroke()
-      }
+      ctx.lineTo(left, bottom)
+      fillOrStroke(ctx, drawing)
       break
     }
     case 'path': {
       if (drawing.points.length === 0) { break }
-      ctx.fillStyle = color_rgbToString(drawing.color)
-      ctx.strokeStyle = color_rgbToString(drawing.color)
+      const inset = beginShape(ctx, drawing)
       ctx.beginPath()
-      ctx.moveTo(x + drawing.points[0][0], y + drawing.points[0][1])
+      ctx.moveTo(x + inset + drawing.points[0][0], y + inset + drawing.points[0][1])
       drawing.points.slice(1).forEach(p => {
-        ctx.lineTo(x + p[0], y + p[1])
+        ctx.lineTo(x + inset + p[0], y + inset + p[1])
       })
-      if (drawing.mode === 'solid') {
-        ctx.fill()
-      } else {
-        ctx.stroke()
-      }
+      fillOrStroke(ctx, drawing)
       break
     }
     case 'beside': {

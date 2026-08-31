@@ -302,68 +302,80 @@
 ;;; @category image, shapes, typecheck, predicates, ellipse, rectangle
 (define-export fill-mode? (js-var "drawing_fillModeQ"))
 
-;;; (ellipse width height fill color) -> drawing?
+;;; (ellipse width height fill color [line-width]) -> drawing?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  fill : fill-mode?
 ;;;  color : color?
-;;; Returns a new drawing containing an ellipse with dimensions `width × height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a new drawing containing an ellipse with dimensions `width × height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-ellipse, outlined-ellipse
 (define-export ellipse (js-var "drawing_ellipse"))
 
-;;; (circle diameter fill color) -> drawing?
+;;; (circle diameter fill color [line-width]) -> drawing?
 ;;;  diameter : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a circle `diameter` wide and `diameter` tall, the same size as `(square diameter fill color)`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of a circle `diameter` wide and `diameter` tall, the same size as `(square diameter fill color)`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-circle, outlined-circle
 (define-export circle (js-var "drawing_circle"))
 
-;;; (rectangle width height fill color) -> drawing?
+;;; (rectangle width height fill color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a rectangle with dimensions `width × height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of a rectangle with dimensions `width × height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-rectangle, outlined-rectangle
 (define-export rectangle (js-var "drawing_rectangle"))
 
-;;; (square width fill color) -> drawing?
+;;; (square width fill color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a square with length `width`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of a square with length `width`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-square, outlined-square
 (define-export square (js-var "drawing_square"))
 
-;;; (triangle length fill color) -> drawing?
+;;; (triangle length fill color [line-width]) -> drawing?
 ;;;  length : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a equilateral triangle with length `length`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of a equilateral triangle with length `length`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-triangle, outlined-triangle
 (define-export triangle (js-var "drawing_triangle"))
 
-;;; (isosceles-triangle width height fill color) -> drawing?
+;;; (isosceles-triangle width height fill color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a isosceles triangle with base `base` and height `height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of a isosceles triangle with base `base` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-isosceles-triangle, outlined-isosceles-triangle
 (define-export isosceles-triangle (js-var "drawing_isoscelesTriangle"))
 
-;;; (path width height points fill color) -> drawing?
+;;; (path width height points fill color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  points : list?
@@ -372,7 +384,9 @@
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing with dimensions `width × height` formed by connecting the points in `points` with straight lines. The points are specified as a `pair` of coordinates.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing with dimensions `width × height` formed by connecting the points in `points` with straight lines. The points are specified as a `pair` of coordinates. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, path, with-dash
 (define-export path (js-var "drawing_path"))
 
@@ -464,11 +478,13 @@
 ;;; @category image, shapes, square, outlined-square
 (define-export solid-square (js-var "drawing_solidSquare"))
 
-;;; (outlined-square width color) -> drawing?
+;;; (outlined-square width color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outline square with length `width`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of an outline square with length `width`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, square, solid-square
 (define-export outlined-square (js-var "drawing_outlinedSquare"))
 
@@ -481,12 +497,14 @@
 ;;; @category image, shapes, rectangle, outlined-rectangle
 (define-export solid-rectangle (js-var "drawing_solidRectangle"))
 
-;;; (outlined-rectangle width height color) -> drawing?
+;;; (outlined-rectangle width height color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outlined rectangle with dimensions `width × height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of an outlined rectangle with dimensions `width × height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, rectangle, solid-rectangle
 (define-export outlined-rectangle (js-var "drawing_outlinedRectangle"))
 
@@ -498,11 +516,13 @@
 ;;; @category image, shapes, circle, outlined-circle
 (define-export solid-circle (js-var "drawing_solidCircle"))
 
-;;; (outlined-circle diameter color) -> drawing?
+;;; (outlined-circle diameter color line-width) -> drawing?
 ;;;  diameter : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outlined circle `diameter` wide and `diameter` tall, the same size as `(outlined-square diameter color)`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn
+;;; Returns a drawing consisting of an outlined circle of diameter `diameter`, drawn with a `line-width`-wide outline. The drawing is `diameter` + `line-width` across, since the outline is drawn centred on the circle.
 ;;; @category image, shapes, circle, solid-circle
 (define-export outlined-circle (js-var "drawing_outlinedCircle"))
 
@@ -514,11 +534,13 @@
 ;;; @category image, shapes, ellipse, outlined-ellipse
 (define-export solid-ellipse (js-var "drawing_solidEllipse"))
 
-;;; (outlined-ellipse width height color) -> drawing?
+;;; (outlined-ellipse width height color [line-width]) -> drawing?
 ;;;  width : integer?
 ;;;  height : integer?
 ;;;  color : color?
-;;; Returns a new drawing containing an outlined ellipse with dimensions `width × height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a new drawing containing an outlined ellipse with dimensions `width × height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, ellipse, solid-ellipse
 (define-export outlined-ellipse (js-var "drawing_outlinedEllipse"))
 
@@ -530,11 +552,13 @@
 ;;; @category image, shapes, triangle, outlined-triangle
 (define-export solid-triangle (js-var "drawing_solidTriangle"))
 
-;;; (outlined-triangle length color) -> drawing?
+;;; (outlined-triangle length color [line-width]) -> drawing?
 ;;;  length : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outlined equilateral triangle with length `length`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of an outlined equilateral triangle with length `length`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, triangle, solid-triangle
 (define-export outlined-triangle (js-var "drawing_outlinedTriangle"))
 
@@ -547,12 +571,14 @@
 ;;; @category image, shapes, isosceles-triangle, outlined-isosceles-triangle
 (define-export solid-isosceles-triangle (js-var "drawing_solidIsoscelesTriangle"))
 
-;;; (outlined-isosceles-triangle width height color) -> drawing?
+;;; (outlined-isosceles-triangle width height color [line-width]) -> drawing?
 ;;;  width : number?
 ;;;  height : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outlined isosceles triangle with base `base` and height `height`.
+;;;  line-width : number?
+;;;   how wide the outline is drawn; defaults to 1
+;;; Returns a drawing consisting of an outlined isosceles triangle with base `base` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, isosceles-triangle, solid-isosceles-triangle
 (define-export outlined-isosceles-triangle (js-var "drawing_outlinedIsoscelesTriangle"))
 

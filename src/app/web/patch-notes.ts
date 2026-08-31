@@ -27,7 +27,8 @@ export const patchNotes: PatchNote[] = [
   {
     version: '5.0.0',
     notes: [
-      'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.'
+      'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.',
+      'An outlined shape can now say how wide to draw its outline and is no longer cut off at its edges; outlined-circle now requires that width, as (outlined-circle 30 "red" 10), while every other shape takes it optionally.'
     ]
   },
   {

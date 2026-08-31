@@ -28,12 +28,13 @@ describe('rotate bounding box (#102)', () => {
   }
 
   // Bug C: a rotate-0 path keeps the declared 200x200 box (was 20x10, the
-  // extent of its four points).
+  // extent of its four points), plus the line width its outline is drawn with
+  // (#431).
   test('rotate 0 preserves a path\'s declared width/height', async () => {
     expect(await dims(`
       (rotate 0 (path 200 200
         (list (pair 90 80) (pair 110 80) (pair 110 70) (pair 90 70) (pair 90 80))
-        "outline" "blue"))`)).toEqual(['200', '200'])
+        "outline" "blue"))`)).toEqual(['201', '201'])
   })
 
   // Bug A: a rotate-0 circle is exactly its diameter, not the 99.90 that

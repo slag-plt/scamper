@@ -744,7 +744,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(ellipse 10 20 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 20 "outline" (rgba 0 0 255 255))',
+        '(ellipse 11 21 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
@@ -788,7 +788,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 10 "outline" (rgba 0 0 255 255))',
+        '(ellipse 11 11 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
@@ -827,7 +827,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 20 "outline" (rgba 0 0 255 255))',
+        '(rectangle 11 21 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
@@ -1307,7 +1307,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 10 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 10 "outline" (rgba 255 0 0 255))',
+        '(rectangle 11 11 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1335,7 +1335,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 20 "outline" (rgba 255 0 0 255))',
+        '(rectangle 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1359,11 +1359,11 @@ describe('drawing', () => {
         await runProgram(`
 (import image)
 (solid-circle 10 "red")
-(outlined-circle 10 "red")
+(outlined-circle 10 "red" 1)
 `),
       ).toEqual([
         '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 10 "outline" (rgba 255 0 0 255))',
+        '(ellipse 11 11 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1389,7 +1389,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(ellipse 10 20 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 20 "outline" (rgba 255 0 0 255))',
+        '(ellipse 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1415,7 +1415,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(triangle 10 8.660254037844386 "solid" (rgba 255 0 0 255))',
-        '(triangle 10 8.660254037844386 "outline" (rgba 255 0 0 255))',
+        '(triangle 11 9.660254037844386 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1441,7 +1441,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(triangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(triangle 10 20 "outline" (rgba 255 0 0 255))',
+        '(triangle 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
