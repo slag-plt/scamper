@@ -139,15 +139,17 @@ function mkTargetCall(
  * (`(list-of number?)`) -- both are valid expressions in operator position,
  * so no special-casing is needed between the two.
  *
- * If a rest parameter is present, one more check is appended after all the
- * fixed params': `(all-satisfy? restPred restVar)`.
+ * The optional params' checks follow the fixed params', each skipped when its
+ * argument is void -- the caller left it out. If a rest parameter is present,
+ * one more check is appended after those: `(all-satisfy? restPred restVar)`.
  */
 function mkCheckChain(
   params: Param[],
+  optParams: Param[],
   restParam: Param | undefined,
   range: Range,
 ): A.Exp {
-  const targetCall = mkTargetCall(params, restParam, range)
+  const targetCall = mkTargetCall([...params, ...optParams], restParam, range)
 
   const restCheck: A.Exp = restParam
     ? A.mkIf(
@@ -166,9 +168,34 @@ function mkCheckChain(
       )
     : targetCall
 
+  // An optional parameter is void when the caller left it out, and a value
+  // that has to satisfy the predicate when they did not. Nesting the two
+  // tests as `(if (if (##voidQ## x) #t (pred x)) ...)` keeps the continuation
+  // written once, where `or` over the pair would duplicate it per parameter.
+  const optChecks = optParams.reduceRight<(next: A.Exp) => A.Exp>(
+    (rest, { name, predicate }) =>
+      (next) =>
+        A.mkIf(
+          A.mkIf(
+            A.mkApp(A.mkId(voidQName, range), [A.mkId(name, range)], range),
+            A.mkLit(true, range),
+            A.mkApp(predicate, [A.mkId(name, range)], range),
+            range,
+          ),
+          rest(next),
+          A.mkApp(
+            A.mkId('##error##', range),
+            [mkErrorMsg(describePred(predicate), name, range)],
+            range,
+          ),
+          range,
+        ),
+    (next) => next,
+  )
+
   const checkAt = (i: number): A.Exp => {
     if (i === params.length) {
-      return restCheck
+      return optChecks(restCheck)
     }
     const { name, predicate } = params[i]
     return A.mkIf(
@@ -186,6 +213,84 @@ function mkCheckChain(
 }
 
 /**
+ * The internal bindings the generated wrapper uses to take the optional
+ * parameters off its own rest parameter. They are internal, and separate from
+ * the prelude functions that would otherwise do the job, so that a documented
+ * parameter named `car` or `void?` cannot change what its own function does on
+ * every call -- see src/lib/runtime.scm.
+ */
+const optsName = '##opts##'
+const optArgName = '##optArg##'
+const optRestName = '##optRest##'
+const checkArityName = '##checkArity##'
+const voidQName = '##voidQ##'
+
+/**
+ * Wraps `body` in the bindings that take the optional parameters, in order,
+ * off the wrapper lambda's rest parameter: each one is that argument, or void
+ * once the caller's arguments run out. A signature with no optional parameters
+ * gets no bindings and no rest parameter of its own, so it lowers exactly as
+ * before.
+ *
+ * Whatever follows the last optional is the declared rest parameter, if the
+ * signature has one; if it does not, anything left over is an arity error,
+ * since the wrapper's own rest parameter is what let those arguments through.
+ */
+function mkOptBindings(
+  numRequired: number,
+  optParams: Param[],
+  restParam: Param | undefined,
+  body: A.Exp,
+  range: Range,
+): A.Exp {
+  const opts = () => A.mkId(optsName, range)
+  const numOpts = optParams.length
+  let inner = restParam
+    ? A.mkLet(
+        [
+          {
+            pat: A.mkId(restParam.name, range),
+            value: A.mkApp(
+              A.mkId(optRestName, range),
+              [opts(), A.mkLit(numOpts, range)],
+              range,
+            ),
+          },
+        ],
+        body,
+        range,
+      )
+    : A.mkBegin(
+        [
+          A.mkApp(
+            A.mkId(checkArityName, range),
+            [opts(), A.mkLit(numOpts, range), A.mkLit(numRequired, range)],
+            range,
+          ),
+          body,
+        ],
+        range,
+      )
+  for (let i = numOpts - 1; i >= 0; i--) {
+    inner = A.mkLet(
+      [
+        {
+          pat: A.mkId(optParams[i].name, range),
+          value: A.mkApp(
+            A.mkId(optArgName, range),
+            [opts(), A.mkLit(i, range)],
+            range,
+          ),
+        },
+      ],
+      inner,
+      range,
+    )
+  }
+  return inner
+}
+
+/**
  * Wraps a define's value in a contract check extracted from its docstring:
  *
  *   (define name expr)
@@ -196,6 +301,13 @@ function mkCheckChain(
  *     (let ([##contract-target## expr])
  *       (lambda (x1 ... xk [& rest])
  *         <cascading predicate checks, then (##contract-target## x1 ... xk)>)))
+ *
+ * A signature with optional parameters -- `(substring s start [end])` -- has
+ * no fixed arity, so the wrapper takes them through a rest parameter of its
+ * own and binds each in turn (mkOptBindings), leaving an unsupplied one void.
+ * They are still passed to the wrapped value positionally, so *it* declares
+ * them as ordinary parameters: a Javascript primitive receives `undefined`,
+ * which is already how Javascript spells "not supplied".
  *
  * @returns the statement unchanged if it isn't a define, has no docstring,
  *          the docstring fails to parse (a documentation-quality issue, not
@@ -221,16 +333,38 @@ export function contractStmt(s: A.Stmt): A.Stmt {
   // internal error (ICE) is intentionally NOT caught here -- it should surface
   // as a loud failure rather than silently skip contract insertion.
   const { doc } = parseFunctionDocFromComments(s.docComments)
-  if (!doc || (doc.params.length === 0 && !doc.restParam)) {
+  if (
+    !doc ||
+    (doc.params.length === 0 && doc.optParams.length === 0 && !doc.restParam)
+  ) {
     return s
   }
+  const checks = mkCheckChain(doc.params, doc.optParams, doc.restParam, s.range)
+  // With optional parameters the wrapper's own rest parameter is what collects
+  // them, so the declared rest parameter (if any) is bound from what is left
+  // rather than by the lambda itself.
+  const hasOpts = doc.optParams.length > 0
+  const body = hasOpts
+    ? mkOptBindings(
+        doc.params.length,
+        doc.optParams,
+        doc.restParam,
+        checks,
+        s.range,
+      )
+    : checks
+  const lamRest = hasOpts
+    ? A.mkId(optsName, s.range)
+    : doc.restParam
+      ? A.mkId(doc.restParam.name, s.range)
+      : undefined
   const wrapped = A.mkLet(
     [{ pat: A.mkId(contractTargetName, s.range), value: s.value }],
     A.mkLam(
       doc.params.map((p) => A.mkId(p.name, s.range)),
-      mkCheckChain(doc.params, doc.restParam, s.range),
+      body,
       s.range,
-      doc.restParam ? A.mkId(doc.restParam.name, s.range) : undefined,
+      lamRest,
     ),
     s.range,
   )
