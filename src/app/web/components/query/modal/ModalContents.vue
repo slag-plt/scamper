@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import ValueRenderer from '../../../../../lpm/renderers/vue/ValueRenderer.vue'
 import { Value } from '../../../../../lpm'
-import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { nextTick, onMounted, PropType, ref, useTemplateRef, watch } from 'vue'
 
-const props = withDefaults(defineProps<{ value: Value; clip?: boolean }>(), {
-  clip: true,
+// `value` is declared at runtime for the reason ValueRenderer's is: a type
+// declaration would put `Boolean` in its runtime type, and Vue would cast an
+// incoming empty string to `true` (#444).
+const props = defineProps({
+  value: { type: null as unknown as PropType<Value>, required: true },
+  clip: { type: Boolean, default: true },
 })
 
 const divRef = useTemplateRef('div-ref')
