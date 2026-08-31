@@ -311,13 +311,13 @@
 ;;; @category image, shapes, solid-ellipse, outlined-ellipse
 (define-export ellipse (js-var "drawing_ellipse"))
 
-;;; (circle radius fill color) -> drawing?
-;;;  radius : number?
+;;; (circle diameter fill color) -> drawing?
+;;;  diameter : number?
 ;;;  fill : fill-mode?
 ;;;   either "solid" or "outline"
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a circle of radius `radius`.
+;;; Returns a drawing consisting of a circle `diameter` wide and `diameter` tall, the same size as `(square diameter fill color)`.
 ;;; @category image, shapes, solid-circle, outlined-circle
 (define-export circle (js-var "drawing_circle"))
 
@@ -490,19 +490,19 @@
 ;;; @category image, shapes, rectangle, solid-rectangle
 (define-export outlined-rectangle (js-var "drawing_outlinedRectangle"))
 
-;;; (solid-circle radius color) -> drawing?
-;;;  radius : number?
+;;; (solid-circle diameter color) -> drawing?
+;;;  diameter : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of a solid circle of radius `radius`.
+;;; Returns a drawing consisting of a solid circle `diameter` wide and `diameter` tall, the same size as `(solid-square diameter color)`.
 ;;; @category image, shapes, circle, outlined-circle
 (define-export solid-circle (js-var "drawing_solidCircle"))
 
-;;; (outlined-circle radius color) -> drawing?
-;;;  radius : number?
+;;; (outlined-circle diameter color) -> drawing?
+;;;  diameter : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
-;;; Returns a drawing consisting of an outlined circle of radius `radius`.
+;;; Returns a drawing consisting of an outlined circle `diameter` wide and `diameter` tall, the same size as `(outlined-square diameter color)`.
 ;;; @category image, shapes, circle, solid-circle
 (define-export outlined-circle (js-var "drawing_outlinedCircle"))
 

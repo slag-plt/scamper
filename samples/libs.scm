@@ -27,20 +27,20 @@
 
 ; A shape is a value like any other, described by its size, whether it is
 ; filled, and its color.
-(circle 25 "solid" "cornflowerblue")
+(circle 50 "solid" "cornflowerblue")
 (rectangle 80 30 "outline" "black")
 (triangle 40 "solid" "seagreen")
 
 ; Pictures are built by putting shapes next to, above, or on top of each other.
-(beside (circle 20 "solid" "red")
-        (circle 20 "solid" "gold")
-        (circle 20 "solid" "green"))
+(beside (circle 40 "solid" "red")
+        (circle 40 "solid" "gold")
+        (circle 40 "solid" "green"))
 
 (above (rectangle 60 20 "solid" "tomato")
        (rectangle 60 20 "solid" "orange"))
 
-(overlay (circle 10 "solid" "white")
-         (circle 25 "solid" "midnightblue"))
+(overlay (circle 20 "solid" "white")
+         (circle 50 "solid" "midnightblue"))
 
 (rotate 30 (square 50 "solid" "purple"))
 
@@ -53,7 +53,7 @@
 (rgb->hsv (rgb 255 0 0))
 
 ; A drawing knows its own dimensions.
-(drawing-width (circle 25 "solid" "red"))
+(drawing-width (circle 50 "solid" "red"))
 
 ; ---------------------------------------------------------------------------
 ; canvas -- drawing at precise coordinates

@@ -190,7 +190,7 @@ origin
 
 ; A one-argument import brings a library's names into scope.
 (import image)
-(beside (circle 20 "solid" "red") (square 40 "outline" "blue"))
+(beside (circle 40 "solid" "red") (square 40 "outline" "blue"))
 
 ; A two-argument import binds the library to a name instead, so its functions
 ; are reached through that name and nothing is added to the surrounding scope.

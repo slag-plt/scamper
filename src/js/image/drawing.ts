@@ -43,8 +43,12 @@ export function drawing_ellipse(width: number, height: number, mode: Mode, color
   return ellipsePrim(width, height, mode, color)
 }
 
-export function drawing_circle(radius: number, mode: Mode, color: L.Value): Ellipse {
-  return ellipsePrim(radius * 2, radius * 2, mode, color)
+/**
+ * A circle is sized by its diameter, not its radius, so that the one number it
+ * takes means what `square`'s does: `(circle d ...)` is `d` across (#433).
+ */
+export function drawing_circle(diameter: number, mode: Mode, color: L.Value): Ellipse {
+  return ellipsePrim(diameter, diameter, mode, color)
 }
 
 interface Rectangle extends L.Struct {
@@ -368,12 +372,12 @@ export function drawing_outlinedRectangle(width: number, height: number, color: 
   return drawing_rectangle(width, height, 'outline', color)
 }
 
-export function drawing_solidCircle(radius: number, color: L.Value): Ellipse {
-  return drawing_circle(radius, 'solid', color)
+export function drawing_solidCircle(diameter: number, color: L.Value): Ellipse {
+  return drawing_circle(diameter, 'solid', color)
 }
 
-export function drawing_outlinedCircle(radius: number, color: L.Value): Ellipse {
-  return drawing_circle(radius, 'outline', color)
+export function drawing_outlinedCircle(diameter: number, color: L.Value): Ellipse {
+  return drawing_circle(diameter, 'outline', color)
 }
 
 export function drawing_solidEllipse(width: number, height: number, color: L.Value): Ellipse {
