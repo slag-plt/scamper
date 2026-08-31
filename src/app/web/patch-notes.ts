@@ -31,6 +31,12 @@ export const patchNotes: PatchNote[] = [
     ]
   },
   {
+    version: '4.2.0',
+    notes: [
+      'The second argument to substring is now optional, so (substring "alphabetical" 5) gives you "betical" instead of an error.'
+    ]
+  },
+  {
     version: '4.1.1',
     notes: [
       'The Run button no longer shows square corners poking out of it when you hover over it.',
