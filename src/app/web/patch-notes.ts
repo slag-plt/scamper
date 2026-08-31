@@ -25,7 +25,7 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
-    version: '4.1.2',
+    version: '4.2.0',
     notes: [
       'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.',
       'The empty string now prints as "" rather than as #t, and the string "value" now prints as itself.'
