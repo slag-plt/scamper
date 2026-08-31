@@ -27,6 +27,7 @@ export const patchNotes: PatchNote[] = [
   {
     version: '4.2.0',
     notes: [
+      'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.',
       'The second argument to substring is now optional, so (substring "alphabetical" 5) gives you "betical" instead of an error.'
     ]
   },
