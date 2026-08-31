@@ -76,7 +76,9 @@
 ;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
-;;; Renders a circle whose center is at `(x, y)` and radius `radius`.
+;;; Renders a circle whose center is at `(x, y)` and radius `radius`. Note that
+;;; this is a radius, where `circle` in the image library takes a diameter: a
+;;; canvas shape is placed by its center rather than fitted to a box.
 ;;; @category canvas, mutation, predicates, shapes, canvas-rectangle!, canvas-ellipse!
 (define-export canvas-circle! (js-var "canvas_canvasCircle"))
 

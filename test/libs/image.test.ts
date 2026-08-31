@@ -714,7 +714,7 @@ describe('drawing', () => {
 (import image)
 (drawing? (rectangle 10 10 "solid" "red"))
 (drawing? (rectangle 10 10 "solid" "red"))
-(drawing? (beside (rectangle 10 10 "solid" "red") (circle 5 "solid" "blue")))
+(drawing? (beside (rectangle 10 10 "solid" "red") (circle 10 "solid" "blue")))
 `),
       ).toEqual(['#t', '#t', '#t'])
     })
@@ -744,7 +744,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(ellipse 10 20 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 20 "outline" (rgba 0 0 255 255))',
+        '(ellipse 11 21 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
@@ -783,20 +783,20 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(circle 5 "solid" "red")
-(circle 5 "outline" "blue")
+(circle 10 "solid" "red")
+(circle 10 "outline" "blue")
 `),
       ).toEqual([
         '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 10 "outline" (rgba 0 0 255 255))',
+        '(ellipse 11 11 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
-    test('does not validate that radius is non-negative', async () => {
+    test('does not validate that diameter is non-negative', async () => {
       expect(
         await runProgram(`
 (import image)
-(circle -5 "solid" "red")
+(circle -10 "solid" "red")
 (circle 0 "solid" "red")
 `),
       ).toEqual([
@@ -809,7 +809,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(circle 5 #t "red")
+(circle 10 #t "red")
 `),
       ).toEqual([
         'Runtime error: (error) expected a fill-mode, received boolean',
@@ -827,7 +827,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 20 "outline" (rgba 0 0 255 255))',
+        '(rectangle 11 21 "outline" (rgba 0 0 255 255) 1)',
       ])
     })
 
@@ -1307,7 +1307,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 10 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 10 "outline" (rgba 255 0 0 255))',
+        '(rectangle 11 11 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1335,7 +1335,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(rectangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(rectangle 10 20 "outline" (rgba 255 0 0 255))',
+        '(rectangle 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1358,12 +1358,12 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(solid-circle 5 "red")
-(outlined-circle 5 "red")
+(solid-circle 10 "red")
+(outlined-circle 10 "red" 1)
 `),
       ).toEqual([
         '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 10 "outline" (rgba 255 0 0 255))',
+        '(ellipse 11 11 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1371,7 +1371,7 @@ describe('drawing', () => {
       expect(
         await runProgram(`
 (import image)
-(solid-circle 5 5)
+(solid-circle 10 5)
 `),
       ).toEqual([
         'Runtime error: (error) expected a color, received number',
@@ -1389,7 +1389,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(ellipse 10 20 "solid" (rgba 255 0 0 255))',
-        '(ellipse 10 20 "outline" (rgba 255 0 0 255))',
+        '(ellipse 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1415,7 +1415,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(triangle 10 8.660254037844386 "solid" (rgba 255 0 0 255))',
-        '(triangle 10 8.660254037844386 "outline" (rgba 255 0 0 255))',
+        '(triangle 11 9.660254037844386 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
@@ -1441,7 +1441,7 @@ describe('drawing', () => {
 `),
       ).toEqual([
         '(triangle 10 20 "solid" (rgba 255 0 0 255))',
-        '(triangle 10 20 "outline" (rgba 255 0 0 255))',
+        '(triangle 11 21 "outline" (rgba 255 0 0 255) 1)',
       ])
     })
 
