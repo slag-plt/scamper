@@ -41,3 +41,62 @@
   border-top: 1px solid rgb(0 0 0 / 8%);
   padding-top: 0.5em;
 }
+
+/*
+ * The values a program printed.
+ *
+ * These mirror the scoped styles of the Vue components the IDE renders with
+ * (CodeElement.vue, TestResultRenderer.vue, GradescopeResultsRenderer.vue). A
+ * widget renders through HTMLDisplay instead, which builds plain DOM and so
+ * carries none of Vue's `data-v-` scope attributes; those components' rules
+ * cannot match it however they reach the page, and in scamper-embed.js they
+ * were simply dead weight. Hence a second copy here, written as descendants of
+ * `.scamper-transcript` so that adding the bundle to a reading cannot restyle
+ * the reading's own `code` or `.test-result`.
+ *
+ * Keep the two in step: a change to one of those components' styles belongs
+ * here too. Only what the HTML renderers actually emit is worth copying --
+ * plots, DOM elements, traces and the error banner are Vue-only markup that a
+ * widget never produces.
+ */
+
+/* A rendered value, in the same face as the source line above it. */
+.scamper-transcript code {
+  font-family: Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+  font-size: 1em;
+}
+
+/*
+ * The `test` library's colours, repeated from theme.css because the bundle
+ * cannot carry theme.css itself -- that file also styles `body` and `a`, which
+ * a reading is entitled to style for itself. `color-scheme` is deliberately
+ * not set: light-dark() then resolves light unless the reading has declared a
+ * scheme of its own, so a widget follows the page it sits in.
+ */
+.scamper-transcript {
+  --test-border: light-dark(oklch(80% 0.018 200), oklch(36% 0.02 200));
+  --test-ok-bg: light-dark(oklch(96% 0.03 150), oklch(25% 0.045 150));
+  --test-error-bg: light-dark(oklch(95.5% 0.018 27), oklch(25% 0.05 27));
+}
+
+.scamper-transcript .test-result {
+  font-family: Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+  font-size: 1em;
+  margin: 0.5em;
+  padding: 0.25em;
+  border: dashed 1px var(--test-border);
+}
+
+.scamper-transcript .test-result.ok {
+  background-color: var(--test-ok-bg);
+}
+
+.scamper-transcript .test-result.error {
+  background-color: var(--test-error-bg);
+}
+
+/* An autograder's results, which are one very long line without this. */
+.scamper-transcript .gradescope-results {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

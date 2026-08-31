@@ -25,6 +25,12 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '4.1.2',
+    notes: [
+      'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.'
+    ]
+  },
+  {
     version: '4.1.1',
     notes: [
       'The Run button no longer shows square corners poking out of it when you hover over it.',
