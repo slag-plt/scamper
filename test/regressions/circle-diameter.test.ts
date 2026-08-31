@@ -27,11 +27,11 @@ test('every circle constructor takes a diameter (#433)', async () => {
   (import image)
   (circle 10 "solid" "red")
   (solid-circle 10 "red")
-  (outlined-circle 10 "red")
+  (outlined-circle 10 "red" 1)
   `),
   ).toEqual([
     '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
     '(ellipse 10 10 "solid" (rgba 255 0 0 255))',
-    '(ellipse 10 10 "outline" (rgba 255 0 0 255))',
+    '(ellipse 11 11 "outline" (rgba 255 0 0 255) 1)', // plus the line width (#431)
   ])
 })
