@@ -312,6 +312,7 @@ function makeTestDocstring(): {
       [mkId(paramName1, anyRange), mkId(paramName2, anyRange)],
       anyRange,
     ),
+    optArgs: [],
     restParam: undefined,
   } as VarApp
 
@@ -383,6 +384,7 @@ function makeTestDocstring(): {
         range: anyRange,
       },
     ],
+    optParams: [],
     restParam: undefined,
     description,
     tags: [

@@ -14,7 +14,11 @@ import type { FunctionDoc } from '../../scheme/docstring/docstring'
 
 /** Every documented param's predicate, including the rest param if any. */
 function argPredicates(doc: FunctionDoc) {
-  return [...doc.params, ...(doc.restParam ? [doc.restParam] : [])].map(
+  return [
+    ...doc.params,
+    ...doc.optParams,
+    ...(doc.restParam ? [doc.restParam] : []),
+  ].map(
     (p) => p.predicate,
   )
 }

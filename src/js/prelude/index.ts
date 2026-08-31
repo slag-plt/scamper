@@ -780,7 +780,8 @@ export function prelude_stringFoldcase(s: string): string {
   return s.toLowerCase()
 }
 
-export function prelude_substring(s: string, start: number, end: number): string {
+/** @param end where the substring ends; the end of `s` when left out. */
+export function prelude_substring(s: string, start: number, end?: number): string {
   return s.substring(start, end)
 }
 

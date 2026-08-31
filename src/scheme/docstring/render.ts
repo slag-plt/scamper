@@ -32,6 +32,8 @@ export function predTypeName(pred: Pred): string {
  *   (cons v1 v2) -> pair?
  *     v1: any
  *     v2: any
+ * An optional parameter keeps its brackets, as the signature line writes it:
+ *   (substring s start [end]) -> string?
  * or, for a documented constant:
  *   pi: number?
  *
@@ -45,17 +47,19 @@ export function functionDocSignature(doc: FunctionDoc): string {
   if (doc.signature.isConstant) {
     return `${name}: ${returnStr}`
   }
-  if (doc.params.length === 0 && !doc.restParam) {
+  if (doc.params.length === 0 && doc.optParams.length === 0 && !doc.restParam) {
     return `(${name}) -> ${returnStr}`
   }
   const argNames = [
     ...doc.params.map((p) => p.name),
+    ...doc.optParams.map((p) => `[${p.name}]`),
     ...(doc.restParam ? [`& ${doc.restParam.name}`] : []),
   ].join(' ')
   const paramLine = (p: FunctionDoc['params'][number]) =>
     `  ${p.name}: ${predToString(p.predicate)}${p.description ? `\n    ${p.description}` : ''}`
   const argLines = [
     ...doc.params.map(paramLine),
+    ...doc.optParams.map(paramLine),
     ...(doc.restParam ? [paramLine(doc.restParam)] : []),
   ].join('\n')
   return `(${name} ${argNames}) -> ${returnStr}\n${argLines}`
