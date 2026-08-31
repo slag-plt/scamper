@@ -737,6 +737,9 @@
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a list of strings obtained by splitting `s` at occurrences of `sep`.
+;;; One `sep` at each end of `s` is ignored, so it does not produce an empty
+;;; string in the result; a string that is nothing but `sep` splits into
+;;; nothing at all.
 ;;; @category string, string-downcase, string-upcase, string-foldcase, substring, string-split-vector
 (define-export string-split (js-var "prelude_stringSplit"))
 
@@ -744,6 +747,9 @@
 ;;;  s : string?
 ;;;  sep : string?
 ;;; Returns a vector of strings obtained by splitting `s` at occurrences of `sep`.
+;;; One `sep` at each end of `s` is ignored, so it does not produce an empty
+;;; string in the result; a string that is nothing but `sep` splits into
+;;; nothing at all.
 ;;; @category string, vectors, string-downcase, string-upcase, string-foldcase, substring, string-split 
 (define-export string-split-vector (js-var "prelude_stringSplitVector"))
 
