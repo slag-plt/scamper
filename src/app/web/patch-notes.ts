@@ -25,9 +25,12 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
-    version: '4.1.2',
+    version: '4.2.0',
     notes: [
-      'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.'
+      'A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.',
+      'The second argument to substring is now optional, so (substring "alphabetical" 5) gives you "betical" instead of an error.',
+      'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.',
+      'An outlined shape can now say how wide to draw its outline and is no longer cut off at its edges; outlined-circle now requires that width, as (outlined-circle 30 "red" 10), while every other shape takes it optionally.'
     ]
   },
   {
