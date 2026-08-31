@@ -25,6 +25,12 @@ export interface PatchNote {
 
 export const patchNotes: PatchNote[] = [
   {
+    version: '4.1.2',
+    notes: [
+      'A separator at the very start or end of a string no longer leaves an empty string behind in the result of string-split, so (string-split "snicker snack" "ck") gives you two pieces rather than three.'
+    ]
+  },
+  {
     version: '4.1.1',
     notes: [
       'The Run button no longer shows square corners poking out of it when you hover over it.',
