@@ -83,7 +83,9 @@ has no mail server and so no way to verify an address or send a reset link.
 `user-chpwd`, `user-delete`, plus `server-down` and `server-dump`. Each goes
 through the container, because the database port is deliberately unpublished.
 
-See [`docs/server.md`](docs/server.md) for the API, accounts, and deployment.
+See [`docs/server.md`](docs/server.md) for the API and accounts, and
+[`docs/server-deployment.md`](docs/server-deployment.md) for putting it on a
+host.
 
 ## Deployment
 
@@ -141,7 +143,7 @@ A server that should keep itself current runs that command under cron, as
 `scripts/server/server-sync`. By default it follows *releases* — a version bump
 in `package.json`, not every merge — so the version students see in the IDE, the
 patch notes it shows them, and the code they are running agree. See
-[`docs/server.md`](docs/server.md).
+[`docs/server-deployment.md`](docs/server-deployment.md).
 
 ## Information about the AST
 

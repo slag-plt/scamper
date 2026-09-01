@@ -5,7 +5,7 @@
 # same-origin deployment keeps the session cookie first-party, which means no
 # CORS, no `SameSite=None`, and no exposure to browsers tightening third-party
 # cookie policy. Splitting the two across hosts costs all of that (see
-# docs/server.md).
+# docs/server-architecture.md).
 #
 # `:80` rather than a hostname because TLS is terminated by whatever fronts
 # this -- the Reclaim Cloud environment's endpoint. Give Caddy the hostname

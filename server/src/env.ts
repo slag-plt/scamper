@@ -34,7 +34,7 @@ export function authSecret(): string {
 
 /**
  * The origin the app is served from, which is also this server's own origin --
- * the two share a host (see docs/server.md), so this is the one URL both
+ * the two share a host (see docs/server-architecture.md), so this is the one URL both
  * halves answer on.
  */
 export function authBaseUrl(): string {

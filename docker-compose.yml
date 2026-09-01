@@ -23,7 +23,7 @@
 # files and passes `/api` through to the server, so the two share an origin.
 # That is what keeps the session cookie first-party -- no CORS, no
 # `SameSite=None`, and nothing to break when browsers tighten third-party cookie
-# policy (see docs/server.md).
+# policy (see docs/server-architecture.md).
 #
 # A static-only deployment is still supported and unchanged: `scripts/deploy`
 # rsyncs `dist/` to a plain web server, where the absence of a `/config.json`
