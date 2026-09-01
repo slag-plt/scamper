@@ -1,59 +1,108 @@
 # Scamper language reference
 
-The grammar below is implemented by `src/scheme/syntax.grammar` (the Lezer
-grammar) and `src/scheme/ast.ts` (the AST it parses into). The runtime language
-is defined in `src/lpm/lang.ts`.
+The surface syntax below is what `src/scheme/syntax.grammar` accepts, read into
+the AST of `src/scheme/ast.ts`. `src/scheme/expansion.ts` then rewrites the
+derived forms away, leaving the core. The runtime language is defined in
+`src/lpm/lang.ts`.
 
-## Core surface syntax
+## Surface syntax
 
 ~~~
-lit ::= <number> | <boolean> | <char> | <string>
-      | ' ( expr1 ... exprk )
-      | [ expr1 ... exprk ]
-      | { expr1 ... exprk }
-      | # ( expr )
+pat ::= _
+      | <identifier>
+      | <number> | <boolean> | <char> | <string>
+      | ( pat1 ... patk )               ; constructor pattern
+      | [ pat1 ... patk ]               ; vector pattern
 
-paramlist ::= ( x1 ... xk ) | ( x1 ... xk & x )
-
-pat ::= <identifier> | _ | lit | ( <identifier> p1 ... pk )
+paramlist ::= ( x1 ... xk ) | ( x1 ... xk & x ) | ( & x )
 
 expr ::= <identifier>
-       | <identifier> . <identifier>
-       | lit
-       | ( expr1 ... exprk )
+       | <number> | <boolean> | <char> | <string>
+       | [ expr1 ... exprk ]                        ; vector literal
+       | { key1 val1 ... keyn valn }                ; map literal
+       | # ( expr )                                 ; anonymous function
+       | ( expr1 ... exprk )                        ; application
        | ( lambda paramlist expr )
-       | ( quote expr )
        | ( if expr1 expr2 expr3 )
        | ( let ( [ pat1 expr1 ] ... [ patk exprk ] ) expr )
        | ( match expr [ pat1 expr1 ] ... [ patk exprk ] )
+       | ( and expr1 ... exprk )
+       | ( or expr1 ... exprk )
+       | ( begin expr1 expr2 ... exprk )
+       | ( cond [ expr11 expr12 ] ... [ exprk1 exprk2 ] )
 
 stmt ::= ( import <identifier> ) | ( import <identifier> <identifier> )
        | ( import <string> ) | ( import <string> <identifier> )
        | ( define <identifier> expr )
+       | ( define-export <identifier> expr )
        | ( export x1 ... xk )
-       | ( display <expr> )
+       | ( display expr )
        | ( struct <identifier> ( x1 ... xk ) )
        | expr
 
-prog ::= stmt1 ... stmt k
+prog ::= stmt1 ... stmtk
 ~~~
 
+There is no `quote`, and no `'` shorthand. A list is built with `list`, and a
+vector with the `[...]` literal.
+
+Each bracket means exactly one thing (#334). `(...)` is an application or
+special form, `[...]` is a vector — or, in a pattern, a vector pattern — except
+in the fixed `[pattern expression]` positions of `let`, `match`, and `cond`.
+`{...}` is a map literal, whose elements read as alternating keys and values; an
+odd number of them is an error, checked in `src/scheme/lezer-bridge.ts` rather
+than by the grammar.
+
+An identifier may be a one-level *qualified* name: two names joined by a single
+`.`, such as `img.outlined-square`, referring to a binding through an imported
+module's alias. Exactly one `.` is allowed, so `a.b.c` is not a single name, and
+a qualified name may only be a reference, never a binder.
+
+`#(...)` is a Clojure-style anonymous function. Its parameters are the `%k`
+markers appearing in the body — `%` is `%1`, and the arity is the largest index
+referenced — with `%&` as an optional rest parameter. The body is an ordinary
+expression, so any parenthesized form may appear: `#(+ %1 1)`, `#(let ([x 1]) (+ x %))`.
+
+`&` in a parameter list separates the fixed parameters from a rest parameter.
+
 A one-argument `import` injects a module's exported names into the current
-scope. A two-argument `import` instead binds the module under a qualified name
-(alias): its exports are reachable only as `<alias>.<name>` and are not injected
-into scope. A module exports only the names its `export` statements list (the
-union of them); a module with no `export` statement exports nothing.
+scope. A two-argument `import` binds the module under a qualified name instead:
+its exports are reachable only as `<alias>.<name>` and are not injected into
+scope. A module exports only the names its `export` statements list, taking
+their union; a module with no `export` statement exports nothing.
+
+## Core forms
+
+Expansion leaves seven expression forms:
+
+~~~
+expr ::= <identifier>
+       | <number> | <boolean> | <char> | <string>
+       | ( expr1 ... exprk )
+       | ( lambda paramlist expr )
+       | ( if expr1 expr2 expr3 )
+       | ( let ( [ pat1 expr1 ] ... [ patk exprk ] ) expr )
+       | ( match expr [ pat1 expr1 ] ... [ patk exprk ] )
+
+stmt ::= ( import ... ) | ( define <identifier> expr ) | ( export x1 ... xk )
+       | ( display expr ) | expr
+~~~
+
+Patterns are not expanded and keep the full surface set.
 
 ## Derived forms
 
-Derived forms are surface syntax desugared into the core language by
-`src/scheme/expansion.ts`.
+Each of these is rewritten by `src/scheme/expansion.ts`. Every rewritten node is
+tagged with the form it came from, so a reduction trace can recover the original
+spelling rather than guess at it.
 
 ~~~
 (and expr1 ... exprk)
-  = (if (not expr1) #f
+  = (if expr1
       ...
-        (if (not exprk) #f #t))
+        (if exprk #t #f)
+      ...
+      #f)
 
 (or expr1 ... exprk)
   = (if expr1 #t
@@ -68,12 +117,34 @@ Derived forms are surface syntax desugared into the core language by
 (cond [expr11 expr12] ... [exprk1 exprk2])
   = (if expr11 expr12
       ...
-        (if exprk1 exprk2 void))
+        (if exprk1 exprk2 (##error## "No matching clause in cond")))
+
+#(body)
+  = (lambda (%1 ... %m [& %&]) body)
+      where m is the largest %k referenced in body
+
+[expr1 ... exprk]
+  = (##mkVec## expr1 ... exprk)
+
+{key1 val1 ... keyn valn}
+  = (##mkObj## key1 val1 ... keyn valn)
 
 (define-export x expr)
   = (define x expr)
     (export x)
+
+(struct S (f1 ... fk))
+  = (define S  (##mkCtorFn## "S" ["f1" ... "fk"]))
+    (define S? (##mkPredFn## "S"))
+    (define S-f1 (##mkGetFn## "S" "f1"))
+    ...
+    (define S-fk (##mkGetFn## "S" "fk"))
 ~~~
+
+A falling-through `cond` raises rather than producing void (#336). The `##...##`
+names are runtime primitives from `src/js/runtime/`, not prelude bindings: a
+derived form must mean the same thing whether or not the user has bound `error`,
+`vector`, or a struct name of their own.
 
 ## The runtime
 
