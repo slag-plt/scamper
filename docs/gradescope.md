@@ -38,7 +38,7 @@ A submission can still shadow any *other* file the harness imports, so import on
 ```
 
 Each test becomes one Gradescope test case, named by its description.
-Its output is the message Scamper shows in the IDE, so a student reads "Expected 8, received 16" rather than only a cross.
+Its output is the message Scamper shows in the IDE, such as "Expected 8, received 16".
 
 For a case that is not worth one point — a bonus mark, or something scored by hand — construct it directly and include it in the same list:
 

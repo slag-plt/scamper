@@ -35,11 +35,10 @@ Every statement in the two `.scm` files produces a value, so each reads top-to-b
 `samples/reading.html` reproduces two [CSC 151](https://osera.cs.grinnell.edu/csc151/) readings verbatim — [Recursion Over Lists](https://osera.cs.grinnell.edu/csc151/readings/recursion-over-lists.html) and [Interactivity, Events, and Reactivity](https://osera.cs.grinnell.edu/csc151/readings/interactivity-events-and-reactivity.html) — separated by a horizontal rule.
 The first is entirely non-interactive and the second is interactive throughout, which makes the page a mixed one.
 Runnable blocks are widgets; walkthrough excerpts stay plain listings, as in the readings themselves.
-The copies will drift from the originals; they sample the widget rather than mirror the course.
 
 A third section at the end belongs to neither reading.
 It exercises the widget features the readings do not use: a hidden preamble, `data-continues` chains, a plain `html` button, and `data-height`.
-A reactive file chooser is deliberately absent, since its callback does not fire inside a widget (#397).
+A reactive file chooser is absent: its callback does not fire inside a widget (#397).
 
 Two known defects affect this page.
 On a busy machine an interactive widget can render everything it will render and still never finish; because widgets run sequentially, the ones below it never start (#415).
@@ -49,8 +48,7 @@ Idle, the whole page runs in well under a second.
 
 `test/samples/` runs all three and requires that they report no errors: `test/samples/scm-samples.test.ts` for the two programs, `test/samples/reading-page.test.ts` for the page.
 Nothing else in the suite covers them, since samples are not compiled, imported, or linted.
-
-The assertion is that a sample runs, not that it produces particular output; a sample pinned to its own output would need re-blessing on every rendering change.
+The assertion is that a sample runs, not that it produces particular output.
 
 Run `npx vitest run test/samples` after editing a sample.
 If a sample has to stop showing something the language no longer supports, note it in the pull request.

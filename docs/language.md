@@ -132,7 +132,7 @@ Every rewritten node is tagged with the form it came from, so a reduction trace 
 ~~~
 
 A falling-through `cond` raises rather than producing void (#336).
-The `##...##` names are runtime primitives from `src/js/runtime/`, not prelude bindings: a derived form must mean the same thing whether or not the user has bound `error`, `vector`, or a struct name of their own.
+The `##...##` names are runtime primitives from `src/js/runtime/` rather than prelude bindings, so a derived form does not depend on what the user has bound.
 
 ## The runtime
 

@@ -47,10 +47,8 @@ A build whose commit changed the version in `package.json` — a release — is 
 | `latest` | the head of main | every merge |
 | `3.6.0`, or a commit | that build and no other | never, until the line changes |
 
-`release` is the default, because of the version number students see.
-`APP_VERSION` comes from `package.json`, and the IDE shows the patch notes between the version a student last opened and the one they are opening now.
-A host on `latest` would serve 3.6.0's breaking changes days before calling itself 3.6.0 and saying what changed, breaking a program mid-assignment with no announcement attached.
-On `release` all three agree.
+`release` is the default.
+`APP_VERSION` comes from `package.json`, so on `release` the version a student sees, the patch notes they are shown, and the code they are running all agree.
 
 `latest` suits a staging host, or a server with no students on it.
 
@@ -170,8 +168,7 @@ Each wraps `docker compose` (`up -d`, `down`, `down -v`, and `mariadb-dump` thro
 The database lives in the named volume `scamper-db`, which survives it.
 Only `--wipe` (`down -v`) removes it, and there is no undo; take a `server-dump` first.
 
-There is no deployment script.
-How the server is started, restarted after a crash, and pointed at its database is already stated by the compose file.
+There is no deployment script; the compose file states how the server is started, restarted after a crash, and pointed at its database.
 
 ## Keeping up with main
 
@@ -195,8 +192,7 @@ A release whose images CI has not finished building is not an error: the pull fa
 
 Note that the host follows **main** for the files it reads itself and the **release** for the code.
 A `Caddyfile` or compose change therefore lands as soon as it is merged, against whatever release is running.
-That suits files about the host rather than the program, but a change that only makes sense alongside the code it ships with should go out with that release.
-Once releases carry a git tag, the tighter version is to check out the release's commit rather than main's head.
+A change that only makes sense alongside the code it ships with should go out with that release.
 
 Compose decides the rest: a container whose image ID has not changed is left alone, so a run that finds nothing restarts nothing.
 
@@ -214,15 +210,13 @@ Four things to get right on the host:
   Pinning a version instead is the off switch — the pull then fetches the same digest every time and nothing is ever deployed.
   That, and putting the *previous* version there, is the rollback when a release turns out to be bad: no commands, no revert commit, live within five minutes.
 
-Nothing pushes from CI.
-A deploy key in GitHub's secrets amounts to a shell on the server, whereas polling needs nothing inbound: no key, no open port, no webhook.
-The cost is up to five minutes of latency.
-If that becomes a problem, add an Actions job that ssh's in against a key restricted to `command="…/server-sync"`, so a leaked secret can only deploy.
+Nothing pushes from CI; the host polls, so nothing inbound is needed — no key, no open port, no webhook.
+Latency is up to five minutes.
 
 ## If the host cannot build the images
 
-It does not have to; that is what the published images are for, and the front-end build (`npm ci` plus Vite) is the most memory-hungry step in this repository.
-This section covers running something CI has not published: an unmerged branch, or a change not going to main.
+It does not have to: the published images are what a host runs, and the front-end build (`npm ci` plus Vite) is the most memory-hungry step in this repository.
+This section covers running something CI has not published — an unmerged branch, or a change not going to main.
 
 Build it elsewhere, under the name the compose file expects, and ship it:
 
@@ -248,13 +242,13 @@ rsync -a --delete --delay-updates dist/ host:scamper/dist/
 
 Caddy then serves that directory directly, and putting new files there is the whole update.
 `--delay-updates` is required: Caddy reads each file per request, so a half-transferred `dist/` is live while it transfers.
-The cost is that what is running no longer corresponds to any image; see [Patching the front end alone](#updating-the-front-end-alone).
+The cost is that what is running no longer corresponds to any image; see [Updating the front end alone](#updating-the-front-end-alone).
 
 ## The static deployment
 
 `npm run deploy` rsyncs a build to a plain web server, where the absence of a `/config.json` keeps the IDE on browser storage: no accounts and no server.
-That deployment and this one are independent, and a site can offer both — the static one as the no-account Scamper, this one for students with accounts.
+That deployment and this one are independent, and a site can offer both.
 
 **Do not use `npm run deploy:server-url` to point a static deployment at this container's API.**
-That would put the front end and the API on different origins, which this arrangement exists to avoid: it requires CORS, `SameSite=None` cookies, and a CSRF check the file routes do not have, and it breaks as browsers restrict third-party cookies.
-That script is for a deployment where one web server serves both the static files and `/api` on a single origin.
+That puts the front end and the API on different origins, which is unsupported; see `docs/server-architecture.md`.
+The script is for a deployment where one web server serves both the static files and `/api` on a single origin.

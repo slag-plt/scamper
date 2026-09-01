@@ -8,7 +8,7 @@ Nothing else marks one, and three things follow from it:
 - Every student whose last-seen version is older is shown the patch notes for it the next time they open the IDE (`src/app/web/patch-notes.ts`).
 
 Ordinary merges do none of that.
-They collect on main and reach nobody until someone cuts the next release, which keeps the version in the corner of the IDE, the notes it shows, and the code behind them in agreement.
+They collect on main and reach nobody until someone cuts the next release.
 
 ## Cutting one
 
@@ -70,4 +70,3 @@ A branch opened before a check was added therefore stays blocked, showing nothin
 
 No git tag is made.
 The repository's existing tags disagree with each other: `3.1.2` beside `v3.1.2`, and none at all for 3.5.0.
-Settling on a convention is a separate decision, not something a version bump should do implicitly.

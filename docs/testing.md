@@ -51,7 +51,7 @@ Paths in the tree below are relative to `test/`.
 + `samples/` — runs the samples in `samples/` (#405) and requires that they report no errors.
   `scm-samples.test.ts` covers `samples/showcase.scm` and `samples/libs.scm`; `reading-page.test.ts` covers `samples/reading.html`.
   Nothing else in the suite would notice a sample going stale, since samples are not compiled, imported, or linted.
-  The split into two files is required: `runProgram` gives each program its own `Scheduler`, while a page runs on the Scamper singleton's, and a harness program that registers a DOM handler wedges a later singleton run in the same environment.
+  The split into two files is required: `runProgram` gives each program its own `Scheduler`, while a page runs on the Scamper singleton's.
 + `regressions/` — regression tests for fixed issues
 
 ## Browser-mode tests
@@ -68,14 +68,12 @@ Operational notes:
 + These files run one at a time (`fileParallelism: false`).
   One browser means one origin and therefore one shared OPFS, so a file that clears storage would empty another's fixtures mid-run.
 + They are excluded from `npm test` and `npm run validate` (see `test.exclude` in `vite.config.ts`), because a missing Playwright browser binary fails browser-mode startup outright.
-  The suite is opt-in; CI runs it as its own job.
+  CI runs them as their own job.
 + One-time setup: `npm run playwright:install` downloads a headless Chromium binary, cached outside the repository.
   Then run `npm run test:browser` or `npm run coverage:browser`.
 + On a bare Linux box that binary needs system libraries that are not installed alongside it.
   The symptom is a startup failure naming a missing shared object, such as `error while loading shared libraries: libatk-1.0.so.0`.
-  This is an environment gap rather than a test failure.
   Install them once with `npx playwright install --with-deps chromium`, which requires root and is what CI's `browser-tests` job runs.
-  Headlessness is not the cause; CI runs headless too.
 
 ## Style
 

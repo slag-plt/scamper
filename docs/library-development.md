@@ -25,7 +25,7 @@ A library named `foo` is two directories:
 ```
 
 `js-var` looks a name up in a single map of every Javascript binding, built in `src/js/index.ts`.
-Because that map is flat, **every Javascript export is prefixed with its library's name** — `test_testResultOk`, `canvas_makeCanvas` — so that two libraries cannot collide.
+That map is flat, so **every Javascript export is prefixed with its library's name** — `test_testResultOk`, `canvas_makeCanvas`.
 `src/js/image/` is the exception: it backs four concepts and exports `drawing_*`, `color_*`, `font_*`, and `image_*` (#103).
 
 ## Scamper-to-Javascript mapping
@@ -71,9 +71,9 @@ A procedure that needs to apply a caller-supplied function belongs in the `.scm`
 
 ## Argument checking
 
-Arity and argument types are not checked by Javascript, and are not checked by hand either.
+Arity and argument types are not checked by Javascript, and are not checked by hand.
 `src/lib/index.ts` compiles each library with `insertContracts: true`, which derives a contract from the docstring above each `define-export` and wraps the export in it.
-The signature line and the `param : predicate?` lines are therefore load-bearing, not decoration.
+The signature line and the `param : predicate?` lines are therefore load-bearing.
 
 ## Wiring a new library
 

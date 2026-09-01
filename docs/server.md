@@ -41,7 +41,6 @@ Sign-in needs no configuration beyond the secret.
 Accounts are made by hand, and there is no identity provider or mail transport.
 
 **A server with no `DATABASE_URL` refuses to start.**
-Falling back to the in-memory store would give a misconfigured deployment no sign-in and one shared namespace, serving every student the same files.
 `SCAMPER_STUB=1` requests the in-memory store explicitly; `npm run dev:memory` sets it.
 
 ## Running it, with its database
@@ -73,8 +72,8 @@ A deployment builds nothing and runs what CI published; see `docs/server-deploym
 | `web`     | Caddy: serves the built front end, proxies `/api` to `server`   |
 
 `web` is the only container a browser talks to.
-The app and its API therefore share an origin and the session cookie is first-party: no CORS, no `SameSite=None`, no CSRF check to write, and nothing that breaks as browsers tighten third-party cookie policy.
-Splitting the two across hosts costs all of that, which is why the front end is built into an image here (`Dockerfile.web`) rather than deployed elsewhere and pointed at this API.
+The app and its API share an origin, so the session cookie is first-party: no CORS, no `SameSite=None`, and no CSRF check to write.
+The front end is built into an image here (`Dockerfile.web`) rather than deployed elsewhere and pointed at this API; see `docs/server-architecture.md`.
 
 `web` also answers `/config.json` with `{"serverUrl": "/api/v1"}`; see the root `Caddyfile`.
 That is how the IDE learns there is a server.
@@ -91,8 +90,7 @@ Two sets of tables, in this order:
 2. **Ours** (`files`, `histories`, `snapshots`, in `server/schema.sql`), which reference `user`.
    `server/src/db.ts` applies them at every start; every statement is `IF NOT EXISTS`.
 
-The CLI is a separate build stage because it pulls in Prisma, Drizzle, and a native SQLite binding for databases this server does not use.
-That is acceptable in a container running for two seconds at deploy time, but not in the one serving requests.
+The CLI is a separate build stage: it pulls in Prisma, Drizzle, and a native SQLite binding for databases this server does not use, and is kept out of the image that serves requests.
 
 ### The `npm audit` alerts on that CLI
 
@@ -112,14 +110,9 @@ As of 2026-08-11:
   `server/src/admin.ts` goes through BetterAuth's runtime internals -- the 1.6.26 copy -- not the CLI.
   Creating and resetting accounts never touches the flagged tree.
 
-There is no newer *stable* `@better-auth/cli` to upgrade to: 1.4.21 is latest, and the only thing past it is a 1.5.0 beta.
-**Do not pin that beta to silence the alert** -- it would put a pre-release in the deployment path to fix something that cannot be reached.
-
-Revisit when a stable CLI past 1.4.21 ships, which is the clean fix and costs nothing.
-Revisit sooner if this server ever gains a social provider or one of the plugins named above, because that is the assumption the whole analysis rests on.
-
-The alternative, if the alerts become intolerable, is to drop the CLI and write BetterAuth's four tables into `server/schema.sql` beside our three.
-That removes the dependency entirely, at the cost of having to notice when BetterAuth changes its own schema -- which is exactly what the CLI is doing for us.
+There is no newer *stable* `@better-auth/cli`: 1.4.21 is latest, and the only thing past it is a 1.5.0 beta.
+**Do not pin that beta to silence the alert.**
+Upgrade when a stable CLI past 1.4.21 ships, and re-check this if the server gains a social provider or one of the plugins named above.
 
 ### Without Docker
 
@@ -157,7 +150,7 @@ npm run account -- chpwd  ada@example.edu
 npm run account -- list
 ```
 
-A password is generated when not given, from an alphabet omitting `0`/`O` and `1`/`l`/`I`, since these are read aloud and written down by someone who did not choose them.
+A password is generated when not given, from an alphabet omitting `0`/`O` and `1`/`l`/`I`.
 **It is shown once.**
 Passwords are stored hashed, so a lost one is replaced rather than recovered; `reset` does that, and also ends that person's sessions.
 
@@ -172,8 +165,8 @@ Every route but `/api/v1/health` requires a session and answers **401** without 
 The check lives in `server/src/api.ts` rather than the HTTP layer, so the rule is stated where the routes are and a test can pin it.
 
 One exception: when the database is unreachable, those routes answer **503** rather than 401.
-Reading a session is itself a query, so a database outage makes every request look unauthenticated, and a bare 401 would tell a student their session had ended and offer a sign-in that could not work either.
-`health` reports the database for the same reason, so the IDE's heartbeat sees the outage and enters its offline state.
+Reading a session is itself a query, so a database outage would otherwise make every request look unauthenticated.
+`health` reports the database too, so the IDE's heartbeat sees the outage and enters its offline state.
 
 ## The API
 
@@ -197,12 +190,12 @@ Everything below is scoped to the signed-in user, and answers 401 without a sess
 | `POST`   | `/api/v1/history/rename`          | `{ from, to }`                              |
 | *        | `/api/auth/*`                     | BetterAuth: sign-up, sign-in, sign-out, session |
 
-The listing carries each file's preview, since computing previews client-side costs one request per file.
+The listing carries each file's preview.
 `rename` is one route rather than a copy-then-delete pair, so an interruption cannot leave a user with two copies or none.
 
 The history routes do **not** mirror the file routes.
 Listing and indexing answer with times and deletion marks only; contents come one version at a time from `files/{name}/{id}`.
-A history holds up to fifty copies of a file, so shipping them all to draw a column of timestamps would defeat storing snapshots as rows.
+A history holds up to fifty copies of a file, so a listing never carries contents.
 See `server/schema.sql` for the queries these stand in for.
 
 ## Running the two halves together
@@ -219,11 +212,9 @@ npm run dev -- --mode server
 
 1. **Proxies `/api` to this server**, so the browser only ever talks to the Vite origin.
 2. **Serves a `/config.json`** naming `/api/v1`, which is how the client learns there is a server at all.
-   A plain `npm run dev` has no such file, gets a 404, and stays on local storage — unchanged from before any of this existed.
+   A plain `npm run dev` has no such file, gets a 404, and stays on local storage.
 
-The proxy is what keeps development and production alike.
-Pointing the client straight at `localhost:3000` would make local development cross-origin while production is same-origin, and every cookie-related behaviour would then differ: `SameSite` would have to be `none`, which requires HTTPS; CORS would have to be configured, and could work in development but not production or the reverse; and the credentialed-request path under test would not be the one shipped.
-Proxying makes a development checkout single-origin exactly as production is.
+The proxy makes a development checkout single-origin exactly as production is, so cookie behaviour is the same in both.
 
 `SCAMPER_SERVER_PORT` moves this server (and the proxy that follows it) off 3000.
 
