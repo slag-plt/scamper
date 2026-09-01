@@ -373,7 +373,7 @@ interface Out {
  * Indentation is paid this late so that a line nothing is written on stays
  * *empty* -- a blank line between comment paragraphs (#333) would otherwise be
  * padded with spaces, and the editor's indenter empties such a line, so
- * formatting would stop being a fixed point of it (FORMATTING.md).
+ * formatting would stop being a fixed point of it (docs/formatting.md).
  */
 function write(out: Out, text: string): void {
   if (text === '') return

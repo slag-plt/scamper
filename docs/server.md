@@ -1,7 +1,9 @@
 # Scamper server
 
 The back end that stores a user's files, so they survive browser-storage loss
-and follow the user between machines (issue #357).
+and follow the user between machines (issue #357). The code is in `server/`, an
+npm workspace of this repository; paths below are relative to the repository
+root.
 
 Run it with `npm run dev:server` from the repository root. `PORT` overrides the
 default of 3000.
@@ -161,7 +163,7 @@ Two sets of tables, in this order:
    before the server starts, so `up` does it for you. It is additive and skips
    what exists, so it is a no-op on every start after the first.
 2. **Ours** (`files`, `histories`, `snapshots`, in `schema.sql`), which reference
-   `user`. `src/db.ts` applies them at every start; every statement is
+   `user`. `server/src/db.ts` applies them at every start; every statement is
    `IF NOT EXISTS`.
 
 The CLI is a separate build stage because it drags in Prisma, Drizzle, and a
@@ -261,7 +263,7 @@ signing in cannot tell the difference.
 so rather than assume.
 
 Every route but `/api/v1/health` needs a session and answers **401** without
-one. That check lives in `src/api.ts` rather than in the HTTP layer, so the rule
+one. That check lives in `server/src/api.ts` rather than in the HTTP layer, so the rule
 is stated where the routes are and a test can pin it.
 
 One exception, and it matters: when the **database** is unreachable, those
@@ -641,7 +643,7 @@ gone: it was configuration nothing set, on a path nothing exercised, in the one
 area where an untested path is worth least — a credentialed cross-origin reply
 is exactly the thing to get wrong quietly. Serving this from a second origin
 would mean putting it back deliberately, alongside `sameSite: 'none'` on the
-session cookie and `trustedOrigins` in `src/auth.ts`.
+session cookie and `trustedOrigins` in `server/src/auth.ts`.
 
 And one more thing that is easy to miss: **`SameSite=Lax` is the only CSRF
 protection the file routes have.** Nothing checks `Origin` on `/api/v1/*` —

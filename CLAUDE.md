@@ -73,7 +73,7 @@ is compiled in.
 
 ### Releases
 
-+ A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `RELEASING.md`
++ A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `docs/releasing.md`
 + Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `src/app/web/patch-notes.ts`
 
 ### Patch notes
@@ -88,7 +88,7 @@ decide which release it belongs to.
 + One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
 + Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
 + Keep the trailing comma on the last note. `.gitattributes` merges this file with `merge=union`, so concurrent pull requests add their lines side by side instead of conflicting; without the comma two appends merge into a syntax error. Nothing may depend on the order of notes within an entry, since the merge decides it
-+ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `RELEASING.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
++ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `docs/releasing.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
 
 ## Architecture Overview
 
@@ -110,9 +110,9 @@ decide which release it belongs to.
   - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
-+ `gradescope/` — The Gradescope autograder harness (#404): `setup.sh`, `run_autograder`, and an example `autograder.scm` that an instructor zips and uploads. Not a build script; see its README.
++ `gradescope/` — The Gradescope autograder harness (#404): `setup.sh`, `run_autograder`, and an example `autograder.scm` that an instructor zips and uploads. Not a build script; see `docs/gradescope.md`.
 + `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/src/`, and `server/` may import *types* from `src/` but *values* only from the two shared contracts, `src/fs/fs.ts` and `src/history/policy.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
-+ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale. See its README.
++ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale. See `docs/samples.md`.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline

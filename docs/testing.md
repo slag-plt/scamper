@@ -2,7 +2,7 @@
 
 ## Structure
 
-Scamper has a comprehensive test suite whose structure nearly mirrors the structure found in src/.
+Scamper has a comprehensive test suite, rooted at `test/`, whose structure nearly mirrors the structure found in src/. Directories named below are relative to `test/`.
 
 + scheme/ contains tests for the front-end/compiler
     - parsing/ tests parsing (via the generated Lezer parser) of source to AST

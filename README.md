@@ -83,7 +83,7 @@ has no mail server and so no way to verify an address or send a reset link.
 `user-chpwd`, `user-delete`, plus `server-down` and `server-dump`. Each goes
 through the container, because the database port is deliberately unpublished.
 
-See [`server/README.md`](server/README.md) for the API, accounts, and deployment.
+See [`docs/server.md`](docs/server.md) for the API, accounts, and deployment.
 
 ## Deployment
 
@@ -91,7 +91,7 @@ Two targets, matching the first and third arrangements above. They are
 independent: a site can be deployed either way, or both at once.
 
 What *triggers* a deployment is a release — a version bump on main, not every
-merge. See [`RELEASING.md`](RELEASING.md).
+merge. See [`docs/releasing.md`](docs/releasing.md).
 
 ### Static, to a plain web server
 
@@ -141,7 +141,7 @@ A server that should keep itself current runs that command under cron, as
 `scripts/server/server-sync`. By default it follows *releases* — a version bump
 in `package.json`, not every merge — so the version students see in the IDE, the
 patch notes it shows them, and the code they are running agree. See
-[`server/README.md`](server/README.md).
+[`docs/server.md`](docs/server.md).
 
 ## Information about the AST
 

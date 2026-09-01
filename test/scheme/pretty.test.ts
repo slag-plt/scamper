@@ -3,7 +3,7 @@ import { tokenizeAndParse } from '../../src/scheme'
 import { layoutToString, stmtToLayout, type Prog } from '../../src/scheme/ast'
 import { PRINT_WIDTH, type UserFormatMode } from '../../src/scheme/style'
 
-// Line breaking for the surface syntax (see FORMATTING.md). The editor's
+// Line breaking for the surface syntax (see docs/formatting.md). The editor's
 // indenter and this printer read the same rule table, so the shapes asserted
 // here are the shapes the output and step panes draw.
 //

@@ -186,7 +186,7 @@ jobs:
   #
   # Silent on the pull requests that are not releases, which is nearly all of
   # them. Make it a required status check on main to make it binding; see
-  # RELEASING.md.
+  # docs/releasing.md.
   version:
 
     if: github.event_name == 'pull_request'

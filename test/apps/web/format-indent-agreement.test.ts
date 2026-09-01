@@ -8,7 +8,7 @@ import { formatSource } from '../../../src/scheme/format'
 import { PRINT_WIDTH, type UserFormatMode } from '../../../src/scheme/style'
 
 /**
- * The anti-drift invariant (FORMATTING.md):
+ * The anti-drift invariant (docs/formatting.md):
  *
  *     indentRange(format(p)) === format(p)
  *
@@ -142,7 +142,7 @@ describe.each(MODES)('the printer and the indenter agree (%s)', (mode) => {
  * diverge when a form begins part-way through a line -- as the `(f ...)` does
  * inside `[(< x 0) (f ...`. Two of the programs below were held to the weaker
  * property that reformatting is merely stable. Retiring that printer is what
- * closed the gap (FORMATTING.md, stage 3).
+ * closed the gap (docs/formatting.md, stage 3).
  */
 describe.each(MODES)(
   'the reformat command and the indenter agree (%s)',

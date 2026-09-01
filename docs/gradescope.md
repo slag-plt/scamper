@@ -4,10 +4,13 @@ A Gradescope autograder for Scamper is an ordinary Scamper program. It imports
 the student's file, runs the tests you wrote with the `test` library, and hands
 them to `gradescope-test-suite`, which prints the JSON Gradescope reads.
 
+The three files an autograder is built from live in `gradescope/`:
+`autograder.scm`, `setup.sh`, and `run_autograder`.
+
 ## Setting one up
 
-1. Write your harness. Start from `autograder.scm` here: import the file the
-   assignment asks students to submit, and end with a call to
+1. Write your harness. Start from `gradescope/autograder.scm`: import the file
+   the assignment asks students to submit, and end with a call to
    `gradescope-test-suite`.
 2. Zip `setup.sh`, `run_autograder`, and your `autograder.scm` together — the
    three files at the top level of the archive, not inside a folder.

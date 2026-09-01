@@ -2,7 +2,7 @@
 
 Scamper in action, for whoever needs a real program rather than a snippet: a
 demonstration, a screenshot, a page to point a browser at, or a fixture for a
-test. Three of them (#405):
+test. Three of them (#405), all in `samples/`:
 
 | File | What it shows |
 | --- | --- |

@@ -13,7 +13,7 @@
 // without one, since a bug fix does not deserve a modal in front of every
 // student. Order does not matter: entries are sorted newest-first when
 // displayed, and the notes within one are independent sentences shown in array
-// order. See RELEASING.md.
+// order. See docs/releasing.md.
 
 export interface PatchNote {
   /** The release these notes describe, e.g. '3.5.0', or `NEXT_RELEASE`. */

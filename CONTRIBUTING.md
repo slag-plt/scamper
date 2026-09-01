@@ -101,7 +101,7 @@ Build a tiny Vue 3 + TypeScript + Vite app from scratch. Suggested scope: a simp
 Once that's working, take the codebase tour:
 
 1. `README.md`: how to run.
-2. `library-development.md`: how libraries plug into the runtime. This is the doc you'll re-read most often.
+2. `docs/library-development.md`: how libraries plug into the runtime. This is the doc you'll re-read most often.
 3. `src/scamper-vue.ts`: re-read this and trace one call from input string to output.
 4. `src/app/web/components/WebEmbedWidget.vue`: what we (will) use in future CSC-151 readings!
 5. `src/lib/index.ts` and one library file (e.g. `src/lib/test.ts`): see what a library actually looks like.
