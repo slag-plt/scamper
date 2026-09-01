@@ -79,16 +79,16 @@ is compiled in.
 ### Patch notes
 
 **Every pull request that changes user-facing functionality adds exactly one
-line to the patch notes** in `src/app/web/patch-notes.ts`, under the entry for
-the next version. Notes are written as the work lands rather than gathered at
-release time, so that entry usually names a release that has not happened yet;
-create it if it is not there.
+line to the patch notes** in `src/app/web/patch-notes.ts`, under the `next`
+entry at the top. Notes are written as the work lands rather than gathered at
+release time, and `next` is where they accumulate, so no pull request has to
+decide which release it belongs to.
 
 + Work a student cannot see adds no line -- a refactor, a test, a CI or tooling change, contributor documentation. Say so in the pull request instead, so the omission reads as a decision rather than an oversight
 + One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
 + Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
-+ Which version to file under follows `RELEASING.md`: `patch` for a fix, `minor` for behaviour that is new or changed, `major` for a breaking change. A `minor` line lands under the next minor, and so on
-+ **Do not bump `package.json`.** Naming the release early is the point; the `version` job exits early while the version is unchanged, so the line simply pre-satisfies the check for whoever cuts that release. Nothing reaches a student until the bump, since `patchNotesSince` never returns an entry newer than the running version
++ Keep the trailing comma on the last note. `.gitattributes` merges this file with `merge=union`, so concurrent pull requests add their lines side by side instead of conflicting; without the comma two appends merge into a syntax error. Nothing may depend on the order of notes within an entry, since the merge decides it
++ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `RELEASING.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
 
 ## Architecture Overview
 

@@ -1,0 +1,16 @@
+# Every pull request that changes what a student sees appends one line to the
+# patch notes, always at the same place, so N concurrent branches would mean
+# N-1 conflicts over independent prose. Union keeps both sides' lines rather
+# than conflicting, which is what you want for a list of sentences.
+#
+# Two things make this safe, and both are load-bearing:
+#
+#   - The last note in an entry carries a trailing comma. Without one, two
+#     appends merge into `'A'` followed by `'C'` with no comma between them --
+#     a syntax error, every time.
+#   - Nothing depends on the order of notes within an entry; a union merge
+#     decides it.
+#
+# Union never reports a conflict, which for code would be dangerous. Hence one
+# path rather than a glob.
+src/app/web/patch-notes.ts merge=union

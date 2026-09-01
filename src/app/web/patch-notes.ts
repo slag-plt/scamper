@@ -3,19 +3,20 @@
 // file; on load it shows notes for every release between that version and the
 // current one, then records the current version so they are not shown again.
 //
-// To announce a release: add an entry here whose `version` matches the app
-// version (package.json). Keep `notes` short and user-facing -- these are what
-// students read, not a full changelog. Order does not matter; entries are
-// sorted newest-first when displayed.
+// Notes are written as the work lands rather than gathered at release time, so
+// they accumulate under the `next` entry: one line per pull request, short and
+// user-facing -- what students read, not a changelog. Nothing here has to guess
+// which release it belongs to. The release pull request renames `next` to the
+// version it cuts and leaves a fresh empty one behind.
 //
-// Write the entry as the work lands, not at release time: the version here may
-// name a release that has not happened yet, which is how notes accumulate for
-// the next one. CI requires an entry for a minor or major release and lets a
-// patch release go without one, since a bug fix does not deserve a modal in
-// front of every student. See RELEASING.md.
+// CI requires an entry for a minor or major release and lets a patch release go
+// without one, since a bug fix does not deserve a modal in front of every
+// student. Order does not matter: entries are sorted newest-first when
+// displayed, and the notes within one are independent sentences shown in array
+// order. See RELEASING.md.
 
 export interface PatchNote {
-  /** The release version these notes describe, e.g. '3.5.0'. */
+  /** The release these notes describe, e.g. '3.5.0', or `NEXT_RELEASE`. */
   version: string
   /** An optional one-line headline for the release. */
   title?: string
@@ -23,7 +24,23 @@ export interface PatchNote {
   notes: string[]
 }
 
+/**
+ * The version an entry carries before its release has been named. It is not a
+ * version, so `compareVersions` reads it as NaN and `patchNotesSince` never
+ * returns it -- an accumulating entry is invisible to students until the
+ * release pull request renames it.
+ */
+export const NEXT_RELEASE = 'next'
+
 export const patchNotes: PatchNote[] = [
+  {
+    version: NEXT_RELEASE,
+    notes: [
+      // One line per pull request that changes what a student sees. Keep the
+      // trailing comma on the last one: .gitattributes merges this file by
+      // union, and without it two appends collide into a syntax error.
+    ],
+  },
   {
     version: '4.2.0',
     notes: [
@@ -32,8 +49,8 @@ export const patchNotes: PatchNote[] = [
       'The second argument to substring is now optional, so (substring "alphabetical" 5) gives you "betical" instead of an error.',
       'circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.',
       'An outlined shape can now say how wide to draw its outline and is no longer cut off at its edges; outlined-circle now requires that width, as (outlined-circle 30 "red" 10), while every other shape takes it optionally.',
-      'The empty string now prints as "" rather than as #t, and the string "value" now prints as itself.'
-    ]
+      'The empty string now prints as "" rather than as #t, and the string "value" now prints as itself.',
+    ],
   },
   {
     version: '4.1.1',
@@ -45,8 +62,8 @@ export const patchNotes: PatchNote[] = [
       'Choosing a file in a reading page\'s example now runs the code that was waiting for it, instead of doing nothing.',
       'A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.',
       'When assoc-ref cannot find a key, it now shows you the key it looked for rather than a piece of jargon.',
-      'Saving a file in Safari now works instead of failing with a message about createWritable, so you can use Scamper there without signing in.'
-    ]
+      'Saving a file in Safari now works instead of failing with a message about createWritable, so you can use Scamper there without signing in.',
+    ],
   },
   {
     version: '4.1.0',
@@ -70,8 +87,8 @@ export const patchNotes: PatchNote[] = [
       'A comment block at the top of your file no longer runs into the documentation on the first function below it, so that function keeps its checked examples and argument checks.',
       'A reactive canvas or container can subscribe to more than one event again, so a program can react to a timer, the mouse, and the keyboard at the same time.',
       'Pictures, charts, and compositions in an embedded reading now appear as themselves rather than as the text of the expression that made them.',
-      'A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.'
-    ]
+      'A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.',
+    ],
   },
   {
     title: 'AY 2026–2027 release',
@@ -80,9 +97,9 @@ export const patchNotes: PatchNote[] = [
       'Major updates to Scamper for the 26–27 academic year!',
       'Scamper is now backed by a server for cloud-based file sharing. See the current CSC 151 instructor for an account.',
       'The UI has been overhauled to better reflect the feature set of a modern IDE.',
-      'Both the language and libraries have been revised heavily. See the documentation for relevant updates.'
-    ]
-  }
+      'Both the language and libraries have been revised heavily. See the documentation for relevant updates.',
+    ],
+  },
 ]
 
 /**
@@ -106,7 +123,8 @@ export function compareVersions(a: string, b: string): number {
 /**
  * The patch notes a user should see, given the last version they saw and the
  * current app version: every release newer than `lastSeen` and no newer than
- * `current`, sorted newest-first.
+ * `current`, sorted newest-first. The `next` entry is never among them, since
+ * it compares as NaN against both bounds.
  */
 export function patchNotesSince(
   lastSeen: string,
