@@ -1,6 +1,10 @@
-# Scamper Language Reference
+# Scamper language reference
 
-## Core Surface Syntax
+The grammar below is implemented by `src/scheme/syntax.grammar` (the Lezer
+grammar) and `src/scheme/ast.ts` (the AST it parses into). The runtime language
+is defined in `src/lpm/lang.ts`.
+
+## Core surface syntax
 
 ~~~
 lit ::= <number> | <boolean> | <char> | <string>
@@ -40,9 +44,10 @@ scope. A two-argument `import` instead binds the module under a qualified name
 into scope. A module exports only the names its `export` statements list (the
 union of them); a module with no `export` statement exports nothing.
 
-## Derived Forms
+## Derived forms
 
-Derived forms are surface syntax that are desugared into the core surface language.
+Derived forms are surface syntax desugared into the core language by
+`src/scheme/expansion.ts`.
 
 ~~~
 (and expr1 ... exprk)
@@ -70,11 +75,13 @@ Derived forms are surface syntax that are desugared into the core surface langua
     (export x)
 ~~~
 
-## The Runtime
+## The runtime
 
-### Value Language
+### Value language
 
-Values in Scamper are Javascript values.
+Scamper values are Javascript values. `scamperTag` and `structKind` are the two
+symbols exported by `src/lpm/lang.ts`; see `docs/library-development.md` for
+using them from a library.
 
 ~~~typescript
 type Id = string
@@ -84,26 +91,25 @@ type Value = number | boolean | string
            | undefined  // void
            | Value[]   // vectors
            | Function  // raw Javascript functions
-           | { [scamperTag]: 'char', value: string }  // char
-           | { [scamperTag]: 'sym', value: string }   // symbols
-           | { [scamperTag]: 'closure', params: Id[], restParam: Id?,
-               code: Expr, locals: Map<string, Value>, name?: Id } // closures
-           | { [scamperTag]: 'struct', [structKind]: 'string', [key: string]: Value }    // structs
-           | { [scampertag]: 'struct', [structkind]: 'pair', fst: value, snd: value }    // pairs
-           | { [scampertag]: 'struct', [structkind]: 'cons', head: value, tail: value }  // cons cells
+           | { [scamperTag]: 'char', value: string }  // chars
+           | { [scamperTag]: 'closure', params: Id[], restParam?: Id,
+               code: Blk, locals: Scope[], name?: Id }  // closures
+           | { [scamperTag]: 'struct', [structKind]: string, [key: string]: Value }      // structs
+           | { [scamperTag]: 'struct', [structKind]: 'pair', fst: Value, snd: Value }    // pairs
+           | { [scamperTag]: 'struct', [structKind]: 'cons', head: Value, tail: List }   // cons cells
 ~~~
 
-### Linear Representation
+### Linear representation
 
-The runtime language is similar to the core surface language except that we
-linearize the expression language and evaluate it against a stack-based
-abstract machine. An expression at runtime is a list of instructions, each of
-which specifies the number of values it pops and pushes onto the value stack.
+The runtime language mirrors the core surface language, with the expression
+language linearized and evaluated against a stack-based abstract machine. An
+expression at runtime is a list of instructions, each specifying how many values
+it pops from and pushes onto the value stack. The instruction set is the `Ops`
+union in `src/lpm/lang.ts`; the handler for each is in `src/lpm/handlers/`.
 
 ~~~
 instr ::= lit(value)                          [0/1]
         | var(name)                           [0/1]
-        | ctor(name, fields)                   [0/1]
         | cls(params, rest, body, name)       [0/1]
         | ap(k)                               [k+1/1]
         | ap-spread                           [2/1]
