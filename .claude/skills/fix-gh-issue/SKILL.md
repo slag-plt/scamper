@@ -6,7 +6,7 @@ description: Investigates a Github issue, constructs and validates a fix, and is
 Given a Github issue number:
 
 1. Check out main and from main, create a new feature branch for that bug, and spawn a worktree to do work in that branch. Make sure to clean (`npm run clean`) and reinstall dependencies (`npm run i`) to ensure that the build environment is operational.
-2. Verify that the Github issue is labeled "Bug." Only work on issues labled as "Bug" unless instructed to work on the issue specifically.
+2. Verify that the Github issue is marked with the "Bug" type. Only work on issues marked with the "Bug" type unless instructed to work on the issue specifically.
 3. Retrieve the Github issue description and formulate your own summary of the issue. Prompt the user if the problem is not clear.
 4. Attempt to reproduce the issue. If you cannot reproduce the issue, prompt the user for additional information or to verify that the issue is non-reproducible. If the issue is marked non-reproducible, close the issue on Github accordingly.
 5. Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in this branch.
