@@ -1,24 +1,20 @@
 # Scamper server
 
-The back end that stores a user's files, so they survive browser-storage loss and follow the user between machines (issue #357).
+The back end is a simple database that stores users' files.
 The code is in `server/`, an npm workspace of this repository; paths below are relative to the repository root.
 
-Three documents cover it:
+The server's documentation is spread out between three files:
 
-+ **This one** — configuration, running it, accounts, and the API.
-+ `docs/server-deployment.md` — putting it on a host and keeping it current.
-+ `docs/server-architecture.md` — why it is shaped this way, and the rules a change to it has to respect.
++ `docs/server.md` (this file): configuration, execution, accounts, and the API.
++ `docs/server-deployment.md`: hosting and updates.
++ `docs/server-architecture.md`: architectural dec.isions and rationale
 
-Run it with `npm run dev:server` from the repository root.
+You can run an in-memory version of the server with  `npm run dev:server` from the repository root.
 `PORT` overrides the default of 3000.
 
-Usually you want both halves at once:
-
-```console
-npm run dev:memory
-```
-
-That starts this server and a front end wired to it; the IDE then keeps files here instead of in the browser.
+Commonly, you want to run both the front-end and back-end.
+This is accomplished via `npm run dev:memory`.
+That command starts this server (with an in-memory database) and a front-end wired to it.
 See [Running the two halves together](#running-the-two-halves-together) for how the two are connected.
 
 ## Configuration
@@ -32,18 +28,18 @@ See [Running the two halves together](#running-the-two-halves-together) for how 
 | `PORT`                     | defaults to 3000                                                |
 | `SCAMPER_STUB`             | `1` to run in memory with no sign-in — development only         |
 
-`BETTER_AUTH_URL` is the common source of trouble.
-It is the list of origins a session may be created from, so if it does not match the browser's address bar exactly, port included, **sign-in alone** fails with `Invalid origin` while everything else works.
+
+`BETTER_AUTH_URL` is the list of origins a session may be created from, so if it does not match the browser's address bar exactly, port included, **sign-in alone** fails with `Invalid origin` while everything else works.
 `server-up` prints the current value for this reason.
 `SCAMPER_TRUSTED_ORIGINS` adds further origins, so one stack can serve both its own origin and Vite's dev origin without edits.
 
 Sign-in needs no configuration beyond the secret.
-Accounts are made by hand, and there is no identity provider or mail transport.
+Accounts are made by hand via scripts found in the `/scripts` directory, and there is no identity provider or mail transport.
 
 **A server with no `DATABASE_URL` refuses to start.**
 `SCAMPER_STUB=1` requests the in-memory store explicitly; `npm run dev:memory` sets it.
 
-## Running it, with its database
+## Running the server with a database
 
 `docker-compose.yml` in the repository root is how this server is meant to run, in development and in production alike:
 
@@ -52,8 +48,8 @@ cp .env.example .env         # fill in the passwords and the secret
 scripts/server/server-up
 ```
 
-That brings up MariaDB, waits for it to be genuinely ready, creates BetterAuth's tables, starts the server, starts Caddy in front of it, and waits until the whole chain answers.
-It is also the upgrade:
+This brings up MariaDB, waits for it to be genuinely ready, creates BetterAuth's tables, starts the server, starts Caddy in front of it, and waits until the whole chain answers.
+Upgrading is accomplished via `server-up`:
 
 ```console
 git pull && scripts/server/server-up --build
@@ -62,7 +58,7 @@ git pull && scripts/server/server-up --build
 `--build` is required after any change to `server/` *or* the front end: the images hold copies of both, so editing the source changes nothing until they are rebuilt.
 A deployment builds nothing and runs what CI published; see `docs/server-deployment.md`.
 
-### Four containers, one origin
+### Containers
 
 | Service   | What it is                                                     |
 | --------- | -------------------------------------------------------------- |
@@ -79,20 +75,20 @@ The front end is built into an image here (`Dockerfile.web`) rather than deploye
 That is how the IDE learns there is a server.
 A static deployment has no such file and stays on browser storage.
 
-### Migrations
+### Migrating data
 
-Two sets of tables, in this order:
+When migrating data, there are two sets of tables to consider, in this order:
 
 1. **BetterAuth's** (`user`, `session`, `account`, `verification`).
    It owns them and its CLI creates them.
    The `migrate` service runs that CLI to completion before the server starts, so `up` does it for you.
    It is additive and skips what exists, so it is a no-op on every start after the first.
-2. **Ours** (`files`, `histories`, `snapshots`, in `server/schema.sql`), which reference `user`.
+2. **Scamper's data** (`files`, `histories`, `snapshots`, in `server/schema.sql`), which reference `user`.
    `server/src/db.ts` applies them at every start; every statement is `IF NOT EXISTS`.
 
 The CLI is a separate build stage: it pulls in Prisma, Drizzle, and a native SQLite binding for databases this server does not use, and is kept out of the image that serves requests.
 
-### The `npm audit` alerts on that CLI
+### Implementation notes
 
 `npm audit` reports a **critical** advisory against `better-auth` and a **high** one against `drizzle-orm`, both reachable from `@better-auth/cli`.
 Both are known and neither is actionable.
@@ -114,22 +110,16 @@ There is no newer *stable* `@better-auth/cli`: 1.4.21 is latest, and the only th
 **Do not pin that beta to silence the alert.**
 Upgrade when a stable CLI past 1.4.21 ships, and re-check this if the server gains a social provider or one of the plugins named above.
 
-### Without Docker
+### Running without Docker
 
 The server is a plain Node process, so it runs directly too — set the variables above and `npm run start:server`, having run `npm run db:migrate --workspace @scamper/server` once against your database.
 
 ## Accounts
 
-Email and password, via BetterAuth mounted at `/api/auth/*`.
-Two constraints shape it:
+Accounts are simple email/password pairs, managed via BetterAuth mounted at `/api/auth/*`.
+Scamper does not have a mail server to reduce complexity, so the server administrator must add accounts manually.
+The administrator creates each account and passes the password to its owner directly.
 
-- **No identity provider.**
-  Institutional SSO is out on compliance grounds, so Scamper holds the credential itself.
-- **No mail server.**
-  Every flow that would normally send mail is therefore unavailable: no self-service sign-up, no address verification, no reset links.
-
-**Sign-up is off.**
-An administrator creates each account and passes the password to its owner directly.
 Against the compose stack, use the scripts in `scripts/server/`:
 
 ```console
@@ -141,7 +131,7 @@ scripts/server/user-chpwd ada@example.edu   # new password, ends all sessions
 scripts/server/user-delete ada@example.edu  # and their files, irreversibly
 ```
 
-Each runs `server/src/admin.ts` inside the container, because that is the only place the database is reachable from — compose does not publish its port.
+Each runs `server/src/admin.ts` inside the container, because that is the only place the database is reachable from—compose does not publish its port.
 Where the database *is* reachable (no Docker), the same commands are:
 
 ```console
@@ -243,7 +233,7 @@ Use `npm run dev` rather than `dev:memory` here: compose already runs the back e
 
 To run the server from a terminal instead, publish a database for it and set `DATABASE_URL` and the two `BETTER_AUTH_*` variables in the environment `dev:memory` runs in.
 
-### What decides the file system
+### Determining the file system
 
 `src/app/web/server-session.ts` picks it before the app mounts: no `/config.json` means local storage, a server the user is not signed in to means local storage plus an offer to sign in, and a signed-in user means their files on the server.
 A server reporting no sign-in methods is the stub above, which has no accounts, so it is used directly.

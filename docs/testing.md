@@ -1,4 +1,4 @@
-# Scamper test plan
+# Scamper Testing
 
 ## Structure
 
@@ -56,8 +56,8 @@ Paths in the tree below are relative to `test/`.
 
 ## Browser-mode tests
 
-A `*.browser.test.ts` file needs something jsdom does not provide, and runs under real headless Chromium via Vitest's browser mode and Playwright (`test/vitest.browser.config.ts`).
-Three things require one:
+A `*.browser.test.ts` file runs under real headless Chromium via Vitest's browser mode and Playwright (`test/vitest.browser.config.ts`).
+This is needed by three features utilized by Scamper:
 
 + A real Canvas2D and font-metrics implementation — `test/libs/canvas.browser.test.ts` and `test/libs/image.browser.test.ts`, for pixel rendering, `getImageData` round-trips, and `measureText`.
 + Real layout, for a component's geometry.

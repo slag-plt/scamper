@@ -1,15 +1,16 @@
-# Developing libraries in Scamper
+# Developing Scamper libraries
 
-Scamper divides into two parts:
+Scamper is divided into two parts:
 
 +   A core Scheme runtime, the Little Pattern Machine, in `src/lpm/`.
 +   A collection of libraries, most of them backed by Javascript, in `src/js/` and `src/lib/`.
 
-The runtime interoperates with Javascript directly, so a library is an ordinary Typescript module plus a Scheme module that binds its exports.
+The runtime interoperates with Javascript directly, so a library references an ordinary Typescript module directly via the `js-var` form.
 
-## The two halves of a library
+## Interop-based libraries
 
-A library named `foo` is two directories:
+In practice, most libraries interoperate with Javascript directly, so they are broken up into two parts.
+For example, a library named `foo` is divided into two directories:
 
 +   `src/js/foo/index.ts` exports plain Typescript functions and values.
 +   `src/lib/foo.scm` binds each of them to a Scamper name with `js-var`, and carries the docstring the documentation page and the contract checker read.
@@ -26,7 +27,7 @@ A library named `foo` is two directories:
 
 `js-var` looks a name up in a single map of every Javascript binding, built in `src/js/index.ts`.
 That map is flat, so **every Javascript export is prefixed with its library's name** — `test_testResultOk`, `canvas_makeCanvas`.
-`src/js/image/` is the exception: it backs four concepts and exports `drawing_*`, `color_*`, `font_*`, and `image_*` (#103).
+`src/js/image/` is the exception: it backs four concepts and exports `drawing_*`, `color_*`, `font_*`, and `image_*`.
 
 ## Scamper-to-Javascript mapping
 
@@ -66,8 +67,8 @@ Import these from `src/lpm/`:
 +   `lang.ts` defines `Value` and the tagged-object shapes, and provides the query and construction helpers (`isStructKind`, `mkPair`, `nameFn`).
 +   `error.ts` defines `ScamperError`, the exception library code should throw, and `ICE` for conditions that indicate a bug in Scamper itself.
 
-Javascript code cannot call back into Scamper: `callScamperFn` is disabled.
-A procedure that needs to apply a caller-supplied function belongs in the `.scm` half instead, written against `with-handler` and the other special forms — as `test-case` and `test-exn` are.
+Javascript code cannot call back into Scamper.
+A procedure that needs to apply a caller-supplied function belongs in the `.scm` half instead, written against `with-handler` and the other special forms, e.g., `test-case` and `test-exn`.
 
 ## Argument checking
 

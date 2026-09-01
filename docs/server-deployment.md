@@ -5,7 +5,7 @@ The reader here administers a machine and need not touch the code: everything be
 
 `docs/server.md` covers configuring and running the server itself, and is worth having open alongside this — in particular its Configuration table, since `.env` is where the two meet.
 
-## The first deployment
+## Initial deployment
 
 Everything runs on one host, from one command.
 The host needs Docker with Compose v2 and git, and nothing else: no Node, no build tooling, and not enough memory to build, since it runs the images CI published.
@@ -27,7 +27,7 @@ On a host that has never run a release, put `latest` in `SCAMPER_TAG` for the fi
 `--no-build` turns a missing image into an error instead of a build; Compose builds any service carrying a `build:` section whenever its tag is absent, and the front-end build is what a small host runs out of memory doing.
 A host with memory to spare can omit both and run `server-up --build` from the checkout.
 
-## Where the images come from
+## Image locations
 
 `.github/workflows/node.js.yml` builds three images and pushes them to ghcr.io on every push to main whose tests pass:
 
@@ -213,7 +213,7 @@ Four things to get right on the host:
 Nothing pushes from CI; the host polls, so nothing inbound is needed — no key, no open port, no webhook.
 Latency is up to five minutes.
 
-## If the host cannot build the images
+## Building images off-host
 
 It does not have to: the published images are what a host runs, and the front-end build (`npm ci` plus Vite) is the most memory-hungry step in this repository.
 This section covers running something CI has not published — an unmerged branch, or a change not going to main.

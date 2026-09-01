@@ -45,8 +45,8 @@ prog ::= stmt1 ... stmtk
 There is no `quote`, and no `'` shorthand.
 A list is built with `list`, and a vector with the `[...]` literal.
 
-Each bracket means exactly one thing (#334).
-`(...)` is an application or special form, `[...]` is a vector — or, in a pattern, a vector pattern — except in the fixed `[pattern expression]` positions of `let`, `match`, and `cond`.
+Like Clojure, brackets are not interchangable and each have their own meaning.
+`(...)` is an application or special form, `[...]` is a vector—or, in a pattern, a vector pattern—except in the fixed `[pattern expression]` positions of `let`, `match`, and `cond`.
 `{...}` is a map literal, whose elements read as alternating keys and values; an odd number of them is an error, checked in `src/scheme/lezer-bridge.ts` rather than by the grammar.
 
 An identifier may be a one-level *qualified* name: two names joined by a single `.`, such as `img.outlined-square`, referring to a binding through an imported module's alias.

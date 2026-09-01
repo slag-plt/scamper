@@ -11,7 +11,7 @@ An autograder is built from three files in `gradescope/`:
 | `gradescope/setup.sh` | installs Scamper when the autograder image is built |
 | `gradescope/run_autograder` | runs the harness against a submission |
 
-## Setting one up
+## Setup
 
 1. Write the harness.
    Start from `gradescope/autograder.scm`: import the file the assignment asks students to submit, and end with a call to `gradescope-test-suite`.
@@ -58,7 +58,7 @@ Two constraints:
   `test-case` catches the exception a student's code throws and reports it as a failed test.
   An error *outside* a test — in the harness, or at the top level of a student's file — stops the run, and the student receives a zero with the error message.
 
-## Which Scamper it grades with
+## Versioning
 
 `gradescope/setup.sh` clones this repository's `main` when the autograder image is built.
 To pin a semester to a release, so that later work on Scamper cannot change how already-submitted work is graded, set `SCAMPER_REF` at the top of `gradescope/setup.sh` to a tag:
