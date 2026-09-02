@@ -112,7 +112,7 @@ decide which release it belongs to.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
 + `gradescope/` — The Gradescope autograder harness (#404): `setup.sh`, `run_autograder`, and an example `autograder.scm` that an instructor zips and uploads. Not a build script; see `docs/gradescope.md`.
 + `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/src/`, and `server/` may import *types* from `src/` but *values* only from the two shared contracts, `src/fs/fs.ts` and `src/history/policy.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
-+ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale. See `docs/samples.md`.
++ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline
