@@ -3,10 +3,13 @@ import { flushPromises, mount } from '@vue/test-utils'
 import PatchNotesModal from '../../../src/app/web/components/PatchNotesModal.vue'
 import {
   compareVersions,
+  NEXT_RELEASE,
   patchNotes,
   patchNotesSince,
   type PatchNote,
 } from '../../../src/app/web/patch-notes'
+
+const released = () => patchNotes.filter((n) => n.version !== NEXT_RELEASE)
 
 describe('compareVersions', () => {
   test('orders dotted numeric versions', () => {
@@ -26,16 +29,30 @@ describe('compareVersions', () => {
 })
 
 describe('patchNotesSince', () => {
-  test('shipped patch notes are internally well-formed', () => {
-    for (const note of patchNotes) {
+  test('every entry is a released version or the accumulating `next`', () => {
+    for (const note of released()) {
       expect(note.version).toMatch(/^\d+(\.\d+)*$/)
+      // A released entry says something; only `next` may be empty, and only
+      // until the first note lands under it.
       expect(note.notes.length).toBeGreaterThan(0)
     }
   })
 
+  test('there is exactly one `next`, so notes have one place to go', () => {
+    // Zero means a release renamed it and left nothing behind; two means two
+    // pull requests each created one and the union merge kept both.
+    expect(patchNotes.filter((n) => n.version === NEXT_RELEASE)).toHaveLength(1)
+  })
+
+  test('never returns `next`, whose release has not been named', () => {
+    expect(patchNotesSince('0.0.0', '999.0.0').map((n) => n.version)).not.toContain(
+      NEXT_RELEASE,
+    )
+  })
+
   test('excludes versions at or below lastSeen and above current', () => {
     // Already caught up to the newest release: nothing to show.
-    const newest = patchNotes
+    const newest = released()
       .map((n) => n.version)
       .sort((a, b) => compareVersions(b, a))[0]
     expect(patchNotesSince(newest, newest)).toEqual([])
@@ -43,9 +60,9 @@ describe('patchNotesSince', () => {
     expect(patchNotesSince('0.0.0', '0.0.1')).toEqual([])
   })
 
-  test('returns everything after lastSeen up to current, newest-first', () => {
+  test('returns every released entry after lastSeen up to current, newest-first', () => {
     const all = patchNotesSince('0.0.0', '999.0.0')
-    expect(all.length).toBe(patchNotes.length)
+    expect(all.length).toBe(released().length)
     for (let i = 1; i < all.length; i++) {
       // strictly descending
       expect(compareVersions(all[i - 1].version, all[i].version)).toBeGreaterThan(0)

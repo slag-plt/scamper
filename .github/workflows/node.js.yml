@@ -234,9 +234,13 @@ jobs:
         # A patch release may pass without notes -- a bug fix does not deserve a
         # modal in front of every student. A minor or major one changes what
         # Scamper does, which is what patch notes are for.
+        #
+        # Notes accumulate under a `next` entry, so in practice this catches a
+        # release that bumped the version and forgot to rename it: the notes are
+        # written but still filed under a version no student will ever run.
         if [ "$(echo "${head}" | cut -d. -f3)" = "0" ] &&
            ! grep -q "version: '${head}'" src/app/web/patch-notes.ts; then
-          echo "::error file=src/app/web/patch-notes.ts::no patch notes for ${head}, so students would be given ${head} with nothing said about it"
+          echo "::error file=src/app/web/patch-notes.ts::no patch notes for ${head} -- rename the 'next' entry to ${head} (and leave a fresh empty one behind), or students get ${head} with nothing said about it"
           failed=1
         fi
 

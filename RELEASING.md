@@ -16,22 +16,47 @@ of the IDE, the notes it shows, and the code behind them all say the same thing.
 
 ## Cutting one
 
-The patch notes are usually written already. `patch-notes.ts` names the release
-an entry belongs to, so notes are added as the work lands rather than gathered
-at the end. What is left is the bump:
+The patch notes are usually written already. They accumulate under the `next`
+entry in `patch-notes.ts` as the work lands, rather than being gathered at the
+end, so nobody has had to name this release yet. That is the first of the two
+edits a release is.
+
+Read what has piled up under `next` and decide what kind of release it makes:
+`patch` for a fix, `minor` for behaviour that is new or changed, `major` for a
+break students cannot work around. Rename the entry to that version, and leave a
+fresh, empty `next` above it:
+
+```ts
+  {
+    version: NEXT_RELEASE,
+    notes: [
+      // (the comment stays; the notes move down)
+    ],
+  },
+  {
+    version: '4.3.0',
+    notes: [ ... ],
+  },
+```
+
+Leaving one behind is not tidiness. Without it, the next two pull requests to
+add a note each create a `next` entry of their own, and `merge=union` keeps both
+rather than conflicting — which is the one thing that shape of merge cannot
+tell you about.
+
+Then the bump, with the same word you just decided:
 
 ```console
 npm version minor --workspaces --include-workspace-root --no-git-tag-version
 ```
 
-`patch` for a fix, `minor` for behaviour that is new or changed, `major` for a
-break students cannot work around. It writes three files — `package.json`,
-`server/package.json`, and `package-lock.json` — and all three belong in the
-commit.
+It writes three files — `package.json`, `server/package.json`, and
+`package-lock.json` — and all three belong in the commit.
 
-Open a pull request with that as its only change. The `version` check reads it
-and confirms the files agree, that the version went up, and that a minor or
-major release has notes to show; a patch release may go without them, since a
+Open a pull request with those as its only changes. The `version` check reads
+them and confirms the files agree, that the version went up, and that a minor or
+major release has notes under its own number — so a forgotten rename fails here,
+which is what that check is for. A patch release may go without notes, since a
 bug fix does not deserve a modal in front of every student. Merge it, watch
 `publish` finish, and hosts on `release` pick it up on their next sync.
 

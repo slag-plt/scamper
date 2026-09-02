@@ -81,6 +81,7 @@ import { importLocalFiles, localFileNames } from '../local-import'
 import type { History, HistoryFile, SnapshotRef } from '../../../history'
 import {
   compareVersions,
+  NEXT_RELEASE,
   patchNotes,
   patchNotesSince,
   type PatchNote,
@@ -776,7 +777,10 @@ async function handleWhatsNew() {
   const notes =
     forThisVersion.length > 0
       ? forThisVersion
-      : [...patchNotes]
+      : patchNotes
+          // The accumulating entry describes a release nobody has cut, so it
+          // is not a fallback -- it is not news yet.
+          .filter((n) => n.version !== NEXT_RELEASE)
           .sort((a, b) => compareVersions(b.version, a.version))
           .slice(0, 1)
   if (notes.length === 0) {
