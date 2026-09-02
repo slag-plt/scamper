@@ -1,6 +1,6 @@
 // A separate, opt-in test config for the small slice of the standard library
 // that needs a real browser's Canvas2D/font-metrics implementation to test
-// meaningfully (see test/TESTING.md). Deliberately NOT part of `npm test`/
+// meaningfully (see docs/testing.md). Deliberately NOT part of `npm test`/
 // `npm run validate` -- a missing Playwright browser binary fails vitest's
 // browser-mode startup outright, so folding this into the default run would
 // break `npm test` for anyone who hasn't run `npm run playwright:install`.

@@ -60,7 +60,7 @@ export const editorFontSize = ref<number>(storedFontSize())
 export const editorWordWrap = ref<boolean>(read(WORD_WRAP_KEY) === 'true')
 
 /**
- * How closely formatting follows the rules in FORMATTING.md: `strict` lays
+ * How closely formatting follows the rules in docs/formatting.md: `strict` lays
  * every form out the way its rule draws it, `relaxed` keeps a `cond`/`match`
  * clause on one line while it fits. Read by the reformat command and, through
  * FormatModeKey, by the output and step panes, so a file and a trace agree.

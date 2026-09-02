@@ -3,7 +3,7 @@
  * single source of truth for formatting: the editor's indenter consumes it to
  * decide how far in a line starts, and the pretty-printer consumes it to decide
  * where line breaks go. Keeping one table is what keeps those two from drifting
- * (see FORMATTING.md).
+ * (see docs/formatting.md).
  */
 
 /** The column width of one indentation step. */

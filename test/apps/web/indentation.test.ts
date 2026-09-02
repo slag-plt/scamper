@@ -8,7 +8,7 @@ import {
 } from '@codemirror/language'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
 
-// The DrRacket-style indenter (see FORMATTING.md). These tests go through the
+// The DrRacket-style indenter (see docs/formatting.md). These tests go through the
 // same path the editor does: `indentRange` is what Ctrl-I dispatches, and
 // `getIndentation` with a simulated break is what Enter asks for -- so a rule
 // that passes here is the rule the user gets.

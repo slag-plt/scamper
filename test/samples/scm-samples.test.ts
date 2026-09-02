@@ -25,7 +25,7 @@ function sample(name: string): string {
 describe('the .scm samples', () => {
   // showcase.scm is pure and runs anywhere, including under `npm run cli`;
   // libs.scm reaches for `document` through the canvas, html and reactive
-  // libraries, so jsdom is the tier that can run it (see samples/README.md).
+  // libraries, so jsdom is the tier that can run it (see docs/samples.md).
   test.each(['showcase.scm', 'libs.scm'])(
     '%s runs without error',
     async (name) => {

@@ -24,7 +24,7 @@ source "$(dirname "$0")/lib.sh"
 
 if [ ! -f "${ROOT}/.env" ]; then
   echo "There is no .env beside docker-compose.yml." >&2
-  echo "This host has never been deployed to; see server/README.md." >&2
+  echo "This host has never been deployed to; see docs/server-deployment.md." >&2
   exit 1
 fi
 

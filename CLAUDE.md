@@ -23,30 +23,30 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 ## Development Commands
 
-### The three arrangements
+Scamper has three different entry points, differing only in where a user's files live.
+The IDE decides at startup by fetching `/config.json`—absent means browser storage, present means the server it names—so one build serves all three.
 
-Scamper runs three ways, differing only in where a user's files live. The IDE
-decides at startup by fetching `/config.json` — absent means browser storage,
-present means the server it names — so one build serves all three and nothing
-is compiled in.
-
-1. **Static** (`npm run dev`, `npm run build`): front end alone, files in OPFS. No server. Most work needs only this.
-2. **In-memory** (`npm run dev:memory`): both halves wired together, back end holding everything in memory with no accounts. For work on the API, `src/fs/`, or history without Docker.
-3. **Full stack** (`scripts/server/server-up`): MariaDB + the API + Caddy serving the built front end and proxying `/api` to it, all one origin. The real deployment; its interface is the bash scripts, which are the *administrator's* tools rather than build steps.
+1.  **Static** (`npm run dev`, `npm run build`): front end alone, files in OPFS.
+    No server.
+    Most work needs only this.
+2.  **In-memory** (`npm run dev:memory`): both halves wired together, back end holding everything in memory with no accounts.
+    For work on the API, `src/fs/`, or history without Docker.
+3.  **Full stack** (`scripts/server/server-up`): MariaDB + the API + Caddy serving the built front end and proxying `/api` to it, all one origin.
+    The real deployment; its interface is the bash scripts, which are the *administrator's* tools rather than build steps.
 
 ### Building
 
 + `npm install`: installs dependencies
-+ `npm run dev`: arrangement 1 — front end only, files in the browser
-+ `npm run dev:memory`: arrangement 2 — front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
++ `npm run dev`: arrangement 1—front end only, files in the browser
++ `npm run dev:memory`: arrangement 2—front end *and* the `server/` back end, wired together. The back end runs in memory with no sign-in unless `DATABASE_URL` is set (`SCAMPER_SERVER_PORT` moves it off 3000)
 + `npm run dev:server`: starts the `server/` back end alone, watching for changes (`PORT` overrides its port)
-+ `npm run build`: full production build (compilation + bundling) into `dist/`, via `scripts/build`. Two Vite builds: the site, and then `dist/scamper-embed.js` — the reading widget as a single self-contained file (`vite.config.embed.ts`), which is what a reading on another site includes. See `docs/embedding.md`
++ `npm run build`: full production build (compilation + bundling) into `dist/`, via `scripts/build`. Two Vite builds: the site, and then `dist/scamper-embed.js`—the reading widget as a single self-contained file (`vite.config.embed.ts`), which is what a reading on another site includes. See `docs/embedding.md`
 + `npm run preview`: serves the built `dist/` locally, i.e. arrangement 1 as deployed
 + `npm run clean`: cleans the build
 + `npm run deploy`: deploys the *front end* to the production server (requires Unix and `compsci` host)
 + `npm run deploy:server-url -- <url>`: points every deployed version at the given file server by writing the site-root `config.json` (no argument clears it, putting everyone back on local storage)
 
-**A server on a different origin from the front end is not supported**, deliberately: it would mean CORS, `SameSite=None` cookies, a CSRF check on the file routes to replace what `SameSite=Lax` gives for free, and exposure to browsers restricting third-party cookies. Arrangement 3 serves both from one origin instead.
+**A server on a different origin from the front end is not supported**, deliberately: it would mean CORS, `SameSite=None` cookies, a CSRF check on the file routes to replace what `SameSite=Lax` gives for free, and exposure to browsers restricting third-party cookies.
 
 ### The file server
 
@@ -73,7 +73,7 @@ is compiled in.
 
 ### Releases
 
-+ A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `RELEASING.md`
++ A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `docs/releasing.md`
 + Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `src/app/web/patch-notes.ts`
 
 ### Patch notes
@@ -88,7 +88,7 @@ decide which release it belongs to.
 + One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
 + Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
 + Keep the trailing comma on the last note. `.gitattributes` merges this file with `merge=union`, so concurrent pull requests add their lines side by side instead of conflicting; without the comma two appends merge into a syntax error. Nothing may depend on the order of notes within an entry, since the merge decides it
-+ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `RELEASING.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
++ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `docs/releasing.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
 
 ## Architecture Overview
 
@@ -110,9 +110,9 @@ decide which release it belongs to.
   - `src/lib/` — The Scamper-language standard library (`.scm` sources) plus the loader that compiles and registers them at startup.
   - `src/lpm/` — The Little Pattern Machine bytecode runtime: fibers, scheduler, stack frames, and the handlers that execute compiled programs.
   - `src/scheme/` — The Scheme language front end: reader, AST, macro expansion, scope checking, and codegen down to LPM bytecode.
-+ `gradescope/` — The Gradescope autograder harness (#404): `setup.sh`, `run_autograder`, and an example `autograder.scm` that an instructor zips and uploads. Not a build script; see its README.
++ `gradescope/` — The Gradescope autograder harness (#404): `setup.sh`, `run_autograder`, and an example `autograder.scm` that an instructor zips and uploads. Not a build script; see `docs/gradescope.md`.
 + `server/` — The Scamper file server: an npm workspace with its own `package.json` and `tsconfig.json`, holding the back end that serves a user's files (issue #357). Kept in this repo rather than a separate one so the `FS` contract in `src/fs/fs.ts` has a single definition and both sides of a change land in one PR. ESLint enforces the boundary: `src/` may not import `server/src/`, and `server/` may import *types* from `src/` but *values* only from the two shared contracts, `src/fs/fs.ts` and `src/history/policy.ts`. The server's DOM-free `tsconfig.json` backstops it, turning any stray browser import into a typecheck error.
-+ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale. See its README.
++ `samples/` — Scamper in action (#405): `showcase.scm` for the language, `libs.scm` for the libraries, and `reading.html` embedding two readings on one page. Development artifacts rather than build inputs — nothing here ships — and `test/samples/` runs all three so they cannot go stale. See `docs/samples.md`.
 + `test/` — Vitest test suites
 
 ## Compilation Pipeline
@@ -155,3 +155,10 @@ Scamper programs as a collection of fibers of execution.
     - The different parts of a docstring should be short and to the point, appropriate for viewing in a tooltip.
 + Text that lives in an artifact whether in code comments, docstrings, commit messages, etc., should be concise and to the point; a few sentences or bullets rather than paragraphs.
 + When leaving messages and comments in Git and Github (e.g., commits, issues, and pull requests), do not include a postamble marker that Claude created the message/comment or a link to the Claude code transcript. Instead. leave a message "_(Co-created with Claude Code)_" at the end of the message/comment.
+
+## Process Management
+
++ Scamper issues are filled in Github (https://github.com/slag-plt/scamper/issues)
+    - Bugs are marked with the "Bug" type.
+    - Features are marked with the "Feature" type.
+    - Issues that are blocked, awaiting user input, are marked with the "investigation" or "blocked" label.
