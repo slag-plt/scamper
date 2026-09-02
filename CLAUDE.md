@@ -159,6 +159,6 @@ Scamper programs as a collection of fibers of execution.
 ## Process Management
 
 + Scamper issues are filled in Github (https://github.com/slag-plt/scamper/issues)
-    + Bugs are marked with the "Bug" type.
-    + Features are marked with the "Feature" type.
-    + Issues that are blocked, awaiting user input, are marked with the "investigation" or "blocked" label.
+    - Bugs are marked with the "Bug" type.
+    - Features are marked with the "Feature" type.
+    - Issues that are blocked, awaiting user input, are marked with the "investigation" or "blocked" label.
