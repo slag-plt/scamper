@@ -4,6 +4,7 @@ import { Rgb, Hsv, color_isRgb, color_isHsv, color_rgbToString, color_hsvToRgb, 
 import { swatchFill, swatchInk } from './swatch.js'
 import { Drawing, drawing_drawingQ, drawing_renderer } from '../drawing.js'
 import { ReactiveImageFile, image_isReactiveImageFile } from '../image.js'
+import { imageToCanvas, loadImage } from '../decode.js'
 
 /***** Colors ******************************************************************/
 
@@ -50,34 +51,29 @@ function render (rif: ReactiveImageFile): HTMLElement {
   inp.type = 'file'
   inp.accept = 'image/*'
   inp.addEventListener('change', () => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e.target !== null) {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0)
+    if (inp.files === null || inp.files.length === 0) { return }
+    outp.innerText = 'Loading...'
+    // An object URL rather than FileReader's data URL: no base64 copy of the
+    // whole image, and the same route image-load takes. Revoked on both paths
+    // -- the image has finished decoding by the time its load resolves.
+    const url = URL.createObjectURL(inp.files[0])
+    loadImage(url, 'Could not read that file as an image')
+      .then((img) => {
+        // Run the callback as a fiber (JS can no longer call the closure) and
+        // render its result; a callback error surfaces in the output pane.
+        rif[L.runField].spawn(rif.callback, [imageToCanvas(img)], (r) => {
+          outp.innerHTML = ''
+          if (r !== null) {
+            outp.appendChild(HtmlRenderer.render(r))
           }
-          // Run the callback as a fiber (JS can no longer call the closure) and
-          // render its result; a callback error surfaces in the output pane.
-          rif[L.runField].spawn(rif.callback, [canvas], (r) => {
-            outp.innerHTML = ''
-            if (r !== null) {
-              outp.appendChild(HtmlRenderer.render(r))
-            }
-          })
-        }
-        img.src = e.target.result as string
-      }
-    }
-    if (inp.files !== null && inp.files.length > 0) {
-      outp.innerText = 'Loading...'
-      reader.readAsDataURL(inp.files[0])
-    }
+        })
+      })
+      // Said out loud rather than leaving "Loading..." on screen forever, which
+      // is what a file the browser cannot decode used to do.
+      .catch((e: unknown) => {
+        outp.innerText = e instanceof Error ? e.message : String(e)
+      })
+      .finally(() => { URL.revokeObjectURL(url) })
   }, false)
 
   ret.appendChild(inp)

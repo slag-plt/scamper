@@ -67,6 +67,14 @@ describe("#342: a blocking primitive's error points at its call", () => {
     ])
   })
 
+  test('image-load, bound directly rather than wrapped (#452)', async () => {
+    // On the good side of the split below: `image` binds it to the primitive
+    // itself, so the range applyFn recovers is the student's own call.
+    expect(
+      await runProgram('(import image)\n(image-load "missing.png")'),
+    ).toEqual(['Runtime error [2:1-2:26]: File "missing.png" does not exist'])
+  })
+
   test('with-file still reports unlocated (known gap)', async () => {
     // NOT fixed here, and pinned so the gap is visible rather than latent.
     //

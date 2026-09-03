@@ -2,6 +2,7 @@
 import { ref, shallowRef } from 'vue'
 import * as L from '../../../lpm'
 import { ReactiveImageFile } from '../image'
+import { imageToCanvas, loadImage } from '../decode'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 
 const props = defineProps<{ value: ReactiveImageFile }>()
@@ -11,38 +12,38 @@ const props = defineProps<{ value: ReactiveImageFile }>()
 // mutates the value in place, so shallow is also what is wanted.
 const result = shallowRef<L.Value>(null)
 const isLoading = ref(false)
+const error = ref<string | null>(null)
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  if (input.files !== null && input.files.length > 0) {
-    isLoading.value = true
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e.target !== null) {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0)
-          }
-          // As in ReactiveFileChooserRenderer: through the run the value
-          // carries, because this fires long after the step that made it
-          // (#397).
-          props.value[L.runField].spawn(props.value.callback, [canvas], (r) => {
-            result.value = r
-            isLoading.value = false
-          })
-        }
-        img.src = e.target.result as string
-      }
-    }
-    reader.readAsDataURL(input.files[0])
-  } else {
+  if (input.files === null || input.files.length === 0) {
     result.value = null
+    return
   }
+  isLoading.value = true
+  error.value = null
+  // An object URL rather than FileReader's data URL: no base64 copy of the
+  // whole image, and the same route image-load takes. Revoked on both paths --
+  // the image has finished decoding by the time its load resolves.
+  const url = URL.createObjectURL(input.files[0])
+  loadImage(url, 'Could not read that file as an image')
+    .then((img) => {
+      // As in ReactiveFileChooserRenderer: through the run the value carries,
+      // because this fires long after the step that made it (#397).
+      props.value[L.runField].spawn(
+        props.value.callback, [imageToCanvas(img)], (r) => {
+          result.value = r
+          isLoading.value = false
+        },
+      )
+    })
+    // Said out loud rather than leaving "Loading..." on screen forever, which
+    // is what a file the browser cannot decode used to do.
+    .catch((e: unknown) => {
+      error.value = e instanceof Error ? e.message : String(e)
+      isLoading.value = false
+    })
+    .finally(() => { URL.revokeObjectURL(url) })
 }
 </script>
 
@@ -51,6 +52,7 @@ function onFileChange(event: Event) {
     <input type="file" accept="image/*" @change="onFileChange" />
     <br />
     <div v-if="isLoading">Loading...</div>
+    <div v-else-if="error !== null">{{ error }}</div>
     <div v-else-if="result !== null">
       <ValueRenderer :value="result" />
     </div>

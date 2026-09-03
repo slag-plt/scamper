@@ -7,8 +7,16 @@
 // mid-range color channel can round off by one. So the known pixel arrays
 // below only use non-zero alpha, and only use mid-range color channels
 // alongside fully opaque (alpha 255) pixels, where premultiplication is exact.
-import { describe, expect, test } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import * as L from '../../src/lpm'
+import HtmlRenderer from '../../src/lpm/renderers/html.js'
+// Imported for its side effect: this is what registers the image library's
+// custom HTML renderers, the reactive-image-file one among them.
+import '../../src/js/image/renderers/html.js'
+import { initializeLibs } from '../../src/lib'
+import { localBackend, setBackend } from '../../src/fs'
+import { MockFileSystem } from '../stubs/mock-file-system'
+import { runProgram } from './harness.js'
 import {
   canvas_canvasGetPixel,
   canvas_canvasSetPixels,
@@ -423,5 +431,142 @@ describe('color_colorToRgb (colour normalization)', () => {
   })
   test('throws on a value that is not a colour', () => {
     expect(() => color_colorToRgb(42)).toThrow(/valid color/)
+  })
+})
+
+// image-load / image-save! (issue #452). The round trip needs a real image
+// codec: jsdom loads no resources, so an <img> pointed at a blob URL there
+// fires neither onload nor onerror. Only the paths that fail before any
+// decoding can be tested in the jsdom suite, and they live in image.test.ts.
+//
+// These run the Scheme program rather than calling the JS directly, since the
+// docstring-derived contracts are part of what is being added.
+describe('image-load, image-save!', () => {
+  // No setup file runs under the browser config, so the libraries the programs
+  // below import are registered here.
+  beforeAll(async () => {
+    await initializeLibs()
+  })
+
+  let fs: MockFileSystem
+
+  beforeEach(async () => {
+    // A fresh FS per test, so writes can't leak between them.
+    fs = await MockFileSystem.create()
+    setBackend(localBackend(fs))
+  })
+
+  test('saves a canvas and reads it back at the same size and colour', async () => {
+    expect(await runProgram(`
+(import image)
+(image-save! (drawing->canvas (solid-rectangle 4 3 "red")) "r.png")
+(canvas-width (image-load "r.png"))
+(canvas-height (image-load "r.png"))
+(rgb-red (vector-ref (canvas->pixels (image-load "r.png")) 0))
+(rgb-green (vector-ref (canvas->pixels (image-load "r.png")) 0))
+`)).toEqual(['void', '4', '3', '255', '0'])
+  })
+
+  test('writes the format the name asks for, and overwrites what was there', async () => {
+    // The point of savedImageMimeTypeOf: toBlob quietly hands back PNG bytes
+    // for a type it cannot encode, so a .jpg has to come back as a JPEG rather
+    // than as a PNG under a JPEG's name.
+    await runProgram(`
+(import image)
+(image-save! (drawing->canvas (solid-rectangle 8 8 "red")) "r.jpg")
+(image-save! (drawing->canvas (solid-rectangle 4 4 "red")) "r.jpg")
+`)
+    const bytes = await fs.loadBytes('r.jpg')
+    // The JPEG start-of-image marker, which PNG's own signature does not share.
+    expect([bytes[0], bytes[1]]).toEqual([0xff, 0xd8])
+    expect(await runProgram(`
+(import image)
+(canvas-width (image-load "r.jpg"))
+`)).toEqual(['4'])
+  })
+
+  test('reads an svg, which is what the typed blob buys over createImageBitmap', async () => {
+    await fs.saveBytes(
+      'dot.svg',
+      new TextEncoder().encode(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3">' +
+        '<rect width="4" height="3" fill="red"/></svg>',
+      ),
+    )
+    expect(await runProgram(`
+(import image)
+(canvas-width (image-load "dot.svg"))
+(canvas-height (image-load "dot.svg"))
+`)).toEqual(['4', '3'])
+  })
+
+  test('a file whose contents are not an image raises a runtime error', async () => {
+    await fs.saveBytes('broken.png', new TextEncoder().encode('not a png'))
+    expect(await runProgram('(import image)\n(image-load "broken.png")')).toEqual([
+      'Runtime error: Could not read "broken.png" as an image',
+    ])
+  })
+})
+
+// with-image-file's HTML renderer, which now decodes through the same helpers
+// image-load does (#452). Driven here rather than through a program because
+// what it does happens in a change handler on a file input, long after the
+// value was rendered: the run is stubbed, and a real File is fed to the input.
+//
+// Covers what was previously uncovered in both directions -- a chosen image
+// reaching the callback, and a file the browser cannot decode saying so instead
+// of leaving "Loading..." on screen forever.
+describe('with-image-file renders a chosen image', () => {
+  /** A reactive-image-file whose run records what the callback was handed. */
+  function imageFileValue(onSpawn: (args: L.Value[]) => void): L.Value {
+    return {
+      [L.scamperTag]: 'struct',
+      [L.structKind]: 'reactive-image-file',
+      // Never called: the stub run below records its arguments instead.
+      callback: null,
+      [L.runField]: {
+        spawn: (_fn: L.Value, args: L.Value[]) => { onSpawn(args) },
+        signal: undefined,
+      },
+    } as unknown as L.Value
+  }
+
+  /** Puts `file` in the rendered input and fires the change the renderer listens for. */
+  function choose(rendered: HTMLElement, file: File): void {
+    const input = rendered.querySelector('input')
+    if (input === null) { throw new Error('the renderer produced no file input') }
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    input.files = transfer.files
+    input.dispatchEvent(new Event('change'))
+  }
+
+  /** A real 4x3 PNG, encoded by the browser rather than kept as a fixture. */
+  async function pngFile(): Promise<File> {
+    const canvas = makeCanvas(4, 3)
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/png')
+    })
+    if (blob === null) { throw new Error('the browser encoded no PNG') }
+    return new File([blob], 'dot.png', { type: 'image/png' })
+  }
+
+  test('hands the callback a canvas the size of the chosen image', async () => {
+    const handed = new Promise<L.Value[]>((resolve) => {
+      const rendered = HtmlRenderer.render(imageFileValue(resolve))
+      void pngFile().then((file) => { choose(rendered, file) })
+    })
+    const canvas = (await handed)[0] as HTMLCanvasElement
+    expect([canvas.width, canvas.height]).toEqual([4, 3])
+  })
+
+  test('reports a file it cannot decode rather than loading forever', async () => {
+    const rendered = HtmlRenderer.render(
+      imageFileValue(() => { throw new Error('the callback should not run') }),
+    )
+    choose(rendered, new File(['not a png'], 'broken.png', { type: 'image/png' }))
+    await vi.waitFor(() => {
+      expect(rendered.textContent).toContain('Could not read that file as an image')
+    })
   })
 })

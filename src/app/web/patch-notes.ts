@@ -47,6 +47,7 @@ export const patchNotes: PatchNote[] = [
       'Color swatches now label themselves in plain black or white, chosen for readability, instead of a computed color that could be hard to read on transparent or vivid colors.',
       'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
       'all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.',
+      'An image you have uploaded can now be read straight into a program with (image-load "cat.png"), and a canvas written back out with (image-save! canvas "out.png").',
     ],
   },
   {

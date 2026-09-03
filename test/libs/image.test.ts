@@ -1,5 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
+import { localBackend, setBackend } from '../../src/fs'
+import { MockFileSystem } from '../stubs/mock-file-system'
 import { runProgram } from './harness.js'
 import { image_isReactiveImageFile, image_withImageFile } from '../../src/js/image/image.js'
 import { drawing_drawingWidth, drawing_drawingHeight } from '../../src/js/image/drawing.js'
@@ -1859,5 +1861,55 @@ describe('pixel-map', () => {
 (vector-length (canvas->pixels (pixel-map (lambda (p) p) c)))
 (rgb? (vector-ref (canvas->pixels (pixel-map (lambda (p) (rgb-greyscale p)) c)) 0))
 `)).toEqual(['2', '2', '#t', '4', '#t'])
+  })
+})
+
+// image-load / image-save! (issue #452) suspend the fiber on an async
+// filesystem action, the same shape as the `file` library's primitives, so they
+// are run through runProgram against an in-memory MockFileSystem exactly as
+// test/libs/file.test.ts does.
+//
+// Only the paths that fail *before* any decoding live here: jsdom loads no
+// resources, so an <img> given a blob URL fires neither onload nor onerror and
+// a test that reached one would simply hang. The round trip through a real
+// image codec is in image.browser.test.ts.
+describe('image-load, image-save!', () => {
+  beforeEach(async () => {
+    setBackend(localBackend(await MockFileSystem.create()))
+  })
+
+  test('a missing file raises a runtime error', async () => {
+    expect(await runProgram('(import image)\n(image-load "nope.png")')).toEqual([
+      'Runtime error: File "nope.png" does not exist',
+    ])
+  })
+
+  test('a name that is not an image says so rather than failing to decode', async () => {
+    expect(await runProgram('(import image)\n(image-load "notes.txt")')).toEqual([
+      'Runtime error: Cannot load "notes.txt" as an image: its name must end in one of .png, .jpg, .jpeg, .gif, .webp, .bmp, .ico, .avif, .svg',
+    ])
+  })
+
+  test('a failed load is catchable by with-handler', async () => {
+    expect(await runProgram(`
+(import image)
+(with-handler (lambda (e) "caught") (lambda () (image-load "nope.png")))
+`)).toEqual(['"caught"'])
+  })
+
+  test('image-save! refuses a format a canvas cannot be encoded into', async () => {
+    expect(await runProgram(`
+(import image)
+(image-save! (drawing->canvas (solid-square 2 "blue")) "out.gif")
+`)).toEqual([
+      'Runtime error: Cannot save "out.gif": an image can be saved as .png, .jpg, .jpeg, .webp',
+    ])
+  })
+
+  test('image-save! requires a canvas', async () => {
+    expect(await runProgram(`
+(import image)
+(image-save! "not-a-canvas" "out.png")
+`)).toEqual(['Runtime error: (error) expected a canvas, received string'])
   })
 })
