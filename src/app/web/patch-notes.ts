@@ -40,6 +40,8 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'Color swatches now label themselves in plain black or white, chosen for readability, instead of a computed color that could be hard to read on transparent or vivid colors.',
+      'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
+      'all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.',
     ],
   },
   {
