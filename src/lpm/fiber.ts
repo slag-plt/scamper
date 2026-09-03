@@ -1,4 +1,4 @@
-import { Blk, Env, Module, Prog, Stmt, Value } from './lang'
+import { Blk, CodeOrigin, Env, Module, Prog, Stmt, Value } from './lang'
 import {
   DefineHandler,
   DispHandler,
@@ -105,16 +105,20 @@ export class Fiber {
   // export statements). Consulted only when the fiber's top level is snapshotted
   // as a module (getModule); a program run for its own sake never exports.
   private _exportedNames = new Set<string>()
-  // When true, every closure created while this fiber runs is marked
-  // `stepOver` (see Closure.stepOver). Set for the fibers that load an
-  // imported module -- the builtin libraries and user file imports -- so a
-  // reduction trace steps over their functions but into the user's own.
-  readonly stepOverClosures: boolean
+  // The origin stamped on every closure created while this fiber runs (see
+  // CodeOrigin). 'builtin' for the fibers that load a builtin library
+  // (src/lib/index.ts), 'import' for one that loads a user's imported file
+  // (Scheduler), and 'user' -- the default -- for the program itself.
+  readonly closureOrigin: CodeOrigin
 
-  constructor(prog: Prog, topLevelEnv: Env = Env.empty, stepOverClosures = false) {
+  constructor(
+    prog: Prog,
+    topLevelEnv: Env = Env.empty,
+    closureOrigin: CodeOrigin = 'user',
+  ) {
     this.prog = prog
     this.topLevelEnv = topLevelEnv
-    this.stepOverClosures = stepOverClosures
+    this.closureOrigin = closureOrigin
   }
 
   /**

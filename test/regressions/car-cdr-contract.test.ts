@@ -10,8 +10,14 @@ import { runProgram } from '../harness.js'
 // contract and rebuilds the family as Scheme compositions over them, so every
 // bad argument now surfaces a clean, uniform contract error.
 //
-// Ranges are stripped from error messages here: they point at car/cdr's
-// definition in prelude.scm and would shift with any edit to that file.
+// Ranges are stripped from error messages here: they are the student's own
+// call, and spelling each one out would say nothing these tests are about.
+//
+// The family reports the *primitive that rejected* (`car`/`cdr`), attributed
+// to the composition the student called (`cadr`) -- see #476, which stopped
+// re-running a contract check on a call the library made to itself. `cadr`
+// documents `v : any`, so all of its checking was always the inner
+// `(car (cdr v))`; that check is now the primitive's own.
 
 const stripRange = (msgs: string[]): string[] =>
   msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
@@ -47,9 +53,9 @@ describe('c[ad]+r family reject bad arguments cleanly (#256)', () => {
     (caddr (list))
     (cddr (list))
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+      'Runtime error [..]: (cadr) cdr: expected a pair or a non-empty list',
+      'Runtime error [..]: (caddr) cdr: expected a pair or a non-empty list',
+      'Runtime error [..]: (cddr) cdr: expected a pair or a non-empty list',
     ])
   })
 
@@ -58,14 +64,14 @@ describe('c[ad]+r family reject bad arguments cleanly (#256)', () => {
     (cadr (list 1))
     (caddr (list 1 2))
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+      'Runtime error [..]: (cadr) car: expected a pair or a non-empty list',
+      'Runtime error [..]: (caddr) car: expected a pair or a non-empty list',
     ])
   })
 
   test('non-list value', async () => {
     expect(stripRange(await runProgram('(cadr 5)'))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received number',
+      'Runtime error [..]: (cadr) cdr: expected a pair or a non-empty list',
     ])
   })
 })

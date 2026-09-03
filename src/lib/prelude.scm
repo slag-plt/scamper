@@ -871,8 +871,8 @@
 ;;
 ;;   1. Define it at the top level, and never as a `let`-bound lambda inside
 ;;      the function it serves. A tail call *replaces* the caller's frame, and
-;;      only closures created while this library loads are marked `stepOver`
-;;      (Fiber.stepOverClosures). Tail-calling a closure built at call time
+;;      only closures created while this library loads carry the `builtin`
+;;      origin (Fiber.closureOrigin). Tail-calling a closure built at call time
 ;;      therefore pops the one frame that was hiding the library's insides,
 ;;      and map's `cond` spills into the student's reduction trace (see
 ;;      src/scheme/trace.ts and

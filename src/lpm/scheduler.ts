@@ -297,8 +297,10 @@ export class Scheduler {
               // library sits in the env's imports, not its top level, so it is
               // not re-exported by the module (see Env.getTopLevelAsModule).
               // Closures defined in an imported file are stepped over in
-              // traces, like the builtin libraries (see Closure.stepOver).
-              const moduleFiber = new Fiber(prog, S.mkInitialEnv(), true)
+              // traces, like the builtin libraries -- but the file is still
+              // the student's own code, so its calls keep their contract
+              // checks (see CodeOrigin).
+              const moduleFiber = new Fiber(prog, S.mkInitialEnv(), 'import')
               const id = crypto.randomUUID()
               // Binds the module's exports into the importer and resumes it.
               const finishImport = () => {

@@ -18,11 +18,12 @@ export class Frame {
   // synthetic per-statement frame beginProcessingBlk creates, which has no
   // caller of its own.
   callRange: Range
-  // True when this frame runs a closure a trace steps *over* (a library/import
-  // function -- see Closure.stepOver). Propagated from the applied closure so
-  // the tracer can keep the whole call atomic. False for the synthetic
-  // per-statement frame and for the user's own closures.
-  stepOver: boolean
+  // Where this frame's code came from (see L.CodeOrigin). Propagated from the
+  // applied closure, so the tracer can keep a library/import call atomic and
+  // library code can skip the contract checks of the functions it names.
+  // 'user' for the synthetic per-statement frame and the student's own
+  // closures.
+  origin: L.CodeOrigin
   // The applied closure's `home` env, if any (see Closure.home). Propagated so
   // that a lambda created while this frame runs inherits the same home -- a
   // closure returned by a qualified-module function must still resolve the
@@ -34,7 +35,7 @@ export class Frame {
     env: L.Env,
     blk: L.Blk,
     callRange: Range = Range.none,
-    stepOver = false,
+    origin: L.CodeOrigin = 'user',
     home?: L.Env,
   ) {
     this.name = name
@@ -42,7 +43,7 @@ export class Frame {
     this.values = []
     this.ops = blk.toReversed()
     this.callRange = callRange
-    this.stepOver = stepOver
+    this.origin = origin
     this.home = home
   }
 

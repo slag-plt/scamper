@@ -22,7 +22,23 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   if (!currFrame.env.has(op.name)) {
     throw new ScamperError('Runtime', `Variable not found: ${op.name}`)
   }
-  currFrame.values.push(currFrame.env.get(op.name))
+  const value = currFrame.env.get(op.name)
+  // Library code naming another library function by its top-level name gets
+  // the value *behind* its contract wrapper (#476). The check exists to
+  // describe a student's mistake at their own call site; re-running it on each
+  // of `map`'s own steps buys nothing and dominates the cost of every library
+  // call. A *local* name is left wrapped: it holds whatever the caller passed
+  // in, so `(map char-upcase ...)` still checks each character.
+  if (
+    currFrame.origin === 'builtin' &&
+    isClosure(value) &&
+    value.contractTarget !== undefined &&
+    !currFrame.env.isLocal(op.name)
+  ) {
+    currFrame.values.push(value.contractTarget)
+    return minorStep
+  }
+  currFrame.values.push(value)
   return minorStep
 }
 
@@ -40,9 +56,9 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame, fiber) => {
       },
       op.name,
       op.restParam,
-      // Closures born while a library/import fiber runs are stepped over in
-      // traces (see Fiber.stepOverClosures / Closure.stepOver).
-      fiber.stepOverClosures,
+      // A closure is stamped with the origin of the fiber that created it
+      // (see Fiber.closureOrigin / CodeOrigin).
+      fiber.closureOrigin,
       // Inherit the enclosing frame's home so a lambda returned by a
       // qualified-module function still resolves the module's siblings.
       currFrame.home,
@@ -93,13 +109,15 @@ export function applyFn(
         // Record the call site on the way out: the action's own error is raised
         // later, in the scheduler, with no other route back here (#342).
         //
-        // N.B., only when that site is in the user's own program. An unnamed
-        // *library* frame (stepOver) is a library-defined Scheme wrapper around
-        // the primitive -- `with-file`, `with-image-from-url` -- whose op ranges
-        // point into prelude.scm/image.scm. Underlining a line of the standard
-        // library in the student's editor is worse than no range at all, so
-        // those two keep reporting unlocated, as they always have.
-        if (useFrame || !currFrame.stepOver) {
+        // N.B., only when that site is worth showing. An *unnamed* library
+        // frame is a lambda inside library source, so its op ranges point into
+        // prelude.scm/image.scm, and underlining a line of the standard library
+        // in the student's editor is worse than no range at all -- those still
+        // report unlocated. A *named* one (`with-file`,
+        // `with-image-from-url`) reports its frame's callRange, which a call
+        // made from library code passes along from its own caller (see the
+        // Frame built below), so it is the student's call after all.
+        if (useFrame || currFrame.origin === 'user') {
           e.range ??= callRange
         }
         throw e
@@ -148,8 +166,15 @@ export function applyFn(
       fn.name ?? '##anonymous##',
       (fn.home ?? fiber.topLevelEnv).withLocalScopes([...fn.locals, paramScope]),
       fn.code,
-      range,
-      fn.stepOver ?? false,
+      // A call written in library source has no site in the student's program:
+      // `range` points into a .scm of the standard library, and underlining
+      // that in their editor is worse than no range at all. Such a call passes
+      // along the range *its* caller was called from instead, so an error
+      // raised deep in the library still points at the call the student wrote
+      // -- which matters more now that a library-internal call runs without
+      // its contract check and can fail inside the wrapped function (#476).
+      currFrame.origin === 'builtin' ? currFrame.callRange : range,
+      fn.origin ?? 'user',
       fn.home,
     )
     if (currFrame.canTailCall()) {

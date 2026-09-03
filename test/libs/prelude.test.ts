@@ -2189,9 +2189,15 @@ test('=-eps', async () => {
 describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   // N.B., car/cdr now carry an `(or/p pair? nonempty-list?)` contract, and the
   // whole c[ad]+r family is defined as Scheme compositions over them, so every
-  // member rejects the empty list with the same clean contract error (#256)
-  // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
-  // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
+  // member rejects the empty list cleanly (#256) instead of leaking a raw JS
+  // TypeError. The innermost (rightmost) accessor letter decides which
+  // primitive first sees null: `a` -> car, `d` -> cdr.
+  //
+  // car and cdr report their own contract; a composition reports the
+  // primitive's own check, blamed on the name the student called. Since #476 a
+  // call the library makes to itself runs without its contract check, and
+  // `cadr` documents `v : any` -- so the inner `(car (cdr v))` is where all of
+  // its checking always was.
   const members = [
     'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
     'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',
@@ -2200,8 +2206,11 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   ]
 
   test.each(members)('%s rejects the empty list', async (name) => {
+    const primitive = name.at(-2) === 'a' ? 'car' : 'cdr'
     expect(await runProgram(`(${name} (list))`)).toEqual([
-      'Runtime error: (error) expected pair or nonempty-list, received null',
+      name === 'car' || name === 'cdr'
+        ? 'Runtime error: (error) expected pair or nonempty-list, received null'
+        : `Runtime error: (${name}) ${primitive}: expected a pair or a non-empty list`,
     ])
   })
 })
