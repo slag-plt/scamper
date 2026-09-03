@@ -1,6 +1,6 @@
 import * as L from '../../lpm'
 import { Rgb, color_rgb, color_colorToRgb, color_rgbAverage, color_rgbToString } from './color.js'
-import { Font, font_font, font_fontQ, font_fontToFontString } from './font.js'
+import { Font, font_font, font_fontToFontString } from './font.js'
 import { context2d } from './context.js'
 
 /***** Core Functions *********************************************************/
@@ -376,24 +376,14 @@ function textPrim (width: number, height: number, text: string,
   }
 }
 
-export function drawing_text(text: string, size: number, color: Rgb, ...rest: L.Value[]): DText {
-  let f: Font = font_font('Arial')
-  if (rest.length > 1) {
-    throw new L.ScamperError('Runtime', `wrong number of arguments to text provided. Expected 3 or 4, received ${3 + rest.length}.`)
-  } else if (rest.length == 1 && font_fontQ(rest[0])) {
-    if (font_fontQ(rest[0])) {
-      f = rest[0] as Font
-    } else {
-      throw new L.ScamperError('Runtime', `expected a font, received ${L.typeOf(rest[0])}`)
-    }
-  }
+export function drawing_text(text: string, size: number, color: Rgb, font?: Font): DText {
+  const f: Font = font ?? font_font('Arial')
 
   // N.B., to calculate the width and height of text, we need to make a
   // temporary canvas to measure the text's dimensions.
   const canvas = document.createElement('canvas')
   const ctx = context2d(canvas)
   ctx.font = font_fontToFontString(f, size)
-  console.log(font_fontToFontString(f, size))
   const met = ctx.measureText(text)
   const width = met.width
   const height = met.actualBoundingBoxAscent + met.actualBoundingBoxDescent + 1
