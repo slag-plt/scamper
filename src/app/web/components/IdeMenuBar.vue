@@ -23,10 +23,12 @@ import {
   DEFAULT_FONT_SIZE,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
+  autoSuggest,
   editorFontSize,
   editorWordWrap,
   isRelaxedFormatting,
   resetZoom,
+  toggleAutoSuggest,
   toggleEditorWordWrap,
   toggleRelaxedFormatting,
   zoomIn,
@@ -232,6 +234,14 @@ const editMenu = computed<MenuItem[]>(() => {
       label: 'Relaxed Formatting',
       checked: isRelaxedFormatting(),
       run: () => { toggleRelaxedFormatting() },
+    },
+    { separator: true },
+    // Completions and parameter help while typing (#449). Off by default;
+    // both are still on Ctrl+Space and Ctrl+Shift+Space either way.
+    {
+      label: 'Suggest as You Type',
+      checked: autoSuggest.value,
+      run: () => { toggleAutoSuggest() },
     },
   ]
 })

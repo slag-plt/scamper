@@ -257,9 +257,11 @@ function scopeCheckComplexPred(
 //   (lambda (lst val) ...))
 // TODO: test this
 /**
- * Scope-checks a definition's already-parsed docstring against the function it
+ * Scope-checks a definition's already-parsed docstring against the value it
  * documents, reporting mismatches (wrong parameter names, undefined predicates,
- * missing descriptions) as "Docstring" warnings.
+ * missing descriptions) as "Docstring" warnings. A docstring in the constant
+ * form -- `name: predicate` (#412) -- describes no parameters, so only its name
+ * and its predicate are checked.
  *
  * N.B., takes the already-parsed `doc` rather than reading it off the Define,
  * since docstring parsing can fail and that failure is handled by the caller;
@@ -273,17 +275,6 @@ function scopeCheckFunctionDoc(
   globals: string[],
 ): void {
   const name = nameId.name
-  if (!A.isLam(value)) {
-    // can't attach function docs onto non-function definitions
-    diagnostics.push(
-      mkDiagnostic('Docstring', 'warning', 'Function docstring attached to non-function definition',
-        doc.range,
-      ),
-    )
-    return
-  }
-
-  const paramNames = value.params.map((p) => p.name)
   const {
     signature: {
       function: {
@@ -292,23 +283,45 @@ function scopeCheckFunctionDoc(
       },
       predicate,
       range: sigRange,
+      isConstant,
     },
     params: docParamDescriptions,
     // TODO: we don't scope check tags for now
     // tags,
     range: docRange,
   } = doc
-  const docParams = [...args.map((v) => v.name)]
 
   // (append...
+  // N.B., the name is checked before anything else because both forms name one.
   if (name !== docName) {
     diagnostics.push(
-      mkDiagnostic('Docstring', 'warning', `Docstring function name "${docName}" does not match defined name "${name}"`,
+      mkDiagnostic('Docstring', 'warning', `Docstring name "${docName}" does not match defined name "${name}"`,
         sigRange,
       ),
     )
     // this is not a catastrophic error, continue parsing
   }
+
+  // #450: a constant is documented `name: predicate` (#412) and names no
+  // parameters, so its predicate is the whole of what is left to check. Its
+  // value is whatever the definition binds, lambda or not.
+  if (isConstant) {
+    scopeCheckPred(diagnostics, predicate, globals)
+    return
+  }
+
+  if (!A.isLam(value)) {
+    // can't attach function docs onto non-function definitions
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'warning', 'Function docstring attached to non-function definition. A constant is documented "name: predicate".',
+        doc.range,
+      ),
+    )
+    return
+  }
+
+  const paramNames = value.params.map((p) => p.name)
+  const docParams = [...args.map((v) => v.name)]
 
   // ... lst val)...
   for (const param of paramNames) {

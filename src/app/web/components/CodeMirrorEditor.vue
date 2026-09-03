@@ -2,6 +2,8 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
 import {
+  completionCompartment,
+  completionExtension,
   editorThemeCompartment,
   editorThemeExtension,
   fontSizeCompartment,
@@ -11,7 +13,7 @@ import {
   wordWrapExtension,
 } from '../codemirror/codemirror'
 import { currentTheme } from '../../../theme'
-import { editorFontSize, editorWordWrap } from '../editor-prefs'
+import { autoSuggest, editorFontSize, editorWordWrap } from '../editor-prefs'
 import {
   type CodeMirrorEditorAdapter,
   createCodeMirrorEditorAdapter,
@@ -126,6 +128,15 @@ watch(editorFontSize, (px) => {
 watch(editorWordWrap, (on) => {
   editorView?.dispatch({
     effects: wordWrapCompartment.reconfigure(wordWrapExtension(on)),
+  })
+})
+
+// A file that is not a Scamper program has no completion at all, and so no
+// compartment. Reconfiguring one the state does not hold leaves it unchanged,
+// so this needs no guard of its own.
+watch(autoSuggest, (on) => {
+  editorView?.dispatch({
+    effects: completionCompartment.reconfigure(completionExtension(on)),
   })
 })
 

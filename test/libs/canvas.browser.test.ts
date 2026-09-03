@@ -146,15 +146,9 @@ describe('canvas-text!', () => {
     expect(() => { canvas_canvasText(canvas, 10, 40, 'W', 30, 'bogus', 'red') }).toThrow(L.ScamperError)
   })
 
-  test('a non-font extra argument throws', () => {
-    const canvas = makeCanvas(100, 50)
-    expect(() => { canvas_canvasText(canvas, 10, 40, 'W', 30, 'solid', 'red', 'not-a-font') }).toThrow(L.ScamperError)
-  })
-
-  test('2 or more extra arguments throws', () => {
-    const canvas = makeCanvas(100, 50)
-    expect(() => { canvas_canvasText(canvas, 10, 40, 'W', 30, 'solid', 'red', font_font('Arial'), 'extra') }).toThrow(L.ScamperError)
-  })
+  // The font argument's type and the call's arity are the contract's job now
+  // (#446), so they are checked at the Scamper level in canvas.test.ts rather
+  // than by hand in canvas_canvasText.
 })
 
 describe('canvas-drawing!', () => {

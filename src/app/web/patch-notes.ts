@@ -40,6 +40,13 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'pixel-map, map, filter, fold-right, and reduce-right now work on large images and long lists instead of stopping with a max call stack depth error.',
+      'Suggestions no longer pop up on their own as you type — press Ctrl+Space for completions and Ctrl+Shift+Space for a function\'s parameters, or turn on Suggest as You Type in the Edit menu.',
+      'font now takes its family, bold, and italic arguments optionally, so (font "Arial") works, font and text now report a bad argument instead of quietly ignoring it, and canvas-text! now accepts a font at all.',
+      'The line width of outlined-circle is now optional and defaults to 1, as (outlined-circle 30 "red"), like every other outlined shape.',
+      'The documentation for rotate no longer warns that it is buggy — the off-centre turn it described was fixed some releases ago, so the note was simply out of date.',
+      'Color swatches now label themselves in plain black or white, chosen for readability, instead of a computed color that could be hard to read on transparent or vivid colors.',
+      'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
+      'all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.',
     ],
   },
   {
