@@ -5,7 +5,7 @@ description: Investigates a Github issue, constructs and validates a fix, and is
 
 Given a Github issue number:
 
-1. Create a  new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree with the same name as this branch.
+1. Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree with the same name as this branch.
 2. Clean (`npm run clean`) and reinstall dependencies (`npm run i`) to ensure that the build environment is operational.
 3. Verify that the Github issue is marked with the "Bug" type. Only work on issues marked with the "Bug" type unless instructed to work on the issue specifically.
 4. Retrieve the Github issue description and formulate your own summary of the issue. Prompt the user if the problem is not clear.
