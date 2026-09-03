@@ -1,6 +1,7 @@
 import * as L from '../../lpm'
 import { extensionOf } from '../../fs/fs.js'
 import { context2d } from './context.js'
+import { imageToCanvas, loadImage } from './decode.js'
 
 /***** Image loading **********************************************************/
 
@@ -91,30 +92,6 @@ function savedImageMimeTypeOf(filename: string): string {
     )
   }
   return type
-}
-
-/**
- * Loads `url` into an image element.
- *
- * @param failure what to say if the browser cannot load it, which depends on
- *        where the URL came from
- */
-function loadImage(url: string, failure: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => { resolve(img) }
-    img.onerror = () => { reject(new L.ScamperError('Runtime', failure)) }
-    img.src = url
-  })
-}
-
-/** Draws `img` onto a new canvas of its own size, the value Scamper hands back. */
-function imageToCanvas(img: HTMLImageElement): HTMLCanvasElement {
-  const canvas = document.createElement('canvas')
-  canvas.width = img.width
-  canvas.height = img.height
-  context2d(canvas).drawImage(img, 0, 0)
-  return canvas
 }
 
 // N.B., suspends the current fiber to load `url` into a canvas asynchronously

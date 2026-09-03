@@ -7,8 +7,12 @@
 // mid-range color channel can round off by one. So the known pixel arrays
 // below only use non-zero alpha, and only use mid-range color channels
 // alongside fully opaque (alpha 255) pixels, where premultiplication is exact.
-import { beforeAll, beforeEach, describe, expect, test } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import * as L from '../../src/lpm'
+import HtmlRenderer from '../../src/lpm/renderers/html.js'
+// Imported for its side effect: this is what registers the image library's
+// custom HTML renderers, the reactive-image-file one among them.
+import '../../src/js/image/renderers/html.js'
 import { initializeLibs } from '../../src/lib'
 import { localBackend, setBackend } from '../../src/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
@@ -501,5 +505,68 @@ describe('image-load, image-save!', () => {
     expect(await runProgram('(import image)\n(image-load "broken.png")')).toEqual([
       'Runtime error: Could not read "broken.png" as an image',
     ])
+  })
+})
+
+// with-image-file's HTML renderer, which now decodes through the same helpers
+// image-load does (#452). Driven here rather than through a program because
+// what it does happens in a change handler on a file input, long after the
+// value was rendered: the run is stubbed, and a real File is fed to the input.
+//
+// Covers what was previously uncovered in both directions -- a chosen image
+// reaching the callback, and a file the browser cannot decode saying so instead
+// of leaving "Loading..." on screen forever.
+describe('with-image-file renders a chosen image', () => {
+  /** A reactive-image-file whose run records what the callback was handed. */
+  function imageFileValue(onSpawn: (args: L.Value[]) => void): L.Value {
+    return {
+      [L.scamperTag]: 'struct',
+      [L.structKind]: 'reactive-image-file',
+      // Never called: the stub run below records its arguments instead.
+      callback: null,
+      [L.runField]: {
+        spawn: (_fn: L.Value, args: L.Value[]) => { onSpawn(args) },
+        signal: undefined,
+      },
+    } as unknown as L.Value
+  }
+
+  /** Puts `file` in the rendered input and fires the change the renderer listens for. */
+  function choose(rendered: HTMLElement, file: File): void {
+    const input = rendered.querySelector('input')
+    if (input === null) { throw new Error('the renderer produced no file input') }
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    input.files = transfer.files
+    input.dispatchEvent(new Event('change'))
+  }
+
+  /** A real 4x3 PNG, encoded by the browser rather than kept as a fixture. */
+  async function pngFile(): Promise<File> {
+    const canvas = makeCanvas(4, 3)
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/png')
+    })
+    if (blob === null) { throw new Error('the browser encoded no PNG') }
+    return new File([blob], 'dot.png', { type: 'image/png' })
+  }
+
+  test('hands the callback a canvas the size of the chosen image', async () => {
+    const handed = new Promise<L.Value[]>((resolve) => {
+      const rendered = HtmlRenderer.render(imageFileValue(resolve))
+      void pngFile().then((file) => { choose(rendered, file) })
+    })
+    const canvas = (await handed)[0] as HTMLCanvasElement
+    expect([canvas.width, canvas.height]).toEqual([4, 3])
+  })
+
+  test('reports a file it cannot decode rather than loading forever', async () => {
+    const rendered = HtmlRenderer.render(
+      imageFileValue(() => { throw new Error('the callback should not run') }),
+    )
+    choose(rendered, new File(['not a png'], 'broken.png', { type: 'image/png' }))
+    await vi.waitFor(() => {
+      expect(rendered.textContent).toContain('Could not read that file as an image')
+    })
   })
 })
