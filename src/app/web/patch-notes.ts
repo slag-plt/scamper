@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'The line width of outlined-circle is now optional and defaults to 1, as (outlined-circle 30 "red"), like every other outlined shape.',
       'The documentation for rotate no longer warns that it is buggy — the off-centre turn it described was fixed some releases ago, so the note was simply out of date.',
       'Color swatches now label themselves in plain black or white, chosen for readability, instead of a computed color that could be hard to read on transparent or vivid colors.',
       'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
