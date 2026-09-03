@@ -428,7 +428,7 @@ describe('scope checking', () => {
           ),
         ),
       ).toContain(
-        'Docstring function name "wrong" does not match defined name "add1"',
+        'Docstring name "wrong" does not match defined name "add1"',
       )
     })
     test('an undefined predicate in a docstring', async () => {
