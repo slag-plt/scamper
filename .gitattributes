@@ -13,4 +13,8 @@
 #
 # Union never reports a conflict, which for code would be dangerous. Hence one
 # path rather than a glob.
+#
+# This is a rule for your git, and GitHub's own merge does not read it. Landing
+# a batch of pull requests that each append a note therefore needs a local
+# `git merge origin/main` on every one after the first; see docs/releasing.md.
 src/app/web/patch-notes.ts merge=union

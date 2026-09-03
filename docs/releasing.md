@@ -7,7 +7,7 @@ Once this is done, the following actions occur:
 - Every host whose `.env` says `SCAMPER_TAG=release` deploys it via the `server-sync` cronjob (`scripts/server/server-sync`).
 - Every student whose last-seen version is older is shown the patch notes for it the next time they open the IDE (`src/app/web/patch-notes.ts`).
 
-Note that 
+Note that ordinary merges do none of this.
 They collect on main and reach nobody until someone cuts the next release.
 
 ## Process
@@ -39,6 +39,31 @@ Rename the entry to that version and leave a fresh, empty `next` above it:
 
 The empty entry is required.
 Without it, the next two pull requests to add a note each create a `next` entry of their own, and the `merge=union` rule in `.gitattributes` keeps both instead of reporting a conflict.
+
+## Landing several pull requests at once
+
+`merge=union` is a rule in `.gitattributes`, which means it is a rule for *your*
+git.
+GitHub's own merge does not read it.
+So a batch of pull requests that each append a note behaves differently than it
+does locally: the first merges cleanly, and the moment it lands, every other one
+reports a conflict on `src/app/web/patch-notes.ts`.
+
+They have not really conflicted, and the fix is to resolve them where the rule
+applies. For each one after the first:
+
+```console
+git -C <worktree> merge origin/main   # union settles patch-notes.ts here
+git -C <worktree> push
+gh pr merge <n> --squash
+```
+
+Then repeat for the next.
+Each push restarts CI, so a batch lands one at a time rather than all at once.
+
+None of this affects a single pull request, or concurrent work before it merges
+— which is what the union rule is for.
+It is only the second and later merges of a batch that need the step.
 
 Then the bump, using the same release version:
 
