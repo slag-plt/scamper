@@ -75,8 +75,7 @@
 ;;; @category color, image, predicates, typecheck, color-func, all-color-names, find-colors
 (define-export color-name? (js-var "color_isColorName"))
 
-;;; (all-color-names x1) -> list?
-;;;  x1 : any
+;;; (all-color-names) -> list?
 ;;; Returns a list of all valid color names.
 ;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define-export all-color-names (js-var "color_allColorNames"))
