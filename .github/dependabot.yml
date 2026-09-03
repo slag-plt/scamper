@@ -3,6 +3,17 @@
 # Please see the documentation for more information:
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 # https://containers.dev/guide/dependabot
+#
+# Only devcontainers are configured for version updates. The npm pull requests
+# that show up regardless are Dependabot *security* updates, which GitHub opens
+# from an alert whether or not an ecosystem is listed here.
+#
+# Before silencing one of those, read docs/dependencies.md. Most of them are
+# development-scope alerts against the `@better-auth/cli` subtree, which the
+# serving image does not contain -- but deliberately no `ignore:` entry is kept
+# here for them, because ignoring by package name would also hide a future,
+# genuine advisory against the `better-auth` the server actually runs. Dismiss
+# such an alert individually, with a reason, instead.
 
 version: 2
 updates:
