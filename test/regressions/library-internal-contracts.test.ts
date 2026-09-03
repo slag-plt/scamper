@@ -5,7 +5,7 @@ import * as Scheme from '../../src/scheme'
 import { LoggingChannel } from '../../src/lpm'
 import { Fiber } from '../../src/lpm/fiber'
 import { runFiberOnScheduler } from '../../src/lpm/run'
-import { runProgram } from '../harness.js'
+import { runProgram, runProgramTraced } from '../harness.js'
 
 // Regression test for #476: the contract wrappers the standard library is
 // loaded with dominated the cost of running anything -- about 240 opcodes per
@@ -45,17 +45,18 @@ describe('#476: library-internal calls skip their contract checks', () => {
   // without breaking on an unrelated few-opcode change to a library function.
   // Steps, rather than milliseconds, so a loaded machine cannot fail the run.
   test("a library's own loop does not re-check its own arguments", async () => {
-    // Was 443,027; the same loop with contracts off costs 19,037.
+    // 443,110 before the fix, 19,037 after -- the same as with contracts off
+    // entirely, since the whole loop is the library calling itself.
     expect(await countSteps('(for-range (lambda (i) i) 0 1000)')).toBeLessThan(
       50_000,
     )
   })
 
   test('map over 1,000 elements stays within a step budget', async () => {
-    // Was 587,173; with contracts off, 92,055.
+    // 587,673 before the fix, 89,136 after.
     expect(
       await countSteps('(length (map (lambda (x) x) (range 1000)))'),
-    ).toBeLessThan(150_000)
+    ).toBeLessThan(250_000)
   })
 })
 
@@ -76,12 +77,43 @@ describe('#476: contract checks a student can reach are kept', () => {
   })
 
   test('a failure inside a library function is blamed on the call the student wrote', async () => {
-    // `cadr` documents `v : any`, so its own contract passes and the failure
-    // happens in the `(car (cdr v))` it is defined as. That error used to
-    // underline a line of prelude.scm; it now points at the student's call.
-    expect(await runProgram('(cadr 5)')).toEqual([
-      'Runtime error [1:1-1:8]: (cadr) cdr: expected a pair or a non-empty list',
+    // A one-element list satisfies cadr's own contract, so the failure happens
+    // in the `(car (cdr v))` it is defined as -- where the call to `car` no
+    // longer carries a check of its own. That error used to underline a line
+    // of prelude.scm; it now points at the student's call.
+    expect(await runProgram('(cadr (list 1))')).toEqual([
+      'Runtime error [1:1-1:15]: (cadr) car: expected a pair or a non-empty list',
     ])
+  })
+})
+
+describe('#476: a lambda a library function builds is library code too', () => {
+  test("its internals stay out of the student's reduction trace", async () => {
+    // `(list-of number?)` returns a lambda built while prelude runs. It used
+    // to be marked as the student's own code -- it is not created at library
+    // *load* time -- so calling it spilled prelude's `and`/`all-satisfy?` into
+    // the trace. A closure now takes the origin of the frame that built it
+    // (see ClsHandler), which is the hazard prelude.scm's `-onto` note had to
+    // be remembered by hand.
+    expect(
+      await runProgramTraced('(define nums? (list-of number?))\n(nums? (list 1 2))'),
+    ).toEqual(['(list-of number?)', '--> (nums? (list 1 2))', '--> #t'])
+  })
+})
+
+describe('#476: a qualified import resolves against its own module', () => {
+  test('a builtin reached without its wrapper still resolves its siblings', async () => {
+    // A qualified import re-homes each export so the module's own calls
+    // resolve against the module, not against whatever the student happens to
+    // have defined (see Env.rehomeExports). The value behind a contract
+    // wrapper has to be re-homed too, now that a library-internal call reaches
+    // it directly -- `o` is defined in terms of `fold-right`, and this
+    // shadowing of that name must not change what it does.
+    expect(
+      await runProgram(
+        '(import prelude p)\n(define fold-right (lambda (f v l) "HIJACKED"))\n((p.o p.car) (list 1 2))',
+      ),
+    ).toEqual(['1'])
   })
 })
 

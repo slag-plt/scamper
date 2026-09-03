@@ -105,10 +105,11 @@ export class Fiber {
   // export statements). Consulted only when the fiber's top level is snapshotted
   // as a module (getModule); a program run for its own sake never exports.
   private _exportedNames = new Set<string>()
-  // The origin stamped on every closure created while this fiber runs (see
-  // CodeOrigin). 'builtin' for the fibers that load a builtin library
-  // (src/lib/index.ts), 'import' for one that loads a user's imported file
-  // (Scheduler), and 'user' -- the default -- for the program itself.
+  // The origin this fiber's code has (see CodeOrigin): 'builtin' for the
+  // fibers that load a builtin library (src/lib/index.ts), 'import' for one
+  // that loads a user's imported file (Scheduler), and 'user' -- the default
+  // -- for the program itself. Stamped on each statement frame, and from
+  // there onto every closure the statement builds (see ClsHandler).
   readonly closureOrigin: CodeOrigin
 
   constructor(
@@ -226,6 +227,11 @@ export class Fiber {
         `##stmt-${this.currStmtIdx.toString()}##`,
         this.topLevelEnv,
         expr,
+        // No caller, so no call range; the origin is this fiber's, so a
+        // closure a library's top-level statement builds is library code (see
+        // ClsHandler, which reads the frame's origin rather than the fiber's).
+        undefined,
+        this.closureOrigin,
       ),
     )
   }

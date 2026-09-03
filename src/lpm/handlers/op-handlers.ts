@@ -42,7 +42,7 @@ export const VarHandler: OpHandler<'var'> = (op, currFrame) => {
   return minorStep
 }
 
-export const ClsHandler: OpHandler<'cls'> = (op, currFrame, fiber) => {
+export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
   currFrame.values.push(
     mkClosure(
       op.params,
@@ -56,9 +56,14 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame, fiber) => {
       },
       op.name,
       op.restParam,
-      // A closure is stamped with the origin of the fiber that created it
-      // (see Fiber.closureOrigin / CodeOrigin).
-      fiber.closureOrigin,
+      // A closure is stamped with the origin of the code that created it (see
+      // CodeOrigin) -- the enclosing frame's, so that a lambda a library
+      // function builds at *call* time is library code too, exactly as one it
+      // defines at load time is. That is what keeps `(list-of number?)`'s
+      // result reducing atomically in a trace rather than spilling prelude's
+      // `and`/`all-satisfy?` into it, and what lets `vector-map`'s inner loop
+      // call `vector-ref` without its contract.
+      currFrame.origin,
       // Inherit the enclosing frame's home so a lambda returned by a
       // qualified-module function still resolves the module's siblings.
       currFrame.home,

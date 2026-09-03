@@ -151,9 +151,9 @@ export function runtime_typeOf (v: L.Value): string {
 
 /**
  * Tags `wrapper` -- the checking lambda a docstring's contract lowers to -- with
- * the value it wraps, so the machine can apply that value directly on a call
- * made from library code (see applyFn). Bound to the internal `##contracted##`
- * and injected by contract insertion; nothing else should call it.
+ * the value it wraps, so the machine can reach that value directly on a call
+ * made from library code (see VarHandler). Bound to the internal
+ * `##contracted##` and injected by contract insertion; nothing else calls it.
  *
  * @returns a copy of `wrapper` carrying `target`, or `wrapper` unchanged when
  *          it is not a closure (which contract insertion never produces).

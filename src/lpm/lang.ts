@@ -328,10 +328,10 @@ export class Env {
      * That reach is the point: a closure the module never bound by name can
      * still need the module's scope. A contract-wrapped export is a wrapper
      * closing over the original function (see scheme/contract.ts), and it is
-     * the original -- reachable only through the wrapper's locals -- whose body
-     * holds the module's calls to its siblings and to the standard library.
-     * Without this, every documented library function resolved those against
-     * whatever env happened to be running instead.
+     * the original -- reachable through the wrapper's locals and its
+     * contractTarget -- whose body holds the module's calls to its siblings and
+     * to the standard library. Without this, every documented library function
+     * resolved those against whatever env happened to be running instead.
      *
      * @returns `value` unchanged if it is not a closure, else a re-homed copy
      *   (or the copy already made for it).
@@ -353,6 +353,13 @@ export class Env {
       const copy: Closure = { ...value, home: value.home ?? home }
       rehomedClosures.set(value, copy)
       copy.locals = value.locals.map(rehomeScope)
+      // The wrapped original is reachable twice over: through the wrapper's
+      // locals (just re-homed) and, since #476, directly as contractTarget --
+      // which is the one a library-internal call applies. The memo above makes
+      // this the same copy rather than a second one.
+      if (copy.contractTarget !== undefined) {
+        copy.contractTarget = rehomeValue(copy.contractTarget)
+      }
       return copy
     }
 
@@ -491,12 +498,12 @@ export interface Closure extends TaggedObject {
   name?: Id
   // Where this closure's code came from; 'user' when omitted. See CodeOrigin.
   origin?: CodeOrigin
-  // The value this closure checks the contract of, when it is a
-  // contract wrapper generated from a docstring (see src/scheme/contract.ts).
-  // A call made from library code applies this directly, skipping the checks
-  // (see applyFn) -- the checks exist to describe a *student's* mistake at
-  // their own call site, and re-running them on every internal step of `map`
-  // buys nothing.
+  // The value this closure checks the contract of, when it is a contract
+  // wrapper generated from a docstring (see src/scheme/contract.ts). Library
+  // code naming the function gets this instead, skipping the checks (see
+  // VarHandler) -- they exist to describe a *student's* mistake at their own
+  // call site, and re-running them on every internal step of `map` buys
+  // nothing.
   contractTarget?: Value
   // The environment this closure resolves its free top-level names against,
   // instead of the running fiber's env (applyFn). Set only for closures of a

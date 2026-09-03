@@ -39,10 +39,10 @@
 
 (define-export ##voidQ## (js-var "runtime_voidQ"))
 
-; Internal: tags a contract wrapper with the value it wraps, so that a call
-; made from library code applies that value directly and skips the checks (see
-; applyFn). Contract insertion injects it; it is internal for the same reason
-; the rest of this file's bindings are.
+; Internal: tags a contract wrapper with the value it wraps, so that library
+; code naming this function reaches that value and skips the checks (see
+; VarHandler). Contract insertion injects it; it is internal for the same
+; reason the rest of this file's bindings are.
 (define-export ##contracted## (js-var "runtime_contracted"))
 
 (define-export any (js-var "runtime_any"))

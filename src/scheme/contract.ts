@@ -304,8 +304,9 @@ function mkOptBindings(
  *         (lambda (x1 ... xk [& rest])
  *           <cascading predicate checks, then (##contract-target## x1 ... xk)>))))
  *
- * ##contracted## tags the wrapper with the value it checks, so a call made
- * from library code can apply that value and skip the checks (see applyFn).
+ * ##contracted## tags the wrapper with the value it checks, so library code
+ * naming this definition reaches that value and skips the checks (see
+ * VarHandler).
  *
  * A signature with optional parameters -- `(substring s start [end])` -- has
  * no fixed arity, so the wrapper takes them through a rest parameter of its
@@ -365,7 +366,7 @@ export function contractStmt(s: A.Stmt): A.Stmt {
       : undefined
   // The wrapper is handed to ##contracted## along with the value it checks, so
   // the machine can reach that value directly and skip the checks on a call
-  // made from library code (see applyFn).
+  // made from library code (see VarHandler).
   const wrapped = A.mkLet(
     [{ pat: A.mkId(contractTargetName, s.range), value: s.value }],
     A.mkApp(
