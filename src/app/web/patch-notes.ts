@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'The documentation for rotate no longer warns that it is buggy — the off-centre turn it described was fixed some releases ago, so the note was simply out of date.',
     ],
   },
   {
