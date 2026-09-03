@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'pixel-map, map, filter, fold-right, and reduce-right now work on large images and long lists instead of stopping with a max call stack depth error.',
     ],
   },
   {

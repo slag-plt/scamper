@@ -862,6 +862,44 @@
         null
         (cons (cdr (car lsts)) (lists-cdrs (cdr lsts))))))
 
+;; N.B., the `-onto` helpers below (map-onto, filter-onto, fold-right-onto)
+;; exist so that map, filter, fold-right, and reduce-right recurse in *tail*
+;; position. Written naively they held one live frame per element and blew
+;; past Fiber.maxCallStackDepth at ~10,000 elements -- a 100x100 image (#453).
+;;
+;; Two rules govern where such a helper may go, both learned the hard way:
+;;
+;;   1. Define it at the top level, and never as a `let`-bound lambda inside
+;;      the function it serves. A tail call *replaces* the caller's frame, and
+;;      only closures created while this library loads are marked `stepOver`
+;;      (Fiber.stepOverClosures). Tail-calling a closure built at call time
+;;      therefore pops the one frame that was hiding the library's insides,
+;;      and map's `cond` spills into the student's reduction trace (see
+;;      src/scheme/trace.ts and
+;;      test/regressions/step-into-recursive-calls.test.ts,
+;;      and #478, which asks for this to be checked rather than remembered).
+;;   2. Put it *above* the neighbouring `;;;` docstring block, never between
+;;      that block and the function it documents. The contract codegen binds a
+;;      docstring to whatever define follows it, so a helper slipped in
+;;      underneath silently inherits the wrong signature -- and fails with an
+;;      arity mismatch naming a function nobody called (#479).
+;;
+;; They are undocumented (like lists-cars above) so the codegen leaves them
+;; alone, which also means map's own contract is checked once per call rather
+;; than once per element.
+(define-export map-onto
+  (lambda (f lsts acc)
+    (cond
+      ;; N.B., the `(null? lsts)` disjunct is what makes this total: with no
+      ;; lists at all there is nothing to take a cdr of, and all-satisfy? is
+      ;; vacuously true, so `(map f)` lands here and yields null.
+      [(or (null? lsts) (some-satisfy? null? lsts))
+       (if (all-satisfy? null? lsts)
+           (reverse acc)
+           (error "map: all lists must have the same length"))]
+      [else (map-onto f (lists-cdrs lsts)
+                      (cons (apply f (lists-cars lsts)) acc))])))
+
 ;;; (map f & l) -> list?
 ;;;  f : procedure?
 ;;;  l : list?
@@ -869,14 +907,15 @@
 ;;; @category list, list manipulation, association list, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
 (define-export map
   (lambda (f & lsts)
+    (map-onto f lsts null)))
+
+; N.B., filter's tail-recursive worker; see the note above map-onto.
+(define-export filter-onto
+  (lambda (f l acc)
     (cond
-      [(null? lsts) null]
-      [(some-satisfy? null? lsts)
-       (if (all-satisfy? null? lsts)
-           null
-           (error "map: all lists must have the same length"))]
-      [else (cons (apply f (lists-cars lsts))
-                  (apply map (cons f (lists-cdrs lsts))))])))
+      [(null? l) (reverse acc)]
+      [(f (car l)) (filter-onto f (cdr l) (cons (car l) acc))]
+      [else (filter-onto f (cdr l) acc)])))
 
 ;;; (filter f l) -> list?
 ;;;  f : procedure?
@@ -885,10 +924,7 @@
 ;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right
 (define-export filter
   (lambda (f l)
-    (cond
-      [(null? l) null]
-      [(f (car l)) (cons (car l) (filter f (cdr l)))]
-      [else (filter f (cdr l))])))
+    (filter-onto f l null)))
 
 ;;; (fold f v l) -> any
 ;;;  f : procedure?
@@ -921,6 +957,16 @@
   (lambda (f v l)
     (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
 
+; N.B., fold-right's and reduce-right's tail-recursive worker: `rev` is the
+; list reversed, so walking it forwards combines from the right end inwards --
+; and so `f` is applied to the rightmost element first, exactly as the naive
+; nesting did. See the note above map-onto.
+(define-export fold-right-onto
+  (lambda (f acc rev)
+    (if (null? rev)
+        acc
+        (fold-right-onto f (f (car rev) acc) (cdr rev)))))
+
 ;;; (fold-right f v l) -> any
 ;;;  f : procedure?
 ;;;  v : any
@@ -929,9 +975,7 @@
 ;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-right, apply, filter
 (define-export fold-right
   (lambda (f v l)
-    (if (null? l)
-        v
-        (f (car l) (fold-right f v (cdr l))))))
+    (fold-right-onto f v (reverse l))))
 
 ;;; (reduce-right f l) -> any
 ;;;  f : procedure?
@@ -940,9 +984,9 @@
 ;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce-right
   (lambda (f l)
-    (match l
+    (match (reverse l)
       [(cons x null) x]
-      [(cons x rest) (f x (reduce-right f rest))])))
+      [(cons x rest) (fold-right-onto f x rest)])))
 
 ;;; (vector-map f & v) -> vector?
 ;;;  f : procedure?
@@ -951,7 +995,19 @@
 ;;; @category vectors, map, string-map, vector-append, vector-fill!, vector-filter, vector-for-each, vector-map!, vector-set!
 (define-export vector-map
   (lambda (f & vs)
-    (list->vector (apply map (cons f (map vector->list vs))))))
+    (match vs
+      ;; The one-vector case -- overwhelmingly the common one, and the one
+      ;; `pixel-map` drives -- fills a result vector directly, rather than
+      ;; routing a whole image through a list and back (#453). The k-vector
+      ;; case still does, since `map` is what defines element-wise behavior
+      ;; across several vectors.
+      [(cons v null)
+       (let ([result (make-vector (vector-length v) void)])
+         (begin
+           (for-range (lambda (i) (vector-set! result i (f (vector-ref v i))))
+             0 (vector-length v))
+           result))]
+      [_ (list->vector (apply map (cons f (map vector->list vs))))])))
 
 ;;; (vector-map! f v) -> void?
 ;;;  f : procedure?
