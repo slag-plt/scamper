@@ -10,13 +10,15 @@ import {
 } from '../codemirror/cell-editor'
 import { setLspContext } from '../codemirror/lsp'
 import {
+  completionCompartment,
+  completionExtension,
   editorThemeCompartment,
   editorThemeExtension,
   fontSizeCompartment,
   fontSizeExtension,
 } from '../codemirror/codemirror'
 import { currentTheme } from '../../../theme'
-import { editorFontSize } from '../editor-prefs'
+import { autoSuggest, editorFontSize } from '../editor-prefs'
 
 /**
  * One cell of Scamper source: the box a REPL entry is typed into, and the
@@ -143,6 +145,15 @@ watch(currentTheme, (theme) => {
 watch(editorFontSize, (px) => {
   view?.dispatch({
     effects: fontSizeCompartment.reconfigure(fontSizeExtension(px)),
+  })
+})
+
+// A cell without the language server -- a prose cell, or one already run --
+// has no completion compartment. Reconfiguring one the state does not hold
+// leaves it unchanged, so this needs no guard of its own.
+watch(autoSuggest, (on) => {
+  view?.dispatch({
+    effects: completionCompartment.reconfigure(completionExtension(on)),
   })
 })
 

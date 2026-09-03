@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'Suggestions no longer pop up on their own as you type — press Ctrl+Space for completions and Ctrl+Shift+Space for a function\'s parameters, or turn on Suggest as You Type in the Edit menu.',
     ],
   },
   {

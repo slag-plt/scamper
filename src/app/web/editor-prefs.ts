@@ -22,6 +22,7 @@ import {
 const FONT_SIZE_KEY = 'scamper.editor.fontSize'
 const WORD_WRAP_KEY = 'scamper.editor.wordWrap'
 const FORMAT_MODE_KEY = 'scamper.editor.formatMode'
+const AUTO_SUGGEST_KEY = 'scamper.editor.autoSuggest'
 
 /** Below this the gutter crowds the text; above it, little fits on a line. */
 export const MIN_FONT_SIZE = 8
@@ -58,6 +59,14 @@ export const editorFontSize = ref<number>(storedFontSize())
 
 /** Whether long lines wrap rather than scrolling sideways. */
 export const editorWordWrap = ref<boolean>(read(WORD_WRAP_KEY) === 'true')
+
+/**
+ * Whether completions and parameter help appear on their own as you type
+ * (#449). Off by default: a popup a beginner did not ask for covers the code
+ * they are reading. Both are still on their keys -- Ctrl+Space and
+ * Ctrl+Shift+Space -- whichever way this is set.
+ */
+export const autoSuggest = ref<boolean>(read(AUTO_SUGGEST_KEY) === 'true')
 
 /**
  * How closely formatting follows the rules in docs/formatting.md: `strict` lays
@@ -108,4 +117,13 @@ export function setEditorWordWrap(on: boolean): void {
 
 export function toggleEditorWordWrap(): void {
   setEditorWordWrap(!editorWordWrap.value)
+}
+
+export function setAutoSuggest(on: boolean): void {
+  autoSuggest.value = on
+  write(AUTO_SUGGEST_KEY, String(on))
+}
+
+export function toggleAutoSuggest(): void {
+  setAutoSuggest(!autoSuggest.value)
 }
