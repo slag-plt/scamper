@@ -621,14 +621,27 @@
 ;;; (with-image-file callback) -> html?
 ;;;  callback : procedure?
 ;;; Returns a container with a file chooser that, when used, calls `callback` with the selected image and replaces the container's contentsr with the output produced by `callback`.
-;;; @category image, with-image-from-url
+;;; @category image, with-image-from-url, image-load
 (define-export with-image-file (js-var "image_withImageFile"))
+
+;;; (image-load fname) -> canvas?
+;;;  fname : string?
+;;; Reads the image stored in the file named `fname` and returns it as a canvas. Raises an error if the file does not exist, if its name does not end in an image extension such as `.png` or `.jpg`, or if its contents are not a readable image.
+;;; @category image, image-save!, with-image-file, with-image-from-url
+(define-export image-load (js-var "image_imageLoad"))
+
+;;; (image-save! canvas fname) -> void?
+;;;  canvas : canvas?
+;;;  fname : string?
+;;; Writes `canvas` to the file named `fname`, creating the file if it does not exist and replacing its contents if it does. The image is written in the format `fname` names, which must be one of `.png`, `.jpg`, `.jpeg`, or `.webp`.
+;;; @category image, image-load, canvas
+(define-export image-save! (js-var "image_imageSave"))
 
 ;;; (with-image-from-url url callback) -> any
 ;;;  url : string?
 ;;;  callback : procedure?
 ;;; Loads the image at `url` and passes it (as a canvas) to `callback`. The output of `callback` is returned (and rendered to the screen if this is a top-level expression).
-;;; @category image, with-image-file
+;;; @category image, with-image-file, image-load
 (define-export with-image-from-url
   (lambda (url callback)
     (callback ((js-var "image_blockOnFetchImage") url))))

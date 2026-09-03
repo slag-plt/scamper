@@ -7,8 +7,12 @@
 // mid-range color channel can round off by one. So the known pixel arrays
 // below only use non-zero alpha, and only use mid-range color channels
 // alongside fully opaque (alpha 255) pixels, where premultiplication is exact.
-import { describe, expect, test } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import * as L from '../../src/lpm'
+import { initializeLibs } from '../../src/lib'
+import { localBackend, setBackend } from '../../src/fs'
+import { MockFileSystem } from '../stubs/mock-file-system'
+import { runProgram } from './harness.js'
 import {
   canvas_canvasGetPixel,
   canvas_canvasSetPixels,
@@ -423,5 +427,79 @@ describe('color_colorToRgb (colour normalization)', () => {
   })
   test('throws on a value that is not a colour', () => {
     expect(() => color_colorToRgb(42)).toThrow(/valid color/)
+  })
+})
+
+// image-load / image-save! (issue #452). The round trip needs a real image
+// codec: jsdom loads no resources, so an <img> pointed at a blob URL there
+// fires neither onload nor onerror. Only the paths that fail before any
+// decoding can be tested in the jsdom suite, and they live in image.test.ts.
+//
+// These run the Scheme program rather than calling the JS directly, since the
+// docstring-derived contracts are part of what is being added.
+describe('image-load, image-save!', () => {
+  // No setup file runs under the browser config, so the libraries the programs
+  // below import are registered here.
+  beforeAll(async () => {
+    await initializeLibs()
+  })
+
+  let fs: MockFileSystem
+
+  beforeEach(async () => {
+    // A fresh FS per test, so writes can't leak between them.
+    fs = await MockFileSystem.create()
+    setBackend(localBackend(fs))
+  })
+
+  test('saves a canvas and reads it back at the same size and colour', async () => {
+    expect(await runProgram(`
+(import image)
+(image-save! (drawing->canvas (solid-rectangle 4 3 "red")) "r.png")
+(canvas-width (image-load "r.png"))
+(canvas-height (image-load "r.png"))
+(rgb-red (vector-ref (canvas->pixels (image-load "r.png")) 0))
+(rgb-green (vector-ref (canvas->pixels (image-load "r.png")) 0))
+`)).toEqual(['void', '4', '3', '255', '0'])
+  })
+
+  test('writes the format the name asks for, and overwrites what was there', async () => {
+    // The point of savedImageMimeTypeOf: toBlob quietly hands back PNG bytes
+    // for a type it cannot encode, so a .jpg has to come back as a JPEG rather
+    // than as a PNG under a JPEG's name.
+    await runProgram(`
+(import image)
+(image-save! (drawing->canvas (solid-rectangle 8 8 "red")) "r.jpg")
+(image-save! (drawing->canvas (solid-rectangle 4 4 "red")) "r.jpg")
+`)
+    const bytes = await fs.loadBytes('r.jpg')
+    // The JPEG start-of-image marker, which PNG's own signature does not share.
+    expect([bytes[0], bytes[1]]).toEqual([0xff, 0xd8])
+    expect(await runProgram(`
+(import image)
+(canvas-width (image-load "r.jpg"))
+`)).toEqual(['4'])
+  })
+
+  test('reads an svg, which is what the typed blob buys over createImageBitmap', async () => {
+    await fs.saveBytes(
+      'dot.svg',
+      new TextEncoder().encode(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3">' +
+        '<rect width="4" height="3" fill="red"/></svg>',
+      ),
+    )
+    expect(await runProgram(`
+(import image)
+(canvas-width (image-load "dot.svg"))
+(canvas-height (image-load "dot.svg"))
+`)).toEqual(['4', '3'])
+  })
+
+  test('a file whose contents are not an image raises a runtime error', async () => {
+    await fs.saveBytes('broken.png', new TextEncoder().encode('not a png'))
+    expect(await runProgram('(import image)\n(image-load "broken.png")')).toEqual([
+      'Runtime error: Could not read "broken.png" as an image',
+    ])
   })
 })

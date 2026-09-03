@@ -81,7 +81,7 @@ const IMAGE_EXTENSIONS = new Set([
  *          extension, so `.gitignore` has none while `.hello.scm.history` has
  *          `history`.
  */
-function extensionOf(name: string): string {
+export function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.')
   return dot <= 0 ? '' : name.slice(dot + 1).toLowerCase()
 }
