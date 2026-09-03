@@ -7,7 +7,7 @@ Given a Github issue number:
 
 1. Go to the issue tracker on Github and verify that the issue number is marked as a feature. Features are marked with the "Feature" type. If the issue is not a feature, STOP and ask the user whether they want to proceed by addressing the issue as if it was a feature.
 2. Clean (`npm run clean`) and reinstall dependencies (`npm install`) to ensure that the build environment is operational.
-3. Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree with the same name as this branch.
+3. Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree in `.claude/` with the same name as this branch.
 4. Retrieve the Github issue description and comments for context. Formulate your own summary of the feature. Prompt the user if the problem is not clear or requires clarification.
 5. Develop a plan for implementing the feature. Prompt the user to resolve any ambiguities in the feature's specification or non-trivial design decisions. Develop your plan with the following considerations:
     + Follow the existing structure and architecture of the existing codebase whenever possible.

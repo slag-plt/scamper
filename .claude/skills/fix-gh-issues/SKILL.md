@@ -1,12 +1,12 @@
 ---
-name: sweep-gh-issues
+name: fix-gh-issues
 description: Go through and fix current issues on Github.
 ---
 
-1. Go through the issue tracker on Github and identify all current bugs to be fixed. These are issues that marked with the "Bug" type. Any bugs that are marked with the labels "investigation" or "blocked" are bugs that are awaiting user input and should be removed from configuration.
+1. If the user specifies an issue number, perform these steps on that one issue. Otherwise, go through the issue tracker on Github and identify all current bugs to be fixed. These are issues that marked with the "Bug" type. Any bugs that are marked with the labels "investigation" or "blocked" are bugs that are awaiting user input and should be removed from configuration.
 2. Clean (`npm run clean`) and reinstall dependencies (`npm install`) to ensure that the build environment is operational.
 3. For each bug spawn a subagent to do the following:
-    + Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree with the same name as this branch.
+    + Create a new branch labeled with the issue number and a short description of the issue (the title of the issue is sufficient if short enough) and perform your subsequent work in a new worktree within `.claude/` with the same name as this branch.
     + Retrieve the Github issue description and comments for context. Formulate your own summary of the issue. Prompt the user if the problem is not clear or requires clarification.
     + Attempt to reproduce the issue. If you cannot reproduce the issue, prompt the user for additional information or to verify that the issue is non-reproducible. If the issue is marked non-reproducible, close the issue on Github accordingly.
     + Add a regression test to the regression suite (`test/regressions`) that captures the issue you observed. The regression test should fail initially, and your future implementation work should cause it to pass.
