@@ -70,6 +70,7 @@ The IDE decides at startup by fetching `/config.json`—absent means browser sto
 + `npm run typecheck:server`: runs the typechecker over the `server/` workspace
 + `npm run lint`: runs the linter. **It fails on a single warning** (`--max-warnings 0`): every rule here is a warning by design, since `eslint-plugin-only-warn` is what the config loads, so this is what makes any of them binding. A warning that is genuinely wanted -- a guard the types cannot see, a deliberate `any` at a boundary -- is disabled on the line with the reason beside it, never left to accumulate
 + `npm run lint:fix`: automatically fixes simple linter errors
++ Dependabot alerts: check `.dependency.scope` before anything else. Most are `development`-scope alerts against the `@better-auth/cli` subtree, which the serving image does not contain. See `docs/dependencies.md` before silencing one
 
 ### Releases
 
