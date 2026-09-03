@@ -589,7 +589,7 @@ describe('font', () => {
       ])
     })
 
-    test('requires exactly four arguments, despite the docstring calling the last three optional', async () => {
+    test('defaults the arguments it is not given', async () => {
       expect(
         await runProgram(`
 (import image)
@@ -598,9 +598,9 @@ describe('font', () => {
 (font "Arial" "serif" #t)
 `),
       ).toEqual([
-        'Runtime error: Arity mismatch in function call: expected 4 arguments, got 1',
-        'Runtime error: Arity mismatch in function call: expected 4 arguments, got 2',
-        'Runtime error: Arity mismatch in function call: expected 4 arguments, got 3',
+        '(font "Arial" "sans-serif" #f #f)',
+        '(font "Arial" "serif" #f #f)',
+        '(font "Arial" "serif" #t #f)',
       ])
     })
   })
@@ -1272,28 +1272,6 @@ describe('drawing', () => {
 (text "hi" 12 "black" (font "Georgia" "serif" #t #f))
 `),
       ).toEqual(['(text 2 1 "hi" 12 (rgba 0 0 0 255) (font "Georgia" "serif" #t #f))'])
-    })
-
-    // A non-font fourth argument fails the font_fontQ guard, so it is silently
-    // dropped rather than rejected and the default font is kept.
-    test('silently ignores a non-font fourth argument', async () => {
-      expect(
-        await runProgram(`
-(import image)
-(text "hi" 12 "black" 5)
-`),
-      ).toEqual(['(text 2 1 "hi" 12 (rgba 0 0 0 255) (font "Arial" "sans-serif" #f #f))'])
-    })
-
-    test('rejects more than one argument after the color', async () => {
-      expect(
-        await runProgram(`
-(import image)
-(text "hi" 12 "black" (font "Arial" "sans-serif" #f #f) 9)
-`),
-      ).toEqual([
-        'Runtime error: (text) wrong number of arguments to text provided. Expected 3 or 4, received 5.',
-      ])
     })
   })
 

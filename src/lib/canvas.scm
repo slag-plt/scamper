@@ -25,6 +25,15 @@
 ;; uses it -- see the cross-module predicate test in test/libs/canvas.test.ts.
 (define-export fill-mode? (js-var "drawing_fillModeQ"))
 
+;;; (font? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only if `v` is a font.
+;;; @category image, typecheck, font, text
+;; N.B., re-exported here (like color? and drawing?) because `canvas-text!`'s
+;; contract names it, and a contract predicate must resolve in the module that
+;; uses it.
+(define-export font? (js-var "font_fontQ"))
+
 ;;; (make-canvas width height) -> canvas?
 ;;;  width : integer?
 ;;;   positive
@@ -82,7 +91,7 @@
 ;;; @category canvas, mutation, predicates, shapes, canvas-rectangle!, canvas-ellipse!
 (define-export canvas-circle! (js-var "canvas_canvasCircle"))
 
-;;; (canvas-text! canvas x y text size mode color & font) -> void?
+;;; (canvas-text! canvas x y text size mode color [font]) -> void?
 ;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?
@@ -92,8 +101,8 @@
 ;;;  mode : fill-mode?
 ;;;   either `"solid"` or `"outline"`
 ;;;  color : color?
-;;;  font : string?
-;;;   a css font string, e.g., `"24px sans-serif"`
+;;;  font : font?
+;;;   defaults to (font "Arial")
 ;;; Renders the given text at the given coordinates.
 ;;; @category canvas, mutation, predicates, canvas-drawing!, canvas-path!
 (define-export canvas-text! (js-var "canvas_canvasText"))

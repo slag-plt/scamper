@@ -277,15 +277,15 @@
 ;;; @category image, typecheck, font, text
 (define-export font? (js-var "font_fontQ"))
 
-;;; (font face system-face bold? italic?) -> font?
-;;;  face : any
-;;;   string? A valid font name
-;;;  system-face : any
-;;;   string? A generic font family name (optional, default "sans-serif")
-;;;  bold? : any
-;;;   boolean? (optional, default #f)
-;;;  italic? : any
-;;;   boolean? (optional, default #f)
+;;; (font face [system-face] [bold?] [italic?]) -> font?
+;;;  face : string?
+;;;   a valid font name
+;;;  system-face : string?
+;;;   a generic font family name; defaults to "sans-serif"
+;;;  bold? : boolean?
+;;;   defaults to #f
+;;;  italic? : boolean?
+;;;   defaults to #f
 ;;; Returns a new font value with the given arguments. The `system-face` name is drawn from one of the possible system font families, a list can be found on [MDN (font-family)](https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#syntax)
 ;;; @category image, font?, text
 (define-export font (js-var "font_font"))
@@ -459,13 +459,13 @@
 ;;; @category canvas, image, shapes, path-func
 (define-export with-dash (js-var "drawing_withDash"))
 
-;;; (text str size color & font) -> drawing?
+;;; (text str size color [font]) -> drawing?
 ;;;  str : string?
-;;;  size : any
-;;;   number? A valid font size (in px)
+;;;  size : number?
+;;;   a valid font size (in px)
 ;;;  color : color?
-;;;  font : any
-;;;   font? (optional, default (font "Arial"))
+;;;  font : font?
+;;;   defaults to (font "Arial")
 ;;; Returns a new drawing formed by drawing `str` with the given arguments.
 ;;; @category image, font, font?
 (define-export text (js-var "drawing_text"))

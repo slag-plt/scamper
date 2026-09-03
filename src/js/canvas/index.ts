@@ -1,7 +1,7 @@
 import * as L from '../../lpm'
 import { Drawing, drawing_render } from '../image/drawing.js'
 import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/color.js'
-import { Font, font_font, font_fontQ, font_fontToFontString } from '../image/font.js'
+import { Font, font_font, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
 
 export function canvas_canvasQ(v: L.Value): boolean {
@@ -69,17 +69,8 @@ export function canvas_canvasCircle(canvas: HTMLCanvasElement, x: number, y: num
   }
 }
 
-export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: L.Value, ...rest: L.Value[]): void {
-  let f: Font = font_font('Arial')
-  if (rest.length > 1) {
-    throw new L.ScamperError('Runtime', `wrong number of arguments to canvas-text! provided. Expected 7 or 8, received ${arguments.length}.`)
-  } else if (rest.length == 1) {
-    if (font_fontQ(rest[0])) {
-      f = rest[0] as Font
-    } else {
-      throw new L.ScamperError('Runtime', `expected a font, received ${L.typeOf(rest[0])}`)
-    }
-  }
+export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: number, text: string, size: number, mode: string, color: L.Value, font?: Font): void {
+  const f: Font = font ?? font_font('Arial')
 
   const ctx = context2d(canvas)
   ctx.fillStyle = color_rgbToString(color_colorToRgb(color))
