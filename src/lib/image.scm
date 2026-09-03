@@ -75,8 +75,7 @@
 ;;; @category color, image, predicates, typecheck, color-func, all-color-names, find-colors
 (define-export color-name? (js-var "color_isColorName"))
 
-;;; (all-color-names x1) -> list?
-;;;  x1 : any
+;;; (all-color-names) -> list?
 ;;; Returns a list of all valid color names.
 ;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define-export all-color-names (js-var "color_allColorNames"))
@@ -447,7 +446,7 @@
 ;;;  angle : number?
 ;;;   in degrees
 ;;;  d : drawing?
-;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Note: currently buggy and shifts off-center.
+;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box.
 ;;; @category image, beside, beside/align, above, above/align, overlay, overlay/align, overlay/offset
 (define-export rotate (js-var "drawing_rotate"))
 
