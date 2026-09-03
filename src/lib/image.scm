@@ -75,8 +75,7 @@
 ;;; @category color, image, predicates, typecheck, color-func, all-color-names, find-colors
 (define-export color-name? (js-var "color_isColorName"))
 
-;;; (all-color-names x1) -> list?
-;;;  x1 : any
+;;; (all-color-names) -> list?
 ;;; Returns a list of all valid color names.
 ;;; @category color, constants, image, color-func, color?, find-colors, color-name?
 (define-export all-color-names (js-var "color_allColorNames"))
@@ -277,15 +276,15 @@
 ;;; @category image, typecheck, font, text
 (define-export font? (js-var "font_fontQ"))
 
-;;; (font face system-face bold? italic?) -> font?
-;;;  face : any
-;;;   string? A valid font name
-;;;  system-face : any
-;;;   string? A generic font family name (optional, default "sans-serif")
-;;;  bold? : any
-;;;   boolean? (optional, default #f)
-;;;  italic? : any
-;;;   boolean? (optional, default #f)
+;;; (font face [system-face] [bold?] [italic?]) -> font?
+;;;  face : string?
+;;;   a valid font name
+;;;  system-face : string?
+;;;   a generic font family name; defaults to "sans-serif"
+;;;  bold? : boolean?
+;;;   defaults to #f
+;;;  italic? : boolean?
+;;;   defaults to #f
 ;;; Returns a new font value with the given arguments. The `system-face` name is drawn from one of the possible system font families, a list can be found on [MDN (font-family)](https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#syntax)
 ;;; @category image, font?, text
 (define-export font (js-var "font_font"))
@@ -447,7 +446,7 @@
 ;;;  angle : number?
 ;;;   in degrees
 ;;;  d : drawing?
-;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Note: currently buggy and shifts off-center.
+;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box.
 ;;; @category image, beside, beside/align, above, above/align, overlay, overlay/align, overlay/offset
 (define-export rotate (js-var "drawing_rotate"))
 
@@ -459,13 +458,13 @@
 ;;; @category canvas, image, shapes, path-func
 (define-export with-dash (js-var "drawing_withDash"))
 
-;;; (text str size color & font) -> drawing?
+;;; (text str size color [font]) -> drawing?
 ;;;  str : string?
-;;;  size : any
-;;;   number? A valid font size (in px)
+;;;  size : number?
+;;;   a valid font size (in px)
 ;;;  color : color?
-;;;  font : any
-;;;   font? (optional, default (font "Arial"))
+;;;  font : font?
+;;;   defaults to (font "Arial")
 ;;; Returns a new drawing formed by drawing `str` with the given arguments.
 ;;; @category image, font, font?
 (define-export text (js-var "drawing_text"))
@@ -516,12 +515,12 @@
 ;;; @category image, shapes, circle, outlined-circle
 (define-export solid-circle (js-var "drawing_solidCircle"))
 
-;;; (outlined-circle diameter color line-width) -> drawing?
+;;; (outlined-circle diameter color [line-width]) -> drawing?
 ;;;  diameter : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;;  line-width : number?
-;;;   how wide the outline is drawn
+;;;   how wide the outline is drawn; defaults to 1
 ;;; Returns a drawing consisting of an outlined circle of diameter `diameter`, drawn with a `line-width`-wide outline. The drawing is `diameter` + `line-width` across, since the outline is drawn centred on the circle.
 ;;; @category image, shapes, circle, solid-circle
 (define-export outlined-circle (js-var "drawing_outlinedCircle"))

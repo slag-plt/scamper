@@ -104,6 +104,31 @@ describe('cross-module predicates (color?, image?) resolve with only canvas impo
     expect(out).toContain('expected a color')
     expect(out).not.toContain('Variable not found')
   })
+
+  // canvas-text!'s font is an optional parameter rather than a rest parameter
+  // (#446), so the contract checks both its type and the call's arity. Before
+  // that the parameter was declared `string?` while the implementation wanted a
+  // font, so no font argument at all could get through. The first line below
+  // also guards canvas.scm's re-export of `font?`: without it the contract's
+  // predicate does not resolve and this fails with `Variable not found`.
+  test('canvas-text! takes a font optionally and checks it', async () => {
+    expect(await runProgram(`
+    (import canvas)
+    (canvas-text! (make-canvas 10 10) 0 0 "hi" 12 "solid" "red" 5)
+    `)).toEqual(['Runtime error: (error) expected a font, received number'])
+  })
+
+  test('canvas-text! accepts a font and rejects a ninth argument', async () => {
+    expect(await runProgram(`
+    (import canvas)
+    (import image)
+    (canvas-text! (make-canvas 10 10) 0 0 "hi" 12 "solid" "red" (font "Georgia" "serif" #t #f))
+    (canvas-text! (make-canvas 10 10) 0 0 "hi" 12 "solid" "red" (font "Arial") 9)
+    `)).toEqual([
+      'void',
+      'Runtime error: (canvas-text!) Arity mismatch in function call: expected at most 8 arguments, got 9',
+    ])
+  })
 })
 
 test.todo('canvas-ellipse!')
