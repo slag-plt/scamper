@@ -214,19 +214,10 @@ describe('color', () => {
     expect(
       await runProgram(`
 (import image)
-(length (all-color-names 1))
-(list-ref (all-color-names 1) 0)
-(all-color-names)
+(length (all-color-names))
+(list-ref (all-color-names) 0)
 `),
-    ).toEqual([
-      '141',
-      '"aliceblue"',
-      // the docstring documents a parameter ("x1 : any") that the real
-      // implementation (color_allColorNames, which takes none) never uses,
-      // so calling with the documented arity actually works, and the
-      // "expected" zero-argument call is itself the arity failure.
-      'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-    ])
+    ).toEqual(['141', '"aliceblue"'])
   })
 
   test('rgb->string', async () => {
