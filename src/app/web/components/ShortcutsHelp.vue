@@ -10,10 +10,14 @@ const root = ref<HTMLElement | null>(null)
 // A few bindings differ per platform beyond the "Mod" key itself.
 const foldPrefix = isMac ? ['Cmd', 'Alt'] : ['Ctrl', 'Shift']
 
-// Ctrl+Space is macOS's input-source switcher and is usually swallowed before
-// the page ever sees it, so the chord is named with a caveat rather than
-// promised outright.
-const autocompleteNote = isMac ? 'if macOS lets it through' : undefined
+// Neither suggestion appears on its own unless the Edit menu says so (#449),
+// so both chords are the way to ask for one. Ctrl+Space is macOS's
+// input-source switcher and is usually swallowed before the page ever sees it,
+// hence the caveat there rather than an outright promise.
+const suggestNote = 'or automatic from the Edit menu'
+const autocompleteNote = isMac
+  ? `if macOS lets it through, ${suggestNote}`
+  : suggestNote
 
 interface Shortcut {
   label: string
@@ -30,7 +34,11 @@ const groups: Group[] = [
     title: 'Code',
     items: [
       { label: 'Autocomplete', keys: ['Ctrl', 'Space'], note: autocompleteNote },
-      { label: 'Signature help', keys: [mod, 'Shift', 'Space'], note: 'auto too' },
+      {
+        label: 'Signature help',
+        keys: [mod, 'Shift', 'Space'],
+        note: suggestNote,
+      },
       { label: 'Go to definition', keys: ['Alt', '.'] },
       { label: 'Find references', keys: ['Shift', 'Alt', '.'] },
       { label: 'Documentation', note: 'hover a name' },

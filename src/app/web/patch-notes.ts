@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'Suggestions no longer pop up on their own as you type — press Ctrl+Space for completions and Ctrl+Shift+Space for a function\'s parameters, or turn on Suggest as You Type in the Edit menu.',
       'font now takes its family, bold, and italic arguments optionally, so (font "Arial") works, font and text now report a bad argument instead of quietly ignoring it, and canvas-text! now accepts a font at all.',
       'The line width of outlined-circle is now optional and defaults to 1, as (outlined-circle 30 "red"), like every other outlined shape.',
       'The documentation for rotate no longer warns that it is buggy — the off-centre turn it described was fixed some releases ago, so the note was simply out of date.',

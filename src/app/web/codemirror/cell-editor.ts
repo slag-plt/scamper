@@ -20,8 +20,10 @@ import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { markdown } from '@codemirror/lang-markdown'
 import type { Diagnostic } from '@codemirror/lint'
 import { currentTheme } from '../../../theme'
-import { editorFontSize } from '../editor-prefs'
+import { autoSuggest, editorFontSize } from '../editor-prefs'
 import {
+  completionCompartment,
+  completionExtension,
   editorThemeCompartment,
   editorThemeExtension,
   fontSizeCompartment,
@@ -285,9 +287,15 @@ function cellExtensions(config: CellEditorConfig): Extension {
     // The same language services the file editor gets, minus the diagnostics:
     // the server does not lint a document that has a context, since a cell is
     // unclosed for most of the time it is being typed.
+    // serverCompletion() pulls in autocompletion() itself, so a cell has a
+    // popup without ever naming one -- with the library's defaults. The
+    // compartment goes in beside it to say which way the preference is set.
     lspUri === undefined || language === 'markdown'
       ? []
-      : scamperLspExtensions(lspUri),
+      : [
+          completionCompartment.of(completionExtension(autoSuggest.value)),
+          scamperLspExtensions(lspUri),
+        ],
   ]
 }
 

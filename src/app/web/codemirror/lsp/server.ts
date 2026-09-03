@@ -46,6 +46,23 @@ interface TrackedDoc {
   context: string
 }
 
+/**
+ * The client asking on its own, off a typed trigger character -- LSP's
+ * `SignatureHelpTriggerKind.TriggerCharacter`.
+ */
+const TRIGGER_CHARACTER = 2
+
+/** What the application tells the server about itself. */
+export interface ScamperLanguageServerConfig {
+  /**
+   * Whether a signature-help request the client made off its own bat -- from a
+   * typed `(` or space -- should be answered (#449). Asked per request, so the
+   * menu item takes effect at once. An explicitly invoked request, and one
+   * keeping an open tooltip up to date, are answered regardless.
+   */
+  automaticSignatureHelp?: () => boolean
+}
+
 /** JSON-RPC error codes. */
 const METHOD_NOT_FOUND = -32601
 const INTERNAL_ERROR = -32603
@@ -70,6 +87,13 @@ export class ScamperLanguageServer {
    * the protocol, and can arrive before the client opens the document.
    */
   private readonly contexts = new Map<string, string>()
+
+  /** Whether an unprompted signature-help request is answered -- see the config. */
+  private readonly automaticSignatureHelp: () => boolean
+
+  constructor(config: ScamperLanguageServerConfig = {}) {
+    this.automaticSignatureHelp = config.automaticSignatureHelp ?? (() => true)
+  }
 
   /**
    * Sets the source `uri` is analysed inside: what precedes it, as though the
@@ -230,6 +254,15 @@ export class ScamperLanguageServer {
   private signatureHelp(params: SignatureHelpParams): SignatureHelp | null {
     const doc = this.docs.get(params.textDocument.uri)
     if (doc === undefined) {
+      return null
+    }
+    // A trigger character is the client asking on its own, off a typed `(` or
+    // space; anything else is the person asking, or an already-open tooltip
+    // following the caret, and is answered whatever the preference says.
+    const context = params.context
+    const unprompted =
+      context?.triggerKind === TRIGGER_CHARACTER && !context.isRetrigger
+    if (unprompted && !this.automaticSignatureHelp()) {
       return null
     }
     const f = frame(doc)

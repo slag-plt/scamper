@@ -11,6 +11,7 @@ import {
   signatureHelp,
 } from '@codemirror/lsp-client'
 import { ScamperLanguageServer } from './server'
+import { autoSuggest } from '../../editor-prefs'
 import { createInProcessTransport } from './transport'
 import { occurrenceHighlighter } from './highlight-extension'
 
@@ -37,7 +38,9 @@ let server: ScamperLanguageServer | undefined
  */
 function getClient(): LSPClient {
   if (client === undefined) {
-    server = new ScamperLanguageServer()
+    server = new ScamperLanguageServer({
+      automaticSignatureHelp: () => autoSuggest.value,
+    })
     client = new LSPClient({
       // Editor features; each stays dormant until the server advertises the
       // matching capability (see ScamperLanguageServer). client.plugin() below

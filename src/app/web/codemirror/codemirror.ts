@@ -24,7 +24,7 @@ import {
 } from '@codemirror/language'
 import { tags as t } from '@lezer/highlight'
 import { currentTheme, type Theme } from '../../../theme'
-import { editorFontSize, editorWordWrap } from '../editor-prefs'
+import { autoSuggest, editorFontSize, editorWordWrap } from '../editor-prefs'
 import {
   defaultKeymap,
   history,
@@ -148,6 +148,7 @@ export const editorThemeCompartment = new Compartment()
  */
 export const fontSizeCompartment = new Compartment()
 export const wordWrapCompartment = new Compartment()
+export const completionCompartment = new Compartment()
 
 /** The editor's font-size extension for a given size in pixels. */
 export function fontSizeExtension(px: number): Extension {
@@ -159,6 +160,18 @@ export function fontSizeExtension(px: number): Extension {
 /** The line-wrapping extension, or nothing when lines should scroll instead. */
 export function wordWrapExtension(on: boolean): Extension {
   return on ? EditorView.lineWrapping : []
+}
+
+/**
+ * The completion extension, offering suggestions as you type or only when
+ * asked for them with Ctrl+Space (#449).
+ *
+ * Always present either way: it is what the completion keymap and the language
+ * server's own completions run through, so turning it off is a matter of
+ * `activateOnTyping` rather than of leaving it out.
+ */
+export function completionExtension(auto: boolean): Extension {
+  return autocompletion({ activateOnTyping: auto })
 }
 
 export interface EditorStateConfig {
@@ -227,7 +240,7 @@ function mkExtensions(config: EditorStateConfig): Extension {
           lintGutter(),
           bracketMatching(),
           closeBrackets(),
-          autocompletion(),
+          completionCompartment.of(completionExtension(autoSuggest.value)),
           ReformatExtension,
           // Ctrl-I re-indents the whole document.
           IndentationExtension,
