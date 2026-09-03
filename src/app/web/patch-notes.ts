@@ -40,6 +40,7 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
+      'all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.',
     ],
   },
   {
