@@ -1,39 +1,36 @@
 import * as L from '../../../lpm'
 import HtmlRenderer from '../../../lpm/renderers/html.js'
-import { Rgb, Hsv, color_isRgb, color_isHsv, color_rgbPseudoComplement, color_rgbToString, color_hsvToRgb, color_hsvToString } from '../color.js'
+import { Rgb, Hsv, color_isRgb, color_isHsv, color_rgbToString, color_hsvToRgb, color_hsvToString } from '../color.js'
+import { swatchFill, swatchInk } from './swatch.js'
 import { Drawing, drawing_drawingQ, drawing_renderer } from '../drawing.js'
 import { ReactiveImageFile, image_isReactiveImageFile } from '../image.js'
 
 /***** Colors ******************************************************************/
 
-function renderRgb (rgb: Rgb): HTMLElement {
+/**
+ * A swatch of `color` with `label` written across it, in whichever of black
+ * or white reads better over the swatch (see `swatch.ts`).
+ */
+function renderSwatch (color: Rgb, label: string): HTMLElement {
   const div = document.createElement('div')
-  const textColor = color_rgbPseudoComplement(rgb)
-  div.style.color = color_rgbToString(textColor)
-  div.style.backgroundColor = color_rgbToString(rgb)
+  div.style.color = swatchInk(color)
+  div.style.backgroundColor = color_rgbToString(swatchFill(color))
   div.style.width = 'fit-content'
   div.style.border = '1px solid var(--border)'
   div.style.padding = '0.25em'
-  div.textContent = color_rgbToString(rgb)
+  div.textContent = label
   return div
 }
 
-HtmlRenderer.registerCustomRenderer(color_isRgb, (v: L.Value) => renderRgb(v as Rgb))
+HtmlRenderer.registerCustomRenderer(color_isRgb, (v: L.Value) => {
+  const rgb = v as Rgb
+  return renderSwatch(rgb, color_rgbToString(rgb))
+})
 
-function renderHsv (hsv: Hsv): HTMLElement {
-  const div = document.createElement('div')
-  const rgb = color_hsvToRgb(hsv)
-  const textColor = color_rgbPseudoComplement(rgb)
-  div.style.color = color_rgbToString(textColor)
-  div.style.backgroundColor = color_rgbToString(rgb)
-  div.style.width = 'fit-content'
-  div.style.border = '1px solid var(--border)'
-  div.style.padding = '0.25em'
-  div.textContent = color_hsvToString(hsv)
-  return div
-}
-
-HtmlRenderer.registerCustomRenderer(color_isHsv, (v: L.Value) => renderHsv(v as Hsv))
+HtmlRenderer.registerCustomRenderer(color_isHsv, (v: L.Value) => {
+  const hsv = v as Hsv
+  return renderSwatch(color_hsvToRgb(hsv), color_hsvToString(hsv))
+})
 
 /***** Drawings ****************************************************************/
 
