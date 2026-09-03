@@ -423,7 +423,7 @@ export function drawing_solidCircle(diameter: number, color: L.Value): Ellipse {
   return drawing_circle(diameter, 'solid', color)
 }
 
-export function drawing_outlinedCircle(diameter: number, color: L.Value, lineWidth: number): Ellipse {
+export function drawing_outlinedCircle(diameter: number, color: L.Value, lineWidth?: number): Ellipse {
   return drawing_circle(diameter, 'outline', color, lineWidth)
 }
 

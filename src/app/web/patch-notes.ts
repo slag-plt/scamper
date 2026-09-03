@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'The line width of outlined-circle is now optional and defaults to 1, as (outlined-circle 30 "red"), like every other outlined shape.',
     ],
   },
   {

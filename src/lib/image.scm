@@ -516,12 +516,12 @@
 ;;; @category image, shapes, circle, outlined-circle
 (define-export solid-circle (js-var "drawing_solidCircle"))
 
-;;; (outlined-circle diameter color line-width) -> drawing?
+;;; (outlined-circle diameter color [line-width]) -> drawing?
 ;;;  diameter : number?
 ;;;  color : color?
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;;  line-width : number?
-;;;   how wide the outline is drawn
+;;;   how wide the outline is drawn; defaults to 1
 ;;; Returns a drawing consisting of an outlined circle of diameter `diameter`, drawn with a `line-width`-wide outline. The drawing is `diameter` + `line-width` across, since the outline is drawn centred on the circle.
 ;;; @category image, shapes, circle, solid-circle
 (define-export outlined-circle (js-var "drawing_outlinedCircle"))
