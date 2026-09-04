@@ -359,9 +359,10 @@ const withDashPrim = (dashSpec: number[], drawing: Drawing): WithDash => ({
 
 /**
  * The dash lengths of `dashSpec` as the array a canvas takes (#491).
- * @throws ScamperError if an element is not a number: setLineDash ignores a
- *         spec it cannot read rather than failing, so an unchecked one would
- *         quietly draw a solid line.
+ * @throws ScamperError if a length is not a number, or is one setLineDash
+ *         cannot use: it returns on a spec it cannot read rather than
+ *         failing, so an unchecked one would quietly draw a solid line --
+ *         a negative or non-finite length does that just as a string does.
  */
 function checkDashSpec(dashSpec: L.List): number[] {
   return L.listToVector(dashSpec).map((v) => {
@@ -369,6 +370,12 @@ function checkDashSpec(dashSpec: L.List): number[] {
       throw new L.ScamperError(
         'Runtime',
         `expected a list of numbers, but the list contains ${L.typeOf(v)}`
+      )
+    }
+    if (!Number.isFinite(v) || v < 0) {
+      throw new L.ScamperError(
+        'Runtime',
+        `expected a finite, non-negative dash length, received ${v.toString()}`
       )
     }
     return v

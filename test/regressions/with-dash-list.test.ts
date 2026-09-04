@@ -21,15 +21,22 @@ test('a dashed drawing renders instead of failing in setLineDash (#491)', async 
 })
 
 // The conversion checks its elements because `setLineDash` does not: per spec
-// it silently returns on a spec it cannot read, so an unchecked non-number
-// would draw a plain solid line and say nothing.
-test('a dash spec that is not all numbers is an error, not a solid line (#491)', async () => {
+// it silently returns on a spec it cannot read, so an unchecked one would draw
+// a plain solid line and say nothing. A negative or non-finite length hits that
+// same rule as squarely as a string does -- measured in Chromium, an outlined
+// square strokes 80 red pixels solid and 30 with (list 4 4), but 80 again with
+// (list 4 -4).
+test('a dash spec setLineDash would silently ignore is an error, not a solid line (#491)', async () => {
   expect(
     await runProgram(`
 (import image)
 (with-dash (list 4 "two") (outlined-square 20 "red"))
+(with-dash (list 4 -2) (outlined-square 20 "red"))
+(with-dash (list 4 (sqrt -1)) (outlined-square 20 "red"))
 `, { stripRanges: true }),
   ).toEqual([
     'Runtime error: (with-dash) expected a list of numbers, but the list contains string',
+    'Runtime error: (with-dash) expected a finite, non-negative dash length, received -2',
+    'Runtime error: (with-dash) expected a finite, non-negative dash length, received NaN',
   ])
 })
