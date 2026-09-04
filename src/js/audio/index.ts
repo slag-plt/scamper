@@ -72,7 +72,7 @@ export function audio_audioContext(sampleRate: number): AudioContext {
 }
 
 export function audio_contextQ(v: L.Value): boolean {
-  return v instanceof AudioContext
+  return typeof AudioContext !== 'undefined' && v instanceof AudioContext
 }
 
 export interface AudioPipeline extends L.Struct {
@@ -162,7 +162,7 @@ export function audio_pipelineQ(v: L.Value): boolean {
 }
 
 export function audio_audioNodeQ(v: L.Value): boolean {
-  return v instanceof AudioNode
+  return typeof AudioNode !== 'undefined' && v instanceof AudioNode
 }
 
 export function audio_oscillatorNode(

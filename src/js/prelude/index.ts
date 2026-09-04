@@ -459,8 +459,8 @@ function appendOne_(l1: L.List, l2: L.List): L.List {
   }
 }
 
-export function prelude_append(l: L.List, ...ls: L.List[]): L.List {
-  let ret = l
+export function prelude_append(...ls: L.List[]): L.List {
+  let ret: L.List = null
   for (const rest of ls) {
     ret = appendOne_(ret, rest)
   }
@@ -730,8 +730,8 @@ export function prelude_makeString(k: number, c: L.Char): string {
   return c.value.repeat(k)
 }
 
-export function prelude_string(c: L.Char, ...cs: L.Char[]): string {
-  return [c, ...cs].map((e) => e.value).join('')
+export function prelude_string(...cs: L.Char[]): string {
+  return cs.map((e) => e.value).join('')
 }
 
 export function prelude_stringLength(s: string): number {
