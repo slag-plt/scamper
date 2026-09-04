@@ -149,7 +149,8 @@ export const mkAp = (
 export const mkMatch = (
   branches: [L.Pat, L.Blk][],
   range: Range = Range.none,
-): L.Match => ({ tag: 'match', branches, range })
+  idx = 0,
+): L.Match => ({ tag: 'match', branches, range, idx })
 export const mkLet = (
   bindings: { pat: L.Pat; value: L.Blk; failMsg?: string }[],
   body: L.Blk,

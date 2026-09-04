@@ -651,13 +651,18 @@ export interface Ap {
   range: Range
   provenance?: Provenance
 }
+// `match` tests one branch per step, to keep the work quantum small: `idx`
+// says which branch to test next, and a branch that fails to match re-enters
+// at `idx + 1`. As with `Let.idx` it is threaded through fresh op copies and
+// never mutated in place, because a compiled program is shared by every run,
+// every call and every fiber in the session -- a cursor written onto the op
+// would outlive the match that moved it.
 export interface Match {
   tag: 'match'
   branches: [Pat, Blk][]
   range: Range
-  // hack fix to not modify original branch
-  // TODO: making this better requires better bytecode
-  currBranchIdx?: number
+  // The branch to test next; 0 on the initial run.
+  idx: number
 }
 // `let` is letrec: a single scope holds every binder, declared as HOLEs, then
 // filled left-to-right as the value sub-blocks evaluate (each may reference any
