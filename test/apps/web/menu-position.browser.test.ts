@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import IdeApp from '../../../src/app/web/components/IdeApp.vue'
 import * as FS from '../../../src/fs'
 import { MockFileSystem } from '../../stubs/mock-file-system'
+import { required } from '../../dom'
 import { initialize } from '../../../src/scamper'
 
 vi.mock('../../../src/app/web/single-instance', () => ({
@@ -31,28 +32,35 @@ describe('popup menu placement', () => {
     document.body.innerHTML = ''
   })
 
+  // A missing element is a broken spec, not a box that moved, so these throw
+  // and name what was not there -- rather than folding it into a NaN whose
+  // comparison fails a few lines later with nothing to point at.
   const title = (name: string) =>
-    document.querySelector<HTMLElement>(`[data-menu="${name}"]`)
-  const menu = () => document.querySelector<HTMLElement>('[role="menu"]')
-  const left = (el: Element | null) => el?.getBoundingClientRect().left ?? NaN
+    required(
+      document.querySelector<HTMLElement>(`[data-menu="${name}"]`),
+      `a "${name}" menu title`,
+    )
+  const menu = () =>
+    required(document.querySelector<HTMLElement>('[role="menu"]'), 'an open menu')
+  const left = (el: Element) => el.getBoundingClientRect().left
 
   test('the panel follows the title whose menu it is showing', async () => {
     const wrapper = mount(IdeApp, { attachTo: document.body })
     await findByRole(document.body, 'button', { name: 'Create file' })
     await flushPromises()
     try {
-      title('File')?.click()
+      title('File').click()
       await flushPromises()
       await new Promise((r) => requestAnimationFrame(r))
       const underFile = left(menu())
 
       // Sliding along the bar swaps the items on one persistent instance,
       // which is exactly the case that used to leave the panel behind.
-      title('Help')?.click()
+      title('Help').click()
       await flushPromises()
       await new Promise((r) => requestAnimationFrame(r))
 
-      expect(menu()?.textContent).toContain('About Scamper')
+      expect(menu().textContent).toContain('About Scamper')
       const underHelp = left(menu())
       expect(underHelp).toBeGreaterThan(underFile + 50)
       // And it sits under Help rather than merely somewhere else.
@@ -69,12 +77,11 @@ describe('popup menu placement', () => {
     try {
       // View is the longest menu; the old clamp assumed 24px rows and could
       // hand it a negative top, losing its first items off the top edge.
-      title('View')?.click()
+      title('View').click()
       await flushPromises()
       await new Promise((r) => requestAnimationFrame(r))
 
-      const box = menu()?.getBoundingClientRect()
-      expect(box).toBeDefined()
+      const box = menu().getBoundingClientRect()
       expect(box.top).toBeGreaterThanOrEqual(0)
       expect(box.left).toBeGreaterThanOrEqual(0)
       expect(box.bottom).toBeLessThanOrEqual(window.innerHeight + 1)

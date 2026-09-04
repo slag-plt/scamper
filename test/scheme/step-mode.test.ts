@@ -8,6 +8,7 @@ import { expToString, mkLit } from '../../src/scheme/ast.js'
 import * as U from '../../src/lpm/util.js'
 import { isStructKind } from '../../src/lpm/util.js'
 import { SuspendSignal } from '../../src/lpm/index.js'
+import type { TraceOutput, TraceStart } from '../../src/lpm/trace/index.js'
 import type { Value } from '../../src/lpm/lang.js'
 import { makeTestFiber } from '../util.js'
 import { required } from '../dom'
@@ -24,8 +25,11 @@ import { required } from '../dom'
  * trace-output; both carry the same expression.
  */
 function render(v: Value): string {
-  if (isStructKind(v, 'trace-output') || isStructKind(v, 'trace-start')) {
-    return expToString((v as { output: Value }).output as never)
+  if (
+    isStructKind<TraceOutput>(v, 'trace-output') ||
+    isStructKind<TraceStart>(v, 'trace-start')
+  ) {
+    return expToString(v.output as never)
   }
   return 'RAW:' + expToString(mkLit(v))
 }
@@ -43,6 +47,9 @@ async function startStepping(src: string) {
     },
     popLevel: () => {
       /* nesting is not what these specs look at */
+    },
+    get totalSends() {
+      return steps.length
     },
   }
   const id = 'test-run'
@@ -207,8 +214,8 @@ describe('robustness regressions', () => {
         U.mkAp(2),
       ]),
     ])
-    let resolveAction!: (v: unknown) => void
-    const actionPromise = new Promise<unknown>((r) => {
+    let resolveAction!: (v: Value) => void
+    const actionPromise = new Promise<Value>((r) => {
       resolveAction = r
     })
     fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
@@ -227,6 +234,9 @@ describe('robustness regressions', () => {
       },
       popLevel: () => {
         /* nesting is not what these specs look at */
+      },
+      get totalSends() {
+        return steps.length
       },
     }
     let finished = false

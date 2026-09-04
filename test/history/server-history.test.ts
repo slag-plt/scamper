@@ -236,7 +236,7 @@ describe('browsing moves no more than it must', () => {
     await record(history, 'hello.scm', 'a'.repeat(5_000), START)
     await record(history, 'gone.scm', 'b'.repeat(5_000), START)
     serverNow = at(1_000)
-    await history.markDeleted('gone.scm', at(1_000))
+    await history.markDeleted('gone.scm')
 
     expect(await history.list()).toEqual([
       { filename: 'gone.scm', deletedAt: at(1_000).toISOString() },
@@ -299,7 +299,7 @@ describe('renaming and deleting', () => {
     const history = ServerHistory.create(BASE_URL)
     await record(history, 'hello.scm', 'x', START)
     serverNow = at(1_000)
-    await history.markDeleted('hello.scm', at(1_000))
+    await history.markDeleted('hello.scm')
 
     const index = await history.index('hello.scm')
     expect(index.deletedAt).toBe(at(1_000).toISOString())
@@ -312,7 +312,7 @@ describe('renaming and deleting', () => {
     const history = ServerHistory.create(BASE_URL)
     await record(history, 'hello.scm', 'x', START)
     serverNow = at(1_000)
-    await history.markDeleted('hello.scm', at(1_000))
+    await history.markDeleted('hello.scm')
 
     const result = await record(history, 'hello.scm', 'x', at(2_000))
 
@@ -323,7 +323,7 @@ describe('renaming and deleting', () => {
   test('a file with no history leaves none behind when deleted', async () => {
     const history = ServerHistory.create(BASE_URL)
     serverNow = at(1_000)
-    await history.markDeleted('hello.scm', at(1_000))
+    await history.markDeleted('hello.scm')
 
     expect(await history.list()).toEqual([])
   })

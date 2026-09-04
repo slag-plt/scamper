@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import ValueRenderer from '../../src/lpm/renderers/vue/ValueRenderer.vue'
 import ModalContents from '../../src/app/web/components/query/modal/ModalContents.vue'
 import { mkCons } from '../../src/lpm/util'
+import type { Value } from '../../src/lpm/lang'
 
 // https://github.com/slag-plt/scamper/issues/444
 //
@@ -39,7 +40,7 @@ test('an empty string inside a list renders as "" (#444)', () => {
 })
 
 test('other values are unaffected (#444)', () => {
-  const cases: [unknown, string][] = [
+  const cases: [Value, string][] = [
     ['hi', '"hi"'],
     [true, '#t'],
     [false, '#f'],

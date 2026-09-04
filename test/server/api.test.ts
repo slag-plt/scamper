@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { API_ROOT, route, type ApiResponse } from '../../server/src/api'
+import { API_ROOT, route, type ApiResponse, type Stores } from '../../server/src/api'
 import { MemoryFileStore } from '../../server/src/store'
 import { MemoryHistoryStore } from '../../server/src/history-store'
 
@@ -70,7 +70,7 @@ describe('api routing', () => {
   // report that, or the IDE tells a student their session ended and offers a
   // sign-in that cannot work either.
   describe('with storage out of reach', () => {
-    let unreachable: typeof stores
+    let unreachable: Stores
 
     beforeEach(() => {
       unreachable = { ...stores, reachable: () => Promise.resolve(false) }

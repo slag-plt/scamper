@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest'
 import { useRepl } from '../../../src/app/web/composables/use-repl'
 import { initialize } from '../../../src/scamper'
 import TextRenderer from '../../../src/lpm/renderers/text'
-import type { ReplEntry } from '../../../src/app/web/composables/use-repl'
+import type { Repl, ReplEntry } from '../../../src/app/web/composables/use-repl'
 
 /** The REPL's most recent entry, or a failure saying there is none. */
-function lastEntry(repl: { entries: { value: unknown[] } }) {
+function lastEntry(repl: Repl): ReplEntry {
   const last = repl.entries.value.at(-1)
   if (last === undefined) throw new Error('the REPL has no entries')
   return last

@@ -14,6 +14,8 @@ const STORAGE_KEY = 'scamper.config'
 const CONFIG: Config = {
   lastOpenedFilename: 'hello.scm',
   lastVersionAccessed: '3.5.0',
+  localFilesOffered: false,
+  recentFiles: ['hello.scm'],
 }
 
 /** Installs a storage whose every method throws, as a blocked browser's does. */

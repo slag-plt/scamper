@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
+import { emptyFS } from '../stubs/empty-fs'
 import { runProgram } from '../harness.js'
 
 // Regression test for #342: an error raised inside a blocking primitive's async
@@ -102,28 +103,12 @@ describe("#342: a blocking primitive's error points at its call", () => {
 
 /** An FS that refuses every write. */
 function unwritableFS(): FS {
-  return {
-    ...emptyFS(),
-    saveFile: () => Promise.reject(new Error('EACCES')),
-  }
+  return emptyFS({ saveFile: () => Promise.reject(new Error('EACCES')) })
 }
 
 /** An FS whose existence check fails outright, with a non-ScamperError. */
 function brokenFS(): FS {
-  return {
-    ...emptyFS(),
+  return emptyFS({
     fileExists: () => Promise.reject(new Error('host is on fire')),
-  }
-}
-
-function emptyFS(): FS {
-  const nope = () => Promise.reject(new Error('unimplemented'))
-  return {
-    getFileList: () => Promise.resolve([]),
-    fileExists: () => Promise.resolve(false),
-    loadFile: nope,
-    saveFile: nope,
-    deleteFile: nope,
-    renameFile: nope,
-  }
+  })
 }

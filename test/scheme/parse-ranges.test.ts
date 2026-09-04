@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'vitest'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
 import * as A from '../../src/scheme/ast'
-import { Range, ScamperError } from '../../src/lpm'
+import { Range } from '../../src/lpm'
+import type { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 
 // This suite pins down the source ranges the parser attaches to every AST
 // node -- and, since the Var/PVar collapse, every identifier's own range.
@@ -12,7 +13,7 @@ import { Range, ScamperError } from '../../src/lpm'
 ///// Helpers //////////////////////////////////////////////////////////////////
 
 function parse(src: string): A.Prog {
-  const errors: ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, src)
   expect(
     errors,

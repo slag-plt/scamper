@@ -23,6 +23,7 @@
     "typecheck": "vue-tsc -noEmit",
     "pretypecheck": "npm run generate",
     "typecheck:server": "npm run typecheck --workspace @scamper/server",
+    "typecheck:test": "vue-tsc --noEmit -p test/tsconfig.json",
     "dev:server": "npm run dev --workspace @scamper/server",
     "start:server": "npm run start --workspace @scamper/server",
     "account": "tsx server/src/admin.ts",

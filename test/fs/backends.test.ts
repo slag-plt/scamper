@@ -26,7 +26,9 @@ describe('backend pairing', () => {
   })
 
   test('both halves of a server backend talk to the same API root', async () => {
-    const fetchMock = vi.fn(() =>
+    // Typed as fetch itself, so the recorded calls carry its arguments and the
+    // URL below is a real one rather than an index into an empty tuple.
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(JSON.stringify({ files: [] }), { status: 200 })),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -34,7 +36,9 @@ describe('backend pairing', () => {
       const backend = serverBackend('/api/v1')
       await backend.fs.getFileList()
       await backend.history.list()
-      const urls = fetchMock.mock.calls.map((call) => String(call[0]))
+      const urls = fetchMock.mock.calls.map(([target]) =>
+        target instanceof Request ? target.url : String(target),
+      )
       expect(urls).toEqual(['/api/v1/fs/files', '/api/v1/history/files'])
     } finally {
       vi.unstubAllGlobals()
