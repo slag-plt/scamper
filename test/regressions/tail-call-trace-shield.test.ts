@@ -23,6 +23,10 @@ describe("#478: a tail call keeps the caller's trace shield", () => {
   })
 
   test('tail-calling a worker built at call time stays atomic', async () => {
+    // The issue's own repro, which #476 already fixed by stamping a call-time
+    // closure with its creator's origin: `go` is library code, so the tail
+    // call replaces one hidden frame with another. Pinned here so the two
+    // halves stay fixed together.
     await fs.saveFile(
       'lib.scm',
       '(define-export sum-to\n' +
@@ -52,6 +56,21 @@ describe("#478: a tail call keeps the caller's trace shield", () => {
           '(twice double 3)',
       ),
     ).toEqual(['(twice double 3)', '12'])
+  })
+
+  test('with-file, the shipped instance of the same shape, stays atomic', async () => {
+    // `with-file` is `twice` above, in prelude.scm: it reads the file and
+    // tail-calls the student's `fn` with the contents. (`with-image-from-url`
+    // is the other one.) It also reaches the tail call the long way round --
+    // the read suspends the fiber, so the `ap` runs after
+    // Fiber.resumeWithValue rather than straight through.
+    await fs.saveFile('data.txt', 'hello')
+    expect(
+      await reductionTrace(
+        '(define twice-length (lambda (s) (* (string-length s) 2)))\n' +
+          '(with-file "data.txt" twice-length)',
+      ),
+    ).toEqual(['(with-file "data.txt" twice-length)', '10'])
   })
 
   test('a tail call *into* library code does not make it visible', async () => {
