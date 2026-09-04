@@ -318,19 +318,20 @@ function mkOptBindings(
  * @returns the statement unchanged if it isn't a define, has no docstring,
  *          the docstring fails to parse (a documentation-quality issue, not
  *          a reason to fail compiling -- see ast.ts's Define.docComments),
- *          or documents neither fixed params nor a rest param. That last
- *          case is both zero-parameter forms, and each is left alone for its
- *          own reason. A documented *constant* (`pi: number?`) has to be:
- *          wrapping it in a zero-arg thunk would silently turn a value into
- *          something that must be called. A documented *nullary function*
- *          (`(rex-empty) -> rex?`) is left alone by choice -- the two forms
- *          are distinguishable here, via the parsed signature's `isConstant`
- *          (#412, see docstring/signature.ts) -- because its wrapper would
- *          have nothing to check: every check comes from a parameter, and a
- *          signature's return predicate is not checked anywhere, so wrapping
- *          would buy only an arity error on an over-supplied call (#469).
- *          A rest-only signature (`(rex-concat & xs)`) does carry a
- *          predicate to apply, so it is wrapped even with zero fixed params.
+ *          or documents no parameters at all -- fixed, optional, or rest.
+ *          That last case is both zero-parameter forms, and each is left
+ *          alone for its own reason. A documented *constant* (`pi: number?`)
+ *          has to be: wrapping it in a zero-arg thunk would silently turn a
+ *          value into something that must be called. A documented *nullary
+ *          function* (`(rex-empty) -> rex?`) is left alone by choice -- the
+ *          two forms are distinguishable here, via the parsed signature's
+ *          `isConstant` (#412, see docstring/signature.ts) -- because its
+ *          wrapper would have nothing to check: every check comes from a
+ *          parameter, and a signature's return predicate is not checked
+ *          anywhere, so wrapping would buy only an arity error on an
+ *          over-supplied call (#469). A rest-only signature
+ *          (`(rex-concat & xs)`) does carry a predicate to apply, so it is
+ *          wrapped even with zero fixed params.
  */
 export function contractStmt(s: A.Stmt): A.Stmt {
   // Both a plain define and a define-export bind a documented value that a
