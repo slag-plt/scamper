@@ -43,7 +43,14 @@ import { useRepl } from '../composables/use-repl'
 import { useNotebook } from '../composables/use-notebook'
 import NotebookView from './NotebookView.vue'
 import { fileView } from '../view-prefs'
-import { checkExamples, liveEvaluation } from '../run-prefs'
+import {
+  checkExamples,
+  liveEvaluation,
+  MAX_TRACE_STEP_LIMIT,
+  MIN_TRACE_STEP_LIMIT,
+  setTraceStepLimit,
+  traceStepLimit,
+} from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
@@ -130,9 +137,6 @@ const trace = ref<{
 const traceIndex = ref(0)
 // Collecting a trace runs the program, which takes a moment on a long one.
 const isCollectingTrace = ref(false)
-// A statement that loops forever would otherwise produce steps until the tab
-// dies; past this the trace is cut short and says so.
-const MAX_TRACE_STEPS = 10_000
 
 // Narrower than this and a window floating over the code has nowhere to float,
 // so the two share the pane through tabs instead. Measured on the pane rather
@@ -466,7 +470,7 @@ async function handleStepStatement() {
       src: editor().getDoc(),
       cursorLoc: editor().getCursorLoc(),
       err: new SimpleErrorChannel(),
-      maxSteps: MAX_TRACE_STEPS,
+      maxSteps: traceStepLimit.value,
     })
     if (collected === null) {
       await modalAlert({
@@ -485,6 +489,41 @@ async function handleStepStatement() {
   } finally {
     isCollectingTrace.value = false
   }
+}
+
+/**
+ * Asks for the number of steps a trace may take before it gives up (#369).
+ *
+ * A menu item rather than a checkbox because the answer is a number, and one
+ * prompt rather than a preferences pane because this is the only such number
+ * the IDE has so far.
+ */
+async function handleTraceStepLimit() {
+  const answer = await modalPrompt({
+    title: 'Trace step limit',
+    message:
+      'How many steps may stepping a statement take before it gives up? ' +
+      `Between ${String(MIN_TRACE_STEP_LIMIT)} and ` +
+      `${String(MAX_TRACE_STEP_LIMIT)}; a larger limit traces further but ` +
+      'takes longer to collect.',
+    defaultValue: String(traceStepLimit.value),
+  })
+  if (answer === null) return
+  const steps = Number(answer.trim())
+  // An empty box reads as 0 through Number, so it is turned away here rather
+  // than clamped up to the floor as a deliberate 5 would be.
+  if (answer.trim() === '' || !Number.isFinite(steps)) {
+    await modalAlert({
+      title: 'Trace step limit',
+      message:
+        `Enter a whole number of steps between ${String(MIN_TRACE_STEP_LIMIT)} ` +
+        `and ${String(MAX_TRACE_STEP_LIMIT)}.`,
+    })
+    return
+  }
+  // A number outside the range is clamped rather than refused, which the menu
+  // item's own label then shows, so the clamp is not silent.
+  setTraceStepLimit(steps)
 }
 
 /**
@@ -1877,6 +1916,7 @@ onUnmounted(() => {
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
         :step-statement="handleStepStatement"
+        :trace-step-limit="handleTraceStepLimit"
         :open-repl="handleOpenRepl"
         :about="handleAbout"
         :whats-new="handleWhatsNew"

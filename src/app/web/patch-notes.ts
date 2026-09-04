@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number with Trace Step Limit in the Run menu.',
     ],
   },
   {

@@ -18,6 +18,9 @@ import {
   liveEvaluation,
   toggleCheckExamples,
   toggleLiveEvaluation,
+  // Aliased: the prop of the same name is the *command* that changes it, and
+  // this is the value it currently holds, which the item's label shows.
+  traceStepLimit as currentTraceStepLimit,
 } from '../run-prefs'
 import {
   DEFAULT_FONT_SIZE,
@@ -83,6 +86,8 @@ const props = defineProps<{
   canStep?: boolean
   isStepping?: boolean
   stepStatement?: () => void
+  /** Asks for the number of steps a trace may take (#369). */
+  traceStepLimit?: () => void
   /** Opens a REPL seeded from the open file (#399). */
   openRepl?: () => void
   about?: () => void
@@ -295,6 +300,12 @@ const runMenu = computed<MenuItem[]>(() => [
     label: 'Step Statement at Cursor…',
     disabled: !props.canStep || props.isStepping,
     run: () => props.stepStatement?.(),
+  },
+  // The label carries the value, which is what lets one menu item both show a
+  // numeric setting and change it, with no preferences pane to put it in yet.
+  {
+    label: `Trace Step Limit (${String(currentTraceStepLimit.value)})…`,
+    run: () => props.traceStepLimit?.(),
   },
   {
     label: 'Open REPL…',

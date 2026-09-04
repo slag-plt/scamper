@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { DEFAULT_TRACE_STEP_LIMIT } from '../../lpm/output/trace-collector'
 
 /**
  * How and when the current file is run.
@@ -71,4 +72,55 @@ export function setCheckExamples(on: boolean): void {
 
 export function toggleCheckExamples(): void {
   setCheckExamples(!checkExamples.value)
+}
+
+const TRACE_STEP_LIMIT_KEY = 'scamper.run.tracesteps'
+
+/**
+ * The range a trace step limit is held to. The floor keeps a limit of 0 -- a
+ * trace with nothing in it -- from being typed in by accident; the ceiling is
+ * on what can be *asked for*, not on what is sensible. Someone who deliberately
+ * types 50,000 has accepted the wait that comes with it (see
+ * {@link DEFAULT_TRACE_STEP_LIMIT} for what that wait is made of).
+ */
+export const MIN_TRACE_STEP_LIMIT = 10
+export const MAX_TRACE_STEP_LIMIT = 100_000
+
+function clampTraceStepLimit(steps: number): number {
+  return Math.min(
+    MAX_TRACE_STEP_LIMIT,
+    Math.max(MIN_TRACE_STEP_LIMIT, Math.round(steps)),
+  )
+}
+
+/**
+ * How many reductions stepping a statement may take before it gives up and
+ * says so (issue #369).
+ *
+ * Here rather than in a file of its own because it is part of how the file is
+ * run, and this module is already what the Run menu reads. It is set from that
+ * menu until there is a preferences pane to hold it.
+ */
+export const traceStepLimit = ref<number>(
+  (() => {
+    try {
+      const stored = localStorage.getItem(TRACE_STEP_LIMIT_KEY)
+      if (stored === null) return DEFAULT_TRACE_STEP_LIMIT
+      const steps = Number(stored)
+      return Number.isFinite(steps)
+        ? clampTraceStepLimit(steps)
+        : DEFAULT_TRACE_STEP_LIMIT
+    } catch {
+      return DEFAULT_TRACE_STEP_LIMIT // no storage; default as if unset
+    }
+  })(),
+)
+
+export function setTraceStepLimit(steps: number): void {
+  traceStepLimit.value = clampTraceStepLimit(steps)
+  try {
+    localStorage.setItem(TRACE_STEP_LIMIT_KEY, String(traceStepLimit.value))
+  } catch {
+    // Applies for this session regardless; remembering it is a bonus.
+  }
 }
