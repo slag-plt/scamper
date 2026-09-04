@@ -255,7 +255,16 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
   // `op`: the compiled program is shared by every run and every fiber.
   const currBranch = op.branches.at(op.idx)
   if (!currBranch) {
-    throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
+    // A `match` in library source has no site in the student's program, so a
+    // builtin frame blames the call the student wrote instead of prelude.scm,
+    // exactly as the call range at :190 does.
+    throw new ScamperError(
+      'Runtime',
+      'Inexhaustive pattern match failure',
+      undefined,
+      currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
+      undefined
+    )
   }
   const [pat, blk] = currBranch
   const bindings = pMatch(scrutinee, pat)
