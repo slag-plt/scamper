@@ -8,12 +8,13 @@ import { ErrorChannel, OutputChannel } from './channel.js'
  * A step costs O(state size) -- the whole frame stack is rebuilt and rendered
  * for each one -- so n steps cost O(n^2), and a runaway statement is exactly
  * the case where the state keeps growing. Measured on `(factorial -1)`: the
- * IDE's old ceiling of 10,000 took 47s and a final step of 9.4MB, where 2000
- * takes under 2s -- a wait rather than a hung tab. It is also the scale of a
- * real recursive trace, `(fib 12)` being 2092 steps, so what it cuts short is
- * mostly what nobody was going to page through anyway.
+ * IDE's old ceiling of 10,000 took 47s and a final step of 9.4MB, where 2500
+ * takes a little over 2s -- a wait rather than a hung tab. It is also chosen to
+ * clear the scale of a real recursive trace: `(fib 12)` is 2092 steps, and a
+ * limit that cut one of those short would truncate the very thing stepping is
+ * for. Past this, what is lost is mostly what nobody was going to page through.
  */
-export const DEFAULT_TRACE_STEP_LIMIT = 2000
+export const DEFAULT_TRACE_STEP_LIMIT = 2500
 
 /**
  * Gathers the reductions of one statement into an array, so they can be paged

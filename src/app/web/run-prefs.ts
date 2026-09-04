@@ -81,7 +81,7 @@ const TRACE_STEP_LIMIT_KEY = 'scamper.run.tracesteps'
  * trace with nothing in it -- from being typed in by accident; the ceiling is
  * on what can be *asked for*, not on what is sensible. On the runaway
  * {@link DEFAULT_TRACE_STEP_LIMIT} was measured against, collection takes 2s at
- * 2000 steps and 47s at 10,000, and runs out of memory at 20,000: a large limit
+ * 2500 steps and 47s at 10,000, and runs out of memory at 20,000: a large limit
  * is a choice to wait -- or, high enough, to lose the page and come back with a
  * smaller one.
  */
