@@ -1123,9 +1123,9 @@
 (define-export ignore (js-var "prelude_ignore"))
 
 ;;; (set-maximum-recursion-depth! n) -> void?
-;;;  n : any
-;;;   number? n >= 0
-;;; Sets the maximum recursion depth of Scamper to n. Note that tail call-optimized functions do _not_ count towards this limit.
+;;;  n : integer?
+;;;   a whole number between 1 and 200000
+;;; Sets the maximum recursion depth of Scamper to `n`, in effect until the program is run again. Note that tail call-optimized functions do _not_ count towards this limit. Each level of recursion costs memory, so a very deep limit may exhaust it before it is reached.
 ;;; @category mutation, predicates, map, reduce, reduce-right
 (define-export set-maximum-recursion-depth! (js-var "prelude_setMaximumRecursionDepth"))
 

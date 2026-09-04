@@ -8,6 +8,7 @@ import {
 } from './handlers/stmt-handlers'
 import { Frame } from './frame'
 import { ICE, ScamperError } from './error'
+import { DEFAULT_MAX_CALL_STACK_DEPTH } from './limits'
 import { Range } from './range'
 import {
   ApHandler,
@@ -100,7 +101,7 @@ export class Fiber {
   private prog: Stmt[]
   private currStmtIdx = 0
   private _isProcessingBlk = false
-  private maxCallStackDepth = 10_000
+  private _maxCallStackDepth = DEFAULT_MAX_CALL_STACK_DEPTH
   // The names this fiber's program has declared for export (the union across its
   // export statements). Consulted only when the fiber's top level is snapshotted
   // as a module (getModule); a program run for its own sake never exports.
@@ -241,11 +242,25 @@ export class Fiber {
     return this.frames.at(-1)
   }
 
+  /** How many frames this fiber may stack before pushFrame errors. */
+  get maxCallStackDepth() {
+    return this._maxCallStackDepth
+  }
+
+  /**
+   * Sets this fiber's call stack limit, on behalf of
+   * `set-maximum-recursion-depth!` (see SetRecursionDepthSignal). `n` is
+   * validated by the primitive, so no check is repeated here.
+   */
+  setMaxCallStackDepth(n: number) {
+    this._maxCallStackDepth = n
+  }
+
   pushFrame(frame: Frame) {
-    if (this.frames.length >= this.maxCallStackDepth) {
+    if (this.frames.length >= this._maxCallStackDepth) {
       throw new ScamperError(
         'Runtime',
-        `Max call stack depth ${this.maxCallStackDepth.toString()} exceeded!`,
+        `Max call stack depth ${this._maxCallStackDepth.toString()} exceeded!`,
       )
     }
     this.frames.push(frame)

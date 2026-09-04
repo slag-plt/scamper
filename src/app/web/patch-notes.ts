@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.',
     ],
   },
   {
