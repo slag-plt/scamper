@@ -167,8 +167,8 @@ scratch
 
 (define digits (rex-repeat (rex-char-range #\0 #\9)))
 (rex-matches? digits "12345")
-(rex-find-matches (regex "[a-z]+" "g") "one two three")
-(rex-split-string (regex "," "") "a,b,c")
+(rex-find-matches (regex "[a-z]+") "one two three")
+(rex-split-string (regex ",") "a,b,c")
 (rex->string digits)
 
 ; ---------------------------------------------------------------------------

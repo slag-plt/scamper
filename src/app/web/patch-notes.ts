@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
     ],
   },
   {
