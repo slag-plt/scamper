@@ -79,9 +79,11 @@ const TRACE_STEP_LIMIT_KEY = 'scamper.run.tracesteps'
 /**
  * The range a trace step limit is held to. The floor keeps a limit of 0 -- a
  * trace with nothing in it -- from being typed in by accident; the ceiling is
- * on what can be *asked for*, not on what is sensible. Someone who deliberately
- * types 50,000 has accepted the wait that comes with it (see
- * {@link DEFAULT_TRACE_STEP_LIMIT} for what that wait is made of).
+ * on what can be *asked for*, not on what is sensible. On the runaway
+ * {@link DEFAULT_TRACE_STEP_LIMIT} was measured against, collection takes 2s at
+ * 2000 steps and 47s at 10,000, and runs out of memory at 20,000: a large limit
+ * is a choice to wait -- or, high enough, to lose the page and come back with a
+ * smaller one.
  */
 export const MIN_TRACE_STEP_LIMIT = 10
 export const MAX_TRACE_STEP_LIMIT = 100_000

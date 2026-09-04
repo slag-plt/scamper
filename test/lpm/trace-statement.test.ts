@@ -92,4 +92,15 @@ describe('tracing a single statement', () => {
     // The traced statement is never reached, so it contributes no steps.
     expect(result.steps.length).toBe(0)
   }, 20000)
+
+  test('a runaway statement after the traced one stops the run, not the trace', async () => {
+    // The other side of the same bound: `(loop 0)` runs after the trace is
+    // complete, so hitting the limit there has to end the run -- otherwise it
+    // never comes back -- without claiming the trace it already has is short.
+    const src =
+      '(define loop (lambda (n) (loop (+ n 1))))\n(+ 1 1)\n(loop 0)\n'
+    const result = await traceOf(src, src.indexOf('(+ 1 1)') + 2, 50)
+    expect(result.steps.length).toBeGreaterThan(0)
+    expect(result.truncated).toBe(false)
+  }, 20000)
 })

@@ -27,12 +27,21 @@ export const DEFAULT_TRACE_STEP_LIMIT = 2000
  * Output from every other statement is discarded -- those statements still run,
  * since the traced one usually depends on what they defined. The limit bounds
  * each statement's reductions rather than the array of kept steps, so a
- * statement *before* the traced one cannot loop forever unnoticed (#369).
+ * statement either side of the traced one cannot loop forever unnoticed
+ * (#369).
  */
 export class TraceCollector implements OutputChannel, ErrorChannel {
   readonly steps: Value[] = []
-  /** True once `limit` was reached and the rest of the trace was dropped. */
+  /**
+   * True when the limit left the traced statement short of its end: it ran
+   * past the limit, or a statement before it did and so it never ran at all.
+   * A statement *after* it spending the limit stops the run too, but by then
+   * the trace is whole.
+   */
   truncated = false
+
+  /** True once the limit stopped the run, so `onLimit` is called just once. */
+  private stopped = false
 
   /** The statement being executed, or -1 before the first is announced. */
   private current = -1
@@ -76,8 +85,13 @@ export class TraceCollector implements OutputChannel, ErrorChannel {
     // still has to run, and nothing but this stops it (#369). For the target
     // itself the two counts coincide, since each of its reductions is kept.
     if (this.emitted >= this.limit) {
-      if (!this.truncated) {
-        this.truncated = true
+      if (!this.stopped) {
+        this.stopped = true
+        // Whose limit was spent decides whether the trace is short: the traced
+        // statement's own, or an earlier statement's, leaves steps missing. A
+        // later statement's does not, and reporting one would tell the reader
+        // that a trace they can see the end of stops early.
+        this.truncated = this.current <= this.target
         this.onLimit()
       }
       return

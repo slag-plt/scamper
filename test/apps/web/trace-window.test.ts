@@ -186,6 +186,21 @@ describe('TraceWindow', () => {
     }
   })
 
+  // Cut short with nothing kept means the limit went on an earlier statement,
+  // so this one never ran (#369). "Stopped after 0 steps" would read as this
+  // statement being the long one.
+  test('a trace stopped before its statement ran blames the right one', () => {
+    const wrapper = open({ steps: [], truncated: true })
+    try {
+      expect(document.body.textContent).toContain(
+        'a statement before this one',
+      )
+      expect(document.body.textContent).not.toContain('Stopped after 0 steps')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   // Moving between steps highlights the one sub-expression that moved, so the
   // reduction is visible rather than having to be spotted.
   describe('the changed sub-expression', () => {
