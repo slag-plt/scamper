@@ -468,12 +468,13 @@ export class Module {
  * + `import` -- a file they imported (`(import "helpers.scm")`).
  * + `builtin` -- a builtin library, loaded by src/lib/index.ts.
  *
- * Two things read it. A reduction trace steps *over* (not into) a call into
- * anything that is not `user`, so the call reduces atomically and its
- * internals stay hidden (see src/scheme/trace.ts). And only `builtin` code
- * skips a contract check on the library functions it names (see VarHandler):
- * an imported file is stepped over just the same, but it is still the
- * student's own code, so its mistakes must still be caught.
+ * Two things read it. It seeds a frame's `hidden` flag, so a reduction trace
+ * steps *over* (not into) a call into anything that is not `user`: the call
+ * reduces atomically, tail calls and all, and its internals stay hidden (see
+ * Frame.hidden, which is what src/scheme/trace.ts actually tests). And only
+ * `builtin` code skips a contract check on the library functions it names (see
+ * VarHandler): an imported file is stepped over just the same, but it is still
+ * the student's own code, so its mistakes must still be caught.
  */
 export type CodeOrigin = 'user' | 'import' | 'builtin'
 

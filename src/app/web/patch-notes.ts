@@ -40,6 +40,8 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'A pattern match that fails once no longer breaks itself for the rest of the session.',
+      'set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.',
+      'Stepping through a program no longer shows a stray step from inside a built-in function that calls a function of yours.',
     ],
   },
   {
