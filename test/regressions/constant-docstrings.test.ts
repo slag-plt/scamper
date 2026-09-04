@@ -9,6 +9,8 @@ import {
 } from '../../src/scheme/docstring/docstring'
 import { functionDocSignature } from '../../src/scheme/docstring/render'
 import { parseSignature } from '../../src/scheme/docstring/signature'
+import { contractStmt } from '../../src/scheme/contract'
+import { runProgram } from '../harness.js'
 import { Range } from '../../src/lpm'
 import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 
@@ -107,5 +109,54 @@ describe('a constant can say that it is one (#412)', () => {
     const doc = docFor(definesByName('rex.scm'), 'rex-empty')
     expect(doc.signature.isConstant).toBe(false)
     expect(functionDocSignature(doc)).toBe('(rex-empty) -> rex?')
+  })
+})
+
+// https://github.com/slag-plt/scamper/issues/469
+//
+// `contractStmt` builds a wrapper out of a docstring's *parameters*, so a
+// signature naming none has nothing to check and the define is returned
+// untouched. Both zero-parameter forms land there: a constant (`pi`,
+// `isConstant` true) and a nullary function (`rex-empty`, `isConstant` false).
+// Since #412 the parsed signature does tell the two apart, so leaving a
+// nullary function unwrapped is now a choice rather than a limitation --
+// these tests pin it, so changing it has to be deliberate.
+describe('a zero-parameter docstring is left unwrapped (#469)', () => {
+  const stmtFor = (
+    defs: Map<string, A.Define | A.DefineExport>,
+    name: string,
+  ): A.Define | A.DefineExport => {
+    const stmt = defs.get(name)
+    if (stmt === undefined) {
+      throw new Error(`expected a definition of ${name}`)
+    }
+    return stmt
+  }
+
+  test('a constant is not wrapped, and is still used as a value', async () => {
+    const prelude = definesByName('prelude.scm')
+    expect(docFor(prelude, 'pi').signature.isConstant).toBe(true)
+    const stmt = stmtFor(prelude, 'pi')
+    expect(contractStmt([], stmt)).toBe(stmt)
+    expect(await runProgram('(> pi 3)')).toEqual(['#t'])
+  })
+
+  test('a nullary function is not wrapped either, and is still called', async () => {
+    const rex = definesByName('rex.scm')
+    expect(docFor(rex, 'rex-empty').signature.isConstant).toBe(false)
+    const stmt = stmtFor(rex, 'rex-empty')
+    expect(contractStmt([], stmt)).toBe(stmt)
+    expect(await runProgram('(import rex)\n(rex? (rex-empty))')).toEqual(['#t'])
+  })
+
+  test('a rest-only signature is wrapped, having something to check', () => {
+    // `(rex-concat & xs) -> rex?`: no fixed parameters, but `xs : rex?` is a
+    // predicate to apply, so this one does get its wrapper.
+    const rex = definesByName('rex.scm')
+    const doc = docFor(rex, 'rex-concat')
+    expect(doc.params).toEqual([])
+    expect(doc.restParam?.name).toBe('xs')
+    const stmt = stmtFor(rex, 'rex-concat')
+    expect(contractStmt([], stmt)).not.toBe(stmt)
   })
 })

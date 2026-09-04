@@ -468,12 +468,13 @@ export class Module {
  * + `import` -- a file they imported (`(import "helpers.scm")`).
  * + `builtin` -- a builtin library, loaded by src/lib/index.ts.
  *
- * Two things read it. A reduction trace steps *over* (not into) a call into
- * anything that is not `user`, so the call reduces atomically and its
- * internals stay hidden (see src/scheme/trace.ts). And only `builtin` code
- * skips a contract check on the library functions it names (see VarHandler):
- * an imported file is stepped over just the same, but it is still the
- * student's own code, so its mistakes must still be caught.
+ * Two things read it. It seeds a frame's `hidden` flag, so a reduction trace
+ * steps *over* (not into) a call into anything that is not `user`: the call
+ * reduces atomically, tail calls and all, and its internals stay hidden (see
+ * Frame.hidden, which is what src/scheme/trace.ts actually tests). And only
+ * `builtin` code skips a contract check on the library functions it names (see
+ * VarHandler): an imported file is stepped over just the same, but it is still
+ * the student's own code, so its mistakes must still be caught.
  */
 export type CodeOrigin = 'user' | 'import' | 'builtin'
 
@@ -651,13 +652,18 @@ export interface Ap {
   range: Range
   provenance?: Provenance
 }
+// `match` tests one branch per step, to keep the work quantum small: `idx`
+// says which branch to test next, and a branch that fails to match re-enters
+// at `idx + 1`. As with `Let.idx` it is threaded through fresh op copies and
+// never mutated in place, because a compiled program is shared by every run,
+// every call and every fiber in the session -- a cursor written onto the op
+// would outlive the match that moved it.
 export interface Match {
   tag: 'match'
   branches: [Pat, Blk][]
   range: Range
-  // hack fix to not modify original branch
-  // TODO: making this better requires better bytecode
-  currBranchIdx?: number
+  // The branch to test next; 0 on the initial run.
+  idx: number
 }
 // `let` is letrec: a single scope holds every binder, declared as HOLEs, then
 // filled left-to-right as the value sub-blocks evaluate (each may reference any

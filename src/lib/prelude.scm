@@ -875,14 +875,15 @@
 ;;      the library's insides. That used to spill map's `cond` into the
 ;;      student's reduction trace: a closure built at call time was not marked
 ;;      as library code. Since #476 it is (a closure takes the origin of the
-;;      frame that built it -- see ClsHandler), so the machine now holds this
-;;      rather than the rule; keeping the helpers at the top level is still
-;;      clearer, and #478 asks for the property to be checked outright.
+;;      frame that built it -- see ClsHandler), and since #478 the shield
+;;      survives the tail call itself (see Frame.hidden), so the machine now
+;;      holds this rather than the rule; keeping the helpers at the top level
+;;      is still clearer.
 ;;   2. Put it *above* the neighbouring `;;;` docstring block, never between
-;;      that block and the function it documents. The contract codegen binds a
-;;      docstring to whatever define follows it, so a helper slipped in
-;;      underneath silently inherits the wrong signature -- and fails with an
-;;      arity mismatch naming a function nobody called (#479).
+;;      that block and the function it documents -- a docstring binds to the
+;;      define directly below it. Since #479 the compiler checks this, so
+;;      getting it wrong stops the library from loading rather than handing
+;;      the helper someone else's contract.
 ;;
 ;; They are undocumented (like lists-cars above) so the codegen leaves them
 ;; alone, which also means map's own contract is checked once per call rather
@@ -1123,9 +1124,9 @@
 (define-export ignore (js-var "prelude_ignore"))
 
 ;;; (set-maximum-recursion-depth! n) -> void?
-;;;  n : any
-;;;   number? n >= 0
-;;; Sets the maximum recursion depth of Scamper to n. Note that tail call-optimized functions do _not_ count towards this limit.
+;;;  n : integer?
+;;;   a whole number between 1 and 200000
+;;; Sets the maximum recursion depth of Scamper to `n`, in effect until the program is run again. Note that tail call-optimized functions do _not_ count towards this limit. Each level of recursion costs memory, so a very deep limit may exhaust it before it is reached.
 ;;; @category mutation, predicates, map, reduce, reduce-right
 (define-export set-maximum-recursion-depth! (js-var "prelude_setMaximumRecursionDepth"))
 

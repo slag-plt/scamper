@@ -69,9 +69,8 @@
 ;;; @category regexes, rex-any-of
 (define-export rex-optional (js-var "rex_rexOptional"))
 
-;;; (regex pattern flags) -> rex?
+;;; (regex pattern) -> rex?
 ;;;  pattern : string?
-;;;  flags : string?
 ;;; Returns a regex that matches a Javascript regex `pattern`. See [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions) for more details.
 ;;; @category regexes, list, pair, string, vector
 (define-export regex (js-var "rex_rexRegex"))

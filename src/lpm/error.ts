@@ -101,3 +101,23 @@ export class SuspendSignal extends Error {
     super('a blocking primitive suspended the fiber')
   }
 }
+
+/**
+ * Thrown by `set-maximum-recursion-depth!` to raise or lower the running
+ * fiber's call stack limit. The limit belongs to the Fiber, which a library
+ * primitive has no handle on, so the request travels out to `applyFn` -- the
+ * runtime's single native-invocation site, which does hold the fiber -- and is
+ * fully handled there. Like SuspendSignal this is control flow, NOT an error:
+ * it is tested for before any error handling and never surfaces to the user.
+ *
+ * It carries the depth rather than a callback so that error.ts need not import
+ * Fiber; there is exactly one primitive of this kind, so a general effect
+ * mechanism would be a cycle bought for nothing.
+ */
+export class SetRecursionDepthSignal extends Error {
+  constructor(public depth: number) {
+    // Extends Error only so that `throw` of it is a throw of an error, which is
+    // what every linter and every reader expects.
+    super('a primitive set the fiber\'s maximum recursion depth')
+  }
+}

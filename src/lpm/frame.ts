@@ -29,6 +29,14 @@ export class Frame {
   // closure returned by a qualified-module function must still resolve the
   // module's siblings. Undefined for ordinary frames (dynamic fiber resolution).
   home?: L.Env
+  // A reduction trace must not surface this frame's steps. Normally that is
+  // just "not the student's code", but a tail call *replaces* its caller's
+  // frame, so a replacement inherits a hidden caller's shield (see
+  // Fiber.replaceFrame) -- otherwise a library function tail-calling a closure
+  // spills the rest of that call into the trace (#478). Visibility only:
+  // `origin` still says whose code this frame runs, which is what decides
+  // contract checks and error ranges.
+  hidden: boolean
 
   constructor(
     name: string,
@@ -45,6 +53,7 @@ export class Frame {
     this.callRange = callRange
     this.origin = origin
     this.home = home
+    this.hidden = origin !== 'user'
   }
 
   isFinished(): boolean {
