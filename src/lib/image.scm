@@ -454,7 +454,7 @@
 ;;;  dash-spec : list?
 ;;;   a list of numbers
 ;;;  d : drawing?
-;;; Returns a new drawing formed by drawing `d` but with lines drawn according to `dash-spec`. `dash-spec` is an list of numbers where each successive pair of numbers describe the length of a dash and the length of the subsequent gap.
+;;; Returns a new drawing formed by drawing `d` but with lines drawn according to `dash-spec`. `dash-spec` is a list of numbers where each successive pair of numbers describe the length of a dash and the length of the subsequent gap.
 ;;; @category canvas, image, shapes, path-func
 (define-export with-dash (js-var "drawing_withDash"))
 

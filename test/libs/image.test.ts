@@ -1217,18 +1217,18 @@ describe('drawing', () => {
 (with-dash (list 4 2) (rectangle 10 10 "solid" "red"))
 `),
       ).toEqual([
-        '(withDash (list 4 2) (rectangle 10 10 "solid" (rgba 255 0 0 255)) 10 10)',
+        '(withDash (vector 4 2) (rectangle 10 10 "solid" (rgba 255 0 0 255)) 10 10)',
       ])
     })
 
-    test('an empty dash spec is the empty list', async () => {
+    test('an empty dash spec is stored as an empty vector', async () => {
       expect(
         await runProgram(`
 (import image)
 (with-dash (list) (rectangle 10 10 "solid" "red"))
 `),
       ).toEqual([
-        '(withDash null (rectangle 10 10 "solid" (rgba 255 0 0 255)) 10 10)',
+        '(withDash (vector) (rectangle 10 10 "solid" (rgba 255 0 0 255)) 10 10)',
       ])
     })
 
@@ -1556,7 +1556,7 @@ describe('drawing', () => {
       ).toEqual([
         '(beside "center" 14 10 (vector (rectangle 10 10 "solid" (rgba 0 128 0 255)) (ellipse 4 6 "solid" (rgba 0 128 0 255))))',
         '(rotate 14.142135623730951 14.142135623730951 7.071067811865475 0 45 (rectangle 10 10 "solid" (rgba 0 128 0 255)))',
-        '(withDash (list 4 2) (rectangle 10 10 "solid" (rgba 0 128 0 255)) 10 10)',
+        '(withDash (vector 4 2) (rectangle 10 10 "solid" (rgba 0 128 0 255)) 10 10)',
       ])
     })
 
