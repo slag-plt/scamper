@@ -1,4 +1,4 @@
-import { ErrorChannel, ICE, OutputChannel, rangesEqual, ReportError, ScamperError, SuspendSignal, Value } from '.'
+import { ErrorChannel, ICE, OutputChannel, rangesEqual, ReportError, ScamperError, SetRecursionDepthSignal, SuspendSignal, Value } from '.'
 import { blockOnStep, Fiber, StepResult } from './fiber'
 import { FiberTraceStepper } from './raiser.js'
 import { schedulerYield } from './scheduler-yield.js'
@@ -186,6 +186,14 @@ export class Scheduler {
     try {
       return fiber.step()
     } catch (e) {
+      if (e instanceof SetRecursionDepthSignal) {
+        // Defensive: applyFn handles this signal and never rethrows it, so
+        // arriving here means a primitive threw one outside a call.
+        throw new ICE(
+          'Scheduler.stepTask',
+          'A set-recursion-depth signal escaped applyFn!',
+        )
+      }
       if (e instanceof SuspendSignal) {
         // A blocking primitive suspended the fiber; hand the async action to
         // processStepResult, which runs it and resumes the fiber with the
