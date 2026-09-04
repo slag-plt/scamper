@@ -84,7 +84,6 @@ export class Scheduler {
   // statement emitting ten reductions is captioned once, and one emitting
   // nothing is captioned all the same. Cleared when the task ends.
   private nextCaption = new Map<SchedulerId, number>()
-  private isRunning = false
   // The task whose fiber is stepping right now, or undefined between steps.
   // A library function running inside a step uses this to find out which run it
   // belongs to, so a callback it registers is tied to that run rather than to
@@ -93,7 +92,13 @@ export class Scheduler {
   // allows for resuming execution
   private currTaskIdx = 0
   private timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
-  private controller = new AbortController()
+  // The `execute` loop that is live, or null when none is. Each loop holds its
+  // own token and tests it by identity, so a loop retired by a pause cannot
+  // wake from an await, consult a *later* loop's liveness, and keep stepping
+  // the queue alongside it (#510). A symbol rather than an AbortController:
+  // nothing here is interruptible mid-step, so there is no signal to observe,
+  // and the per-run controller in scamper.ts is a different thing entirely.
+  private currentLoop: symbol | null = null
 
   /**
    * @returns the id of the run whose fiber is stepping, or undefined if called
@@ -161,17 +166,16 @@ export class Scheduler {
   }
 
   pauseExecution() {
-    this.controller.abort()
-    this.isRunning = false
+    this.currentLoop = null
   }
 
   resumeExecution() {
-    if (this.isRunning) {
+    if (this.currentLoop !== null) {
       return
     }
-    this.controller = new AbortController()
-    this.isRunning = true
-    void this.execute()
+    const loop = Symbol('execute loop')
+    this.currentLoop = loop
+    void this.execute(loop)
   }
 
   stepTask(task: SchedulerTask): StepResult | undefined {
@@ -655,10 +659,10 @@ export class Scheduler {
     }
   }
 
-  private async execute(): Promise<void> {
-    while (!this.wasPaused()) {
+  private async execute(loop: symbol): Promise<void> {
+    while (this.currentLoop === loop) {
       if (this.tasks.length === 0) {
-        this.isRunning = false
+        this.retire(loop)
         return
       }
       // Yield before stepping so callers can observe scheduled tasks (e.g. UI
@@ -666,7 +670,7 @@ export class Scheduler {
       await schedulerYield()
       const startTime = performance.now()
       while (performance.now() - startTime < this.timeQuantum) {
-        if (this.wasPaused()) {
+        if (this.currentLoop !== loop) {
           break
         }
         if (this.currTaskIdx >= this.tasks.length) {
@@ -711,11 +715,11 @@ export class Scheduler {
           this.dropTask(task)
           if (task.onFatal === undefined) {
             // Nobody to hand this to, so let it escape as an unhandled
-            // rejection (the old behavior) -- but clear isRunning first, or
+            // rejection (the old behavior) -- but retire this loop first, or
             // resumeExecution() sees a "running" loop that has in fact died and
             // returns early forever, wedging this scheduler (and, for the
             // Scamper singleton, every later run) with nothing surfaced.
-            this.isRunning = false
+            this.retire(loop)
             throw e
           }
           task.onFatal(e)
@@ -835,8 +839,19 @@ export class Scheduler {
     task.fiber.advanceStmt()
   }
 
+  /**
+   * Ends `loop`, but only if it is still the live one: a loop already retired
+   * by a pause must not clear the liveness of the loop that replaced it.
+   */
+  private retire(loop: symbol): void {
+    if (this.currentLoop === loop) {
+      this.currentLoop = null
+    }
+  }
+
+  /** @returns whether the scheduler is stopped, i.e. no loop is live. */
   private wasPaused(): boolean {
-    return !this.isRunning || this.controller.signal.aborted
+    return this.currentLoop === null
   }
 
   async setTimeQuantumFromFPS(): Promise<void> {

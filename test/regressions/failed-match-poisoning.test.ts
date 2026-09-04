@@ -15,6 +15,8 @@ import { runFiberOnScheduler } from '../../src/lpm/run'
 // match failure" for a scrutinee that matches perfectly well.
 //
 // Order matters: the failing call has to come first, or nothing is poisoned.
+//
+// The subject here is the poisoning; the range on that error is #493's doing.
 test('a failed match does not poison later uses of it (#480)', async () => {
   expect(
     await runProgram(`
@@ -23,7 +25,7 @@ test('a failed match does not poison later uses of it (#480)', async () => {
     (reduce-right - (list 1 2 3))
     `),
   ).toEqual([
-    'Runtime error: Inexhaustive pattern match failure',
+    'Runtime error [1:1-1:21]: Inexhaustive pattern match failure',
     '42',
     '2',
   ])
@@ -71,7 +73,7 @@ test('running a program does not mutate its compiled bytecode (#480)', async () 
   // unexpected error rather than these three lines.
   expect(out.log).toEqual([
     '"one"',
-    'Runtime error: Inexhaustive pattern match failure',
+    'Runtime error [3:9-5:20]: Inexhaustive pattern match failure',
     '"zero"',
   ])
   expect(JSON.stringify(prog)).toEqual(before)

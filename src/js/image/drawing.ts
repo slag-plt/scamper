@@ -349,14 +349,41 @@ interface WithDash extends L.Struct {
   height: number
 }
 
-export function drawing_withDash(dashSpec: number[], drawing: Drawing): WithDash {
-  return {
-    [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
-    dashSpec,
-    drawing,
-    width: drawing.width,
-    height: drawing.height
-  }
+const withDashPrim = (dashSpec: number[], drawing: Drawing): WithDash => ({
+  [L.scamperTag]: 'struct', [L.structKind]: 'withDash',
+  dashSpec,
+  drawing,
+  width: drawing.width,
+  height: drawing.height
+})
+
+/**
+ * The dash lengths of `dashSpec` as the array a canvas takes (#491).
+ * @throws ScamperError if a length is not a number, or is one setLineDash
+ *         cannot use: it returns on a spec it cannot read rather than
+ *         failing, so an unchecked one would quietly draw a solid line --
+ *         a negative or non-finite length does that just as a string does.
+ */
+function checkDashSpec(dashSpec: L.List): number[] {
+  return L.listToVector(dashSpec).map((v) => {
+    if (typeof v !== 'number') {
+      throw new L.ScamperError(
+        'Runtime',
+        `expected a list of numbers, but the list contains ${L.typeOf(v)}`
+      )
+    }
+    if (!Number.isFinite(v) || v < 0) {
+      throw new L.ScamperError(
+        'Runtime',
+        `expected a finite, non-negative dash length, received ${v.toString()}`
+      )
+    }
+    return v
+  })
+}
+
+export function drawing_withDash(dashSpec: L.List, drawing: Drawing): WithDash {
+  return withDashPrim(checkDashSpec(dashSpec), drawing)
 }
 interface DText extends L.Struct {
   [L.structKind]: 'text',
@@ -521,7 +548,7 @@ export function drawing_drawingRecolor(drawing: Drawing, color: L.Value): Drawin
     case 'rotate':
       return drawing_rotate(drawing.angle, drawing_drawingRecolor(drawing.drawing, color))
     case 'withDash':
-      return drawing_withDash(drawing.dashSpec, drawing_drawingRecolor(drawing.drawing, color))
+      return withDashPrim(drawing.dashSpec, drawing_drawingRecolor(drawing.drawing, color))
     case 'text':
       return textPrim(drawing.width, drawing.height, drawing.text,
         drawing.font, drawing.size, drawing.color)
@@ -601,7 +628,7 @@ export function drawing_normalize (drawing: Drawing): Drawing {
       const child = drawing_normalize(drawing.drawing)
       return child === drawing.drawing
         ? drawing
-        : drawing_withDash(drawing.dashSpec, child)
+        : withDashPrim(drawing.dashSpec, child)
     }
   }
 }

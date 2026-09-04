@@ -8,13 +8,12 @@ import * as SymbolDB from '../src/scheme/symbol-db'
 expect.extend(matchers)
 // N.B., only initializeLibs() (plus the symbol DB it feeds) here, not
 // scamper.ts's initialize(): importing scamper.ts triggers its
-// module-load-time renderer registration (a fire-and-forget
-// `import("./app/web/renderers.js")`), and doing that from this shared global
-// setup -- before any individual test file's own vi.mock(...) calls have been
-// registered -- grabs real (unmocked) transitive dependencies (e.g.
-// src/fs/opfs.ts) out from under tests that mock them. Test files that
-// actually need Scamper.getInstance() (or anything else from scamper.ts) call
-// its initialize() themselves, after their own mocks.
+// module-load-time renderer registration (`import("./app/web/renderers.js")`),
+// and doing that from this shared global setup -- before any individual test
+// file's own vi.mock(...) calls have been registered -- grabs real (unmocked)
+// transitive dependencies (e.g. src/fs/opfs.ts) out from under tests that mock
+// them. Test files that actually need Scamper.getInstance() (or anything else
+// from scamper.ts) call its initialize() themselves, after their own mocks.
 await initializeLibs()
 // N.B., after initializeLibs(): the symbol DB snapshots the just-loaded
 // builtin libraries.

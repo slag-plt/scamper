@@ -1,15 +1,15 @@
 import * as L from '../../lpm'
 
 export function html_isElement(v: L.Value): boolean {
-  return v instanceof HTMLElement
+  return typeof HTMLElement !== 'undefined' && v instanceof HTMLElement
 }
 
 export function html_textAreaQ(v: L.Value): boolean {
-  return v instanceof HTMLTextAreaElement
+  return typeof HTMLTextAreaElement !== 'undefined' && v instanceof HTMLTextAreaElement
 }
 
 export function html_buttonQ(v: L.Value): boolean {
-  return v instanceof HTMLButtonElement
+  return typeof HTMLButtonElement !== 'undefined' && v instanceof HTMLButtonElement
 }
 
 export function html_textArea(id: string): HTMLTextAreaElement {
