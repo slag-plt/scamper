@@ -21,9 +21,12 @@ import { librarySources } from './generated/sources.js'
 async function loadLibrary(name: string, src: string): Promise<L.Module> {
   // N.B., insertContracts=true: only the standard library gets its exports
   // wrapped with contract checks derived from their docstrings, not
-  // arbitrary user programs. allowInternalNames is narrower still: the
-  // `##...##` shape is reserved for the runtime (see ParseOptions), and
-  // runtime.scm is the interop layer that binds those primitives.
+  // arbitrary user programs. A docstring whose signature names something
+  // other than the define directly below it fails this load (the ICE below)
+  // rather than contracting the wrong function (#479).
+  // allowInternalNames is narrower still: the `##...##` shape is reserved for
+  // the runtime (see ParseOptions), and runtime.scm is the interop layer that
+  // binds those primitives.
   const { prog, diagnostics } = await compile(src, {
     insertContracts: true,
     allowInternalNames: name === 'runtime',
