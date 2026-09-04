@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { nextTick } from 'vue'
 import OutputPane from '../../../src/app/web/components/OutputPane.vue'
 import Scamper, { initialize } from '../../../src/scamper'
+import type { ErrorChannel, OutputChannel } from '../../../src/lpm/output'
 import { setShowSourceWithOutput } from '../../../src/app/web/output-prefs'
 
 await initialize()
@@ -67,8 +68,10 @@ describe('output pane source captions', () => {
   async function runInPane(src: string) {
     const wrapper = mount(OutputPane, { attachTo: document.body })
     await nextTick()
+    // The pane's display is both channels at once, which is how the IDE wires
+    // it: what a run prints and what it reports land in the same column.
     const channel = (
-      wrapper.vm as unknown as { display: Parameters<typeof Scamper.prototype.execute>[0]['out'] }
+      wrapper.vm as unknown as { display: OutputChannel & ErrorChannel }
     ).display
     const run = await Scamper.getInstance().execute({
       src,

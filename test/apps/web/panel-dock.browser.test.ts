@@ -31,6 +31,7 @@ const LABELS: Record<PanelId, string> = {
   editor: 'Source',
   output: 'Output',
   trace: 'Step',
+  repl: 'REPL',
 }
 
 const DOCK_W = 900
@@ -91,10 +92,18 @@ function mountDock(withEditor = false): Harness {
   return { wrapper: mount(Host, { attachTo: host }), size }
 }
 
+// These three throw rather than hand back a null a caller has to defend
+// against: every assertion below is about a box, and a `?? 0` standing in for a
+// frame that went missing turns "the editor got narrower" into `0 < 350`, which
+// holds whatever the dock did. A missing element is a broken spec, not a
+// measurement.
 const frame = (id: PanelId) =>
-  host.querySelector<HTMLElement>(`[data-panel="${id}"]`)
-const dock = () => host.querySelector<HTMLElement>('.dock')
-const rect = (el: Element | null) => el?.getBoundingClientRect()
+  required(
+    host.querySelector<HTMLElement>(`[data-panel="${id}"]`),
+    `a frame for the ${id} panel`,
+  )
+const dock = () => required(host.querySelector<HTMLElement>('.dock'), 'the dock')
+const rect = (el: Element) => el.getBoundingClientRect()
 
 /** A pointer drag from `from` to `to`, in client coordinates. */
 function drag(
@@ -134,12 +143,11 @@ describe('the splitter', () => {
       // The default docks editor and output into the two slots (#371).
       await settle()
 
-      const before = rect(frame('editor'))?.width ?? 0
+      const before = rect(frame('editor')).width
       expect(before).toBeGreaterThan(0)
 
       const sp = query(host, '[role="separator"]')
       const box = rect(sp)
-      expect(box).toBeDefined()
 
       drag(
         sp,
@@ -148,8 +156,8 @@ describe('the splitter', () => {
       )
       await settle()
 
-      const after = rect(frame('editor'))?.width ?? 0
-      const other = rect(frame('output'))?.width ?? 0
+      const after = rect(frame('editor')).width
+      const other = rect(frame('output')).width
       expect(after).toBeLessThan(before - 150)
       // The two slots plus the gutter still account for the whole dock.
       expect(after + other).toBeGreaterThan(DOCK_W - 40)
@@ -175,7 +183,7 @@ describe('the splitter', () => {
       await settle()
 
       // 15% is the floor the model clamps to.
-      expect(rect(frame('editor'))?.width ?? 0).toBeGreaterThan(DOCK_W * 0.14)
+      expect(rect(frame('editor')).width).toBeGreaterThan(DOCK_W * 0.14)
       expect(panels.layout.value.splitPercent).toBe(15)
     } finally {
       wrapper.unmount()
@@ -201,7 +209,7 @@ describe('a floating panel', () => {
     try {
       const win = frame('output')
       const before = rect(win)
-      const bar = query(required(win, 'the floating window'), '.window-bar')
+      const bar = query(win, '.window-bar')
 
       drag(
         bar,
@@ -225,7 +233,7 @@ describe('a floating panel', () => {
     try {
       const win = frame('output')
       const before = rect(win)
-      const handle = query(required(win, 'the floating window'), '.resize-w')
+      const handle = query(win, '.resize-w')
 
       drag(
         handle,
@@ -256,7 +264,7 @@ describe('a floating panel', () => {
       panels.float('output')
       await settle()
       const dockBefore = rect(dock())
-      expect(rect(frame('output'))?.right).toBeLessThanOrEqual(dockBefore.right + 1)
+      expect(rect(frame('output')).right).toBeLessThanOrEqual(dockBefore.right + 1)
 
       size.value = { w: 420, h: 320 }
       await settle()
@@ -322,7 +330,7 @@ describe('a floating panel', () => {
       await settle()
 
       const win = frame('output')
-      expect(win?.offsetParent).toBe(dock())
+      expect(win.offsetParent).toBe(dock())
 
       expect(panels.layout.value.placement.output.kind).toBe('floating')
       const g = panels.layout.value.geometry.output
@@ -344,8 +352,9 @@ describe('CodeMirror', () => {
     const { wrapper } = mountDock(true)
     try {
       await settle()
-      const content = () => host.querySelector<HTMLElement>('.cm-content')
-      const before = rect(content())?.height ?? 0
+      const content = () =>
+        required(host.querySelector<HTMLElement>('.cm-content'), "CodeMirror's content")
+      const before = rect(content()).height
       expect(before).toBeGreaterThan(0)
 
       // Share a slot with the output, then show the other tab, then come back.
@@ -353,15 +362,15 @@ describe('CodeMirror', () => {
       await settle()
       panels.moveToOtherSlot('output')
       await settle()
-      expect(rect(frame('editor'))?.height ?? 1).toBe(0)
+      expect(rect(frame('editor')).height).toBe(0)
 
       panels.reveal('editor')
       await settle()
 
-      const after = rect(content())?.height ?? 0
+      const after = rect(content()).height
       expect(after).toBeGreaterThan(0)
       // And the document survived the round trip rather than being remounted.
-      expect(content()?.textContent).toContain('sidebar')
+      expect(content().textContent).toContain('sidebar')
     } finally {
       wrapper.unmount()
     }

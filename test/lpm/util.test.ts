@@ -116,7 +116,7 @@ describe('typeOf', () => {
     ['JS function', namedFn, '[Function: namedFn]'],
     [
       'closure',
-      U.mkClosure([], [], new Map(), () => null, 'add-one'),
+      U.mkClosure([], [], [], () => null, 'add-one'),
       '[Function: add-one]',
     ],
     ['char', U.mkChar('a'), 'char'],
@@ -149,7 +149,7 @@ describe('toString', () => {
     ['vector', [1, 2], '(vector 1 2)'],
     [
       'closure',
-      U.mkClosure([], [], new Map(), () => null, 'add-one'),
+      U.mkClosure([], [], [], () => null, 'add-one'),
       '[Function: add-one]',
     ],
     ['JS function', namedFn, '[Function: namedFn]'],

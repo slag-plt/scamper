@@ -10,7 +10,13 @@ import '../../../src/app/web/renderers'
 await initialize()
 
 function entry(id: number, source: string, values: unknown[] = []): ReplEntry {
-  return { id, source, values: values as ReplEntry['values'], isRunning: false }
+  return {
+    id,
+    source,
+    values: values as ReplEntry['values'],
+    isRunning: false,
+    ran: true,
+  }
 }
 
 /** The cells on screen, in order; the last one is always the prompt. */

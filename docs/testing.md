@@ -69,6 +69,7 @@ Operational notes:
   One browser means one origin and therefore one shared OPFS, so a file that clears storage would empty another's fixtures mid-run.
 + They are excluded from `npm test` and `npm run validate` (see `test.exclude` in `vite.config.ts`), because a missing Playwright browser binary fails browser-mode startup outright.
   CI runs them as their own job.
+  They *are* typechecked by `npm run typecheck:test`, which covers the whole of `test/`, so a browser spec that has drifted from `src/` still fails `npm run validate` even though nothing runs it there.
 + One-time setup: `npm run playwright:install` downloads a headless Chromium binary, cached outside the repository.
   Then run `npm run test:browser` or `npm run coverage:browser`.
 + On a bare Linux box that binary needs system libraries that are not installed alongside it.

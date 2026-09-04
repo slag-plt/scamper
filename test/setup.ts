@@ -26,11 +26,16 @@ SymbolDB.initialize()
 // than being caught and logged as the ones inside a dispatch are. No
 // rectangles is the honest answer here: nothing on this page has a size.
 if (typeof Range !== 'undefined') {
-  if (!('getClientRects' in Range.prototype)) {
+  // N.B., the checks go through a local typed `object`: asking
+  // `'getClientRects' in Range.prototype` directly narrows the prototype to
+  // `never` in the branch that has to write to it, since the DOM lib says the
+  // method is always there and only jsdom disagrees.
+  const rangeProto: object = Range.prototype
+  if (!('getClientRects' in rangeProto)) {
     Range.prototype.getClientRects = () =>
       Object.assign([], { item: () => null }) as unknown as DOMRectList
   }
-  if (!('getBoundingClientRect' in Range.prototype)) {
+  if (!('getBoundingClientRect' in rangeProto)) {
     Range.prototype.getBoundingClientRect = () => new DOMRect()
   }
 }

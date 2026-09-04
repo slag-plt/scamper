@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import * as L from '../../../src/lpm'
 import { parseProgramFromSource } from '../../../src/scheme/lezer-bridge'
+import type { ScamperDiagnostic } from '../../../src/scheme/diagnostic'
 
 // N.B., unlike core.test.ts/corpus.test.ts, these don't
 // assert parity with reader.ts/parser.ts's specific error messages -- Lezer's
@@ -9,7 +9,7 @@ import { parseProgramFromSource } from '../../../src/scheme/lezer-bridge'
 // are deliberately generic. What matters is: no crash, at least one error is
 // reported, and parsing keeps going for the rest of the program.
 function parse(src: string) {
-  const errors: L.ScamperError[] = []
+  const errors: ScamperDiagnostic[] = []
   const prog = parseProgramFromSource(errors, src)
   return { prog, errors }
 }

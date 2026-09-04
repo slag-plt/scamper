@@ -1,3 +1,15 @@
+// The test tree's own project. Until #509 nothing ran it: it existed only for
+// ESLint's `projectService`, and type-aware lint rules do not report the
+// compile errors -- a fixture missing a member, a call site left behind by a
+// changed signature -- that had accumulated here unseen. `npm run
+// typecheck:test` runs it now and `scripts/validate-build` gates on it, so it
+// is a blocking step.
+//
+// It adds no compiler option to the root config and relaxes none of them: a
+// spec runs under exactly the strictness `src/` does. In particular
+// `noUncheckedIndexedAccess` stays off, for the reason recorded at length in
+// the root config -- measured against this project too, it costs several
+// hundred errors across bounded loops and fixture indexing and buys nothing.
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {

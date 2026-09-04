@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import { localBackend, setBackend } from '../../src/fs'
 import type { FS } from '../../src/fs/fs'
 import { MockFileSystem } from '../stubs/mock-file-system'
+import { emptyFS } from '../stubs/empty-fs'
 import { runProgram } from '../harness.js'
 
 // Regression test for #341: a `(import "...")` of a *file* as the last
@@ -29,15 +30,10 @@ beforeEach(async () => {
 
 /** An FS whose every file exists but refuses to load, as a directory would. */
 function unreadableFS(): FS {
-  const nope = () => Promise.reject(new Error('EISDIR'))
-  return {
-    getFileList: () => Promise.resolve([]),
+  return emptyFS({
     fileExists: () => Promise.resolve(true),
-    loadFile: nope,
-    saveFile: nope,
-    deleteFile: nope,
-    renameFile: nope,
-  }
+    loadFile: () => Promise.reject(new Error('EISDIR')),
+  })
 }
 
 describe('#341: a file import as the last statement of a program', () => {

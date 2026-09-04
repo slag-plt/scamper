@@ -23,6 +23,7 @@ const LABELS: Record<PanelId, string> = {
   editor: 'Source',
   output: 'Output',
   trace: 'Step',
+  repl: 'REPL',
 }
 
 /** Counts mounts, so a remount shows up as a number rather than a guess. */
