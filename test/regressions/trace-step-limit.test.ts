@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import Scamper, { initialize } from '../../src/scamper'
 import { Loc } from '../../src/lpm/range'
 import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
+import { DEFAULT_TRACE_STEP_LIMIT } from '../../src/lpm/output/trace-collector'
 
 beforeAll(async () => {
   await initialize()
@@ -26,7 +27,6 @@ const RUNAWAY =
 
 describe('tracing a statement that never finishes (#369)', () => {
   test('stops at the default step limit instead of running on', async () => {
-    const started = Date.now()
     const result = await Scamper.getInstance().traceStatement({
       src: RUNAWAY,
       cursorLoc: new Loc(1, 1, RUNAWAY.indexOf('(factorial -1)') + 1),
@@ -36,9 +36,12 @@ describe('tracing a statement that never finishes (#369)', () => {
     // Cut off rather than run to an end it does not have, and said to be so:
     // the window tells the reader the rest was dropped.
     expect(result?.truncated).toBe(true)
-    // The point of the limit is that stepping stays responsive. Generous
-    // enough not to be flaky on a loaded machine, tight enough that the old
-    // ~50s ceiling could never pass.
-    expect(Date.now() - started).toBeLessThan(5_000)
+    // Exactly the limit, which is what says collection stopped *because* of it
+    // rather than wandering off somewhere else. Deliberately not a wall-clock
+    // assertion: how long 2,500 steps take is a property of the machine, and a
+    // bound tight enough to mean anything here is one a loaded CI runner
+    // trips. What guards against a regression to the old ~50s ceiling is this
+    // test's own timeout -- collecting 10,000 steps cannot finish inside it.
+    expect(result?.steps).toHaveLength(DEFAULT_TRACE_STEP_LIMIT)
   }, 20_000)
 })
