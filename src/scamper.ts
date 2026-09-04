@@ -322,8 +322,12 @@ export default class Scamper {
     ]
     const fiber = new Fiber(prog, env)
     // A callback runs on the student's behalf, so it inherits whatever depth
-    // the program set for itself (#477).
-    fiber.setMaxCallStackDepth(run.fiber.maxCallStackDepth)
+    // the program set for itself (#477) -- and only that. A run that never
+    // asked leaves its callbacks on the current default, so a depth raised in
+    // the preferences pane reaches them too (#497).
+    if (run.fiber.hasOwnCallStackDepth) {
+      fiber.setMaxCallStackDepth(run.fiber.maxCallStackDepth)
+    }
     const id = crypto.randomUUID()
     this.scheduler.schedule({
       id,
@@ -669,9 +673,14 @@ export default class Scamper {
     ): Promise<void> => {
       if (ended) return
       const fiber = new Fiber(prog, run.fiber.topLevelEnv)
-      // As with the environment, the depth an earlier entry set carries into
-      // this one -- a REPL session is one continuous program to its user (#477).
-      fiber.setMaxCallStackDepth(run.fiber.maxCallStackDepth)
+      // As with the environment, a depth an earlier entry *asked* for carries
+      // into this one -- a REPL session is one continuous program to its user
+      // (#477). One it merely started at does not, so raising the preference
+      // reaches a REPL that is already open, which is where a student who has
+      // just hit the limit is sitting (#497).
+      if (run.fiber.hasOwnCallStackDepth) {
+        fiber.setMaxCallStackDepth(run.fiber.maxCallStackDepth)
+      }
       // Before the run, not after: a handler registered *by this entry* has to
       // see this fiber's top level, and so does one registered by an earlier
       // entry that fires while this one is running.

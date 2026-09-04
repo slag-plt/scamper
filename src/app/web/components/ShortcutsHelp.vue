@@ -74,6 +74,7 @@ const groups: Group[] = [
     items: [
       { label: 'Run program', keys: [mod, 'Enter'] },
       { label: 'Save now', keys: [mod, 'S'], note: 'autosaves anyway' },
+      { label: 'Preferences', keys: [mod, ','] },
     ],
   },
 ]

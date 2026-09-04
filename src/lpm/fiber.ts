@@ -8,7 +8,7 @@ import {
 } from './handlers/stmt-handlers'
 import { Frame } from './frame'
 import { ICE, ScamperError } from './error'
-import { DEFAULT_MAX_CALL_STACK_DEPTH } from './limits'
+import { defaultMaxCallStackDepth } from './limits'
 import { Range } from './range'
 import {
   ApHandler,
@@ -101,7 +101,8 @@ export class Fiber {
   private prog: Stmt[]
   private currStmtIdx = 0
   private _isProcessingBlk = false
-  private _maxCallStackDepth = DEFAULT_MAX_CALL_STACK_DEPTH
+  private _maxCallStackDepth = defaultMaxCallStackDepth()
+  private _ownCallStackDepth = false
   // The names this fiber's program has declared for export (the union across its
   // export statements). Consulted only when the fiber's top level is snapshotted
   // as a module (getModule); a program run for its own sake never exports.
@@ -248,12 +249,27 @@ export class Fiber {
   }
 
   /**
+   * Whether that depth was asked for rather than taken from the default the
+   * fiber was built with.
+   *
+   * What tells a chain of fibers -- a REPL's entries, a callback and the run
+   * that registered it -- whether there is a choice to carry forward. Without
+   * it, one that had merely inherited the session default would go on handing
+   * that stale number down and a raised preference would never reach an open
+   * REPL (#497).
+   */
+  get hasOwnCallStackDepth() {
+    return this._ownCallStackDepth
+  }
+
+  /**
    * Sets this fiber's call stack limit, on behalf of
    * `set-maximum-recursion-depth!` (see SetRecursionDepthSignal). `n` is
    * validated by the primitive, so no check is repeated here.
    */
   setMaxCallStackDepth(n: number) {
     this._maxCallStackDepth = n
+    this._ownCallStackDepth = true
   }
 
   pushFrame(frame: Frame) {

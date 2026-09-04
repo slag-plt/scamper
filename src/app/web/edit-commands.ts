@@ -23,6 +23,9 @@ export const mod = isMac ? 'Cmd' : 'Ctrl'
 export const appShortcut = {
   save: `${mod}+S`,
   run: `${mod}+Enter`,
+  // What every desktop editor since the first one binds Preferences to, and
+  // what VS Code trains a student to reach for (#497).
+  preferences: `${mod}+,`,
 } as const
 
 export const editShortcut = {

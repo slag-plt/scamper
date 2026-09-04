@@ -39,7 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
-      'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number with Trace Step Limit in the Run menu.',
+      'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.',
       'Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.',
       'with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.',
       'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
@@ -51,6 +51,7 @@ export const patchNotes: PatchNote[] = [
       'Stopping a program, or having a trace cut short at the step limit, no longer leaves the page sluggish.',
       'A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.',
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
+      'Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.',
     ],
   },
   {
