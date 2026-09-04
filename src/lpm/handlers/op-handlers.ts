@@ -1,4 +1,4 @@
-import { ICE, ScamperError, SuspendSignal } from '../error'
+import { ICE, ScamperError, SetRecursionDepthSignal, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
@@ -94,6 +94,15 @@ export function applyFn(
       currFrame.values.push(fn(...args))
       return traceStep
     } catch (e) {
+      if (e instanceof SetRecursionDepthSignal) {
+        // `set-maximum-recursion-depth!` reaching the fiber it applies to (the
+        // primitive has no handle on one). The depth is already validated, so
+        // this is the whole of the call: set it and push the void the docstring
+        // promises. The signal is handled here and never escapes.
+        fiber.setMaxCallStackDepth(e.depth)
+        currFrame.values.push(undefined)
+        return traceStep
+      }
       // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
       // fn was called directly, outside any named Scamper function -- in
       // that case op.range/fn.name (this call's own, real range and the
