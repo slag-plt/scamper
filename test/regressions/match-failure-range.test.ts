@@ -26,4 +26,14 @@ describe('an inexhaustive match reports where it is (#493)', () => {
       'Runtime error [1:1-1:21]: Inexhaustive pattern match failure',
     ])
   })
+
+  // The frame's `origin`, not its `hidden` flag, is what decides this: a
+  // library function applying the student's lambda hides that frame from the
+  // trace but leaves its origin 'user' (see Frame.hidden). Reading `hidden`
+  // here would blame the whole `(map ...)` call instead of the match inside it.
+  test("a student's match inside a library call reports their own match", async () => {
+    expect(
+      await runProgram('(map (lambda (x) (match x [0 "zero"])) (list 1))'),
+    ).toEqual(['Runtime error [1:18-1:37]: Inexhaustive pattern match failure'])
+  })
 })
