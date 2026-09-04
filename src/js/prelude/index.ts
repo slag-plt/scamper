@@ -1070,11 +1070,23 @@ export function prelude_ignore(_v: L.Value): HTMLElement {
   return ret
 }
 
-export function prelude_setMaximumRecursionDepth(n: number): L.Value {
-  return {
-    [L.scamperTag]: 'set-maximum-recursion-depth',
-    value: n,
+/**
+ * Sets the running fiber's call stack limit. The limit belongs to the Fiber,
+ * which a primitive cannot reach, so the depth is thrown out to `applyFn` as a
+ * SetRecursionDepthSignal and applied there; the call's value (void) is pushed
+ * by that handler, so this function never returns.
+ *
+ * Validating here rather than there keeps the signal infallible and takes
+ * `applyFn`'s ordinary error path, which underlines the student's call site.
+ */
+export function prelude_setMaximumRecursionDepth(n: number): never {
+  if (!Number.isInteger(n) || n < 1 || n > L.MAX_CALL_STACK_DEPTH) {
+    throw new L.ScamperError(
+      'Runtime',
+      `expects a whole number between 1 and ${L.MAX_CALL_STACK_DEPTH.toString()}, but was given ${n.toString()}`,
+    )
   }
+  throw new L.SetRecursionDepthSignal(n)
 }
 
 export function prelude_stringToWords(s: string): L.List {

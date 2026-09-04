@@ -70,11 +70,16 @@ Import these from `src/lpm/`:
 Javascript code cannot call back into Scamper.
 A procedure that needs to apply a caller-supplied function belongs in the `.scm` half instead, written against `with-handler` and the other special forms, e.g., `test-case` and `test-exn`.
 
+A library function is one step of a student's reduction trace, and that holds for the whole call: a closure the library builds is library code too (it takes the origin of the frame that built it), and a tail call hands the shield to the frame that replaces it, so a callback never surfaces on its own.
+Nothing has to arrange this by hand, but it is the property `Frame.hidden`, `Fiber.replaceFrame`, and `src/scheme/trace.ts` exist to preserve (#478).
+
 ## Argument checking
 
 Arity and argument types are not checked by Javascript, and are not checked by hand.
 `src/lib/index.ts` compiles each library with `insertContracts: true`, which derives a contract from the docstring above each `define-export` and wraps the export in it.
 The signature line and the `param : predicate?` lines are therefore load-bearing.
+A docstring attaches to the definition *directly* beneath it, so a helper written between a docstring and the function it documents would take that function's contract.
+The signature's name is checked against the name being defined, so getting this wrong fails the library load rather than contracting the wrong function (#479).
 
 ## Wiring a new library
 

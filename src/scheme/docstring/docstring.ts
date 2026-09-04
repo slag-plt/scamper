@@ -17,7 +17,7 @@ export interface FunctionDoc {
   /** The documented optional parameters, e.g. `end` in `(substring s start
    * [end])` -- see VarApp.optArgs. They follow `params` positionally. */
   optParams: Params
-  /** The documented rest parameter, e.g. `xs` in `(+ . xs)`, if the
+  /** The documented rest parameter, e.g. `xs` in `(+ & xs)`, if the
    * signature declares one -- see VarApp.restParam. */
   restParam?: Param
   description: string
@@ -57,9 +57,9 @@ export interface VarApp extends App {
    * [end])`. They come after every required parameter and before the rest
    * parameter, so a call site's arguments still line up positionally. */
   optArgs: Identifier[]
-  /** The signature's rest parameter, e.g. `xs` in `(+ . xs)` or
-   * `(map f . xs)`, mirroring the lambda arglist's dotted-pair rest-param
-   * syntax. undefined for a fixed-arity signature. */
+  /** The signature's rest parameter, e.g. `xs` in `(+ & xs)` or
+   * `(map f & xs)`, mirroring the lambda arglist's `&` rest-param syntax
+   * (#272). undefined for a fixed-arity signature. */
   restParam?: Identifier
 }
 
