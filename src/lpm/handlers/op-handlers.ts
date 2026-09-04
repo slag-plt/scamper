@@ -3,7 +3,7 @@ import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
 import { Range } from '../range'
-import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, patVars, pMatch, popRequired, typeOf, vectorToList } from '../util'
+import { isClosure, isJsFunction, isList, listToVector, mkClosure, mkLet, mkMatch, patVars, pMatch, popRequired, typeOf, vectorToList } from '../util'
 
 /* Definition */
 type OpHandler<T extends Ops['tag']> = (
@@ -250,24 +250,23 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     throw new ICE('Fiber.MatchHandler', 'Match requires at least one value')
   }
   const scrutinee = currFrame.values.pop()
-  // we will always step match to abide by a small work quantum
-  // TODO: we need to figure out if we want to keep this, hack fix for now
-  op.currBranchIdx ??= 0
-  const currBranch = op.branches.at(op.currBranchIdx++)
+  // One branch per step, to keep the work quantum small. The cursor advances
+  // by re-entering with a fresh op copy (as `let` does), never by writing to
+  // `op`: the compiled program is shared by every run and every fiber.
+  const currBranch = op.branches.at(op.idx)
   if (!currBranch) {
     throw new ScamperError('Runtime', 'Inexhaustive pattern match failure')
   }
   const [pat, blk] = currBranch
   const bindings = pMatch(scrutinee, pat)
   if (!bindings) {
-    currFrame.pushBlk([op])
+    currFrame.pushBlk([mkMatch(op.branches, op.range, op.idx + 1)])
     // make sure to push the scrutinee back for the next branch!
     currFrame.values.push(scrutinee)
   } else {
     // Push the branch's binders as a fresh scope; the `pop-scope` codegen
     // emits right after this match op discards it once the branch completes.
     currFrame.env = currFrame.env.pushScope(bindings)
-    op.currBranchIdx = 0
     currFrame.pushBlk(blk)
   }
   return traceStep
