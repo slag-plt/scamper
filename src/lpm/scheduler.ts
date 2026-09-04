@@ -93,10 +93,12 @@ export class Scheduler {
   private currTaskIdx = 0
   private timeQuantum: number = 1000 / DEFAULT_REFRESH_RATE
   // The `execute` loop that is live, or null when none is. Each loop holds its
-  // own controller and tests it by identity, so a loop retired by a pause
-  // cannot wake from an await, consult a *later* loop's liveness, and keep
-  // stepping the queue alongside it (#510).
-  private currentLoop: AbortController | null = null
+  // own token and tests it by identity, so a loop retired by a pause cannot
+  // wake from an await, consult a *later* loop's liveness, and keep stepping
+  // the queue alongside it (#510). A symbol rather than an AbortController:
+  // nothing here is interruptible mid-step, so there is no signal to observe,
+  // and the per-run controller in scamper.ts is a different thing entirely.
+  private currentLoop: symbol | null = null
 
   /**
    * @returns the id of the run whose fiber is stepping, or undefined if called
@@ -164,7 +166,6 @@ export class Scheduler {
   }
 
   pauseExecution() {
-    this.currentLoop?.abort()
     this.currentLoop = null
   }
 
@@ -172,7 +173,7 @@ export class Scheduler {
     if (this.currentLoop !== null) {
       return
     }
-    const loop = new AbortController()
+    const loop = Symbol('execute loop')
     this.currentLoop = loop
     void this.execute(loop)
   }
@@ -658,7 +659,7 @@ export class Scheduler {
     }
   }
 
-  private async execute(loop: AbortController): Promise<void> {
+  private async execute(loop: symbol): Promise<void> {
     while (this.currentLoop === loop) {
       if (this.tasks.length === 0) {
         this.retire(loop)
@@ -842,7 +843,7 @@ export class Scheduler {
    * Ends `loop`, but only if it is still the live one: a loop already retired
    * by a pause must not clear the liveness of the loop that replaced it.
    */
-  private retire(loop: AbortController): void {
+  private retire(loop: symbol): void {
     if (this.currentLoop === loop) {
       this.currentLoop = null
     }
