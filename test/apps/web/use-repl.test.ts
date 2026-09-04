@@ -160,6 +160,26 @@ describe('the REPL transcript', () => {
     }
   })
 
+  test('the history skips blank lines and immediate repeats', async () => {
+    // As a shell's does: Enter on an empty prompt is not a command, and the
+    // same one run twice in a row is worth one place in the history rather
+    // than two. The same one run again later is not the one before it, so it
+    // is kept.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('')
+      await repl.submit('   ')
+      await repl.submit('(+ 1 2)')
+      await repl.submit('(+ 1 2)')
+      await repl.submit('x')
+      await repl.submit('(+ 1 2)')
+      expect(repl.history.value).toEqual(['(+ 1 2)', 'x', '(+ 1 2)'])
+    } finally {
+      repl.close()
+    }
+  })
+
   test('an edit to the file marks the session stale', async () => {
     // Nothing is reconciled -- that is what makes it scratch work -- so saying
     // so is all the window can do.
