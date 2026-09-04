@@ -4,10 +4,9 @@ import { runProgramWithHTML } from '../harness'
 import { getByLabelText } from '@testing-library/dom'
 import { drawing_canvasAriaLabel } from '../../src/js/image/drawing'
 // Registers the image library's HTML custom renderer (drawings -> <canvas>)
-// on the shared HtmlRenderer singleton. Needed here because production code
-// only wires this up via scamper.ts's fire-and-forget dynamic import (see
-// its header comment), which isn't awaited anywhere and so isn't guaranteed
-// to have run before this test's assertions.
+// on the shared HtmlRenderer singleton. Load-bearing: scamper.ts starts that
+// registration and initialize() awaits it (#511), but runProgramWithHTML()
+// never calls initialize(), so nothing else here would have run it.
 import '../../src/app/web/renderers'
 
 const testSrc = `(import image)

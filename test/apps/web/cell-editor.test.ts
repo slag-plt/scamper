@@ -4,6 +4,14 @@ import {
   isCompleteForm,
   mkCellEditorState,
 } from '../../../src/app/web/codemirror/cell-editor'
+import { initialize } from '../../../src/scamper'
+
+// Nothing below needs Scamper, but cell-editor.ts reaches scamper.ts (via
+// codemirror.ts's query extension), whose module body starts the renderer
+// registration. initialize() is what awaits that import; without this call it
+// is still in flight when this file's environment is torn down, and the
+// rejection that follows fails an otherwise green run (#511).
+await initialize()
 
 // What decides whether Enter runs the cell or continues it onto another line
 // (#399).

@@ -141,6 +141,35 @@ export const QUERY_EXPANDED_CHANGED = 'scamper:queryexpandedchanged'
 let defaultEnv: Env | undefined
 let initialized = false
 
+// Kicks off web/renderers.ts's custom Vue/HTML renderer registration. The
+// import stays dynamic and guarded on `window`: that file transitively
+// imports Vue single-file components, which the CLI's plain Node runtime
+// cannot load (see its header comment), so a static import here would break
+// the CLI.
+//
+// It fires here, at module evaluation, rather than from a shared global call
+// site (like a test suite's global setup), so it only ever runs as a
+// consequence of *something* importing scamper.ts -- e.g. a test file's own
+// import graph. Firing it from such a call site would grab real (unmocked)
+// transitive dependencies -- notably src/fs/opfs.ts -- out from under tests
+// that mock them, before their `vi.mock(...)` calls have been registered.
+//
+// initialize() awaits this handle, once, so the registration cannot outlive
+// the environment that started it: an in-flight module fetch still resolving
+// past a vitest worker's teardown is rejected, and with nothing awaiting it
+// that unhandled rejection fails an otherwise green run (#511).
+//
+// execute()/query() must still NOT await it before scheduling. Doing so once
+// delayed task-id generation past the window stopRun()'s cancel-by-id logic
+// (see use-scamper-session.ts) needs, so a pending run could dodge
+// cancellation and a second run would duplicate its output instead of
+// replacing it. initialize() awaits well before any run is scheduled, so
+// that hazard is untouched.
+const renderersReady: Promise<void> =
+  typeof window !== 'undefined'
+    ? import('./app/web/renderers.js').then(() => undefined)
+    : Promise.resolve()
+
 /**
  * Compiles the builtin libraries and prepares the default top-level
  * environment they're imported into. Must be awaited once, by application
@@ -154,34 +183,13 @@ export async function initialize(): Promise<void> {
   }
   await initializeLibs()
   SymbolDB.initialize()
+  await renderersReady
   defaultEnv = Env.empty
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     .extendWithImport('runtime', builtinLibs.get('runtime')!)
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     .extendWithImport('prelude', builtinLibs.get('prelude')!)
   initialized = true
-}
-
-// Kicks off web/renderers.ts's custom Vue/HTML renderer registration as
-// early as possible (browser-only; see its header comment for why this must
-// be a guarded dynamic import). Deliberately independent of initialize()
-// above (and fire-and-forget): execute()/query() must NOT await this before
-// scheduling. Doing so once delayed task-id generation past the window
-// stopRun()'s cancel-by-id logic (see use-scamper-session.ts) needs, so a
-// pending run could dodge cancellation and a second run would duplicate its
-// output instead of replacing it. Tradeoff: a value displayed before this
-// resolves can render via the generic fallback instead of its custom
-// renderer -- in practice only a risk for the very first values shown after
-// a fresh page load. Kept as a plain module-load-time side effect (as
-// opposed to living inside initialize()) so it only ever fires as a
-// consequence of *something* importing scamper.ts -- e.g. a test file's own
-// import graph -- rather than from a shared global call site (like a test
-// suite's global setup) that runs before that particular test file's own
-// module mocks (`vi.mock(...)`) have been registered; running it from there
-// grabs real (unmocked) transitive dependencies -- notably src/fs/opfs.ts --
-// out from under tests that mock them.
-if (typeof window !== 'undefined') {
-  void import('./app/web/renderers.js')
 }
 
 /** Unreachable once getInstance() has gated on `initialized`. */
