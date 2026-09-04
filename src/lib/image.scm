@@ -446,7 +446,7 @@
 ;;;  angle : number?
 ;;;   in degrees
 ;;;  d : drawing?
-;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box.
+;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Rotating a drawing that is already rotated measures the same as the single equivalent turn, so `(rotate 30 (rotate 30 d))` is the size of `(rotate 60 d)` rather than larger.
 ;;; @category image, beside, beside/align, above, above/align, overlay, overlay/align, overlay/offset
 (define-export rotate (js-var "drawing_rotate"))
 
@@ -652,13 +652,13 @@
 ;;; Returns a new canvas that is the result of applying `fn` to each pixel (an rgb value) of `canvas`. `canvas` itself is unchanged.
 ;;; @category image, pixel, canvas-get-pixel, canvas->pixels, pixels->canvas, canvas-set-pixels!
 (define-export pixel-map
-  (lambda (fn img)
-    (pixels->canvas (vector-map fn (canvas->pixels img))
-                   (canvas-width img)
-                   (canvas-height img))))
+  (lambda (fn canvas)
+    (pixels->canvas (vector-map fn (canvas->pixels canvas))
+                    (canvas-width canvas)
+                    (canvas-height canvas))))
 
-;;; (canvas-get-pixel img x y) -> rgb?
-;;;  img : drawing?
+;;; (canvas-get-pixel canvas x y) -> rgb?
+;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?
 ;;; Returns the rgb value of the pixel at position `(x, y)` of `canvas`.

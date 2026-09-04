@@ -291,7 +291,7 @@ test('any-of', async () => {
 test('regex', async () => {
   expect(await runProgram(`
     (import rex)
-    (define color (regex "colou?r" ""))
+    (define color (regex "colou?r"))
     (rex-matches? color "color")
     (rex-matches? color "colour")
     (rex-matches? color "colouur")
@@ -310,7 +310,7 @@ test('regex', async () => {
 test('regex bad pattern', async () => {
   expect(await runProgram(`
     (import rex)
-    (define bad (regex "[" ""))
+    (define bad (regex "["))
     (rex->string bad)
     (rex-matches? bad "a")
   `)).toEqual([

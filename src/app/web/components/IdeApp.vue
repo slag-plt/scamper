@@ -1985,6 +1985,7 @@ onUnmounted(() => {
               :is-busy="repl.isBusy.value"
               :is-stale="repl.isStale.value"
               :context="repl.context.value"
+              :history="repl.history.value"
               @submit="(text: string) => void repl.submit(text)"
               @interrupt="repl.interrupt"
               @restart="() => void handleReplRestart()"

@@ -66,6 +66,21 @@ describe('a REPL session', () => {
     session.end()
   })
 
+  test('carries a recursion depth set by an earlier entry', async () => {
+    // The limit lives on the fiber, and a session makes a fresh one per entry,
+    // so `set-maximum-recursion-depth!` would otherwise last exactly one entry
+    // (#477). Lowering it rather than raising it keeps the case cheap and
+    // proves the depth itself carried, not merely some larger default.
+    const { session, out } = open()
+    await session.evaluate('(set-maximum-recursion-depth! 100)')
+    await session.evaluate('(define sum (lambda (n) (if (= n 0) 0 (+ n (sum (- n 1))))))')
+    await session.evaluate('(sum 500)')
+    expect(out.lines.at(-1)).toBe(
+      'Runtime error: Max call stack depth 100 exceeded!',
+    )
+    session.end()
+  })
+
   test('a later entry sees a definition redefined by an earlier one', async () => {
     const { session, out } = open()
     await session.evaluate('(define x 1)')
