@@ -654,8 +654,8 @@
 (define-export pixel-map
   (lambda (fn canvas)
     (pixels->canvas (vector-map fn (canvas->pixels canvas))
-                   (canvas-width canvas)
-                   (canvas-height canvas))))
+                    (canvas-width canvas)
+                    (canvas-height canvas))))
 
 ;;; (canvas-get-pixel canvas x y) -> rgb?
 ;;;  canvas : canvas?
