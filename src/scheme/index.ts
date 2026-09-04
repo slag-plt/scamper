@@ -196,7 +196,9 @@ export async function compile(
   }
 
   // Lowering/codegen
-  const contracted = insertContracts ? contractProgram(program) : program
+  const contracted = insertContracts
+    ? contractProgram(diagnostics, program)
+    : program
   const prog = lowerProgram(expandProgram(contracted))
   return queryLoc
     ? { prog, queriedRange: (parsed as QueryParseResult).queriedRange, diagnostics }
