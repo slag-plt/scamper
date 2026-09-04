@@ -19,3 +19,17 @@ test('a dashed drawing renders instead of failing in setLineDash (#491)', async 
 `),
   ).toEqual(['441', '441'])
 })
+
+// The conversion checks its elements because `setLineDash` does not: per spec
+// it silently returns on a spec it cannot read, so an unchecked non-number
+// would draw a plain solid line and say nothing.
+test('a dash spec that is not all numbers is an error, not a solid line (#491)', async () => {
+  expect(
+    await runProgram(`
+(import image)
+(with-dash (list 4 "two") (outlined-square 20 "red"))
+`, { stripRanges: true }),
+  ).toEqual([
+    'Runtime error: (with-dash) expected a list of numbers, but the list contains string',
+  ])
+})

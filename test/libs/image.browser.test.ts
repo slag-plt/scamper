@@ -237,7 +237,7 @@ describe('render per-shape branches', () => {
   })
 
   test('with-dash strokes a dashed outline', () => {
-    const canvas = drawing_drawingToCanvas(drawing_withDash([4, 4], drawing_rectangle(20, 20, 'outline', 'red')))
+    const canvas = drawing_drawingToCanvas(drawing_withDash(L.mkList(4, 4), drawing_rectangle(20, 20, 'outline', 'red')))
     expect(canvas.width).toBe(21)
     expect(canvas.height).toBe(21)
     expect(hasColoredPixel(canvas)).toBe(true)

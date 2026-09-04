@@ -41,6 +41,7 @@ export const patchNotes: PatchNote[] = [
       // union, and without it two appends collide into a syntax error.
       'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number with Trace Step Limit in the Run menu.',
       'Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.',
+      'with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.',
       'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
       'canvas-get-pixel now works on a canvas — it used to report that it expected a drawing, which is the one thing it cannot take.',
       'Rotating a drawing that is already rotated no longer adds extra blank margin — two 30-degree turns now measure the same as a single 60-degree turn.',
