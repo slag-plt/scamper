@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'Rotating a drawing that is already rotated no longer adds extra blank margin — two 30-degree turns now measure the same as a single 60-degree turn.',
     ],
   },
   {

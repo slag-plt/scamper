@@ -446,7 +446,7 @@ export function drawing_outlinedIsoscelesTriangle(width: number, height: number,
 
 export function drawing_drawingWidth(drawing: Drawing): number {
   if (drawing_drawingQ(drawing)) {
-    return drawing.width
+    return drawing_normalize(drawing).width
   } else {
     return (drawing as unknown as HTMLCanvasElement).width
   }
@@ -454,7 +454,7 @@ export function drawing_drawingWidth(drawing: Drawing): number {
 
 export function drawing_drawingHeight(drawing: Drawing): number {
   if (drawing_drawingQ(drawing)) {
-    return drawing.height
+    return drawing_normalize(drawing).height
   } else {
     return (drawing as unknown as HTMLCanvasElement).height
   }
@@ -525,6 +525,84 @@ export function drawing_drawingRecolor(drawing: Drawing, color: L.Value): Drawin
     case 'text':
       return textPrim(drawing.width, drawing.height, drawing.text,
         drawing.font, drawing.size, drawing.color)
+  }
+}
+
+/**
+ * Rewrites `drawing` so that a rotation of a rotation is the single equivalent
+ * rotation, and so that every box above one is recomputed from the collapsed
+ * subtree (#473).
+ *
+ * `rotate` boxes a drawing by turning the corners of the box it is handed, so
+ * a second turn treats the first turn's padding as ink and the margin
+ * compounds; `beside`/`above`/`overlay` snapshot their children's boxes at
+ * construction, so the padding propagates upwards too. This is a *late* pass
+ * over a finished structure -- construction is untouched, so the tree stays
+ * exactly what the student wrote.
+ *
+ * Two invariants:
+ *  - The painted ink is unchanged. Two rotations compose to the same net
+ *    rotation under a pure translation, so collapsing moves no pixel.
+ *  - A box only ever shrinks, never grows.
+ *
+ * Pure: nothing is mutated, so a subtree shared between drawings is safe, and
+ * the original node is returned whenever nothing below it changed -- a drawing
+ * with no nested rotation allocates nothing.
+ */
+export function drawing_normalize (drawing: Drawing): Drawing {
+  switch (drawing[L.structKind]) {
+    case 'ellipse':
+    case 'rectangle':
+    case 'triangle':
+    case 'path':
+    case 'text':
+      return drawing
+    case 'beside': {
+      const drawings = drawing.drawings.map(drawing_normalize)
+      return drawings.every((d, i) => d === drawing.drawings[i])
+        ? drawing
+        : besideAlignPrim(drawing.align, ...drawings)
+    }
+    case 'above': {
+      const drawings = drawing.drawings.map(drawing_normalize)
+      return drawings.every((d, i) => d === drawing.drawings[i])
+        ? drawing
+        : aboveAlignPrim(drawing.align, ...drawings)
+    }
+    case 'overlay': {
+      const drawings = drawing.drawings.map(drawing_normalize)
+      return drawings.every((d, i) => d === drawing.drawings[i])
+        ? drawing
+        : overlayAlignPrim(drawing.xAlign, drawing.yAlign, ...drawings)
+    }
+    case 'overlayOffset': {
+      const d1 = drawing_normalize(drawing.d1)
+      const d2 = drawing_normalize(drawing.d2)
+      // The public constructor, not overlayOffsetPrim: the box must be
+      // recomputed from the collapsed children, not carried over.
+      return d1 === drawing.d1 && d2 === drawing.d2
+        ? drawing
+        : drawing_overlayOffset(drawing.dx, drawing.dy, d1, d2)
+    }
+    case 'rotate': {
+      const child = drawing_normalize(drawing.drawing)
+      if (child[L.structKind] === 'rotate') {
+        // The collapse. Summing modulo 360 is what makes (rotate 180 (rotate
+        // 180 d)) exactly the original size rather than a rounding error away
+        // from it; it only ever touches a sum this pass creates, so a single
+        // rotation is left bit-identical.
+        return drawing_rotate((drawing.angle + child.angle) % 360, child.drawing)
+      }
+      return child === drawing.drawing
+        ? drawing
+        : drawing_rotate(drawing.angle, child)
+    }
+    case 'withDash': {
+      const child = drawing_normalize(drawing.drawing)
+      return child === drawing.drawing
+        ? drawing
+        : drawing_withDash(drawing.dashSpec, child)
+    }
   }
 }
 
@@ -768,11 +846,12 @@ export function drawing_clearDrawing (canvas: HTMLCanvasElement, background = 'w
 // TODO: aria labels should be in a central location
 export const drawing_canvasAriaLabel = 'scamper-canvas'
 export function drawing_renderer (drawing: Drawing): HTMLElement {
+  const d = drawing_normalize(drawing)
   const canvas = document.createElement('canvas')
   canvas.setAttribute('aria-label', drawing_canvasAriaLabel)
-  canvas.width = Math.ceil(drawing.width)
-  canvas.height = Math.ceil(drawing.height)
+  canvas.width = Math.ceil(d.width)
+  canvas.height = Math.ceil(d.height)
   drawing_clearDrawing(canvas)
-  drawing_render(0, 0, drawing, canvas)
+  drawing_render(0, 0, d, canvas)
   return canvas
 }
