@@ -19,7 +19,10 @@ import {
 import { Fiber } from './lpm/fiber'
 import { DiscardOutput } from './lpm/output/discard'
 import { SimpleErrorChannel } from './lpm/output/simple-error'
-import { TraceCollector } from './lpm/output/trace-collector'
+import {
+  DEFAULT_TRACE_STEP_LIMIT,
+  TraceCollector,
+} from './lpm/output/trace-collector'
 import { Scheduler, SchedulerId, StepMode } from './lpm/scheduler'
 import { compile, countStatements } from './scheme'
 import { makeTraceStepper } from './scheme/trace'
@@ -330,8 +333,10 @@ export default class Scamper {
    * is gathered in full rather than streamed because what reads it offers a
    * "step 12 of 35" and a slider, and neither is answerable until the run ends.
    *
-   * @param maxSteps how many reductions to keep before abandoning the rest, so
-   *        a statement that loops forever cannot hang the page.
+   * @param maxSteps how many reductions any one statement may take before the
+   *        rest are abandoned, so a statement that loops forever cannot hang
+   *        the page. Defaults to {@link DEFAULT_TRACE_STEP_LIMIT}, so a caller
+   *        with no opinion does not have to invent a number.
    * @returns the statement's source and its steps, or null when the cursor is
    *          not inside a statement or the program did not compile.
    */
@@ -339,12 +344,12 @@ export default class Scamper {
     src,
     cursorLoc,
     err,
-    maxSteps,
+    maxSteps = DEFAULT_TRACE_STEP_LIMIT,
   }: {
     src: string
     cursorLoc: Loc
     err: ErrorChannel
-    maxSteps: number
+    maxSteps?: number
   }): Promise<{ source: string; steps: Value[]; truncated: boolean } | null> {
     const { prog, diagnostics } = await compile(src)
     diagnostics.forEach((d) => {

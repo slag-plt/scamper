@@ -84,12 +84,20 @@ function onSeek(event: Event) {
     <div class="trace-body">
       <SourceCaption class="trace-source" :source="source" force-visible />
       <div class="trace-step">
-        <p v-if="count === 0" class="trace-empty">
+        <!-- Nothing kept *and* cut short means the limit was spent before this
+             statement was reached: an earlier one runs forever, so this one
+             never ran at all (#369). Saying it takes no steps would blame the
+             wrong statement. -->
+        <p v-if="count === 0 && truncated" class="trace-empty">
+          Stopped: a statement before this one runs longer than the trace step
+          limit.
+        </p>
+        <p v-else-if="count === 0" class="trace-empty">
           This statement takes no visible steps.
         </p>
         <ValueRenderer v-else :value="steps[index]" />
       </div>
-      <p v-if="truncated" class="trace-truncated" role="status">
+      <p v-if="truncated && count > 0" class="trace-truncated" role="status">
         Stopped after {{ count }} steps — this statement has more than can be
         traced.
       </p>
