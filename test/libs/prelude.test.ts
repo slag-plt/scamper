@@ -2701,11 +2701,15 @@ test('set-maximum-recursion-depth', async () => {
     await runProgram(`
 (set-maximum-recursion-depth! 100)
 (set-maximum-recursion-depth! -1)
+(set-maximum-recursion-depth! 1000000)
+(set-maximum-recursion-depth! "lots")
 (set-maximum-recursion-depth!)
 `),
   ).toEqual([
-    '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":100}]',
-    '[Blob: {"##scamperTag##":"set-maximum-recursion-depth","value":-1}]',
+    'void',
+    'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given -1',
+    'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given 1000000',
+    'Runtime error: (error) expected an integer, received string',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })

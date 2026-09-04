@@ -1,5 +1,5 @@
 import * as L from '../../lpm'
-import { Drawing, drawing_render } from '../image/drawing.js'
+import { Drawing, drawing_normalize, drawing_render } from '../image/drawing.js'
 import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/color.js'
 import { Font, font_font, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
@@ -86,7 +86,8 @@ export function canvas_canvasText(canvas: HTMLCanvasElement, x: number, y: numbe
 }
 
 export function canvas_canvasDrawing(canvas: HTMLCanvasElement, x: number, y: number, drawing: Drawing): void {
-  drawing_render(x, y, drawing, canvas)
+  // Normalised so a nested rotation paints where `drawing-width` says it is.
+  drawing_render(x, y, drawing_normalize(drawing), canvas)
 }
 
 export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: string, color: L.Value): void {

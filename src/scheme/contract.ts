@@ -1,5 +1,6 @@
 import { Range } from '../lpm'
 import * as A from './ast.js'
+import { mkDiagnostic, ScamperDiagnostic } from './diagnostic.js'
 import { parseFunctionDocFromComments, Pred } from './docstring/docstring.js'
 import { Param } from './docstring/param.js'
 
@@ -315,34 +316,66 @@ function mkOptBindings(
  * them as ordinary parameters: a Javascript primitive receives `undefined`,
  * which is already how Javascript spells "not supplied".
  *
+ * A docstring attaches to the definition directly beneath it, so a helper
+ * written between a `;;;` block and the function it documents would take that
+ * function's contract (#479). A signature naming something other than the
+ * definition below it is therefore an *error*, where a docstring that fails to
+ * parse is not: a parse failure leaves the function merely uncontracted, while
+ * a mismatched name applies a valid contract to the wrong binding, changing
+ * what two functions do and reporting nothing.
+ *
+ * @param diagnostics collects that mismatch, the one thing this pass reports
  * @returns the statement unchanged if it isn't a define, has no docstring,
  *          the docstring fails to parse (a documentation-quality issue, not
  *          a reason to fail compiling -- see ast.ts's Define.docComments),
- *          or documents neither fixed params nor a rest param. The last case
- *          is deliberately left alone rather than wrapped in a zero-arg
- *          checking thunk: a zero-param docstring is also how a documented
- *          *constant* (e.g. `pi`) is written, and there's no way to tell the
- *          two apart from the parsed docstring alone -- wrapping a constant
- *          this way would silently turn it into a function that must be
- *          called. A rest-only signature (`(+ . xs)`) can't be confused with
- *          a constant's, though (constants never have a dot), so that case
- *          is still wrapped even with zero fixed params.
+ *          names a binding other than the one it sits above (reported, and
+ *          left unwrapped so the failure degrades to "uncontracted" rather
+ *          than "wrongly contracted"), or documents no parameters at all --
+ *          fixed, optional, or rest.
+ *          That last case is both zero-parameter forms, and each is left
+ *          alone for its own reason. A documented *constant* (`pi: number?`)
+ *          has to be: wrapping it in a zero-arg thunk would silently turn a
+ *          value into something that must be called. A documented *nullary
+ *          function* (`(rex-empty) -> rex?`) is left alone by choice -- the
+ *          two forms are distinguishable here, via the parsed signature's
+ *          `isConstant` (#412, see docstring/signature.ts) -- because its
+ *          wrapper would have nothing to check: every check comes from a
+ *          parameter, and a signature's return predicate is not checked
+ *          anywhere, so wrapping would buy only an arity error on an
+ *          over-supplied call (#469). A rest-only signature
+ *          (`(rex-concat & xs)`) does carry a predicate to apply, so it is
+ *          wrapped even with zero fixed params.
  */
-export function contractStmt(s: A.Stmt): A.Stmt {
+export function contractStmt(
+  diagnostics: ScamperDiagnostic[],
+  s: A.Stmt,
+): A.Stmt {
   // Both a plain define and a define-export bind a documented value that a
   // docstring can describe (the standard library uses define-export -- see
   // src/lib/*.scm), so both are wrapped, preserving the original form.
   if ((s.tag !== 'define' && s.tag !== 'defexport') || !s.docComments) {
     return s
   }
-  // A malformed docstring yields `doc: undefined` (handled below); a genuine
-  // internal error (ICE) is intentionally NOT caught here -- it should surface
-  // as a loud failure rather than silently skip contract insertion.
+  // A malformed docstring yields `doc: undefined`; a genuine internal error
+  // (ICE) is intentionally NOT caught here -- it should surface as a loud
+  // failure rather than silently skip contract insertion.
   const { doc } = parseFunctionDocFromComments(s.docComments)
-  if (
-    !doc ||
-    (doc.params.length === 0 && doc.optParams.length === 0 && !doc.restParam)
-  ) {
+  if (!doc) {
+    return s
+  }
+  // The name is compared before the zero-parameter bail below, so a misplaced
+  // *constant* docstring is caught too, even though it would wrap nothing.
+  const docName = doc.signature.function.head.name
+  if (docName !== s.name.name) {
+    diagnostics.push(
+      mkDiagnostic('Docstring', 'error',
+        `Docstring signature names "${docName}", but the definition below it is "${s.name.name}". A docstring is attached to the definition directly beneath it: move that definition above the docstring block, or correct the name in the signature.`,
+        doc.signature.range,
+      ),
+    )
+    return s
+  }
+  if (doc.params.length === 0 && doc.optParams.length === 0 && !doc.restParam) {
     return s
   }
   const checks = mkCheckChain(doc.params, doc.optParams, doc.restParam, s.range)
@@ -390,6 +423,9 @@ export function contractStmt(s: A.Stmt): A.Stmt {
 }
 
 /** Applies contractStmt to every statement in a program. */
-export function contractProgram(prog: A.Prog): A.Prog {
-  return prog.map(contractStmt)
+export function contractProgram(
+  diagnostics: ScamperDiagnostic[],
+  prog: A.Prog,
+): A.Prog {
+  return prog.map((s) => contractStmt(diagnostics, s))
 }

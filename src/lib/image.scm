@@ -446,7 +446,7 @@
 ;;;  angle : number?
 ;;;   in degrees
 ;;;  d : drawing?
-;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box.
+;;; Returns a new drawing formed by rotating drawing `d` by `angle` degrees around the center of its bounding box. Rotating a drawing that is already rotated measures the same as the single equivalent turn, so `(rotate 30 (rotate 30 d))` is the size of `(rotate 60 d)` rather than larger.
 ;;; @category image, beside, beside/align, above, above/align, overlay, overlay/align, overlay/offset
 (define-export rotate (js-var "drawing_rotate"))
 
