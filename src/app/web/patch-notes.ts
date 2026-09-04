@@ -47,6 +47,7 @@ export const patchNotes: PatchNote[] = [
       'A pattern match that fails once no longer breaks itself for the rest of the session.',
       'set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.',
       'Stepping through a program no longer shows a stray step from inside a built-in function that calls a function of yours.',
+      'Stopping a program, or having a trace cut short at the step limit, no longer leaves the page sluggish.',
       'A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.',
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
     ],
