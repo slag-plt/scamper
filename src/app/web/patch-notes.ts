@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'Stepping through a program no longer shows a stray step from inside a built-in function that calls a function of yours.',
     ],
   },
   {
