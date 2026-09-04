@@ -55,6 +55,25 @@ describe('docstring bugs', () => {
     ).toBeGreaterThan(0)
   })
 
+  // #479: contract insertion attaches a `;;;` block to whatever define follows
+  // it, so a helper slipped in between a docstring and the function it
+  // documents silently takes that function's contract -- and leaves the
+  // documented function with none. Both names are right there to compare, so
+  // the mismatch is reported instead of compiled.
+  test('a docstring over a differently-named define is reported, not silently applied to it', async () => {
+    const src = [
+      ';;; (f x) -> number?',
+      ';;;  x : number?',
+      ';;; Returns x.',
+      '(define helper (lambda (a b c) a))',
+      '(define f (lambda (x) x))',
+    ].join('\n')
+    const { diagnostics } = await compile(src, { insertContracts: true })
+    expect(diagnostics.map((d) => `${d.phase}: ${d.message}`)).toEqual([
+      'Docstring: Docstring signature names "f", but the definition below it is "helper". A docstring is attached to the definition directly beneath it: move that definition above the docstring block, or correct the name in the signature.',
+    ])
+  })
+
   test('docstring errors (parse failures and signature mismatches) are tagged phase "Docstring", not "Parse"', async () => {
     const src = `
 ;;; (add1 wrongname) -> number?

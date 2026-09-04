@@ -137,7 +137,7 @@ describe('a zero-parameter docstring is left unwrapped (#469)', () => {
     const prelude = definesByName('prelude.scm')
     expect(docFor(prelude, 'pi').signature.isConstant).toBe(true)
     const stmt = stmtFor(prelude, 'pi')
-    expect(contractStmt(stmt)).toBe(stmt)
+    expect(contractStmt([], stmt)).toBe(stmt)
     expect(await runProgram('(> pi 3)')).toEqual(['#t'])
   })
 
@@ -145,7 +145,7 @@ describe('a zero-parameter docstring is left unwrapped (#469)', () => {
     const rex = definesByName('rex.scm')
     expect(docFor(rex, 'rex-empty').signature.isConstant).toBe(false)
     const stmt = stmtFor(rex, 'rex-empty')
-    expect(contractStmt(stmt)).toBe(stmt)
+    expect(contractStmt([], stmt)).toBe(stmt)
     expect(await runProgram('(import rex)\n(rex? (rex-empty))')).toEqual(['#t'])
   })
 
@@ -157,6 +157,6 @@ describe('a zero-parameter docstring is left unwrapped (#469)', () => {
     expect(doc.params).toEqual([])
     expect(doc.restParam?.name).toBe('xs')
     const stmt = stmtFor(rex, 'rex-concat')
-    expect(contractStmt(stmt)).not.toBe(stmt)
+    expect(contractStmt([], stmt)).not.toBe(stmt)
   })
 })
