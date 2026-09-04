@@ -20,19 +20,48 @@ describe('nested rotate boxes like the single equivalent turn (#473)', () => {
     return [Number(width), Number(height)]
   }
 
+  // Exact equality, not `toBeCloseTo`: collapsing rebuilds the drawing as
+  // `(rotate 60 d)` -- the same constructor on the same angle -- so the two
+  // numbers are bit-identical, and anything less means the collapse did not
+  // happen. Every nested-versus-single comparison below is exact for the same
+  // reason.
   test('two 30-degree turns box like one 60-degree turn', async () => {
     const d = '(solid-rectangle 100 40 "red")'
     const [width, height] = await dims(`(rotate 60 ${d})`)
     const [nestedWidth, nestedHeight] = await dims(`(rotate 30 (rotate 30 ${d}))`)
-    expect(nestedWidth).toBeCloseTo(width, 6)
-    expect(nestedHeight).toBeCloseTo(height, 6)
+    expect(nestedWidth).toBe(width)
+    expect(nestedHeight).toBe(height)
   })
 
   test('a turn and its inverse leave a square\'s box alone', async () => {
     const [width, height] =
       await dims('(rotate 45 (rotate -45 (solid-square 100 "red")))')
-    expect(width).toBeCloseTo(100, 6)
-    expect(height).toBeCloseTo(100, 6)
+    expect(width).toBe(100)
+    expect(height).toBe(100)
+  })
+
+  // The summed angle is reduced modulo 360, which is what makes a whole turn
+  // the exact identity: `(rotate 360 d)` on its own boxes 100 as
+  // 100.00000000000001, since sin(2*pi) is not quite zero in floating point.
+  // Asserted exactly on purpose -- toBeCloseTo would not see that drift.
+  test('two half-turns leave the box exactly as it was', async () => {
+    const [width, height] =
+      await dims('(rotate 180 (rotate 180 (solid-rectangle 100 40 "red")))')
+    expect(width).toBe(100)
+    expect(height).toBe(40)
+  })
+
+  // JS's `%` keeps the dividend's sign, so a negative sum past a whole turn
+  // reduces to a negative angle: -400 becomes -40, not 320. `rotate` takes a
+  // negative angle happily and it names the same turn, so the box agrees --
+  // closely rather than exactly, since -40 and 320 are different inputs to
+  // sin/cos.
+  test('a negative sum past a whole turn is still the same turn', async () => {
+    const d = '(solid-rectangle 100 40 "red")'
+    const [width, height] = await dims(`(rotate 320 ${d})`)
+    const [nestedWidth, nestedHeight] = await dims(`(rotate -200 (rotate -200 ${d}))`)
+    expect(nestedWidth).toBeCloseTo(width, 9)
+    expect(nestedHeight).toBeCloseTo(height, 9)
   })
 
   // The collapse is bottom-up, so depth beyond two must fall out of the same
@@ -41,8 +70,8 @@ describe('nested rotate boxes like the single equivalent turn (#473)', () => {
     const d = '(solid-rectangle 100 40 "red")'
     const [width, height] = await dims(`(rotate 60 ${d})`)
     const [nestedWidth, nestedHeight] = await dims(`(rotate 20 (rotate 20 (rotate 20 ${d})))`)
-    expect(nestedWidth).toBeCloseTo(width, 6)
-    expect(nestedHeight).toBeCloseTo(height, 6)
+    expect(nestedWidth).toBe(width)
+    expect(nestedHeight).toBe(height)
   })
 
   // The padding does not stop at the rotate: beside/above/overlay snapshot
@@ -54,8 +83,8 @@ describe('nested rotate boxes like the single equivalent turn (#473)', () => {
     const [width, height] = await dims(`(beside ${single} (solid-square 10 "blue"))`)
     const [nestedWidth, nestedHeight] = await dims(`(beside ${nested} (solid-square 10 "blue"))`)
     expect(width).toBeCloseTo(94.6410161, 6)
-    expect(nestedWidth).toBeCloseTo(width, 6)
-    expect(nestedHeight).toBeCloseTo(height, 6)
+    expect(nestedWidth).toBe(width)
+    expect(nestedHeight).toBe(height)
   })
 
   // The boundary of the fix, pinned deliberately. A single turn still boxes the

@@ -547,7 +547,7 @@ export function drawing_drawingRecolor(drawing: Drawing, color: L.Value): Drawin
  *
  * Pure: nothing is mutated, so a subtree shared between drawings is safe, and
  * the original node is returned whenever nothing below it changed -- a drawing
- * with no nested rotation allocates nothing.
+ * with no nested rotation is handed straight back rather than rebuilt.
  */
 export function drawing_normalize (drawing: Drawing): Drawing {
   switch (drawing[L.structKind]) {
