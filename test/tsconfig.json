@@ -5,11 +5,13 @@
 // typecheck:test` runs it now and `scripts/validate-build` gates on it, so it
 // is a blocking step.
 //
-// It adds no compiler option to the root config and relaxes none of them: a
-// spec runs under exactly the strictness `src/` does. In particular
-// `noUncheckedIndexedAccess` stays off, for the reason recorded at length in
-// the root config -- measured against this project too, it costs several
-// hundred errors across bounded loops and fixture indexing and buys nothing.
+// It relaxes no check the root config makes: a spec runs under exactly the
+// strictness `src/` does. What it adds below is about what is *in* the project
+// -- a .mjs script, ambient test types -- not about how hard it is checked. In
+// particular `noUncheckedIndexedAccess` stays off, for the reason recorded at
+// length in the root config -- measured against this project too, it costs
+// several hundred errors across bounded loops and fixture indexing and buys
+// nothing.
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {

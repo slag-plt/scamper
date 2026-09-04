@@ -9,14 +9,17 @@ import '../../../src/app/web/renderers'
 
 await initialize()
 
-function entry(id: number, source: string, values: unknown[] = []): ReplEntry {
-  return {
-    id,
-    source,
-    values: values as ReplEntry['values'],
-    isRunning: false,
-    ran: true,
-  }
+/**
+ * A finished entry, as `submit` leaves one that compiled and ran: `isRunning`
+ * back to false and `ran` true. The window is what these specs are about, so
+ * every fixture is an entry it would really be handed.
+ */
+function entry(
+  id: number,
+  source: string,
+  values: ReplEntry['values'] = [],
+): ReplEntry {
+  return { id, source, values, isRunning: false, ran: true }
 }
 
 /** The cells on screen, in order; the last one is always the prompt. */
