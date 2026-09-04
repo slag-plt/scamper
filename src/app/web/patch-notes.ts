@@ -39,6 +39,7 @@ export const patchNotes: PatchNote[] = [
       // One line per pull request that changes what a student sees. Keep the
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
+      'canvas-get-pixel now works on a canvas — it used to report that it expected a drawing, which is the one thing it cannot take.',
       'Rotating a drawing that is already rotated no longer adds extra blank margin — two 30-degree turns now measure the same as a single 60-degree turn.',
       'A pattern match that fails once no longer breaks itself for the rest of the session.',
       'set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.',
