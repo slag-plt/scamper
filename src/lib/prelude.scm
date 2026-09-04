@@ -875,9 +875,10 @@
 ;;      the library's insides. That used to spill map's `cond` into the
 ;;      student's reduction trace: a closure built at call time was not marked
 ;;      as library code. Since #476 it is (a closure takes the origin of the
-;;      frame that built it -- see ClsHandler), so the machine now holds this
-;;      rather than the rule; keeping the helpers at the top level is still
-;;      clearer, and #478 asks for the property to be checked outright.
+;;      frame that built it -- see ClsHandler), and since #478 the shield
+;;      survives the tail call itself (see Frame.hidden), so the machine now
+;;      holds this rather than the rule; keeping the helpers at the top level
+;;      is still clearer.
 ;;   2. Put it *above* the neighbouring `;;;` docstring block, never between
 ;;      that block and the function it documents -- a docstring binds to the
 ;;      define directly below it. Since #479 the compiler checks this, so

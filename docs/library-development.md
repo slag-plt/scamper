@@ -70,6 +70,9 @@ Import these from `src/lpm/`:
 Javascript code cannot call back into Scamper.
 A procedure that needs to apply a caller-supplied function belongs in the `.scm` half instead, written against `with-handler` and the other special forms, e.g., `test-case` and `test-exn`.
 
+A library function is one step of a student's reduction trace, and that holds for the whole call: a closure the library builds is library code too (it takes the origin of the frame that built it), and a tail call hands the shield to the frame that replaces it, so a callback never surfaces on its own.
+Nothing has to arrange this by hand, but it is the property `Frame.hidden`, `Fiber.replaceFrame`, and `src/scheme/trace.ts` exist to preserve (#478).
+
 ## Argument checking
 
 Arity and argument types are not checked by Javascript, and are not checked by hand.

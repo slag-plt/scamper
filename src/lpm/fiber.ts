@@ -256,6 +256,11 @@ export class Fiber {
   }
 
   replaceFrame(frame: Frame) {
+    // A tail call discards the caller's frame, so if that frame was hiding the
+    // trace, the shield goes with it unless the replacement carries it on
+    // (#478). One-way: a hidden frame's replacement is hidden, never the
+    // reverse, or a student tail-calling `map` would drag `map` into view.
+    frame.hidden ||= this.currentFrame?.hidden ?? false
     this.popFrame()
     this.pushFrame(frame)
   }
