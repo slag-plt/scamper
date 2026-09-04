@@ -652,13 +652,13 @@
 ;;; Returns a new canvas that is the result of applying `fn` to each pixel (an rgb value) of `canvas`. `canvas` itself is unchanged.
 ;;; @category image, pixel, canvas-get-pixel, canvas->pixels, pixels->canvas, canvas-set-pixels!
 (define-export pixel-map
-  (lambda (fn img)
-    (pixels->canvas (vector-map fn (canvas->pixels img))
-                   (canvas-width img)
-                   (canvas-height img))))
+  (lambda (fn canvas)
+    (pixels->canvas (vector-map fn (canvas->pixels canvas))
+                   (canvas-width canvas)
+                   (canvas-height canvas))))
 
-;;; (canvas-get-pixel img x y) -> rgb?
-;;;  img : drawing?
+;;; (canvas-get-pixel canvas x y) -> rgb?
+;;;  canvas : canvas?
 ;;;  x : integer?
 ;;;  y : integer?
 ;;; Returns the rgb value of the pixel at position `(x, y)` of `canvas`.
