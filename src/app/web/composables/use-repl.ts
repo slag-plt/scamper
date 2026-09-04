@@ -52,6 +52,14 @@ export interface Repl {
    */
   readonly context: Ref<string>
   /**
+   * What has been typed at the prompt, oldest first.
+   *
+   * A record of the person's work rather than of the session, so `open` --
+   * which is what Restart calls -- and `close` deliberately leave it alone,
+   * unlike the transcript, which belongs to the session that produced it.
+   */
+  readonly history: Ref<string[]>
+  /**
    * Opens a session seeded from `src`, replacing one already open -- which is
    * also how the window restarts.
    */
@@ -66,6 +74,13 @@ export interface Repl {
   close: () => void
 }
 
+/**
+ * How many typed entries the history keeps, so that a long session cannot grow
+ * it without bound. The oldest fall off the front; what anyone recalls is near
+ * the end.
+ */
+const HISTORY_LIMIT = 200
+
 export function useRepl(): Repl {
   // Shallow, both of them. A session is a handle with methods on it rather than
   // state, and an entry holds rendered values -- deep structures whose type
@@ -76,6 +91,10 @@ export function useRepl(): Repl {
   const banner = ref('')
   const isBusy = ref(false)
   const isStale = ref(false)
+  // Apart from the rest: everything above belongs to the session and is thrown
+  // away with it, while this is the person's. Shallow and replaced wholesale
+  // too -- a list of strings nobody edits in place needs nothing deeper.
+  const history = shallowRef<string[]>([])
   // What the session was seeded from, kept for the context above.
   const seedSource = ref('')
   const context = computed(() =>
@@ -196,6 +215,13 @@ export function useRepl(): Repl {
   async function submit(text: string): Promise<void> {
     const repl = session.value
     if (repl === null || isBusy.value) return
+    // Recorded before it runs and kept whatever becomes of it: one that was
+    // refused or did not compile is the very thing someone wants back, to fix
+    // the typo in it. A blank line and an immediate repeat are dropped, as a
+    // shell drops them.
+    if (text.trim().length > 0 && text !== history.value.at(-1)) {
+      history.value = [...history.value, text].slice(-HISTORY_LIMIT)
+    }
     const entry: ReplEntry = {
       id: nextId++,
       source: text,
@@ -214,6 +240,13 @@ export function useRepl(): Repl {
     }
   }
 
+  /**
+   * Ends the session and clears everything belonging to it.
+   *
+   * `history` is deliberately not among them: it is what the person typed, not
+   * what the session produced, so it survives a close and the `open` that
+   * Restart performs (#458).
+   */
   function close(): void {
     session.value?.end()
     session.value = null
@@ -231,6 +264,7 @@ export function useRepl(): Repl {
     isBusy,
     isStale,
     context,
+    history,
     open,
     submit,
     interrupt: () => {

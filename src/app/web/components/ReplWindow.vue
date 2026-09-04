@@ -26,6 +26,8 @@ const props = defineProps<{
    * the language server to analyse it inside.
    */
   context?: string
+  /** The commands typed so far, oldest first, for Up and Down to walk. */
+  history?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -46,8 +48,8 @@ const scrollEl = ref<HTMLDivElement | null>(null)
 const promptRef = ref<CellEditorHandle | null>(null)
 
 /**
- * Where the caret is in the entry history: an index into `entries`, or null
- * when the prompt holds something typed rather than something recalled.
+ * Where the caret is in the history: an index into `history`, or null when the
+ * prompt holds something typed rather than something recalled.
  */
 const recalled = ref<number | null>(null)
 
@@ -59,19 +61,20 @@ function onSubmit(text: string) {
 }
 
 /**
- * Up and down at the edges of the prompt walk what has already been run, as
- * every terminal does. Entries with no source -- the one seeding reports into
- * -- are not entries anyone typed, so they are skipped.
+ * Up and down at the edges of the prompt walk what has already been typed, as
+ * every terminal does. The list walked is the history rather than the
+ * transcript, so a restart does not take it away and nothing in it is anything
+ * but text someone typed.
  */
 function onHistory(direction: -1 | 1, handled: { value: boolean }) {
-  const typed = props.entries.filter((entry) => entry.source.trim().length > 0)
+  const typed = props.history ?? []
   if (typed.length === 0) return
   const at = recalled.value ?? typed.length
   const to = Math.min(typed.length, Math.max(0, at + direction))
   if (to === at) return
   handled.value = true
   recalled.value = to === typed.length ? null : to
-  promptRef.value?.setText(to === typed.length ? '' : typed[to].source)
+  promptRef.value?.setText(to === typed.length ? '' : typed[to])
 }
 
 // Opened deliberately, from a button or a menu, so the caret belongs in the

@@ -94,6 +94,8 @@ describe('the REPL window', () => {
         entries: [entry(0, '(+ 1 2)'), entry(1, '(* 3 4)')],
         banner: '',
         isBusy: false,
+        // What Up walks is the history, not the transcript beside it.
+        history: ['(+ 1 2)', '(* 3 4)'],
       },
     })
     try {

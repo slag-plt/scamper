@@ -131,6 +131,55 @@ describe('the REPL transcript', () => {
     }
   })
 
+  test('the history outlives the session it was typed in', async () => {
+    // #458: Restart opens a new session, and the transcript goes with the old
+    // one. What was typed is the person's, not the session's, so it stays --
+    // including an entry that was refused, which is the one most worth
+    // recalling to fix.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('(+ 1 2)')
+      await repl.submit('(define a 1) (define b 2)')
+      await repl.submit('(+ 1 2))')
+      expect(repl.history.value).toEqual([
+        '(+ 1 2)',
+        '(define a 1) (define b 2)',
+        '(+ 1 2))',
+      ])
+
+      await repl.open('lab.scm', '(define x 1)')
+      expect(repl.entries.value).toEqual([])
+      expect(repl.history.value).toEqual([
+        '(+ 1 2)',
+        '(define a 1) (define b 2)',
+        '(+ 1 2))',
+      ])
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('the history skips blank lines and immediate repeats', async () => {
+    // As a shell's does: Enter on an empty prompt is not a command, and the
+    // same one run twice in a row is worth one place in the history rather
+    // than two. The same one run again later is not the one before it, so it
+    // is kept.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('')
+      await repl.submit('   ')
+      await repl.submit('(+ 1 2)')
+      await repl.submit('(+ 1 2)')
+      await repl.submit('x')
+      await repl.submit('(+ 1 2)')
+      expect(repl.history.value).toEqual(['(+ 1 2)', 'x', '(+ 1 2)'])
+    } finally {
+      repl.close()
+    }
+  })
+
   test('an edit to the file marks the session stale', async () => {
     // Nothing is reconciled -- that is what makes it scratch work -- so saying
     // so is all the window can do.
