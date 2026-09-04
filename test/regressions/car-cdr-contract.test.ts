@@ -10,8 +10,15 @@ import { runProgram } from '../harness.js'
 // contract and rebuilds the family as Scheme compositions over them, so every
 // bad argument now surfaces a clean, uniform contract error.
 //
-// Ranges are stripped from error messages here: they point at car/cdr's
-// definition in prelude.scm and would shift with any edit to that file.
+// Ranges are stripped from error messages here: they are the student's own
+// call, and spelling each one out would say nothing these tests are about.
+//
+// Every member carries the `(or/p pair? nonempty-list?)` contract itself, so a
+// bad *argument* fails the member's own check. A list that is merely too short
+// passes that and fails inside the composition, which reports the primitive
+// that rejected (`car`/`cdr`) blamed on the member the student called -- see
+// #476, which stopped re-running a contract check on a call the library made
+// to itself.
 
 const stripRange = (msgs: string[]): string[] =>
   msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
@@ -58,8 +65,8 @@ describe('c[ad]+r family reject bad arguments cleanly (#256)', () => {
     (cadr (list 1))
     (caddr (list 1 2))
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+      'Runtime error [..]: (cadr) car: expected a pair or a non-empty list',
+      'Runtime error [..]: (caddr) car: expected a pair or a non-empty list',
     ])
   })
 

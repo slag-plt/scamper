@@ -5,6 +5,7 @@ import { builtinLibs } from '../lpm/builtin-registry.js'
 import * as A from '../scheme/ast.js'
 import { compile, tokenizeAndParse } from '../scheme/index.js'
 import { jsVar } from '../js/index.js'
+import { runtime_contracted } from '../js/runtime/index.js'
 import {
   FunctionDoc,
   parseFunctionDocFromComments,
@@ -36,12 +37,24 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   // js-var is the FFI root primitive -- it can't be bound via itself, so it's
   // injected directly into every library's load environment (and exported
   // explicitly below, since it carries no export statement).
+  //
+  // ##contracted## joins it because contract insertion calls it in a define's
+  // *value* position, which runs while this library loads -- and a library
+  // loads with only what is injected here (a wrapper's *body*, by contrast,
+  // resolves ##error##/##typeOf## against the env of whatever fiber later
+  // calls it, where runtime.scm is imported). It is exported from runtime.scm
+  // too, for the same reason js-var is: so a user program compiled with
+  // contracts on can see it.
   const fiber = new Fiber(
     prog,
-    L.Env.empty.extendWithTopLevel(['js-var', jsVar]),
-    // Mark every closure this library defines as step-over, so a reduction
-    // trace treats library calls atomically (see Closure.stepOver).
-    true,
+    L.Env.empty.extendWithTopLevel(
+      ['js-var', jsVar],
+      ['##contracted##', runtime_contracted],
+    ),
+    // Every closure this library defines is builtin code: a reduction trace
+    // treats a call to it atomically, and the library functions it names in
+    // turn are called without their contract checks (see CodeOrigin).
+    'builtin',
   )
   // Run it the way any other program runs. Going through the scheduler is what
   // lets a builtin library use a blocking primitive at load time; a hand-stepped

@@ -2192,6 +2192,11 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
   // member rejects the empty list with the same clean contract error (#256)
   // instead of leaking a raw JS TypeError. The innermost (rightmost) accessor
   // letter decides which primitive first sees null: `a` -> car, `d` -> cdr.
+  //
+  // Each member carries that contract itself, so the empty list fails the
+  // member's own check rather than an inner call's -- which is what keeps this
+  // message intact now that a call the library makes to itself runs without
+  // its contract check (#476).
   const members = [
     'car', 'cdr', 'caar', 'cadr', 'cdar', 'cddr', 'caaar', 'cadar', 'cdaar',
     'cddar', 'caadr', 'caddr', 'cdadr', 'cdddr', 'caaaar', 'cadaar', 'cdaaar',

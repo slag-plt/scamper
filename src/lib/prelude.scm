@@ -870,14 +870,14 @@
 ;; Two rules govern where such a helper may go, both learned the hard way:
 ;;
 ;;   1. Define it at the top level, and never as a `let`-bound lambda inside
-;;      the function it serves. A tail call *replaces* the caller's frame, and
-;;      only closures created while this library loads are marked `stepOver`
-;;      (Fiber.stepOverClosures). Tail-calling a closure built at call time
-;;      therefore pops the one frame that was hiding the library's insides,
-;;      and map's `cond` spills into the student's reduction trace (see
-;;      src/scheme/trace.ts and
-;;      test/regressions/step-into-recursive-calls.test.ts,
-;;      and #478, which asks for this to be checked rather than remembered).
+;;      the function it serves. A tail call *replaces* the caller's frame, so
+;;      tail-calling a helper built at call time pops the frame that was hiding
+;;      the library's insides. That used to spill map's `cond` into the
+;;      student's reduction trace: a closure built at call time was not marked
+;;      as library code. Since #476 it is (a closure takes the origin of the
+;;      frame that built it -- see ClsHandler), so the machine now holds this
+;;      rather than the rule; keeping the helpers at the top level is still
+;;      clearer, and #478 asks for the property to be checked outright.
 ;;   2. Put it *above* the neighbouring `;;;` docstring block, never between
 ;;      that block and the function it documents. The contract codegen binds a
 ;;      docstring to whatever define follows it, so a helper slipped in
@@ -1282,169 +1282,169 @@
 (define-export with-file-chooser (js-var "prelude_withFileChooser"))
 
 ;;; (caar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car v))`.
 ;;; @category list, list manipulation, association list
 (define-export caar (lambda (v) (car (car v))))
 
 ;;; (cadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr v))`.
 ;;; @category list, list manipulation, association list
 (define-export cadr (lambda (v) (car (cdr v))))
 
 ;;; (cdar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car v))`.
 ;;; @category list, list manipulation, association list
 (define-export cdar (lambda (v) (cdr (car v))))
 
 ;;; (cddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr v))`.
 ;;; @category list, list manipulation, association list
 (define-export cddr (lambda (v) (cdr (cdr v))))
 
 ;;; (caaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (car v)))`.
 ;;; @category list, list manipulation, association list
 (define-export caaar (lambda (v) (car (car (car v)))))
 
 ;;; (cadar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (car v)))`.
 ;;; @category list, list manipulation, association list
 (define-export cadar (lambda (v) (car (cdr (car v)))))
 
 ;;; (cdaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (car v)))`.
 ;;; @category list, list manipulation, association list
 (define-export cdaar (lambda (v) (cdr (car (car v)))))
 
 ;;; (cddar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (car v)))`.
 ;;; @category list, list manipulation, association list
 (define-export cddar (lambda (v) (cdr (cdr (car v)))))
 
 ;;; (caadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (cdr v)))`.
 ;;; @category list, list manipulation, association list
 (define-export caadr (lambda (v) (car (car (cdr v)))))
 
 ;;; (caddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (cdr v)))`.
 ;;; @category list, list manipulation, association list
 (define-export caddr (lambda (v) (car (cdr (cdr v)))))
 
 ;;; (cdadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (cdr v)))`.
 ;;; @category list, list manipulation, association list
 (define-export cdadr (lambda (v) (cdr (car (cdr v)))))
 
 ;;; (cdddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (cdr v)))`.
 ;;; @category list, list manipulation, association list
 (define-export cdddr (lambda (v) (cdr (cdr (cdr v)))))
 
 ;;; (caaaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (car (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export caaaar (lambda (v) (car (car (car (car v))))))
 
 ;;; (cadaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (car (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cadaar (lambda (v) (car (cdr (car (car v))))))
 
 ;;; (cdaaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (car (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cdaaar (lambda (v) (cdr (car (car (car v))))))
 
 ;;; (cddaar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (car (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cddaar (lambda (v) (cdr (cdr (car (car v))))))
 
 ;;; (caadar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export caadar (lambda (v) (car (car (cdr (car v))))))
 
 ;;; (caddar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export caddar (lambda (v) (car (cdr (cdr (car v))))))
 
 ;;; (cdadar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cdadar (lambda (v) (cdr (car (cdr (car v))))))
 
 ;;; (cdddar v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (cdr (car v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cdddar (lambda (v) (cdr (cdr (cdr (car v))))))
 
 ;;; (caaadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export caaadr (lambda (v) (car (car (car (cdr v))))))
 
 ;;; (cadadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cadadr (lambda (v) (car (cdr (car (cdr v))))))
 
 ;;; (cdaadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cdaadr (lambda (v) (cdr (car (car (cdr v))))))
 
 ;;; (cddadr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (car (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cddadr (lambda (v) (cdr (cdr (car (cdr v))))))
 
 ;;; (caaddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (car (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export caaddr (lambda (v) (car (car (cdr (cdr v))))))
 
 ;;; (cadddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(car (cdr (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cadddr (lambda (v) (car (cdr (cdr (cdr v))))))
 
 ;;; (cdaddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (car (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cdaddr (lambda (v) (cdr (car (cdr (cdr v))))))
 
 ;;; (cddddr v) -> any
-;;;  v : any
+;;;  v : (or/p pair? nonempty-list?)
 ;;; Equivalent to `(cdr (cdr (cdr (cdr v))))`.
 ;;; @category list, list manipulation, association list
 (define-export cddddr (lambda (v) (cdr (cdr (cdr (cdr v))))))

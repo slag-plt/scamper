@@ -92,7 +92,9 @@ export class Env {
    */
   lookup(
     name: string,
-  ): { found: true; slot: Value | typeof HOLE } | { found: false } {
+  ):
+    | { found: true; slot: Value | typeof HOLE; local: boolean }
+    | { found: false } {
     // 0. A qualified name (`alias.member`) resolves *only* through a qualified
     // import's alias -- it is never a local, a top-level binding, or an
     // unqualified import (binders can't be qualified). The scheme grammar admits
@@ -102,7 +104,7 @@ export class Env {
       const module = this.qualified.get(name.slice(0, dot))
       const member = name.slice(dot + 1)
       if (module?.bindings.has(member)) {
-        return { found: true, slot: module.bindings.get(member) }
+        return { found: true, slot: module.bindings.get(member), local: false }
       }
       return { found: false }
     }
@@ -110,20 +112,31 @@ export class Env {
     for (let i = this.locals.length - 1; i >= 0; i--) {
       const scope = this.locals[i]
       if (scope.has(name)) {
-        return { found: true, slot: scope.get(name) }
+        return { found: true, slot: scope.get(name), local: true }
       }
     }
     // 2. Top-level scope
     if (this.topLevel.has(name)) {
-      return { found: true, slot: this.topLevel.get(name) }
+      return { found: true, slot: this.topLevel.get(name), local: false }
     }
     // 3. Imported modules, most recent imports first
     for (const library of [...this.imports.values()].toReversed()) {
       if (library.bindings.has(name)) {
-        return { found: true, slot: library.bindings.get(name) }
+        return { found: true, slot: library.bindings.get(name), local: false }
       }
     }
     return { found: false }
+  }
+
+  /**
+   * Whether `name` resolves to a *local* binding (a parameter, or a `let`'s)
+   * rather than to a top-level, imported, or qualified one. Library code uses
+   * this to tell a function it named itself from one its caller handed it
+   * (see VarHandler).
+   */
+  isLocal(name: string): boolean {
+    const r = this.lookup(name)
+    return r.found && r.local
   }
 
   /**
@@ -315,10 +328,10 @@ export class Env {
      * That reach is the point: a closure the module never bound by name can
      * still need the module's scope. A contract-wrapped export is a wrapper
      * closing over the original function (see scheme/contract.ts), and it is
-     * the original -- reachable only through the wrapper's locals -- whose body
-     * holds the module's calls to its siblings and to the standard library.
-     * Without this, every documented library function resolved those against
-     * whatever env happened to be running instead.
+     * the original -- reachable through the wrapper's locals and its
+     * contractTarget -- whose body holds the module's calls to its siblings and
+     * to the standard library. Without this, every documented library function
+     * resolved those against whatever env happened to be running instead.
      *
      * @returns `value` unchanged if it is not a closure, else a re-homed copy
      *   (or the copy already made for it).
@@ -340,6 +353,13 @@ export class Env {
       const copy: Closure = { ...value, home: value.home ?? home }
       rehomedClosures.set(value, copy)
       copy.locals = value.locals.map(rehomeScope)
+      // The wrapped original is reachable twice over: through the wrapper's
+      // locals (just re-homed) and, since #476, directly as contractTarget --
+      // which is the one a library-internal call applies. The memo above makes
+      // this the same copy rather than a second one.
+      if (copy.contractTarget !== undefined) {
+        copy.contractTarget = rehomeValue(copy.contractTarget)
+      }
       return copy
     }
 
@@ -441,6 +461,22 @@ export class Module {
   }
 }
 
+/**
+ * Where a piece of running code came from.
+ *
+ * + `user` -- the program the student is running.
+ * + `import` -- a file they imported (`(import "helpers.scm")`).
+ * + `builtin` -- a builtin library, loaded by src/lib/index.ts.
+ *
+ * Two things read it. A reduction trace steps *over* (not into) a call into
+ * anything that is not `user`, so the call reduces atomically and its
+ * internals stay hidden (see src/scheme/trace.ts). And only `builtin` code
+ * skips a contract check on the library functions it names (see VarHandler):
+ * an imported file is stepped over just the same, but it is still the
+ * student's own code, so its mistakes must still be caught.
+ */
+export type CodeOrigin = 'user' | 'import' | 'builtin'
+
 /** Tagged objects are Scamper values with a queryable runtime identity. */
 export interface TaggedObject {
   [scamperTag]: string
@@ -460,13 +496,15 @@ export interface Closure extends TaggedObject {
   // Machine can be referenced by call to perform evaluation.
   call: (...args: Value[]) => Value
   name?: Id
-  // When true, a reduction trace steps *over* (not into) a call to this
-  // closure: its internal reductions stay hidden and the call reduces to its
-  // value atomically. Set for closures defined in imported modules -- the
-  // builtin libraries (incl. the prelude) and user file imports -- so a trace
-  // steps through the user's own module/local definitions but not library
-  // code. See src/scheme/trace.ts.
-  stepOver?: boolean
+  // Where this closure's code came from; 'user' when omitted. See CodeOrigin.
+  origin?: CodeOrigin
+  // The value this closure checks the contract of, when it is a contract
+  // wrapper generated from a docstring (see src/scheme/contract.ts). Library
+  // code naming the function gets this instead, skipping the checks (see
+  // VarHandler) -- they exist to describe a *student's* mistake at their own
+  // call site, and re-running them on every internal step of `map` buys
+  // nothing.
+  contractTarget?: Value
   // The environment this closure resolves its free top-level names against,
   // instead of the running fiber's env (applyFn). Set only for closures of a
   // module imported under a qualified name (see extendWithQualifiedImport): that

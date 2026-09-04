@@ -48,6 +48,7 @@ export const patchNotes: PatchNote[] = [
       'Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.',
       'all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.',
       'An image you have uploaded can now be read straight into a program with (image-load "cat.png"), and a canvas written back out with (image-save! canvas "out.png").',
+      'Programs now run several times faster — pixel-map over a photograph finishes in seconds rather than half a minute — and an error raised inside a built-in function now underlines the call you wrote instead of reporting no location at all.',
     ],
   },
   {

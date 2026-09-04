@@ -75,17 +75,18 @@ describe("#342: a blocking primitive's error points at its call", () => {
     ).toEqual(['Runtime error [2:1-2:26]: File "missing.png" does not exist'])
   })
 
-  test('with-file still reports unlocated (known gap)', async () => {
-    // NOT fixed here, and pinned so the gap is visible rather than latent.
-    //
+  test('with-file reports the call site too (gap closed in #476)', async () => {
     // with-file and with-image-from-url are the only two primitives called from
-    // a *library-defined Scheme* body, so the range applyFn can recover is the
-    // one inside prelude.scm/image.scm rather than the student's call. Reaching
-    // the real call site means walking out of that wrapper's frame, which the
-    // current call-site recovery cannot do -- see the PR discussion.
+    // a *library-defined Scheme* body, so the range applyFn could recover was
+    // the one inside prelude.scm/image.scm rather than the student's call --
+    // and reporting unlocated was the lesser evil. A call made from library
+    // source now passes along the range its own caller was called from (see
+    // applyFn), which walks out of that wrapper for free.
     expect(
       await runProgram('(with-file "missing.txt" (lambda (s) s))'),
-    ).toEqual(['Runtime error: File "missing.txt" does not exist'])
+    ).toEqual([
+      'Runtime error [1:1-1:40]: File "missing.txt" does not exist',
+    ])
   })
 
   test('a rejection that is not a ScamperError also gets a range', async () => {

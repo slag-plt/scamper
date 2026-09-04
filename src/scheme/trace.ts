@@ -5,14 +5,14 @@ import { sugarExpr } from './sugar.js'
 import { raiseFiber } from './raise.js'
 
 // The fiber's current state as a user-visible reduction expression (with its
-// rendering), or undefined to skip. A step is hidden while any `stepOver` frame
+// rendering), or undefined to skip. A step is hidden while any non-`user` frame
 // is on the stack -- a call into a library/import function reduces atomically,
 // so its internals (and any user callback it drives) never surface -- while the
 // user's own module/local functions, including recursive calls, are stepped
 // into. Internal `##...##` states are never surfaced either.
 function visibleReduction(fiber: Fiber): { exp: Exp; str: string } | undefined {
   // No frames means we're at a statement boundary with nothing to raise.
-  if (fiber.frames.length === 0 || fiber.frames.some((f) => f.stepOver)) {
+  if (fiber.frames.length === 0 || fiber.frames.some((f) => f.origin !== 'user')) {
     return undefined
   }
   const exp = sugarExpr(raiseFiber(fiber))

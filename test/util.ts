@@ -49,7 +49,7 @@ export function stepFiberToCompletion(fiber: Fiber): void {
  *
  * The escape hatch for tests that must observe the fiber *between* steps --
  * frame depth, or raising/sugaring the machine state at a finer granularity
- * than the trace policy exposes (it dedups, and hides `stepOver` frames). No
+ * than the trace policy exposes (it dedups, and hides non-`user` frames). No
  * scheduler API surfaces that. Same caveats as stepFiberToCompletion: no
  * blocking primitives, no file imports, no error recovery.
  */

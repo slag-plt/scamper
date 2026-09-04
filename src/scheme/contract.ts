@@ -12,6 +12,7 @@ import { Param } from './docstring/param.js'
 // original value via an ordinary `let` before the `define` shadows it.
 
 const contractTargetName = '##contract-target##'
+const contractedName = '##contracted##'
 
 /**
  * The bare name of a simple `var` predicate with any trailing `?` stripped,
@@ -299,8 +300,13 @@ function mkOptBindings(
  *
  *   (define name
  *     (let ([##contract-target## expr])
- *       (lambda (x1 ... xk [& rest])
- *         <cascading predicate checks, then (##contract-target## x1 ... xk)>)))
+ *       (##contracted## ##contract-target##
+ *         (lambda (x1 ... xk [& rest])
+ *           <cascading predicate checks, then (##contract-target## x1 ... xk)>))))
+ *
+ * ##contracted## tags the wrapper with the value it checks, so library code
+ * naming this definition reaches that value and skips the checks (see
+ * VarHandler).
  *
  * A signature with optional parameters -- `(substring s start [end])` -- has
  * no fixed arity, so the wrapper takes them through a rest parameter of its
@@ -358,13 +364,23 @@ export function contractStmt(s: A.Stmt): A.Stmt {
     : doc.restParam
       ? A.mkId(doc.restParam.name, s.range)
       : undefined
+  // The wrapper is handed to ##contracted## along with the value it checks, so
+  // the machine can reach that value directly and skip the checks on a call
+  // made from library code (see VarHandler).
   const wrapped = A.mkLet(
     [{ pat: A.mkId(contractTargetName, s.range), value: s.value }],
-    A.mkLam(
-      doc.params.map((p) => A.mkId(p.name, s.range)),
-      body,
+    A.mkApp(
+      A.mkId(contractedName, s.range),
+      [
+        A.mkId(contractTargetName, s.range),
+        A.mkLam(
+          doc.params.map((p) => A.mkId(p.name, s.range)),
+          body,
+          s.range,
+          lamRest,
+        ),
+      ],
       s.range,
-      lamRest,
     ),
     s.range,
   )

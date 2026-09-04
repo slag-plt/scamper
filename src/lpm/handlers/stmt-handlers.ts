@@ -41,6 +41,17 @@ export const DefineHandler: StatementHandler<'define'> = (stmt, fiber) => {
     (fiber.lastResult.name === undefined || fiber.lastResult.name === '##anonymous##')
   ) {
     fiber.lastResult.name = stmt.name
+    // A contract wrapper and the value it checks are two closures for one
+    // definition, so they answer to the same name: an error raised inside the
+    // wrapped function is still about the student's call to *this* name, and
+    // applyFn reports a frame by its name (see Closure.contractTarget).
+    const target = fiber.lastResult.contractTarget
+    if (
+      isClosure(target) &&
+      (target.name === undefined || target.name === '##anonymous##')
+    ) {
+      target.name = stmt.name
+    }
   }
   fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([stmt.name, fiber.lastResult])
   fiber.advanceStmt()
