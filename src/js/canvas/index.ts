@@ -5,7 +5,7 @@ import { Font, font_font, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
 
 export function canvas_canvasQ(v: L.Value): boolean {
-  return v instanceof HTMLCanvasElement
+  return typeof HTMLCanvasElement !== 'undefined' && v instanceof HTMLCanvasElement
 }
 
 // N.B., canvas-width/canvas-height used to be bound to the *drawing* accessors,
