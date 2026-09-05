@@ -593,8 +593,9 @@ export function toString(v: L.Value): string {
         return `(list ${listToVector(v).map(toString).join(' ')})`
       } else if (isPair(v)) {
         return `(pair ${toString(v.fst)} ${toString(v.snd)})`
-      } else if (v instanceof HTMLElement) {
-        // N.B., shouldn't encounter this? Need to be in browser to render...
+      } else if (typeof HTMLElement !== 'undefined' && v instanceof HTMLElement) {
+        // N.B., the `typeof` guard is what lets this answer "no" outside the
+        // browser, where the global is undeclared rather than merely undefined.
         return '[HTMLElement]'
       } else if (isStruct(v)) {
         const name = v[L.structKind]

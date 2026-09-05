@@ -102,8 +102,6 @@ const KNOWN_BROKEN = new Map<string, string>([
  * be tuned without weakening them.
  */
 const ZERO_REST_BROKEN = new Map<string, string>([
-  ['prelude:-', 'leaks a raw JS TypeError on no arguments (#517)'],
-  ['prelude:/', 'leaks a raw JS TypeError on no arguments (#517)'],
   ['prelude:range', '& args admits no arguments; the native needs 1-3 (#542)'],
   [
     'prelude:vector-range',

@@ -429,9 +429,13 @@ export default class Scamper {
     const id = crypto.randomUUID()
     const { promise, resolve } = deferred()
     const collector = new TraceCollector(target, maxSteps, () => {
-      // Deferred out of the send that tripped it: this runs from inside the
-      // scheduler's own loop, and cancelling there would splice the task list
-      // out from under the iteration. A microtask lands between steps instead.
+      // Deferred out of the send that tripped it, so the cancel does not run
+      // from inside the scheduler's own step. It does *not* land between steps,
+      // though: the scheduler awaits between stepping a task and settling its
+      // place, and that await is a microtask boundary too, so this still runs
+      // inside the same iteration. What makes that safe is the scheduler
+      // locating tasks by identity rather than by an index the splice
+      // invalidates (#515).
       //
       // `resolve` here rather than relying on onComplete, because a cancelled
       // task never reaches it -- cancelTask reports and unschedules, and that

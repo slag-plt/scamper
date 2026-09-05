@@ -625,6 +625,10 @@ describe('Scheduler', () => {
       // moveNextTask saw a done fiber and tried to remove a task from an
       // already-empty queue -- tripping removeTaskFromQueue's atomicity ICE.
       //
+      // N.B. that ICE is gone since #515: removal is by identity, so the stray
+      // call finds nothing and returns. This test therefore no longer pins the
+      // `if (!(await ...))` guard, only the completion count it protects.
+      //
       // That ICE was thrown inside execute()'s detached promise, so it reached
       // no caller: the run looked green apart from an unhandled rejection. The
       // previous test doesn't catch it because its blocking call is followed by

@@ -1,4 +1,5 @@
 import * as L from '../../lpm'
+import { requireBrowser } from '../browser.js'
 
 export function html_isElement(v: L.Value): boolean {
   return typeof HTMLElement !== 'undefined' && v instanceof HTMLElement
@@ -13,6 +14,7 @@ export function html_buttonQ(v: L.Value): boolean {
 }
 
 export function html_textArea(id: string): HTMLTextAreaElement {
+  requireBrowser()
   const ret = document.createElement('textarea')
   ret.id = id
   return ret
@@ -23,6 +25,7 @@ export function html_textAreaGet(textArea: HTMLTextAreaElement): string {
 }
 
 export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
+  requireBrowser()
   const ret = document.createElement('button')
   ret.textContent = label
   // Each click runs the (zero-argument) callback as a fresh fiber; a JS handler
@@ -36,6 +39,7 @@ export function html_button(label: string, fn: L.ScamperFn): HTMLButtonElement {
 }
 
 export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
+  requireBrowser()
   const elt = document.createElement(name)
   if (children.length > 0 && L.isList(children[0])) {
     const attrs = L.listToVector(children[0])
@@ -65,6 +69,7 @@ export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
 }
 
 export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
+  requireBrowser()
   if (!(elt instanceof HTMLElement)) {
     throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
   } else {
@@ -83,6 +88,7 @@ export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
 }
 
 export function html_onKeydown(fn: L.ScamperFn): void {
+  requireBrowser()
   // Each keydown runs `(fn key)` as a fresh fiber; errors surface in the output
   // pane rather than an alert. The run's AbortSignal removes the listener when
   // the program is re-run/stopped.
