@@ -148,7 +148,7 @@ export function applyFn(
           'Runtime',
           `Unexpected error in Javascript function call: ${e instanceof Error ? e.toString() : String(e)}`,
           undefined,
-          range,
+          callRange,
           undefined
         )
       }

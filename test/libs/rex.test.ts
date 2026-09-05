@@ -305,8 +305,10 @@ test('regex', async () => {
 })
 
 // regex/rex-char-range don't validate their contents up front, so a bad
-// pattern only surfaces once something forces it through JS's RegExp --
-// hence the error pointing at rex-matches?'s own definition, not this call.
+// pattern only surfaces once something forces it through JS's RegExp -- so the
+// error is reported at the rex-matches? call, not where the pattern was built.
+// (These ranges are stripped here; they are pinned in
+// test/regressions/native-raw-error-call-range.test.ts.)
 test('regex bad pattern', async () => {
   expect(await runProgram(`
     (import rex)
