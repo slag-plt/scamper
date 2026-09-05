@@ -1,12 +1,19 @@
 import { ref } from 'vue'
 import { DEFAULT_TRACE_STEP_LIMIT } from '../../lpm/output/trace-collector'
+import {
+  DEFAULT_MAX_CALL_STACK_DEPTH,
+  MAX_CALL_STACK_DEPTH,
+  MIN_CALL_STACK_DEPTH,
+  setDefaultMaxCallStackDepth,
+} from '../../lpm/limits'
 
 /**
  * How and when the current file is run.
  *
  * Module-level and self-persisting, like editor-prefs and output-prefs: the
- * toggle is set from the Run menu and read where edits are noticed, so routing
- * it through props would mean threading one boolean down the component tree.
+ * toggles are set from the Run menu and the preferences pane and read where
+ * edits are noticed, so routing them through props would mean threading one
+ * boolean down the component tree.
  */
 
 const LIVE_EVALUATION_KEY = 'scamper.run.live'
@@ -74,6 +81,27 @@ export function toggleCheckExamples(): void {
   setCheckExamples(!checkExamples.value)
 }
 
+/**
+ * Reads a number this module has stored, held to `clamp`.
+ *
+ * @returns `fallback` when nothing is stored, when what is stored is not a
+ *          number, or when there is no storage to read at all.
+ */
+function storedNumber(
+  key: string,
+  fallback: number,
+  clamp: (value: number) => number,
+): number {
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored === null) return fallback
+    const value = Number(stored)
+    return Number.isFinite(value) ? clamp(value) : fallback
+  } catch {
+    return fallback // no storage; default as if unset
+  }
+}
+
 const TRACE_STEP_LIMIT_KEY = 'scamper.run.tracesteps'
 
 /**
@@ -100,22 +128,15 @@ function clampTraceStepLimit(steps: number): number {
  * says so (issue #369).
  *
  * Here rather than in a file of its own because it is part of how the file is
- * run, and this module is already what the Run menu reads. It is set from that
- * menu until there is a preferences pane to hold it.
+ * run, and this module is already what the preferences pane reads for its
+ * Running section.
  */
 export const traceStepLimit = ref<number>(
-  (() => {
-    try {
-      const stored = localStorage.getItem(TRACE_STEP_LIMIT_KEY)
-      if (stored === null) return DEFAULT_TRACE_STEP_LIMIT
-      const steps = Number(stored)
-      return Number.isFinite(steps)
-        ? clampTraceStepLimit(steps)
-        : DEFAULT_TRACE_STEP_LIMIT
-    } catch {
-      return DEFAULT_TRACE_STEP_LIMIT // no storage; default as if unset
-    }
-  })(),
+  storedNumber(
+    TRACE_STEP_LIMIT_KEY,
+    DEFAULT_TRACE_STEP_LIMIT,
+    clampTraceStepLimit,
+  ),
 )
 
 export function setTraceStepLimit(steps: number): void {
@@ -126,3 +147,58 @@ export function setTraceStepLimit(steps: number): void {
     // Applies for this session regardless; remembering it is a bonus.
   }
 }
+
+const MAX_CALL_STACK_DEPTH_KEY = 'scamper.run.callstackdepth'
+
+// The range this may be chosen from is the machine's own, and the pane shows
+// both ends of it, so they are passed along from here rather than reached for
+// separately.
+export { MAX_CALL_STACK_DEPTH, MIN_CALL_STACK_DEPTH }
+
+function clampCallStackDepth(depth: number): number {
+  return Math.min(
+    MAX_CALL_STACK_DEPTH,
+    Math.max(MIN_CALL_STACK_DEPTH, Math.round(depth)),
+  )
+}
+
+/**
+ * How deep a recursion may go before the machine reports `Max call stack depth
+ * exceeded` (issue #477).
+ *
+ * Named for the stack rather than the recursion, as the machine, its error, and
+ * the pane's own label all are: what this sets is a fiber's maxCallStackDepth.
+ * Only `set-maximum-recursion-depth!` keeps the older word, since it is a
+ * published name in the standard library.
+ *
+ * The depth a *fresh fiber starts at* rather than the last word on the matter:
+ * a program that calls `set-maximum-recursion-depth!` still overrides it for
+ * its own run, so what a program does stays reproducible and this is only the
+ * floor a student sets for the session. Before the preferences pane that call
+ * was the only way to ask at all, and the next Run undid it.
+ */
+export const maxCallStackDepth = ref<number>(
+  storedNumber(
+    MAX_CALL_STACK_DEPTH_KEY,
+    DEFAULT_MAX_CALL_STACK_DEPTH,
+    clampCallStackDepth,
+  ),
+)
+
+export function setMaxCallStackDepth(depth: number): void {
+  maxCallStackDepth.value = clampCallStackDepth(depth)
+  setDefaultMaxCallStackDepth(maxCallStackDepth.value)
+  try {
+    localStorage.setItem(
+      MAX_CALL_STACK_DEPTH_KEY,
+      String(maxCallStackDepth.value),
+    )
+  } catch {
+    // Applies for this session regardless; remembering it is a bonus.
+  }
+}
+
+// Handed to the machine as this module loads rather than when the pane is first
+// opened, so the two agree before anything is run: the pane is not necessarily
+// opened at all in a session that has one of these stored from an earlier one.
+setDefaultMaxCallStackDepth(maxCallStackDepth.value)

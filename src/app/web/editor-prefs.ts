@@ -93,7 +93,13 @@ export function toggleRelaxedFormatting(): void {
 }
 
 export function setEditorFontSize(size: number): void {
-  const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size))
+  // Rounded as well as clamped since the preferences pane made this typeable:
+  // the zoom commands only ever step by two, but a box takes `12.5`, which
+  // would be applied and remembered as written.
+  const clamped = Math.min(
+    MAX_FONT_SIZE,
+    Math.max(MIN_FONT_SIZE, Math.round(size)),
+  )
   editorFontSize.value = clamped
   write(FONT_SIZE_KEY, String(clamped))
 }

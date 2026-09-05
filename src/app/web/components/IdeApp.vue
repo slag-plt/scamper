@@ -43,14 +43,7 @@ import { useRepl } from '../composables/use-repl'
 import { useNotebook } from '../composables/use-notebook'
 import NotebookView from './NotebookView.vue'
 import { fileView } from '../view-prefs'
-import {
-  checkExamples,
-  liveEvaluation,
-  MAX_TRACE_STEP_LIMIT,
-  MIN_TRACE_STEP_LIMIT,
-  setTraceStepLimit,
-  traceStepLimit,
-} from '../run-prefs'
+import { checkExamples, liveEvaluation, traceStepLimit } from '../run-prefs'
 import { providePanels } from '../composables/use-panels'
 import type { PanelId } from '../panel-layout'
 import Scamper from '../../../scamper'
@@ -77,6 +70,7 @@ import {
   modalPrompt,
 } from '../composables/use-modals'
 import PatchNotesModal from './PatchNotesModal.vue'
+import PreferencesModal from './PreferencesModal.vue'
 import FileHistoryModal from './FileHistoryModal.vue'
 import SignInModal from './SignInModal.vue'
 import { restart, serverSession, usesServerFiles } from '../server-session'
@@ -154,6 +148,8 @@ const cursorStatus = ref<CursorStatus>({ line: 1, column: 1, path: [] })
 const canStep = computed(() => cursorStatus.value.path.length > 0)
 const patchNotesToShow = ref<PatchNote[]>([])
 const showPatchNotes = ref(false)
+/** Whether the preferences pane is showing (#497). */
+const showPreferences = ref(false)
 const showHistory = ref(false)
 const historyFiles = ref<HistoryFile[]>([])
 const historyFile = ref('')
@@ -491,39 +487,9 @@ async function handleStepStatement() {
   }
 }
 
-/**
- * Asks for the number of steps a trace may take before it gives up (#369).
- *
- * A menu item rather than a checkbox because the answer is a number, and one
- * prompt rather than a preferences pane because this is the only such number
- * the IDE has so far.
- */
-async function handleTraceStepLimit() {
-  const answer = await modalPrompt({
-    title: 'Trace step limit',
-    message:
-      'How many steps may stepping a statement take before it gives up? ' +
-      `Between ${String(MIN_TRACE_STEP_LIMIT)} and ` +
-      `${String(MAX_TRACE_STEP_LIMIT)}; a larger limit traces further but ` +
-      'takes longer to collect.',
-    defaultValue: String(traceStepLimit.value),
-  })
-  if (answer === null) return
-  const steps = Number(answer.trim())
-  // An empty box reads as 0 through Number, so it is turned away here rather
-  // than clamped up to the floor as a deliberate 5 would be.
-  if (answer.trim() === '' || !Number.isFinite(steps)) {
-    await modalAlert({
-      title: 'Trace step limit',
-      message:
-        `Enter a whole number of steps between ${String(MIN_TRACE_STEP_LIMIT)} ` +
-        `and ${String(MAX_TRACE_STEP_LIMIT)}.`,
-    })
-    return
-  }
-  // A number outside the range is clamped rather than refused, which the menu
-  // item's own label then shows, so the clamp is not silent.
-  setTraceStepLimit(steps)
+/** Opens the preferences pane (#497). */
+function handlePreferences() {
+  showPreferences.value = true
 }
 
 /**
@@ -1702,9 +1668,9 @@ async function handleBeforeUnload(e: BeforeUnloadEvent) {
 }
 
 /**
- * The two commands that need a keystroke the editor cannot provide.
+ * The three commands that need a keystroke the editor cannot provide.
  *
- * Both are handled at the window in the capture phase, and both preventDefault:
+ * All are handled at the window in the capture phase, and all preventDefault:
  *
  * - Mod+S. Scamper autosaves, but a student's reflex is to press it anyway, and
  *   unbound it fires the browser's "Save Page As" -- a download dialog for the
@@ -1712,6 +1678,8 @@ async function handleBeforeUnload(e: BeforeUnloadEvent) {
  * - Mod+Enter. The conventional "run" chord in a web REPL. Capture-phase,
  *   because CodeMirror's defaultKeymap binds it to insertBlankLine and would
  *   otherwise get it first when the caret is in the editor.
+ * - Mod+, opens the preferences pane (#497). Capture-phase for the same reason
+ *   as the others: the comma would otherwise be typed into the editor.
  *
  * Not bound: zoom. Mod+= / Mod+- / Mod+0 are the browser's own, and taking them
  * for the editor's font size would stop a student zooming the page -- which on
@@ -1730,6 +1698,9 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   } else if (e.key === 'Enter') {
     e.preventDefault()
     void session.execute()
+  } else if (e.key === ',') {
+    e.preventDefault()
+    handlePreferences()
   }
 }
 
@@ -1916,8 +1887,8 @@ onUnmounted(() => {
         :can-step="canStep"
         :is-stepping="isCollectingTrace"
         :step-statement="handleStepStatement"
-        :trace-step-limit="handleTraceStepLimit"
         :open-repl="handleOpenRepl"
+        :preferences="handlePreferences"
         :about="handleAbout"
         :whats-new="handleWhatsNew"
       />
@@ -2045,6 +2016,7 @@ onUnmounted(() => {
     :notes="patchNotesToShow"
     @close="handlePatchNotesClose"
   />
+  <PreferencesModal :open="showPreferences" @close="showPreferences = false" />
   <FileHistoryModal
     v-if="showHistory"
     :open="showHistory"
