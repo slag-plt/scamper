@@ -1,3 +1,5 @@
+;;; The Scamper music library, inspired from Hudak's Euterpea library for the Haskell programming language
+
 ;;; (dur? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a duration.

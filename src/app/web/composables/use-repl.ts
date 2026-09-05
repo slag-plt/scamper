@@ -1,5 +1,5 @@
 import { computed, ref, shallowRef, triggerRef, type Ref } from 'vue'
-import Scamper, { type ReplSession } from '../../../scamper'
+import Scamper, { type Env, type ReplSession } from '../../../scamper'
 import type { ErrorChannel, OutputChannel, Value } from '../../../lpm'
 import type { ScamperError } from '../../../lpm/error'
 
@@ -24,6 +24,30 @@ export interface ReplEntry {
    * continues. False for one that was refused or did not compile.
    */
   ran: boolean
+  /**
+   * The top level this entry was evaluated in, kept so that stepping it can
+   * replay it exactly as it was (#424).
+   *
+   * Cheap to hold on to: a top level is persistent, so this is one reference to
+   * an environment nothing later can change. What it *reaches* is not free --
+   * a name redefined at the prompt keeps the value it had here alive for as
+   * long as the transcript does -- but a transcript is bounded by what one
+   * person types. Null for an entry nobody typed -- the seed's, or one holding
+   * output a handler produced -- which has no statement to step.
+   */
+  env: Env | null
+}
+
+/**
+ * Whether `entry` can be stepped: something was typed, it ran, and the top
+ * level it ran in was kept.
+ *
+ * An entry that was refused or did not compile never became part of the
+ * program, so there is nothing to replay; one that failed at runtime did run,
+ * and is exactly the entry worth stepping.
+ */
+export function canStepEntry(entry: ReplEntry): boolean {
+  return entry.ran && entry.env !== null && entry.source.trim().length > 0
 }
 
 export interface Repl {
@@ -158,7 +182,14 @@ export function useRepl(): Repl {
       // Nothing has been typed yet, so this came from something the seeded file
       // left running -- a timer, a key handler. It still has to be seen, so it
       // gets an entry of its own rather than being dropped on the floor.
-      entry = { id: nextId++, source: '', values: [], isRunning: false, ran: false }
+      entry = {
+        id: nextId++,
+        source: '',
+        values: [],
+        isRunning: false,
+        ran: false,
+        env: null,
+      }
       entries.value = [...entries.value, entry]
     }
     entry.values.push(v)
@@ -180,6 +211,7 @@ export function useRepl(): Repl {
       values: [],
       isRunning: true,
       ran: false,
+      env: null,
     }
     entries.value = [seedEntry]
     isBusy.value = true
@@ -228,6 +260,10 @@ export function useRepl(): Repl {
       values: [],
       isRunning: true,
       ran: false,
+      // Taken now, before `evaluate` runs and extends it: this is the top level
+      // the entry is about to be evaluated in, and so the one to replay it in
+      // when it is stepped (#424).
+      env: repl.env,
     }
     entries.value = [...entries.value, entry]
     isBusy.value = true

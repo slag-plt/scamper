@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
+import type { ModuleDoc } from '../../scheme/docstring/module-doc'
 import DocEntry from './DocEntry.vue'
+import DocText from './DocText.vue'
 
 const props = defineProps<{
   moduleName: string
   lib: Map<string, FunctionDoc>
+  /**
+   * What the module is for, if it says (#411). Absent for a module with no
+   * module comment, which renders nothing rather than an empty heading.
+   */
+  moduleDoc?: ModuleDoc
 }>()
 
 interface Entry {
@@ -38,6 +45,11 @@ const entries = computed<Entry[]>(() => {
       </ul>
     </div>
     <div class="entries">
+      <!-- What the module is for, above what is in it. Only when it says: a
+           module with no module comment shows nothing here at all. -->
+      <p v-if="moduleDoc !== undefined" class="module-doc">
+        <DocText :text="moduleDoc.description" />
+      </p>
       <DocEntry
         v-for="entry in entries"
         :id="entry.id"
@@ -80,5 +92,15 @@ const entries = computed<Entry[]>(() => {
   flex: 1;
   min-height: 0;
   overflow: scroll;
+}
+
+/* Aligned with the entry cards below it, and set apart from them: prose about
+   the module rather than another entry in it. */
+.module-doc {
+  margin: 1em;
+  padding: 0 1em;
+  font-family: var(--font-sans);
+  font-size: 1.05em;
+  line-height: 1.5;
 }
 </style>

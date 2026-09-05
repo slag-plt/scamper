@@ -40,6 +40,8 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.',
+      'Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.',
+      'You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.',
       'Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.',
       'with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.',
       'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
