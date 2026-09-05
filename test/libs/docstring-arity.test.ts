@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { builtinLibs, docRegistry } from '../../src/lib'
+import { librarySources } from '../../src/lib/generated/sources'
 import * as L from '../../src/lpm'
 import { FunctionDoc } from '../../src/scheme/docstring/docstring'
 import { functionDocSignature } from '../../src/scheme/docstring/render'
@@ -137,8 +138,12 @@ function jsArity(fn: L.JsFunction): Arity {
   const firstDefault = fixed.findIndex(hasDefault)
   const required = firstDefault === -1 ? fixed.length : firstDefault
   if (fn.length !== required) {
+    // Either this parser has drifted from the source it reads, or the binding
+    // has no parameter list in its source to read: a built-in (`Math.floor`)
+    // or a bound function prints as `[native code]`, and would need its arity
+    // recorded some other way.
     throw new Error(
-      `parsed ${String(required)} required parameter(s) but Function.length says ${String(fn.length)}: ${fn.toString().slice(0, 120)}`,
+      `parsed ${String(required)} required parameter(s) but Function.length says ${String(fn.length)} -- this parser has drifted, or the function's source is not readable (e.g. "[native code]"): ${fn.toString().slice(0, 120)}`,
     )
   }
   return { required, total: fixed.length, rest }
@@ -171,17 +176,18 @@ function describeArity(a: Arity): string {
 /**
  * How many arguments the contract wrapper can hand the implementation. An
  * optional parameter is always passed positionally -- void when the caller
- * omits it (see contract.ts's mkTargetCall) -- so it raises the floor as well
- * as the ceiling. A rest parameter lifts the ceiling to infinity and leaves the
- * floor at the required parameters.
+ * omits it -- so it raises the floor as well as the ceiling: contractStmt
+ * calls `mkTargetCall([...params, ...optParams], restParam, ...)`, which
+ * passes every optional whether or not a rest parameter follows them. A rest
+ * parameter then lifts the ceiling to infinity, leaving the floor where it is.
+ *
+ * N.B., no library signature declares optionals *and* a rest parameter today,
+ * so that half of the floor is unobservable: it is written from what
+ * contract.ts lowers to rather than from a failure it has caught.
  */
 function docArity(doc: FunctionDoc): { min: number; max: number } {
-  const required = doc.params.length
-  if (doc.restParam !== undefined) {
-    return { min: required, max: Infinity }
-  }
-  const fixed = required + doc.optParams.length
-  return { min: fixed, max: fixed }
+  const passed = doc.params.length + doc.optParams.length
+  return { min: passed, max: doc.restParam !== undefined ? Infinity : passed }
 }
 
 /** Unwraps the contract lambda a docstring lowered to, if there is one. */
@@ -243,10 +249,14 @@ function arityDisagreements(): Map<string, string> {
 }
 
 test('a contracted binding unwraps to its implementation', () => {
-  // Without this the sweep could pass vacuously: with an empty registry it has
-  // nothing to check, and if contract insertion stopped tagging its wrapper
-  // with contractTarget every binding would be compared against the wrapper
-  // built from its own docstring and agree trivially.
+  // Without this the sweep could pass vacuously: a registry missing modules
+  // narrows it silently rather than failing, and if contract insertion stopped
+  // tagging its wrapper with contractTarget every binding would be compared
+  // against the wrapper built from its own docstring and agree trivially.
+  expect(
+    docRegistry.size,
+    'every library module should be in the doc registry',
+  ).toBe(librarySources.length)
   expect(docRegistry.get('prelude')?.has('substring')).toBe(true)
   const substring = builtinLibs.get('prelude')?.bindings.get('substring')
   expect(L.isClosure(substring), 'substring should be a contract wrapper').toBe(
