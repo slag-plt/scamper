@@ -1,13 +1,14 @@
 import type { MarkupContent } from 'vscode-languageserver-protocol'
 import { tokenizeAndParse } from '../../../../scheme'
 import { parseProgramFromSource } from '../../../../scheme/lezer-bridge'
-import { docRegistry } from '../../../../lib'
+import { docRegistry, moduleDocRegistry } from '../../../../lib'
 import * as A from '../../../../scheme/ast'
 import {
   FunctionDoc,
   parseFunctionDocFromComments,
 } from '../../../../scheme/docstring/docstring'
 import { functionDocSignature } from '../../../../scheme/docstring/render'
+import type { ModuleDoc } from '../../../../scheme/docstring/module-doc'
 
 /** A documentation entry plus the builtin module it came from (undefined for a user definition). */
 export interface DocLookup {
@@ -83,6 +84,70 @@ function lookupQualifiedDoc(src: string, name: string): DocLookup | undefined {
   }
   const doc = docRegistry.get(imp.module)?.get(member)
   return doc !== undefined ? { doc, module: imp.module } : undefined
+}
+
+/** A module's comment plus the module it belongs to. */
+export interface ModuleLookup {
+  doc: ModuleDoc
+  module: string
+}
+
+/**
+ * Resolves the module named at `offset` to its module comment (#411).
+ *
+ * Only inside an import: `(import rex)` and `(import rex r)` both name a module
+ * there, and nowhere else does a bare name mean one. Restricting it to the
+ * statement is also what keeps a module whose name is also a function's from
+ * shadowing that function everywhere else in the file.
+ *
+ * @param name the identifier under the cursor, which must be the module's name
+ *        or the alias it was imported under.
+ * @returns the module's comment, or undefined when the offset is not in an
+ *          import, names something else in one, or the module says nothing.
+ */
+export function lookupModuleDoc(
+  src: string,
+  name: string,
+  offset: number,
+): ModuleLookup | undefined {
+  // Nothing to find, so nothing is parsed. Hovering is on the path of every
+  // pointer move, and the parse below is O(file size) where the builtin lookup
+  // it precedes is a map read -- worth skipping outright while no module
+  // carries a comment, which is every module today.
+  if (moduleDocRegistry.size === 0) {
+    return undefined
+  }
+  // Parse tolerantly, as lookupQualifiedDoc does, so hover keeps working while
+  // the rest of the buffer is mid-edit.
+  const program = parseProgramFromSource([], src)
+  for (const stmt of program) {
+    if (
+      stmt.tag !== 'import' ||
+      offset < stmt.range.begin.idx ||
+      offset > stmt.range.end.idx
+    ) {
+      continue
+    }
+    if (stmt.module !== name && stmt.alias !== name) {
+      continue
+    }
+    const doc = moduleDocRegistry.get(stmt.module)
+    return doc === undefined ? undefined : { doc, module: stmt.module }
+  }
+  return undefined
+}
+
+/** Renders a module's comment as Markdown: its name, then what it is for. */
+export function moduleDocMarkdown(
+  module: string,
+  doc: ModuleDoc,
+): MarkupContent {
+  return {
+    kind: 'markdown',
+    value: ['```scheme', `(import ${module})`, '```', '', doc.description].join(
+      '\n',
+    ),
+  }
 }
 
 /** Renders a doc entry as Markdown: a signature code block, the description, then the source module. */

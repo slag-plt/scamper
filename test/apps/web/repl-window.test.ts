@@ -2,9 +2,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { EditorView } from '@codemirror/view'
 import { getByRole, queryByRole } from '@testing-library/dom'
 import { afterEach, describe, expect, test } from 'vitest'
+import { nextTick } from 'vue'
 import ReplWindow from '../../../src/app/web/components/ReplWindow.vue'
 import type { ReplEntry } from '../../../src/app/web/composables/use-repl'
 import { transcriptText } from '../../../src/app/web/repl-transcript'
+import { Env } from '../../../src/lpm'
 import { initialize } from '../../../src/scamper'
 import '../../../src/app/web/renderers'
 
@@ -12,15 +14,44 @@ await initialize()
 
 /**
  * A finished entry, as `submit` leaves one that compiled and ran: `isRunning`
- * back to false and `ran` true. The window is what these specs are about, so
- * every fixture is an entry it would really be handed.
+ * back to false, `ran` true, and holding the top level it ran in. The window is
+ * what these specs are about, so every fixture is an entry it would really be
+ * handed.
  */
 function entry(
   id: number,
   source: string,
   values: ReplEntry['values'] = [],
 ): ReplEntry {
-  return { id, source, values, isRunning: false, ran: true }
+  return { id, source, values, isRunning: false, ran: true, env: Env.empty }
+}
+
+/**
+ * An entry that was refused or did not compile: it is in the transcript, so it
+ * can be read and fixed, but it never ran and so cannot be stepped.
+ */
+function refusedEntry(id: number, source: string): ReplEntry {
+  return { id, source, values: [], isRunning: false, ran: false, env: null }
+}
+
+/** The step button on the `n`th entry, or null when it offers none. */
+function stepButton(n: number): HTMLButtonElement | null {
+  return document
+    .querySelectorAll('.repl-entry')
+    [n].querySelector<HTMLButtonElement>('.repl-step')
+}
+
+/**
+ * Right-clicks what was typed in the `n`th entry -- where the menu is offered,
+ * as opposed to over its output.
+ *
+ * @returns whether the browser's own menu survived it.
+ */
+function rightClick(n: number): boolean {
+  const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+  const source = document.querySelectorAll('.repl-entry')[n].querySelector('.repl-source')
+  if (source === null) throw new Error(`entry ${String(n)} shows no source`)
+  return source.dispatchEvent(event)
 }
 
 /** The cells on screen, in order; the last one is always the prompt. */
@@ -282,6 +313,175 @@ describe('the REPL window', () => {
       typeInPrompt('(+ 1 2)')
       pressInPrompt('Enter')
       expect(wrapper.emitted('submit')).toBeUndefined()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+})
+
+// An entry that ran can be stepped, from a button on it or from its right-click
+// menu (#424). Both hand back the entry itself, since it carries the top level
+// the trace has to be replayed in.
+describe('stepping an entry', () => {
+  test('a button on an entry that ran asks to step it', () => {
+    const stepped = entry(0, '(+ 1 2)', [3])
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [stepped], banner: '', isBusy: false },
+    })
+    try {
+      const button = stepButton(0)
+      expect(button).not.toBeNull()
+      button?.click()
+      // The entry itself is handed back: it carries the top level the trace has
+      // to be replayed in.
+      expect(wrapper.emitted('step')).toEqual([[stepped]])
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('an entry that never ran offers no button', () => {
+    // It was refused or did not compile, so there is nothing to replay.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries: [refusedEntry(0, '(display')],
+        banner: '',
+        isBusy: false,
+      },
+    })
+    try {
+      expect(stepButton(0)).toBeNull()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('output from a handler offers no button', () => {
+    // Nobody typed it, so there is no statement to step.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries: [{ ...refusedEntry(0, ''), values: [7] }],
+        banner: '',
+        isBusy: false,
+      },
+    })
+    try {
+      expect(stepButton(0)).toBeNull()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('the button stays in the document rather than appearing on hover', () => {
+    // It is faded by CSS, not added and removed: a control that only exists
+    // while the pointer is over it cannot be tabbed to. jsdom applies no
+    // scoped styles, so what is pinned here is the part that matters -- that
+    // it is rendered, labelled, and reachable at rest.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [entry(0, '(+ 1 2)')], banner: '', isBusy: false },
+    })
+    try {
+      const button = stepButton(0)
+      expect(button?.isConnected).toBe(true)
+      expect(button?.getAttribute('aria-label')).toBe('Step through this')
+      expect(button?.disabled).toBe(false)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('the offer is withdrawn while another trace is collecting', async () => {
+    // One at a time, as the Step in the menu bar is: a control that can be
+    // clicked and do nothing is worse than one that says it cannot.
+    const stepped = entry(0, '(+ 1 2)')
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [stepped], banner: '', isBusy: false },
+    })
+    try {
+      await wrapper.setProps({ isStepping: true })
+      expect(stepButton(0)?.disabled).toBe(true)
+      stepButton(0)?.click()
+      expect(wrapper.emitted('step')).toBeUndefined()
+
+      // ...and the menu says so too, rather than quietly dropping the item.
+      expect(rightClick(0)).toBe(false)
+      await nextTick()
+      expect(
+        getByRole(document.body, 'menuitem', { name: /Step through this/ })
+          .getAttribute('aria-disabled'),
+      ).toBe('true')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('right-clicking what an entry printed keeps the native menu', () => {
+    // Output holds pictures and players with right-click menus of their own,
+    // and those are the browser's to give.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries: [entry(0, '(+ 1 2)', [3])],
+        banner: '',
+        isBusy: false,
+      },
+    })
+    try {
+      const value = document.querySelector('.repl-value')
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+      })
+      expect(value?.dispatchEvent(event)).toBe(true)
+      expect(
+        queryByRole(document.body, 'menuitem', { name: /Step through this/ }),
+      ).toBeNull()
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('right-clicking an entry that ran offers to step it', async () => {
+    const stepped = entry(0, '(+ 1 2)')
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [stepped], banner: '', isBusy: false },
+    })
+    try {
+      // Cancelled, so the browser's own menu makes way for ours.
+      expect(rightClick(0)).toBe(false)
+      await nextTick()
+      const item = getByRole(document.body, 'menuitem', {
+        name: /Step through this/,
+      })
+      item.click()
+      expect(wrapper.emitted('step')).toEqual([[stepped]])
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('right-clicking an entry that never ran keeps the native menu', async () => {
+    // Nothing of ours to offer, so taking Copy away would give nothing back.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries: [refusedEntry(0, '(display')],
+        banner: '',
+        isBusy: false,
+      },
+    })
+    try {
+      expect(rightClick(0)).toBe(true)
+      await nextTick()
+      expect(
+        queryByRole(document.body, 'menuitem', { name: /Step through this/ }),
+      ).toBeNull()
     } finally {
       wrapper.unmount()
     }

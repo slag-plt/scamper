@@ -2,9 +2,11 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 import CellEditor from './CellEditor.vue'
-import type { ReplEntry } from '../composables/use-repl'
+import PopupMenu from './PopupMenu.vue'
+import { canStepEntry, type ReplEntry } from '../composables/use-repl'
 import type { CellEditorHandle } from '../codemirror/cell-editor'
 import { transcriptText } from '../repl-transcript'
+import type { MenuItem } from '../menu'
 
 /**
  * The REPL: a transcript of what has been tried, and a prompt to try the next
@@ -23,6 +25,12 @@ const props = defineProps<{
   /** True once the file has been edited since this session was seeded. */
   isStale?: boolean
   /**
+   * True while a trace is being collected, which takes a moment on a long
+   * statement. Only one at a time, so the offer is withdrawn rather than left
+   * to be clicked and do nothing -- as the Step in the menu bar is.
+   */
+  isStepping?: boolean
+  /**
    * The program the prompt continues -- the file and the entries so far -- for
    * the language server to analyse it inside.
    */
@@ -35,6 +43,8 @@ const emit = defineEmits<{
   submit: [text: string]
   interrupt: []
   restart: []
+  /** Step through an entry that has already run (#424). */
+  step: [entry: ReplEntry]
 }>()
 
 /**
@@ -53,6 +63,36 @@ const promptRef = ref<CellEditorHandle | null>(null)
  * prompt holds something typed rather than something recalled.
  */
 const recalled = ref<number | null>(null)
+
+/**
+ * The right-click menu on an entry, or null when none is up (#424).
+ *
+ * The same offer as the button beside the entry, for someone who reaches for a
+ * context menu rather than hunting for a control that only appears on hover.
+ */
+const menu = ref<{ x: number; y: number; items: MenuItem[] } | null>(null)
+
+function onEntryContextMenu(event: MouseEvent, entry: ReplEntry) {
+  // Nothing of ours to offer, so the browser's own menu is left alone: taking
+  // it away would cost the reader Copy and give nothing back.
+  if (!canStepEntry(entry)) return
+  event.preventDefault()
+  menu.value = {
+    x: event.clientX,
+    y: event.clientY,
+    items: [
+      {
+        label: 'Step through this',
+        // Shown greyed rather than withheld while another trace collects, so
+        // the menu does not change shape depending on when it is opened.
+        disabled: props.isStepping,
+        run: () => {
+          emit('step', entry)
+        },
+      },
+    ],
+  }
+}
 
 function onSubmit(text: string) {
   if (props.isBusy) return
@@ -161,9 +201,27 @@ defineExpose({
       <p class="repl-banner">{{ banner }}</p>
 
       <div v-for="entry in entries" :key="entry.id" class="repl-entry">
-        <div v-if="entry.source.length > 0" class="repl-source">
+        <!-- The menu is offered over what was typed, not over what the entry
+             produced: output holds pictures and players of its own, whose
+             right-click menus are the browser's to give. -->
+        <div
+          v-if="entry.source.length > 0"
+          class="repl-source"
+          @contextmenu="onEntryContextMenu($event, entry)"
+        >
           <span class="repl-marker" aria-hidden="true">&gt;</span>
           <CellEditor :source="entry.source" is-read-only />
+          <!-- Out of the way until it is wanted: shown on hover, and on focus
+               so it can be reached by keyboard rather than by pointer alone. -->
+          <button
+            v-if="canStepEntry(entry)"
+            type="button"
+            class="repl-step fa-solid fa-shoe-prints"
+            title="Step through this"
+            aria-label="Step through this"
+            :disabled="isStepping"
+            @click="emit('step', entry)"
+          ></button>
         </div>
         <div
           v-for="(value, i) in entry.values"
@@ -223,6 +281,14 @@ defineExpose({
         <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Restart
       </button>
     </div>
+
+    <PopupMenu
+      v-if="menu !== null"
+      :x="menu.x"
+      :y="menu.y"
+      :items="menu.items"
+      @close="menu = null"
+    />
   </div>
 </template>
 
@@ -287,6 +353,48 @@ defineExpose({
   opacity: 0.5;
   font-family: var(--font-mono, monospace);
   user-select: none;
+}
+
+/* Beside the entry rather than stretched across it: the rule above gives every
+   child of .repl-source a flex of 1, and this is the exception. */
+.repl-source > .repl-step {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  padding: 0.15em 0.35em;
+  font-size: 0.85em;
+  color: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+  /* Faded rather than removed, so it still holds its place in the layout and
+     can be tabbed to -- focus below is what brings it back for the keyboard. */
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.repl-source:hover > .repl-step,
+.repl-source > .repl-step:focus-visible {
+  opacity: 0.75;
+}
+
+.repl-source > .repl-step:hover:not(:disabled),
+.repl-source > .repl-step:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.repl-source > .repl-step:disabled {
+  cursor: default;
+}
+
+/* Nothing hovers on a touch screen, and a long press there is the browser's
+   own gesture rather than a right-click -- so on one the button is the only
+   way in, and hiding it until a hover that never comes would hide it for
+   good. */
+@media (hover: none) {
+  .repl-source > .repl-step {
+    opacity: 0.75;
+  }
 }
 
 /* Output is indented under the entry that produced it, so the eye can follow
