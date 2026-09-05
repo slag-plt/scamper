@@ -232,8 +232,10 @@ export class Scheduler {
    * @returns true when this step took over managing the task's place in the run
    * queue -- it has already dequeued the task and will re-schedule it (or signal
    * its completion) itself, asynchronously. The caller must then NOT also
-   * advance/remove it: should the async action have settled during the await,
-   * the task is back in the queue and a second removal would complete it twice.
+   * advance/remove it: the task's place is no longer this iteration's to
+   * settle. Locating tasks by identity makes a stray call a no-op today, where
+   * it used to remove the wrong task or trip the empty-queue check (#315,
+   * #515) -- but the rule is what keeps it one.
    *
    * N.B., stepTask's isReportTask error branch also dequeues (via endCurrFiber)
    * and then yields `undefined` here, which reports false -- the one place that
@@ -700,8 +702,9 @@ export class Scheduler {
           }
           // A step that suspended the fiber (block-on, import-file) or parked it
           // has already taken the task out of the run queue and owns re-scheduling
-          // it. Advancing here as well would act on it a second time, removing
-          // and completing a task the async action had already put back.
+          // it; settling its place here as well is not this iteration's to do.
+          // Since #515 a stray call is a no-op rather than a corruption -- it
+          // used to remove a second task, or trip the empty-queue check (#315).
           if (!(await this.processStepResult(stepResult, task))) {
             this.moveNextTask(task)
           }

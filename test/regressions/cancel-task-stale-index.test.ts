@@ -91,9 +91,9 @@ describe('a cancel mid-iteration does not disturb the queue (#515)', () => {
     const fatal = vi.fn()
     const done = vi.fn()
 
-    // With nothing else queued the splice empties the queue outright, so the
-    // stale index is past the end: `removeTaskFromQueue` raises its own
-    // atomicity ICE, which `execute` hands to `onFatal`.
+    // With nothing else queued the splice empties the queue outright, so
+    // `removeTaskFromQueue` finds no last task to move into the stale index's
+    // slot and raises its atomicity ICE, which `execute` hands to `onFatal`.
     const only = {
       ...makeTask(finishesOnDisplay()),
       onComplete: done,
