@@ -300,9 +300,17 @@ export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
     const binding = op.bindings[op.idx - 1]
     const bs = pMatch(value, binding.pat)
     if (!bs) {
+      // The failing binder's own range, not the whole `let`: `idx` says which
+      // binding this is, so the underline can land on the very pattern the
+      // message names instead of a form that may span many bindings. A `let`
+      // in library source has no site in the student's program, so a builtin
+      // frame blames the call they wrote, exactly as :190 and :265 do.
       throw new ScamperError(
         'Runtime',
         binding.failMsg ?? 'let: value did not match its pattern',
+        undefined,
+        currFrame.origin === 'builtin' ? currFrame.callRange : binding.pat.range,
+        undefined
       )
     }
     for (const [name, v] of bs) {
