@@ -148,16 +148,17 @@ export function setTraceStepLimit(steps: number): void {
   }
 }
 
-const MAX_RECURSION_DEPTH_KEY = 'scamper.run.recursiondepth'
+const MAX_CALL_STACK_DEPTH_KEY = 'scamper.run.callstackdepth'
 
-/** The range a recursion depth may be chosen from; see lpm/limits.ts. */
-export const MIN_RECURSION_DEPTH = MIN_CALL_STACK_DEPTH
-export const MAX_RECURSION_DEPTH = MAX_CALL_STACK_DEPTH
+// The range this may be chosen from is the machine's own, and the pane shows
+// both ends of it, so they are passed along from here rather than reached for
+// separately.
+export { MAX_CALL_STACK_DEPTH, MIN_CALL_STACK_DEPTH }
 
-function clampRecursionDepth(depth: number): number {
+function clampCallStackDepth(depth: number): number {
   return Math.min(
-    MAX_RECURSION_DEPTH,
-    Math.max(MIN_RECURSION_DEPTH, Math.round(depth)),
+    MAX_CALL_STACK_DEPTH,
+    Math.max(MIN_CALL_STACK_DEPTH, Math.round(depth)),
   )
 }
 
@@ -165,27 +166,32 @@ function clampRecursionDepth(depth: number): number {
  * How deep a recursion may go before the machine reports `Max call stack depth
  * exceeded` (issue #477).
  *
+ * Named for the stack rather than the recursion, as the machine, its error, and
+ * the pane's own label all are: what this sets is a fiber's maxCallStackDepth.
+ * Only `set-maximum-recursion-depth!` keeps the older word, since it is a
+ * published name in the standard library.
+ *
  * The depth a *fresh fiber starts at* rather than the last word on the matter:
  * a program that calls `set-maximum-recursion-depth!` still overrides it for
  * its own run, so what a program does stays reproducible and this is only the
  * floor a student sets for the session. Before the preferences pane that call
  * was the only way to ask at all, and the next Run undid it.
  */
-export const maxRecursionDepth = ref<number>(
+export const maxCallStackDepth = ref<number>(
   storedNumber(
-    MAX_RECURSION_DEPTH_KEY,
+    MAX_CALL_STACK_DEPTH_KEY,
     DEFAULT_MAX_CALL_STACK_DEPTH,
-    clampRecursionDepth,
+    clampCallStackDepth,
   ),
 )
 
-export function setMaxRecursionDepth(depth: number): void {
-  maxRecursionDepth.value = clampRecursionDepth(depth)
-  setDefaultMaxCallStackDepth(maxRecursionDepth.value)
+export function setMaxCallStackDepth(depth: number): void {
+  maxCallStackDepth.value = clampCallStackDepth(depth)
+  setDefaultMaxCallStackDepth(maxCallStackDepth.value)
   try {
     localStorage.setItem(
-      MAX_RECURSION_DEPTH_KEY,
-      String(maxRecursionDepth.value),
+      MAX_CALL_STACK_DEPTH_KEY,
+      String(maxCallStackDepth.value),
     )
   } catch {
     // Applies for this session regardless; remembering it is a bonus.
@@ -195,4 +201,4 @@ export function setMaxRecursionDepth(depth: number): void {
 // Handed to the machine as this module loads rather than when the pane is first
 // opened, so the two agree before anything is run: the pane is not necessarily
 // opened at all in a session that has one of these stored from an earlier one.
-setDefaultMaxCallStackDepth(maxRecursionDepth.value)
+setDefaultMaxCallStackDepth(maxCallStackDepth.value)

@@ -19,13 +19,13 @@ import { Fiber } from '../../../src/lpm/fiber'
 import { DEFAULT_MAX_CALL_STACK_DEPTH } from '../../../src/lpm/limits'
 import { DEFAULT_TRACE_STEP_LIMIT } from '../../../src/lpm/output/trace-collector'
 import {
-  MAX_RECURSION_DEPTH,
+  MAX_CALL_STACK_DEPTH,
   MAX_TRACE_STEP_LIMIT,
-  MIN_RECURSION_DEPTH,
+  MIN_CALL_STACK_DEPTH,
   liveEvaluation,
-  maxRecursionDepth,
+  maxCallStackDepth,
   setLiveEvaluation,
-  setMaxRecursionDepth,
+  setMaxCallStackDepth,
   setTraceStepLimit,
   traceStepLimit,
 } from '../../../src/app/web/run-prefs'
@@ -73,13 +73,13 @@ describe('preferences pane', () => {
     setShowSourceWithOutput(false)
     setLiveEvaluation(true)
     setTraceStepLimit(DEFAULT_TRACE_STEP_LIMIT)
-    setMaxRecursionDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
+    setMaxCallStackDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
   })
 
   afterEach(() => {
     setTheme('light')
     setTraceStepLimit(DEFAULT_TRACE_STEP_LIMIT)
-    setMaxRecursionDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
+    setMaxCallStackDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
     uninstallMemoryStorage()
     vi.restoreAllMocks()
     document.body.innerHTML = ''
@@ -259,12 +259,12 @@ describe('preferences pane', () => {
     const wrapper = await mountIde()
     try {
       const box = getByRole(await openPane(), 'spinbutton', {
-        name: 'Maximum recursion depth',
+        name: 'Maximum stack depth',
       })
 
       fireEvent.change(box, { target: { value: '' } })
       await flushPromises()
-      expect(maxRecursionDepth.value).toBe(DEFAULT_MAX_CALL_STACK_DEPTH)
+      expect(maxCallStackDepth.value).toBe(DEFAULT_MAX_CALL_STACK_DEPTH)
       expect((box as HTMLInputElement).value).toBe(
         String(DEFAULT_MAX_CALL_STACK_DEPTH),
       )
@@ -277,13 +277,13 @@ describe('preferences pane', () => {
     const wrapper = await mountIde()
     try {
       const box = getByRole(await openPane(), 'spinbutton', {
-        name: 'Maximum recursion depth',
+        name: 'Maximum stack depth',
       })
 
       fireEvent.change(box, { target: { value: '30000' } })
       await flushPromises()
-      expect(maxRecursionDepth.value).toBe(30_000)
-      expect(localStorage.getItem('scamper.run.recursiondepth')).toBe('30000')
+      expect(maxCallStackDepth.value).toBe(30_000)
+      expect(localStorage.getItem('scamper.run.callstackdepth')).toBe('30000')
     } finally {
       wrapper.unmount()
     }
@@ -329,32 +329,32 @@ describe('preferences pane', () => {
 
 // The depth preference is the one setting that reaches past the IDE into the
 // machine, so what it does there is worth its own tests (#477, #497).
-describe('the recursion-depth preference', () => {
+describe('the call-stack-depth preference', () => {
   beforeEach(() => {
     installMemoryStorage()
   })
 
   afterEach(() => {
-    setMaxRecursionDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
+    setMaxCallStackDepth(DEFAULT_MAX_CALL_STACK_DEPTH)
     uninstallMemoryStorage()
   })
 
   test('is the depth a fresh fiber starts at', () => {
-    setMaxRecursionDepth(25_000)
+    setMaxCallStackDepth(25_000)
     expect(new Fiber([]).maxCallStackDepth).toBe(25_000)
   })
 
   test('is held to the range the pane offers', () => {
-    setMaxRecursionDepth(1)
-    expect(maxRecursionDepth.value).toBe(MIN_RECURSION_DEPTH)
-    setMaxRecursionDepth(10_000_000)
-    expect(maxRecursionDepth.value).toBe(MAX_RECURSION_DEPTH)
+    setMaxCallStackDepth(1)
+    expect(maxCallStackDepth.value).toBe(MIN_CALL_STACK_DEPTH)
+    setMaxCallStackDepth(10_000_000)
+    expect(maxCallStackDepth.value).toBe(MAX_CALL_STACK_DEPTH)
   })
 
   // The point of the setting: room for the rest of the session, without the
   // program having to ask for it and without the next Run taking it away.
   test('gives a deep recursion room with no call in the program', async () => {
-    setMaxRecursionDepth(20_000)
+    setMaxCallStackDepth(20_000)
     expect(await runProgram(deepSum(12_000))).toEqual(['72006000'])
   }, 30000)
 
@@ -362,7 +362,7 @@ describe('the recursion-depth preference', () => {
   // word, so a program that names its own depth still gets it and stays
   // reproducible wherever it is run.
   test("does not override a program's own set-maximum-recursion-depth!", async () => {
-    setMaxRecursionDepth(20_000)
+    setMaxCallStackDepth(20_000)
     expect(
       await runProgram(`(set-maximum-recursion-depth! 100)${deepSum(500)}`),
     ).toEqual(['void', 'Runtime error: Max call stack depth 100 exceeded!'])
@@ -373,14 +373,14 @@ describe('the recursion-depth preference', () => {
   // not anyone chose it would strand a REPL on the depth it opened with -- and
   // a student who has just hit the limit is sitting in exactly that REPL.
   test('reaches a REPL that is already open', async () => {
-    setMaxRecursionDepth(MIN_RECURSION_DEPTH)
+    setMaxCallStackDepth(MIN_CALL_STACK_DEPTH)
     const repl = useRepl()
     await repl.open('lab.scm', deepSum(0))
     try {
       await repl.submit('(sum 1500)')
       expect(printed(repl)).toContain('Max call stack depth')
 
-      setMaxRecursionDepth(20_000)
+      setMaxCallStackDepth(20_000)
       await repl.submit('(sum 1500)')
       expect(printed(repl)).toBe('1125750')
     } finally {
@@ -394,7 +394,7 @@ describe('the recursion-depth preference', () => {
     await repl.open('lab.scm', deepSum(0))
     try {
       await repl.submit('(set-maximum-recursion-depth! 200)')
-      setMaxRecursionDepth(20_000)
+      setMaxCallStackDepth(20_000)
       await repl.submit('(sum 1500)')
       expect(printed(repl)).toContain('Max call stack depth 200 exceeded')
     } finally {
