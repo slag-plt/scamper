@@ -39,7 +39,7 @@ import {
   type LiveStatus,
 } from '../composables/use-live-evaluation'
 import { useExampleChecks } from '../composables/use-example-checks'
-import { useRepl } from '../composables/use-repl'
+import { canStepEntry, useRepl, type ReplEntry } from '../composables/use-repl'
 import { useNotebook } from '../composables/use-notebook'
 import NotebookView from './NotebookView.vue'
 import { fileView } from '../view-prefs'
@@ -474,6 +474,47 @@ async function handleStepStatement() {
         message:
           'Put the cursor inside a statement to step through it. If the ' +
           'program does not compile, fix that first.',
+      })
+      return
+    }
+    trace.value = collected
+    traceIndex.value = 0
+    panels.reveal('trace')
+  } catch (e) {
+    reportError(e, (message) => `Could not step that statement: ${message}`)
+  } finally {
+    isCollectingTrace.value = false
+  }
+}
+
+/**
+ * Opens the trace window on a REPL entry (#424).
+ *
+ * Unlike stepping in the editor, nothing has to be re-run to get there: an
+ * entry is one statement, and it is replayed in the top level it was
+ * originally evaluated in, which the entry has been holding since it ran. So a
+ * name redefined at the prompt since does not change what the trace shows.
+ */
+async function handleStepReplEntry(entry: ReplEntry) {
+  if (isCollectingTrace.value) return
+  // The window offers this only where it applies, but the guard is what makes
+  // the non-null environment below a fact rather than a hope.
+  if (!canStepEntry(entry) || entry.env === null) return
+  // Replaying the entry runs it again, and an entry can import -- which reaches
+  // the file system, the server's when the files are.
+  if (!(await requireServer('Stepping an entry'))) return
+  isCollectingTrace.value = true
+  try {
+    const collected = await Scamper.getInstance().traceReplEntry({
+      src: entry.source,
+      env: entry.env,
+      err: new SimpleErrorChannel(),
+      maxSteps: traceStepLimit.value,
+    })
+    if (collected === null) {
+      await modalAlert({
+        title: 'Nothing to step',
+        message: 'That entry has no statement to step through.',
       })
       return
     }
@@ -1955,11 +1996,13 @@ onUnmounted(() => {
               :banner="repl.banner.value"
               :is-busy="repl.isBusy.value"
               :is-stale="repl.isStale.value"
+              :is-stepping="isCollectingTrace"
               :context="repl.context.value"
               :history="repl.history.value"
               @submit="(text: string) => void repl.submit(text)"
               @interrupt="repl.interrupt"
               @restart="() => void handleReplRestart()"
+              @step="(entry: ReplEntry) => void handleStepReplEntry(entry)"
             />
           </PanelFrame>
         </PanelDock>

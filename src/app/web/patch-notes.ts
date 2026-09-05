@@ -40,6 +40,8 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.',
+      'Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.',
+      'You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.',
       'Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.',
       'with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.',
       'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
@@ -49,10 +51,16 @@ export const patchNotes: PatchNote[] = [
       'set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.',
       'Stepping through a program no longer shows a stray step from inside a built-in function that calls a function of yours.',
       'Stopping a program, or having a trace cut short at the step limit, no longer leaves the page sluggish.',
+      'A trace that stops at the step limit no longer cuts short the program running beside it, or ends in an internal error.',
       'A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.',
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
       'Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.',
       'The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, and show the first function that compose, o, any-of, and all-of require.',
+      'Stepping through a program is about twice as fast, so a trace appears sooner.',
+      '(-) and (/) with no numbers now tell you they need at least one instead of reporting an internal error, and beside, above and overlay with no images now give an empty image that no longer makes the picture around it disappear.',
+      '(compose) and (o) with no functions now give you back a function that leaves its argument alone, and (any-of) and (all-of) with no predicates give you one that always answers #f and #t, instead of an arity error.',
+      'A let binding whose value does not fit its pattern now points at the binding that failed, instead of reporting the mismatch with no location to look at.',
+      'When a built-in function stops with an unexpected internal error — a bad regex pattern, say — the error now points at your call instead of at a line inside Scamper\'s own libraries.',
     ],
   },
   {

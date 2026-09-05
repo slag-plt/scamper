@@ -1,4 +1,5 @@
 import * as L from '../../lpm'
+import { requireBrowser } from '../browser.js'
 
 // N.B., lazily instantiate AudioContext to avoid issues with non-web contexts
 // TODO: need to factor appropriately so that we aren't initializing any
@@ -67,6 +68,7 @@ export function sampleSourceNode(
 }
 
 export function audio_audioContext(sampleRate: number): AudioContext {
+  requireBrowser()
   const AudioContext = window.AudioContext
   return new AudioContext({ sampleRate })
 }
@@ -201,6 +203,7 @@ export function audio_delayNode(ctx: AudioContext, delayTime: number): DelayNode
 }
 
 export function audio_playSample(sample: SampleNode): void {
+  requireBrowser()
   const ctx = audio_getCtx()
   const source = sampleSourceNode(ctx, sample)
   source.connect(ctx.destination)

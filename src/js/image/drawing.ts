@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 import { Rgb, color_rgb, color_colorToRgb, color_rgbAverage, color_rgbToString } from './color.js'
 import { Font, font_font, font_fontToFontString } from './font.js'
 import { context2d } from './context.js'
+import { requireBrowser } from '../browser.js'
 
 /***** Core Functions *********************************************************/
 
@@ -160,6 +161,16 @@ export function drawing_path(width: number, height: number, points: L.List, mode
     mode, color, lineWidth)
 }
 
+/**
+ * The largest of `ns`, or 0 when there are none. `Math.max()` with no
+ * arguments is `-Infinity`, which is the identity for max over the reals but
+ * not over a drawing's non-negative dimensions: an empty composition would
+ * take it as its width or height, and every enclosing `beside`/`above` that
+ * *sums* that dimension would inherit it, silently shrinking the whole picture
+ * to a 0x0 canvas (#517).
+ */
+const maxDim = (ns: number[]): number => ns.length === 0 ? 0 : Math.max(...ns)
+
 interface Beside extends L.Struct {
   [L.structKind]: 'beside',
   align: string,
@@ -172,7 +183,7 @@ const besideAlignPrim = (align: string, ...drawings: Drawing[]): Beside => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'beside',
   align,
   width: drawings.reduce((acc, d) => acc + d.width, 0),
-  height: Math.max(...drawings.map(d => d.height)),
+  height: maxDim(drawings.map(d => d.height)),
   drawings
 })
 
@@ -195,7 +206,7 @@ interface Above extends L.Struct {
 const aboveAlignPrim = (align: string, ...drawings: Drawing[]): Above => ({
   [L.scamperTag]: 'struct', [L.structKind]: 'above',
   align,
-  width: Math.max(...drawings.map(d => d.width)),
+  width: maxDim(drawings.map(d => d.width)),
   height: drawings.reduce((acc, d) => acc + d.height, 0),
   drawings
 })
@@ -221,8 +232,8 @@ const overlayAlignPrim = (xAlign: string, yAlign: string, ...drawings: Drawing[]
   [L.scamperTag]: 'struct', [L.structKind]: 'overlay',
   xAlign,
   yAlign,
-  width: Math.max(...drawings.map(d => d.width)),
-  height: Math.max(...drawings.map(d => d.height)),
+  width: maxDim(drawings.map(d => d.width)),
+  height: maxDim(drawings.map(d => d.height)),
   drawings
 })
 
@@ -404,6 +415,7 @@ function textPrim (width: number, height: number, text: string,
 }
 
 export function drawing_text(text: string, size: number, color: Rgb, font?: Font): DText {
+  requireBrowser()
   const f: Font = font ?? font_font('Arial')
 
   // N.B., to calculate the width and height of text, we need to make a
@@ -634,6 +646,7 @@ export function drawing_normalize (drawing: Drawing): Drawing {
 }
 
 export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
+  requireBrowser()
   const canvas = drawing_renderer(drawing) as HTMLCanvasElement
   const ctx = context2d(canvas)
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -645,6 +658,7 @@ export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
 }
 
 export function drawing_drawingToCanvas(drawing: Drawing): HTMLCanvasElement {
+  requireBrowser()
   return drawing_renderer(drawing) as HTMLCanvasElement
 }
 

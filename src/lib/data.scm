@@ -1,3 +1,5 @@
+;;; Data processing and visualization functionality
+
 ;;; (parse-csv data) -> list?
 ;;;  data : string?
 ;;; Parses `data` as a CSV-formatted string and returns a list of rows where each row is a list of fields as strings.
