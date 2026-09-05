@@ -77,7 +77,7 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
  * at compile time) and ApSpreadHandler (ap-spread's arg count is only known at
  * runtime, from the length of the spread list) -- both ultimately need the
  * same dispatch: call directly if fn is a JsFunction (rewriting a thrown
- * ScamperError's range to the call site), or push a new Frame if fn is a
+ * error's range to the call site), or push a new Frame if fn is a
  * Closure (mirroring what a "cls" body does on every other call), since
  * Closure.call/callScamperFn are permanently disabled for JS code calling
  * back into Scamper.
@@ -148,7 +148,7 @@ export function applyFn(
           'Runtime',
           `Unexpected error in Javascript function call: ${e instanceof Error ? e.toString() : String(e)}`,
           undefined,
-          range,
+          callRange,
           undefined
         )
       }
