@@ -15,9 +15,13 @@ import * as L from '../lpm'
  *
  * N.B., a helper rather than #508's inline `typeof` clause: that was one
  * `instanceof` operand per predicate, whereas this is one sentence repeated
- * across six libraries. It lives here rather than in any library's `index.ts`
- * because src/js/index.ts flattens every one of those modules' exports into the
- * `js-var` map -- an export there would become a Scamper binding.
+ * across seven libraries. `music` keeps its own wording -- `requireWaf` names
+ * the audio it cannot reach, which is more specific than the missing page.
+ *
+ * It lives in its own module rather than anywhere src/js/index.ts flattens into
+ * the `js-var` map -- every library module *and* the files they re-export, such
+ * as image/drawing.ts and prelude/files.ts -- since an export reached from
+ * there would become a Scamper binding named after it.
  */
 export function requireBrowser(): void {
   if (typeof document === 'undefined') {
