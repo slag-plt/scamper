@@ -98,26 +98,26 @@ interface Section {
  */
 const sections: Section[] = [
   {
-    title: 'Running',
+    title: 'Execution',
     rows: [
       {
         kind: 'toggle',
         label: 'Live evaluation',
-        note: 'Runs the file by itself shortly after you stop typing.',
+        note: 'Runs the file automatically.',
         get: () => liveEvaluation.value,
         set: setLiveEvaluation,
       },
       {
         kind: 'toggle',
         label: 'Check examples',
-        note: 'Checks each ;;; @example line once the file has run, which runs the file again for every one of them.',
+        note: 'Automatically executes @example tags found in docstrings.',
         get: () => checkExamples.value,
         set: setCheckExamples,
       },
       {
         kind: 'number',
         label: 'Trace step limit',
-        note: `How far stepping a statement may go before it gives up. Between ${commas(MIN_TRACE_STEP_LIMIT)} and ${commas(MAX_TRACE_STEP_LIMIT)}. Every reduction is kept, so a large limit takes longer to collect and holds more in memory.`,
+        note: 'The maximum number of steps that the stepper takes.',
         min: MIN_TRACE_STEP_LIMIT,
         max: MAX_TRACE_STEP_LIMIT,
         get: () => traceStepLimit.value,
@@ -125,8 +125,8 @@ const sections: Section[] = [
       },
       {
         kind: 'number',
-        label: 'Maximum recursion depth',
-        note: `How deep a recursion may go before Scamper reports that the call stack is exhausted. Between ${commas(MIN_RECURSION_DEPTH)} and ${commas(MAX_RECURSION_DEPTH)}; a level costs about a kilobyte and a fraction of a millisecond, so reaching ${commas(MAX_RECURSION_DEPTH)} of them takes roughly 200 MB and 8 seconds. A program that calls set-maximum-recursion-depth! chooses its own depth for that run.`,
+        label: 'Maximum stack depth',
+        note: 'The maximum number of active function calls during execution.',
         min: MIN_RECURSION_DEPTH,
         max: MAX_RECURSION_DEPTH,
         get: () => maxRecursionDepth.value,
@@ -140,7 +140,7 @@ const sections: Section[] = [
       {
         kind: 'number',
         label: 'Font size',
-        note: `The editor's text, in pixels, between ${commas(MIN_FONT_SIZE)} and ${commas(MAX_FONT_SIZE)}. The browser's own zoom is separate and still works.`,
+        note: `The editor's text, in pixels, between ${commas(MIN_FONT_SIZE)} and ${commas(MAX_FONT_SIZE)}.`,
         min: MIN_FONT_SIZE,
         max: MAX_FONT_SIZE,
         get: () => editorFontSize.value,
@@ -149,14 +149,12 @@ const sections: Section[] = [
       {
         kind: 'toggle',
         label: 'Word wrap',
-        note: 'Wraps a long line rather than scrolling sideways.',
         get: () => editorWordWrap.value,
         set: setEditorWordWrap,
       },
       {
         kind: 'toggle',
         label: 'Relaxed formatting',
-        note: 'Leaves a cond or match clause on one line while it fits, rather than laying every form out in full.',
         get: isRelaxedFormatting,
         set: (on) => {
           setFormatMode(on ? 'relaxed' : 'strict')
@@ -165,7 +163,7 @@ const sections: Section[] = [
       {
         kind: 'toggle',
         label: 'Suggest as you type',
-        note: 'Offers completions and parameter help unasked. Ctrl+Space asks for them either way.',
+        note: 'Automatically offer auto-completion suggestions and parameter help.',
         get: () => autoSuggest.value,
         set: setAutoSuggest,
       },
@@ -176,8 +174,8 @@ const sections: Section[] = [
     rows: [
       {
         kind: 'toggle',
-        label: 'Show programs as notebooks',
-        note: 'Shows a Scamper program as its forms, each with what it printed underneath. Anything else — a text file, an image — is shown as itself regardless.',
+        label: 'Show programs as a notebook',
+        note: 'Enable notebook view where Scamper source code and output is interleaved together.',
         get: () => fileView.value === 'notebook',
         set: (on) => {
           setFileView(on ? 'notebook' : 'source')
@@ -186,14 +184,14 @@ const sections: Section[] = [
       {
         kind: 'toggle',
         label: 'Source with output',
-        note: 'Captions each result with the statement that produced it.',
+        note: 'Prepends each outputted value with the source code that generated it.',
         get: () => showSourceWithOutput.value,
         set: setShowSourceWithOutput,
       },
       {
         kind: 'toggle',
         label: 'Show hidden files',
-        note: "Lists Scamper's own files, such as a file's saved history, in the file drawer.",
+        note: "Lists hidden system files (i.e., starts with '.')",
         get: () => showHiddenFiles.value,
         set: setShowHiddenFiles,
       },
