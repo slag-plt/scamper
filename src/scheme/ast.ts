@@ -1,6 +1,6 @@
 import * as L from '../lpm'
 import TextRenderer from '../lpm/renderers/text.js'
-import { renderToString } from './pretty.js'
+import { renderFlat, renderToString } from './pretty.js'
 import { DEFAULT_FORMAT_MODE, PRINT_WIDTH, type FormatMode } from './style.js'
 
 export interface Tagged {
@@ -930,7 +930,7 @@ export function layoutToString(
  * comparing two layouts, and embedding a form in a one-line message.
  */
 export function layoutToFlatString(l: Layout): string {
-  return renderToString(l, Infinity, 'flat')
+  return renderFlat(l)
 }
 
 /**

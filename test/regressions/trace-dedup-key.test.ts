@@ -5,7 +5,17 @@ import { SimpleErrorChannel } from '../../src/lpm/output/simple-error'
 import { isStructKind } from '../../src/lpm/util'
 import type { Value } from '../../src/lpm/lang'
 import type { TraceOutput, TraceStart } from '../../src/lpm/trace'
-import { type Exp, expToLayout, expToString } from '../../src/scheme/ast'
+import {
+  type Exp,
+  type Layout,
+  expToLayout,
+  expToString,
+  layoutToFlatString,
+  progToNode,
+  stmtToLayout,
+} from '../../src/scheme/ast'
+import { attachComments, collectComments } from '../../src/scheme/comments'
+import { tokenizeAndParse } from '../../src/scheme'
 import { renderToString } from '../../src/scheme/pretty'
 
 beforeAll(async () => {
@@ -153,6 +163,71 @@ describe('the trace dedup key decides trace content (#494)', () => {
     for (const step of steps) {
       expect(expToString(step)).toBe(
         renderToString(expToLayout(step), Infinity, 'flat'),
+      )
+    }
+  })
+})
+
+// A trace of arithmetic reaches only parenthesized groups, names and numbers,
+// so the invariant above is checked again over every shape a Layout has --
+// brackets, braces, a `#(...)`, a map's key/value pair, and the empty forms.
+// A faster flat rendering is a second copy of the printer's rules, and this is
+// what stops the copies drifting anywhere the factorial trace does not go.
+const SHAPES = [
+  '(f)',
+  '[]',
+  '{}',
+  '[1 2 3]',
+  '{"a" 1 "b" (+ 2 3)}',
+  '#(+ %1 1)',
+  '#()',
+  '(lambda (x & rest) x)',
+  '(let ([x 1] [y 2]) (+ x y))',
+  '(cond [(< 1 2) "yes"] [else "no"])',
+  '(match x [(cons a b) a] [_ 0])',
+  '(define f (lambda (n) (if (zero? n) 1 (* n (f (- n 1))))))',
+  '(struct point (x y))',
+  '(import image)',
+  '(display "hi")',
+  '(and #t (or #f #t))',
+  '(begin 1 2 3)',
+]
+
+/** `src`'s statements as layouts, with its comments attached when asked. */
+function layouts(src: string, withComments = false): Layout[] {
+  const { program, diagnostics } = tokenizeAndParse(src)
+  if (program === undefined) {
+    throw new Error(diagnostics.map((d) => d.message).join('; '))
+  }
+  if (withComments) {
+    attachComments(progToNode(program), collectComments(src))
+  }
+  return program.map(stmtToLayout)
+}
+
+describe('flattening a form answers what the printer answers (#494)', () => {
+  test('for every shape a layout can take', () => {
+    for (const src of SHAPES) {
+      for (const layout of layouts(src)) {
+        expect(layoutToFlatString(layout)).toBe(
+          renderToString(layout, Infinity, 'flat'),
+        )
+      }
+    }
+  })
+
+  test('for a form carrying comments, which no width can flatten', () => {
+    // The case a fast path has to hand back rather than answer: a comment runs
+    // to the end of its line, so the form breaks however wide the page is.
+    // Nothing in the app flattens a commented layout today -- only the
+    // formatter attaches comments, and it lays out rather than flattens -- so
+    // without this the fallback is never taken and could rot unnoticed.
+    const src = '; leading\n(+ 1 ; trailing\n   2)\n'
+    const commented = layouts(src, true)
+    expect(commented.some((l) => l.leading !== undefined)).toBe(true)
+    for (const layout of commented) {
+      expect(layoutToFlatString(layout)).toBe(
+        renderToString(layout, Infinity, 'flat'),
       )
     }
   })
