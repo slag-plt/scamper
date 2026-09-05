@@ -1,3 +1,5 @@
+;;; The Scamper core library
+
 ; `apply` is a first-class procedure backed by the ap-spread VM primitive
 ; (native implementation: prelude_apply in src/js/prelude/index.ts).
 (define-export apply (js-var "prelude_apply"))

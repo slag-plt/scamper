@@ -1,3 +1,5 @@
+;;; Regular expression functions
+
 ;;; (rex? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if `v` is a regex, `#f` otherwise.

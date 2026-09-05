@@ -10,6 +10,7 @@ import {
   FunctionDoc,
   parseFunctionDocFromComments,
 } from '../scheme/docstring/docstring.js'
+import { ModuleDoc, moduleDocOf } from '../scheme/docstring/module-doc.js'
 
 import { librarySources } from './generated/sources.js'
 
@@ -118,6 +119,18 @@ function extractDocs(prog: A.Prog): Map<string, FunctionDoc> {
  */
 export const docRegistry = new Map<string, Map<string, FunctionDoc>>()
 
+/**
+ * Module name -> its module comment, for every builtin library that has one
+ * (#411). A module with no comment is simply absent, so `.get(mod)` yields
+ * undefined for both "no module comment" and "no such module" -- the same
+ * shape `docRegistry` uses for a function.
+ *
+ * Beside `docRegistry` rather than folded into it: the two are filled together,
+ * below, but every reader wants one or the other and never both in the same
+ * expression. Populated by initializeLibs() -- empty until then.
+ */
+export const moduleDocRegistry = new Map<string, ModuleDoc>()
+
 let initialized = false
 
 /**
@@ -164,6 +177,10 @@ export async function initializeLibs(): Promise<void> {
       name,
       program ? extractDocs(program) : new Map<string, FunctionDoc>(),
     )
+    const moduleDoc = program ? moduleDocOf(src, program) : undefined
+    if (moduleDoc !== undefined) {
+      moduleDocRegistry.set(name, moduleDoc)
+    }
   }
   initialized = true
 }

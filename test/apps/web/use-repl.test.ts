@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { useRepl } from '../../../src/app/web/composables/use-repl'
-import { initialize } from '../../../src/scamper'
+import {
+  canStepEntry,
+  useRepl,
+} from '../../../src/app/web/composables/use-repl'
+import Scamper, { initialize } from '../../../src/scamper'
+import { SimpleErrorChannel } from '../../../src/lpm/output/simple-error'
 import TextRenderer from '../../../src/lpm/renderers/text'
 import type { Repl, ReplEntry } from '../../../src/app/web/composables/use-repl'
 
@@ -347,6 +351,122 @@ describe('the REPL transcript', () => {
       expect(repl.entries.value.length).toBe(2)
       repl.interrupt()
       await running
+    } finally {
+      repl.close()
+    }
+  })
+})
+
+// An entry holds the top level it ran in, so that stepping it can replay it
+// exactly as it was (#424).
+describe('what an entry keeps for stepping', () => {
+  test('an entry records the top level it was evaluated in', async () => {
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.submit('(+ x 1)')
+      const entry = lastEntry(repl)
+      expect(entry.env).not.toBeNull()
+      // It is the top level as it stood *before* the entry, so what the file
+      // defined is there.
+      expect(entry.env?.has('x')).toBe(true)
+      expect(canStepEntry(entry)).toBe(true)
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('the top level recorded is the one before the entry ran', async () => {
+    // Taken after the entry, `y` would already be bound -- and a trace would
+    // then be replayed in an environment the entry never saw.
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(define y 2)')
+      expect(lastEntry(repl).env?.has('y')).toBe(false)
+      // The next entry does see it.
+      await repl.submit('(+ y 1)')
+      expect(lastEntry(repl).env?.has('y')).toBe(true)
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry that fails at run time can still be stepped', async () => {
+    // It ran, and it is the entry someone most wants to step.
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(car 5)')
+      expect(canStepEntry(lastEntry(repl))).toBe(true)
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry that did not compile cannot be stepped', async () => {
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(display')
+      const entry = lastEntry(repl)
+      expect(entry.ran).toBe(false)
+      expect(canStepEntry(entry)).toBe(false)
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry that was refused cannot be stepped', async () => {
+    // More than one statement at the prompt is refused rather than half-run.
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(+ 1 2)\n(+ 3 4)')
+      expect(canStepEntry(lastEntry(repl))).toBe(false)
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('an entry traces against what it saw, not what the prompt says now', async () => {
+    // The join the two halves are for: what `submit` captured is what the
+    // trace is actually replayed in. Redefining `x` afterwards must not
+    // rewrite history -- the entry printed 2, so stepping it must show 2.
+    const repl = useRepl()
+    await repl.open(null, '')
+    try {
+      await repl.submit('(define x 1)')
+      await repl.submit('(+ x 1)')
+      const stepped = lastEntry(repl)
+      expect(shown(stepped)).toBe('2')
+      await repl.submit('(define x 10)')
+
+      const env = stepped.env
+      if (env === null) throw new Error('the entry kept no environment')
+      const trace = await Scamper.getInstance().traceReplEntry({
+        src: stepped.source,
+        env,
+        err: new SimpleErrorChannel(),
+      })
+      expect(
+        trace?.steps.map((s) => TextRenderer.render(s)).at(-1),
+      ).toContain('2')
+    } finally {
+      repl.close()
+    }
+  })
+
+  test('output nobody typed cannot be stepped', async () => {
+    // A handler the seeded file left running produced it, so there is no
+    // statement to replay.
+    const repl = useRepl()
+    await repl.open('lab.scm', '(define x 1)')
+    try {
+      await repl.session.value?.evaluate('(display "from a handler")')
+      const entry = lastEntry(repl)
+      expect(entry.env).toBeNull()
+      expect(canStepEntry(entry)).toBe(false)
     } finally {
       repl.close()
     }

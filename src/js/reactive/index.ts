@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 
 import { NoteHandlers, NoteMsg } from '../music/index.js'
 import { context2d } from '../image/context.js'
+import { requireBrowser } from '../browser.js'
 
 /***** Reactive Components ****************************************************/
 
@@ -139,6 +140,7 @@ export function reactive_reactiveCanvas (
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLCanvasElement {
+  requireBrowser()
   const react = new ReactiveCanvas(width, height, init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   return react.getElement() as HTMLCanvasElement
@@ -236,6 +238,7 @@ export function reactive_reactiveContainer(
     view: L.ScamperFn,
     update: L.ScamperFn,
     ...subscriptions: Subscription[]): HTMLDivElement {
+  requireBrowser()
   const react = new ReactiveContainer(init, view, update)
   subscriptions.forEach(sub => { sub.register(react) })
   react.draw()
