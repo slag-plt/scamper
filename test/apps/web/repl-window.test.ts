@@ -1,9 +1,10 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { EditorView } from '@codemirror/view'
 import { getByRole, queryByRole } from '@testing-library/dom'
 import { afterEach, describe, expect, test } from 'vitest'
 import ReplWindow from '../../../src/app/web/components/ReplWindow.vue'
 import type { ReplEntry } from '../../../src/app/web/composables/use-repl'
+import { transcriptText } from '../../../src/app/web/repl-transcript'
 import { initialize } from '../../../src/scamper'
 import '../../../src/app/web/renderers'
 
@@ -53,8 +54,35 @@ function pressInPrompt(key: string, shift = false) {
   )
 }
 
+/** A clipboard that keeps what was written to it; jsdom has none at all. */
+function installClipboard(): string[] {
+  const written: string[] = []
+  Object.defineProperty(navigator, 'clipboard', {
+    value: {
+      writeText: (text: string) => {
+        written.push(text)
+        return Promise.resolve()
+      },
+    },
+    configurable: true,
+  })
+  return written
+}
+
+function uninstallClipboard(): void {
+  // @ts-expect-error -- jsdom has no `clipboard`; dropping the stub restores
+  // that.
+  delete navigator.clipboard
+}
+
+/** The Copy button, which is always there whether or not it is offered. */
+function copyButton(): HTMLButtonElement {
+  return getByRole(document.body, 'button', { name: /Copy/ })
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
+  uninstallClipboard()
 })
 
 // The window is the transcript plus a prompt (#399). What it is seeded from is
@@ -184,6 +212,44 @@ describe('the REPL window', () => {
     try {
       getByRole(document.body, 'button', { name: /Restart/ }).click()
       expect(wrapper.emitted('restart')).toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('Copy is offered only once there is something to copy', async () => {
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [], banner: '', isBusy: false },
+    })
+    try {
+      expect(copyButton().disabled).toBe(true)
+      await wrapper.setProps({ entries: [entry(0, '(+ 1 2)', [3])] })
+      expect(copyButton().disabled).toBe(false)
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('Copy puts the whole transcript on the clipboard', async () => {
+    const written = installClipboard()
+    const entries = [entry(0, '(+ 1 2)', [3]), entry(1, '(define x 5)')]
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: {
+        entries,
+        banner: 'Definitions from lab.scm are available here.',
+        isBusy: false,
+      },
+    })
+    try {
+      copyButton().click()
+      expect(written).toEqual([transcriptText(entries)])
+      // Plain text, as a drag across the entries gives: no prompt markers, and
+      // no banner -- that is what the session was seeded from, not work.
+      expect(written[0]).toBe('(+ 1 2)\n3\n(define x 5)')
+      await flushPromises()
+      expect(document.body.textContent).toContain('Copied.')
     } finally {
       wrapper.unmount()
     }

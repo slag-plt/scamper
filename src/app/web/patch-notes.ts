@@ -52,6 +52,7 @@ export const patchNotes: PatchNote[] = [
       'A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.',
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
       'Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.',
+      'The REPL now has a Copy button that puts the whole transcript on your clipboard, and dragging across several entries finally highlights as you go.',
     ],
   },
   {
