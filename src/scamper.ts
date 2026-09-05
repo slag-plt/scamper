@@ -93,6 +93,17 @@ export interface ReplSession {
   /** The run every entry is evaluated as. */
   readonly id: SchedulerId
   /**
+   * The top level as it stands: the environment the next entry will be
+   * evaluated in.
+   *
+   * Read before an entry runs, this is the environment that entry ran in, and
+   * it stays that way -- a top level is persistent, so the defines that later
+   * entries make build new environments rather than changing this one. That is
+   * what lets an entry be replayed exactly as it was, which is how stepping one
+   * works (#424).
+   */
+  readonly env: Env
+  /**
    * Runs the whole of `src` for what it defines, discarding its output, and
    * makes the environment it leaves behind the one entries start from.
    *
@@ -377,12 +388,54 @@ export default class Scamper {
     const { begin, end } = prog[target].range
     const source = src.slice(begin.idx, end.idx + 1).trim()
 
+    return {
+      source,
+      ...(await this.collectTrace({
+        prog,
+        target,
+        src,
+        env: getDefaultEnv(),
+        maxSteps,
+      })),
+    }
+  }
+
+  /**
+   * Runs `prog` from `env`, keeping only statement `target`'s reductions.
+   *
+   * The shared engine behind {@link traceStatement} and
+   * {@link traceReplEntry}; what separates the two is which program is run and
+   * which environment it starts from.
+   *
+   * @param src the program's text, which the scheduler needs in order to
+   *        announce each statement -- without it `beginStatement` never fires
+   *        and the collector keeps nothing.
+   * @param maxSteps reductions one statement may take before the rest are
+   *        abandoned, so a statement that loops forever cannot hang the page.
+   */
+  private async collectTrace({
+    prog,
+    target,
+    src,
+    env,
+    maxSteps,
+  }: {
+    prog: Prog
+    target: number
+    src: string
+    env: Env
+    maxSteps: number
+  }): Promise<{ steps: Value[]; truncated: boolean }> {
     const id = crypto.randomUUID()
     const { promise, resolve } = deferred()
     const collector = new TraceCollector(target, maxSteps, () => {
-      // Deferred out of the send that tripped it: this runs from inside the
-      // scheduler's own loop, and cancelling there would splice the task list
-      // out from under the iteration. A microtask lands between steps instead.
+      // Deferred out of the send that tripped it, so the cancel does not run
+      // from inside the scheduler's own step. It does *not* land between steps,
+      // though: the scheduler awaits between stepping a task and settling its
+      // place, and that await is a microtask boundary too, so this still runs
+      // inside the same iteration. What makes that safe is the scheduler
+      // locating tasks by identity rather than by an index the splice
+      // invalidates (#515).
       //
       // `resolve` here rather than relying on onComplete, because a cancelled
       // task never reaches it -- cancelTask reports and unschedules, and that
@@ -392,10 +445,10 @@ export default class Scamper {
         resolve()
       })
     })
-    const fiber = new Fiber(prog, getDefaultEnv())
+    const fiber = new Fiber(prog, env)
     // Deliberately not registered as a run: a trace is a side run, and
     // adopting it would point spawned event handlers at it and leave the
-    // editor's actual program behind.
+    // editor's actual program -- or the REPL session being stepped -- behind.
     this.scheduler.schedule({
       id,
       fiber,
@@ -413,9 +466,57 @@ export default class Scamper {
     })
     await promise
     return {
-      source,
       steps: collector.steps,
       truncated: collector.truncated,
+    }
+  }
+
+  /**
+   * Collects the reduction trace of one REPL entry, by replaying it in the
+   * environment it originally ran in (#424).
+   *
+   * The REPL's counterpart to {@link traceStatement}, and cheaper than it: an
+   * entry is one statement, and `env` -- captured before the entry ran, which
+   * costs one reference because a top level is persistent -- already holds
+   * everything the file and the earlier entries defined. So nothing has to be
+   * re-run to reach it, and a name redefined since is not the one the trace
+   * sees.
+   *
+   * The entry does run a second time, which is what stepping in the editor
+   * does too. Its output is collected rather than shown, but its effects are
+   * real: a `(random ...)` may not agree with the transcript, and an entry
+   * that mutates -- `vector-set!`, `hash-set!` -- applies that mutation again
+   * to state the session still shares.
+   *
+   * @returns the entry's source and its steps, or null when it does not
+   *          compile or holds no statement to step (a comment, say).
+   */
+  public async traceReplEntry({
+    src,
+    env,
+    err,
+    maxSteps = DEFAULT_TRACE_STEP_LIMIT,
+  }: {
+    src: string
+    env: Env
+    err: ErrorChannel
+    maxSteps?: number
+  }): Promise<{ source: string; steps: Value[]; truncated: boolean } | null> {
+    const { prog, diagnostics } = await compile(src)
+    diagnostics.forEach((d) => {
+      err.report(diagnosticToError(d))
+    })
+    if (prog === undefined || prog.length === 0) return null
+
+    return {
+      source: src.trim(),
+      ...(await this.collectTrace({
+        prog,
+        target: 0,
+        src,
+        env,
+        maxSteps,
+      })),
     }
   }
 
@@ -723,6 +824,11 @@ export default class Scamper {
 
     return {
       id,
+      // A getter, not a value: the session's top level is replaced by every
+      // define, and what a caller wants is the one in force when it asks.
+      get env() {
+        return run.fiber.topLevelEnv
+      },
       seed: async (src: string) => {
         const { prog, diagnostics } = await compile(src)
         if (ended) return false

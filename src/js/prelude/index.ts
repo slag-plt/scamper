@@ -1,5 +1,6 @@
 import * as L from '../../lpm'
 import TextRenderer from '../../lpm/renderers/text.js'
+import { requireBrowser } from '../browser.js'
 
 export * from './files.js'
 
@@ -1065,6 +1066,7 @@ export function prelude_random(n: number): number {
 // Additional Scamper-specific functions
 
 export function prelude_ignore(_v: L.Value): HTMLElement {
+  requireBrowser()
   const ret = document.createElement('div')
   ret.style.display = 'non'
   return ret

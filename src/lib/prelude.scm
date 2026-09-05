@@ -1,3 +1,5 @@
+;;; The Scamper core library
+
 ; `apply` is a first-class procedure backed by the ap-spread VM primitive
 ; (native implementation: prelude_apply in src/js/prelude/index.ts).
 (define-export apply (js-var "prelude_apply"))
@@ -164,8 +166,9 @@
 ;;; @category math, algebra, -, *, /, modulo, quotient, remainder 
 (define-export + (js-var "prelude_plus"))
 
-;;; (- & v1) -> number?
+;;; (- v1 & v2) -> number?
 ;;;  v1 : number?
+;;;  v2 : number?
 ;;; Returns the difference of `v1`, `v2`, ... .
 ;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define-export - (js-var "prelude_minus"))
@@ -176,8 +179,9 @@
 ;;; @category math, algebra, +, -, /, modulo, quotient, remainder
 (define-export * (js-var "prelude_times"))
 
-;;; (/ & v1) -> number?
+;;; (/ v1 & v2) -> number?
 ;;;  v1 : number?
+;;;  v2 : number?
 ;;; Returns the quotient of `v1`, `v2`, ... .
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
@@ -357,9 +361,9 @@
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
 ;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
 (define-export any-of
-  (lambda (f & fs)
+  (lambda (& fs)
     (lambda (v)
-      (some-satisfy? (lambda (g) (g v)) (cons f fs)))))
+      (some-satisfy? (lambda (g) (g v)) fs))))
 
 ;;; (all-of & f1) -> procedure?
 ;;;  f1 : any
@@ -367,9 +371,9 @@
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
 ;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
 (define-export all-of
-  (lambda (f & fs)
+  (lambda (& fs)
     (lambda (v)
-      (all-satisfy? (lambda (g) (g v)) (cons f fs)))))
+      (all-satisfy? (lambda (g) (g v)) fs))))
 
 ;;; (pair? v) -> boolean?
 ;;;  v : any
@@ -1068,17 +1072,17 @@
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.
 ;;; @category function composition, all-of, any-of, =-eps, o, |>
 (define-export compose
-  (lambda (f & fs)
+  (lambda (& fs)
     (lambda (x)
-      (fold-right (lambda (g acc) (g acc)) x (cons f fs)))))
+      (fold-right (lambda (g acc) (g acc)) x fs))))
 
 ;;; (o & f) -> procedure?
 ;;;  f : procedure?
 ;;; A synonym for `compose`.
 ;;; @category function composition, all-of, any-of, compose, =-eps, |>
 (define-export o
-  (lambda (f & fs)
-    (apply compose (cons f fs))))
+  (lambda (& fs)
+    (apply compose fs)))
 
 ;;; (|> v & f1) -> any
 ;;;  v : any

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import { ICE, LoggingChannel, Value } from '../../src/lpm'
+import { ICE, Loc, LoggingChannel, Range, ScamperError, Value, rangesEqual } from '../../src/lpm'
 import { makeTestFiber, stepFiberToOutput } from '../util'
 
 describe('basic ops', () => {
@@ -141,6 +141,39 @@ describe('basic ops', () => {
       expect(() => {
         stepFiberToOutput(fiber, out)
       }).toThrow(/Unexpected error in Javascript function call/)
+    })
+
+    // #513: the wrapped error takes the *caller's* range, not the ap op's own.
+    // Pinned here as well as in test/regressions/native-raw-error-call-range.ts
+    // so the branch stays covered even if the library repro stops reaching it.
+    test('the wrapped error reports the calling frame, not the ap op (#513)', () => {
+      const libRange = new Range(new Loc(90, 1, 900), new Loc(90, 54, 953))
+      const callRange = new Range(new Loc(2, 1, 13), new Loc(2, 20, 32))
+      const fiber = makeTestFiber([
+        U.mkDisp([
+          // A named frame stands in for a contract wrapper: its body applies
+          // `boom` at a range in "library source" (libRange), while the frame
+          // itself was called from the "student's" callRange.
+          U.mkCls([], [U.mkVar('boom'), U.mkAp(0, libRange)], 'wrapper'),
+          U.mkAp(0, callRange),
+        ]),
+      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
+        'boom',
+        () => {
+          throw new TypeError('kaboom')
+        },
+      ])
+      let err: unknown
+      try {
+        stepFiberToOutput(fiber, out)
+      } catch (e) {
+        err = e
+      }
+      expect(err).toBeInstanceOf(ScamperError)
+      expect((err as ScamperError).range).toSatisfy((r: Range) =>
+        rangesEqual(r, callRange),
+      )
     })
   })
 

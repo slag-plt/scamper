@@ -1,3 +1,5 @@
+;;; Scamper's reactive functional programming library
+
 ;;; (html? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.
