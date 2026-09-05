@@ -37,6 +37,7 @@ Paths in the tree below are relative to `test/`.
     - `audio.test.ts`, `music.test.ts`, and `reactive.test.ts` are `test.todo` stubs, pending a browser-API mocking strategy
     - `canvas.test.ts` and `image.test.ts` each have a `.browser.test.ts` sibling for functions that need a real browser; see [Browser-mode tests](#browser-mode-tests)
     - `generated-sources-freshness.test.ts` — the checked-in generated library sources match `src/lib/*.scm`
+    - `contracts.test.ts` (#495) — applies every contracted binding once *from Scheme*, since a contract wrapper is built only on that path: a test calling the native directly never runs it. Arguments come from each binding's own docstring (`contract-samples.ts`), and `library-bindings.ts` is the shared walk over the library's documented definitions. Its `SKIP` list is the record of what is still uncovered — every contract that has never run is named there, with the reason it cannot be reached
 + `apps/` — end-to-end tests for the applications
     - `web/` — the IDE end to end; `embed-widget.test.ts` covers the reading widget (#375): several programs on one page, chained environments, and each widget's callbacks staying its own
     - `cli/` — the command-line runner against fixture programs

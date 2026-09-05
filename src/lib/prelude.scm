@@ -38,8 +38,8 @@
 (define-export or☀︎ (js-var "prelude_equalQ"))
 
 ;;; (apply☀︎ v1 v2) -> any?
-;;;  v1 : function
-;;;  v2 : list
+;;;  v1 : procedure?
+;;;  v2 : list?
 ;;; Applies function `v1` to every element of `v2`
 ;;; @category list manipulation
 (define-export apply☀︎ (js-var "prelude_equalQ"))

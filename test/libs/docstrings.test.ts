@@ -1,7 +1,5 @@
 import { expect, test } from 'vitest'
-import { librarySources } from '../../src/lib/generated/sources'
-import { tokenizeAndParse } from '../../src/scheme'
-import { parseFunctionDocFromComments } from '../../src/scheme/docstring/docstring'
+import { libraryBindings } from './library-bindings'
 
 // A malformed docstring in the standard library is invisible: extractDocs
 // (src/lib/index.ts) keeps the parsed doc and drops the diagnostic, so the
@@ -24,25 +22,11 @@ const KNOWN_BAD = new Map<string, string>([])
 
 /** Every `<module>:<name>` in the standard library whose docstring won't parse. */
 function malformedDocstrings(): Map<string, string> {
-  const bad = new Map<string, string>()
-  for (const [module, src] of librarySources) {
-    const { program } = tokenizeAndParse(src, undefined, {
-      allowInternalNames: module === 'runtime',
-    })
-    for (const stmt of program ?? []) {
-      if (
-        (stmt.tag !== 'define' && stmt.tag !== 'defexport') ||
-        stmt.docComments === undefined
-      ) {
-        continue
-      }
-      const { diagnostics } = parseFunctionDocFromComments(stmt.docComments)
-      if (diagnostics.length > 0) {
-        bad.set(`${module}:${stmt.name.name}`, diagnostics[0].message)
-      }
-    }
-  }
-  return bad
+  return new Map(
+    libraryBindings()
+      .filter((b) => b.diagnostics.length > 0)
+      .map((b) => [`${b.module}:${b.name}`, b.diagnostics[0].message]),
+  )
 }
 
 test('no library docstring is malformed, beyond the known exceptions', () => {
