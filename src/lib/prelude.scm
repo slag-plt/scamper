@@ -164,8 +164,9 @@
 ;;; @category math, algebra, -, *, /, modulo, quotient, remainder 
 (define-export + (js-var "prelude_plus"))
 
-;;; (- & v1) -> number?
+;;; (- v1 & v2) -> number?
 ;;;  v1 : number?
+;;;  v2 : number?
 ;;; Returns the difference of `v1`, `v2`, ... .
 ;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define-export - (js-var "prelude_minus"))
@@ -176,8 +177,9 @@
 ;;; @category math, algebra, +, -, /, modulo, quotient, remainder
 (define-export * (js-var "prelude_times"))
 
-;;; (/ & v1) -> number?
+;;; (/ v1 & v2) -> number?
 ;;;  v1 : number?
+;;;  v2 : number?
 ;;; Returns the quotient of `v1`, `v2`, ... .
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
