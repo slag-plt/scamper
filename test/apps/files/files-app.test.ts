@@ -59,6 +59,8 @@ class FakeRoot {
     return Promise.resolve()
   }
 
+  // An async generator standing in for OPFS's, which is async because the real
+  // one is; this fake has nothing to await.
   // eslint-disable-next-line @typescript-eslint/require-await
   async *entries() {
     if (this.failListing) {
@@ -194,5 +196,40 @@ describe('the browser-files page', () => {
     expect(localStorage.getItem('scamper-theme')).toBe('dark')
     expect(root.removed).toEqual([])
     localStorage.clear()
+  })
+
+  test('asks before a rename replaces a file that already exists', async () => {
+    root.files.set('hello.scm', { contents: '(display 1)', lastModified: 1 })
+    root.files.set('backup.scm', { contents: '(display 2)', lastModified: 2 })
+    await mountPage()
+
+    vi.spyOn(window, 'prompt').mockReturnValue('hello.scm')
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    getByRole(document.body, 'button', { name: 'Rename backup.scm' }).click()
+    await flushPromises()
+
+    expect(confirm).toHaveBeenCalled()
+    expect(root.files.get('hello.scm')?.contents).toBe('(display 1)')
+    expect(root.files.has('backup.scm')).toBe(true)
+
+    confirm.mockReturnValue(true)
+    getByRole(document.body, 'button', { name: 'Rename backup.scm' }).click()
+    await flushPromises()
+
+    expect(root.files.get('hello.scm')?.contents).toBe('(display 2)')
+    expect(root.files.has('backup.scm')).toBe(false)
+  })
+
+  test('renames onto an unused name without asking', async () => {
+    root.files.set('hello.scm', { contents: '(display 1)', lastModified: 1 })
+    await mountPage()
+
+    vi.spyOn(window, 'prompt').mockReturnValue('goodbye.scm')
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    getByRole(document.body, 'button', { name: 'Rename hello.scm' }).click()
+    await flushPromises()
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(root.files.has('goodbye.scm')).toBe(true)
   })
 })

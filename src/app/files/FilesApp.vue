@@ -92,8 +92,10 @@ function need(): FileSystemDirectoryHandle {
 async function refresh(): Promise<void> {
   root ??= await openRoot()
   entries.value = sortEntries(await list(root))
-  storageUsage.value = await usage()
+  // Before the estimate, not after: a browser that refuses one must not hide a
+  // listing that worked, since the listing is what the student came for.
   loaded.value = true
+  storageUsage.value = await usage()
 }
 
 /**
@@ -169,6 +171,15 @@ function handleDownloadAll() {
 function handleRename(entry: StorageEntry) {
   const to = window.prompt(`Rename ${entry.name} to:`, entry.name)?.trim()
   if (to === undefined || to === '' || to === entry.name) return
+  // Renaming onto a name already in use replaces it. Every candidate name is
+  // listed right above the prompt, so a mistyped one is easy, and this is the
+  // page a student reaches when they are already close to losing work.
+  if (
+    entries.value.some((e) => e.name === to) &&
+    !window.confirm(`${to} already exists. Replace it? This cannot be undone.`)
+  ) {
+    return
+  }
   void attempt(`Renaming ${entry.name}`, async () => {
     await rename(need(), entry.name, to)
     await refresh()
