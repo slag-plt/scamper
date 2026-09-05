@@ -240,6 +240,19 @@ export const ARGS = new Map<string, string[]>([
   ['file:file->string', [`"${SAMPLE_FILE}"`]],
   ['file:file->lines', [`"${SAMPLE_FILE}"`]],
   ['file:lines->file', ['(list "one" "two")', '"written.txt"']],
+  ['prelude:with-file', [`"${SAMPLE_FILE}"`, '(lambda (contents) 0)']],
+
+  // image's file bindings name a file rather than merely a string, and
+  // image-save! reads the format off the extension, which "abc" does not have.
+  // Both write through the in-memory backend contracts.test.ts installs.
+  [
+    'image:image-save!',
+    ['(drawing->canvas (solid-square 10 "red"))', '"contract-output.png"'],
+  ],
+  // Deliberately absent: jsdom settles no image decode, so a file that *is*
+  // there hangs forever while a missing one reports cleanly -- after the
+  // contract has run. See ENVIRONMENTAL in contracts.test.ts.
+  ['image:image-load', ['"no-such-image.png"']],
 
   // gradescope: a suite is built out of test results.
   ['gradescope:gradescope-test-suite', ['(list (test-result-ok "ok"))']],

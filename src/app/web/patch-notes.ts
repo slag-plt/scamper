@@ -52,7 +52,8 @@ export const patchNotes: PatchNote[] = [
       'A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.',
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
       'Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.',
-      'The documentation for apply☀︎ now names types that exist, procedure? and list?, in place of two that do not — which is what made every call to it fail before it started.',
+      'The documentation for apply☀︎ lists the types of its two arguments correctly, as a procedure and a list; it named two types that do not exist, which also made the docs page describe it wrongly.',
+      'The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, and show the first function that compose, o, any-of, and all-of require.',
     ],
   },
   {

@@ -40,29 +40,31 @@ import { runProgram } from './harness.js'
 
 /**
  * Bindings whose contract cannot be reached from a test at all, so they are
- * not called. This list is the honest successor to the "18% never run" figure
- * the sweep was written to retire: every contract that has still never
- * executed is named here, with the reason it cannot.
+ * not called. This list is what replaces a coverage percentage: rather than
+ * measure again what is now 0 by construction, every contract the suite still
+ * never runs is named here, with the reason it cannot be reached. Verified by
+ * instrumentation, not assumed -- these six are exactly the contracted names no
+ * closure entry records across the whole suite (see docs/testing.md).
  */
 const SKIP = new Map<string, string>([
   // audio_contextQ is `typeof AudioContext !== "undefined" && v instanceof
-  // AudioContext` (src/js/audio/index.ts), and jsdom has no Web Audio -- so
-  // under this environment *no* value satisfies `context?` and the contract
-  // can only ever be reached by failing it.
+  // AudioContext` (src/js/audio/index.ts), and jsdom has no Web Audio. The only
+  // thing that could build one is `audio-context`, which is itself
+  // ENVIRONMENTAL here -- so *no* value satisfies `context?` and these four
+  // contracts can only ever be reached by failing them.
   ['audio:audio-pipeline', 'ctx : context? is unsatisfiable without Web Audio'],
   ['audio:oscillator-node', 'ctx : context? is unsatisfiable without Web Audio'],
   ['audio:audio-file-node', 'ctx : context? is unsatisfiable without Web Audio'],
   ['audio:delay-node', 'ctx : context? is unsatisfiable without Web Audio'],
-  // Each suspends the fiber on something outside the program: a file chooser
-  // the student has to answer, or a network fetch.
-  ['prelude:with-file', 'suspends on a file chooser the test cannot answer'],
-  ['prelude:with-file-chooser', 'suspends on a file chooser the test cannot answer'],
-  ['image:image-load', 'suspends on a real image decode'],
-  ['image:with-image-from-url', 'suspends on a network fetch'],
-  // Writes an actual file through getFS().saveBytes (src/js/image/image.ts).
-  ['image:image-save!', 'writes a real file'],
-  // Starts a requestAnimationFrame loop that would outlive the test.
-  ['canvas:animate-with', 'starts an animation loop that outlives the test'],
+  // Suspends on a fetch that never resolves under jsdom, so the call hangs
+  // rather than failing -- measured, not assumed.
+  ['image:with-image-from-url', 'suspends on a fetch jsdom never resolves'],
+  // Returns immediately, but schedules a requestAnimationFrame callback that
+  // fires after the program has finished and spawns a fiber into a run the
+  // test has moved on from (src/js/canvas/index.ts:144). Whether the loop then
+  // stops depends on what the sample callback happens to return, which is not a
+  // coupling worth having.
+  ['canvas:animate-with', 'schedules an animation frame that outlives the run'],
 ])
 
 /**
@@ -72,6 +74,10 @@ const SKIP = new Map<string, string>([
  */
 const ENVIRONMENTAL = new Map<string, string>([
   ['audio:audio-context', 'constructs an AudioContext, which jsdom has not'],
+  // Called on a name that is not there: jsdom decodes no image, so a *seeded*
+  // PNG hangs the decode forever, while a missing one reports cleanly -- after
+  // the contract has run, which is the point. See ARGS.
+  ['image:image-load', 'jsdom cannot decode an image, so it is called on a missing file'],
   ['audio:play-sample', 'constructs an AudioContext, which jsdom has not'],
   ['music:load-instrument', 'requireWaf() needs a browser with Web Audio'],
   ['music:load-percussion', 'requireWaf() needs a browser with Web Audio'],
@@ -103,11 +109,6 @@ const ZERO_REST_BROKEN = new Map<string, string>([
     'prelude:vector-range',
     '& args admits no arguments; the native needs 1-3 (#542)',
   ],
-  // Being fixed in #496, which corrects these four signatures' arity.
-  ['prelude:any-of', 'signature says & f1, the value requires one (#496)'],
-  ['prelude:all-of', 'signature says & f1, the value requires one (#496)'],
-  ['prelude:compose', 'signature says & f1, the value requires one (#496)'],
-  ['prelude:o', 'signature says & f, the value requires one (#496)'],
 ])
 
 /***** Reading a run's output *************************************************/
@@ -134,6 +135,45 @@ const isContractFailure = (line: string): boolean =>
   CONTRACT_VIOLATION.test(line) ||
   REST_VIOLATION.test(line) ||
   ARITY_VIOLATION.test(line)
+
+/***** The discriminator's own positive control *******************************/
+
+// Nothing in the sweep below ever trips these three patterns: every error that
+// survives it is a native's own. So a typo in any one of them would make tier 1
+// pass forever and report nothing -- the failure mode a test of this shape is
+// most exposed to. These are the positive controls, and they produce their
+// violation strings by *running* a program rather than quoting one, so a change
+// to the message format breaks them here rather than silently.
+describe('the contract discriminator matches what the machine emits', () => {
+  test.each([
+    ['a fixed parameter', '(abs "x")', CONTRACT_VIOLATION],
+    ['a rest parameter', '(+ 1 "x")', REST_VIOLATION],
+    ['one argument too many', '(abs 1 2)', ARITY_VIOLATION],
+    ['one optional argument too many', '(substring "abc" 1 2 3)', ARITY_VIOLATION],
+  ])('%s', async (_what, src, pattern) => {
+    const errors = (await runProgram(src)).filter((l) => ERROR_LINE.test(l))
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatch(pattern)
+    expect(isContractFailure(errors[0])).toBe(true)
+  })
+
+  test("a native's own error is not a contract failure", async () => {
+    // Chosen because it is the same shape a contract violation takes -- a
+    // rejected argument -- but reported by the function itself, so its source
+    // is `(cons)` rather than `(error)`. If the patterns ever widened to catch
+    // this, tier 1 would start blaming the library for its own type checks.
+    const errors = (await runProgram('(cons 1 2)')).filter((l) =>
+      ERROR_LINE.test(l),
+    )
+    expect(errors).toEqual([
+      'Runtime error: (cons) The second argument to cons should be a list',
+    ])
+    for (const pattern of [CONTRACT_VIOLATION, REST_VIOLATION, ARITY_VIOLATION]) {
+      expect(errors[0]).not.toMatch(pattern)
+    }
+    expect(isContractFailure(errors[0])).toBe(false)
+  })
+})
 
 /***** Building one binding's program *****************************************/
 

@@ -1,10 +1,9 @@
 // The standard library's documented definitions, enumerated once, for the
-// tests that need to sweep across all of them (docstring well-formedness,
-// contract exercising). Each of those had grown its own copy of the same walk
-// over `librarySources`; this is that walk, written once.
+// tests that sweep across all of them (docstring well-formedness, contract
+// exercising). Each of those had grown its own copy of the same walk over
+// `librarySources`; this is that walk, written once.
 import { librarySources } from '../../src/lib/generated/sources'
 import { tokenizeAndParse } from '../../src/scheme'
-import type * as A from '../../src/scheme/ast'
 import type { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 import { isContracted } from '../../src/scheme/contract'
 import {
@@ -12,30 +11,28 @@ import {
   parseFunctionDocFromComments,
 } from '../../src/scheme/docstring/docstring'
 
-/** One documented top-level definition of one standard library module. */
+/** One commented top-level definition of one standard library module. */
 export interface LibraryBinding {
   /** The library module the definition lives in, e.g. `image`. */
   module: string
   /** The name bound, e.g. `solid-square`. */
   name: string
-  /**
-   * The definition itself. Carried alongside `doc` because a docstring says
-   * nothing about the *value* being defined -- a consumer that needs to reach
-   * the `(js-var "...")` behind a binding has to read it from here.
-   */
-  stmt: A.Define | A.DefineExport
-  /** The parsed docstring, or undefined when it failed to parse. */
+  /** The parsed docstring, or undefined when there is not one. */
   doc?: FunctionDoc
-  /** Why the docstring failed to parse; empty when it parsed. */
+  /** Why the docstring failed to parse; empty when it parsed or was absent. */
   diagnostics: ScamperDiagnostic[]
 }
 
 /**
- * Every documented `define`/`define-export` across every standard library
- * module, in source order. An undocumented definition is absent; a definition
- * whose docstring is malformed is present with `doc: undefined` and the
- * failure in `diagnostics` -- which is how the library load path treats it too
- * (see src/lib/index.ts's extractDocs).
+ * Every commented `define`/`define-export` across every standard library
+ * module, in source order. A definition with no comment at all is absent.
+ *
+ * `doc: undefined` covers two cases the caller has to tell apart, which is what
+ * `diagnostics` is for: a definition carrying only ordinary `;`/`;;` comments
+ * has no docstring to parse and no diagnostic (17 of them, e.g. `prelude:apply`
+ * and the `runtime:##...##` primitives), while a malformed `;;;` block has the
+ * parse failure in `diagnostics`. The library load path treats the second the
+ * same way -- see src/lib/index.ts's extractDocs.
  */
 export function libraryBindings(): LibraryBinding[] {
   const bindings: LibraryBinding[] = []
@@ -51,7 +48,7 @@ export function libraryBindings(): LibraryBinding[] {
         continue
       }
       const { doc, diagnostics } = parseFunctionDocFromComments(stmt.docComments)
-      bindings.push({ module, name: stmt.name.name, stmt, doc, diagnostics })
+      bindings.push({ module, name: stmt.name.name, doc, diagnostics })
     }
   }
   return bindings
