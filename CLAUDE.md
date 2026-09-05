@@ -102,6 +102,7 @@ decide which release it belongs to.
   - `src/app/` — The end-user apps, one folder each:
     - `src/app/cli/` — Node-based command-line entry point for running Scamper programs outside the browser.
     - `src/app/docs/` — Vue app rendering the searchable API/library documentation site (`docs.html`).
+    - `src/app/files/` — The browser-storage rescue page (#130), at `files.html`: it lists everything in OPFS, downloads it, and deletes it, so a student wedged by an oversized file need not clear the site's data. Reachable **by URL only** — nothing in the IDE links to it, deliberately. See `docs/browser-files.md`.
     - `src/app/search/` — Only `search.html`, a redirect. Search was its own app until #403 folded it into the docs page; the URL stays so older links keep working.
     - `src/app/web/` — Browser-facing UI: the IDE and its Vue components.
       - `src/app/web/embed/` — The transcript widget a reading embeds (#375): a `.scamper-transcript` block becomes its code interleaved with its output. See `docs/embedding.md`.
@@ -145,6 +146,7 @@ Scamper programs as a collection of fibers of execution.
 + `src/app/cli`: the command-line driver for console-based execution of Scamper programs
 + `src/app/docs`: the standard library documentation pages 
 + `src/app/search`: the standard library search page
++ `src/app/files`: the browser-storage rescue page, at `files.html` (e.g. `http://localhost:5173/files.html`). Not linked from anywhere in the UI — the URL is the only way in
 
 ## Design Notes
 

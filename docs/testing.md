@@ -40,6 +40,7 @@ Paths in the tree below are relative to `test/`.
 + `apps/` — end-to-end tests for the applications
     - `web/` — the IDE end to end; `embed-widget.test.ts` covers the reading widget (#375): several programs on one page, chained environments, and each widget's callbacks staying its own
     - `cli/` — the command-line runner against fixture programs
+    - `files/` — the browser-storage rescue page (#130): its OPFS layer, its pure formatting helpers, and the page itself over a fake root
     - `docs/` and `search/` are not yet covered
 + `fs/` — the file-system layer
     - `opfs.test.ts`, `node-fs.test.ts`, `server-fs.test.ts` — each backend against the shared `FS` contract, including the text/bytes split (#385)
@@ -62,6 +63,7 @@ This is needed by three features utilized by Scamper:
 + A real Canvas2D and font-metrics implementation — `test/libs/canvas.browser.test.ts` and `test/libs/image.browser.test.ts`, for pixel rendering, `getImageData` round-trips, and `measureText`.
 + Real layout, for a component's geometry.
 + Real OPFS — `test/fs/opfs.browser.test.ts`, and the #429 regression, which removes `createWritable` to exercise the fallback worker a Safari user gets.
+  `test/apps/files/files.browser.test.ts` is the other half of that: it pins that the rescue page shows the `.crswap` file the IDE hides, which only Chromium produces.
 
 Operational notes:
 
