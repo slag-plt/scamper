@@ -4,7 +4,7 @@ import ModuleList from './ModuleList.vue'
 import ApiEntries from './ApiEntries.vue'
 import SearchResults from './SearchResults.vue'
 import ThemeToggle from '../shared/ThemeToggle.vue'
-import { docRegistry } from '../../lib'
+import { docRegistry, moduleDocRegistry } from '../../lib'
 import { moduleOrder } from './modules'
 import type { SearchRequest } from './search'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
@@ -21,6 +21,11 @@ const selectedLib = computed(
   () =>
     libs.find(([name]) => name === selectedModule.value)?.[1] ??
     new Map<string, FunctionDoc>(),
+)
+
+/** What the selected module is for, if it says (#411). */
+const selectedModuleDoc = computed(() =>
+  moduleDocRegistry.get(selectedModule.value),
 )
 
 /*
@@ -122,7 +127,11 @@ onUnmounted(() => {
           :selected-module="selectedModule"
           @select="selectedModule = $event"
         />
-        <ApiEntries :module-name="selectedModule" :lib="selectedLib" />
+        <ApiEntries
+          :module-name="selectedModule"
+          :lib="selectedLib"
+          :module-doc="selectedModuleDoc"
+        />
       </template>
     </div>
   </div>
