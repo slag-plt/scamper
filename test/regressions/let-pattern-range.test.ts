@@ -40,6 +40,12 @@ describe('a let binding that does not match reports where it is (#521)', () => {
   // trace but leaves its origin 'user' (see Frame.hidden). Reading `hidden`
   // here would blame the whole `(map ...)` call, [1:1-1:54], instead of the
   // binder inside it.
+  //
+  // `map` and not, say, `filter`: the shield reaches the lambda's own frame
+  // only because `map` applies it through `apply`, whose `ap-spread` is in
+  // tail position, so Fiber.replaceFrame passes the shield on (#478).
+  // `filter` calls it non-tail, leaving the frame unhidden -- and this case
+  // then passes under either reading, guarding nothing.
   test("a let inside a library call reports the student's own binder", async () => {
     expect(
       await runProgram('(map (lambda (p) (let ([(pair x y) p]) x)) (list 1 2))'),
