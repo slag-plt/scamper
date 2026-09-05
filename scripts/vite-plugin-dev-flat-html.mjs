@@ -1,13 +1,14 @@
 import { basename } from 'path'
 
 // In dev, the HTML entry points are served from their source locations
-// (src/app/web/, src/app/docs/, src/app/search/), but the production build
-// flattens them to the site root -- index.html, docs.html, search.html, etc.
-// all sit at the top level (see flattenHtmlPlugin). This middleware makes the
-// dev server mirror that flat layout: each flattened URL (e.g. /docs.html) is
-// served in place from its nested source file, and `/` serves the IDE. That
-// way the apps' relative cross-page links (`docs.html`, `search.html`, ...)
-// resolve identically in dev and in the deployed build, at any base path.
+// (src/app/web/, src/app/docs/, src/app/search/, src/app/files/), but the
+// production build flattens them to the site root -- index.html, docs.html,
+// search.html, files.html, etc. all sit at the top level (see
+// flattenHtmlPlugin). This middleware makes the dev server mirror that flat
+// layout: each flattened URL (e.g. /docs.html) is served in place from its
+// nested source file, and `/` serves the IDE. That way the apps' relative
+// cross-page links (`docs.html`, `search.html`, ...) resolve identically in
+// dev and in the deployed build, at any base path.
 //
 // The rewrite is internal (req.url is changed, not redirected), so the browser
 // stays on the flat URL. `entryPaths`/`idePath` come from vite.config.ts's

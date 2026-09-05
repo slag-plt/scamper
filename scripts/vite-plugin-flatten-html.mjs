@@ -1,15 +1,15 @@
 import { basename } from 'path'
 
-// The four HTML entry points live next to their app's source (src/app/web/,
-// src/app/docs/, src/app/search/) so they're not sitting oddly at the
-// project root, but Vite's build output mirrors each entry's path relative
-// to the project root -- e.g. src/app/web/index.html would otherwise land
-// at dist/src/app/web/index.html. The deploy scripts (scripts/deploy,
-// scripts/update-latest) and the web server rely on a flat dist/ (index.html,
-// web.html, docs.html, search.html all at the top level), so
-// this renames each emitted HTML asset back down to its basename. Each
-// entry's basename is currently unique, so no explicit path mapping is
-// needed -- but a future entry sharing a basename (e.g. a second
+// The five HTML entry points live next to their app's source (src/app/web/,
+// src/app/docs/, src/app/search/, src/app/files/) so they're not sitting
+// oddly at the project root, but Vite's build output mirrors each entry's
+// path relative to the project root -- e.g. src/app/web/index.html would
+// otherwise land at dist/src/app/web/index.html. The deploy scripts
+// (scripts/deploy, scripts/update-latest) and the web server rely on a flat
+// dist/ (index.html, docs.html, search.html, embed.html, files.html all at
+// the top level), so this renames each emitted HTML asset back down to its
+// basename. Each entry's basename is currently unique, so no explicit path
+// mapping is needed -- but a future entry sharing a basename (e.g. a second
 // src/app/<newapp>/index.html) would otherwise flatten to the same dist
 // path and silently overwrite another app's output, so we check for and
 // reject that instead of letting it happen quietly.

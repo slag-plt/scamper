@@ -42,6 +42,7 @@ const htmlEntries: Record<string, string> = {
   'scamper-ide': ideEntry,
   'scamper-embed': 'src/app/web/embed/embed.html',
   'scamper-search': 'src/app/search/search.html',
+  'scamper-files': 'src/app/files/files.html',
 }
 
 // `vite --mode server` (i.e. `npm run dev:memory`) runs the front end against the

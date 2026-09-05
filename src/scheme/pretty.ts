@@ -465,6 +465,69 @@ function emitBody(node: Layout, col: number, plan: LayoutPlan, out: Out): void {
 }
 
 /**
+ * `root`'s text on one line: what {@link renderToString} gives at infinite
+ * width in `flat` mode, reached without the plan where the plan cannot matter.
+ *
+ * There, every decision {@link planLayout} makes is "no break", so the plan --
+ * a width and a forced-break flag per node, an entry per group, and a
+ * {@link TextRenderer} pass over every value to measure it -- is built only to
+ * be ignored. A trace pays for one of these per step, on a state that grows
+ * with the step number (#494), so the plan is worth skipping.
+ *
+ * A comment is the one thing that breaks a line at any width, so a layout
+ * carrying one goes to the planning renderer instead. Both halves are here
+ * rather than at the call site: the fast path and the answer it has to match
+ * are one decision, and a caller left to write the fallback could write a
+ * different one.
+ */
+export function renderFlat(root: Layout): string {
+  const parts: string[] = []
+  return flat(root, parts)
+    ? parts.join('')
+    : renderToString(root, Infinity, 'flat')
+}
+
+/** Appends `node`'s flat text to `parts`; false if a comment forbids one line. */
+function flat(node: Layout, parts: string[]): boolean {
+  if (
+    node.leading !== undefined ||
+    node.trailing !== undefined ||
+    node.dangling !== undefined
+  ) {
+    return false
+  }
+  switch (node.kind) {
+    case 'tok':
+      parts.push(node.text)
+      return true
+    case 'val':
+      parts.push(TextRenderer.render(node.value))
+      return true
+    case 'hash':
+      parts.push('#')
+      return flat(node.child, parts)
+    case 'unit':
+      return flatChildren(node.children, parts)
+    case 'group': {
+      const [open, close] = DELIMS[node.delim]
+      parts.push(open)
+      if (!flatChildren(node.children, parts)) return false
+      parts.push(close)
+      return true
+    }
+  }
+}
+
+/** The children of a unit or group, one space between each pair. */
+function flatChildren(children: Layout[], parts: string[]): boolean {
+  for (let i = 0; i < children.length; i++) {
+    if (i > 0) parts.push(' ')
+    if (!flat(children[i], parts)) return false
+  }
+  return true
+}
+
+/**
  * Render `root` to text, breaking lines at `width` columns.
  *
  * @param col the column `root` begins at (see {@link planLayout}). The first

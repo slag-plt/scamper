@@ -2,7 +2,7 @@
 #
 # `npm run build`: the site, and then the reading-widget bundle.
 #
-# Two Vite builds because they want incompatible outputs -- the site is four
+# Two Vite builds because they want incompatible outputs -- the site is five
 # HTML entries sharing chunks, the bundle is one self-contained file (see
 # vite.config.embed.ts). A script rather than `a && b` in package.json so that
 # `npm run build -- --base=/4.0.0/`, which is how scripts/deploy builds a

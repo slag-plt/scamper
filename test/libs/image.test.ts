@@ -1000,13 +1000,16 @@ describe('drawing', () => {
       ).toEqual(['10', '10'])
     })
 
-    test('with no drawings, width is 0 and height is -infinity', async () => {
+    // 0x0, not the -Infinity height `Math.max()` gives over no drawings: an
+    // enclosing `above` sums the heights, so a degenerate one poisoned the
+    // whole picture into a 0x0 canvas (#517).
+    test('with no drawings, both dimensions are 0', async () => {
       expect(
         await runProgram(`
 (import image)
 (beside)
 `),
-      ).toEqual(['(beside "center" 0 -Infinity (vector))'])
+      ).toEqual(['(beside "center" 0 0 (vector))'])
     })
 
     test('rejects a non-image argument', async () => {
@@ -1057,13 +1060,13 @@ describe('drawing', () => {
       ])
     })
 
-    test('with no drawings, height is 0 and width is -infinity', async () => {
+    test('with no drawings, both dimensions are 0', async () => {
       expect(
         await runProgram(`
 (import image)
 (above)
 `),
-      ).toEqual(['(above "middle" -Infinity 0 (vector))'])
+      ).toEqual(['(above "middle" 0 0 (vector))'])
     })
   })
 
@@ -1103,13 +1106,13 @@ describe('drawing', () => {
       ])
     })
 
-    test('with no drawings, both dimensions are -infinity', async () => {
+    test('with no drawings, both dimensions are 0', async () => {
       expect(
         await runProgram(`
 (import image)
 (overlay)
 `),
-      ).toEqual(['(overlay "middle" "center" -Infinity -Infinity (vector))'])
+      ).toEqual(['(overlay "middle" "center" 0 0 (vector))'])
     })
   })
 
