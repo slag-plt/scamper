@@ -1,3 +1,5 @@
+;;; Scamper's unit testing functions
+
 ;;; (test-result-ok desc) -> test-result?
 ;;;  desc : string?
 ;;; Returns a test result indicating that the test named `desc` passed.
