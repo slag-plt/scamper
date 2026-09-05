@@ -1,4 +1,5 @@
-;; The Gradescope autograder library (issue #404).
+;;; The Gradescope autograder library
+
 ;;
 ;; A `gradescope-test-suite-output` prints as exactly the JSON blob Gradescope
 ;; reads from `results/results.json`, so an autograder is a Scamper program

@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 import { Rgb, color_rgb, color_colorToRgb, color_rgbAverage, color_rgbToString } from './color.js'
 import { Font, font_font, font_fontToFontString } from './font.js'
 import { context2d } from './context.js'
+import { requireBrowser } from '../browser.js'
 
 /***** Core Functions *********************************************************/
 
@@ -414,6 +415,7 @@ function textPrim (width: number, height: number, text: string,
 }
 
 export function drawing_text(text: string, size: number, color: Rgb, font?: Font): DText {
+  requireBrowser()
   const f: Font = font ?? font_font('Arial')
 
   // N.B., to calculate the width and height of text, we need to make a
@@ -644,6 +646,7 @@ export function drawing_normalize (drawing: Drawing): Drawing {
 }
 
 export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
+  requireBrowser()
   const canvas = drawing_renderer(drawing) as HTMLCanvasElement
   const ctx = context2d(canvas)
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -655,6 +658,7 @@ export function drawing_drawingToPixels(drawing: Drawing): Rgb[] {
 }
 
 export function drawing_drawingToCanvas(drawing: Drawing): HTMLCanvasElement {
+  requireBrowser()
   return drawing_renderer(drawing) as HTMLCanvasElement
 }
 

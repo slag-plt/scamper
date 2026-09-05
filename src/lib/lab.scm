@@ -1,3 +1,5 @@
+;;; Functions for creating lab outlines within Scamper source code
+
 ;;; (html? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.

@@ -1,3 +1,5 @@
+;;; The Scamper image manipulation library
+
 ;;; (canvas? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a canvas.

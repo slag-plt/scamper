@@ -40,6 +40,8 @@ export const patchNotes: PatchNote[] = [
       // trailing comma on the last one: .gitattributes merges this file by
       // union, and without it two appends collide into a syntax error.
       'Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.',
+      'Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.',
+      'You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.',
       'Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.',
       'with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.',
       'regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.',
@@ -53,6 +55,9 @@ export const patchNotes: PatchNote[] = [
       '(string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.',
       'Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.',
       '(-) and (/) with no numbers now tell you they need at least one instead of reporting an internal error, and beside, above and overlay with no images now give an empty image that no longer makes the picture around it disappear.',
+      '(compose) and (o) with no functions now give you back a function that leaves its argument alone, and (any-of) and (all-of) with no predicates give you one that always answers #f and #t, instead of an arity error.',
+      'A let binding whose value does not fit its pattern now points at the binding that failed, instead of reporting the mismatch with no location to look at.',
+      'When a built-in function stops with an unexpected internal error — a bad regex pattern, say — the error now points at your call instead of at a line inside Scamper\'s own libraries.',
     ],
   },
   {
