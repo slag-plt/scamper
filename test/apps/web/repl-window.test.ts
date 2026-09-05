@@ -245,11 +245,29 @@ describe('the REPL window', () => {
     try {
       copyButton().click()
       expect(written).toEqual([transcriptText(entries)])
-      // Plain text, as a drag across the entries gives: no prompt markers, and
-      // no banner -- that is what the session was seeded from, not work.
+      // Plain text, shaped as a drag across the entries gives: no prompt
+      // markers, and no banner -- that is what the session was seeded from,
+      // not work.
       expect(written[0]).toBe('(+ 1 2)\n3\n(define x 5)')
       await flushPromises()
       expect(document.body.textContent).toContain('Copied.')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  test('Copy says so when the browser will not give up the clipboard', async () => {
+    // No installClipboard() here: jsdom has no navigator.clipboard, which is
+    // also what an insecure context looks like. The click must report rather
+    // than reject.
+    const wrapper = mount(ReplWindow, {
+      attachTo: document.body,
+      props: { entries: [entry(0, '(+ 1 2)', [3])], banner: '', isBusy: false },
+    })
+    try {
+      copyButton().click()
+      await flushPromises()
+      expect(document.body.textContent).toContain('Could not copy.')
     } finally {
       wrapper.unmount()
     }

@@ -1,11 +1,16 @@
 /**
  * The REPL transcript as plain text, for the Copy button (#459).
  *
- * Deliberately what a drag across the entries already puts on the clipboard:
+ * Shaped like what a drag across the entries already puts on the clipboard:
  * each entry's source followed by what it printed, with no prompt markers --
  * the `>` is `user-select: none` -- and no comment prefixes. That is also what
  * the embedded reading widget calls a transcript, so there is one such thing
  * rather than two.
+ *
+ * The two are not identical, and cannot be: a drag copies the DOM the Vue
+ * renderers built, so a drawing (a canvas) copies as nothing at all, while
+ * this renders every value through TextRenderer and so writes the drawing's
+ * constructor expression. Where they differ, this is the more useful text.
  *
  * Framework-free, so it can be tested on plain objects rather than by mounting
  * the window; see notebook-display.ts.
@@ -24,8 +29,9 @@ export interface TranscriptEntry {
 /**
  * The most of one value that is copied. A value can be arbitrarily large -- a
  * sound holds every one of its samples, and TextRenderer spells an unknown
- * object out as JSON -- and a button click must not build tens of megabytes of
- * string to hand to the clipboard.
+ * object out as JSON -- and handing tens of megabytes to the clipboard helps
+ * nobody. This bounds what is written, not what is built: TextRenderer has no
+ * limit to pass, so the whole string is rendered and then cut.
  */
 const MAX_VALUE_CHARS = 4000
 

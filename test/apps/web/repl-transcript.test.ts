@@ -5,7 +5,8 @@ import { drawing_rectangle } from '../../../src/js/image/drawing'
 import { ScamperError } from '../../../src/lpm/error'
 
 // What the Copy button hands to the clipboard (#459): the transcript as plain
-// text, which is byte for byte what a drag across the entries already copies.
+// text, shaped like what a drag across the entries copies. Not identical to it
+// -- see the drawing case below, which a drag gets nothing at all for.
 // Nothing here mounts anything -- the entries are plain objects, since that is
 // all the function asks for.
 describe('the REPL transcript as text', () => {
