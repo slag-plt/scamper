@@ -1,7 +1,11 @@
 import { Range } from '../lpm'
 import * as A from './ast.js'
 import { mkDiagnostic, ScamperDiagnostic } from './diagnostic.js'
-import { parseFunctionDocFromComments, Pred } from './docstring/docstring.js'
+import {
+  FunctionDoc,
+  parseFunctionDocFromComments,
+  Pred,
+} from './docstring/docstring.js'
 import { Param } from './docstring/param.js'
 
 // Adapted from the (now-removed) LPM-bytecode version of this idea in
@@ -293,6 +297,18 @@ function mkOptBindings(
 }
 
 /**
+ * Whether a docstring earns its definition a contract wrapper. Only a
+ * signature declaring at least one parameter -- fixed, optional, or rest --
+ * has anything to check; see contractStmt's @returns for why each
+ * zero-parameter form is left alone.
+ */
+export function isContracted(doc: FunctionDoc): boolean {
+  return (
+    doc.params.length > 0 || doc.optParams.length > 0 || doc.restParam !== undefined
+  )
+}
+
+/**
  * Wraps a define's value in a contract check extracted from its docstring:
  *
  *   (define name expr)
@@ -375,7 +391,7 @@ export function contractStmt(
     )
     return s
   }
-  if (doc.params.length === 0 && doc.optParams.length === 0 && !doc.restParam) {
+  if (!isContracted(doc)) {
     return s
   }
   const checks = mkCheckChain(doc.params, doc.optParams, doc.restParam, s.range)
