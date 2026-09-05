@@ -204,14 +204,8 @@ describe('a comment trailing a line of code', () => {
 
 // On a real library rather than a hand-written snippet: the shipped files are
 // hundreds of `@category` lines and docstrings deep, and are the input the
-// feature actually has to survive. Nothing ships with a header (see
-// test/libs/docstrings.test.ts), so one is prepended here.
+// feature actually has to survive.
 describe('a header on a real library source', () => {
-  const HEADER = [
-    ';;; Regular expressions: patterns for finding, splitting,',
-    ';;; and pulling apart text.',
-  ].join('\n')
-
   /** The `rex` library's source, as it is shipped. */
   function rexSource(): string {
     const found = librarySources.find(([name]) => name === 'rex')
@@ -219,15 +213,23 @@ describe('a header on a real library source', () => {
     return found[1]
   }
 
-  test('is found, and the first definition keeps its docstring', () => {
-    const src = `${HEADER}\n\n${rexSource()}`
+  /** `rex` with its own header taken off, for building the cases below. */
+  function rexBody(): string {
+    const src = rexSource()
+    const firstDoc = src.indexOf(';;; (')
+    if (firstDoc < 0) throw new Error('rex has no docstring to cut at')
+    return src.slice(firstDoc)
+  }
+
+  test('the shipped header is found, and the first definition keeps its docstring', () => {
+    const src = rexSource()
     const { program } = tokenizeAndParse(src)
     if (program === undefined) throw new Error('rex did not parse')
 
     expect(moduleDocOf(src, program)?.description).toBe(
-      'Regular expressions: patterns for finding, splitting, and pulling apart text.',
+      'Regular expression functions',
     )
-    // The failure that would matter: the header swallowing the first define's
+    // The failure that would matter: a header swallowing the first define's
     // docstring costs it both its documentation and its contract.
     const first = program.find(
       (stmt) => stmt.tag === 'define' || stmt.tag === 'defexport',
@@ -241,15 +243,16 @@ describe('a header on a real library source', () => {
 
   test('without a blank line under it, it is the first definition’s docstring', () => {
     // The mistake the guard in test/libs/docstrings.test.ts exists to catch,
-    // shown here on the real thing: no header, and the define keeps the block.
-    const src = `${HEADER}\n${rexSource()}`
+    // shown on the real thing: no module comment, and the define keeps the
+    // block -- which is why that guard checks both halves.
+    const src = `;;; Regular expression functions\n${rexBody()}`
     const { program } = tokenizeAndParse(src)
     if (program === undefined) throw new Error('rex did not parse')
     expect(moduleDocOf(src, program)).toBeUndefined()
   })
 
-  test('the shipped source has none', () => {
-    const src = rexSource()
+  test('a library body with no header has none', () => {
+    const src = rexBody()
     const { program } = tokenizeAndParse(src)
     if (program === undefined) throw new Error('rex did not parse')
     expect(moduleDocOf(src, program)).toBeUndefined()

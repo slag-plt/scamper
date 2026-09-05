@@ -73,27 +73,35 @@ function programOf(module: string, src: string) {
   }).program
 }
 
-// Module comments (#411) are plumbing for now: the syntax, the registry, the
-// docs page and hover all work, but no library has been given one -- that
-// content is the maintainer's to write. These pin the shipped state, so the
-// first header to land is noticed, and lands in the right place.
+// Every module the docs cover says what it is for (#411). A module whose header
+// is written wrongly -- with no blank line under it -- does not merely go
+// unsaid: it is swallowed by the first definition below, which then loses both
+// its documentation and the contract derived from it.
 describe('module comments in the standard library', () => {
-  test('no library has one yet', () => {
+  test('every documented module has one, and runtime does not', () => {
     const withComments = librarySources
       .filter(([module, src]) => {
         const program = programOf(module, src)
         return program !== undefined && moduleDocOf(src, program) !== undefined
       })
       .map(([module]) => module)
-    // Not a prohibition: when headers are written, update this list. It is here
-    // so that adding one is a decision rather than an accident, and so the
-    // first is checked against the case below.
-    expect(withComments).toEqual([])
-    // And the registry agrees with what the parser finds. Asserted together
-    // rather than against a literal, so this keeps testing the wiring in
-    // src/lib/index.ts once headers exist -- while both are still empty, it is
-    // the only thing tying the two together at all.
+    // runtime is LPM interop rather than a library anyone imports, so it is
+    // deliberately absent -- which is also why the docs exclude it.
+    expect(withComments.sort()).toEqual([...moduleOrder].sort())
+    // And the registry agrees with what the parser finds, which is what ties
+    // the wiring in src/lib/index.ts to the extraction it depends on.
     expect([...moduleDocRegistry.keys()].sort()).toEqual([...withComments].sort())
+  })
+
+  test('each one says something', () => {
+    // A header that parsed to an empty blurb would pass the test above and
+    // still show a blank line on the docs page.
+    for (const module of moduleOrder) {
+      expect(
+        moduleDocRegistry.get(module)?.description,
+        `${module} has no module comment`,
+      ).toBeTruthy()
+    }
   })
 
   test("every documented library's first definition keeps its own docstring", () => {
