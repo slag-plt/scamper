@@ -1,3 +1,5 @@
+;;; The Scamper audio processing library
+
 ;;; (sample? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an audio sample.
