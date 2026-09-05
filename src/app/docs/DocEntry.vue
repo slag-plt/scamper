@@ -1,30 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { FunctionDoc } from '../../scheme/docstring/docstring'
 import { functionDocSignature } from '../../scheme/docstring/render'
+import DocText from './DocText.vue'
 
-const props = defineProps<{ doc: FunctionDoc; id: string }>()
-
-interface TextSpan {
-  text: string
-  code: boolean
-}
-
-const descSpans = computed<TextSpan[]>(() => {
-  const parts = props.doc.description.trim().split('`')
-  return parts.map((text, i) => ({ text, code: i % 2 === 1 }))
-})
+defineProps<{ doc: FunctionDoc; id: string }>()
 </script>
 
 <template>
   <div :id="id" class="entry">
     <pre class="sig"><code>{{ functionDocSignature(doc) }}</code></pre>
-    <p class="desc">
-      <template v-for="(span, i) in descSpans" :key="i">
-        <code v-if="span.code">{{ span.text }}</code>
-        <template v-else>{{ span.text }}</template>
-      </template>
-    </p>
+    <p class="desc"><DocText :text="doc.description" /></p>
   </div>
 </template>
 
@@ -49,9 +34,5 @@ const descSpans = computed<TextSpan[]>(() => {
 
 .desc {
   margin: 1em 0;
-}
-
-.desc code {
-  font-family: var(--font-mono);
 }
 </style>

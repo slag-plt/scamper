@@ -1,3 +1,5 @@
+;;; Functions for manipulating HTML DOM elements in Scamper
+
 ;;; (element? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is an HTML element.

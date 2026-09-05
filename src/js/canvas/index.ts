@@ -3,6 +3,7 @@ import { Drawing, drawing_normalize, drawing_render } from '../image/drawing.js'
 import { Rgb, color_colorToRgb, color_rgb, color_rgbToString } from '../image/color.js'
 import { Font, font_font, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
+import { requireBrowser } from '../browser.js'
 
 export function canvas_canvasQ(v: L.Value): boolean {
   return typeof HTMLCanvasElement !== 'undefined' && v instanceof HTMLCanvasElement
@@ -20,6 +21,7 @@ export function canvas_canvasHeight(canvas: HTMLCanvasElement): number {
 }
 
 export function canvas_makeCanvas(width: number, height: number): HTMLCanvasElement {
+  requireBrowser()
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
@@ -117,6 +119,7 @@ export function canvas_canvasPath(canvas: HTMLCanvasElement, lst: L.List, mode: 
 }
 
 export function canvas_animateWith(fn: L.ScamperFn): void {
+  requireBrowser()
   // Each frame runs `(fn time)` as a fiber; the *next* frame is only requested
   // once that fiber finishes (in onComplete), which both moves the loop's
   // continuation past the async boundary and gives natural back-pressure -- no
@@ -191,6 +194,7 @@ export function canvas_canvasToPixels(canvas: HTMLCanvasElement): L.Struct[] {
 }
 
 export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height: number): HTMLCanvasElement {
+  requireBrowser()
   const ret = document.createElement('canvas')
   ret.width = width
   ret.height = height

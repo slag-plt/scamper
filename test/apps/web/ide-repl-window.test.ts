@@ -121,6 +121,49 @@ describe('IDE REPL window', () => {
     }
   })
 
+  // Stepping an entry is the REPL's answer to "why did that happen?" (#424):
+  // the same trace window the editor's Step puts up, on a statement that only
+  // ever existed at the prompt.
+  test('stepping an entry puts the trace window up', async () => {
+    const wrapper = await mountIde()
+    try {
+      await openRepl()
+      const prompt = EditorView.findFromDOM(
+        query(
+          required(replWindow(), 'the REPL window'),
+          '.repl-prompt .cm-editor',
+        ),
+      )
+      prompt?.dispatch({ changes: { from: 0, insert: '(sq 7)' } })
+      await flushPromises()
+      prompt?.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+      await flushPromises()
+      await flushPromises()
+      expect(document.querySelector('[data-panel="trace"]')).toBeNull()
+
+      getByRole(document.body, 'button', { name: 'Step through this' }).click()
+      await flushPromises()
+      await flushPromises()
+
+      const trace = document.querySelector<HTMLElement>('[data-panel="trace"]')
+      expect(trace).not.toBeNull()
+      // The entry is the trace's subject, and it opens on the first of several
+      // steps rather than jumping to the answer.
+      expect(trace?.textContent).toContain('(sq 7)')
+      expect(trace?.textContent).toContain('1/3')
+
+      // Paging to the end reaches what the entry produced, so the steps are a
+      // real reduction of it rather than the window merely being up.
+      getByRole(document.body, 'button', { name: 'Last step' }).click()
+      await flushPromises()
+      expect(trace?.textContent).toContain('49')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('typing in the editor warns that the REPL is out of sync', async () => {
     // The same courtesy the output pane pays: nothing is re-seeded, but the
     // window says what it started from has moved on.

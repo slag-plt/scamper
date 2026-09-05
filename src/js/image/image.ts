@@ -2,6 +2,7 @@ import * as L from '../../lpm'
 import { extensionOf } from '../../fs/fs.js'
 import { context2d } from './context.js'
 import { imageToCanvas, loadImage } from './decode.js'
+import { requireBrowser } from '../browser.js'
 
 /***** Image loading **********************************************************/
 
@@ -100,6 +101,7 @@ function savedImageMimeTypeOf(filename: string): string {
 // the user's callback. A failed load (or a cross-origin taint) rejects,
 // surfacing as a runtime error catchable by with-handler.
 export function image_blockOnFetchImage(url: string): L.Value {
+  requireBrowser()
   throw new L.SuspendSignal(async () => {
     const canvas = imageToCanvas(
       await loadImage(url, `Failed to load image from "${url}"`),
@@ -136,6 +138,7 @@ export function image_blockOnFetchImage(url: string): L.Value {
  * storage.)
  */
 export function image_imageLoad(filename: string): L.Value {
+  requireBrowser()
   throw new L.SuspendSignal(async () => {
     // Before the read, so a name that is not an image says so rather than
     // failing later as an undecodable file.

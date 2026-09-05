@@ -220,7 +220,7 @@ export class Scheduler {
       if (isReportTask(task)) {
         console.debug(e)
         task.err.report(e)
-        this.endCurrFiber()
+        this.endCurrFiber(task)
         return undefined
       }
       this.reportAndUnwind(e, task)
@@ -232,14 +232,16 @@ export class Scheduler {
    * @returns true when this step took over managing the task's place in the run
    * queue -- it has already dequeued the task and will re-schedule it (or signal
    * its completion) itself, asynchronously. The caller must then NOT also
-   * advance/remove it: doing so removes a *second* task, or trips
-   * removeTaskFromQueue's atomicity check when the queue is now empty.
+   * advance/remove it: the task's place is no longer this iteration's to
+   * settle. Locating tasks by identity makes a stray call a no-op today, where
+   * it used to remove the wrong task or trip the empty-queue check (#315,
+   * #515) -- but the rule is what keeps it one.
    *
    * N.B., stepTask's isReportTask error branch also dequeues (via endCurrFiber)
    * and then yields `undefined` here, which reports false -- the one place that
-   * does not follow this rule. It is harmless today only because that fiber is
-   * never done at that point, so the caller's moveNextTask just mis-advances
-   * currTaskIdx rather than removing a second task.
+   * does not follow this rule. It is harmless because moveNextTask locates the
+   * task by identity: finding it already gone, it neither removes a second one
+   * nor moves the cursor.
    */
   async processStepResult(
     stepResult: StepResult | undefined,
@@ -272,7 +274,7 @@ export class Scheduler {
                 `Attempted to import file "${stepResult.filename}" but it could not be read!`,
               ),
         )
-        this.endCurrFiber()
+        this.endCurrFiber(task)
         return true
       }
       if (!exists) {
@@ -282,9 +284,9 @@ export class Scheduler {
             `Attempted to import file "${stepResult.filename}" but it does not exist!`,
           ),
         )
-        this.endCurrFiber()
+        this.endCurrFiber(task)
       } else {
-        this.removeTaskFromQueue(this.currTaskIdx)
+        this.removeTaskFromQueue(task)
         getFS()
           .loadFile(stepResult.filename)
           .then(
@@ -385,7 +387,7 @@ export class Scheduler {
       // action, and on completion resume the SAME fiber in place -- pushing the
       // resolved value as the primitive's result (no advanceStmt: we're mid
       // expression, not at a statement boundary).
-      this.removeTaskFromQueue(this.currTaskIdx)
+      this.removeTaskFromQueue(task)
       stepResult.action().then(
         (value) => {
           fiber.resumeWithValue(value)
@@ -581,7 +583,7 @@ export class Scheduler {
    * currTaskIdx. Wakes any pending resume() awaiter.
    */
   private parkInGate(task: DisplayTask): void {
-    this.removeTaskFromQueue(this.currTaskIdx)
+    this.removeTaskFromQueue(task)
     const gate = this.steppingGates.get(task.id)
     if (gate) {
       gate.parked = true
@@ -700,11 +702,11 @@ export class Scheduler {
           }
           // A step that suspended the fiber (block-on, import-file) or parked it
           // has already taken the task out of the run queue and owns re-scheduling
-          // it. Advancing here as well would remove a second task -- or, if the
-          // async action already finished the program during the await above,
-          // trip removeTaskFromQueue's atomicity check on an empty queue.
+          // it; settling its place here as well is not this iteration's to do.
+          // Since #515 a stray call is a no-op rather than a corruption -- it
+          // used to remove a second task, or trip the empty-queue check (#315).
           if (!(await this.processStepResult(stepResult, task))) {
-            this.moveNextTask(task.fiber)
+            this.moveNextTask(task)
           }
         } catch (e) {
           // An ICE or a genuine runtime bug (stepTask rethrows anything that is
@@ -752,54 +754,51 @@ export class Scheduler {
   }
 
   /**
-   * Takes the task at `index` out of the run queue, by moving the last one into
-   * its slot rather than shifting everything down.
+   * Takes `task` out of the run queue, wherever it now sits, by moving the last
+   * one into its slot rather than shifting everything down. `currTaskIdx` is
+   * left alone: it now names whatever was moved, which has yet to run.
    *
-   * @returns the task that was at `index` -- the one removed. N.B. that is not
-   *          what `pop()` hands back, which is the task that was *moved*: the
-   *          two coincide only when `index` is the last slot. Returning the
-   *          moved one instead meant a finished run signalled someone else's
-   *          completion and never its own (#415).
+   * Located by identity rather than by `currTaskIdx`, because that index goes
+   * stale. `execute` awaits `processStepResult` between stepping a task and
+   * settling its place, and a `cancelTask` landing in that window splices the
+   * queue out from under the index -- so removing by it removed, and completed,
+   * whichever task had shifted into the slot (#515). Which is #415's failure
+   * again: a run signalling someone else's completion and never its own.
+   *
+   * @returns whether `task` was still queued. False when something else already
+   *          dequeued it -- a cancellation being the ordinary cause -- and the
+   *          caller must then leave the queue alone rather than remove a task
+   *          on its behalf.
    */
-  private removeTaskFromQueue(index: number): SchedulerTask | undefined {
-    const lastFiber = this.tasks.at(this.tasks.length - 1)
-    if (!lastFiber) {
-      throw new ICE(
-        'Scheduler.removeTaskFromQueue',
-        "Loop iteration atomicity error: somehow scheduler's tasks changed mid-iteration!",
-      )
+  private removeTaskFromQueue(task: SchedulerTask): boolean {
+    const index = this.tasks.findIndex((t) => t.id === task.id)
+    if (index === -1) {
+      return false
     }
-    // Past the end there is nothing to return, and assigning would leave a hole
-    // for the next round to trip over. Raise rather than drop it silently: a
-    // caller that loses its task here waits on a completion that never comes,
-    // which is the failure #415 was.
-    if (index >= this.tasks.length) {
-      throw new ICE(
-        'Scheduler.removeTaskFromQueue',
-        `Loop iteration atomicity error: asked to remove task #${index.toString()} of ${this.tasks.length.toString()}!`,
-      )
-    }
-    const removed = this.tasks[index]
-    this.tasks[index] = lastFiber
+    // In range, so there is a last task to move -- itself, if it is the last.
+    this.tasks[index] = this.tasks[this.tasks.length - 1]
     this.tasks.pop()
-    return removed
+    return true
   }
 
-  private endCurrFiber() {
-    const task = this.removeTaskFromQueue(this.currTaskIdx)
-    if (task) {
-      // A completed step-mode run: drop its gate and wake any pending
-      // stepStmt/stepAll awaiter, then signal completion.
-      this.captionRemaining(task)
-      this.tracesStarted.delete(task.id)
-      this.nextCaption.delete(task.id)
-      const gate = this.steppingGates.get(task.id)
-      if (gate) {
-        this.steppingGates.delete(task.id)
-        gate.resolve()
-      }
-      task.onComplete?.()
+  private endCurrFiber(task: SchedulerTask) {
+    if (!this.removeTaskFromQueue(task)) {
+      // Already gone: cancelled out from under this iteration. `cancelTask` has
+      // reported to its owner and settled its gate, and completing it here
+      // would be a second, contradictory signal.
+      return
     }
+    // A completed step-mode run: drop its gate and wake any pending
+    // stepStmt/stepAll awaiter, then signal completion.
+    this.captionRemaining(task)
+    this.tracesStarted.delete(task.id)
+    this.nextCaption.delete(task.id)
+    const gate = this.steppingGates.get(task.id)
+    if (gate) {
+      this.steppingGates.delete(task.id)
+      gate.resolve()
+    }
+    task.onComplete?.()
   }
 
   /**
@@ -823,12 +822,19 @@ export class Scheduler {
     }
   }
 
-  private moveNextTask(currFiber: Fiber) {
-    if (!currFiber.isDone()) {
-      this.currTaskIdx++
+  private moveNextTask(task: SchedulerTask) {
+    if (!task.fiber.isDone()) {
+      // Advance past where this task sits *now*, not past the slot it sat in
+      // when the step began: a `cancelTask` during the step shifts the queue
+      // beneath it (#515). Gone from the queue entirely, the cursor stays put
+      // -- whatever moved into that slot has not had its turn.
+      const index = this.tasks.findIndex((t) => t.id === task.id)
+      if (index !== -1) {
+        this.currTaskIdx = index + 1
+      }
       return
     }
-    this.endCurrFiber()
+    this.endCurrFiber(task)
   }
 
   private reportAndUnwind(e: ScamperError, task: DisplayTask) {

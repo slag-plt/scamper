@@ -37,6 +37,11 @@ Paths in the tree below are relative to `test/`.
     - `audio.test.ts`, `music.test.ts`, and `reactive.test.ts` are `test.todo` stubs, pending a browser-API mocking strategy
     - `canvas.test.ts` and `image.test.ts` each have a `.browser.test.ts` sibling for functions that need a real browser; see [Browser-mode tests](#browser-mode-tests)
     - `generated-sources-freshness.test.ts` — the checked-in generated library sources match `src/lib/*.scm`
+    - `docstring-arity.test.ts` — every documented binding's signature declares the arity its implementation actually has, since contract insertion makes the docstring the runtime arity (#496)
+    - `contracts.test.ts` (#495) — applies every contracted binding once *from Scheme*, since a contract wrapper is built only on that path: a test calling the native directly never runs it, and a library-internal call unwraps it (#476/#488).
+      Arguments come from each binding's own docstring (`contract-samples.ts`), and `library-bindings.ts` is the shared walk over the library's documented definitions.
+      Its `SKIP` list is what is still uncovered: the six contracts the suite cannot reach at all, each with the reason.
+      Measured by recording every closure carrying `contractTarget` that `applyFn` enters, which is exactly "a contract ran": 54 of the 421 distinct contracted names (12.8%) were never entered before this test, 6 (1.4%) after.
 + `apps/` — end-to-end tests for the applications
     - `web/` — the IDE end to end; `embed-widget.test.ts` covers the reading widget (#375): several programs on one page, chained environments, and each widget's callbacks staying its own
     - `cli/` — the command-line runner against fixture programs

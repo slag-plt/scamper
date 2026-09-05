@@ -1,3 +1,5 @@
+;;; The Scamper music library, inspired from Hudak's Euterpea library for the Haskell programming language
+
 ;;; (dur? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is a duration.
@@ -107,7 +109,7 @@
 ;;; @category modifications, music, predicates, sound, typecheck, dynamics, mod, note-handlers, percussion, tempo
 (define-export mod? (js-var "music_modQ"))
 
-;;; (percussion) -> mod?
+;;; percussion: mod?
 ;;; A modification that switches playback to percussion mode (MIDI channel 9). In percussion mode, each note corresponds to one percussion instrument.
 ;;; @category constants, modifications, music, sound, load-percussion, dynamics, mod, mod?, note-handlers, tempo
 (define-export percussion (js-var "music_percussion"))
@@ -192,32 +194,32 @@
 ;;; @category music, sound, composition?, empty, instrument, mod, note, note-event, note-freq, repeat, rest, trigger
 (define-export play-composition (js-var "music_playComposition"))
 
-;;; (wn) -> dur?
+;;; wn: dur?
 ;;; A whole note duration (4/4).
 ;;; @category constants, duration, music, sound, hn, qn, en, sn, tn
 (define-export wn (js-var "music_wn"))
 
-;;; (hn) -> dur?
+;;; hn: dur?
 ;;; A half note duration (2/4).
 ;;; @category constants, duration, music, sound, wn, qn, en, sn, tn
 (define-export hn (js-var "music_hn"))
 
-;;; (qn) -> dur?
+;;; qn: dur?
 ;;; A quarter note duration (1/4).
 ;;; @category constants, music, note, sound, wn, hn, en, sn, tn
 (define-export qn (js-var "music_qn"))
 
-;;; (en) -> dur?
+;;; en: dur?
 ;;; An eighth note duration (1/8).
 ;;; @category constants, duration, music, sound, wn, hn, qn, sn, tn
 (define-export en (js-var "music_en"))
 
-;;; (sn) -> dur?
+;;; sn: dur?
 ;;; A sixteenth note duration (1/16).
 ;;; @category constants, duration, music, sound, wn, hn, qn, en, tn
 (define-export sn (js-var "music_sn"))
 
-;;; (tn) -> dur?
+;;; tn: dur?
 ;;; A thirty-secondth note duration (1/32).
 ;;; @category duration, music, sound, wn, hn, qn, en, sn
 (define-export tn (js-var "music_tn"))

@@ -1,3 +1,5 @@
+;;; Functions for handling files
+
 ;;; (file-exists? fname) -> boolean?
 ;;;  fname : string?
 ;;; Returns `#t` if `fname` names something in storage and `#f` otherwise. Note that a directory counts as existing, so a `#t` here does not guarantee that `file->string` will succeed.
