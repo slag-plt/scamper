@@ -143,4 +143,20 @@ describe('a cell editor', () => {
       cell.done()
     }
   })
+
+  test('a read-only cell leaves the selection to the browser', () => {
+    // drawSelection() draws the selection itself and hides the native one, but
+    // a cell nobody can type in never draws it -- so a drag across the REPL's
+    // entries selected text that was nowhere visible (#459). Its layer being
+    // absent is what says the extension is not there.
+    const record = mount('(+ 1 2)', { isReadOnly: true })
+    const live = mount('(+ 1 2)')
+    try {
+      expect(record.view.dom.querySelector('.cm-selectionLayer')).toBeNull()
+      expect(live.view.dom.querySelector('.cm-selectionLayer')).not.toBeNull()
+    } finally {
+      record.done()
+      live.done()
+    }
+  })
 })

@@ -260,7 +260,12 @@ function cellExtensions(config: CellEditorConfig): Extension {
   return [
     highlightSpecialChars(),
     history(),
-    drawSelection(),
+    // Only where a caret goes. drawSelection() draws the selection itself and,
+    // at Prec.highest, hides the browser's -- but a cell nobody can type in
+    // never draws one, so a drag across the transcript selected text that was
+    // nowhere visible (#459). mkDiffEditorState leaves it out for the same
+    // reason.
+    ...(isReadOnly ? [] : [drawSelection()]),
     indentOnInput(),
     bracketMatching(),
     closeBrackets(),

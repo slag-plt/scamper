@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
 import CellEditor from './CellEditor.vue'
 import PopupMenu from './PopupMenu.vue'
 import { canStepEntry, type ReplEntry } from '../composables/use-repl'
 import type { CellEditorHandle } from '../codemirror/cell-editor'
+import { transcriptText } from '../repl-transcript'
 import type { MenuItem } from '../menu'
 
 /**
@@ -117,6 +118,42 @@ function onHistory(direction: -1 | 1, handled: { value: boolean }) {
   promptRef.value?.setText(to === typed.length ? '' : typed[to])
 }
 
+/** What the hint line says when it has nothing else to report. */
+const DEFAULT_HINT = 'Enter runs the line; Shift+Enter adds another.'
+
+const hint = ref(DEFAULT_HINT)
+let hintTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Says `message` in the hint line, then puts the hint back. */
+function flashHint(message: string) {
+  hint.value = message
+  clearTimeout(hintTimer)
+  hintTimer = setTimeout(() => {
+    hint.value = DEFAULT_HINT
+  }, 2000)
+}
+
+/**
+ * Puts the whole transcript on the clipboard (#459). Dragging across the
+ * entries copies the same text; this is for when the transcript is longer than
+ * a drag is worth.
+ */
+async function copyTranscript() {
+  try {
+    // Inside the try because `navigator.clipboard` is simply absent outside a
+    // secure context -- and under jsdom -- however firmly the DOM types
+    // promise it, and that is the same failure as the browser refusing.
+    await navigator.clipboard.writeText(transcriptText(props.entries))
+    flashHint('Copied.')
+  } catch {
+    flashHint('Could not copy.')
+  }
+}
+
+onUnmounted(() => {
+  clearTimeout(hintTimer)
+})
+
 // Opened deliberately, from a button or a menu, so the caret belongs in the
 // prompt: a REPL that has to be clicked into before it can be typed in is a
 // REPL with an extra step in front of every use.
@@ -212,9 +249,20 @@ defineExpose({
     </div>
 
     <div class="repl-controls">
-      <span class="repl-hint">
-        Enter runs the line; Shift+Enter adds another.
-      </span>
+      <!-- Also where Copy reports itself, so what it did is announced rather
+           than left to be noticed. -->
+      <span class="repl-hint" aria-live="polite">{{ hint }}</span>
+      <!-- Left of Stop, which comes and goes, so Copy never moves under the
+           pointer. -->
+      <button
+        type="button"
+        class="repl-button"
+        title="Copy the whole transcript"
+        :disabled="entries.length === 0"
+        @click="() => void copyTranscript()"
+      >
+        <i class="fa-solid fa-copy" aria-hidden="true"></i> Copy
+      </button>
       <button
         v-if="isBusy"
         type="button"
@@ -387,7 +435,12 @@ defineExpose({
   cursor: pointer;
 }
 
-.repl-button:hover {
+.repl-button:hover:not(:disabled) {
   background: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.repl-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 </style>
