@@ -81,6 +81,10 @@ The signature line and the `param : predicate?` lines are therefore load-bearing
 A docstring attaches to the definition *directly* beneath it, so a helper written between a docstring and the function it documents would take that function's contract.
 The signature's name is checked against the name being defined, so getting this wrong fails the library load rather than contracting the wrong function (#479).
 
+The docstring's arity is therefore the binding's *runtime* arity: the wrapper takes exactly the parameters the signature declares, and Javascript checks none of it, so a missing argument reaches the implementation as `undefined` and an extra one is dropped.
+`test/libs/docstring-arity.test.ts` sweeps every documented binding and fails when a signature can hand its implementation too few or too many arguments, when a function's signature names something that is not callable, or when a constant's signature names a function (#496).
+It compares arity only; predicates are not checked against the implementation.
+
 ## Wiring a new library
 
 1.  Write `src/js/foo/index.ts`, prefixing every export with `foo_`.
