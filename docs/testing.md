@@ -37,6 +37,7 @@ Paths in the tree below are relative to `test/`.
     - `audio.test.ts`, `music.test.ts`, and `reactive.test.ts` are `test.todo` stubs, pending a browser-API mocking strategy
     - `canvas.test.ts` and `image.test.ts` each have a `.browser.test.ts` sibling for functions that need a real browser; see [Browser-mode tests](#browser-mode-tests)
     - `generated-sources-freshness.test.ts` — the checked-in generated library sources match `src/lib/*.scm`
+    - `docstring-arity.test.ts` — every documented binding's signature declares the arity its implementation actually has, since contract insertion makes the docstring the runtime arity (#496)
 + `apps/` — end-to-end tests for the applications
     - `web/` — the IDE end to end; `embed-widget.test.ts` covers the reading widget (#375): several programs on one page, chained environments, and each widget's callbacks staying its own
     - `cli/` — the command-line runner against fixture programs
