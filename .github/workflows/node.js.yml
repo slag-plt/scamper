@@ -9,6 +9,23 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# The default shell for a `run:` block is `bash -e {0}` -- which is *not*
+# `pipefail`, so a pipeline reports only its last command's status and a failure
+# anywhere earlier is swallowed. That is not academic here: `git show
+# <sha>:package.json | jq -r .version` returns an empty string and exit 0 when
+# the lookup fails, because `jq` is perfectly happy with empty input. An empty
+# version then compares unequal to everything, which is how a *failed read*
+# turns into "the version changed" -- silently disabling the `version` job's
+# checks, or moving the `release` tag that every host deploys.
+#
+# Naming `bash` explicitly is what GitHub documents as `bash --noprofile --norc
+# -eo pipefail {0}`, so this closes the whole class rather than the three places
+# it had reached. Any pipeline whose failure is expected now has to say so with
+# an explicit `|| true`, which is the right way round.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
 
@@ -286,7 +303,27 @@ jobs:
       run: |
         image="ghcr.io/${{ github.repository }}-${{ matrix.image }}"
         version="$(jq -r .version package.json)"
-        previous="$(git show HEAD^:package.json 2>/dev/null | jq -r .version || echo none)"
+
+        # Whether this commit is a release is whether it changed the version,
+        # so a parent that cannot be read means the question cannot be answered
+        # -- and answering it wrongly moves `release`, which every host on
+        # SCAMPER_TAG=release then deploys.
+        #
+        # The old `git show HEAD^:… | jq … || echo none` could not fail: jq
+        # exits 0 on empty input, so the fallback never ran and `previous` came
+        # back empty, which compares unequal to `version` and tags the commit as
+        # a release. `pipefail` (see `defaults`) makes that pipeline fail now,
+        # but the fallback would still say `none` and still look like a release,
+        # so the two cases are told apart explicitly instead.
+        if ! git rev-parse --verify --quiet HEAD^ >/dev/null; then
+          # Genuinely no parent: the repository's first commit is a release.
+          previous=none
+        elif ! previous_json="$(git show HEAD^:package.json)"; then
+          echo "::error::could not read package.json at HEAD^ -- refusing to guess whether this is a release"
+          exit 1
+        else
+          previous="$(printf '%s' "${previous_json}" | jq -r .version)"
+        fi
         {
           echo "tags<<EOF"
           echo "${image}:latest"
@@ -341,9 +378,22 @@ jobs:
       with:
         fetch-depth: 0
     - name: A version bump must be a whole one
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
-        base="$(git show ${{ github.event.pull_request.base.sha }}:package.json | jq -r .version)"
         head="$(jq -r .version package.json)"
+
+        # Read separately, then parse. `git show … | jq` would report only jq's
+        # status, and jq exits 0 on empty input -- so a failed lookup would give
+        # an empty `base` that compares unequal to everything, announcing a
+        # release that is not one and, worse, quietly passing the "version rose"
+        # check below against nothing. `pipefail` (see `defaults` above) makes
+        # that loud; this makes it legible.
+        if ! base_json="$(git show "${BASE_SHA}:package.json")"; then
+          echo "::error::could not read package.json at ${BASE_SHA} -- nothing can be checked against it"
+          exit 1
+        fi
+        base="$(printf '%s' "${base_json}" | jq -r .version)"
 
         if [ "${base}" = "${head}" ]; then
           echo "No version change here; nothing to check."
@@ -586,6 +636,14 @@ jobs:
         # A listing, so the root of the site is not a 404. Releases first, then
         # their candidates newest-first -- `sort -V` puts 4.4.0 before
         # 4.4.0-rc.1, which is backwards, so the two are gathered separately.
+        #
+        # Gathered before the document is written, and with `|| true`: a `grep`
+        # that matches nothing exits 1, and "no release directory yet" is the
+        # normal state while a candidate is under review, not an error.
+        dirs="$(find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n')"
+        releases="$(printf '%s\n' "${dirs}" | grep -v -e '-' | sort -Vr || true)"
+        candidates="$(printf '%s\n' "${dirs}" | grep -e '-' | sort -Vr || true)"
+
         {
           echo '<!doctype html>'
           echo '<html lang="en"><head><meta charset="utf-8">'
@@ -597,12 +655,12 @@ jobs:
           echo '<p>Client-side only builds, for looking at a release before it ships.'
           echo 'Files are kept in your browser: signing in, server storage, and history are not part of a preview.</p>'
           echo '<ul>'
-          find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
-            grep -v -- '-' | sort -Vr |
-            while read -r dir; do echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"; done
-          find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
-            grep -e '-' | sort -Vr |
-            while read -r dir; do echo "<li><a href=\"${dir}/\">${dir}</a></li>"; done
+          for dir in ${releases}; do
+            echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
+          done
+          for dir in ${candidates}; do
+            echo "<li><a href=\"${dir}/\">${dir}</a></li>"
+          done
           echo '</ul>'
           echo "<p><a href=\"https://github.com/${GITHUB_REPOSITORY}\">github.com/${GITHUB_REPOSITORY}</a></p>"
           echo '</body></html>'
@@ -647,8 +705,12 @@ jobs:
         # --paginate: the comment is normally the first, but a long review
         # would push it off page one and each re-cut would then add another
         # rather than editing this one.
-        existing="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
-          --jq "map(select(.body | startswith(\"${marker}\"))) | .[0].id // empty" | head -n 1)"
+        # Read fully, then take the first line: piping gh straight into `head`
+        # closes its output early, and the SIGPIPE that follows is a failed
+        # pipeline under pipefail.
+        found="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+          --jq "map(select(.body | startswith(\"${marker}\"))) | .[0].id // empty")"
+        existing="$(printf '%s\n' "${found}" | head -n 1)"
 
         if [ -n "${existing}" ]; then
           gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="${body}" --silent
