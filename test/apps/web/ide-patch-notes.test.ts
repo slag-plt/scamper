@@ -47,8 +47,11 @@ describe('IDE patch-notes gate', () => {
   // These tests need a real dotted-numeric app version, which `npm test` (and
   // validate-build) provide via npm_package_version. Fail fast with a clear
   // message rather than a confusing timeout if it's the 'unknown' fallback.
+  //
+  // A release-candidate suffix is allowed: a preview build is stamped
+  // `4.4.0-rc.1` and must still show its release's notes (#565).
   beforeAll(() => {
-    expect(APP_VERSION).toMatch(/^\d+(\.\d+)*$/)
+    expect(APP_VERSION).toMatch(/^\d+(\.\d+)*(-[0-9A-Za-z.-]+)?$/)
   })
 
   beforeEach(() => {

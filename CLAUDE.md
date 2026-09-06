@@ -78,21 +78,24 @@ The IDE decides at startup by fetching `/config.json`—absent means browser sto
 ### Releases
 
 + A release is a commit on main that changes `version` in `package.json`; that is what deploys to a server and what decides the patch notes a student is shown. Ordinary merges deploy nowhere. See `docs/releasing.md`
-+ Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `src/app/web/patch-notes.ts`
++ Cut one with `npm version <patch|minor|major> --workspaces --include-workspace-root --no-git-tag-version`, which writes `package.json`, `server/package.json`, and `package-lock.json`. The `version` job checks that they agree, that the version rose, and that a minor or major release has an entry in `patch-notes.md`
++ A release is previewed before it lands. The release pull request carries a release-candidate version (`4.4.0-rc.1`), and the `preview` job publishes a client-side-only build of it to GitHub Pages at `slag-plt.github.io/scamper/<version>/`, commenting the URL. `version` deliberately fails while the version carries an `-rc` suffix, so dropping it is what makes the pull request mergeable and a candidate never reaches main
 
 ### Patch notes
 
 **Every pull request that changes user-facing functionality adds exactly one
-line to the patch notes** in `src/app/web/patch-notes.ts`, under the `next`
-entry at the top. Notes are written as the work lands rather than gathered at
-release time, and `next` is where they accumulate, so no pull request has to
-decide which release it belongs to.
+line to the patch notes** in `patch-notes.md` at the repository root, under the
+`# next` heading at the top. Notes are written as the work lands rather than
+gathered at release time, and `# next` is where they accumulate, so no pull
+request has to decide which release it belongs to.
 
 + Work a student cannot see adds no line -- a refactor, a test, a CI or tooling change, contributor documentation. Say so in the pull request instead, so the omission reads as a decision rather than an oversight
 + One line per PR, and one sentence per line. It summarises the change; it is not a changelog of the commits in it
-+ Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.ts` is what the IDE shows them on their first load of a new version
-+ Keep the trailing comma on the last note. `.gitattributes` merges this file with `merge=union`, so concurrent pull requests add their lines side by side instead of conflicting; without the comma two appends merge into a syntax error. Nothing may depend on the order of notes within an entry, since the merge decides it
-+ **Do not bump `package.json`, and do not rename `next`.** Both belong to the release pull request, which renames `next` to the version it is cutting and leaves a fresh empty one behind; see `docs/releasing.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
++ Write it for a student, in terms of what they will notice, not how it was built. `patch-notes.md` is what the IDE shows them on their first load of a new version
++ The format is the whole specification: `# <version>` starts an entry, `- <text>` is a note, `> <text>` under a heading is an optional headline, and everything else is ignored. `.gitattributes` merges this file with `merge=union`, so concurrent pull requests add their lines side by side instead of conflicting; a bullet is a whole line, so there is no punctuation two appends could collide over. Nothing may depend on the order of notes within an entry, since the merge decides it
++ **A note's text is not Markdown**, despite the file's name: `PatchNotesModal.vue` renders it with `{{ item }}`, so a code span or link would be shown to a student verbatim. Name procedures bare; `test/regressions/patch-notes-plain-text.test.ts` pins this
++ `src/app/web/patch-notes.ts` parses that file and is not where notes are edited
++ **Do not bump `package.json`, and do not rename `# next`.** Both belong to the release pull request, which renames it to the version it is cutting and leaves a fresh empty one behind; see `docs/releasing.md`. Nothing reaches a student before then, since `compareVersions` reads `next` as NaN and `patchNotesSince` never returns it
 
 ## Architecture Overview
 

@@ -9,6 +9,23 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# The default shell for a `run:` block is `bash -e {0}` -- which is *not*
+# `pipefail`, so a pipeline reports only its last command's status and a failure
+# anywhere earlier is swallowed. That is not academic here: `git show
+# <sha>:package.json | jq -r .version` returns an empty string and exit 0 when
+# the lookup fails, because `jq` is perfectly happy with empty input. An empty
+# version then compares unequal to everything, which is how a *failed read*
+# turns into "the version changed" -- silently disabling the `version` job's
+# checks, or moving the `release` tag that every host deploys.
+#
+# Naming `bash` explicitly is what GitHub documents as `bash --noprofile --norc
+# -eo pipefail {0}`, so this closes the whole class rather than the three places
+# it had reached. Any pipeline whose failure is expected now has to say so with
+# an explicit `|| true`, which is the right way round.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
 
@@ -286,7 +303,27 @@ jobs:
       run: |
         image="ghcr.io/${{ github.repository }}-${{ matrix.image }}"
         version="$(jq -r .version package.json)"
-        previous="$(git show HEAD^:package.json 2>/dev/null | jq -r .version || echo none)"
+
+        # Whether this commit is a release is whether it changed the version,
+        # so a parent that cannot be read means the question cannot be answered
+        # -- and answering it wrongly moves `release`, which every host on
+        # SCAMPER_TAG=release then deploys.
+        #
+        # The old `git show HEAD^:… | jq … || echo none` could not fail: jq
+        # exits 0 on empty input, so the fallback never ran and `previous` came
+        # back empty, which compares unequal to `version` and tags the commit as
+        # a release. `pipefail` (see `defaults`) makes that pipeline fail now,
+        # but the fallback would still say `none` and still look like a release,
+        # so the two cases are told apart explicitly instead.
+        if ! git rev-parse --verify --quiet HEAD^ >/dev/null; then
+          # Genuinely no parent: the repository's first commit is a release.
+          previous=none
+        elif ! previous_json="$(git show HEAD^:package.json)"; then
+          echo "::error::could not read package.json at HEAD^ -- refusing to guess whether this is a release"
+          exit 1
+        else
+          previous="$(printf '%s' "${previous_json}" | jq -r .version)"
+        fi
         {
           echo "tags<<EOF"
           echo "${image}:latest"
@@ -341,16 +378,37 @@ jobs:
       with:
         fetch-depth: 0
     - name: A version bump must be a whole one
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
-        base="$(git show ${{ github.event.pull_request.base.sha }}:package.json | jq -r .version)"
         head="$(jq -r .version package.json)"
+
+        # Read separately, then parse. `git show … | jq` would report only jq's
+        # status, and jq exits 0 on empty input -- so a failed lookup would give
+        # an empty `base` that compares unequal to everything, announcing a
+        # release that is not one and, worse, quietly passing the "version rose"
+        # check below against nothing. `pipefail` (see `defaults` above) makes
+        # that loud; this makes it legible.
+        if ! base_json="$(git show "${BASE_SHA}:package.json")"; then
+          echo "::error::could not read package.json at ${BASE_SHA} -- nothing can be checked against it"
+          exit 1
+        fi
+        base="$(printf '%s' "${base_json}" | jq -r .version)"
 
         if [ "${base}" = "${head}" ]; then
           echo "No version change here; nothing to check."
           exit 0
         fi
 
-        echo "This pull request releases ${base} -> ${head}."
+        # A release candidate previews a release: 4.4.0-rc.2 is a preview of
+        # 4.4.0, and every check below is about that release rather than about
+        # the candidate. See docs/releasing.md.
+        release="${head%%-*}"
+
+        echo "This pull request releases ${base} -> ${release}."
+        if [ "${head}" != "${release}" ]; then
+          echo "Currently previewing it as ${head}."
+        fi
         failed=0
 
         workspace="$(jq -r .version server/package.json)"
@@ -369,8 +427,12 @@ jobs:
           fi
         done
 
-        if [ "$(printf '%s\n%s\n' "${base}" "${head}" | sort -V | tail -1)" != "${head}" ]; then
-          echo "::error file=package.json::${head} is not newer than ${base}"
+        # On the release versions, not the literal ones: `sort -V` orders
+        # 4.4.0 *before* 4.4.0-rc.1, which is backwards from semver, and the
+        # question here is only whether the release being cut is newer.
+        if [ "${base}" = "${release}" ] ||
+           [ "$(printf '%s\n%s\n' "${base}" "${release}" | sort -V | tail -1)" != "${release}" ]; then
+          echo "::error file=package.json::${release} is not newer than ${base}"
           failed=1
         fi
 
@@ -381,10 +443,277 @@ jobs:
         # Notes accumulate under a `next` entry, so in practice this catches a
         # release that bumped the version and forgot to rename it: the notes are
         # written but still filed under a version no student will ever run.
-        if [ "$(echo "${head}" | cut -d. -f3)" = "0" ] &&
-           ! grep -q "version: '${head}'" src/app/web/patch-notes.ts; then
-          echo "::error file=src/app/web/patch-notes.ts::no patch notes for ${head} -- rename the 'next' entry to ${head} (and leave a fresh empty one behind), or students get ${head} with nothing said about it"
+        # Matched the way the parser reads it (leading '#', whitespace, the
+        # version, nothing else), rather than as an exact line, so a heading
+        # the IDE is perfectly happy with cannot fail here. The dots are
+        # escaped so they are not regex wildcards.
+        release_re="$(printf '%s' "${release}" | sed 's/\./\\./g')"
+        if [ "$(echo "${release}" | cut -d. -f3)" = "0" ] &&
+           ! grep -qE "^#[[:space:]]+${release_re}[[:space:]]*$" patch-notes.md; then
+          echo "::error file=patch-notes.md::no patch notes for ${release} -- rename the '# next' heading to '# ${release}' (and leave a fresh empty one behind), or students get ${release} with nothing said about it"
+          failed=1
+        fi
+
+        # Last, so the report above is a full rehearsal of the release before
+        # this says it is not one yet. A candidate is a preview: it is built and
+        # published (see the `preview` job) but must not reach main, or the
+        # images, the version in the IDE, and the notes would disagree.
+        if [ "${head}" != "${release}" ]; then
+          echo "::error file=package.json::${head} is a release candidate, so this cannot merge yet -- everything else above is checked, and setting the version to ${release} is what releases it"
           failed=1
         fi
 
         exit "${failed}"
+
+  # Whether this commit changes the version, which is the only thing that
+  # publishes a preview. Split out from `preview` below, and deliberately
+  # outside its concurrency group: a run that publishes nothing must not be
+  # able to sit in that group, because a later arrival cancels a *pending*
+  # member rather than queueing behind it -- which would cancel the release
+  # preview on behalf of an unrelated pull request.
+  preview-check:
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # HEAD^ for the push case: whether this commit is a version change is a
+        # question about its parent.
+        fetch-depth: 2
+        persist-credentials: false
+
+    - id: version
+      name: Is this a version change?
+      env:
+        EVENT: ${{ github.event_name }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+        head="$(jq -r .version package.json)"
+
+        # The blob is read before jq sees it, rather than `git show … | jq`.
+        # jq exits 0 on empty input, so a failed lookup in a pipeline is
+        # silent: `base` would come back empty, compare unequal to `head`, and
+        # publish -- pruning the release actually under review on behalf of a
+        # pull request that changed no version at all.
+        if [ "${EVENT}" = "pull_request" ]; then
+          if ! base_json="$(git show "${BASE_SHA}:package.json" 2>/dev/null)"; then
+            echo "::error::could not read package.json at ${BASE_SHA}"
+            exit 1
+          fi
+        else
+          # An unborn parent is the repository's first commit, not an error.
+          base_json="$(git show 'HEAD^:package.json' 2>/dev/null || echo '{}')"
+        fi
+        base="$(printf '%s' "${base_json}" | jq -r '.version // "none"')"
+
+        if [ "${head}" = "${base}" ]; then
+          echo "The version is unchanged; there is no preview to publish."
+          echo "publish=false" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        echo "Publishing a preview of ${head}."
+        {
+          echo "publish=true"
+          echo "version=${head}"
+          # Everything belonging to this release survives the prune below.
+          echo "release=${head%%-*}"
+        } >> "${GITHUB_OUTPUT}"
+
+  # A version pull request publishes a client-side-only build of itself, so a
+  # release can be opened and clicked around before it exists (#565). Scamper
+  # used to get this for free: it was a purely static app and `scripts/deploy`
+  # gave every release its own directory. The live app is server-backed now, so
+  # this puts the preview somewhere else -- GitHub Pages -- rather than beside
+  # it.
+  #
+  # Client-side only is not a special build: the IDE keeps files in the browser
+  # unless it can fetch a `config.json` naming a server, and none is served
+  # here. So a preview is the ordinary bundle, and anything needing the back end
+  # -- signing in, server file storage, history -- is simply absent from it.
+  preview:
+
+    needs: [build, preview-check]
+
+    # A fork's GITHUB_TOKEN is read-only however this job asks for `contents:
+    # write`, so publishing from one would fail at the push with a misleading
+    # red X. Skipped instead: `preview` is not a required check, so nothing is
+    # blocked by its absence.
+    if: >-
+      needs.preview-check.outputs.publish == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    # One branch, and every publishing run pushes to it. Not
+    # cancel-in-progress: a half-finished push would leave the site
+    # inconsistent.
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # This job runs the pull request's own code (`npm ci` postinstall, the
+        # build). It also holds a token that can push, so that token is kept
+        # out of the checkout's git config and used only where it is needed.
+        persist-credentials: false
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+        cache: 'npm'
+
+    - run: npm ci
+
+    # `--base` is what makes a subdirectory deploy work: every asset URL in the
+    # bundle is written with this prefix. scripts/build forwards it to both
+    # Vite builds. Through `env` rather than `${{ }}` interpolation, since the
+    # version is a value the pull request itself controls.
+    - name: Build it for the subdirectory it will live in
+      env:
+        VERSION: ${{ needs.preview-check.outputs.version }}
+      run: npm run build -- --base="/${GITHUB_REPOSITORY##*/}/${VERSION}/"
+
+    - name: Publish it to gh-pages
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ needs.preview-check.outputs.version }}
+        RELEASE: ${{ needs.preview-check.outputs.release }}
+      run: |
+        set -euo pipefail
+        remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+        # Cloned rather than checked out, so the build in ./dist is untouched.
+        # The branch is made here on the first run rather than by hand, so this
+        # needs no setup beyond turning Pages on.
+        if git clone --quiet --depth=1 --branch gh-pages "${remote}" pages 2>/dev/null; then
+          echo "Publishing onto the existing gh-pages."
+        else
+          echo "No gh-pages yet; starting one."
+          mkdir pages
+          git -C pages init --quiet
+        fi
+
+        cd pages
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        # The site is a preview, not an archive: it holds the release under
+        # review and nothing else. A directory belongs to this release when its
+        # name matches once an -rc suffix is stripped, so the candidates for one
+        # release stay side by side and the whole set is cleared the moment the
+        # next release starts. The live app is where a shipped release is looked
+        # at, so nothing of value is dropped here.
+        find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
+          while read -r dir; do
+            if [ "${dir%%-*}" != "${RELEASE}" ]; then
+              echo "Removing ${dir}, which is not part of ${RELEASE}."
+              rm -rf "./${dir}"
+            fi
+          done
+
+        rm -rf "./${VERSION}"
+        cp -r ../dist "./${VERSION}"
+
+        # Pages would otherwise treat this as a Jekyll site and drop anything
+        # whose name begins with an underscore.
+        touch .nojekyll
+
+        # A listing, so the root of the site is not a 404. Releases first, then
+        # their candidates newest-first -- `sort -V` puts 4.4.0 before
+        # 4.4.0-rc.1, which is backwards, so the two are gathered separately.
+        #
+        # Gathered before the document is written, and with `|| true`: a `grep`
+        # that matches nothing exits 1, and "no release directory yet" is the
+        # normal state while a candidate is under review, not an error.
+        dirs="$(find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n')"
+        releases="$(printf '%s\n' "${dirs}" | grep -v -e '-' | sort -Vr || true)"
+        candidates="$(printf '%s\n' "${dirs}" | grep -e '-' | sort -Vr || true)"
+
+        {
+          echo '<!doctype html>'
+          echo '<html lang="en"><head><meta charset="utf-8">'
+          echo '<meta name="viewport" content="width=device-width,initial-scale=1">'
+          echo "<title>Scamper ${RELEASE} previews</title>"
+          echo '<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5}li{margin:.25rem 0}</style>'
+          echo '</head><body>'
+          echo "<h1>Scamper ${RELEASE} previews</h1>"
+          echo '<p>Client-side only builds, for looking at a release before it ships.'
+          echo 'Files are kept in your browser: signing in, server storage, and history are not part of a preview.</p>'
+          echo '<ul>'
+          for dir in ${releases}; do
+            echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
+          done
+          for dir in ${candidates}; do
+            echo "<li><a href=\"${dir}/\">${dir}</a></li>"
+          done
+          echo '</ul>'
+          echo "<p><a href=\"https://github.com/${GITHUB_REPOSITORY}\">github.com/${GITHUB_REPOSITORY}</a></p>"
+          echo '</body></html>'
+        } > index.html
+
+        # One orphan commit, force-pushed, rather than a growing history. Each
+        # build is several megabytes and its asset names carry the version, so
+        # almost nothing would dedupe between commits; keeping every past
+        # preview forever would work against the Pages source-size limit and
+        # every clone of the repository. The site's *content* is what matters
+        # here, and the prune above has already decided what that is.
+        if git rev-parse --verify --quiet HEAD >/dev/null; then
+          git checkout --quiet --orphan publish
+        else
+          git checkout --quiet -b publish
+        fi
+        git add -A
+        git commit --quiet -m "Preview ${VERSION} (${GITHUB_SHA})"
+        git push --quiet --force "${remote}" publish:gh-pages
+
+        pages_host="$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]').github.io"
+        echo "Preview published: https://${pages_host}/${GITHUB_REPOSITORY##*/}/${VERSION}/" \
+          >> "${GITHUB_STEP_SUMMARY}"
+
+    # One comment per pull request, edited in place, so re-cutting a candidate
+    # does not add another.
+    - name: Say where it is
+      if: github.event_name == 'pull_request'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ needs.preview-check.outputs.version }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        set -euo pipefail
+        pages_host="$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]').github.io"
+        url="https://${pages_host}/${GITHUB_REPOSITORY##*/}/${VERSION}/"
+        marker="<!-- scamper-preview -->"
+
+        body="$(printf '%s\n**Preview:** %s\n\nA client-side-only build of `%s`. Files are kept in your browser — signing in, server storage, and history are not part of a preview.\n\nTo publish another, re-cut the candidate with `npm version prerelease --workspaces --include-workspace-root --no-git-tag-version`; this comment follows the newest one. See docs/releasing.md.' \
+          "${marker}" "${url}" "${VERSION}")"
+
+        # --paginate: the comment is normally the first, but a long review
+        # would push it off page one and each re-cut would then add another
+        # rather than editing this one.
+        # Read fully, then take the first line: piping gh straight into `head`
+        # closes its output early, and the SIGPIPE that follows is a failed
+        # pipeline under pipefail.
+        found="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+          --jq "map(select(.body | startswith(\"${marker}\"))) | .[0].id // empty")"
+        existing="$(printf '%s\n' "${found}" | head -n 1)"
+
+        if [ -n "${existing}" ]; then
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="${body}" --silent
+        else
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -f body="${body}" --silent
+        fi
