@@ -262,10 +262,63 @@ export function color_findColors(name: string): L.List {
   return L.mkList(...results)
 }
 
-/***** Color Strings **********************************************************/
+/**
+ * The named color closest to `rgb`, by `color_rgbDistance` -- which ignores
+ * alpha, so only the hue is matched and `describe-color` is left to say how
+ * transparent the color is.
+ *
+ * Seeded with white and comparing strictly, so a tie is won by the earlier
+ * name in the table and by white against any equal candidate, matching csc151.
+ * Needed because a shape stores its color as an `Rgb`: the name a student wrote
+ * is gone by the time a description is generated, so it is recovered here.
+ */
+export function color_rgbToColorName(rgb: Rgb): string {
+  let name = 'white'
+  let distance = color_rgbDistance(color_rgb(255, 255, 255, 255), rgb)
+  for (const [candidate, candidateRgb] of namedCssColors) {
+    const candidateDistance = color_rgbDistance(candidateRgb, rgb)
+    if (candidateDistance < distance) {
+      name = candidate
+      distance = candidateDistance
+    }
+  }
+  return name
+}
 
-// rgb-string?
-// rgb-string->rgb
+/** The named color closest to `v`; the name itself when `v` is already one. */
+export function color_colorToColorName(v: L.Value): string {
+  return typeof v === 'string' && color_isColorName(v)
+    ? v.toLowerCase()
+    : color_rgbToColorName(color_colorToRgb(v))
+}
+
+/** How transparent a color is, as a describe-color prefix; '' when opaque. */
+function alphaDescription(alpha: number): string {
+  if (alpha <= 64) { return 'mostly-transparent ' }
+  if (alpha <= 128) { return 'semi-transparent ' }
+  if (alpha <= 192) { return 'semi-opaque ' }
+  if (alpha <= 254) { return 'mostly-opaque ' }
+  return ''
+}
+
+/**
+ * `v` in words, e.g. "red", "semi-transparent blue", or "approximately red"
+ * when the nearest name is not an exact match. This is what puts a color into
+ * the descriptions shapes generate for themselves.
+ */
+export function color_describeColor(v: L.Value): string {
+  const rgb = color_colorToRgb(v)
+  if (rgb.alpha === 0) { return 'transparent' }
+  const name = color_colorToColorName(v)
+  const named = color_colorNameToRgb(name)
+  const prefix =
+    rgb.red === named.red && rgb.green === named.green && rgb.blue === named.blue
+      ? ''
+      : 'approximately '
+  return `${alphaDescription(rgb.alpha)}${prefix}${name}`
+}
+
+/***** Color Strings **********************************************************/
 
 function fracToPercentString(n: number, m: number): string {
   return `${Math.trunc(n/m * 100)}%`
@@ -421,15 +474,10 @@ export function color_colorNameToRgb(name: string): Rgb {
   return rgb
 }
 
-// rgb->color-name
-// color->rgb
-
 export function color_hsvToRgb(hsv: Hsv): Rgb {
   const ret = colorsys.hsvToRgb(hsv.hue, hsv.saturation, hsv.value)
   return color_rgb(ret.r, ret.g, ret.b, hsv.alpha)
 }
-
-// color->color-name
 
 /***** Color components *******************************************************/
 
@@ -442,7 +490,6 @@ export function color_hsvToRgb(hsv: Hsv): Rgb {
 
 // mod2
 // color-equal?
-// describe-color
 // color->list
 
 /***** Color transformations **************************************************/
