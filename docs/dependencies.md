@@ -59,6 +59,39 @@ alerts about code that never runs in production.
 If the CLI ever publishes a current stable release, taking it is the fix, and it
 should retire most of this page.
 
+## Why `better-auth` is held on the 1.6 line
+
+`better-auth` is pinned with `~` rather than `^`, in both `package.json` and
+`server/package.json`, so it takes patches and refuses the next minor.
+The pin is load-bearing: the server cannot move ahead of the CLI above.
+
+1.7 adds a required `issuer` column to the `account` table, with a unique index
+on `(issuer, accountId)`, and credential sign-in filters on
+`issuer = 'local:credential'` — as do `updatePassword` and
+`findCredentialAccount`, which `accounts.ts` reaches through `internalAdapter`.
+But `npm run db:migrate` derives its migration from the copy of `better-auth`
+bundled inside `@better-auth/cli`, which is 1.4 and has no `issuer` at all.
+A 1.7 server would therefore run against a schema its own migration tool cannot
+produce, and every account row written under 1.6 would carry no issuer, so
+every existing user would be locked out.
+
+There is no security cost to waiting: every `better-auth` advisory `npm audit`
+reports is fixed at 1.6.22 or below.
+
+Taking 1.7 is its own piece of work, and needs all of:
+
++   the `issuer` column and its unique index, added by something other than the
+    CLI;
++   a backfill, `issuer = 'local:credential'` for every `providerId =
+    'credential'` row, run before the new server starts;
++   `server/src/accounts.ts` updated for `createUser`'s second argument (the
+    provisioning source) and `createAccount`'s new `issuer` field.
+
+Note also that the front end imports `better-auth/client`
+(`src/app/web/auth-client.ts`), so the root `package.json` declares
+`better-auth` too. Keep the two ranges identical — they resolve to one hoisted
+copy, and letting them drift installs two.
+
 ## What is worth acting on
 
 +   Any alert whose scope is `runtime`.
