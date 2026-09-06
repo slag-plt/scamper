@@ -91,11 +91,11 @@ Actions only report; a ruleset is what blocks a merge.
 Two cover `main` (**Settings → Rules**):
 
 - **Main** — pull requests required, no force-pushes, no deleting the branch.
-- **Release criteria** — `build (22.x)`, `database-tests`, `browser-tests`, and `version` all have to pass.
+- **Release criteria** — `build (22.x)`, `database-tests`, `browser-tests`, `server-smoke`, and `version` all have to pass.
 
-`server-smoke` is not required yet, and adding it is a two-step job in this order:
-merge the pull request that adds the job first, then add the check.
+Adding a check to that list is a two-step job, in this order: merge the pull request that adds the job first, then add the check.
 The reason is the paragraph below — required *before* it exists on main blocks every open branch at once.
+This is how `server-smoke` was added; the same commands take the next one, with its own name in place of `server-smoke`.
 
 ```console
 gh api repos/slag-plt/scamper/rulesets/21264173 > /tmp/ruleset.json
