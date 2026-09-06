@@ -36,7 +36,7 @@ describe('the reduction marker', () => {
   // The web trace is paginated, so a step is already presented on its own and
   // the "-->" says nothing the view does not. The console trace has only
   // consecutive lines, so it keeps the marker. Two renderers, one value.
-  const step = mkTraceOutput(42 as unknown as Value)
+  const step = mkTraceOutput(42)
 
   test('the web renderer draws no arrow', () => {
     const wrapper = mount(TraceOutputRenderer, { props: { value: step } })

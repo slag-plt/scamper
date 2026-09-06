@@ -32,7 +32,7 @@ if (typeof Range !== 'undefined') {
   const rangeProto: object = Range.prototype
   if (!('getClientRects' in rangeProto)) {
     Range.prototype.getClientRects = () =>
-      Object.assign([], { item: () => null }) as unknown as DOMRectList
+      Object.assign([], { item: () => null })
   }
   if (!('getBoundingClientRect' in rangeProto)) {
     Range.prototype.getBoundingClientRect = () => new DOMRect()

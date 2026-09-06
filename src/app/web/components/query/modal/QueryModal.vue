@@ -19,10 +19,6 @@ const { expandedQueryId } = useScamperSession()
 const toRender = useReportedValue(() => query)
 const queryAnchorName = computed(() => getQueryAnchorName(query.id))
 
-void ModalWidth
-void ModalVerticalPadding
-void ModalOverallPadding
-
 const invisible = computed(() => {
   const expanded = expandedQueryId.value
   if (expanded === null) {

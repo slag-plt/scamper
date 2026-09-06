@@ -132,7 +132,7 @@ describe('recovering', () => {
 
     Connectivity.stop()
     // The server's reply lands after teardown, and is discarded.
-    answer({ ok: false, status: 502 } as Response)
+    answer({ ok: false, status: 502 })
     await probe
 
     expect(Connectivity.connection.value).toBe('online')

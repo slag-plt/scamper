@@ -19,9 +19,11 @@ function renderReactiveFileChooser (v: L.Value): HTMLElement {
     reader.onload = (e) => {
       if (e.target !== null) {
         outp.innerHTML = ''
+        // `readAsText` below, so the result is text rather than bytes.
+        const text: string = e.target.result as string
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result; a callback error surfaces in the output pane.
-        rf[L.runField].spawn(rf.callback, [e.target.result as string], (r) => {
+        rf[L.runField].spawn(rf.callback, [text], (r) => {
           if (r !== null) {
             outp.appendChild(HTMLRenderer.render(r))
           }

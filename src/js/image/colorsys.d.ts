@@ -106,22 +106,13 @@ declare module 'colorsys' {
 
   //convert HEX to *
   export function hex2Rgb(hex: string): RGB;
-  export function hex2Rgb(hex: string): RGB;
-  export function hex_to_rgb(hex: string): RGB;
   export function hex_to_rgb(hex: string): RGB;
   export function hexToRgb(hex: string): RGB;
-  export function hexToRgb(hex: string): RGB;
-  export function hex_to_hsv(hex: string): HSV;
   export function hex_to_hsv(hex: string): HSV;
   export function hexToHsv(hex: string): HSV;
-  export function hexToHsv(hex: string): HSV;
-  export function hex2Hsv(hex: string): HSV;
   export function hex2Hsv(hex: string): HSV;
   export function hex2Hsl(hex: string): HSL;
-  export function hex2Hsl(hex: string): HSL;
   export function hex_to_hsl(hex: string): HSL;
-  export function hex_to_hsl(hex: string): HSL;
-  export function hexToHsl(hex: string): HSL;
   export function hexToHsl(hex: string): HSL;
 
 

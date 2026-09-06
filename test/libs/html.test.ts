@@ -193,7 +193,7 @@ describe('tag-set-children!', () => {
 
   test('throws when a child is not an HTML element', () => {
     const elt = html_tag('div')
-    expect(() => { html_tagSetChildren(elt, 'not an element' as unknown as HTMLElement) })
+    expect(() => { html_tagSetChildren(elt, 'not an element') })
       .toThrow(/expects all children to be HTML elements/)
   })
 })

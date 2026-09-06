@@ -120,8 +120,10 @@ export function useNotebook(editor: EditorAccessor): Notebook {
   })
 
   // Read through `version`, so a view showing it redraws when something lands
-  // in it: the array itself is filled in place as a run proceeds.
+  // in it: the array itself is filled in place as a run proceeds. The read is
+  // the whole point, so `void` here is not the no-op the rule takes it for.
   const unplaced = computed(() => {
+    // eslint-disable-next-line @typescript-eslint/no-meaningless-void-operator
     void version.value
     return display.unplaced
   })
@@ -470,7 +472,9 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     display,
     outputOf: (index) => {
       // Read through `version` so a view that calls this re-runs when a run
-      // adds something.
+      // adds something. The read is the whole point, so `void` here is not the
+      // no-op the rule takes it for.
+      // eslint-disable-next-line @typescript-eslint/no-meaningless-void-operator
       void version.value
       return display.outputOf(index)
     },

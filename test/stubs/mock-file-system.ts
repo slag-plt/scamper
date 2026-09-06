@@ -46,6 +46,11 @@ export class MockFileSystem implements FS {
     try {
       refuseBinary(filename)
     } catch (e) {
+      // `refuseBinary` throws an `Error`, which `catch` widens to `unknown` and
+      // `Promise.reject`'s `any` parameter then makes the assertion look
+      // redundant -- but `prefer-promise-reject-errors` reads the argument, not
+      // the parameter, and rejects an `unknown` reason.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       return Promise.reject(e as Error)
     }
     return this.loadBytes(filename).then((bytes) =>
@@ -57,6 +62,11 @@ export class MockFileSystem implements FS {
     try {
       refuseBinary(filename)
     } catch (e) {
+      // `refuseBinary` throws an `Error`, which `catch` widens to `unknown` and
+      // `Promise.reject`'s `any` parameter then makes the assertion look
+      // redundant -- but `prefer-promise-reject-errors` reads the argument, not
+      // the parameter, and rejects an `unknown` reason.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       return Promise.reject(e as Error)
     }
     return this.saveBytes(filename, new TextEncoder().encode(contents))

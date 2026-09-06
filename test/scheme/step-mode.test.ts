@@ -220,9 +220,9 @@ describe('robustness regressions', () => {
     })
     fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
       'block',
-      (() => {
+      () => {
         throw new SuspendSignal(() => actionPromise)
-      }) as unknown as Value,
+      },
     ])
     const steps: string[] = []
     const errs: string[] = []

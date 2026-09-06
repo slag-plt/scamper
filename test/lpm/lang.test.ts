@@ -144,7 +144,7 @@ describe('Module.fromLibs', () => {
 describe('Module.registerValue', () => {
   test('assigns the registered name to a function value', () => {
     const mod = new Module()
-    mod.registerValue('my-fn', ((x: number) => x) as Value)
+    mod.registerValue('my-fn', (x: number) => x)
     expect((mod.bindings.get('my-fn') as JsFunction).name).toBe('my-fn')
   })
 

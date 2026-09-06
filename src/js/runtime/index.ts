@@ -25,7 +25,7 @@ export function runtime_report (value: L.Value): L.Value {
  * either way, so a violation still reads `(error) ...` rather than leaking the
  * internal spelling.
  */
-export const runtime_error = L.nameFn('error', (msg: L.Value): L.Value => {
+export const runtime_error: L.JsFunction = L.nameFn('error', (msg: L.Value): L.Value => {
   if (typeof msg !== 'string') {
     throw new L.ScamperError(
       'Runtime',
@@ -36,7 +36,7 @@ export const runtime_error = L.nameFn('error', (msg: L.Value): L.Value => {
     )
   }
   throw new L.ScamperError('Runtime', msg, undefined, undefined, 'error')
-}) as L.JsFunction
+})
 
 /**
  * The optional arguments a contract wrapper was called with, as a list: what

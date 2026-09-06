@@ -19,13 +19,15 @@ function onFileChange(event: Event) {
     const reader = new FileReader()
     reader.onload = (e) => {
       if (e.target !== null) {
+        // `readAsText` below, so the result is text rather than bytes.
+        const text: string = e.target.result as string
         // Run the callback as a fiber (JS can no longer call the closure) and
         // render its result in the widget; a callback error surfaces in the
         // output pane instead. Through the run the *value* carries, since this
         // fires long after the step that made it and Vue mounts us later still
         // -- resolving a run here would find the foreground one, or none at
         // all on a reading page (#397).
-        props.value[L.runField].spawn(props.value.callback, [e.target.result as string], (r) => {
+        props.value[L.runField].spawn(props.value.callback, [text], (r) => {
           result.value = r
           isLoading.value = false
         })

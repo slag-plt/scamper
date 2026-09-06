@@ -6,7 +6,6 @@ import {
   getQueryAnchorName,
   ModalOverallPadding,
   ModalVerticalPadding,
-  ModalWidth,
   useReportedValue,
 } from './query-utils'
 import ModalControls from './modal/ModalControls.vue'
@@ -32,10 +31,6 @@ const handleClick = (e: MouseEvent) => {
 }
 
 const toRender = useReportedValue(() => getQueryOrThrow(queryId))
-
-void ModalWidth
-void ModalVerticalPadding
-void ModalOverallPadding
 
 onMounted(() => {
   document.addEventListener('click', handleClick)
