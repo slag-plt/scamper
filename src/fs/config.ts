@@ -35,8 +35,8 @@ function isServerConfig(value: unknown): value is ServerConfig {
     typeof value === 'object' &&
     value !== null &&
     'serverUrl' in value &&
-    typeof (value as { serverUrl: unknown }).serverUrl === 'string' &&
-    (value as { serverUrl: string }).serverUrl.length > 0
+    typeof value.serverUrl === 'string' &&
+    value.serverUrl.length > 0
   )
 }
 

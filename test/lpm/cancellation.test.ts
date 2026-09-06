@@ -77,7 +77,7 @@ describe('run cancellation', () => {
       draw: () => undefined,
       getElement: () => document.createElement('div'),
     }
-    reactive_onTimer(50).register(react as ReactiveElement)
+    reactive_onTimer(50).register(react)
 
     vi.advanceTimersByTime(120) // ~2 ticks
     const before = updates.length

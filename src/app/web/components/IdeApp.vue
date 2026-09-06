@@ -1752,11 +1752,11 @@ const visibilityChangeWrapper = () => {
 const pageHideWrapper = () => {
   void handlePageHide()
 }
-const pageShowWrapper = (e: Event) => {
-  void handlePageShow(e as PageTransitionEvent)
+const pageShowWrapper = (e: PageTransitionEvent) => {
+  void handlePageShow(e)
 }
-const beforeUnloadWrapper = (e: Event) => {
-  void handleBeforeUnload(e as BeforeUnloadEvent)
+const beforeUnloadWrapper = (e: BeforeUnloadEvent) => {
+  void handleBeforeUnload(e)
 }
 
 // ---------- lifecycle ----------

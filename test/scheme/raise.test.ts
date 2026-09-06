@@ -37,12 +37,12 @@ function raiseBlk(blk: LPM.Blk): string {
 
 /** A binary `+` function value; renders as its name (`+`) on the value stack. */
 function plus(): LPM.Value {
-  return LPM.nameFn('+', (a: number, b: number) => a + b) as LPM.Value
+  return LPM.nameFn('+', (a: number, b: number) => a + b)
 }
 
 /** A named nullary function value, for building call-stack fixtures. */
 function named(name: string): LPM.Value {
-  return LPM.nameFn(name, () => 0) as LPM.Value
+  return LPM.nameFn(name, () => 0)
 }
 
 // ---- valuesToExps ----------------------------------------------------------

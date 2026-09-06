@@ -528,7 +528,7 @@ describe('with-image-file renders a chosen image', () => {
         spawn: (_fn: L.Value, args: L.Value[]) => { onSpawn(args) },
         signal: undefined,
       },
-    } as unknown as L.Value
+    }
   }
 
   /** Puts `file` in the rendered input and fires the change the renderer listens for. */
