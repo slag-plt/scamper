@@ -1,0 +1,122 @@
+<!--
+The patch notes students are shown the first time they open a new version of
+Scamper (issue #306). This file is the data; src/app/web/patch-notes.ts only
+parses it.
+
+The format is the whole specification:
+
+  - `# <version>` starts an entry. `# next` is the one notes accumulate
+    under before a release has been named.
+  - `> <text>` directly under a heading is that release's optional headline.
+  - `- <text>` is one note. One per pull request, one sentence, written for
+    a student in terms of what they will notice.
+
+Anything else -- blank lines, this comment -- is ignored, so there is no
+punctuation to get wrong. That is the point: .gitattributes merges this file
+by union so concurrent pull requests append side by side, and a bullet cannot
+collide into a syntax error the way an array element could.
+
+Despite the .md name, THE TEXT OF A NOTE IS NOT MARKDOWN. PatchNotesModal.vue
+renders each one with `{{ item }}`, plain-text interpolation with no Markdown
+pass, so a code span or a link would be shown to students verbatim, backticks
+and all -- which is what happened to the 4.1.1 notes. Name procedures bare.
+test/regressions/patch-notes-plain-text.test.ts pins this.
+
+Order does not matter within an entry. See docs/releasing.md.
+-->
+
+# next
+
+- Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
+- Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.
+- You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.
+- Restarting the REPL now keeps the commands you have typed, so the up arrow still brings them back.
+- with-dash now works: passing it a list of dash lengths draws a dashed shape instead of raising an error.
+- regex is now called with just a pattern, as (regex "colou?r"), rather than requiring a second argument that was never used.
+- canvas-get-pixel now works on a canvas — it used to report that it expected a drawing, which is the one thing it cannot take.
+- Rotating a drawing that is already rotated no longer adds extra blank margin — two 30-degree turns now measure the same as a single 60-degree turn.
+- A pattern match that fails once no longer breaks itself for the rest of the session.
+- set-maximum-recursion-depth! now really does raise the recursion limit, so a program that stopped with a max call stack depth error can be given more room — up to 200,000 — instead of the call quietly doing nothing.
+- Stepping through a program no longer shows a stray step from inside a built-in function that calls a function of yours.
+- Stopping a program, or having a trace cut short at the step limit, no longer leaves the page sluggish.
+- A trace that stops at the step limit no longer cuts short the program running beside it, or ends in an internal error.
+- A match that runs out of cases now tells you where it is, instead of reporting "Inexhaustive pattern match failure" with no location to look at.
+- (string) with no characters now gives you the empty string and (append) with no lists gives you the empty list, instead of an internal error message or nothing at all.
+- Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.
+- The REPL now has a Copy button that puts the whole transcript on your clipboard, and dragging across several entries finally highlights as you go.
+- If Scamper ever gets stuck — a file too big to open, or an editor that will not start — the new page at files.html lists everything stored in your browser so you can download what you want to keep and delete what is in the way, without losing the rest of your work.
+- The documentation for apply☀︎ lists the types of its two arguments correctly, as a procedure and a list; it named two types that do not exist, which also made the docs page describe it wrongly.
+- The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, and show the first function that compose, o, any-of, and all-of require.
+- The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, so the page no longer tells you to write (qn).
+- Stepping through a program is about twice as fast, so a trace appears sooner.
+- (-) and (/) with no numbers now tell you they need at least one instead of reporting an internal error, and beside, above and overlay with no images now give an empty image that no longer makes the picture around it disappear.
+- (compose) and (o) with no functions now give you back a function that leaves its argument alone, and (any-of) and (all-of) with no predicates give you one that always answers #f and #t, instead of an arity error.
+- A let binding whose value does not fit its pattern now points at the binding that failed, instead of reporting the mismatch with no location to look at.
+- When a built-in function stops with an unexpected internal error — a bad regex pattern, say — the error now points at your call instead of at a line inside Scamper's own libraries.
+- You can now write ?? on its own, without parentheses, wherever you have not written an expression yet: Scamper complains only if it actually reaches one, and points at the ?? it reached instead of reporting a type error.
+- The image library gains polygons, diamonds, wedges, right triangles and equilateral triangles, procedures for asking a shape what it is and how big it is, and a description you can give any image — which is what a screen reader now reads out, made up for you if you do not write one.
+
+# 4.3.0
+
+- pixel-map, map, filter, fold-right, and reduce-right now work on large images and long lists instead of stopping with a max call stack depth error.
+- Suggestions no longer pop up on their own as you type — press Ctrl+Space for completions and Ctrl+Shift+Space for a function's parameters, or turn on Suggest as You Type in the Edit menu.
+- font now takes its family, bold, and italic arguments optionally, so (font "Arial") works, font and text now report a bad argument instead of quietly ignoring it, and canvas-text! now accepts a font at all.
+- The line width of outlined-circle is now optional and defaults to 1, as (outlined-circle 30 "red"), like every other outlined shape.
+- The documentation for rotate no longer warns that it is buggy — the off-centre turn it described was fixed some releases ago, so the note was simply out of date.
+- Color swatches now label themselves in plain black or white, chosen for readability, instead of a computed color that could be hard to read on transparent or vivid colors.
+- Documenting a constant in your own file, as name: predicate, no longer warns that the docstring is attached to something that is not a function.
+- all-color-names is now called with no arguments, as (all-color-names), rather than requiring a meaningless one.
+- An image you have uploaded can now be read straight into a program with (image-load "cat.png"), and a canvas written back out with (image-save! canvas "out.png").
+- Programs now run several times faster — pixel-map over a photograph finishes in seconds rather than half a minute — and an error raised inside a built-in function now underlines the call you wrote instead of reporting no location at all.
+
+# 4.2.0
+
+- A test in a reading page now looks green when it passes and red when it fails, instead of looking the same either way, and values it prints are in the same typewriter face as the code above them.
+- A separator at the very start or end of a string no longer leaves an empty string behind in the result of string-split, so (string-split "snicker snack" "ck") gives you two pieces rather than three.
+- The second argument to substring is now optional, so (substring "alphabetical" 5) gives you "betical" instead of an error.
+- circle, solid-circle, and outlined-circle now take the diameter rather than the radius, so (solid-circle 100 "red") is the same size as (solid-square 100 "red"); double the number in a drawing you already have to keep it the size it was.
+- An outlined shape can now say how wide to draw its outline and is no longer cut off at its edges; outlined-circle now requires that width, as (outlined-circle 30 "red" 10), while every other shape takes it optionally.
+- The empty string now prints as "" rather than as #t, and the string "value" now prints as itself.
+
+# 4.1.1
+
+- The Run button no longer shows square corners poking out of it when you hover over it.
+- A program that has finished is no longer sometimes treated as still running, which could leave the Run button stuck on Stop or stop the rest of a reading page from running.
+- The documentation now lists null, which was missing from it, and shows a constant such as pi as a value rather than as a function you would call.
+- On the documentation page, setting a filter to "and" without ticking anything in it no longer wipes out your search results.
+- Choosing a file in a reading page's example now runs the code that was waiting for it, instead of doing nothing.
+- A colour name written with capitals, such as (color-name->rgb "RED"), now gives you that colour instead of quietly giving you nothing.
+- When assoc-ref cannot find a key, it now shows you the key it looked for rather than a piece of jargon.
+- Saving a file in Safari now works instead of failing with a message about createWritable, so you can use Scamper there without signing in.
+
+# 4.1.0
+
+- Your file can now be shown as a notebook: each definition or expression in its own box, with what it printed underneath, and the comments between them as formatted text.
+- The output now opens in a pane beside your code rather than in a window floating over it.
+- The separate run window has been removed.
+- The View menu can now show the internal files Scamper keeps, such as saved file histories, which open read-only.
+- Pressing Run on a file with no code in it no longer fails silently.
+- Audio pipelines now accept a sample, so a sample-node can drive one.
+- Your file now runs by itself when you open it and a moment after you stop typing; the Run button says "Autorun" while it does, and Run > Live Evaluation turns it off.
+- Scamper now indents your code as you type, re-indents or reformats a whole file to the standard style, and wraps long expressions in the output instead of running them off the edge.
+- An @example line in a docstring now gets a checkmark when your code agrees with it and a cross when it does not; Run > Check Examples turns this off.
+- Files that are not Scamper programs now open properly: plain text without the Scheme squiggles, Markdown and CSV with their own colouring, images as a picture, and other files with a note instead of gibberish.
+- A string containing a newline or a tab now prints as "a\nb" on one line instead of breaking across two.
+- Reformatting your file now keeps the blank lines you left between paragraphs of comments.
+- Scamper examples can now be embedded in a web page as a live transcript, so a reading can show code beside what it produces.
+- A struct or define-export now appears once above its output instead of being repeated for every definition it stands for.
+- A REPL window opens on your file so you can try things against its definitions one line at a time, without changing the file; it offers the same completions and documentation as the editor, including the names your file and your earlier lines defined.
+- Searching for a function now happens on the documentation page itself, which looks like the rest of Scamper rather than a separate page of its own.
+- A comment block at the top of your file no longer runs into the documentation on the first function below it, so that function keeps its checked examples and argument checks.
+- A reactive canvas or container can subscribe to more than one event again, so a program can react to a timer, the mouse, and the keyboard at the same time.
+- Pictures, charts, and compositions in an embedded reading now appear as themselves rather than as the text of the expression that made them.
+- A new gradescope library turns your test results into the file Gradescope reads, so an instructor can autograde Scamper work with the same tests you write.
+
+# 4.0.0
+
+> AY 2026–2027 release
+
+- Major updates to Scamper for the 26–27 academic year!
+- Scamper is now backed by a server for cloud-based file sharing. See the current CSC 151 instructor for an account.
+- The UI has been overhauled to better reflect the feature set of a modern IDE.
+- Both the language and libraries have been revised heavily. See the documentation for relevant updates.

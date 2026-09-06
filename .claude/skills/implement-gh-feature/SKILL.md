@@ -14,7 +14,7 @@ Given a Github issue number:
     + Make architectural choices that favor conciseness and elegance first in implementation and extensibility second.
 5. STOP - approval gate. Call EnterPlanMode. Write the complete implementation plan to `.claude/feature-plan.md`. Summarize the feature and the implementation plan. List the files affected and a summary of the planned changes to each file. Then call ExitPlanMode and wait. Proceed to the next step only after the user accepts. Answers to AskUserQuestion are never approval — the tool resolves options inside a plan and does not authorize executing one. If the user rejects or amends, revise the plan file and call ExitPlanMode again.
 6. Execute the approved (potentially modified) plan, spawning subagents as needed, indicated by the plan.
-7. Add a line to `patch-notes.ts` summarizing the feature, following the guidance found in `CLAUDE.md`.
+7. Add a line to `patch-notes.md` summarizing the feature, following the guidance found in `CLAUDE.md`.
 8. Spawn a subagent to run an independent code review of your work. Resolve suggestions on your own, prompting the user when a resolution would result in a non-trivial change to the code or feature design.
 8. Once completed and verified, file a pull request on Github for user review. Give a summary of your work to the user.
 9. At this point, if the user gives you approval to accept any of these PRs on their behalf, you may do so.

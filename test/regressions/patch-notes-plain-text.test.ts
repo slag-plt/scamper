@@ -39,3 +39,23 @@ test('every released entry keeps at least one note, and none is empty', () => {
     }
   }
 })
+
+// The notes moved from a TypeScript array to patch-notes.md (#565). The array
+// failed to compile if it were mangled; a Markdown file does not, and the
+// parser is deliberately forgiving -- an unterminated `<!--` silently swallows
+// every entry below it, for instance. Nothing else asserts that a release still
+// has its notes, so this pins the history: entries are only ever added, never
+// removed, so this list only ever grows.
+const RELEASED_SO_FAR = ['4.3.0', '4.2.0', '4.1.1', '4.1.0', '4.0.0']
+
+test('no release loses its notes to a mis-parse', () => {
+  const versions = patchNotes.map((n) => n.version)
+  for (const version of RELEASED_SO_FAR) {
+    expect(versions).toContain(version)
+    const entry = patchNotes.find((n) => n.version === version)
+    expect(entry?.notes.length ?? 0).toBeGreaterThan(0)
+  }
+  // And the accumulating entry is still the first thing in the file, which is
+  // where a new note is appended.
+  expect(versions[0]).toBe(NEXT_RELEASE)
+})

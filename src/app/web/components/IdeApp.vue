@@ -84,6 +84,7 @@ import {
   compareVersions,
   NEXT_RELEASE,
   patchNotes,
+  patchNotesFor,
   patchNotesSince,
   type PatchNote,
 } from '../patch-notes'
@@ -819,7 +820,7 @@ async function offerLocalFiles() {
  * without notes.
  */
 async function handleWhatsNew() {
-  const forThisVersion = patchNotes.filter((n) => n.version === APP_VERSION)
+  const forThisVersion = patchNotesFor(APP_VERSION)
   const notes =
     forThisVersion.length > 0
       ? forThisVersion

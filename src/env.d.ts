@@ -17,6 +17,11 @@ declare module '*.scm?raw' {
   export default src
 }
 
+declare module '*.md?raw' {
+  const src: string
+  export default src
+}
+
 // Vite builds the module and inlines it as a blob URL; the default export
 // constructs a worker running it. See src/fs/opfs-writer.ts.
 declare module '*?worker&inline' {
