@@ -20,6 +20,7 @@ expr ::= <identifier>
        | [ expr1 ... exprk ]                        ; vector literal
        | { key1 val1 ... keyn valn }                ; map literal
        | # ( expr )                                 ; anonymous function
+       | ??                                         ; hole
        | ( expr1 ... exprk )                        ; application
        | ( lambda paramlist expr )
        | ( if expr1 expr2 expr3 )
@@ -58,17 +59,22 @@ The body is an ordinary expression, so any parenthesized form may appear: `#(+ %
 
 `&` in a parameter list separates the fixed parameters from a rest parameter.
 
+`??` is a *hole*: a placeholder for an expression not yet written.
+Reaching one raises "Hole encountered in program!", so a hole in a branch that is not taken costs nothing—`(if #t 1 ??)` is `1`, and a function whose body is a hole is fine until it is called.
+It is an atomic form rather than a parenthesized one, so it is written bare (`(+ 1 ??)`); `(??)`, the spelling from when `??` was a nullary library procedure, still raises, since a head is evaluated before its call.
+
 A one-argument `import` injects a module's exported names into the current scope.
 A two-argument `import` binds the module under a qualified name instead: its exports are reachable only as `<alias>.<name>` and are not injected into scope.
 A module exports only the names its `export` statements list, taking their union; a module with no `export` statement exports nothing.
 
 ## Core forms
 
-Expansion leaves seven expression forms:
+Expansion leaves eight expression forms:
 
 ~~~
 expr ::= <identifier>
        | <number> | <boolean> | <char> | <string>
+       | ??
        | ( expr1 ... exprk )
        | ( lambda paramlist expr )
        | ( if expr1 expr2 expr3 )
@@ -172,6 +178,7 @@ instr ::= lit(value)                          [0/1]
         | let(pat)
         | if(ifBranch, elseBranch)            [1/1]
         | match(branches)                     [1/1]
+        | hole                                [0/0]  ; always raises
         | push-handler                        [1/0]
         | pop-handler                         [0/0]
         | pop-scope                           [0/0]

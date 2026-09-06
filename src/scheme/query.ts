@@ -91,8 +91,10 @@ interface Slot {
 
 function slotsOf(exp: A.Exp): Slot[] {
   switch (exp.tag) {
+    // Atomic: a hole, like a literal or a name, has no sub-expression to query.
     case 'lit':
     case 'id':
+    case 'hole':
       return []
 
     case 'app':

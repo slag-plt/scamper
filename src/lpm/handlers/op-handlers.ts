@@ -347,6 +347,15 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
   return traceStep
 }
 
+export const HoleHandler: OpHandler<'hole'> = (op, currFrame) => {
+  throw new ScamperError(
+    'Runtime',
+    'Hole encountered in program!',
+    undefined,
+    currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
+  )
+}
+
 export const PopScopeHandler: OpHandler<'pop-scope'> = (_op, currFrame) => {
   currFrame.env = currFrame.env.popScope()
   return minorStep

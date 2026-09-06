@@ -38,6 +38,7 @@ const FORM_LABELS: Record<string, string> = {
   Boolean: 'boolean',
   Char: 'char',
   Identifier: 'identifier',
+  Hole: 'hole',
   LineComment: 'comment',
 }
 

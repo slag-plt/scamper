@@ -16,6 +16,7 @@ function collectAndNormalizePercent(
   const rec = (x: A.Exp) => collectAndNormalizePercent(x, acc)
   switch (e.tag) {
     case 'lit':
+    case 'hole':
       return e
     case 'id': {
       if (e.name === '%&') {
@@ -65,6 +66,9 @@ export function expandExpr(e: A.Exp): A.Exp {
     case 'id':
       return e
     case 'lit':
+      return e
+    // Core (see A.Hole): codegen lowers it to the `hole` op directly.
+    case 'hole':
       return e
     case 'app':
       return A.mkApp(expandExpr(e.head), e.args.map(expandExpr), e.range)

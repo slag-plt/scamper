@@ -95,6 +95,7 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     // Leaves: no sub-expressions, no scopes.
     case 'id':
     case 'lit':
+    case 'hole':
       return []
 
     // Transparent forms: forward the scopes of every sub-expression.

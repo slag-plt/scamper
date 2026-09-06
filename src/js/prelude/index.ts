@@ -1011,10 +1011,6 @@ export function prelude_voidQ(x: L.Value): boolean {
   return x === undefined
 }
 
-export function prelude_qq(): never {
-  throw new L.ScamperError('Runtime', 'Hole encountered in program!')
-}
-
 export function prelude_range(...args: number[]): L.List {
   if (args.length === 0 || args.length > 3) {
     throw new L.ScamperError(

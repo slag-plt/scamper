@@ -15,6 +15,7 @@ import {
   applyFn,
   ApSpreadHandler,
   ClsHandler,
+  HoleHandler,
   IfHandler,
   LetHandler,
   LitHandler,
@@ -434,6 +435,9 @@ export class Fiber {
         break
       case 'if':
         isMajorStep = IfHandler(currOp, this.currentFrame, this)
+        break
+      case 'hole':
+        isMajorStep = HoleHandler(currOp, this.currentFrame, this)
         break
       case 'pop-scope':
         isMajorStep = PopScopeHandler(currOp, this.currentFrame, this)

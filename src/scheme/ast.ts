@@ -193,6 +193,14 @@ export interface Match extends Tagged, Node {
   scrutinee: Exp
   branches: { pat: Pat; body: Exp }[]
 }
+// A hole `??`: the placeholder for an expression not yet written. It is core
+// rather than sugar -- there is no expression it could expand to that raises
+// only when reached -- so it survives expansion and lowers to the `hole` op,
+// whose handler raises. Reaching one is an error; not reaching one is not, so
+// `(if #t 1 ??)` is 1.
+export interface Hole extends Tagged, Node {
+  tag: 'hole'
+}
 // Sugared Forms
 // A vector literal `[e1 ... ek]`. Expansion (expansion.ts) rewrites it to
 // `(vector e1 ... ek)` tagged `provenance:'vector-lit'`; nothing downstream of
@@ -238,6 +246,7 @@ export type Exp =
   | Begin
   | If
   | Match
+  | Hole
   | And
   | Or
   | Cond
@@ -442,6 +451,10 @@ export const mkMatch = (
   branches: { pat: Pat; body: Exp }[],
   range: L.Range = L.Range.none,
 ): Match => ({ tag: 'match', scrutinee, branches, range })
+export const mkHole = (range: L.Range = L.Range.none): Hole => ({
+  tag: 'hole',
+  range,
+})
 export const mkAnd = (exps: Exp[], range: L.Range = L.Range.none): And => ({
   tag: 'and',
   exps,
@@ -554,6 +567,7 @@ export function isExp(v: unknown): v is Exp {
       'begin',
       'if',
       'match',
+      'hole',
       'and',
       'or',
       'cond',
@@ -840,6 +854,9 @@ function expLayout(e: Exp): Layout {
           clause([patToLayout(pat), expToLayout(body)]),
         ),
       ])
+    case 'hole':
+      // Atomic: `??` is the whole form, so there is no group to lay out.
+      return tok('??')
     case 'and':
       return special('and', e.exps.map(expToLayout))
     case 'or':
@@ -1039,6 +1056,9 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.branches.every(({ pat }, i) => patEquals(pat, e2.branches[i].pat)) &&
       e1.branches.every(({ body }, i) => expEquals(body, e2.branches[i].body))
     )
+  } else if (e1.tag === 'hole' && e2.tag === 'hole') {
+    // A hole carries nothing, so any two are the same expression.
+    return true
   } else if (e1.tag === 'and' && e2.tag === 'and') {
     return (
       e1.exps.length === e2.exps.length &&

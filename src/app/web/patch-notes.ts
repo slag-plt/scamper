@@ -65,6 +65,7 @@ export const patchNotes: PatchNote[] = [
       '(compose) and (o) with no functions now give you back a function that leaves its argument alone, and (any-of) and (all-of) with no predicates give you one that always answers #f and #t, instead of an arity error.',
       'A let binding whose value does not fit its pattern now points at the binding that failed, instead of reporting the mismatch with no location to look at.',
       'When a built-in function stops with an unexpected internal error — a bad regex pattern, say — the error now points at your call instead of at a line inside Scamper\'s own libraries.',
+      'You can now write ?? on its own, without parentheses, wherever you have not written an expression yet: Scamper complains only if it actually reaches one, and points at the ?? it reached instead of reporting a type error.',
     ],
   },
   {
