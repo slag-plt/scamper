@@ -505,6 +505,11 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
       return identifier(ctx, node, 'Expected an identifier', true, true)
     }
 
+    // `??`, the hole (issue #561). Atomic, so its only child is the keyword
+    // itself and there is nothing to convert.
+    case 'Hole':
+      return A.mkHole(range)
+
     case 'Vector':
       // `[e1 ... ek]`: every element is an ordinary sub-expression, evaluated
       // like any other (issue #325).

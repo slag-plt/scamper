@@ -107,6 +107,7 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
     case 'import':
     case 'lit':
     case 'id':
+    case 'hole':
     case 'pwild':
     case 'plit':
       return []

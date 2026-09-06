@@ -178,6 +178,10 @@ export const mkIf = (
   range: Range = Range.none,
   provenance?: L.Provenance,
 ): L.If => ({ tag: 'if', thenB, elseB, range, provenance })
+export const mkHole = (range: Range = Range.none): L.Hole => ({
+  tag: 'hole',
+  range,
+})
 export const mkPopScope = (range: Range = Range.none): L.PopScope => ({
   tag: 'pop-scope',
   range,

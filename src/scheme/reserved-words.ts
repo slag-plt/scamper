@@ -3,6 +3,8 @@
 // test/scheme/parsing/grammar-keyword-parity.test.ts), and none of them can
 // be used as a variable/identifier name.
 export const reservedWords = [
+  // The hole, `??`: an atomic special form rather than a parenthesized one.
+  '??',
   'and',
   'begin',
   'cond',

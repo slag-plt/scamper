@@ -16,6 +16,8 @@ describe('lezer-bridge parsing', () => {
     expectParses('(or 1 2 3)')
     expectParses('(export a b c)')
     expectParses('(define-export x 1)')
+    expectParses('??')
+    expectParses('(+ 1 ??)')
   })
 
   test('rest parameters use Clojure-style "&", including zero fixed params (#272)', () => {
@@ -267,6 +269,7 @@ describe('lezer-bridge parsing', () => {
     // as reservedWords grows.
     expect(reservedWords.slice().sort()).toEqual(
       [
+        '??',
         'and',
         'begin',
         'cond',

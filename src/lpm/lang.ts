@@ -689,6 +689,15 @@ export interface If {
   range: Range
   provenance?: Provenance
 }
+// N.B., what the surface `??` lowers to: executing it raises "Hole encountered
+// in program!" at `range`. Unrelated to the HOLE sentinel above, which marks an
+// unassigned binder rather than a place in the program. It is an op rather than
+// a call to a primitive so that a hole is atomic -- its error names the hole's
+// own source range, and a reduction trace never shows a function behind it.
+export interface Hole {
+  tag: 'hole'
+  range: Range
+}
 export interface PopScope {
   tag: 'pop-scope'
   range: Range
@@ -722,6 +731,7 @@ export type Ops =
   | Match
   | Let
   | If
+  | Hole
   | PopScope
   | ApSpread
   | PushHandler

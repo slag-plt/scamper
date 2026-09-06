@@ -88,8 +88,10 @@ function flattenBegin(e: A.Exp): A.Exp[] | null {
 
 export function sugarExpr(e: A.Exp): A.Exp {
   switch (e.tag) {
+    // Core and atomic: each is already its own surface spelling.
     case 'lit':
     case 'id':
+    case 'hole':
       return e
 
     case 'app': {

@@ -837,15 +837,17 @@ test('error', async () => {
   ])
 })
 
-test('error-qq', async () => {
+test('error-then-hole', async () => {
+  // A failed statement aborts only itself, so the hole in the next one is
+  // still reached.
   expect(
     await runProgram(`
 (error "existing")
-(+ 5 (??))
+(+ 5 ??)
 `),
   ).toEqual([
     'Runtime error: (error) existing',
-    'Runtime error: (??) Hole encountered in program!',
+    'Runtime error: Hole encountered in program!',
   ])
 })
 
@@ -1341,14 +1343,6 @@ test('positive-negative', async () => {
 (negative? (- 7 4))
 `),
   ).toEqual(['#f', '#f', '#f', '#t', '#t', '#f', '#t', '#t', '#f', '#f'])
-})
-
-test('qq', async () => {
-  expect(
-    await runProgram(`
-(+ (??) 1)
-`),
-  ).toEqual(['Runtime error: (??) Hole encountered in program!'])
 })
 
 test('random', async () => {

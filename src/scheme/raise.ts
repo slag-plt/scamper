@@ -168,6 +168,14 @@ export function raiseFrame(
         break
       }
 
+      case 'hole': {
+        // Only ever reached for a hole that has not run yet -- running one
+        // raises -- so it reconstructs as the `??` still standing in the
+        // source.
+        values.push(A.mkHole(op.range))
+        break
+      }
+
       case 'pop-scope': {
         // Runtime scope bookkeeping only; nothing to reconstruct.
         break

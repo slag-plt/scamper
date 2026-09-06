@@ -1062,11 +1062,6 @@
 ;;; @category predicates, typecheck, pair?, list?, null?, procedure?, ref?, vector?
 (define-export void? (js-var "prelude_voidQ"))
 
-;;; ??: any
-;;; A placeholder for an expression that is not yet implemented.
-;;; @category constants, other
-(define-export ?? (js-var "prelude_qq"))
-
 ;;; (compose & f1) -> procedure?
 ;;;  f1 : procedure?
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.

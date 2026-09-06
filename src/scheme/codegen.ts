@@ -22,6 +22,8 @@ function lowerExpr(e: A.Exp): L.Blk {
       return [L.mkLit(e.value, e.range, e.provenance)]
     case 'id':
       return [L.mkVar(e.name, e.range)]
+    case 'hole':
+      return [L.mkHole(e.range)]
     case 'app':
       // Internal spread-application `(##ap-spread## fn argList)`, emitted by
       // contract.ts for rest-parameter targets. Lowered to an *inline*

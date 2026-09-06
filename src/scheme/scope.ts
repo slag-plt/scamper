@@ -139,7 +139,9 @@ function scopeCheckExp(
       return
     }
 
+    // Neither a literal nor a hole references a name or binds one.
     case 'lit':
+    case 'hole':
       return
 
     case 'app': {

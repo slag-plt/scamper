@@ -72,6 +72,12 @@ expression {
   // the body is a normal expression, any parenthesized form (application, let,
   // if, ...) can appear -- expansion wraps it verbatim in a lambda.
   AnonFn { AnonHash expression } |
+  // A hole: the placeholder for an expression not yet written. Atomic rather
+  // than parenthesized, so it is written bare -- `(+ 1 ??)`. Reaching one at
+  // runtime raises "Hole encountered in program!" (see the `hole` op in
+  // src/lpm/lang.ts). `(??)` still parses, as an application whose head is a
+  // hole, and still raises, since a head is evaluated before the call.
+  Hole { kw<"??"> } |
   Application { paren<expression*> } |
   Let { paren<kw<"let"> Bindings { paren<Binding*> } expression> } |
   Match { paren<kw<"match"> expression MatchClause*> }

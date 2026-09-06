@@ -26,16 +26,8 @@ import { functionDocSignature } from '../../src/scheme/docstring/render'
  * why. A new entry needs a reason and an issue -- it means the signature a
  * student reads is not the one the binding has.
  */
-const KNOWN_BAD = new Map<string, string>([
-  [
-    'prelude:??',
-    // `??: any` documents a constant, but prelude_qq is a nullary function
-    // that throws "Hole encountered in program!". Since the binding is that
-    // function, `(+ 1 ??)` reports a type error instead of the hole. Fixing it
-    // decides what a hole *is* -- a language question, not a docstring edit.
-    'documented as a constant but bound to a nullary function -- see #537',
-  ],
-])
+// Empty: every documented signature currently agrees with its implementation.
+const KNOWN_BAD = new Map<string, string>()
 
 /** How many arguments an implementation takes, and nothing else about it. */
 interface Arity {
