@@ -66,6 +66,7 @@ export const patchNotes: PatchNote[] = [
       'A let binding whose value does not fit its pattern now points at the binding that failed, instead of reporting the mismatch with no location to look at.',
       'When a built-in function stops with an unexpected internal error — a bad regex pattern, say — the error now points at your call instead of at a line inside Scamper\'s own libraries.',
       'You can now write ?? on its own, without parentheses, wherever you have not written an expression yet: Scamper complains only if it actually reaches one, and points at the ?? it reached instead of reporting a type error.',
+      'The image library gains polygons, diamonds, wedges, right triangles and equilateral triangles, procedures for asking a shape what it is and how big it is, and a description you can give any image — which is what a screen reader now reads out, made up for you if you do not write one.',
     ],
   },
   {

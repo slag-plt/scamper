@@ -39,6 +39,7 @@ import {
 import {
   drawing_above,
   drawing_beside,
+  drawing_diamond,
   drawing_drawingToCanvas,
   drawing_drawingToPixels,
   drawing_ellipse,
@@ -46,9 +47,12 @@ import {
   drawing_overlay,
   drawing_overlayOffset,
   drawing_path,
+  drawing_polygon,
   drawing_rectangle,
+  drawing_rightTriangle,
   drawing_rotate,
   drawing_text,
+  drawing_wedge,
   drawing_withDash,
 } from '../../src/js/image/drawing.js'
 
@@ -568,5 +572,98 @@ describe('with-image-file renders a chosen image', () => {
     await vi.waitFor(() => {
       expect(rendered.textContent).toContain('Could not read that file as an image')
     })
+  })
+})
+
+// A polygon, a diamond and a right triangle are all a Path, and an outlined one
+// must be stroked all the way round. `stroke()` does not close a path the way
+// `fill()` does, so without an explicit closePath the edge back to the first
+// vertex went unpainted -- three-quarters of a diamond (#432).
+describe('closed shapes are stroked all the way round', () => {
+  // Whether anything at all was painted here. A diagonal edge is antialiased,
+  // so its exact colour is not stable, but an edge that was never stroked
+  // leaves the background exactly as drawing_clearDrawing laid it down.
+  const painted = (canvas: HTMLCanvasElement, x: number, y: number): boolean =>
+    pixel(canvas, x, y).slice(0, 3).some((channel) => channel !== 255)
+
+  test('an outlined diamond paints all four edges', () => {
+    const canvas = drawing_drawingToCanvas(drawing_diamond(40, 40, 'outline', 'red', 2))
+    expect([canvas.width, canvas.height]).toEqual([42, 42])
+    // One midpoint per edge, going round; the last is the closing edge, which
+    // is the one that used to come out blank.
+    expect(painted(canvas, 31, 11)).toBe(true)
+    expect(painted(canvas, 31, 31)).toBe(true)
+    expect(painted(canvas, 11, 31)).toBe(true)
+    expect(painted(canvas, 11, 11)).toBe(true)
+  })
+
+  test('an outlined right triangle paints its third edge', () => {
+    const canvas = drawing_drawingToCanvas(drawing_rightTriangle(40, 40, 'outline', 'red', 2))
+    expect([canvas.width, canvas.height]).toEqual([42, 42])
+    expect(painted(canvas, 21, 21)).toBe(true)
+    expect(painted(canvas, 21, 41)).toBe(true)
+    // The left edge, from the last vertex back to the first.
+    expect(painted(canvas, 1, 21)).toBe(true)
+  })
+
+  test('an outlined polygon paints its closing edge', () => {
+    const square = L.mkList(
+      L.mkPair(0, 0), L.mkPair(40, 0), L.mkPair(40, 40), L.mkPair(0, 40),
+    )
+    const canvas = drawing_drawingToCanvas(drawing_polygon(square, 'outline', 'red', 2))
+    expect([canvas.width, canvas.height]).toEqual([42, 42])
+    expect(painted(canvas, 21, 1)).toBe(true)
+    expect(painted(canvas, 41, 21)).toBe(true)
+    expect(painted(canvas, 21, 41)).toBe(true)
+    expect(painted(canvas, 1, 21)).toBe(true)
+  })
+
+  test('path stays open, which is what distinguishes it from polygon', () => {
+    // The same four vertices as the polygon above, traced rather than closed:
+    // the edge from the last back to the first is left unpainted.
+    const square = L.mkList(
+      L.mkPair(1, 1), L.mkPair(41, 1), L.mkPair(41, 41), L.mkPair(1, 41),
+    )
+    const canvas = drawing_drawingToCanvas(drawing_path(42, 42, square, 'outline', 'red', 2))
+    expect(painted(canvas, 21, 2)).toBe(true)
+    expect(painted(canvas, 2, 21)).toBe(false)
+  })
+})
+
+// The wedge is the one shape #432 added that a path could not express, so it is
+// the one with rendering of its own to check. An unpainted pixel reads as the
+// white `drawing_clearDrawing` lays down, not as transparent.
+describe('wedge rendering', () => {
+  const RED = [255, 0, 0, 255]
+  const WHITE = [255, 255, 255, 255]
+
+  test('a quarter turn fills its own quadrant and nothing else', () => {
+    const canvas = drawing_drawingToCanvas(drawing_wedge(10, 90, 'solid', 'red'))
+    expect([canvas.width, canvas.height]).toEqual([10, 10])
+    // The sweep runs counterclockwise from due east, so the centre sits at the
+    // bottom-left and the slice opens up and to the right.
+    expect(pixel(canvas, 1, 9)).toEqual(RED)
+    expect(pixel(canvas, 2, 8)).toEqual(RED)
+    // Past the radius, on the diagonal away from the centre.
+    expect(pixel(canvas, 9, 0)).toEqual(WHITE)
+  })
+
+  test('a full turn is the whole circle', () => {
+    const canvas = drawing_drawingToCanvas(drawing_wedge(10, 360, 'solid', 'red'))
+    expect([canvas.width, canvas.height]).toEqual([20, 20])
+    expect(pixel(canvas, 10, 10)).toEqual(RED)
+    expect(pixel(canvas, 10, 1)).toEqual(RED)
+    expect(pixel(canvas, 1, 10)).toEqual(RED)
+    // The corners of the box lie outside a circle inscribed in it.
+    expect(pixel(canvas, 0, 0)).toEqual(WHITE)
+    expect(pixel(canvas, 19, 19)).toEqual(WHITE)
+  })
+
+  test('a half turn is a semicircle, half as tall as it is wide', () => {
+    const canvas = drawing_drawingToCanvas(drawing_wedge(10, 180, 'solid', 'red'))
+    expect([canvas.width, canvas.height]).toEqual([20, 10])
+    expect(pixel(canvas, 10, 9)).toEqual(RED)
+    expect(pixel(canvas, 10, 1)).toEqual(RED)
+    expect(pixel(canvas, 0, 0)).toEqual(WHITE)
   })
 })

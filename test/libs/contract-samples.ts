@@ -54,6 +54,19 @@ export const SAMPLES: Record<string, string> = {
   'drawing?': '(solid-square 10 "red")',
   'fill-mode?': '"solid"',
   'font?': '(font "sans-serif")',
+  // The shape predicates are structural (#432), so any value of the right shape
+  // will do -- a square is a rectangle, and a diamond is a polygon.
+  'ellipse?': '(solid-ellipse 10 20 "red")',
+  'circle?': '(solid-circle 10 "red")',
+  'rectangle?': '(solid-rectangle 10 20 "red")',
+  'square?': '(solid-square 10 "red")',
+  'isosceles-triangle?': '(solid-isosceles-triangle 10 20 "red")',
+  'equilateral-triangle?': '(solid-equilateral-triangle 10 "red")',
+  'right-triangle?': '(solid-right-triangle 10 20 "red")',
+  'polygon?': '(solid-polygon (list (pair 0 0) (pair 10 0) (pair 5 8)) "red")',
+  '(list-of pair?)': '(list (pair 0 0) (pair 10 0) (pair 5 8))',
+  'diamond?': '(solid-diamond 10 20 "red")',
+  'wedge?': '(solid-wedge 10 90 "red")',
 
   // music
   'dur?': 'qn',

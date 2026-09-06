@@ -1916,3 +1916,371 @@ describe('image-load, image-save!', () => {
 `)).toEqual(['Runtime error: (error) expected a canvas, received string'])
   })
 })
+
+// The shapes ported from the csc151 library (#432), together with the
+// predicates and accessors that ask a shape what it is. Those predicates are
+// structural -- a 20x20 ellipse *is* a circle -- which is what csc151 does and
+// what lets `circle` stay an Ellipse and `square` a Rectangle here.
+describe('csc151 shapes', () => {
+  describe('polygon', () => {
+    test('is sized to fit its own points, wherever they start', async () => {
+      expect(await runProgram(`
+(import image)
+(define tri (list (pair 0 0) (pair 20 0) (pair 10 30)))
+(image-width (solid-polygon tri "red"))
+(image-height (solid-polygon tri "red"))
+(image-width (solid-polygon (list (pair 100 50) (pair 120 50) (pair 110 80)) "red"))
+`)).toEqual(['20', '30', '20'])
+    })
+
+    test('an outline grows the box by its line width', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (outlined-polygon (list (pair 0 0) (pair 20 0) (pair 10 30)) "red" 4))
+(image-height (outlined-polygon (list (pair 0 0) (pair 20 0) (pair 10 30)) "red" 4))
+`)).toEqual(['24', '34'])
+    })
+
+    test('polygon-points reports the vertices, translated to the origin', async () => {
+      expect(await runProgram(`
+(import image)
+(polygon-points (solid-polygon (list (pair 100 50) (pair 120 50) (pair 110 80)) "red"))
+`)).toEqual(['(list (pair 0 0) (pair 20 0) (pair 10 30))'])
+    })
+
+    test('an empty polygon has no size rather than a negative one', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-polygon null "red"))
+(image-height (solid-polygon null "red"))
+`)).toEqual(['0', '0'])
+    })
+  })
+
+  describe('diamond', () => {
+    test('takes the size it is given', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-diamond 20 30 "red"))
+(image-height (solid-diamond 20 30 "red"))
+(image-width (outlined-diamond 20 30 "red" 4))
+(diamond-width (outlined-diamond 20 30 "red" 4))
+(diamond-height (solid-diamond 20 30 "red"))
+`)).toEqual(['20', '30', '24', '20', '30'])
+    })
+
+    test('its vertices are the midpoints of its box', async () => {
+      expect(await runProgram(`
+(import image)
+(polygon-points (solid-diamond 20 30 "red"))
+`)).toEqual(['(list (pair 10 0) (pair 20 15) (pair 10 30) (pair 0 15))'])
+    })
+  })
+
+  describe('right-triangle', () => {
+    test('takes the size it is given, right angle at the bottom-left', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-right-triangle 20 30 "blue"))
+(image-height (solid-right-triangle 20 30 "blue"))
+(right-triangle-width (solid-right-triangle 20 30 "blue"))
+(right-triangle-height (solid-right-triangle 20 30 "blue"))
+(polygon-points (solid-right-triangle 20 30 "blue"))
+`)).toEqual(['20', '30', '20', '30',
+        '(list (pair 0 0) (pair 20 30) (pair 0 30))'])
+    })
+  })
+
+  describe('equilateral-triangle', () => {
+    // It is `triangle` under another name -- Scamper's triangle already derives
+    // the height that makes all three edges equal.
+    test('is the same shape as triangle', async () => {
+      expect(await runProgram(`
+(import image)
+(equal? (image-width (solid-equilateral-triangle 20 "red"))
+        (image-width (solid-triangle 20 "red")))
+(equal? (image-height (solid-equilateral-triangle 20 "red"))
+        (image-height (solid-triangle 20 "red")))
+(equilateral-triangle-edge (solid-equilateral-triangle 20 "red"))
+`)).toEqual(['#t', '#t', '20'])
+    })
+  })
+
+  describe('wedge', () => {
+    test('a quarter turn occupies one quadrant of its circle', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-wedge 10 90 "green"))
+(image-height (solid-wedge 10 90 "green"))
+`)).toEqual(['10', '10'])
+    })
+
+    test('a full turn is as big as the whole circle', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-wedge 10 360 "green"))
+(image-height (solid-wedge 10 360 "green"))
+`)).toEqual(['20', '20'])
+    })
+
+    test('a half turn is a semicircle', async () => {
+      expect(await runProgram(`
+(import image)
+(image-width (solid-wedge 10 180 "green"))
+(image-height (solid-wedge 10 180 "green"))
+`)).toEqual(['20', '10'])
+    })
+
+    test('reports the radius and angle it was given', async () => {
+      expect(await runProgram(`
+(import image)
+(wedge-radius (solid-wedge 10 90 "green"))
+(wedge-angle (solid-wedge 10 90 "green"))
+(image-width (outlined-wedge 10 90 "green" 4))
+`)).toEqual(['10', '90', '14'])
+    })
+  })
+
+  describe('predicates', () => {
+    test('ask what a shape is, not how it was built', async () => {
+      expect(await runProgram(`
+(import image)
+(circle? (solid-ellipse 20 20 "red"))
+(circle? (solid-ellipse 20 30 "red"))
+(square? (solid-rectangle 20 20 "red"))
+(square? (solid-rectangle 20 30 "red"))
+(equilateral-triangle? (solid-triangle 20 "red"))
+(equilateral-triangle? (solid-isosceles-triangle 20 20 "red"))
+`)).toEqual(['#t', '#f', '#t', '#f', '#t', '#f'])
+    })
+
+    test('an outline does not change what a shape is', async () => {
+      expect(await runProgram(`
+(import image)
+(circle? (outlined-circle 20 "red" 4))
+(square? (outlined-square 20 "red" 4))
+(equilateral-triangle? (outlined-triangle 20 "red" 4))
+`)).toEqual(['#t', '#t', '#t'])
+    })
+
+    test('the new shapes recognise themselves', async () => {
+      expect(await runProgram(`
+(import image)
+(diamond? (solid-diamond 20 30 "red"))
+(right-triangle? (solid-right-triangle 20 30 "red"))
+(wedge? (solid-wedge 10 90 "red"))
+(polygon? (solid-polygon (list (pair 0 0) (pair 10 0) (pair 5 8)) "red"))
+`)).toEqual(['#t', '#t', '#t', '#t'])
+    })
+
+    test('a diamond and a right triangle are polygons, and not each other', async () => {
+      expect(await runProgram(`
+(import image)
+(polygon? (solid-diamond 20 30 "red"))
+(polygon? (solid-right-triangle 20 30 "red"))
+(diamond? (solid-right-triangle 20 30 "red"))
+(right-triangle? (solid-diamond 20 30 "red"))
+(diamond? (solid-circle 20 "red"))
+(wedge? (solid-circle 20 "red"))
+`)).toEqual(['#t', '#t', '#f', '#f', '#f', '#f'])
+    })
+
+    test('solid? and outlined? split the shapes, and reject compositions', async () => {
+      expect(await runProgram(`
+(import image)
+(solid? (solid-circle 20 "red"))
+(outlined? (solid-circle 20 "red"))
+(solid? (outlined-circle 20 "red" 2))
+(outlined? (outlined-circle 20 "red" 2))
+(solid? (beside (solid-circle 20 "red")))
+(outlined? (beside (solid-circle 20 "red")))
+(solid? 5)
+`)).toEqual(['#t', '#f', '#f', '#t', '#f', '#f', '#f'])
+    })
+  })
+
+  describe('accessors', () => {
+    test('report the size the shape was given, not the box it occupies', async () => {
+      expect(await runProgram(`
+(import image)
+(circle-diameter (outlined-circle 20 "red" 4))
+(square-side (outlined-square 20 "red" 4))
+(ellipse-width (outlined-ellipse 20 30 "red" 4))
+(ellipse-height (outlined-ellipse 20 30 "red" 4))
+(rectangle-width (outlined-rectangle 20 30 "red" 4))
+(rectangle-height (outlined-rectangle 20 30 "red" 4))
+(isosceles-triangle-width (outlined-isosceles-triangle 20 30 "red" 4))
+(isosceles-triangle-height (outlined-isosceles-triangle 20 30 "red" 4))
+`)).toEqual(['20', '20', '20', '30', '20', '30', '20', '30'])
+    })
+
+    // Nothing checks this by hand: the predicate in the docstring is what the
+    // contract is derived from. See docs/library-development.md.
+    test('reject a shape of the wrong kind', async () => {
+      expect(await runProgram(`
+(import image)
+(wedge-radius (solid-circle 20 "red"))
+(circle-diameter 5)
+`)).toEqual([
+        'Runtime error: (error) expected a wedge, received [Struct: ellipse]',
+        'Runtime error: (error) expected a circle, received number',
+      ])
+    })
+  })
+
+  describe('image-* aliases', () => {
+    test('are the drawing-* procedures under csc151 names', async () => {
+      expect(await runProgram(`
+(import image)
+(equal? (image-width (solid-square 20 "red")) (drawing-width (solid-square 20 "red")))
+(equal? (image-height (solid-square 20 "red")) (drawing-height (solid-square 20 "red")))
+(equal? (image-color (solid-square 20 "red")) (drawing-color (solid-square 20 "red")))
+(image-color (image-recolor (solid-square 20 "red") "blue"))
+`)).toEqual(['#t', '#t', '#t', '(rgba 0 0 255 255)'])
+    })
+  })
+})
+
+describe('image descriptions', () => {
+  test('a shape describes itself when it is not told what it is', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (solid-circle 20 "red"))
+(describe-image (outlined-square 30 "blue" 2))
+(describe-image (solid-ellipse 20 30 "red"))
+(describe-image (solid-triangle 20 "red"))
+(describe-image (solid-wedge 10 90 "green"))
+(describe-image (solid-diamond 20 30 "purple"))
+(describe-image (solid-right-triangle 20 30 "purple"))
+(describe-image (solid-polygon (list (pair 0 0) (pair 10 0) (pair 5 8)) "orange"))
+`)).toEqual([
+      '"a solid red circle with diameter 20"',
+      '"an outlined blue square with side 30"',
+      '"a solid red ellipse with width 20 and height 30"',
+      '"a solid red equilateral triangle with edge 20"',
+      '"a solid green wedge with radius 10 and angle 90"',
+      '"a solid purple diamond with width 20 and height 30"',
+      '"a solid purple right triangle with width 20 and height 30"',
+      '"a solid orange polygon with 3 vertices"',
+    ])
+  })
+
+  test('a description given to a shape is returned verbatim', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (solid-circle 20 "red" "a sun"))
+(image-description (outlined-square 30 "blue" 2 "a window"))
+`)).toEqual(['"a sun"', '"a window"'])
+  })
+
+  test('image-description and describe-image are the same procedure', async () => {
+    expect(await runProgram(`
+(import image)
+(equal? (image-description (solid-circle 20 "red"))
+        (describe-image (solid-circle 20 "red")))
+`)).toEqual(['#t'])
+  })
+
+  test('a composition describes itself from its parts', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (beside (solid-circle 20 "red") (outlined-square 30 "blue" 2)))
+(describe-image (above (solid-circle 20 "red") (solid-circle 20 "red")))
+`)).toEqual([
+      '"a center-aligned sequence of images (a solid red circle with diameter 20' +
+        ' beside an outlined blue square with side 30)"',
+      '"a middle-aligned stack of images (a solid red circle with diameter 20' +
+        ' above a solid red circle with diameter 20)"',
+    ])
+  })
+
+  test("a part's own description is what the composition uses", async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (beside (solid-circle 20 "red" "a sun") (solid-square 10 "green" "a leaf")))
+`)).toEqual([
+      '"a center-aligned sequence of images (a sun beside a leaf)"',
+    ])
+  })
+
+  test('redescribe names a composition, which takes no description of its own', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (redescribe (beside (solid-circle 20 "red")) "two dots"))
+(image-width (redescribe (solid-square 20 "red") "a box"))
+`)).toEqual(['"two dots"', '20'])
+  })
+
+  test('a rotation and a recolouring keep the description they were given', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (rotate 45 (solid-square 20 "red" "a box")))
+(describe-image (image-recolor (solid-square 20 "red" "a box") "blue"))
+`)).toEqual([
+      '"a box, rotated by 45 degrees"',
+      '"a box"',
+    ])
+  })
+
+  // A description is read aloud, and both renderers derive one on every
+  // repaint, so a drawing built by recursion must not produce an unbounded one.
+  test('a deeply nested composition is summarised rather than spelled out', async () => {
+    expect(await runProgram(`
+(import image)
+(define nest
+  (lambda (n)
+    (if (= n 0)
+        (solid-circle 5 "red")
+        (beside (nest (- n 1)) (nest (- n 1))))))
+(string-contains (describe-image (nest 6)) "a composition of 2 images")
+(< (string-length (describe-image (nest 8))) 2000)
+`)).toEqual(['#t', '#t'])
+  })
+
+  test('a wide composition lists a few parts and counts the rest', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-image (beside (solid-square 1 "red") (solid-square 2 "red")
+                        (solid-square 3 "red") (solid-square 4 "red")
+                        (solid-square 5 "red") (solid-square 6 "red")
+                        (solid-square 7 "red") (solid-square 8 "red")))
+`)).toEqual([
+      '"a center-aligned sequence of images (a solid red square with side 1' +
+        ' beside a solid red square with side 2' +
+        ' beside a solid red square with side 3' +
+        ' beside a solid red square with side 4' +
+        ' beside a solid red square with side 5' +
+        ' beside a solid red square with side 6, and 2 more)"',
+    ])
+  })
+
+  test('a description wins over the derived wording, down to the cut-off', async () => {
+    expect(await runProgram(`
+(import image)
+(define nest
+  (lambda (n img)
+    (if (= n 0) img (beside (nest (- n 1) img) (solid-square 1 "blue")))))
+(string-contains (describe-image (nest 3 (solid-circle 5 "red" "a sun"))) "a sun")
+(string-contains (describe-image (nest 6 (solid-circle 5 "red" "a sun"))) "a sun")
+`)).toEqual(['#t', '#f'])
+  })
+
+  test('describe-color says how transparent and how exact a colour is', async () => {
+    expect(await runProgram(`
+(import image)
+(describe-color "red")
+(describe-color (rgb 250 2 2))
+(describe-color (rgb 255 0 0 0))
+(describe-color (rgb 255 0 0 100))
+(rgb->color-name (rgb 255 0 0))
+(color->color-name "Red")
+`)).toEqual([
+      '"red"',
+      '"approximately red"',
+      '"transparent"',
+      '"semi-transparent red"',
+      '"red"',
+      '"red"',
+    ])
+  })
+})

@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { Drawing, drawing_normalize, drawing_render, drawing_clearDrawing, drawing_canvasAriaLabel } from '../drawing'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Drawing, drawing_normalize, drawing_render, drawing_clearDrawing, drawing_canvasClass, drawing_drawingDescription } from '../drawing'
 import { onThemeChange, readColorToken } from '../../../theme'
 
 const props = defineProps<{ value: Drawing }>()
 const canvas = ref<HTMLCanvasElement | null>(null)
+
+// Of the *normalised* drawing, so this reads the same as what
+// `drawing_renderer` labels its canvas with, and describes what was painted --
+// a pair of rotations is announced as the single turn it is drawn as. Computed,
+// so a repaint on a theme change does not rebuild the string.
+const description = computed(() =>
+  drawing_drawingDescription(drawing_normalize(props.value)))
 
 function renderDrawing() {
   // The IDE's output pane bypasses drawing_renderer, so it normalises for
@@ -28,5 +35,5 @@ onUnmounted(unsubscribe)
 </script>
 
 <template>
-  <canvas ref="canvas" :aria-label="drawing_canvasAriaLabel"></canvas>
+  <canvas ref="canvas" :class="drawing_canvasClass" :aria-label="description"></canvas>
 </template>

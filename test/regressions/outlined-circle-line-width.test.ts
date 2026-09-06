@@ -25,19 +25,22 @@ test('outlined-circle takes an optional line width, defaulting to 1 (#460)', asy
 
 test('a line width that is given is still checked (#460)', async () => {
   // Optional is not unchecked: a supplied width still has to satisfy the
-  // docstring's contract, and a fourth argument is still one too many.
+  // docstring's contract. The fourth argument is the shape's description
+  // (#432), so it is checked as a string, and a fifth is one too many.
   expect(
     await runProgram(
       `
   (import image)
   (outlined-circle 20 "red" "wide")
   (outlined-circle 20 "red" 1 2)
+  (outlined-circle 20 "red" 1 "a hoop" 3)
   `,
       { stripRanges: true },
     ),
   ).toEqual([
     'Runtime error: (error) expected a number, received string',
-    'Runtime error: (outlined-circle) Arity mismatch in function call: expected at most 3 arguments, got 4',
+    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (outlined-circle) Arity mismatch in function call: expected at most 4 arguments, got 5',
   ])
 })
 

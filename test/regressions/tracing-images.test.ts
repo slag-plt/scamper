@@ -1,8 +1,7 @@
 import { expect, test } from 'vitest'
 import HTMLDisplay from '../../src/lpm/output/html'
 import { runProgramWithHTML } from '../harness'
-import { getByLabelText } from '@testing-library/dom'
-import { drawing_canvasAriaLabel } from '../../src/js/image/drawing'
+import { drawing_canvasClass } from '../../src/js/image/drawing'
 // Registers the image library's HTML custom renderer (drawings -> <canvas>)
 // on the shared HtmlRenderer singleton. Load-bearing: scamper.ts starts that
 // registration and initialize() awaits it (#511), but runProgramWithHTML()
@@ -21,5 +20,9 @@ test('tracing-images', async () => {
   const mockOut = new HTMLDisplay(mockRoot)
   await runProgramWithHTML(testSrc, mockOut)
 
-  expect(getByLabelText(mockRoot, drawing_canvasAriaLabel)).toBeVisible()
+  // By class, not by label: the aria-label now carries the drawing's own
+  // description rather than a fixed handle (#432).
+  const canvas = mockRoot.querySelector(`canvas.${drawing_canvasClass}`)
+  expect(canvas).toBeVisible()
+  expect(canvas).toHaveAttribute('aria-label', 'a solid red circle with diameter 10')
 })
