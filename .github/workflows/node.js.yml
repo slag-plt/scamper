@@ -152,12 +152,17 @@ jobs:
     - name: Make an account
       run: |
         scripts/server/user-add smoke@example.edu "Smoke Test" > /tmp/user-add.log
-        cat /tmp/user-add.log
         password="$(awk '/^  password: /{ print $2 }' /tmp/user-add.log)"
         if [ -z "${password}" ]; then
           echo "::error::user-add printed no password"
+          cat /tmp/user-add.log
           exit 1
         fi
+        # This account lives for about twenty seconds and the stack is thrown
+        # away after it, so the password is not worth protecting -- but it is
+        # printed by user-add and carried in every later step's environment,
+        # and this file should not teach anyone to leave one in a log.
+        echo "::add-mask::${password}"
         echo "SMOKE_PASSWORD=${password}" >> "${GITHUB_ENV}"
 
     # The half a schema change breaks silently: 1.7 filters credential sign-in
