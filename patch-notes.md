@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+# 4.4.0
+
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
 - Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.
 - You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.
