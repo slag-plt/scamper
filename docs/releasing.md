@@ -93,5 +93,20 @@ Two cover `main` (**Settings → Rules**):
 - **Main** — pull requests required, no force-pushes, no deleting the branch.
 - **Release criteria** — `build (22.x)`, `database-tests`, `browser-tests`, and `version` all have to pass.
 
+`server-smoke` is not required yet, and adding it is a two-step job in this order:
+merge the pull request that adds the job first, then add the check.
+The reason is the paragraph below — required *before* it exists on main blocks every open branch at once.
+
+```console
+gh api repos/slag-plt/scamper/rulesets/21264173 > /tmp/ruleset.json
+jq '(.rules[] | select(.type == "required_status_checks")
+      | .parameters.required_status_checks) += [{"context": "server-smoke"}]
+    | {name, target, enforcement, conditions, rules}' /tmp/ruleset.json \
+  > /tmp/ruleset-updated.json
+gh api -X PUT repos/slag-plt/scamper/rulesets/21264173 --input /tmp/ruleset-updated.json
+```
+
+Or the same thing in **Settings → Rules → Release criteria**, which is less to get wrong.
+
 A required check has to *exist* on a pull request in order to pass, and the job producing it comes from that branch's own copy of the workflow.
 A branch opened before a check was added therefore stays blocked, showing nothing missing, until main is merged into it.

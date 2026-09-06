@@ -82,6 +82,144 @@ jobs:
     - run: npx playwright install --with-deps chromium
     - run: npm run test:browser
 
+  # The compose stack, end to end, on the code in this branch.
+  #
+  # Everything above tests pieces: `build` never starts a server, and
+  # `database-tests` exercises our own SQL rather than BetterAuth's. Nothing
+  # else runs `better-auth migrate` at all -- which matters, because the
+  # migration comes from the copy of `better-auth` bundled inside
+  # @better-auth/cli rather than from the one the server imports, and those two
+  # are different versions (docs/dependencies.md). A bump that the typechecker
+  # is happy with can still leave a server whose schema its own migration tool
+  # cannot produce, and nobody able to sign in.
+  #
+  # So this asks the only question that catches that: after a real `compose up`,
+  # can an administrator make an account, and can its owner sign in and keep a
+  # file?
+  server-smoke:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Values, not secrets: this stack is built, asked three questions, and
+    # thrown away. BETTER_AUTH_URL has to match the origin curl uses below, port
+    # included, or sign-in is refused as an invalid origin.
+    #
+    # SCAMPER_TAG is deliberately a name CI never publishes, so compose builds
+    # this branch instead of pulling a ghcr image that has nothing to do with
+    # it.
+    - name: Write a .env for the stack
+      run: |
+        cat > .env <<'ENV'
+        MARIADB_DATABASE=scamper
+        MARIADB_USER=scamper
+        MARIADB_PASSWORD=smoketestpassword
+        MARIADB_ROOT_PASSWORD=smoketestrootpassword
+        BETTER_AUTH_SECRET=smoke-test-secret-not-used-anywhere-else
+        BETTER_AUTH_URL=http://localhost:8080
+        SCAMPER_TAG=smoke
+        WEB_PORT=8080
+        SERVER_PORT=3000
+        ENV
+
+    - name: Bring the stack up
+      run: docker compose up -d --build
+
+    # Through `web` (Caddy), not the API's own port: that is the origin a
+    # student's browser uses, and the one the session cookie is scoped to.
+    #
+    # `server` waits on `migrate` completing successfully, so a migration that
+    # fails shows up here as a server that never answers -- hence the log dump,
+    # which is where the reason will be.
+    - name: Wait for it to answer
+      run: |
+        for _ in $(seq 1 60); do
+          if curl -fsS http://localhost:8080/api/v1/health | grep -q '"status":"ok"'; then
+            echo "The stack is up."
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "::error::the stack never became healthy"
+        docker compose logs --no-color migrate server web db
+        exit 1
+
+    # The only way an account is ever made -- there is no sign-up route. This is
+    # `internalAdapter.createUser` and `createAccount`, which is exactly what a
+    # BetterAuth upgrade changes out from under us.
+    - name: Make an account
+      run: |
+        scripts/server/user-add smoke@example.edu "Smoke Test" > /tmp/user-add.log
+        cat /tmp/user-add.log
+        password="$(awk '/^  password: /{ print $2 }' /tmp/user-add.log)"
+        if [ -z "${password}" ]; then
+          echo "::error::user-add printed no password"
+          exit 1
+        fi
+        echo "SMOKE_PASSWORD=${password}" >> "${GITHUB_ENV}"
+
+    # The half a schema change breaks silently: 1.7 filters credential sign-in
+    # on a column 1.6 never wrote, so this is green on either version alone and
+    # red on a half-applied upgrade.
+    - name: Sign in
+      run: |
+        status="$(curl -sS -o /tmp/sign-in.json -w '%{http_code}' \
+          -c /tmp/cookies.txt \
+          -H 'Content-Type: application/json' \
+          -H 'Origin: http://localhost:8080' \
+          -d "{\"email\":\"smoke@example.edu\",\"password\":\"${SMOKE_PASSWORD}\"}" \
+          http://localhost:8080/api/auth/sign-in/email)"
+        if [ "${status}" != "200" ]; then
+          echo "::error::sign-in answered ${status}"
+          cat /tmp/sign-in.json
+          docker compose logs --no-color server
+          exit 1
+        fi
+        if ! grep -q 'better-auth.session_token' /tmp/cookies.txt; then
+          echo "::error::sign-in set no session cookie"
+          exit 1
+        fi
+
+    # That the session actually authorises the file routes, and that a file
+    # survives the round trip through MariaDB.
+    - name: Save a file and read it back
+      run: |
+        printf '(+ 1 2)\n' > /tmp/smoke.scm
+
+        curl -fsS -b /tmp/cookies.txt -X PUT \
+          -H 'Content-Type: application/octet-stream' \
+          --data-binary @/tmp/smoke.scm \
+          http://localhost:8080/api/v1/fs/files/smoke.scm
+
+        curl -fsS -b /tmp/cookies.txt \
+          http://localhost:8080/api/v1/fs/files/smoke.scm > /tmp/read-back.scm
+        diff /tmp/smoke.scm /tmp/read-back.scm
+
+        curl -fsS -b /tmp/cookies.txt http://localhost:8080/api/v1/fs/files \
+          | grep -q 'smoke.scm'
+
+    # The other half of the same guarantee: without the cookie these are
+    # nobody's files. A server that answered this 200 would be serving one
+    # student's work to another.
+    - name: Refuse the same request without a session
+      run: |
+        status="$(curl -sS -o /dev/null -w '%{http_code}' \
+          http://localhost:8080/api/v1/fs/files)"
+        if [ "${status}" != "401" ]; then
+          echo "::error::an unauthenticated file listing answered ${status}, not 401"
+          exit 1
+        fi
+
+    - name: Show the logs when something above failed
+      if: failure()
+      run: docker compose logs --no-color
+
+    - name: Tear it down
+      if: always()
+      run: docker compose down -v
+
   # The three images a deployment runs, pushed to ghcr.io. A server pulls these
   # rather than building its own: the front-end build (`npm ci` plus Vite) is
   # the memory-hungriest step in this repository, and a small managed host runs
@@ -93,7 +231,7 @@ jobs:
   publish:
 
     if: github.event_name == 'push'
-    needs: [build, database-tests, browser-tests]
+    needs: [build, database-tests, browser-tests, server-smoke]
 
     runs-on: ubuntu-latest
 
