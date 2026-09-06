@@ -1,6 +1,6 @@
 {
   "name": "scamper",
-  "version": "4.4.0-rc.1",
+  "version": "4.4.0-rc.2",
   "description": "The Scamper multimedia programming environment",
   "main": "./_build/js/index.js",
   "workspaces": [
