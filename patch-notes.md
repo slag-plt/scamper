@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+# 4.4.0
+
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
 - Every library now says what it is for: the documentation page shows a line about the module you are looking at, and hovering over an import tells you what you just imported.
 - You can now step through anything you have typed in the REPL, using the button that appears on it or by right-clicking it.
@@ -45,9 +47,8 @@ Order does not matter within an entry. See docs/releasing.md.
 - Preferences, in the Edit menu or on Ctrl+, (Cmd+, on a Mac), gathers every Scamper setting in one place and explains what each one costs — including how deep your programs may recurse, which until now you could only ask for from inside a program, and only until the next run.
 - The REPL now has a Copy button that puts the whole transcript on your clipboard, and dragging across several entries finally highlights as you go.
 - If Scamper ever gets stuck — a file too big to open, or an editor that will not start — the new page at files.html lists everything stored in your browser so you can download what you want to keep and delete what is in the way, without losing the rest of your work.
-- The documentation for apply☀︎ lists the types of its two arguments correctly, as a procedure and a list; it named two types that do not exist, which also made the docs page describe it wrongly.
-- The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, and show the first function that compose, o, any-of, and all-of require.
-- The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, so the page no longer tells you to write (qn).
+- The documentation for apply☀︎ used to name two argument types that do not exist, which made the docs page describe it wrongly; it now lists them correctly, as a procedure and a list.
+- The docs now show wn, hn, qn, en, sn, tn, and percussion as the values they are rather than as functions to call, so the page no longer tells you to write (qn), and they show the first function that compose, o, any-of, and all-of require.
 - Stepping through a program is about twice as fast, so a trace appears sooner.
 - (-) and (/) with no numbers now tell you they need at least one instead of reporting an internal error, and beside, above and overlay with no images now give an empty image that no longer makes the picture around it disappear.
 - (compose) and (o) with no functions now give you back a function that leaves its argument alone, and (any-of) and (all-of) with no predicates give you one that always answers #f and #t, instead of an arity error.

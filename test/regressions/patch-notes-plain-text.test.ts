@@ -46,7 +46,7 @@ test('every released entry keeps at least one note, and none is empty', () => {
 // every entry below it, for instance. Nothing else asserts that a release still
 // has its notes, so this pins the history: entries are only ever added, never
 // removed, so this list only ever grows.
-const RELEASED_SO_FAR = ['4.3.0', '4.2.0', '4.1.1', '4.1.0', '4.0.0']
+const RELEASED_SO_FAR = ['4.4.0', '4.3.0', '4.2.0', '4.1.1', '4.1.0', '4.0.0']
 
 test('no release loses its notes to a mis-parse', () => {
   const versions = patchNotes.map((n) => n.version)
