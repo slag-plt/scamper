@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Documentation &middot; Scamper</title>
+  <!-- Apply the persisted theme before first paint to avoid a flash. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('scamper-theme')
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t)
+        }
+      } catch (e) {}
+    })()
+  </script>
+  <link href="/scamper/4.4.0/css/normalize.css" rel="stylesheet">
+  <link href="/scamper/4.4.0/css/theme.css" rel="stylesheet">
+  <!-- Fontawesome (brands + solid) -->
+  <link href="/scamper/4.4.0/css/fontawesome.css" rel="stylesheet">
+  <link href="/scamper/4.4.0/css/brands.css" rel="stylesheet">
+  <link href="/scamper/4.4.0/css/solid.css" rel="stylesheet">
+  <script type="module" crossorigin src="/scamper/4.4.0/assets/scamper-docs-4.4.0.js"></script>
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/modulepreload-polyfill-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/theme-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/utils-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/rolldown-runtime-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/fs-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/json-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/lib-4.4.0.js">
+  <link rel="modulepreload" crossorigin href="/scamper/4.4.0/assets/render-4.4.0.js">
+  <link rel="stylesheet" crossorigin href="/scamper/4.4.0/assets/scamper-docs-4.4.0.css">
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>

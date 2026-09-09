@@ -1,0 +1,1 @@
+import{t as e}from"./fs-42.4.0.js";export{e as getFS};
