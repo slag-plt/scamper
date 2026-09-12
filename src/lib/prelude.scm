@@ -408,10 +408,10 @@
             (all-satisfy? pred? (cdr lst))
             #f))))
 
-;;; (cons v1 v2) -> pair?
+;;; (cons v1 v2) -> list?
 ;;;  v1 : any
-;;;  v2 : any
-;;; Returns a new cons cell containing `v1` and `v2`.
+;;;  v2 : list?
+;;; Returns a new list with `v1` at the front of the list `v2`.
 ;;; @category list, list manipulation, association list, car, cdr
 (define-export cons (js-var "prelude_cons"))
 
