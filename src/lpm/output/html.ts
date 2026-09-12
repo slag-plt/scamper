@@ -54,6 +54,7 @@ export class HTMLDisplay implements OutputChannel, ErrorChannel {
       elt.addEventListener('click', (_e) => {
         for (const child of elt.children) {
           if (
+            // eslint-disable-next-line no-restricted-syntax -- a click listener on an element this class made with document.createElement, so a DOM is the precondition for the line running at all; a guard would be dead code.
             child instanceof HTMLElement &&
             child.classList.contains('trace-block')
           ) {
