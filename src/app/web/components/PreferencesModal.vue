@@ -55,7 +55,7 @@ import { currentTheme, setTheme } from '../../../theme'
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
-/** Reads long limits the way a person writes them: 100000 -> "100,000". */
+/** Reads long limits the way a person writes them: 5000 -> "5,000". */
 function commas(n: number): string {
   // Pinned rather than the ambient locale: this is English prose either way,
   // and the tests should not depend on where they run.
@@ -117,7 +117,7 @@ const sections: Section[] = [
       {
         kind: 'number',
         label: 'Trace step limit',
-        note: 'The maximum number of steps that the stepper takes.',
+        note: `The maximum number of steps that the stepper takes, between ${commas(MIN_TRACE_STEP_LIMIT)} and ${commas(MAX_TRACE_STEP_LIMIT)}. Every step is kept at once, so a large limit pauses the page while they are collected: about five seconds at ${commas(MAX_TRACE_STEP_LIMIT)}.`,
         min: MIN_TRACE_STEP_LIMIT,
         max: MAX_TRACE_STEP_LIMIT,
         get: () => traceStepLimit.value,

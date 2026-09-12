@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- The trace step limit now tops out at a number the page can actually survive, and Preferences says how long a large one takes, so raising it can no longer lose your tab.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
