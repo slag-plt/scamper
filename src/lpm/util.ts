@@ -569,8 +569,20 @@ export function typeOf(v: L.Value): string {
   }
 }
 
-/** @return a generic string representation of value v. */
-export function toString(v: L.Value): string {
+/**
+ * The dispatch that every *textual* rendering of a value shares: one branch per
+ * value shape, with `render` deciding how a value nested inside an aggregate
+ * comes out. {@link toString} passes itself; the text renderer passes its own
+ * `render`, so a custom renderer still claims a nested value. Written once so
+ * the two cannot drift (#545), the same reason {@link objToString} takes a
+ * renderer.
+ *
+ * @param render how to render a value nested inside an aggregate.
+ */
+export function valueToString(
+  v: L.Value,
+  render: (v: L.Value) => string,
+): string {
   switch (typeof v) {
     case 'boolean':
       return v ? '#t' : '#f'
@@ -586,7 +598,7 @@ export function toString(v: L.Value): string {
       } else if (isArray(v)) {
         return v.length === 0
           ? '(vector)'
-          : `(vector ${v.map(toString).join(' ')})`
+          : `(vector ${v.map((x) => render(x)).join(' ')})`
       } else if (isClosure(v)) {
         return `[Function: ${v.name ?? '##anonymous##'}]`
       } else if (isFunction(v)) {
@@ -594,9 +606,9 @@ export function toString(v: L.Value): string {
       } else if (isChar(v)) {
         return `#\\${charToName(v.value)}`
       } else if (isList(v)) {
-        return `(list ${listToVector(v).map(toString).join(' ')})`
+        return `(list ${listToVector(v).map((x) => render(x)).join(' ')})`
       } else if (isPair(v)) {
-        return `(pair ${toString(v.fst)} ${toString(v.snd)})`
+        return `(pair ${render(v.fst)} ${render(v.snd)})`
       } else if (typeof HTMLElement !== 'undefined' && v instanceof HTMLElement) {
         // N.B., the `typeof` guard is what lets this answer "no" outside the
         // browser, where the global is undeclared rather than merely undefined.
@@ -607,7 +619,7 @@ export function toString(v: L.Value): string {
         if (fields.length === 0) {
           return `(${name})`
         } else {
-          const args = fields.map((f) => toString(v[f])).join(' ')
+          const args = fields.map((f) => render(v[f])).join(' ')
           return `(${name} ${args})`
         }
       } else if (v instanceof ScamperError) {
@@ -617,9 +629,19 @@ export function toString(v: L.Value): string {
       } else if (v instanceof Error) {
         return v.toString()
       } else if (isObj(v)) {
-        return objToString(v, toString)
+        return objToString(v, render)
       } else {
         return `[Blob: ${JSON.stringify(v)}]`
       }
   }
+}
+
+/**
+ * @return a generic string representation of value v.
+ *
+ * N.B., a hoisted `function` rather than a `const`: `error.ts` imports this and
+ * is imported back, so the cycle must not depend on evaluation order.
+ */
+export function toString(v: L.Value): string {
+  return valueToString(v, toString)
 }
