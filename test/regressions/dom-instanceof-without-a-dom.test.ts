@@ -7,19 +7,20 @@ import {
   audio_sampleNode,
 } from '../../src/js/audio/index'
 
-// #535: #508 guarded six predicates and #514 guarded `toString`, but nine more
-// `instanceof <DOM class>` tests were left bare. Each has the same shape:
+// #535: #508 guarded six predicates and #514 guarded `toString`, but eleven
+// more `instanceof <DOM class>` tests were left bare. Each has the same shape:
 // `instanceof` reads its right operand as an ordinary identifier, so where
 // nothing declares the class the *test* is a `ReferenceError` rather than a
 // `false`, and it takes down whatever was being decided.
 //
-// Most of the nine sit behind `requireBrowser` (#516) or a `context?` contract,
-// so no program reaches them -- `(audio-pipeline 5 6)` reports "expected a
-// context, received number" and stops there. The two cases below are the ones
-// reachable from Javascript, which is what a test helper or a future
-// non-browser entry point is. The rest are pinned by lint instead: see the
-// `no-restricted-syntax` DOM-class entry in eslint.config.mjs, which is the
-// durable half of this fix.
+// Eight of the eleven sit behind `requireBrowser` (#516) or a `context?`
+// contract, so no program reaches them -- `(audio-pipeline 5 6)` reports
+// "expected a context, received number" and stops there. The three cases below
+// are the ones with a real answer to give without a browser, so they are the
+// ones a guard buys something for; each is reached here from Javascript, which
+// is what a test helper or a future non-browser entry point is. The other eight
+// are pinned by lint instead: see the `no-restricted-syntax` DOM-class entry in
+// eslint.config.mjs, which is the durable half of this fix.
 //
 // N.B., this file overrides the suite's jsdom environment on purpose. Under
 // jsdom `HTMLElement` and `AudioNode` *are* defined and none of this is
