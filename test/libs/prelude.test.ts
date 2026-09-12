@@ -791,11 +791,13 @@ test('cons-pair', async () => {
 (pair 0.003 100)
 `),
   ).toEqual([
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
+    // `cons` requires a list tail, and since #541 its contract is what says so,
+    // in the same words as every other rejected argument.
+    'Runtime error: (error) expected a list, received boolean',
+    'Runtime error: (error) expected a list, received number',
+    'Runtime error: (error) expected a list, received string',
+    'Runtime error: (error) expected a list, received string',
+    'Runtime error: (error) expected a list, received number',
     '(pair 1 2)',
     '(pair #t #f)',
     '(pair "hi" "bye")',
