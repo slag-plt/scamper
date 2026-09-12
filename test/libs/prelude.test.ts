@@ -2900,7 +2900,7 @@ test('list->string-non-char', async () => {
 
 test('vector-range-errors', async () => {
   expect(await runProgram('(vector-range)')).toEqual([
-    'Runtime error: (vector-range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
   expect(await runProgram('(vector-range 0 10 0)')).toEqual([
     'Runtime error: (vector-range) "step" argument must be non-zero',
@@ -2909,7 +2909,7 @@ test('vector-range-errors', async () => {
 
 test('range-errors', async () => {
   expect(await runProgram('(range)')).toEqual([
-    'Runtime error: (range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
   expect(await runProgram('(range 0 10 0)')).toEqual([
     'Runtime error: (range) "step" argument must be non-zero',

@@ -819,7 +819,8 @@
 ;;; @category list, list manipulation, association list, vectors, list->vector, vector->list
 (define-export list->vector (js-var "prelude_listToVector"))
 
-;;; (vector-range & args) -> vector?
+;;; (vector-range n1 & args) -> vector?
+;;;  n1 : integer?
 ;;;  args : integer?
 ;;; Can be called with one, two, or three arguments, all of which are integers.
 ;;; (vector-range end) returns a vector containing the numbers from 0 to `end` (exclusive).
@@ -1088,7 +1089,8 @@
   (lambda (v & fs)
     (fold (lambda (acc f) (f acc)) v fs)))
 
-;;; (range & args) -> list?
+;;; (range n1 & args) -> list?
+;;;  n1 : integer?
 ;;;  args : integer?
 ;;; Can be called with one, two, or three arguments, all of which are integers.
 ;;; (range end) returns a list containing the numbers from 0 to `end` (exclusive).

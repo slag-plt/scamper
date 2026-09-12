@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Calling range or vector-range with no arguments now reports a plain arity error at your own code instead of a message from inside the library.
 - Giving sample-node a list instead of a vector now says so, rather than reporting a confusing Javascript error.
 - rex-any-of with no regexes now matches nothing at all, instead of matching the empty string everywhere.
 - Pressing stop now stops a program that is waiting on a file or an image, instead of letting it continue once the file finishes loading.
