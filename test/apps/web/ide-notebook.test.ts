@@ -54,13 +54,13 @@ describe('IDE notebook view', () => {
     return getByRole(document.body, 'button', { name: 'Notebook view' })
   }
 
+  /** Presses the toggle and waits until the view has actually changed over. */
   async function showNotebook() {
+    const wasShowing = notebook() !== null
     toggle().click()
-    await flushPromises()
-    await flushPromises()
-    // Turning the view on runs the file, and output is published a frame at a
-    // time, as the output pane's is.
-    await nextFrame()
+    await vi.waitFor(() => {
+      expect(notebook() !== null).toBe(!wasShowing)
+    })
     await flushPromises()
   }
 
@@ -77,17 +77,26 @@ describe('IDE notebook view', () => {
     return mockEditorHandle.adapter?.getDoc() ?? ''
   }
 
-  /** Runs the file and waits for its output to arrive. */
+  /** Starts a run. Its output arrives later -- see `settled`. */
   async function run() {
     const button =
       queryByRole(document.body, 'button', { name: 'Run' }) ??
       getByRole(document.body, 'button', { name: 'Autorun' })
     button.click()
     await flushPromises()
-    // Output is published a frame at a time, as the output pane's is, so a
-    // frame has to pass before it is on screen.
-    await nextFrame()
-    await flushPromises()
+  }
+
+  /**
+   * Waits until `check` holds, however many frames the run needs.
+   *
+   * A run's output is coalesced one animation frame at a time
+   * (use-notebook.ts), and nothing bounds how many frames a program takes --
+   * least of all on a loaded machine (#536). So the assertion *is* the
+   * condition, retried, rather than something checked after a fixed number of
+   * ticks.
+   */
+  async function settled(check: () => void) {
+    await vi.waitFor(check)
   }
 
   test('the toggle swaps the source view for the notebook', async () => {
@@ -173,10 +182,12 @@ describe('IDE notebook view', () => {
     try {
       await showNotebook()
       await run()
-      const output = cells().map((cell) =>
-        cell.querySelector('.cell-output')?.textContent.trim() ?? '',
-      )
-      expect(output).toEqual(['1', '2'])
+      await settled(() => {
+        const output = cells().map((cell) =>
+          cell.querySelector('.cell-output')?.textContent.trim() ?? '',
+        )
+        expect(output).toEqual(['1', '2'])
+      })
     } finally {
       wrapper.unmount()
     }
@@ -188,9 +199,11 @@ describe('IDE notebook view', () => {
     const wrapper = await mountIde('(display "hello")')
     try {
       await showNotebook()
-      expect(cells()[0].querySelector('.cell-output')?.textContent).toContain(
-        'hello',
-      )
+      await settled(() => {
+        expect(cells()[0].querySelector('.cell-output')?.textContent).toContain(
+          'hello',
+        )
+      })
     } finally {
       wrapper.unmount()
     }
@@ -201,10 +214,13 @@ describe('IDE notebook view', () => {
     try {
       await showNotebook()
       await run()
+      await settled(() => {
+        expect(cells()[1].querySelector('.cell-output')?.textContent).toContain(
+          '5',
+        )
+      })
+      // Only meaningful once the run has settled, or it holds vacuously.
       expect(cells()[0].querySelector('.cell-output')).toBeNull()
-      expect(cells()[1].querySelector('.cell-output')?.textContent).toContain(
-        '5',
-      )
     } finally {
       wrapper.unmount()
     }
@@ -492,15 +508,6 @@ describe('IDE notebook view', () => {
     }
   })
 })
-
-/** Resolves once a frame has been drawn. */
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve()
-    })
-  })
-}
 
 /**
  * Types `text` at the end of the cell at `index`, through CodeMirror itself so
