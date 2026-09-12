@@ -2687,7 +2687,7 @@ test('ignore', async () => {
 (ignore)
 `),
   ).toEqual([
-    '[Blob: {}]',
+    '[HTMLElement]',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })

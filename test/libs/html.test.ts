@@ -13,10 +13,11 @@ import {
 } from '../../src/js/html/index.js'
 import * as L from '../../src/lpm/index.js'
 
-// html.scm binds directly to the DOM. An HTMLElement always prints as
-// '[HTMLElement]' via runProgram regardless of its actual shape, so tests
-// that need to inspect an element's tag/attributes/children go through the
-// html_* functions directly instead.
+// html.scm binds directly to the DOM. Every HTMLElement prints as
+// '[HTMLElement]' via runProgram, whatever its tag, attributes or children, so
+// tests that need to inspect those go through the html_* functions directly
+// instead. (#545 made the printed form match what `toString` has always said;
+// before it, the same element came out '[Blob: {}]' here.)
 
 describe('element?', () => {
   test('is true for any HTML element', async () => {
