@@ -3,10 +3,13 @@
 ; reader's `allowInternalNames`, set by src/lib/index.ts); anywhere else, naming
 ; one is a parse error, reference as well as binding (#532).
 ;
-; N.B., document these with plain `;` comments only. A `;;;` docstring is
-; re-parsed by the docstring sub-parsers (src/scheme/docstring/), which call
-; tokenizeAndParse with default options and so would reject the very name being
-; documented. Threading the option through them can wait until one is wanted.
+; N.B., a `;;;` docstring here may not use an `@example` that calls one of
+; these, nor an internal as a parameter or return predicate: those parts are
+; re-parsed by the docstring sub-parsers (src/scheme/docstring/) with
+; tokenizeAndParse's *default* options, which reject the name -- and that makes
+; the whole docstring malformed, which is silently dropped (no contract, no docs
+; entry). The signature line itself is hand-tokenized, so it may name one.
+; Threading the option through those sub-parsers can wait until one is wanted.
 
 (define-export ##mkPredFn## (js-var "runtime_mkPredFn"))
 

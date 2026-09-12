@@ -771,8 +771,10 @@ export interface ParseOptions {
    * Whether internal `##...##` names may be written at all -- bound or
    * referenced. Set only for src/lib/runtime.scm, the interop layer that
    * defines the primitives expansion injects; every other program is denied
-   * the shape. N.B., a `;;;` docstring in runtime.scm would still be rejected:
-   * the docstring sub-parsers re-parse the signature with default options.
+   * the shape. N.B., this does not reach the docstring sub-parsers
+   * (src/scheme/docstring/), which re-parse a predicate or an `@example` with
+   * default options -- so a runtime.scm docstring naming an internal in either
+   * is dropped. See the note at the top of that file.
    */
   allowInternalNames?: boolean
 }
