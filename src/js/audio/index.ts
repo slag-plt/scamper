@@ -98,7 +98,7 @@ function toSourceNode(
   if (audio_sampleQ(v)) {
     return audio_sampleSourceNode(ctx, v as SampleNode)
   }
-  if (v instanceof AudioNode) {
+  if (typeof AudioNode !== 'undefined' && v instanceof AudioNode) {
     return v
   }
   throw new L.ScamperError(
@@ -121,7 +121,7 @@ function toEffectNode(v: AudioNode | SampleNode): AudioNode {
       'a sample can only be the first argument: it is what the pipeline plays, not something it plays through',
     )
   }
-  if (v instanceof AudioNode) {
+  if (typeof AudioNode !== 'undefined' && v instanceof AudioNode) {
     return v
   }
   throw new L.ScamperError(

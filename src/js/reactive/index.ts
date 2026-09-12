@@ -188,6 +188,7 @@ class ReactiveContainer<T> implements ReactiveElement {
   // than the full re-render here.
   private renderView(onDone?: () => void) {
     this.run.spawn(this.viewFunc, [this.state as L.Value], (result) => {
+      // eslint-disable-next-line no-restricted-syntax -- a ReactiveContainer is only built after requireBrowser(), and its constructor needs document; a guard would silently drop every view result rather than say a browser is needed.
       if (result instanceof HTMLElement) {
         this.container.innerHTML = ''
         this.container.appendChild(result)

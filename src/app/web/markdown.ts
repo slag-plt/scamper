@@ -142,8 +142,10 @@ function render(node: SyntaxNode, md: string, parent: Node): void {
  */
 function trimEdges(el: HTMLElement): void {
   const first = el.firstChild
+  // eslint-disable-next-line no-restricted-syntax -- IDE-only; renderMarkdown built these nodes with document, so Text is present by construction and a guard would imply a DOM-free path that does not exist.
   if (first instanceof Text) first.data = first.data.replace(/^\s+/, '')
   const last = el.lastChild
+  // eslint-disable-next-line no-restricted-syntax -- as above: the node came from the DOM this function just built.
   if (last instanceof Text) last.data = last.data.replace(/\s+$/, '')
 }
 

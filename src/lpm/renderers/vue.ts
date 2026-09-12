@@ -65,7 +65,8 @@ const pairStrategy: VueStrategy = {
 }
 
 const htmlElementStrategy: DOMStrategy = {
-  predicate: (v) => v instanceof HTMLElement,
+  predicate: (v) =>
+    typeof HTMLElement !== 'undefined' && v instanceof HTMLElement,
   type: 'dom',
 }
 
