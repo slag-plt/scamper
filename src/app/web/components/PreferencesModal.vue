@@ -117,7 +117,7 @@ const sections: Section[] = [
       {
         kind: 'number',
         label: 'Trace step limit',
-        note: `The maximum number of steps that the stepper takes, between ${commas(MIN_TRACE_STEP_LIMIT)} and ${commas(MAX_TRACE_STEP_LIMIT)}. Every step is kept at once, so a large limit pauses the page while they are collected: about five seconds at ${commas(MAX_TRACE_STEP_LIMIT)}.`,
+        note: `The maximum number of steps that the stepper takes, between ${commas(MIN_TRACE_STEP_LIMIT)} and ${commas(MAX_TRACE_STEP_LIMIT)}. All of the steps are kept at once, so a large limit pauses the page while they are collected: about five seconds at ${commas(MAX_TRACE_STEP_LIMIT)}.`,
         min: MIN_TRACE_STEP_LIMIT,
         max: MAX_TRACE_STEP_LIMIT,
         get: () => traceStepLimit.value,

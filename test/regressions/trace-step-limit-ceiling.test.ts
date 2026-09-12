@@ -22,7 +22,7 @@ import {
 //   7,500   10.2s   13.2s   1,773 MB
 //
 // Both curves are quadratic in the limit, so the fit extrapolates to ~3.0 GB
-// and ~20s at 10,000 and ~11 GB at 20,000 -- the browser is worse still, since
+// and ~22s at 10,000 and ~11 GB at 20,000 -- the browser is worse still, since
 // the trace is handed to a deep `ref` and so every step carries a reactive
 // proxy too. 5,000 is the largest round limit measured to stay under a gigabyte
 // and under about five seconds: a pause, which is the guarantee #369 exists to
