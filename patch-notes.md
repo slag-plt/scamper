@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Giving sample-node a list instead of a vector now says so, rather than reporting a confusing Javascript error.
 - rex-any-of with no regexes now matches nothing at all, instead of matching the empty string everywhere.
 - Pressing stop now stops a program that is waiting on a file or an image, instead of letting it continue once the file finishes loading.
 - cons now documents that its second argument must be a list, and reports a non-list one in the same words as every other wrong argument.
