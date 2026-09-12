@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - rex-any-of with no regexes now matches nothing at all, instead of matching the empty string everywhere.
+- ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
 
 # 4.4.0
 
