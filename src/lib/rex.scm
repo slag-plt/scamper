@@ -62,6 +62,7 @@
 ;;; (rex-any-of & xs) -> rex?
 ;;;  xs : rex?
 ;;; Returns a regex that matches any one of the regexes `rs`.
+;;; With no regexes, the result matches nothing.
 ;;; @category regexes, rex-optional
 (define-export rex-any-of (js-var "rex_rexAnyOf"))
 
