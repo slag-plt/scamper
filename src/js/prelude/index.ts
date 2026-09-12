@@ -1064,7 +1064,7 @@ export function prelude_random(n: number): number {
 export function prelude_ignore(_v: L.Value): HTMLElement {
   requireBrowser()
   const ret = document.createElement('div')
-  ret.style.display = 'non'
+  ret.style.display = 'none'
   return ret
 }
 
