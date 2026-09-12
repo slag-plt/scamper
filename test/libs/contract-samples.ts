@@ -278,7 +278,8 @@ export const ARGS = new Map<string, string[]>([
   ['music:note-handlers', ['(vector (lambda (msg) 0))']],
   ['reactive:on-note', ['(vector (lambda (msg) 0))']],
 
-  // audio: `any`, documented as "vector? of numbers between -1.0 and 1.0".
+  // audio: numbers in [-1.0, 1.0], which the generic `vector?` sample
+  // `(vector 1 2 3)` is not.
   ['audio:sample-node', ['(vector 0 0.5)']],
 
   // reactive: a component's view draws and its update returns a state.

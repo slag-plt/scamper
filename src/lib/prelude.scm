@@ -408,10 +408,10 @@
             (all-satisfy? pred? (cdr lst))
             #f))))
 
-;;; (cons v1 v2) -> pair?
+;;; (cons v1 v2) -> list?
 ;;;  v1 : any
-;;;  v2 : any
-;;; Returns a new cons cell containing `v1` and `v2`.
+;;;  v2 : list?
+;;; Returns a new list with `v1` at the front of the list `v2`.
 ;;; @category list, list manipulation, association list, car, cdr
 (define-export cons (js-var "prelude_cons"))
 
@@ -819,7 +819,8 @@
 ;;; @category list, list manipulation, association list, vectors, list->vector, vector->list
 (define-export list->vector (js-var "prelude_listToVector"))
 
-;;; (vector-range & args) -> vector?
+;;; (vector-range n1 & args) -> vector?
+;;;  n1 : integer?
 ;;;  args : integer?
 ;;; Can be called with one, two, or three arguments, all of which are integers.
 ;;; (vector-range end) returns a vector containing the numbers from 0 to `end` (exclusive).
@@ -1088,7 +1089,8 @@
   (lambda (v & fs)
     (fold (lambda (acc f) (f acc)) v fs)))
 
-;;; (range & args) -> list?
+;;; (range n1 & args) -> list?
+;;;  n1 : integer?
 ;;;  args : integer?
 ;;; Can be called with one, two, or three arguments, all of which are integers.
 ;;; (range end) returns a list containing the numbers from 0 to `end` (exclusive).

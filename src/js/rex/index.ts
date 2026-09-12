@@ -157,7 +157,11 @@ class RexAnyOf implements L.Struct, Re {
   }
 
   toRegexString(): string {
-    return `(?:${this.values.map(v => v.toRegexString()).join('|')})`
+    // No branch can succeed, so an empty alternation matches nothing; `(?:)`
+    // would be the empty string, which matches at every position.
+    return this.values.length === 0
+      ? '(?!)'
+      : `(?:${this.values.map(v => v.toRegexString()).join('|')})`
   }
 }
 
