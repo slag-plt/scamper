@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Pressing stop now stops a program that is waiting on a file or an image, instead of letting it continue once the file finishes loading.
 - cons now documents that its second argument must be a list, and reports a non-list one in the same words as every other wrong argument.
 - The trace step limit now tops out at a number the page can actually survive, and Preferences says how long a large one takes, so raising it can no longer lose your tab.
 - An HTML element now prints as [HTMLElement] instead of [Blob: {}] when a program's output is shown as text, such as on the command line or in a copied transcript.
