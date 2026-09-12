@@ -89,6 +89,12 @@ export function applyFn(
   fiber: Fiber,
   range: Range,
 ): StepResult {
+  // Where, in the student's program, this call really is. A call written in
+  // library source has no site of its own: `range` points into a .scm of the
+  // standard library, and underlining that in their editor is worse than no
+  // range at all. Such a call reports the range *its* caller was called from
+  // instead, which a chain of library calls passes along (see the Frame below).
+  const siteRange = currFrame.origin === 'builtin' ? currFrame.callRange : range
   if (isJsFunction(fn)) {
     try {
       currFrame.values.push(fn(...args))
@@ -163,7 +169,7 @@ export function applyFn(
         'Runtime',
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
         undefined,
-        range,
+        siteRange,
         undefined)
     }
     const namedArgs = args.slice(0, fn.params.length)
@@ -180,14 +186,12 @@ export function applyFn(
       fn.name ?? '##anonymous##',
       (fn.home ?? fiber.topLevelEnv).withLocalScopes([...fn.locals, paramScope]),
       fn.code,
-      // A call written in library source has no site in the student's program:
-      // `range` points into a .scm of the standard library, and underlining
-      // that in their editor is worse than no range at all. Such a call passes
-      // along the range *its* caller was called from instead, so an error
-      // raised deep in the library still points at the call the student wrote
-      // -- which matters more now that a library-internal call runs without
-      // its contract check and can fail inside the wrapped function (#476).
-      currFrame.origin === 'builtin' ? currFrame.callRange : range,
+      // The call site rather than `range`, so a frame this call builds passes
+      // the student's own call along to whatever it calls in turn -- and so an
+      // error raised deep in the library still points there, which matters all
+      // the more now that a library-internal call runs without its contract
+      // check and can fail inside the wrapped function (#476).
+      siteRange,
       fn.origin ?? 'user',
       fn.home,
     )
@@ -204,7 +208,7 @@ export function applyFn(
     'Runtime',
     `Not a function or closure: ${JSON.stringify(fn)}`,
     undefined,
-    range,
+    siteRange,
     undefined
   )
 }

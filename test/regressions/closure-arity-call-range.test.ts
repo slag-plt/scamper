@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { ScamperError } from '../../src/lpm'
 import { runProgram } from '../harness.js'
 
 // https://github.com/slag-plt/scamper/issues/554
@@ -22,6 +23,23 @@ import { runProgram } from '../harness.js'
 // `(lambda (f args) «ap-spread»)` (src/js/prelude/index.ts), whose `mkApSpread()`
 // carries no range, so the same throw reported unlocated. `map` reaches it
 // through its own rest parameter, hence the two cases below with no range today.
+
+/**
+ * Runs `src`, which is expected to *throw* rather than report: an error raised
+ * while an error is being handled escapes the fiber instead of reaching the
+ * output channel.
+ *
+ * @returns the thrown ScamperError, rendered (range included).
+ */
+async function runExpectingThrow(src: string): Promise<string> {
+  try {
+    const log = await runProgram(src)
+    throw new Error(`expected a thrown error, got ${log.join('\n')}`)
+  } catch (e) {
+    if (e instanceof ScamperError) { return e.toString() }
+    throw e
+  }
+}
 
 describe("#554: a closure's arity error points at the call, not the library", () => {
   test('fold blames the call the student wrote', async () => {
@@ -82,5 +100,18 @@ describe("#554: a closure's arity error points at the call, not the library", ()
     expect(await runProgram('(define f (lambda (x) x))\n(f 1 2)')).toEqual([
       'Runtime error [2:1-2:7]: Arity mismatch in function call: expected 1 arguments, got 2',
     ])
+  })
+
+  // Fiber.handleError is applyFn's third caller: it applies a with-handler's
+  // handler from the `with-handler` builtin's own frame. So the rule above moves
+  // a wrong-arity *handler*'s error off the thunk's failing form -- it used to
+  // report `(error "boom")` at [1:40-1:53] -- and onto the with-handler call
+  // whose handler is wrong, which is the form the student has to fix.
+  test('a wrong-arity with-handler handler blames the with-handler form', async () => {
+    expect(await runExpectingThrow(
+      '(with-handler (lambda () 1) (lambda () (error "boom")))',
+    )).toEqual(
+      'Runtime error [1:1-1:55]: Arity mismatch in function call: expected 0 arguments, got 1',
+    )
   })
 })

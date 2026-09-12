@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- An error about the wrong number of arguments to a function you passed to map, fold, or filter now points at your own line instead of a line inside Scamper's library.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
