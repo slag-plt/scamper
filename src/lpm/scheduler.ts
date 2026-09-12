@@ -65,6 +65,17 @@ interface SteppingGate {
   parked: boolean
 }
 
+// A task suspended on an async action -- a blocking primitive's promise, or a
+// file import's load -- keyed by SchedulerId in `suspensions`. Like a parked
+// task it is NOT in the run queue; unlike one it may *also* have a gate, since a
+// step-mode run can suspend mid-burst. `cancelled` is set by cancelTask and read
+// by the action's settle path, which is the only place that can act on it: the
+// action is still pending when the cancel lands.
+interface Suspension {
+  task: SchedulerTask
+  cancelled: boolean
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 export class Scheduler {
@@ -76,6 +87,9 @@ export class Scheduler {
   private tasks: SchedulerTask[] = []
   // Parked step-mode tasks, keyed by id. A parked task lives here, not in `tasks`.
   private steppingGates = new Map<SchedulerId, SteppingGate>()
+  // Tasks suspended on an async action, keyed by id. A suspended task lives
+  // here, not in `tasks` -- so this is where cancelTask finds one.
+  private suspensions = new Map<SchedulerId, Suspension>()
   // Traced tasks that have already emitted their opening line. Cleared when the
   // task ends.
   private tracesStarted = new Set<SchedulerId>()
@@ -140,16 +154,20 @@ export class Scheduler {
     const wasPaused = this.wasPaused()
     this.pauseExecution()
     // A step-mode task may be parked in a gate (not in `tasks`), running a burst
-    // (in both), or a plain task may be in `tasks` only. Handle all cases.
+    // (in both), suspended on an async action (in `suspensions`, possibly with a
+    // gate as well), or a plain task may be in `tasks` only. Handle all cases.
     const gate = this.steppingGates.get(id)
+    const susp = this.suspensions.get(id)
     const taskI = this.tasks.findIndex((t) => t.id === id)
-    if (gate === undefined && taskI === -1) {
+    if (gate === undefined && susp === undefined && taskI === -1) {
       if (!wasPaused) {
         this.resumeExecution()
       }
       return
     }
-    const errCh = gate?.task.err ?? this.tasks[taskI].err
+    // Every lookup names the same task object, so the order says only which
+    // place happened to hold it.
+    const errCh = gate?.task.err ?? susp?.task.err ?? this.tasks[taskI].err
     errCh.report(new ScamperError('Runtime', 'Evaluation cancelled'))
     if (taskI !== -1) {
       this.tasks.splice(taskI, 1)
@@ -157,6 +175,12 @@ export class Scheduler {
     if (gate) {
       this.steppingGates.delete(id)
       gate.resolve() // unblock any pending stepStmt/stepAll awaiter
+    }
+    // Flagged rather than deleted: the action is still pending, and the flag is
+    // what its settle path reads to leave the task off the queue. Set alongside
+    // the gate branch above, not instead of it -- a step-mode run is both.
+    if (susp) {
+      susp.cancelled = true
     }
     this.tracesStarted.delete(id)
     this.nextCaption.delete(id)
@@ -286,7 +310,7 @@ export class Scheduler {
         )
         this.endCurrFiber(task)
       } else {
-        this.removeTaskFromQueue(task)
+        this.suspendTask(task)
         getFS()
           .loadFile(stepResult.filename)
           .then(
@@ -387,11 +411,15 @@ export class Scheduler {
       // action, and on completion resume the SAME fiber in place -- pushing the
       // resolved value as the primitive's result (no advanceStmt: we're mid
       // expression, not at a statement boundary).
-      this.removeTaskFromQueue(task)
+      this.suspendTask(task)
       stepResult.action().then(
         (value) => {
           fiber.resumeWithValue(value)
-          this.schedule(task)
+          // Through resumeOrComplete, not schedule: that is where the
+          // suspension is cleared and a cancel that landed mid-action is
+          // honoured. Equivalent to scheduling directly, since resumeWithValue
+          // never advances the statement index, so the fiber cannot be done.
+          this.resumeOrComplete(task)
         },
         (err: unknown) => {
           // A rejected async action surfaces as a runtime error at the blocking
@@ -577,10 +605,21 @@ export class Scheduler {
   }
 
   /**
+   * Pulls `task` out of the run queue and records that it is waiting on an async
+   * action -- an import's load, or a blocking primitive's promise. The record is
+   * what lets cancelTask find a task that is in neither the queue nor a gate,
+   * and the action's settle path (resumeOrComplete) consumes it.
+   */
+  private suspendTask(task: SchedulerTask): void {
+    this.removeTaskFromQueue(task)
+    this.suspensions.set(task.id, { task, cancelled: false })
+  }
+
+  /**
    * Pulls the current (stepping) task out of the run queue and parks it in its
-   * gate, awaiting a step()/resume(). Mirrors the block-on suspend at
-   * `processStepResult`: removeTaskFromQueue + return, never touching
-   * currTaskIdx. Wakes any pending resume() awaiter.
+   * gate, awaiting a step()/resume(). The step-mode counterpart of
+   * `suspendTask`: dequeue and return, never touching currTaskIdx. Wakes any
+   * pending resume() awaiter.
    */
   private parkInGate(task: DisplayTask): void {
     this.removeTaskFromQueue(task)
@@ -749,6 +788,7 @@ export class Scheduler {
       this.steppingGates.delete(task.id)
       gate.resolve()
     }
+    this.suspensions.delete(task.id)
     this.tracesStarted.delete(task.id)
     this.nextCaption.delete(task.id)
   }
@@ -810,8 +850,22 @@ export class Scheduler {
    * re-scheduling one raises an ICE from inside a detached promise, killing the
    * run silently (#341). The task is already out of the queue at this point, so
    * completion is signaled directly rather than through endCurrFiber.
+   *
+   * Also where a cancel that landed during the suspension takes effect: the
+   * action was already in flight and could not be called off, so the task is
+   * simply not returned to the queue (#534).
    */
   private resumeOrComplete(task: SchedulerTask) {
+    // The suspension is over whatever its outcome, so consume it on every path:
+    // a stale entry would have a later cancelTask report against a task that is
+    // in fact queued.
+    const susp = this.suspensions.get(task.id)
+    this.suspensions.delete(task.id)
+    if (susp?.cancelled) {
+      // cancelTask has already told the owner, and a cancelled run reached no
+      // completion to signal.
+      return
+    }
     if (task.fiber.isDone()) {
       this.captionRemaining(task)
       this.tracesStarted.delete(task.id)

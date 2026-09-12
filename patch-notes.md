@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Pressing stop now stops a program that is waiting on a file or an image, instead of letting it continue once the file finishes loading.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
