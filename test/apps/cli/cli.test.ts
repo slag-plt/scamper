@@ -15,7 +15,10 @@ function runCli(args: string[]) {
   })
 }
 
-describe('scamper CLI', () => {
+// Each test spawns `npx tsx`, which cold-starts the whole front end -- about
+// a second idle, and much longer on a loaded runner. The budget has to
+// outlive the child's own, or the number in `runCli` can never apply (#536).
+describe('scamper CLI', { timeout: 30_000 }, () => {
   test('successful program prints its value and exits 0', () => {
     const result = runCli([fixture('success.scm')])
 

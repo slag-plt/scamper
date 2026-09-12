@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Calling range or vector-range with no arguments now reports a plain arity error at your own code instead of a message from inside the library.
+- ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
 
 # 4.4.0
 
