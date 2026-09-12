@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - An HTML element now prints as [HTMLElement] instead of [Blob: {}] when a program's output is shown as text, such as on the command line or in a copied transcript.
+- ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
 
 # 4.4.0
 

@@ -228,15 +228,18 @@ function isPercentId(name: string): boolean {
 
 // An *internal* name: `##...##`, the shape expansion and contract insertion
 // use for the primitives they inject by reference (`##mkVec##`, `##mkCtorFn##`,
-// ...). Only src/lib/runtime.scm may bind one -- see identifierName.
+// ...). Only src/lib/runtime.scm may write one -- see identifierName.
 function isInternalName(name: string): boolean {
   return name.length > 4 && name.startsWith('##') && name.endsWith('##')
 }
 
 // Validates a qualified reference `mod.member` (only reached when allowQualified
 // is set -- see identifierName). Each half must be a legal simple name: neither
-// a reserved word nor a `%` identifier (those name a `#(...)` parameter, which
-// can't be qualified). Returns the name unchanged, or '<error>' after reporting.
+// a reserved word, nor a `%` identifier (those name a `#(...)` parameter, which
+// can't be qualified), nor an internal `##...##` name -- a qualified name
+// returns from identifierName before that rule, so `(import runtime r)` plus
+// `r.##report##` would otherwise reach an internal through the module (#532).
+// Returns the name unchanged, or '<error>' after reporting.
 function qualifiedName(ctx: Ctx, node: SyntaxNode, name: string): string {
   const { qualifier, member } = A.splitQualifiedName(name)
   for (const half of [qualifier, member]) {
@@ -251,15 +254,30 @@ function qualifiedName(ctx: Ctx, node: SyntaxNode, name: string): string {
       )
       return '<error>'
     }
+    if (isInternalName(half) && !ctx.allowInternalNames) {
+      ctx.diagnostics.push(
+        mkDiagnostic('Parse', 'error', reservedInternalMsg(half), ctx.range(node)),
+      )
+      return '<error>'
+    }
   }
   return name
 }
 
+// The one message for the one rule: `##...##` is Scamper's, wherever it is
+// written. The text up to "internal use" is matched by
+// test/regressions/literal-hygiene.test.ts.
+function reservedInternalMsg(name: string): string {
+  return `The identifier "${name}" is reserved for Scamper's internal use and cannot be used in a program`
+}
+
 // `allowPercent` is set only for a variable *reference* (see the Identifier
 // case in expFromNode); a `%` identifier is legal there (inside a `#(...)`) but
-// never as a binder, so every binder call leaves it false. `allowQualified` is
-// likewise set only for a reference: a qualified name (`mod.member`) resolves a
-// binding through an imported module and is meaningless in a binder position.
+// never as a binder, so every binder call leaves it false. It governs the `%`
+// rules alone: the internal-name rule reads no position, since `##...##` may be
+// neither bound nor referenced (#532). `allowQualified` is likewise set only for
+// a reference: a qualified name (`mod.member`) resolves a binding through an
+// imported module and is meaningless in a binder position.
 function identifierName(
   ctx: Ctx,
   node: SyntaxNode,
@@ -297,19 +315,18 @@ function identifierName(
     }
     return qualifiedName(ctx, node, name)
   }
-  if (isInternalName(name) && !allowPercent && !ctx.allowInternalNames) {
-    // Rejected everywhere but a variable reference (allowPercent is set only
-    // there -- see above). Binding an internal name captures the primitive a
-    // derived form expands to, silently changing what `[...]`, `struct`, ...
-    // mean, so the shape is reserved and only runtime.scm may bind it.
-    // Referring to one stays legal, as with the `%` parameters below.
+  if (isInternalName(name) && !ctx.allowInternalNames) {
+    // Rejected in every position, binder and reference alike (#532). Binding an
+    // internal name captures the primitive a derived form expands to, silently
+    // changing what `[...]`, `struct`, ... mean; *referring* to one reaches a
+    // primitive written for internal callers only -- `##report##` aborts the
+    // fiber past `with-handler`, `##contracted##` retags any closure so a
+    // library's contract check is skipped. Expansion, contract insertion, and
+    // the query/@example paths build their references as AST nodes, which never
+    // come through the reader, so denying the shape in source costs them
+    // nothing and only runtime.scm -- which defines them -- sets the option.
     ctx.diagnostics.push(
-      mkDiagnostic(
-        'Parse',
-        'error',
-        `The identifier "${name}" is reserved for Scamper's internal use and cannot be used as a binding name`,
-        ctx.range(node),
-      ),
+      mkDiagnostic('Parse', 'error', reservedInternalMsg(name), ctx.range(node)),
     )
     return '<error>'
   }
@@ -751,9 +768,13 @@ function stmtFromNode(ctx: Ctx, node: SyntaxNode): A.Stmt {
 /** Knobs for {@link parseProgramFromSource}. */
 export interface ParseOptions {
   /**
-   * Whether internal `##...##` names may be bound. Set only for
-   * src/lib/runtime.scm, the interop layer that defines the primitives
-   * expansion injects; every other program is denied the shape.
+   * Whether internal `##...##` names may be written at all -- bound or
+   * referenced. Set only for src/lib/runtime.scm, the interop layer that
+   * defines the primitives expansion injects; every other program is denied
+   * the shape. N.B., this does not reach the docstring sub-parsers
+   * (src/scheme/docstring/), which re-parse a predicate or an `@example` with
+   * default options -- so a runtime.scm docstring naming an internal in either
+   * is dropped. See the note at the top of that file.
    */
   allowInternalNames?: boolean
 }

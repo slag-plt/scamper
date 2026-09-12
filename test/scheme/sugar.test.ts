@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseProgramFromSource } from '../../src/scheme/lezer-bridge'
+import { parseProgramFromSource, type ParseOptions } from '../../src/scheme/lezer-bridge'
 import { expandExpr, expandProgram } from '../../src/scheme/expansion'
 import { sugarExpr, sugarProgram } from '../../src/scheme/sugar'
 import * as A from '../../src/scheme/ast'
@@ -13,9 +13,9 @@ import { required } from '../dom'
 // ---- Helpers ---------------------------------------------------------------
 
 /** Parse a single bare-expression statement and return its expression. */
-function parseExp(src: string): A.Exp {
+function parseExp(src: string, opts: ParseOptions = {}): A.Exp {
   const errors: ScamperDiagnostic[] = []
-  const prog = parseProgramFromSource(errors, src)
+  const prog = parseProgramFromSource(errors, src, opts)
   expect(errors).toEqual([])
   const stmt = prog[0]
   if (!A.isStmtExp(stmt)) {
@@ -32,8 +32,8 @@ function sugarStr(src: string): string {
 
 /** The full round trip: parse -> expand (desugar) -> sugar -> print. For a
  * well-formed derived form this recovers it. */
-function roundTrip(src: string): string {
-  return A.expToString(sugarExpr(expandExpr(parseExp(src))))
+function roundTrip(src: string, opts: ParseOptions = {}): string {
+  return A.expToString(sugarExpr(expandExpr(parseExp(src, opts))))
 }
 
 // ---- Recovering each derived form ------------------------------------------
@@ -247,7 +247,12 @@ describe('map literal', () => {
   })
 
   test('a hand-written (##mkObj## ...) is left alone -- recovery is exact', () => {
-    expect(roundTrip('(##mkObj## "a" 1)')).toBe('(##mkObj## "a" 1)')
+    // The reader denies `##...##` in a program (#532), so this asks for the
+    // option runtime.scm is loaded with. What is under test is sugaring's
+    // exactness on the shape expansion emits, not what a student may write.
+    expect(roundTrip('(##mkObj## "a" 1)', { allowInternalNames: true })).toBe(
+      '(##mkObj## "a" 1)',
+    )
   })
 })
 
