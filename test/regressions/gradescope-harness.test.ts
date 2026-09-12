@@ -64,7 +64,10 @@ const HARNESS = [
   '  (list (test-case "double 4" equal? 8 (lambda () (double 4)))))',
 ].join('\n')
 
-describe('run_autograder', () => {
+// run_autograder shells out to the CLI and spawnSync allows the child 60s, so
+// the test around it has to allow at least as much or the child's budget can
+// never apply (#536).
+describe('run_autograder', { timeout: 60_000 }, () => {
   test('grades the submission against the instructor\'s harness', () => {
     const { results, status } = runHarness({
       harness: HARNESS,

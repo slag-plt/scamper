@@ -102,6 +102,15 @@ export default defineConfig(({ mode }) => ({
 
   test: {
     environment: 'jsdom',
+    // A timeout is a hang detector, not an assertion that a test is fast: a
+    // loaded runner is routinely 10x slower than an idle one, and vitest's 5s
+    // default is short enough that work taking a second idle fails on it
+    // (#536). Named here rather than per test, so a test with no budget of its
+    // own still has one a reader can find.
+    testTimeout: 20_000,
+    // `beforeAll(initialize)` compiles the standard library, so the default
+    // 10s is a wall-clock claim about the machine too.
+    hookTimeout: 20_000,
     setupFiles: './test/setup.ts',
     // *.browser.test.ts files need a real browser's Canvas2D/font-metrics
     // implementation and run separately via `npm run test:browser` (see

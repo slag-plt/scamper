@@ -40,8 +40,9 @@ describe('tracing a statement that never finishes (#369)', () => {
     // rather than wandering off somewhere else. Deliberately not a wall-clock
     // assertion: how long 2,500 steps take is a property of the machine, and a
     // bound tight enough to mean anything here is one a loaded CI runner
-    // trips. What guards against a regression to the old ~50s ceiling is this
-    // test's own timeout -- collecting 10,000 steps cannot finish inside it.
+    // trips. The two assertions above are the whole regression guard; the
+    // timeout below is only a hang detector, and is generous because a loaded
+    // runner is routinely 10x slower than an idle one (#536).
     expect(result?.steps).toHaveLength(DEFAULT_TRACE_STEP_LIMIT)
-  }, 20_000)
+  }, 60_000)
 })
