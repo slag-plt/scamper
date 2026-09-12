@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Calling range or vector-range with no arguments now reports a plain arity error at your own code instead of a message from inside the library.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.

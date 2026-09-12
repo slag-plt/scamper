@@ -101,13 +101,8 @@ const KNOWN_BROKEN = new Map<string, string>([
  * does not survive one -- #492's shape. Separate from the maps above so it can
  * be tuned without weakening them.
  */
-const ZERO_REST_BROKEN = new Map<string, string>([
-  ['prelude:range', '& args admits no arguments; the native needs 1-3 (#542)'],
-  [
-    'prelude:vector-range',
-    '& args admits no arguments; the native needs 1-3 (#542)',
-  ],
-])
+// Empty: every rest-parameter binding survives the empty call (#542).
+const ZERO_REST_BROKEN = new Map<string, string>()
 
 /***** Reading a run's output *************************************************/
 
