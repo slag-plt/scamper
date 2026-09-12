@@ -151,6 +151,14 @@ export class Scheduler {
   }
 
   cancelTask(id: SchedulerId): void {
+    // A suspension already marked cancelled is the whole story: the task is out
+    // of the queue and out of its gate, and the entry is still here only
+    // because the action it waits on has yet to settle. So a second stop has
+    // nothing left to do -- as it has for a queued task, which the first one
+    // dequeued.
+    if (this.suspensions.get(id)?.cancelled) {
+      return
+    }
     const wasPaused = this.wasPaused()
     this.pauseExecution()
     // A step-mode task may be parked in a gate (not in `tasks`), running a burst
@@ -771,9 +779,9 @@ export class Scheduler {
 
   /**
    * Forgets `task` entirely: out of the run queue (wherever it sits) and out of
-   * both id-keyed maps. Unlike removeTaskFromQueue this is positional-agnostic
-   * and tolerates an already-dequeued task, since a fatal error can strike
-   * either side of a dequeue.
+   * every id-keyed record of it. Unlike removeTaskFromQueue this is
+   * positional-agnostic and tolerates an already-dequeued task, since a fatal
+   * error can strike either side of a dequeue.
    */
   private dropTask(task: SchedulerTask): void {
     const i = this.tasks.findIndex((t) => t.id === task.id)
@@ -857,8 +865,9 @@ export class Scheduler {
    */
   private resumeOrComplete(task: SchedulerTask) {
     // The suspension is over whatever its outcome, so consume it on every path:
-    // a stale entry would have a later cancelTask report against a task that is
-    // in fact queued.
+    // an entry left behind would outlive the run -- one per import and per
+    // blocking call, each holding its task -- and a cancel arriving afterwards
+    // would report against a run that has already finished.
     const susp = this.suspensions.get(task.id)
     this.suspensions.delete(task.id)
     if (susp?.cancelled) {

@@ -179,4 +179,53 @@ describe('cancelling a task suspended on an async action (#534)', () => {
       getFS.mockRestore()
     }
   })
+
+  test('a second cancel of a suspended task says nothing more', async () => {
+    const sched = new Scheduler()
+    let resolveAction!: (v: Value) => void
+    const action = new Promise<Value>((r) => {
+      resolveAction = r
+    })
+    const task = blockingTask(action)
+
+    sched.schedule(task)
+    await sleep(QUANTUM_WAIT_MS)
+    // The entry outlives the first cancel -- only the action's settle path can
+    // clear it -- so a second cancel can still find it. A queued task is
+    // idempotent for free, the first cancel having dequeued it, and a suspended
+    // one must read the same to the student: one 'Evaluation cancelled'.
+    sched.cancelTask(task.id)
+    sched.cancelTask(task.id)
+    sched.pauseExecution()
+
+    expect(task.ch.errLog).toHaveLength(1)
+
+    resolveAction(5)
+    await sleep(QUANTUM_WAIT_MS)
+  })
+
+  test('a cancel after the suspension settled is not reported', async () => {
+    const sched = new Scheduler()
+    const completed = vi.fn()
+    let resolveAction!: (v: Value) => void
+    const action = new Promise<Value>((r) => {
+      resolveAction = r
+    })
+    const task = { ...blockingTask(action), onComplete: completed }
+
+    sched.schedule(task)
+    await sleep(QUANTUM_WAIT_MS)
+    resolveAction(5)
+    await sleep(QUANTUM_WAIT_MS)
+    // The run settled and finished, so there is no suspension left to find.
+    expect(task.ch.log).toEqual([6])
+    expect(completed).toHaveBeenCalled()
+
+    // Pressing stop once a run has finished has always been a no-op; an entry
+    // left behind by the settle would make this report against it.
+    sched.cancelTask(task.id)
+    sched.pauseExecution()
+
+    expect(task.ch.errLog).toEqual([])
+  })
 })
