@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { runProgram } from '../harness.js'
 import builtinLibs from '../../src/lib/index.js'
+import { compile } from '../../src/scheme/index.js'
 import { parseProgramFromSource } from '../../src/scheme/lezer-bridge.js'
 import type { ScamperDiagnostic } from '../../src/scheme/diagnostic.js'
 
@@ -9,7 +10,8 @@ import type { ScamperDiagnostic } from '../../src/scheme/diagnostic.js'
 // `(##mkCtorFn## ...)`, and so on. Those names resolve against the *user's*
 // top-level environment, so a user binding with the same name silently
 // rewrote what the form meant (#336). The `##...##` shape is now reserved: no
-// program may bind one, so no form's meaning depends on its surroundings.
+// program may bind one, so no form's meaning depends on its surroundings. The
+// reference direction is the block below (#532).
 describe('internal `##...##` names cannot be bound', () => {
   const reserved = (name: string): unknown =>
     expect.stringContaining(
@@ -54,12 +56,87 @@ describe('internal `##...##` names cannot be bound', () => {
       ])
     }
   })
+})
 
-  test('referring to an internal name is still allowed', async () => {
-    // Only *binding* is reserved, exactly as with the `%` parameters of
-    // `#(...)`. Sugaring already round-trips a hand-written `(##mkObj## ...)`
-    // (test/scheme/sugar.test.ts), so references must keep parsing.
-    expect(await runProgram('(##mkVec## 1 2)')).toEqual(['(vector 1 2)'])
+// #532: the reservation was only ever read in *binder* positions, so a program
+// could still name an internal. `mkInitialEnv` imports the whole `runtime`
+// library into a user program's environment, and the scope checker seeds its
+// globals from the same module, so `(##report## 5)` passed `--check` cleanly and
+// then ran the query machinery's abort primitive. Nothing documents these names
+// and nothing in the library or the samples writes one; every reference
+// expansion, contract insertion, and the query/example paths inject is built as
+// an AST node and never goes through the reader, so denying the shape in source
+// costs them nothing.
+describe('internal `##...##` names cannot be referenced either (#532)', () => {
+  /**
+   * What `--check` (compile plus the optional scope-check pass) reports for
+   * `src`. Deliberately only asked *whether* it complains and about which name:
+   * the reference can be denied by the reader or by the scope checker, and this
+   * suite is about the hole, not about which pass closes it.
+   */
+  const checkMessages = async (src: string): Promise<string[]> => {
+    const { diagnostics } = await compile(src, { scopeCheck: true })
+    return diagnostics.map((d) => d.message)
+  }
+
+  // Everything runtime.scm exports under the reserved shape -- the whole
+  // surface mkInitialEnv put within a program's reach.
+  const internals = [
+    '##mkVec##',
+    '##mkObj##',
+    '##mkCtorFn##',
+    '##mkPredFn##',
+    '##mkGetFn##',
+    '##typeOf##',
+    '##error##',
+    '##report##',
+    '##optArg##',
+    '##optRest##',
+    '##checkArity##',
+    '##voidQ##',
+    '##contracted##',
+  ]
+
+  test('the reported repro is rejected, and never reports', async () => {
+    expect(await checkMessages('(##report## 5)')).not.toEqual([])
+    // ##report## stops the fiber and hands its argument back as the answer to
+    // an IDE query. A student's program must not be able to ask for that.
+    expect(await runProgram('(##report## 5)')).not.toContainEqual(
+      expect.stringContaining('Reported value'),
+    )
+    expect(
+      await runProgram('(struct point (x y))\n(##report## (point 1 2))'),
+    ).not.toContainEqual(expect.stringContaining('Reported value'))
+  })
+
+  test('every internal the runtime exports is out of reach', async () => {
+    for (const name of internals) {
+      expect((await checkMessages(`(${name} 1)`)).join('\n'), name).toContain(
+        name,
+      )
+    }
+  })
+
+  test('an explicit `(import runtime)` does not let one back in', async () => {
+    // runtime is a real builtin module, so importing it re-extends the
+    // environment with exactly these bindings -- qualified or not. Keeping the
+    // library out of the *initial* environment would therefore not be enough on
+    // its own.
+    expect(await checkMessages('(import runtime)\n(##report## 5)')).not.toEqual(
+      [],
+    )
+    expect(
+      await checkMessages('(import runtime r)\n(r.##report## 5)'),
+    ).not.toEqual([])
+  })
+
+  test('`##ap-spread##` is not a form source can ask for', async () => {
+    // Not an environment binding at all: codegen recognizes this name in an
+    // application head and lowers an inline spread-application, and contract
+    // insertion is its only author. So it is reachable no matter what the
+    // environment holds, and only denying the *reference* closes it.
+    expect(await checkMessages('(##ap-spread## + (list 1 2))')).not.toEqual([])
+    expect(await runProgram('(##ap-spread## + (list 1 2))')).not.toEqual(['3'])
   })
 })
 

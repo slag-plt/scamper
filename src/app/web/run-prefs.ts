@@ -106,15 +106,18 @@ const TRACE_STEP_LIMIT_KEY = 'scamper.run.tracesteps'
 
 /**
  * The range a trace step limit is held to. The floor keeps a limit of 0 -- a
- * trace with nothing in it -- from being typed in by accident; the ceiling is
- * on what can be *asked for*, not on what is sensible. On the runaway
- * {@link DEFAULT_TRACE_STEP_LIMIT} was measured against, collection takes 2s at
- * 2500 steps and 47s at 10,000, and runs out of memory at 20,000: a large limit
- * is a choice to wait -- or, high enough, to lose the page and come back with a
- * smaller one.
+ * trace with nothing in it -- from being typed in by accident. The ceiling is
+ * what the page survives rather than what can be asked for (#529): there is no
+ * worker, so collection runs on the main thread, and every step keeps the whole
+ * fiber state, which makes time *and* retained memory quadratic in the limit.
+ * Measured on the runaway {@link DEFAULT_TRACE_STEP_LIMIT} was chosen against:
+ * 1.2s and 264MB at 2,500 steps, 4.2s and 786MB at 5,000, 10s and 1.8GB at
+ * 7,500, extrapolating to ~22s and ~3GB at 10,000. 5,000 is the largest round
+ * limit still under a gigabyte, so every limit the pane offers is a pause --
+ * the guarantee #369 exists to make -- rather than a tab that does not return.
  */
 export const MIN_TRACE_STEP_LIMIT = 10
-export const MAX_TRACE_STEP_LIMIT = 100_000
+export const MAX_TRACE_STEP_LIMIT = 5_000
 
 function clampTraceStepLimit(steps: number): number {
   return Math.min(

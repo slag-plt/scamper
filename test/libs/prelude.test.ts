@@ -791,11 +791,13 @@ test('cons-pair', async () => {
 (pair 0.003 100)
 `),
   ).toEqual([
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
-    'Runtime error: (cons) The second argument to cons should be a list',
+    // `cons` requires a list tail, and since #541 its contract is what says so,
+    // in the same words as every other rejected argument.
+    'Runtime error: (error) expected a list, received boolean',
+    'Runtime error: (error) expected a list, received number',
+    'Runtime error: (error) expected a list, received string',
+    'Runtime error: (error) expected a list, received string',
+    'Runtime error: (error) expected a list, received number',
     '(pair 1 2)',
     '(pair #t #f)',
     '(pair "hi" "bye")',
@@ -2685,7 +2687,7 @@ test('ignore', async () => {
 (ignore)
 `),
   ).toEqual([
-    '[Blob: {}]',
+    '[HTMLElement]',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
@@ -2898,7 +2900,7 @@ test('list->string-non-char', async () => {
 
 test('vector-range-errors', async () => {
   expect(await runProgram('(vector-range)')).toEqual([
-    'Runtime error: (vector-range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
   expect(await runProgram('(vector-range 0 10 0)')).toEqual([
     'Runtime error: (vector-range) "step" argument must be non-zero',
@@ -2907,7 +2909,7 @@ test('vector-range-errors', async () => {
 
 test('range-errors', async () => {
   expect(await runProgram('(range)')).toEqual([
-    'Runtime error: (range) 1, 2, or 3 numbers must be passed to function',
+    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
   expect(await runProgram('(range 0 10 0)')).toEqual([
     'Runtime error: (range) "step" argument must be non-zero',
