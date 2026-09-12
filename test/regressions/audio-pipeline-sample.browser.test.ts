@@ -25,7 +25,7 @@ import {
   audio_audioPipeline,
   audio_oscillatorNode,
   audio_sampleNode,
-  sampleSourceNode,
+  audio_sampleSourceNode,
 } from '../../src/js/audio/index.js'
 
 beforeAll(async () => {
@@ -122,7 +122,7 @@ describe('#181: a sample can drive an audio pipeline', () => {
     // The point of the issue: not merely that it stops erroring. Render the
     // same graph the renderer builds and check something actually came out.
     const ctx = new OfflineAudioContext(2, 4000, 4000)
-    const source = sampleSourceNode(ctx, audio_sampleNode(ramp(4000)))
+    const source = audio_sampleSourceNode(ctx, audio_sampleNode(ramp(4000)))
     source.connect(ctx.destination)
     source.start()
     const rendered = await ctx.startRendering()
@@ -133,7 +133,7 @@ describe('#181: a sample can drive an audio pipeline', () => {
   test('the conversion keeps the data, in both channels, at the context rate', () => {
     const ctx = new OfflineAudioContext(2, 4000, 4000)
     const data = ramp(64)
-    const source = sampleSourceNode(ctx, audio_sampleNode(data))
+    const source = audio_sampleSourceNode(ctx, audio_sampleNode(data))
     const buffer = source.buffer
     expect(buffer).not.toBeNull()
     expect(buffer?.numberOfChannels).toBe(2)
@@ -149,8 +149,8 @@ describe('#181: a sample can drive an audio pipeline', () => {
   test('each call yields a fresh source, since one can only start once', () => {
     withCtx(4000, (ctx) => {
       const sample = audio_sampleNode(ramp(64))
-      expect(sampleSourceNode(ctx, sample)).not.toBe(
-        sampleSourceNode(ctx, sample),
+      expect(audio_sampleSourceNode(ctx, sample)).not.toBe(
+        audio_sampleSourceNode(ctx, sample),
       )
     })
   })

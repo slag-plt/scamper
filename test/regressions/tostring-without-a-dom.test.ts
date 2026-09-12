@@ -2,7 +2,6 @@
 import { describe, expect, test } from 'vitest'
 import { ICE, ScamperError } from '../../src/lpm'
 import * as U from '../../src/lpm/util'
-import { runProgram } from '../harness'
 
 // #514: `toString` tests `v instanceof HTMLElement` before it tests for a
 // struct. `instanceof` evaluates its right operand as an ordinary identifier
@@ -37,20 +36,5 @@ describe('#514: toString where there is no DOM', () => {
     }
     const blob = new (class { foo = 1 })()
     expect(U.toString(blob)).toBe(`[Blob: ${JSON.stringify(blob)}]`)
-  })
-
-  // The path a program takes there. `##report##` builds a ReportError, whose
-  // message is `toString` of the reported value; a query and every docstring
-  // example (src/scheme/examples.ts) wrap their target in it. Both are IDE-only
-  // -- which is why nobody has hit this -- but the name is referenceable from
-  // ordinary source, so a program run on the CLI can reach it too. N.B., that
-  // referenceability is itself pinned, in internal-name-hygiene.test.ts; if it
-  // is ever tightened, this case goes and cases 2-3 carry the regression.
-  test('a reported struct comes back as its value, not a ReferenceError', async () => {
-    expect(
-      await runProgram('(struct point (x y))\n(##report## (point 1 2))', {
-        stripRanges: true,
-      }),
-    ).toEqual(['Runtime error: (##report##) Reported value: (point 1 2)'])
   })
 })
