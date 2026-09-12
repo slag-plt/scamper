@@ -86,15 +86,10 @@ const ENVIRONMENTAL = new Map<string, string>([
 ])
 
 /** Bindings that fail on a real bug, each with the issue tracking it. */
-const KNOWN_BROKEN = new Map<string, string>([
-  // `cons` documents `v2 : any`, but mkCons (src/lpm/util.ts) requires a list.
-  // The docstring is what is wrong, but correcting it changes the message a
-  // student sees for `(cons 1 2)` -- and displaces the fixture
-  // test/regressions/contract-error-call-site.test.ts uses as its example of
-  // an error raised *outside* a contract wrapper -- so it belongs on its own
-  // diff.
-  ['prelude:cons', 'v2 : any, but cons requires a list (#541)'],
-])
+// Empty: `cons` was the last entry, and #541 narrowed its `v2 : any` to the
+// `list?` its native has always required, so the sweep's own sample satisfies
+// it.
+const KNOWN_BROKEN = new Map<string, string>()
 
 /**
  * Bindings whose contract admits a zero-rest-argument call but whose native
@@ -158,14 +153,17 @@ describe('the contract discriminator matches what the machine emits', () => {
   test("a native's own error is not a contract failure", async () => {
     // Chosen because it is the same shape a contract violation takes -- a
     // rejected argument -- but reported by the function itself, so its source
-    // is `(cons)` rather than `(error)`. If the patterns ever widened to catch
+    // is `(/)` rather than `(error)`. If the patterns ever widened to catch
     // this, tier 1 would start blaming the library for its own type checks.
-    const errors = (await runProgram('(cons 1 2)')).filter((l) =>
+    // `/` rather than `cons`, which used to stand here: narrowing `cons`'s
+    // docstring (#541) moved its error inside the contract wrapper. `0` is a
+    // number, so `/`'s truthful `v2 : number?` admits it and only the native
+    // can object -- and "nonzero" is not a predicate the library has, so no
+    // docstring can displace this one the same way.
+    const errors = (await runProgram('(/ 1 0)')).filter((l) =>
       ERROR_LINE.test(l),
     )
-    expect(errors).toEqual([
-      'Runtime error: (cons) The second argument to cons should be a list',
-    ])
+    expect(errors).toEqual(['Runtime error: (/) /: division by zero'])
     for (const pattern of [CONTRACT_VIOLATION, REST_VIOLATION, ARITY_VIOLATION]) {
       expect(errors[0]).not.toMatch(pattern)
     }
