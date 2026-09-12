@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- An HTML element now prints as [HTMLElement] instead of [Blob: {}] when a program's output is shown as text, such as on the command line or in a copied transcript.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.
