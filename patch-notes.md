@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - An error about the wrong number of arguments to a function you passed to map, fold, or filter now points at your own line instead of a line inside Scamper's library.
+- ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
 
 # 4.4.0
 
