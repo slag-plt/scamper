@@ -47,7 +47,7 @@ export function audio_sampleQ(v: L.Value): boolean {
  *
  * N.B., the sample is duplicated into both channels, so it plays as stereo.
  */
-export function sampleSourceNode(
+export function audio_sampleSourceNode(
   ctx: BaseAudioContext,
   sample: SampleNode,
 ): AudioBufferSourceNode {
@@ -96,7 +96,7 @@ function toSourceNode(
   v: AudioNode | SampleNode,
 ): AudioNode {
   if (audio_sampleQ(v)) {
-    return sampleSourceNode(ctx, v as SampleNode)
+    return audio_sampleSourceNode(ctx, v as SampleNode)
   }
   if (v instanceof AudioNode) {
     return v
@@ -205,7 +205,7 @@ export function audio_delayNode(ctx: AudioContext, delayTime: number): DelayNode
 export function audio_playSample(sample: SampleNode): void {
   requireBrowser()
   const ctx = audio_getCtx()
-  const source = sampleSourceNode(ctx, sample)
+  const source = audio_sampleSourceNode(ctx, sample)
   source.connect(ctx.destination)
   source.start()
 }
