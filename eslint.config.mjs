@@ -6,6 +6,51 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import 'eslint-plugin-only-warn'
 import vueEslint from 'eslint-plugin-vue'
 
+// Shared because the src-only block at the bottom extends it: flat config
+// *replaces* a rule's options rather than merging them, so restating
+// `no-restricted-syntax` there would otherwise drop this entry.
+const restrictedSyntax = [
+  {
+    selector: 'PrivateIdentifier',
+    message: 'Use the `private` modifier instead of `#` to enforce privacy.',
+  },
+]
+
+/**
+ * A bare `instanceof` against a DOM class, i.e. one not behind a `typeof`.
+ *
+ * `v instanceof HTMLElement` reads its right operand as an ordinary identifier,
+ * so where nothing declares the class -- the CLI, a Node test, Gradescope --
+ * the *test* is a `ReferenceError` rather than a `false`, taking down whatever
+ * it was deciding. #508 fixed six predicates that way, #514 `toString`, and
+ * #535 the rest; this is what stops the next one being written.
+ *
+ * The guarded form is `typeof HTMLElement !== 'undefined' && v instanceof
+ * HTMLElement`. The selector accepts any `instanceof` under a logical operator
+ * whose left side is a `typeof` comparison, so the negated spelling -- `typeof
+ * X === 'undefined' || !(v instanceof X)` -- passes too. It cannot check that
+ * the name guarded is the name tested; only a custom rule could.
+ *
+ * Where the surrounding function genuinely needs a browser the answer is
+ * `requireBrowser()` (src/js/browser.ts, #516) and *not* a guard, which would
+ * turn a clear "needs a browser" error into a silently wrong `false`. Such a
+ * site stays bare and disables this rule on the line, with that as the reason.
+ *
+ * The names are the browser globals Node does not define, spelled out rather
+ * than wildcarded on `HTML*` so a local class such as `HTMLDisplay` is not
+ * swept up -- add one when src/ starts using it. `DOMException`, `Blob` and
+ * `Event` are deliberately absent: Node declares those.
+ */
+const domClassInstanceof = {
+  selector: [
+    "BinaryExpression[operator='instanceof']",
+    '[right.name=/^(HTML[A-Za-z]*Element|SVG[A-Za-z]*Element|Element|Node|Text|Document|DocumentFragment|DOMParser|Window|CanvasRenderingContext2D|ImageData|ImageBitmap|AudioNode|AudioContext|BaseAudioContext|AudioBuffer|AudioBufferSourceNode|GainNode|OscillatorNode|DelayNode|BiquadFilterNode|MediaStream)$/]',
+    ":not(LogicalExpression[left.left.operator='typeof'] *)",
+  ].join(''),
+  message:
+    "A DOM class is not declared outside the browser, so a bare `instanceof` against one throws there instead of answering false. Guard it with `typeof X !== 'undefined' &&`, or -- if the function needs a browser at all -- call requireBrowser() and disable this rule on the line, with that as the reason.",
+}
+
 export default defineConfig(
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
@@ -212,13 +257,19 @@ export default defineConfig(
         { blankLine: 'always', prev: 'function', next: '*' },
         { blankLine: 'always', prev: '*', next: 'function' },
       ],
+      'no-restricted-syntax': ['warn', ...restrictedSyntax],
+    },
+  },
+  // Shipping code only. A test names the environment it wants in its header
+  // (`@vitest-environment`), so a DOM global there is either present or the
+  // test is wrong; src/ has no such declaration and must hold either way.
+  {
+    files: ['src/**/*.ts', 'src/**/*.vue'],
+    rules: {
       'no-restricted-syntax': [
         'warn',
-        {
-          selector: 'PrivateIdentifier',
-          message:
-            'Use the `private` modifier instead of `#` to enforce privacy.',
-        },
+        ...restrictedSyntax,
+        domClassInstanceof,
       ],
     },
   },
