@@ -6,8 +6,8 @@
 (define-export sample? (js-var "audio_sampleQ"))
 
 ;;; (sample-node v) -> sample?
-;;;  v : any
-;;;   vector? of numbers between -1.0 and 1.0
+;;;  v : vector?
+;;;   of numbers between -1.0 and 1.0
 ;;; Returns an audio sample generated from the provided example.
 ;;; @category audio, sound
 (define-export sample-node (js-var "audio_sampleNode"))
