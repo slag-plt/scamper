@@ -4,7 +4,7 @@ import {
   SampleNode,
   AudioPipeline,
   audio_getCtx,
-  sampleSourceNode,
+  audio_sampleSourceNode,
 } from '../index.js'
 import { onThemeChange, readColorToken } from '../../../theme'
 
@@ -85,7 +85,7 @@ export function sampleRenderer(sample: SampleNode): HTMLElement {
   let source: AudioBufferSourceNode | undefined
   playButton.onclick = () => {
     // A fresh source per press: one can only be started once.
-    source = sampleSourceNode(ctx, sample)
+    source = audio_sampleSourceNode(ctx, sample)
     source.connect(ctx.destination)
     source.connect(analyser)
     source.start()

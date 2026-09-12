@@ -1,3 +1,16 @@
+; The interop layer: the `##...##` primitives expansion and contract insertion
+; inject by reference. This is the one file allowed to write that shape (the
+; reader's `allowInternalNames`, set by src/lib/index.ts); anywhere else, naming
+; one is a parse error, reference as well as binding (#532).
+;
+; N.B., a `;;;` docstring here may not use an `@example` that calls one of
+; these, nor an internal as a parameter or return predicate: those parts are
+; re-parsed by the docstring sub-parsers (src/scheme/docstring/) with
+; tokenizeAndParse's *default* options, which reject the name -- and that makes
+; the whole docstring malformed, which is silently dropped (no contract, no docs
+; entry). The signature line itself is hand-tokenized, so it may name one.
+; Threading the option through those sub-parsers can wait until one is wanted.
+
 (define-export ##mkPredFn## (js-var "runtime_mkPredFn"))
 
 (define-export ##mkCtorFn## (js-var "runtime_mkCtorFn"))
