@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- cons now documents that its second argument must be a list, and reports a non-list one in the same words as every other wrong argument.
+
 # 4.4.0
 
 - Stepping a statement that never finishes now stops after a set number of steps and tells you so, instead of freezing the page — set that number under Preferences in the Edit menu.

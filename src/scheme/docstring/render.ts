@@ -29,9 +29,9 @@ export function predTypeName(pred: Pred): string {
 /**
  * Renders a full signature block matching the old hand-written `Doc`
  * viewers' format, e.g.:
- *   (cons v1 v2) -> pair?
+ *   (cons v1 v2) -> list?
  *     v1: any
- *     v2: any
+ *     v2: list?
  * An optional parameter keeps its brackets, as the signature line writes it:
  *   (substring s start [end]) -> string?
  * or, for a documented constant:

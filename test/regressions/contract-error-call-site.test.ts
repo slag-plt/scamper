@@ -71,9 +71,30 @@ describe('errors raised from a library body keep reporting the call site', () =>
   // These never went through the contract wrapper -- they are the JS-thrown
   // path `applyFn` already handled correctly -- so they guard against a fix
   // that trades one misattribution for another.
-  test('a raw JsFunction argument check', async () => {
-    expect(await runProgram('(cons 1 2)')).toEqual([
-      'Runtime error [1:1-1:10]: (cons) The second argument to cons should be a list',
+  test("a value rejected by a JsFunction's own check", async () => {
+    // `/` rather than `cons`, which used to stand here: `cons`'s docstring was
+    // wider than its native, so narrowing it (#541) moved the error inside the
+    // contract wrapper and left this test with nothing to guard. `/` cannot be
+    // displaced the same way -- its documented `number?` arguments are
+    // truthful, and "nonzero" is not a predicate the library has -- so only the
+    // native can ever raise this. The `(/)` source, rather than `(error)`, is
+    // what says the contract was not involved.
+    expect(await runProgram('(/ 1 0)')).toEqual([
+      'Runtime error [1:1-1:7]: (/) /: division by zero',
+    ])
+  })
+
+  test('nested in a user function and in a higher-order call', async () => {
+    // The inner call is the one reported, as in the first describe: the
+    // coarse-vs-fine distinction #239 turned on, now covered on this branch too.
+    expect(await runProgram('(define f (lambda (x) (/ 1 x)))\n(f 0)')).toEqual([
+      'Runtime error [1:23-1:29]: (/) /: division by zero',
+    ])
+    expect(await runProgram('(map (lambda (x) (/ 1 x)) (list 0))')).toEqual([
+      'Runtime error [1:18-1:24]: (/) /: division by zero',
+    ])
+    expect(await runProgram('(+ 1\n   (/ 1 0))')).toEqual([
+      'Runtime error [2:4-2:10]: (/) /: division by zero',
     ])
   })
 
