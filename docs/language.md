@@ -138,7 +138,7 @@ Every rewritten node is tagged with the form it came from, so a reduction trace 
 ~~~
 
 A falling-through `cond` raises rather than producing void (#336).
-The `##...##` names are runtime primitives from `src/js/runtime/` rather than prelude bindings, so a derived form does not depend on what the user has bound.
+The `##...##` names are runtime primitives from `src/js/runtime/` rather than prelude bindings, so a derived form does not depend on what the user has bound. The shape is reserved: a program may neither bind nor reference one, so only `src/lib/runtime.scm`, which defines them, may spell them.
 
 ## The runtime
 
