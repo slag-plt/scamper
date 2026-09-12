@@ -59,6 +59,7 @@ export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
     children = children.slice(1)
   }
   for (const child of children) {
+    // eslint-disable-next-line no-restricted-syntax -- html_tag calls requireBrowser() first, so there is no DOM-free path here; a guard would quietly send every child down the textContent branch instead.
     if (child instanceof HTMLElement) {
       elt.appendChild(child)
     } else {
@@ -70,10 +71,12 @@ export function html_tag(name: string, ...children: L.Value[]): HTMLElement {
 
 export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
   requireBrowser()
+  // eslint-disable-next-line no-restricted-syntax -- requireBrowser() ran on the line above, and guarding a negated test honestly needs `typeof HTMLElement === 'undefined' || ...`, whose reading is "on the CLI, reject every argument" -- requireBrowser's message, badly spelled.
   if (!(elt instanceof HTMLElement)) {
     throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
   } else {
     children.forEach((e, i) => {
+      // eslint-disable-next-line no-restricted-syntax -- as above: requireBrowser() covers it, and guarding a negated test would only restate its message.
       if (!(e instanceof HTMLElement)) {
         throw new L.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.typeOf(elt)}$.`)
       }

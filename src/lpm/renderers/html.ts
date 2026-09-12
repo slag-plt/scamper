@@ -64,7 +64,10 @@ export class Renderer extends R.Renderer<HTMLElement> {
           ret.appendChild(this.render(v.snd))
           ret.append(mkCodeElement(')'))
           return ret
-        } else if (v instanceof HTMLElement) {
+        } else if (
+          // eslint-disable-next-line no-restricted-syntax -- this is the browser's renderer: every other branch calls document.createElement, so a guard would only move the ReferenceError one branch along.
+          v instanceof HTMLElement
+        ) {
           return v
         } else {
           // TODO: note: we never cycle back to expToHTML if the value is an
