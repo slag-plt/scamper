@@ -37,8 +37,8 @@ describe('docstring bugs', () => {
   test('a malformed docstring does not block compilation', async () => {
     const src = `
 ;;; this is not a valid signature line at all, no arrow
-(define add1 (lambda (x) (+ x 1)))
-(display (add1 5))
+(define bump (lambda (x) (+ x 1)))
+(display (bump 5))
 `
     const { prog, diagnostics } = await compile(src)
     expect(diagnostics).toEqual([])
@@ -76,10 +76,10 @@ describe('docstring bugs', () => {
 
   test('docstring errors (parse failures and signature mismatches) are tagged phase "Docstring", not "Parse"', async () => {
     const src = `
-;;; (add1 wrongname) -> number?
+;;; (bump wrongname) -> number?
 ;;;  wrongname : number?
 ;;; Adds one to a number.
-(define add1 (lambda (x) (+ x 1)))
+(define bump (lambda (x) (+ x 1)))
 `
     const { program: parsed } = tokenizeAndParse(src)
     expect(parsed).toBeDefined()

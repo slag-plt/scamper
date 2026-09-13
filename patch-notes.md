@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Added add1, sub1, increment, and decrement for adding or subtracting one.
 - An error about the wrong number of arguments to a function you passed to map, fold, or filter now points at your own line instead of a line inside Scamper's library.
 - Calling range or vector-range with no arguments now reports a plain arity error at your own code instead of a message from inside the library.
 - Giving sample-node a list instead of a vector now says so, rather than reporting a confusing Javascript error.

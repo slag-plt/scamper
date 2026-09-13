@@ -14,6 +14,59 @@ function tryGetFS(): FS | undefined {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// add1/sub1 and their aliases increment/decrement (#572). The composition cases
+// are the point of the request: they are wanted for talking about composing
+// functions, which a procedure is needed for and an operator is not.
+test('add1-sub1', async () => {
+  expect(
+    await runProgram(`
+(add1 1)
+(add1 -5)
+(add1 0)
+(add1 2.5)
+(sub1 1)
+(sub1 -5)
+(sub1 0)
+(sub1 2.5)
+(increment 1)
+(increment -5)
+(decrement 1)
+(decrement -5)
+((compose add1 add1) 1)
+((compose sub1 add1) 7)
+(map add1 (list 1 2 3))
+(map decrement (list 1 2 3))
+`),
+  ).toEqual([
+    '2',
+    '-4',
+    '1',
+    '3.5',
+    '0',
+    '-6',
+    '-1',
+    '1.5',
+    '2',
+    '-4',
+    '0',
+    '-6',
+    '3',
+    '7',
+    '(list 2 3 4)',
+    '(list 0 1 2)',
+  ])
+})
+
+test('add1-sub1 reject a non-number', async () => {
+  // Each is defined in its own right rather than aliased, so each carries its
+  // own contract and turns a non-number away itself.
+  for (const name of ['add1', 'sub1', 'increment', 'decrement']) {
+    expect(await runProgram(`(${name} "a")`)).toEqual([
+      'Runtime error: (error) expected a number, received string',
+    ])
+  }
+})
+
 test('abs-quotient', async () => {
   expect(
     await runProgram(`
