@@ -186,6 +186,30 @@
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
 
+;;; (add1 n) -> number?
+;;;  n : number?
+;;; Returns `n` plus one.
+;;; @category math, algebra, sub1, increment, decrement
+(define-export add1 (lambda (n) (+ n 1)))
+
+;;; (sub1 n) -> number?
+;;;  n : number?
+;;; Returns `n` minus one.
+;;; @category math, algebra, add1, increment, decrement
+(define-export sub1 (lambda (n) (- n 1)))
+
+;;; (increment n) -> number?
+;;;  n : number?
+;;; Returns `n` plus one. The same as `add1`.
+;;; @category math, algebra, add1, sub1, decrement
+(define-export increment (lambda (n) (+ n 1)))
+
+;;; (decrement n) -> number?
+;;;  n : number?
+;;; Returns `n` minus one. The same as `sub1`.
+;;; @category math, algebra, add1, sub1, increment
+(define-export decrement (lambda (n) (- n 1)))
+
 ;;; (abs v) -> number?
 ;;;  v : number?
 ;;; Returns the absolute value of `v`.

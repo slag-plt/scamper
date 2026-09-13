@@ -404,6 +404,10 @@ describe('scope checking', () => {
   })
 
   describe('docstrings', () => {
+    // N.B., `bump` rather than a plausible name like `add1`: scope checking
+    // warns that a global is already defined, so a fixture named after a
+    // library binding reports that warning on top of whatever it is testing.
+    // `add1` was such a name until #572 added it.
     const withDoc = (sig: string, param: string, body: string) =>
       `;;; ${sig}\n;;;  ${param}\n;;; A description.\n${body}`
 
@@ -411,9 +415,9 @@ describe('scope checking', () => {
       expect(
         await scopeErrors(
           withDoc(
-            '(add1 n) -> number?',
+            '(bump n) -> number?',
             'n : number?',
-            '(define add1 (lambda (n) (+ n 1)))',
+            '(define bump (lambda (n) (+ n 1)))',
           ),
         ),
       ).toEqual([])
@@ -424,20 +428,20 @@ describe('scope checking', () => {
           withDoc(
             '(wrong n) -> number?',
             'n : number?',
-            '(define add1 (lambda (n) (+ n 1)))',
+            '(define bump (lambda (n) (+ n 1)))',
           ),
         ),
       ).toContain(
-        'Docstring name "wrong" does not match defined name "add1"',
+        'Docstring name "wrong" does not match defined name "bump"',
       )
     })
     test('an undefined predicate in a docstring', async () => {
       expect(
         await scopeErrors(
           withDoc(
-            '(add1 n) -> bogus?',
+            '(bump n) -> bogus?',
             'n : number?',
-            '(define add1 (lambda (n) (+ n 1)))',
+            '(define bump (lambda (n) (+ n 1)))',
           ),
         ),
       ).toContain('Undefined predicate "bogus?"')

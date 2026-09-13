@@ -99,8 +99,10 @@ describe('reading.html', () => {
       expect(el?.querySelector('.scamper-output')).not.toBeNull()
     }
 
-    // `twice` and `increment` are defined in the widget with id `defs`; the two
-    // after it pick that environment up rather than starting from the library.
+    // `twice` is defined in the widget with id `defs`; the two after it pick
+    // that environment up rather than starting from the library. (`increment`
+    // in the first of them is the library's, since #572 added it -- the widget
+    // used to define its own, which now shadows a global.)
     const chained = [
       ...document.querySelectorAll<HTMLElement>('[data-continues]'),
     ]
