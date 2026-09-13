@@ -1122,6 +1122,23 @@ test('l-s-r-s reject a non-procedure', async () => {
   }
 })
 
+// A section fixes one argument of a *two*-argument procedure, deliberately --
+// #571 settled on that rather than a rest parameter, which would have to decide
+// where the fixed argument goes for a variadic `f`. Pinned so the limit reads as
+// a decision, and so its error stays the plain arity one.
+test('l-s-r-s section only a two-argument procedure', async () => {
+  for (const name of ['l-s', 'r-s']) {
+    expect(
+      await runProgram(`
+(define f (lambda (a b c) (+ a b c)))
+((${name} f 1) 2)
+`),
+    ).toEqual([
+      'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
+    ])
+  }
+})
+
 test('length', async () => {
   expect(
     await runProgram(`
