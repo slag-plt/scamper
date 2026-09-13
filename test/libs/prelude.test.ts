@@ -1077,6 +1077,51 @@ test('integer', async () => {
   ).toEqual(['#t', '#t', '#f', '#t', '#f'])
 })
 
+// l-s and r-s (#571). The operators here are deliberately non-commutative:
+// with `+` the two are indistinguishable, so a test that only used it would
+// pass even if both fixed the same side. The `+` pair below says so explicitly.
+test('l-s-r-s', async () => {
+  expect(
+    await runProgram(`
+((l-s - 10) 3)
+((r-s - 10) 3)
+((l-s / 12) 4)
+((r-s / 12) 4)
+((l-s string-append "ab") "cd")
+((r-s string-append "ab") "cd")
+((l-s + 1) 2)
+((r-s + 1) 2)
+(map (l-s * 2) (list 1 2 3))
+(filter (r-s > 2) (list 1 2 3 4))
+(map (r-s expt 2) (list 1 2 3 4))
+((compose (l-s + 1) (r-s - 1)) 10)
+(|> 10 (r-s - 1) (l-s * 3))
+`),
+  ).toEqual([
+    '7', // (- 10 3)
+    '-7', // (- 3 10)
+    '3', // (/ 12 4)
+    '0.3333333333333333', // (/ 4 12)
+    '"abcd"',
+    '"cdab"',
+    '3', // commutative: the two agree, which is the point of including it
+    '3',
+    '(list 2 4 6)',
+    '(list 3 4)', // (r-s > 2) reads as "greater than 2"
+    '(list 1 4 9 16)', // (r-s expt 2) reads as "squared"
+    '10', // (+ 1 (- 10 1))
+    '27', // (* 3 (- 10 1))
+  ])
+})
+
+test('l-s-r-s reject a non-procedure', async () => {
+  for (const name of ['l-s', 'r-s']) {
+    expect(await runProgram(`((${name} 5 1) 2)`)).toEqual([
+      'Runtime error: (error) expected a procedure, received number',
+    ])
+  }
+})
+
 test('length', async () => {
   expect(
     await runProgram(`
