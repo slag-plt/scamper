@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- You can now use l-s and r-s to make a one-argument procedure out of a two-argument one by fixing its left or right argument, so (r-s expt 2) squares a number and (r-s > 2) tests for greater than 2.
 - You can now use add1, sub1, increment, and decrement to add or subtract one, which saves writing a lambda when you pass one of them to map or compose.
 - An error about the wrong number of arguments to a function you passed to map, fold, or filter now points at your own line instead of a line inside Scamper's library.
 - Calling range or vector-range with no arguments now reports a plain arity error at your own code instead of a message from inside the library.

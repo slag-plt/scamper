@@ -1090,7 +1090,7 @@
 ;;; (compose & f1) -> procedure?
 ;;;  f1 : procedure?
 ;;; Returns a new procedure that is the composition of the given functions, _i.e._, `f(x) = f1(f2(...(fk(x))))`.
-;;; @category function composition, all-of, any-of, =-eps, o, |>
+;;; @category function composition, all-of, any-of, =-eps, o, |>, l-s, r-s
 (define-export compose
   (lambda (& fs)
     (lambda (x)
@@ -1099,7 +1099,7 @@
 ;;; (o & f) -> procedure?
 ;;;  f : procedure?
 ;;; A synonym for `compose`.
-;;; @category function composition, all-of, any-of, compose, =-eps, |>
+;;; @category function composition, all-of, any-of, compose, =-eps, |>, l-s, r-s
 (define-export o
   (lambda (& fs)
     (apply compose fs)))
@@ -1108,10 +1108,28 @@
 ;;;  v : any
 ;;;  f1 : procedure?
 ;;; Returns the result of applying the given function in sequence, starting with initial value `v`, _i.e._, `(fk (fk-1(...(f1 v)))`.
-;;; @category function composition, all-of, any-of, compose, =-eps, o
+;;; @category function composition, all-of, any-of, compose, =-eps, o, l-s, r-s
 (define-export |>
   (lambda (v & fs)
     (fold (lambda (acc f) (f acc)) v fs)))
+
+;;; (l-s f x) -> procedure?
+;;;  f : procedure?
+;;;  x : any
+;;; Returns a procedure that takes one argument `y` and computes `(f x y)`, _i.e._, `f` with its left argument fixed to `x`. `((l-s - 10) 3)` is `7`.
+;;; @category function composition, compose, o, |>, r-s
+(define-export l-s
+  (lambda (f x)
+    (lambda (y) (f x y))))
+
+;;; (r-s f x) -> procedure?
+;;;  f : procedure?
+;;;  x : any
+;;; Returns a procedure that takes one argument `y` and computes `(f y x)`, _i.e._, `f` with its right argument fixed to `x`. `((r-s - 10) 3)` is `-7`.
+;;; @category function composition, compose, o, |>, l-s
+(define-export r-s
+  (lambda (f x)
+    (lambda (y) (f y x))))
 
 ;;; (range n1 & args) -> list?
 ;;;  n1 : integer?
