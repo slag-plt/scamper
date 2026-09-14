@@ -1,7 +1,7 @@
 /**
- * Searching and filtering the standard library. The matching rules are carried
- * over unchanged from the standalone search page (#403); what changed is that
- * they are plain functions rather than side effects of rendering.
+ * Searching and filtering the standard library. The rules came over from the
+ * standalone search page (#403) as plain functions rather than side effects of
+ * rendering; name matching has since widened to a substring (#603).
  */
 
 import {
@@ -173,7 +173,7 @@ function relativesOf(doc: FunctionDoc): LibEntry[] {
   return allEntries().filter((e) => names.includes(functionDocName(e.doc)))
 }
 
-/** What a name search turned up: the functions called `name`, then theirs. */
+/** What a name search turned up: the matches, then their cross-references. */
 export interface NameResults {
   matches: LibEntry[]
   relatives: LibEntry[]

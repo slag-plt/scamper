@@ -131,7 +131,8 @@ describe('#403: search is part of the docs app', () => {
 
 // The matching rules came from the standalone page as student-written code and
 // were carried over deliberately unchanged, so these pin the behaviour itself
-// rather than any particular spelling of it.
+// rather than any particular spelling of it. #603 has since changed one of
+// them on purpose -- see the comments on the first two tests.
 describe('#403: the search rules survived the move', () => {
   // #603 widened matching from a whole name to a substring, so `map` now also
   // matches the four names containing it, and three of its cross-references are

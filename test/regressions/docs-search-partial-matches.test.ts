@@ -52,14 +52,24 @@ describe('#603: a partial name finds the functions containing it', () => {
       'vector-map!',
       'pixel-map',
     ])
+    // `map` is a prefix of nothing, so it alone cannot tell the exact band
+    // from the prefix one. `string->number` starts with `string` and the
+    // library lists it first; only the exact band puts `string` back in front.
+    const found = names('string')
+    expect(found).toContain('string->number')
+    expect(found[0]).toBe('string')
   })
 
   test('a prefix ranks above a name that merely contains the term', () => {
-    // `canvas-` names start with the term; `make-canvas` and `draw-canvas`
-    // only contain it, so every prefix match comes first.
-    const found = names('canvas-')
-    const prefixes = found.filter((n) => n.startsWith('canvas-'))
-    expect(prefixes.length).toBeGreaterThan(1)
+    // `ellipse?` and friends start with the term; `solid-ellipse` and
+    // `outlined-ellipse` only contain it, and the library lists those two
+    // first -- so without the ranking the result would open with them. The
+    // length check is what keeps this from passing vacuously: a term every
+    // match is a prefix of would satisfy the slice whatever the order.
+    const found = names('ellipse')
+    const prefixes = found.filter((n) => n.startsWith('ellipse'))
+    expect(found).toContain('solid-ellipse')
+    expect(prefixes.length).toBeLessThan(found.length)
     expect(found.slice(0, prefixes.length)).toEqual(prefixes)
   })
 
