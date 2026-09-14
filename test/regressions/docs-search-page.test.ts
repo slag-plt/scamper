@@ -133,21 +133,32 @@ describe('#403: search is part of the docs app', () => {
 // were carried over deliberately unchanged, so these pin the behaviour itself
 // rather than any particular spelling of it.
 describe('#403: the search rules survived the move', () => {
-  test('a name search returns the exact match, then its cross-references', () => {
+  // #603 widened matching from a whole name to a substring, so `map` now also
+  // matches the four names containing it, and three of its cross-references are
+  // matches in their own right and deduplicated out of the relatives. The
+  // ordering below -- exact first -- is #603's, and is pinned in full by
+  // test/regressions/docs-search-partial-matches.test.ts.
+  test('a name search returns the matches, then its cross-references', () => {
     const { matches, relatives } = searchByName('map')
-    expect(matches.map((e) => functionDocName(e.doc))).toEqual(['map'])
-    expect(relatives.map((e) => functionDocName(e.doc))).toEqual([
+    expect(matches.map((e) => functionDocName(e.doc))).toEqual([
+      'map',
       'string-map',
-      'reduce',
-      'reduce-right',
       'vector-map',
       'vector-map!',
+      'pixel-map',
+    ])
+    expect(relatives.map((e) => functionDocName(e.doc))).toEqual([
+      'reduce',
+      'reduce-right',
       'set-maximum-recursion-depth!',
     ])
   })
 
-  test('only an exact name matches', () => {
-    expect(searchByName('ma').matches).toHaveLength(0)
+  // Was 'only an exact name matches', which #603 deliberately stopped being
+  // true. What survives the change is the empty term: "" is a substring of
+  // every name, and the whole library is not a search result.
+  test('a partial name matches, an empty one does not', () => {
+    expect(searchByName('ma').matches.length).toBeGreaterThan(0)
     expect(searchByName('').matches).toHaveLength(0)
   })
 

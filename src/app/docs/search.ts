@@ -179,8 +179,23 @@ export interface NameResults {
   relatives: LibEntry[]
 }
 
+/** How well `name` answers `term`: 0 exact, 1 a prefix, 2 merely contains it. */
+function nameRank(name: string, term: string): number {
+  if (name === term) {
+    return 0
+  }
+  return name.startsWith(term) ? 1 : 2
+}
+
 /**
- * A name search. Only an exact name matches; the rest are cross-references.
+ * A name search: every function whose name contains `name`, ignoring case,
+ * best answer first (#603). It matched only a whole name until then, so a
+ * student typing what they remembered -- `image-save` for `image-save!` --
+ * found nothing.
+ *
+ * Cross-references come from an *exact* match only. They are shown under a
+ * divider reading "here is the function, here is its neighbourhood", which says
+ * nothing once the term is a fragment matching twenty functions.
  *
  * A docstring may list its own function among its `@category` entries -- five
  * do, `string-length` among them -- so the relatives are deduplicated against
@@ -188,10 +203,23 @@ export interface NameResults {
  * function. Left in, the same entry rendered twice under one id.
  */
 export function searchByName(name: string): NameResults {
-  const matches = allEntries().filter((e) => functionDocName(e.doc) === name)
+  const term = name.toLowerCase()
+  // "" is a substring of every name, and the whole library is not a search
+  // result. The docs page never asks -- it treats an empty box as no search --
+  // so this is the function's own answer rather than a second guard.
+  if (term === '') {
+    return { matches: [], relatives: [] }
+  }
+  const nameOf = (e: LibEntry) => functionDocName(e.doc).toLowerCase()
+  // `sort` is stable, so entries within a band keep the order the library
+  // lists them in.
+  const matches = allEntries()
+    .filter((e) => nameOf(e).includes(term))
+    .sort((a, b) => nameRank(nameOf(a), term) - nameRank(nameOf(b), term))
   const seen = new Set(matches.map(entryId))
   const relatives: LibEntry[] = []
-  for (const entry of matches.flatMap((e) => relativesOf(e.doc))) {
+  const exact = matches.filter((e) => nameOf(e) === term)
+  for (const entry of exact.flatMap((e) => relativesOf(e.doc))) {
     const id = entryId(entry)
     if (!seen.has(id)) {
       seen.add(id)
