@@ -2802,7 +2802,10 @@ test('ignore', async () => {
 (ignore)
 `),
   ).toEqual([
-    '[HTMLElement]',
+    // Void, as the docstring always said: the hiding is the web renderers'
+    // job, not the value's (#596). The text renderer has no way to hide, so it
+    // still names it here, as it does for any other void-valued call.
+    'void',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })

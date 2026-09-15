@@ -46,7 +46,8 @@ test('other values are unaffected (#444)', () => {
     [false, '#f'],
     [0, '0'],
     [null, 'null'],
-    [undefined, 'void'],
+    // Void draws as a hidden element, so it contributes no text at all (#596).
+    [undefined, ''],
   ]
   for (const [value, expected] of cases) {
     expect(mount(ValueRenderer, { props: { value } }).text()).toBe(expected)

@@ -29,10 +29,12 @@ describe('#516: browser-only functions where there is no DOM', () => {
     expect(typeof window).toBe('undefined')
   })
 
-  // `ignore` is the sharpest case: it lives in the prelude, so a student
-  // reaches it without importing anything.
-  test('ignore says what is missing instead of naming `document`', async () => {
-    expect(await report('(ignore 5)')).toBe(`Runtime error: (ignore) ${MESSAGE}`)
+  // `ignore` was the sharpest case, being the one such function in the
+  // prelude -- reachable without importing anything. #596 made it return void
+  // rather than a hidden element, so it needs no DOM at all now and is no
+  // longer one of these; every remaining case comes from a library.
+  test('ignore needs no browser now that it returns void (#596)', async () => {
+    expect(await report('(ignore 5)')).toBe('void')
   })
 
   // Each is named by `applyFn`, which labels a native's ScamperError with the
@@ -60,7 +62,6 @@ describe('#516: browser-only functions where there is no DOM', () => {
   // instructor.
   test('none of them report a Javascript ReferenceError', async () => {
     const programs = [
-      '(ignore 5)',
       '(import canvas)\n(animate-with (lambda (t) #f))',
       '(import html)\n(button "hi" (lambda () 1))',
       '(import image)\n(image-load "cat.png")',

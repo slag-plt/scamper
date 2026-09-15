@@ -7,6 +7,7 @@ import {
   isJsFunction,
 } from '../../util'
 import { createTextRenderer, Strategy, VueStrategyProps } from '../vue'
+import VoidRenderer from './components/VoidRenderer.vue'
 
 // `T` is what the caller's `formatFn` takes, and it is carried into the
 // component's `value` prop so the two cannot drift. The rule counts only
@@ -35,9 +36,12 @@ const stringStrategy: Strategy = {
   predicate: (v) => typeof v === 'string',
   ...createSimpleVueRenderer<string>((v) => `"${escapeStringLiteral(v)}"`),
 }
+// Void shows nothing at all, rather than the word `void` it used to print: see
+// VoidRenderer and #596.
 const undefinedStrategy: Strategy = {
   predicate: (v) => v === undefined,
-  ...createSimpleVueRenderer<null | undefined>(() => 'void'),
+  type: 'vue',
+  renderer: VoidRenderer,
 }
 const nullStrategy: Strategy = {
   predicate: (v) => v === null,
