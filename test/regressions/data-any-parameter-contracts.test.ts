@@ -32,22 +32,22 @@ const REJECTED: [label: string, program: string, message: string][] = [
   [
     'dataset-bar given a number',
     '(dataset-bar "t" 5)',
-    'expected a list, received number',
+    'expected a list as the second argument, received number',
   ],
   [
     'dataset-line given a string',
     '(dataset-line "t" "nope")',
-    'expected a list, received string',
+    'expected a list as the second argument, received string',
   ],
   [
     'dataset-bubble given a vector',
     '(dataset-bubble "t" (vector 1 2 3))',
-    'expected a list, received vector',
+    'expected a list as the second argument, received vector',
   ],
   [
     'dataset-pie given a boolean',
     '(dataset-pie "t" #t)',
-    'expected a list, received boolean',
+    'expected a list as the second argument, received boolean',
   ],
   // The rest parameter is checked per *argument*, not against the collected
   // list, so its predicate is the element type (`dataset?`) -- as rex-concat's
@@ -71,17 +71,17 @@ const REJECTED: [label: string, program: string, message: string][] = [
   [
     'plot-category given non-list labels',
     '(plot-category 5 (dataset-bar "c" (list 1 2)))',
-    'expected a list, received number',
+    'expected a list as the first argument, received number',
   ],
   [
     'with-plot-options given non-list options',
     '(with-plot-options 5 (plot-linear (dataset-line "xs" (list (pair 1 1)))))',
-    'expected a list, received number',
+    'expected a list as the first argument, received number',
   ],
   [
     'with-dataset-options given non-list options',
     '(with-dataset-options "border-color" (dataset-bar "c" (list 1 2)))',
-    'expected a list, received string',
+    'expected a list as the first argument, received string',
   ],
 ]
 

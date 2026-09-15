@@ -119,7 +119,9 @@ describe('#590: tag-set-children! takes elements', () => {
   test('a non-element parent is refused', async () => {
     expect(
       await report('(import html)\n(tag-set-children! "div" (tag "span"))'),
-    ).toEqual(['Runtime error: (error) expected an element, received string'])
+    ).toEqual([
+      'Runtime error: (error) expected an element as the first argument, received string',
+    ])
   })
 
   test('a non-element child is refused', async () => {
