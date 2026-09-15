@@ -84,7 +84,7 @@
 
 ;;; (find-colors color-name) -> list?
 ;;;  color-name : string?
-;;; Returns a list of all color names that contain `color`, case-insensitive.
+;;; Returns a list of all color names that contain `color-name`, case-insensitive.
 ;;; @category image, color-func, color?, all-color-names, color-name?
 (define-export find-colors (js-var "color_findColors"))
 
@@ -408,7 +408,7 @@
 ;;;   how wide the outline is drawn; defaults to 1
 ;;;  description : string?
 ;;;   what the image shows, for a screen reader; generated if omitted
-;;; Returns a drawing consisting of a isosceles triangle with base `base` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
+;;; Returns a drawing consisting of a isosceles triangle with base `width` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, solid-isosceles-triangle, outlined-isosceles-triangle
 (define-export isosceles-triangle (js-var "drawing_isoscelesTriangle"))
 
@@ -628,7 +628,7 @@
 ;;;   either a color name or the form "rgba(r, g, b, a)"
 ;;;  description : string?
 ;;;   what the image shows, for a screen reader; generated if omitted
-;;; Returns a drawing consisting of a solid isosceles triangle with base `base` and height `height`.
+;;; Returns a drawing consisting of a solid isosceles triangle with base `width` and height `height`.
 ;;; @category image, shapes, isosceles-triangle, outlined-isosceles-triangle
 (define-export solid-isosceles-triangle (js-var "drawing_solidIsoscelesTriangle"))
 
@@ -641,7 +641,7 @@
 ;;;   how wide the outline is drawn; defaults to 1
 ;;;  description : string?
 ;;;   what the image shows, for a screen reader; generated if omitted
-;;; Returns a drawing consisting of an outlined isosceles triangle with base `base` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
+;;; Returns a drawing consisting of an outlined isosceles triangle with base `width` and height `height`. An outlined shape is `line-width` wider and taller than the size it is given, since the outline is drawn centred on that size.
 ;;; @category image, shapes, isosceles-triangle, solid-isosceles-triangle
 (define-export outlined-isosceles-triangle (js-var "drawing_outlinedIsoscelesTriangle"))
 

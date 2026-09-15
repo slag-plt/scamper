@@ -14,8 +14,9 @@ import { typeOf } from '../../src/lpm/util'
 // `typeOf` (src/lpm/util.ts) names a non-integer "floating point number", so
 // every "..., received ..." message in the system gains the distinction, and
 // contract insertion (src/scheme/contract.ts) appends the offending
-// argument's ordinal -- but only when the signature declares more than one
-// parameter, since on a unary function there is nothing to disambiguate.
+// argument's ordinal, uniformly -- including on a unary function, where there
+// is nothing to disambiguate. One rule with no exception to explain was judged
+// worth the four extra words on the errors students hit most.
 
 describe('a contract names which argument was at fault (#606)', () => {
   test("the issue's four examples name the position and the float", async () => {
@@ -42,11 +43,12 @@ describe('a contract names which argument was at fault (#606)', () => {
     ])
   })
 
-  test('a one-parameter function still reports no position', async () => {
-    // "as the first argument" would be noise where there is only one.
+  test('a one-parameter function names the position too', async () => {
+    // Uniform: a unary signature has nothing to disambiguate, but saying so
+    // costs one phrase and spares the reader a rule with an exception in it.
     expect(await runProgram('(car 5)\n(string-length 5)')).toEqual([
-      'Runtime error [1:1-1:7]: (error) expected pair or nonempty-list, received number',
-      'Runtime error [2:1-2:17]: (error) expected a string, received number',
+      'Runtime error [1:1-1:7]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [2:1-2:17]: (error) expected a string as the first argument, received number',
     ])
   })
 })

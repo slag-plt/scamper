@@ -62,7 +62,7 @@ test('add1-sub1 reject a non-number', async () => {
   // own contract and turns a non-number away itself.
   for (const name of ['add1', 'sub1', 'increment', 'decrement']) {
     expect(await runProgram(`(${name} "a")`)).toEqual([
-      'Runtime error: (error) expected a number, received string',
+      'Runtime error: (error) expected a number as the first argument, received string',
     ])
   }
 })
@@ -865,7 +865,7 @@ test('contract-check-map', async () => {
 (map char-upcase (list "h" "e" "l" "l" "o"))
 `),
   ).toEqual([
-    'Runtime error: (error) expected a char, received string',
+    'Runtime error: (error) expected a char as the first argument, received string',
   ])
 })
 
@@ -1334,7 +1334,7 @@ test('not-boolean', async () => {
   ).toEqual([
     '#f',
     '#t',
-    'Runtime error: (error) expected a boolean, received number',
+    'Runtime error: (error) expected a boolean as the first argument, received number',
     '#t',
     '#t',
     '#f',
@@ -2290,7 +2290,7 @@ test('=-eps', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error: (error) expected a number, received string',
+    'Runtime error: (error) expected a number as the first argument, received string',
   ])
 })
 
@@ -2317,7 +2317,7 @@ describe('list accessors (c[ad]+r family) - empty-list failures', () => {
 
   test.each(members)('%s rejects the empty list', async (name) => {
     expect(await runProgram(`(${name} (list))`)).toEqual([
-      'Runtime error: (error) expected pair or nonempty-list, received null',
+      'Runtime error: (error) expected pair or nonempty-list as the first argument, received null',
     ])
   })
 })
@@ -2517,7 +2517,7 @@ test('list-of-contract', async () => {
 (list-of 5)
 `),
   ).toEqual([
-    'Runtime error: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure as the first argument, received number',
   ])
 })
 
@@ -2580,8 +2580,8 @@ test('string-vector-conversions', async () => {
   ).toEqual([
     '(vector #\\a #\\b #\\c)',
     '"abc"',
-    'Runtime error: (error) expected a string, received number',
-    'Runtime error: (error) expected a vector, received string',
+    'Runtime error: (error) expected a string as the first argument, received number',
+    'Runtime error: (error) expected a vector as the first argument, received string',
   ])
 })
 
@@ -2682,7 +2682,7 @@ test('vector-length', async () => {
   ).toEqual([
     '3',
     '0',
-    'Runtime error: (error) expected a vector, received number',
+    'Runtime error: (error) expected a vector as the first argument, received number',
   ])
 })
 
@@ -2729,7 +2729,7 @@ test('vector-to-list', async () => {
   ).toEqual([
     '(list 1 2 3)',
     'null',
-    'Runtime error: (error) expected a vector, received list',
+    'Runtime error: (error) expected a vector as the first argument, received list',
   ])
 })
 
@@ -2743,7 +2743,7 @@ test('list-to-vector', async () => {
   ).toEqual([
     '(vector 1 2 3)',
     '(vector)',
-    'Runtime error: (error) expected a list, received vector',
+    'Runtime error: (error) expected a list as the first argument, received vector',
   ])
 })
 
@@ -2823,7 +2823,7 @@ test('set-maximum-recursion-depth', async () => {
     'void',
     'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given -1',
     'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given 1000000',
-    'Runtime error: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer as the first argument, received string',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })
@@ -2840,7 +2840,7 @@ test('string-to-words', async () => {
     '(list "Hello" "world" "How" "are" "you")',
     'null',
     '(list "...")',
-    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a string as the first argument, received number',
   ])
 })
 
@@ -2868,7 +2868,7 @@ r
     '10',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error: (error) expected a ref, received number',
+    'Runtime error: (error) expected a ref as the first argument, received number',
     'Runtime error: (error) expected a ref as the first argument, received number',
   ])
 })
@@ -2981,7 +2981,7 @@ test('with-file-chooser', async () => {
 `),
   ).toEqual([
     '(reactive-file-chooser [Function: ##anonymous##])',
-    'Runtime error: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a procedure as the first argument, received number',
   ])
 })
 
@@ -2991,7 +2991,7 @@ test('random-wrong-type', async () => {
 (random "a")
 `),
   ).toEqual([
-    'Runtime error: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer as the first argument, received string',
   ])
 })
 

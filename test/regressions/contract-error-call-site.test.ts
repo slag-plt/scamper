@@ -21,7 +21,7 @@ import { runProgram } from '../harness.js'
 describe('a contract violation reports the call site, not the definition (#254)', () => {
   test('the range covers the offending call', async () => {
     expect(await runProgram('(not 1)')).toEqual([
-      'Runtime error [1:1-1:7]: (error) expected a boolean, received number',
+      'Runtime error [1:1-1:7]: (error) expected a boolean as the first argument, received number',
     ])
   })
 
@@ -30,13 +30,13 @@ describe('a contract violation reports the call site, not the definition (#254)'
       await runProgram('(define f (lambda (x) x))\n(f 1)\n(not 1)'),
     ).toEqual([
       '1',
-      'Runtime error [3:1-3:7]: (error) expected a boolean, received number',
+      'Runtime error [3:1-3:7]: (error) expected a boolean as the first argument, received number',
     ])
   })
 
   test('a nested call reports the inner call, not the enclosing one', async () => {
     expect(await runProgram('(+ 1\n   (not 1))')).toEqual([
-      'Runtime error [2:4-2:10]: (error) expected a boolean, received number',
+      'Runtime error [2:4-2:10]: (error) expected a boolean as the first argument, received number',
     ])
   })
 
@@ -47,19 +47,19 @@ describe('a contract violation reports the call site, not the definition (#254)'
     expect(
       await runProgram('(define g (lambda (n) (string-length n)))\n(g 5)'),
     ).toEqual([
-      'Runtime error [1:23-1:39]: (error) expected a string, received number',
+      'Runtime error [1:23-1:39]: (error) expected a string as the first argument, received number',
     ])
   })
 
   test('a call inside a lambda passed to a higher-order function', async () => {
     expect(await runProgram('(map (lambda (x) (not x)) (list 1 2))')).toEqual([
-      'Runtime error [1:18-1:24]: (error) expected a boolean, received number',
+      'Runtime error [1:18-1:24]: (error) expected a boolean as the first argument, received number',
     ])
   })
 
   test('the other repros from the issue', async () => {
     expect(await runProgram('(string-length (list 1 2 3))')).toEqual([
-      'Runtime error [1:1-1:28]: (error) expected a string, received list',
+      'Runtime error [1:1-1:28]: (error) expected a string as the first argument, received list',
     ])
     expect(await runProgram('(+ 1 2 3 "bye")')).toEqual([
       'Runtime error [1:1-1:15]: (error) expected every value of v1 to be a number, but at least one was not',

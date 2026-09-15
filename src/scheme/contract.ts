@@ -180,10 +180,10 @@ function mkTargetCall(
  * argument is void -- the caller left it out. If a rest parameter is present,
  * one more check is appended after those: `(all-satisfy? restPred restVar)`.
  *
- * Each message names the offending argument's position (#606), but only when
- * the signature declares more than one: on a one-parameter function there is
- * nothing to disambiguate, so "as the first argument" would be noise on the
- * error a student sees most often (`(car 5)`).
+ * Each message names the offending argument's position (#606), uniformly --
+ * including on a one-parameter function, where there is nothing to
+ * disambiguate. One rule with no exception to explain was judged worth the
+ * four extra words on `(car 5)`.
  */
 function mkCheckChain(
   params: Param[],
@@ -193,9 +193,7 @@ function mkCheckChain(
 ): A.Exp {
   const targetCall = mkTargetCall([...params, ...optParams], restParam, range)
 
-  const numParams = params.length + optParams.length + (restParam ? 1 : 0)
-  const positionOf = (index: number): string | undefined =>
-    numParams > 1 ? describePosition(index) : undefined
+  const positionOf = (index: number): string => describePosition(index)
 
   const restCheck: A.Exp = restParam
     ? A.mkIf(

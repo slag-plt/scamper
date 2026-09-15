@@ -48,7 +48,9 @@ describe('#531: sample-node turns away a non-vector through its contract', () =>
       await runProgram(`(import audio)\n(sample-node ${expr})`, {
         stripRanges: true,
       }),
-    ).toEqual([`Runtime error: (error) expected a vector, received ${received}`])
+    ).toEqual([
+      `Runtime error: (error) expected a vector as the first argument, received ${received}`,
+    ])
   })
 
   test('no raw Javascript error reaches the student', async () => {

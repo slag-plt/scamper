@@ -133,14 +133,11 @@ function readLibrary(): {
  * "<file> <binding> <name the prose uses>"; remove an entry when its docstring
  * is corrected. Do not add to this list -- a new mismatch is a bug to fix.
  */
-const knownMismatches = new Set([
-  'image.scm find-colors color', // the parameter is `color-name`
-  'image.scm isosceles-triangle base', // the parameter is `width`
-  'image.scm solid-isosceles-triangle base', // the parameter is `width`
-  'image.scm outlined-isosceles-triangle base', // the parameter is `width`
-  'music.scm instrument comp', // there is no `comp` parameter
-  'music.scm make-note-handlers note-handler', // the binding is `note-handlers`
-])
+// Empty, and meant to stay that way: every mismatch this sweep found was
+// corrected alongside #594's own two. An entry here is a name the prose uses
+// that its signature does not declare -- add one only to record a deliberate
+// exception, never to silence a typo.
+const knownMismatches = new Set<string>([])
 
 describe('a docstring only names parameters its signature declares (#594)', () => {
   const { bindings, libraryNames, moduleNames } = readLibrary()

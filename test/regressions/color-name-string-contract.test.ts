@@ -40,5 +40,5 @@ test('color-name? rejects a non-string argument via its contract', async () => {
   (color-name? 5)
   `)
   expect(out).toHaveLength(1)
-  expect(out[0]).toContain('expected a string, received number')
+  expect(out[0]).toContain('expected a string as the first argument, received number')
 })

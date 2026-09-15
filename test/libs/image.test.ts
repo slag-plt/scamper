@@ -99,7 +99,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '10',
-      'Runtime error: (error) expected a rgb, received number',
+      'Runtime error: (error) expected a rgb as the first argument, received number',
       'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
       'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
     ])
@@ -114,7 +114,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '20',
-      'Runtime error: (error) expected a rgb, received string',
+      'Runtime error: (error) expected a rgb as the first argument, received string',
     ])
   })
 
@@ -127,7 +127,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '30',
-      'Runtime error: (error) expected a rgb, received string',
+      'Runtime error: (error) expected a rgb as the first argument, received string',
     ])
   })
 
@@ -142,7 +142,7 @@ describe('color', () => {
     ).toEqual([
       '128',
       '255',
-      'Runtime error: (error) expected a rgb, received null',
+      'Runtime error: (error) expected a rgb as the first argument, received null',
     ])
   })
 
@@ -178,7 +178,7 @@ describe('color', () => {
       '#t',
       '#t',
       '#f',
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 
@@ -193,7 +193,7 @@ describe('color', () => {
     ).toEqual([
       '(list "darkred" "indianred" "mediumvioletred" "orangered" "palevioletred" "red")',
       'null',
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 
@@ -208,7 +208,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 0 0 255)',
       'Runtime error: (color-name->rgb) color-name->rgb: unknown color name not-a-color',
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 
@@ -235,7 +235,7 @@ describe('color', () => {
       '"rgb(255  0  0 / 100%)"',
       '"rgb(255  0  0 / 50%)"',
       '"rgb(0  0  0 / 0%)"',
-      'Runtime error: (error) expected a rgb, received number',
+      'Runtime error: (error) expected a rgb as the first argument, received number',
     ])
   })
 
@@ -302,7 +302,7 @@ describe('color', () => {
       '120',
       '240',
       '60',
-      'Runtime error: (error) expected a rgb, received string',
+      'Runtime error: (error) expected a rgb as the first argument, received string',
     ])
   })
 
@@ -344,7 +344,7 @@ describe('color', () => {
       '(hsv 0 100 100 255)',
       '(hsv 120 100 100 255)',
       '(hsv 0 0 50 255)',
-      'Runtime error: (error) expected a rgb, received number',
+      'Runtime error: (error) expected a rgb as the first argument, received number',
     ])
   })
 
@@ -380,7 +380,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 0 0 255)',
       '(rgba 255 0 0 128)',
-      'Runtime error: (error) expected a hsv, received number',
+      'Runtime error: (error) expected a hsv as the first argument, received number',
     ])
   })
 
@@ -395,7 +395,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 84 84 84 255)',
       '(rgba 0 0 0 255)',
-      'Runtime error: (error) expected a rgb, received string',
+      'Runtime error: (error) expected a rgb as the first argument, received string',
     ])
   })
 
@@ -450,7 +450,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 255 255 255)',
       '(rgba 0 0 0 255)',
-      'Runtime error: (error) expected a rgb, received string',
+      'Runtime error: (error) expected a rgb as the first argument, received string',
     ])
   })
 
@@ -1451,8 +1451,8 @@ describe('drawing', () => {
 (drawing-width (make-canvas 20 15))
 `),
       ).toEqual([
-        'Runtime error: (error) expected a drawing, received number',
-        'Runtime error: (error) expected a drawing, received object',
+        'Runtime error: (error) expected a drawing as the first argument, received number',
+        'Runtime error: (error) expected a drawing as the first argument, received object',
       ])
     })
   })
@@ -1477,8 +1477,8 @@ describe('drawing', () => {
 (drawing-height (make-canvas 20 15))
 `),
       ).toEqual([
-        'Runtime error: (error) expected a drawing, received number',
-        'Runtime error: (error) expected a drawing, received object',
+        'Runtime error: (error) expected a drawing as the first argument, received number',
+        'Runtime error: (error) expected a drawing as the first argument, received object',
       ])
     })
   })
@@ -1529,7 +1529,7 @@ describe('drawing', () => {
 (drawing-color 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected a drawing, received number',
+        'Runtime error: (error) expected a drawing as the first argument, received number',
       ])
     })
   })
@@ -1624,7 +1624,7 @@ describe('image transforms', () => {
 (with-image-file 5)
 `),
       ).toEqual([
-        'Runtime error: (error) expected a procedure, received number',
+        'Runtime error: (error) expected a procedure as the first argument, received number',
       ])
     })
 
@@ -2122,8 +2122,8 @@ describe('csc151 shapes', () => {
 (wedge-radius (solid-circle 20 "red"))
 (circle-diameter 5)
 `)).toEqual([
-        'Runtime error: (error) expected a wedge, received [Struct: ellipse]',
-        'Runtime error: (error) expected a circle, received number',
+        'Runtime error: (error) expected a wedge as the first argument, received [Struct: ellipse]',
+        'Runtime error: (error) expected a circle as the first argument, received number',
       ])
     })
   })

@@ -51,7 +51,7 @@ describe('title', () => {
     (import lab)
     (title 5)
     `)).toEqual([
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 })
@@ -68,7 +68,7 @@ describe('part', () => {
     (import lab)
     (part 5)
     `)).toEqual([
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 })
@@ -85,7 +85,7 @@ describe('problem', () => {
     (import lab)
     (problem 5)
     `)).toEqual([
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 })
@@ -104,7 +104,7 @@ describe('description', () => {
     (import lab)
     (description 5)
     `)).toEqual([
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the first argument, received number',
     ])
   })
 })

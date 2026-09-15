@@ -98,7 +98,7 @@ describe('#590: on-timer takes an integer', () => {
   // The worst of the four: this was accepted without a word.
   test('a string is refused rather than silently taken', async () => {
     expect(await report('(import reactive)\n(on-timer "hi")')).toEqual([
-      'Runtime error: (error) expected an integer, received string',
+      'Runtime error: (error) expected an integer as the first argument, received string',
     ])
   })
 
