@@ -179,6 +179,21 @@ test('empty', async () => {
   ])
 })
 
+test('none', async () => {
+  expect(await runProgram(`
+    (import rex)
+    (rex-matches? (rex-none) "")
+    (rex-matches? (rex-none) "hello")
+    (rex-none)
+    (rex->string (rex-none))
+  `)).toEqual([
+    '#f',
+    '#f',
+    '(rex-none)',
+    '"(?!)"'
+  ])
+})
+
 test('find-matches', async () => {
   expect(await runProgram(`
     (import rex)
