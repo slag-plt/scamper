@@ -87,6 +87,7 @@ export const SAMPLES: Record<string, string> = {
     '(gradescope-test-suite (list (test-result-ok "ok")))',
 
   // html, reactive
+  'element?': '(tag "div")',
   'text-area?': '(text-area "notes")',
   'button?': '(button "Click" (lambda () #t))',
   // N.B., never on-timer: a timer subscription outlives the test (#375, and
@@ -271,9 +272,6 @@ export const ARGS = new Map<string, string[]>([
   // gradescope: a suite is built out of test results.
   ['gradescope:gradescope-test-suite', ['(list (test-result-ok "ok"))']],
   ['gradescope:gradescope-test-result', ['"case"', '"passed"', '1', '1', '"ok"']],
-
-  // html: children have to be elements, not the generic `any` sample.
-  ['html:tag-set-children!', ['(tag "div")', '(tag "span")']],
 
   // music: a sample of numbers, not the generic vector.
   ['music:note-handlers', ['(vector (lambda (msg) 0))']],
