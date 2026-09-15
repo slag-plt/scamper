@@ -323,6 +323,13 @@ export class Scheduler {
           .loadFile(stepResult.filename)
           .then(
             async (_src) => {
+              // The load could not be called off, but its results belong to a
+              // run that is over: compiling would report the file's
+              // diagnostics, and a module fiber would be scheduled onto the
+              // cancelled run's channels (#577).
+              if (this.abandonIfCancelled(task)) {
+                return
+              }
               const { prog, diagnostics } = await S.compile(_src)
               diagnostics.forEach((d) => {
                 task.err.report(diagnosticToError(d))
@@ -397,6 +404,11 @@ export class Scheduler {
               })
             },
             (_err: unknown) => {
+              // A load that fails after the stop is not news: the student was
+              // already told the run was cancelled (#577).
+              if (this.abandonIfCancelled(task)) {
+                return
+              }
               task.err.report(
                 new ScamperError(
                   'Runtime',
@@ -430,6 +442,12 @@ export class Scheduler {
           this.resumeOrComplete(task)
         },
         (err: unknown) => {
+          // Reported at the call site, so a cancel has to be honoured here
+          // rather than at resumeOrComplete: by then the error is already in
+          // the stopped run's output (#577).
+          if (this.abandonIfCancelled(task)) {
+            return
+          }
           // A rejected async action surfaces as a runtime error at the blocking
           // call, catchable by an enclosing with-handler (via handleError).
           const scamperErr =
@@ -621,6 +639,34 @@ export class Scheduler {
   private suspendTask(task: SchedulerTask): void {
     this.removeTaskFromQueue(task)
     this.suspensions.set(task.id, { task, cancelled: false })
+  }
+
+  /**
+   * Whether `task`'s run was cancelled while the async action it is suspended
+   * on was in flight -- in which case the suspension is consumed here and the
+   * caller must abandon the action's work at once, reporting nothing and
+   * resuming nothing.
+   *
+   * The action itself cannot be called off, so its settle path runs regardless;
+   * what this buys is stopping it at the *top*, before it reports an import's
+   * failure or a rejection into channels belonging to a run the student has
+   * already stopped (#577).
+   *
+   * Distinct from the consume in `resumeOrComplete`, which ends every
+   * suspension whatever its outcome: this one takes the entry only when it is
+   * cancelled, so a live task keeps its suspension and still settles through
+   * that single chokepoint.
+   *
+   * @returns whether the caller should give up. True means the entry is gone;
+   *          `resumeOrComplete` must NOT then be called, since without the
+   *          entry it would put the cancelled task back on the queue.
+   */
+  private abandonIfCancelled(task: SchedulerTask): boolean {
+    if (this.suspensions.get(task.id)?.cancelled !== true) {
+      return false
+    }
+    this.suspensions.delete(task.id)
+    return true
   }
 
   /**
@@ -861,7 +907,9 @@ export class Scheduler {
    *
    * Also where a cancel that landed during the suspension takes effect: the
    * action was already in flight and could not be called off, so the task is
-   * simply not returned to the queue (#534).
+   * simply not returned to the queue (#534). A settle path that would *report*
+   * on the way here gives up sooner, at `abandonIfCancelled` (#577); what is
+   * left to drop here is the quiet remainder.
    */
   private resumeOrComplete(task: SchedulerTask) {
     // The suspension is over whatever its outcome, so consume it on every path:
