@@ -150,20 +150,33 @@ describe('basic ops', () => {
       const libRange = new Range(new Loc(90, 1, 900), new Loc(90, 54, 953))
       const callRange = new Range(new Loc(2, 1, 13), new Loc(2, 20, 32))
       const fiber = makeTestFiber([
-        U.mkDisp([
-          // A named frame stands in for a contract wrapper: its body applies
-          // `boom` at a range in "library source" (libRange), while the frame
-          // itself was called from the "student's" callRange.
-          U.mkCls([], [U.mkVar('boom'), U.mkAp(0, libRange)], 'wrapper'),
-          U.mkAp(0, callRange),
-        ]),
+        U.mkDisp([U.mkVar('wrapper'), U.mkAp(0, callRange)]),
       ])
-      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
-        'boom',
-        () => {
-          throw new TypeError('kaboom')
-        },
-      ])
+      fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel(
+        [
+          'boom',
+          () => {
+            throw new TypeError('kaboom')
+          },
+        ],
+        // A 'builtin' closure stands in for a contract wrapper: its body
+        // applies `boom` at a range in "library source" (libRange), while the
+        // frame itself was called from the "student's" callRange. The origin
+        // is what marks libRange as a range no student could open (#592) --
+        // a frame merely *named* is just as often a lambda they wrote.
+        [
+          'wrapper',
+          U.mkClosure(
+            [],
+            [U.mkVar('boom'), U.mkAp(0, libRange)],
+            [],
+            () => undefined,
+            'wrapper',
+            undefined,
+            'builtin',
+          ),
+        ],
+      )
       let err: unknown
       try {
         stepFiberToOutput(fiber, out)

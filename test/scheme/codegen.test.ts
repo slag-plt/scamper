@@ -922,7 +922,7 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     test('an accessor applied to the wrong struct is a runtime error', async () => {
       await checkMachineOutput(
         '(struct a (x)) (struct b (y)) (a-x (b 1))',
-        ['Runtime error: Accessor function expects a a, received [Struct: b]'], true)
+        ['Runtime error: (a-x) Accessor function expects a a, received [Struct: b]'], true)
     })
   })
 

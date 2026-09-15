@@ -109,52 +109,44 @@ export function applyFn(
         currFrame.values.push(undefined)
         return traceStep
       }
-      // N.B., a synthetic frame name ("##anonymous##", "##stmt-N##") means
-      // fn was called directly, outside any named Scamper function -- in
-      // that case op.range/fn.name (this call's own, real range and the
-      // JS function's own name) are already exactly right. Otherwise fn
-      // is being invoked from inside a named function's frame -- most
-      // often a contract wrapper's own ##contract-target## call, whose Ap
-      // op only ever carries the *wrapped definition's* range, never the
-      // user's actual call site. In that case prefer the frame's own
-      // callRange/name: the range/name of the Ap that invoked *this
-      // frame*, i.e. wherever the user (or an enclosing function) really
-      // wrote the call.
-      const useFrame = !currFrame.name.startsWith('##')
-      const callRange = useFrame ? currFrame.callRange : range
+      // N.B., a native's failure is blamed at `siteRange`, as the closure arm
+      // and MatchHandler/LetHandler blame theirs. This asked instead whether
+      // the enclosing frame's *name* was synthetic, which reads a contract
+      // wrapper and a lambda the student named alike -- so a bare native they
+      // called, a struct accessor most visibly, was blamed on the enclosing
+      // function's call site rather than their own (#592).
       if (e instanceof SuspendSignal) {
         // A blocking primitive is suspending the fiber -- propagate to
         // Scheduler.stepTask (control flow, not an error). The result value is
         // supplied on resume by Fiber.resumeWithValue, not by the push above.
         // Record the call site on the way out: the action's own error is raised
         // later, in the scheduler, with no other route back here (#342).
-        //
-        // N.B., only when that site is worth showing. An *unnamed* library
-        // frame is a lambda inside library source, so its op ranges point into
-        // prelude.scm/image.scm, and underlining a line of the standard library
-        // in the student's editor is worse than no range at all -- those still
-        // report unlocated. A *named* one (`with-file`,
-        // `with-image-from-url`) reports its frame's callRange, which a call
-        // made from library code passes along from its own caller (see the
-        // Frame built below), so it is the student's call after all.
-        if (useFrame || currFrame.origin === 'user') {
-          e.range ??= callRange
-        }
+        e.range ??= siteRange
         throw e
       }
       if (e instanceof ScamperError) {
         // Fill range/source only when the error didn't set them itself: most JS
         // primitives throw context-free errors (we supply both), but some (e.g.
         // `error`) fix their own source, which we must not clobber.
-        e.range ??= callRange
-        e.source ??= useFrame ? currFrame.name : fn.name
+        //
+        // The name to report is the native's own -- the procedure that
+        // complained -- except from inside a *named library* frame, which is
+        // the contract wrapper standing in for it: there the native is reached
+        // as `##contract-target##` and still carries its raw Javascript
+        // identifier (`prelude_vectorRef`), where the frame carries the
+        // Scamper spelling the student wrote.
+        e.range ??= siteRange
+        e.source ??=
+          currFrame.origin === 'builtin' && !currFrame.name.startsWith('##')
+            ? currFrame.name
+            : fn.name
         throw e
       } else {
         throw new ScamperError(
           'Runtime',
           `Unexpected error in Javascript function call: ${e instanceof Error ? e.toString() : String(e)}`,
           undefined,
-          callRange,
+          siteRange,
           undefined
         )
       }
