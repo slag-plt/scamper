@@ -72,11 +72,24 @@ describe('typeOf distinguishes a whole number from a float (#606)', () => {
     expect(typeOf(5.0)).toBe('number')
   })
 
-  test('the distinction reaches a native check, not just a contract', async () => {
+  test('the distinction reaches a contract check', async () => {
     // Every backend renders a type name through the same `typeOf`, so the
     // wording cannot drift between one message and another.
     expect(await runProgram('(vector-ref (vector 1 2) 0.5)')).toEqual([
       'Runtime error [1:1-1:29]: (error) expected an integer as the second argument, received floating point number',
+    ])
+  })
+
+  test('and a native check, which contract insertion never touches', async () => {
+    // `(error)` is the source contract insertion stamps, so the case above is
+    // a contract after all. These two are raised by hand inside a native and
+    // carry no argument position -- but they render their type name through
+    // the same `typeOf`, which is what this pins.
+    expect(await runProgram('(if 5.5 1 2)')).toEqual([
+      'Runtime error: if: expected a boolean guard, received floating point number',
+    ])
+    expect(await runProgram('(list->string (list 1.5))')).toEqual([
+      'Runtime error [1:1-1:25]: (list->string) list->string: list contains non-character element: floating point number',
     ])
   })
 })

@@ -122,7 +122,8 @@ export function applyFn(
       // so a bare native they called, a struct accessor most visibly, was
       // blamed on the enclosing function's call site rather than their own.
       //
-      // WHAT TO NAME is genuinely a question about the name, below.
+      // WHAT TO NAME is the separate question settled below, and takes the
+      // name into account as well as the origin.
       if (e instanceof SuspendSignal) {
         // A blocking primitive is suspending the fiber -- propagate to
         // Scheduler.stepTask (control flow, not an error). The result value is
@@ -139,10 +140,12 @@ export function applyFn(
         //
         // The name to report is the native's own -- the procedure that
         // complained -- except from inside a *named library* frame, which is
-        // the contract wrapper standing in for it: there the native is reached
-        // as `##contract-target##` and still carries its raw Javascript
+        // usually the contract wrapper standing in for it: there the native is
+        // reached as `##contract-target##` and still carries its raw Javascript
         // identifier (`prelude_vectorRef`), where the frame carries the
-        // Scamper spelling the student wrote.
+        // Scamper spelling the student wrote. Not every named library frame is
+        // a wrapper, so a library helper can name itself instead of the native
+        // -- prelude's own `apply` does; see struct-accessor-call-range.test.ts.
         e.range ??= siteRange
         e.source ??=
           currFrame.origin === 'builtin' && !currFrame.name.startsWith('##')

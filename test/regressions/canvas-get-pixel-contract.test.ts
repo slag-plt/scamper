@@ -6,7 +6,8 @@ import { runProgram } from '../harness.js'
 // `canvas-get-pixel`'s docstring declared `img : drawing?` for a parameter
 // that is a canvas, and src/lib/index.ts turns that line into a runtime
 // contract -- so the one kind of value the function works on was the one kind
-// it rejected, with "expected a drawing as the first argument, received object".
+// it rejected, with "expected a drawing, received object" (the message as it
+// then read; #606 has since added the argument position).
 //
 // These go through the Scheme binding on purpose. The existing coverage in
 // test/libs/image.browser.test.ts calls `canvas_canvasGetPixel` directly,

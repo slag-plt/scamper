@@ -153,3 +153,6 @@ dumps/
 # A local choice about how one machine serves the front end, not a property of
 # the project. Copy docker-compose.override.yml.example to create it.
 docker-compose.override.yml
+
+# Working notes for the bug sweep, not part of the repo.
+.claude/sweep-plan.md

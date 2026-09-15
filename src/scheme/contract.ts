@@ -82,8 +82,9 @@ function describePosition(index: number): string {
  * prelude/runtime calls (rather than a host closure) so the result is ordinary
  * Scamper source.
  *
- * @param position the argument's ordinal, or undefined to leave it out -- see
- *        mkCheckChain for when a position is worth naming.
+ * @param position the argument's ordinal. mkCheckChain names one on every
+ *        fixed and optional parameter (#606), so `undefined` -- which drops
+ *        the phrase -- is only what a caller that did not want one would pass.
  */
 function mkErrorMsg(
   descPred: string,

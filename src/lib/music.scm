@@ -130,10 +130,10 @@
 ;;; @category modifications, music, sound, mod, mod?, note-handlers, percussion, tempo
 (define-export dynamics (js-var "music_dynamics"))
 
-;;; (instrument prog) -> composition?
+;;; (instrument prog) -> mod?
 ;;;  prog : integer?
 ;;;   a valid MIDI program number (0--127)
-;;; Creates a new composition that is played with MIDI sound or program `prog`. See the "General MIDI" Wikipedia article for a complete list of MIDI program numbers to sound mappings. Additionally, you should call `load-instrument` at the top-level of your program to download the desired instrument's soundfont before using this function.
+;;; A modification that plays the modified composition with MIDI sound or program `prog`. See the "General MIDI" Wikipedia article for a complete list of MIDI program numbers to sound mappings. Additionally, you should call `load-instrument` at the top-level of your program to download the desired instrument's soundfont before using this function.
 ;;; @category instruments, music, sound, load-instrument, use-high-quality-instruments, composition?, empty, mod, note, note-event, note-freq, play-composition, repeat, rest, trigger
 (define-export instrument (js-var "music_instrument"))
 

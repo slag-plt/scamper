@@ -330,6 +330,10 @@ export class Scheduler {
               if (this.abandonIfCancelled(task)) {
                 return
               }
+              // No second check after this await: `compile` only ever
+              // suspends under `scopeCheck`, which the scheduler does not
+              // pass, so it resolves synchronously and the continuation is a
+              // microtask. A stop click is a macrotask and cannot interleave.
               const { prog, diagnostics } = await S.compile(_src)
               diagnostics.forEach((d) => {
                 task.err.report(diagnosticToError(d))
