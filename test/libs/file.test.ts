@@ -208,8 +208,8 @@ describe('argument contracts', () => {
       'Runtime error: (error) expected a string, received number',
       'Runtime error: (error) expected a string, received number',
       'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the second argument, received number',
+      'Runtime error: (error) expected a string as the second argument, received number',
     ])
   })
 
@@ -221,8 +221,8 @@ describe('argument contracts', () => {
 (lines->file "not a list" "out.txt")
 `),
     ).toEqual([
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a list, received string',
+      'Runtime error: (error) expected a string as the first argument, received number',
+      'Runtime error: (error) expected a list as the first argument, received string',
     ])
   })
 })

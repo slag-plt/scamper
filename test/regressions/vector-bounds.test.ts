@@ -45,7 +45,7 @@ describe('vector-ref rejects out-of-bounds indices cleanly (#257)', () => {
 
   test('non-integer index still caught by the integer? contract', async () => {
     expect(stripRange(await runProgram('(vector-ref (vector 1 2 3) 1.5)'))).toEqual([
-      'Runtime error [..]: (error) expected an integer, received number',
+      'Runtime error [..]: (error) expected an integer as the second argument, received floating point number',
     ])
   })
 

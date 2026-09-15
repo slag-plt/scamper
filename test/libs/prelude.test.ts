@@ -846,11 +846,11 @@ test('cons-pair', async () => {
   ).toEqual([
     // `cons` requires a list tail, and since #541 its contract is what says so,
     // in the same words as every other rejected argument.
-    'Runtime error: (error) expected a list, received boolean',
-    'Runtime error: (error) expected a list, received number',
-    'Runtime error: (error) expected a list, received string',
-    'Runtime error: (error) expected a list, received string',
-    'Runtime error: (error) expected a list, received number',
+    'Runtime error: (error) expected a list as the second argument, received boolean',
+    'Runtime error: (error) expected a list as the second argument, received number',
+    'Runtime error: (error) expected a list as the second argument, received string',
+    'Runtime error: (error) expected a list as the second argument, received string',
+    'Runtime error: (error) expected a list as the second argument, received number',
     '(pair 1 2)',
     '(pair #t #f)',
     '(pair "hi" "bye")',
@@ -1117,7 +1117,7 @@ test('l-s-r-s', async () => {
 test('l-s-r-s reject a non-procedure', async () => {
   for (const name of ['l-s', 'r-s']) {
     expect(await runProgram(`((${name} 5 1) 2)`)).toEqual([
-      'Runtime error: (error) expected a procedure, received number',
+      'Runtime error: (error) expected a procedure as the first argument, received number',
     ])
   }
 })
@@ -2431,8 +2431,8 @@ test('sort-contract', async () => {
 (sort (list 1 2) 5)
 `),
   ).toEqual([
-    'Runtime error: (error) expected a list, received number',
-    'Runtime error: (error) expected a procedure, received number',
+    'Runtime error: (error) expected a list as the first argument, received number',
+    'Runtime error: (error) expected a procedure as the second argument, received number',
   ])
 })
 
@@ -2597,7 +2597,7 @@ test('string-contains', async () => {
     '#t',
     '#f',
     '#t',
-    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a string as the first argument, received number',
   ])
 })
 
@@ -2609,7 +2609,7 @@ test('string-split-vector', async () => {
 `),
   ).toEqual([
     '(vector "a" "b" "c")',
-    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a string as the first argument, received number',
   ])
 })
 
@@ -2668,7 +2668,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer as the first argument, received string',
   ])
 })
 
@@ -2699,7 +2699,7 @@ test('vector-ref', async () => {
   ).toEqual([
     '1',
     '3',
-    'Runtime error: (error) expected a vector, received number',
+    'Runtime error: (error) expected a vector as the first argument, received number',
     'Runtime error: (vector-ref) vector-ref: index 5 out of bounds of vector',
     'Runtime error: (vector-ref) vector-ref: index -1 out of bounds of vector',
   ])
@@ -2869,7 +2869,7 @@ r
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
     'Runtime error: (error) expected a ref, received number',
-    'Runtime error: (error) expected a ref, received number',
+    'Runtime error: (error) expected a ref as the first argument, received number',
   ])
 })
 
@@ -2969,7 +2969,7 @@ describe('with-file', () => {
       await runProgram(`
 (with-file 5 (lambda (s) s))
 `),
-    ).toEqual(['Runtime error: (error) expected a string, received number'])
+    ).toEqual(['Runtime error: (error) expected a string as the first argument, received number'])
   })
 })
 
@@ -3417,7 +3417,7 @@ m
     ).toEqual([
       'void',
       '{ "a" : 99 }',
-      'Runtime error: (error) expected a string, received number',
+      'Runtime error: (error) expected a string as the second argument, received number',
     ])
   })
 
@@ -3491,9 +3491,9 @@ m
 (list->hash (list 5))
 `),
     ).toEqual([
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a hash, received list',
+      'Runtime error: (error) expected a string as the second argument, received number',
+      'Runtime error: (error) expected a string as the second argument, received number',
+      'Runtime error: (error) expected a hash as the first argument, received list',
       'Runtime error: (list->hash) list->hash: expected a list of pairs, but the list contains number',
     ])
   })

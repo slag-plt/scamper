@@ -40,7 +40,7 @@ test('an optional argument is still checked against its predicate (#435)', async
       { stripRanges: true },
     ),
   ).toEqual([
-    'Runtime error: (error) expected an integer, received string',
+    'Runtime error: (error) expected an integer as the third argument, received string',
     'Runtime error: (substring) Arity mismatch in function call: expected at most 3 arguments, got 4',
   ])
 })
@@ -69,7 +69,7 @@ test('a documented definition can declare optional parameters (#435)', async () 
   ).toEqual([
     '"Hello, Ada"',
     '"Howdy, Ada"',
-    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a string as the second argument, received number',
     'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
   ])
 })

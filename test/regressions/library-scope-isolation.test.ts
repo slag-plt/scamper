@@ -68,7 +68,7 @@ describe('a user define cannot capture a library\'s internals', () => {
     // contract error turned into "Not a function or closure: 5" pointing at a
     // prelude line number.
     expect(await runProgram('(define string-append 5)\n(list-ref 1 2)')).toEqual([
-      'Runtime error [2:1-2:14]: (error) expected a list, received number',
+      'Runtime error [2:1-2:14]: (error) expected a list as the first argument, received number',
     ])
     expect(await runProgram('(define all-satisfy? 5)\n(+ 1 "a")')).toEqual([
       'Runtime error [2:1-2:9]: (error) expected every value of v1 to be a number, but at least one was not',

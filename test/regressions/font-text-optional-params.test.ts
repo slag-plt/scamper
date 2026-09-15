@@ -44,10 +44,10 @@ describe('font', () => {
         { stripRanges: true },
       ),
     ).toEqual([
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a string, received number',
-      'Runtime error: (error) expected a boolean, received string',
-      'Runtime error: (error) expected a boolean, received string',
+      'Runtime error: (error) expected a string as the first argument, received number',
+      'Runtime error: (error) expected a string as the second argument, received number',
+      'Runtime error: (error) expected a boolean as the third argument, received string',
+      'Runtime error: (error) expected a boolean as the fourth argument, received string',
       'Runtime error: (font) Arity mismatch in function call: expected at most 4 arguments, got 5',
     ])
   })
@@ -81,8 +81,8 @@ describe('text', () => {
         { stripRanges: true },
       ),
     ).toEqual([
-      'Runtime error: (error) expected a font, received number',
-      'Runtime error: (error) expected a number, received string',
+      'Runtime error: (error) expected a font as the fourth argument, received number',
+      'Runtime error: (error) expected a number as the second argument, received string',
       'Runtime error: (text) Arity mismatch in function call: expected at most 4 arguments, got 5',
     ])
   })

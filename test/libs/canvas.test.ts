@@ -115,7 +115,7 @@ describe('cross-module predicates (color?, image?) resolve with only canvas impo
     expect(await runProgram(`
     (import canvas)
     (canvas-text! (make-canvas 10 10) 0 0 "hi" 12 "solid" "red" 5)
-    `)).toEqual(['Runtime error: (error) expected a font, received number'])
+    `)).toEqual(['Runtime error: (error) expected a font as the eighth argument, received number'])
   })
 
   test('canvas-text! accepts a font and rejects a ninth argument', async () => {
