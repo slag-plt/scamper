@@ -457,7 +457,7 @@ describe('color', () => {
   test('rgb-greyscale', async () => {
     // #259: the Rec.601 luma weights already sum to 1.0, so the greyscale
     // value is 0.30r + 0.59g + 0.11b (no spurious /3). White -> 255, black ->
-    // 0, pure red -> 0.30*255 = 76.5.
+    // 0, pure red -> 0.30*255 = 76.5, rounded to 77 since #609.
     expect(
       await runProgram(`
 (import image)
@@ -465,7 +465,7 @@ describe('color', () => {
 (rgb-greyscale (rgb 0 0 0))
 (rgb-greyscale (rgb 255 0 0))
 `),
-    ).toEqual(['(rgba 255 255 255 255)', '(rgba 0 0 0 255)', '(rgba 76.5 76.5 76.5 255)'])
+    ).toEqual(['(rgba 255 255 255 255)', '(rgba 0 0 0 255)', '(rgba 77 77 77 255)'])
   })
 
   test('rgb-phaseshift', async () => {
@@ -541,7 +541,7 @@ describe('color', () => {
 (rgb-average (rgb 1 2 3) (rgb 4 5 6))
 (rgb-average (rgb 0 0 0) (rgb 0 0 0))
 `),
-    ).toEqual(['(rgba 2.5 3.5 4.5 255)', '(rgba 0 0 0 255)'])
+    ).toEqual(['(rgba 3 4 5 255)', '(rgba 0 0 0 255)'])
   })
 })
 
@@ -1500,7 +1500,7 @@ describe('drawing', () => {
 (drawing-color (beside (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
 (drawing-color (overlay/offset 3 4 (rectangle 10 10 "solid" "red") (rectangle 5 5 "solid" "blue")))
 `),
-      ).toEqual(['(rgba 127.5 0 127.5 255)', '(rgba 127.5 0 127.5 255)'])
+      ).toEqual(['(rgba 128 0 128 255)', '(rgba 128 0 128 255)'])
     })
 
     test('passes through the wrapped color for rotate and with-dash', async () => {

@@ -17,11 +17,14 @@ describe('rgb-greyscale uses Rec.601 luma without a spurious /3 (#259)', () => {
 `)).toEqual(['(rgba 255 255 255 255)'])
   })
 
-  test('pure red maps to 0.30*255 = 76.5', async () => {
+  // N.B., 0.30*255 = 76.5 is now reported as 77: #609 made the components
+  // whole numbers. The weights, which are what this case is about, are
+  // unchanged -- 77 is still nowhere near the 85 the spurious /3 produced.
+  test('pure red maps to 0.30*255 = 76.5, rounded to 77', async () => {
     expect(await runProgram(`
 (import image)
 (rgb-greyscale (rgb 255 0 0))
-`)).toEqual(['(rgba 76.5 76.5 76.5 255)'])
+`)).toEqual(['(rgba 77 77 77 255)'])
   })
 })
 
