@@ -16,6 +16,13 @@ const restrictedSyntax = [
   },
 ]
 
+// The browser globals Node does not define, spelled out rather than wildcarded
+// on `HTML*` so a local class such as `HTMLDisplay` is not swept up -- add one
+// when src/ starts using it. `DOMException`, `Blob` and `Event` are
+// deliberately absent: Node declares those.
+const domClass =
+  '/^(HTML[A-Za-z]*Element|SVG[A-Za-z]*Element|Element|Node|Text|Document|DocumentFragment|DOMParser|Window|CanvasRenderingContext2D|ImageData|ImageBitmap|AudioNode|AudioContext|BaseAudioContext|AudioBuffer|AudioBufferSourceNode|GainNode|OscillatorNode|DelayNode|BiquadFilterNode|MediaStream)$/'
+
 /**
  * A bare `instanceof` against a DOM class, i.e. one not behind a `typeof`.
  *
@@ -29,23 +36,31 @@ const restrictedSyntax = [
  * HTMLElement`. The selector accepts any `instanceof` under a logical operator
  * whose left side is a `typeof` comparison, so the negated spelling -- `typeof
  * X === 'undefined' || !(v instanceof X)` -- passes too. It cannot check that
- * the name guarded is the name tested; only a custom rule could.
+ * the name guarded is the name tested; only a custom rule could. That is also
+ * why the exemption stays a plain descendant one (#595): a guard naming the
+ * wrong class escapes with or without an intervening callback, so narrowing
+ * the scope would close nothing and would risk flagging honest nesting.
  *
  * Where the surrounding function genuinely needs a browser the answer is
  * `requireBrowser()` (src/js/browser.ts, #516) and *not* a guard, which would
  * turn a clear "needs a browser" error into a silently wrong `false`. Such a
  * site stays bare and disables this rule on the line, with that as the reason.
  *
- * The names are the browser globals Node does not define, spelled out rather
- * than wildcarded on `HTML*` so a local class such as `HTMLDisplay` is not
- * swept up -- add one when src/ starts using it. `DOMException`, `Blob` and
- * `Event` are deliberately absent: Node declares those.
+ * Exported so test/regressions/dom-instanceof-lint-rule.test.ts pins the real
+ * selector rather than a copy of it. ESLint reads the default export only, so
+ * the named one costs nothing here.
  */
-const domClassInstanceof = {
+export const domClassInstanceof = {
   selector: [
     "BinaryExpression[operator='instanceof']",
-    '[right.name=/^(HTML[A-Za-z]*Element|SVG[A-Za-z]*Element|Element|Node|Text|Document|DocumentFragment|DOMParser|Window|CanvasRenderingContext2D|ImageData|ImageBitmap|AudioNode|AudioContext|BaseAudioContext|AudioBuffer|AudioBufferSourceNode|GainNode|OscillatorNode|DelayNode|BiquadFilterNode|MediaStream)$/]',
-    ":not(LogicalExpression[left.left.operator='typeof'] *)",
+    // The right operand, named bare (`v instanceof HTMLElement`) or qualified
+    // (`v instanceof window.HTMLElement`). Neither name is declared off the
+    // browser, so both throw rather than answering false (#595).
+    `:matches([right.name=${domClass}],[right.property.name=${domClass}])`,
+    // Under a guard, in either spelling of the comparison: `typeof X !==
+    // 'undefined'` and the yoda `'undefined' !== typeof X`. No rule forbids
+    // the latter, so keying on one side alone flagged correct code (#595).
+    ":not(LogicalExpression:matches([left.left.operator='typeof'],[left.right.operator='typeof']) *)",
   ].join(''),
   message:
     "A DOM class is not declared outside the browser, so a bare `instanceof` against one throws there instead of answering false. Guard it with `typeof X !== 'undefined' &&`, or -- if the function needs a browser at all -- call requireBrowser() and disable this rule on the line, with that as the reason.",
