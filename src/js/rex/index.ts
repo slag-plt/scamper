@@ -2,8 +2,13 @@ import * as L from '../../lpm'
 
 // From: https://simonwillison.net/2006/Jan/20/escape/
 // TODO: replace with RegEx.escape once it is commonly supported
+// `^` and `-` matter only inside a character class, but that is where
+// rex-char-set and rex-char-antiset put them: unescaped, `(rex-char-set "^a")`
+// renders `[^a]` and matches everything *except* `a`, and `(rex-char-set
+// "a-z")` renders a range. Every combinator here promises its characters are
+// taken literally, so both are escaped everywhere (#600).
 const specials = [
-  '/', '.', '*', '+', '?', '|',
+  '/', '.', '*', '+', '?', '|', '^', '-',
   '(', ')', '[', ']', '{', '}', '\\'
 ]
 const escapeRegexp = new RegExp(
@@ -25,6 +30,16 @@ class RexEmpty implements L.Struct, Re {
   [L.structKind] = 'rex-empty'
   toRegexString(): string {
     return ''
+  }
+}
+
+class RexNone implements L.Struct, Re {
+  [key: number]: never;
+  [key: string]: L.Value;
+  [L.scamperTag] = 'struct' as const;
+  [L.structKind] = 'rex-none'
+  toRegexString(): string {
+    return '(?!)'
   }
 }
 
@@ -124,7 +139,12 @@ class RegCharAntiset implements L.Struct, Re {
   }
 
   toRegexString(): string {
-    return `[^${regexpEscape(this.chars)}]`
+    // Excluding nothing admits every character, newline included -- which `.`
+    // does not, so `rex-any-char` is not the answer. `[^]` means the same in
+    // Javascript, but only as a quirk of the empty character class.
+    return this.chars.length === 0
+      ? '[\\s\\S]'
+      : `[^${regexpEscape(this.chars)}]`
   }
 }
 
@@ -151,17 +171,15 @@ class RexAnyOf implements L.Struct, Re {
   [key: string]: L.Value;
   [L.scamperTag] = 'struct' as const;
   [L.structKind] = 'rex-any-of'
+  // Never empty: `rex_rexAnyOf` returns a `RexNone` for that case, since
+  // `(?:)` would be the empty string and match everywhere (#533).
   values: Re[]
   constructor (values: Re[]) {
     this.values = values
   }
 
   toRegexString(): string {
-    // No branch can succeed, so an empty alternation matches nothing; `(?:)`
-    // would be the empty string, which matches at every position.
-    return this.values.length === 0
-      ? '(?!)'
-      : `(?:${this.values.map(v => v.toRegexString()).join('|')})`
+    return `(?:${this.values.map(v => v.toRegexString()).join('|')})`
   }
 }
 
@@ -197,6 +215,7 @@ class RexRegex implements L.Struct, Re {
 
 export function rex_isRegex (value: L.Value): value is Re {
   return L.isStructKind(value, 'rex-empty') ||
+    L.isStructKind(value, 'rex-none') ||
     L.isStructKind(value, 'rex-string') ||
     L.isStructKind(value, 'rex-repeat') ||
     L.isStructKind(value, 'rex-repeat-0') ||
@@ -212,6 +231,10 @@ export function rex_isRegex (value: L.Value): value is Re {
 
 export function rex_rexEmpty(): Re {
   return new RexEmpty()
+}
+
+export function rex_rexNone(): Re {
+  return new RexNone()
 }
 
 export function rex_rexString(s: string): Re {
@@ -235,7 +258,9 @@ export function rex_rexAnyChar(): Re {
 }
 
 export function rex_rexCharSet(s: string): Re {
-  return new RegCharSet(s)
+  // A set admitting no characters is exactly the pattern matching nothing.
+  // `[]` happens to do the same in Javascript, but says nothing of the intent.
+  return s.length === 0 ? new RexNone() : new RegCharSet(s)
 }
 
 export function rex_rexCharAntiset(s: string): Re {
@@ -247,7 +272,9 @@ export function rex_rexCharRange(start: L.Char, end: L.Char): Re {
 }
 
 export function rex_rexAnyOf(...args: Re[]): Re {
-  return new RexAnyOf(args)
+  // Alternation's unit: with no branch to succeed with, the result must fail on
+  // every input. `(?:)` would be the empty string, which matches everywhere.
+  return args.length === 0 ? new RexNone() : new RexAnyOf(args)
 }
 
 export function rex_rexOptional(r: Re): Re {
