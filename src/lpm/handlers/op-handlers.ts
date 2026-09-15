@@ -89,11 +89,14 @@ export function applyFn(
   fiber: Fiber,
   range: Range,
 ): StepResult {
-  // Where, in the student's program, this call really is. A call written in
-  // library source has no site of its own: `range` points into a .scm of the
-  // standard library, and underlining that in their editor is worse than no
-  // range at all. Such a call reports the range *its* caller was called from
-  // instead, which a chain of library calls passes along (see the Frame below).
+  // Where, in the student's program, this call really is -- for both arms
+  // below, and for the Frame a closure call builds. A call written in library
+  // source has no site of its own: `range` points into a .scm of the standard
+  // library, and underlining that in their editor is worse than no range at
+  // all. Such a call reports the range *its* caller was called from instead,
+  // which a chain of library calls passes along (see the Frame below). Keyed
+  // on origin rather than on the frame's name, because "is this library code"
+  // is what is being asked and an anonymous library lambda answers yes (#591).
   const siteRange = currFrame.origin === 'builtin' ? currFrame.callRange : range
   if (isJsFunction(fn)) {
     try {
@@ -109,12 +112,17 @@ export function applyFn(
         currFrame.values.push(undefined)
         return traceStep
       }
-      // N.B., a native's failure is blamed at `siteRange`, as the closure arm
-      // and MatchHandler/LetHandler blame theirs. This asked instead whether
-      // the enclosing frame's *name* was synthetic, which reads a contract
-      // wrapper and a lambda the student named alike -- so a bare native they
-      // called, a struct accessor most visibly, was blamed on the enclosing
-      // function's call site rather than their own (#592).
+      // Where to point and what to name are two different questions, and the
+      // single name test this replaces answered both badly (#591, #592).
+      //
+      // WHERE is settled by `siteRange` above: only *library* code lacks a
+      // site of its own, so origin decides. An anonymous lambda in prelude.scm
+      // is library code just as much as a named one, and a lambda the student
+      // named is not library code at all -- the old test read those two alike,
+      // so a bare native they called, a struct accessor most visibly, was
+      // blamed on the enclosing function's call site rather than their own.
+      //
+      // WHAT TO NAME is genuinely a question about the name, below.
       if (e instanceof SuspendSignal) {
         // A blocking primitive is suspending the fiber -- propagate to
         // Scheduler.stepTask (control flow, not an error). The result value is
