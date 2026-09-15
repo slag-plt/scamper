@@ -1958,6 +1958,35 @@ test('stringQ-procedure', async () => {
   ).toEqual(['#f', '#f', '#t', '#t', '#f', '#f', '#t', '#f', '#t', '#t'])
 })
 
+// #608: the readings call these functions, so the predicate exists under that
+// name too. Same test as procedure?, which stays.
+test('function?', async () => {
+  expect(
+    await runProgram(`
+(function? (pair #t #f))
+(function? list)
+(function? "bye")
+(function? +)
+(function? string-length)
+(function? (lambda (x) x))
+(function? function?)
+(function? procedure?)
+`),
+  ).toEqual(['#f', '#t', '#f', '#t', '#t', '#t', '#t', '#t'])
+})
+
+// The two names answer alike for anything at all, which is the only promise
+// #608 makes about them.
+test('function? and procedure? never disagree', async () => {
+  expect(
+    await runProgram(`
+(define vs (list 0 "a" #\\a #t null (list 1) (vector 1) (pair 1 2)
+                 car (lambda (x) x) (ref 0) void))
+(equal? (map function? vs) (map procedure? vs))
+`),
+  ).toEqual(['#t'])
+})
+
 test('times-div', async () => {
   expect(
     await runProgram(`

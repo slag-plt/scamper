@@ -3,7 +3,7 @@
 ;;; (rex? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if `v` is a regex, `#f` otherwise.
-;;; @category predicates, regexes, typecheck, rex-matches?, pair?, list?, procedure?, ref?, vector?
+;;; @category predicates, regexes, typecheck, rex-matches?, pair?, list?, procedure?, function?, ref?, vector?
 (define-export rex? (js-var "rex_isRegex"))
 
 ;;; (rex-empty) -> rex?
