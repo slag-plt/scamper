@@ -31,7 +31,7 @@
 
 ;;; (rex-concat & xs) -> rex?
 ;;;  xs : rex?
-;;; Returns a regex that matches the concatenation of the regexes `rs` in order.
+;;; Returns a regex that matches the concatenation of the regexes `xs` in order.
 ;;; @category regexes, rex-repeat, rex-repeat-o
 (define-export rex-concat (js-var "rex_rexConcat"))
 
@@ -61,7 +61,7 @@
 
 ;;; (rex-any-of & xs) -> rex?
 ;;;  xs : rex?
-;;; Returns a regex that matches any one of the regexes `rs`.
+;;; Returns a regex that matches any one of the regexes `xs`.
 ;;; With no regexes, the result matches nothing.
 ;;; @category regexes, rex-optional
 (define-export rex-any-of (js-var "rex_rexAnyOf"))
