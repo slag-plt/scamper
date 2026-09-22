@@ -41,7 +41,7 @@ describe('#508: DOM-class predicates where there is no DOM', () => {
       stripRanges: true,
     })
     expect(out).toEqual([
-      'Runtime error: (error) expected a canvas, received number',
+      'Runtime error: (error) expected a canvas as the first argument, received number',
     ])
   })
 })

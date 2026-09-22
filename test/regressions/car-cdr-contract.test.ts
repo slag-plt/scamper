@@ -29,8 +29,8 @@ describe('car/cdr reject non-pairs cleanly (#256)', () => {
     (car (list))
     (cdr (list))
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received null',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received null',
     ])
   })
 
@@ -40,9 +40,9 @@ describe('car/cdr reject non-pairs cleanly (#256)', () => {
     (cdr "hi")
     (car #t)
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received number',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received string',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received boolean',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received string',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received boolean',
     ])
   })
 })
@@ -54,9 +54,9 @@ describe('c[ad]+r family reject bad arguments cleanly (#256)', () => {
     (caddr (list))
     (cddr (list))
     `))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
-      'Runtime error [..]: (error) expected pair or nonempty-list, received null',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received null',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received null',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received null',
     ])
   })
 
@@ -72,7 +72,7 @@ describe('c[ad]+r family reject bad arguments cleanly (#256)', () => {
 
   test('non-list value', async () => {
     expect(stripRange(await runProgram('(cadr 5)'))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received number',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 })
@@ -141,7 +141,7 @@ describe('nonempty-list? and or/p (#256)', () => {
     // nonempty-list?)` contract is what exercises describePred's or/p case:
     // the message reads "pair or nonempty-list", not "a value matching ...".
     expect(stripRange(await runProgram('(car 5)'))).toEqual([
-      'Runtime error [..]: (error) expected pair or nonempty-list, received number',
+      'Runtime error [..]: (error) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 })

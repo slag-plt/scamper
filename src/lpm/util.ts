@@ -536,10 +536,17 @@ export function objToString(
   return entries.length === 0 ? '{}' : `{ ${entries.join(', ')} }`
 }
 
-/** @returns the type of the given value as a string (for debugging purposes) */
+/**
+ * @returns the type of the given value as a string. This names the value in
+ * every "..., received ..." error a student sees, so a number that is not a
+ * whole one is called a "floating point number" (#606): `(quotient 5.5 2)`
+ * reporting "received number" left the reason it was rejected invisible, since
+ * an integer is a number too. A whole number stays plain "number" -- naming it
+ * would draw a distinction where the value is already what was asked for.
+ */
 export function typeOf(v: L.Value): string {
   if (isNumber(v)) {
-    return 'number'
+    return Number.isInteger(v) ? 'number' : 'floating point number'
   } else if (isBoolean(v)) {
     return 'boolean'
   } else if (isString(v)) {

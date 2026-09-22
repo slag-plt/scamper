@@ -551,7 +551,10 @@ export function color_rgbPseudoComplement(rgba: Rgb): Rgb {
 // rgb-complement
 
 export function color_rgbGreyscale(rgba: Rgb): Rgb {
-  const avg = 0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue
+  // Rounded, since the Rec.601 weights are floating point: an already-grey
+  // color like (32, 32, 32) otherwise comes back as 31.999999999999996, which
+  // truncation would turn into 31 (#609).
+  const avg = Math.round(0.30 * rgba.red + 0.59 * rgba.green + 0.11 * rgba.blue)
   return color_rgb(avg, avg, avg, rgba.alpha)
 }
 
@@ -607,12 +610,17 @@ export function color_rgbSubtract(rgba1: Rgb, rgba2: Rgb): Rgb {
   )
 }
 
+/** The midpoint of two components, rounded so it stays a whole number (#609). */
+function midpoint(a: number, b: number): number {
+  return Math.round((a + b) / 2)
+}
+
 export function color_rgbAverage(rgba1: Rgb, rgba2: Rgb): Rgb {
   return color_rgb(
-    (rgba1.red + rgba2.red) / 2,
-    (rgba1.green + rgba2.green) / 2,
-    (rgba1.blue + rgba2.blue) / 2,
-    (rgba1.alpha + rgba2.alpha) / 2
+    midpoint(rgba1.red, rgba2.red),
+    midpoint(rgba1.green, rgba2.green),
+    midpoint(rgba1.blue, rgba2.blue),
+    midpoint(rgba1.alpha, rgba2.alpha)
   )
 }
 

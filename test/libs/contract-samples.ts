@@ -87,6 +87,7 @@ export const SAMPLES: Record<string, string> = {
     '(gradescope-test-suite (list (test-result-ok "ok")))',
 
   // html, reactive
+  'element?': '(tag "div")',
   'text-area?': '(text-area "notes")',
   'button?': '(button "Click" (lambda () #t))',
   // N.B., never on-timer: a timer subscription outlives the test (#375, and
@@ -233,8 +234,9 @@ export const ARGS = new Map<string, string[]>([
     ['(make-canvas 10 10)', '(list (pair 0 0) (pair 10 10))', '"solid"', '"red"'],
   ],
 
-  // data: a string that is actually delimited, and `any` parameters whose
-  // shape every one of these reads.
+  // data: a string that is actually delimited, and lists whose *elements* the
+  // natives read -- numbers, pairs, or triples, which the generic `list?`
+  // sample `(list 1 2 3)` is not for most of these.
   ['data:parse-csv', ['"name,age\\nAlice,30"']],
   ['data:with-plot-options', ['(list (pair "x-min" 0))', '(plot-linear (dataset-line "xs" (list (pair 1 1))))']],
   ['data:with-dataset-options', ['(list (pair "border-color" "red"))', '(dataset-bar "counts" (list 1 2))']],
@@ -270,9 +272,6 @@ export const ARGS = new Map<string, string[]>([
   // gradescope: a suite is built out of test results.
   ['gradescope:gradescope-test-suite', ['(list (test-result-ok "ok"))']],
   ['gradescope:gradescope-test-result', ['"case"', '"passed"', '1', '1', '"ok"']],
-
-  // html: children have to be elements, not the generic `any` sample.
-  ['html:tag-set-children!', ['(tag "div")', '(tag "span")']],
 
   // music: a sample of numbers, not the generic vector.
   ['music:note-handlers', ['(vector (lambda (msg) 0))']],

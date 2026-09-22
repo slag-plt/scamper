@@ -380,8 +380,8 @@
 (define-export xor (js-var "prelude_xor"))
 
 ;;; (any-of & f1) -> procedure?
-;;;  f1 : any
-;;;   procedure? that takes a value as input and returns a boolean.
+;;;  f1 : procedure?
+;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
 ;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
 (define-export any-of
@@ -390,8 +390,8 @@
       (some-satisfy? (lambda (g) (g v)) fs))))
 
 ;;; (all-of & f1) -> procedure?
-;;;  f1 : any
-;;;   procedure? that takes a value as input and returns a boolean.
+;;;  f1 : procedure?
+;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
 ;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
 (define-export all-of

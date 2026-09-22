@@ -67,8 +67,8 @@
 (define-export on-key-up (js-var "reactive_onKeyUp"))
 
 ;;; (on-timer interval) -> subscription?
-;;;  interval : any
-;;;   non-negative integer
+;;;  interval : integer?
+;;;   non-negative
 ;;; Returns a subscription that emits a message of the form `(event-timer time elapsed)` every `interval` milliseconds. `time` is the current time since the page was loaded and `elapsed` is the time since the last timer message, all in milliseconds.
 ;;; @category reactive, subscription?, on-note
 (define-export on-timer (js-var "reactive_onTimer"))

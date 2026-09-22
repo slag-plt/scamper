@@ -65,7 +65,7 @@ describe('string->chars', () => {
     (import data)
     (string->chars 5)
     `)).toEqual([
-      'Runtime error: (error) expected a string, received number'
+      'Runtime error: (error) expected a string as the first argument, received number'
     ])
   })
 })
@@ -89,7 +89,7 @@ describe('string->lines', () => {
     (import data)
     (string->lines (list "a" "b"))
     `)).toEqual([
-      'Runtime error: (error) expected a string, received list'
+      'Runtime error: (error) expected a string as the first argument, received list'
     ])
   })
 })

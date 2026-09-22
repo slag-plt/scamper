@@ -34,7 +34,9 @@ function runHarness(layout: Layout): { results: unknown; status: number | null }
     }
     const result = spawnSync(path.join(repoRoot, 'gradescope', 'run_autograder'), {
       encoding: 'utf-8',
-      timeout: 60000,
+      // Past SCAMPER_TIMEOUT below, leaving the script room to turn a
+      // timed-out submission into a zero before it is killed outright.
+      timeout: 35_000,
       env: {
         ...process.env,
         SCAMPER_DIR: repoRoot,
@@ -64,10 +66,12 @@ const HARNESS = [
   '  (list (test-case "double 4" equal? 8 (lambda () (double 4)))))',
 ].join('\n')
 
-// run_autograder shells out to the CLI and spawnSync allows the child 60s, so
-// the test around it has to allow at least as much or the child's budget can
-// never apply (#536).
-describe('run_autograder', { timeout: 60_000 }, () => {
+// Three budgets, each strictly outliving the one inside it (#536, #599): a
+// submission gets SCAMPER_TIMEOUT, run_autograder gets spawnSync's, and the
+// test gets vitest's. Equal numbers mean the inner budget never fires and its
+// better diagnostic is lost. A run takes under a second, so all three are hang
+// detectors rather than assertions about how fast the machine is.
+describe('run_autograder', { timeout: 40_000 }, () => {
   test('grades the submission against the instructor\'s harness', () => {
     const { results, status } = runHarness({
       harness: HARNESS,

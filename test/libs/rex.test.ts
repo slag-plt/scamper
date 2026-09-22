@@ -356,9 +356,9 @@ test('bad combinator arguments', async () => {
     (rex-optional 5)
     (rex-any-of (rex-string "a") "b")
   `)).toEqual([
-    'Runtime error: (error) expected a rex, received string',
+    'Runtime error: (error) expected a rex as the first argument, received string',
     'Runtime error: (error) expected every value of xs to be a rex, but at least one was not',
-    'Runtime error: (error) expected a rex, received number',
+    'Runtime error: (error) expected a rex as the first argument, received number',
     'Runtime error: (error) expected every value of xs to be a rex, but at least one was not'
   ])
 })

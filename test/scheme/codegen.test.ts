@@ -172,7 +172,7 @@ describe('End-to-end cases', () => {
 
 (+ 1 2 3 "bye")
 `, [
-      'Runtime error: (error) expected a string, received list',
+      'Runtime error: (error) expected a string as the first argument, received list',
       // N.B., "+" is documented as a rest param (`. v1`), so its contract
       // check is a single all-satisfy? over the whole argument list rather
       // than a per-argument check -- it can report that *some* argument
@@ -922,7 +922,7 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     test('an accessor applied to the wrong struct is a runtime error', async () => {
       await checkMachineOutput(
         '(struct a (x)) (struct b (y)) (a-x (b 1))',
-        ['Runtime error: Accessor function expects a a, received [Struct: b]'], true)
+        ['Runtime error: (a-x) Accessor function expects a a, received [Struct: b]'], true)
     })
   })
 

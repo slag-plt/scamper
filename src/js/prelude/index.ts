@@ -1,6 +1,5 @@
 import * as L from '../../lpm'
 import TextRenderer from '../../lpm/renderers/text.js'
-import { requireBrowser } from '../browser.js'
 
 export * from './files.js'
 
@@ -1061,11 +1060,14 @@ export function prelude_random(n: number): number {
 
 // Additional Scamper-specific functions
 
-export function prelude_ignore(_v: L.Value): HTMLElement {
-  requireBrowser()
-  const ret = document.createElement('div')
-  ret.style.display = 'none'
-  return ret
+/**
+ * Drops `v`, evaluating to void -- which the web renderers draw as a hidden
+ * element, so producing one is the whole of the hiding (#596). It used to hand
+ * back that element itself, which showed nothing but left an HTMLElement where
+ * the docstring promised `void?`.
+ */
+export function prelude_ignore(_v: L.Value): void {
+  /* nothing to do: the point is to leave no value worth showing */
 }
 
 /**

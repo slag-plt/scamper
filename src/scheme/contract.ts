@@ -58,16 +58,48 @@ function describePred(pred: Pred): string {
 }
 
 /**
- * Builds `(string-append "expected " descPred ", received " (##typeOf## argVar))`.
- * Written in terms of ordinary prelude/runtime calls (rather than a host
- * closure) so the result is ordinary Scamper source.
+ * The ordinals a contract message names an argument's position with. Ten
+ * covers every signature the standard library declares today -- canvas-ellipse!
+ * is the widest, at ten parameters.
  */
-function mkErrorMsg(descPred: string, argVar: string, range: Range): A.Exp {
+const positionWords = [
+  'first', 'second', 'third', 'fourth', 'fifth',
+  'sixth', 'seventh', 'eighth', 'ninth', 'tenth',
+]
+
+/**
+ * @returns the ordinal naming the argument at `index`, e.g. 0 ~> "first". Past
+ *          the words above this falls back to a numeric ordinal, whose suffix
+ *          is only right through "20th" -- no signature comes near either.
+ */
+function describePosition(index: number): string {
+  return positionWords[index] ?? `${(index + 1).toString()}th`
+}
+
+/**
+ * Builds `(string-append "expected " descPred [" as the Nth argument"],
+ * ", received " (##typeOf## argVar))`. Written in terms of ordinary
+ * prelude/runtime calls (rather than a host closure) so the result is ordinary
+ * Scamper source.
+ *
+ * @param position the argument's ordinal. mkCheckChain names one on every
+ *        fixed and optional parameter (#606), so `undefined` -- which drops
+ *        the phrase -- is only what a caller that did not want one would pass.
+ */
+function mkErrorMsg(
+  descPred: string,
+  argVar: string,
+  position: string | undefined,
+  range: Range,
+): A.Exp {
+  const expected =
+    position === undefined
+      ? `expected ${descPred}`
+      : `expected ${descPred} as the ${position} argument`
   return A.mkApp(
     A.mkId('string-append', range),
     [
-      A.mkLit('expected ', range),
-      A.mkLit(descPred, range),
+      A.mkLit(expected, range),
       A.mkLit(', received ', range),
       A.mkApp(A.mkId('##typeOf##', range), [A.mkId(argVar, range)], range),
     ],
@@ -148,6 +180,11 @@ function mkTargetCall(
  * The optional params' checks follow the fixed params', each skipped when its
  * argument is void -- the caller left it out. If a rest parameter is present,
  * one more check is appended after those: `(all-satisfy? restPred restVar)`.
+ *
+ * Each message names the offending argument's position (#606), uniformly --
+ * including on a one-parameter function, where there is nothing to
+ * disambiguate. One rule with no exception to explain was judged worth the
+ * four extra words on `(car 5)`.
  */
 function mkCheckChain(
   params: Param[],
@@ -156,6 +193,8 @@ function mkCheckChain(
   range: Range,
 ): A.Exp {
   const targetCall = mkTargetCall([...params, ...optParams], restParam, range)
+
+  const positionOf = (index: number): string => describePosition(index)
 
   const restCheck: A.Exp = restParam
     ? A.mkIf(
@@ -179,7 +218,7 @@ function mkCheckChain(
   // tests as `(if (if (##voidQ## x) #t (pred x)) ...)` keeps the continuation
   // written once, where `or` over the pair would duplicate it per parameter.
   const optChecks = optParams.reduceRight<(next: A.Exp) => A.Exp>(
-    (rest, { name, predicate }) =>
+    (rest, { name, predicate }, i) =>
       (next) =>
         A.mkIf(
           A.mkIf(
@@ -191,7 +230,7 @@ function mkCheckChain(
           rest(next),
           A.mkApp(
             A.mkId('##error##', range),
-            [mkErrorMsg(describePred(predicate), name, range)],
+            [mkErrorMsg(describePred(predicate), name, positionOf(params.length + i), range)],
             range,
           ),
           range,
@@ -209,7 +248,7 @@ function mkCheckChain(
       checkAt(i + 1),
       A.mkApp(
         A.mkId('##error##', range),
-        [mkErrorMsg(describePred(predicate), name, range)],
+        [mkErrorMsg(describePred(predicate), name, positionOf(i), range)],
         range,
       ),
       range,

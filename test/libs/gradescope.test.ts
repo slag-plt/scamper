@@ -169,7 +169,7 @@ test('a non-list is caught by the contract', async () => {
     (import gradescope)
     (gradescope-test-suite 5)
     `),
-  ).toEqual(['Runtime error: (error) expected a list, received number'])
+  ).toEqual(['Runtime error: (error) expected a list as the first argument, received number'])
 })
 
 // The library is written in Scamper and calls its own struct constructors, so

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { Fiber } from '../../src/lpm/fiber'
 import * as U from '../../src/lpm/util'
-import { ICE, Loc, LoggingChannel, Range, ScamperError, Value, rangesEqual } from '../../src/lpm'
+import { CodeOrigin, ICE, Loc, LoggingChannel, Range, ScamperError, Value, rangesEqual } from '../../src/lpm'
 import { makeTestFiber, stepFiberToOutput } from '../util'
 
 describe('basic ops', () => {
@@ -146,17 +146,34 @@ describe('basic ops', () => {
     // #513: the wrapped error takes the *caller's* range, not the ap op's own.
     // Pinned here as well as in test/regressions/native-raw-error-call-range.ts
     // so the branch stays covered even if the library repro stops reaching it.
-    test('the wrapped error reports the calling frame, not the ap op (#513)', () => {
-      const libRange = new Range(new Loc(90, 1, 900), new Loc(90, 54, 953))
-      const callRange = new Range(new Loc(2, 1, 13), new Loc(2, 20, 32))
+    //
+    // Whether the caller's range is the one to take is a question about the
+    // frame's *origin* (#591). A library frame's ops carry library source, so
+    // it has no site of its own and reports where it was called from; a user
+    // frame's ops are the student's own code, so the call in its body is
+    // exactly the place to point. Both halves are pinned below.
+    const bodyRange = new Range(new Loc(90, 1, 900), new Loc(90, 54, 953))
+    const callRange = new Range(new Loc(2, 1, 13), new Loc(2, 20, 32))
+
+    /**
+     * Applies `boom` -- a js function that throws a raw Javascript error --
+     * from inside a frame named `wrapper` whose code came from `origin`. The
+     * wrapper applies it at `bodyRange` and is itself called at `callRange`.
+     *
+     * @returns the ScamperError the raw error was wrapped in.
+     */
+    function boomInsideWrapper(origin: CodeOrigin): ScamperError {
+      const wrapper = U.mkClosure(
+        [],
+        [U.mkVar('boom'), U.mkAp(0, bodyRange)],
+        [],
+        () => null,
+        'wrapper',
+        undefined,
+        origin,
+      )
       const fiber = makeTestFiber([
-        U.mkDisp([
-          // A named frame stands in for a contract wrapper: its body applies
-          // `boom` at a range in "library source" (libRange), while the frame
-          // itself was called from the "student's" callRange.
-          U.mkCls([], [U.mkVar('boom'), U.mkAp(0, libRange)], 'wrapper'),
-          U.mkAp(0, callRange),
-        ]),
+        U.mkDisp([U.mkLit(wrapper), U.mkAp(0, callRange)]),
       ])
       fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([
         'boom',
@@ -171,8 +188,18 @@ describe('basic ops', () => {
         err = e
       }
       expect(err).toBeInstanceOf(ScamperError)
-      expect((err as ScamperError).range).toSatisfy((r: Range) =>
+      return err as ScamperError
+    }
+
+    test('a library wrapper reports the frame it was called from (#513)', () => {
+      expect(boomInsideWrapper('builtin').range).toSatisfy((r: Range) =>
         rangesEqual(r, callRange),
+      )
+    })
+
+    test("a user's own function reports the call in its body (#591)", () => {
+      expect(boomInsideWrapper('user').range).toSatisfy((r: Range) =>
+        rangesEqual(r, bodyRange),
       )
     })
   })

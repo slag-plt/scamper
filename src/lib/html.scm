@@ -45,10 +45,8 @@
 (define-export tag (js-var "html_tag"))
 
 ;;; (tag-set-children! elt & c) -> element?
-;;;  elt : any
-;;;   an HTML element
-;;;  c : any
-;;;   an HTML element or string
+;;;  elt : element?
+;;;  c : element?
 ;;; Sets `elt`'s children to be `c1`, `c2`, ..
 ;;; @category html, mutation, predicates, tag-func
 (define-export tag-set-children! (js-var "html_tagSetChildren"))

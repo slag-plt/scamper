@@ -158,7 +158,7 @@ describe('the injected error primitive cannot be shadowed', () => {
 
   test('a contract violation still raises when `error` is bound', async () => {
     expect(await runProgram('(define error 5)\n(list-ref 1 2)')).toEqual([
-      'Runtime error [2:1-2:14]: (error) expected a list, received number',
+      'Runtime error [2:1-2:14]: (error) expected a list as the first argument, received number',
     ])
     expect(await runProgram('(define error 5)\n(+ 1 "a")')).toEqual([
       'Runtime error [2:1-2:9]: (error) expected every value of v1 to be a number, but at least one was not',

@@ -38,8 +38,8 @@ test('a line width that is given is still checked (#460)', async () => {
       { stripRanges: true },
     ),
   ).toEqual([
-    'Runtime error: (error) expected a number, received string',
-    'Runtime error: (error) expected a string, received number',
+    'Runtime error: (error) expected a number as the third argument, received string',
+    'Runtime error: (error) expected a string as the fourth argument, received number',
     'Runtime error: (outlined-circle) Arity mismatch in function call: expected at most 4 arguments, got 5',
   ])
 })

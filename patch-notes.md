@@ -40,6 +40,15 @@ Order does not matter within an entry. See docs/releasing.md.
 - cons now documents that its second argument must be a list, and reports a non-list one in the same words as every other wrong argument.
 - The trace step limit now tops out at a number the page can actually survive, and Preferences says how long a large one takes, so raising it can no longer lose your tab.
 - An HTML element now prints as [HTMLElement] instead of [Blob: {}] when a program's output is shown as text, such as on the command line or in a copied transcript.
+- Type errors now always say which argument was wrong, and call a number that is not whole a floating point number.
+- A struct accessor or constructor given the wrong value now underlines that call and names itself, instead of blaming the function that contains it.
+- An error raised by a procedure you passed to vector-map, vector-for-each, or compose now points at your own line instead of a line inside Scamper's library.
+- Pressing stop during an import no longer prints the import's error afterwards.
+- A statement whose value is void, such as one calling vector-set! or ref-set!, now shows nothing in the output pane instead of printing the word void.
+- Greyscaling and averaging colors now give whole-numbered components instead of values like 31.999999999999996.
+- Giving a plot or dataset function the wrong kind of argument now says which type it expected, rather than reporting a confusing Javascript error.
+- any-of, all-of, on-timer and tag-set-children! now say so when given the wrong kind of value, instead of failing later or not at all.
+- The documentation for rex-concat and rex-any-of now names the same parameter as their signatures.
 - ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
 
 # 4.4.0

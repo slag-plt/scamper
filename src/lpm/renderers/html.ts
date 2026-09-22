@@ -10,6 +10,17 @@ export function mkCodeElement(text: string): HTMLElement {
   return ret
 }
 
+/**
+ * How a void value is drawn: an element that takes up no space at all. A
+ * statement producing void keeps its place in the output -- so nothing that
+ * counts output blocks shifts -- while showing the reader nothing (#596).
+ */
+export function mkHiddenElement(): HTMLElement {
+  const ret = document.createElement('div')
+  ret.style.display = 'none'
+  return ret
+}
+
 export class Renderer extends R.Renderer<HTMLElement> {
   render(v: Value): HTMLElement {
     switch (typeof v) {
@@ -20,7 +31,7 @@ export class Renderer extends R.Renderer<HTMLElement> {
       case 'string':
         return mkCodeElement(`"${U.escapeStringLiteral(v)}"`)
       case 'undefined':
-        return mkCodeElement('void')
+        return mkHiddenElement()
       default:
         if (v === null) {
           return mkCodeElement('()')

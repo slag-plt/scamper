@@ -37,7 +37,7 @@ function consDoc(): FunctionDoc {
 describe("cons's contract rejects a non-list tail (#541)", () => {
   test('(cons 1 2) reports the uniform contract message', async () => {
     expect(await runProgram('(cons 1 2)')).toEqual([
-      'Runtime error [1:1-1:10]: (error) expected a list, received number',
+      'Runtime error [1:1-1:10]: (error) expected a list as the second argument, received number',
     ])
   })
 
@@ -45,9 +45,9 @@ describe("cons's contract rejects a non-list tail (#541)", () => {
     expect(
       await runProgram('(cons 1 "two")\n(cons 1 #t)\n(cons 1 (pair 1 2))'),
     ).toEqual([
-      'Runtime error [1:1-1:14]: (error) expected a list, received string',
-      'Runtime error [2:1-2:11]: (error) expected a list, received boolean',
-      'Runtime error [3:1-3:19]: (error) expected a list, received pair',
+      'Runtime error [1:1-1:14]: (error) expected a list as the second argument, received string',
+      'Runtime error [2:1-2:11]: (error) expected a list as the second argument, received boolean',
+      'Runtime error [3:1-3:19]: (error) expected a list as the second argument, received pair',
     ])
   })
 
@@ -57,7 +57,7 @@ describe("cons's contract rejects a non-list tail (#541)", () => {
     expect(
       await runProgram('(define f (lambda (t) (cons 1 t)))\n(f 2)'),
     ).toEqual([
-      'Runtime error [1:23-1:32]: (error) expected a list, received number',
+      'Runtime error [1:23-1:32]: (error) expected a list as the second argument, received number',
     ])
   })
 
