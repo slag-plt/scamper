@@ -9,7 +9,7 @@ Part 1 is what R7RS-small says that Scamper does not do, or does differently.
 Part 2 is what Scamper has that R7RS does not, and where each borrowed idea came from.
 
 For the *positive* statement of any form -- what it is and how to write it -- see `public/reference.html`, the student-facing language reference.
-Each form is anchored there under its own name, so `reference.html#let` is what `let` *is*, and this document is only what it is *not*.
+Each form gains an anchor under its own name when #543 lands, so `reference.html#let` will be what `let` *is*, and this document is only what it is *not*.
 For the grammar, see `docs/language.md`, which owns it; this document does not restate it.
 
 ## Reading this document
@@ -22,7 +22,8 @@ $> npx tsx src/app/cli/index.ts file.scm
 ~~~
 
 A top-level expression prints its value, so a one-line file is a usable experiment.
-Errors print on the same stream, which is why "Variable not found: `eq?`" below is a result rather than a failure.
+Errors print to standard error rather than to standard output, so on a terminal they interleave with the values, which is why "Variable not found: `quote`" below is a result rather than a failure.
+Transcripts are real runs, trimmed to the line that matters: a statement's `void`, and the second error that a malformed form cascades into, are left out.
 
 Two conventions:
 
@@ -35,7 +36,7 @@ Two conventions:
 Each gap in part 1 is labelled **by design** or **not yet**.
 *Not yet* means the source marks it `// TODO: implement`, so it may close.
 *By design* means the source gives a reason, which is quoted.
-Five `// TODO: implement` blocks mark gaps that may close; everything else is a decision, and the summary table at the end of part 1 lists all five in one place.
+Five `// TODO: implement` blocks mark gaps that may close; everything else is a decision, and the summary table at the end of part 1 marks all five, with the paragraph beneath it naming them together.
 
 ## 1. Differences from R7RS
 
@@ -119,7 +120,14 @@ R7RS gives `1` there.
 This is the difference most likely to silently change the meaning of ported code rather than fail loudly.
 **By design.**
 
-Consequently there is no `let*`, `letrec`, `letrec*`, named `let`, `do`, or `let-values` -- each is an unbound variable.
+Consequently there is no `let*`, `letrec`, `letrec*`, `do`, or `let-values` -- each is an unbound variable.
+Named `let` is not an unbound variable but a parse error, since `let`'s own rule has no room for the name:
+
+~~~
+> (let loop ([x 1]) x)
+Parser error [1:1-1:5]: Malformed let expression (a list of bindings and a body).
+~~~
+
 **By design**; `let` already covers what they were for, and iteration is written as tail recursion.
 
 **`if` (`reference.html#if`) requires all three parts and a boolean guard.**
@@ -243,7 +251,7 @@ The prelude says so: it implements "the subset of numbers corresponding to the J
 **By design.**
 
 **Division by zero raises, floats included.**
-R7RS gives `+inf.0` for the inexact case; Scamper does not:
+R7RS-small permits `+inf.0` for the inexact case rather than requiring it; Scamper does not:
 
 ~~~
 > (/ 1 0)
@@ -262,7 +270,7 @@ The number token is decimal only, with an optional sign and exponent (`src/schem
 `gcd` and `lcm` are absent and marked `// TODO: implement` (`src/js/prelude/index.ts:217-219`).
 **Not yet** -- one of the five TODO blocks.
 
-The composite division operators (`floor/`, `floor-quotient`, `floor-remainder`, `truncate/`, `truncate-quotient`, `truncate-remainder`) are absent "to avoid clutter in the documentation" (`:187-194`), as is `exact-integer-sqrt` (`:254-256`).
+The composite division operators (`floor/`, `floor-quotient`, `floor-remainder`, `truncate/`, `truncate-quotient`, `truncate-remainder`) are absent "to avoid clutter in the documentation" (`:187-194`), as is `exact-integer-sqrt`, "to avoid polluting the documentation" (`:254-256`).
 **By design** -- these are documentation-surface decisions rather than implementation ones.
 `quotient`, `remainder`, and `modulo` are all present.
 
@@ -321,15 +329,15 @@ There are no improper lists, and `car`/`cdr` accept either a pair or a non-empty
 **By design.**
 
 **The `member`/`assoc` family is absent**: `memq`, `memv`, `member`, `assq`, `assv`, and `assoc` are each an unbound variable (`:534-541`).
-Scamper replaces them with `index-of`, `assoc-key?`, `assoc-ref`, and `assoc-set` (`src/lib/prelude.scm:573-598`), which take the value first, matching R7RS's argument order rather than the data-first order the accessors use (`:548-550`, issue #103).
-**By design**, though `assoc-set`'s implementation carries a `// TODO: implement me -- this isn't the right implementation!` (`:588`).
+Scamper replaces them with `index-of`, `assoc-key?`, `assoc-ref`, and `assoc-set` (`src/lib/prelude.scm:573-598`), which take the value first, matching R7RS's argument order rather than the data-first order the accessors use (`src/js/prelude/index.ts:548-550`, issue #103).
+**By design**, though `assoc-set`'s implementation carries a `// TODO: implement me—this isn't the right implementation!` (`:588`).
 
 The full `c[ad]+r` family through `cddddr` is present, as ordinary Scheme compositions rather than natives (`:400-403`).
 
 ### Strings and characters
 
 **Strings are immutable.**
-`string-set!`, `string-fill!`, `string-copy`, and `string-copy!` are absent because they "don't make sense in an immutable context" (`src/js/prelude/index.ts:745`, `:837-844`).
+`string-copy`, `string-copy!`, and `string-fill!` are absent because they "don't make sense in an immutable context" (`src/js/prelude/index.ts:837-844`), and `string-set!` "since it is effectful" (`:745`).
 The one-argument `(make-string k)` is absent for the same reason -- "having an 'empty' string of size k does not make sense" (`:727-728`) -- while the two-argument form works:
 
 ~~~
@@ -359,20 +367,24 @@ Iteration for effect is otherwise written with `map` and `ignore`, or with `for-
 
 **No `call/cc`, `values`, `call-with-values`, or `dynamic-wind`**, all four marked `// TODO: implement` (`:998-1003`).
 **Not yet** -- one of the five TODO blocks.
-This is a larger hole than the other four together: no continuations means no generators, no non-local exit, and no multiple-value returns, and nothing in the language substitutes for them.
+This is a larger hole than the other four together: no continuations means no generators and no multiple-value returns, and nothing in the language substitutes for either.
+Non-local exit fares better: `with-handler` and `error` together escape an arbitrarily deep call in one shot (see *Exceptions* below), which covers the commonest use of `call/cc` and nothing else.
 
 **No `eval`, no `environment`, no `interaction-environment`** (R7RS 6.12): "platform-specific stuff with no need to be implemented" (`:1049-1051`).
 **By design.**
 
-**No ports and nothing else from R7RS 6.13**: no `read`, `write`, `newline`, `current-output-port`, `open-input-string`, `char-ready?`, or file I/O.
+**No ports** (R7RS 6.13): no `read`, `write`, `newline`, `current-output-port`, `open-input-string`, or `char-ready?`.
 The reason is the deployment target -- "in-browser, so can't implement directly without some level of virtualization" (`:1053-1055`).
 **By design.**
-File access exists, but through `with-file` and `with-file-chooser` (`src/lib/prelude.scm:1324-1332`), which are browser file-picker operations rather than ports.
+File I/O itself exists, as whole-file operations rather than ports.
+The built-in `file` module both reads and writes -- `file-exists?`, `file->string`, `file->lines`, `string->file`, `lines->file` (`src/lib/file.scm`) -- and is imported like any other module.
+The prelude adds two more: `with-file`, which reads a named file and hands its contents to a procedure, and `with-file-chooser`, which is the browser file-picker (`src/lib/prelude.scm:1319-1332`).
 
 **Nothing from R7RS 6.14**: no `exit`, `command-line`, `get-environment-variable`, `current-second`, or `features` -- "all operating system-specific stuff" (`:1057-1059`).
 **By design.**
 
-Vectors are the only mutable data type the language hands a student by default, and `[...]` is their literal syntax -- `#(` is unavailable because it is taken by the anonymous-function form.
+Vectors are mutable, and `[...]` is their literal syntax -- `#(` is unavailable because it is taken by the anonymous-function form.
+They are not the only mutable thing a student is handed, though: reference cells (`ref-set!`) and maps (`hash-set!`) are the others, as *Equivalence* above notes.
 `vector-copy` and `vector-copy!` are absent, unremarked; `vector-set!`, `vector-fill!`, `vector-append`, `vector-map`, `vector-for-each`, and the conversions are present.
 
 ### Exceptions
@@ -444,7 +456,7 @@ R7RS's `define-library`, its `(scheme base)`-style library names, and its `impor
 Parser error [1:1-1:8]: Malformed import statement (a built-in library name, or a quoted file name).
 ~~~
 
-Scamper's module system is four statement forms (`reference.html#import`): `(import name)`, `(import "file.scm")`, `(import name alias)`, and `export` / `define-export`.
+Scamper's module system is five statement forms (`reference.html#import`, `src/scheme/syntax.grammar:90`): `(import name)`, `(import "file.scm")`, `(import name alias)`, `(import "file.scm" alias)`, and `export` / `define-export`.
 A one-argument `import` injects the module's exports into scope; a two-argument one binds them behind a qualified `alias.name` instead.
 A module exports only what its `export` statements list.
 See `docs/language.md` for the grammar; the built-in module names are the `.scm` files in `src/lib/`.
@@ -468,23 +480,23 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | § | Scamper's position | Why |
 | --- | --- | --- |
 | 6.1 Equivalence | `equal?` only; no `eq?`, `eqv?` | design: "we don't have effects beside vectors" (`index.ts:71-75`) -- now narrower than stated |
-| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix; division by zero raises | design: "the Javascript numeric stack" (`:104-105`). `gcd`/`lcm` **not yet** (`:217-219`) |
+| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises | design: "the Javascript numeric stack" (`:104-105`). `gcd`/`lcm` **not yet** (`:217-219`), as is `string->number`'s radix argument (`:275-277`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
 | 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:578`); "the pure, functional subset" (`index.ts:405-406`) |
 | 6.5 Symbols | none | **not yet** by the label (`:608-614`), but the note itself doubts it |
 | 6.6 Characters | essentially complete | -- |
-| 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`:837-844`) |
-| 6.8 Vectors | the only mutable type; `[...]` is the literal; no `vector-copy` | design |
+| 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`:837-844`); `string-set!` "since it is effectful" (`:745`) |
+| 6.8 Vectors | mutable, though not the only mutable type; `[...]` is the literal; no `vector-copy`/`vector-copy!` | unremarked; the bracket literal follows Clojure (`syntax.grammar:5-9`) |
 | 6.9 Bytevectors | none | design: "inherently effectful" (`:984-986`) |
 | 6.10 Control | `apply`, `map`, `string-map`, `vector-map`, `vector-for-each` present | `for-each`, `string-for-each` **not yet** (`:994-996`); `call/cc`, `values`, `call-with-values`, `dynamic-wind` **not yet** (`:998-1003`) |
 | 6.11 Exceptions | none; `with-handler` instead, handler takes a message string | design: "inherently effectful" (`:1045-1047`) |
 | 6.12 Environments and evaluation | none | design: "platform-specific stuff" (`:1049-1051`) |
-| 6.13 Input and output | none; `display` is a statement | design: "in-browser, so can't implement directly" (`:1053-1055`) |
+| 6.13 Input and output | no ports; `display` is a statement; the `file` module reads and writes whole files | design: "in-browser, so can't implement directly" (`:1053-1055`) |
 | 6.14 System interface | none | design: "all operating system-specific stuff" (`:1057-1059`) |
 
 The five `// TODO: implement` gaps, in full: `gcd`/`lcm`, `for-each`/`string-for-each`, the `call/cc` block, symbols, and the radix argument to `string->number`.
 That last one is a half-stale TODO: `src/js/prelude/index.ts:275-277` lists both `(string->number s)` and `(string->number s radix)`, but the no-radix form is implemented directly beneath it and bound at `src/lib/prelude.scm:294`.
-Three further TODOs exist but are narrower -- a variant of something present, or a note on an implementation: `string->list`'s substring-bounded form (`:792-793`), `assoc-set`'s algorithm (`:588`), and fold variants for vectors (`:1007`).
+Three further TODOs exist but are narrower -- a variant of something present, or a note on an implementation: `string->list`'s substring-bounded form (`src/js/prelude/index.ts:792-793`), `assoc-set`'s algorithm (`:588`), and fold variants for vectors (`:1007`).
 
 ## 2. Where Scamper's extensions come from
 
@@ -493,13 +505,14 @@ This section separates what the source *says* from what it merely *resembles*, b
 
 ### From Racket
 
-Racket is the only language the TypeScript names outright.
+Racket is the language the TypeScript names most often.
 
 + **`racket/base` arithmetic and booleans.**
-  `// Additional functions from racket/base` heads `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan` (`src/js/prelude/index.ts:290`), and `// From racket/base` heads `nand`, `nor`, `implies`, `xor` (`:343`).
-  Cited, though in Racket the four boolean operators come from `racket/bool` rather than `racket/base`.
+  `// Additional functions from racket/base` heads `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, and `=-eps` (`src/js/prelude/index.ts:290-331`), and `// From racket/base` heads `nand`, `nor`, `implies`, `xor` (`:343`).
+  Cited, though in Racket the four boolean operators come from `racket/bool` rather than `racket/base`, and `=-eps` is not a Racket name at all.
 + **`racket/string`.**
   `// Additional functions from racket/string.` heads `string-contains`, `string-split`, `string-split-vector` (`:846`), and `string-split`'s empty-field behaviour is matched to Racket's deliberately (`:854`).
+  Cited, though `string-split-vector` is not a Racket name either.
 + **The functional hash interface.**
   `hash-ref`, `hash-set`, `hash-remove`, `hash-keys`, `hash-values`, `hash->list` and the rest follow "Racket's functional hash interface", chosen over SRFI-69/125's mutable `hash-table-*` because those "would not operate on what `{...}` produces" (`:1133-1136`).
 + **Module semantics.**
@@ -524,7 +537,7 @@ Unattributed in the source but unmistakably Racket's:
 
 ### From Clojure
 
-Clojure's influence is **purely syntactic**.
+Clojure's influence is **almost entirely syntactic**; the pair/cons split, the last bullet below, is the one place it reaches the data model.
 There is not one Clojure-derived procedure name in the standard library: `take-while`, `drop-while`, `partition`, `frequencies`, `some`, `every?`, `conj`, `juxt`, `zipmap`, `interleave`, `into`, and `get-in` are all absent.
 
 What is Clojure, each attributed in the source:
@@ -563,8 +576,12 @@ Neither R7RS nor, as far as the source records, anyone else's:
 + **`pair`** as a constructor separate from `cons`, forced by the pair/cons split.
 + **`index-of`, `assoc-key?`, `assoc-ref`, `assoc-set`**, the replacement for the `member`/`assoc` family.
 + **`list-take`, `list-drop`, `nonempty-list?`, `for-range`, `string->words`, `string-split-vector`, `vector-range`, `function?`** (a second name for `procedure?`, added in #608 because the readings say "function").
-+ **`js-var`**, the FFI root, and the reserved `##...##` names that derived forms expand into -- neither writable by a user program.
++ **`js-var`**, the FFI root, which is exported to user programs (`src/lib/index.ts:41-51`, `:83`), so the whole native surface is reachable from student code -- `(js-var "prelude_car")` evaluates to `car`'s implementation, and `js-var` itself can be shadowed like any other binding.
++ **The reserved `##...##` names** that derived forms expand into, which are the one thing a program may *not* bind: `(define ##error## 1)` is a parse error.
 + **`import` of a *file*** (`(import "helpers.scm")`), which has no R7RS counterpart because R7RS libraries are named, not located.
+
+Two of these sit under a Racket heading in the source and are Scamper's own all the same: `=-eps`, under `// Additional functions from racket/base` (`src/js/prelude/index.ts:290`, `:324`), and `string-split-vector`, under `// Additional functions from racket/string.` (`:846`, `:882`).
+Neither name exists in Racket, so in each case the heading claims a parent the name does not have.
 
 `range` deserves a note of its own: its one-, two-, and three-argument shape (`src/lib/prelude.scm:1139-1150`) is identical in Racket, Clojure, and Python, so naming a parent would be a guess.
 
@@ -584,7 +601,7 @@ This is the likeliest trap in the whole library, and it is worth stating twice.
 `fold-left` is "like `fold`, but the combining function `f` takes the current element as its first argument and the accumulated value as its second" (`:986-994`).
 
 So **Scamper's `fold` is what R6RS calls `fold-left`, and Scamper's `fold-left` is what SRFI-1 calls `fold`.**
-The names are crossed relative to both standards at once, and both orders are pinned by `test/regressions/fold-arguments.test.ts`, so neither is an accident.
+The names are crossed relative to both standards at once, and both orders are pinned by tests -- `fold-left` and `fold-right` in `test/regressions/fold-arguments.test.ts`, `fold` in `test/libs/prelude.test.ts` -- so neither is an accident.
 
 ~~~
 > (fold-left cons null (list 1 2 3))
