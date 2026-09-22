@@ -17,21 +17,41 @@ export interface ScamperDiagnostic {
   severity: Severity
   message: string
   range?: Range
+  /**
+   * The file `range` is an offset into, when that is not the file being
+   * analysed. Undefined means the analysed source itself; see
+   * ScamperError.modName and {@link isPlaceable}.
+   */
   modName?: string
   source?: string
 }
 
 /**
+ * Whether `d` can be pointed at in the source it was analysed from: it has a
+ * real range, and that range is an offset into *this* file rather than into an
+ * imported one (#557). A diagnostic that fails this must name its file in
+ * words instead -- underlining another file's coordinates in the open document
+ * marks whatever happens to sit there.
+ */
+export function isPlaceable(
+  d: ScamperDiagnostic,
+): d is ScamperDiagnostic & { range: Range } {
+  return d.modName === undefined && d.range !== undefined && d.range.begin.idx >= 0
+}
+
+/**
  * Constructs a diagnostic.
  * @param range the source range the diagnostic refers to, if any
+ * @param modName the file `range` is an offset into, if not the analysed one
  */
 export function mkDiagnostic(
   phase: DiagnosticPhase,
   severity: Severity,
   message: string,
   range?: Range,
+  modName?: string,
 ): ScamperDiagnostic {
-  return { phase, severity, message, range }
+  return { phase, severity, message, range, modName }
 }
 
 /**

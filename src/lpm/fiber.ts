@@ -61,6 +61,9 @@ export interface BlockOnStep {
   tag: 'block-on'
   action: () => Promise<Value>
   range?: Range
+  // The file `range` points into, if it is not the program's own (see
+  // Frame.modName); carried alongside it for the same reason.
+  modName?: string
 }
 
 export type StepResult =
@@ -84,8 +87,9 @@ export function importFileStep(
 export function blockOnStep(
   action: () => Promise<Value>,
   range?: Range,
+  modName?: string,
 ): BlockOnStep {
-  return { tag: 'block-on', action, range }
+  return { tag: 'block-on', action, range, modName }
 }
 
 // a fiber is a concurrent thread of execution
@@ -114,15 +118,23 @@ export class Fiber {
   // -- for the program itself. Stamped on each statement frame, and from
   // there onto every closure the statement builds (see ClsHandler).
   readonly closureOrigin: CodeOrigin
+  // The file this fiber's program was read from, when that is a file the
+  // student imported (Scheduler). Undefined for the program the editor is
+  // showing and for the builtin libraries. Stamped on each statement frame,
+  // and from there onto every closure the statement builds, so that an error
+  // says which file its range is an offset into (see Frame.modName).
+  readonly modName?: string
 
   constructor(
     prog: Prog,
     topLevelEnv: Env = Env.empty,
     closureOrigin: CodeOrigin = 'user',
+    modName?: string,
   ) {
     this.prog = prog
     this.topLevelEnv = topLevelEnv
     this.closureOrigin = closureOrigin
+    this.modName = modName
   }
 
   /**
@@ -235,6 +247,8 @@ export class Fiber {
         // ClsHandler, which reads the frame's origin rather than the fiber's).
         undefined,
         this.closureOrigin,
+        undefined,
+        this.modName,
       ),
     )
   }

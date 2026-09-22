@@ -8,6 +8,13 @@ type Phase = 'Parser' | 'Runtime' | 'Docstring'
 /** Errors that arise during Scamper compilation and execution. */
 export class ScamperError extends Error {
   phase: Phase
+  /**
+   * The file `range` is an offset into, when that is not the program the
+   * student is looking at -- an imported file, most often (#557). Undefined
+   * means the open document, so a consumer that places a range in it (the
+   * notebook, the editor's diagnostics) must place a located error only when
+   * this is unset, and name the file instead when it is set.
+   */
   modName?: string
   range?: Range
   source?: string
@@ -27,7 +34,11 @@ export class ScamperError extends Error {
   }
 
   toString(): string {
-    const detail = `${this.modName ?? ''}${this.range && this.range !== Range.none ? this.range.toString() : ''}`
+    const loc =
+      this.range && this.range !== Range.none ? this.range.toString() : ''
+    // Space-separated so a file and a location read as two things -- without
+    // it, `m.scm` and `1:40-1:49` run together into `m.scm1:40-1:49`.
+    const detail = [this.modName ?? '', loc].filter((p) => p.length > 0).join(' ')
     const src = this.source ? `(${this.source}) ` : ''
     return `${this.phase} error${detail.length > 0 ? ' [' + detail + ']' : ''}: ${src}${this.message}`
   }
@@ -92,6 +103,9 @@ export class SuspendSignal extends Error {
    * is otherwise raised far from the call and arrives unlocated (#342).
    */
   range?: Range
+
+  /** The file `range` points into, if not the program's own. See Frame.modName. */
+  modName?: string
 
   constructor(public action: () => Promise<Value>) {
     // Extends Error only so that `throw` of it is a throw of an error, which is
