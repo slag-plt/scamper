@@ -201,9 +201,17 @@
    * defaults (the light theme previously had no custom theme at all). */
   --editor-gutter-fg: light-dark(oklch(55% 0.016 200), oklch(64.5% 0.016 200));
   --editor-selection: light-dark(oklch(88% 0.045 250), oklch(40% 0.06 250));
+  /* Translucent on purpose (#436). CodeMirror draws the selection in a layer
+   * *behind* the text, and the active line's background is on the line itself,
+   * so an opaque tint here hides the selection on whichever line the caret
+   * ended on -- leaving only the other occurrences of the selected text lit up,
+   * which reads as the wrong text being selected. The colours are the opaque
+   * pair scaled back up so that, composited on --surface, an unselected active
+   * line looks as it did before. CodeMirror's own theme carries alpha here for
+   * the same reason. */
   --editor-active-line: light-dark(
-    oklch(97.5% 0.01 200),
-    oklch(25.5% 0.016 200)
+    oklch(92% 0.03 200 / 30%),
+    oklch(34% 0.03 200 / 30%)
   );
 
   /* Canvas / chart surfaces (read from JS via readColorToken) */
