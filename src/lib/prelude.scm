@@ -59,38 +59,33 @@
 ;;; @category math, comparator, typecheck, predicates, min, max, >=, >, <=, <, = 
 (define-export nan? (js-var "prelude_nanQ"))
 
-;;; (< v1 v2) -> boolean?
+;;; (< & v1) -> boolean?
 ;;;  v1 : number?
-;;;  v2 : number?
-;;; Returns `#t` if and only `v1` is strictly less than `v2`.
+;;; Returns `#t` if and only `v1`, `v2`, ... are strictly increasing.
 ;;; @category math, comparator, min, max, nan?, >=, >, <=, =
 (define-export < (js-var "prelude_lt"))
 
-;;; (<= v1 v2) -> boolean?
+;;; (<= & v1) -> boolean?
 ;;;  v1 : number?
-;;;  v2 : number?
-;;; Returns `#t` if and only `v1` is less than or equal to `v2`.
+;;; Returns `#t` if and only `v1`, `v2`, ... are non-decreasing.
 ;;; @category math, comparator, min, max, nan?, >=, >, <, =
 (define-export <= (js-var "prelude_leq"))
 
-;;; (> v1 v2) -> boolean?
+;;; (> & v1) -> boolean?
 ;;;  v1 : number?
-;;;  v2 : number?
-;;; Returns `#t` if and only `v1` is strictly greater than `v2`.
+;;; Returns `#t` if and only `v1`, `v2`, ... are strictly decreasing.
 ;;; @category math, comparator, min, max, nan?, >=, <=, <, =
 (define-export > (js-var "prelude_gt"))
 
-;;; (>= v1 v2) -> boolean?
+;;; (>= & v1) -> boolean?
 ;;;  v1 : number?
-;;;  v2 : number?
-;;; Returns `#t` if and only `v1` is greater than or equal to `v2`.
+;;; Returns `#t` if and only `v1`, `v2`, ... are non-increasing.
 ;;; @category math, comparator, min, max, nan?, >, <=, <, =
 (define-export >= (js-var "prelude_geq"))
 
-;;; (= v1 v2) -> boolean?
+;;; (= & v1) -> boolean?
 ;;;  v1 : number?
-;;;  v2 : number?
-;;; Returns `#t` if and only `v1` is equal to `v2`.
+;;; Returns `#t` if and only `v1`, `v2`, ... are all equal.
 ;;; @category math, comparator, min, max, nan?, >=, >, <=, <
 (define-export = (js-var "prelude_eq"))
 

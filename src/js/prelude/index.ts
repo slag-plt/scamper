@@ -112,24 +112,33 @@ export function prelude_nanQ(x: L.Value): boolean {
   return Number.isNaN(x)
 }
 
-export function prelude_lt(x: number, y: number): boolean {
-  return x < y
+// The five numeric comparisons are variadic, per R7RS: each holds when its
+// arguments are monotonic under the operator, so `(< 1 2 0 3)` is `#f`. They
+// share `pairwiseSatisfies` (defined with the character comparisons below)
+// with their `char` and `string` counterparts, which gives three properties
+// the report asks for: NaN compares false against everything in Javascript, so
+// any NaN argument fails a pair and the whole call is `#f`; `-0.0 === 0.0`, so
+// the two zeroes are not distinguished; and every adjacent pair is checked,
+// which is what makes the answer right for a non-monotonic run.
+
+export function prelude_lt(...xs: number[]): boolean {
+  return pairwiseSatisfies((a, b) => a < b, xs)
 }
 
-export function prelude_leq(x: number, y: number): boolean {
-  return x <= y
+export function prelude_leq(...xs: number[]): boolean {
+  return pairwiseSatisfies((a, b) => a <= b, xs)
 }
 
-export function prelude_gt(x: number, y: number): boolean {
-  return x > y
+export function prelude_gt(...xs: number[]): boolean {
+  return pairwiseSatisfies((a, b) => a > b, xs)
 }
 
-export function prelude_geq(x: number, y: number): boolean {
-  return x >= y
+export function prelude_geq(...xs: number[]): boolean {
+  return pairwiseSatisfies((a, b) => a >= b, xs)
 }
 
-export function prelude_eq(x: number, y: number): boolean {
-  return x === y
+export function prelude_eq(...xs: number[]): boolean {
+  return pairwiseSatisfies((a, b) => a === b, xs)
 }
 
 export function prelude_zeroQ(x: number): boolean {
@@ -623,6 +632,13 @@ export function prelude_charQ(x: L.Value): boolean {
   return L.isChar(x)
 }
 
+/**
+ * Whether every adjacent pair of `xs` satisfies `f` -- the shape every
+ * comparison procedure in this library has, numeric, character, and string
+ * alike. Fewer than two arguments is vacuously true, since there is no pair to
+ * fail; that is the answer `(char=? #\a)` has always given, and the numeric
+ * comparisons follow it rather than inventing a second convention.
+ */
 function pairwiseSatisfies<T>(f: (a: T, b: T) => boolean, xs: T[]): boolean {
   if (xs.length <= 1) {
     return true
