@@ -69,10 +69,21 @@ export const mkClosure = (
   // (only a closure from an imported file carries a modName); see Closure.home
   // and Closure.modName.
 ): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}), ...(modName !== undefined ? { modName } : {}) })
-export const mkChar = (v: string): L.Char => ({
-  [L.scamperTag]: 'char',
-  value: v,
-})
+/**
+ * @param v the character's value: a non-empty string.
+ * @throws ICE if `v` is not one. This is the only place a char is made, so the
+ * check is what keeps a char from holding `undefined` and printing as
+ * `#\undefined` (#613).
+ */
+export const mkChar = (v: string): L.Char => {
+  // N.B., the check is not the tautology the signature makes it look like: a
+  // caller indexing a string out of range hands us `undefined` at runtime,
+  // which is exactly what the type cannot see.
+  if (typeof v !== 'string' || v.length === 0) {
+    throw new ICE('mkChar', `expected a non-empty string, received ${v}`)
+  }
+  return { [L.scamperTag]: 'char', value: v }
+}
 export const mkStruct = (
   kind: string,
   fields: string[],

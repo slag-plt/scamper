@@ -743,6 +743,12 @@ export function prelude_stringLength(s: string): number {
 }
 
 export function prelude_stringRef(s: string, i: number): L.Char {
+  if (i < 0 || i >= s.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `string-ref: index ${i} out of bounds of string`,
+    )
+  }
   return L.mkChar(s[i])
 }
 
