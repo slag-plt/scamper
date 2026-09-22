@@ -3,13 +3,18 @@
 ;;; (rex? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if `v` is a regex, `#f` otherwise.
-;;; @category predicates, regexes, typecheck, rex-matches?, pair?, list?, procedure?, ref?, vector?
+;;; @category predicates, regexes, typecheck, rex-matches?, pair?, list?, procedure?, function?, ref?, vector?
 (define-export rex? (js-var "rex_isRegex"))
 
 ;;; (rex-empty) -> rex?
-;;; Returns a regex that matches the empty string.
-;;; @category regexes, rex-empty, rex-split-string, rex-string, rex->string
+;;; Returns a regex that matches the empty string, and only the empty string.
+;;; @category regexes, rex-empty, rex-none, rex-split-string, rex-string, rex->string
 (define-export rex-empty (js-var "rex_rexEmpty"))
+
+;;; (rex-none) -> rex?
+;;; Returns a regex that matches nothing at all: no string matches it, not even the empty string.
+;;; @category regexes, rex-empty, rex-any-of, rex-char-set
+(define-export rex-none (js-var "rex_rexNone"))
 
 ;;; (rex-string s) -> rex?
 ;;;  s : string?
@@ -43,7 +48,8 @@
 ;;; (rex-char-set s) -> rex?
 ;;;  s : string?
 ;;; Returns a regex that matches any single character in the string `s`.
-;;; @category regexes, rex-any-char, rex-char-antiset, rex-char-range
+;;; With no characters to choose from, the result is `(rex-none)`.
+;;; @category regexes, rex-any-char, rex-char-antiset, rex-char-range, rex-none
 (define-export rex-char-set (js-var "rex_rexCharSet"))
 
 ;;; (rex-char-antiset s) -> rex?
@@ -62,8 +68,8 @@
 ;;; (rex-any-of & xs) -> rex?
 ;;;  xs : rex?
 ;;; Returns a regex that matches any one of the regexes `xs`.
-;;; With no regexes, the result matches nothing.
-;;; @category regexes, rex-optional
+;;; With no regexes, the result is `(rex-none)`, which matches nothing.
+;;; @category regexes, rex-optional, rex-none
 (define-export rex-any-of (js-var "rex_rexAnyOf"))
 
 ;;; (rex-optional r) -> rex?

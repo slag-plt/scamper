@@ -402,7 +402,7 @@
 ;;; (pair? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a pair.
-;;; @category typecheck, predicates, list?, null?, procedure?, ref?, rex?, vector?, void?
+;;; @category typecheck, predicates, list?, null?, procedure?, function?, ref?, rex?, vector?, void?
 (define-export pair? (js-var "prelude_pairQ"))
 
 ;;; (list-of p) -> procedure?
@@ -487,13 +487,13 @@
 ;;; (null? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is the empty list.
-;;; @category list, association list, typecheck, predicates, pair?, list?, procedure?, ref?, vector?, void?
+;;; @category list, association list, typecheck, predicates, pair?, list?, procedure?, function?, ref?, vector?, void?
 (define-export null? (js-var "prelude_nullQ"))
 
 ;;; (list? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a list.
-;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, ref?, rex?, vector?, void?
+;;; @category list, association list, typecheck, predicates, pair?, null?, procedure?, function?, ref?, rex?, vector?, void?
 (define-export list? (js-var "prelude_listQ"))
 
 ;;; (nonempty-list? v) -> boolean?
@@ -785,7 +785,7 @@
 ;;; (vector? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a vector.
-;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, ref?, rex?, void?
+;;; @category typecheck, vectors, predicates, pair?, list?, null?, procedure?, function?, ref?, rex?, void?
 (define-export vector? (js-var "prelude_vectorQ"))
 
 ;;; (vector & v1) -> vector?
@@ -864,8 +864,14 @@
 ;;; (procedure? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a procedure.
-;;; @category typecheck, predicates, pair?, list?, null?, ref?, rex?, vector?, void?
+;;; @category typecheck, predicates, function?, pair?, list?, null?, ref?, rex?, vector?, void?
 (define-export procedure? (js-var "prelude_procedureQ"))
+
+;;; (function? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is a function. The same test as `procedure?`.
+;;; @category typecheck, predicates, procedure?, pair?, list?, null?, ref?, rex?, vector?, void?
+(define-export function? (js-var "prelude_procedureQ"))
 
 ;;; (string-map f s) -> string?
 ;;;  f : procedure?
@@ -1084,7 +1090,7 @@
 ;;; (void? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only if `v` is the void value.
-;;; @category predicates, typecheck, pair?, list?, null?, procedure?, ref?, vector?
+;;; @category predicates, typecheck, pair?, list?, null?, procedure?, function?, ref?, vector?
 (define-export void? (js-var "prelude_voidQ"))
 
 ;;; (compose & f1) -> procedure?
@@ -1188,7 +1194,7 @@
 ;;; (ref? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is a reference cell.
-;;; @category typecheck, predicates, pair?, list?, null?, procedure?, rex?, vector?, void?
+;;; @category typecheck, predicates, pair?, list?, null?, procedure?, function?, rex?, vector?, void?
 (define-export ref? (js-var "prelude_isRef"))
 
 ;;; (deref r) -> any

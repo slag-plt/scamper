@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- You can now ask whether a value is a function with function?, the same question procedure? answers, under the name the readings use.
+- The rex library is clearer at its edges: rex-none names the pattern that matches nothing and is what an empty rex-any-of or rex-char-set gives you, and rex-char-set now takes characters like ^ and - literally instead of as regular expression syntax.
 - The documentation search now finds a function from part of its name, so searching for image-save finds image-save!, and what you typed in full comes first.
 - You can now use l-s and r-s to make a one-argument procedure out of a two-argument one by fixing its left or right argument, so (r-s expt 2) squares a number and (r-s > 2) tests for greater than 2.
 - You can now use add1, sub1, increment, and decrement to add or subtract one, which saves writing a lambda when you pass one of them to map or compose.
