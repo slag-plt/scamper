@@ -16,6 +16,7 @@ import {
   type Cell,
 } from '../notebook-cells'
 import { analyzeSource } from '../codemirror/lsp/diagnostics'
+import { isPlaceable } from '../../../scheme/diagnostic'
 import type { CellChange } from '../codemirror/cell-editor'
 
 /**
@@ -433,7 +434,9 @@ export function useNotebook(editor: EditorAccessor): Notebook {
     if (mine !== lintGeneration) return
     const perCell: Diagnostic[][] = cells.value.map(() => [])
     for (const d of found) {
-      if (d.range === undefined || d.range.begin.idx < 0) continue
+      // Only what can be pointed at in this document: a diagnostic about an
+      // imported file would otherwise mark the cell its offsets land in (#557).
+      if (!isPlaceable(d)) continue
       const at = d.range.begin.idx
       const index = cells.value.findIndex(
         (cell) => at >= cell.from && at < cell.to,

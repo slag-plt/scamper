@@ -61,11 +61,14 @@ export const mkClosure = (
   name?: L.Id,
   restParam?: string,
   origin: L.CodeOrigin = 'user',
-  home?: L.Env
-  // Omit `home` when unset so an ordinary closure keeps the exact shape it had
-  // before module-home resolution existed (only a qualified/private-module
-  // closure carries one); see Closure.home.
-): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}) })
+  home?: L.Env,
+  modName?: string
+  // Omit `home` and `modName` when unset so an ordinary closure keeps the exact
+  // shape it had before module-home resolution (only a qualified/private-module
+  // closure carries a home) and before imported files were named in errors
+  // (only a closure from an imported file carries a modName); see Closure.home
+  // and Closure.modName.
+): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}), ...(modName !== undefined ? { modName } : {}) })
 export const mkChar = (v: string): L.Char => ({
   [L.scamperTag]: 'char',
   value: v,
