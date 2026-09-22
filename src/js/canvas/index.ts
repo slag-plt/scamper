@@ -5,18 +5,29 @@ import { Font, font_font, font_fontToFontString } from '../image/font.js'
 import { context2d } from '../image/context.js'
 import { requireBrowser } from '../browser.js'
 
-export function canvas_canvasQ(v: L.Value): boolean {
+// N.B., a type predicate, so the guards below narrow rather than cast (#553).
+export function canvas_canvasQ(v: L.Value): v is HTMLCanvasElement {
   return typeof HTMLCanvasElement !== 'undefined' && v instanceof HTMLCanvasElement
 }
 
 // N.B., canvas-width/canvas-height used to be bound to the *drawing* accessors,
 // which accept either kind via a cast. Splitting them gives each an honest
 // contract (#103).
-export function canvas_canvasWidth(canvas: HTMLCanvasElement): number {
+export function canvas_canvasWidth(canvas: L.Value): number {
+  // The contract is `canvas?`, so what arrives is a canvas and this re-narrows
+  // it: `pixel-map` names this at top level, which reaches the native without
+  // the contract (#553), and anything with a `width` field answered instead.
+  if (!canvas_canvasQ(canvas)) {
+    throw new L.ScamperError('Runtime', 'canvas-width: expected a canvas')
+  }
   return canvas.width
 }
 
-export function canvas_canvasHeight(canvas: HTMLCanvasElement): number {
+export function canvas_canvasHeight(canvas: L.Value): number {
+  // As canvas-width (#553).
+  if (!canvas_canvasQ(canvas)) {
+    throw new L.ScamperError('Runtime', 'canvas-height: expected a canvas')
+  }
   return canvas.height
 }
 
@@ -179,11 +190,16 @@ export function canvas_canvasGetPixel(canvas: HTMLCanvasElement, x: number, y: n
  * pixels->canvas consumes. There is no distinct runtime type -- this is the
  * contract the pixel operations were previously declared `any` for.
  */
-export function canvas_pixelsQ(v: L.Value): boolean {
+export function canvas_pixelsQ(v: L.Value): v is Rgb[] {
   return L.isArray(v) && v.every((p) => L.isStructKind(p, 'rgba'))
 }
 
-export function canvas_canvasToPixels(canvas: HTMLCanvasElement): L.Struct[] {
+export function canvas_canvasToPixels(canvas: L.Value): L.Struct[] {
+  // As canvas-width: `pixel-map` reaches this one without its `canvas?`
+  // contract (#553).
+  if (!canvas_canvasQ(canvas)) {
+    throw new L.ScamperError('Runtime', 'canvas->pixels: expected a canvas')
+  }
   const ctx = context2d(canvas)
   const src = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   const ret = []
@@ -193,8 +209,19 @@ export function canvas_canvasToPixels(canvas: HTMLCanvasElement): L.Struct[] {
   return ret
 }
 
-export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height: number): HTMLCanvasElement {
+export function canvas_pixelsToCanvas(pixels: L.Value, width: L.Value, height: L.Value): HTMLCanvasElement {
   requireBrowser()
+  // The contract is `pixels?`, `integer?`, `integer?`. `pixel-map` names this
+  // at top level and so skips it (#553): a non-rgb element read `undefined`
+  // for each channel, and assigning undefined into a Uint8ClampedArray stores
+  // 0 -- an all-black, fully transparent canvas, with no error at all.
+  if (!canvas_pixelsQ(pixels)) {
+    throw new L.ScamperError('Runtime', 'pixels->canvas: expected a vector of rgb values')
+  }
+  if (!L.isNumber(width) || !Number.isInteger(width) ||
+      !L.isNumber(height) || !Number.isInteger(height)) {
+    throw new L.ScamperError('Runtime', 'pixels->canvas: expected an integer width and height')
+  }
   const ret = document.createElement('canvas')
   ret.width = width
   ret.height = height
@@ -202,7 +229,7 @@ export function canvas_pixelsToCanvas(pixels: L.Struct[], width: number, height:
   const outImg = ctx.createImageData(width, height)
   const data = outImg.data
   for (let i = 0; i < pixels.length; i++) {
-    const c = pixels[i] as Rgb
+    const c = pixels[i]
     data[i*4] = c.red
     data[i*4 + 1] = c.green
     data[i*4 + 2] = c.blue

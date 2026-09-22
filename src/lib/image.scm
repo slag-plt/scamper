@@ -1120,13 +1120,20 @@
 ;;; (pixel-map fn canvas) -> canvas?
 ;;;  fn : procedure?
 ;;;  canvas : canvas?
-;;; Returns a new canvas that is the result of applying `fn` to each pixel (an rgb value) of `canvas`. `canvas` itself is unchanged.
+;;; Returns a new canvas that is the result of applying `fn` to each pixel (an rgb value) of `canvas`. `fn` must return an rgb value for each pixel it is given. `canvas` itself is unchanged.
 ;;; @category image, pixel, canvas-get-pixel, canvas->pixels, pixels->canvas, canvas-set-pixels!
 (define-export pixel-map
   (lambda (fn canvas)
-    (pixels->canvas (vector-map fn (canvas->pixels canvas))
-                    (canvas-width canvas)
-                    (canvas-height canvas))))
+    ;; N.B., the contract constrains `fn` to a procedure but says nothing about
+    ;; what it returns, and `pixels->canvas`'s own `pixels?` contract does not
+    ;; run on this call -- library code reaches the native behind the wrapper
+    ;; (#553). Without this check `(pixel-map (lambda (p) 5) c)` silently
+    ;; produced an all-black, fully transparent canvas. The check is here, not
+    ;; at `pixels->canvas`, so the error names the argument the student wrote.
+    (let ([pixels (vector-map fn (canvas->pixels canvas))])
+      (if (pixels? pixels)
+          (pixels->canvas pixels (canvas-width canvas) (canvas-height canvas))
+          (error "pixel-map: expected fn to return an rgb value for each pixel")))))
 
 ;;; (canvas-get-pixel canvas x y) -> rgb?
 ;;;  canvas : canvas?
