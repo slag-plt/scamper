@@ -9,7 +9,7 @@ Part 1 is what R7RS-small says that Scamper does not do, or does differently.
 Part 2 is what Scamper has that R7RS does not, and where each borrowed idea came from.
 
 For the *positive* statement of any form -- what it is and how to write it -- see `public/reference.html`, the student-facing language reference.
-Each form gains an anchor under its own name when #543 lands, so `reference.html#let` will be what `let` *is*, and this document is only what it is *not*.
+Each form is anchored there under its own name, so `reference.html#let` is what `let` *is*, and this document is only what it is *not*.
 For the grammar, see `docs/language.md`, which owns it; this document does not restate it.
 
 ## Reading this document
@@ -417,8 +417,8 @@ A runtime error from the library arrives the same way:
 Runtime error [1:1-1:17]: (error) bad
 ~~~
 
-Two comments in the tree describe `with-handler` as a reserved-word special form (`src/js/prelude/index.ts` and `src/lib/prelude.scm`).
-Both are stale: it is a library binding again, as `src/scheme/raise.ts:197` notes and as the grammar confirms by having no rule for it.
+Two comments in the tree used to describe `with-handler` as a reserved-word special form; #616 removed them.
+It is a library binding, as `src/scheme/raise.ts:197` notes and as the grammar confirms by having no rule for it.
 
 ### Recursion
 
