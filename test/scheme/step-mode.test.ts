@@ -76,6 +76,7 @@ async function startStepping(src: string) {
 const FACTORIAL =
   '(define fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))\n(fact 3)'
 const FACTORIAL_TRACE = [
+  '(lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))',
   '(fact 3)',
   '(if (= 3 0) 1 (* 3 (fact (- 3 1))))',
   '(if #f 1 (* 3 (fact (- 3 1))))',
@@ -100,6 +101,7 @@ const FACTORIAL_TRACE = [
 const LIST_LENGTH =
   '(define len (lambda (l) (if (null? l) 0 (+ 1 (len (cdr l))))))\n(len (list 7 8))'
 const LIST_LENGTH_TRACE = [
+  '(lambda (l) (if (null? l) 0 (+ 1 (len (cdr l)))))',
   '(len (list 7 8))',
   '(if (null? (list 7 8)) 0 (+ 1 (len (cdr (list 7 8)))))',
   '(if #f 0 (+ 1 (len (cdr (list 7 8)))))',
@@ -178,12 +180,14 @@ describe('abort and cancel', () => {
   test('cancelling a parked run reports cancellation and frees the gate', async () => {
     const run = await startStepping(FACTORIAL)
     await run.step() // park after the first reduction
-    expect(run.steps).toEqual(['(fact 3)'])
+    expect(run.steps).toEqual(FACTORIAL_TRACE.slice(0, 1))
     run.sched.cancelTask(run.id)
     expect(run.steps).toContain('ERR:Evaluation cancelled')
     // the gate is gone: a further resume is a no-op and emits nothing more
     await run.resume('step')
-    expect(run.steps.filter((s) => !s.startsWith('ERR:'))).toEqual(['(fact 3)'])
+    expect(run.steps.filter((s) => !s.startsWith('ERR:'))).toEqual(
+      FACTORIAL_TRACE.slice(0, 1),
+    )
   })
 })
 

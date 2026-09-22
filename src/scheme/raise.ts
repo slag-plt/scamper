@@ -22,10 +22,53 @@ function raisePat(pat: LPM.Pat): A.Pat {
   }
 }
 
-/** @return a stack of expressions created from the given value stack. */
-export function valuesToExps(values: LPM.Value[]): A.Exp[] {
+// The name codegen gives every lambda (see codegen.ts); a `define` replaces it
+// when it binds one. A closure still carrying it has no name a student wrote,
+// so anything showing the name instead of the lambda is showing an internal
+// (#569).
+const ANONYMOUS = '##anonymous##'
+
+/** @returns true iff `v` is a closure with no Scamper-facing name. */
+export function isAnonymousClosure(v: LPM.Value): v is LPM.Closure {
+  return LPM.isClosure(v) && (v.name === undefined || v.name === ANONYMOUS)
+}
+
+/**
+ * Rebuilds an evaluated closure as the lambda it was written as, by raising its
+ * body against the scopes it captured.
+ * @param env supplies the top-level names the body references; its locals are
+ *            replaced by the closure's own.
+ */
+export function closureToLam(
+  v: LPM.Closure,
+  env: LPM.Env = LPM.Env.empty,
+): A.Exp {
+  const excluded = v.restParam ? [...v.params, v.restParam] : v.params
+  return A.mkLam(
+    v.params.map((p) => A.mkId(p)),
+    raiseFrame(
+      [],
+      env.withLocalScopes(v.locals).withoutLocals(...excluded),
+      v.code.toReversed(),
+    ),
+    undefined,
+    v.restParam ? A.mkId(v.restParam) : undefined,
+    v.provenance,
+  )
+}
+
+/**
+ * @param env the frame the values sit in, for raising a closure's body.
+ * @return a stack of expressions created from the given value stack.
+ */
+export function valuesToExps(
+  values: LPM.Value[],
+  env: LPM.Env = LPM.Env.empty,
+): A.Exp[] {
   return values.map((v) => {
-    if ((LPM.isFunction(v) || LPM.isClosure(v)) && v.name) {
+    if (isAnonymousClosure(v)) {
+      return closureToLam(v, env)
+    } else if (LPM.isFunction(v) && v.name) {
       return A.mkId(v.name)
     } else {
       return A.mkLit(v)
@@ -60,35 +103,25 @@ export function raiseFrame(
       }
 
       case 'cls': {
-        const excluded = op.restParam ? [...op.params, op.restParam] : op.params
-        const body = raiseFrame(
-          [],
-          env.withoutLocals(...excluded),
-          op.body.toReversed(),
-        )
-        if (op.provenance === 'anon-fn') {
-          // Reconstruct the tagged lambda so sugaring recovers the `#(...)`.
-          values.push(
-            A.mkLam(
-              op.params.map((p) => A.mkId(p)),
-              body,
-              op.range,
-              op.restParam ? A.mkId(op.restParam) : undefined,
-              'anon-fn',
-            ),
-          )
-        } else if (op.name) {
+        // A lambda that has not run yet shows as the lambda it is, unless it
+        // has a name to show instead. Codegen's is the ANONYMOUS placeholder,
+        // never a name a student wrote, and showing it hid the whole step
+        // (#569). The provenance rides along so sugaring recovers a `#(...)`
+        // written as one.
+        if (op.name !== undefined && op.name !== ANONYMOUS) {
           values.push(A.mkId(op.name))
-        } else {
-          values.push(
-            A.mkLam(
-              op.params.map((p) => A.mkId(p)),
-              body,
-              undefined,
-              op.restParam ? A.mkId(op.restParam) : undefined,
-            ),
-          )
+          break
         }
+        const excluded = op.restParam ? [...op.params, op.restParam] : op.params
+        values.push(
+          A.mkLam(
+            op.params.map((p) => A.mkId(p)),
+            raiseFrame([], env.withoutLocals(...excluded), op.body.toReversed()),
+            op.range,
+            op.restParam ? A.mkId(op.restParam) : undefined,
+            op.provenance,
+          ),
+        )
         break
       }
 
@@ -214,12 +247,12 @@ export function raiseFrames(frames: Frame[]): A.Exp {
   }
   const lastFrame = frames[frames.length - 1]
   let ret = raiseFrame(
-    valuesToExps(lastFrame.values),
+    valuesToExps(lastFrame.values, lastFrame.env),
     lastFrame.env,
     lastFrame.ops,
   )
   for (let i = frames.length - 2; i >= 0; i--) {
-    const values = valuesToExps(frames[i].values)
+    const values = valuesToExps(frames[i].values, frames[i].env)
     values.push(ret)
     ret = raiseFrame(values, frames[i].env, frames[i].ops)
   }

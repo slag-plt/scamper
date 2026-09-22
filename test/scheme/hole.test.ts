@@ -171,6 +171,7 @@ describe('hole tracing', () => {
     expect(
       await reductionTrace('(define f (lambda (x) ??))\n(f 1)'),
     ).toEqual([
+      '(lambda (x) ??)',
       '(f 1)',
       '??',
       'Runtime error [1:23-1:24]: Hole encountered in program!',

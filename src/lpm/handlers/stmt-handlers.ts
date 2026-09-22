@@ -1,6 +1,6 @@
-import { displayStep, Fiber, StepResult, traceStep } from '../fiber'
+import { displayStep, Fiber, StepResult, stmtValueStep, traceStep } from '../fiber'
 import { Stmt } from '../lang'
-import { isClosure } from '../util'
+import { isClosure, isFunction } from '../util'
 
 type StatementHandler<T extends Stmt['tag']> = (
   stmt: Extract<Stmt, { tag: T }>,
@@ -53,9 +53,14 @@ export const DefineHandler: StatementHandler<'define'> = (stmt, fiber) => {
       target.name = stmt.name
     }
   }
-  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([stmt.name, fiber.lastResult])
+  const value = fiber.lastResult
+  fiber.topLevelEnv = fiber.topLevelEnv.extendWithTopLevel([stmt.name, value])
   fiber.advanceStmt()
-  return traceStep
+  // The defined value is the last step of the define's trace (#568): without it
+  // the trace stops on the reduction just before, so `(define y (sqr (+ 2 3)))`
+  // ends at `(* 5 5)`. A function is the exception -- the step before already
+  // showed its lambda, and naming it again says nothing.
+  return isFunction(value) ? traceStep : stmtValueStep
 }
 export const DispHandler: StatementHandler<'disp'> = (stmt, fiber) => {
   if (!fiber.isProcessingBlk) {

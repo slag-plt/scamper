@@ -55,7 +55,7 @@ describe("#478: a tail call keeps the caller's trace shield", () => {
           '(define double (lambda (x) (* x 2)))\n' +
           '(twice double 3)',
       ),
-    ).toEqual(['(twice double 3)', '12'])
+    ).toEqual(['(lambda (x) (* x 2))', '(twice double 3)', '12'])
   })
 
   test('with-file, the shipped instance of the same shape, stays atomic', async () => {
@@ -70,7 +70,11 @@ describe("#478: a tail call keeps the caller's trace shield", () => {
         '(define twice-length (lambda (s) (* (string-length s) 2)))\n' +
           '(with-file "data.txt" twice-length)',
       ),
-    ).toEqual(['(with-file "data.txt" twice-length)', '10'])
+    ).toEqual([
+      '(lambda (s) (* (string-length s) 2))',
+      '(with-file "data.txt" twice-length)',
+      '10',
+    ])
   })
 
   test('a tail call *into* library code does not make it visible', async () => {
@@ -83,6 +87,12 @@ describe("#478: a tail call keeps the caller's trace shield", () => {
           '(define f (lambda (xs) (map double xs)))\n' +
           '(f (list 1 2 3))',
       ),
-    ).toEqual(['(f (list 1 2 3))', '(map double (list 1 2 3))', '(list 2 4 6)'])
+    ).toEqual([
+      '(lambda (x) (* x 2))',
+      '(lambda (xs) (map double xs))',
+      '(f (list 1 2 3))',
+      '(map double (list 1 2 3))',
+      '(list 2 4 6)',
+    ])
   })
 })

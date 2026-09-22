@@ -72,6 +72,9 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
       // Library code has no file of its own to name -- it reports its caller's
       // site, and with it that site's file (see applyFn).
       currFrame.origin === 'builtin' ? undefined : currFrame.modName,
+      // ...and the derived form it was written as, so a trace that shows this
+      // closure sugars it back to that form (see Closure.provenance).
+      op.provenance,
     ),
   )
   return minorStep
