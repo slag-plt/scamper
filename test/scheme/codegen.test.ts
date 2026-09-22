@@ -937,8 +937,10 @@ describe('Construct semantics (comprehensiveness audit)', () => {
 
     // `apply` carries a docstring since #543, so a user-facing call goes
     // through its contract wrapper and is rejected there, in the words every
-    // other library procedure uses. ApSpreadHandler's own check still backs it
-    // up for library code, which reaches the wrapped value directly.
+    // other library procedure uses -- with a source range, which the message
+    // it replaces did not carry. ApSpreadHandler's own check still backs it up
+    // for library code, which VarHandler hands the value from *behind* the
+    // wrapper, so no library call reaches the contract at all.
     test('apply with a non-list argument is a runtime error', async () => {
       await checkMachineOutput('(apply + 5)',
         ['Runtime error: (error) expected a list as the second argument, received number'], true)

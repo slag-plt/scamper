@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom'
 import { describe, expect, test } from 'vitest'
 import SearchResults from '../../src/app/docs/SearchResults.vue'
 import { tokenizeAndParse } from '../../src/scheme'
+import { runProgram } from '../libs/harness'
 import { reservedWords } from '../../src/scheme/reserved-words'
 
 // Regression tests for #543: the special forms used to appear in the function
@@ -48,21 +49,17 @@ const otherForms = [
 ]
 
 describe('language reference page', () => {
-  test('every reserved word has a section, and every section names a real form', () => {
-    const forms = new Set(sections.map(formOf))
-    const known = new Set([...reservedWords, ...otherForms])
-
-    const missing = reservedWords.filter((w) => !forms.has(w))
-    const unknown = [...forms].filter((f) => !known.has(f))
+  test('the page describes each form exactly once, and no others', () => {
+    // Compared as a sorted multiset rather than by set membership, so that
+    // renaming one section to another form's name -- which leaves both names
+    // "known" and the set unchanged -- still fails here.
+    const forms = sections.map(formOf).sort()
+    const expected = [...reservedWords, ...otherForms].sort()
 
     expect(
-      missing,
-      `reserved words with no section in public/reference.html: ${missing.join(', ')}`,
-    ).toEqual([])
-    expect(
-      unknown,
-      `sections of public/reference.html naming no form of the language: ${unknown.join(', ')}`,
-    ).toEqual([])
+      forms,
+      'each reserved word, and each of the other forms the page covers, wants exactly one section',
+    ).toEqual(expected)
   })
 
   test("a reserved word's section is anchored by the word itself", () => {
@@ -98,11 +95,28 @@ describe('language reference page', () => {
       expect(examples.length, `${form} has no example`).toBeGreaterThan(0)
       for (const example of examples) {
         const src = example.textContent
+        expect(src.trim(), `${form}: empty example`).not.toEqual('')
         const { diagnostics } = tokenizeAndParse(src)
         expect(
           diagnostics.map((d) => d.message),
           `${form}: example does not parse: ${src}`,
         ).toEqual([])
+      }
+    }
+  })
+
+  test('every example runs without raising', async () => {
+    // Parsing is not evaluating. The page shipped a `let` whose bindings were
+    // not wrapped and an `(import "image")` that named a file; the first was a
+    // parse error, but the second parsed perfectly and failed at run time. Only
+    // running the examples notices that second kind.
+    for (const section of sections) {
+      const form = formOf(section)
+      for (const example of section.querySelectorAll('pre.example')) {
+        const src = example.textContent
+        const output = await runProgram(src)
+        const raised = output.filter((line) => /^(Runtime|Parser) error/.test(line))
+        expect(raised, `${form}: example raises: ${src}`).toEqual([])
       }
     }
   })

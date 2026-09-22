@@ -320,9 +320,10 @@ MODULE.NAME</pre>
       <h3>if</h3>
       <pre class="syntax">(if EXPR EXPR EXPR)</pre>
       <p>
-        Evaluates the first expression; if it is <code>#t</code>, the second is
-        the answer, and otherwise the third. Both branches are required, and
-        only the one taken is evaluated.
+        Evaluates the first expression, which must be a boolean; if it is
+        <code>#t</code>, the second is the answer, and otherwise the third. A
+        guard that is not a boolean is an error, not something treated as true.
+        Both branches are required, and only the one taken is evaluated.
       </p>
       <pre class="example">(display (if (&gt; 3 2) "bigger" "smaller"))</pre>
     </section>
@@ -332,7 +333,8 @@ MODULE.NAME</pre>
       <pre class="syntax">(cond [EXPR EXPR] ...)</pre>
       <p>
         Tries each clause's first expression in turn and answers with the second
-        expression of the first clause whose test is <code>#t</code>.
+        expression of the first clause whose test is <code>#t</code>. Each test
+        must be a boolean.
         <code>else</code> is an ordinary binding whose value is <code>#t</code>,
         so a final <code>[else ...]</code> clause catches everything left. A
         <code>cond</code> in which no clause matches is an error.
@@ -346,8 +348,8 @@ MODULE.NAME</pre>
       <p>
         <code>#t</code> when every expression is <code>#t</code>. It stops at
         the first <code>#f</code>, leaving the rest unevaluated &mdash; which is
-        why it is a form rather than a procedure. <code>(and)</code> is
-        <code>#t</code>.
+        why it is a form rather than a procedure. Each expression it reaches
+        must be a boolean. <code>(and)</code> is <code>#t</code>.
       </p>
       <pre class="example">(display (and (&gt; 2 1) (&lt; 2 3)))</pre>
     </section>
@@ -357,18 +359,19 @@ MODULE.NAME</pre>
       <pre class="syntax">(or EXPR ...)</pre>
       <p>
         <code>#t</code> when at least one expression is <code>#t</code>. It
-        stops at the first <code>#t</code>, leaving the rest unevaluated.
-        <code>(or)</code> is <code>#f</code>.
+        stops at the first <code>#t</code>, leaving the rest unevaluated. Each
+        expression it reaches must be a boolean. <code>(or)</code> is
+        <code>#f</code>.
       </p>
       <pre class="example">(display (or (&gt; 1 2) (&lt; 1 2)))</pre>
     </section>
 
     <section id="begin">
       <h3>begin</h3>
-      <pre class="syntax">(begin EXPR EXPR ...)</pre>
+      <pre class="syntax">(begin EXPR ...)</pre>
       <p>
         Evaluates each expression in order and answers with the last. At least
-        two are required, since a single expression needs no <code>begin</code>.
+        one is required, though a single expression needs no <code>begin</code>.
         It is how a body holds several steps when the earlier ones are run for
         their effect.
       </p>

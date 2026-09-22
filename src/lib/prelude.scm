@@ -4,8 +4,7 @@
 ;;;  f : procedure?
 ;;;  args : list?
 ;;; Calls `f` with the elements of `args` as its arguments, so
-;;; `(apply + (list 1 2 3))` is `(+ 1 2 3)`. Native impl: prelude_apply, the
-;;; bytecode closure around the ap-spread VM primitive.
+;;; `(apply + (list 1 2 3))` is `(+ 1 2 3)`.
 ;;; @category function
 (define-export apply (js-var "prelude_apply"))
 
@@ -15,15 +14,17 @@
 ;;; Runs `(thunk)`. Returns its value if it completes normally; if it raises an
 ;;; error, calls `(handler msg)` with the error's message string and returns that
 ;;; instead. `handler`/`thunk` being procedures is enforced by this contract,
-;;; which runs before the handler is installed. Native impl: prelude_withHandler.
+;;; which runs before the handler is installed.
 ;;; @category function
 (define-export with-handler (js-var "prelude_withHandler"))
 
-;;; (error msg) -> any?
+;;; (error msg & irritants) -> any?
 ;;;  msg : string?
+;;;  irritants : any
 ;;; Raises a runtime error reporting `msg`, stopping the program unless a
-;;; `with-handler` is waiting for it. It never returns a value. Native impl:
-;;; prelude_error.
+;;; `with-handler` is waiting for it. It never returns a value. R7RS allows
+;;; extra values after the message; Scamper accepts them so that such a call is
+;;; not an arity error, but does not show them.
 ;;; @category function, with-handler
 (define-export error (js-var "prelude_error"))
 

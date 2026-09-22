@@ -8,7 +8,11 @@ export * from './files.js'
 // "error" but leaves the range unset, so applyFn attributes it to the call
 // site (applyFn fills range/source only when unset). Bound via
 // `(define error (js-var "prelude_error"))`.
-export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value): L.Value => {
+//
+// R7RS spells this `(error msg irritant ...)`, so the irritants are accepted
+// rather than being an arity error. Scamper does not show them; the parameter
+// is here so that a call written in the R7RS shape still reports its message.
+export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value, ..._irritants: L.Value[]): L.Value => {
   if (typeof msg !== 'string') {
     throw new L.ScamperError(
       'Runtime',

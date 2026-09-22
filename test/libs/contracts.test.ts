@@ -378,6 +378,10 @@ describe('a rest parameter admits zero arguments', () => {
           (a) =>
             a.errors.length > 0 &&
             !ENVIRONMENTAL.has(key(a.binding)) &&
+            // "the call completed" is the wrong success criterion for a
+            // procedure whose job is to raise, in this tier as in the one
+            // above -- `(error "abc")` with no irritants raises, correctly.
+            !ALWAYS_RAISES.has(key(a.binding)) &&
             !ZERO_REST_BROKEN.has(key(a.binding)),
         )
         .map(describeFailure),
