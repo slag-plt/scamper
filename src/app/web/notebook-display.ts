@@ -127,6 +127,10 @@ export class NotebookDisplay implements OutputChannel, ErrorChannel {
 
   /** @returns the cell `e` points into, or -1. */
   private cellOf(e: ScamperError): number {
+    // An error from an imported file carries a range into *that* file, so
+    // there is no cell of this document it belongs under: it goes above the
+    // notebook, where the message names the file it is in (#557).
+    if (e.modName !== undefined) return -1
     const at = e.range?.begin.idx
     if (at === undefined || at < 0) return -1
     return this.slots.findIndex(

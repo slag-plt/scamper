@@ -499,6 +499,10 @@ export interface Closure extends TaggedObject {
   name?: Id
   // Where this closure's code came from; 'user' when omitted. See CodeOrigin.
   origin?: CodeOrigin
+  // The imported file this closure was written in, if any (see Frame.modName).
+  // Undefined for the program's own closures -- the file the editor is showing
+  // -- and for the standard library's, which report their caller's site.
+  modName?: string
   // The value this closure checks the contract of, when it is a contract
   // wrapper generated from a docstring (see src/scheme/contract.ts). Library
   // code naming the function gets this instead, skipping the checks (see

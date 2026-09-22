@@ -37,6 +37,13 @@ export class Frame {
   // `origin` still says whose code this frame runs, which is what decides
   // contract checks and error ranges.
   hidden: boolean
+  // The file an error raised under this frame points into: the imported file
+  // whose source this frame's code was written in, or -- for a library frame,
+  // which reports its caller's `callRange` rather than its own ops' ranges --
+  // the file that call site is in. Undefined for the program's own file, which
+  // is the one the editor is showing, so an error from it needs no file named
+  // (see ScamperError.modName).
+  modName?: string
 
   constructor(
     name: string,
@@ -45,6 +52,7 @@ export class Frame {
     callRange: Range = Range.none,
     origin: L.CodeOrigin = 'user',
     home?: L.Env,
+    modName?: string,
   ) {
     this.name = name
     this.env = env
@@ -53,6 +61,7 @@ export class Frame {
     this.callRange = callRange
     this.origin = origin
     this.home = home
+    this.modName = modName
     this.hidden = origin !== 'user'
   }
 

@@ -65,6 +65,22 @@ describe('error rendering', () => {
     }
   })
 
+  test('an error from another file names it, and leads with it (#557)', () => {
+    // The coordinates are offsets into m.scm, so a student told only the line
+    // would look for it in the file they have open.
+    const range = new Range(new Loc(2, 1, 12), new Loc(2, 8, 19))
+    const wrapper = mount(ErrorRenderer, {
+      props: { value: new ScamperError('Runtime', 'boom', 'm.scm', range) },
+    })
+    try {
+      expect(wrapper.find('.error-origin').text()).toContain(
+        'in m.scm, line 2, column 1',
+      )
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
   test('a rangeless error says nothing about where', () => {
     const wrapper = mount(ErrorRenderer, {
       props: { value: new ScamperError('Runtime', 'boom') },

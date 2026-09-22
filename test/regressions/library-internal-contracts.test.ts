@@ -137,8 +137,9 @@ describe('#476: an imported file is the student\'s own code', () => {
       await runProgram('(import "helpers.scm")\n(shout "h")'),
     ).toEqual([
       // The range is the `(char-upcase c)` in helpers.scm -- their file, and
-      // their mistake.
-      'Runtime error [1:34-1:48]: (error) expected a char as the first argument, received string',
+      // their mistake -- and it says so, since those coordinates mean nothing
+      // in the file they are looking at (#557).
+      'Runtime error [helpers.scm 1:34-1:48]: (error) expected a char as the first argument, received string',
     ])
   })
 })
