@@ -43,7 +43,10 @@ export interface HandlerRecord {
 
 
 export interface DisplayStep { tag: 'display' }
-export interface TraceStep { tag: 'trace' }
+// `stmtValue` marks a statement that finished with a value its trace should
+// show as its last step -- a `define`'s (#568) -- but which is not output, so a
+// non-traced run still prints nothing for it.
+export interface TraceStep { tag: 'trace'; stmtValue?: boolean }
 export interface MinorStep { tag: 'minor' }
 export interface YieldStep { tag: 'yield' }
 export interface ImportFileStep {
@@ -76,6 +79,7 @@ export type StepResult =
 
 export const displayStep: DisplayStep = { tag: 'display' }
 export const traceStep: TraceStep = { tag: 'trace' }
+export const stmtValueStep: TraceStep = { tag: 'trace', stmtValue: true }
 export const minorStep: MinorStep = { tag: 'minor' }
 export const yieldStep: YieldStep = { tag: 'yield' }
 export function importFileStep(

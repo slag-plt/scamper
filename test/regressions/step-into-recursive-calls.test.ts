@@ -43,7 +43,11 @@ describe('imported-library calls stay atomic in traces (#319)', () => {
       await reductionTrace(
         '(define double (lambda (x) (* x 2)))\n(map double (list 1 2 3))',
       ),
-    ).toEqual(['(map double (list 1 2 3))', '(list 2 4 6)'])
+    ).toEqual([
+      '(lambda (x) (* x 2))',
+      '(map double (list 1 2 3))',
+      '(list 2 4 6)',
+    ])
 
     expect(await reductionTrace('(fold + 0 (list 1 2 3))')).toEqual([
       '(fold + 0 (list 1 2 3))',

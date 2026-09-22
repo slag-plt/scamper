@@ -124,7 +124,7 @@ describe('stepwise reduction traces, by construct', () => {
   test('a function application substitutes its argument into the body', async () => {
     expect(
       await reductionTrace('(define sq (lambda (x) (* x x)))\n(sq 4)'),
-    ).toEqual(['(sq 4)', '(* 4 4)', '16'])
+    ).toEqual(['(lambda (x) (* x x))', '(sq 4)', '(* 4 4)', '16'])
   })
 })
 
@@ -157,6 +157,7 @@ describe('stepwise reduction traces of substantial programs', () => {
     const src =
       '(define fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))\n(fact 3)'
     expect(await reductionTrace(src)).toEqual([
+      '(lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))',
       '(fact 3)',
       '(if (= 3 0) 1 (* 3 (fact (- 3 1))))',
       '(if #f 1 (* 3 (fact (- 3 1))))',
@@ -183,6 +184,7 @@ describe('stepwise reduction traces of substantial programs', () => {
     const src =
       '(define len (lambda (l) (if (null? l) 0 (+ 1 (len (cdr l))))))\n(len (list 7 8))'
     expect(await reductionTrace(src)).toEqual([
+      '(lambda (l) (if (null? l) 0 (+ 1 (len (cdr l)))))',
       '(len (list 7 8))',
       '(if (null? (list 7 8)) 0 (+ 1 (len (cdr (list 7 8)))))',
       '(if #f 0 (+ 1 (len (cdr (list 7 8)))))',

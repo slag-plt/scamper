@@ -45,7 +45,11 @@ describe('scamper CLI', { timeout: 30_000 }, () => {
 
     expect(result.stdout).toBe(
       [
-        '(fact 3)',
+        '(lambda (n)',
+        '  (if (= n 0)',
+        '      1',
+        '      (* n (fact (- n 1)))))',
+        '--> (fact 3)',
         '--> (if (= 3 0)',
         '        1',
         '        (* 3 (fact (- 3 1))))',
@@ -103,7 +107,11 @@ describe('scamper CLI', { timeout: 30_000 }, () => {
 
     expect(result.stdout).toBe(
       [
-        '(len (list 7 8))',
+        '(lambda (l)',
+        '  (if (null? l)',
+        '      0',
+        '      (+ 1 (len (cdr l)))))',
+        '--> (len (list 7 8))',
         '--> (if (null? (list 7 8))',
         '        0',
         '        (+ 1 (len (cdr (list 7 8)))))',

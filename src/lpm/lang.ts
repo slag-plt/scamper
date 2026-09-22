@@ -497,6 +497,10 @@ export interface Closure extends TaggedObject {
   // Machine can be referenced by call to perform evaluation.
   call: (...args: Value[]) => Value
   name?: Id
+  // The derived form this closure's lambda was written as, copied from the
+  // `cls` op that built it, so a trace showing the closure sugars back to what
+  // the student wrote -- `#(* % 2)` rather than `(lambda (%1) (* %1 2))`.
+  provenance?: Provenance
   // Where this closure's code came from; 'user' when omitted. See CodeOrigin.
   origin?: CodeOrigin
   // The imported file this closure was written in, if any (see Frame.modName).

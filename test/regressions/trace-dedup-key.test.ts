@@ -139,7 +139,7 @@ describe('the trace dedup key decides trace content (#494)', () => {
       (
         await traceSteps('(map (lambda (x) (* x x)) (list 1 2 3))\n', '(map')
       ).map(expToString),
-    ).toEqual(['(list 1 4 9)'])
+    ).toEqual(['(map (lambda (x) (* x x)) (list 1 2 3))', '(list 1 4 9)'])
   })
 
   test('a step that renders as the one before it is dropped', async () => {

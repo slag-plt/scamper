@@ -1,5 +1,5 @@
 import { Fiber } from './fiber.js'
-import { Value } from './lang.js'
+import { Env, Value } from './lang.js'
 
 /**
  * Language services bundle together related functions that allow LPM to work
@@ -21,8 +21,13 @@ export interface FiberRaiser<Exp> {
  * statement's value as its last step, or undefined if it duplicates the last.
  * Encapsulates the language-specific raise/sugar/granularity policy so the
  * (language-generic) scheduler can drive step mode without importing it.
+ *
+ * `final` takes the environment the statement ran in as well as its value: a
+ * value that is a function carries code, and that code's free names must
+ * resolve the same way they did in the step before it, or one state renders
+ * two different ways.
  */
 export interface FiberTraceStepper {
   render: (fiber: Fiber) => Value | undefined
-  final: (value: Value) => Value | undefined
+  final: (value: Value, env: Env) => Value | undefined
 }

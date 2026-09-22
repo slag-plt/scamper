@@ -1,8 +1,8 @@
 import { Fiber } from '../lpm/fiber.js'
-import { Value } from '../lpm/lang.js'
+import { Env, Value } from '../lpm/lang.js'
 import { Exp, expToString, mkLit } from './ast.js'
 import { sugarExpr } from './sugar.js'
-import { raiseFiber } from './raise.js'
+import { closureToLam, isAnonymousClosure, raiseFiber } from './raise.js'
 
 // The fiber's current state as a user-visible reduction expression (with its
 // rendering), or undefined to skip. A step is hidden while any hidden frame is
@@ -33,7 +33,7 @@ function visibleReduction(fiber: Fiber): { exp: Exp; str: string } | undefined {
  */
 export function makeTraceStepper(): {
   render: (fiber: Fiber) => Exp | undefined
-  final: (value: Value) => Exp | undefined
+  final: (value: Value, env: Env) => Exp | undefined
 } {
   let last: string | undefined
   return {
@@ -43,8 +43,14 @@ export function makeTraceStepper(): {
       last = r.str
       return r.exp
     },
-    final(value) {
-      const exp = mkLit(value)
+    final(value, env) {
+      // An anonymous closure has no name to report, and `[Function:
+      // ##anonymous##]` is not one (#569): show the lambda it was written as,
+      // sugared exactly as a reduction step is -- and raised against the same
+      // environment, so it does not spell itself differently here.
+      const exp = isAnonymousClosure(value)
+        ? sugarExpr(closureToLam(value, env))
+        : mkLit(value)
       const str = expToString(exp)
       if (str === last) return undefined
       last = str
