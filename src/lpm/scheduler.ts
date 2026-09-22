@@ -18,6 +18,11 @@ export type StepMode = 'step' | 'statement' | 'all'
 
 interface BaseSchedulerTask {
   id: SchedulerId
+  // The run that spawned this task, for a task that is not a run of its own:
+  // the module fiber of a file import, which the importer waits on. Its id is
+  // minted inside the scheduler and nobody outside ever learns it, so this is
+  // what lets a cancel naming the *run* reach it as well (#578).
+  parent?: SchedulerId
   fiber: Fiber
   err: ErrorChannel
   onComplete?: () => void
@@ -150,17 +155,37 @@ export class Scheduler {
     this.resumeExecution()
   }
 
+  /**
+   * Stops the run `id` names, along with every task it spawned -- an import's
+   * module fiber, and whatever that module imported in turn.
+   */
   cancelTask(id: SchedulerId): void {
     // A suspension already marked cancelled is the whole story: the task is out
     // of the queue and out of its gate, and the entry is still here only
     // because the action it waits on has yet to settle. So a second stop has
     // nothing left to do -- as it has for a queued task, which the first one
-    // dequeued.
+    // dequeued. Its children went with it, and a cancelled task spawns no more.
     if (this.suspensions.get(id)?.cancelled) {
       return
     }
     const wasPaused = this.wasPaused()
     this.pauseExecution()
+    this.cancelOne(id, true)
+    if (!wasPaused) {
+      this.resumeExecution()
+    }
+  }
+
+  /**
+   * One task's share of a cancel, then each task it spawned. The whole subtree
+   * is stopped together: a spawned task runs on its parent's channels, so one
+   * left behind goes on reporting into a run the student has stopped (#578).
+   *
+   * @param report whether to tell the task's owner. True for the run the stop
+   *        named and false for everything below it, which shares that run's
+   *        error channel and would otherwise say "cancelled" once per task.
+   */
+  private cancelOne(id: SchedulerId, report: boolean): void {
     // A step-mode task may be parked in a gate (not in `tasks`), running a burst
     // (in both), suspended on an async action (in `suspensions`, possibly with a
     // gate as well), or a plain task may be in `tasks` only. Handle all cases.
@@ -168,15 +193,16 @@ export class Scheduler {
     const susp = this.suspensions.get(id)
     const taskI = this.tasks.findIndex((t) => t.id === id)
     if (gate === undefined && susp === undefined && taskI === -1) {
-      if (!wasPaused) {
-        this.resumeExecution()
-      }
       return
     }
-    // Every lookup names the same task object, so the order says only which
-    // place happened to hold it.
-    const errCh = gate?.task.err ?? susp?.task.err ?? this.tasks[taskI].err
-    errCh.report(new ScamperError('Runtime', 'Evaluation cancelled'))
+    if (report) {
+      // Every lookup names the same task object, so the order says only which
+      // place happened to hold it.
+      const errCh = gate?.task.err ?? susp?.task.err ?? this.tasks[taskI].err
+      errCh.report(new ScamperError('Runtime', 'Evaluation cancelled'))
+    }
+    // Read before the recursion, which empties the very collections it searches.
+    const children = this.childrenOf(id)
     if (taskI !== -1) {
       this.tasks.splice(taskI, 1)
     }
@@ -184,17 +210,46 @@ export class Scheduler {
       this.steppingGates.delete(id)
       gate.resolve() // unblock any pending stepStmt/stepAll awaiter
     }
-    // Flagged rather than deleted: the action is still pending, and the flag is
-    // what its settle path reads to leave the task off the queue. Set alongside
-    // the gate branch above, not instead of it -- a step-mode run is both.
     if (susp) {
-      susp.cancelled = true
+      if (children.length === 0) {
+        // Flagged rather than deleted: the action is still pending, and the
+        // flag is what its settle path reads to leave the task off the queue.
+        // Set alongside the gate branch above, not instead of it -- a step-mode
+        // run is both.
+        susp.cancelled = true
+      } else {
+        // Waiting on a module it spawned, not on an action of its own -- the
+        // load that produced that module has already settled, so nothing is
+        // left to read a flag. That module is cancelled just below and will
+        // never complete, so this is the entry's last chance to be consumed;
+        // left behind it would outlive the run, holding the task's fiber and
+        // channels for the life of the page.
+        this.suspensions.delete(id)
+      }
     }
     this.tracesStarted.delete(id)
     this.nextCaption.delete(id)
-    if (!wasPaused) {
-      this.resumeExecution()
-    }
+    children.forEach((childId) => {
+      this.cancelOne(childId, false)
+    })
+  }
+
+  /**
+   * The ids of the tasks `id` spawned, wherever they now sit: on the run queue,
+   * suspended on an action of their own, or parked in a gate.
+   *
+   * Read off the tasks themselves rather than out of a registry kept alongside
+   * them, so a task that ends -- by any of the several routes it can -- leaves
+   * nothing behind to go stale (#515).
+   */
+  private childrenOf(id: SchedulerId): SchedulerId[] {
+    const living = [
+      ...this.tasks,
+      ...[...this.suspensions.values()].map((s) => s.task),
+      ...[...this.steppingGates.values()].map((g) => g.task),
+    ]
+    // Deduped: one task can sit in two of those at once.
+    return [...new Set(living.filter((t) => t.parent === id).map((t) => t.id))]
   }
 
   pauseExecution() {
@@ -402,6 +457,12 @@ export class Scheduler {
               }
               this.schedule({
                 id,
+                // Tied to the importer, so a stop reaches the module as well as
+                // the run that asked for it (#578). Registered here rather than
+                // when the fiber is built because this is the point past
+                // `abandonIfCancelled`: a run stopped before now never gets a
+                // module to own.
+                parent: task.id,
                 fiber: moduleFiber,
                 err: task.err,
                 // A fatal error inside the module would otherwise kill the loop
@@ -674,9 +735,10 @@ export class Scheduler {
    * cancelled, so a live task keeps its suspension and still settles through
    * that single chokepoint.
    *
-   * @returns whether the caller should give up. True means the entry is gone;
-   *          `resumeOrComplete` must NOT then be called, since without the
-   *          entry it would put the cancelled task back on the queue.
+   * @returns whether the caller should give up. True means the entry is gone,
+   *          which `resumeOrComplete` now reads as "cancelled" in its own
+   *          right -- so calling it anyway drops the task rather than putting
+   *          it back on the queue.
    */
   private abandonIfCancelled(task: SchedulerTask): boolean {
     if (this.suspensions.get(task.id)?.cancelled !== true) {
@@ -935,9 +997,11 @@ export class Scheduler {
     // would report against a run that has already finished.
     const susp = this.suspensions.get(task.id)
     this.suspensions.delete(task.id)
-    if (susp?.cancelled) {
+    if (susp === undefined || susp.cancelled) {
       // cancelTask has already told the owner, and a cancelled run reached no
-      // completion to signal.
+      // completion to signal. A missing entry says the same: only a cancel (or
+      // a fatal error) takes a task's suspension while it is still suspended,
+      // so there is no live run here to put back on the queue either.
       return
     }
     if (task.fiber.isDone()) {
