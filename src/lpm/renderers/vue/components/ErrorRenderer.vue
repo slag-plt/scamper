@@ -38,16 +38,24 @@ const message = computed(() => props.value.message)
  *
  * Only the start: the end of the range is machinery, and the beginning is the
  * only part of it anyone navigates to. A line of -1 is the LPM's "no location".
+ *
+ * The file leads when the error is not in the open document -- an imported one
+ * (#557). Its coordinates are offsets into *that* file, so a student told only
+ * the line would go looking in the wrong one.
  */
 const where = computed(() => {
+  const file = str(parts.value.modName)
   const begin = parts.value.range?.begin
   const line = begin?.line
   const col = begin?.col
-  if (typeof line !== 'number' || line < 0) return null
-  const at = `line ${String(line)}`
-  return typeof col === 'number' && col >= 0
-    ? `${at}, column ${String(col)}`
-    : at
+  if (typeof line !== 'number' || line < 0) {
+    return file === null ? null : `in ${file}`
+  }
+  const at =
+    typeof col === 'number' && col >= 0
+      ? `line ${String(line)}, column ${String(col)}`
+      : `line ${String(line)}`
+  return file === null ? at : `in ${file}, ${at}`
 })
 
 /**
@@ -62,7 +70,8 @@ const origin = computed(() => {
   const phase = str(parts.value.phase)
   const bits = [
     phase === null ? null : `${phase} error`,
-    str(parts.value.modName),
+    // `where` carries the file, so that a file and a location read as one
+    // place ("in m.scm, line 4, column 3") rather than as two facts.
     where.value,
   ].filter((b): b is string => b !== null)
   return bits.length > 0 ? bits.join(' · ') : null

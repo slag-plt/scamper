@@ -67,6 +67,11 @@ export const ClsHandler: OpHandler<'cls'> = (op, currFrame) => {
       // Inherit the enclosing frame's home so a lambda returned by a
       // qualified-module function still resolves the module's siblings.
       currFrame.home,
+      // ...and the file it is being written in, so an error inside it names
+      // that file rather than whichever one the student calls it from (#557).
+      // Library code has no file of its own to name -- it reports its caller's
+      // site, and with it that site's file (see applyFn).
+      currFrame.origin === 'builtin' ? undefined : currFrame.modName,
     ),
   )
   return minorStep
@@ -98,6 +103,12 @@ export function applyFn(
   // on origin rather than on the frame's name, because "is this library code"
   // is what is being asked and an anonymous library lambda answers yes (#591).
   const siteRange = currFrame.origin === 'builtin' ? currFrame.callRange : range
+  // ...and which file that site is in. Both arms of the choice above land in
+  // the same file -- this frame's own source, or, for library code reporting
+  // its caller, the file that caller was reached from -- which is exactly what
+  // Frame.modName holds. A range without its file points into whatever the
+  // editor happens to be showing (#557).
+  const siteModName = currFrame.modName
   if (isJsFunction(fn)) {
     try {
       currFrame.values.push(fn(...args))
@@ -131,6 +142,7 @@ export function applyFn(
         // Record the call site on the way out: the action's own error is raised
         // later, in the scheduler, with no other route back here (#342).
         e.range ??= siteRange
+        e.modName ??= siteModName
         throw e
       }
       if (e instanceof ScamperError) {
@@ -147,6 +159,7 @@ export function applyFn(
         // a wrapper, so a library helper can name itself instead of the native
         // -- prelude's own `apply` does; see struct-accessor-call-range.test.ts.
         e.range ??= siteRange
+        e.modName ??= siteModName
         e.source ??=
           currFrame.origin === 'builtin' && !currFrame.name.startsWith('##')
             ? currFrame.name
@@ -156,7 +169,7 @@ export function applyFn(
         throw new ScamperError(
           'Runtime',
           `Unexpected error in Javascript function call: ${e instanceof Error ? e.toString() : String(e)}`,
-          undefined,
+          siteModName,
           siteRange,
           undefined
         )
@@ -171,7 +184,7 @@ export function applyFn(
       throw new ScamperError(
         'Runtime',
         `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
-        undefined,
+        siteModName,
         siteRange,
         undefined)
     }
@@ -197,6 +210,9 @@ export function applyFn(
       siteRange,
       fn.origin ?? 'user',
       fn.home,
+      // Library code reports the call site above, so it reports that site's
+      // file; any other closure runs its own file's code (see Frame.modName).
+      fn.origin === 'builtin' ? siteModName : fn.modName,
     )
     if (currFrame.canTailCall()) {
       // tail-call optimize by replacing the current frame (any leftover
@@ -210,7 +226,7 @@ export function applyFn(
   throw new ScamperError(
     'Runtime',
     `Not a function or closure: ${JSON.stringify(fn)}`,
-    undefined,
+    siteModName,
     siteRange,
     undefined
   )
@@ -241,7 +257,7 @@ export const ApSpreadHandler: OpHandler<'ap-spread'> = (op, currFrame, fiber) =>
     throw new ScamperError(
       'Runtime',
       `expected a list, received ${typeOf(argList)}`,
-      undefined,
+      currFrame.modName,
       op.range,
       'apply',
     )
@@ -268,7 +284,7 @@ export const MatchHandler: OpHandler<'match'> = (op, currFrame) => {
     throw new ScamperError(
       'Runtime',
       'Inexhaustive pattern match failure',
-      undefined,
+      currFrame.modName,
       currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
       undefined
     )
@@ -315,7 +331,7 @@ export const LetHandler: OpHandler<'let'> = (op, currFrame) => {
       throw new ScamperError(
         'Runtime',
         binding.failMsg ?? 'let: value did not match its pattern',
-        undefined,
+        currFrame.modName,
         currFrame.origin === 'builtin' ? currFrame.callRange : binding.pat.range,
         undefined
       )
@@ -358,7 +374,7 @@ export const HoleHandler: OpHandler<'hole'> = (op, currFrame) => {
   throw new ScamperError(
     'Runtime',
     'Hole encountered in program!',
-    undefined,
+    currFrame.modName,
     currFrame.origin === 'builtin' ? currFrame.callRange : op.range,
   )
 }
