@@ -121,15 +121,33 @@ export function prelude_nanQ(x: L.Value): boolean {
 // the two zeroes are not distinguished; and every adjacent pair is checked,
 // which is what makes the answer right for a non-monotonic run.
 
-export function prelude_lt(...xs: number[]): boolean {
+// N.B., `<`, `<=` and `>` re-narrow their arguments (#553) because prelude's
+// own `for-range` and `sort` name them at top level, which reaches them behind
+// their contract wrappers -- and Javascript compares strings quite happily, so
+// an unchecked `(< "a" "b")` answered `#t` rather than raising. `>=` and `=`
+// are left bare: no library definition calls either, and the natives that no
+// library reaches are recorded as unguarded rather than guarded one by one.
+// test/regressions/library-native-bypass-surface.test.ts is what notices if
+// that ever stops being true.
+
+export function prelude_lt(...xs: L.Value[]): boolean {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '<: expected numbers')
+  }
   return pairwiseSatisfies((a, b) => a < b, xs)
 }
 
-export function prelude_leq(...xs: number[]): boolean {
+export function prelude_leq(...xs: L.Value[]): boolean {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '<=: expected numbers')
+  }
   return pairwiseSatisfies((a, b) => a <= b, xs)
 }
 
-export function prelude_gt(...xs: number[]): boolean {
+export function prelude_gt(...xs: L.Value[]): boolean {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '>: expected numbers')
+  }
   return pairwiseSatisfies((a, b) => a > b, xs)
 }
 
@@ -169,11 +187,33 @@ export function prelude_min(...xs: number[]): number {
   return Math.min(...xs)
 }
 
-export function prelude_plus(...xs: number[]): number {
+/**
+ * Raises unless `xs` holds the one argument a reducer with no unit needs.
+ * `-` and `/` fold without an initial value, so no arguments at all is a raw
+ * "Reduce of empty array" from Javascript. #517 narrowed both docstrings to
+ * `(op v1 & v2)` so a student's call is turned away by an arity error; this
+ * re-narrows it for a call that reaches the native without a contract (#553).
+ * Shared because the two are the same check word for word, unlike the type
+ * checks, each of which has to name its own procedure and expected type.
+ */
+function requireOneArgument(who: string, xs: L.Value[]): void {
+  if (xs.length === 0) {
+    throw new L.ScamperError('Runtime', `${who}: expected at least 1 argument`)
+  }
+}
+
+export function prelude_plus(...xs: L.Value[]): number {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '+: expected numbers')
+  }
   return xs.reduce((a, b) => a + b, 0)
 }
 
-export function prelude_minus(...xs: number[]): number {
+export function prelude_minus(...xs: L.Value[]): number {
+  requireOneArgument('-', xs)
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '-: expected numbers')
+  }
   return xs.length === 1 ? -xs[0] : xs.reduce((a, b) => a - b)
 }
 
@@ -182,6 +222,10 @@ export function prelude_times(...xs: number[]): number {
 }
 
 export function prelude_div(...xs: number[]): number {
+  // N.B., no library definition calls `/`, so it takes only the arity floor
+  // above -- the half of `-`'s guard that is shared -- and not the type check,
+  // which would be a guard on a native outside the bypass surface (#553).
+  requireOneArgument('/', xs)
   // `/` folds left-to-right; unary `(/ x)` means `1/x`. Any zero divisor
   // anywhere in the chain errors rather than producing Infinity/NaN.
   const divide = (a: number, b: number): number => {
@@ -206,7 +250,13 @@ export function prelude_abs(x: number): number {
 //   (truncate-remainder n1 n2)
 // To avoid clutter in the documentation.
 
-export function prelude_quotient(x: number, y: number): number {
+export function prelude_quotient(x: L.Value, y: L.Value): number {
+  // Guarded against a zero divisor but never against a non-number, so
+  // `(quotient "a" 2)` was `Math.trunc(NaN)` -- NaN, silently. `sort` names
+  // this one at top level, so its `integer?` contract does not run (#553).
+  if (!L.isNumber(x) || !L.isNumber(y)) {
+    throw new L.ScamperError('Runtime', 'quotient: expected numbers')
+  }
   if (y === 0) {
     throw new L.ScamperError('Runtime', 'quotient: division by zero')
   }
@@ -446,11 +496,19 @@ export function prelude_makeList(n: number, fill: L.Value): L.List {
   return ret
 }
 
-export function prelude_length(l: L.List): number {
+export function prelude_length(l: L.Value): number {
+  // The contract is `list?`, so what arrives is a list and this re-narrows it
+  // for the library-internal calls that reach the native without the contract
+  // (#553) -- `sort` is one. Unchecked, `(length 5)` walked off the end of a
+  // non-list and raised a raw Javascript TypeError.
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'length: expected a list')
+  }
   let len = 0
-  while (l !== null) {
+  let cur: L.List = l
+  while (cur !== null) {
     len += 1
-    l = l.tail
+    cur = cur.tail
   }
   return len
 }
@@ -480,11 +538,16 @@ export function prelude_append(...ls: L.List[]): L.List {
   return ret
 }
 
-export function prelude_reverse(l: L.List): L.List {
+export function prelude_reverse(l: L.Value): L.List {
+  // As length: the contract says `list?` and this re-narrows it (#553).
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'reverse: expected a list')
+  }
   const queue = []
-  while (l !== null) {
-    queue.push(l)
-    l = l.tail
+  let cur: L.List = l
+  while (cur !== null) {
+    queue.push(cur)
+    cur = cur.tail
   }
   queue.reverse()
   let ret = null
@@ -503,13 +566,24 @@ export function prelude_listTail(l: L.List, k: number): L.List {
   return l
 }
 
-export function prelude_listTake(l: L.List, k: number): L.List {
+export function prelude_listTake(l: L.Value, k: L.Value): L.List {
+  // The contract is `list?` and `integer?`; this re-narrows both for the
+  // library-internal calls that skip it (#553) -- `sort` takes and drops on
+  // every merge step.
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'list-take: expected a list')
+  }
+  if (!L.isNumber(k) || !Number.isInteger(k)) {
+    throw new L.ScamperError('Runtime', 'list-take: expected an integer')
+  }
   const elts = []
+  let cur: L.List = l
+  let n = k
   // N.B., push in reverse order so we built the list right-to-left
-  while (l !== null && k > 0) {
-    elts.push(l.head)
-    l = l.tail
-    k -= 1
+  while (cur !== null && n > 0) {
+    elts.push(cur.head)
+    cur = cur.tail
+    n -= 1
   }
   let ret: L.List = null
   for (let i = elts.length - 1; i >= 0; i--) {
@@ -518,12 +592,21 @@ export function prelude_listTake(l: L.List, k: number): L.List {
   return ret
 }
 
-export function prelude_listDrop(l: L.List, k: number): L.List {
-  while (l !== null && k > 0) {
-    l = l.tail
-    k -= 1
+export function prelude_listDrop(l: L.Value, k: L.Value): L.List {
+  // As list-take (#553).
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'list-drop: expected a list')
   }
-  return l
+  if (!L.isNumber(k) || !Number.isInteger(k)) {
+    throw new L.ScamperError('Runtime', 'list-drop: expected an integer')
+  }
+  let cur: L.List = l
+  let n = k
+  while (cur !== null && n > 0) {
+    cur = cur.tail
+    n -= 1
+  }
+  return cur
 }
 
 export function prelude_listRef(l: L.List, n: number): L.Value {
@@ -811,7 +894,13 @@ export function prelude_stringAppend(...args: string[]): string {
 
 // TODO: stringToList has a 3-argument version, too, that specifies
 // a substring of s to turn into a list.
-export function prelude_stringToList(s: string): L.List {
+export function prelude_stringToList(s: L.Value): L.List {
+  // The contract is `string?`; this re-narrows it for `string-map`, which
+  // names this one at top level and so skips the contract (#553). Unchecked,
+  // `(string->list 5)` read `.length` off a number and answered null.
+  if (!L.isString(s)) {
+    throw new L.ScamperError('Runtime', 'string->list: expected a string')
+  }
   let ret = null
   for (let i = s.length - 1; i >= 0; i--) {
     ret = L.mkCons(L.mkChar(s[i]), ret)
@@ -913,7 +1002,13 @@ export function prelude_vector(...xs: L.Value[]): L.Value[] {
   return xs
 }
 
-export function prelude_makeVector(n: number, fill: L.Value): L.Value[] {
+export function prelude_makeVector(n: L.Value, fill: L.Value): L.Value[] {
+  // The contract is `integer?`; this re-narrows it for `vector-map`, which
+  // names this one at top level (#553). Unchecked, `(make-vector "3" 0)`
+  // failed its loop test immediately and answered the empty vector.
+  if (!L.isNumber(n) || !Number.isInteger(n)) {
+    throw new L.ScamperError('Runtime', 'make-vector: expected an integer')
+  }
   const ret = []
   for (let i = 0; i < n; i++) {
     ret.push(fill)
@@ -921,11 +1016,26 @@ export function prelude_makeVector(n: number, fill: L.Value): L.Value[] {
   return ret
 }
 
-export function prelude_vectorLength(v: L.Value[]): number {
+// N.B., the three below each guarded an *index* but never a type, so a string
+// answered `.length` and `[i]` just as a vector does: `(vector-length "abc")`
+// was 3 and `(vector-ref "abc" 1)` was the character `b`. They looked guarded,
+// which is the trap #553 is about -- all three are named at top level by
+// `vector-map` and friends, so the `vector?` contract never ran on them.
+
+export function prelude_vectorLength(v: L.Value): number {
+  if (!L.isArray(v)) {
+    throw new L.ScamperError('Runtime', 'vector-length: expected a vector')
+  }
   return v.length
 }
 
-export function prelude_vectorRef(v: L.Value[], i: number): L.Value {
+export function prelude_vectorRef(v: L.Value, i: L.Value): L.Value {
+  if (!L.isArray(v)) {
+    throw new L.ScamperError('Runtime', 'vector-ref: expected a vector')
+  }
+  if (!L.isNumber(i) || !Number.isInteger(i)) {
+    throw new L.ScamperError('Runtime', 'vector-ref: expected an integer')
+  }
   if (i < 0 || i >= v.length) {
     throw new L.ScamperError(
       'Runtime',
@@ -935,7 +1045,13 @@ export function prelude_vectorRef(v: L.Value[], i: number): L.Value {
   return v[i]
 }
 
-export function prelude_vectorSet(v: L.Value[], i: number, x: L.Value): void {
+export function prelude_vectorSet(v: L.Value, i: L.Value, x: L.Value): void {
+  if (!L.isArray(v)) {
+    throw new L.ScamperError('Runtime', 'vector-set!: expected a vector')
+  }
+  if (!L.isNumber(i) || !Number.isInteger(i)) {
+    throw new L.ScamperError('Runtime', 'vector-set!: expected an integer')
+  }
   if (i < 0 || i >= v.length) {
     throw new L.ScamperError(
       'Runtime',
@@ -951,7 +1067,12 @@ export function prelude_vectorFill(v: L.Value[], x: L.Value): void {
   }
 }
 
-export function prelude_vectorToList(v: L.Value[]): L.List {
+export function prelude_vectorToList(v: L.Value): L.List {
+  // As vector-length: the contract is `vector?` and `vector-filter` skips it
+  // (#553). A string answered a list of its characters' *strings*, not chars.
+  if (!L.isArray(v)) {
+    throw new L.ScamperError('Runtime', 'vector->list: expected a vector')
+  }
   let ret = null
   for (let i = v.length - 1; i >= 0; i--) {
     ret = L.mkCons(v[i], ret)
@@ -959,11 +1080,16 @@ export function prelude_vectorToList(v: L.Value[]): L.List {
   return ret
 }
 
-export function prelude_listToVector(l: L.List): L.Value[] {
+export function prelude_listToVector(l: L.Value): L.Value[] {
+  // The contract is `list?`; `vector-map` and `vector-filter` skip it (#553).
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'list->vector: expected a list')
+  }
   const ret = []
-  while (l !== null) {
-    ret.push(l.head)
-    l = l.tail
+  let cur: L.List = l
+  while (cur !== null) {
+    ret.push(cur.head)
+    cur = cur.tail
   }
   return ret
 }
