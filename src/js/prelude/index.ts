@@ -1037,11 +1037,6 @@ export function prelude_random(n: number): number {
   return Math.floor(Math.random() * n)
 }
 
-// N.B., `with-handler` used to live here as prelude_withHandler, but a js-var
-// procedure can no longer call Scamper functions (callScamperFn is disabled).
-// It is now a reserved-word special form lowered to the LPM handler stack; see
-// syntax.grammar / codegen / src/lpm/fiber.ts.
-
 // Exceptions (6.11)
 
 // N.B., exception operations are unimplemented because they are inherently effectful.

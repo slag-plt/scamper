@@ -1,7 +1,12 @@
 ;;; The Scamper core library
 
-; `apply` is a first-class procedure backed by the ap-spread VM primitive
-; (native implementation: prelude_apply in src/js/prelude/index.ts).
+;;; (apply f args) -> any?
+;;;  f : procedure?
+;;;  args : list?
+;;; Calls `f` with the elements of `args` as its arguments, so
+;;; `(apply + (list 1 2 3))` is `(+ 1 2 3)`. Native impl: prelude_apply, the
+;;; bytecode closure around the ap-spread VM primitive.
+;;; @category function
 (define-export apply (js-var "prelude_apply"))
 
 ;;; (with-handler handler thunk) -> any?
@@ -14,37 +19,13 @@
 ;;; @category function
 (define-export with-handler (js-var "prelude_withHandler"))
 
-; `error` raises a runtime error with the given message; a first-class
-; procedure backed by prelude_error.
+;;; (error msg) -> any?
+;;;  msg : string?
+;;; Raises a runtime error reporting `msg`, stopping the program unless a
+;;; `with-handler` is waiting for it. It never returns a value. Native impl:
+;;; prelude_error.
+;;; @category function, with-handler
 (define-export error (js-var "prelude_error"))
-
-;;; (and☀︎ v1 v2) -> boolean?
-;;;  v1 : any
-;;;  v2 : any
-;;; Returns `#t` if and only `v1` and `v2` are both true.
-;;; @category boolean/logic
-(define-export and☀︎ (js-var "prelude_equalQ"))
-
-;;; (if☀︎ v1 v2) -> any?
-;;;  v1 : any
-;;;  v2 : any
-;;; Executes `v2` if `v1` is true
-;;; @category boolean/logic
-(define-export if☀︎ (js-var "prelude_equalQ"))
-
-;;; (or☀︎ v1 v2) -> boolean?
-;;;  v1 : any
-;;;  v2 : any
-;;; Returns `#t` if either `v1` or `v2` are true.
-;;; @category boolean/logic
-(define-export or☀︎ (js-var "prelude_equalQ"))
-
-;;; (apply☀︎ v1 v2) -> any?
-;;;  v1 : procedure?
-;;;  v2 : list?
-;;; Applies function `v1` to every element of `v2`
-;;; @category list manipulation
-(define-export apply☀︎ (js-var "prelude_equalQ"))
 
 ;;; (equal? v1 v2) -> boolean?
 ;;;  v1 : any
@@ -1155,16 +1136,6 @@
 ;;; Returns a random number in the range 0 to n (exclusive).
 ;;; @category other
 (define-export random (js-var "prelude_random"))
-
-;; N.B., `with-handler` is now a reserved-word special form, not a library
-;; binding -- it must install an exception handler in the bytecode, which a
-;; js-var-backed procedure cannot do. Its handler/function/args are ordinary
-;; sub-expressions; on a raised runtime error the fiber unwinds to the handler
-;; and applies it to the error's message string. Parsing lives in
-;; syntax.grammar (WithHandler) + lezer-bridge; the AST node is WithHandlerExp;
-;; codegen lowers it to push-handler/apply/pop-handler (see the LPM handler
-;; stack in src/lpm/fiber.ts). As it is no longer a documented define, it does
-;; not appear on the generated docs site (like `error`/`if`/`cond`).
 
 ;;; (ignore v) -> void?
 ;;;  v : any
