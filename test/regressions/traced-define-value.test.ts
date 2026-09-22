@@ -11,7 +11,13 @@ describe('a traced define ends at the value it binds (#568)', () => {
       await reductionTrace(
         '(define sqr (lambda (x) (* x x)))\n(define y (sqr (+ 2 3)))',
       ),
-    ).toEqual(['(sqr (+ 2 3))', '(sqr 5)', '(* 5 5)', '25'])
+    ).toEqual([
+      '(lambda (x) (* x x))',
+      '(sqr (+ 2 3))',
+      '(sqr 5)',
+      '(* 5 5)',
+      '25',
+    ])
   })
 
   test('an arithmetic expression reduces to its number', async () => {

@@ -305,7 +305,7 @@ Worth knowing before building a lesson on aliasing.
 
 ### Pairs, lists and mutation
 
-**A pair and a cons cell are different types**, following Clojure (`src/lpm/lang.ts:582-584`, `src/js/prelude/index.ts`).
+**A pair and a cons cell are different types**, following Clojure (`src/lpm/lang.ts:586-588`, `src/js/prelude/index.ts`).
 A cons cell's tail must be a list; a pair holds any two values.
 So `cons` does not build a pair:
 
@@ -418,7 +418,7 @@ Runtime error [1:1-1:17]: (error) bad
 ~~~
 
 Two comments in the tree used to describe `with-handler` as a reserved-word special form; #616 removed them.
-It is a library binding, as `src/scheme/raise.ts:197` notes and as the grammar confirms by having no rule for it.
+It is a library binding, as `src/scheme/raise.ts:230` notes and as the grammar confirms by having no rule for it.
 
 ### Recursion
 
@@ -426,7 +426,7 @@ It is a library binding, as `src/scheme/raise.ts:197` notes and as the grammar c
 A 200,000-deep tail loop and a 200,000-deep mutual recursion both return normally.
 
 **Non-tail recursion is capped by an explicit counter.**
-The default limit is 10,000 frames (`src/lpm/limits.ts:10`), enforced in `Fiber.pushFrame` (`src/lpm/fiber.ts:290-298`):
+The default limit is 10,000 frames (`src/lpm/limits.ts:10`), enforced in `Fiber.pushFrame` (`src/lpm/fiber.ts:294-302`):
 
 ~~~
 > (define sum (lambda (n) (if (zero? n) 0 (+ n (sum (- n 1))))))
@@ -483,7 +483,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | 6.1 Equivalence | `equal?` only; no `eq?`, `eqv?` | design: "we don't have effects beside vectors" (`index.ts`) -- now narrower than stated |
 | 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises | design: "the Javascript numeric stack" (`index.ts`). `gcd`/`lcm` **not yet** (`index.ts`), as is `string->number`'s radix argument (`index.ts`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
-| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:582`); "the pure, functional subset" (`index.ts`) |
+| 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:586`); "the pure, functional subset" (`index.ts`) |
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
 | 6.6 Characters | essentially complete | -- |
 | 6.7 Strings | immutable; no `string-set!`, `string-copy`, `string-fill!`, 1-arg `make-string` | design: "don't make sense in an immutable context" (`index.ts`); `string-set!` "since it is effectful" (`index.ts`) |
@@ -550,7 +550,7 @@ What is Clojure, each attributed in the source:
 + **The anonymous function `#(...)`** with `%`/`%1`/`%2`/`%&` -- "A Clojure-style anonymous function" (`:70`, `src/scheme/ast.ts:231`, `src/scheme/anon-tokens.ts:4`).
   Nesting is disallowed, matching Clojure (#605, settling issue #571).
 + **The `&` rest-parameter marker** -- "Clojure-style" (`src/scheme/syntax.grammar:139-145`).
-+ **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:582-584`), echoed at `src/js/prelude/index.ts`.
++ **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:586-588`), echoed at `src/js/prelude/index.ts`.
 
 ### From SRFI-1 and the ML family
 

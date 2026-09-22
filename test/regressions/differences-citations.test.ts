@@ -132,13 +132,13 @@ const ANCHORS: Record<string, string | undefined> = {
   // Numbers
   '`src/scheme/syntax.grammar:113-118`': 'Number {',
   // Pairs, lists and mutation
-  '`src/lpm/lang.ts:582-584`': "We follow Clojure's lead",
+  '`src/lpm/lang.ts:586-588`': "We follow Clojure's lead",
   // Exceptions
-  '`src/scheme/raise.ts:197`': 'with-handler is now an ordinary procedure',
+  '`src/scheme/raise.ts:230`': 'with-handler is now an ordinary procedure',
   // Recursion
   '`src/lpm/limits.ts:12-23`': 'frames live in an array',
   '`src/lpm/limits.ts:10`': 'DEFAULT_MAX_CALL_STACK_DEPTH = 10_000',
-  '`src/lpm/fiber.ts:290-298`': 'pushFrame',
+  '`src/lpm/fiber.ts:294-302`': 'pushFrame',
   '`src/lpm/limits.ts:23`': 'MAX_CALL_STACK_DEPTH = 200_000',
   // The one prelude.scm citation that keeps its number: the sentence describes
   // the tail-recursive fold helpers without naming one, so there is nothing to
@@ -148,7 +148,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/scheme/syntax.grammar:90`': 'kw<"import">',
   '`src/scheme/scope.ts:449-460`': 'This matches Racket module semantics',
   // Summary table
-  '`lang.ts:582`': "We follow Clojure's lead",
+  '`lang.ts:586`': "We follow Clojure's lead",
   '`syntax.grammar:5-9`': 'is a map literal',
   // From Racket
   '`docs/formatting.md:3`': "DrRacket's rules",

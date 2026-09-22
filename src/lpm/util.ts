@@ -62,13 +62,16 @@ export const mkClosure = (
   restParam?: string,
   origin: L.CodeOrigin = 'user',
   home?: L.Env,
-  modName?: string
-  // Omit `home` and `modName` when unset so an ordinary closure keeps the exact
-  // shape it had before module-home resolution (only a qualified/private-module
-  // closure carries a home) and before imported files were named in errors
-  // (only a closure from an imported file carries a modName); see Closure.home
-  // and Closure.modName.
-): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}), ...(modName !== undefined ? { modName } : {}) })
+  modName?: string,
+  provenance?: L.Provenance
+  // Omit `home`, `modName` and `provenance` when unset so an ordinary closure
+  // keeps the exact shape it had before module-home resolution (only a
+  // qualified/private-module closure carries a home), before imported files
+  // were named in errors (only a closure from an imported file carries a
+  // modName), and before a traced closure was sugared (only a derived form
+  // carries a provenance); see Closure.home, Closure.modName and
+  // Closure.provenance.
+): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}), ...(modName !== undefined ? { modName } : {}), ...(provenance !== undefined ? { provenance } : {}) })
 /**
  * @param v the character's value: a non-empty string.
  * @throws ICE if `v` is not one. This is the only place a char is made, so the

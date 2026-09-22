@@ -574,7 +574,7 @@ export class Scheduler {
     if (endsStatement && task.isTracing && task.stepper && fiber.lastResult !== null) {
       // The statement handler advanced the fiber before returning, so the
       // statement that produced this value is the one just behind the index.
-      const v = task.stepper.final(fiber.lastResult)
+      const v = task.stepper.final(fiber.lastResult, fiber.topLevelEnv)
       if (v !== undefined) {
         this.captionUpTo(task, fiber.stmtIndex - 1)
         out.send(this.mkTraceValue(task, v))
