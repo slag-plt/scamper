@@ -235,7 +235,7 @@ export class Scheduler {
         // processStepResult, which runs it and resumes the fiber with the
         // result. The signal's range is the call that suspended (see applyFn),
         // carried along so a rejection can be reported there.
-        return blockOnStep(e.action, e.range)
+        return blockOnStep(e.action, e.range, e.modName)
       }
       if (!(e instanceof ScamperError)) {
         // either the runtime broke and threw an ICE (which is bad)
@@ -336,7 +336,12 @@ export class Scheduler {
               // microtask. A stop click is a macrotask and cannot interleave.
               const { prog, diagnostics } = await S.compile(_src)
               diagnostics.forEach((d) => {
-                task.err.report(diagnosticToError(d))
+                // The ranges are offsets into the module, not into the program
+                // the student is looking at, so each one is reported with the
+                // file it belongs to (#557).
+                task.err.report(
+                  diagnosticToError({ ...d, modName: stepResult.filename }),
+                )
               })
               if (prog === undefined) {
                 // The diagnostics above are the report; there is no module to
@@ -357,7 +362,14 @@ export class Scheduler {
               // traces, like the builtin libraries -- but the file is still
               // the student's own code, so its calls keep their contract
               // checks (see CodeOrigin).
-              const moduleFiber = new Fiber(prog, S.mkInitialEnv(), 'import')
+              // Named with the file it was read from, so an error raised in
+              // it says which file its range is an offset into (#557).
+              const moduleFiber = new Fiber(
+                prog,
+                S.mkInitialEnv(),
+                'import',
+                stepResult.filename,
+              )
               const id = crypto.randomUUID()
               // Binds the module's exports into the importer and resumes it.
               const finishImport = () => {
@@ -466,6 +478,7 @@ export class Scheduler {
           // -- the range the step carries -- unless it named a site itself
           // (#342). Done before handleError so a with-handler sees it too.
           scamperErr.range ??= stepResult.range
+          scamperErr.modName ??= stepResult.modName
           if (!fiber.handleError(scamperErr)) {
             task.err.report(scamperErr)
             fiber.advanceStmt()

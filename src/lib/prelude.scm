@@ -671,6 +671,7 @@
 ;;; (string-ref s n) -> char?
 ;;;  s : string?
 ;;;  n : integer?
+;;;   a valid index into s
 ;;; Returns the character at index `n` of string `s`.
 ;;; @category string, assoc-ref, deref, list-ref, ref, ref-set!
 (define-export string-ref (js-var "prelude_stringRef"))

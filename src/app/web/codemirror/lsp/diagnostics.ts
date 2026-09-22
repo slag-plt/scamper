@@ -1,6 +1,6 @@
 import type { Diagnostic } from 'vscode-languageserver-protocol'
 import * as LPM from '../../../../lpm'
-import { ScamperDiagnostic, mkDiagnostic } from '../../../../scheme/diagnostic'
+import { ScamperDiagnostic, isPlaceable, mkDiagnostic } from '../../../../scheme/diagnostic'
 import { expandProgram } from '../../../../scheme/expansion'
 import { scopeCheckProgram } from '../../../../scheme/scope'
 import { tokenizeAndParse } from '../../../../scheme'
@@ -30,7 +30,9 @@ export async function analyzeSource(
     }
   } catch (e) {
     if (e instanceof LPM.ScamperError) {
-      diagnostics.push(mkDiagnostic('Parse', 'error', e.message, e.range))
+      diagnostics.push(
+        mkDiagnostic('Parse', 'error', e.message, e.range, e.modName),
+      )
     } else {
       console.error(e)
       diagnostics.push(
@@ -55,13 +57,19 @@ export async function computeDiagnostics(
 }
 
 function toLspDiagnostic(d: ScamperDiagnostic, lineStarts: number[]): Diagnostic {
-  const from = d.range === undefined ? 0 : d.range.begin.idx
+  // A diagnostic about another file has no place in this one -- its offsets are
+  // into that file -- so it is reported at the top of the document with the
+  // file named in words, rather than underlining whatever sits at those
+  // coordinates here (#557). That is also what an unlocated diagnostic does.
+  const placed = isPlaceable(d)
+  const from = placed ? d.range.begin.idx : 0
   // +1 to cover the token's right edge (Scamper ranges are end-inclusive).
-  const to = d.range === undefined ? 0 : d.range.end.idx + 1
+  const to = placed ? d.range.end.idx + 1 : 0
   return {
     range: rangeFromOffsets(from, to, lineStarts),
     severity: d.severity === 'error' ? SEVERITY_ERROR : SEVERITY_WARNING,
     source: 'scamper',
-    message: d.message,
+    message:
+      d.modName === undefined ? d.message : `in ${d.modName}: ${d.message}`,
   }
 }
