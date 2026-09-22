@@ -563,23 +563,26 @@ export class Scheduler {
       stepResult.tag === 'minor' || stepResult.tag === 'yield'
 
     // Emit this step's output, tracking whether it produced a user-visible
-    // reduction. A completed statement (display) renders its value as the final
-    // reduction step (`--> value`) in a traced run, or raw otherwise.
+    // reduction. Two kinds of step end a statement with a value: a `display`,
+    // which renders as the final reduction step (`--> value`) in a traced run
+    // and raw otherwise, and a `define`, whose value is likewise the trace's
+    // last step but is never printed on its own (#568).
+    const endsStatement =
+      stepResult.tag === 'display' ||
+      (stepResult.tag === 'trace' && stepResult.stmtValue === true)
     let emittedVisible = false
-    if (stepResult.tag === 'display') {
+    if (endsStatement && task.isTracing && task.stepper && fiber.lastResult !== null) {
       // The statement handler advanced the fiber before returning, so the
       // statement that produced this value is the one just behind the index.
-      if (task.isTracing && task.stepper && fiber.lastResult !== null) {
-        const v = task.stepper.final(fiber.lastResult)
-        if (v !== undefined) {
-          this.captionUpTo(task, fiber.stmtIndex - 1)
-          out.send(this.mkTraceValue(task, v))
-          emittedVisible = true
-        }
-      } else {
+      const v = task.stepper.final(fiber.lastResult)
+      if (v !== undefined) {
         this.captionUpTo(task, fiber.stmtIndex - 1)
-        out.send(fiber.lastResult)
+        out.send(this.mkTraceValue(task, v))
+        emittedVisible = true
       }
+    } else if (stepResult.tag === 'display') {
+      this.captionUpTo(task, fiber.stmtIndex - 1)
+      out.send(fiber.lastResult)
     } else if (!isMinor && task.isTracing && task.stepper) {
       // A trace (major) step: render the reduction, if it is user-visible.
       const v = task.stepper.render(fiber)
