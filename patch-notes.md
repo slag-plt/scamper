@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Selecting text no longer hides the highlight on the line your selection ends on.
 - You can now ask whether a value is a function with function?, the same question procedure? answers, under the name the readings use.
 - The rex library is clearer at its edges: rex-none names the pattern that matches nothing and is what an empty rex-any-of or rex-char-set gives you, and rex-char-set now takes characters like ^ and - literally instead of as regular expression syntax.
 - The documentation search now finds a function from part of its name, so searching for image-save finds image-save!, and what you typed in full comes first.
