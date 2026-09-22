@@ -353,6 +353,11 @@ export class Scheduler {
       try {
         exists = await getFS().fileExists(stepResult.filename)
       } catch (e) {
+        // A probe that fails after the stop is not news: the student was
+        // already told the run was cancelled (#577).
+        if (this.cancelledMidStep(task)) {
+          return true
+        }
         task.err.report(
           e instanceof ScamperError
             ? e
@@ -362,6 +367,14 @@ export class Scheduler {
               ),
         )
         this.endCurrFiber(task)
+        return true
+      }
+      // The same window, the probe having answered rather than failed. Neither
+      // branch below may act on a task the stop has already taken: reporting
+      // would talk into a stopped run, and *suspending* would erase the stop
+      // outright -- the fresh entry reads `cancelled: false`, so the module
+      // loads and runs and the importer is put back on the queue when it ends.
+      if (this.cancelledMidStep(task)) {
         return true
       }
       if (!exists) {
@@ -716,10 +729,38 @@ export class Scheduler {
    * action -- an import's load, or a blocking primitive's promise. The record is
    * what lets cancelTask find a task that is in neither the queue nor a gate,
    * and the action's settle path (resumeOrComplete) consumes it.
+   *
+   * A task that has already left the queue is left alone -- see below.
    */
   private suspendTask(task: SchedulerTask): void {
-    this.removeTaskFromQueue(task)
+    if (!this.removeTaskFromQueue(task)) {
+      // Not the queue's any more, so not this step's to suspend: a cancel took
+      // it while the branch was awaiting. A fresh entry here reads
+      // `cancelled: false` and erases that stop, so file none -- and
+      // `resumeOrComplete` reads a missing entry as cancelled in its own right
+      // (#578), which is what a stopped run wants. The branch guards this case
+      // itself, since it must also report nothing; the invariant is kept here
+      // as well so no later one can lose a cancel by forgetting to.
+      return
+    }
     this.suspensions.set(task.id, { task, cancelled: false })
+  }
+
+  /**
+   * Whether `task` was stopped while this step was awaiting -- in which case
+   * the branch must abandon its work at once, reporting nothing, suspending
+   * nothing and resuming nothing.
+   *
+   * A task reaches `processStepResult` from the run queue and stays there until
+   * the step settles its place, so finding it gone means a `cancelTask` spliced
+   * it out in the meantime and has already told the student the run stopped.
+   *
+   * The counterpart to `abandonIfCancelled`, which answers the same question
+   * for a task that got as far as suspending: there the cancel is a flag on the
+   * suspension, here it is the absence of the task from the queue.
+   */
+  private cancelledMidStep(task: SchedulerTask): boolean {
+    return !this.tasks.some((t) => t.id === task.id)
   }
 
   /**
