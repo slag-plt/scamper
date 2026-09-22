@@ -8,7 +8,11 @@ export * from './files.js'
 // "error" but leaves the range unset, so applyFn attributes it to the call
 // site (applyFn fills range/source only when unset). Bound via
 // `(define error (js-var "prelude_error"))`.
-export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value): L.Value => {
+//
+// R7RS spells this `(error msg irritant ...)`, so the irritants are accepted
+// rather than being an arity error. Scamper does not show them; the parameter
+// is here so that a call written in the R7RS shape still reports its message.
+export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value, ..._irritants: L.Value[]): L.Value => {
   if (typeof msg !== 'string') {
     throw new L.ScamperError(
       'Runtime',
@@ -1036,11 +1040,6 @@ export function prelude_range(...args: number[]): L.List {
 export function prelude_random(n: number): number {
   return Math.floor(Math.random() * n)
 }
-
-// N.B., `with-handler` used to live here as prelude_withHandler, but a js-var
-// procedure can no longer call Scamper functions (callScamperFn is disabled).
-// It is now a reserved-word special form lowered to the LPM handler stack; see
-// syntax.grammar / codegen / src/lpm/fiber.ts.
 
 // Exceptions (6.11)
 

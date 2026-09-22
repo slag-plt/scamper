@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import DocEntry from './DocEntry.vue'
 import { entryId, type LibEntry } from './modules'
+import { reservedWords } from '../../scheme/reserved-words'
 import {
   filtersAreEmpty,
   noFilters,
@@ -41,6 +42,17 @@ watch(
 const named = computed(() =>
   term.value === '' ? null : searchByName(term.value),
 )
+
+/*
+ * A reserved word names a form of the language rather than a procedure, so the
+ * library holds nothing to find -- searching for `if` or `and` used to turn up
+ * the `if☀︎`/`and☀︎` stubs, which were callable and answered wrongly (#543).
+ * Point at the page that describes the real form instead.
+ */
+const specialForm = computed(() => {
+  const word = term.value.toLowerCase()
+  return committed.value === null && reservedWords.includes(word) ? word : null
+})
 
 const results = computed<LibEntry[]>(() => {
   if (committed.value !== null) {
@@ -179,6 +191,11 @@ const modes: Combinator[] = ['or', 'and']
           for {{ term }}
         </span>
       </h2>
+      <p v-if="specialForm" class="special-form">
+        <code>{{ specialForm }}</code> is a special form, not a procedure &mdash;
+        see the
+        <a :href="`reference.html#${specialForm}`">Language Reference</a>.
+      </p>
       <p v-if="emptyMessage" class="empty">{{ emptyMessage }}</p>
       <template v-for="(entry, i) in results" :key="entryId(entry)">
         <h3 v-if="i === relatedFrom" class="related">Related functions</h3>
@@ -309,5 +326,13 @@ h2 {
 
 .empty {
   margin: var(--space-xl);
+}
+
+.special-form {
+  margin: var(--space-xl);
+  padding: var(--space-md) var(--space-xl);
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 </style>

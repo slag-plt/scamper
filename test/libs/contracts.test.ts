@@ -85,6 +85,14 @@ const ENVIRONMENTAL = new Map<string, string>([
   ['music:play-composition', 'requireWaf() needs a browser with Web Audio'],
 ])
 
+/**
+ * Bindings whose native is *meant* not to finish: raising is the whole point of
+ * the call, so tier 2 cannot apply to one. Tier 1 still does.
+ */
+const ALWAYS_RAISES = new Map<string, string>([
+  ['prelude:error', 'raising is what it does; a completed call would be the bug'],
+])
+
 /** Bindings that fail on a real bug, each with the issue tracking it. */
 // Empty: `cons` was the last entry, and #541 narrowed its `v2 : any` to the
 // `list?` its native has always required, so the sweep's own sample satisfies
@@ -324,6 +332,7 @@ describe.each(MODULES)('%s contracts', (module) => {
           (a) =>
             a.errors.length > 0 &&
             !ENVIRONMENTAL.has(key(a.binding)) &&
+            !ALWAYS_RAISES.has(key(a.binding)) &&
             !KNOWN_BROKEN.has(key(a.binding)),
         )
         .map(describeFailure),
@@ -369,6 +378,10 @@ describe('a rest parameter admits zero arguments', () => {
           (a) =>
             a.errors.length > 0 &&
             !ENVIRONMENTAL.has(key(a.binding)) &&
+            // "the call completed" is the wrong success criterion for a
+            // procedure whose job is to raise, in this tier as in the one
+            // above -- `(error "abc")` with no irritants raises, correctly.
+            !ALWAYS_RAISES.has(key(a.binding)) &&
             !ZERO_REST_BROKEN.has(key(a.binding)),
         )
         .map(describeFailure),
@@ -385,6 +398,7 @@ describe('the exception lists are still needed', () => {
   test.each([
     ['SKIP', SKIP],
     ['ENVIRONMENTAL', ENVIRONMENTAL],
+    ['ALWAYS_RAISES', ALWAYS_RAISES],
     ['KNOWN_BROKEN', KNOWN_BROKEN],
     ['ZERO_REST_BROKEN', ZERO_REST_BROKEN],
     ['ARGS', ARGS],
@@ -400,8 +414,12 @@ describe('the exception lists are still needed', () => {
   const stillFailing = (runs: Map<string, Attempt>, k: string): boolean =>
     (runs.get(k)?.errors ?? []).length > 0
 
-  test('every ENVIRONMENTAL and KNOWN_BROKEN entry still fails', () => {
-    const stale = [...ENVIRONMENTAL.keys(), ...KNOWN_BROKEN.keys()].filter(
+  test('every ENVIRONMENTAL, ALWAYS_RAISES and KNOWN_BROKEN entry still fails', () => {
+    const stale = [
+      ...ENVIRONMENTAL.keys(),
+      ...ALWAYS_RAISES.keys(),
+      ...KNOWN_BROKEN.keys(),
+    ].filter(
       (k) => !stillFailing(attempts, k),
     )
     expect(stale, 'these now run cleanly -- drop them from the list').toEqual([])

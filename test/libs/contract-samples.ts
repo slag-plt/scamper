@@ -28,8 +28,8 @@ export const SAMPLE_FILE_CONTENTS = 'one\ntwo\n'
  * any arity.
  *
  * N.B., `function` and `list` are deliberately absent: they are not predicates
- * and nothing in `src/lib` binds them. The one docstring that named them
- * (`apply☀︎`) was uncallable because of it.
+ * and nothing in `src/lib` binds them, so a docstring naming one makes its
+ * definition uncallable. Write `procedure?` and `list?` instead.
  */
 export const SAMPLES: Record<string, string> = {
   // prelude

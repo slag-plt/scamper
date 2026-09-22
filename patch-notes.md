@@ -50,6 +50,7 @@ Order does not matter within an entry. See docs/releasing.md.
 - any-of, all-of, on-timer and tag-set-children! now say so when given the wrong kind of value, instead of failing later or not at all.
 - The documentation for rex-concat and rex-any-of now names the same parameter as their signatures.
 - ignore now actually hides the value it swallows, so it no longer splits the output across two lines when it appears inside a larger value.
+- The special forms are now described on the Language Reference page under the Help menu, instead of appearing in the function documentation as odd names ending in a sun symbol that could be called and gave wrong answers.
 
 # 4.4.0
 
