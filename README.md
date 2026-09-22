@@ -2,6 +2,8 @@
 
 A mini-Scheme implementation designed for teaching, targeting multimedia applications on the web.
 
+It is not R7RS: [`docs/DIFFERENCES.md`](docs/DIFFERENCES.md) catalogues what it leaves out of the standard and where its extensions came from.
+
 ## Running Scamper
 
 Scamper runs in three arrangements, differing only in **where a student's files
