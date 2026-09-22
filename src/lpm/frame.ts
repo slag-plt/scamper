@@ -44,6 +44,23 @@ export class Frame {
   // is the one the editor is showing, so an error from it needs no file named
   // (see ScamperError.modName).
   modName?: string
+  // How many times this frame has been changed by a step. Bumped by Fiber at
+  // the four places a step can touch a frame -- stepFrame, completeCurrentFrame,
+  // resumeWithValue, handleError -- and never by an op handler, which is sound
+  // because a handler only ever reaches `fiber.currentFrame` (stepFrame asserts
+  // it).
+  //
+  // What it is for: a reconstruction of this frame (raiseSpine, in
+  // src/scheme/raise.ts) stays valid exactly while the counter is unchanged.
+  // One counter covers `values`, `ops` *and* `env`, all three of which the
+  // reconstruction reads -- a `let` binder filled in place changes how the
+  // frame renders just as surely as a pushed value does. A length-based
+  // fingerprint would not do: a step that pops one op and pushes a block can
+  // land on the same lengths.
+  //
+  // Scaffolding for #494: nothing in the app reads it yet. Stage 4 is what
+  // caches on it.
+  version: number
 
   constructor(
     name: string,
@@ -63,6 +80,7 @@ export class Frame {
     this.home = home
     this.modName = modName
     this.hidden = origin !== 'user'
+    this.version = 0
   }
 
   isFinished(): boolean {

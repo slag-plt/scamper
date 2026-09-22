@@ -340,6 +340,9 @@ export class Fiber {
     const ret = currFrame.values.pop()
     this.popFrame()
     if (this.hasFramesRemaining()) {
+      // The caller receives the callee's value, so its reconstruction changes
+      // (see Frame.version).
+      this.currentFrame.version++
       this.currentFrame.values.push(ret)
     } else {
       this.lastResult = ret
@@ -369,6 +372,14 @@ export class Fiber {
         'Handler unwound past the bottom of the frame stack',
       )
     }
+    // The frame we unwound to loses ops and values and gains the handler call,
+    // so its reconstruction changes (see Frame.version). Defensive rather than
+    // load-bearing today: the only frame that can be a target is
+    // `with-handler`'s, whose ops are spent by the time the handler is applied,
+    // so applyFn tail-call-*replaces* it and it is never reconstructed again.
+    // Bumped anyway, so the rule stays "a changed frame has a changed version"
+    // with no exception to remember.
+    target.version++
     // Discard the rest of the guarded computation's ops, up to and including the
     // matching pop-handler. The error may have been raised partway through the
     // guarded region (e.g. during argument evaluation), so the next op is not
@@ -411,6 +422,9 @@ export class Fiber {
         'Attempted to resume a fiber with no current frame',
       )
     }
+    // The suspended primitive's result lands on this frame, so its
+    // reconstruction changes (see Frame.version).
+    frame.version++
     frame.values.push(value)
     if (frame.isFinished()) {
       this.completeCurrentFrame()
@@ -428,6 +442,29 @@ export class Fiber {
         'Attempted to step stack frame when none exist!',
       )
     }
+
+    // This step is about to change the top frame, and -- by the invariant the
+    // block below guards -- only the top frame (see Frame.version).
+    this.currentFrame.version++
+
+    // Snapshot the frame directly beneath the top. Reconstructing a trace step
+    // reuses the outer frames' renderings across steps (raiseSpine, in
+    // src/scheme/raise.ts), which is sound only because an op handler touches
+    // nothing but the `currFrame` it is handed. A handler that reached past it
+    // would break that with no crash and no error -- just a step rendered from
+    // a stale outer frame -- so the break is caught here instead.
+    //
+    // One frame deep, and O(1), so it can stay on in production: a handler is
+    // given `currentFrame` and the fiber, so reaching any other frame means
+    // walking `fiber.frames`, and this is the first frame such a walk arrives
+    // at. It notices a swapped `values`/`ops`/`env` and a push or pop on
+    // either stack; an in-place write to an existing slot it cannot see.
+    const outer = this.frames.at(-2)
+    const outerEnv = outer?.env
+    const outerValues = outer?.values
+    const outerOps = outer?.ops
+    const outerValueCount = outer?.values.length
+    const outerOpCount = outer?.ops.length
 
     // handle op and save if it was a major step or not
     const currOp = this.currentFrame.popInstr()
@@ -469,6 +506,21 @@ export class Fiber {
       case 'pop-handler':
         isMajorStep = PopHandlerHandler(currOp, this.currentFrame, this)
         break
+    }
+
+    if (
+      outer !== undefined &&
+      (outer.env !== outerEnv ||
+        outer.values !== outerValues ||
+        outer.ops !== outerOps ||
+        outer.values.length !== outerValueCount ||
+        outer.ops.length !== outerOpCount)
+    ) {
+      throw new ICE(
+        'Fiber.stepFrame',
+        `Op ${currOp.tag} changed frame ${outer.name}, which is not the ` +
+          'current frame: a step may only touch the top of the frame stack',
+      )
     }
 
     if (this.currentFrame.isFinished()) {

@@ -262,3 +262,189 @@ export function raiseFrames(frames: Frame[]): A.Exp {
 export function raiseFiber(fiber: Fiber): A.Exp {
   return raiseFrames(fiber.frames)
 }
+
+///// Frame contexts ///////////////////////////////////////////////////////////
+//
+// SCAFFOLDING for #494, alongside the raiseFiber above rather than in place of
+// it. Nothing in the app calls any of it yet.
+//
+// `raiseFiber` rebuilds every frame on the stack on every step, which is what
+// makes collecting a trace quadratic. But only the *top* frame changes from one
+// step to the next (Fiber.stepFrame guards it), so the outer frames' work is
+// the same work, redone. The shape below is the same reconstruction with that
+// seam left in: each outer frame becomes a `FrameContext` -- its rendering with
+// a hole where the callee's value will go -- and `plug` folds them back into the
+// one expression `raiseFiber` would have returned.
+//
+// Stage 3 only proves the two agree (test/scheme/raise-spine.test.ts). Stage 4
+// is what will keep a spine across steps, reusing every `FrameContext` whose
+// frame is unchanged (`frame` and `version` are what say so) and rebuilding only
+// the head; stage 5 is what will sugar a context once instead of once per step.
+
+/**
+ * The placeholder a `FrameContext` carries where its callee's value belongs.
+ *
+ * Deliberately *not* `A.mkHole()`. That is the student's `??` -- a real form
+ * with its own meaning, pinned by test/scheme/hole.test.ts -- and a context
+ * built from one would be indistinguishable from it in both the tree and the
+ * text. `plug` matches by identity, so it would not itself confuse the two, but
+ * everything downstream reads the rendering: a context that leaked into a step
+ * would show a student a `??` they never wrote.
+ *
+ * A single shared identifier instead, in the `##...##` shape no program may
+ * bind or name (#336, #532). A leak is then visibly an internal -- and
+ * harmless, since `visibleReduction` (src/scheme/trace.ts) already drops any
+ * step whose text contains `##`. Matching is still by *object* identity, so
+ * anything that copies an expression on the way through is a loud failure (an
+ * ICE for a context with no hole) rather than a silent one.
+ */
+const contextHole: A.Exp = A.mkId('##context-hole##')
+
+/**
+ * One frame of a raised stack: its own reconstruction, with a hole where the
+ * frame it called will go.
+ *
+ * `frame` and `version` identify the machine state this was built from, so a
+ * later step can tell whether it is still current (see Frame.version). `rest`
+ * is the frames outside this one, and is meant to be *shared* between
+ * consecutive steps rather than rebuilt.
+ */
+export interface FrameContext {
+  readonly ctx: A.Exp
+  readonly frame: Frame
+  readonly version: number
+  readonly rest: Spine
+}
+
+/** A stack of frame contexts, innermost first; `null` is the empty stack. */
+export type Spine = FrameContext | null
+
+/**
+ * @returns `ctx` with its context hole replaced by `inner`.
+ * @throws ICE if `ctx` has no hole, which means something copied it.
+ */
+function fillHole(ctx: A.Exp, inner: A.Exp): A.Exp {
+  let filled = false
+  // Rebuilt by spread rather than by the mk* constructors: a node's
+  // `provenance` is what sugaring reads to recover the derived form it came
+  // from, and not every constructor takes one.
+  const go = (e: A.Exp): A.Exp => {
+    if (e === contextHole) {
+      filled = true
+      return inner
+    }
+    switch (e.tag) {
+      case 'lit':
+      case 'id':
+      case 'hole':
+        return e
+      case 'app':
+        return { ...e, head: go(e.head), args: e.args.map((a) => go(a)) }
+      case 'lam':
+      case 'anonfn':
+        return { ...e, body: go(e.body) }
+      case 'let':
+        return {
+          ...e,
+          bindings: e.bindings.map((b) => ({ ...b, value: go(b.value) })),
+          body: go(e.body),
+        }
+      case 'begin':
+      case 'and':
+      case 'or':
+      case 'vec':
+        return { ...e, exps: e.exps.map((x) => go(x)) }
+      case 'if':
+        return { ...e, guard: go(e.guard), ifB: go(e.ifB), elseB: go(e.elseB) }
+      case 'match':
+        return {
+          ...e,
+          scrutinee: go(e.scrutinee),
+          branches: e.branches.map((b) => ({ ...b, body: go(b.body) })),
+        }
+      case 'cond':
+        return {
+          ...e,
+          branches: e.branches.map((b) => ({
+            ...b,
+            test: go(b.test),
+            body: go(b.body),
+          })),
+        }
+      case 'obj':
+        return {
+          ...e,
+          pairs: e.pairs.map((p) => ({ key: go(p.key), value: go(p.value) })),
+        }
+    }
+  }
+  const out = go(ctx)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- `filled` is set inside `go`, which flow analysis does not follow
+  if (!filled) {
+    throw new LPM.ICE(
+      'fillHole',
+      'a frame context with no hole to plug: something copied it',
+    )
+  }
+  return out
+}
+
+/**
+ * Folds `inner` back out through the frames that called it.
+ * @returns the whole stack as one expression -- what `raiseFrames` returns.
+ */
+export function plug(spine: Spine, inner: A.Exp): A.Exp {
+  let exp = inner
+  for (let s = spine; s !== null; s = s.rest) {
+    exp = fillHole(s.ctx, exp)
+  }
+  return exp
+}
+
+/**
+ * Reconstructs one frame with a hole where the frame it calls will go.
+ * @param rest the contexts outside this one, which become its `rest`.
+ */
+export function raiseFrameContext(frame: Frame, rest: Spine): FrameContext {
+  // The callee's value lands on top of this frame's value stack, exactly where
+  // raiseFrames pushes the expression it raised from the frame below.
+  const values = valuesToExps(frame.values, frame.env)
+  values.push(contextHole)
+  return {
+    ctx: raiseFrame(values, frame.env, frame.ops),
+    frame,
+    version: frame.version,
+    rest,
+  }
+}
+
+/**
+ * As `raiseFrames`, but keeping the stack's shape: the innermost frame as an
+ * expression, and every outer frame as a `FrameContext`. `plug` puts them back
+ * together, so `expToString(plug(spine, inner))` is `expToString(raiseFrames(frames))`.
+ */
+export function raiseSpine(frames: Frame[]): { spine: Spine; inner: A.Exp } {
+  if (frames.length === 0) {
+    throw new LPM.ICE('raiseSpine', 'no frames to raise')
+  }
+  let spine: Spine = null
+  // Outermost frame first, so each becomes the `rest` of the one it called and
+  // the resulting chain runs innermost-first.
+  for (let i = 0; i < frames.length - 1; i++) {
+    spine = raiseFrameContext(frames[i], spine)
+  }
+  const innermost = frames[frames.length - 1]
+  return {
+    spine,
+    inner: raiseFrame(
+      valuesToExps(innermost.values, innermost.env),
+      innermost.env,
+      innermost.ops,
+    ),
+  }
+}
+
+/** {@link raiseSpine} of a fiber's frame stack. */
+export function raiseFiberSpine(fiber: Fiber): { spine: Spine; inner: A.Exp } {
+  return raiseSpine(fiber.frames)
+}
