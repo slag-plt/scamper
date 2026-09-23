@@ -9,10 +9,10 @@ export * from './files.js'
 // site (applyFn fills range/source only when unset). Bound via
 // `(define error (js-var "prelude_error"))`.
 //
-// R7RS spells this `(error msg irritant ...)`, so the irritants are accepted
-// rather than being an arity error. Scamper does not show them; the parameter
-// is here so that a call written in the R7RS shape still reports its message.
-export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value, ..._irritants: L.Value[]): L.Value => {
+// One argument, deliberately. R7RS spells this `(error msg irritant ...)`, but
+// Scamper shows only the message -- so accepting irritants would take them and
+// silently drop them, which is worse than saying the arity is wrong.
+export const prelude_error: L.JsFunction = L.nameFn('error', (msg: L.Value): L.Value => {
   if (typeof msg !== 'string') {
     throw new L.ScamperError(
       'Runtime',
