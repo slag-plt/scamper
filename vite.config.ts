@@ -37,10 +37,19 @@ export function sourcePlugins() {
 // layout (devFlatHtmlPlugin) all stay in sync. Each app's entry lives next to
 // its source; the build flattens them to distinct top-level basenames.
 const ideEntry = 'src/app/web/index.html'
-const htmlEntries: Record<string, string> = {
+//
+// A key is also the `[name]` in `entryFileNames` below, so it names a chunk in
+// `assets/`. `embed.html`'s key is therefore *not* `scamper-embed`, however
+// natural that looks beside its directory: `dist/scamper-embed.js` is the
+// self-contained bundle a reading on another site includes, and an
+// `assets/scamper-embed-<version>.js` sitting next to it is a chunk that
+// imports three siblings and works only inside the deployment. Someone
+// embedding Scamper found that one first and reported the bundle as broken.
+// The key names the page instead, which is what it actually is.
+export const htmlEntries: Record<string, string> = {
   'scamper-docs': 'src/app/docs/docs.html',
   'scamper-ide': ideEntry,
-  'scamper-embed': 'src/app/web/embed/embed.html',
+  'scamper-transcript-demo': 'src/app/web/embed/embed.html',
   'scamper-search': 'src/app/search/search.html',
   'scamper-files': 'src/app/files/files.html',
 }
