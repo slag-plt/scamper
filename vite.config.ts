@@ -15,7 +15,7 @@ import { devServerConfigPlugin } from './scripts/vite-plugin-dev-server-config.m
 // the npm lifecycle (`npm run ...`), not by IDE test runners or a bare
 // `vitest`, so relying on it alone leaves APP_VERSION as 'unknown' there.
 const pkg = JSON.parse(
-  readFileSync(resolve(__dirname, 'package.json'), 'utf-8'),
+  readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf-8'),
 ) as { version?: string }
 
 /** Exported for vite.config.embed.ts, so both builds stamp the same version. */
@@ -72,7 +72,7 @@ export default defineConfig(({ mode }) => ({
       input: Object.fromEntries(
         Object.entries(htmlEntries).map(([name, path]) => [
           name,
-          resolve(__dirname, path),
+          resolve(import.meta.dirname, path),
         ]),
       ),
       output: {
