@@ -1,6 +1,6 @@
 {
   "name": "@scamper/server",
-  "version": "4.5.0-rc.2",
+  "version": "4.5.0",
   "description": "The Scamper file server: per-user storage behind the FS interface",
   "private": true,
   "type": "module",
