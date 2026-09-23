@@ -626,19 +626,19 @@
 
 ;;; (char-upcase c) -> char?
 ;;;  c : char?
-;;; Returns the upper-case equivalent of `c`.
+;;; Returns the upper-case equivalent of `c`, or `c` itself when its upper-case form is more than one character.
 ;;; @category char, char-downcase, char-foldcase
 (define-export char-upcase (js-var "prelude_charUpcase"))
 
 ;;; (char-downcase c) -> char?
 ;;;  c : char?
-;;; Returns the lower-case equivalent of `c`.
+;;; Returns the lower-case equivalent of `c`, or `c` itself when its lower-case form is more than one character.
 ;;; @category char, char-upcase, char-foldcase
 (define-export char-downcase (js-var "prelude_charDowncase"))
 
 ;;; (char-foldcase c) -> char?
 ;;;  c : char?
-;;; Returns the case-folded equivalent of `c`. This is a version of `c` that is appropriate for case-insensitive comparison.
+;;; Returns the case-folded equivalent of `c`, or `c` itself when its folded form is more than one character. This is a version of `c` that is appropriate for case-insensitive comparison.
 ;;; @category char, char-upcase, char-downcase
 (define-export char-foldcase (js-var "prelude_charFoldcase"))
 

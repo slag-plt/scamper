@@ -821,12 +821,25 @@ export function prelude_integerToChar(n: number): L.Char {
   return L.mkChar(String.fromCodePoint(n))
 }
 
+/**
+ * `c` case-mapped by `f`, or `c` unchanged when that mapping is not a single
+ * code point. Unicode's case mappings are not all one-to-one -- `ß` upcases to
+ * `SS` -- and a char holds exactly one code point (#646), so a longer mapping
+ * has no character to return. R7RS 6.6 asks for this, requiring the mappings
+ * to be one-to-one for exactly the same reason.
+ */
+function caseMap(c: L.Char, f: (v: string) => string): L.Char {
+  const mapped = f(c.value)
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are exactly the unit wanted here
+  return [...mapped].length === 1 ? L.mkChar(mapped) : c
+}
+
 export function prelude_charUpcase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toUpperCase())
+  return caseMap(c, (v) => v.toUpperCase())
 }
 
 export function prelude_charDowncase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toLowerCase())
+  return caseMap(c, (v) => v.toLowerCase())
 }
 
 // N.B., "folding" in Unicode returns a character to a "canonical" form, suitable for
@@ -835,7 +848,7 @@ export function prelude_charDowncase(c: L.Char): L.Char {
 //
 // See: https://unicode.org/reports/tr18/#General_Category_Property
 export function prelude_charFoldcase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toLowerCase())
+  return caseMap(c, (v) => v.toLowerCase())
 }
 
 // Strings (6.7)
