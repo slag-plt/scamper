@@ -70,10 +70,22 @@ there is none; the build emits no such file, and nothing serves one here. So
 a report that sign-in is broken there is a report about the preview rather than
 about the release.
 
-The site holds the release under review and nothing else.
-Every candidate for it stays, so `rc.1` and `rc.2` can be compared, and the whole
-set is cleared the moment the next release starts.
-Past releases are not kept: the live app is where a shipped release is looked at.
+The site holds the release under review in full, and one file from every release
+that has shipped.
+Every candidate stays while its release is under review, so `rc.1` and `rc.2` can
+be compared; when the next release starts, those candidates go and the release
+they previewed is reduced to its `scamper-embed.js`.
+
+That one file is kept because a reading on another site loads it by URL, at
+`https://slag-plt.github.io/scamper/<version>/scamper-embed.js`, and must go on
+working after the next release.
+It is self-contained and refers to nothing outside itself, so it does not mind
+that the rest of its directory is gone.
+The live app is still where a shipped release is *looked at* — what survives here
+is the embeddable bundle, not a browsable copy of the IDE.
+
+**Deleting a version's directory therefore breaks any reading pinned to it.**
+See `docs/embedding.md`.
 
 ### One-time setup
 

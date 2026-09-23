@@ -23,6 +23,19 @@ We provide a collection of widgets for embedding Scamper into a webpage, e.g., f
 Every `.scamper-transcript` on the page is found and run, in the order it appears.
 Each widget fills its container's width.
 
+Every released version is published at
+`https://slag-plt.github.io/scamper/<version>/scamper-embed.js`, so a reading can
+point at one and keep working without the Scamper server being reachable at all:
+
+~~~html
+<script type="module"
+        src="https://slag-plt.github.io/scamper/4.5.0/scamper-embed.js"></script>
+~~~
+
+Pin a version rather than tracking the newest one.
+A release is immutable once published, so a reading pinned to one keeps rendering
+exactly as it did when it was written.
+
 `scamper-embed.js` carries its own styles and refers to nothing outside itself, so a reading need not link a stylesheet
 
 ## Embedding Scamper code
