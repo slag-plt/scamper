@@ -140,10 +140,6 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/lpm/limits.ts:10`': 'DEFAULT_MAX_CALL_STACK_DEPTH = 10_000',
   '`src/lpm/fiber.ts:294-302`': 'pushFrame',
   '`src/lpm/limits.ts:23`': 'MAX_CALL_STACK_DEPTH = 200_000',
-  // The one prelude.scm citation that keeps its number: the sentence describes
-  // the tail-recursive fold helpers without naming one, so there is nothing to
-  // grep for and the line is the only way in.
-  '`src/lib/prelude.scm:878-903`': 'fold-right-onto',
   // The module system
   '`src/scheme/syntax.grammar:90`': 'kw<"import">',
   '`src/scheme/scope.ts:449-460`': 'This matches Racket module semantics',
@@ -231,11 +227,10 @@ describe('a cited line still holds what the sentence says it holds', () => {
 
 describe('the two files that move constantly are cited by path alone', () => {
   test('no line number is given for the prelude or the standard library', () => {
-    const offenders = numbered
-      // The tail-recursive fold helpers are the exception: nothing in that
-      // sentence names a binding, so the line is the only way to find them.
-      .filter((c) => c.text !== '`src/lib/prelude.scm:878-903`')
-      .filter((c) => HOT_FILES.includes(c.path))
+    // No exceptions. The fold-helpers sentence used to be one, because it
+    // named no binding; it now names map-onto, filter-onto and
+    // fold-right-onto, so it greps like every other citation.
+    const offenders = numbered.filter((c) => HOT_FILES.includes(c.path))
       .map((c) => `${DOC}:${c.docLine.toString()} ${c.text}`)
     expect(
       offenders,

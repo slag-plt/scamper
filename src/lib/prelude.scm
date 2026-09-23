@@ -18,13 +18,12 @@
 ;;; @category function
 (define-export with-handler (js-var "prelude_withHandler"))
 
-;;; (error msg & irritants) -> any?
+;;; (error msg) -> any?
 ;;;  msg : string?
-;;;  irritants : any
 ;;; Raises a runtime error reporting `msg`, stopping the program unless a
 ;;; `with-handler` is waiting for it. It never returns a value. R7RS allows
-;;; extra values after the message; Scamper accepts them so that such a call is
-;;; not an arity error, but does not show them.
+;;; extra values after the message, which Scamper does not: it shows only the
+;;; message, so accepting more would silently drop them.
 ;;; @category function, with-handler
 (define-export error (js-var "prelude_error"))
 
