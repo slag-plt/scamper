@@ -41,6 +41,25 @@ describe('#553: each live native re-narrows what its contract narrows', () => {
     ['prelude_length', '5', 'length: expected a list', 'a TypeError, after walking off a non-list'],
     ['prelude_reverse', '5', 'reverse: expected a list', 'a TypeError'],
     ['prelude_quotient', '"a" 2', 'quotient: expected numbers', 'NaN'],
+    // The fifteen Math.* wrappers (#650). Each handed its argument straight to
+    // Math, so anything non-numeric was NaN -- a value that propagates
+    // arbitrarily far before anything notices it.
+    ['prelude_abs', '"a"', 'abs: expected a number', 'NaN'],
+    ['prelude_floor', '"a"', 'floor: expected a number', 'NaN'],
+    ['prelude_ceiling', '"a"', 'ceiling: expected a number', 'NaN'],
+    ['prelude_truncate', '"a"', 'truncate: expected a number', 'NaN'],
+    ['prelude_round', '"a"', 'round: expected a number', 'NaN'],
+    ['prelude_sqrt', '"a"', 'sqrt: expected a number', 'NaN'],
+    ['prelude_exp', '"a"', 'exp: expected a number', 'NaN'],
+    ['prelude_log', '"a"', 'log: expected a number', 'NaN'],
+    ['prelude_sin', '"a"', 'sin: expected a number', 'NaN'],
+    ['prelude_cos', '"a"', 'cos: expected a number', 'NaN'],
+    ['prelude_tan', '"a"', 'tan: expected a number', 'NaN'],
+    ['prelude_asin', '"a"', 'asin: expected a number', 'NaN'],
+    ['prelude_acos', '"a"', 'acos: expected a number', 'NaN'],
+    ['prelude_atan', '"a"', 'atan: expected a number', 'NaN'],
+    ['prelude_expt', '"a" 2', 'expt: expected numbers', 'NaN'],
+    ['prelude_expt', '2 "a"', 'expt: expected numbers', 'NaN'],
     ['prelude_makeVector', '"3" 0', 'make-vector: expected an integer', 'the empty vector'],
     ['prelude_listTake', '5 1', 'list-take: expected a list', 'a list of voids'],
     ['prelude_listTake', 'null "a"', 'list-take: expected an integer', 'null'],
@@ -132,5 +151,18 @@ describe('#553: the bypass mechanism itself', () => {
 
   test('a bypassed call that was always right is still right', async () => {
     expect(await runAsOrigin('(vector-length (vector 1 2 3))', 'builtin')).toEqual(['3'])
+  })
+
+  // The guards added in #650 are on the bypass path only. A student's own call
+  // is turned away by the contract first, with the message and the position
+  // they have always seen -- pinned here so the guard's wording is never
+  // mistaken for the one they read.
+  test('a math guard does not change what a student sees', async () => {
+    expect(await runProgram('(sqrt "a")')).toEqual([
+      'Runtime error [1:1-1:10]: (error) expected a number as the first argument, received string',
+    ])
+    expect(await runProgram('(expt "a" 2)')).toEqual([
+      'Runtime error [1:1-1:12]: (error) expected a number as the first argument, received string',
+    ])
   })
 })

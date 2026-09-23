@@ -208,6 +208,21 @@ function requireOneArgument(who: string, xs: L.Value[]): void {
   }
 }
 
+/**
+ * Raises the "not a number" error the Math.* wrappers all share (#650).
+ * Only the `typeof` test stays in each body, so the wrapper is still one
+ * inlinable line; the message and the throw live here, since they are the same
+ * word for word apart from the procedure's name.
+ *
+ * Deliberately not variadic: a `...xs` helper taking the arguments themselves
+ * allocates on every call and cannot be inlined, which measured 8-13x dearer
+ * than the test it would replace. `expt` therefore writes its own two-argument
+ * check inline, as `quotient` does.
+ */
+function notANumber(who: string): never {
+  throw new L.ScamperError('Runtime', `${who}: expected a number`)
+}
+
 export function prelude_plus(...xs: L.Value[]): number {
   if (!xs.every(L.isNumber)) {
     throw new L.ScamperError('Runtime', '+: expected numbers')
@@ -243,7 +258,8 @@ export function prelude_div(...xs: number[]): number {
   return xs.length === 1 ? divide(1, xs[0]) : xs.reduce(divide)
 }
 
-export function prelude_abs(x: number): number {
+export function prelude_abs(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('abs')
   return Math.abs(x)
 }
 
@@ -292,19 +308,23 @@ export function prelude_modulo(x: number, y: number): number {
 //   (denominator q)
 // Since we don't implement rationals.
 
-export function prelude_floor(x: number): number {
+export function prelude_floor(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('floor')
   return Math.floor(x)
 }
 
-export function prelude_ceiling(x: number): number {
+export function prelude_ceiling(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('ceiling')
   return Math.ceil(x)
 }
 
-export function prelude_truncate(x: number): number {
+export function prelude_truncate(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('truncate')
   return Math.trunc(x)
 }
 
-export function prelude_round(x: number): number {
+export function prelude_round(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('round')
   return Math.round(x)
 }
 
@@ -316,7 +336,8 @@ export function prelude_square(x: number): number {
   return x * x
 }
 
-export function prelude_sqrt(x: number): number {
+export function prelude_sqrt(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('sqrt')
   return Math.sqrt(x)
 }
 
@@ -324,7 +345,10 @@ export function prelude_sqrt(x: number): number {
 //   (exact-integer-sqrt k)
 // To avoid polluting the documentation.
 
-export function prelude_expt(x: number, y: number): number {
+export function prelude_expt(x: L.Value, y: L.Value): number {
+  if (typeof x !== 'number' || typeof y !== 'number') {
+    throw new L.ScamperError('Runtime', 'expt: expected numbers')
+  }
   return Math.pow(x, y)
 }
 
@@ -358,35 +382,43 @@ export function prelude_stringToNumber(s: string): number | boolean {
 
 // Additional functions from racket/base
 
-export function prelude_exp(x: number): number {
+export function prelude_exp(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('exp')
   return Math.exp(x)
 }
 
-export function prelude_log(x: number): number {
+export function prelude_log(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('log')
   return Math.log(x)
 }
 
-export function prelude_sin(x: number): number {
+export function prelude_sin(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('sin')
   return Math.sin(x)
 }
 
-export function prelude_cos(x: number): number {
+export function prelude_cos(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('cos')
   return Math.cos(x)
 }
 
-export function prelude_tan(x: number): number {
+export function prelude_tan(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('tan')
   return Math.tan(x)
 }
 
-export function prelude_asin(x: number): number {
+export function prelude_asin(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('asin')
   return Math.asin(x)
 }
 
-export function prelude_acos(x: number): number {
+export function prelude_acos(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('acos')
   return Math.acos(x)
 }
 
-export function prelude_atan(x: number): number {
+export function prelude_atan(x: L.Value): number {
+  if (typeof x !== 'number') notANumber('atan')
   return Math.atan(x)
 }
 
