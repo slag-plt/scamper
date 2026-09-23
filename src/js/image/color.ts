@@ -421,6 +421,19 @@ function rgbHueHelper(r: number, g: number, b: number): number {
 
 function rgbHueHelper2(max: number, min: number, r: number, g: number, b: number): number {
   if (max - min === 0) {
+    // N.B., a grey has no hue, and csc151 answers with a random one rather than
+    // picking a convention -- `(random 360)` at colors.rkt:390 of the commit
+    // linked above. Kept verbatim so this function agrees with the library it
+    // was translated from, but it is worth knowing: `rgb-hue` is the one
+    // procedure here that answers differently on each call, which is a strange
+    // thing for a teaching language to do, and `(rgb-hue (rgb 5 5 5))` twice
+    // gives two different numbers.
+    //
+    // The translation is *not* exact, and the difference is Scamper's, not
+    // csc151's: Racket's `(random 360)` yields an integer -- its docstring
+    // promises "Integers [0..360]" -- where this yields a float. So the branches
+    // below round through fixHue and this one does not, which is why a grey's
+    // hue comes back as 174.3359407796572 while a red's comes back as 0.
     return Math.random() * 360
   } else if (max === r) {
     return fixHue((g - b) / (max - min))
