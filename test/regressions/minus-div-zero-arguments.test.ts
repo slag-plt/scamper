@@ -72,20 +72,20 @@ describe('zero-argument - and / (#517)', () => {
   })
 
   // Deliberately unchanged siblings, pinned so the decision is recorded rather
-  // than rediscovered. The same rule keeps them as they are: each has a unit.
-  // `-Infinity`/`Infinity` really are max's and min's, and they compose --
-  // `(max (apply max null) 4)` is 4 -- so these stay total like `(+)`, `(*)`,
-  // `(string)` and `(append)`, R7RS's stricter arity notwithstanding. An empty
-  // `par`/`seq` is likewise a well-formed composition, the same silence
-  // `(empty)` already names.
-  test('max, min, par and seq stay total at zero arguments', async () => {
+  // than rediscovered. An empty `par`/`seq` is a well-formed composition, the
+  // same silence `(empty)` already names, so both stay total like `(+)`,
+  // `(*)`, `(string)` and `(append)`.
+  //
+  // `max` and `min` were on this list too, on the same rule -- their identity
+  // genuinely composes, `(max (apply max null) 4)` is 4. #647 took them off it:
+  // an infinity is not a value a student has a use for, and it travels
+  // silently through the arithmetic that follows. See
+  // max-min-zero-arguments.test.ts.
+  test('par and seq stay total at zero arguments', async () => {
     expect(await runProgram(`
 (import music)
-(max)
-(min)
-(max (apply max null) 4)
 (composition? (par))
 (composition? (seq))
-`)).toEqual(['-Infinity', 'Infinity', '4', '#t', '#t'])
+`)).toEqual(['#t', '#t'])
   })
 })

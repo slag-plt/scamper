@@ -124,13 +124,15 @@
 ;;; @category math, comparator, predicates, integer?, negative?, number?, odd?, positive?, real?, zero?
 (define-export even? (js-var "prelude_evenQ"))
 
-;;; (max & v) -> number?
+;;; (max v1 & v) -> number?
+;;;  v1 : number?
 ;;;  v : number?
 ;;; Returns the maximum of the given numbers.
 ;;; @category math, comparator, min, nan?, >=, >, <=, <, =
 (define-export max (js-var "prelude_max"))
 
-;;; (min & v) -> number?
+;;; (min v1 & v) -> number?
+;;;  v1 : number?
 ;;;  v : number?
 ;;; Returns the minimum of the given numbers.
 ;;; @category math, comparator, max, nan?, >=, >, <=, <, =
