@@ -807,6 +807,17 @@ export function prelude_charToInteger(c: L.Char): number {
 }
 
 export function prelude_integerToChar(n: number): L.Char {
+  // Unicode's code space runs from 0 to 0x10FFFF, and `String.fromCodePoint`
+  // raises a raw Javascript RangeError outside it, which reached the student
+  // as "Unexpected error in Javascript function call" (#644). The `integer?`
+  // contract cannot see this -- -1 is an integer -- so the check belongs here,
+  // in the style string-ref, vector-ref and list-ref share.
+  if (n < 0 || n > 0x10ffff) {
+    throw new L.ScamperError(
+      'Runtime',
+      `integer->char: code point ${n} out of bounds of Unicode`,
+    )
+  }
   return L.mkChar(String.fromCodePoint(n))
 }
 
