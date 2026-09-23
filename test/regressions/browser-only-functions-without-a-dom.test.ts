@@ -11,6 +11,13 @@ import { runProgram } from '../harness'
 // the call. Gradescope autograders run through the CLI, so this is the message
 // an instructor's harness got.
 //
+// Every function still in that class lives in a library, so reaching one takes
+// an `import`: `ignore` was the only one in the prelude, and #596 gave it a
+// void return. The guard is therefore less sharp than when it was written -- a
+// student has to ask for the library before the message can matter -- but it
+// is no narrower, and the `ignore` row below is what keeps the prelude out of
+// the class.
+//
 // N.B., this file overrides the suite's jsdom environment on purpose. Under
 // jsdom `document` is defined and these functions work, so a test there could
 // not see the bug at all. Node is the CLI's own condition.
@@ -31,14 +38,18 @@ describe('#516: browser-only functions where there is no DOM', () => {
 
   // `ignore` was the sharpest case, being the one such function in the
   // prelude -- reachable without importing anything. #596 made it return void
-  // rather than a hidden element, so it needs no DOM at all now and is no
-  // longer one of these; every remaining case comes from a library.
+  // rather than a hidden element, so it needs no DOM at all now. Kept as the
+  // negative control: this row is what fails if a prelude function starts
+  // needing a browser again, which is the only way the rows below stop being
+  // the whole story.
   test('ignore needs no browser now that it returns void (#596)', async () => {
     expect(await report('(ignore 5)')).toBe('void')
   })
 
-  // Each is named by `applyFn`, which labels a native's ScamperError with the
-  // function the student called -- which is why the guard takes no argument.
+  // The class itself, one row per function, each behind the `import` that
+  // brings it into scope. Each is named by `applyFn`, which labels a native's
+  // ScamperError with the function the student called -- which is why the
+  // guard takes no argument.
   //
   // N.B., the last two check *before* throwing their SuspendSignal, and that is
   // what these two rows pin. Move either guard inside the action and the
