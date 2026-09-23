@@ -908,7 +908,32 @@ export function prelude_stringFoldcase(s: string): string {
 
 /** @param end where the substring ends; the end of `s` when left out. */
 export function prelude_substring(s: string, start: number, end?: number): string {
-  return s.substring(start, end)
+  // R7RS 6.7 requires 0 <= start <= end <= (string-length s) and calls
+  // anything else an error; `String.prototype.substring` honours none of it.
+  // It clamps an index past the end, and it *swaps* the two when start > end,
+  // so `(substring "hello" 3 1)` answered "el" -- a miscomputed pair of
+  // indices produced a plausible string rather than saying anything (#645).
+  // Reported in the style string-ref, vector-ref and list-ref share.
+  const stop = end ?? s.length
+  if (start < 0 || start > s.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: start index ${start} out of bounds of string`,
+    )
+  }
+  if (stop < 0 || stop > s.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: end index ${stop} out of bounds of string`,
+    )
+  }
+  if (start > stop) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: start index ${start} is greater than end index ${stop}`,
+    )
+  }
+  return s.substring(start, stop)
 }
 
 export function prelude_stringAppend(...args: string[]): string {

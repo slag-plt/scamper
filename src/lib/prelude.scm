@@ -696,6 +696,7 @@
 ;;; (substring s start [end]) -> string?
 ;;;  s : string?
 ;;;  start : integer?
+;;;   0 <= start <= end <= (string-length s)
 ;;;  end : integer?
 ;;;   where the substring ends; defaults to the end of `s`
 ;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive), or to the end of `s` when `end` is left out.

@@ -29,6 +29,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
 - integer->char now reports an error when given a number that is not a character's code, instead of reporting a confusing Javascript error.
+- substring now reports an error when its start or end is outside the string, or its start comes after its end, instead of quietly trimming the indices or swapping them.
 # 4.5.0
 
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.
