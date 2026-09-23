@@ -196,8 +196,30 @@ function errorOr<T>(
 // lumps every non-bracket, non-string atom into one category), the grammar
 // has already done that disambiguation -- Number/String/Boolean/Char are
 // distinct node types here, so this just dispatches directly on node.type.name.
+// N.B., the literal parsers *raise* a malformed literal (a bad character name,
+// an unsupported string escape) instead of collecting it, since literals.ts is
+// also used where there is no diagnostic list to collect into. This is the one
+// place with a list, so the raise is turned back into an ordinary parse
+// diagnostic here -- otherwise it escapes the parser entirely and the CLI dies
+// with a Node stack trace (#638). The placeholder value is never seen: any
+// diagnostic at all makes tokenizeAndParse discard the program.
 function leafValue(ctx: Ctx, node: SyntaxNode): L.Value {
   const text = ctx.text(node)
+  try {
+    return leafValueOrRaise(ctx, node, text)
+  } catch (e) {
+    // An ICE is a bug in Scamper rather than in the program: not ours to catch.
+    if (!(e instanceof L.ScamperError)) {
+      throw e
+    }
+    ctx.diagnostics.push(
+      mkDiagnostic('Parse', 'error', e.message, e.range ?? ctx.range(node)),
+    )
+    return undefined
+  }
+}
+
+function leafValueOrRaise(ctx: Ctx, node: SyntaxNode, text: string): L.Value {
   switch (node.type.name) {
     case 'Number':
       return parseNumberLiteral(text)
