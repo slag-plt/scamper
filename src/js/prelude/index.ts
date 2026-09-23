@@ -564,12 +564,29 @@ export function prelude_reverse(l: L.Value): L.List {
   return ret
 }
 
-export function prelude_listTail(l: L.List, k: number): L.List {
-  while (l !== null && k > 0) {
-    l = l.tail
-    k -= 1
+/**
+ * Backs both `list-tail` and `list-drop`, which src/lib/prelude.scm binds to
+ * this one native: `list-drop`'s docstring calls itself an alias of
+ * `list-tail`, and one implementation is what makes that true rather than
+ * merely true today. They were two natives, and #553 guarded only one of them,
+ * so the same wrong call answered differently under each name (#649).
+ */
+export function prelude_listTail(l: L.Value, k: L.Value): L.List {
+  // As list-take (#553): `sort` names `list-drop` at top level, so the
+  // `list?`/`integer?` contract never runs on that call.
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'list-tail: expected a list')
   }
-  return l
+  if (!L.isNumber(k) || !Number.isInteger(k)) {
+    throw new L.ScamperError('Runtime', 'list-tail: expected an integer')
+  }
+  let cur: L.List = l
+  let n = k
+  while (cur !== null && n > 0) {
+    cur = cur.tail
+    n -= 1
+  }
+  return cur
 }
 
 export function prelude_listTake(l: L.Value, k: L.Value): L.List {
@@ -596,23 +613,6 @@ export function prelude_listTake(l: L.Value, k: L.Value): L.List {
     ret = L.mkCons(elts[i], ret)
   }
   return ret
-}
-
-export function prelude_listDrop(l: L.Value, k: L.Value): L.List {
-  // As list-take (#553).
-  if (!L.isList(l)) {
-    throw new L.ScamperError('Runtime', 'list-drop: expected a list')
-  }
-  if (!L.isNumber(k) || !Number.isInteger(k)) {
-    throw new L.ScamperError('Runtime', 'list-drop: expected an integer')
-  }
-  let cur: L.List = l
-  let n = k
-  while (cur !== null && n > 0) {
-    cur = cur.tail
-    n -= 1
-  }
-  return cur
 }
 
 export function prelude_listRef(l: L.List, n: number): L.Value {

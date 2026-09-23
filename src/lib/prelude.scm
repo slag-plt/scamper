@@ -533,7 +533,7 @@
 ;;;   0 <= k <= (length l)
 ;;; An alias for `(list-tail l k)`.
 ;;; @category list, list manipulation, association list, append, list-tail, list-take, make-list, range, reverse, sort
-(define-export list-drop (js-var "prelude_listDrop"))
+(define-export list-drop (js-var "prelude_listTail"))
 
 ;;; (list-ref l n) -> any
 ;;;  l : list?
