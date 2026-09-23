@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+# 4.5.0
+
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.
 - string-ref now reports an error when given an index outside the string, instead of returning a nonsense character.
 - The number comparisons =, <, >, <= and >= now take any number of arguments, so (< 1 2 3) works the way it already did for characters and strings.
