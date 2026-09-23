@@ -612,16 +612,40 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        # The site is a preview, not an archive: it holds the release under
-        # review and nothing else. A directory belongs to this release when its
-        # name matches once an -rc suffix is stripped, so the candidates for one
-        # release stay side by side and the whole set is cleared the moment the
-        # next release starts. The live app is where a shipped release is looked
-        # at, so nothing of value is dropped here.
+        # The site holds the release under review in full, and one file from
+        # every release that has shipped.
+        #
+        # A directory belongs to this release when its name matches once an -rc
+        # suffix is stripped, so the candidates for one release stay side by
+        # side while it is reviewed. Everything else is dealt with by kind:
+        #
+        #   a candidate for an older release   removed; it was a preview of
+        #                                      something that has since shipped
+        #   a shipped release                  reduced to scamper-embed.js
+        #   ... with no such file              removed; it predates #417, which
+        #                                      is what made that file exist
+        #
+        # The bundle is kept because a reading on another site loads it by URL
+        # and must go on working after the next release (#631 is why anyone
+        # went looking for it in the first place). It is one self-contained
+        # file with no URLs of its own, so it does not care that the rest of
+        # its directory is gone -- and at ~1.2 MB a release, keeping them all
+        # stays far inside what Pages is willing to serve.
+        #
+        # Reducing rather than rebuilding: the file published here is the one
+        # that release actually shipped, not a fresh build of its tag.
         find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
           while read -r dir; do
-            if [ "${dir%%-*}" != "${RELEASE}" ]; then
-              echo "Removing ${dir}, which is not part of ${RELEASE}."
+            if [ "${dir%%-*}" = "${RELEASE}" ]; then
+              continue
+            elif [ "${dir}" != "${dir%%-*}" ]; then
+              echo "Removing ${dir}, a candidate for a release that has shipped."
+              rm -rf "./${dir}"
+            elif [ -f "./${dir}/scamper-embed.js" ]; then
+              echo "Reducing ${dir} to its embed bundle."
+              find "./${dir}" -mindepth 1 -not -name 'scamper-embed.js' -delete
+            else
+              echo "Removing ${dir}, which shipped no embed bundle."
               rm -rf "./${dir}"
             fi
           done
@@ -651,17 +675,28 @@ jobs:
           echo "<title>Scamper ${RELEASE} previews</title>"
           echo '<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5}li{margin:.25rem 0}</style>'
           echo '</head><body>'
-          echo "<h1>Scamper ${RELEASE} previews</h1>"
+          echo "<h1>Scamper ${RELEASE}</h1>"
           echo '<p>Client-side only builds, for looking at a release before it ships.'
           echo 'Files are kept in your browser: signing in, server storage, and history are not part of a preview.</p>'
           echo '<ul>'
+          # A shipped release keeps only its embed bundle, so it is linked as
+          # the file it still has. The release under review is here in full
+          # until the next one starts, and index.html is how that is told
+          # apart -- rather than comparing against RELEASE, which would be
+          # wrong for the run that publishes the release itself.
           for dir in ${releases}; do
-            echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
+            if [ -f "./${dir}/index.html" ]; then
+              echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
+            else
+              echo "<li>${dir} &mdash; <a href=\"${dir}/scamper-embed.js\">scamper-embed.js</a></li>"
+            fi
           done
           for dir in ${candidates}; do
             echo "<li><a href=\"${dir}/\">${dir}</a></li>"
           done
           echo '</ul>'
+          echo '<p>A shipped release keeps the one file a reading loads.'
+          echo 'See <a href="https://github.com/slag-plt/scamper/blob/main/docs/embedding.md">docs/embedding.md</a>.</p>'
           echo "<p><a href=\"https://github.com/${GITHUB_REPOSITORY}\">github.com/${GITHUB_REPOSITORY}</a></p>"
           echo '</body></html>'
         } > index.html
