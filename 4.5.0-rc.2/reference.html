@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Language Reference &middot; Scamper</title>
+  <!-- Apply the persisted theme before first paint to avoid a flash. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('scamper-theme')
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t)
+        }
+      } catch (e) {}
+    })()
+  </script>
+  <link href="css/normalize.css" rel="stylesheet">
+  <link href="css/theme.css" rel="stylesheet">
+  <!-- Fontawesome (brands + solid) -->
+  <link href="css/fontawesome.css" rel="stylesheet">
+  <link href="css/brands.css" rel="stylesheet">
+  <link href="css/solid.css" rel="stylesheet">
+  <style>
+    /* Colors and fonts come from theme.css, so this page follows the light/dark
+       choice like every other one. It used to hardcode White on Black and its
+       own copies of the font stacks, which left it permanently light. */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
+    }
+
+    /* The docs page's header, spelled out here: this page is plain HTML in
+       public/, with no Vue app to mount. */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-fg);
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+
+    .header-left, .header-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    #content {
+      max-width: 50em;
+      margin: 0 auto;
+      padding: var(--space-xl);
+    }
+
+    #content h2 {
+      margin-top: var(--space-2xl);
+      padding-bottom: var(--space-xs);
+      border-bottom: 1px solid var(--border);
+    }
+
+    section {
+      margin: var(--space-xl) 0;
+    }
+
+    section h3 {
+      margin: 0;
+      font-family: var(--font-mono);
+    }
+
+    code, pre {
+      font-family: var(--font-mono);
+      font-size: 1em;
+    }
+
+    pre {
+      margin: var(--space-md) 0;
+      padding: var(--space-md);
+      border-radius: var(--radius-lg);
+      overflow-x: auto;
+    }
+
+    /* The two kinds of sample are told apart by eye as well as by class: a
+       syntax line is the shape of the form, an example is code that runs. */
+    pre.syntax {
+      background: var(--surface-muted);
+      border-left: 4px solid var(--accent);
+    }
+
+    pre.example {
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .absent {
+      margin: var(--space-2xl) 0;
+      padding: var(--space-md) var(--space-xl);
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <a href="index.html">Scamper</a> &middot;
+      <a href="docs.html">Docs</a> &middot;
+      <a href="reference.html">Reference</a>
+    </div>
+    <div class="header-right">
+      <a href="https://github.com/slag-plt/scamper"><i class="fa-brands fa-github"></i></a>
+      &middot;
+      <em><a href="https://github.com/slag-plt/scamper/issues">Report an issue</a></em>
+    </div>
+  </div>
+
+  <div id="content">
+    <h1>Scamper Language Reference</h1>
+
+    <p>
+      This page describes every form built into the Scamper language: the
+      fifteen reserved words, which cannot be used as names, and the bracket
+      spellings that go with them. Everything else &mdash; <code>+</code>,
+      <code>map</code>, <code>circle</code> &mdash; is an ordinary procedure,
+      and lives in the <a href="docs.html">function documentation</a> instead.
+    </p>
+
+    <p>
+      A form here is <em>not</em> a procedure. <code>if</code> chooses a branch
+      without evaluating the other one, so it cannot be passed to
+      <code>map</code> or stored in a variable the way <code>+</code> can.
+    </p>
+
+    <p>
+      One rule runs through the whole page: <strong>a body is exactly one
+      expression</strong>. A <code>lambda</code>, a <code>let</code>, a
+      <code>cond</code> clause and a <code>match</code> clause each take a
+      single expression, never a sequence. Scamper has no implicit
+      <code>begin</code> and no definitions inside a body; use
+      <code>begin</code> or <code>let</code> when several steps are wanted.
+    </p>
+
+    <h2>Notation</h2>
+
+    <section id="names">
+      <h3>names</h3>
+      <pre class="syntax">NAME
+MODULE.NAME</pre>
+      <p>
+        A name may use any characters except whitespace, brackets, a quote, a
+        semicolon, a period, and <code>&amp;</code>, so <code>null?</code>,
+        <code>&lt;=</code> and <code>string-&gt;list</code> are all ordinary
+        names. The fifteen reserved words on this page are the exception: they
+        cannot be defined or used as a variable. A name containing a single
+        period is a <em>qualified</em> name, whose first half is the alias given
+        by a two-argument <code>import</code> and whose second half is a name
+        that module exports. Exactly one period is allowed, and a qualified name
+        may only be referred to, never defined.
+      </p>
+      <pre class="example">(import image img)
+(display (img.circle 25 "solid" "red"))</pre>
+    </section>
+
+    <section id="literals">
+      <h3>literals</h3>
+      <pre class="syntax">42   -0.3   1e3          ; numbers
+#t   #f                   ; booleans
+#\a  #\space              ; characters
+"Hello"                   ; strings</pre>
+      <p>
+        A string may contain the escapes <code>\a</code>, <code>\b</code>,
+        <code>\t</code>, <code>\n</code>, <code>\v</code>, <code>\f</code>,
+        <code>\r</code>, <code>\e</code>, <code>\"</code>, <code>\'</code> and
+        <code>\\</code>; any other backslash simply stands for the character
+        after it. Hex (<code>\x41;</code>), Unicode (<code>\u0041</code>) and
+        octal (<code>\101</code>) escapes are <em>not</em> supported and are
+        reported as errors.
+      </p>
+      <pre class="example">(display (list 42 -0.3 #t #\a "a\tb"))</pre>
+    </section>
+
+    <section id="comment">
+      <h3>;</h3>
+      <pre class="syntax">; TEXT</pre>
+      <p>
+        A semicolon comments out the rest of the line. That is the only kind of
+        comment: there is no block comment and no datum comment.
+      </p>
+      <pre class="example">; Adds one to its argument.
+(define add-one (lambda (x) (+ x 1)))</pre>
+    </section>
+
+    <h2>Statements</h2>
+
+    <section id="import">
+      <h3>import</h3>
+      <pre class="syntax">(import MODULE)
+(import MODULE ALIAS)</pre>
+      <p>
+        Brings a module's exported names into scope. With an alias, the names
+        are <em>not</em> brought into scope; each is reached as
+        <code>ALIAS.NAME</code> instead. The module is named bare: a string
+        there names a <em>file</em> to load, so <code>(import "image")</code>
+        looks for a file called <code>image</code> and fails.
+      </p>
+      <pre class="example">(import image)
+(import music mus)</pre>
+    </section>
+
+    <section id="define">
+      <h3>define</h3>
+      <pre class="syntax">(define NAME EXPR)</pre>
+      <p>
+        Binds NAME to the value of EXPR. A definition is a statement, so it may
+        only appear at the top level of a file &mdash; never inside a
+        <code>lambda</code> or a <code>let</code>.
+      </p>
+      <pre class="example">(define x (+ 1 1))</pre>
+    </section>
+
+    <section id="define-export">
+      <h3>define-export</h3>
+      <pre class="syntax">(define-export NAME EXPR)</pre>
+      <p>
+        A <code>define</code> that also exports NAME, exactly as if it were
+        followed by <code>(export NAME)</code>. Only meaningful in a file that
+        another file imports.
+      </p>
+      <pre class="example">(define-export square (lambda (x) (* x x)))</pre>
+    </section>
+
+    <section id="export">
+      <h3>export</h3>
+      <pre class="syntax">(export NAME ...)</pre>
+      <p>
+        Names which of this file's definitions another file may
+        <code>import</code>. A file with no <code>export</code> statement
+        exports nothing, and several <code>export</code> statements add up.
+      </p>
+      <pre class="example">(define square (lambda (x) (* x x)))
+(define cube (lambda (x) (* x x x)))
+(export square cube)</pre>
+    </section>
+
+    <section id="display">
+      <h3>display</h3>
+      <pre class="syntax">(display EXPR)</pre>
+      <p>
+        Shows the value of EXPR in the output. It is a statement rather than a
+        procedure, so it appears at the top level of a file and never inside
+        another expression. An expression written on its own at the top level is
+        shown too, so <code>display</code> is mostly a way of saying so
+        explicitly.
+      </p>
+      <pre class="example">(display "Hello!")</pre>
+    </section>
+
+    <section id="struct">
+      <h3>struct</h3>
+      <pre class="syntax">(struct NAME (FIELD ...))</pre>
+      <p>
+        Declares a new kind of value. It defines a constructor
+        <code>NAME</code>, a predicate <code>NAME?</code>, and a getter
+        <code>NAME-FIELD</code> for each field. A struct value also matches the
+        constructor pattern <code>(NAME PAT ...)</code>.
+      </p>
+      <pre class="example">(struct person (name age))
+(define alice (person "Alice" 30))
+(display (person-age alice))</pre>
+    </section>
+
+    <h2>Expressions</h2>
+
+    <section id="application">
+      <h3>procedure call</h3>
+      <pre class="syntax">(EXPR EXPR ...)</pre>
+      <p>
+        Evaluates every sub-expression left to right, then calls the first on
+        the rest. Parentheses always mean a call unless the first word is one of
+        the reserved words on this page, so <code>(1 2 3)</code> is an attempt
+        to call <code>1</code> rather than a list; build a list with
+        <code>list</code>.
+      </p>
+      <pre class="example">(display (max 1 2 3))</pre>
+    </section>
+
+    <section id="lambda">
+      <h3>lambda</h3>
+      <pre class="syntax">(lambda (NAME ...) BODY)</pre>
+      <p>
+        An anonymous procedure with the given parameters. BODY is exactly one
+        expression.
+      </p>
+      <pre class="example">(define hypotenuse (lambda (x y) (sqrt (+ (* x x) (* y y)))))
+(display (hypotenuse 3 4))</pre>
+    </section>
+
+    <section id="rest-parameter">
+      <h3>&amp;</h3>
+      <pre class="syntax">(lambda (NAME ... &amp; REST) BODY)</pre>
+      <p>
+        An <code>&amp;</code> in a parameter list marks the last parameter as
+        the <em>rest</em> parameter: it collects every remaining argument into a
+        list, so the procedure accepts any number of them.
+        <code>(lambda (&amp; xs) ...)</code> collects all of them.
+      </p>
+      <pre class="example">(define sum-all (lambda (&amp; xs) (apply + xs)))
+(display (sum-all 1 2 3 4))</pre>
+    </section>
+
+    <section id="if">
+      <h3>if</h3>
+      <pre class="syntax">(if EXPR EXPR EXPR)</pre>
+      <p>
+        Evaluates the first expression, which must be a boolean; if it is
+        <code>#t</code>, the second is the answer, and otherwise the third. A
+        guard that is not a boolean is an error, not something treated as true.
+        Both branches are required, and only the one taken is evaluated.
+      </p>
+      <pre class="example">(display (if (&gt; 3 2) "bigger" "smaller"))</pre>
+    </section>
+
+    <section id="cond">
+      <h3>cond</h3>
+      <pre class="syntax">(cond [EXPR EXPR] ...)</pre>
+      <p>
+        Tries each clause's first expression in turn and answers with the second
+        expression of the first clause whose test is <code>#t</code>. Each test
+        must be a boolean.
+        <code>else</code> is an ordinary binding whose value is <code>#t</code>,
+        so a final <code>[else ...]</code> clause catches everything left. A
+        <code>cond</code> in which no clause matches is an error.
+      </p>
+      <pre class="example">(display (cond [(= 1 2) "one"] [(= 2 2) "two"] [else "neither"]))</pre>
+    </section>
+
+    <section id="and">
+      <h3>and</h3>
+      <pre class="syntax">(and EXPR ...)</pre>
+      <p>
+        <code>#t</code> when every expression is <code>#t</code>. It stops at
+        the first <code>#f</code>, leaving the rest unevaluated &mdash; which is
+        why it is a form rather than a procedure. Each expression it reaches
+        must be a boolean. <code>(and)</code> is <code>#t</code>.
+      </p>
+      <pre class="example">(display (and (&gt; 2 1) (&lt; 2 3)))</pre>
+    </section>
+
+    <section id="or">
+      <h3>or</h3>
+      <pre class="syntax">(or EXPR ...)</pre>
+      <p>
+        <code>#t</code> when at least one expression is <code>#t</code>. It
+        stops at the first <code>#t</code>, leaving the rest unevaluated. Each
+        expression it reaches must be a boolean. <code>(or)</code> is
+        <code>#f</code>.
+      </p>
+      <pre class="example">(display (or (&gt; 1 2) (&lt; 1 2)))</pre>
+    </section>
+
+    <section id="begin">
+      <h3>begin</h3>
+      <pre class="syntax">(begin EXPR ...)</pre>
+      <p>
+        Evaluates each expression in order and answers with the last. At least
+        one is required, though a single expression needs no <code>begin</code>.
+        It is how a body holds several steps when the earlier ones are run for
+        their effect.
+      </p>
+      <pre class="example">(display (begin (+ 1 1) (* 3 3)))</pre>
+    </section>
+
+    <section id="let">
+      <h3>let</h3>
+      <pre class="syntax">(let ([PAT EXPR] ...) BODY)</pre>
+      <p>
+        Binds each pattern to the value of its expression and evaluates BODY
+        &mdash; exactly one expression &mdash; with those bindings in scope.
+        Note the parentheses around the whole list of bindings. Every binding is
+        in scope throughout <em>every</em> binding's expression as well as the
+        body, which is Scheme's <code>letrec</code>, so two procedures bound by
+        one <code>let</code> may call each other and there is no need for a
+        <code>let*</code>. The left of a binding is a full pattern rather than
+        only a name, so a binding can take a value apart.
+      </p>
+      <pre class="example">(display (let ([x 10] [y 20]) (+ x y)))
+(display (let ([(cons x rest) (list 1 2 3)]) rest))</pre>
+      <pre class="example">(display
+  (let ([even2? (lambda (n) (if (= n 0) #t (odd2? (- n 1))))]
+        [odd2? (lambda (n) (if (= n 0) #f (even2? (- n 1))))])
+    (even2? 10)))</pre>
+    </section>
+
+    <section id="match">
+      <h3>match</h3>
+      <pre class="syntax">(match EXPR [PAT EXPR] ...)</pre>
+      <p>
+        Tries each pattern against the value of the first expression and answers
+        with the expression beside the first pattern that matches, with that
+        pattern's names bound. A value that matches no pattern is an error.
+      </p>
+      <pre class="example">(display (match (list 1 2 3) [null "empty"] [(cons h t) h]))</pre>
+    </section>
+
+    <section id="vector-literal">
+      <h3>[...]</h3>
+      <pre class="syntax">[EXPR ...]</pre>
+      <p>
+        A vector literal, whose elements are evaluated left to right. Square
+        brackets are not interchangeable with parentheses: they mean a vector
+        everywhere except in the fixed <code>[PAT EXPR]</code> positions of
+        <code>let</code>, <code>match</code> and <code>cond</code>.
+      </p>
+      <pre class="example">(display (vector-ref [1 2 3] 0))</pre>
+    </section>
+
+    <section id="map-literal">
+      <h3>{...}</h3>
+      <pre class="syntax">{KEY VALUE ...}</pre>
+      <p>
+        A map literal, read as alternating keys and values; an odd number of
+        elements is an error. Keys and values are both ordinary expressions.
+        Curly braces mean this and nothing else.
+      </p>
+      <pre class="example">(display {"name" "Alice" "age" 30})</pre>
+    </section>
+
+    <section id="anonymous-function">
+      <h3>#(...)</h3>
+      <pre class="syntax">#(BODY)</pre>
+      <p>
+        A shorthand for a <code>lambda</code>. Its parameters are the
+        <code>%</code> names appearing in BODY: <code>%</code> (or
+        <code>%1</code>) is the first argument, <code>%2</code> the second, and
+        <code>%&amp;</code> collects the rest. The arity is the largest
+        <code>%k</code> that appears. BODY must be a parenthesized expression,
+        and the <code>#</code> must touch the opening parenthesis.
+      </p>
+      <pre class="example">(display (map #(* % %) (list 1 2 3)))</pre>
+    </section>
+
+    <section id="??">
+      <h3>??</h3>
+      <pre class="syntax">??</pre>
+      <p>
+        A hole: a placeholder for an expression not written yet. A program
+        containing one still parses and runs, and reaching a hole raises "Hole
+        encountered in program!" &mdash; so <code>(if #t 1 ??)</code> is
+        <code>1</code>, and a procedure whose body is a hole is fine until it is
+        called. It is written bare, with no parentheses of its own.
+      </p>
+      <pre class="example">(define area (lambda (r) (* 3.14 ??)))</pre>
+    </section>
+
+    <h2>Patterns</h2>
+
+    <section id="patterns">
+      <h3>patterns</h3>
+      <pre class="syntax">_                      ; matches anything, binds nothing
+NAME                   ; matches anything, binds NAME to it
+42  #t  #\a  "hi"      ; matches exactly that value
+(NAME PAT ...)         ; matches a struct or list built by NAME
+[PAT ...]              ; matches a vector of exactly that many elements</pre>
+      <p>
+        A pattern appears on the left of a <code>match</code> clause and on the
+        left of a <code>let</code> binding. <code>(cons h t)</code>,
+        <code>(person n a)</code> and <code>null</code> take apart a non-empty
+        list, a struct and the empty list respectively.
+      </p>
+      <pre class="example">(display (match [1 2] [[a b] (+ a b)] [_ 0]))</pre>
+    </section>
+
+    <div class="absent">
+      <h2>What Scamper does not have</h2>
+      <p>
+        These are Scheme and Racket habits with no Scamper spelling. Reaching
+        for one is reported as an error, never silently taken to mean something
+        else.
+      </p>
+      <ul>
+        <li><code>let*</code> &mdash; <code>let</code> already binds its names letrec-style.</li>
+        <li><code>quote</code> and the <code>'</code> shorthand &mdash; build a list with <code>list</code>.</li>
+        <li><code>set!</code> &mdash; a variable is never reassigned; a vector or map is changed with its own procedures.</li>
+        <li>macros: <code>define-syntax</code> and <code>syntax-rules</code>.</li>
+        <li>named <code>let</code>, <code>do</code>, and <code>case</code>.</li>
+        <li><code>when</code> and <code>unless</code> &mdash; use <code>if</code> or <code>cond</code>.</li>
+      </ul>
+      <p>
+        The longer list of differences from Scheme is kept in
+        <a href="https://github.com/slag-plt/scamper/blob/main/docs/DIFFERENCES.md">docs/DIFFERENCES.md</a>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
