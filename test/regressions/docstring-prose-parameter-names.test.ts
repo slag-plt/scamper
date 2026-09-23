@@ -16,6 +16,16 @@ import { ScamperDiagnostic } from '../../src/scheme/diagnostic'
 //
 // This sweeps every binding in the standard library rather than the two sites
 // the issue names, so the whole class is guarded.
+//
+// It is not exhaustive, and the backtick is where it stops: prose that names a
+// parameter *without* backticks, and prose whose backticked name resolves to
+// the wrong real thing -- another binding, or a module -- both read as clean
+// here. Widening it to bare words was measured and rejected. Prose is English,
+// so every word in it is a candidate: across the library's 511 documented
+// bindings, 5735 bare words resolve to nothing, and narrowing to the hyphens
+// and punctuation a library name carries still leaves 69 -- "non-negative",
+// "left-to-right", "upper-left". Neither set held a single real mismatch, and
+// a sweep with that ratio gets switched off rather than read.
 
 const libDir = resolve(__dirname, '../../src/lib')
 
