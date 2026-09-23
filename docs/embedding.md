@@ -23,6 +23,19 @@ We provide a collection of widgets for embedding Scamper into a webpage, e.g., f
 Every `.scamper-transcript` on the page is found and run, in the order it appears.
 Each widget fills its container's width.
 
+Every released version is published at
+`https://slag-plt.github.io/scamper/<version>/scamper-embed.js`, so a reading can
+point at one and keep working without the Scamper server being reachable at all:
+
+~~~html
+<script type="module"
+        src="https://slag-plt.github.io/scamper/4.5.0/scamper-embed.js"></script>
+~~~
+
+Pin a version rather than tracking the newest one.
+A release is immutable once published, so a reading pinned to one keeps rendering
+exactly as it did when it was written.
+
 `scamper-embed.js` carries its own styles and refers to nothing outside itself, so a reading need not link a stylesheet
 
 ## Embedding Scamper code
@@ -93,7 +106,7 @@ One widget's button sees its own definitions and reports its own errors, and sta
     Unlike `execute`, that does not supersede: the foreground run is left alone and each widget gets a run of its own (see `RunContext` in `src/scamper.ts`).
 +   A widget's run deliberately outlives its fiber, so its handlers keep working after its program has finished.
 +   `dist/scamper-embed.js` is a **second** build of that entry point (`vite.config.embed.ts`, run after the site build by `scripts/build`): one chunk, with the dynamic imports and every stylesheet folded in.
-    The site build emits the same entry as `assets/scamper-embed-<version>.js`, but as chunks shared with the IDE and with the CSS left to the page — which suits `embed.html`, sitting in the deployment beside them, and is unusable from a reading on another site.
+    The site build emits the same entry as `assets/scamper-transcript-demo-<version>.js`, but as chunks shared with the IDE and with the CSS left to the page — which suits `embed.html`, sitting in the deployment beside them, and is unusable from a reading on another site.
 +   `src/app/web/embed/embed.html` is a demonstration page and what the browser test drives.
     `npm run dev` serves it at `/embed.html`.
     It links the stylesheets and loads the entry point directly, so it exercises the widget rather than the bundle.
