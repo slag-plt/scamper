@@ -10,7 +10,9 @@ import * as L from '../../src/lpm'
 // same bounds error `vector-ref` does (see vector-bounds.test.ts, #257).
 //
 // `mkChar` is the only place a char is made, so it is guarded too: a char can
-// no longer hold anything but a non-empty string, whichever caller asks.
+// no longer hold anything but a real character, whichever caller asks. #646
+// narrowed that guard from "a non-empty string" to a single code point, which
+// is the wording below; the rule itself lives in char-single-code-point.test.ts.
 //
 // Ranges are stripped: this test is about the bounds *message*, not the
 // location, which contract-error-call-site.test.ts asserts.
@@ -67,15 +69,15 @@ describe('a char cannot be built from a missing value (#613)', () => {
     L.mkChar(v as string)
 
   test('undefined is rejected', () => {
-    expect(mkBadChar(undefined)).toThrow(/expected a non-empty string, received undefined/)
+    expect(mkBadChar(undefined)).toThrow(/expected a single code point, received undefined/)
   })
 
   test('null is rejected', () => {
-    expect(mkBadChar(null)).toThrow(/expected a non-empty string, received null/)
+    expect(mkBadChar(null)).toThrow(/expected a single code point, received null/)
   })
 
   test('the empty string is rejected', () => {
-    expect(mkBadChar('')).toThrow(/expected a non-empty string/)
+    expect(mkBadChar('')).toThrow(/expected a single code point/)
   })
 
   test('an ordinary character is still fine', () => {

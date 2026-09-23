@@ -28,6 +28,10 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
+- integer->char now reports an error when given a number that is not a character's code, instead of reporting a confusing Javascript error.
+- substring now reports an error when its start or end is outside the string, or its start comes after its end, instead of quietly trimming the indices or swapping them.
+- char-upcase, char-downcase and char-foldcase now leave a character alone when its other case is more than one character, so (char-upcase #\ß) is #\ß rather than a two-letter character no other procedure understood.
+- max and min now require at least one number, so (max) reports a plain arity error at your own line instead of quietly answering -Infinity.
 - A character like #\zzz that names no character, or a string escape Scamper does not support, is now reported as an ordinary error pointing at it instead of stopping the program with no message.
 - A statement that produces nothing, such as vector-set!, no longer leaves an empty gap under it in the notebook view or in a reading.
 # 4.5.0

@@ -564,12 +564,29 @@ export function prelude_reverse(l: L.Value): L.List {
   return ret
 }
 
-export function prelude_listTail(l: L.List, k: number): L.List {
-  while (l !== null && k > 0) {
-    l = l.tail
-    k -= 1
+/**
+ * Backs both `list-tail` and `list-drop`, which src/lib/prelude.scm binds to
+ * this one native: `list-drop`'s docstring calls itself an alias of
+ * `list-tail`, and one implementation is what makes that true rather than
+ * merely true today. They were two natives, and #553 guarded only one of them,
+ * so the same wrong call answered differently under each name (#649).
+ */
+export function prelude_listTail(l: L.Value, k: L.Value): L.List {
+  // As list-take (#553): `sort` names `list-drop` at top level, so the
+  // `list?`/`integer?` contract never runs on that call.
+  if (!L.isList(l)) {
+    throw new L.ScamperError('Runtime', 'list-tail: expected a list')
   }
-  return l
+  if (!L.isNumber(k) || !Number.isInteger(k)) {
+    throw new L.ScamperError('Runtime', 'list-tail: expected an integer')
+  }
+  let cur: L.List = l
+  let n = k
+  while (cur !== null && n > 0) {
+    cur = cur.tail
+    n -= 1
+  }
+  return cur
 }
 
 export function prelude_listTake(l: L.Value, k: L.Value): L.List {
@@ -596,23 +613,6 @@ export function prelude_listTake(l: L.Value, k: L.Value): L.List {
     ret = L.mkCons(elts[i], ret)
   }
   return ret
-}
-
-export function prelude_listDrop(l: L.Value, k: L.Value): L.List {
-  // As list-take (#553).
-  if (!L.isList(l)) {
-    throw new L.ScamperError('Runtime', 'list-drop: expected a list')
-  }
-  if (!L.isNumber(k) || !Number.isInteger(k)) {
-    throw new L.ScamperError('Runtime', 'list-drop: expected an integer')
-  }
-  let cur: L.List = l
-  let n = k
-  while (cur !== null && n > 0) {
-    cur = cur.tail
-    n -= 1
-  }
-  return cur
 }
 
 export function prelude_listRef(l: L.List, n: number): L.Value {
@@ -807,15 +807,39 @@ export function prelude_charToInteger(c: L.Char): number {
 }
 
 export function prelude_integerToChar(n: number): L.Char {
+  // Unicode's code space runs from 0 to 0x10FFFF, and `String.fromCodePoint`
+  // raises a raw Javascript RangeError outside it, which reached the student
+  // as "Unexpected error in Javascript function call" (#644). The `integer?`
+  // contract cannot see this -- -1 is an integer -- so the check belongs here,
+  // in the style string-ref, vector-ref and list-ref share.
+  if (n < 0 || n > 0x10ffff) {
+    throw new L.ScamperError(
+      'Runtime',
+      `integer->char: code point ${n} out of bounds of Unicode`,
+    )
+  }
   return L.mkChar(String.fromCodePoint(n))
 }
 
+/**
+ * `c` case-mapped by `f`, or `c` unchanged when that mapping is not a single
+ * code point. Unicode's case mappings are not all one-to-one -- `ß` upcases to
+ * `SS` -- and a char holds exactly one code point (#646), so a longer mapping
+ * has no character to return. R7RS 6.6 asks for this, requiring the mappings
+ * to be one-to-one for exactly the same reason.
+ */
+function caseMap(c: L.Char, f: (v: string) => string): L.Char {
+  const mapped = f(c.value)
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are exactly the unit wanted here
+  return [...mapped].length === 1 ? L.mkChar(mapped) : c
+}
+
 export function prelude_charUpcase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toUpperCase())
+  return caseMap(c, (v) => v.toUpperCase())
 }
 
 export function prelude_charDowncase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toLowerCase())
+  return caseMap(c, (v) => v.toLowerCase())
 }
 
 // N.B., "folding" in Unicode returns a character to a "canonical" form, suitable for
@@ -824,7 +848,7 @@ export function prelude_charDowncase(c: L.Char): L.Char {
 //
 // See: https://unicode.org/reports/tr18/#General_Category_Property
 export function prelude_charFoldcase(c: L.Char): L.Char {
-  return L.mkChar(c.value.toLowerCase())
+  return caseMap(c, (v) => v.toLowerCase())
 }
 
 // Strings (6.7)
@@ -897,7 +921,32 @@ export function prelude_stringFoldcase(s: string): string {
 
 /** @param end where the substring ends; the end of `s` when left out. */
 export function prelude_substring(s: string, start: number, end?: number): string {
-  return s.substring(start, end)
+  // R7RS 6.7 requires 0 <= start <= end <= (string-length s) and calls
+  // anything else an error; `String.prototype.substring` honours none of it.
+  // It clamps an index past the end, and it *swaps* the two when start > end,
+  // so `(substring "hello" 3 1)` answered "el" -- a miscomputed pair of
+  // indices produced a plausible string rather than saying anything (#645).
+  // Reported in the style string-ref, vector-ref and list-ref share.
+  const stop = end ?? s.length
+  if (start < 0 || start > s.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: start index ${start} out of bounds of string`,
+    )
+  }
+  if (stop < 0 || stop > s.length) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: end index ${stop} out of bounds of string`,
+    )
+  }
+  if (start > stop) {
+    throw new L.ScamperError(
+      'Runtime',
+      `substring: start index ${start} is greater than end index ${stop}`,
+    )
+  }
+  return s.substring(start, stop)
 }
 
 export function prelude_stringAppend(...args: string[]): string {

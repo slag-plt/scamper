@@ -124,13 +124,15 @@
 ;;; @category math, comparator, predicates, integer?, negative?, number?, odd?, positive?, real?, zero?
 (define-export even? (js-var "prelude_evenQ"))
 
-;;; (max & v) -> number?
+;;; (max v1 & v) -> number?
+;;;  v1 : number?
 ;;;  v : number?
 ;;; Returns the maximum of the given numbers.
 ;;; @category math, comparator, min, nan?, >=, >, <=, <, =
 (define-export max (js-var "prelude_max"))
 
-;;; (min & v) -> number?
+;;; (min v1 & v) -> number?
+;;;  v1 : number?
 ;;;  v : number?
 ;;; Returns the minimum of the given numbers.
 ;;; @category math, comparator, max, nan?, >=, >, <=, <, =
@@ -531,7 +533,7 @@
 ;;;   0 <= k <= (length l)
 ;;; An alias for `(list-tail l k)`.
 ;;; @category list, list manipulation, association list, append, list-tail, list-take, make-list, range, reverse, sort
-(define-export list-drop (js-var "prelude_listDrop"))
+(define-export list-drop (js-var "prelude_listTail"))
 
 ;;; (list-ref l n) -> any
 ;;;  l : list?
@@ -626,19 +628,19 @@
 
 ;;; (char-upcase c) -> char?
 ;;;  c : char?
-;;; Returns the upper-case equivalent of `c`.
+;;; Returns the upper-case equivalent of `c`, or `c` itself when its upper-case form is more than one character.
 ;;; @category char, char-downcase, char-foldcase
 (define-export char-upcase (js-var "prelude_charUpcase"))
 
 ;;; (char-downcase c) -> char?
 ;;;  c : char?
-;;; Returns the lower-case equivalent of `c`.
+;;; Returns the lower-case equivalent of `c`, or `c` itself when its lower-case form is more than one character.
 ;;; @category char, char-upcase, char-foldcase
 (define-export char-downcase (js-var "prelude_charDowncase"))
 
 ;;; (char-foldcase c) -> char?
 ;;;  c : char?
-;;; Returns the case-folded equivalent of `c`. This is a version of `c` that is appropriate for case-insensitive comparison.
+;;; Returns the case-folded equivalent of `c`, or `c` itself when its folded form is more than one character. This is a version of `c` that is appropriate for case-insensitive comparison.
 ;;; @category char, char-upcase, char-downcase
 (define-export char-foldcase (js-var "prelude_charFoldcase"))
 
@@ -696,6 +698,7 @@
 ;;; (substring s start [end]) -> string?
 ;;;  s : string?
 ;;;  start : integer?
+;;;   0 <= start <= end <= (string-length s)
 ;;;  end : integer?
 ;;;   where the substring ends; defaults to the end of `s`
 ;;; Returns the substring of `s` from index `start` (inclusive) to index `end` (exclusive), or to the end of `s` when `end` is left out.

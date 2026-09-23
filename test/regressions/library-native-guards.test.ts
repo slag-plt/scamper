@@ -44,8 +44,10 @@ describe('#553: each live native re-narrows what its contract narrows', () => {
     ['prelude_makeVector', '"3" 0', 'make-vector: expected an integer', 'the empty vector'],
     ['prelude_listTake', '5 1', 'list-take: expected a list', 'a list of voids'],
     ['prelude_listTake', 'null "a"', 'list-take: expected an integer', 'null'],
-    ['prelude_listDrop', '5 1', 'list-drop: expected a list', 'void'],
-    ['prelude_listDrop', 'null "a"', 'list-drop: expected an integer', 'null'],
+    // One native behind both list-tail and list-drop, so it names the former
+    // whichever binding reached it (#649).
+    ['prelude_listTail', '5 1', 'list-tail: expected a list', 'void'],
+    ['prelude_listTail', 'null "a"', 'list-tail: expected an integer', 'null'],
     ['prelude_listToVector', '5', 'list->vector: expected a list', 'a TypeError'],
     ['prelude_vectorToList', '"abc"', 'vector->list: expected a vector', 'a list of one-character strings'],
     ['prelude_vectorLength', '"abc"', 'vector-length: expected a vector', '3 -- a string has a length too'],
