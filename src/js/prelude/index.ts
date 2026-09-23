@@ -151,11 +151,17 @@ export function prelude_gt(...xs: L.Value[]): boolean {
   return pairwiseSatisfies((a, b) => a > b, xs)
 }
 
-export function prelude_geq(...xs: number[]): boolean {
+export function prelude_geq(...xs: L.Value[]): boolean {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '>=: expected numbers')
+  }
   return pairwiseSatisfies((a, b) => a >= b, xs)
 }
 
-export function prelude_eq(...xs: number[]): boolean {
+export function prelude_eq(...xs: L.Value[]): boolean {
+  if (!xs.every(L.isNumber)) {
+    throw new L.ScamperError('Runtime', '=: expected numbers')
+  }
   return pairwiseSatisfies((a, b) => a === b, xs)
 }
 
