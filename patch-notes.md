@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
+- A character like #\zzz that names no character, or a string escape Scamper does not support, is now reported as an ordinary error pointing at it instead of stopping the program with no message.
 # 4.5.0
 
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.
