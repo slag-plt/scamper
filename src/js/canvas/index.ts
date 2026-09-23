@@ -239,12 +239,22 @@ export function canvas_pixelsToCanvas(pixels: L.Value, width: L.Value, height: L
   return ret
 }
 
-export function canvas_canvasSetPixels(canvas: HTMLCanvasElement, pixels: L.Struct[]): void {
+export function canvas_canvasSetPixels(canvas: HTMLCanvasElement, pixels: L.Value): void {
+  // The same guard pixels->canvas carries, and for the same reason: a non-rgb
+  // element reads `undefined` for each channel, and assigning undefined into a
+  // Uint8ClampedArray stores 0 -- a silently black, fully transparent canvas
+  // rather than an error (#553, via pixel-map). No library definition calls
+  // this today, so its contract always runs and the guard is unreachable; it
+  // is here so the two do not disagree if one ever is called.
+  if (!canvas_pixelsQ(pixels)) {
+    throw new L.ScamperError('Runtime', 'canvas-set-pixels!: expected a vector of rgb values')
+  }
   const ctx = context2d(canvas)
   const outImg = ctx.createImageData(canvas.width, canvas.height)
   const data = outImg.data
-  for (let i = 0; i < pixels.length; i++) {
-    const c = pixels[i] as Rgb
+  const px = pixels as L.Struct[]
+  for (let i = 0; i < px.length; i++) {
+    const c = px[i] as Rgb
     data[i*4] = c.red
     data[i*4 + 1] = c.green
     data[i*4 + 2] = c.blue
