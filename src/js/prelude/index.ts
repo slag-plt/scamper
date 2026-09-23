@@ -1446,7 +1446,6 @@ export function prelude_listToHash(l: L.List): Record<string, L.Value> {
 
 // Additional constants
 
-export const prelude_elseConst = true
 export const prelude_nullConst = null
 export const prelude_piConst = Math.PI
 export const prelude_voidConst = undefined

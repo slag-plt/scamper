@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
+- else is now part of the cond form itself and may only be a cond's last clause, so defining it as a name is reported right where you wrote it instead of breaking every later cond.
 - integer->char now reports an error when given a number that is not a character's code, instead of reporting a confusing Javascript error.
 - substring now reports an error when its start or end is outside the string, or its start comes after its end, instead of quietly trimming the indices or swapping them.
 - char-upcase, char-downcase and char-foldcase now leave a character alone when its other case is more than one character, so (char-upcase #\ß) is #\ß rather than a two-letter character no other procedure understood.

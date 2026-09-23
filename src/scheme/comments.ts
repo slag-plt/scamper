@@ -95,7 +95,10 @@ export function astChildNodes(node: A.SchemeNode): A.SchemeNode[] {
     case 'match':
       return [node.scrutinee, ...node.branches.flatMap((b) => [b.pat, b.body])]
     case 'cond':
-      return node.branches.flatMap((b) => [b.test, b.body])
+      return [
+        ...node.branches.flatMap((b) => [b.test, b.body]),
+        ...(node.elseBody === undefined ? [] : [node.elseBody]),
+      ]
     case 'pctor':
       return [node.name, ...node.args]
     case 'pvec':

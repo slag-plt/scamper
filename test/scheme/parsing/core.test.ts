@@ -140,6 +140,9 @@ describe('lezer-bridge parsing', () => {
   test('cond with test/body pairs, including zero and many branches', () => {
     expectParses('(cond)')
     expectParses('(cond [(> x 0) "pos"] [(< x 0) "neg"] [#t "zero"])')
+    // `else` is a reserved word naming the final fall-through clause (#639).
+    expectParses('(cond [(> x 0) "pos"] [else "not pos"])')
+    expectParses('(cond [else "always"])')
   })
 
   test('struct', () => {
@@ -275,6 +278,7 @@ describe('lezer-bridge parsing', () => {
         'cond',
         'define',
         'define-export',
+        'else',
         'export',
         'display',
         'if',

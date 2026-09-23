@@ -54,18 +54,34 @@ function collectOr(e: A.Exp): A.Exp[] | null {
   return null
 }
 
+/** A `cond`'s recovered clauses, plus its `[else ...]` body if it had one. */
+interface CondClauses {
+  branches: { test: A.Exp; body: A.Exp }[]
+  elseBody?: A.Exp
+}
+
 /**
- * @return the branches of a `cond` if `e` is (the head of) its expansion, else
+ * @return the clauses of a `cond` if `e` is (the head of) its expansion, else
  * null. `(cond [t1 b1] ... [tk bk])` expands to a `provenance:'cond'`-tagged
  * right-nested `(if ti bi <rest>)` chain whose base is the tagged fall-through
- * error sentinel (the only app expansion inserts).
+ * error sentinel (the only app expansion inserts). A final `[else eb]` clause
+ * replaces that base with `eb`, and its `if` is tagged `'cond-else'` -- which is
+ * what tells the base apart from a nested `cond` sitting in the else body.
  */
-function collectCond(e: A.Exp): { test: A.Exp; body: A.Exp }[] | null {
+function collectCond(e: A.Exp): CondClauses | null {
+  if (e.tag === 'if' && e.provenance === 'cond-else') {
+    return { branches: [{ test: e.guard, body: e.ifB }], elseBody: e.elseB }
+  }
   if (e.provenance !== 'cond') return null
-  if (e.tag === 'app') return [] // the fall-through error sentinel
+  if (e.tag === 'app') return { branches: [] } // the fall-through error sentinel
   if (e.tag === 'if') {
     const rest = collectCond(e.elseB)
-    if (rest !== null) return [{ test: e.guard, body: e.ifB }, ...rest]
+    if (rest !== null) {
+      return {
+        branches: [{ test: e.guard, body: e.ifB }, ...rest.branches],
+        elseBody: rest.elseBody,
+      }
+    }
   }
   return null
 }
@@ -129,11 +145,12 @@ export function sugarExpr(e: A.Exp): A.Exp {
       const cond = collectCond(e)
       if (cond !== null) {
         return A.mkCond(
-          cond.map((b) => ({
+          cond.branches.map((b) => ({
             test: sugarExpr(b.test),
             body: sugarExpr(b.body),
           })),
           e.range,
+          cond.elseBody === undefined ? undefined : sugarExpr(cond.elseBody),
         )
       }
       // An untagged `if`: still sugar its parts so nested derived forms survive.
@@ -180,6 +197,7 @@ export function sugarExpr(e: A.Exp): A.Exp {
           body: sugarExpr(b.body),
         })),
         e.range,
+        e.elseBody === undefined ? undefined : sugarExpr(e.elseBody),
       )
     case 'anonfn':
       return A.mkAnonFn(sugarExpr(e.body), e.range)

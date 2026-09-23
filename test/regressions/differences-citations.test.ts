@@ -118,19 +118,20 @@ function linesOf(path: string): string[] {
  */
 const ANCHORS: Record<string, string | undefined> = {
   // The shape of a program
-  '`src/scheme/syntax.grammar:86-100`': 'Struct { paren<kw<"struct">',
+  '`src/scheme/syntax.grammar:94-108`': 'Struct { paren<kw<"struct">',
+  '`src/scheme/syntax.grammar:44-52`': 'CondElseClause {',
   '`src/scheme/expansion.ts:98-117`': "case 'begin':",
-  '`src/scheme/syntax.grammar:162`': 'LineComment',
+  '`src/scheme/syntax.grammar:170`': 'LineComment',
   // Binding and control
   '`src/scheme/scope.ts:164-189`': 'letrec: every binder is in scope throughout',
   '`src/scheme/expansion.ts:118-150`': "case 'and':",
-  '`src/scheme/expansion.ts:151-172`': "case 'cond':",
-  '`src/scheme/syntax.grammar:139-145`': 'Amp { "&" }',
+  '`src/scheme/expansion.ts:151-189`': "case 'cond':",
+  '`src/scheme/syntax.grammar:147-153`': 'Amp { "&" }',
   // No macros / no quotation
-  '`src/scheme/expansion.ts:250-278`': "case 'struct':",
-  '`src/scheme/syntax.grammar:137`': 'baseIdentifier',
+  '`src/scheme/expansion.ts:265-293`': "case 'struct':",
+  '`src/scheme/syntax.grammar:145`': 'baseIdentifier',
   // Numbers
-  '`src/scheme/syntax.grammar:113-118`': 'Number {',
+  '`src/scheme/syntax.grammar:121-126`': 'Number {',
   // Pairs, lists and mutation
   '`src/lpm/lang.ts:586-588`': "We follow Clojure's lead",
   // Exceptions
@@ -141,7 +142,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/lpm/fiber.ts:294-302`': 'pushFrame',
   '`src/lpm/limits.ts:23`': 'MAX_CALL_STACK_DEPTH = 200_000',
   // The module system
-  '`src/scheme/syntax.grammar:90`': 'kw<"import">',
+  '`src/scheme/syntax.grammar:98`': 'kw<"import">',
   '`src/scheme/scope.ts:449-460`': 'This matches Racket module semantics',
   // Summary table
   '`lang.ts:586`': "We follow Clojure's lead",
@@ -152,9 +153,9 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/lib/image.scm:343-355`': '(circle diameter fill color',
   // From Clojure
   '`src/scheme/syntax.grammar:5-9`': 'is a map literal',
-  '`:59`': 'Clojure-style map literal',
-  '`:70`': 'Clojure-style anonymous function',
-  '`src/scheme/ast.ts:231`': 'Clojure-style anonymous function',
+  '`:67`': 'Clojure-style map literal',
+  '`:78`': 'Clojure-style anonymous function',
+  '`src/scheme/ast.ts:237`': 'Clojure-style anonymous function',
   '`src/scheme/anon-tokens.ts:4`': 'Clojure-style anonymous function',
   // Scamper's own
   '`src/lib/index.ts:41-51`': 'js-var is the FFI root primitive',

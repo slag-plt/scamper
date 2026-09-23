@@ -2902,27 +2902,26 @@ r
   ])
 })
 
+// N.B., `else` was a constant here too until #639 made it a reserved word; it
+// is now a `cond` clause's keyword and never a value. See
+// test/regressions/else-is-reserved.test.ts.
 test('constants', async () => {
   expect(
     await runProgram(`
-else
 null
 pi
 π
 void
-(else)
 (null)
 (pi)
 (π)
 (void)
 `),
   ).toEqual([
-    '#t',
     'null',
     '3.141592653589793',
     '3.141592653589793',
     'void',
-    'Runtime error: Not a function or closure: true',
     'Runtime error: Not a function or closure: null',
     'Runtime error: Not a function or closure: 3.141592653589793',
     'Runtime error: Not a function or closure: 3.141592653589793',

@@ -120,10 +120,13 @@ function scopesInExp(exp: A.Exp): ScopeTree[] {
     case 'anonfn':
       return scopesInExp(exp.body)
     case 'cond':
-      return exp.branches.flatMap((b) => [
-        ...scopesInExp(b.test),
-        ...scopesInExp(b.body),
-      ])
+      return [
+        ...exp.branches.flatMap((b) => [
+          ...scopesInExp(b.test),
+          ...scopesInExp(b.body),
+        ]),
+        ...(exp.elseBody === undefined ? [] : scopesInExp(exp.elseBody)),
+      ]
 
     // Binding forms.
     case 'lam': {

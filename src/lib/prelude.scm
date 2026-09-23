@@ -1261,11 +1261,6 @@
 ;;; @category hashmap, hash->list, hash-set, hash-keys
 (define-export list->hash (js-var "prelude_listToHash"))
 
-;;; else: boolean?
-;;; A synonym for `#t` appropriate for use as the final guard of a `cond` expression.
-;;; @category boolean/logic, constants
-(define-export else (js-var "prelude_elseConst"))
-
 ;;; null: list?
 ;;; The empty list.
 ;;; @category list, list creation, association list, constants

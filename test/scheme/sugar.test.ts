@@ -96,6 +96,25 @@ describe('cond', () => {
     // so a user binding named `error` cannot capture it (#336).
     expect(roundTrip('(cond)')).toBe('(##error## "No matching clause in cond")')
   })
+  // #639: an [else ...] clause replaces the sentinel with its own body, so the
+  // chain's base is an ordinary expression. The `if` holding it is tagged
+  // 'cond-else' to keep the two apart.
+  test('a final else clause', () => {
+    expect(roundTrip('(cond [a b] [else c])')).toBe('(cond [a b] [else c])')
+  })
+  test('a cond in the else body is not folded into its parent', () => {
+    expect(roundTrip('(cond [a b] [else (cond [c d])])')).toBe(
+      '(cond [a b] [else (cond [c d])])',
+    )
+    expect(roundTrip('(cond [a b] [else (cond [c d] [else e])])')).toBe(
+      '(cond [a b] [else (cond [c d] [else e])])',
+    )
+  })
+  test('a cond whose only clause is else is just that body', () => {
+    // There is no `if` left to carry the provenance, so nothing marks the
+    // expansion as having come from a cond -- and nothing needs to.
+    expect(roundTrip('(cond [else a])')).toBe('a')
+  })
 })
 
 describe('anonymous functions #(...)', () => {

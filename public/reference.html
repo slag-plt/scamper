@@ -127,7 +127,7 @@
 
     <p>
       This page describes every form built into the Scamper language: the
-      fifteen reserved words, which cannot be used as names, and the bracket
+      sixteen reserved words, which cannot be used as names, and the bracket
       spellings that go with them. Everything else &mdash; <code>+</code>,
       <code>map</code>, <code>circle</code> &mdash; is an ordinary procedure,
       and lives in the <a href="docs.html">function documentation</a> instead.
@@ -330,16 +330,29 @@ MODULE.NAME</pre>
 
     <section id="cond">
       <h3>cond</h3>
-      <pre class="syntax">(cond [EXPR EXPR] ...)</pre>
+      <pre class="syntax">(cond [EXPR EXPR] ... [else EXPR])</pre>
       <p>
         Tries each clause's first expression in turn and answers with the second
         expression of the first clause whose test is <code>#t</code>. Each test
-        must be a boolean.
-        <code>else</code> is an ordinary binding whose value is <code>#t</code>,
-        so a final <code>[else ...]</code> clause catches everything left. A
-        <code>cond</code> in which no clause matches is an error.
+        must be a boolean. A final <code>[else ...]</code> clause, if there is
+        one, catches everything left; see <a href="#else"><code>else</code></a>.
+        A <code>cond</code> with no <code>else</code> clause in which no test
+        holds is an error.
       </p>
       <pre class="example">(display (cond [(= 1 2) "one"] [(= 2 2) "two"] [else "neither"]))</pre>
+    </section>
+
+    <section id="else">
+      <h3>else</h3>
+      <pre class="syntax">[else EXPR]</pre>
+      <p>
+        The fall-through clause of a <code>cond</code>, which answers with its
+        expression when no earlier test holds. It may appear only as a
+        <code>cond</code>'s <em>last</em> clause and nowhere else:
+        <code>else</code> is a reserved word, not a name, so it is neither a
+        value you can display nor a variable you can define.
+      </p>
+      <pre class="example">(display (cond [(&gt; 0 1) "impossible"] [else "of course"]))</pre>
     </section>
 
     <section id="and">

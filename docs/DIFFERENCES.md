@@ -43,7 +43,7 @@ Five `// TODO: implement` blocks mark gaps that may close; everything else is a 
 
 ### The shape of a program
 
-A Scamper program is a flat sequence of statements, and the statement forms are fixed: `import`, `define`, `define-export`, `export`, `display`, `struct`, or a bare expression (`src/scheme/syntax.grammar:86-100`).
+A Scamper program is a flat sequence of statements, and the statement forms are fixed: `import`, `define`, `define-export`, `export`, `display`, `struct`, or a bare expression (`src/scheme/syntax.grammar:94-108`).
 There is no way to add a new one, because there are no macros.
 
 Three consequences bite immediately.
@@ -94,7 +94,7 @@ R7RS's `write`/`display` distinction does not exist, and the one form Scamper ha
 **By design** -- there are no ports at all (see 6.13 below), so `display` is a request to the IDE's output pane rather than a procedure over a port.
 
 Finally, R7RS's lexical syntax is thinner than it looks.
-There are no block comments (`#| ... |#`) and no datum comments (`#;`); `;` to end of line is the only comment (`src/scheme/syntax.grammar:162`).
+There are no block comments (`#| ... |#`) and no datum comments (`#;`); `;` to end of line is the only comment (`src/scheme/syntax.grammar:170`).
 
 ### Binding and control
 
@@ -163,25 +163,25 @@ The R7RS idiom `(or x default)` therefore does not work.
 Runtime error [1:1-1:13]: (error) No matching clause in cond
 ~~~
 
-The raise is built into the expansion and uses a runtime primitive rather than the prelude's `error`, so it fires whether or not the user has rebound that name (`src/scheme/expansion.ts:151-172`, issue #336).
+The raise is built into the expansion and uses a runtime primitive rather than the prelude's `error`, so it fires whether or not the user has rebound that name (`src/scheme/expansion.ts:151-189`, issue #336).
 **By design.**
 
-**`else` is not a keyword.**
-It is an ordinary variable bound to `#t` (`src/lib/prelude.scm`, `src/js/prelude/index.ts`):
+**`else` is a reserved word, not auxiliary syntax.**
+R7RS makes `else` a literal a program may shadow; Scamper makes it a keyword no program can bind at all (`src/scheme/reserved-words.ts`), and `[else EXPR]` is a shape the grammar recognizes only as a `cond`'s last clause (`src/scheme/syntax.grammar:44-52`):
 
 ~~~
-> else
-#t
+> (define else #f)
+Parser error [1:1-1:16]: Malformed define statement (a name and a value).
 ~~~
 
-So `[else ...]` in a `cond` works, and so would `[#t ...]`, and so would rebinding `else` to `#f`.
+So `[else ...]` catches whatever is left, `[#t ...]` does the same thing spelled differently, and rebinding `else` is a parse error at the `define` rather than a silent break of every later `cond` (issue #639).
 `cond` also has no `=>` clause form.
 **By design.**
 
 **Absent entirely, all as unbound variables:** `set!`, `case`, `when`, `unless`, `delay`, `delay-force`, `force`, `make-promise`, `case-lambda`, `make-parameter`, `parameterize`, `guard`, `assert`, `define-values`, `let-values`.
 **By design** -- most are either effectful or redundant given that a body is one expression.
 
-`lambda`'s rest parameter (`reference.html#lambda`) is written with `&` rather than a dotted tail: `(lambda (x & rest) ...)` (`src/scheme/syntax.grammar:139-145`).
+`lambda`'s rest parameter (`reference.html#lambda`) is written with `&` rather than a dotted tail: `(lambda (x & rest) ...)` (`src/scheme/syntax.grammar:147-153`).
 
 ### No macros
 
@@ -193,7 +193,7 @@ The derived forms Scamper does have -- `and`, `or`, `begin`, `cond`, `struct`, `
 
 This is the deepest difference in the document, because R7RS's own prose defines much of the language by macro-expansion, and a course that teaches `syntax-rules` has nothing to teach it with here.
 
-`define-record-type` is replaced by `struct` (`reference.html#struct`), which expands to a constructor, a predicate, and one accessor per field (`src/scheme/expansion.ts:250-278`):
+`define-record-type` is replaced by `struct` (`reference.html#struct`), which expands to a constructor, a predicate, and one accessor per field (`src/scheme/expansion.ts:265-293`):
 
 ~~~
 > (struct posn (x y))
@@ -219,7 +219,7 @@ Parser error [1:1-1:1]: Malformed syntax.
 Runtime error: Variable not found: `
 ~~~
 
-`'` is not even a character an identifier may contain -- the tokenizer treats it as a delimiter (`src/scheme/syntax.grammar:137`) -- so `'x` is a parse error rather than an unbound name.
+`'` is not even a character an identifier may contain -- the tokenizer treats it as a delimiter (`src/scheme/syntax.grammar:145`) -- so `'x` is a parse error rather than an unbound name.
 
 Lists are built with `list` and vectors with the `[...]` literal, which is why the language can do without quotation at all.
 **By design.**
@@ -264,7 +264,7 @@ Runtime error [1:1-1:12]: (modulo) modulo: division by zero
 ~~~
 
 **There is no radix syntax and no radix argument.**
-The number token is decimal only, with an optional sign and exponent (`src/scheme/syntax.grammar:113-118`), so `#x10` reads as an identifier, `1/2` reads as the two forms `1` and `/2`, and `+inf.0` is an unbound variable.
+The number token is decimal only, with an optional sign and exponent (`src/scheme/syntax.grammar:121-126`), so `#x10` reads as an identifier, `1/2` reads as the two forms `1` and `/2`, and `+inf.0` is an unbound variable.
 `number->string` and `string->number` take one argument each; the radix versions raise an arity error.
 **By design** for the literals; the radix argument is the surviving half of a stale TODO (see below).
 
@@ -457,7 +457,7 @@ R7RS's `define-library`, its `(scheme base)`-style library names, and its `impor
 Parser error [1:1-1:8]: Malformed import statement (a built-in library name, or a quoted file name).
 ~~~
 
-Scamper's module system is five statement forms (`reference.html#import`, `src/scheme/syntax.grammar:90`): `(import name)`, `(import "file.scm")`, `(import name alias)`, `(import "file.scm" alias)`, and `export` / `define-export`.
+Scamper's module system is five statement forms (`reference.html#import`, `src/scheme/syntax.grammar:98`): `(import name)`, `(import "file.scm")`, `(import name alias)`, `(import "file.scm" alias)`, and `export` / `define-export`.
 A one-argument `import` injects the module's exports into scope; a two-argument one binds them behind a qualified `alias.name` instead.
 A module exports only what its `export` statements list.
 See `docs/language.md` for the grammar; the built-in module names are the `.scm` files in `src/lib/`.
@@ -546,10 +546,10 @@ What is Clojure, each attributed in the source:
 + **Brackets are not interchangeable.**
   `(...)` is an application or special form, `[...]` a vector, `{...}` a map, and each means exactly one thing (`src/scheme/syntax.grammar:5-9`).
   This is why `[...]` can be the vector literal at all.
-+ **The map literal `{k1 v1 ...}`** -- "A Clojure-style map literal" (`:59`).
-+ **The anonymous function `#(...)`** with `%`/`%1`/`%2`/`%&` -- "A Clojure-style anonymous function" (`:70`, `src/scheme/ast.ts:231`, `src/scheme/anon-tokens.ts:4`).
++ **The map literal `{k1 v1 ...}`** -- "A Clojure-style map literal" (`:67`).
++ **The anonymous function `#(...)`** with `%`/`%1`/`%2`/`%&` -- "A Clojure-style anonymous function" (`:78`, `src/scheme/ast.ts:237`, `src/scheme/anon-tokens.ts:4`).
   Nesting is disallowed, matching Clojure (#605, settling issue #571).
-+ **The `&` rest-parameter marker** -- "Clojure-style" (`src/scheme/syntax.grammar:139-145`).
++ **The `&` rest-parameter marker** -- "Clojure-style" (`src/scheme/syntax.grammar:147-153`).
 + **The pair/cons split** -- "We follow Clojure's lead and distinguish between pairs and lists explicitly" (`src/lpm/lang.ts:586-588`), echoed at `src/js/prelude/index.ts`.
 
 ### From SRFI-1 and the ML family

@@ -623,6 +623,11 @@ export type Provenance =
   | 'or'
   | 'begin'
   | 'cond'
+  // Tags the innermost `if` of a `cond` that ends in an `[else ...]` clause --
+  // the one whose else-branch is that clause's body rather than the next clause
+  // or the fall-through error. Sugaring needs the two told apart, since an else
+  // body may itself be a `cond` (#639).
+  | 'cond-else'
   | 'anon-fn'
   // Tags the `(vector ...)` a vector literal `[...]` expands to, and the
   // `(##mkObj## ...)` a map literal `{...}` expands to, so sugaring recovers

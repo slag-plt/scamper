@@ -10,6 +10,10 @@ export const reservedWords = [
   'cond',
   'define',
   'define-export',
+  // `else` names a `cond`'s fall-through clause and nothing else. Reserved so
+  // that `(define else #f)` is a parse error where the mistake is, rather than
+  // a silent break of every later `cond` (#639).
+  'else',
   'export',
   'if',
   'import',

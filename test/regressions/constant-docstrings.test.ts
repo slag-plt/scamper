@@ -62,7 +62,6 @@ describe('a constant can say that it is one (#412)', () => {
   test.each([
     ['null', 'list?'],
     ['pi', 'number?'],
-    ['else', 'boolean?'],
     ['void', 'void?'],
   ])('%s documents as a constant, and renders as one', (name, pred) => {
     const doc = docFor(prelude, name)
