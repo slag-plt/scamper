@@ -32,6 +32,8 @@ Order does not matter within an entry. See docs/releasing.md.
 - substring now reports an error when its start or end is outside the string, or its start comes after its end, instead of quietly trimming the indices or swapping them.
 - char-upcase, char-downcase and char-foldcase now leave a character alone when its other case is more than one character, so (char-upcase #\ß) is #\ß rather than a two-letter character no other procedure understood.
 - max and min now require at least one number, so (max) reports a plain arity error at your own line instead of quietly answering -Infinity.
+- A character like #\zzz that names no character, or a string escape Scamper does not support, is now reported as an ordinary error pointing at it instead of stopping the program with no message.
+- A statement that produces nothing, such as vector-set!, no longer leaves an empty gap under it in the notebook view or in a reading.
 # 4.5.0
 
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.

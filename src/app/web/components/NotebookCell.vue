@@ -2,6 +2,7 @@
 import { nextTick, ref, watch } from 'vue'
 import type { Diagnostic } from '@codemirror/lint'
 import ValueRenderer from '../../../lpm/renderers/vue/ValueRenderer.vue'
+import { drawsNothing } from '../../../lpm/renderers'
 import CellEditor from './CellEditor.vue'
 import type { Value } from '../../../lpm'
 import type { CellChange, CellEditorHandle } from '../codemirror/cell-editor'
@@ -163,6 +164,21 @@ function stopEditingProse() {
   isEditing.value = false
 }
 
+/**
+ * Whether this cell has anything to put under its code.
+ *
+ * Not the same as having printed something: a void prints nothing at all
+ * (#612), so a cell whose only statement is `(vector-set! v 0 5)` would
+ * otherwise draw a padded region with nothing in it (#635). The values
+ * themselves are still all rendered, so a void beside a value keeps its place.
+ *
+ * A function rather than a computed: a run fills the array this reads in place
+ * (use-notebook's `outputOf`), so there is nothing for a cache to invalidate on.
+ */
+function hasOutput(): boolean {
+  return props.output.some((v) => !drawsNothing(v))
+}
+
 /** Up and down at the edges of a cell move to the next one, as a caret does. */
 function onHistory(direction: -1 | 1, handled: { value: boolean }) {
   handled.value = true
@@ -220,7 +236,7 @@ defineExpose({
 
     <!-- Under the code that produced it, which is the whole point of the
          view. A cell that printed nothing shows nothing. -->
-    <div v-if="output.length > 0" class="cell-output" role="log">
+    <div v-if="hasOutput()" class="cell-output" role="log">
       <div v-for="(value, i) in output" :key="i" class="cell-value">
         <ValueRenderer :value="value" />
       </div>
