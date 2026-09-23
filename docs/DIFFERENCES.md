@@ -446,7 +446,7 @@ It is a teaching decision -- a runaway recursion reports itself instead of hangi
 ~~~
 
 **By design.**
-The practical consequence is that a naively-written non-tail `map` or `length` over a large data set fails where R7RS would succeed, which is why the standard library writes its own folds with tail-recursive helpers (`src/lib/prelude.scm:878-903`).
+The practical consequence is that a naively-written non-tail `map` or `length` over a large data set fails where R7RS would succeed, which is why the standard library writes its own folds with tail-recursive helpers -- `map-onto`, `filter-onto` and `fold-right-onto` (`src/lib/prelude.scm`).
 
 ### The module system
 
