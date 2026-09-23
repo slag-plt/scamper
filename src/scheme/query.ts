@@ -180,29 +180,44 @@ function slotsOf(exp: A.Exp): Slot[] {
       ]
     }
 
-    case 'cond':
-      return exp.branches.flatMap((b, i) => [
-        {
-          exp: b.test,
-          rebuild: (r: A.Exp) =>
-            A.mkCond(
-              exp.branches.map((x, j) =>
-                j === i ? { test: r, body: x.body } : x,
+    case 'cond': {
+      const elseBody = exp.elseBody
+      return [
+        ...exp.branches.flatMap((b, i) => [
+          {
+            exp: b.test,
+            rebuild: (r: A.Exp) =>
+              A.mkCond(
+                exp.branches.map((x, j) =>
+                  j === i ? { test: r, body: x.body } : x,
+                ),
+                exp.range,
+                elseBody,
               ),
-              exp.range,
-            ),
-        },
-        {
-          exp: b.body,
-          rebuild: (r: A.Exp) =>
-            A.mkCond(
-              exp.branches.map((x, j) =>
-                j === i ? { test: x.test, body: r } : x,
+          },
+          {
+            exp: b.body,
+            rebuild: (r: A.Exp) =>
+              A.mkCond(
+                exp.branches.map((x, j) =>
+                  j === i ? { test: x.test, body: r } : x,
+                ),
+                exp.range,
+                elseBody,
               ),
-              exp.range,
-            ),
-        },
-      ])
+          },
+        ]),
+        ...(elseBody === undefined
+          ? []
+          : [
+              {
+                exp: elseBody,
+                rebuild: (r: A.Exp) =>
+                  A.mkCond(exp.branches, exp.range, r),
+              },
+            ]),
+      ]
+    }
 
     case 'match':
       return [

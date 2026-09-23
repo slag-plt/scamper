@@ -67,6 +67,7 @@ export interface Comment {
 //     | (and e1 ... ek)
 //     | (or e1 ... ek)
 //     | (cond [e11 e12] ... [e1k e2k])
+//     | (cond [e11 e12] ... [e1k e2k] [else e])
 //     | #(e1 ... ek)
 //
 // s ::= e
@@ -224,9 +225,14 @@ export interface Or extends Tagged, Node {
   tag: 'or'
   exps: Exp[]
 }
+// `elseBody` is the body of a final `[else ...]` clause, if the `cond` has one.
+// `else` is a reserved word, so the clause is a shape the grammar recognizes
+// rather than a branch whose test happens to be true (#639); a `cond` without
+// one still raises when no branch matches.
 export interface Cond extends Tagged, Node {
   tag: 'cond'
   branches: { test: Exp; body: Exp }[]
+  elseBody?: Exp
 }
 // A Clojure-style anonymous function `#(body)` -- the `#` marker followed by a
 // parenthesized expression. Expansion (expansion.ts) rewrites it to a `lambda`
@@ -468,7 +474,13 @@ export const mkOr = (exps: Exp[], range: L.Range = L.Range.none): Or => ({
 export const mkCond = (
   branches: { test: Exp; body: Exp }[],
   range: L.Range = L.Range.none,
-): Cond => ({ tag: 'cond', branches, range })
+  elseBody?: Exp,
+): Cond => ({
+  tag: 'cond',
+  branches,
+  range,
+  ...(elseBody !== undefined ? { elseBody } : {}),
+})
 export const mkAnonFn = (
   body: Exp,
   range: L.Range = L.Range.none,
@@ -862,12 +874,16 @@ function expLayout(e: Exp): Layout {
     case 'or':
       return special('or', e.exps.map(expToLayout))
     case 'cond':
-      return special(
-        'cond',
-        e.branches.map(({ test, body }) =>
+      return special('cond', [
+        ...e.branches.map(({ test, body }) =>
           clause([expToLayout(test), expToLayout(body)]),
         ),
-      )
+        // The fall-through clause is written `[else body]`, with the keyword
+        // where a test would go.
+        ...(e.elseBody === undefined
+          ? []
+          : [clause([tok('else'), expToLayout(e.elseBody)])]),
+      ])
     case 'anonfn':
       // #(body): "#" then the body's own parenthesized layout. An empty #()
       // (whose body parsed to the `null` literal) is rendered literally.
@@ -1070,7 +1086,13 @@ export function expEquals(e1: Exp, e2: Exp): boolean {
       e1.exps.every((exp, i) => expEquals(exp, e2.exps[i]))
     )
   } else if (e1.tag === 'cond' && e2.tag === 'cond') {
+    // A cond with an else clause is never equal to one without.
+    const else1 = e1.elseBody
+    const else2 = e2.elseBody
     return (
+      (else1 === undefined
+        ? else2 === undefined
+        : else2 !== undefined && expEquals(else1, else2)) &&
       e1.branches.length === e2.branches.length &&
       e1.branches.every(({ test }, i) =>
         expEquals(test, e2.branches[i].test),

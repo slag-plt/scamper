@@ -102,6 +102,7 @@ const GROUPING_NODES = new Set([
   'Bindings',
   'Binding',
   'CondClause',
+  'CondElseClause',
   'MatchClause',
 ])
 
@@ -138,7 +139,7 @@ const formDescriptions: Record<string, string> = {
   Lambda: 'lambda expression (a list of parameters and a body)',
   If: 'if expression (a guard, an if-branch, and an else-branch)',
   Let: 'let expression (a list of bindings and a body)',
-  Cond: 'cond expression (a list of [test body] branches)',
+  Cond: 'cond expression (a list of [test body] branches, optionally ending in [else body])',
   Match: 'match expression (a scrutinee and a list of [pattern body] branches)',
   And: 'and expression',
   Or: 'or expression',
@@ -643,11 +644,23 @@ function expFromNode(ctx: Ctx, node: SyntaxNode): A.Exp {
     }
 
     case 'Cond': {
-      const branches = cs.slice(1).map((c) => {
+      // The grammar allows at most one CondElseClause, and only last, so the
+      // else body is read off the final child when it is one.
+      const clauses = cs.slice(1)
+      const last = clauses.at(-1)
+      const elseClause = last?.type.name === 'CondElseClause' ? last : undefined
+      const branches = (
+        elseClause === undefined ? clauses : clauses.slice(0, -1)
+      ).map((c) => {
         const [test, body] = children(c)
         return { test: expFromNode(ctx, test), body: expFromNode(ctx, body) }
       })
-      return A.mkCond(branches, range)
+      // A CondElseClause's children are the `else` keyword and its body.
+      const elseBody =
+        elseClause === undefined
+          ? undefined
+          : expFromNode(ctx, children(elseClause)[1])
+      return A.mkCond(branches, range, elseBody)
     }
 
     case 'Match': {

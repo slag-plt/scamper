@@ -129,6 +129,7 @@ export const scamperIndentation = indentNodeProp.add({
   Bindings: alignToFirstItem,
   Binding: alignToFirstItem,
   CondClause: alignToFirstItem,
+  CondElseClause: alignToFirstItem,
   MatchClause: alignToFirstItem,
   ArgList: alignToFirstItem,
   FieldList: alignToFirstItem,

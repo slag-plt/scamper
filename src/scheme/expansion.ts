@@ -157,18 +157,33 @@ export function expandExpr(e: A.Exp): A.Exp {
       // ##error## is a runtime primitive (src/js/runtime), *not* the prelude's
       // `error`: a fall-through must raise whether or not the user happens to
       // have bound the name `error` (#336).
+      //
+      // A final [else ek] clause replaces that error with ek, so the chain
+      // cannot fall through at all. The `if` holding it is tagged 'cond-else'
+      // rather than 'cond' so sugaring can tell "my else-branch is the else
+      // clause's body" from "my else-branch is the rest of the chain".
       const branches = e.branches.map((c) => ({
         test: expandExpr(c.test),
         body: expandExpr(c.body),
       }))
-      let ret: A.Exp = A.mkApp(
-        A.mkId('##error##', e.range),
-        [A.mkLit('No matching clause in cond', e.range)],
-        e.range,
-        'cond',
-      )
+      const elseBody = e.elseBody
+      const hasElse = elseBody !== undefined
+      let ret: A.Exp = hasElse
+        ? expandExpr(elseBody)
+        : A.mkApp(
+            A.mkId('##error##', e.range),
+            [A.mkLit('No matching clause in cond', e.range)],
+            e.range,
+            'cond',
+          )
       for (let i = branches.length - 1; i >= 0; i--) {
-        ret = A.mkIf(branches[i].test, branches[i].body, ret, e.range, 'cond')
+        ret = A.mkIf(
+          branches[i].test,
+          branches[i].body,
+          ret,
+          e.range,
+          hasElse && i === branches.length - 1 ? 'cond-else' : 'cond',
+        )
       }
       return ret
     }

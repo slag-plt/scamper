@@ -9,7 +9,7 @@
 // was given up so the map literal could have it (issue #334).
 paren<content> { "(" content ")" }
 
-// N.B., these five are named (capitalized) rules rather than inlined ones so
+// N.B., these are named (capitalized) rules rather than inlined ones so
 // that Lezer emits a node for each. The indenter needs their extents: a node
 // carries its own brackets, so "align the next binding under the first" is just
 // a column read off the node, with no re-deriving of clause boundaries from
@@ -39,6 +39,14 @@ CondClause {
   "[" expression expression "]"
 }
 
+// A `cond`'s fall-through clause, `[else EXPR]`. `else` is a reserved word
+// (reserved-words.ts) rather than a variable bound to #t, and this is the only
+// place it may be written -- so `(define else #f)` is a parse error at the
+// define rather than a silent break of every later `cond` (issue #639).
+CondElseClause {
+  "[" kw<"else"> expression "]"
+}
+
 pattern {
   Number |
   Identifier |
@@ -66,7 +74,7 @@ expression {
   And { paren<kw<"and"> expression*> } |
   Or { paren<kw<"or"> expression*> } |
   Begin { paren<kw<"begin"> expression expression*> } |
-  Cond { paren<kw<"cond"> CondClause*> } |
+  Cond { paren<kw<"cond"> CondClause* CondElseClause?> } |
   // A Clojure-style anonymous function: the "#" marker followed by an ordinary
   // parenthesized expression, e.g. #(+ %1 1) or #(let ([x 1]) (+ x %)). Because
   // the body is a normal expression, any parenthesized form (application, let,
