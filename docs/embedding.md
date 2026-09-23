@@ -93,7 +93,7 @@ One widget's button sees its own definitions and reports its own errors, and sta
     Unlike `execute`, that does not supersede: the foreground run is left alone and each widget gets a run of its own (see `RunContext` in `src/scamper.ts`).
 +   A widget's run deliberately outlives its fiber, so its handlers keep working after its program has finished.
 +   `dist/scamper-embed.js` is a **second** build of that entry point (`vite.config.embed.ts`, run after the site build by `scripts/build`): one chunk, with the dynamic imports and every stylesheet folded in.
-    The site build emits the same entry as `assets/scamper-embed-<version>.js`, but as chunks shared with the IDE and with the CSS left to the page — which suits `embed.html`, sitting in the deployment beside them, and is unusable from a reading on another site.
+    The site build emits the same entry as `assets/scamper-transcript-demo-<version>.js`, but as chunks shared with the IDE and with the CSS left to the page — which suits `embed.html`, sitting in the deployment beside them, and is unusable from a reading on another site.
 +   `src/app/web/embed/embed.html` is a demonstration page and what the browser test drives.
     `npm run dev` serves it at `/embed.html`.
     It links the stylesheets and loads the entry point directly, so it exercises the widget rather than the bundle.
