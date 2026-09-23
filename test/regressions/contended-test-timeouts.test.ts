@@ -148,14 +148,18 @@ describe('#536: a test budget survives a loaded machine', () => {
         globalBudgetMs('testTimeout'),
         ...declaredBudgets(source).map((b) => b.limitMs),
       )
+      // Strictly greater, not equal: two equal budgets are the case #599 was
+      // filed about. The child's timeout has to fire *first* for its number to
+      // mean anything -- it is what turns a hung child into a reported failure
+      // -- and at equality which of the two fires is a race.
       for (const limit of childMs) {
         expect(
           budgetMs,
           `a child process is given ${limit.toString()}ms but the test around ` +
-            `it only has ${budgetMs.toString()}ms, so the child's budget can ` +
-            'never apply: the test dies first, and does so on any machine slow ' +
-            'enough to take the longer path',
-        ).toBeGreaterThanOrEqual(limit)
+            `it has only ${budgetMs.toString()}ms, so the child's budget can ` +
+            'never apply: the test dies first -- or, at equality, races it -- ' +
+            'on any machine slow enough to take the longer path',
+        ).toBeGreaterThan(limit)
       }
     },
   )
