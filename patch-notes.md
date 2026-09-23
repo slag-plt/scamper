@@ -27,6 +27,13 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.
+- string-ref now reports an error when given an index outside the string, instead of returning a nonsense character.
+- The number comparisons =, <, >, <= and >= now take any number of arguments, so (< 1 2 3) works the way it already did for characters and strings.
+- pixel-map now reports an error when the function you give it does not return a color, instead of quietly producing a blank canvas.
+- Stopping a program during an import now stops the imported file too, so it can no longer report an error after the run was cancelled.
+- Pressing stop while a program is loading an imported file now really stops it, instead of running that file and carrying on past the import.
+- A trace of a define now finishes at the value it binds, and a lambda shows as a step of its own instead of being skipped entirely.
 - Selecting text no longer hides the highlight on the line your selection ends on.
 - You can now ask whether a value is a function with function?, the same question procedure? answers, under the name the readings use.
 - The rex library is clearer at its edges: rex-none names the pattern that matches nothing and is what an empty rex-any-of or rex-char-set gives you, and rex-char-set now takes characters like ^ and - literally instead of as regular expression syntax.
