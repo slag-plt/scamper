@@ -1,6 +1,19 @@
 import * as LPM from '../lang.js'
+import { isVoid } from '../util.js'
 
 export type TypeTest    = (v: LPM.Value) => boolean
+
+/**
+ * Whether rendering `v` puts nothing at all on the page.
+ *
+ * Void is the one value it is true of: both web renderers draw it as an element
+ * taking up no space (#612). A surface that wraps a rendering in a container of
+ * its own asks this first, so a statement producing only void leaves no empty
+ * padded box behind (#635).
+ */
+export function drawsNothing (v: LPM.Value): boolean {
+  return isVoid(v)
+}
 
 /**
  * Renders a value. `col` is the column the rendering begins at, for the

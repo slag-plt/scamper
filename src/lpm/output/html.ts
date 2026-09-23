@@ -1,5 +1,6 @@
 import * as LPM from '..'
 import HtmlRenderer from '../renderers/html.js'
+import { drawsNothing } from '../renderers/index.js'
 import { OutputChannel, ErrorChannel } from './channel.js'
 
 // import hljs from 'highlight.js'
@@ -23,6 +24,10 @@ import { OutputChannel, ErrorChannel } from './channel.js'
 // }
 
 export function renderToOutput(output: HTMLElement, v: LPM.Value) {
+  // Nothing to show needs nothing to show it in. `.scamper-output` is a block a
+  // page gives spacing to, so wrapping a void would leave an empty gap in the
+  // transcript where the word `void` used to be (#635).
+  if (drawsNothing(v)) return
   const div = document.createElement('div')
   div.classList.add('scamper-output')
   div.appendChild(HtmlRenderer.render(v))

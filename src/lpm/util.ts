@@ -73,17 +73,22 @@ export const mkClosure = (
   // Closure.provenance.
 ): L.Closure => ({ [L.scamperTag]: 'closure', params, code, locals: env, call, name, restParam, origin, ...(home !== undefined ? { home } : {}), ...(modName !== undefined ? { modName } : {}), ...(provenance !== undefined ? { provenance } : {}) })
 /**
- * @param v the character's value: a non-empty string.
+ * @param v the character's value: a string of exactly one code point.
  * @throws ICE if `v` is not one. This is the only place a char is made, so the
  * check is what keeps a char from holding `undefined` and printing as
- * `#\undefined` (#613).
+ * `#\undefined` (#613), or a whole string and printing as `#\SS` (#646).
  */
 export const mkChar = (v: string): L.Char => {
   // N.B., the check is not the tautology the signature makes it look like: a
   // caller indexing a string out of range hands us `undefined` at runtime,
   // which is exactly what the type cannot see.
-  if (typeof v !== 'string' || v.length === 0) {
-    throw new ICE('mkChar', `expected a non-empty string, received ${v}`)
+  //
+  // Code points, not UTF-16 units: an astral character is one code point in
+  // two units, so spreading is what admits it while still turning away a value
+  // that is genuinely two characters, like `ß`'s uppercase "SS" (#646).
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread -- code points are exactly the unit wanted here
+  if (typeof v !== 'string' || [...v].length !== 1) {
+    throw new ICE('mkChar', `expected a single code point, received ${v}`)
   }
   return { [L.scamperTag]: 'char', value: v }
 }

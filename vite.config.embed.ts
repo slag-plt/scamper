@@ -2,7 +2,7 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
-import { AppVersion, sourcePlugins } from './vite.config'
+import { AppVersion, sourcePlugins } from './vite.config.ts'
 import { inlineCssPlugin } from './scripts/vite-plugin-inline-css.mjs'
 
 // The second half of `npm run build` (see `scripts/build`): the reading widget
@@ -33,7 +33,7 @@ export default defineConfig({
     // and inlineCssPlugin fails the build if one appears anyway.
     assetsInlineLimit: () => true,
     lib: {
-      entry: resolve(__dirname, 'src/app/web/embed/embed-entry.ts'),
+      entry: resolve(import.meta.dirname, 'src/app/web/embed/embed-entry.ts'),
       // An ES module because the entry awaits at the top level. A reading
       // includes it as <script type="module">, which also defers it.
       formats: ['es'],
@@ -52,8 +52,8 @@ export default defineConfig({
       // What embed.html links for itself, and what a reading would otherwise
       // have to. The Vue components' own styles follow, from the build.
       baseStyles: [
-        resolve(__dirname, 'public/css/scamper-highlight.css'),
-        resolve(__dirname, 'public/css/scamper-transcript.css'),
+        resolve(import.meta.dirname, 'public/css/scamper-highlight.css'),
+        resolve(import.meta.dirname, 'public/css/scamper-transcript.css'),
       ],
     }),
   ],

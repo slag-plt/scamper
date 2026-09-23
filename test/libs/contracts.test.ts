@@ -119,7 +119,16 @@ const ERROR_LINE = /^(?:Parser|Runtime|Docstring) error/
 // source to "error"; a native's own error carries the *function's* name as its
 // source instead. So the "(error)" prefix is what tells the two apart, and
 // these two patterns are the exact messages contract.ts generates.
-const CONTRACT_VIOLATION = /^Runtime error: \(error\) expected .+, received .+/
+//
+// The "as the Nth argument" clause is matched rather than stepped over: the
+// pattern that stood here ended at `expected .+, received .+`, which admitted
+// the message with or without a position -- so when #606 *added* the position
+// the positive controls below noticed nothing, the one event they exist to
+// catch. The ordinal stays `\w+` because describePosition falls back to "11th"
+// past "tenth" (src/scheme/contract.ts), and a new parameter is not a format
+// change.
+const CONTRACT_VIOLATION =
+  /^Runtime error: \(error\) expected .+ as the \w+ argument, received .+/
 const REST_VIOLATION =
   /^Runtime error: \(error\) expected every value of .+ to be .+, but at least one was not/
 // From runtime_checkArity ("at most N") and the closure arity check in
