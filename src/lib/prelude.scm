@@ -58,32 +58,42 @@
 ;;; @category math, comparator, typecheck, predicates, min, max, >=, >, <=, <, = 
 (define-export nan? (js-var "prelude_nanQ"))
 
-;;; (< & v1) -> boolean?
+;;; (< v1 v2 & v3) -> boolean?
 ;;;  v1 : number?
+;;;  v2 : number?
+;;;  v3 : number?
 ;;; Returns `#t` if and only `v1`, `v2`, ... are strictly increasing.
 ;;; @category math, comparator, min, max, nan?, >=, >, <=, =
 (define-export < (js-var "prelude_lt"))
 
-;;; (<= & v1) -> boolean?
+;;; (<= v1 v2 & v3) -> boolean?
 ;;;  v1 : number?
+;;;  v2 : number?
+;;;  v3 : number?
 ;;; Returns `#t` if and only `v1`, `v2`, ... are non-decreasing.
 ;;; @category math, comparator, min, max, nan?, >=, >, <, =
 (define-export <= (js-var "prelude_leq"))
 
-;;; (> & v1) -> boolean?
+;;; (> v1 v2 & v3) -> boolean?
 ;;;  v1 : number?
+;;;  v2 : number?
+;;;  v3 : number?
 ;;; Returns `#t` if and only `v1`, `v2`, ... are strictly decreasing.
 ;;; @category math, comparator, min, max, nan?, >=, <=, <, =
 (define-export > (js-var "prelude_gt"))
 
-;;; (>= & v1) -> boolean?
+;;; (>= v1 v2 & v3) -> boolean?
 ;;;  v1 : number?
+;;;  v2 : number?
+;;;  v3 : number?
 ;;; Returns `#t` if and only `v1`, `v2`, ... are non-increasing.
 ;;; @category math, comparator, min, max, nan?, >, <=, <, =
 (define-export >= (js-var "prelude_geq"))
 
-;;; (= & v1) -> boolean?
+;;; (= v1 v2 & v3) -> boolean?
 ;;;  v1 : number?
+;;;  v2 : number?
+;;;  v3 : number?
 ;;; Returns `#t` if and only `v1`, `v2`, ... are all equal.
 ;;; @category math, comparator, min, max, nan?, >=, >, <=, <
 (define-export = (js-var "prelude_eq"))
@@ -1464,62 +1474,82 @@
 ;;; @category list, list manipulation, association list
 (define-export cddddr (lambda (v) (cdr (cdr (cdr (cdr v))))))
 
-;;; (char=? & c1) -> boolean?
+;;; (char=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters.
 ;;; @category char, predicates, char>=?, char>?, char<=?, char<?
 (define-export char=? (js-var "prelude_char=?"))
 
-;;; (char<? & c1) -> boolean?
+;;; (char<? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values.
 ;;; @category char, predicates, char=?, char>=?, char>?, char<=?
 (define-export char<? (js-var "prelude_char<?"))
 
-;;; (char>? & c1) -> boolean?
+;;; (char>? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values.
 ;;; @category char, predicates, char=?, char>=?, char<=?, char<?
 (define-export char>? (js-var "prelude_char>?"))
 
-;;; (char<=? & c1) -> boolean?
+;;; (char<=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values.
 ;;; @category char, predicates, char=?, char>=?, char>?, char<?
 (define-export char<=? (js-var "prelude_char<=?"))
 
-;;; (char>=? & c1) -> boolean?
+;;; (char>=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values.
 ;;; @category char, predicates, char=?, char>?, char<=?, char<?
 (define-export char>=? (js-var "prelude_char>=?"))
 
-;;; (char-ci=? & c1) -> boolean?
+;;; (char-ci=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... are all equivalent characters, ignoring case.
 ;;; @category char, predicates, char-ci>=?, char-ci>?, char-ci<=?, char-ci<?
 (define-export char-ci=? (js-var "prelude_char-ci=?"))
 
-;;; (char-ci<? & c1) -> boolean?
+;;; (char-ci<? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly increasing character values, ignoring case.
 ;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci>?, char-ci<=?
 (define-export char-ci<? (js-var "prelude_char-ci<?"))
 
-;;; (char-ci>? & c1) -> boolean?
+;;; (char-ci>? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have strictly decreasing character values, ignoring case.
 ;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci<=?, char-ci<?
 (define-export char-ci>? (js-var "prelude_char-ci>?"))
 
-;;; (char-ci<=? & c1) -> boolean?
+;;; (char-ci<=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-decreasing character values, ignoring case.
 ;;; @category char, predicates, char-ci=?, char-ci>=?, char-ci>?, char-ci<?
 (define-export char-ci<=? (js-var "prelude_char-ci<=?"))
 
-;;; (char-ci>=? & c1) -> boolean?
+;;; (char-ci>=? c1 c2 & c3) -> boolean?
 ;;;  c1 : char?
+;;;  c2 : char?
+;;;  c3 : char?
 ;;; Returns `#t` if and only `c1`, `c2`, ... have non-increasing character values, ignoring case.
 ;;; @category char, predicates, char-ci=?, char-ci>?, char-ci<=?, char-ci<?
 (define-export char-ci>=? (js-var "prelude_char-ci>=?"))
@@ -1554,62 +1584,82 @@
 ;;; @category char, predicates, char-alphabetic?, char-numeric?, char-upper-case?, char-whitespace?
 (define-export char-lower-case? (js-var "prelude_char-lower-case?"))
 
-;;; (string=? & s1) -> boolean?
+;;; (string=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings.
 ;;; @category string, predicates, string>=?, string>?, string<=?, string<?, string-contains
 (define-export string=? (js-var "prelude_string=?"))
 
-;;; (string<? & s1) -> boolean?
+;;; (string<? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order.
 ;;; @category string, predicates, string=?, string>=?, string>?, string<=?, string-contains
 (define-export string<? (js-var "prelude_string<?"))
 
-;;; (string>? & s1) -> boolean?
+;;; (string>? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order.
 ;;; @category string, predicates, string=?, string>=?, string<=?, string<?, string-contains
 (define-export string>? (js-var "prelude_string>?"))
 
-;;; (string<=? & s1) -> boolean?
+;;; (string<=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order.
 ;;; @category string, predicates, string=?, string>=?, string>?, string<?, string-contains
 (define-export string<=? (js-var "prelude_string<=?"))
 
-;;; (string>=? & s1) -> boolean?
+;;; (string>=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order.
 ;;; @category string, predicates, string=?, string>?, string<=?, string<?, string-contains
 (define-export string>=? (js-var "prelude_string>=?"))
 
-;;; (string-ci=? & s1) -> boolean?
+;;; (string-ci=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are equivalent strings, ignoring case.
 ;;; @category string, predicates, string-ci>=?, string-ci>?, string-ci<=?, string-ci<?, string-contains
 (define-export string-ci=? (js-var "prelude_string-ci=?"))
 
-;;; (string-ci<? & s1) -> boolean?
+;;; (string-ci<? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically increasing order, ignoring case.
 ;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci>?, string-ci<=?, string-contains
 (define-export string-ci<? (js-var "prelude_string-ci<?"))
 
-;;; (string-ci>? & s1) -> boolean?
+;;; (string-ci>? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in strictly lexicographically decreasing order, ignoring case.
 ;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci<=?, string-ci<?, string-contains
 (define-export string-ci>? (js-var "prelude_string-ci>?"))
 
-;;; (string-ci<=? & s1) -> boolean?
+;;; (string-ci<=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in lexicographical order, ignoring case.
 ;;; @category string, predicates, string-ci=?, string-ci>=?, string-ci>?, string-ci<?, string-contains
 (define-export string-ci<=? (js-var "prelude_string-ci<=?"))
 
-;;; (string-ci>=? & s1) -> boolean?
+;;; (string-ci>=? s1 s2 & s3) -> boolean?
 ;;;  s1 : string?
+;;;  s2 : string?
+;;;  s3 : string?
 ;;; Returns `#t` if and only `s1`, `s2`, ... are in reverse lexicographical order, ignoring case.
 ;;; @category string, predicates, string-ci=?, string-ci>?, string-ci<=?, string-ci<?, string-contains
 (define-export string-ci>=? (js-var "prelude_string-ci>=?"))

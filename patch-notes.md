@@ -35,6 +35,7 @@ Order does not matter within an entry. See docs/releasing.md.
 - max and min now require at least one number, so (max) reports a plain arity error at your own line instead of quietly answering -Infinity.
 - A character like #\zzz that names no character, or a string escape Scamper does not support, is now reported as an ordinary error pointing at it instead of stopping the program with no message.
 - A statement that produces nothing, such as vector-set!, no longer leaves an empty gap under it in the notebook view or in a reading.
+- The comparisons =, <, >, <= and >= still take any number of arguments but now need at least two, as do the character and string comparisons, so (< x) reports an arity error instead of quietly answering #t.
 # 4.5.0
 
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.

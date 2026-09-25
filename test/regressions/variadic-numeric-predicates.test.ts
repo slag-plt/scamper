@@ -11,8 +11,11 @@ import { runProgram } from '../harness.js'
 //
 // The character and string comparisons named in the same issue were already
 // variadic; the fix makes the numeric five share their helper
-// (`pairwiseSatisfies`), so all three families now answer the same way,
-// including for fewer than two arguments.
+// (`pairwiseSatisfies`), so all three families now answer the same way.
+//
+// #614 also set the arity floor at 0, which #648 raised to 2 for all three
+// families; see variadic-comparisons-need-two-arguments.test.ts. Everything
+// below is about two arguments or more, which is unaffected.
 //
 // Scamper's numbers are IEEE doubles, so the report's two numeric caveats are
 // live here: any NaN argument makes every predicate `#f`, and inexact zero and
@@ -111,31 +114,17 @@ describe('inexact zero and inexact negative zero are not distinguished (#614)', 
   })
 })
 
-describe('fewer than two arguments is vacuously true (#614)', () => {
-  // The arity floor is 0, matching `char=?`/`string=?` (already variadic, and
-  // pinned at this answer by test/libs/prelude.test.ts) and `max`/`min`/`+`.
-  // `(< 1)` being #t is also what Racket, Chez, Guile, and MIT Scheme answer.
-  test('one argument', async () => {
-    expect(
-      await runProgram('(< 1) (<= 1) (> 1) (>= 1) (= 1) (< (sqrt -1))'),
-    ).toEqual(['#t', '#t', '#t', '#t', '#t', '#t'])
-  })
-
-  test('no arguments', async () => {
-    expect(await runProgram('(<) (<=) (>) (>=) (=)')).toEqual([
-      '#t',
-      '#t',
-      '#t',
-      '#t',
-      '#t',
-    ])
-  })
-
-  test('the char and string comparisons still agree', async () => {
+describe('the char and string comparisons answer the same way (#614)', () => {
+  // This block asserted that fewer than two arguments is vacuously true --
+  // `(< 1)`, `(<)`, `(char<? #\a)` and `(string<? "a")` were all `#t`, an
+  // arity floor of 0 shared by all three families. #648 raised the floor to 2,
+  // so those cases are now arity errors and live in the test named above; what
+  // remains here is the agreement across the families that #614 is about.
+  test('two arguments and more agree across the three families', async () => {
     expect(
       await runProgram(`
-      (char<? #\\a)
-      (string<? "a")
+      (char<? #\\a #\\b)
+      (string<? "a" "b")
       (char<? #\\a #\\b #\\c)
       (string<? "a" "b" "c")
       (char<? #\\a #\\c #\\b)
@@ -150,7 +139,7 @@ describe('the element contract still applies to every argument (#614)', () => {
     const stripRange = (msgs: string[]): string[] =>
       msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
     expect(stripRange(await runProgram('(< 1 2 "a")'))).toEqual([
-      'Runtime error [..]: (error) expected every value of v1 to be a number, but at least one was not',
+      'Runtime error [..]: (error) expected every value of v3 to be a number, but at least one was not',
     ])
   })
 })
