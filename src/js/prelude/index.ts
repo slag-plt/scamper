@@ -129,6 +129,13 @@ export function prelude_nanQ(x: L.Value): boolean {
 // library reaches are recorded as unguarded rather than guarded one by one.
 // test/regressions/library-native-bypass-surface.test.ts is what notices if
 // that ever stops being true.
+//
+// The re-narrowing is a *type* guard only; none of the five guards its arity
+// (#648). A short call cannot reach here: a student's goes through the
+// contract, which now demands two arguments, and the three library calls that
+// bypass it -- `(< beg end)` and `(> beg end)` in for-range, `(<= (length l) 1)`
+// in sort -- are literal two-argument sites. An arity guard would be code no
+// program can run.
 
 export function prelude_lt(...xs: L.Value[]): boolean {
   if (!xs.every(L.isNumber)) {
@@ -756,9 +763,10 @@ export function prelude_charQ(x: L.Value): boolean {
 /**
  * Whether every adjacent pair of `xs` satisfies `f` -- the shape every
  * comparison procedure in this library has, numeric, character, and string
- * alike. Fewer than two arguments is vacuously true, since there is no pair to
- * fail; that is the answer `(char=? #\a)` has always given, and the numeric
- * comparisons follow it rather than inventing a second convention.
+ * alike. Fewer than two arguments is vacuously true here, since there is no
+ * pair to fail, but no comparison can be *called* that way: each declares two
+ * arguments before its rest parameter, so its contract rejects a short call
+ * before this runs (#648).
  */
 function pairwiseSatisfies<T>(f: (a: T, b: T) => boolean, xs: T[]): boolean {
   if (xs.length <= 1) {

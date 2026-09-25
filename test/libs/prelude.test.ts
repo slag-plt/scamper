@@ -3033,9 +3033,14 @@ test('string->number-invalid', async () => {
 })
 
 test('char-compare-single-arg', async () => {
-  // N.B., a comparator applied to fewer than two arguments is vacuously true
-  // (exercises pairwiseSatisfies' length<=1 branch)
-  expect(await runProgram('(char=? #\\a)')).toEqual(['#t'])
+  // N.B., this asserted `#t` -- "vacuously true", exercising
+  // pairwiseSatisfies' length<=1 branch -- until #648. R7RS-small gives every
+  // comparison two arguments before the ellipsis, and a student who wrote
+  // `(char=? a)` for `(char=? a b)` got a silent `#t`, so the arity floor is
+  // now two and the vacuous branch is unreachable from a program.
+  expect(await runProgram('(char=? #\\a)')).toEqual([
+    'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
+  ])
 })
 
 test('list->string-non-char', async () => {
