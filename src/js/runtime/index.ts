@@ -108,8 +108,15 @@ export function runtime_voidQ (v: L.Value): boolean {
 /**
  * Each of the three functions a `struct` lowers to is named for its Scamper
  * spelling (`point`, `point?`, `point-x`), as every library native is by
- * Module.registerValue. They have no contract wrapper to lend them one, so
- * this name is what an error they raise is reported under (see applyFn).
+ * Module.registerValue.
+ *
+ * The two that can fail also *report* themselves under that spelling, setting
+ * the raised error's source rather than leaving applyFn to choose one. They
+ * have no contract wrapper to speak for them, so applyFn would otherwise name
+ * the enclosing library frame -- which for a higher-order call is an internal
+ * helper the student never wrote (`(map point-x ...)` blamed prelude's `apply`;
+ * #633). applyFn fills the source in only when the thrower left it unset, so
+ * naming themselves here carries through any depth of library frames.
  *
  * @returns a predicate function for struct types t.
  */
@@ -125,7 +132,7 @@ export function runtime_mkPredFn (t: string): (v: L.Value) => boolean {
 export function runtime_mkCtorFn (t: string, fieldNames: string[]): (...args: L.Value[]) => L.Struct {
   return L.nameFn(t, (...args: L.Value[]) => {
     if (args.length !== fieldNames.length) {
-      throw new L.ScamperError('Runtime', `Constructor ${t} expects ${fieldNames.length} arguments, received ${args.length}`)
+      throw new L.ScamperError('Runtime', `Constructor ${t} expects ${fieldNames.length} arguments, received ${args.length}`, undefined, undefined, t)
     }
     return L.mkStruct(t, fieldNames, args)
   })
@@ -135,14 +142,15 @@ export function runtime_mkCtorFn (t: string, fieldNames: string[]): (...args: L.
  * @return field accessor function for struct type t and field name f.
  */
 export function runtime_mkGetFn (t: string, f: string): (v: L.Value) => L.Value {
-  return L.nameFn(`${t}-${f}`, (v: L.Value) => {
+  const name = `${t}-${f}`
+  return L.nameFn(name, (v: L.Value) => {
     if (L.isStructKind(v, t)) {
       if (!(f in v)) {
-        throw new L.ScamperError('Runtime', `Accessor expects field ${f} but it is not present in the given struct value`)
+        throw new L.ScamperError('Runtime', `Accessor expects field ${f} but it is not present in the given struct value`, undefined, undefined, name)
       }
       return v[f]
     } else {
-      throw new L.ScamperError('Runtime', `Accessor function expects a ${t}, received ${L.typeOf(v)}`)
+      throw new L.ScamperError('Runtime', `Accessor function expects a ${t}, received ${L.typeOf(v)}`, undefined, undefined, name)
     }
   })
 }
