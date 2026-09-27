@@ -110,10 +110,10 @@ describe('two arguments and more still work (#648)', () => {
     // now, so a non-number there is named by position rather than as one of
     // the rest list. The third argument on is still the rest list.
     expect(await run('(< 1 "a")')).toEqual([
-      'Runtime error: (error) expected a number as the second argument, received string',
+      'Runtime error: (<) expected a number as the second argument, received string',
     ])
     expect(await run('(< 1 2 "a")')).toEqual([
-      'Runtime error: (error) expected every value of v3 to be a number, but at least one was not',
+      'Runtime error: (<) expected every value of v3 to be a number, but at least one was not',
     ])
   })
 

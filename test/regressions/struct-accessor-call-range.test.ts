@@ -61,14 +61,12 @@ describe('#592: a struct accessor is blamed at its own call', () => {
 
   test('an accessor a library function calls is still blamed on the student', async () => {
     // `map` is library code, so the call it makes has no site in the student's
-    // program and the range stays their own `(map ...)`. The name reported is
-    // the library frame's, which is how a contracted native gets its Scamper
-    // spelling instead of the raw `prelude_*` identifier behind its wrapper --
-    // `apply` here is prelude's own helper, which is its own (smaller) wart.
+    // program and the range stays their own `(map ...)`. The accessor names
+    // itself, so the enclosing library frame is not consulted for one (#633).
     expect(
       await runProgram('(struct point (x y))\n(map point-x (list 1 2))'),
     ).toEqual([
-      'Runtime error [2:1-2:24]: (apply) Accessor function expects a point, received number',
+      'Runtime error [2:1-2:24]: (point-x) Accessor function expects a point, received number',
     ])
   })
 })

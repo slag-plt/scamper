@@ -185,11 +185,17 @@ function mkTargetCall(
  * including on a one-parameter function, where there is nothing to
  * disambiguate. One rule with no exception to explain was judged worth the
  * four extra words on `(car 5)`.
+ *
+ * `fnName` is the documented definition's own name, passed to `##error##` as
+ * the party to blame so the failure reads `(car) expected ...` rather than
+ * `(error) expected ...` (#633). It is the procedure whose promise was broken,
+ * and the one name in the message a student can go and look up.
  */
 function mkCheckChain(
   params: Param[],
   optParams: Param[],
   restParam: Param | undefined,
+  fnName: string,
   range: Range,
 ): A.Exp {
   const targetCall = mkTargetCall([...params, ...optParams], restParam, range)
@@ -206,7 +212,10 @@ function mkCheckChain(
         targetCall,
         A.mkApp(
           A.mkId('##error##', range),
-          [mkRestErrorMsg(describePred(restParam.predicate), restParam.name, range)],
+          [
+            mkRestErrorMsg(describePred(restParam.predicate), restParam.name, range),
+            A.mkLit(fnName, range),
+          ],
           range,
         ),
         range,
@@ -230,7 +239,10 @@ function mkCheckChain(
           rest(next),
           A.mkApp(
             A.mkId('##error##', range),
-            [mkErrorMsg(describePred(predicate), name, positionOf(params.length + i), range)],
+            [
+              mkErrorMsg(describePred(predicate), name, positionOf(params.length + i), range),
+              A.mkLit(fnName, range),
+            ],
             range,
           ),
           range,
@@ -248,7 +260,10 @@ function mkCheckChain(
       checkAt(i + 1),
       A.mkApp(
         A.mkId('##error##', range),
-        [mkErrorMsg(describePred(predicate), name, positionOf(i), range)],
+        [
+          mkErrorMsg(describePred(predicate), name, positionOf(i), range),
+          A.mkLit(fnName, range),
+        ],
         range,
       ),
       range,
@@ -433,7 +448,13 @@ export function contractStmt(
   if (!isContracted(doc)) {
     return s
   }
-  const checks = mkCheckChain(doc.params, doc.optParams, doc.restParam, s.range)
+  const checks = mkCheckChain(
+    doc.params,
+    doc.optParams,
+    doc.restParam,
+    s.name.name,
+    s.range,
+  )
   // With optional parameters the wrapper's own rest parameter is what collects
   // them, so the declared rest parameter (if any) is bound from what is left
   // rather than by the lambda itself.

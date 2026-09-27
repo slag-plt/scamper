@@ -40,7 +40,7 @@ describe('integer->char rejects code points outside Unicode (#644)', () => {
 
   test('a non-integer is still caught by the contract', async () => {
     expect(stripRange(await runProgram('(integer->char 1.5)'))).toEqual([
-      'Runtime error [..]: (error) expected an integer as the first argument, received floating point number',
+      'Runtime error [..]: (integer->char) expected an integer as the first argument, received floating point number',
     ])
   })
 })

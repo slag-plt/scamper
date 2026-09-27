@@ -66,13 +66,13 @@ describe('#476: contract checks a student can reach are kept', () => {
     // call that reaches it is `map`'s. Skipping it here raised a raw
     // "Cannot read properties of undefined" from the Javascript primitive.
     expect(await runProgram('(map char-upcase (list "h" "e"))')).toEqual([
-      'Runtime error [1:1-1:32]: (error) expected a char as the first argument, received string',
+      'Runtime error [1:1-1:32]: (char-upcase) expected a char as the first argument, received string',
     ])
   })
 
   test('a direct call to a builtin still reports its own contract', async () => {
     expect(await runProgram('(car 5)')).toEqual([
-      'Runtime error [1:1-1:7]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [1:1-1:7]: (car) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 
@@ -139,7 +139,7 @@ describe('#476: an imported file is the student\'s own code', () => {
       // The range is the `(char-upcase c)` in helpers.scm -- their file, and
       // their mistake -- and it says so, since those coordinates mean nothing
       // in the file they are looking at (#557).
-      'Runtime error [helpers.scm 1:34-1:48]: (error) expected a char as the first argument, received string',
+      'Runtime error [helpers.scm 1:34-1:48]: (char-upcase) expected a char as the first argument, received string',
     ])
   })
 })

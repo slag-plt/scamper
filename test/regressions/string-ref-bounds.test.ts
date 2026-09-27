@@ -47,7 +47,7 @@ describe('string-ref rejects out-of-bounds indices cleanly (#613)', () => {
 
   test('non-integer index still caught by the integer? contract', async () => {
     expect(stripRange(await runProgram('(string-ref "hello" 1.5)'))).toEqual([
-      'Runtime error [..]: (error) expected an integer as the second argument, received floating point number',
+      'Runtime error [..]: (string-ref) expected an integer as the second argument, received floating point number',
     ])
   })
 

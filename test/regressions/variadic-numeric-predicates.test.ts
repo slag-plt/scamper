@@ -139,7 +139,7 @@ describe('the element contract still applies to every argument (#614)', () => {
     const stripRange = (msgs: string[]): string[] =>
       msgs.map((m) => m.replace(/\[\d+:\d+-\d+:\d+\]/, '[..]'))
     expect(stripRange(await runProgram('(< 1 2 "a")'))).toEqual([
-      'Runtime error [..]: (error) expected every value of v3 to be a number, but at least one was not',
+      'Runtime error [..]: (<) expected every value of v3 to be a number, but at least one was not',
     ])
   })
 })

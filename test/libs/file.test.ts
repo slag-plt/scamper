@@ -205,11 +205,11 @@ describe('argument contracts', () => {
 (lines->file (list "a") 5)
 `),
     ).toEqual([
-      'Runtime error: (error) expected a string as the first argument, received number',
-      'Runtime error: (error) expected a string as the first argument, received number',
-      'Runtime error: (error) expected a string as the first argument, received number',
-      'Runtime error: (error) expected a string as the second argument, received number',
-      'Runtime error: (error) expected a string as the second argument, received number',
+      'Runtime error: (file-exists?) expected a string as the first argument, received number',
+      'Runtime error: (file->string) expected a string as the first argument, received number',
+      'Runtime error: (file->lines) expected a string as the first argument, received number',
+      'Runtime error: (string->file) expected a string as the second argument, received number',
+      'Runtime error: (lines->file) expected a string as the second argument, received number',
     ])
   })
 
@@ -221,8 +221,8 @@ describe('argument contracts', () => {
 (lines->file "not a list" "out.txt")
 `),
     ).toEqual([
-      'Runtime error: (error) expected a string as the first argument, received number',
-      'Runtime error: (error) expected a list as the first argument, received string',
+      'Runtime error: (string->file) expected a string as the first argument, received number',
+      'Runtime error: (lines->file) expected a list as the first argument, received string',
     ])
   })
 })

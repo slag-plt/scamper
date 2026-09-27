@@ -159,8 +159,10 @@ export function applyFn(
         // reached as `##contract-target##` and still carries its raw Javascript
         // identifier (`prelude_vectorRef`), where the frame carries the
         // Scamper spelling the student wrote. Not every named library frame is
-        // a wrapper, so a library helper can name itself instead of the native
-        // -- prelude's own `apply` does; see struct-accessor-call-range.test.ts.
+        // a wrapper, so this rule would name a library helper rather than the
+        // native -- which is why a bare native with no wrapper to speak for it
+        // names itself instead (#633), leaving the rule to the wrapped natives
+        // it was written for.
         e.range ??= siteRange
         e.modName ??= siteModName
         e.source ??=

@@ -139,7 +139,7 @@ describe('#553: the bypass mechanism itself', () => {
     // The student's own call: the `vector?` contract turns it away, naming the
     // argument's position. Unchanged by this work.
     expect(await runAsOrigin('(vector-length "abc")', 'user')).toEqual([
-      'Runtime error [1:1-1:21]: (error) expected a vector as the first argument, received string',
+      'Runtime error [1:1-1:21]: (vector-length) expected a vector as the first argument, received string',
     ])
     // The same call made from library code skips that check entirely. It
     // answered `3` before this fix -- a wrong value, silently. Now the native's
@@ -159,10 +159,10 @@ describe('#553: the bypass mechanism itself', () => {
   // mistaken for the one they read.
   test('a math guard does not change what a student sees', async () => {
     expect(await runProgram('(sqrt "a")')).toEqual([
-      'Runtime error [1:1-1:10]: (error) expected a number as the first argument, received string',
+      'Runtime error [1:1-1:10]: (sqrt) expected a number as the first argument, received string',
     ])
     expect(await runProgram('(expt "a" 2)')).toEqual([
-      'Runtime error [1:1-1:12]: (error) expected a number as the first argument, received string',
+      'Runtime error [1:1-1:12]: (expt) expected a number as the first argument, received string',
     ])
   })
 })

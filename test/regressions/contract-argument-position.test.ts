@@ -25,10 +25,10 @@ describe('a contract names which argument was at fault (#606)', () => {
         '(quotient 5.5 2)\n(remainder 5.5 4)\n(quotient 5 1.5)\n(remainder 5 1.5)',
       ),
     ).toEqual([
-      'Runtime error [1:1-1:16]: (error) expected an integer as the first argument, received floating point number',
-      'Runtime error [2:1-2:17]: (error) expected an integer as the first argument, received floating point number',
-      'Runtime error [3:1-3:16]: (error) expected an integer as the second argument, received floating point number',
-      'Runtime error [4:1-4:17]: (error) expected an integer as the second argument, received floating point number',
+      'Runtime error [1:1-1:16]: (quotient) expected an integer as the first argument, received floating point number',
+      'Runtime error [2:1-2:17]: (remainder) expected an integer as the first argument, received floating point number',
+      'Runtime error [3:1-3:16]: (quotient) expected an integer as the second argument, received floating point number',
+      'Runtime error [4:1-4:17]: (remainder) expected an integer as the second argument, received floating point number',
     ])
   })
 
@@ -38,8 +38,8 @@ describe('a contract names which argument was at fault (#606)', () => {
     expect(
       await runProgram('(string-split "a,b" 2)\n(substring "hello" 0 1.5)'),
     ).toEqual([
-      'Runtime error [1:1-1:22]: (error) expected a string as the second argument, received number',
-      'Runtime error [2:1-2:25]: (error) expected an integer as the third argument, received floating point number',
+      'Runtime error [1:1-1:22]: (string-split) expected a string as the second argument, received number',
+      'Runtime error [2:1-2:25]: (substring) expected an integer as the third argument, received floating point number',
     ])
   })
 
@@ -47,8 +47,8 @@ describe('a contract names which argument was at fault (#606)', () => {
     // Uniform: a unary signature has nothing to disambiguate, but saying so
     // costs one phrase and spares the reader a rule with an exception in it.
     expect(await runProgram('(car 5)\n(string-length 5)')).toEqual([
-      'Runtime error [1:1-1:7]: (error) expected pair or nonempty-list as the first argument, received number',
-      'Runtime error [2:1-2:17]: (error) expected a string as the first argument, received number',
+      'Runtime error [1:1-1:7]: (car) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [2:1-2:17]: (string-length) expected a string as the first argument, received number',
     ])
   })
 })
@@ -76,7 +76,7 @@ describe('typeOf distinguishes a whole number from a float (#606)', () => {
     // Every backend renders a type name through the same `typeOf`, so the
     // wording cannot drift between one message and another.
     expect(await runProgram('(vector-ref (vector 1 2) 0.5)')).toEqual([
-      'Runtime error [1:1-1:29]: (error) expected an integer as the second argument, received floating point number',
+      'Runtime error [1:1-1:29]: (vector-ref) expected an integer as the second argument, received floating point number',
     ])
   })
 
