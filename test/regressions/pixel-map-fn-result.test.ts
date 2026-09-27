@@ -38,7 +38,7 @@ describe('pixel-map checks what fn returns (#553)', () => {
 (pixels->canvas (vector 5 5 5 5) 2 2)
 `),
     ).toEqual([
-      'Runtime error [2:1-2:37]: (error) expected a pixels as the first argument, received vector',
+      'Runtime error [2:1-2:37]: (pixels->canvas) expected a pixels as the first argument, received vector',
     ])
   })
 

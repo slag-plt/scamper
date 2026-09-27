@@ -22,31 +22,40 @@ import { runProgram } from '../harness.js'
 // nothing these tests are about.
 
 /**
- * A wrong argument, and the contract error it should now produce. One per
- * family: the two `with-*-options` takers of an association list, a fixed
- * `labels` list, the variadic `plot-*` rest parameter, and the `dataset-*`
- * data list.
+ * A wrong argument, the procedure the contract should blame, and the message it
+ * should produce. One per family: the two `with-*-options` takers of an
+ * association list, a fixed `labels` list, the variadic `plot-*` rest
+ * parameter, and the `dataset-*` data list.
  */
-const REJECTED: [label: string, program: string, message: string][] = [
+const REJECTED: [
+  label: string,
+  program: string,
+  blame: string,
+  message: string,
+][] = [
   // The issue's own program.
   [
     'dataset-bar given a number',
     '(dataset-bar "t" 5)',
+    'dataset-bar',
     'expected a list as the second argument, received number',
   ],
   [
     'dataset-line given a string',
     '(dataset-line "t" "nope")',
+    'dataset-line',
     'expected a list as the second argument, received string',
   ],
   [
     'dataset-bubble given a vector',
     '(dataset-bubble "t" (vector 1 2 3))',
+    'dataset-bubble',
     'expected a list as the second argument, received vector',
   ],
   [
     'dataset-pie given a boolean',
     '(dataset-pie "t" #t)',
+    'dataset-pie',
     'expected a list as the second argument, received boolean',
   ],
   // The rest parameter is checked per *argument*, not against the collected
@@ -60,36 +69,41 @@ const REJECTED: [label: string, program: string, message: string][] = [
   [
     'plot-linear given a non-dataset',
     '(plot-linear 5)',
+    'plot-linear',
     'expected every value of datasets to be a dataset, but at least one was not',
   ],
   [
     'plot-radial given a non-dataset',
     '(plot-radial (list "a") "not-a-dataset")',
+    'plot-radial',
     'expected every value of datasets to be a dataset, but at least one was not',
   ],
   // A fixed parameter ahead of a rest parameter is checked first.
   [
     'plot-category given non-list labels',
     '(plot-category 5 (dataset-bar "c" (list 1 2)))',
+    'plot-category',
     'expected a list as the first argument, received number',
   ],
   [
     'with-plot-options given non-list options',
     '(with-plot-options 5 (plot-linear (dataset-line "xs" (list (pair 1 1)))))',
+    'with-plot-options',
     'expected a list as the first argument, received number',
   ],
   [
     'with-dataset-options given non-list options',
     '(with-dataset-options "border-color" (dataset-bar "c" (list 1 2)))',
+    'with-dataset-options',
     'expected a list as the first argument, received string',
   ],
 ]
 
 describe('#589: data.scm turns away a wrong argument through its contract', () => {
-  test.each(REJECTED)('%s', async (_label, program, message) => {
+  test.each(REJECTED)('%s', async (_label, program, blame, message) => {
     expect(
       await runProgram(`(import data)\n${program}`, { stripRanges: true }),
-    ).toEqual([`Runtime error: (error) ${message}`])
+    ).toEqual([`Runtime error: (${blame}) ${message}`])
   })
 
   test('no raw Javascript error reaches the student', async () => {

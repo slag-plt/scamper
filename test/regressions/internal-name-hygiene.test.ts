@@ -157,11 +157,14 @@ describe('the injected error primitive cannot be shadowed', () => {
   })
 
   test('a contract violation still raises when `error` is bound', async () => {
+    // The check names the procedure it guards rather than `error` (#633), but
+    // the binding above still cannot reach it: what would leak here is the
+    // internal `(##error##)` spelling, or no raise at all.
     expect(await runProgram('(define error 5)\n(list-ref 1 2)')).toEqual([
-      'Runtime error [2:1-2:14]: (error) expected a list as the first argument, received number',
+      'Runtime error [2:1-2:14]: (list-ref) expected a list as the first argument, received number',
     ])
     expect(await runProgram('(define error 5)\n(+ 1 "a")')).toEqual([
-      'Runtime error [2:1-2:9]: (error) expected every value of v1 to be a number, but at least one was not',
+      'Runtime error [2:1-2:9]: (+) expected every value of v1 to be a number, but at least one was not',
     ])
   })
 

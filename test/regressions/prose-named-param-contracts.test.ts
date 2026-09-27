@@ -59,7 +59,7 @@ describe('#590: any-of and all-of take procedures', () => {
     '%s rejects a non-procedure at the call that supplied it',
     async (name) => {
       expect(await report(`(${name} 5)`)).toEqual([
-        'Runtime error: (error) expected every value of f1 to be a procedure, but at least one was not',
+        `Runtime error: (${name}) expected every value of f1 to be a procedure, but at least one was not`,
       ])
     },
   )
@@ -75,7 +75,7 @@ describe('#590: any-of and all-of take procedures', () => {
       // the next statement". What matters is the first line.
       const out = await report(`(define p (${name} 5))\n(p 1)`)
       expect(out[0]).toBe(
-        'Runtime error: (error) expected every value of f1 to be a procedure, but at least one was not',
+        `Runtime error: (${name}) expected every value of f1 to be a procedure, but at least one was not`,
       )
       expect(out.join('\n')).not.toContain('Not a function or closure')
     },
@@ -98,7 +98,7 @@ describe('#590: on-timer takes an integer', () => {
   // The worst of the four: this was accepted without a word.
   test('a string is refused rather than silently taken', async () => {
     expect(await report('(import reactive)\n(on-timer "hi")')).toEqual([
-      'Runtime error: (error) expected an integer as the first argument, received string',
+      'Runtime error: (on-timer) expected an integer as the first argument, received string',
     ])
   })
 
@@ -120,7 +120,7 @@ describe('#590: tag-set-children! takes elements', () => {
     expect(
       await report('(import html)\n(tag-set-children! "div" (tag "span"))'),
     ).toEqual([
-      'Runtime error: (error) expected an element as the first argument, received string',
+      'Runtime error: (tag-set-children!) expected an element as the first argument, received string',
     ])
   })
 
@@ -128,7 +128,7 @@ describe('#590: tag-set-children! takes elements', () => {
     expect(
       await report('(import html)\n(tag-set-children! (tag "div") "kid")'),
     ).toEqual([
-      'Runtime error: (error) expected every value of c to be an element, but at least one was not',
+      'Runtime error: (tag-set-children!) expected every value of c to be an element, but at least one was not',
     ])
   })
 

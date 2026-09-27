@@ -21,21 +21,29 @@ export function runtime_report (value: L.Value): L.Value {
  *
  * A separate function object from prelude_error, not an alias: Module
  * .registerValue renames whatever it binds, so sharing one object would
- * rename the prelude's `error` too. The reported source is fixed to "error"
- * either way, so a violation still reads `(error) ...` rather than leaking the
- * internal spelling.
+ * rename the prelude's `error` too.
+ *
+ * @param blame the procedure whose promise was broken, reported in place of
+ *        `error`. A contract check passes the name of the definition it guards,
+ *        so a violation reads `(not) expected a boolean ...` rather than naming
+ *        the mechanism (#633). Omitted by a raise that has no such owner -- a
+ *        `cond` fall-through, and the prelude's own `error` -- which reports
+ *        `error`. That default is what keeps the internal `##error##` spelling
+ *        out of a student's error even when they have bound `error` themselves;
+ *        see test/regressions/internal-name-hygiene.test.ts.
  */
-export const runtime_error: L.JsFunction = L.nameFn('error', (msg: L.Value): L.Value => {
+export const runtime_error: L.JsFunction = L.nameFn('error', (msg: L.Value, blame?: L.Value): L.Value => {
+  const source = typeof blame === 'string' ? blame : 'error'
   if (typeof msg !== 'string') {
     throw new L.ScamperError(
       'Runtime',
       `expected a string, received ${L.typeOf(msg)}`,
       undefined,
       undefined,
-      'error',
+      source,
     )
   }
-  throw new L.ScamperError('Runtime', msg, undefined, undefined, 'error')
+  throw new L.ScamperError('Runtime', msg, undefined, undefined, source)
 })
 
 /**

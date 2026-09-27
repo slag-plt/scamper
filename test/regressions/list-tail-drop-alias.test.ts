@@ -38,8 +38,8 @@ describe('list-tail and list-drop are one procedure (#649)', () => {
 (list-tail 5 1)
 (list-drop 5 1)
 `, { stripRanges: true })).toEqual([
-      'Runtime error: (error) expected a list as the first argument, received number',
-      'Runtime error: (error) expected a list as the first argument, received number',
+      'Runtime error: (list-tail) expected a list as the first argument, received number',
+      'Runtime error: (list-drop) expected a list as the first argument, received number',
     ])
   })
 

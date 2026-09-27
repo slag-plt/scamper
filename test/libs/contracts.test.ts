@@ -115,10 +115,16 @@ const ZERO_REST_BROKEN = new Map<string, string>()
 // libs harness strips ranges), then the message.
 const ERROR_LINE = /^(?:Parser|Runtime|Docstring) error/
 
-// A contract violation goes through ##error## (runtime_error), which pins its
-// source to "error"; a native's own error carries the *function's* name as its
-// source instead. So the "(error)" prefix is what tells the two apart, and
-// these two patterns are the exact messages contract.ts generates.
+// The *message* is what tells a contract violation from a native's own error:
+// these two patterns are the exact messages contract.ts generates, and nothing
+// else in src/ produces either phrasing.
+//
+// The source used to carry that job -- a violation went through ##error##,
+// which pinned its source to "error", where a native's error carried the
+// function's name. Since #633 a check names the procedure it guards, so both
+// read `(abs) ...` and the prefix no longer discriminates. Hence `\([^)]+\)`:
+// the source is matched but not relied on, and the negative control below still
+// fails all three patterns on its message alone.
 //
 // The "as the Nth argument" clause is matched rather than stepped over: the
 // pattern that stood here ended at `expected .+, received .+`, which admitted
@@ -128,9 +134,9 @@ const ERROR_LINE = /^(?:Parser|Runtime|Docstring) error/
 // past "tenth" (src/scheme/contract.ts), and a new parameter is not a format
 // change.
 const CONTRACT_VIOLATION =
-  /^Runtime error: \(error\) expected .+ as the \w+ argument, received .+/
+  /^Runtime error: \([^)]+\) expected .+ as the \w+ argument, received .+/
 const REST_VIOLATION =
-  /^Runtime error: \(error\) expected every value of .+ to be .+, but at least one was not/
+  /^Runtime error: \([^)]+\) expected every value of .+ to be .+, but at least one was not/
 // From runtime_checkArity ("at most N") and the closure arity check in
 // op-handlers.ts (exactly N).
 const ARITY_VIOLATION =
@@ -164,9 +170,12 @@ describe('the contract discriminator matches what the machine emits', () => {
 
   test("a native's own error is not a contract failure", async () => {
     // Chosen because it is the same shape a contract violation takes -- a
-    // rejected argument -- but reported by the function itself, so its source
-    // is `(/)` rather than `(error)`. If the patterns ever widened to catch
-    // this, tier 1 would start blaming the library for its own type checks.
+    // rejected argument -- but reported by the function itself, in its own
+    // words: "/: division by zero" matches none of the three message formats
+    // contract.ts generates. Its source is `(/)` either way, which since #633
+    // is what a contract failure here would say too, so the message is the
+    // whole of the distinction. If the patterns ever widened to catch this,
+    // tier 1 would start blaming the library for its own type checks.
     // `/` rather than `cons`, which used to stand here: narrowing `cons`'s
     // docstring (#541) moved its error inside the contract wrapper. `0` is a
     // number, so `/`'s truthful `v2 : number?` admits it and only the native

@@ -172,12 +172,12 @@ describe('End-to-end cases', () => {
 
 (+ 1 2 3 "bye")
 `, [
-      'Runtime error: (error) expected a string as the first argument, received list',
+      'Runtime error: (string-length) expected a string as the first argument, received list',
       // N.B., "+" is documented as a rest param (`. v1`), so its contract
       // check is a single all-satisfy? over the whole argument list rather
       // than a per-argument check -- it can report that *some* argument
       // failed, not *which one*.
-      'Runtime error: (error) expected every value of v1 to be a number, but at least one was not',
+      'Runtime error: (+) expected every value of v1 to be a number, but at least one was not',
     ], true)
   })
 
@@ -943,7 +943,7 @@ describe('Construct semantics (comprehensiveness audit)', () => {
     // wrapper, so no library call reaches the contract at all.
     test('apply with a non-list argument is a runtime error', async () => {
       await checkMachineOutput('(apply + 5)',
-        ['Runtime error: (error) expected a list as the second argument, received number'], true)
+        ['Runtime error: (apply) expected a list as the second argument, received number'], true)
     })
 
     // apply is now an ordinary first-class procedure (not a special form): it

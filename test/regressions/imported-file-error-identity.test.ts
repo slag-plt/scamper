@@ -60,7 +60,7 @@ describe('an error in an imported file says which file (#557)', () => {
     expect(await runProgram(MAIN)).toEqual([
       'Runtime error [m.scm 2:22-2:31]: let: value did not match pattern (pair x y)',
       'Runtime error [m.scm 4:15-4:34]: Inexhaustive pattern match failure',
-      'Runtime error [m.scm 6:15-6:21]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [m.scm 6:15-6:21]: (car) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 
@@ -75,7 +75,7 @@ describe('an error in an imported file says which file (#557)', () => {
     ).toEqual([
       'Runtime error [1:8-1:17]: let: value did not match pattern (pair x y)',
       'Runtime error [2:1-2:20]: Inexhaustive pattern match failure',
-      'Runtime error [3:1-3:7]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [3:1-3:7]: (car) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 
@@ -97,7 +97,7 @@ describe('an error in an imported file says which file (#557)', () => {
     expect(
       await runProgram('(import "m.scm")\n(twice (lambda (n) (car n)) 5)'),
     ).toEqual([
-      'Runtime error [2:20-2:26]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [2:20-2:26]: (car) expected pair or nonempty-list as the first argument, received number',
     ])
   })
 
@@ -109,7 +109,7 @@ describe('an error in an imported file says which file (#557)', () => {
       'b.scm': '(define-export deep\n  (lambda (v) (car v)))',
     })
     expect(await runProgram('(import "a.scm")\n"done"')).toEqual([
-      'Runtime error [b.scm 2:15-2:21]: (error) expected pair or nonempty-list as the first argument, received number',
+      'Runtime error [b.scm 2:15-2:21]: (car) expected pair or nonempty-list as the first argument, received number',
       '"done"',
     ])
   })

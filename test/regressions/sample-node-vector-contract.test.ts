@@ -49,7 +49,7 @@ describe('#531: sample-node turns away a non-vector through its contract', () =>
         stripRanges: true,
       }),
     ).toEqual([
-      `Runtime error: (error) expected a vector as the first argument, received ${received}`,
+      `Runtime error: (sample-node) expected a vector as the first argument, received ${received}`,
     ])
   })
 
@@ -90,9 +90,10 @@ describe('#531: what sample-node already accepted, it still accepts', () => {
 
   // The range check belongs to the native and stays there: the contract only
   // has to get a vector to it. Asserted by shape rather than verbatim -- the
-  // `(sample-node)` source is what says the native raised it rather than the
-  // contract, and the noun in that message is still the old "list" -- a
-  // correction that belongs to src/js/audio/index.ts rather than here.
+  // noun in that message is still the old "list", a correction that belongs to
+  // src/js/audio/index.ts rather than here. The *message* is what says the
+  // native raised it rather than the contract: since #633 both report
+  // `(sample-node)`, so the source no longer tells the two apart.
   test("an element out of range is still the native's own complaint", async () => {
     const out = await runProgram('(import audio)\n(sample-node (vector 2.0))', {
       stripRanges: true,
@@ -100,6 +101,5 @@ describe('#531: what sample-node already accepted, it still accepts', () => {
     expect(out).toHaveLength(1)
     expect(out[0]).toContain('(sample-node)')
     expect(out[0]).toContain('between -1.0 and 1.0')
-    expect(out[0]).not.toContain('(error)')
   })
 })
