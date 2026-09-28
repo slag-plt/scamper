@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import { displayStep, Fiber, StepResult, traceStep } from '../src/lpm/fiber'
 import {
   LoggingChannel,
@@ -124,10 +124,49 @@ export function trackFiberSteps(fiber: Fiber): StepTrackedFiber {
 }
 
 // The scheduler runs its inner loop for one time quantum (default ~17ms at
-// 60fps) before yielding. We sleep long enough that the scheduler will have
-// burned through several quanta and (importantly) so that pauseExecution has
-// time to take effect after the current quantum drains.
+// 60fps) before yielding, so this is long enough for pauseExecution to take
+// effect after the current quantum drains.
+//
+// That -- *settling* -- is what it is for: waiting on the absence of further
+// work, where there is nothing to observe. It is the wrong shape for waiting on
+// work to *happen*. How many quanta fit in 100ms is a claim about the machine,
+// and a loaded one fits fewer, so a test that sleeps and then asserts a fiber
+// advanced says "expected 0 to be greater than 1" on a busy runner and nowhere
+// else (#636). Use waitForSteps for that.
 export const QUANTUM_WAIT_MS = 100
+
+/**
+ * How long {@link waitForSteps} will wait. Generous, since it costs nothing
+ * when the steps arrive promptly, and well inside the suite's 20s test budget
+ * so a genuine stall is still reported as one.
+ */
+const STEP_WAIT_TIMEOUT_MS = 5_000
+
+/**
+ * Waits until `fiber` has been stepped at least `n` times.
+ *
+ * Use this instead of `await sleep(QUANTUM_WAIT_MS)` before asserting that a
+ * fiber has advanced. The sleep assumes a wall-clock interval holds a known
+ * number of scheduler quanta, which is true of an idle machine and false of a
+ * CI runner sharing two cores with everything else in the suite -- and the
+ * failure lands on a pull request that touched none of this (#636).
+ *
+ * Step counts only rise, so waiting for the count an assertion needs makes that
+ * assertion hold by construction; contention can then make the test slower but
+ * not wrong.
+ */
+export function waitForSteps(fiber: StepTrackedFiber, n: number): Promise<void> {
+  return vi.waitFor(
+    () => {
+      expect(
+        fiber.stepCallCount,
+        `fiber was stepped ${fiber.stepCallCount.toString()} times, waiting ` +
+          `for ${n.toString()}`,
+      ).toBeGreaterThanOrEqual(n)
+    },
+    { timeout: STEP_WAIT_TIMEOUT_MS, interval: 10 },
+  )
+}
 
 let schedulerYieldPatched = false
 

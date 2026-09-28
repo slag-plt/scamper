@@ -176,4 +176,57 @@ describe('#536: a test budget survives a loaded machine', () => {
         'content instead, so a slow machine costs time rather than a failure',
     ).toBe(true)
   })
+
+  // The check above is about the file; this one is about each assertion, which
+  // is not the same claim. ide-notebook.test.ts satisfied the first -- it does
+  // use waitFor -- while the arrow-key test #636 reported asserted `hasFocus`
+  // straight after a `flushPromises()`, and that is the one that failed on a
+  // loaded runner.
+  //
+  // Focus is the case worth singling out. A Vue ref settles in one tick, so an
+  // assertion about rendered content after `flushPromises()` is bounded. Focus
+  // after a synthetic key event is not: it travels through CodeMirror's own
+  // handling of the move, and nothing says how many turns of the loop that
+  // takes.
+  test.each(SETTLE_SENSITIVE)('%s waits for focus, not for ticks', (name) => {
+    const source = readFileSync(resolve(testRoot, name), 'utf-8')
+    const waits = waitForRanges(source)
+    for (const m of source.matchAll(/\bhasFocus\b|\bactiveElement\b/g)) {
+      const at = m.index
+      const line = source.slice(0, at).split('\n').length
+      expect(
+        waits.some(([from, to]) => at > from && at < to),
+        `${name}:${line.toString()} reads focus outside a waitFor. Focus after ` +
+          'an event is not a fixed number of ticks away, so assert it inside ' +
+          'vi.waitFor and let a slow machine cost time rather than a failure',
+      ).toBe(true)
+    }
+  })
 })
+
+/**
+ * The character range of every `waitFor(...)` call in `source`, by matching its
+ * parentheses.
+ *
+ * Text, not syntax: a parenthesis inside a string literal would throw the count
+ * off. None of the files this runs over has one inside a `waitFor`, and a guard
+ * that needed a parser to state this rule would not be worth the rule.
+ */
+function waitForRanges(source: string): [number, number][] {
+  const ranges: [number, number][] = []
+  for (const m of source.matchAll(/\bwaitFor\(/g)) {
+    let depth = 0
+    for (let i = m.index + m[0].length - 1; i < source.length; i++) {
+      if (source[i] === '(') {
+        depth += 1
+      } else if (source[i] === ')') {
+        depth -= 1
+        if (depth === 0) {
+          ranges.push([m.index, i])
+          break
+        }
+      }
+    }
+  }
+  return ranges
+}
