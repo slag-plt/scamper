@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- reduce-left is now available, combining a list from the left starting with its first element and passing the combining function the current element first, the way fold-left does.
+
 # 4.6.0
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.

@@ -3181,6 +3181,39 @@ test('fold-left', async () => {
   ])
 })
 
+test('reduce-left', async () => {
+  // reduce-left seeds fold-left with the list's first element, so its combiner
+  // takes the current element first and the accumulated value second (SRFI-1's
+  // `reduce`) -- the opposite of `reduce`'s argument order.
+  expect(
+    await runProgram(`
+(reduce-left + (list 1 2 3 4 5))
+(reduce-left + (list 42))
+(reduce-left - (list 1 2 3))
+(reduce-left max (list 3 1 4 1 5 9 2 6))
+(equal? (reduce-left - (list 10 3 2)) (fold-left - 10 (list 3 2)))
+(reduce - (list 1 2 3))
+(reduce-left + (list))
+`),
+  ).toEqual([
+    '15',
+    // a singleton list accumulates to its only element
+    '42',
+    // element-first combiner: (- 3 (- 2 1)) = 2
+    '2',
+    '9',
+    // reduce-left f l is fold-left f (car l) (cdr l), by definition
+    '#t',
+    // Deliberately pinned divergence: `reduce` combines accumulator-first, so
+    // it gives (- (- 1 2) 3) = -4 where reduce-left gives 2. This is intended
+    // -- it is the same crossing fold and fold-left already have; see the
+    // "Folds: a warning" table in docs/DIFFERENCES.md.
+    '-4',
+    // the empty list has no first element to start from
+    'Runtime error: (reduce-left) car: expected a pair or a non-empty list',
+  ])
+})
+
 test('fold-right', async () => {
   expect(
     await runProgram(`

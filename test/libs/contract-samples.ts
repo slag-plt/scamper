@@ -201,6 +201,7 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:fold-left', ['(lambda (acc x) acc)', '0', '(list 1 2 3)']],
   ['prelude:fold-right', ['(lambda (x acc) acc)', '0', '(list 1 2 3)']],
   ['prelude:reduce', ['(lambda (a b) a)', '(list 1 2 3)']],
+  ['prelude:reduce-left', ['(lambda (a b) b)', '(list 1 2 3)']],
   ['prelude:reduce-right', ['(lambda (a b) b)', '(list 1 2 3)']],
   // A generic `integer?` sample would cap the stack at one frame, for every
   // statement after this one in the generated program.
