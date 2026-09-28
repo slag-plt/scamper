@@ -345,7 +345,7 @@ The one-argument `(make-string k)` is absent for the same reason -- "having an '
 > (make-string 3 #\a)
 "aaa"
 > (make-string 3)
-Runtime error [1:1-1:15]: Arity mismatch in function call: expected 2 arguments, got 1
+Runtime error [1:1-1:15]: (make-string) Arity mismatch in function call: expected 2 arguments, got 1
 ~~~
 
 **By design.**

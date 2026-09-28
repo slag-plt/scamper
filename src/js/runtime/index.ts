@@ -98,9 +98,12 @@ export function runtime_checkArity (
     given += 1
     extra = extra.tail
   }
+  // Shares its wording with the closure arity check (L.arityMismatchMsg), which
+  // is what keeps "argument" singular in both when the ceiling is one -- no
+  // library signature has such a ceiling today, so nothing a student sees moves.
   throw new L.ScamperError(
     'Runtime',
-    `Arity mismatch in function call: expected at most ${numRequired + numOpts} arguments, got ${given}`)
+    L.arityMismatchMsg('at most', numRequired + numOpts, given))
 }
 
 /**

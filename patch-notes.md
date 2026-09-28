@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- An error about calling a function with the wrong number of arguments now names the function and says at least when the function accepts more.
+
 # 4.6.0
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
