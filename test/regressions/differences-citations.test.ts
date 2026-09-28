@@ -159,7 +159,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/scheme/anon-tokens.ts:4`': 'Clojure-style anonymous function',
   // Scamper's own
   '`src/lib/index.ts:41-51`': 'js-var is the FFI root primitive',
-  '`:83`': "addExports(['js-var'])",
+  '`:91`': "addExports(['js-var'])",
   '`src/lib/music.scm:1`': 'Euterpea',
 }
 
