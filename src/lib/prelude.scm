@@ -157,7 +157,8 @@
 ;;; (- v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the difference of `v1`, `v2`, ... .
+;;; Returns the difference of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; additive inverse, so `(- 5)` is `-5`.
 ;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define-export - (js-var "prelude_minus"))
 
@@ -170,7 +171,8 @@
 ;;; (/ v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the quotient of `v1`, `v2`, ... .
+;;; Returns the quotient of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; reciprocal, so `(/ 4)` is `0.25`.
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
 
