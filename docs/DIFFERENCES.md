@@ -37,7 +37,7 @@ Two conventions:
 Each gap in part 1 is labelled **by design** or **not yet**.
 *Not yet* means the source marks it `// TODO: implement`, so it may close.
 *By design* means the source gives a reason, which is quoted.
-Five `// TODO: implement` blocks mark gaps that may close; everything else is a decision, and the summary table at the end of part 1 marks all five, with the paragraph beneath it naming them together.
+Four `// TODO: implement` blocks mark gaps that may close; everything else is a decision, and the summary table at the end of part 1 marks all four, with the paragraph beneath it naming them together.
 
 ## 1. Differences from R7RS
 
@@ -226,7 +226,7 @@ Lists are built with `list` and vectors with the `[...]` literal, which is why t
 
 Symbols are the one gap whose source comment is ambivalent.
 `src/js/prelude/index.ts` lists `symbol?`, `symbol=?`, `symbol->string`, and `string->symbol` under `// TODO: implement:` and then closes with "...but we don't implement symbols, will we?".
-Formally **not yet** -- one of the five TODO blocks -- but in practice the note reads as a decision, and nothing else in the language has a place to put one -- there is no reader syntax for a symbol, and `match` patterns bind bare identifiers rather than matching quoted ones.
+Formally **not yet** -- one of the four TODO blocks -- but in practice the note reads as a decision, and nothing else in the language has a place to put one -- there is no reader syntax for a symbol, and `match` patterns bind bare identifiers rather than matching quoted ones.
 
 ### Numbers
 
@@ -263,13 +263,16 @@ Runtime error [1:1-1:11]: (/) /: division by zero
 Runtime error [1:1-1:12]: (modulo) modulo: division by zero
 ~~~
 
-**There is no radix syntax and no radix argument.**
+**There is no radix syntax, and only `string->number` takes a radix argument.**
 The number token is decimal only, with an optional sign and exponent (`src/scheme/syntax.grammar:121-126`), so `#x10` reads as an identifier, `1/2` reads as the two forms `1` and `/2`, and `+inf.0` is an unbound variable.
-`number->string` and `string->number` take one argument each; the radix versions raise an arity error.
-**By design** for the literals; the radix argument is the surviving half of a stale TODO (see below).
+`number->string` takes one argument; its radix version raises an arity error.
+**By design**: the literals and `number->string` are decimal-only, and nothing marks either as a gap.
+
+`string->number` does take a radix, from 2 to 36, though only for whole numbers: a fractional numeral in a base other than 10 gives `#f` (`src/js/prelude/index.ts`).
+A radix outside 2 to 36 raises, since `#f` already means "this string does not denote a number".
 
 `gcd` and `lcm` are absent and marked `// TODO: implement` (`src/js/prelude/index.ts`).
-**Not yet** -- one of the five TODO blocks.
+**Not yet** -- one of the four TODO blocks.
 
 The composite division operators (`floor/`, `floor-quotient`, `floor-remainder`, `truncate/`, `truncate-quotient`, `truncate-remainder`) are absent "to avoid clutter in the documentation" (`src/js/prelude/index.ts`), as is `exact-integer-sqrt`, "to avoid polluting the documentation" (`src/js/prelude/index.ts`).
 **By design** -- these are documentation-surface decisions rather than implementation ones.
@@ -362,12 +365,12 @@ The source flags one uncertainty of its own: `char-foldcase` is implemented with
 **By design.**
 
 **No `for-each` and no `string-for-each`**, marked `// TODO: implement` (`src/js/prelude/index.ts`).
-**Not yet** -- one of the five TODO blocks.
+**Not yet** -- one of the four TODO blocks.
 `vector-for-each` *is* present (`src/lib/prelude.scm`), as are `map`, `string-map`, and `vector-map`; `map` is variadic over several lists.
 Iteration for effect is otherwise written with `map` and `ignore`, or with `for-range`.
 
 **No `call/cc`, `values`, `call-with-values`, or `dynamic-wind`**, all four marked `// TODO: implement` (`src/js/prelude/index.ts`).
-**Not yet** -- one of the five TODO blocks.
+**Not yet** -- one of the four TODO blocks.
 This is a larger hole than the other four together: no continuations means no generators and no multiple-value returns, and nothing in the language substitutes for either.
 Non-local exit fares better: `with-handler` and `error` together escape an arbitrarily deep call in one shot (see *Exceptions* below), which covers the commonest use of `call/cc` and nothing else.
 
@@ -481,7 +484,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | § | Scamper's position | Why |
 | --- | --- | --- |
 | 6.1 Equivalence | `equal?` only; no `eq?`, `eqv?` | design: "we don't have effects beside vectors" (`index.ts`) -- now narrower than stated |
-| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises | design: "the Javascript numeric stack" (`index.ts`). `gcd`/`lcm` **not yet** (`index.ts`), as is `string->number`'s radix argument (`index.ts`) |
+| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises; `string->number` takes a radix, `number->string` does not | design: "the Javascript numeric stack" (`index.ts`). `gcd`/`lcm` **not yet** (`index.ts`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
 | 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:586`); "the pure, functional subset" (`index.ts`) |
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
@@ -495,8 +498,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | 6.13 Input and output | no ports; `display` is a statement; the `file` module reads and writes whole files | design: "in-browser, so can't implement directly" (`index.ts`) |
 | 6.14 System interface | none | design: "all operating system-specific stuff" (`index.ts`) |
 
-The five `// TODO: implement` gaps, in full: `gcd`/`lcm`, `for-each`/`string-for-each`, the `call/cc` block, symbols, and the radix argument to `string->number`.
-That last one is a half-stale TODO: `src/js/prelude/index.ts` lists both `(string->number s)` and `(string->number s radix)`, but the no-radix form is implemented directly beneath it and bound at `src/lib/prelude.scm`.
+The four `// TODO: implement` gaps, in full: `gcd`/`lcm`, `for-each`/`string-for-each`, the `call/cc` block, and symbols.
 Three further TODOs exist but are narrower -- a variant of something present, or a note on an implementation: `string->list`'s substring-bounded form (`src/js/prelude/index.ts`), `assoc-set`'s algorithm (`src/js/prelude/index.ts`), and fold variants for vectors (`src/js/prelude/index.ts`).
 
 ## 2. Where Scamper's extensions come from

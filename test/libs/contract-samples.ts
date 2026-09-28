@@ -184,7 +184,7 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:quotient', ['7', '2']],
   ['prelude:remainder', ['7', '2']],
   ['prelude:modulo', ['7', '2']],
-  ['prelude:string->number', ['"1"']],
+  ['prelude:string->number', ['"1"', '10']],
   ['prelude:digit-value', ['#\\5']],
   ['prelude:list->string', ['(list #\\a #\\b)']],
   ['prelude:vector->string', ['(vector #\\a #\\b)']],

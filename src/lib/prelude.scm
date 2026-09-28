@@ -274,10 +274,13 @@
 ;;; @category string, char->integer, digit-value, integer->char, string->number
 (define-export number->string (js-var "prelude_numberToString"))
 
-;;; (string->number s) -> number?
+;;; (string->number s [radix]) -> number?
 ;;;  s : string?
+;;;  radix : integer?
+;;;   the base `s` is written in, from 2 to 36; defaults to 10
 ;;; Returns the number denoted by `s`, or `#f` if `s`
-;;; does not denote a number.
+;;; does not denote a number. In a base other than 10, only whole numbers are
+;;; read, so `s` written with a decimal point gives `#f`.
 ;;; @category string, number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char
 (define-export string->number (js-var "prelude_stringToNumber"))
 

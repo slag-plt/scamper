@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- string->number now takes an optional base, so string->number of "ff" with base 16 is 255 and "1010" with base 2 is 10.
+
 # 4.6.0
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
