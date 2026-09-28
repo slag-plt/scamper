@@ -470,6 +470,18 @@ MODULE.NAME</pre>
         <code>1</code>, and a procedure whose body is a hole is fine until it is
         called. It is written bare, with no parentheses of its own.
       </p>
+      <p>
+        A hole is <em>exactly two</em> question marks. <code>???</code> is not a
+        hole: it is read as an ordinary name, so Scamper reports it as a variable
+        it cannot find. <code>??</code> is also a reserved word, so it cannot be
+        given a meaning of its own &mdash; <code>(define ?? 5)</code> is a parse
+        error.
+      </p>
+      <p>
+        The error names where the hole is written, not where evaluation happened
+        to reach it. A hole inside a procedure you hand to <code>map</code>
+        points at that procedure's body, not at <code>map</code>.
+      </p>
       <pre class="example">(define area (lambda (r) (* 3.14 ??)))</pre>
     </section>
 

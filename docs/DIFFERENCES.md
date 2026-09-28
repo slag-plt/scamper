@@ -571,6 +571,7 @@ Neither R7RS nor, as far as the source records, anyone else's:
 
 + **`??`, the hole** -- a placeholder for an expression not yet written, which raises when reached.
   A hole in an untaken branch costs nothing, so a partly-written program still runs (`docs/language.md`, "Surface syntax").
+  The spelling is exactly two question marks and is reserved: `???` is an ordinary identifier, and `(define ?? 5)` is a parse error.
 + **`set-maximum-recursion-depth!`** (`src/lib/prelude.scm`), which exists because the recursion cap exists.
 + **`ignore`** (`src/lib/prelude.scm`), which suppresses a value's appearance in the output pane -- a notion with no analogue in a language whose output goes to a port.
 + **`=-eps`** (`src/lib/prelude.scm`), approximate numeric equality, which earns its place given that every number is a double.

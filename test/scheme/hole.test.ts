@@ -90,6 +90,15 @@ describe('hole evaluation', () => {
     ])
   })
 
+  test('??? is not a hole, so it fails as an unbound name', async () => {
+    // The parsing suite above pins the shape; this pins what a student sees,
+    // which is what public/reference.html and docs/language.md promise: a third
+    // question mark makes it an ordinary name, with no range and no hole named.
+    expect(await runProgram('???')).toEqual([
+      'Runtime error: Variable not found: ???',
+    ])
+  })
+
   test('a hole is only reached when evaluation gets to it', async () => {
     // The point of the form: an unfinished branch does not break the branches
     // that are finished.

@@ -375,6 +375,10 @@ export const IfHandler: OpHandler<'if'> = (op, currFrame) => {
   return traceStep
 }
 
+// A hole raises where it was *written*, `op.range`. The fallback to the frame's
+// call range covers a builtin frame, whose ops have no source a student wrote;
+// a lambda a student did write is user code wherever a library applies it, so
+// `(map (lambda (x) ??) (list 1 2))` still blames the lambda body, not `map`.
 export const HoleHandler: OpHandler<'hole'> = (op, currFrame) => {
   throw new ScamperError(
     'Runtime',
