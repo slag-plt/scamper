@@ -506,7 +506,7 @@
 ;;; (length v) -> integer?
 ;;;  v : list?
 ;;; Returns the length of `v`.
-;;; @category list, list manipulation, index-of, range, string-length, vector-length, vector-range, vector-ref 
+;;; @category list, list manipulation, index-of, range, string-length, tally, tally-value, vector-length, vector-range, vector-ref 
 (define-export length (js-var "prelude_length"))
 
 ;;; (append & l1) -> list?
@@ -557,7 +557,7 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the index of the first occurrence of `v` in `l` or `-1` if `v` is not in `l`.
-;;; @category list, list manipulation, association list, range, string-length, vector-length, vector-range, vector-ref 
+;;; @category list, list manipulation, association list, range, string-length, tally, tally-value, vector-length, vector-range, vector-ref 
 (define-export index-of (js-var "prelude_indexOf"))
 
 ;;; (assoc-key? k l) -> any
@@ -947,7 +947,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` for which `f` returns `#t`.
-;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right
+;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, tally
 (define-export filter
   (lambda (f l)
     (filter-onto f l null)))
@@ -1013,6 +1013,25 @@
     (match (reverse l)
       [(cons x null) x]
       [(cons x rest) (fold-right-onto f x rest)])))
+
+;;; (tally lst pred?) -> integer?
+;;;  lst : list?
+;;;  pred? : procedure?
+;;;   returns `#t` for an element that should be counted
+;;; Returns the number of elements of `lst` for which `pred?` returns `#t`.
+;;; @category list, list manipulation, filter, index-of, length, map, tally-value
+(define-export tally
+  (lambda (lst pred?)
+    (length (filter pred? lst))))
+
+;;; (tally-value lst value) -> integer?
+;;;  lst : list?
+;;;  value : any
+;;; Returns the number of times `value` appears in `lst`, compared with `equal?`.
+;;; @category list, list manipulation, equal?, index-of, length, tally, tally-all
+(define-export tally-value
+  (lambda (lst value)
+    (tally lst (lambda (x) (equal? x value)))))
 
 ;;; (vector-map f & v) -> vector?
 ;;;  f : procedure?

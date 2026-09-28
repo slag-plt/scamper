@@ -96,6 +96,7 @@ const KNOWN_SURFACE: Record<string, string> = {
   prelude_car: 'guarded',
   prelude_cdr: 'guarded',
   prelude_cons: 'total: both arguments are any',
+  prelude_equalQ: 'total: both arguments are any',
   prelude_error: 'guarded',
   prelude_gt: 'guarded',
   prelude_leq: 'guarded',
