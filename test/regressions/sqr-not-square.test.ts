@@ -4,9 +4,9 @@ import { runProgram } from '../harness.js'
 // https://github.com/slag-plt/scamper/issues/677
 //
 // The prelude's numeric `square` and the image library's shape constructor
-// `square` shared one name, and re-binding a standard-library name is silent
-// by design (src/scheme/scope.ts), so `(import image)` replaced the numeric
-// one without a word. A student who then wrote `(square 5)` got an arity
+// `square` shared one name, and an import that re-binds a library name raises
+// no diagnostic where a `define` of it would (src/scheme/scope.ts), so
+// `(import image)` replaced the numeric one without a word. A student who then wrote `(square 5)` got an arity
 // error about arguments they had never heard of. The numeric one is `sqr` now,
 // following Racket's `racket/math`, so the two names coexist.
 
