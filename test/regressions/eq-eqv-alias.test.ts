@@ -21,7 +21,23 @@ describe('eq? and eqv? are one procedure (#641)', () => {
     expect(typeof lookup('prelude_eqvQ')).toBe('function')
   })
 
-  test('a student reaching either through its contract sees its own name', async () => {
+  // Sharing the native means sharing its `name` property: Module.registerValue
+  // stamps it as it binds each name, so the second binding overwrites the
+  // first's stamp and the function itself can only carry one of the two. What a
+  // student ever names is the contract wrapper in front of it, which is what
+  // keeps each binding reporting itself -- the same thing `list-tail` and
+  // `list-drop` rely on (#649).
+  test('each name reports itself, not the one it shares a native with', async () => {
+    expect(await runProgram(`
+eqv?
+eq?
+`)).toEqual(['[Function: eqv?]', '[Function: eq?]'])
+  })
+
+  // Arity is checked by that wrapper, so both names have it. The message names
+  // no procedure -- no contract-checked binding's does, `equal?` included -- so
+  // it is the source range that says which call went wrong.
+  test('both names take exactly two arguments', async () => {
     expect(await runProgram(`
 (eqv? 1)
 (eq? 1)
