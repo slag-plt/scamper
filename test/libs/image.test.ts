@@ -69,7 +69,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 0 0 255)',
       '(rgba 0 0 0 0)',
-      'Runtime error: (rgb) rgb: expects 3 or 4 arguments, but got 5',
+      'Runtime error: (rgb) expected 3 or 4 arguments, received 5',
     ])
   })
 
@@ -83,8 +83,8 @@ describe('color', () => {
 `),
     ).toEqual([
       'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
-      'Runtime error: (rgb) expected a rgb-component as the first argument, received string',
-      'Runtime error: (rgb) expected every value of a to be a rgb-component, but at least one was not',
+      'Runtime error: (rgb) expected an rgb-component as the first argument, received string',
+      'Runtime error: (rgb) expected every value of a to be an rgb-component, but at least one was not',
     ])
   })
 
@@ -99,7 +99,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '10',
-      'Runtime error: (rgb-red) expected a rgb as the first argument, received number',
+      'Runtime error: (rgb-red) expected an rgb as the first argument, received number',
       'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
       'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
     ])
@@ -114,7 +114,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '20',
-      'Runtime error: (rgb-green) expected a rgb as the first argument, received string',
+      'Runtime error: (rgb-green) expected an rgb as the first argument, received string',
     ])
   })
 
@@ -127,7 +127,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '30',
-      'Runtime error: (rgb-blue) expected a rgb as the first argument, received string',
+      'Runtime error: (rgb-blue) expected an rgb as the first argument, received string',
     ])
   })
 
@@ -142,7 +142,7 @@ describe('color', () => {
     ).toEqual([
       '128',
       '255',
-      'Runtime error: (rgb-alpha) expected a rgb as the first argument, received null',
+      'Runtime error: (rgb-alpha) expected an rgb as the first argument, received null',
     ])
   })
 
@@ -157,7 +157,7 @@ describe('color', () => {
     ).toEqual([
       '441.6729559300637',
       '0',
-      'Runtime error: (rgb-distance) expected a rgb as the second argument, received null',
+      'Runtime error: (rgb-distance) expected an rgb as the second argument, received null',
     ])
   })
 
@@ -207,7 +207,7 @@ describe('color', () => {
 `),
     ).toEqual([
       '(rgba 255 0 0 255)',
-      'Runtime error: (color-name->rgb) color-name->rgb: unknown color name not-a-color',
+      'Runtime error: (color-name->rgb) unknown color name not-a-color',
       'Runtime error: (color-name->rgb) expected a string as the first argument, received number',
     ])
   })
@@ -235,7 +235,7 @@ describe('color', () => {
       '"rgb(255  0  0 / 100%)"',
       '"rgb(255  0  0 / 50%)"',
       '"rgb(0  0  0 / 0%)"',
-      'Runtime error: (rgb->string) expected a rgb as the first argument, received number',
+      'Runtime error: (rgb->string) expected an rgb as the first argument, received number',
     ])
   })
 
@@ -276,11 +276,11 @@ describe('color', () => {
     ).toEqual([
       'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
       'Runtime error: (hsv) expected a number as the first argument, received string',
-      'Runtime error: (hsv) hsv: expects hue to be in the an angle (0–360), but got -1',
-      'Runtime error: (hsv) hsv: expects hue to be in the an angle (0–360), but got 361',
-      'Runtime error: (hsv) hsv: expects saturation to be a percentage (0–100), but got 101',
-      'Runtime error: (hsv) hsv: expects value to be a percentage (0–100), but got 101',
-      'Runtime error: (hsv) hsv: expects alpha to be in the range 0–255, but got 256',
+      'Runtime error: (hsv) expected hue to be an angle between 0 and 360, received -1',
+      'Runtime error: (hsv) expected hue to be an angle between 0 and 360, received 361',
+      'Runtime error: (hsv) expected saturation to be a percentage between 0 and 100, received 101',
+      'Runtime error: (hsv) expected value to be a percentage between 0 and 100, received 101',
+      'Runtime error: (hsv) expected alpha to be between 0 and 255, received 256',
     ])
   })
 
@@ -302,7 +302,7 @@ describe('color', () => {
       '120',
       '240',
       '60',
-      'Runtime error: (rgb-hue) expected a rgb as the first argument, received string',
+      'Runtime error: (rgb-hue) expected an rgb as the first argument, received string',
     ])
   })
 
@@ -344,14 +344,14 @@ describe('color', () => {
       '(hsv 0 100 100 255)',
       '(hsv 120 100 100 255)',
       '(hsv 0 0 50 255)',
-      'Runtime error: (rgb->hsv) expected a rgb as the first argument, received number',
+      'Runtime error: (rgb->hsv) expected an rgb as the first argument, received number',
     ])
   })
 
   // Every function below takes an hsv? argument, and its own contract check
   // calls the buggy hsv? binding (github.com/slag-plt/scamper#250, see the
-  // hsv? skip above) before running -- so the check itself throws "hsv:
-  // expects 3 or 4 arguments, but got 1" no matter what's passed in, and
+  // hsv? skip above) before running -- so the check itself throws "expected
+  // 3 or 4 arguments, received 1" no matter what's passed in, and
   // none of these can succeed right now.
   describe('blocked by #250 (hsv? bound to the hsv constructor)', () => {
     test.skip('hsv-hue')
@@ -380,7 +380,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 0 0 255)',
       '(rgba 255 0 0 128)',
-      'Runtime error: (hsv->rgb) expected a hsv as the first argument, received number',
+      'Runtime error: (hsv->rgb) expected an hsv as the first argument, received number',
     ])
   })
 
@@ -395,7 +395,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 84 84 84 255)',
       '(rgba 0 0 0 255)',
-      'Runtime error: (rgb-darker) expected a rgb as the first argument, received string',
+      'Runtime error: (rgb-darker) expected an rgb as the first argument, received string',
     ])
   })
 
@@ -450,7 +450,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 255 255 255 255)',
       '(rgba 0 0 0 255)',
-      'Runtime error: (rgb-pseudo-complement) expected a rgb as the first argument, received string',
+      'Runtime error: (rgb-pseudo-complement) expected an rgb as the first argument, received string',
     ])
   })
 
@@ -1833,12 +1833,12 @@ describe('image-width / image-height of a canvas', () => {
 
 describe('colour edge cases', () => {
   // Too few args trip the outer call-arity contract; too many (5) reach
-  // color_hsv's own "expects 3 or 4 arguments" guard.
+  // color_hsv's own "expected 3 or 4 arguments" guard.
   test('hsv rejects too many arguments', async () => {
     expect(await runProgram(`
 (import image)
 (hsv 1 2 3 4 5)
-`)).toEqual(['Runtime error: (hsv) hsv: expects 3 or 4 arguments, but got 5'])
+`)).toEqual(['Runtime error: (hsv) expected 3 or 4 arguments, received 5'])
   })
   test('rgb-hue of a grey colour is a hue in [0, 360)', async () => {
     expect(await runProgram(`

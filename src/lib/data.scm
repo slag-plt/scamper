@@ -59,16 +59,14 @@
 (define-export plot-linear (js-var "data_plotLinear"))
 
 ;;; (plot-category labels & datasets) -> plot?
-;;;  labels : list?
-;;;   of strings
+;;;  labels : (list-of string?)
 ;;;  datasets : dataset?
 ;;; Creates a categorical plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.
 ;;; @category data, create, plot, plot-linear, plot-radial
 (define-export plot-category (js-var "data_plotCategory"))
 
 ;;; (plot-radial labels & datasets) -> plot?
-;;;  labels : list?
-;;;   of strings
+;;;  labels : (list-of string?)
 ;;;  datasets : dataset?
 ;;; Creates a radial plot from the provided list of labels and datasets. It is assumed that the dataset provides a value for each label. Valid datasets for this plot include line and bar datasets.
 ;;; @category data, create, plot, plot-category, plot-linear
@@ -76,56 +74,49 @@
 
 ;;; (dataset-line title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers, or of pairs of numbers
+;;;  data : (list-of (or/p number? pair?))
 ;;; Creates a line dataset with the given `title` and `data` points. If the dataset is used in a numeric (e.g., linear) plot, the data points must be a list of pairs of numbers. If the dataset is used in a categorical plot, the data points must be a list of numbers.
 ;;; @category data, create, dataset-bar, dataset-bubble, dataset-pie, dataset-polar, dataset-radar, dataset-scatter
 (define-export dataset-line (js-var "data_datasetLine"))
 
 ;;; (dataset-bar title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers
+;;;  data : (list-of number?)
 ;;; Creates a bar dataset with the given `title` and `data` points.
 ;;; @category data, create, dataset-bubble, dataset-line, dataset-pie, dataset-polar, dataset-radar, dataset-scatter
 (define-export dataset-bar (js-var "data_datasetBar"))
 
 ;;; (dataset-scatter title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers
-;;; Creates a scatter dataset with the given `title` and `data` points.
+;;;  data : (list-of pair?)
+;;; Creates a scatter dataset with the given `title` and `data` points, each a pair of an x- and a y-coordinate.
 ;;; @category data, create, dataset-bar, dataset-bubble, dataset-line, dataset-pie, dataset-polar, dataset-radar
 (define-export dataset-scatter (js-var "data_datasetScatter"))
 
 ;;; (dataset-bubble title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of lists of three numbers
+;;;  data : (list-of list?)
 ;;; Creates a bubble dataset with the given `title` and `data` points. The three numbers of each data point represent x-coordinate, y-coordinate, and radius of each point.
 ;;; @category data, create, dataset-bar, dataset-line, dataset-pie, dataset-polar, dataset-radar, dataset-scatter
 (define-export dataset-bubble (js-var "data_datasetBubble"))
 
 ;;; (dataset-pie title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers
+;;;  data : (list-of number?)
 ;;; Creates a pie dataset with the given `title` and `data` points.
 ;;; @category data, create, dataset-bar, dataset-bubble, dataset-line, dataset-polar, dataset-radar, dataset-scatter
 (define-export dataset-pie (js-var "data_datasetPie"))
 
 ;;; (dataset-polar title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers
+;;;  data : (list-of number?)
 ;;; Creates a polar dataset with the given `title` and `data` points.
 ;;; @category data, create, dataset-bar, dataset-bubble, dataset-line, dataset-pie, dataset-radar, dataset-scatter
 (define-export dataset-polar (js-var "data_datasetPolar"))
 
 ;;; (dataset-radar title data) -> dataset?
 ;;;  title : string?
-;;;  data : list?
-;;;   of numbers
+;;;  data : (list-of number?)
 ;;; Creates a radar dataset with the given `title` and `data` points.
 ;;; @category data, create, dataset-bar, dataset-bubble, dataset-line, dataset-pie, dataset-polar, dataset-scatter
 (define-export dataset-radar (js-var "data_datasetRadar"))

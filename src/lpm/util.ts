@@ -559,6 +559,29 @@ export function objToString(
 }
 
 /**
+ * The ordinals an error message names an argument's position with. Ten covers
+ * every signature the standard library declares today -- canvas-ellipse! is the
+ * widest, at ten parameters.
+ */
+const ordinalWords = [
+  'first', 'second', 'third', 'fourth', 'fifth',
+  'sixth', 'seventh', 'eighth', 'ninth', 'tenth',
+]
+
+/**
+ * @param index a zero-based position.
+ * @returns the ordinal naming it, e.g. 0 ~> "first". Past the words above this
+ *          falls back to a numeric ordinal, whose suffix is only right through
+ *          "20th" -- no signature comes near either. Shared with the contract
+ *          codegen so a hand-written message and a generated one count
+ *          positions the same way (#634); before this, one native said
+ *          "position 0" where every contract said "the first".
+ */
+export function ordinal(index: number): string {
+  return ordinalWords[index] ?? `${(index + 1).toString()}th`
+}
+
+/**
  * @returns the type of the given value as a string. This names the value in
  * every "..., received ..." error a student sees, so a number that is not a
  * whole one is called a "floating point number" (#606): `(quotient 5.5 2)`

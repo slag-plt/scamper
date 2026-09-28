@@ -7,7 +7,7 @@ import { runProgram } from '../harness.js'
 // The auto-generated contract layer invokes `hsv?` to validate every
 // parameter declared `hsv?`, so it called the constructor with a single
 // struct argument and every hsv accessor/derived function errored with
-// `(hsv?) hsv: expects 3 or 4 arguments, but got 1`.
+// `(hsv?) expected 3 or 4 arguments, received 1`.
 
 test('hsv? is a predicate and hsv-typed contracts pass', async () => {
   expect(await runProgram(`

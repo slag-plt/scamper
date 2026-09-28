@@ -73,12 +73,12 @@ export function html_tagSetChildren(elt: HTMLElement, ...children: L.Value[]) {
   requireBrowser()
   // eslint-disable-next-line no-restricted-syntax -- requireBrowser() ran on the line above, and guarding a negated test honestly needs `typeof HTMLElement === 'undefined' || ...`, whose reading is "on the CLI, reject every argument" -- requireBrowser's message, badly spelled.
   if (!(elt instanceof HTMLElement)) {
-    throw new L.ScamperError('Runtime', `tag-set-children! expects an HTML element, but received ${L.typeOf(elt)}`)
+    throw new L.ScamperError('Runtime', `expected an HTML element as the first argument, received ${L.typeOf(elt)}`)
   } else {
     children.forEach((e, i) => {
       // eslint-disable-next-line no-restricted-syntax -- as above: requireBrowser() covers it, and guarding a negated test would only restate its message.
       if (!(e instanceof HTMLElement)) {
-        throw new L.ScamperError('Runtime', `tag-set-children! expects all children to be HTML elements, but position ${i} is a ${L.typeOf(elt)}$.`)
+        throw new L.ScamperError('Runtime', `expected an HTML element as the ${L.ordinal(i)} child, received ${L.typeOf(e)}`)
       }
     })
     // N.B., clear the current set of children

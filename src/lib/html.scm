@@ -44,7 +44,7 @@
 ;;; @category html, tag-set-children?
 (define-export tag (js-var "html_tag"))
 
-;;; (tag-set-children! elt & c) -> element?
+;;; (tag-set-children! elt & c) -> void?
 ;;;  elt : element?
 ;;;  c : element?
 ;;; Sets `elt`'s children to be `c1`, `c2`, ..

@@ -103,8 +103,8 @@ describe('rgb clamps components on both ends of [0, 255] (#259)', () => {
 (rgb -10 0 0 255)
 (rgb 300 0 0 255)
 `, { stripRanges: true })).toEqual([
-      'Runtime error: (rgb) expected a rgb-component as the first argument, received number',
-      'Runtime error: (rgb) expected a rgb-component as the first argument, received number',
+      'Runtime error: (rgb) expected an rgb-component as the first argument, received number',
+      'Runtime error: (rgb) expected an rgb-component as the first argument, received number',
     ])
   })
 })
