@@ -35,6 +35,7 @@ Order does not matter within an entry. See docs/releasing.md.
 - max and min now require at least one number, so (max) reports a plain arity error at your own line instead of quietly answering -Infinity.
 - A character like #\zzz that names no character, or a string escape Scamper does not support, is now reported as an ordinary error pointing at it instead of stopping the program with no message.
 - A statement that produces nothing, such as vector-set!, no longer leaves an empty gap under it in the notebook view or in a reading.
+- Copying the REPL transcript no longer writes the word void for a statement that showed you nothing.
 - The comparisons =, <, >, <= and >= still take any number of arguments but now need at least two, as do the character and string comparisons, so (< x) reports an arity error instead of quietly answering #t.
 - An error from a struct's accessor or constructor now names that accessor or constructor even when map, filter, sort, or fold is what called it, instead of naming a helper from inside Scamper's library that you never wrote.
 - An error about a wrong argument now names the procedure you called, so (not 1) reports not rather than the bare error it used to report, and the name in the message is one you can look up.
