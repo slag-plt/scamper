@@ -1,4 +1,4 @@
-import { Range } from '../lpm'
+import { ordinal, Range } from '../lpm'
 import * as A from './ast.js'
 import { mkDiagnostic, ScamperDiagnostic } from './diagnostic.js'
 import {
@@ -29,51 +29,87 @@ function predBareName(pred: A.Identifier): string {
 }
 
 /**
+ * The letters whose *names* begin with a vowel sound, so an initialism starting
+ * with one takes "an": `rgb` is read "ar-gee-bee", hence "an rgb".
+ */
+const vowelSoundLetters = 'aefhilmnorsx'
+
+/**
+ * @returns "a" or "an" for `name`, by how the name is said rather than how it
+ *          is spelled. A first hyphen-separated segment with no vowel in it is
+ *          not a pronounceable word, so it is read letter by letter and the
+ *          article follows that first letter's *name* -- which is what makes
+ *          `rgb?`, `rgb-component?`, `hsv?` and `html?` read "an" (#634). A
+ *          name that is a word follows the ordinary spelling rule, so `list?`
+ *          stays "a list" even though the letter L is said "el".
+ */
+function articleFor(name: string): string {
+  const isInitialism = !/[aeiouy]/i.test(name.split('-')[0])
+  const first = name[0].toLowerCase()
+  return (isInitialism ? vowelSoundLetters : 'aeiou').includes(first)
+    ? 'an'
+    : 'a'
+}
+
+/**
+ * @returns `name` in the plural, by the regular English rule -- enough for
+ *          every predicate the library names, from "pairs" to "matches".
+ */
+function pluralise(name: string): string {
+  return /(?:s|x|z|ch|sh)$/i.test(name) ? `${name}es` : `${name}s`
+}
+
+/**
+ * @returns the bare names of `pred`'s disjuncts if it is an `(or/p p1 ... pk)`
+ *          over simple `var` predicates, else undefined.
+ */
+function orDisjuncts(pred: Pred): string[] | undefined {
+  if (pred.tag === 'id') { return undefined }
+  const args = pred.args
+  return pred.head.name === 'or/p' && args.length > 0 && args.every(A.isVar)
+    ? args.map(predBareName)
+    : undefined
+}
+
+/** `["a", "b", "c"]` ~> "a, b, or c" -- an Oxford join. */
+function joinAlternatives(names: string[]): string {
+  if (names.length === 1) { return names[0] }
+  if (names.length === 2) { return `${names[0]} or ${names[1]}` }
+  return `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`
+}
+
+/**
  * A short, human-readable description of a predicate, suitable for embedding
  * in an "expected ..." contract violation message, e.g. `number?` ~> `a
  * number`, `integer?` ~> `an integer`. An `(or/p p1 ... pk)` predicate over
- * simple `var` disjuncts renders as `p1, ..., or pk` (Oxford join, no
- * leading article), e.g. `(or/p pair? nonempty-list?)` ~> "pair or
- * nonempty-list". Other complex predicates (`(list-of number?)`) don't reduce
- * to a single word, so they're rendered as-is.
+ * simple `var` disjuncts renders as `p1, ..., or pk` (Oxford join, no leading
+ * article), e.g. `(or/p pair? nonempty-list?)` ~> "pair or nonempty-list", and
+ * `(list-of p)` as "a list of ps". A predicate that is neither is rendered as
+ * its own source.
  */
 function describePred(pred: Pred): string {
   if (pred.tag !== 'id') {
     const args = pred.args
-    if (pred.head.name === 'or/p' && args.length > 0 && args.every(A.isVar)) {
-      const names = args.map(predBareName)
-      if (names.length === 1) {
-        return names[0]
+    const disjuncts = orDisjuncts(pred)
+    if (disjuncts !== undefined) { return joinAlternatives(disjuncts) }
+    // `(list-of p)` is the only combinator a parameter is declared with, and
+    // the fall-through below reads badly for it: "a value matching
+    // `(list-of pair?)`" hands a student the predicate's source where "a list
+    // of pairs" says the same thing in their own words (#634).
+    if (pred.head.name === 'list-of' && args.length === 1) {
+      const elem = args[0]
+      const elemDisjuncts = orDisjuncts(elem)
+      if (elemDisjuncts !== undefined) {
+        return `a list of ${joinAlternatives(elemDisjuncts.map(pluralise))}`
       }
-      if (names.length === 2) {
-        return `${names[0]} or ${names[1]}`
+      if (A.isVar(elem)) {
+        return `a list of ${pluralise(predBareName(elem))}`
       }
-      return `${names.slice(0, -1).join(', ')}, or ${names[names.length - 1]}`
     }
     return `a value matching \`${A.expToString(pred)}\``
   }
   const name = predBareName(pred)
-  const article = /^[aeiou]/i.test(name) ? 'an' : 'a'
-  return `${article} ${name}`
-}
-
-/**
- * The ordinals a contract message names an argument's position with. Ten
- * covers every signature the standard library declares today -- canvas-ellipse!
- * is the widest, at ten parameters.
- */
-const positionWords = [
-  'first', 'second', 'third', 'fourth', 'fifth',
-  'sixth', 'seventh', 'eighth', 'ninth', 'tenth',
-]
-
-/**
- * @returns the ordinal naming the argument at `index`, e.g. 0 ~> "first". Past
- *          the words above this falls back to a numeric ordinal, whose suffix
- *          is only right through "20th" -- no signature comes near either.
- */
-function describePosition(index: number): string {
-  return positionWords[index] ?? `${(index + 1).toString()}th`
+  return `${articleFor(name)} ${name}`
 }
 
 /**
@@ -200,8 +236,6 @@ function mkCheckChain(
 ): A.Exp {
   const targetCall = mkTargetCall([...params, ...optParams], restParam, range)
 
-  const positionOf = (index: number): string => describePosition(index)
-
   const restCheck: A.Exp = restParam
     ? A.mkIf(
         A.mkApp(
@@ -240,7 +274,7 @@ function mkCheckChain(
           A.mkApp(
             A.mkId('##error##', range),
             [
-              mkErrorMsg(describePred(predicate), name, positionOf(params.length + i), range),
+              mkErrorMsg(describePred(predicate), name, ordinal(params.length + i), range),
               A.mkLit(fnName, range),
             ],
             range,
@@ -261,7 +295,7 @@ function mkCheckChain(
       A.mkApp(
         A.mkId('##error##', range),
         [
-          mkErrorMsg(describePred(predicate), name, positionOf(i), range),
+          mkErrorMsg(describePred(predicate), name, ordinal(i), range),
           A.mkLit(fnName, range),
         ],
         range,

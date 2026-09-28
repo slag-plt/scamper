@@ -20,7 +20,7 @@
 
 ;;; (rgb-component? v) -> boolean?
 ;;;  v : any
-;;; Returns `#t` if and only if `v` is an integer between 0 and 255.
+;;; Returns `#t` if and only if `v` is a number between 0 and 255.
 ;;; @category color, image, predicates, rgb, typecheck, rgb-func, color-func, rgb?, rgb-distance
 (define-export rgb-component? (js-var "color_isRgbComponent"))
 

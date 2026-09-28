@@ -38,6 +38,7 @@ Order does not matter within an entry. See docs/releasing.md.
 - The comparisons =, <, >, <= and >= still take any number of arguments but now need at least two, as do the character and string comparisons, so (< x) reports an arity error instead of quietly answering #t.
 - An error from a struct's accessor or constructor now names that accessor or constructor even when map, filter, sort, or fold is what called it, instead of naming a helper from inside Scamper's library that you never wrote.
 - An error about a wrong argument now names the procedure you called, so (not 1) reports not rather than the bare error it used to report, and the name in the message is one you can look up.
+- An error about a list now says what the list should hold, so a chart given a list of strings reports expected a list of numbers, and the messages from hsv, tag-set-children! and a bubble chart now name the value that was actually wrong.
 # 4.5.0
 
 - An error inside a file you imported now says which file it is in, instead of pointing at a spot in the file you have open.

@@ -189,13 +189,13 @@ describe('tag-set-children!', () => {
   })
 
   test('throws when elt is not an HTML element', () => {
-    expect(() => { html_tagSetChildren(42 as unknown as HTMLElement) }).toThrow(/expects an HTML element/)
+    expect(() => { html_tagSetChildren(42 as unknown as HTMLElement) }).toThrow(/expected an HTML element as the first argument/)
   })
 
   test('throws when a child is not an HTML element', () => {
     const elt = html_tag('div')
     expect(() => { html_tagSetChildren(elt, 'not an element') })
-      .toThrow(/expects all children to be HTML elements/)
+      .toThrow(/expected an HTML element as the first child, received string/)
   })
 })
 

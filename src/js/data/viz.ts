@@ -211,7 +211,7 @@ export function data_datasetBubble (title: string, data: L.List): Dataset {
   const points: {x: number, y: number, r: number}[] = L.listToVector(data).map(v => {
     const l = L.listToVector(v as L.List)
     if (l.length !== 3) {
-      throw new L.ScamperError('Runtime', 'Data for dataset-bubble must be a list of three numbers')
+      throw new L.ScamperError('Runtime', 'every data point must be a list of three numbers')
     }
     return { x: l[0] as number, y: l[1] as number, r: l[2] as number }
   })

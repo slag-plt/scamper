@@ -32,7 +32,7 @@ export function color_colorToRgb (v: L.Value): Rgb {
   } else if (L.isStructKind<Hsv>(v, 'hsv')) {
     return color_hsvToRgb(v)
   } else {
-    throw new L.ScamperError('Runtime', `Shapes expect a valid color, received a: ${L.typeOf(v)}`)
+    throw new L.ScamperError('Runtime', `Shapes expect a valid color, received ${L.typeOf(v)}`)
   }
 }
 
@@ -62,7 +62,7 @@ export function color_isRgb (v: L.Value): boolean {
 
 export function color_rgb(...args: number[]): Rgb {
   if (args.length !== 3 && args.length !== 4) {
-    throw new L.ScamperError('Runtime', `rgb: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `expected 3 or 4 arguments, received ${args.length}`)
   }
   const red = Math.max(0, Math.min(args[0], 255))
   const green = Math.max(0, Math.min(args[1], 255))
@@ -356,21 +356,21 @@ export function color_isHsv(v: L.Value): boolean {
 
 export function color_hsv(...args: number[]): Hsv {
   if (args.length !== 3 && args.length !== 4) {
-    throw new L.ScamperError('Runtime', `hsv: expects 3 or 4 arguments, but got ${args.length}`)
+    throw new L.ScamperError('Runtime', `expected 3 or 4 arguments, received ${args.length}`)
   }
   
   if (args[0] < 0 || args[0] > 360) {
-    throw new L.ScamperError('Runtime', `hsv: expects hue to be in the an angle (0–360), but got ${args[0]}`)
+    throw new L.ScamperError('Runtime', `expected hue to be an angle between 0 and 360, received ${args[0]}`)
   }
   const hue = args[0]
 
   if (args[1] < 0 || args[1] > 100) {
-    throw new L.ScamperError('Runtime', `hsv: expects saturation to be a percentage (0–100), but got ${args[1]}`)
+    throw new L.ScamperError('Runtime', `expected saturation to be a percentage between 0 and 100, received ${args[1]}`)
   }
   const saturation = args[1]
 
   if (args[2] < 0 || args[2] > 100) {
-    throw new L.ScamperError('Runtime', `hsv: expects value to be a percentage (0–100), but got ${args[2]}`)
+    throw new L.ScamperError('Runtime', `expected value to be a percentage between 0 and 100, received ${args[2]}`)
   }
   const value = args[2]
 
@@ -379,7 +379,7 @@ export function color_hsv(...args: number[]): Hsv {
   // element type therefore reads as `number` (#154).
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (args[3] !== undefined && (args[3] < 0 || args[3] > 255)) {
-    throw new L.ScamperError('Runtime', `hsv: expects alpha to be in the range 0–255, but got ${args[3]}`)
+    throw new L.ScamperError('Runtime', `expected alpha to be between 0 and 255, received ${args[3]}`)
   }
   const alpha = args[3] ?? 255
   return ({
@@ -482,7 +482,7 @@ export function color_colorNameToRgb(name: string): Rgb {
   // non-null assertion handed back an undefined typed as an Rgb (#154).
   const rgb = namedCssColors.get(name.toLowerCase())
   if (rgb === undefined) {
-    throw new L.ScamperError('Runtime', `color-name->rgb: unknown color name ${name}`)
+    throw new L.ScamperError('Runtime', `unknown color name ${name}`)
   }
   return rgb
 }
