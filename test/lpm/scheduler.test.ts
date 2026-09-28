@@ -17,6 +17,7 @@ import {
   stepFiberToCompletion,
   sleep,
   trackFiberSteps,
+  waitForSteps,
   withSuppressedRejections,
 } from '../util'
 import { importFileStep, minorStep, traceStep, yieldStep } from '../../src/lpm/fiber'
@@ -138,7 +139,8 @@ describe('Scheduler', () => {
 
         sched.schedule(makeTask(doneFiber))
         sched.schedule(makeTask(liveFiber))
-        await sleep(QUANTUM_WAIT_MS)
+        // As above: the assertion wants two steps, so wait for two.
+        await waitForSteps(liveFiber, 2)
         sched.pauseExecution()
         await sleep(QUANTUM_WAIT_MS)
 
@@ -828,7 +830,11 @@ describe('Scheduler', () => {
       sched.schedule(queryTask)
       sched.schedule(makeTask(siblingA))
       sched.schedule(makeTask(siblingB))
-      await sleep(QUANTUM_WAIT_MS)
+      // Wait for the two steps each assertion below needs rather than sleeping
+      // and hoping the quanta fit: this is the test #636 saw fail with
+      // "expected 0 to be greater than 1" on a loaded runner.
+      await waitForSteps(siblingA, 2)
+      await waitForSteps(siblingB, 2)
       sched.pauseExecution()
       await sleep(QUANTUM_WAIT_MS)
 

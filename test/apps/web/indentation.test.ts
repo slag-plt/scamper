@@ -1,12 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { EditorState } from '@codemirror/state'
-import {
-  ensureSyntaxTree,
-  getIndentation,
-  IndentContext,
-  indentRange,
-} from '@codemirror/language'
+import { getIndentation, IndentContext, indentRange } from '@codemirror/language'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
+import { mkParsedState } from './parsed-state'
 
 // The DrRacket-style indenter (see docs/formatting.md). These tests go through the
 // same path the editor does: `indentRange` is what Ctrl-I dispatches, and
@@ -14,11 +10,7 @@ import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/langu
 // that passes here is the rule the user gets.
 
 function mkState(doc: string): EditorState {
-  const state = EditorState.create({ doc, extensions: [ScamperSupport()] })
-  // A fresh state parses lazily under a time budget; force it so the tree
-  // covers the whole document before anything asks for an indent.
-  ensureSyntaxTree(state, state.doc.length, 5000)
-  return state
+  return mkParsedState({ doc, extensions: [ScamperSupport()] })
 }
 
 /** Ctrl-I: re-indent every line, leaving line breaks alone. */

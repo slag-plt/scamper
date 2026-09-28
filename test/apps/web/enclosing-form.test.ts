@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { ensureSyntaxTree } from '@codemirror/language'
 import { parser } from '../../../src/scheme/generated/parser.js'
 import { ScamperSupport } from '../../../src/app/web/codemirror/extensions/language'
 import { mkFreshEditorState } from '../../../src/app/web/codemirror/codemirror'
 import { scamperMode } from '../../../src/app/web/codemirror/modes'
+import { mkParsedState } from './parsed-state'
 import { initialize } from '../../../src/scamper'
 import {
   cursorStatus,
@@ -91,15 +90,16 @@ describe('formPathAt', () => {
 describe('cursorStatus', () => {
   // Exercises the production path: status read off a real CodeMirror state
   // configured with ScamperSupport, at state.selection.head. In the app the
-  // EditorView drives parsing; here ensureSyntaxTree forces it.
+  // EditorView drives parsing; here mkParsedState forces it and publishes it,
+  // which the ensureSyntaxTree call that stood here did not do (#636).
   function statusAt(doc: string, anchor: number) {
-    const state = EditorState.create({
-      doc,
-      selection: { anchor },
-      extensions: [ScamperSupport()],
-    })
-    ensureSyntaxTree(state, doc.length, 5000)
-    return cursorStatus(state)
+    return cursorStatus(
+      mkParsedState({
+        doc,
+        selection: { anchor },
+        extensions: [ScamperSupport()],
+      }),
+    )
   }
 
   test('reads breadcrumb plus 1-based line/column on a single line', () => {

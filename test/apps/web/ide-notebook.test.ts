@@ -300,8 +300,12 @@ describe('IDE notebook view', () => {
       first.contentDOM.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
       )
-      await flushPromises()
-      expect(second.hasFocus).toBe(true)
+      // Focus arrives through CodeMirror's own handling of the move, not
+      // through Vue's reactivity, so no fixed number of ticks bounds it: this
+      // is the assertion #636 saw fail on a loaded runner.
+      await vi.waitFor(() => {
+        expect(second.hasFocus).toBe(true)
+      })
     } finally {
       wrapper.unmount()
     }
@@ -329,13 +333,14 @@ describe('IDE notebook view', () => {
       try {
         await showNotebook()
         addBelow(0, 'Code')
-        await flushPromises()
-        await flushPromises()
+        // As above: the new cell has to mount and then take focus, and neither
+        // is a fixed number of ticks away.
+        await vi.waitFor(() => {
+          expect(cellViews()).toHaveLength(4)
+          expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+        })
 
         const views = cellViews()
-        expect(views).toHaveLength(4)
-        expect(views.findIndex((v) => v.hasFocus)).toBe(1)
-
         views[1].dispatch({ changes: { from: 0, insert: '(display 9)' } })
         await flushPromises()
         expect(docText()).toBe(
@@ -351,13 +356,13 @@ describe('IDE notebook view', () => {
       try {
         await showNotebook()
         addBelow(0, 'Text')
-        await flushPromises()
-        await flushPromises()
+        // Its editor, not its rendering: there is nothing to read yet.
+        await vi.waitFor(() => {
+          expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+        })
 
         const cell = document.querySelectorAll('.notebook-cell')[1]
         expect(cell.className).toContain('notebook-cell-prose')
-        // Its editor, not its rendering: there is nothing to read yet.
-        expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
       } finally {
         wrapper.unmount()
       }
@@ -388,8 +393,9 @@ describe('IDE notebook view', () => {
       try {
         await showNotebook()
         addBelow(0, 'Code')
-        await flushPromises()
-        await flushPromises()
+        await vi.waitFor(() => {
+          expect(cellViews()).toHaveLength(4)
+        })
 
         const views = cellViews()
         views[0].focus()
@@ -397,8 +403,9 @@ describe('IDE notebook view', () => {
         views[0].contentDOM.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
         )
-        await flushPromises()
-        expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+        await vi.waitFor(() => {
+          expect(cellViews().findIndex((v) => v.hasFocus)).toBe(1)
+        })
       } finally {
         wrapper.unmount()
       }
