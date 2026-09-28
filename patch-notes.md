@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- The empty list now shows as null in an embedded reading, matching the editor and the command line.
+
 # 4.6.0
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.
