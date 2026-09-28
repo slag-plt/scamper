@@ -144,6 +144,8 @@ describe('#403: the search rules survived the move', () => {
     expect(matches.map((e) => functionDocName(e.doc))).toEqual([
       'map',
       'string-map',
+      'andmap',
+      'ormap',
       'vector-map',
       'vector-map!',
       'pixel-map',

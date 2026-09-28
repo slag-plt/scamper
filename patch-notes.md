@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- andmap and ormap are now available, answering whether a test holds for every element of a list or for at least one, and they stop as soon as the answer is known.
+
 # 4.6.0
 
 - error now reports an error when given more than a message, instead of quietly ignoring the extra values.

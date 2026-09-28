@@ -3124,6 +3124,95 @@ test('filter', async () => {
   ])
 })
 
+// andmap/ormap (#667) wear Racket's names but deliberately not Racket's
+// results: Racket's `ormap` hands back the first true *value* and `andmap` the
+// last one, and Scamper has no truthiness, so such an answer could not then be
+// used as a guard -- `(if (ormap f l) ...)` would raise. Both return booleans.
+test('andmap', async () => {
+  expect(
+    await runProgram(`
+(andmap even? (list 2 4 6))
+(andmap even? (list 2 3 4))
+(andmap even? (list))
+(andmap even? (list 2))
+(andmap even? (list 3))
+(andmap (lambda (s) (> (string-length s) 2)) (list "abc" "abcd"))
+(andmap < (list 1 2 3) (list 2 3 4))
+(andmap < (list 1 2 3) (list 2 3 3))
+(andmap (lambda (a b c) (< a b c)) (list 1 2) (list 3 4) (list 5 6))
+(andmap even?)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    // With no lists at all there is nothing to disagree, so the answer is
+    // vacuously true -- the same reasoning that makes `(map f)` null.
+    '#t',
+  ])
+})
+
+test('ormap', async () => {
+  expect(
+    await runProgram(`
+(ormap even? (list 1 3 4))
+(ormap even? (list 1 3 5))
+(ormap even? (list))
+(ormap even? (list 2))
+(ormap even? (list 3))
+(ormap (lambda (s) (> (string-length s) 2)) (list "a" "ab" "abc"))
+(ormap < (list 3 2) (list 1 4))
+(ormap < (list 3 2) (list 1 1))
+(ormap even?)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+  ])
+})
+
+// Stopping early is a promise, not an optimisation, so it is pinned by a list
+// whose later element would raise if it were reached: `>` and `<` on a string
+// are errors, and the answer is settled before the walk gets there.
+test('andmap-ormap-stop-early', async () => {
+  expect(
+    await runProgram(`
+(ormap (lambda (x) (> x 0)) (list 1 "nope"))
+(andmap (lambda (x) (< x 0)) (list 1 "nope"))
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+  ])
+})
+
+test('andmap-length-mismatch', async () => {
+  expect(await runProgram('(andmap < (list 1 2) (list 3))')).toEqual([
+    'Runtime error: (error) andmap: all lists must have the same length',
+  ])
+  expect(await runProgram('(ormap < (list 5 6) (list 1))')).toEqual([
+    'Runtime error: (error) ormap: all lists must have the same length',
+  ])
+  // The mismatch is only noticed if the walk reaches the end of the short
+  // list. Here the first pair settles the answer, so it never does and no
+  // error is reported -- Racket checks the lengths up front, and this is the
+  // price of stopping early.
+  expect(await runProgram('(andmap < (list 5) (list 1 2))')).toEqual(['#f'])
+})
+
 test('fold', async () => {
   expect(
     await runProgram(`

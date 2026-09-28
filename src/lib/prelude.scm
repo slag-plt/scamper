@@ -371,7 +371,7 @@
 ;;;  f1 : procedure?
 ;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
-;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
+;;; @category function composition, boolean/logic, all-of, andmap, ormap, compose, =-eps, o, |>
 (define-export any-of
   (lambda (& fs)
     (lambda (v)
@@ -381,7 +381,7 @@
 ;;;  f1 : procedure?
 ;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
-;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
+;;; @category function composition, boolean/logic, any-of, andmap, ormap, compose, =-eps, o, |>
 (define-export all-of
   (lambda (& fs)
     (lambda (v)
@@ -397,7 +397,7 @@
 ;;;  p : procedure?
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
-;;; @category list, function composition, association list, apply, filter, fold, fold-left, fold-right, for-range, map, reduce, reduce-right
+;;; @category list, function composition, association list, andmap, apply, filter, fold, fold-left, fold-right, for-range, map, ormap, reduce, reduce-right
 (define-export list-of
   (lambda (p)
     (lambda (l)
@@ -930,7 +930,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the results of applying `f` to each element of `l`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
-;;; @category list, list manipulation, association list, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
+;;; @category list, list manipulation, association list, andmap, ormap, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
 (define-export map
   (lambda (f & lsts)
     (map-onto f lsts null)))
@@ -947,10 +947,66 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` for which `f` returns `#t`.
-;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right
+;;; @category list, list manipulation, association list, andmap, apply, fold, fold-left, fold-right, for-range, list-of, map, ormap, reduce, reduce-right
 (define-export filter
   (lambda (f l)
     (filter-onto f l null)))
+
+; N.B., andmap's and ormap's tail-recursive workers; see the note above
+; map-onto, whose shape and length check these copy. They are not named `-onto`
+; because there is nothing to accumulate onto: each stops as soon as one element
+; decides the answer, so the answer *is* the return value.
+;
+; N.B., all-satisfy? and some-satisfy? above are the single-list versions of
+; exactly these walks. Resist folding the two spellings together: those two must
+; stay undocumented, because documenting them makes contract.ts wrap them and
+; the wrapper's own rest-parameter check calls all-satisfy? -> car/cdr -> back
+; into the contracted car/cdr, a cycle. andmap and ormap are documented, so they
+; have to be separate definitions that *call* them -- one contracted wrapper
+; around uncontracted internals, which is fine.
+(define-export andmap-lists
+  (lambda (f lsts)
+    (cond
+      ;; N.B., the `(null? lsts)` disjunct is what makes this total, as in
+      ;; map-onto: with no lists at all there is no cdr to take, and nothing
+      ;; disagrees, so `(andmap f)` lands here and yields #t.
+      [(or (null? lsts) (some-satisfy? null? lsts))
+       (if (all-satisfy? null? lsts)
+           #t
+           (error "andmap: all lists must have the same length"))]
+      [(apply f (lists-cars lsts)) (andmap-lists f (lists-cdrs lsts))]
+      [else #f])))
+
+;;; (andmap f & l) -> boolean?
+;;;  f : procedure?
+;;;   takes one element from each list and returns a boolean
+;;;  l : list?
+;;; Returns `#t` if and only if `f` returns `#t` for every element of `l`, stopping at the first element for which it does not. An empty list, or no list at all, yields `#t`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
+;;; @category list, list manipulation, boolean/logic, ormap, all-of, any-of, filter, list-of, map
+(define-export andmap
+  (lambda (f & lsts)
+    (andmap-lists f lsts)))
+
+; N.B., ormap's worker; see andmap-lists above.
+(define-export ormap-lists
+  (lambda (f lsts)
+    (cond
+      [(or (null? lsts) (some-satisfy? null? lsts))
+       (if (all-satisfy? null? lsts)
+           #f
+           (error "ormap: all lists must have the same length"))]
+      [(apply f (lists-cars lsts)) #t]
+      [else (ormap-lists f (lists-cdrs lsts))])))
+
+;;; (ormap f & l) -> boolean?
+;;;  f : procedure?
+;;;   takes one element from each list and returns a boolean
+;;;  l : list?
+;;; Returns `#t` if and only if `f` returns `#t` for at least one element of `l`, stopping at the first element for which it does. An empty list, or no list at all, yields `#f`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
+;;; @category list, list manipulation, boolean/logic, andmap, all-of, any-of, filter, list-of, map
+(define-export ormap
+  (lambda (f & lsts)
+    (ormap-lists f lsts)))
 
 ;;; (fold f v l) -> any
 ;;;  f : procedure?
