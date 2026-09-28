@@ -10,12 +10,15 @@
  * The two are not identical, and cannot be: a drag copies the DOM the Vue
  * renderers built, so a drawing (a canvas) copies as nothing at all, while
  * this renders every value through TextRenderer and so writes the drawing's
- * constructor expression. Where they differ, this is the more useful text.
+ * constructor expression. Where they differ, this is the more useful text --
+ * except for a value drawn as nothing at all, which is skipped so that what is
+ * copied matches what was on the screen.
  *
  * Framework-free, so it can be tested on plain objects rather than by mounting
  * the window; see notebook-display.ts.
  */
 import type { Value } from '../../lpm'
+import { drawsNothing } from '../../lpm/renderers'
 import TextRenderer from '../../lpm/renderers/text'
 
 /** An entry, as the transcript needs to know it. */
@@ -62,6 +65,12 @@ export function transcriptText(entries: readonly TranscriptEntry[]): string {
       lines.push(entry.source)
     }
     for (const value of entry.values) {
+      // A value the reader saw nothing of contributes nothing to copy. Void is
+      // the case: #612 made the web renderers draw it as an empty element, so
+      // writing TextRenderer's "void" here would put a word on the clipboard
+      // that was never on the screen (#635). The CLI keeps printing it, where
+      // there is no hidden element to be had and an autograder reads the text.
+      if (drawsNothing(value)) { continue }
       lines.push(renderValue(value))
     }
   }
