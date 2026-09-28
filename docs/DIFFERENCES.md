@@ -279,29 +279,35 @@ The composite division operators (`floor/`, `floor-quotient`, `floor-remainder`,
 
 ### Equivalence
 
-There is one equality predicate, `equal?`.
-`eq?` and `eqv?` are absent, and the source explains:
+All three predicates are present: `equal?` is structural, and `eqv?` asks the sharper question of whether two values are the *same* value (`src/lib/prelude.scm`, `src/js/prelude/index.ts`).
+`eq?` is a second binding of that same procedure.
+R7RS permits `eq?` to draw finer distinctions than `eqv?`; Scamper represents values so that there are none left to draw -- every atom is a Javascript primitive except `char`, which the shared `eqv` helper unwraps (`src/lpm/util.ts`) -- so the two always agree here, and one native carries both names.
 
-> `// N.B., don't need these functions: (eqv? x y) (eq? x y) Since we don't have effects beside vectors. Therefore, value vs. reference equality is not an issue!` (`src/js/prelude/index.ts`)
-
-**By design**, but the reason is now narrower than it was.
-Scamper has grown two more mutable things since: reference cells (`ref`, `deref`, `ref-set!`, `src/lib/prelude.scm`) and in-place map update (`hash-set!`, `src/lib/prelude.scm`).
-Identity is therefore observable-by-mutation but not askable:
+They were absent until issue #641, on the reasoning that mutation was confined to vectors and so identity never came up.
+That stopped being true once Scamper grew reference cells (`ref`, `deref`, `ref-set!`, `src/lib/prelude.scm`) and in-place map update (`hash-set!`, `src/lib/prelude.scm`): identity was observable by mutating one of two cells and watching the other, but not askable, which is precisely what a lesson on aliasing needs to ask.
+It now is:
 
 ~~~
 > (define a (ref 1))
 > (define b (ref 1))
 > (equal? a b)
 #t
-> (ref-set! a 2)
-> (equal? a b)
+> (eq? a b)
 #f
+> (eq? a a)
+#t
 ~~~
 
-Two distinct cells holding the same value compare equal, and there is no predicate that distinguishes them.
-Worth knowing before building a lesson on aliasing.
+Two **deviations** remain, both downstream of there being no exactness (6.2).
+`(eqv? 2 2.0)` is `#t`, where R7RS would hold an exact and an inexact 2 apart.
+`(eqv? 0 -0)` is `#t` as well, and this one is a real loss: the two zeroes *are* distinguishable, since `(expt -0 -1)` is `-Infinity` where `(expt 0 -1)` is `Infinity`.
+Answering `#f` would nonetheless put `eqv?` at odds with `=` and `equal?`, neither of which separates them, so it answers `#t` and the leak is left documented rather than patched in one predicate.
 
-`boolean=?` is also absent, with no note in the source either way.
+By contrast `(eqv? (sqrt -1) (sqrt -1))` is `#f`: `NaN` is not `eqv?` to itself, which is what keeps `eqv?` a refinement of `equal?` as R7RS requires, and agrees with `=`.
+
+`(eq? "a" "a")` is `#t`, which R7RS leaves unspecified and so **permits**: strings here are immutable Javascript primitives and there is no `string-copy` (6.7), so Scamper cannot hand out two distinct string locations to be compared in the first place.
+
+`boolean=?` is absent, with no note in the source either way.
 
 ### Pairs, lists and mutation
 
@@ -385,7 +391,7 @@ The prelude adds two more: `with-file`, which reads a named file and hands its c
 **By design.**
 
 Vectors are mutable, and `[...]` is their literal syntax -- `#(` is unavailable because it is taken by the anonymous-function form.
-They are not the only mutable thing a student is handed, though: reference cells (`ref-set!`) and maps (`hash-set!`) are the others, as *Equivalence* above notes.
+They are not the only mutable thing a student is handed, though: reference cells (`ref-set!`) and maps (`hash-set!`) are the others, which is why *Equivalence* above has `eqv?` to tell two of them apart.
 `vector-copy` and `vector-copy!` are absent, unremarked; `vector-set!`, `vector-fill!`, `vector-append`, `vector-map`, `vector-for-each`, and the conversions are present.
 
 ### Exceptions
@@ -480,7 +486,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 
 | § | Scamper's position | Why |
 | --- | --- | --- |
-| 6.1 Equivalence | `equal?` only; no `eq?`, `eqv?` | design: "we don't have effects beside vectors" (`index.ts`) -- now narrower than stated |
+| 6.1 Equivalence | all three present; `eq?` is a second name for `eqv?` | added in issue #641 once `ref`/`hash-set!` made identity worth asking about. Deviations: `2` is `eqv?` to `2.0`, and `0` to `-0` |
 | 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises | design: "the Javascript numeric stack" (`index.ts`). `gcd`/`lcm` **not yet** (`index.ts`), as is `string->number`'s radix argument (`index.ts`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
 | 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:586`); "the pure, functional subset" (`index.ts`) |
