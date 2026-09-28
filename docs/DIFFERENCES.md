@@ -275,6 +275,11 @@ The composite division operators (`floor/`, `floor-quotient`, `floor-remainder`,
 **By design** -- these are documentation-surface decisions rather than implementation ones.
 `quotient`, `remainder`, and `modulo` are all present.
 
+**R7RS-small's `square` is spelled `sqr`.**
+The name `square` belongs to the image library's shape constructor, and re-binding a standard-library name is silent by design, so `(import image)` replaced the numeric `square` without a word (#677).
+The numeric one now takes Racket's `racket/math` name, `sqr` (`src/lib/prelude.scm`, pinned by `test/regressions/sqr-not-square.test.ts`).
+**By design** -- a deliberate divergence from 6.2.6, taken to end a collision students hit.
+
 `real?` is `Number.isFinite` (`src/js/prelude/index.ts`), so it is false for an infinity, which R7RS would call a real.
 
 ### Equivalence
@@ -481,7 +486,7 @@ Name collisions between two user-introduced bindings are reported symmetrically,
 | § | Scamper's position | Why |
 | --- | --- | --- |
 | 6.1 Equivalence | `equal?` only; no `eq?`, `eqv?` | design: "we don't have effects beside vectors" (`index.ts`) -- now narrower than stated |
-| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises | design: "the Javascript numeric stack" (`index.ts`). `gcd`/`lcm` **not yet** (`index.ts`), as is `string->number`'s radix argument (`index.ts`) |
+| 6.2 Numbers | JS doubles; no exactness, rationals, complex, bignums, or radix syntax; division by zero raises; `square` is `sqr` | design: "the Javascript numeric stack" (`index.ts`); `sqr` frees `square` for the image library (`prelude.scm`). `gcd`/`lcm` **not yet** (`index.ts`), as is `string->number`'s radix argument (`index.ts`) |
 | 6.3 Booleans | `not`, `boolean?`; no `boolean=?` | unremarked. Extensions: `nand`, `nor`, `implies`, `xor` |
 | 6.4 Pairs and lists | pair and cons are distinct types; `null` not `'()`; immutable; no `member`/`assoc` family | design: Clojure's split (`lang.ts:586`); "the pure, functional subset" (`index.ts`) |
 | 6.5 Symbols | none | **not yet** by the label (`index.ts`), but the note itself doubts it |
@@ -529,6 +534,8 @@ Unattributed in the source but unmistakably Racket's:
 + **`list-of` and `or/p`** (`src/lib/prelude.scm`), which are Racket's contract combinators `listof` and `or/c` under lighter names.
 + **`add1` and `sub1`** (`src/lib/prelude.scm`).
   The commit that added them (#604) gives a teaching motivation and names no parent language; `increment` and `decrement`, added alongside, are Scamper's own.
++ **`sqr`** (`src/lib/prelude.scm`), Racket's `racket/math` name for R7RS's `square`.
+  Racket spells it this way because `2htdp/image` owns `square`, which is exactly why Scamper does (#677).
 + **`src/lib/image.scm`**, which is Racket's `2htdp/image` teachpack: `beside`, `beside/align`, `above`, `above/align`, `overlay`, `overlay/align`, `overlay/offset`, `rotate`, `text`, and the shape constructors are all 2htdp names.
   Nothing in the file says so.
 

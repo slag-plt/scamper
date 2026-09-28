@@ -1648,15 +1648,15 @@ test('sin-cos-tan', async () => {
   ])
 })
 
-test('square-sqrt', async () => {
+test('sqr-sqrt', async () => {
   expect(
     await runProgram(`
-(square 0.71)
-(square 111)
-(square 6.1)
-(square 0.69)
-(square 0.10000000000000009)
-(square 0)
+(sqr 0.71)
+(sqr 111)
+(sqr 6.1)
+(sqr 0.69)
+(sqr 0.10000000000000009)
+(sqr 0)
 (sqrt 0.5041)
 (sqrt 12321)
 (sqrt 37.21)
