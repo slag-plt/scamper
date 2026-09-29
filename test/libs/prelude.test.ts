@@ -2014,6 +2014,75 @@ test('string-number-conversions', async () => {
   ])
 })
 
+// string->number's optional radix (#642). R7RS defines (string->number s radix);
+// only the one-argument form existed.
+test('string-to-number-radix', async () => {
+  expect(
+    await runProgram(`
+(string->number "1010" 2)
+(string->number "-101" 2)
+(string->number "17" 8)
+(string->number "ff" 16)
+(string->number "FF" 16)
+(string->number "1e3" 16)
+(string->number "z" 36)
+`),
+  ).toEqual(['10', '-5', '15', '255', '255', '483', '35'])
+})
+
+// A digit outside the base, and the three ways `parseInt` would have answered
+// something plausible instead of #f: it prefix-parses, it tolerates surrounding
+// whitespace, and it truncates at a dot.
+test('string-to-number-radix-non-numerals', async () => {
+  expect(
+    await runProgram(`
+(string->number "2" 2)
+(string->number "18" 8)
+(string->number "0x10" 16)
+(string->number "" 2)
+(string->number "12abc" 10)
+(string->number "  10 " 2)
+(string->number "101.1" 2)
+`),
+  ).toEqual(['#f', '#f', '#f', '#f', '#f', '#f', '#f'])
+})
+
+// Radix 10 is the default radix, so the two spellings must agree exactly --
+// including on the decimal forms no other base accepts.
+test('string-to-number-radix-ten-matches-default', async () => {
+  expect(
+    await runProgram(`
+(string->number "1e3" 10)
+(string->number "1e3")
+(string->number "3.5" 10)
+(string->number "3.5")
+(string->number "+5" 10)
+(string->number ".5" 10)
+`),
+  ).toEqual(['1000', '1000', '3.5', '3.5', '5', '0.5'])
+})
+
+// A radix outside 2-36 raises rather than answering #f: #f already means "this
+// string does not denote a number", so conflating the two would hide a typo'd
+// radix behind a plausible answer. A non-integer radix never reaches the
+// native -- the docstring's contract catches it -- and a third argument is
+// beyond the signature's ceiling.
+test('string-to-number-radix-errors', async () => {
+  expect(
+    await runProgram(`
+(string->number "10" 1)
+(string->number "10" 37)
+(string->number "10" 2.5)
+(string->number "10" 2 3)
+`),
+  ).toEqual([
+    'Runtime error: (string->number) string->number: radix 1 is not between 2 and 36',
+    'Runtime error: (string->number) string->number: radix 37 is not between 2 and 36',
+    'Runtime error: (string->number) expected an integer as the second argument, received floating point number',
+    'Runtime error: (string->number) Arity mismatch in function call: expected at most 2 arguments, got 3',
+  ])
+})
+
 test('string-ops', async () => {
   expect(
     await runProgram(`

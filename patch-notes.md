@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- string->number now takes an optional base, so string->number of "ff" with base 16 is 255 and "1010" with base 2 is 10.
 - The documentation for - and / now explains that a single argument gives the negation or the reciprocal.
 - The function that squares a number is now called sqr, so it no longer clashes with the square that draws a shape from the image library.
 - New eq? and eqv? predicates tell whether two values are the very same object, so two separately created reference cells, vectors, or maps can now be told apart.

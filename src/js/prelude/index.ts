@@ -377,19 +377,33 @@ export function prelude_numberToString(x: number): string {
   return x.toString()
 }
 
-// TODO: implement:
-//   (string->number s)
-//   (string->number s radix)
+/** The digits of base 36, in order; a prefix of them spells any smaller base. */
+const RADIX_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
-export function prelude_stringToNumber(s: string): number | boolean {
+export function prelude_stringToNumber(s: string, radix?: number): number | boolean {
   // N.B., per R7RS, return #f when the string does not denote a number.
-  if (/^[+-]?\d+$/.test(s)) {
-    return parseInt(s)
-  } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
-    return parseFloat(s)
-  } else {
-    return false
+  if (radix === undefined || radix === 10) {
+    // 10 is R7RS's default radix, so it must answer exactly as omitting it does.
+    if (/^[+-]?\d+$/.test(s)) {
+      return parseInt(s)
+    } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
+      return parseFloat(s)
+    } else {
+      return false
+    }
   }
+  if (radix < 2 || radix > 36) {
+    throw new L.ScamperError(
+      'Runtime',
+      `string->number: radix ${radix} is not between 2 and 36`,
+    )
+  }
+  // Validate before parseInt: it prefix-parses ("12abc" -> 12), tolerates
+  // surrounding whitespace, and truncates at a dot ("101.1" base 2 -> 5). Only
+  // integer numerals are accepted here; R7RS permits a fractional numeral in
+  // any base, but parseInt cannot read one.
+  const re = new RegExp(`^[+-]?[${RADIX_DIGITS.slice(0, radix)}]+$`, 'i')
+  return re.test(s) ? parseInt(s, radix) : false
 }
 
 // Additional functions from racket/base
