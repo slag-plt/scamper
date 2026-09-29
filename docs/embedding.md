@@ -64,6 +64,8 @@ This code is not made visible to the user:
 </div>
 ```
 
+A preamble may sit beside either form of code: a `text/scamper` script, as above, or the element's own text.
+
 ## Building on an earlier widget
 
 By default each widget is its own program and sees only the standard library, so a definition in one cannot leak into the next.

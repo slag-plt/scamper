@@ -25,8 +25,8 @@ describe('zero-argument range and vector-range (#542)', () => {
 (vector-range)
 `),
     ).toEqual([
-      'Runtime error [1:1-1:7]: Arity mismatch in function call: expected 1 arguments, got 0',
-      'Runtime error [2:1-2:14]: Arity mismatch in function call: expected 1 arguments, got 0',
+      'Runtime error [1:1-1:7]: (range) Arity mismatch in function call: expected at least 1 argument, got 0',
+      'Runtime error [2:1-2:14]: (vector-range) Arity mismatch in function call: expected at least 1 argument, got 0',
     ])
   })
 
