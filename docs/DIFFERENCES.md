@@ -539,6 +539,8 @@ Unattributed in the source but unmistakably Racket's:
 + **`struct`**, in both its spelling and its expansion to constructor / predicate / accessors.
 + **`match`** (`reference.html#match`), whose `[pattern expression]` clause shape is Racket's.
 + **`sort`**, whose argument order is `(sort l lt?)` (`src/lib/prelude.scm`) -- Racket's, not SRFI-132's `(list-sort < lst)`.
+  This is the one place the ecosystem genuinely disagrees with itself: R6RS (`list-sort proc list`) and SRFI-132 put the procedure first, while SRFI-95 and Racket put the data first.
+  SRFI-132's rationale records the break in so many words -- "in SRFI 32, the data-first convention was used ... However, R6RS adopted the procedure-first convention, which is more consistent with other Scheme libraries that put the procedure first" -- so a reader arriving from R6RS finds `sort` backwards, and one arriving from Racket does not.
 + **`list-of` and `or/p`** (`src/lib/prelude.scm`), which are Racket's contract combinators `listof` and `or/c` under lighter names.
 + **`andmap` and `ormap`** (`src/lib/prelude.scm`), Racket's names for "does this hold for every element" and "for at least one".
 
@@ -598,6 +600,7 @@ Neither R7RS nor, as far as the source records, anyone else's:
 + **`=-eps`** (`src/lib/prelude.scm`), approximate numeric equality, which earns its place given that every number is a double.
 + **`pair`** as a constructor separate from `cons`, forced by the pair/cons split.
 + **`index-of`, `assoc-key?`, `assoc-ref`, `assoc-set`**, the replacement for the `member`/`assoc` family.
++ **`tally` and `tally-value`** (`src/lib/prelude.scm`) -- the names are Scamper's, though the function is not: counting the elements that satisfy a predicate is `count` in both SRFI-1 and Racket. Their argument order is discussed below.
 + **`list-take`, `list-drop`, `nonempty-list?`, `for-range`, `string->words`, `string-split-vector`, `vector-range`, `function?`** (a second name for `procedure?`, added in #608 because the readings say "function").
 + **`js-var`**, the FFI root, which is exported to user programs (`src/lib/index.ts:41-51`, `:91`), so the whole native surface is reachable from student code -- `(js-var "prelude_car")` evaluates to `car`'s implementation, and `js-var` itself can be shadowed like any other binding.
 + **The reserved `##...##` names** that derived forms expand into, which are the one thing a program may *not* bind: `(define ##error## 1)` is a parse error.
@@ -644,3 +647,38 @@ Whichever spelling a reader arrives with, one of these three is not what they ex
 The `reduce` family seeds each of those folds with an element of the list instead of a value, and inherits its combiner order: `reduce` is `fold` started from the first element, `reduce-left` is `fold-left` started from the first, and `reduce-right` is `fold-right` started from the last (`src/lib/prelude.scm`).
 So the crossing above reaches them too -- `(reduce - (list 1 2 3))` is `-4` but `(reduce-left - (list 1 2 3))` is `2`.
 The rule that keeps all six straight: **an unsuffixed name takes the accumulator first, and a `-left` or `-right` suffix takes the element first.**
+
+Two things are worth knowing before reading that as a peculiarity of Scamper's.
+
+**R6RS is inconsistent in exactly the same way**: its `fold-left` hands `combine` the accumulator first and its `fold-right` hands it last.
+SRFI-1 and Racket are the uniform ones -- every fold in both passes the element first and the seed last.
+So a library splitting its own folds between the two orders is not unusual; what is Scamper's own is *which* names fall on which side.
+
+**`reduce` also differs from SRFI-1 in arity, not only in order.**
+SRFI-1's is `(reduce f ridentity list)`, and `ridentity` is not a seed -- it is used only when the list is empty, so `(reduce f z l)` is `(fold f (car l) (cdr l))` for any non-empty `l`.
+Scamper's `reduce` takes no such value and reports an error on an empty list, which is Clojure's two-argument shape rather than SRFI-1's three-argument one.
+
+### Argument order: where the function goes
+
+The fold table above settles how a *combiner* receives its arguments.
+A second question runs through the rest of the library: when a procedure takes both a function and a collection, which of the two comes first?
+
+Scamper answers **function first** in seventeen of its nineteen collection procedures -- `map`, `filter`, `andmap`, `ormap`, the six folds, `string-map`, `vector-map`, `vector-map!`, `vector-for-each`, `vector-filter`, `for-range`, and `image`'s `pixel-map`.
+A fold's seed always sits between the function and the list (`fold f v l`), which is what R6RS, SRFI-1, Racket and Clojure all do; there is no divergence to report there.
+
+Two procedures take the collection first, and they are not the same case.
+
+**`sort l lt?`** is Racket's order, and the disagreement belongs to the ecosystem rather than to Scamper -- see the note under *From Racket* above.
+
+**`tally lst pred?`** has no such cover.
+Its analogue is `count`, which exists in SRFI-1 as `(count pred clist)` and in Racket as `(count proc lst)`, and **both put the predicate first**.
+Clojure has no predicate-counting procedure at all; the idiom there is `(count (filter pred coll))` -- which is, as it happens, exactly how Scamper's `tally` is implemented (`src/lib/prelude.scm`).
+So `tally` takes its arguments in an order no language in this comparison uses, and in the opposite order from the `filter` it is built out of.
+The order was chosen deliberately when it was added (#666), and a reversed call is caught by the contract rather than silently answering `0`; this note records the cost, which is that `tally` and `filter` cannot be read off one another.
+
+The value-searching family is a third shape and a consistent one: `index-of`, `assoc-key?`, `assoc-ref` and `assoc-set` all take the value or key first and the list second, matching `member` and `assoc` in both R7RS-small and SRFI-1.
+`tally-value lst value` is the exception within that family too, for the same reason as `tally`.
+
+Two smaller notes on this axis.
+Racket, the language Scamper draws on most, has **no single rule** of its own -- `sort`, `takef`, `dropf`, `remove-duplicates`, `build-list`, `hash-map` and `hash-for-each` are all collection-first while `map`, `filter`, `foldl` and `count` are function-first -- so "follow Racket" does not by itself decide the question.
+Clojure, by contrast, is collection-**last** throughout its sequence library, which is what makes its transducers and its `->>` threading work; `|>` (above) is the one place Scamper borrows that shape, and it is value-first for the same reason.
