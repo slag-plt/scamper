@@ -21,7 +21,7 @@
 ;;; (tally-all lst) -> list?
 ;;;  lst : list?
 ;;; Takes a list `lst` and returns a list of pairs where each pair consists of an element from `lst` and the number of times that element appears in `lst`.
-;;; @category data, string->chars, string->lines
+;;; @category data, string->chars, string->lines, tally, tally-value
 (define-export tally-all (js-var "data_tallyAll"))
 
 ;;; (dataset? v) -> boolean?

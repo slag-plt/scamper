@@ -208,6 +208,7 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:reduce', ['(lambda (a b) a)', '(list 1 2 3)']],
   ['prelude:reduce-left', ['(lambda (a b) b)', '(list 1 2 3)']],
   ['prelude:reduce-right', ['(lambda (a b) b)', '(list 1 2 3)']],
+  ['prelude:tally', ['(list 1 2 3)', '(lambda (x) #t)']],
   // A generic `integer?` sample would cap the stack at one frame, for every
   // statement after this one in the generated program.
   ['prelude:set-maximum-recursion-depth!', ['10000']],

@@ -3537,6 +3537,48 @@ test('reduce-right', async () => {
   ])
 })
 
+test('tally', async () => {
+  expect(
+    await runProgram(`
+(tally (list 1 2 3 4 5) even?)
+(tally null even?)
+(tally (list 2 4 6) even?)
+(tally (list 1 3 5) even?)
+(tally (list "a" "abc" "ab") (lambda (s) (> (string-length s) 1)))
+`),
+  ).toEqual([
+    '2',
+    '0',
+    // every element passes
+    '3',
+    // no element passes
+    '0',
+    '2',
+  ])
+})
+
+test('tally-value', async () => {
+  expect(
+    await runProgram(`
+(tally-value (list "a" "b" "a") "a")
+(tally-value (list "a" "b" "a") "c")
+(tally-value null "a")
+(tally-value (list (list 1) (list 1) (list 2)) (list 1))
+(equal? (tally-value (list 1 2 1 3 1) 1) (tally (list 1 2 1 3 1) (lambda (x) (equal? x 1))))
+`),
+  ).toEqual([
+    '2',
+    // an absent value is counted zero times
+    '0',
+    '0',
+    // the comparison is structural, so equal lists count even though they are
+    // not the same object
+    '2',
+    // tally-value is tally with an equal? test
+    '#t',
+  ])
+})
+
 test('vector-map', async () => {
   expect(
     await runProgram(`
