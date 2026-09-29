@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - The empty list now shows as null in an embedded reading, matching the editor and the command line.
+- An error about calling a function with the wrong number of arguments now names the function and says at least when the function accepts more.
 
 # 4.6.0
 
