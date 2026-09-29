@@ -60,6 +60,32 @@ describe('readSpec', () => {
     })
   })
 
+  test('takes it from the element text beside a preamble script', () => {
+    // The combination the other three miss: "reads a preamble" above writes
+    // both halves as scripts, so nothing here noticed that the bare-text
+    // fallback was swallowing the preamble's own source too (#665).
+    const el = widget(
+      `<div class="${EMBED_CLASS}">
+         <script type="text/scamper-preamble">(define x 1)</script>
+         (+ x 1)
+       </div>`,
+    )
+    expect(readSpec(el)).toMatchObject({
+      code: '(+ x 1)',
+      preamble: '(define x 1)',
+    })
+  })
+
+  test('prefers a script to the element text when it has both', () => {
+    const el = widget(
+      `<div class="${EMBED_CLASS}">
+         (+ 1 2)
+         <script type="text/scamper">(* 3 4)</script>
+       </div>`,
+    )
+    expect(readSpec(el).code).toBe('(* 3 4)')
+  })
+
   test('a widget with no preamble reports an empty one', () => {
     const el = widget(`<div class="${EMBED_CLASS}">1</div>`)
     expect(readSpec(el).preamble).toBe('')

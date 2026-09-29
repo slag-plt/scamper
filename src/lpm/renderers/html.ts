@@ -34,7 +34,11 @@ export class Renderer extends R.Renderer<HTMLElement> {
         return mkHiddenElement()
       default:
         if (v === null) {
-          return mkCodeElement('()')
+          // The empty list is `null`: `docs/DIFFERENCES.md` states it outright,
+          // "not `'()`" -- necessarily, since Scamper has no quotation. #612
+          // aligned the editor and the CLI on that spelling and missed this
+          // renderer, which is the one behind an embedded reading (#668).
+          return mkCodeElement('null')
         } else if (U.isArray(v)) {
           if (v.length === 0) {
             return mkCodeElement('(vector)')

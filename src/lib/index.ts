@@ -39,8 +39,8 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
     )
   }
   // js-var is the FFI root primitive -- it can't be bound via itself, so it's
-  // injected directly into every library's load environment (and exported
-  // explicitly below, since it carries no export statement).
+  // injected directly into every library's load environment (and exported from
+  // runtime below, since it carries no export statement).
   //
   // ##contracted## joins it because contract insertion calls it in a define's
   // *value* position, which runs while this library loads -- and a library
@@ -79,8 +79,17 @@ async function loadLibrary(name: string, src: string): Promise<L.Module> {
   // Every library now declares its exports with `define-export` (see src/lib/*.scm).
   // js-var is injected rather than defined (it's the FFI root, so it can't be
   // bound via itself), so it carries no export statement -- add it explicitly so
-  // user code and the scope-checker pick it up, as before.
-  fiber.addExports(['js-var'])
+  // user code and the scope-checker pick it up.
+  //
+  // Only runtime exports it, and that one export is enough: runtime is in every
+  // program's default environment (Scamper.initialize) and seeds the
+  // scope-checker's globals (scope.ts), so js-var is global with no import at
+  // all. Adding it to all 14 libraries instead made any two imports collide on
+  // it -- one name arriving from two modules is a collision the scope checker
+  // rightly reports (#663).
+  if (name === 'runtime') {
+    fiber.addExports(['js-var'])
+  }
   return fiber.getModule()
 }
 

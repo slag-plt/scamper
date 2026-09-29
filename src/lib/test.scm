@@ -36,22 +36,22 @@
 ;;; Returns `#t` if and only if `v` is a test result.
 (define-export test-result? (js-var "test_isResult"))
 
-;;; (test-case desc eq? expected test-fn) -> test-result?
+;;; (test-case desc same? expected test-fn) -> test-result?
 ;;;  desc : string?
-;;;  eq? : procedure?
+;;;  same? : procedure?
 ;;;   a function that tests for equality between two values
 ;;;  expected : any
 ;;;  test-fn : procedure?
 ;;;   a function that produces the actual value to be tested
-;;; Returns a test result indicating whether the given equality test passed: `(eq? expected (test-fn))`.
+;;; Returns a test result indicating whether the given equality test passed: `(same? expected (test-fn))`.
 ;;; @category testing
 (define-export test-case
-  (lambda (desc eq? expected test-fn)
+  (lambda (desc same? expected test-fn)
     (with-handler
       (lambda (err) (test-result-error-exn desc err))
       (lambda ()
         (let ([actual (test-fn)]
-              [is-equal (eq? expected actual)])
+              [is-equal (same? expected actual)])
           (cond
             [(equal? is-equal #t) (test-result-ok desc)]
             [(equal? is-equal #f) (test-result-error-expected desc expected actual)]
