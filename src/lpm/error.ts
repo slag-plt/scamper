@@ -53,6 +53,28 @@ export class ScamperError extends Error {
   }
 }
 
+/** How an arity requirement bounds the number of arguments a call may pass. */
+export type ArityBound = 'exactly' | 'at least' | 'at most'
+
+/**
+ * The message both arity checks raise -- the closure check in op-handlers.ts and
+ * the optional-argument check in src/js/runtime -- so that "argument" vs
+ * "arguments" is decided in one place. `exactly` contributes no words of its
+ * own: "expected 2 arguments" is how a fixed arity has always read.
+ *
+ * @param expected the number of arguments `bound` qualifies.
+ * @param given how many the call actually passed.
+ */
+export function arityMismatchMsg (
+  bound: ArityBound,
+  expected: number,
+  given: number,
+): string {
+  const qualifier = bound === 'exactly' ? '' : `${bound} `
+  const noun = expected === 1 ? 'argument' : 'arguments'
+  return `Arity mismatch in function call: expected ${qualifier}${expected} ${noun}, got ${given}`
+}
+
 /** Internal compiler errors arise due to bugs in Scamper. */
 export class ICE extends Error {
   funcName: string

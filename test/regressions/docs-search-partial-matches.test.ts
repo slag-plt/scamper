@@ -48,6 +48,11 @@ describe('#603: a partial name finds the functions containing it', () => {
     expect(names('map')).toEqual([
       'map',
       'string-map',
+      // #667's andmap/ormap contain `map` too, so they are matches in their own
+      // right -- which is also why they do not appear among the relatives below
+      // despite `map` naming them.
+      'andmap',
+      'ormap',
       'vector-map',
       'vector-map!',
       'pixel-map',

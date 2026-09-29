@@ -30,9 +30,33 @@
 ;;; (equal? v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any
-;;; Returns `#t` if and only `v1` and `v2` are (structurally) equal values.
-;;; @category predicates
+;;; Returns `#t` if and only if `v1` and `v2` are structurally equal, i.e. they
+;;; are built the same way out of equal parts. Two separately created vectors
+;;; holding the same elements are `equal?`; use `eqv?` to ask the sharper
+;;; question of whether they are the very same vector.
+;;; @category predicates, eq?, eqv?
 (define-export equal? (js-var "prelude_equalQ"))
+
+;;; (eqv? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; Returns `#t` if and only if `v1` and `v2` are the same value: the same
+;;; vector, map, or reference cell rather than merely equal ones, and otherwise
+;;; the same number, string, character, or boolean. So `(eqv? (ref 1) (ref 1))`
+;;; is `#f` while `equal?` of the two is `#t`. Unlike R7RS, `2` and `2.0` are
+;;; `eqv?` (Scamper has no exactness) and so are `0` and `-0`; `(sqrt -1)` is
+;;; not `eqv?` to itself, matching `=` and `equal?`.
+;;; @category predicates, eq?, equal?
+(define-export eqv? (js-var "prelude_eqvQ"))
+
+;;; (eq? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; An alias for `(eqv? v1 v2)`. R7RS allows `eq?` to draw finer distinctions
+;;; than `eqv?`, but Scamper represents values so that there are none to draw,
+;;; so the two always agree here.
+;;; @category predicates, eqv?, equal?
+(define-export eq? (js-var "prelude_eqvQ"))
 
 ;;; (number? v) -> boolean?
 ;;;  v : any
@@ -49,8 +73,15 @@
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export integer? (js-var "prelude_integerQ"))
+
+;;; (nonnegative-integer? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an integer that is zero or greater, i.e., a
+;;; possible size or length.
+;;; @category math, typecheck, predicates, integer?, negative?, positive?, zero?, make-list, make-string, make-vector
+(define-export nonnegative-integer? (js-var "prelude_nonnegativeIntegerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
@@ -113,13 +144,13 @@
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, odd?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, real?, zero?
 (define-export positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
@@ -157,7 +188,8 @@
 ;;; (- v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the difference of `v1`, `v2`, ... .
+;;; Returns the difference of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; additive inverse, so `(- 5)` is `-5`.
 ;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define-export - (js-var "prelude_minus"))
 
@@ -170,7 +202,8 @@
 ;;; (/ v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the quotient of `v1`, `v2`, ... .
+;;; Returns the quotient of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; reciprocal, so `(/ 4)` is `0.25`.
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
 
@@ -249,23 +282,23 @@
 ;;; @category math, algebra, abs, ceiling, floor, truncate
 (define-export round (js-var "prelude_round"))
 
-;;; (square v) -> number?
+;;; (sqr v) -> number?
 ;;;  v : number?
 ;;; Returns the square of `v`.
 ;;; @category math, algebra, exp, expt, sqrt, log
-(define-export square (js-var "prelude_square"))
+(define-export sqr (js-var "prelude_sqr"))
 
 ;;; (sqrt v) -> number?
 ;;;  v : number?
 ;;; Returns the square root of `v`.
-;;; @category math, algebra, exp, expt, square, log
+;;; @category math, algebra, exp, expt, sqr, log
 (define-export sqrt (js-var "prelude_sqrt"))
 
 ;;; (expt x y) -> number?
 ;;;  x : number?
 ;;;  y : number?
 ;;; Returns `x` raised to the power of `y`.
-;;; @category math, algebra, exp, square, sqrt, log  
+;;; @category math, algebra, exp, sqr, sqrt, log  
 (define-export expt (js-var "prelude_expt"))
 
 ;;; (number->string v) -> string?
@@ -274,23 +307,26 @@
 ;;; @category string, char->integer, digit-value, integer->char, string->number
 (define-export number->string (js-var "prelude_numberToString"))
 
-;;; (string->number s) -> number?
+;;; (string->number s [radix]) -> number?
 ;;;  s : string?
+;;;  radix : integer?
+;;;   the base `s` is written in, from 2 to 36; defaults to 10
 ;;; Returns the number denoted by `s`, or `#f` if `s`
-;;; does not denote a number.
+;;; does not denote a number. In a base other than 10, only whole numbers are
+;;; read, so `s` written with a decimal point gives `#f`.
 ;;; @category string, number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char
 (define-export string->number (js-var "prelude_stringToNumber"))
 
 ;;; (exp v) -> number?
 ;;;  v : number?
 ;;; Returns the exponential of `v`.
-;;; @category math, algebra, expt, square, sqrt, log
+;;; @category math, algebra, expt, sqr, sqrt, log
 (define-export exp (js-var "prelude_exp"))
 
 ;;; (log v) -> number?
 ;;;  v : number?
 ;;; Returns the natural logarithm of `v`.
-;;; @category math, algebra, exp, expt, square, sqrt
+;;; @category math, algebra, exp, expt, sqr, sqrt
 (define-export log (js-var "prelude_log"))
 
 ;;; (sin v) -> number?
@@ -371,7 +407,7 @@
 ;;;  f1 : procedure?
 ;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only one of `f1`, `f2`, ... is `#t` for its argument.
-;;; @category function composition, boolean/logic, all-of, compose, =-eps, o, |>
+;;; @category function composition, boolean/logic, all-of, andmap, ormap, compose, =-eps, o, |>
 (define-export any-of
   (lambda (& fs)
     (lambda (v)
@@ -381,7 +417,7 @@
 ;;;  f1 : procedure?
 ;;;   that takes a value as input and returns a boolean.
 ;;; Returns a unary function that returns `#t` if and only all of `f1`, `f2`, ... are `#t` for its argument.
-;;; @category function composition, boolean/logic, any-of, compose, =-eps, o, |>
+;;; @category function composition, boolean/logic, any-of, andmap, ormap, compose, =-eps, o, |>
 (define-export all-of
   (lambda (& fs)
     (lambda (v)
@@ -397,7 +433,7 @@
 ;;;  p : procedure?
 ;;;   returns `#t` if its argument is of the desired type
 ;;; Returns a new predicate that tests whether its argument is a list of elements that satisfy the predicate `p`.
-;;; @category list, function composition, association list, apply, filter, fold, fold-left, fold-right, for-range, map, reduce, reduce-right
+;;; @category list, function composition, association list, andmap, apply, filter, fold, fold-left, fold-right, for-range, map, ormap, reduce, reduce-right
 (define-export list-of
   (lambda (p)
     (lambda (l)
@@ -497,10 +533,10 @@
 (define-export list (js-var "prelude_list"))
 
 ;;; (make-list n v) -> list?
-;;;  n : integer?
+;;;  n : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a new list containing `n` copies of `v`.
-;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, range, reverse, sort
+;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, nonnegative-integer?, range, reverse, sort
 (define-export make-list (js-var "prelude_makeList"))
 
 ;;; (length v) -> integer?
@@ -661,10 +697,10 @@
 (define-export string? (js-var "prelude_stringQ"))
 
 ;;; (make-string k c) -> string?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  c : char?
 ;;; Returns a string of length `k` with each character set to `c`.
-;;; @category string, make-list, make-vector, string-append, string-map
+;;; @category string, make-list, make-vector, nonnegative-integer?, string-append, string-map
 (define-export make-string (js-var "prelude_makeString"))
 
 ;;; (string & c1) -> string?
@@ -785,10 +821,10 @@
 (define-export vector (js-var "prelude_vector"))
 
 ;;; (make-vector k v) -> vector?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a vector of length `k` with each element set to `v`.
-;;; @category vectors, make-list, make-string
+;;; @category vectors, make-list, make-string, nonnegative-integer?
 (define-export make-vector (js-var "prelude_makeVector"))
 
 ;;; (vector-length v) -> integer?
@@ -930,7 +966,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the results of applying `f` to each element of `l`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
-;;; @category list, list manipulation, association list, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
+;;; @category list, list manipulation, association list, andmap, ormap, reduce, reduce-right, set-maximum-recursion-depth!, string-map, vector-map, vector-map!
 (define-export map
   (lambda (f & lsts)
     (map-onto f lsts null)))
@@ -947,17 +983,73 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Returns a new list containing the elements of `l` for which `f` returns `#t`.
-;;; @category list, list manipulation, association list, apply, fold, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, tally
+;;; @category list, list manipulation, association list, andmap, apply, fold, fold-left, fold-right, for-range, list-of, map, ormap, reduce, reduce-right, tally
 (define-export filter
   (lambda (f l)
     (filter-onto f l null)))
+
+; N.B., andmap's and ormap's tail-recursive workers; see the note above
+; map-onto, whose shape and length check these copy. They are not named `-onto`
+; because there is nothing to accumulate onto: each stops as soon as one element
+; decides the answer, so the answer *is* the return value.
+;
+; N.B., all-satisfy? and some-satisfy? above are the single-list versions of
+; exactly these walks. Resist folding the two spellings together: those two must
+; stay undocumented, because documenting them makes contract.ts wrap them and
+; the wrapper's own rest-parameter check calls all-satisfy? -> car/cdr -> back
+; into the contracted car/cdr, a cycle. andmap and ormap are documented, so they
+; have to be separate definitions that *call* them -- one contracted wrapper
+; around uncontracted internals, which is fine.
+(define-export andmap-lists
+  (lambda (f lsts)
+    (cond
+      ;; N.B., the `(null? lsts)` disjunct is what makes this total, as in
+      ;; map-onto: with no lists at all there is no cdr to take, and nothing
+      ;; disagrees, so `(andmap f)` lands here and yields #t.
+      [(or (null? lsts) (some-satisfy? null? lsts))
+       (if (all-satisfy? null? lsts)
+           #t
+           (error "andmap: all lists must have the same length"))]
+      [(apply f (lists-cars lsts)) (andmap-lists f (lists-cdrs lsts))]
+      [else #f])))
+
+;;; (andmap f & l) -> boolean?
+;;;  f : procedure?
+;;;   takes one element from each list and returns a boolean
+;;;  l : list?
+;;; Returns `#t` if and only if `f` returns `#t` for every element of `l`, stopping at the first element for which it does not. An empty list, or no list at all, yields `#t`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
+;;; @category list, list manipulation, boolean/logic, ormap, all-of, any-of, filter, list-of, map
+(define-export andmap
+  (lambda (f & lsts)
+    (andmap-lists f lsts)))
+
+; N.B., ormap's worker; see andmap-lists above.
+(define-export ormap-lists
+  (lambda (f lsts)
+    (cond
+      [(or (null? lsts) (some-satisfy? null? lsts))
+       (if (all-satisfy? null? lsts)
+           #f
+           (error "ormap: all lists must have the same length"))]
+      [(apply f (lists-cars lsts)) #t]
+      [else (ormap-lists f (lists-cdrs lsts))])))
+
+;;; (ormap f & l) -> boolean?
+;;;  f : procedure?
+;;;   takes one element from each list and returns a boolean
+;;;  l : list?
+;;; Returns `#t` if and only if `f` returns `#t` for at least one element of `l`, stopping at the first element for which it does. An empty list, or no list at all, yields `#f`. When several lists are given, `f` is applied element-wise across them and all lists must have the same length.
+;;; @category list, list manipulation, boolean/logic, andmap, all-of, any-of, filter, list-of, map
+(define-export ormap
+  (lambda (f & lsts)
+    (ormap-lists f lsts)))
 
 ;;; (fold f v l) -> any
 ;;;  f : procedure?
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.
-;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold
   (lambda (f v l)
     (if (null? l)
@@ -968,7 +1060,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold` but uses the first element of `l` as the initial value.
-;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+;;; @category list, list manipulation, reduce-left, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce
   (lambda (f l)
     (fold f (car l) (cdr l))))
@@ -978,10 +1070,19 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Like `fold`, but the combining function `f` takes the current element as its first argument and the accumulated value as its second.
-;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold-left
   (lambda (f v l)
     (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
+
+;;; (reduce-left f l) -> any
+;;;  f : procedure?
+;;;  l : list?
+;;; Like `fold-left` but uses the first element of `l` as the initial value. Unlike `reduce`, the combining function `f` takes the current element as its first argument and the accumulated value as its second, as `fold-left` does.
+;;; @category list, list manipulation, reduce, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+(define-export reduce-left
+  (lambda (f l)
+    (fold-left f (car l) (cdr l))))
 
 ; N.B., fold-right's and reduce-right's tail-recursive worker: `rev` is the
 ; list reversed, so walking it forwards combines from the right end inwards --
@@ -998,7 +1099,7 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.
-;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold-right
   (lambda (f v l)
     (fold-right-onto f v (reverse l))))
@@ -1007,7 +1108,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
-;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+;;; @category list, list manipulation, reduce, reduce-left, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce-right
   (lambda (f l)
     (match (reverse l)

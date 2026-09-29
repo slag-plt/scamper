@@ -22,8 +22,8 @@ describe('zero-argument - and / (#517)', () => {
 (-)
 (/)
 `)).toEqual([
-      'Runtime error [1:1-1:3]: Arity mismatch in function call: expected 1 arguments, got 0',
-      'Runtime error [2:1-2:3]: Arity mismatch in function call: expected 1 arguments, got 0',
+      'Runtime error [1:1-1:3]: (-) Arity mismatch in function call: expected at least 1 argument, got 0',
+      'Runtime error [2:1-2:3]: (/) Arity mismatch in function call: expected at least 1 argument, got 0',
     ])
   })
 

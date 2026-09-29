@@ -882,6 +882,137 @@ test('equal', async () => {
   ).toEqual(['#t', '#f', '#t', '#f', '#f', '#t'])
 })
 
+// eq? and eqv? (#641). Scamper had only `equal?`, so `(equal? (ref 1) (ref 1))`
+// was `#t` and nothing told two reference cells apart -- exactly the
+// distinction a lesson on aliasing needs. The two predicates coincide under
+// Scamper's value representation, so they are one native under two names; the
+// last test here is what keeps "they coincide" a checked claim rather than a
+// docstring promise.
+describe('eq-eqv', () => {
+  test('two separately created reference cells are not the same cell', async () => {
+    expect(
+      await runProgram(`
+(eq? (ref 1) (ref 1))
+(eqv? (ref 1) (ref 1))
+(equal? (ref 1) (ref 1))
+(let ([r (ref 1)]) (eq? r r))
+(let ([r (ref 1)]) (eqv? r r))
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#t'])
+  })
+
+  test('a fresh vector or map is equal? to its twin but not eq? to it', async () => {
+    expect(
+      await runProgram(`
+(eq? (vector 1 2) (vector 1 2))
+(eqv? (vector 1 2) (vector 1 2))
+(equal? (vector 1 2) (vector 1 2))
+(let ([v (vector 1 2)]) (eq? v v))
+(eq? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(eqv? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(equal? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(let ([m (hash-set {} "a" 1)]) (eq? m m))
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#f', '#f', '#t', '#t'])
+  })
+
+  // Characters are the one atom Scamper represents as a wrapped object, freshly
+  // built at every read, so a bare `===` would answer `#f` here -- and R7RS
+  // requires two `char=?` characters to be `eqv?`.
+  test('characters that look the same are the same', async () => {
+    expect(
+      await runProgram(`
+(eqv? #\\a #\\a)
+(eq? #\\a #\\a)
+(eqv? #\\a #\\b)
+(eqv? #\\a "a")
+`),
+    ).toEqual(['#t', '#t', '#f', '#f'])
+  })
+
+  test('strings and numbers answer as equal? does', async () => {
+    expect(
+      await runProgram(`
+(eqv? "abc" "abc")
+(eq? "abc" "abc")
+(eqv? "abc" (string-append "ab" "c"))
+(eqv? "abc" "abd")
+(eqv? 4 4)
+(eqv? 4 5)
+(eqv? 2 2.0)
+(eqv? 0 -0)
+(eqv? (sqrt -1) (sqrt -1))
+(eqv? 4 "4")
+`),
+    ).toEqual(['#t', '#t', '#t', '#f', '#t', '#f', '#t', '#t', '#f', '#f'])
+  })
+
+  test('null and the booleans are themselves', async () => {
+    expect(
+      await runProgram(`
+(eqv? null null)
+(eq? null null)
+(eqv? #t #t)
+(eqv? #f #f)
+(eqv? #t #f)
+(eqv? #f null)
+`),
+    ).toEqual(['#t', '#t', '#t', '#t', '#f', '#f'])
+  })
+
+  test('two identical lambdas are two procedures; a name is one', async () => {
+    expect(
+      await runProgram(`
+(eq? (lambda (x) x) (lambda (x) x))
+(eqv? (lambda (x) x) (lambda (x) x))
+(let ([f (lambda (x) x)]) (eq? f f))
+(eq? car car)
+(eqv? car car)
+(eq? car cdr)
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#t', '#f'])
+  })
+
+  // The docstrings say eq? is an alias for eqv?; this is that claim, checked.
+  test('eq? and eqv? agree on every value a student can hand them', async () => {
+    expect(
+      await runProgram(`
+(define agree? (lambda (a b) (equal? (eq? a b) (eqv? a b))))
+(define r (ref 1))
+(define v (vector 1 2))
+(and (agree? r (ref 1))
+     (agree? r r)
+     (agree? v (vector 1 2))
+     (agree? v v)
+     (agree? #\\a #\\a)
+     (agree? #\\a #\\b)
+     (agree? "a" "a")
+     (agree? 2 2.0)
+     (agree? 0 -0)
+     (agree? (sqrt -1) (sqrt -1))
+     (agree? null null)
+     (agree? #t #f)
+     (agree? car car)
+     (agree? (lambda (x) x) (lambda (x) x)))
+`),
+    ).toEqual(['#t'])
+  })
+
+  test('both take exactly two arguments', async () => {
+    expect(
+      await runProgram(`
+(eq? 1)
+(eqv? 1)
+(eq? 1 2 3)
+`),
+    ).toEqual([
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eqv?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 3',
+    ])
+  })
+})
+
 test('error', async () => {
   expect(
     await runProgram(`
@@ -1134,7 +1265,7 @@ test('l-s-r-s section only a two-argument procedure', async () => {
 ((${name} f 1) 2)
 `),
     ).toEqual([
-      'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
+      'Runtime error: (f) Arity mismatch in function call: expected 3 arguments, got 2',
     ])
   }
 })
@@ -1648,15 +1779,15 @@ test('sin-cos-tan', async () => {
   ])
 })
 
-test('square-sqrt', async () => {
+test('sqr-sqrt', async () => {
   expect(
     await runProgram(`
-(square 0.71)
-(square 111)
-(square 6.1)
-(square 0.69)
-(square 0.10000000000000009)
-(square 0)
+(sqr 0.71)
+(sqr 111)
+(sqr 6.1)
+(sqr 0.69)
+(sqr 0.10000000000000009)
+(sqr 0)
 (sqrt 0.5041)
 (sqrt 12321)
 (sqrt 37.21)
@@ -1880,6 +2011,75 @@ test('string-number-conversions', async () => {
     '100',
     '4',
     '30.135325698915423',
+  ])
+})
+
+// string->number's optional radix (#642). R7RS defines (string->number s radix);
+// only the one-argument form existed.
+test('string-to-number-radix', async () => {
+  expect(
+    await runProgram(`
+(string->number "1010" 2)
+(string->number "-101" 2)
+(string->number "17" 8)
+(string->number "ff" 16)
+(string->number "FF" 16)
+(string->number "1e3" 16)
+(string->number "z" 36)
+`),
+  ).toEqual(['10', '-5', '15', '255', '255', '483', '35'])
+})
+
+// A digit outside the base, and the three ways `parseInt` would have answered
+// something plausible instead of #f: it prefix-parses, it tolerates surrounding
+// whitespace, and it truncates at a dot.
+test('string-to-number-radix-non-numerals', async () => {
+  expect(
+    await runProgram(`
+(string->number "2" 2)
+(string->number "18" 8)
+(string->number "0x10" 16)
+(string->number "" 2)
+(string->number "12abc" 10)
+(string->number "  10 " 2)
+(string->number "101.1" 2)
+`),
+  ).toEqual(['#f', '#f', '#f', '#f', '#f', '#f', '#f'])
+})
+
+// Radix 10 is the default radix, so the two spellings must agree exactly --
+// including on the decimal forms no other base accepts.
+test('string-to-number-radix-ten-matches-default', async () => {
+  expect(
+    await runProgram(`
+(string->number "1e3" 10)
+(string->number "1e3")
+(string->number "3.5" 10)
+(string->number "3.5")
+(string->number "+5" 10)
+(string->number ".5" 10)
+`),
+  ).toEqual(['1000', '1000', '3.5', '3.5', '5', '0.5'])
+})
+
+// A radix outside 2-36 raises rather than answering #f: #f already means "this
+// string does not denote a number", so conflating the two would hide a typo'd
+// radix behind a plausible answer. A non-integer radix never reaches the
+// native -- the docstring's contract catches it -- and a third argument is
+// beyond the signature's ceiling.
+test('string-to-number-radix-errors', async () => {
+  expect(
+    await runProgram(`
+(string->number "10" 1)
+(string->number "10" 37)
+(string->number "10" 2.5)
+(string->number "10" 2 3)
+`),
+  ).toEqual([
+    'Runtime error: (string->number) string->number: radix 1 is not between 2 and 36',
+    'Runtime error: (string->number) string->number: radix 37 is not between 2 and 36',
+    'Runtime error: (string->number) expected an integer as the second argument, received floating point number',
+    'Runtime error: (string->number) Arity mismatch in function call: expected at most 2 arguments, got 3',
   ])
 })
 
@@ -2578,8 +2778,8 @@ test('charQ-arity', async () => {
 (char? #\\a #\\b)
 `),
   ).toEqual([
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: (char?) Arity mismatch in function call: expected 1 argument, got 0',
+    'Runtime error: (char?) Arity mismatch in function call: expected 1 argument, got 2',
   ])
 })
 
@@ -2680,8 +2880,8 @@ test('vectorQ', async () => {
     '#f',
     '#f',
     '#f',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: (vector?) Arity mismatch in function call: expected 1 argument, got 0',
+    'Runtime error: (vector?) Arity mismatch in function call: expected 1 argument, got 2',
   ])
 })
 
@@ -2697,7 +2897,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error: (make-vector) expected an integer as the first argument, received string',
+    'Runtime error: (make-vector) expected a nonnegative-integer as the first argument, received string',
   ])
 })
 
@@ -2820,7 +3020,7 @@ test('voidQ', async () => {
   ).toEqual([
     '#t',
     '#f',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (void?) Arity mismatch in function call: expected 1 argument, got 0',
   ])
 })
 
@@ -2835,7 +3035,7 @@ test('ignore', async () => {
     // job, not the value's (#596). The text renderer has no way to hide, so it
     // still names it here, as it does for any other void-valued call.
     'void',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (ignore) Arity mismatch in function call: expected 1 argument, got 0',
   ])
 })
 
@@ -2853,7 +3053,7 @@ test('set-maximum-recursion-depth', async () => {
     'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given -1',
     'Runtime error: (set-maximum-recursion-depth!) expects a whole number between 1 and 200000, but was given 1000000',
     'Runtime error: (set-maximum-recursion-depth!) expected an integer as the first argument, received string',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (set-maximum-recursion-depth!) Arity mismatch in function call: expected 1 argument, got 0',
   ])
 })
 
@@ -2895,8 +3095,8 @@ r
     '5',
     'void',
     '10',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (ref) Arity mismatch in function call: expected 1 argument, got 0',
+    'Runtime error: (ref?) Arity mismatch in function call: expected 1 argument, got 0',
     'Runtime error: (deref) expected a ref as the first argument, received number',
     'Runtime error: (ref-set!) expected a ref as the first argument, received number',
   ])
@@ -3039,7 +3239,7 @@ test('char-compare-single-arg', async () => {
   // `(char=? a)` for `(char=? a b)` got a silent `#t`, so the arity floor is
   // now two and the vacuous branch is unreachable from a program.
   expect(await runProgram('(char=? #\\a)')).toEqual([
-    'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
+    'Runtime error: (char=?) Arity mismatch in function call: expected at least 2 arguments, got 1',
   ])
 })
 
@@ -3051,7 +3251,7 @@ test('list->string-non-char', async () => {
 
 test('vector-range-errors', async () => {
   expect(await runProgram('(vector-range)')).toEqual([
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (vector-range) Arity mismatch in function call: expected at least 1 argument, got 0',
   ])
   expect(await runProgram('(vector-range 0 10 0)')).toEqual([
     'Runtime error: (vector-range) "step" argument must be non-zero',
@@ -3060,7 +3260,7 @@ test('vector-range-errors', async () => {
 
 test('range-errors', async () => {
   expect(await runProgram('(range)')).toEqual([
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
+    'Runtime error: (range) Arity mismatch in function call: expected at least 1 argument, got 0',
   ])
   expect(await runProgram('(range 0 10 0)')).toEqual([
     'Runtime error: (range) "step" argument must be non-zero',
@@ -3124,6 +3324,95 @@ test('filter', async () => {
   ])
 })
 
+// andmap/ormap (#667) wear Racket's names but deliberately not Racket's
+// results: Racket's `ormap` hands back the first true *value* and `andmap` the
+// last one, and Scamper has no truthiness, so such an answer could not then be
+// used as a guard -- `(if (ormap f l) ...)` would raise. Both return booleans.
+test('andmap', async () => {
+  expect(
+    await runProgram(`
+(andmap even? (list 2 4 6))
+(andmap even? (list 2 3 4))
+(andmap even? (list))
+(andmap even? (list 2))
+(andmap even? (list 3))
+(andmap (lambda (s) (> (string-length s) 2)) (list "abc" "abcd"))
+(andmap < (list 1 2 3) (list 2 3 4))
+(andmap < (list 1 2 3) (list 2 3 3))
+(andmap (lambda (a b c) (< a b c)) (list 1 2) (list 3 4) (list 5 6))
+(andmap even?)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#t',
+    // With no lists at all there is nothing to disagree, so the answer is
+    // vacuously true -- the same reasoning that makes `(map f)` null.
+    '#t',
+  ])
+})
+
+test('ormap', async () => {
+  expect(
+    await runProgram(`
+(ormap even? (list 1 3 4))
+(ormap even? (list 1 3 5))
+(ormap even? (list))
+(ormap even? (list 2))
+(ormap even? (list 3))
+(ormap (lambda (s) (> (string-length s) 2)) (list "a" "ab" "abc"))
+(ormap < (list 3 2) (list 1 4))
+(ormap < (list 3 2) (list 1 1))
+(ormap even?)
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+    '#f',
+    '#t',
+    '#f',
+    '#t',
+    '#t',
+    '#f',
+    '#f',
+  ])
+})
+
+// Stopping early is a promise, not an optimisation, so it is pinned by a list
+// whose later element would raise if it were reached: `>` and `<` on a string
+// are errors, and the answer is settled before the walk gets there.
+test('andmap-ormap-stop-early', async () => {
+  expect(
+    await runProgram(`
+(ormap (lambda (x) (> x 0)) (list 1 "nope"))
+(andmap (lambda (x) (< x 0)) (list 1 "nope"))
+`),
+  ).toEqual([
+    '#t',
+    '#f',
+  ])
+})
+
+test('andmap-length-mismatch', async () => {
+  expect(await runProgram('(andmap < (list 1 2) (list 3))')).toEqual([
+    'Runtime error: (error) andmap: all lists must have the same length',
+  ])
+  expect(await runProgram('(ormap < (list 5 6) (list 1))')).toEqual([
+    'Runtime error: (error) ormap: all lists must have the same length',
+  ])
+  // The mismatch is only noticed if the walk reaches the end of the short
+  // list. Here the first pair settles the answer, so it never does and no
+  // error is reported -- Racket checks the lengths up front, and this is the
+  // price of stopping early.
+  expect(await runProgram('(andmap < (list 5) (list 1 2))')).toEqual(['#f'])
+})
+
 test('fold', async () => {
   expect(
     await runProgram(`
@@ -3178,6 +3467,39 @@ test('fold-left', async () => {
     // (cons elem acc) reverses the list
     '(list 3 2 1)',
     '6',
+  ])
+})
+
+test('reduce-left', async () => {
+  // reduce-left seeds fold-left with the list's first element, so its combiner
+  // takes the current element first and the accumulated value second (SRFI-1's
+  // `reduce`) -- the opposite of `reduce`'s argument order.
+  expect(
+    await runProgram(`
+(reduce-left + (list 1 2 3 4 5))
+(reduce-left + (list 42))
+(reduce-left - (list 1 2 3))
+(reduce-left max (list 3 1 4 1 5 9 2 6))
+(equal? (reduce-left - (list 10 3 2)) (fold-left - 10 (list 3 2)))
+(reduce - (list 1 2 3))
+(reduce-left + (list))
+`),
+  ).toEqual([
+    '15',
+    // a singleton list accumulates to its only element
+    '42',
+    // element-first combiner: (- 3 (- 2 1)) = 2
+    '2',
+    '9',
+    // reduce-left f l is fold-left f (car l) (cdr l), by definition
+    '#t',
+    // Deliberately pinned divergence: `reduce` combines accumulator-first, so
+    // it gives (- (- 1 2) 3) = -4 where reduce-left gives 2. This is intended
+    // -- it is the same crossing fold and fold-left already have; see the
+    // "Folds: a warning" table in docs/DIFFERENCES.md.
+    '-4',
+    // the empty list has no first element to start from
+    'Runtime error: (reduce-left) car: expected a pair or a non-empty list',
   ])
 })
 
