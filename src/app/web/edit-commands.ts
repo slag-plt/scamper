@@ -37,6 +37,10 @@ export const editShortcut = {
   selectAll: `${mod}+A`,
   find: `${mod}+F`,
   toggleComment: `${mod}+/`,
+  // Commenting in two directions rather than one toggle, since comment depth
+  // means something in Scamper (#662). CodeMirror's own toggle keeps Mod+/.
+  addComment: `${mod}+;`,
+  removeComment: `${mod}+Shift+;`,
   format: `${mod}+Shift+I`,
   goToLine: `${mod}+Alt+G`,
   goToDefinition: 'Alt+.',

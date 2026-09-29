@@ -29,6 +29,7 @@ import {
   fontSizeCompartment,
   fontSizeExtension,
 } from './codemirror'
+import { CommentExtension } from './extensions/comment'
 import { ScamperLanguage, ScamperSupport } from './extensions/language'
 import { scamperLspExtensions } from './lsp'
 
@@ -281,6 +282,9 @@ function cellExtensions(config: CellEditorConfig): Extension {
       ...(onHistory ? historyKeys(onHistory) : []),
     ]),
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
+    // The same comment chords the file editor has (#662), so a cell and the
+    // file it came from agree about what Ctrl-; does.
+    CommentExtension,
     EditorState.readOnly.of(isReadOnly),
     // A cell that has been run is a record of what was typed, not a box: it
     // can be selected and copied but not walked through with a caret.

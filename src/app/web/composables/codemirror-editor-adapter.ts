@@ -17,6 +17,10 @@ import {
   mkNoFileEditorState,
 } from '../codemirror/codemirror'
 import { modeFor, scamperMode, type EditorMode } from '../codemirror/modes'
+import {
+  addCommentLayer,
+  removeCommentLayer,
+} from '../codemirror/extensions/comment'
 import { formatScamperDocument } from '../codemirror/extensions/reformat'
 import { lineColumnAt, type CursorStatus } from '../codemirror/enclosing-form'
 import { syncQueryDecorations } from '../codemirror/extensions/query'
@@ -251,6 +255,19 @@ export function createCodeMirrorEditorAdapter(
 
     toggleComment() {
       toggleComment(view)
+    },
+
+    /**
+     * Ctrl-; and Ctrl-Shift-;: one more semicolon on each selected line, or one
+     * fewer (#662). Two commands rather than the toggle above because comment
+     * depth means something here -- `;;;` opens a docstring -- so a toggle can
+     * only ever take a layer off.
+     */
+    addComment() {
+      addCommentLayer(view)
+    },
+    removeComment() {
+      removeCommentLayer(view)
     },
 
     format() {
