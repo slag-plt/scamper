@@ -121,7 +121,7 @@ describe('#403: search is part of the docs app', () => {
   })
 
   test('results carry unique ids even across modules', () => {
-    // `square`, `html?` and four others are exported by more than one module,
+    // `drawing?`, `html?` and five others are exported by more than one module,
     // so a bare function name is not a usable key or anchor.
     const entries = searchByFilters({ ...noFilters(), returnTypes: ['boolean'] })
     const ids = entries.map(entryId)

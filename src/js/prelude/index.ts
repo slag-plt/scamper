@@ -344,7 +344,7 @@ export function prelude_round(x: L.Value): number {
 //   (rationalize x y)
 // Because we don't implement rationals.
 
-export function prelude_square(x: number): number {
+export function prelude_sqr(x: number): number {
   return x * x
 }
 

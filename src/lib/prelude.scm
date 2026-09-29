@@ -273,23 +273,23 @@
 ;;; @category math, algebra, abs, ceiling, floor, truncate
 (define-export round (js-var "prelude_round"))
 
-;;; (square v) -> number?
+;;; (sqr v) -> number?
 ;;;  v : number?
 ;;; Returns the square of `v`.
 ;;; @category math, algebra, exp, expt, sqrt, log
-(define-export square (js-var "prelude_square"))
+(define-export sqr (js-var "prelude_sqr"))
 
 ;;; (sqrt v) -> number?
 ;;;  v : number?
 ;;; Returns the square root of `v`.
-;;; @category math, algebra, exp, expt, square, log
+;;; @category math, algebra, exp, expt, sqr, log
 (define-export sqrt (js-var "prelude_sqrt"))
 
 ;;; (expt x y) -> number?
 ;;;  x : number?
 ;;;  y : number?
 ;;; Returns `x` raised to the power of `y`.
-;;; @category math, algebra, exp, square, sqrt, log  
+;;; @category math, algebra, exp, sqr, sqrt, log  
 (define-export expt (js-var "prelude_expt"))
 
 ;;; (number->string v) -> string?
@@ -308,13 +308,13 @@
 ;;; (exp v) -> number?
 ;;;  v : number?
 ;;; Returns the exponential of `v`.
-;;; @category math, algebra, expt, square, sqrt, log
+;;; @category math, algebra, expt, sqr, sqrt, log
 (define-export exp (js-var "prelude_exp"))
 
 ;;; (log v) -> number?
 ;;;  v : number?
 ;;; Returns the natural logarithm of `v`.
-;;; @category math, algebra, exp, expt, square, sqrt
+;;; @category math, algebra, exp, expt, sqr, sqrt
 (define-export log (js-var "prelude_log"))
 
 ;;; (sin v) -> number?
