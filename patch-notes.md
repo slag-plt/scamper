@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- make-list, make-vector and make-string now report an error when given a negative length, instead of quietly answering an empty result.
 - string->number now takes an optional base, so string->number of "ff" with base 16 is 255 and "1010" with base 2 is 10.
 - The documentation for - and / now explains that a single argument gives the negation or the reciprocal.
 - The function that squares a number is now called sqr, so it no longer clashes with the square that draws a shape from the image library.

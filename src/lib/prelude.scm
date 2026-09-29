@@ -73,8 +73,15 @@
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export integer? (js-var "prelude_integerQ"))
+
+;;; (nonnegative-integer? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an integer that is zero or greater, i.e., a
+;;; possible size or length.
+;;; @category math, typecheck, predicates, integer?, negative?, positive?, zero?, make-list, make-string, make-vector
+(define-export nonnegative-integer? (js-var "prelude_nonnegativeIntegerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
@@ -137,13 +144,13 @@
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, odd?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, real?, zero?
 (define-export positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
@@ -526,10 +533,10 @@
 (define-export list (js-var "prelude_list"))
 
 ;;; (make-list n v) -> list?
-;;;  n : integer?
+;;;  n : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a new list containing `n` copies of `v`.
-;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, range, reverse, sort
+;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, nonnegative-integer?, range, reverse, sort
 (define-export make-list (js-var "prelude_makeList"))
 
 ;;; (length v) -> integer?
@@ -690,10 +697,10 @@
 (define-export string? (js-var "prelude_stringQ"))
 
 ;;; (make-string k c) -> string?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  c : char?
 ;;; Returns a string of length `k` with each character set to `c`.
-;;; @category string, make-list, make-vector, string-append, string-map
+;;; @category string, make-list, make-vector, nonnegative-integer?, string-append, string-map
 (define-export make-string (js-var "prelude_makeString"))
 
 ;;; (string & c1) -> string?
@@ -814,10 +821,10 @@
 (define-export vector (js-var "prelude_vector"))
 
 ;;; (make-vector k v) -> vector?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a vector of length `k` with each element set to `v`.
-;;; @category vectors, make-list, make-string
+;;; @category vectors, make-list, make-string, nonnegative-integer?
 (define-export make-vector (js-var "prelude_makeVector"))
 
 ;;; (vector-length v) -> integer?

@@ -2897,7 +2897,7 @@ test('make-vector', async () => {
     '(vector "a" "a" "a")',
     '(vector)',
     '(vector #t #t #t #t #t)',
-    'Runtime error: (make-vector) expected an integer as the first argument, received string',
+    'Runtime error: (make-vector) expected a nonnegative-integer as the first argument, received string',
   ])
 })
 

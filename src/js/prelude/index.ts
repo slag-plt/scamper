@@ -101,6 +101,16 @@ export function prelude_integerQ(x: L.Value): boolean {
   return typeof x === 'number' && Number.isInteger(x)
 }
 
+// A size is a non-negative integer, which `integer?` cannot say and the
+// numeric predicates cannot compose into a single name (#675). Exported to
+// students in its own right, in the style of `nonempty-list?`: a predicate that
+// exists because a contract needed it is still one worth being able to call.
+// Typed as a predicate rather than a plain boolean so the three size guards
+// below narrow with it, the way they narrow with `L.isNumber`.
+export function prelude_nonnegativeIntegerQ(x: L.Value): x is number {
+  return L.isNumber(x) && Number.isInteger(x) && x >= 0
+}
+
 // N.B., we don't implement the following functions:
 //   (complex? obj)
 //   (rational? obj)
@@ -552,7 +562,13 @@ export function prelude_list(...xs: L.Value[]): L.List {
   return ret
 }
 
-export function prelude_makeList(n: number, fill: L.Value): L.List {
+export function prelude_makeList(n: L.Value, fill: L.Value): L.List {
+  // The contract is `nonnegative-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #675). Unchecked, a negative `n` failed the loop test
+  // immediately and answered the empty list.
+  if (!prelude_nonnegativeIntegerQ(n)) {
+    throw new L.ScamperError('Runtime', 'make-list: expected a nonnegative integer')
+  }
   let ret = null
   for (let i = 0; i < n; i++) {
     ret = L.mkCons(fill, ret)
@@ -918,7 +934,14 @@ export function prelude_stringQ(x: L.Value): boolean {
 
 // N.B., we don't implement the (make-string k) variant because our strings are
 // immutable, so having an "empty" string of size k does not make sense.
-export function prelude_makeString(k: number, c: L.Char): string {
+export function prelude_makeString(k: L.Value, c: L.Char): string {
+  // The contract is `nonnegative-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #675). Unchecked, a negative `k` reached
+  // `String.prototype.repeat`, which leaked "RangeError: Invalid count value"
+  // to the student in the host's own words.
+  if (!prelude_nonnegativeIntegerQ(k)) {
+    throw new L.ScamperError('Runtime', 'make-string: expected a nonnegative integer')
+  }
   return c.value.repeat(k)
 }
 
@@ -1123,11 +1146,17 @@ export function prelude_vector(...xs: L.Value[]): L.Value[] {
 }
 
 export function prelude_makeVector(n: L.Value, fill: L.Value): L.Value[] {
-  // The contract is `integer?`; this re-narrows it for `vector-map`, which
-  // names this one at top level (#553). Unchecked, `(make-vector "3" 0)`
-  // failed its loop test immediately and answered the empty vector.
+  // The contract is `nonnegative-integer?`; this re-narrows it for
+  // `vector-map`, which names this one at top level (#553). Unchecked,
+  // `(make-vector "3" 0)` failed its loop test immediately and answered the
+  // empty vector -- and so did `(make-vector -3 0)` (#675). Two branches
+  // rather than one, so the two mistakes read differently: `"3"` is not a
+  // length at all, where `-3` is a length that cannot exist.
   if (!L.isNumber(n) || !Number.isInteger(n)) {
     throw new L.ScamperError('Runtime', 'make-vector: expected an integer')
+  }
+  if (n < 0) {
+    throw new L.ScamperError('Runtime', 'make-vector: expected a nonnegative integer')
   }
   const ret = []
   for (let i = 0; i < n; i++) {
