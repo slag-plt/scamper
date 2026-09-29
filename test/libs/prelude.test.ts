@@ -1006,9 +1006,9 @@ describe('eq-eqv', () => {
 (eq? 1 2 3)
 `),
     ).toEqual([
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 3',
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eqv?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 3',
     ])
   })
 })

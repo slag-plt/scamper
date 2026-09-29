@@ -34,16 +34,17 @@ eq?
 `)).toEqual(['[Function: eqv?]', '[Function: eq?]'])
   })
 
-  // Arity is checked by that wrapper, so both names have it. The message names
-  // no procedure -- no contract-checked binding's does, `equal?` included -- so
-  // it is the source range that says which call went wrong.
+  // Arity is checked by that wrapper, so both names have it -- and since #669
+  // the message names the procedure it is about, which is the wrapper's own
+  // Scamper spelling. So this is a second, independent witness that the shared
+  // native does not leak one name into the other's errors.
   test('both names take exactly two arguments', async () => {
     expect(await runProgram(`
 (eqv? 1)
 (eq? 1)
 `, { stripRanges: true })).toEqual([
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eqv?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 1',
     ])
   })
 })
