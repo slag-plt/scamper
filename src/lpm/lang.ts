@@ -703,7 +703,9 @@ export interface If {
   provenance?: Provenance
 }
 // N.B., what the surface `??` lowers to: executing it raises "Hole encountered
-// in program!" at `range`. Unrelated to the HOLE sentinel above, which marks an
+// in program!" at `range`. Nothing makes it lazy: an op in a branch that is not
+// taken is simply never executed, which is the whole of why a hole costs
+// nothing until reached. Unrelated to the HOLE sentinel above, which marks an
 // unassigned binder rather than a place in the program. It is an op rather than
 // a call to a primitive so that a hole is atomic -- its error names the hole's
 // own source range, and a reduction trace never shows a function behind it.

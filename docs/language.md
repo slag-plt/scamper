@@ -62,6 +62,8 @@ The body is an ordinary expression, so any parenthesized form may appear: `#(+ %
 `??` is a *hole*: a placeholder for an expression not yet written.
 Reaching one raises "Hole encountered in program!", so a hole in a branch that is not taken costs nothing—`(if #t 1 ??)` is `1`, and a function whose body is a hole is fine until it is called.
 It is an atomic form rather than a parenthesized one, so it is written bare (`(+ 1 ??)`); `(??)`, the spelling from when `??` was a nullary library procedure, still raises, since a head is evaluated before its call.
+The spelling is exactly two question marks, and it is a reserved word: `???` is an ordinary identifier rather than a hole (so it fails with "Variable not found: ???"), and `(define ?? 5)` is a parse error.
+The error carries the hole's own range even when the hole is reached from inside a library procedure—`(map (lambda (x) ??) (list 1 2))` blames the lambda body, not `map`—because `HoleHandler` (`src/lpm/handlers/op-handlers.ts`) falls back to the frame's call range only for a frame running builtin code, and a lambda the student wrote is user code wherever a library applies it.
 
 A one-argument `import` injects a module's exported names into the current scope.
 A two-argument `import` binds the module under a qualified name instead: its exports are reachable only as `<alias>.<name>` and are not injected into scope.

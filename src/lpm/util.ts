@@ -544,6 +544,27 @@ export function equals(v: L.Value, u: L.Value): boolean {
 }
 
 /**
+ * @returns true if the two L.Values are the *same* value -- reference identity
+ * for every aggregate, sameness of the atom itself for every atom. This is what
+ * `eqv?` (and so `eq?`) answers.
+ *
+ * `char` is the one atom Scamper represents as a wrapped object, built afresh at
+ * every read and never interned, so identity alone would answer false for two
+ * `char=?` characters -- which R7RS forbids. Unwrapping it here is what keeps
+ * the whole implementation to one line, and keeps that knowledge beside
+ * {@link equals}, which needs exactly the same branch.
+ *
+ * The invariant is that `eqv(v, u)` implies `equals(v, u)`: `equals` begins with
+ * the same `===` and has the same `char` branch, so this predicate only ever
+ * refines it. That is why the comparison is `===` rather than `Object.is` --
+ * `Object.is(NaN, NaN)` is true while `equals` answers false, which would break
+ * the refinement (and disagree with `=`).
+ */
+export function eqv(v: L.Value, u: L.Value): boolean {
+  return v === u || (isChar(v) && isChar(u) && v.value === u.value)
+}
+
+/**
  * @returns the printed form of a map value, `{ "k1" : v1, "k2" : v2 }` (`{}`
  * when empty), given a renderer for its values. Shared by every backend so the
  * text and web renderings cannot drift.

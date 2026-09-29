@@ -72,14 +72,19 @@ export const prelude_withHandler: L.Value = L.mkClosure(
 
 // Equivalence predicates (6.1)
 
-// N.B., don't need these functions:
-//   (eqv? x y)
-//   (eq? x y)
-// Since we don't have effects beside vectors. Therefore, value vs. reference
-// equality is not an issue!
+// All three of R7RS's equivalence predicates are here. `equal?` is structural;
+// `eqv?` asks whether two values are the same value, which is what a lesson on
+// aliasing needs of a `ref` cell. R7RS allows `eq?` to be finer than `eqv?`, but
+// under Scamper's representation there is nothing for it to be finer about --
+// every atom is a Javascript primitive except `char`, which `L.eqv` unwraps --
+// so `eq?` is bound to this same native (see src/lib/prelude.scm).
 
 export function prelude_equalQ(x: L.Value, y: L.Value): boolean {
   return L.equals(x, y)
+}
+
+export function prelude_eqvQ(x: L.Value, y: L.Value): boolean {
+  return L.eqv(x, y)
 }
 
 // Numbers (6.2)

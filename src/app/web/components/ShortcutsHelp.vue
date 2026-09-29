@@ -52,6 +52,8 @@ const groups: Group[] = [
       { label: 'Outdent', keys: ['Shift', 'Tab'] },
       { label: 'Reformat file', keys: [mod, 'Shift', 'I'] },
       { label: 'Toggle comment', keys: [mod, '/'] },
+      { label: 'Add comment', keys: [mod, ';'] },
+      { label: 'Remove comment', keys: [mod, 'Shift', ';'] },
       { label: 'Undo', keys: [mod, 'Z'] },
       { label: 'Redo', keys: [mod, 'Shift', 'Z'] },
     ],

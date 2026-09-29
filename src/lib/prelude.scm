@@ -30,9 +30,33 @@
 ;;; (equal? v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any
-;;; Returns `#t` if and only `v1` and `v2` are (structurally) equal values.
-;;; @category predicates
+;;; Returns `#t` if and only if `v1` and `v2` are structurally equal, i.e. they
+;;; are built the same way out of equal parts. Two separately created vectors
+;;; holding the same elements are `equal?`; use `eqv?` to ask the sharper
+;;; question of whether they are the very same vector.
+;;; @category predicates, eq?, eqv?
 (define-export equal? (js-var "prelude_equalQ"))
+
+;;; (eqv? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; Returns `#t` if and only if `v1` and `v2` are the same value: the same
+;;; vector, map, or reference cell rather than merely equal ones, and otherwise
+;;; the same number, string, character, or boolean. So `(eqv? (ref 1) (ref 1))`
+;;; is `#f` while `equal?` of the two is `#t`. Unlike R7RS, `2` and `2.0` are
+;;; `eqv?` (Scamper has no exactness) and so are `0` and `-0`; `(sqrt -1)` is
+;;; not `eqv?` to itself, matching `=` and `equal?`.
+;;; @category predicates, eq?, equal?
+(define-export eqv? (js-var "prelude_eqvQ"))
+
+;;; (eq? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; An alias for `(eqv? v1 v2)`. R7RS allows `eq?` to draw finer distinctions
+;;; than `eqv?`, but Scamper represents values so that there are none to draw,
+;;; so the two always agree here.
+;;; @category predicates, eqv?, equal?
+(define-export eq? (js-var "prelude_eqvQ"))
 
 ;;; (number? v) -> boolean?
 ;;;  v : any
