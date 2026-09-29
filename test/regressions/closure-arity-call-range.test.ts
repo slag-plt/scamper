@@ -44,7 +44,7 @@ async function runExpectingThrow(src: string): Promise<string> {
 describe("#554: a closure's arity error points at the call, not the library", () => {
   test('fold blames the call the student wrote', async () => {
     expect(await runProgram('(fold (lambda (x) x) 0 (list 1 2))')).toEqual([
-      'Runtime error [1:1-1:34]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [1:1-1:34]: Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
@@ -53,7 +53,7 @@ describe("#554: a closure's arity error points at the call, not the library", ()
       'Runtime error [1:1-1:36]: Arity mismatch in function call: expected 2 arguments, got 1',
     ])
     expect(await runProgram('(reduce (lambda (x) x) (list 1 2))')).toEqual([
-      'Runtime error [1:1-1:34]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [1:1-1:34]: Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
@@ -62,7 +62,7 @@ describe("#554: a closure's arity error points at the call, not the library", ()
       'Runtime error [1:1-1:33]: Arity mismatch in function call: expected 2 arguments, got 1',
     ])
     expect(await runProgram('(apply (lambda (x) x) (list 1 2))')).toEqual([
-      'Runtime error [1:1-1:33]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [1:1-1:33]: Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
@@ -79,7 +79,7 @@ describe("#554: a closure's arity error points at the call, not the library", ()
       ),
     ).toEqual([
       '3',
-      'Runtime error [2:1-2:34]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [2:1-2:34]: Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
@@ -92,13 +92,13 @@ describe("#554: a closure's arity error points at the call, not the library", ()
         '(define apply-twice (lambda (f x) (f x x)))\n(apply-twice (lambda (y) y) 1)',
       ),
     ).toEqual([
-      'Runtime error [1:35-1:41]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [1:35-1:41]: Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
   test('a direct wrong-arity call is unaffected', async () => {
     expect(await runProgram('(define f (lambda (x) x))\n(f 1 2)')).toEqual([
-      'Runtime error [2:1-2:7]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [2:1-2:7]: (f) Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
