@@ -1,4 +1,4 @@
-import { ICE, ScamperError, SetRecursionDepthSignal, SuspendSignal } from '../error'
+import { arityMismatchMsg, ICE, ScamperError, SetRecursionDepthSignal, SuspendSignal } from '../error'
 import { Fiber, minorStep, StepResult, traceStep } from '../fiber'
 import { Ops, Scope, Value } from '../lang'
 import { Frame } from '../frame'
@@ -188,10 +188,28 @@ export function applyFn(
         (!fn.restParam && args.length !== fn.params.length)) {
       throw new ScamperError(
         'Runtime',
-        `Arity mismatch in function call: expected ${fn.params.length.toString()} arguments, got ${args.length.toString()}`,
+        // A rest parameter makes the parameter count a floor, not an exact
+        // arity: `(max)` requires one argument and accepts any number, so
+        // "expected 1 argument" alone read as though a second were an error too
+        // (#670). The optional-parameter wrappers reach this through a rest
+        // parameter of their own, so they say "at least" as well; their ceiling
+        // is ##checkArity##'s separate "at most" message.
+        arityMismatchMsg(
+          fn.restParam ? 'at least' : 'exactly', fn.params.length, args.length),
         siteModName,
         siteRange,
-        undefined)
+        // The *callee's* name, not `currFrame.name` (#669). The callee's Frame
+        // is built a few lines below, so the frame running here is the *caller*
+        // -- `##stmt-0##` for a direct top-level call, or `map` for a lambda
+        // passed to it. The js-function rule above reads currFrame.name
+        // precisely because there the frame *is* the contract wrapper speaking
+        // for the native it wrapped; different site, different right answer.
+        //
+        // The `##` guard is load-bearing rather than defensive: codegen stamps
+        // every lambda with the placeholder `##anonymous##`, which a define then
+        // replaces with the Scamper spelling, so `fn.name` is almost never
+        // undefined and an unguarded read would show a student that sentinel.
+        fn.name !== undefined && !fn.name.startsWith('##') ? fn.name : undefined)
     }
     const namedArgs = args.slice(0, fn.params.length)
     const bindings = fn.params.map((p: string, i: number): [string, Value] =>

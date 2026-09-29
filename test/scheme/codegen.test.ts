@@ -707,7 +707,7 @@ describe('Rest parameters', () => {
     expect(await runProgram(`
     ((lambda (x y & z) z) 1)
     `)).toEqual([
-      'Runtime error [1:1-1:24]: Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error [1:1-1:24]: Arity mismatch in function call: expected at least 2 arguments, got 1',
     ])
   })
 
@@ -715,7 +715,7 @@ describe('Rest parameters', () => {
     expect(await runProgram(`
     ((lambda (x & y) y))
     `)).toEqual([
-      'Runtime error [1:1-1:20]: Arity mismatch in function call: expected 1 arguments, got 0',
+      'Runtime error [1:1-1:20]: Arity mismatch in function call: expected at least 1 argument, got 0',
     ])
   })
 
