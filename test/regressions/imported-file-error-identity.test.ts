@@ -85,7 +85,7 @@ describe('an error in an imported file says which file (#557)', () => {
   test("a bad call to an imported procedure stays the caller's", async () => {
     mockFS({ 'm.scm': MODULE })
     expect(await runProgram('(import "m.scm")\n(head 1 2)')).toEqual([
-      'Runtime error [2:1-2:10]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [2:1-2:10]: (head) Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 

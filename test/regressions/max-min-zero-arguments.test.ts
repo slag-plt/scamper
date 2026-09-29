@@ -23,8 +23,8 @@ describe('zero-argument max and min (#647)', () => {
 (max)
 (min)
 `)).toEqual([
-      'Runtime error [1:1-1:5]: Arity mismatch in function call: expected 1 arguments, got 0',
-      'Runtime error [2:1-2:5]: Arity mismatch in function call: expected 1 arguments, got 0',
+      'Runtime error [1:1-1:5]: (max) Arity mismatch in function call: expected at least 1 argument, got 0',
+      'Runtime error [2:1-2:5]: (min) Arity mismatch in function call: expected at least 1 argument, got 0',
     ])
   })
 
@@ -40,7 +40,7 @@ describe('zero-argument max and min (#647)', () => {
 
   test('an empty spread is an arity error too, not an infinity', async () => {
     expect(await runProgram('(apply max null)')).toEqual([
-      'Runtime error [1:1-1:16]: Arity mismatch in function call: expected 1 arguments, got 0',
+      'Runtime error [1:1-1:16]: (max) Arity mismatch in function call: expected at least 1 argument, got 0',
     ])
   })
 })
