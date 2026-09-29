@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- New eq? and eqv? predicates tell whether two values are the very same object, so two separately created reference cells, vectors, or maps can now be told apart.
 - The language reference now explains that a hole is written with exactly two question marks, and that reaching one points at where you wrote it.
 - Importing two libraries no longer warns that js-var is already defined.
 - Ctrl+; (Cmd+; on a Mac) now adds one semicolon to the front of each selected line and Ctrl+Shift+; takes one away, so you can build up and peel back a two- or three-semicolon comment a layer at a time; Ctrl+/ still toggles as before.

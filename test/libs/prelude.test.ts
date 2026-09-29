@@ -882,6 +882,137 @@ test('equal', async () => {
   ).toEqual(['#t', '#f', '#t', '#f', '#f', '#t'])
 })
 
+// eq? and eqv? (#641). Scamper had only `equal?`, so `(equal? (ref 1) (ref 1))`
+// was `#t` and nothing told two reference cells apart -- exactly the
+// distinction a lesson on aliasing needs. The two predicates coincide under
+// Scamper's value representation, so they are one native under two names; the
+// last test here is what keeps "they coincide" a checked claim rather than a
+// docstring promise.
+describe('eq-eqv', () => {
+  test('two separately created reference cells are not the same cell', async () => {
+    expect(
+      await runProgram(`
+(eq? (ref 1) (ref 1))
+(eqv? (ref 1) (ref 1))
+(equal? (ref 1) (ref 1))
+(let ([r (ref 1)]) (eq? r r))
+(let ([r (ref 1)]) (eqv? r r))
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#t'])
+  })
+
+  test('a fresh vector or map is equal? to its twin but not eq? to it', async () => {
+    expect(
+      await runProgram(`
+(eq? (vector 1 2) (vector 1 2))
+(eqv? (vector 1 2) (vector 1 2))
+(equal? (vector 1 2) (vector 1 2))
+(let ([v (vector 1 2)]) (eq? v v))
+(eq? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(eqv? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(equal? (hash-set {} "a" 1) (hash-set {} "a" 1))
+(let ([m (hash-set {} "a" 1)]) (eq? m m))
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#f', '#f', '#t', '#t'])
+  })
+
+  // Characters are the one atom Scamper represents as a wrapped object, freshly
+  // built at every read, so a bare `===` would answer `#f` here -- and R7RS
+  // requires two `char=?` characters to be `eqv?`.
+  test('characters that look the same are the same', async () => {
+    expect(
+      await runProgram(`
+(eqv? #\\a #\\a)
+(eq? #\\a #\\a)
+(eqv? #\\a #\\b)
+(eqv? #\\a "a")
+`),
+    ).toEqual(['#t', '#t', '#f', '#f'])
+  })
+
+  test('strings and numbers answer as equal? does', async () => {
+    expect(
+      await runProgram(`
+(eqv? "abc" "abc")
+(eq? "abc" "abc")
+(eqv? "abc" (string-append "ab" "c"))
+(eqv? "abc" "abd")
+(eqv? 4 4)
+(eqv? 4 5)
+(eqv? 2 2.0)
+(eqv? 0 -0)
+(eqv? (sqrt -1) (sqrt -1))
+(eqv? 4 "4")
+`),
+    ).toEqual(['#t', '#t', '#t', '#f', '#t', '#f', '#t', '#t', '#f', '#f'])
+  })
+
+  test('null and the booleans are themselves', async () => {
+    expect(
+      await runProgram(`
+(eqv? null null)
+(eq? null null)
+(eqv? #t #t)
+(eqv? #f #f)
+(eqv? #t #f)
+(eqv? #f null)
+`),
+    ).toEqual(['#t', '#t', '#t', '#t', '#f', '#f'])
+  })
+
+  test('two identical lambdas are two procedures; a name is one', async () => {
+    expect(
+      await runProgram(`
+(eq? (lambda (x) x) (lambda (x) x))
+(eqv? (lambda (x) x) (lambda (x) x))
+(let ([f (lambda (x) x)]) (eq? f f))
+(eq? car car)
+(eqv? car car)
+(eq? car cdr)
+`),
+    ).toEqual(['#f', '#f', '#t', '#t', '#t', '#f'])
+  })
+
+  // The docstrings say eq? is an alias for eqv?; this is that claim, checked.
+  test('eq? and eqv? agree on every value a student can hand them', async () => {
+    expect(
+      await runProgram(`
+(define agree? (lambda (a b) (equal? (eq? a b) (eqv? a b))))
+(define r (ref 1))
+(define v (vector 1 2))
+(and (agree? r (ref 1))
+     (agree? r r)
+     (agree? v (vector 1 2))
+     (agree? v v)
+     (agree? #\\a #\\a)
+     (agree? #\\a #\\b)
+     (agree? "a" "a")
+     (agree? 2 2.0)
+     (agree? 0 -0)
+     (agree? (sqrt -1) (sqrt -1))
+     (agree? null null)
+     (agree? #t #f)
+     (agree? car car)
+     (agree? (lambda (x) x) (lambda (x) x)))
+`),
+    ).toEqual(['#t'])
+  })
+
+  test('both take exactly two arguments', async () => {
+    expect(
+      await runProgram(`
+(eq? 1)
+(eqv? 1)
+(eq? 1 2 3)
+`),
+    ).toEqual([
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eqv?) Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (eq?) Arity mismatch in function call: expected 2 arguments, got 3',
+    ])
+  })
+})
+
 test('error', async () => {
   expect(
     await runProgram(`
