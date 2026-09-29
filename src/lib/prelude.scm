@@ -993,7 +993,7 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l`, starting with initial value `v`. The function `f` takes two arguments, the first is the accumulated value and the second is the current element.
-;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold-left, fold-right, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold
   (lambda (f v l)
     (if (null? l)
@@ -1004,7 +1004,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold` but uses the first element of `l` as the initial value.
-;;; @category list, list manipulation, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+;;; @category list, list manipulation, reduce-left, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce
   (lambda (f l)
     (fold f (car l) (cdr l))))
@@ -1014,10 +1014,19 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Like `fold`, but the combining function `f` takes the current element as its first argument and the accumulated value as its second.
-;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold, fold-right, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold-left
   (lambda (f v l)
     (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
+
+;;; (reduce-left f l) -> any
+;;;  f : procedure?
+;;;  l : list?
+;;; Like `fold-left` but uses the first element of `l` as the initial value. Unlike `reduce`, the combining function `f` takes the current element as its first argument and the accumulated value as its second, as `fold-left` does.
+;;; @category list, list manipulation, reduce, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+(define-export reduce-left
+  (lambda (f l)
+    (fold-left f (car l) (cdr l))))
 
 ; N.B., fold-right's and reduce-right's tail-recursive worker: `rev` is the
 ; list reversed, so walking it forwards combines from the right end inwards --
@@ -1034,7 +1043,7 @@
 ;;;  v : any
 ;;;  l : list?
 ;;; Returns the result of accumulating the result of applying `f` to each element of `l` in reverse order, starting with initial value `v`. The function `f` takes two arguments, the first is the current element and the second is the accumulated value.
-;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-right, apply, filter
+;;; @category list, list manipulation, association list, fold, fold-left, for-range, list-of, map, reduce, reduce-left, reduce-right, apply, filter
 (define-export fold-right
   (lambda (f v l)
     (fold-right-onto f v (reverse l))))
@@ -1043,7 +1052,7 @@
 ;;;  f : procedure?
 ;;;  l : list?
 ;;; Like `fold-right` but uses the last element of `l` as the initial value.
-;;; @category list, list manipulation, range, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
+;;; @category list, list manipulation, reduce, reduce-left, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce-right
   (lambda (f l)
     (match (reverse l)

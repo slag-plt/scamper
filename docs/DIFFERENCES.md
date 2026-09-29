@@ -613,6 +613,9 @@ This is the likeliest trap in the whole library, and it is worth stating twice.
 | `(fold f v l)` | `(acc elem)` | R6RS `fold-left` |
 | `(fold-left f v l)` | `(elem acc)` | SRFI-1 `fold` |
 | `(fold-right f v l)` | `(elem acc)` | SRFI-1 `fold-right` |
+| `(reduce f l)` | `(acc elem)` | Clojure's two-argument `reduce` |
+| `(reduce-left f l)` | `(elem acc)` | SRFI-1 `reduce` |
+| `(reduce-right f l)` | `(elem acc)` | SRFI-1 `reduce-right` |
 
 `fold` takes "the accumulated value and ... the current element", in that order (`src/lib/prelude.scm`).
 `fold-left` is "like `fold`, but the combining function `f` takes the current element as its first argument and the accumulated value as its second" (`src/lib/prelude.scm`).
@@ -631,3 +634,7 @@ Runtime error [3:1-3:29]: (error) expected a list as the second argument, receiv
 
 `fold` is the one that fails, because it hands `cons` the accumulator first.
 Whichever spelling a reader arrives with, one of these three is not what they expect.
+
+The `reduce` family seeds each of those folds with an element of the list instead of a value, and inherits its combiner order: `reduce` is `fold` started from the first element, `reduce-left` is `fold-left` started from the first, and `reduce-right` is `fold-right` started from the last (`src/lib/prelude.scm`).
+So the crossing above reaches them too -- `(reduce - (list 1 2 3))` is `-4` but `(reduce-left - (list 1 2 3))` is `2`.
+The rule that keeps all six straight: **an unsuffixed name takes the accumulator first, and a `-left` or `-right` suffix takes the element first.**
