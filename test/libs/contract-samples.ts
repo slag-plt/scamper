@@ -36,6 +36,7 @@ export const SAMPLES: Record<string, string> = {
   any: '0',
   'number?': '1',
   'integer?': '1',
+  'nonnegative-integer?': '1',
   'string?': '"abc"',
   'char?': '#\\a',
   'boolean?': '#t',
@@ -184,7 +185,7 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:quotient', ['7', '2']],
   ['prelude:remainder', ['7', '2']],
   ['prelude:modulo', ['7', '2']],
-  ['prelude:string->number', ['"1"']],
+  ['prelude:string->number', ['"1"', '10']],
   ['prelude:digit-value', ['#\\5']],
   ['prelude:list->string', ['(list #\\a #\\b)']],
   ['prelude:vector->string', ['(vector #\\a #\\b)']],
@@ -205,6 +206,7 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:fold-left', ['(lambda (acc x) acc)', '0', '(list 1 2 3)']],
   ['prelude:fold-right', ['(lambda (x acc) acc)', '0', '(list 1 2 3)']],
   ['prelude:reduce', ['(lambda (a b) a)', '(list 1 2 3)']],
+  ['prelude:reduce-left', ['(lambda (a b) b)', '(list 1 2 3)']],
   ['prelude:reduce-right', ['(lambda (a b) b)', '(list 1 2 3)']],
   // A generic `integer?` sample would cap the stack at one frame, for every
   // statement after this one in the generated program.

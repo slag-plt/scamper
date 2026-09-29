@@ -3,7 +3,9 @@
 // test/scheme/parsing/grammar-keyword-parity.test.ts), and none of them can
 // be used as a variable/identifier name.
 export const reservedWords = [
-  // The hole, `??`: an atomic special form rather than a parenthesized one.
+  // The hole, `??` -- exactly two question marks, and an atomic special form
+  // rather than a parenthesized one. Reserved so that `(define ?? 5)` is a
+  // parse error; `???` is not reserved and reads as an ordinary identifier.
   '??',
   'and',
   'begin',

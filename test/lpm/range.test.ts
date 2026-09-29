@@ -90,13 +90,13 @@ describe('rangesEqual', () => {
 describe('error range reporting (end-to-end)', () => {
   test('an arity mismatch points at the offending call site', async () => {
     expect(await runProgram('(define f (lambda (x) x))\n(f 1 2)')).toEqual([
-      'Runtime error [2:1-2:7]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [2:1-2:7]: (f) Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
   test('a builtin arity mismatch points at the call, not the definition', async () => {
     expect(await runProgram('(car 1 2)')).toEqual([
-      'Runtime error [1:1-1:9]: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error [1:1-1:9]: (car) Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 

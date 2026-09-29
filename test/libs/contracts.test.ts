@@ -138,9 +138,13 @@ const CONTRACT_VIOLATION =
 const REST_VIOLATION =
   /^Runtime error: \([^)]+\) expected every value of .+ to be .+, but at least one was not/
 // From runtime_checkArity ("at most N") and the closure arity check in
-// op-handlers.ts (exactly N).
+// op-handlers.ts, which says "at least N" for a signature with a rest or
+// optional parameter and a bare N for a fixed arity (#670). All three qualifiers
+// are matched: an unmatched "at least" would not make this test fail, it would
+// make tier 1 below file a contract's own arity error as a native's, which is
+// the one distinction this pattern exists to draw.
 const ARITY_VIOLATION =
-  /Arity mismatch in function call: expected (?:at most )?\d+ arguments?, got \d+/
+  /Arity mismatch in function call: expected (?:at (?:most|least) )?\d+ arguments?, got \d+/
 
 const isContractFailure = (line: string): boolean =>
   CONTRACT_VIOLATION.test(line) ||
@@ -161,6 +165,7 @@ describe('the contract discriminator matches what the machine emits', () => {
     ['a rest parameter', '(+ 1 "x")', REST_VIOLATION],
     ['one argument too many', '(abs 1 2)', ARITY_VIOLATION],
     ['one optional argument too many', '(substring "abc" 1 2 3)', ARITY_VIOLATION],
+    ['one argument too few, for a floor', '(< 1)', ARITY_VIOLATION],
   ])('%s', async (_what, src, pattern) => {
     const errors = (await runProgram(src)).filter((l) => ERROR_LINE.test(l))
     expect(errors).toHaveLength(1)
