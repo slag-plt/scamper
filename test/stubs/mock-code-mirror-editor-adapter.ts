@@ -60,6 +60,8 @@ export function makeMockCodeMirrorEditorAdapter(
     replace: record('replace'),
     goToLine: record('goToLine'),
     toggleComment: record('toggleComment'),
+    addComment: record('addComment'),
+    removeComment: record('removeComment'),
     format: record('format'),
     foldAll: record('foldAll'),
     unfoldAll: record('unfoldAll'),

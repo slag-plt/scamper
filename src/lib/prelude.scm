@@ -30,9 +30,33 @@
 ;;; (equal? v1 v2) -> boolean?
 ;;;  v1 : any
 ;;;  v2 : any
-;;; Returns `#t` if and only `v1` and `v2` are (structurally) equal values.
-;;; @category predicates
+;;; Returns `#t` if and only if `v1` and `v2` are structurally equal, i.e. they
+;;; are built the same way out of equal parts. Two separately created vectors
+;;; holding the same elements are `equal?`; use `eqv?` to ask the sharper
+;;; question of whether they are the very same vector.
+;;; @category predicates, eq?, eqv?
 (define-export equal? (js-var "prelude_equalQ"))
+
+;;; (eqv? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; Returns `#t` if and only if `v1` and `v2` are the same value: the same
+;;; vector, map, or reference cell rather than merely equal ones, and otherwise
+;;; the same number, string, character, or boolean. So `(eqv? (ref 1) (ref 1))`
+;;; is `#f` while `equal?` of the two is `#t`. Unlike R7RS, `2` and `2.0` are
+;;; `eqv?` (Scamper has no exactness) and so are `0` and `-0`; `(sqrt -1)` is
+;;; not `eqv?` to itself, matching `=` and `equal?`.
+;;; @category predicates, eq?, equal?
+(define-export eqv? (js-var "prelude_eqvQ"))
+
+;;; (eq? v1 v2) -> boolean?
+;;;  v1 : any
+;;;  v2 : any
+;;; An alias for `(eqv? v1 v2)`. R7RS allows `eq?` to draw finer distinctions
+;;; than `eqv?`, but Scamper represents values so that there are none to draw,
+;;; so the two always agree here.
+;;; @category predicates, eqv?, equal?
+(define-export eq? (js-var "prelude_eqvQ"))
 
 ;;; (number? v) -> boolean?
 ;;;  v : any
@@ -49,8 +73,15 @@
 ;;; (integer? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is an integer.
-;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, boolean?, char?, string?, even?, negative?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export integer? (js-var "prelude_integerQ"))
+
+;;; (nonnegative-integer? v) -> boolean?
+;;;  v : any
+;;; Returns `#t` if and only `v` is an integer that is zero or greater, i.e., a
+;;; possible size or length.
+;;; @category math, typecheck, predicates, integer?, negative?, positive?, zero?, make-list, make-string, make-vector
+(define-export nonnegative-integer? (js-var "prelude_nonnegativeIntegerQ"))
 
 ;;; (nan? v) -> boolean?
 ;;;  v : any
@@ -113,13 +144,13 @@
 ;;; (positive? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is positive.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, number?, odd?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, negative?, nonnegative-integer?, number?, odd?, real?, zero?
 (define-export positive? (js-var "prelude_positiveQ"))
 
 ;;; (negative? v) -> boolean?
 ;;;  v : any
 ;;; Returns `#t` if and only `v` is negative.
-;;; @category math, comparator, typecheck, predicates, even?, integer?, number?, odd?, positive?, real?, zero?
+;;; @category math, comparator, typecheck, predicates, even?, integer?, nonnegative-integer?, number?, odd?, positive?, real?, zero?
 (define-export negative? (js-var "prelude_negativeQ"))
 
 ;;; (odd? v) -> boolean?
@@ -157,7 +188,8 @@
 ;;; (- v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the difference of `v1`, `v2`, ... .
+;;; Returns the difference of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; additive inverse, so `(- 5)` is `-5`.
 ;;; @category math, algebra, +, *, /, modulo, quotient, remainder
 (define-export - (js-var "prelude_minus"))
 
@@ -170,7 +202,8 @@
 ;;; (/ v1 & v2) -> number?
 ;;;  v1 : number?
 ;;;  v2 : number?
-;;; Returns the quotient of `v1`, `v2`, ... .
+;;; Returns the quotient of `v1`, `v2`, ... . Given `v1` alone, returns its
+;;; reciprocal, so `(/ 4)` is `0.25`.
 ;;; @category math, algebra, +, -, *, modulo, quotient, remainder
 (define-export / (js-var "prelude_div"))
 
@@ -249,23 +282,23 @@
 ;;; @category math, algebra, abs, ceiling, floor, truncate
 (define-export round (js-var "prelude_round"))
 
-;;; (square v) -> number?
+;;; (sqr v) -> number?
 ;;;  v : number?
 ;;; Returns the square of `v`.
 ;;; @category math, algebra, exp, expt, sqrt, log
-(define-export square (js-var "prelude_square"))
+(define-export sqr (js-var "prelude_sqr"))
 
 ;;; (sqrt v) -> number?
 ;;;  v : number?
 ;;; Returns the square root of `v`.
-;;; @category math, algebra, exp, expt, square, log
+;;; @category math, algebra, exp, expt, sqr, log
 (define-export sqrt (js-var "prelude_sqrt"))
 
 ;;; (expt x y) -> number?
 ;;;  x : number?
 ;;;  y : number?
 ;;; Returns `x` raised to the power of `y`.
-;;; @category math, algebra, exp, square, sqrt, log  
+;;; @category math, algebra, exp, sqr, sqrt, log  
 (define-export expt (js-var "prelude_expt"))
 
 ;;; (number->string v) -> string?
@@ -274,23 +307,26 @@
 ;;; @category string, char->integer, digit-value, integer->char, string->number
 (define-export number->string (js-var "prelude_numberToString"))
 
-;;; (string->number s) -> number?
+;;; (string->number s [radix]) -> number?
 ;;;  s : string?
+;;;  radix : integer?
+;;;   the base `s` is written in, from 2 to 36; defaults to 10
 ;;; Returns the number denoted by `s`, or `#f` if `s`
-;;; does not denote a number.
+;;; does not denote a number. In a base other than 10, only whole numbers are
+;;; read, so `s` written with a decimal point gives `#f`.
 ;;; @category string, number->string, string->list, string->words, string->vector, char->integer, digit-value, integer->char
 (define-export string->number (js-var "prelude_stringToNumber"))
 
 ;;; (exp v) -> number?
 ;;;  v : number?
 ;;; Returns the exponential of `v`.
-;;; @category math, algebra, expt, square, sqrt, log
+;;; @category math, algebra, expt, sqr, sqrt, log
 (define-export exp (js-var "prelude_exp"))
 
 ;;; (log v) -> number?
 ;;;  v : number?
 ;;; Returns the natural logarithm of `v`.
-;;; @category math, algebra, exp, expt, square, sqrt
+;;; @category math, algebra, exp, expt, sqr, sqrt
 (define-export log (js-var "prelude_log"))
 
 ;;; (sin v) -> number?
@@ -497,10 +533,10 @@
 (define-export list (js-var "prelude_list"))
 
 ;;; (make-list n v) -> list?
-;;;  n : integer?
+;;;  n : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a new list containing `n` copies of `v`.
-;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, range, reverse, sort
+;;; @category list, list creation, association list, make-string, make-vector, append, list-drop, list-tail, list-take, nonnegative-integer?, range, reverse, sort
 (define-export make-list (js-var "prelude_makeList"))
 
 ;;; (length v) -> integer?
@@ -661,10 +697,10 @@
 (define-export string? (js-var "prelude_stringQ"))
 
 ;;; (make-string k c) -> string?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  c : char?
 ;;; Returns a string of length `k` with each character set to `c`.
-;;; @category string, make-list, make-vector, string-append, string-map
+;;; @category string, make-list, make-vector, nonnegative-integer?, string-append, string-map
 (define-export make-string (js-var "prelude_makeString"))
 
 ;;; (string & c1) -> string?
@@ -785,10 +821,10 @@
 (define-export vector (js-var "prelude_vector"))
 
 ;;; (make-vector k v) -> vector?
-;;;  k : integer?
+;;;  k : nonnegative-integer?
 ;;;  v : any
 ;;; Returns a vector of length `k` with each element set to `v`.
-;;; @category vectors, make-list, make-string
+;;; @category vectors, make-list, make-string, nonnegative-integer?
 (define-export make-vector (js-var "prelude_makeVector"))
 
 ;;; (vector-length v) -> integer?

@@ -72,14 +72,19 @@ export const prelude_withHandler: L.Value = L.mkClosure(
 
 // Equivalence predicates (6.1)
 
-// N.B., don't need these functions:
-//   (eqv? x y)
-//   (eq? x y)
-// Since we don't have effects beside vectors. Therefore, value vs. reference
-// equality is not an issue!
+// All three of R7RS's equivalence predicates are here. `equal?` is structural;
+// `eqv?` asks whether two values are the same value, which is what a lesson on
+// aliasing needs of a `ref` cell. R7RS allows `eq?` to be finer than `eqv?`, but
+// under Scamper's representation there is nothing for it to be finer about --
+// every atom is a Javascript primitive except `char`, which `L.eqv` unwraps --
+// so `eq?` is bound to this same native (see src/lib/prelude.scm).
 
 export function prelude_equalQ(x: L.Value, y: L.Value): boolean {
   return L.equals(x, y)
+}
+
+export function prelude_eqvQ(x: L.Value, y: L.Value): boolean {
+  return L.eqv(x, y)
 }
 
 // Numbers (6.2)
@@ -94,6 +99,16 @@ export function prelude_realQ(x: L.Value): boolean {
 
 export function prelude_integerQ(x: L.Value): boolean {
   return typeof x === 'number' && Number.isInteger(x)
+}
+
+// A size is a non-negative integer, which `integer?` cannot say and the
+// numeric predicates cannot compose into a single name (#675). Exported to
+// students in its own right, in the style of `nonempty-list?`: a predicate that
+// exists because a contract needed it is still one worth being able to call.
+// Typed as a predicate rather than a plain boolean so the three size guards
+// below narrow with it, the way they narrow with `L.isNumber`.
+export function prelude_nonnegativeIntegerQ(x: L.Value): x is number {
+  return L.isNumber(x) && Number.isInteger(x) && x >= 0
 }
 
 // N.B., we don't implement the following functions:
@@ -339,7 +354,7 @@ export function prelude_round(x: L.Value): number {
 //   (rationalize x y)
 // Because we don't implement rationals.
 
-export function prelude_square(x: number): number {
+export function prelude_sqr(x: number): number {
   return x * x
 }
 
@@ -372,19 +387,33 @@ export function prelude_numberToString(x: number): string {
   return x.toString()
 }
 
-// TODO: implement:
-//   (string->number s)
-//   (string->number s radix)
+/** The digits of base 36, in order; a prefix of them spells any smaller base. */
+const RADIX_DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
-export function prelude_stringToNumber(s: string): number | boolean {
+export function prelude_stringToNumber(s: string, radix?: number): number | boolean {
   // N.B., per R7RS, return #f when the string does not denote a number.
-  if (/^[+-]?\d+$/.test(s)) {
-    return parseInt(s)
-  } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
-    return parseFloat(s)
-  } else {
-    return false
+  if (radix === undefined || radix === 10) {
+    // 10 is R7RS's default radix, so it must answer exactly as omitting it does.
+    if (/^[+-]?\d+$/.test(s)) {
+      return parseInt(s)
+    } else if (/^[+-]?(\d+|(\d*\.\d+)|(\d+\.\d*))([eE][+-]?\d+)?$/.test(s)) {
+      return parseFloat(s)
+    } else {
+      return false
+    }
   }
+  if (radix < 2 || radix > 36) {
+    throw new L.ScamperError(
+      'Runtime',
+      `string->number: radix ${radix} is not between 2 and 36`,
+    )
+  }
+  // Validate before parseInt: it prefix-parses ("12abc" -> 12), tolerates
+  // surrounding whitespace, and truncates at a dot ("101.1" base 2 -> 5). Only
+  // integer numerals are accepted here; R7RS permits a fractional numeral in
+  // any base, but parseInt cannot read one.
+  const re = new RegExp(`^[+-]?[${RADIX_DIGITS.slice(0, radix)}]+$`, 'i')
+  return re.test(s) ? parseInt(s, radix) : false
 }
 
 // Additional functions from racket/base
@@ -533,7 +562,13 @@ export function prelude_list(...xs: L.Value[]): L.List {
   return ret
 }
 
-export function prelude_makeList(n: number, fill: L.Value): L.List {
+export function prelude_makeList(n: L.Value, fill: L.Value): L.List {
+  // The contract is `nonnegative-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #675). Unchecked, a negative `n` failed the loop test
+  // immediately and answered the empty list.
+  if (!prelude_nonnegativeIntegerQ(n)) {
+    throw new L.ScamperError('Runtime', 'make-list: expected a nonnegative integer')
+  }
   let ret = null
   for (let i = 0; i < n; i++) {
     ret = L.mkCons(fill, ret)
@@ -899,7 +934,14 @@ export function prelude_stringQ(x: L.Value): boolean {
 
 // N.B., we don't implement the (make-string k) variant because our strings are
 // immutable, so having an "empty" string of size k does not make sense.
-export function prelude_makeString(k: number, c: L.Char): string {
+export function prelude_makeString(k: L.Value, c: L.Char): string {
+  // The contract is `nonnegative-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #675). Unchecked, a negative `k` reached
+  // `String.prototype.repeat`, which leaked "RangeError: Invalid count value"
+  // to the student in the host's own words.
+  if (!prelude_nonnegativeIntegerQ(k)) {
+    throw new L.ScamperError('Runtime', 'make-string: expected a nonnegative integer')
+  }
   return c.value.repeat(k)
 }
 
@@ -1104,11 +1146,17 @@ export function prelude_vector(...xs: L.Value[]): L.Value[] {
 }
 
 export function prelude_makeVector(n: L.Value, fill: L.Value): L.Value[] {
-  // The contract is `integer?`; this re-narrows it for `vector-map`, which
-  // names this one at top level (#553). Unchecked, `(make-vector "3" 0)`
-  // failed its loop test immediately and answered the empty vector.
+  // The contract is `nonnegative-integer?`; this re-narrows it for
+  // `vector-map`, which names this one at top level (#553). Unchecked,
+  // `(make-vector "3" 0)` failed its loop test immediately and answered the
+  // empty vector -- and so did `(make-vector -3 0)` (#675). Two branches
+  // rather than one, so the two mistakes read differently: `"3"` is not a
+  // length at all, where `-3` is a length that cannot exist.
   if (!L.isNumber(n) || !Number.isInteger(n)) {
     throw new L.ScamperError('Runtime', 'make-vector: expected an integer')
+  }
+  if (n < 0) {
+    throw new L.ScamperError('Runtime', 'make-vector: expected a nonnegative integer')
   }
   const ret = []
   for (let i = 0; i < n; i++) {

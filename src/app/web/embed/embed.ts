@@ -44,18 +44,39 @@ function scriptText(el: HTMLElement, suffix: string): string | null {
 }
 
 /**
+ * @returns the widget's own text, leaving out any `<script>` it holds.
+ *
+ * `el.textContent` folds a script's own source in with the text around it, so a
+ * preamble beside bare code became part of that code: shown in the transcript
+ * and run a second time there (#665).
+ *
+ * A throwaway copy with the scripts taken out, rather than a filter over the
+ * children, so the reading stays the browser's own: `textContent` on an element
+ * is the text of its `Text` descendants alone, which leaves out a comment the
+ * author wrote in the widget, and `querySelectorAll` reaches a script nested
+ * inside a child exactly as `scriptText`'s `querySelector` does.
+ */
+function ownText(el: HTMLElement): string {
+  const copy = el.cloneNode(true) as HTMLElement
+  copy.querySelectorAll('script').forEach((script) => {
+    script.remove()
+  })
+  return copy.textContent
+}
+
+/**
  * Reads one widget's code off the page.
  *
  * The code may be written either as a `<script type="text/scamper">` or as the
- * element's own text, which is what the issue's example does. Bare text cannot
- * carry a preamble, so a widget wanting one uses the script form.
+ * element's own text, which is what the issue's example does. Either form may
+ * sit beside a preamble script, whose source is not part of the code.
  */
 export function readSpec(el: HTMLElement): EmbedSpec {
   const scripted = scriptText(el, '')
   const continues = el.getAttribute('data-continues')
   return {
     el,
-    code: (scripted ?? el.textContent).trim(),
+    code: (scripted ?? ownText(el)).trim(),
     preamble: (scriptText(el, '-preamble') ?? '').trim(),
     continues,
     height: el.getAttribute('data-height'),
