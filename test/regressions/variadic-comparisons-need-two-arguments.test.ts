@@ -17,10 +17,13 @@ import { runProgram } from '../harness.js'
 // The floor is enforced by the docstring signature in src/lib/prelude.scm,
 // which is where a contract comes from; the natives are untouched.
 
-const ARITY_1 =
-  'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1'
-const ARITY_0 =
-  'Runtime error: Arity mismatch in function call: expected 2 arguments, got 0'
+// Each comparison names itself in the error (#669) and reports its floor as a
+// floor (#670), so the expected line is a function of the procedure called
+// rather than one string the whole family shares.
+const arity = (name: string, got: number): string =>
+  `Runtime error: (${name}) Arity mismatch in function call: expected at least 2 arguments, got ${got}`
+const ARITY_1 = (name: string): string => arity(name, 1)
+const ARITY_0 = (name: string): string => arity(name, 0)
 
 /** Runs `src` with source ranges dropped, so only messages are asserted. */
 const run = (src: string): Promise<string[]> =>
@@ -64,29 +67,35 @@ describe('a comparison applied to fewer than two arguments is an arity error (#6
   test('the calls named in the issue', async () => {
     expect(
       await run('(< 1)\n(<)\n(= 1)\n(char=? #\\a)\n(string=? "a")'),
-    ).toEqual([ARITY_1, ARITY_0, ARITY_1, ARITY_1, ARITY_1])
+    ).toEqual([
+      ARITY_1('<'),
+      ARITY_0('<'),
+      ARITY_1('='),
+      ARITY_1('char=?'),
+      ARITY_1('string=?'),
+    ])
   })
 
   test('all 25 comparisons agree, so no family is an exception', () => {
     expect(comparisons.length).toBe(25)
   })
 
-  test.each(comparisons)('(%s ...) with one argument', async (_name, one) => {
-    expect(await run(one)).toEqual([ARITY_1])
+  test.each(comparisons)('(%s ...) with one argument', async (name, one) => {
+    expect(await run(one)).toEqual([ARITY_1(name)])
   })
 
   test('with no arguments at all', async () => {
     expect(await run('(<)\n(char<?)\n(string-ci=?)')).toEqual([
-      ARITY_0,
-      ARITY_0,
-      ARITY_0,
+      ARITY_0('<'),
+      ARITY_0('char<?'),
+      ARITY_0('string-ci=?'),
     ])
   })
 
   test('apply over a too-short list is caught too', async () => {
     // `apply` reaches the contract-wrapped binding like any other call, so a
     // list assembled at run time cannot slip under the floor.
-    expect(await run('(apply < (list 1))')).toEqual([ARITY_1])
+    expect(await run('(apply < (list 1))')).toEqual([ARITY_1('<')])
   })
 })
 
