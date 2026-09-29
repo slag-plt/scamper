@@ -351,7 +351,7 @@ The one-argument `(make-string k)` is absent for the same reason -- "having an '
 > (make-string 3 #\a)
 "aaa"
 > (make-string 3)
-Runtime error [1:1-1:15]: Arity mismatch in function call: expected 2 arguments, got 1
+Runtime error [1:1-1:15]: (make-string) Arity mismatch in function call: expected 2 arguments, got 1
 ~~~
 
 **By design.**
@@ -577,13 +577,14 @@ Neither R7RS nor, as far as the source records, anyone else's:
 
 + **`??`, the hole** -- a placeholder for an expression not yet written, which raises when reached.
   A hole in an untaken branch costs nothing, so a partly-written program still runs (`docs/language.md`, "Surface syntax").
+  The spelling is exactly two question marks and is reserved: `???` is an ordinary identifier, and `(define ?? 5)` is a parse error.
 + **`set-maximum-recursion-depth!`** (`src/lib/prelude.scm`), which exists because the recursion cap exists.
 + **`ignore`** (`src/lib/prelude.scm`), which suppresses a value's appearance in the output pane -- a notion with no analogue in a language whose output goes to a port.
 + **`=-eps`** (`src/lib/prelude.scm`), approximate numeric equality, which earns its place given that every number is a double.
 + **`pair`** as a constructor separate from `cons`, forced by the pair/cons split.
 + **`index-of`, `assoc-key?`, `assoc-ref`, `assoc-set`**, the replacement for the `member`/`assoc` family.
 + **`list-take`, `list-drop`, `nonempty-list?`, `for-range`, `string->words`, `string-split-vector`, `vector-range`, `function?`** (a second name for `procedure?`, added in #608 because the readings say "function").
-+ **`js-var`**, the FFI root, which is exported to user programs (`src/lib/index.ts:41-51`, `:83`), so the whole native surface is reachable from student code -- `(js-var "prelude_car")` evaluates to `car`'s implementation, and `js-var` itself can be shadowed like any other binding.
++ **`js-var`**, the FFI root, which is exported to user programs (`src/lib/index.ts:41-51`, `:91`), so the whole native surface is reachable from student code -- `(js-var "prelude_car")` evaluates to `car`'s implementation, and `js-var` itself can be shadowed like any other binding.
 + **The reserved `##...##` names** that derived forms expand into, which are the one thing a program may *not* bind: `(define ##error## 1)` is a parse error.
 + **`import` of a *file*** (`(import "helpers.scm")`), which has no R7RS counterpart because R7RS libraries are named, not located.
 

@@ -194,11 +194,11 @@ export interface Match extends Tagged, Node {
   scrutinee: Exp
   branches: { pat: Pat; body: Exp }[]
 }
-// A hole `??`: the placeholder for an expression not yet written. It is core
-// rather than sugar -- there is no expression it could expand to that raises
-// only when reached -- so it survives expansion and lowers to the `hole` op,
-// whose handler raises. Reaching one is an error; not reaching one is not, so
-// `(if #t 1 ??)` is 1.
+// A hole `??` -- exactly two question marks, and a reserved word, so `???` is
+// an ordinary identifier. The placeholder for an expression not yet written,
+// core rather than sugar: no expression expands to one that raises only when
+// reached, so it survives expansion and lowers to the `hole` op, whose
+// handler raises. Not reaching one is fine -- `(if #t 1 ??)` is 1.
 export interface Hole extends Tagged, Node {
   tag: 'hole'
 }

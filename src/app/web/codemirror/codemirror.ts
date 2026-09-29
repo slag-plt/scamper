@@ -43,6 +43,7 @@ import { lintGutter, lintKeymap } from '@codemirror/lint'
 import { unifiedMergeView } from '@codemirror/merge'
 import { ScamperSupport } from './extensions/language'
 import { scamperMode, type EditorMode } from './modes'
+import { CommentExtension } from './extensions/comment'
 import { IndentationExtension } from './extensions/indentation'
 import { ReformatExtension } from './extensions/reformat'
 import { QueryExtension } from './extensions/query'
@@ -217,6 +218,11 @@ function mkExtensions(config: EditorStateConfig): Extension {
       ...completionKeymap,
       ...lintKeymap,
     ]),
+    // Ctrl-; adds a layer of semicolons and Ctrl-Shift-; takes one away
+    // (#662). Not inside the isScamper block below: both commands ask the
+    // language for its comment marker and decline when it has none, so a text
+    // file needs no special case.
+    CommentExtension,
     EditorState.readOnly.of(config.isReadOnly),
     // Highlighting for whatever this file is -- Scheme, Markdown, CSV, or
     // nothing at all for a text file we have no grammar for (#385).
