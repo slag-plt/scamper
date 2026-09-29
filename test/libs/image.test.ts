@@ -82,7 +82,7 @@ describe('color', () => {
 (rgb 1 2 3 300)
 `),
     ).toEqual([
-      'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
+      'Runtime error: (rgb) Arity mismatch in function call: expected at least 3 arguments, got 2',
       'Runtime error: (rgb) expected an rgb-component as the first argument, received string',
       'Runtime error: (rgb) expected every value of a to be an rgb-component, but at least one was not',
     ])
@@ -100,8 +100,8 @@ describe('color', () => {
     ).toEqual([
       '10',
       'Runtime error: (rgb-red) expected an rgb as the first argument, received number',
-      'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-      'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
+      'Runtime error: (rgb-red) Arity mismatch in function call: expected 1 argument, got 0',
+      'Runtime error: (rgb-red) Arity mismatch in function call: expected 1 argument, got 2',
     ])
   })
 
@@ -274,7 +274,7 @@ describe('color', () => {
 (hsv 0 0 0 256)
 `),
     ).toEqual([
-      'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
+      'Runtime error: (hsv) Arity mismatch in function call: expected at least 3 arguments, got 2',
       'Runtime error: (hsv) expected a number as the first argument, received string',
       'Runtime error: (hsv) expected hue to be an angle between 0 and 360, received -1',
       'Runtime error: (hsv) expected hue to be an angle between 0 and 360, received 361',
@@ -520,7 +520,7 @@ describe('color', () => {
     ).toEqual([
       '(rgba 5 7 9 255)',
       '(rgba 255 255 255 255)',
-      'Runtime error: Arity mismatch in function call: expected 2 arguments, got 1',
+      'Runtime error: (rgb-add) Arity mismatch in function call: expected 2 arguments, got 1',
     ])
   })
 
@@ -766,7 +766,7 @@ describe('drawing', () => {
 (ellipse 10 20 "solid")
 `),
       ).toEqual([
-        'Runtime error: Arity mismatch in function call: expected 4 arguments, got 3',
+        'Runtime error: (ellipse) Arity mismatch in function call: expected at least 4 arguments, got 3',
       ])
     })
   })
@@ -875,7 +875,7 @@ describe('drawing', () => {
 (square 10 "solid")
 `),
       ).toEqual([
-        'Runtime error: Arity mismatch in function call: expected 3 arguments, got 2',
+        'Runtime error: (square) Arity mismatch in function call: expected at least 3 arguments, got 2',
       ])
     })
   })
@@ -1636,8 +1636,8 @@ describe('image transforms', () => {
 (with-image-file car car)
 `),
       ).toEqual([
-        'Runtime error: Arity mismatch in function call: expected 1 arguments, got 0',
-        'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
+        'Runtime error: (with-image-file) Arity mismatch in function call: expected 1 argument, got 0',
+        'Runtime error: (with-image-file) Arity mismatch in function call: expected 1 argument, got 2',
       ])
     })
   })
