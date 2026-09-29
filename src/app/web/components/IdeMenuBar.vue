@@ -229,6 +229,11 @@ const editMenu = computed<MenuItem[]>(() => {
     { label: 'Replace…', disabled: s.readOnly, run: inEditor((ed) => { ed.replace() }) },
     { separator: true },
     { label: 'Toggle Comment', kbd: editShortcut.toggleComment, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.toggleComment() }) },
+    // Beside the toggle rather than replacing it: comment depth means
+    // something in Scamper, so these two deepen and shallow a comment by one
+    // semicolon, where the toggle can only ever take a layer off (#662).
+    { label: 'Add Comment', kbd: editShortcut.addComment, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.addComment() }) },
+    { label: 'Remove Comment', kbd: editShortcut.removeComment, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.removeComment() }) },
     { label: 'Format File', kbd: editShortcut.format, disabled: s.readOnly || !s.isScamper, run: inEditor((ed) => { ed.format() }) },
     // Sits under Format File because that is the command it changes -- though
     // it governs the output and step panes too, so a file and a trace agree.

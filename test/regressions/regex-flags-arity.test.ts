@@ -28,6 +28,6 @@ test('regex rejects a second argument rather than dropping it (#467)', async () 
   (import rex)
   (regex "colou?r" "g")
   `, { stripRanges: true })).toEqual([
-    'Runtime error: Arity mismatch in function call: expected 1 arguments, got 2',
+    'Runtime error: (regex) Arity mismatch in function call: expected 1 argument, got 2',
   ])
 })

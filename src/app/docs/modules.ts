@@ -19,7 +19,7 @@ export interface LibEntry {
 }
 
 /**
- * A stable id for an entry. Six names -- `square`, `html?`, `button?` and
+ * A stable id for an entry. Seven names -- `drawing?`, `html?`, `button?` and
  * friends -- are exported by more than one module, so the module has to be
  * part of the id for anchors and list keys to stay unique.
  */
