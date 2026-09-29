@@ -27,6 +27,7 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- andmap and ormap are now available, answering whether a test holds for every element of a list or for at least one, and they stop as soon as the answer is known.
 - reduce-left is now available, combining a list from the left starting with its first element and passing the combining function the current element first, the way fold-left does.
 - make-list, make-vector and make-string now report an error when given a negative length, instead of quietly answering an empty result.
 - string->number now takes an optional base, so string->number of "ff" with base 16 is 255 and "1010" with base 2 is 10.

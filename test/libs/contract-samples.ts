@@ -196,6 +196,10 @@ export const ARGS = new Map<string, string[]>([
   ['prelude:hash-ref', ['(list->hash (list (pair "a" 1)))', '"a"']],
   ['prelude:sort', ['(list 3 1 2)', '(lambda (a b) (< a b))']],
   ['prelude:filter', ['(lambda (x) #t)', '(list 1 2 3)']],
+  // The generic `procedure?` sample returns 0, and Scamper has no truthiness:
+  // these two test each element with `if`, so the predicate has to be one.
+  ['prelude:andmap', ['(lambda (x) #t)', '(list 1 2 3)']],
+  ['prelude:ormap', ['(lambda (x) #t)', '(list 1 2 3)']],
   ['prelude:vector-filter', ['(lambda (x) #t)', '(vector 1 2 3)']],
   ['prelude:string-map', ['(lambda (c) c)', '"abc"']],
   ['prelude:fold', ['(lambda (acc x) acc)', '0', '(list 1 2 3)']],

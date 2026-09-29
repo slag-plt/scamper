@@ -540,6 +540,12 @@ Unattributed in the source but unmistakably Racket's:
 + **`match`** (`reference.html#match`), whose `[pattern expression]` clause shape is Racket's.
 + **`sort`**, whose argument order is `(sort l lt?)` (`src/lib/prelude.scm`) -- Racket's, not SRFI-132's `(list-sort < lst)`.
 + **`list-of` and `or/p`** (`src/lib/prelude.scm`), which are Racket's contract combinators `listof` and `or/c` under lighter names.
++ **`andmap` and `ormap`** (`src/lib/prelude.scm`), Racket's names for "does this hold for every element" and "for at least one".
+
+  **They return booleans, where Racket returns values.**
+  Racket's `ormap` hands back the first non-`#f` result and `andmap` the last one, so `(ormap add1 '(1 2))` is `2` in Racket; in Scamper the same call is a runtime error, because `add1` is not a predicate.
+  This is forced rather than chosen: `if` requires a boolean guard (above), so a non-boolean answer could not be used as one -- `(if (ormap f l) ...)` would raise -- and the short-circuit test *inside* `andmap` could not itself be written with `if` or `cond`.
+  Both also stop as soon as the answer is settled, which means a length mismatch between several lists goes unreported when the answer is decided before the shortest list runs out; Racket checks the lengths up front.
 + **`add1` and `sub1`** (`src/lib/prelude.scm`).
   The commit that added them (#604) gives a teaching motivation and names no parent language; `increment` and `decrement`, added alongside, are Scamper's own.
 + **`sqr`** (`src/lib/prelude.scm`), Racket's `racket/math` name for R7RS's `square`.
