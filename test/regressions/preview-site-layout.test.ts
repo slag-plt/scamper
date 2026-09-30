@@ -249,8 +249,8 @@ describe('the preview site keeps one bundle per release, at its root', () => {
   // Lifting is the only branch where a failed copy would be followed by an
   // irrecoverable delete -- the legacy branch keeps the very file it copies from
   // -- so this is where that must not happen. Not a property to take on trust:
-  // the loop runs in a pipeline subshell, where `set -e` is easy to assume has
-  // no effect.
+  // `set -e` aborting *before* the next statement is exactly what separates this
+  // script from the inline bash it replaced.
   //
   // Forced by shadowing `mv` on PATH rather than by permissions, since a
   // directory the script cannot write to is also one it cannot delete from,
@@ -272,5 +272,37 @@ describe('the preview site keeps one bundle per release, at its root', () => {
     expect(readFileSync(path.join(site, '4.7.5/scamper-embed-4.7.5.js'), 'utf-8')).toBe(
       'bundle',
     )
+  })
+
+  // The lift is deliberately unguarded. A root copy can only have come from the
+  // very file being lifted, so overwriting it loses nothing -- while declining
+  // because *something* was already there would delete the directory holding the
+  // only good copy. A half-finished publish is how that something gets there.
+  test('a truncated copy at the root does not cost the real bundle', () => {
+    const site = compose(
+      {
+        'scamper-embed-4.7.5.js': '',
+        '4.7.5/scamper-embed-4.7.5.js': 'bundle 4.7.5',
+      },
+      '4.8.0',
+      '4.8.0',
+    )
+
+    expect(readFileSync(path.join(site, 'scamper-embed-4.7.5.js'), 'utf-8')).toBe(
+      'bundle 4.7.5',
+    )
+    expect(existsSync(path.join(site, '4.7.5'))).toBe(false)
+  })
+
+  // Carrying on would publish a release whose bundle the *next* publish deletes
+  // as "shipped no embed bundle" -- the failure would surface one release later,
+  // as a reading that stopped working.
+  test('a release that built no bundle fails now rather than losing it later', () => {
+    const { site, dist } = stage({}, '4.8.0')
+    rmSync(path.join(dist, 'scamper-embed-4.8.0.js'))
+
+    expect(() =>
+      execFileSync(SCRIPT, [site, dist, '4.8.0', '4.8.0'], { stdio: 'pipe' }),
+    ).toThrow()
   })
 })

@@ -75,30 +75,42 @@ cd "$site"
 # working after the next release (#631 is why anyone went looking for it). It is
 # one self-contained file with no URLs of its own, so it does not mind being
 # served from the root -- which is what #704 is for.
-find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
-  while read -r dir; do
-    if [ "${dir%%-*}" = "${RELEASE}" ]; then
-      continue
-    elif [ "${dir}" != "${dir%%-*}" ]; then
-      echo "Removing ${dir}, a candidate for a release that has shipped."
-      rm -rf "./${dir}"
-    elif [ -f "./${dir}/scamper-embed-${dir}.js" ]; then
-      echo "Lifting ${dir}'s bundle to the root; its directory holds nothing else that must survive."
-      if [ ! -f "./scamper-embed-${dir}.js" ]; then
-        mv "./${dir}/scamper-embed-${dir}.js" "./scamper-embed-${dir}.js"
-      fi
-      rm -rf "./${dir}"
-    elif [ -f "./${dir}/scamper-embed.js" ]; then
-      echo "Copying ${dir}'s bundle to the root, and keeping the URL it shipped with."
-      if [ ! -f "./scamper-embed-${dir}.js" ]; then
-        cp "./${dir}/scamper-embed.js" "./scamper-embed-${dir}.js"
-      fi
-      find "./${dir}" -mindepth 1 -not -name 'scamper-embed.js' -delete
-    else
-      echo "Removing ${dir}, which shipped no embed bundle."
-      rm -rf "./${dir}"
+#
+# A glob rather than `find -printf`, which is GNU-only: this now runs on a
+# contributor's machine under `npm test` as well as on CI's ubuntu. `./*/` also
+# skips `.git` for free, since a glob does not match a leading dot -- and a plain
+# loop rather than a `find | while` pipeline means `set -e` aborts the script
+# itself on a failed copy, rather than only the subshell the loop ran in.
+for path in ./*/; do
+  [ -d "${path}" ] || continue
+  dir=$(basename "${path}")
+  if [ "${dir%%-*}" = "${RELEASE}" ]; then
+    continue
+  elif [ "${dir}" != "${dir%%-*}" ]; then
+    echo "Removing ${dir}, a candidate for a release that has shipped."
+    rm -rf "./${dir}"
+  elif [ -f "./${dir}/scamper-embed-${dir}.js" ]; then
+    echo "Lifting ${dir}'s bundle to the root; its directory holds nothing else that must survive."
+    # Unguarded on purpose. The root copy can only have come from this very file
+    # (a release copies its own bundle out, below), so overwriting it loses
+    # nothing -- whereas skipping the move because *something* is already there
+    # would delete the directory holding the only good copy.
+    mv "./${dir}/scamper-embed-${dir}.js" "./scamper-embed-${dir}.js"
+    rm -rf "./${dir}"
+  elif [ -f "./${dir}/scamper-embed.js" ]; then
+    echo "Copying ${dir}'s bundle to the root, and keeping the URL it shipped with."
+    # Guarded, unlike the lift above, because this branch keeps the directory:
+    # nothing is lost by declining, and a backfill already done should not be
+    # repeated.
+    if [ ! -f "./scamper-embed-${dir}.js" ]; then
+      cp "./${dir}/scamper-embed.js" "./scamper-embed-${dir}.js"
     fi
-  done
+    find "./${dir}" -mindepth 1 ! -name 'scamper-embed.js' -delete
+  else
+    echo "Removing ${dir}, which shipped no embed bundle."
+    rm -rf "./${dir}"
+  fi
+done
 
 rm -rf "./${VERSION}"
 cp -r "${dist}" "./${VERSION}"
@@ -107,9 +119,15 @@ cp -r "${dist}" "./${VERSION}"
 # so the flat URL works the moment it ships. A candidate's does not: its
 # directory is deleted when the release lands, and a root copy would be a file
 # nothing ever cleans up.
-if [ "${VERSION}" = "${RELEASE}" ] &&
-   [ -f "./${VERSION}/scamper-embed-${VERSION}.js" ]; then
-  cp "./${VERSION}/scamper-embed-${VERSION}.js" "./scamper-embed-${VERSION}.js"
+if [ "${VERSION}" = "${RELEASE}" ]; then
+  if [ -f "./${VERSION}/scamper-embed-${VERSION}.js" ]; then
+    cp "./${VERSION}/scamper-embed-${VERSION}.js" "./scamper-embed-${VERSION}.js"
+  else
+    # Silently carrying on would publish a release whose bundle the *next*
+    # publish then deletes as "shipped no embed bundle".
+    echo "compose-preview-site: ${VERSION} built no scamper-embed-${VERSION}.js" >&2
+    exit 1
+  fi
 fi
 
 # Pages would otherwise treat this as a Jekyll site and drop anything whose name
@@ -121,9 +139,11 @@ touch .nojekyll
 # Gathered before the document is written, and with `|| true`: a `grep` that
 # matches nothing exits 1, and "no release directory yet" is the normal state
 # while a candidate is under review, not an error.
-dirs="$(find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n')"
-flat="$(find . -maxdepth 1 -mindepth 1 -type f -name 'scamper-embed-*.js' \
-  -printf '%f\n' | sed 's/^scamper-embed-//; s/\.js$//')"
+dirs="$(for p in ./*/; do [ -d "${p}" ] && basename "${p}"; done || true)"
+flat="$(for p in ./scamper-embed-*.js; do
+  [ -f "${p}" ] || continue
+  n=$(basename "${p}"); n=${n#scamper-embed-}; echo "${n%.js}"
+done || true)"
 plain="$(printf '%s\n' "${dirs}" | grep -v -e '-' || true)"
 candidates="$(printf '%s\n' "${dirs}" | grep -e '-' | sort -Vr || true)"
 
