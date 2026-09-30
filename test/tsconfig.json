@@ -16,12 +16,13 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    // Two specs import a .mjs at the repository root directly: the freshness
+    // Three specs import a .mjs at the repository root directly: the freshness
     // one reads scripts/generate-lib-sources.mjs, to compare what it would
-    // write against what is checked in, and the DOM-instanceof lint one reads
+    // write against what is checked in; the DOM-instanceof lint one reads
     // eslint.config.mjs, so it pins the selector the build runs rather than a
-    // copy. Without allowJs those imports resolve to nothing and read as
-    // untyped.
+    // copy; and the embed-bundle-name one reads scripts/embed-bundle-name.mjs,
+    // which is where that filename is decided. Without allowJs those imports
+    // resolve to nothing and read as untyped.
     "allowJs": true,
     "types": ["@testing-library/jest-dom/vitest", "node"]
   },
@@ -30,6 +31,7 @@
     "./setup.ts",
     "../src/env.d.ts",
     "../src/js/image/colorsys.d.ts",
+    "../scripts/embed-bundle-name.mjs",
     "../scripts/generate-lib-sources.mjs",
     "../eslint.config.mjs"
   ],

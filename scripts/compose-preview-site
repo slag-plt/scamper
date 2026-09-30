@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+#
+# Composes the content of the GitHub Pages site the `preview` job publishes
+# (.github/workflows/node.js.yml). Given what is already published, a fresh
+# build, and the version it is for, this decides what the site should hold and
+# writes its listing. The workflow clones gh-pages, calls this, and commits.
+#
+#   compose-preview-site <site-dir> <dist-dir> <version> <release>
+#
+# <release> is <version> with any -rc suffix stripped, so the candidates for one
+# release can be told from the candidates for an older one.
+#
+# A script rather than inline workflow bash because it *permanently deletes
+# published files*: a reading on another site loads one by URL, and removing a
+# version's directory breaks it (docs/releasing.md). Inline, it ran only on main
+# and could not be exercised before it did damage.
+# test/regressions/preview-site-layout.test.ts is what exercises it now.
+#
+# The site holds the release under review in full, and one bundle from every
+# release that has shipped. Since #704 that bundle carries its version in its
+# name and lives at the root, so a shipped release's directory is disposable --
+# which is why there is no longer a "reduce a directory in place" step for
+# anything released from here on.
+
+set -euo pipefail
+
+if [ "$#" -ne 4 ]; then
+  echo "usage: $(basename "$0") <site-dir> <dist-dir> <version> <release>" >&2
+  exit 2
+fi
+
+site=$1
+dist=$2
+VERSION=$3
+RELEASE=$4
+
+# Named explicitly rather than trusted: everything below is relative to `site`
+# after the cd, and an empty one would aim `rm -rf` at the working directory.
+for arg in "$site" "$dist" "$VERSION" "$RELEASE"; do
+  if [ -z "$arg" ]; then
+    echo "compose-preview-site: empty argument" >&2
+    exit 2
+  fi
+done
+[ -d "$site" ] || { echo "compose-preview-site: no site dir at $site" >&2; exit 2; }
+[ -d "$dist" ] || { echo "compose-preview-site: no dist dir at $dist" >&2; exit 2; }
+
+dist=$(cd "$dist" && pwd)
+cd "$site"
+
+# What survives, by kind:
+#
+#   this release, and its candidates      kept, so rc.1 and rc.2 can be compared
+#   a candidate for an older release      removed; it previewed something shipped
+#   shipped, bundle carries its version   lifted to the root, directory deleted
+#   shipped, bundle has the old name      copied to the root under the new name,
+#                                         and the directory reduced to it, so a
+#                                         reading already pinned to the old URL
+#                                         goes on working
+#   shipped, no bundle at all             removed; predates #417
+#
+# The bundle is kept at all because a reading loads it by URL and must go on
+# working after the next release (#631 is why anyone went looking for it). It is
+# one self-contained file with no URLs of its own, so it does not mind being
+# served from the root -- which is what #704 is for.
+find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
+  while read -r dir; do
+    if [ "${dir%%-*}" = "${RELEASE}" ]; then
+      continue
+    elif [ "${dir}" != "${dir%%-*}" ]; then
+      echo "Removing ${dir}, a candidate for a release that has shipped."
+      rm -rf "./${dir}"
+    elif [ -f "./${dir}/scamper-embed-${dir}.js" ]; then
+      echo "Lifting ${dir}'s bundle to the root; its directory holds nothing else that must survive."
+      if [ ! -f "./scamper-embed-${dir}.js" ]; then
+        mv "./${dir}/scamper-embed-${dir}.js" "./scamper-embed-${dir}.js"
+      fi
+      rm -rf "./${dir}"
+    elif [ -f "./${dir}/scamper-embed.js" ]; then
+      echo "Copying ${dir}'s bundle to the root, and keeping the URL it shipped with."
+      if [ ! -f "./scamper-embed-${dir}.js" ]; then
+        cp "./${dir}/scamper-embed.js" "./scamper-embed-${dir}.js"
+      fi
+      find "./${dir}" -mindepth 1 -not -name 'scamper-embed.js' -delete
+    else
+      echo "Removing ${dir}, which shipped no embed bundle."
+      rm -rf "./${dir}"
+    fi
+  done
+
+rm -rf "./${VERSION}"
+cp -r "${dist}" "./${VERSION}"
+
+# A release's bundle goes to the root now, not when the next release prunes it,
+# so the flat URL works the moment it ships. A candidate's does not: its
+# directory is deleted when the release lands, and a root copy would be a file
+# nothing ever cleans up.
+if [ "${VERSION}" = "${RELEASE}" ] &&
+   [ -f "./${VERSION}/scamper-embed-${VERSION}.js" ]; then
+  cp "./${VERSION}/scamper-embed-${VERSION}.js" "./scamper-embed-${VERSION}.js"
+fi
+
+# Pages would otherwise treat this as a Jekyll site and drop anything whose name
+# begins with an underscore.
+touch .nojekyll
+
+# A listing, so the root of the site is not a 404.
+#
+# Gathered before the document is written, and with `|| true`: a `grep` that
+# matches nothing exits 1, and "no release directory yet" is the normal state
+# while a candidate is under review, not an error.
+dirs="$(find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n')"
+flat="$(find . -maxdepth 1 -mindepth 1 -type f -name 'scamper-embed-*.js' \
+  -printf '%f\n' | sed 's/^scamper-embed-//; s/\.js$//')"
+plain="$(printf '%s\n' "${dirs}" | grep -v -e '-' || true)"
+candidates="$(printf '%s\n' "${dirs}" | grep -e '-' | sort -Vr || true)"
+
+# A release is anything with a directory of its own or a bundle at the root.
+# `sort -Vru` because the two overlap during the release that backfills one.
+releases="$(printf '%s\n%s\n' "${plain}" "${flat}" | grep -v '^$' | sort -Vru || true)"
+
+{
+  echo '<!doctype html>'
+  echo '<html lang="en"><head><meta charset="utf-8">'
+  echo '<meta name="viewport" content="width=device-width,initial-scale=1">'
+  echo "<title>Scamper ${RELEASE} previews</title>"
+  echo '<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5}li{margin:.25rem 0}code{font-size:.9em}</style>'
+  echo '</head><body>'
+  echo "<h1>Scamper ${RELEASE}</h1>"
+  echo '<p>Client-side only builds, for looking at a release before it ships.'
+  echo 'Files are kept in your browser: signing in, server storage, and history are not part of a preview.</p>'
+  echo '<ul>'
+  # The release under review is here in full until the next one starts, and
+  # index.html is how that is told apart -- rather than comparing against
+  # RELEASE, which would be wrong for the run that publishes the release itself.
+  # Everything else is linked as the one file it still has.
+  for dir in ${releases}; do
+    if [ -f "./${dir}/index.html" ]; then
+      echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
+    elif [ -f "./scamper-embed-${dir}.js" ]; then
+      echo "<li>${dir} &mdash; <a href=\"scamper-embed-${dir}.js\">scamper-embed-${dir}.js</a></li>"
+    else
+      echo "<li>${dir} &mdash; <a href=\"${dir}/scamper-embed.js\">scamper-embed.js</a></li>"
+    fi
+  done
+  for dir in ${candidates}; do
+    echo "<li><a href=\"${dir}/\">${dir}</a></li>"
+  done
+  echo '</ul>'
+  echo '<p>A shipped release keeps the one file a reading loads, at the root.'
+  echo 'A release from before that change also keeps the <code>&lt;version&gt;/scamper-embed.js</code> URL it shipped with.'
+  echo 'See <a href="https://github.com/slag-plt/scamper/blob/main/docs/embedding.md">docs/embedding.md</a>.</p>'
+  echo "<p><a href=\"https://github.com/${GITHUB_REPOSITORY:-slag-plt/scamper}\">github.com/${GITHUB_REPOSITORY:-slag-plt/scamper}</a></p>"
+  echo '</body></html>'
+} > index.html

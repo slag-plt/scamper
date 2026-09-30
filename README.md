@@ -121,9 +121,10 @@ That writes one `config.json` at the site root, which every deployed version
 reads at startup — including releases shipped long before the server existed.
 
 This is also what publishes the reading widget: the build's
-`dist/scamper-embed.js` lands at `<root>/<version>/scamper-embed.js`, which is
-the one file a reading on another site includes. See
-[`docs/embedding.md`](docs/embedding.md).
+`dist/scamper-embed-<version>.js` is the one file a reading on another site
+includes. A `scamper-embed.js` beside it imports that one, so the
+`<root>/<version>/scamper-embed.js` URL a deployment served before keeps
+working. See [`docs/embedding.md`](docs/embedding.md).
 
 **A server on a different origin from the front end is not supported**, and that
 is deliberate: it would mean CORS, `SameSite=None` cookies, a new CSRF check on
