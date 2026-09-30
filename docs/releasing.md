@@ -70,22 +70,32 @@ there is none; the build emits no such file, and nothing serves one here. So
 a report that sign-in is broken there is a report about the preview rather than
 about the release.
 
-The site holds the release under review in full, and one file from every release
+The site holds the release under review in full, and one bundle from every release
 that has shipped.
 Every candidate stays while its release is under review, so `rc.1` and `rc.2` can
 be compared; when the next release starts, those candidates go and the release
-they previewed is reduced to its `scamper-embed.js`.
+they previewed keeps only its bundle.
 
-That one file is kept because a reading on another site loads it by URL, at
-`https://slag-plt.github.io/scamper/<version>/scamper-embed.js`, and must go on
+Since #704 that bundle carries its version in its name and lives at the **root** of
+the site, `scamper-embed-<version>.js`, so a shipped release's directory is simply
+deleted rather than reduced in place. A release published before that change keeps
+its directory and the `<version>/scamper-embed.js` URL it shipped with, and gains a
+root-level copy the next time the site is published.
+
+The bundle is kept because a reading on another site loads it by URL and must go on
 working after the next release.
-It is self-contained and refers to nothing outside itself, so it does not mind
-that the rest of its directory is gone.
+It is self-contained and refers to nothing outside itself, so it does not mind being
+served from the root.
 The live app is still where a shipped release is *looked at* — what survives here
 is the embeddable bundle, not a browsable copy of the IDE.
 
-**Deleting a version's directory therefore breaks any reading pinned to it.**
+**Deleting a release's bundle therefore breaks any reading pinned to it.**
 See `docs/embedding.md`.
+
+`scripts/compose-preview-site` is what decides all of this, and
+`test/regressions/preview-site-layout.test.ts` exercises it over fixture trees —
+the publish job only runs on main, so that test is the only chance to catch a
+mistake before it deletes something.
 
 ### One-time setup
 

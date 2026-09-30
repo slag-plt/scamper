@@ -40,11 +40,13 @@ const ideEntry = 'src/app/web/index.html'
 //
 // A key is also the `[name]` in `entryFileNames` below, so it names a chunk in
 // `assets/`. `embed.html`'s key is therefore *not* `scamper-embed`, however
-// natural that looks beside its directory: `dist/scamper-embed.js` is the
-// self-contained bundle a reading on another site includes, and an
+// natural that looks beside its directory: `dist/scamper-embed-<version>.js` is
+// the self-contained bundle a reading on another site includes, and an
 // `assets/scamper-embed-<version>.js` sitting next to it is a chunk that
 // imports three siblings and works only inside the deployment. Someone
 // embedding Scamper found that one first and reported the bundle as broken.
+// Since #704 the two differ only by directory, which is what makes this rule
+// binding rather than tidy -- see scripts/embed-bundle-name.mjs.
 // The key names the page instead, which is what it actually is.
 export const htmlEntries: Record<string, string> = {
   'scamper-docs': 'src/app/docs/docs.html',

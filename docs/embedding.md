@@ -6,7 +6,7 @@ We provide a collection of widgets for embedding Scamper into a webpage, e.g., f
 
 ```html
 <script type="module"
-        src="<host>/<version>/scamper-embed.js"></script>
+        src="https://slag-plt.github.io/scamper/scamper-embed-<version>.js"></script>
 
 <div class="scamper-transcript">
 ;;; (factorial n) -> number?
@@ -23,20 +23,38 @@ We provide a collection of widgets for embedding Scamper into a webpage, e.g., f
 Every `.scamper-transcript` on the page is found and run, in the order it appears.
 Each widget fills its container's width.
 
-Every released version is published at
-`https://slag-plt.github.io/scamper/<version>/scamper-embed.js`, so a reading can
-point at one and keep working without the Scamper server being reachable at all:
+Every released version is published on GitHub Pages, so a reading can point at one
+and keep working without the Scamper server being reachable at all:
+
+~~~html
+<script type="module"
+        src="https://slag-plt.github.io/scamper/scamper-embed-4.7.0.js"></script>
+~~~
+
+The bundle carries its version in its filename, which is why every release's can
+sit side by side at the root of that site (#704).
+
+Releases published before that change instead have a directory of their own, and
+keep it:
 
 ~~~html
 <script type="module"
         src="https://slag-plt.github.io/scamper/4.5.0/scamper-embed.js"></script>
 ~~~
 
+Both forms keep working. Use the first for a new reading.
+
+A self-hosted Scamper serves the same bundle, but inside the version's own
+directory (`scripts/deploy` gives every release one), so there the URL is
+`<host>/<version>/scamper-embed-<version>.js` — or
+`<host>/<version>/scamper-embed.js`, which the build writes beside it and which
+imports it.
+
 Pin a version rather than tracking the newest one.
 A release is immutable once published, so a reading pinned to one keeps rendering
 exactly as it did when it was written.
 
-`scamper-embed.js` carries its own styles and refers to nothing outside itself, so a reading need not link a stylesheet
+The bundle carries its own styles and refers to nothing outside itself, so a reading need not link a stylesheet
 
 ## Embedding Scamper code
 
@@ -107,7 +125,8 @@ One widget's button sees its own definitions and reports its own errors, and sta
 +   Each widget is a `Scamper.executeEmbedded` call.
     Unlike `execute`, that does not supersede: the foreground run is left alone and each widget gets a run of its own (see `RunContext` in `src/scamper.ts`).
 +   A widget's run deliberately outlives its fiber, so its handlers keep working after its program has finished.
-+   `dist/scamper-embed.js` is a **second** build of that entry point (`vite.config.embed.ts`, run after the site build by `scripts/build`): one chunk, with the dynamic imports and every stylesheet folded in.
++   `dist/scamper-embed-<version>.js` is a **second** build of that entry point (`vite.config.embed.ts`, run after the site build by `scripts/build`): one chunk, with the dynamic imports and every stylesheet folded in.
+    `scripts/embed-bundle-name.mjs` is the one place that name is decided, and `scripts/vite-plugin-embed-shim.mjs` writes an unversioned `dist/scamper-embed.js` beside it that does nothing but import it (#704).
     The site build emits the same entry as `assets/scamper-transcript-demo-<version>.js`, but as chunks shared with the IDE and with the CSS left to the page — which suits `embed.html`, sitting in the deployment beside them, and is unusable from a reading on another site.
 +   `src/app/web/embed/embed.html` is a demonstration page and what the browser test drives.
     `npm run dev` serves it at `/embed.html`.

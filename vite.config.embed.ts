@@ -3,10 +3,18 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 import { AppVersion, sourcePlugins } from './vite.config.ts'
+import { EMBED_ALIAS, embedBundleName } from './scripts/embed-bundle-name.mjs'
+import { embedShimPlugin } from './scripts/vite-plugin-embed-shim.mjs'
 import { inlineCssPlugin } from './scripts/vite-plugin-inline-css.mjs'
 
 // The second half of `npm run build` (see `scripts/build`): the reading widget
-// as one self-contained file, `dist/scamper-embed.js`.
+// as one self-contained file, `dist/scamper-embed-<version>.js`.
+//
+// The version is in the *filename* since #704, so the GitHub Pages site can
+// keep every release's bundle at its root rather than one per directory. An
+// unversioned `scamper-embed.js` is written beside it, importing it, so the
+// name samples/reading.html and a self-hosted deployment already use goes on
+// working -- see scripts/vite-plugin-embed-shim.mjs.
 //
 // The main build emits the same entry point as well, but as a page's worth of
 // shared chunks under `assets/` with the stylesheets left to the page -- fine
@@ -37,7 +45,9 @@ export default defineConfig({
       // An ES module because the entry awaits at the top level. A reading
       // includes it as <script type="module">, which also defers it.
       formats: ['es'],
-      fileName: () => 'scamper-embed.js',
+      // scripts/embed-bundle-name.mjs is the authority on this name, so the
+      // shim plugin and the test that keeps the stem unique agree with it.
+      fileName: () => embedBundleName(AppVersion),
     },
     rolldownOptions: {
       // Scamper loads its renderers by dynamic import (see src/scamper.ts),
@@ -55,6 +65,10 @@ export default defineConfig({
         resolve(import.meta.dirname, 'public/css/scamper-highlight.css'),
         resolve(import.meta.dirname, 'public/css/scamper-transcript.css'),
       ],
+    }),
+    embedShimPlugin({
+      alias: EMBED_ALIAS,
+      target: () => embedBundleName(AppVersion),
     }),
   ],
 

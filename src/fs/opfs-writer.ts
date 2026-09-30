@@ -80,9 +80,9 @@ class OPFSWriter {
     // Imported here rather than at the top of the file so that a host with no
     // OPFS never loads it. `?worker&inline` is Vite's, and means the worker is
     // built and inlined as a blob rather than emitted beside the bundle:
-    // `dist/scamper-embed.js` is one self-contained file a reading on another
-    // site includes by URL (see vite.config.embed.ts), and a worker it had to
-    // fetch relative to itself would not survive the trip.
+    // `dist/scamper-embed-<version>.js` is one self-contained file a reading on
+    // another site includes by URL (see vite.config.embed.ts), and a worker it
+    // had to fetch relative to itself would not survive the trip.
     const { default: WriterWorker } = await import('./opfs-writer.worker?worker&inline')
     const worker = new WriterWorker()
     worker.onmessage = (event: MessageEvent<WriteReply>) => {

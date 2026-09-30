@@ -612,94 +612,17 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        # The site holds the release under review in full, and one file from
-        # every release that has shipped.
+        # What the site should hold, and its listing. A script rather than
+        # inline bash because it permanently deletes published files: a reading
+        # on another site loads one by URL, and removing a version breaks it
+        # (docs/releasing.md). Inline, it ran only on main and could not be
+        # exercised first -- test/regressions/preview-site-layout.test.ts now
+        # drives it over fixture trees.
         #
-        # A directory belongs to this release when its name matches once an -rc
-        # suffix is stripped, so the candidates for one release stay side by
-        # side while it is reviewed. Everything else is dealt with by kind:
-        #
-        #   a candidate for an older release   removed; it was a preview of
-        #                                      something that has since shipped
-        #   a shipped release                  reduced to scamper-embed.js
-        #   ... with no such file              removed; it predates #417, which
-        #                                      is what made that file exist
-        #
-        # The bundle is kept because a reading on another site loads it by URL
-        # and must go on working after the next release (#631 is why anyone
-        # went looking for it in the first place). It is one self-contained
-        # file with no URLs of its own, so it does not care that the rest of
-        # its directory is gone -- and at ~1.2 MB a release, keeping them all
-        # stays far inside what Pages is willing to serve.
-        #
-        # Reducing rather than rebuilding: the file published here is the one
-        # that release actually shipped, not a fresh build of its tag.
-        find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n' |
-          while read -r dir; do
-            if [ "${dir%%-*}" = "${RELEASE}" ]; then
-              continue
-            elif [ "${dir}" != "${dir%%-*}" ]; then
-              echo "Removing ${dir}, a candidate for a release that has shipped."
-              rm -rf "./${dir}"
-            elif [ -f "./${dir}/scamper-embed.js" ]; then
-              echo "Reducing ${dir} to its embed bundle."
-              find "./${dir}" -mindepth 1 -not -name 'scamper-embed.js' -delete
-            else
-              echo "Removing ${dir}, which shipped no embed bundle."
-              rm -rf "./${dir}"
-            fi
-          done
-
-        rm -rf "./${VERSION}"
-        cp -r ../dist "./${VERSION}"
-
-        # Pages would otherwise treat this as a Jekyll site and drop anything
-        # whose name begins with an underscore.
-        touch .nojekyll
-
-        # A listing, so the root of the site is not a 404. Releases first, then
-        # their candidates newest-first -- `sort -V` puts 4.4.0 before
-        # 4.4.0-rc.1, which is backwards, so the two are gathered separately.
-        #
-        # Gathered before the document is written, and with `|| true`: a `grep`
-        # that matches nothing exits 1, and "no release directory yet" is the
-        # normal state while a candidate is under review, not an error.
-        dirs="$(find . -maxdepth 1 -mindepth 1 -type d -not -name '.git' -printf '%f\n')"
-        releases="$(printf '%s\n' "${dirs}" | grep -v -e '-' | sort -Vr || true)"
-        candidates="$(printf '%s\n' "${dirs}" | grep -e '-' | sort -Vr || true)"
-
-        {
-          echo '<!doctype html>'
-          echo '<html lang="en"><head><meta charset="utf-8">'
-          echo '<meta name="viewport" content="width=device-width,initial-scale=1">'
-          echo "<title>Scamper ${RELEASE} previews</title>"
-          echo '<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;line-height:1.5}li{margin:.25rem 0}</style>'
-          echo '</head><body>'
-          echo "<h1>Scamper ${RELEASE}</h1>"
-          echo '<p>Client-side only builds, for looking at a release before it ships.'
-          echo 'Files are kept in your browser: signing in, server storage, and history are not part of a preview.</p>'
-          echo '<ul>'
-          # A shipped release keeps only its embed bundle, so it is linked as
-          # the file it still has. The release under review is here in full
-          # until the next one starts, and index.html is how that is told
-          # apart -- rather than comparing against RELEASE, which would be
-          # wrong for the run that publishes the release itself.
-          for dir in ${releases}; do
-            if [ -f "./${dir}/index.html" ]; then
-              echo "<li><a href=\"${dir}/\">${dir}</a> &mdash; the release</li>"
-            else
-              echo "<li>${dir} &mdash; <a href=\"${dir}/scamper-embed.js\">scamper-embed.js</a></li>"
-            fi
-          done
-          for dir in ${candidates}; do
-            echo "<li><a href=\"${dir}/\">${dir}</a></li>"
-          done
-          echo '</ul>'
-          echo '<p>A shipped release keeps the one file a reading loads.'
-          echo 'See <a href="https://github.com/slag-plt/scamper/blob/main/docs/embedding.md">docs/embedding.md</a>.</p>'
-          echo "<p><a href=\"https://github.com/${GITHUB_REPOSITORY}\">github.com/${GITHUB_REPOSITORY}</a></p>"
-          echo '</body></html>'
-        } > index.html
+        # Since #704 a release's bundle carries its version and sits at the root,
+        # so a shipped release's directory is disposable rather than reduced.
+        "${GITHUB_WORKSPACE}/scripts/compose-preview-site" \
+          . ../dist "${VERSION}" "${RELEASE}"
 
         # One orphan commit, force-pushed, rather than a growing history. Each
         # build is several megabytes and its asset names carry the version, so
