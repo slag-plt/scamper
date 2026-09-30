@@ -45,6 +45,18 @@ done
 [ -d "$site" ] || { echo "compose-preview-site: no site dir at $site" >&2; exit 2; }
 [ -d "$dist" ] || { echo "compose-preview-site: no dist dir at $dist" >&2; exit 2; }
 
+# The two versions name directories under `site`, and reach `rm -rf`. Checked
+# for shape for the same reason as above: a `/` or a leading dot in one -- a
+# typo in package.json is all it takes -- would aim it outside the site.
+for arg in "$VERSION" "$RELEASE"; do
+  case $arg in
+    *[!0-9A-Za-z.+-]* | .*)
+      echo "compose-preview-site: ${arg} is not a version" >&2
+      exit 2
+      ;;
+  esac
+done
+
 dist=$(cd "$dist" && pwd)
 cd "$site"
 

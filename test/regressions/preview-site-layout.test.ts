@@ -1,5 +1,12 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
@@ -39,18 +46,16 @@ function put(root: string, rel: string, contents = 'x'): void {
 }
 
 /**
- * Builds a pages tree and a dist tree, runs the script over them, and returns
- * the pages directory it composed.
+ * Builds a pages tree and a dist tree, without running anything over them.
  *
  * @param pages what is already published, as paths relative to the site root
  * @param version the build being published, candidate suffix and all
- * @param release that version with any candidate suffix stripped
+ * @returns the two directories the script takes
  */
-function compose(
+function stage(
   pages: Record<string, string>,
   version: string,
-  release: string,
-): string {
+): { site: string; dist: string } {
   scratch = mkdtempSync(path.join(tmpdir(), 'scamper-pages-'))
   const site = path.join(scratch, 'site')
   const dist = path.join(scratch, 'dist')
@@ -65,6 +70,21 @@ function compose(
   put(dist, 'index.html', '<!doctype html>')
   put(dist, 'assets/scamper-ide-x.js', 'chunk')
 
+  return { site, dist }
+}
+
+/**
+ * Builds those trees, runs the script over them, and returns the pages
+ * directory it composed.
+ *
+ * @param release the version with any candidate suffix stripped
+ */
+function compose(
+  pages: Record<string, string>,
+  version: string,
+  release: string,
+): string {
+  const { site, dist } = stage(pages, version)
   execFileSync(SCRIPT, [site, dist, version, release], { encoding: 'utf-8' })
   return site
 }
@@ -206,6 +226,51 @@ describe('the preview site keeps one bundle per release, at its root', () => {
     // variable would take it.
     expect(existsSync(path.join(site, '..', 'dist', 'scamper-embed-4.8.0.js'))).toBe(
       true,
+    )
+  })
+
+  test.each([
+    ['../dist', 'escapes the site root'],
+    ['..', 'is the site root itself'],
+    ['/etc', 'is absolute'],
+    ['4.8.0/../..', 'climbs out'],
+  ])('a version that %s is refused before anything is deleted (%s)', (version) => {
+    const { site, dist } = stage({ '4.6.0/scamper-embed.js': 'bundle' }, '4.8.0')
+
+    // `rm -rf "./${VERSION}"` is reached with whatever package.json said, so the
+    // shape is checked rather than trusted.
+    expect(() =>
+      execFileSync(SCRIPT, [site, dist, version, version], { stdio: 'pipe' }),
+    ).toThrow()
+    expect(existsSync(path.join(site, '4.6.0/scamper-embed.js'))).toBe(true)
+    expect(existsSync(path.join(site, '..', 'dist'))).toBe(true)
+  })
+
+  // Lifting is the only branch where a failed copy would be followed by an
+  // irrecoverable delete -- the legacy branch keeps the very file it copies from
+  // -- so this is where that must not happen. Not a property to take on trust:
+  // the loop runs in a pipeline subshell, where `set -e` is easy to assume has
+  // no effect.
+  //
+  // Forced by shadowing `mv` on PATH rather than by permissions, since a
+  // directory the script cannot write to is also one it cannot delete from,
+  // which would let the property hold for the wrong reason.
+  test('a lift it cannot make stops it before it deletes the directory', () => {
+    const { site, dist } = stage({ '4.7.5/scamper-embed-4.7.5.js': 'bundle' }, '4.8.0')
+    const bin = path.join(site, '..', 'bin')
+    mkdirSync(bin, { recursive: true })
+    writeFileSync(path.join(bin, 'mv'), '#!/bin/sh\nexit 1\n', { mode: 0o755 })
+
+    expect(() =>
+      execFileSync(SCRIPT, [site, dist, '4.8.0', '4.8.0'], {
+        stdio: 'pipe',
+        env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` },
+      }),
+    ).toThrow()
+
+    // The only copy of a published bundle is still the one inside.
+    expect(readFileSync(path.join(site, '4.7.5/scamper-embed-4.7.5.js'), 'utf-8')).toBe(
+      'bundle',
     )
   })
 })
