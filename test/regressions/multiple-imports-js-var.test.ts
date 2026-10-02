@@ -42,10 +42,13 @@ describe('#663: two library imports do not collide on js-var', () => {
   })
 
   test('no pair of builtin libraries collides on js-var', async () => {
-    // Filtered on js-var rather than asserted empty: a handful of pairs do
+    // Filtered on js-var rather than asserted empty: a handful of pairs
     // genuinely re-export the same native under one name (canvas/image on
-    // canvas?, html/reactive on button?, ...), which is a separate issue. Those
-    // are free to change without touching this test.
+    // canvas?, html/reactive on button?, ...), which was a separate issue at
+    // the time. #682 has since fixed those, and its sweep asserts the stronger
+    // claim -- no pair warns at all -- so this one can no longer fail on its
+    // own. It stays as #663's own record of what it was about; the assertion
+    // below it is the pin that can still fail independently.
     const offenders: string[] = []
     for (const [i, a] of libs.entries()) {
       for (const b of libs.slice(i + 1)) {

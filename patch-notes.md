@@ -27,6 +27,8 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+- Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+
 # 4.7.0
 
 - tally and tally-value are now available, counting how many elements of a list pass a test or how many are equal to a given value.

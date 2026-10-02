@@ -20,6 +20,22 @@ export const isClosure = (v: L.Value): v is L.Closure =>
   isTaggedObject(v) && v[L.scamperTag] === 'closure'
 export const isFunction = (v: L.Value): v is L.ScamperFn =>
   isJsFunction(v) || isClosure(v)
+/**
+ * Strips a value's contract wrappers, yielding the value they guard -- for a
+ * documented library export, the native or closure the docstring's checks were
+ * generated around (see scheme/contract.ts). A value that is not a wrapper is
+ * returned as it is.
+ *
+ * A loop rather than one step: a wrapper around an already-wrapped value is
+ * possible (an alias export documented in its own right).
+ */
+export const behindContracts = (v: L.Value): L.Value => {
+  let cur = v
+  while (isClosure(cur) && cur.contractTarget !== undefined) {
+    cur = cur.contractTarget
+  }
+  return cur
+}
 export const isChar = (v: L.Value): v is L.Char =>
   isTaggedObject(v) && v[L.scamperTag] === 'char'
 /**
