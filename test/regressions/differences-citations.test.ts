@@ -143,7 +143,7 @@ const ANCHORS: Record<string, string | undefined> = {
   '`src/lpm/limits.ts:23`': 'MAX_CALL_STACK_DEPTH = 200_000',
   // The module system
   '`src/scheme/syntax.grammar:98`': 'kw<"import">',
-  '`src/scheme/scope.ts:449-460`': 'This matches Racket module semantics',
+  '`src/scheme/scope.ts:481-492`': 'This matches Racket module semantics',
   // Summary table
   '`lang.ts:586`': "We follow Clojure's lead",
   '`syntax.grammar:5-9`': 'is a map literal',

@@ -1,7 +1,7 @@
 import builtinLibs from '../lib'
 import * as A from './ast'
 import * as L from '../lpm/lang'
-import { Range } from '../lpm'
+import { Range, behindContracts, isFunction } from '../lpm'
 import { ScamperDiagnostic, diagnosticToError } from './diagnostic.js'
 import { parseProgramFromSource } from './lezer-bridge'
 
@@ -211,6 +211,35 @@ export async function loadTransitiveImports(
   }
   await visit(prog, undefined, undefined)
   return failures
+}
+
+/**
+ * @returns whether builtin libraries `a` and `b` both export `name` as the same
+ *   procedure, so the name they share denotes one binding rather than two --
+ *   `canvas` and `image` both export `canvas?`, and deliberately, since a
+ *   contract predicate must resolve in the module whose contracts name it
+ *   (#682). Each library wraps its own exports in checks built from its own
+ *   docstrings, so the two wrappers are never the same object; what they guard
+ *   is (behindContracts).
+ *
+ *   Procedures only: two libraries binding a name to equal *numbers* are two
+ *   bindings that happen to agree, not one shared native.
+ *
+ *   False if either module is not a builtin library, or does not export `name`.
+ *   That is the conservative answer, and the caller must ensure it is the one a
+ *   file module gets -- a file's program has not been run when the importing
+ *   program is checked, so there is no value to compare, and a file may be named
+ *   after a library (see ImportSource in scope.ts).
+ */
+export function exportSameBinding(a: string, b: string, name: string): boolean {
+  const ba = builtinLibs.get(a)?.bindings
+  const bb = builtinLibs.get(b)?.bindings
+  // Keyed on `has`, not on a non-undefined value: `void` is a legal binding.
+  if (ba === undefined || bb === undefined || !ba.has(name) || !bb.has(name)) {
+    return false
+  }
+  const va = behindContracts(ba.get(name))
+  return isFunction(va) && va === behindContracts(bb.get(name))
 }
 
 /** @returns the identifiers for the given module, or undefined if absent */

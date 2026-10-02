@@ -447,6 +447,38 @@ async function resolveImport(
 }
 
 /**
+ * What introduced a top-level name: `null` for a define, else the import that
+ * brought it in. The `kind` is part of the identity, not decoration: a builtin
+ * library and a file can carry the same name (a file called `canvas` beside the
+ * `canvas` library), and they are two different modules.
+ */
+type ImportSource = { module: string; kind: A.Import['kind'] } | null
+
+/** @returns whether `prev` is the very module `s` imports, re-imported */
+function isSameModule(prev: ImportSource, s: A.Import): boolean {
+  return prev !== null && prev.module === s.module && prev.kind === s.kind
+}
+
+/**
+ * @returns whether the name `prev` introduced and the one `s` imports are one
+ *   binding rather than two: both come from a builtin library, and both
+ *   libraries export `name` as the same procedure (#682). A define (`null`) and
+ *   a file import are always a second binding -- a file may even be named after
+ *   a library, and is still not that library.
+ */
+function sharesBinding(
+  prev: ImportSource,
+  s: A.Import,
+  name: string,
+): boolean {
+  return (
+    prev?.kind === 'builtin' &&
+    s.kind === 'builtin' &&
+    SymbolDB.exportSameBinding(prev.module, s.module, name)
+  )
+}
+
+/**
  * First pass over the top level: records every binding a statement introduces
  * (a define's name, or an import's exported names) into `globals`, so that all
  * top-level definitions are mutually visible regardless of their order in the
@@ -458,16 +490,19 @@ async function resolveImport(
  * and flags name collisions. A collision between two *user-introduced* names --
  * define/define, define/import, or import/import -- is reported symmetrically,
  * regardless of order (Racket: "an identifier can be either imported or defined
- * ... but not both"). `sources` maps each user-introduced name to what
- * introduced it (`null` for a define, else the module name), so re-importing
- * the same module is idempotent and a library import that merely re-binds a
- * standard-library name is not spuriously flagged.
+ * ... but not both"). `sources` maps each user-introduced name to the import
+ * that introduced it (`null` for a define), so re-importing the same module is
+ * idempotent and a library import that merely re-binds a standard-library name
+ * is not spuriously flagged. Two *different* libraries exporting one name are
+ * likewise not flagged when both export the same procedure
+ * (SymbolDB.exportSameBinding): several of them re-export one shared native,
+ * and whichever binding wins guards it (#682).
  */
 async function collectTopLevelBindings(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
   qualified: QualifiedModules,
-  sources: Map<string, string | null>,
+  sources: Map<string, ImportSource>,
   s: A.Stmt,
 ): Promise<void> {
   switch (s.tag) {
@@ -503,23 +538,29 @@ async function collectTopLevelBindings(
       }
       for (const { name } of ids) {
         const prev = sources.get(name)
-        if (prev !== undefined && prev !== s.module) {
-          // Already introduced by a define (null) or a different module.
-          diagnostics.push(
-            mkDiagnostic(
-              'Scope',
-              'warning',
-              `Global variable '${name}' is already defined`,
-              s.range,
-            ),
-          )
-        } else if (prev === undefined) {
+        if (prev === undefined) {
           if (!globals.includes(name)) {
             globals.push(name)
           }
-          sources.set(name, s.module)
+          sources.set(name, { module: s.module, kind: s.kind })
+        } else if (!isSameModule(prev, s)) {
+          // Introduced by a define (null) or by another module -- a
+          // collision, unless both are builtin libraries exporting the name as
+          // the same procedure. Several of them re-export one shared native
+          // (#682); the wrappers still shadow each other, but they are built
+          // from the same signature, so which one wins cannot be observed.
+          if (!sharesBinding(prev, s, name)) {
+            diagnostics.push(
+              mkDiagnostic(
+                'Scope',
+                'warning',
+                `Global variable '${name}' is already defined`,
+                s.range,
+              ),
+            )
+          }
         }
-        // prev === s.module: the same module re-imported; idempotent, skip.
+        // Otherwise the same module re-imported: idempotent, skip.
       }
       return
     }
@@ -566,7 +607,7 @@ function scopeCheckStmtBodies(
   diagnostics: ScamperDiagnostic[],
   globals: string[],
   qualified: QualifiedModules,
-  sources: Map<string, string | null>,
+  sources: Map<string, ImportSource>,
   s: A.Stmt,
 ): void {
   switch (s.tag) {
@@ -663,7 +704,7 @@ export async function scopeCheckProgram(
   // every top-level binding first (also resolving imports, registering qualified
   // module aliases, and flagging name collisions), then check each statement's
   // bodies against the full set.
-  const sources = new Map<string, string | null>()
+  const sources = new Map<string, ImportSource>()
   const qualified: QualifiedModules = new Map()
   for (const s of prog) {
     await collectTopLevelBindings(diagnostics, globals, qualified, sources, s)
