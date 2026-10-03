@@ -1082,14 +1082,19 @@
   (lambda (f v l)
     (if (null? l) v (fold-left f (f (car l) v) (cdr l)))))
 
+; N.B., reduce-left repeats reduce's body rather than calling it, deliberately
+; (#664, #712): the point of the name is to pin the leftward direction while
+; `reduce` stays free to change its implementation. Delegating would also
+; re-label the empty-list error as `(reduce)`, which both test suites pin.
+
 ;;; (reduce-left f l) -> any
 ;;;  f : procedure?
 ;;;  l : list?
-;;; Like `fold-left` but uses the first element of `l` as the initial value. Unlike `reduce`, the combining function `f` takes the current element as its first argument and the accumulated value as its second, as `fold-left` does.
+;;; Like `reduce`, with the leftward direction of the fold fixed in the name: the combining function `f` takes the accumulated value as its first argument and the current element as its second.
 ;;; @category list, list manipulation, reduce, reduce-right, apply, filter, fold, fold-left, fold-right, for-range, list-of, map, set-maximum-recursion-depth!
 (define-export reduce-left
   (lambda (f l)
-    (fold-left f (car l) (cdr l))))
+    (fold f (car l) (cdr l))))
 
 ; N.B., fold-right's and reduce-right's tail-recursive worker: `rev` is the
 ; list reversed, so walking it forwards combines from the right end inwards --
