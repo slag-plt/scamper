@@ -3,7 +3,7 @@ import {
   indentRange,
   TreeIndentContext,
 } from '@codemirror/language'
-import { Extension } from '@codemirror/state'
+import { Extension, Prec } from '@codemirror/state'
 import { Command, keymap } from '@codemirror/view'
 import type { SyntaxNode } from '@lezer/common'
 import { INDENT_UNIT, styleOf } from '../../../../scheme/style'
@@ -153,6 +153,19 @@ export const reindentScamperDocument: Command = (view) => {
   return true
 }
 
-export const IndentationExtension: Extension = keymap.of([
-  { key: 'Ctrl-i', run: reindentScamperDocument },
-])
+/**
+ * Ctrl-I, at `Prec.high` because `defaultKeymap` claims the same chord for
+ * `selectParentSyntax` -- `Mod-i` normalises to Ctrl-I off macOS (#686).
+ *
+ * Installing this after the base keymap does not win the chord: CodeMirror
+ * collects every command bound to it in facet order and runs them until one
+ * returns true, and `selectParentSyntax` returns true whenever it widened the
+ * selection. The comment chords in extensions/comment.ts note needing no
+ * precedence only because nothing else binds `;`. `Ctrl-i` rather than `Mod-i`
+ * is deliberate: docs/formatting.md and ShortcutsHelp.vue both say Ctrl
+ * literally rather than the platform modifier, and Ctrl-I is a distinct chord
+ * on macOS, where it already works.
+ */
+export const IndentationExtension: Extension = Prec.high(
+  keymap.of([{ key: 'Ctrl-i', run: reindentScamperDocument }]),
+)
