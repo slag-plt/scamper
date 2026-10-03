@@ -27,6 +27,10 @@ Order does not matter within an entry. See docs/releasing.md.
 
 # next
 
+# 4.8.0
+
+> Clearer errors when a number is out of range, and two new procedures.
+
 - random now reports an error if the count is not positive, since there is nothing to choose from.
 - An error about a map key that is not a string no longer begins with a strange internal name.
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
