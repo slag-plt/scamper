@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- id is now available, the identity function, which returns whatever value you give it, for when you need a function that leaves its input alone.
 
 # 4.7.0
 

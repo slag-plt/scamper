@@ -587,6 +587,8 @@ What is Clojure, each attributed in the source:
   The spelling is F#'s, OCaml's, and Elm's; the source names none of them.
 + **`l-s` and `r-s`**, left and right sections (`src/lib/prelude.scm`).
   "Section" is Haskell's term for a partially applied operator, but the commit that added them (#605, issue #571) settles the argument order from the issue thread and names no language.
++ **`id`**, the identity function and the unit of `compose` (`src/lib/prelude.scm`).
+  The spelling is Haskell's and F#'s; Racket's identity function is `identity`, in `racket/function`, R7RS has none, and the source names no language.
 
 ### Scamper's own
 

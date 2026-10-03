@@ -274,6 +274,12 @@ describe('scope checking', () => {
       expect(await scopeErrors('(define map 1)')).toEqual([
         "Global variable 'map' is already defined",
       ])
+      // `id` (#709) is the case most likely to arise by accident, being an
+      // ordinary variable name as well as a library procedure. Local binders
+      // named `id` stay silent -- see the shadowing cases below.
+      expect(await scopeErrors('(define id 1)')).toEqual([
+        "Global variable 'id' is already defined",
+      ])
     })
   })
 

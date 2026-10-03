@@ -1270,6 +1270,100 @@ test('l-s-r-s section only a two-argument procedure', async () => {
   }
 })
 
+// https://github.com/slag-plt/scamper/issues/709
+//
+// The identity function, requested for coursework. It is the unit of
+// `compose`, so `(compose f id)` is `f`, and it is what a higher-order
+// procedure wants when an element should pass through unchanged.
+test('id', async () => {
+  expect(
+    await runProgram(`
+(id 5)
+(id "hello")
+(id #t)
+(id null)
+(id (list 1 2 3))
+(id (pair 1 2))
+(map id (list 1 2 3))
+((compose id) 7)
+((compose id id) 7)
+((compose id (lambda (x) (+ x 1))) 1)
+((compose (lambda (x) (+ x 1)) id) 1)
+((o id (lambda (x) (+ x 1))) 1)
+(|> 5 id id)
+(let ([v (list 1 2)]) (eq? v (id v)))
+(let ([r (ref 1)]) (eq? r (id r)))
+`),
+  ).toEqual([
+    '5',
+    '"hello"',
+    '#t',
+    'null',
+    '(list 1 2 3)',
+    '(pair 1 2)',
+    '(list 1 2 3)',
+    // the unit of composition, on either side: composing with id changes nothing
+    '7',
+    '7',
+    '2',
+    '2',
+    '2',
+    '5',
+    // and it returns the argument itself, not something equal to it
+    '#t',
+    '#t',
+  ])
+})
+
+// `id` takes exactly one argument, and its docstring says `any`, so the only
+// thing its contract can report is the arity.
+test('id takes exactly one argument', async () => {
+  expect(await runProgram('(id)')).toEqual([
+    'Runtime error: (id) Arity mismatch in function call: expected 1 argument, got 0',
+  ])
+  expect(await runProgram('(id 1 2)')).toEqual([
+    'Runtime error: (id) Arity mismatch in function call: expected 1 argument, got 2',
+  ])
+})
+
+// The objection #709 has to answer: `id` is an extremely likely student
+// variable name -- a student id, a record id, a lambda parameter. Every binding
+// form shadows the export and runs, and the program means what the student
+// wrote. A *local* binder is silent besides, which scope checking states
+// outright (scope.ts, "local shadowing is allowed across scopes"); a top-level
+// `(define id ...)` warns that a global is already defined, exactly as
+// `(define map 1)` does and as `(define add1 ...)` began to when #572 added
+// add1 -- pinned by 'redefining a prelude binding' in test/scheme/scope.test.ts.
+// That warning is the whole cost of the name, and it does not stop the program:
+// the student's definition still wins, as the last case here shows.
+test('id is shadowed by student code', async () => {
+  expect(
+    await runProgram(`
+(define make-student (lambda (id name) (list id name)))
+(make-student 1234 "sam")
+(let ([id 7]) (* id 6))
+(let ([id 1]) (let ([j (+ id 1)]) j))
+(match (list 1 2) [(cons id rest) id])
+(struct student (id name))
+(student-id (student 1234 "sam"))
+(define id 99)
+id
+`),
+  ).toEqual([
+    // a lambda parameter named id
+    '(list 1234 "sam")',
+    // a let binding named id
+    '42',
+    '2',
+    // a match pattern binding id
+    '1',
+    // a struct field named id (the define itself displays nothing)
+    '1234',
+    // the student's own top-level definition of id, which wins
+    '99',
+  ])
+})
+
 test('length', async () => {
   expect(
     await runProgram(`
