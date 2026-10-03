@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- repeat now reports an error when given a negative count, instead of reporting a confusing Javascript error.
 
 # 4.7.0
 

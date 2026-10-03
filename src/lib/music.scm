@@ -59,11 +59,10 @@
 (define-export note-freq (js-var "music_noteFreq"))
 
 ;;; (repeat n comp) -> composition?
-;;;  n : integer?
-;;;   n >= 0
+;;;  n : nonnegative-integer?
 ;;;  comp : composition?
 ;;; Creates a new composition formed by repeating `comp` `n` times sequentially.
-;;; @category music, sound, composition?, empty, instrument, mod, note, note-event, note-freq, play-composition, rest, trigger
+;;; @category music, sound, composition?, empty, instrument, mod, nonnegative-integer?, note, note-event, note-freq, play-composition, rest, trigger
 (define-export repeat (js-var "music_repeat"))
 
 ;;; (empty) -> composition?

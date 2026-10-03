@@ -1,4 +1,5 @@
 import * as L from '../../lpm'
+import { prelude_nonnegativeIntegerQ } from '../prelude/index.js'
 import { requireWaf, waf } from './webaudiofont/webaudiofont.js'
 
 export type PitchClass = string
@@ -59,7 +60,14 @@ export function music_noteFreq(freq: number, duration: Duration): NoteFreq {
   return { [L.scamperTag]: 'struct', [L.structKind]: 'note-freq', freq, duration }
 }
 
-export function music_repeat(n: number, composition: Composition): Composition {
+export function music_repeat(n: L.Value, composition: Composition): Composition {
+  // The contract is `nonnegative-integer?`; this re-narrows it for the raw
+  // `js-var` path (#553, #680). Unchecked, this recursion's `n === 0` base
+  // case was unreachable from a negative `n`, so the host stack ran out and
+  // "RangeError: Maximum call stack size exceeded" reached the student.
+  if (!prelude_nonnegativeIntegerQ(n)) {
+    throw new L.ScamperError('Runtime', 'repeat: expected a nonnegative integer')
+  }
   if (n === 0) {
     return music_empty()
   } else {
