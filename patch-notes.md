@@ -28,6 +28,7 @@ Order does not matter within an entry. See docs/releasing.md.
 # next
 
 - Importing two libraries that share a function, such as canvas and image, no longer warns that a variable is already defined.
+- list-ref now reports an error when given a negative index, instead of quietly answering the first element.
 
 # 4.7.0
 
